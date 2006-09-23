@@ -59,14 +59,13 @@ typedef struct or_history_t {
 /** Map from hex OR identity digest to or_history_t. */
 static digestmap_t *history_map = NULL;
 
-/** Return the or_history_t for the named OR, creating it if necessary.
- */
+/** Return the or_history_t for the named OR, creating it if necessary. */
 static or_history_t *
 get_or_history(const char* id)
 {
   or_history_t *hist;
 
-  if (!memcmp(id, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DIGEST_LEN))
+  if (tor_mem_is_zero(id, DIGEST_LEN))
     return NULL;
 
   hist = digestmap_get(history_map, id);
@@ -83,7 +82,7 @@ get_or_history(const char* id)
 
 /** Return the link_history_t for the link from the first named OR to
  * the second, creating it if necessary. (ORs are identified by
- * identity digest)
+ * identity digest.)
  */
 static link_history_t *
 get_link_history(const char *from_id, const char *to_id)
@@ -93,7 +92,7 @@ get_link_history(const char *from_id, const char *to_id)
   orhist = get_or_history(from_id);
   if (!orhist)
     return NULL;
-  if (!memcmp(to_id, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DIGEST_LEN))
+  if (tor_mem_is_zero(to_id, DIGEST_LEN))
     return NULL;
   lhist = (link_history_t*) digestmap_get(orhist->link_history_map, to_id);
   if (!lhist) {
@@ -105,7 +104,7 @@ get_link_history(const char *from_id, const char *to_id)
   return lhist;
 }
 
-/** Helper: free storage held by a single link history entry */
+/** Helper: free storage held by a single link history entry. */
 static void
 _free_link_history(void *val)
 {
@@ -113,7 +112,7 @@ _free_link_history(void *val)
   tor_free(val);
 }
 
-/** Helper: free storage held by a single OR history entry */
+/** Helper: free storage held by a single OR history entry. */
 static void
 free_or_history(void *_hist)
 {
@@ -141,8 +140,7 @@ update_or_history(or_history_t *hist, time_t when)
   }
 }
 
-/** Initialize the static data structures for tracking history.
- */
+/** Initialize the static data structures for tracking history. */
 void
 rep_hist_init(void)
 {
@@ -236,7 +234,7 @@ rep_hist_note_connection_died(const char* id, time_t when)
 
 /** Remember that we successfully extended from the OR with identity
  * digest <b>from_id</b> to the OR with identity digest
- *  <b>to_name</b>.
+ * <b>to_name</b>.
  */
 void
 rep_hist_note_extend_succeeded(const char *from_id, const char *to_id)
@@ -344,7 +342,8 @@ rep_hist_dump_stats(time_t now, int severity)
 }
 
 /** Remove history info for routers/links that haven't changed since
- * <b>before</b> */
+ * <b>before</b>.
+ */
 void
 rep_history_clean(time_t before)
 {
@@ -387,11 +386,10 @@ rep_history_clean(time_t before)
 #define NUM_SECS_BW_SUM_INTERVAL (15*60)
 /** How far in the past do we remember and publish bandwidth use? */
 #define NUM_SECS_BW_SUM_IS_VALID (24*60*60)
-/** How many bandwidth usage intervals do we remember? (derived.) */
+/** How many bandwidth usage intervals do we remember? (derived) */
 #define NUM_TOTALS (NUM_SECS_BW_SUM_IS_VALID/NUM_SECS_BW_SUM_INTERVAL)
 
-/**
- * Structure to track bandwidth use, and remember the maxima for a given
+/** Structure to track bandwidth use, and remember the maxima for a given
  * time period.
  */
 typedef struct bw_array_t {
@@ -423,8 +421,7 @@ typedef struct bw_array_t {
   uint64_t totals[NUM_TOTALS];
 } bw_array_t;
 
-/** Shift the current period of b forward by one.
- */
+/** Shift the current period of b forward by one. */
 static void
 commit_max(bw_array_t *b)
 {
@@ -444,8 +441,7 @@ commit_max(bw_array_t *b)
   b->total_in_period = 0;
 }
 
-/** Shift the current observation time of 'b' forward by one second.
- */
+/** Shift the current observation time of 'b' forward by one second. */
 static INLINE void
 advance_obs(bw_array_t *b)
 {
@@ -470,8 +466,7 @@ advance_obs(bw_array_t *b)
     commit_max(b);
 }
 
-/** Add 'n' bytes to the number of bytes in b for second 'when'.
- */
+/** Add 'n' bytes to the number of bytes in b for second 'when'. */
 static INLINE void
 add_obs(bw_array_t *b, time_t when, uint64_t n)
 {
@@ -488,8 +483,7 @@ add_obs(bw_array_t *b, time_t when, uint64_t n)
   b->total_in_period += n;
 }
 
-/** Allocate, initialize, and return a new bw_array.
- */
+/** Allocate, initialize, and return a new bw_array. */
 static bw_array_t *
 bw_array_new(void)
 {
@@ -506,8 +500,7 @@ bw_array_new(void)
 static bw_array_t *read_array = NULL;
 static bw_array_t *write_array = NULL;
 
-/** Set up read_array and write_array
- */
+/** Set up read_array and write_array. */
 static void
 bw_arrays_init(void)
 {
@@ -563,8 +556,7 @@ find_largest_max(bw_array_t *b)
   return max;
 }
 
-/**
- * Find the largest sums in the past NUM_SECS_BW_SUM_IS_VALID (roughly)
+/** Find the largest sums in the past NUM_SECS_BW_SUM_IS_VALID (roughly)
  * seconds. Find one sum for reading and one for writing. They don't have
  * to be at the same time).
  *
@@ -577,15 +569,12 @@ rep_hist_bandwidth_assess(void)
   r = find_largest_max(read_array);
   w = find_largest_max(write_array);
   if (r>w)
-    return (int)(w/(double)NUM_SECS_ROLLING_MEASURE);
+    return (int)(U64_TO_DBL(w)/NUM_SECS_ROLLING_MEASURE);
   else
-    return (int)(r/(double)NUM_SECS_ROLLING_MEASURE);
-
-  return 0;
+    return (int)(U64_TO_DBL(r)/NUM_SECS_ROLLING_MEASURE);
 }
 
-/**
- * Print the bandwidth history of b (either read_array or write_array)
+/** Print the bandwidth history of b (either read_array or write_array)
  * into the buffer pointed to by buf.  The format is simply comma
  * separated numbers, from oldest to newest.
  *
@@ -619,8 +608,7 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
   return cp-buf;
 }
 
-/**
- * Allocate and return lines for representing this server's bandwidth
+/** Allocate and return lines for representing this server's bandwidth
  * history in its descriptor.
  */
 char *
@@ -689,8 +677,7 @@ rep_hist_update_state(or_state_t *state)
   state->dirty = 1;
 }
 
-/** Set bandwidth history from our saved state.
- */
+/** Set bandwidth history from our saved state. */
 int
 rep_hist_load_state(or_state_t *state, char **err)
 {
@@ -751,12 +738,17 @@ rep_hist_load_state(or_state_t *state, char **err)
   return 0;
 }
 
+/*********************************************************************/
+
 /** A list of port numbers that have been used recently. */
 static smartlist_t *predicted_ports_list=NULL;
 /** The corresponding most recently used time for each port. */
 static smartlist_t *predicted_ports_times=NULL;
 
-/** DOCDOC */
+/** We just got an application request for a connection with
+ * port <b>port</b>. Remember it for the future, so we can keep
+ * some circuits open that will exit to this port.
+ */
 static void
 add_predicted_port(uint16_t port, time_t now)
 {
@@ -770,7 +762,10 @@ add_predicted_port(uint16_t port, time_t now)
   smartlist_add(predicted_ports_times, tmp_time);
 }
 
-/** DOCDOC */
+/** Initialize whatever memory and structs are needed for predicting
+ * which ports will be used. Also seed it with port 80, so we'll build
+ * circuits on start-up.
+ */
 static void
 predicted_ports_init(void)
 {
@@ -779,7 +774,9 @@ predicted_ports_init(void)
   add_predicted_port(80, time(NULL)); /* add one to kickstart us */
 }
 
-/** DOCDOC */
+/** Free whatever memory is needed for predicting which ports will
+ * be used.
+ */
 static void
 predicted_ports_free(void)
 {
@@ -919,6 +916,22 @@ any_predicted_circuits(time_t now)
 {
   return smartlist_len(predicted_ports_list) ||
          predicted_internal_time + PREDICTED_CIRCS_RELEVANCE_TIME >= now;
+}
+
+/** Return 1 if we have no need for circuits currently, else return 0. */
+int
+rep_hist_circbuilding_dormant(time_t now)
+{
+  if (any_predicted_circuits(now))
+    return 0;
+
+  /* see if we'll still need to build testing circuits */
+  if (server_mode(get_options()) && !check_whether_orport_reachable())
+    return 0;
+  if (!check_whether_dirport_reachable())
+    return 0;
+
+  return 1;
 }
 
 /** Free all storage held by the OR/link history caches, by the

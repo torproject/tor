@@ -40,7 +40,6 @@ const char tortls_c_id[] =
 /* DOCDOC */
 typedef struct tor_tls_context_t {
   SSL_CTX *ctx;
-  SSL_CTX *client_only_ctx;
 } tor_tls_context_t;
 
 /** Holds a SSL object and its associated data.  Members are only
@@ -170,7 +169,6 @@ tor_tls_free_all(void)
 {
   if (global_tls_context) {
     SSL_CTX_free(global_tls_context->ctx);
-    SSL_CTX_free(global_tls_context->client_only_ctx);
     tor_free(global_tls_context);
     global_tls_context = NULL;
   }
@@ -234,7 +232,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   if ((nid = OBJ_txt2nid("organizationName")) == NID_undef)
     goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   (unsigned char*)"TOR", -1, -1, 0)))
+                                   (unsigned char*)"Tor", -1, -1, 0)))
     goto error;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
@@ -248,7 +246,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   if ((nid = OBJ_txt2nid("organizationName")) == NID_undef)
     goto error;
   if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
-                                   (unsigned char*)"TOR", -1, -1, 0)))
+                                   (unsigned char*)"Tor", -1, -1, 0)))
     goto error;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
   if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
@@ -301,20 +299,16 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 #define CIPHER_LIST SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA
 #endif
 
-/** Create a new TLS context.  If we are going to be using it as a
- * server, it must have isServer set to true, <b>identity</b> set to the
- * identity key used to sign that certificate, and <b>nickname</b> set to
- * the server's nickname.  If we're only going to be a client,
- * isServer should be false, identity should be NULL, and nickname
- * should be NULL.  Return -1 if failure, else 0.
+/** Create a new TLS context for use with Tor TLS handshakes.
+ * <b>identity</b> should be set to the identity key used to sign the
+ * certificate, and <b>nickname</b> set to the nickname to use.
  *
  * You can call this function multiple times.  Each time you call it,
  * it generates new certificates; all new connections will use
  * the new SSL context.
  */
 int
-tor_tls_context_new(crypto_pk_env_t *identity,
-                    int isServer, const char *nickname,
+tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
                     unsigned int key_lifetime)
 {
   crypto_pk_env_t *rsa = NULL;
@@ -323,86 +317,71 @@ tor_tls_context_new(crypto_pk_env_t *identity,
   tor_tls_context_t *result = NULL;
   X509 *cert = NULL, *idcert = NULL;
   char nn2[128];
-  int client_only;
-  SSL_CTX **ctx;
   if (!nickname)
     nickname = "null";
   tor_snprintf(nn2, sizeof(nn2), "%s <identity>", nickname);
 
   tor_tls_init();
 
-  if (isServer) {
-    /* Generate short-term RSA key. */
-    if (!(rsa = crypto_new_pk_env()))
-      goto error;
-    if (crypto_pk_generate_key(rsa)<0)
-      goto error;
-    /* Create certificate signed by identity key. */
-    cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
-                                      key_lifetime);
-    /* Create self-signed certificate for identity key. */
-    idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
-                                        IDENTITY_CERT_LIFETIME);
-    if (!cert || !idcert) {
-      log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
-      goto error;
-    }
+  /* Generate short-term RSA key. */
+  if (!(rsa = crypto_new_pk_env()))
+    goto error;
+  if (crypto_pk_generate_key(rsa)<0)
+    goto error;
+  /* Create certificate signed by identity key. */
+  cert = tor_tls_create_certificate(rsa, identity, nickname, nn2,
+                                    key_lifetime);
+  /* Create self-signed certificate for identity key. */
+  idcert = tor_tls_create_certificate(identity, identity, nn2, nn2,
+                                      IDENTITY_CERT_LIFETIME);
+  if (!cert || !idcert) {
+    log(LOG_WARN, LD_CRYPTO, "Error creating certificate");
+    goto error;
   }
 
   result = tor_malloc(sizeof(tor_tls_context_t));
-  result->ctx = result->client_only_ctx = NULL;
-  for (client_only=0; client_only <= 1; ++client_only) {
-    ctx = client_only ? &result->client_only_ctx : &result->ctx;
 #ifdef EVERYONE_HAS_AES
-    /* Tell OpenSSL to only use TLS1 */
-    if (!(*ctx = SSL_CTX_new(TLSv1_method())))
-      goto error;
+  /* Tell OpenSSL to only use TLS1 */
+  if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
+    goto error;
 #else
-    /* Tell OpenSSL to use SSL3 or TLS1 but not SSL2. */
-    if (!(*ctx = SSL_CTX_new(SSLv23_method())))
-      goto error;
-    SSL_CTX_set_options(*ctx, SSL_OP_NO_SSLv2);
+  /* Tell OpenSSL to use SSL3 or TLS1 but not SSL2. */
+  if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
+    goto error;
+  SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
 #endif
-#ifndef ENABLE_0119_PARANOIA_A
-    SSL_CTX_set_options(*ctx, SSL_OP_SINGLE_DH_USE);
-#endif
-    if (!SSL_CTX_set_cipher_list(*ctx, CIPHER_LIST))
-      goto error;
-    if (!client_only) {
-      if (cert && !SSL_CTX_use_certificate(*ctx,cert))
-        goto error;
-      X509_free(cert); /* We just added a reference to cert. */
-      cert=NULL;
-      if (idcert && !SSL_CTX_add_extra_chain_cert(*ctx,idcert))
-        goto error;
-      idcert=NULL; /* The context now owns the reference to idcert */
-    }
-    SSL_CTX_set_session_cache_mode(*ctx, SSL_SESS_CACHE_OFF);
-    if (isServer && !client_only) {
-      tor_assert(rsa);
-      if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
-        goto error;
-      if (!SSL_CTX_use_PrivateKey(*ctx, pkey))
-        goto error;
-      EVP_PKEY_free(pkey);
-      pkey = NULL;
-      if (!SSL_CTX_check_private_key(*ctx))
-        goto error;
-    }
-    dh = crypto_dh_new();
-    SSL_CTX_set_tmp_dh(*ctx, _crypto_dh_env_get_dh(dh));
-    crypto_dh_free(dh);
-    SSL_CTX_set_verify(*ctx, SSL_VERIFY_PEER,
-                       always_accept_verify_cb);
-    /* let us realloc bufs that we're writing from */
-    SSL_CTX_set_mode(*ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-  }
+  SSL_CTX_set_options(result->ctx, SSL_OP_SINGLE_DH_USE);
+  if (!SSL_CTX_set_cipher_list(result->ctx, CIPHER_LIST))
+    goto error;
+  if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
+    goto error;
+  X509_free(cert); /* We just added a reference to cert. */
+  cert=NULL;
+  if (idcert && !SSL_CTX_add_extra_chain_cert(result->ctx,idcert))
+    goto error;
+  idcert=NULL; /* The context now owns the reference to idcert */
+  SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
+  tor_assert(rsa);
+  if (!(pkey = _crypto_pk_env_get_evp_pkey(rsa,1)))
+    goto error;
+  if (!SSL_CTX_use_PrivateKey(result->ctx, pkey))
+    goto error;
+  EVP_PKEY_free(pkey);
+  pkey = NULL;
+  if (!SSL_CTX_check_private_key(result->ctx))
+    goto error;
+  dh = crypto_dh_new();
+  SSL_CTX_set_tmp_dh(result->ctx, _crypto_dh_env_get_dh(dh));
+  crypto_dh_free(dh);
+  SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
+                     always_accept_verify_cb);
+  /* let us realloc bufs that we're writing from */
+  SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
   /* Free the old context if one exists. */
   if (global_tls_context) {
     /* This is safe even if there are open connections: OpenSSL does
      * reference counting with SSL and SSL_CTX objects. */
     SSL_CTX_free(global_tls_context->ctx);
-    SSL_CTX_free(global_tls_context->client_only_ctx);
     tor_free(global_tls_context);
   }
   global_tls_context = result;
@@ -420,8 +399,6 @@ tor_tls_context_new(crypto_pk_env_t *identity,
     crypto_dh_free(dh);
   if (result && result->ctx)
     SSL_CTX_free(result->ctx);
-  if (result && result->client_only_ctx)
-    SSL_CTX_free(result->client_only_ctx);
   if (result)
     tor_free(result);
   if (cert)
@@ -435,20 +412,29 @@ tor_tls_context_new(crypto_pk_env_t *identity,
  * determine whether it is functioning as a server.
  */
 tor_tls_t *
-tor_tls_new(int sock, int isServer, int use_no_cert)
+tor_tls_new(int sock, int isServer)
 {
+  BIO *bio = NULL;
   tor_tls_t *result = tor_malloc(sizeof(tor_tls_t));
-  SSL_CTX *ctx;
+
   tor_assert(global_tls_context); /* make sure somebody made it first */
-  ctx = use_no_cert ? global_tls_context->client_only_ctx
-    : global_tls_context->ctx;
-  if (!(result->ssl = SSL_new(ctx))) {
+  if (!(result->ssl = SSL_new(global_tls_context->ctx))) {
     tls_log_errors(LOG_WARN, "generating TLS context");
     tor_free(result);
     return NULL;
   }
   result->socket = sock;
-  SSL_set_fd(result->ssl, sock);
+#ifdef USE_BSOCKETS
+  bio = BIO_new_bsocket(sock, BIO_NOCLOSE);
+#else
+  bio = BIO_new_socket(sock, BIO_NOCLOSE);
+#endif
+  if (! bio) {
+    tls_log_errors(LOG_WARN, "opening BIO");
+    tor_free(result);
+    return NULL;
+  }
+  SSL_set_bio(result->ssl, bio, bio);
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;
@@ -557,7 +543,8 @@ tor_tls_handshake(tor_tls_t *tls)
   }
   r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO);
   if (ERR_peek_error() != 0) {
-    tls_log_errors(LOG_WARN, "handshaking");
+    tls_log_errors(tls->isServer ? LOG_INFO : LOG_WARN,
+                   "handshaking");
     return TOR_TLS_ERROR;
   }
   if (r == TOR_TLS_DONE) {
@@ -717,7 +704,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
   BIO_get_mem_ptr(bio, &buf);
   s1 = tor_strndup(buf->data, buf->length);
 
-  BIO_reset(bio);
+  (void)BIO_reset(bio);
   if (!(ASN1_TIME_print(bio, X509_get_notAfter(cert)))) {
     tls_log_errors(LOG_WARN, "printing certificate lifetime");
     goto end;
@@ -882,7 +869,7 @@ tor_tls_get_n_bytes_written(tor_tls_t *tls)
 }
 
 /** Implement check_no_tls_errors: If there are any pending OpenSSL
- * errors, log an error message and assert(0). */
+ * errors, log an error message. */
 void
 _check_no_tls_errors(const char *fname, int line)
 {

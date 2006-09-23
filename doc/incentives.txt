@@ -177,7 +177,7 @@
    Addendum: I was more thinking of measuring based on who is the service
    provider and service receiver for the circuit. Say Alice builds a
    circuit to Bob. Then Bob is providing service to Alice, since he
-   otherwise wouldn't need to spend is bandwidth. So traffic in either
+   otherwise wouldn't need to spend his bandwidth. So traffic in either
    direction should be charged to Alice. Of course, the same attack would
    work, namely, Bob could cheat by sending bytes back quickly. So someone
    close to the origin needs to detect this and close the circuit, if

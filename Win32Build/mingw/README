@@ -1,0 +1,8 @@
+The current SVN version of Tor should compile with MinGW.
+
+OpenSSL and libz both compile on MinGW out of the box.
+
+libevent 1.1b will not build unless you apply the diff in this directory.
+
+
+

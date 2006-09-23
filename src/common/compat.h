@@ -76,6 +76,34 @@
 #endif /* ifndef MAVE_MACRO__func__ */
 #endif /* if not windows */
 
+#if defined(_MSC_VER) && (_MSC_VER < 1300)
+/* MSVC versions before 7 apparently don't believe that you can cast uint64_t
+ * to double and really mean it. */
+extern INLINE double U64_TO_DBL(uint64_t x) {
+  int64_t i = (int64_t) x;
+  return (i < 0) ? ((double) INT64_MAX) : (double) i;
+}
+#define DBL_TO_U64(x) ((uint64_t)(int64_t) (x))
+#else
+#define U64_TO_DBL(x) ((double) (x))
+#define DBL_TO_U64(x) ((uint64_t) (x))
+#endif
+
+/* GCC has several useful attributes. */
+#if defined(__GNUC__) && __GNUC__ >= 3
+#define ATTR_NORETURN __attribute__((noreturn))
+#define ATTR_PURE __attribute__((pure))
+#define ATTR_MALLOC __attribute__((malloc))
+#define ATTR_NONNULL(x) __attribute__((nonnull x))
+#define PREDICT(exp, val) __builtin_expect((exp), (val))
+#else
+#define ATTR_NORETURN
+#define ATTR_PURE
+#define ATTR_MALLOC
+#define ATTR_NONNULL(x)
+#define PREDICT(exp, val) (exp)
+#endif
+
 /* ===== String compatibility */
 #ifdef MS_WINDOWS
 /* Windows names string functions differently from most other platforms. */
@@ -83,13 +111,13 @@
 #define strcasecmp stricmp
 #endif
 #ifndef HAVE_STRLCAT
-size_t strlcat(char *dst, const char *src, size_t siz);
+size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
 #ifndef HAVE_STRLCPY
-size_t strlcpy(char *dst, const char *src, size_t siz);
+size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
 
-#ifdef MS_WINDOWS
+#ifdef _MSC_VER
 #define U64_PRINTF_ARG(a) (a)
 #define U64_SCANF_ARG(a) (a)
 #define U64_FORMAT "%I64u"
@@ -101,12 +129,22 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #define U64_LITERAL(n) (n ## llu)
 #endif
 
+/** Opaque bookkeeping type used for mmap accounting. */
+typedef struct tor_mmap_t {
+  const char *data;
+  size_t size;
+} tor_mmap_t;
+
+tor_mmap_t *tor_mmap_file(const char *filename) ATTR_NONNULL((1));
+void tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
+
 int tor_snprintf(char *str, size_t size, const char *format, ...)
-     CHECK_PRINTF(3,4);
-int tor_vsnprintf(char *str, size_t size, const char *format, va_list args);
+  CHECK_PRINTF(3,4) ATTR_NONNULL((1,3));
+int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
+  ATTR_NONNULL((1,3));
 
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
-                       size_t nlen);
+                       size_t nlen)  ATTR_PURE ATTR_NONNULL((1,3));
 
 #define TOR_ISALPHA(c)   isalpha((int)(unsigned char)(c))
 #define TOR_ISALNUM(c)   isalnum((int)(unsigned char)(c))
@@ -114,9 +152,11 @@ const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
 #define TOR_ISXDIGIT(c) isxdigit((int)(unsigned char)(c))
 #define TOR_ISDIGIT(c)   isdigit((int)(unsigned char)(c))
 #define TOR_ISPRINT(c)   isprint((int)(unsigned char)(c))
+#define TOR_ISLOWER(c)   islower((int)(unsigned char)(c))
+#define TOR_ISUPPER(c)   isupper((int)(unsigned char)(c))
 
-#define TOR_TOLOWER(c)   (char)tolower((int)(unsigned char)(c))
-#define TOR_TOUPPER(c)   (char)toupper((int)(unsigned char)(c))
+#define TOR_TOLOWER(c)   ((char)tolower((int)(unsigned char)(c)))
+#define TOR_TOUPPER(c)   ((char)toupper((int)(unsigned char)(c)))
 
 #ifdef MS_WINDOWS
 #define _SHORT_FILE_ (tor_fix_source_file(__FILE__))
@@ -159,8 +199,10 @@ int touch_file(const char *fname);
 #endif
 
 /* ===== Net compatibility */
-#ifdef MS_WINDOWS
-/** On windows, you have to call close() on fds returned by open(),
+#ifdef USE_BSOCKETS
+#define tor_close_socket(s) bclose(s)
+#elif defined(MS_WINDOWS)
+/** On Windows, you have to call close() on fds returned by open(),
  * and closesocket() on fds returned by socket().  On Unix, everything
  * gets close()'d.  We abstract this difference by always using
  * tor_close_socket to close sockets, and always using close() on
@@ -171,17 +213,21 @@ int touch_file(const char *fname);
 #define tor_close_socket(s) close(s)
 #endif
 
+#ifdef USE_BSOCKETS
+#define tor_socket_send(s, buf, len, flags) bsend(s, buf, len, flags)
+#define tor_socket_recv(s, buf, len, flags) brecv(s, buf, len, flags)
+#else
+#define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
+#define tor_socket_recv(s, buf, len, flags) recv(s, buf, len, flags)
+#endif
+
 #if (SIZEOF_SOCKLEN_T == 0)
 typedef int socklen_t;
 #endif
 
-/* Now that we use libevent, all real sockets are safe for polling ... or
- * if they aren't, libevent will help us. */
-#define SOCKET_IS_POLLABLE(fd) ((fd)>=0)
-
 struct in_addr;
-int tor_inet_aton(const char *cp, struct in_addr *addr);
-int tor_lookup_hostname(const char *name, uint32_t *addr);
+int tor_inet_aton(const char *cp, struct in_addr *addr) ATTR_NONNULL((1,2));
+int tor_lookup_hostname(const char *name, uint32_t *addr) ATTR_NONNULL((1,2));
 void set_socket_nonblocking(int socket);
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
 int network_init(void);
@@ -191,7 +237,7 @@ int network_init(void);
  * errnos against expected values, and use tor_socket_errno to find
  * the actual errno after a socket operation fails.
  */
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
 /** Return true if e is EAGAIN or the local equivalent. */
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
 /** Return true if e is EINPROGRESS or the local equivalent. */
@@ -226,21 +272,10 @@ const char *tor_socket_strerror(int e);
 /* ===== OS compatibility */
 const char *get_uname(void);
 
-/* Some platforms segfault when you try to access a multi-byte type
- * that isn't aligned to a word boundary.  The macros and/or functions
- * below can be used to access unaligned data on any platform.
- */
-#ifdef UNALIGNED_INT_ACCESS_OK
-#define get_uint16(cp) (*(uint16_t*)(cp))
-#define get_uint32(cp) (*(uint32_t*)(cp))
-#define set_uint16(cp,v) do { *(uint16_t*)(cp) = (v); } while (0)
-#define set_uint32(cp,v) do { *(uint32_t*)(cp) = (v); } while (0)
-#else
-uint16_t get_uint16(const char *cp);
-uint32_t get_uint32(const char *cp);
-void set_uint16(char *cp, uint16_t v);
-void set_uint32(char *cp, uint32_t v);
-#endif
+uint16_t get_uint16(const char *cp) ATTR_PURE ATTR_NONNULL((1));
+uint32_t get_uint32(const char *cp) ATTR_PURE ATTR_NONNULL((1));
+void set_uint16(char *cp, uint16_t v) ATTR_NONNULL((1));
+void set_uint32(char *cp, uint32_t v) ATTR_NONNULL((1));
 
 int set_max_file_descriptors(unsigned long limit, unsigned long cap);
 int switch_id(char *user, char *group);
@@ -248,8 +283,8 @@ int switch_id(char *user, char *group);
 char *get_user_homedir(const char *username);
 #endif
 
-int spawn_func(int (*func)(void *), void *data);
-void spawn_exit(void);
+int spawn_func(void (*func)(void *), void *data);
+void spawn_exit(void) ATTR_NORETURN;
 
 #if defined(ENABLE_THREADS) && defined(MS_WINDOWS)
 #define USE_WIN32_THREADS
@@ -262,8 +297,9 @@ void spawn_exit(void);
 #undef TOR_IS_MULTITHREADED
 #endif
 
-/* Because we use threads instead of processes on Windows, we need locking on
- * Windows.  On Unixy platforms, these functions are no-ops. */
+/* Because we use threads instead of processes on most platforms (Windows,
+ * Linux, etc), we need locking for them.  On platforms with poor thread
+ * support or broken gethostbyname_r, these functions are no-ops. */
 
 typedef struct tor_mutex_t tor_mutex_t;
 #ifdef TOR_IS_MULTITHREADED
@@ -278,6 +314,21 @@ unsigned long tor_get_thread_id(void);
 #define tor_mutex_release(m) do { } while (0)
 #define tor_mutex_free(m) do { tor_free(m); } while (0)
 #define tor_get_thread_id() (1UL)
+#endif
+
+/*for some reason my compiler doesn't have these version flags defined
+  a nice homework assignment for someone one day is to define the rest*/
+//these are the values as given on MSDN
+#ifdef MS_WINDOWS
+
+#ifndef VER_SUITE_EMBEDDEDNT
+#define VER_SUITE_EMBEDDEDNT 0x00000040
+#endif
+
+#ifndef VER_SUITE_SINGLEUSERTS
+#define VER_SUITE_SINGLEUSERTS 0x00000100
+#endif
+
 #endif
 
 #endif

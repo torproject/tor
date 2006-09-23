@@ -50,6 +50,7 @@ smartlist_create(void)
 void
 smartlist_free(smartlist_t *sl)
 {
+  tor_assert(sl != NULL);
   tor_free(sl->list);
   tor_free(sl);
 }
@@ -125,6 +126,32 @@ smartlist_remove(smartlist_t *sl, const void *element)
       sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
     }
+}
+
+/** If <b>sl</b> is nonempty, remove and return the final element.  Otherwise,
+ * return NULL. */
+void *
+smartlist_pop_last(smartlist_t *sl)
+{
+  tor_assert(sl);
+  if (sl->num_used)
+    return sl->list[--sl->num_used];
+  else
+    return NULL;
+}
+
+/** Reverse the order of the items in <b>sl</b>. */
+void
+smartlist_reverse(smartlist_t *sl)
+{
+  int i, j;
+  void *tmp;
+  tor_assert(sl);
+  for (i = 0, j = sl->num_used-1; i < j; ++i, --j) {
+    tmp = sl->list[i];
+    sl->list[i] = sl->list[j];
+    sl->list[j] = tmp;
+  }
 }
 
 /** If there are any strings in sl equal to element, remove and free them.
@@ -402,6 +429,29 @@ smartlist_sort(smartlist_t *sl, int (*compare)(const void **a, const void **b))
         (int (*)(const void *,const void*))compare);
 }
 
+/** Given a sorted smartlist <b>sl</b> and the comparison function used to
+ * sort it, remove all duplicate members.  If free_fn is provided, calls
+ * free_fn on each duplicate.  Otherwise, frees them with tor_free(), which
+ * may not be what you want..  Preserves order.
+ */
+void
+smartlist_uniq(smartlist_t *sl,
+               int (*compare)(const void **a, const void **b),
+               void (*free_fn)(void *a))
+{
+  int i;
+  for (i=1; i < sl->num_used; ++i) {
+    if (compare((const void **)&(sl->list[i-1]),
+                (const void **)&(sl->list[i])) == 0) {
+      if (free_fn)
+        free_fn(sl->list[i]);
+      else
+        tor_free(sl->list[i]);
+      smartlist_del_keeporder(sl, i--);
+    }
+  }
+}
+
 /** Assuming the members of <b>sl</b> are in order, return a pointer to the
  * member which matches <b>key</b>.  Ordering and matching are defined by a
  * <b>compare</b> function, which returns 0 on a match; less than 0 if key is
@@ -433,6 +483,117 @@ void
 smartlist_sort_strings(smartlist_t *sl)
 {
   smartlist_sort(sl, _compare_string_ptrs);
+}
+
+/** Remove duplicate strings from a sorted list, and free them with tor_free().
+ */
+void
+smartlist_uniq_strings(smartlist_t *sl)
+{
+  smartlist_uniq(sl, _compare_string_ptrs, NULL);
+}
+
+#define LEFT_CHILD(i)  ( ((i)+1)*2 - 1)
+#define RIGHT_CHILD(i) ( ((i)+1)*2 )
+#define PARENT(i)      ( ((i)+1)/2 - 1)
+
+static INLINE void
+smartlist_heapify(smartlist_t *sl,
+                  int (*compare)(const void *a, const void *b),
+                  int idx)
+{
+  while (1) {
+    int left_idx = LEFT_CHILD(idx);
+    int best_idx;
+
+    if (left_idx >= sl->num_used)
+      return;
+    if (compare(sl->list[idx],sl->list[left_idx]) < 0)
+      best_idx = idx;
+    else
+      best_idx = left_idx;
+    if (left_idx+1 < sl->num_used &&
+        compare(sl->list[left_idx+1],sl->list[best_idx]) < 0)
+      best_idx = left_idx + 1;
+
+    if (best_idx == idx) {
+      return;
+    } else {
+      void *tmp = sl->list[idx];
+      sl->list[idx] = sl->list[best_idx];
+      sl->list[best_idx] = tmp;
+
+      idx = best_idx;
+    }
+  }
+}
+
+void
+smartlist_pqueue_add(smartlist_t *sl,
+                     int (*compare)(const void *a, const void *b),
+                     void *item)
+{
+  int idx;
+  smartlist_add(sl,item);
+
+  for (idx = sl->num_used - 1; idx; ) {
+    int parent = PARENT(idx);
+    if (compare(sl->list[idx], sl->list[parent]) < 0) {
+      void *tmp = sl->list[parent];
+      sl->list[parent] = sl->list[idx];
+      sl->list[idx] = tmp;
+      idx = parent;
+    } else {
+      return;
+    }
+  }
+}
+
+void *
+smartlist_pqueue_pop(smartlist_t *sl,
+                     int (*compare)(const void *a, const void *b))
+{
+  void *top;
+  tor_assert(sl->num_used);
+
+  top = sl->list[0];
+  if (--sl->num_used) {
+    sl->list[0] = sl->list[sl->num_used];
+    smartlist_heapify(sl, compare, 0);
+  }
+  return top;
+}
+
+void
+smartlist_pqueue_assert_ok(smartlist_t *sl,
+                           int (*compare)(const void *a, const void *b))
+{
+  int i;
+  for (i = sl->num_used - 1; i > 0; --i) {
+    tor_assert(compare(sl->list[PARENT(i)], sl->list[i]) <= 0);
+  }
+}
+
+/** Helper: compare two DIGEST_LEN digests. */
+static int
+_compare_digests(const void **_a, const void **_b)
+{
+  return memcmp((const char*)*_a, (const char*)*_b, DIGEST_LEN);
+}
+
+/** Sort the list of DIGEST_LEN-byte digests into ascending order. */
+void
+smartlist_sort_digests(smartlist_t *sl)
+{
+  smartlist_sort(sl, _compare_digests);
+}
+
+/** Remove duplicate digests from a sorted list, and free them with tor_free().
+ */
+void
+smartlist_uniq_digests(smartlist_t *sl)
+{
+  smartlist_uniq(sl, _compare_digests, NULL);
 }
 
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
@@ -702,7 +863,7 @@ strmap_remove_lc(strmap_t *map, const char *key)
  *       iter = strmap_iter_next_rmv(iter);
  *       free(val);
  *    } else {
- *       for (;*cp;cp++) *cp = toupper(*cp);
+ *       for (;*cp;cp++) *cp = TOR_TOUPPER(*cp);
  *       iter = strmap_iter_next(iter);
  *    }
  * }
@@ -842,6 +1003,17 @@ digestmap_free(digestmap_t *map, void (*free_val)(void*))
   tor_assert(HT_EMPTY(&map->head));
   HT_CLEAR(digestmap_impl, &map->head);
   tor_free(map);
+}
+
+void
+strmap_assert_ok(strmap_t *map)
+{
+  tor_assert(!_strmap_impl_HT_REP_IS_BAD(&map->head));
+}
+void
+digestmap_assert_ok(digestmap_t *map)
+{
+  tor_assert(!_digestmap_impl_HT_REP_IS_BAD(&map->head));
 }
 
 /** Return true iff <b>map</b> has no entries. */

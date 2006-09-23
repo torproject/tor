@@ -536,7 +536,7 @@ accounting_set_wakeup_time(void)
 
 #define BW_ACCOUNTING_VERSION 1
 /** Save all our bandwidth tracking information to disk. Return 0 on
- * success, -1 on failure*/
+ * success, -1 on failure. */
 int
 accounting_record_bandwidth_usage(time_t now)
 {
@@ -545,11 +545,18 @@ accounting_record_bandwidth_usage(time_t now)
   char time1[ISO_TIME_LEN+1];
   char time2[ISO_TIME_LEN+1];
   char *cp = buf;
+  time_t tmp;
   /* Format is:
      Version\nTime\nTime\nRead\nWrite\nSeconds\nExpected-Rate\n */
 
   format_iso_time(time1, interval_start_time);
   format_iso_time(time2, now);
+  /* now check to see if they're valid times -- if they're not,
+   * and we write them, then tor will refuse to start next time. */
+  if (parse_iso_time(time1, &tmp) || parse_iso_time(time2, &tmp)) {
+    log_warn(LD_ACCT, "Created a time that we refused to parse.");
+    return -1;
+  }
   tor_snprintf(cp, sizeof(buf),
                "%d\n%s\n%s\n"U64_FORMAT"\n"U64_FORMAT"\n%lu\n%lu\n",
                BW_ACCOUNTING_VERSION,
@@ -676,7 +683,8 @@ hibernate_hard_limit_reached(void)
 static int
 hibernate_soft_limit_reached(void)
 {
-  uint64_t soft_limit = (uint64_t) ((get_options()->AccountingMax) * .95);
+  uint64_t soft_limit = DBL_TO_U64(U64_TO_DBL(get_options()->AccountingMax)
+                                     * .95);
   if (!soft_limit)
     return 0;
   return n_bytes_read_in_interval >= soft_limit
@@ -704,6 +712,7 @@ hibernate_begin(int new_state, time_t now)
   /* close listeners. leave control listener(s). */
   while ((conn = connection_get_by_type(CONN_TYPE_OR_LISTENER)) ||
          (conn = connection_get_by_type(CONN_TYPE_AP_LISTENER)) ||
+         (conn = connection_get_by_type(CONN_TYPE_AP_TRANS_LISTENER)) ||
          (conn = connection_get_by_type(CONN_TYPE_DIR_LISTENER))) {
     log_info(LD_NET,"Closing listener type %d", conn->type);
     connection_mark_for_close(conn);
@@ -778,11 +787,12 @@ hibernate_go_dormant(time_t now)
          (conn = connection_get_by_type(CONN_TYPE_AP)) ||
          (conn = connection_get_by_type(CONN_TYPE_EXIT))) {
     if (CONN_IS_EDGE(conn))
-      connection_edge_end(conn, END_STREAM_REASON_HIBERNATING,
-                          conn->cpath_layer);
+      connection_edge_end(TO_EDGE_CONN(conn), END_STREAM_REASON_HIBERNATING,
+                          TO_EDGE_CONN(conn)->cpath_layer);
     log_info(LD_NET,"Closing conn type %d", conn->type);
     if (conn->type == CONN_TYPE_AP) /* send socks failure if needed */
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_HIBERNATING);
+      connection_mark_unattached_ap(TO_EDGE_CONN(conn),
+                                    END_STREAM_REASON_HIBERNATING);
     else
       connection_mark_for_close(conn);
   }

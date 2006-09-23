@@ -198,6 +198,12 @@ of Tor's outgoing connections to use a single one.
 On startup, write our PID to FILE. On clean shutdown, remove FILE.
 .LP
 .TP
+\fBProtocolWarnings \fR\fB0\fR|\fB1\fR\fP
+If 1, Tor will log with severity 'warn' various cases of other parties
+not following the Tor specification. Otherwise, they are logged with
+severity 'info'. (Default: 0)
+.LP
+.TP
 \fBRunAsDaemon \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor forks and daemonizes to the background. This option has
 no effect on Windows; instead you should use the --service command-line
@@ -215,7 +221,7 @@ about what sites a user might have visited. (Default: 1)
 On startup, setuid to this user.
 .LP
 .TP
-\fBHardwareAccel \fR\fI0|1\fP
+\fBHardwareAccel \fR\fB0\fR|\fB1\fP
 If non-zero, try to use crypto hardware acceleration when
 available. This is untested and probably buggy. (Default: 0)
 
@@ -225,10 +231,11 @@ The following options are useful only for clients (that is, if \fBSocksPort\fP i
 .LP
 .TP
 \fBAllowInvalidNodes\fR \fBentry\fR|\fBexit\fR|\fBmiddle\fR|\fBintroduction\fR|\fBrendezvous\fR|...\fP
-Allow routers that the dirserver operators consider invalid (not
-trustworthy or otherwise not working right) in only these positions in
-your circuits.
-The default is "middle,rendezvous", and other choices are not advised.
+If some Tor servers are obviously not working right, the directory
+authorities can manually mark them as invalid, meaning that it's not
+recommended you use them for entry or exit positions in your circuits. You
+can opt to use them in some circuit positions, though. The default is
+"middle,rendezvous", and other choices are not advised.
 .LP
 .TP
 \fBCircuitBuildTimeout \fR\fINUM\fP
@@ -310,7 +317,7 @@ firewall allows connections to everything inside net 99, rejects port
 \fBReachableDirAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
 Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
 these restrictions when fetching directory information, using standard HTTP
-GET requests. If not set explicitly then the value of \fBfBReachableAddresses\fP
+GET requests. If not set explicitly then the value of \fBReachableAddresses\fP
 is used.  If \fBHttpProxy\fR is set then these connections will go through that
 proxy.
 .LP
@@ -318,7 +325,7 @@ proxy.
 \fBReachableORAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
 Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
 these restrictions when connecting to Onion Routers, using TLS/SSL.  If not set
-explicitly then the value of \fBfBReachableAddresses\fP is used. If
+explicitly then the value of \fBReachableAddresses\fP is used. If
 \fBHttpsProxy\fR is set then these connections will go through that proxy.
 
 The separation between \fBReachableORAddresses\fP and
@@ -333,14 +340,15 @@ port 80.
 A list of ports for services that tend to have long-running connections
 (e.g. chat and interactive shells). Circuits for streams that use these
 ports will contain only high-uptime nodes, to reduce the chance that a
-node will go down before the stream is finished. (Default: 21, 22, 706, 1863, 5050, 
-5190, 5222, 5223, 6667, 8300, 8888)
+node will go down before the stream is finished.
+(Default: 21, 22, 706, 1863, 5050, 5190, 5222, 5223, 6667, 8300)
 .LP
 .TP
 \fBMapAddress\fR \fIaddress\fR \fInewaddress\fR
-When a request for address arrives to Tor, it will rewrite it to newaddress before 
-processing it. For example, if you always want connections to www.indymedia.org to 
-exit via \fItorserver\fR (where \fItorserver\fR is the nickname of the server), 
+When a request for address arrives to Tor, it will rewrite it to
+newaddress before processing it. For example, if you always want
+connections to www.indymedia.org to exit via \fItorserver\fR (where
+\fItorserver\fR is the nickname of the server),
 use "MapAddress www.indymedia.org www.indymedia.org.torserver.exit".
 .LP
 .TP
@@ -349,8 +357,9 @@ Every NUM seconds consider whether to build a new circuit. (Default: 30 seconds)
 .LP
 .TP
 \fBMaxCircuitDirtiness \fR\fINUM\fP
-Feel free to reuse a circuit that was first used at most NUM seconds
-ago, but never attach a new stream to a circuit that is too old. (Default: 10 minutes)
+Feel free to reuse a circuit that was first used at most NUM seconds ago,
+but never attach a new stream to a circuit that is too old.
+(Default: 10 minutes)
 .LP
 .TP
 \fBNodeFamily \fR\fInickname\fR,\fInickname\fR,\fI...\fP
@@ -361,7 +370,7 @@ NodeFamily is only needed when a server doesn't list the family itself
 .LP
 .TP
 .\" \fBPathlenCoinWeight \fR\fI0.0-1.0\fP
-.\" Paths are 3 hops plus a geometric distribution centered around this coinweight. 
+.\" Paths are 3 hops plus a geometric distribution centered around this coinweight.
 .\" Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
 .\" .TP
 \fBRendNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
@@ -396,6 +405,11 @@ Let a socks connection wait NUM seconds unattached before we fail it.
 (Default: 2 minutes.)
 .LP
 .TP
+\fBTestVia \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+A list of nodes to prefer for your middle hop when building testing
+circuits. This option is mainly for debugging reachability problems.
+.LP
+.TP
 \fBTrackHostExits \fR\fIhost\fR,\fI.domain\fR,\fI...\fR\fP
 For each value in the comma separated list, Tor will track recent connections
 to hosts that match this value and attempt to
@@ -415,7 +429,7 @@ between host and exit server after NUM seconds. The default
 is 1800 seconds (30 minutes).
 .LP
 .TP
-\fBUseEntryGuards \fR\fI0|1\fP
+\fBUseEntryGuards \fR\fB0\fR|\fB1\fR\fP
 If this option is set to 1, we pick a few long-term entry servers, and
 try to stick with them.  This is desirable because
 constantly changing servers increases the odds that an adversary who owns
@@ -429,7 +443,7 @@ as long-term entries for our circuits.
 (Defaults to 3.)
 .LP
 .TP
-\fBSafeSocks \fR\fI0|1\fP
+\fBSafeSocks \fR\fB0\fR|\fB1\fR\fP
 When this option is enabled, Tor will reject application connections that
 use unsafe variants of the socks protocol -- ones that only provide an
 IP address, meaning the application is doing a DNS resolve first.
@@ -470,7 +484,9 @@ list all connected servers as running.
 .LP
 .TP
 \fBContactInfo \fR\fIemail_address\fP
-Administrative contact information for server.
+Administrative contact information for server. This line might get
+picked up by spam harvesters, so you may want to obscure the fact
+that it's an email address.
 .LP
 .TP
 \fBExitPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
@@ -614,6 +630,32 @@ as day 1 and Sunday as day 7.  If \fBday\fR is given, each accounting
 period runs from the time \fIHH:MM\fR each day to the same time on the
 next day.  All times are local, and given in 24-hour time.  (Defaults to
 "month 1 0:00".)
+.LP
+.TP
+\fBServerDNSResolvConfFile \fR\fIfilename\fP
+Overrides the default DNS configuration with the configuration in
+\fIfilename\fP.  The file format is the same as the standard Unix
+"\fBresolv.conf\fP" file (7).  This option only effects name lookup for
+addresses requested by clients; and only takes effect if Tor was built with
+eventdns support.  (Defaults to use the system DNS configuration.)
+.LP
+.TP
+\fBServerDNSSearchDomains \fR\fB0\fR|\fB1\fR\fP
+If set to \fB1\fP, then we will search for addresses in the local search
+domain.  For example, if this system is configured to believe it is in
+"example.com", and a client tries to connect to "www", the client will be
+connected to "www.example.com".
+This option only effects name lookup for addresses requested by clients.
+(Defaults to "0".)
+.LP
+.TP
+\fBServerDNSDetectHijacking \fR\fB0\fR|\fB1\fR\fP
+When this option is set to 1, we will test periodically to determine whether
+our local nameservers have been configured to hijack failing DNS requests
+(usually to an advertising site).  If they are, we will attempt to correct
+this.  This option only effects name lookup for addresses requested by
+clients; and only takes effect if Tor was built with eventdns support.
+(Defaults to "1".)
 
 .SH DIRECTORY SERVER OPTIONS
 .PP
@@ -667,7 +709,8 @@ to this port rather than the one specified in DirPort. (Default: 0.0.0.0)
 .LP
 .TP
 \fBDirPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
-Set an entrance policy for this server, to limit who can connect to the directory ports. 
+Set an entrance policy for this server, to limit who can connect to the
+directory ports.
 The policies have the same form as exit policies above.
 .LP
 .TP

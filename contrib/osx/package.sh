@@ -26,7 +26,7 @@ PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.3.zip
 #   man packagemaker
 
 # Make sure VERSION is set, so we don't name the package
-# "Tor--$OS-$ARCH-Bundle.dmg"
+# "Tor--$OS-Bundle.dmg"
 if [ "XX$VERSION" = 'XX' ]; then
   echo "VERSION not set."
   exit 1
@@ -83,6 +83,7 @@ cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
 #cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
 chmod 755 contrib/osx/TorPostflight
 cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
+cp contrib/osx/TorPreFlight $BUILD_DIR/tor_resources/preflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cp contrib/osx/Tor_Uninstaller.applescript $BUILD_DIR/tor_resources/Tor_Uninstaller.applescript
 cp contrib/osx/Tor_Uninstaller.app.tar.gz $BUILD_DIR/tor_resources/Tor_Uninstaller.app.tar.gz

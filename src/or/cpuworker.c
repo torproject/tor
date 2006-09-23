@@ -36,7 +36,7 @@ static int num_cpuworkers_busy=0;
  * the last time we got a key rotation event. */
 static time_t last_rotation_time=0;
 
-static int cpuworker_main(void *data);
+static void cpuworker_main(void *data);
 static int spawn_cpuworker(void);
 static void spawn_enough_cpuworkers(void);
 static void process_pending_task(connection_t *cpuworker);
@@ -137,7 +137,7 @@ connection_cpu_process_inbuf(connection_t *conn)
   uint32_t addr;
   uint16_t port;
   uint16_t circ_id;
-  connection_t *p_conn;
+  or_connection_t *p_conn;
   circuit_t *circ;
 
   tor_assert(conn);
@@ -181,8 +181,8 @@ connection_cpu_process_inbuf(connection_t *conn)
       log_debug(LD_OR,"processed onion for a circ that's gone. Dropping.");
       goto done_processing;
     }
-    tor_assert(circ->p_conn);
-    if (onionskin_answer(circ, CELL_CREATED, buf+TAG_LEN,
+    tor_assert(! CIRCUIT_IS_ORIGIN(circ));
+    if (onionskin_answer(TO_OR_CIRCUIT(circ), CELL_CREATED, buf+TAG_LEN,
                          buf+TAG_LEN+ONIONSKIN_REPLY_LEN) < 0) {
       log_warn(LD_OR,"onionskin_answer failed. Closing.");
       circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
@@ -222,7 +222,7 @@ done_processing:
  *  (Note: this _should_ be by addr/port, since we're concerned with specific
  * connections, not with routers (where we'd use identity).)
  */
-static int
+static void
 cpuworker_main(void *data)
 {
   char question[ONIONSKIN_CHALLENGE_LEN];
@@ -308,7 +308,6 @@ cpuworker_main(void *data)
   tor_close_socket(fd);
   crypto_thread_cleanup();
   spawn_exit();
-  return 0; /* windows wants this function to return an int */
 }
 
 /** Launch a new cpuworker. Return 0 if we're happy, -1 if we failed.
@@ -328,6 +327,9 @@ spawn_cpuworker(void)
     tor_free(fdarray);
     return -1;
   }
+
+  tor_assert(fdarray[0] >= 0);
+  tor_assert(fdarray[1] >= 0);
 
   fd = fdarray[0];
   spawn_func(cpuworker_main, (void*)fdarray);
@@ -383,7 +385,7 @@ spawn_enough_cpuworkers(void)
 static void
 process_pending_task(connection_t *cpuworker)
 {
-  circuit_t *circ;
+  or_circuit_t *circ;
 
   tor_assert(cpuworker);
 
@@ -441,7 +443,7 @@ int
 assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
                     void *task)
 {
-  circuit_t *circ;
+  or_circuit_t *circ;
   char tag[TAG_LEN];
 
   tor_assert(question_type == CPUWORKER_TASK_ONION);
@@ -451,7 +453,7 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
   if (question_type == CPUWORKER_TASK_ONION) {
     circ = task;
-    tor_assert(circ->onionskin);
+    tor_assert(circ->_base.onionskin);
 
     if (num_cpuworkers_busy == num_cpuworkers) {
       log_debug(LD_OR,"No idle cpuworkers. Queuing.");
@@ -470,7 +472,8 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
       log_info(LD_OR,"circ->p_conn gone. Failing circ.");
       return -1;
     }
-    tag_pack(tag, circ->p_conn->addr, circ->p_conn->port, circ->p_circ_id);
+    tag_pack(tag, circ->p_conn->_base.addr, circ->p_conn->_base.port,
+             circ->p_circ_id);
 
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;
     /* touch the lastwritten timestamp, since that's how we check to
@@ -481,9 +484,9 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
     connection_write_to_buf((char*)&question_type, 1, cpuworker);
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
-    connection_write_to_buf(circ->onionskin, ONIONSKIN_CHALLENGE_LEN,
+    connection_write_to_buf(circ->_base.onionskin, ONIONSKIN_CHALLENGE_LEN,
                             cpuworker);
-    tor_free(circ->onionskin);
+    tor_free(circ->_base.onionskin);
   }
   return 0;
 }

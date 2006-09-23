@@ -128,7 +128,7 @@ parse_reachable_addresses(void)
 int
 firewall_is_fascist_or(void)
 {
-  return !!reachable_or_addr_policy;
+  return reachable_or_addr_policy != NULL;
 }
 
 /** Return true iff <b>policy</b> (possibly NULL) will allow a
@@ -603,7 +603,7 @@ policies_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
 
 /** Return true iff <b>ri</b> is "useful as an exit node", meaning
  * it allows exit to at least one /8 address space for at least
- * one of ports 80, 443, and 6667. */
+ * two of ports 80, 443, and 6667. */
 int
 exit_policy_is_general_exit(addr_policy_t *policy)
 {
@@ -619,9 +619,39 @@ exit_policy_is_general_exit(addr_policy_t *policy)
       if ((p->addr & 0xff000000ul) == 0x7f000000ul)
         continue; /* 127.x */
       /* We have a match that is at least a /8. */
-      if (p->policy_type == ADDR_POLICY_ACCEPT)
-        return 1;
+      if (p->policy_type == ADDR_POLICY_ACCEPT) {
+        ++n_allowed;
+        break; /* stop considering this port */
+      }
     }
+  }
+  return n_allowed >= 2;
+}
+
+/** Return false if <b>policy</b> might permit access to some addr:port;
+ * otherwise if we are certain it rejects everything, return true. */
+int
+policy_is_reject_star(addr_policy_t *p)
+{
+  for ( ; p; p = p->next) {
+    if (p->policy_type == ADDR_POLICY_ACCEPT)
+      return 0;
+    else if (p->policy_type == ADDR_POLICY_REJECT &&
+             p->prt_min <= 1 && p->prt_max == 65535 &&
+             p->msk == 0)
+      return 1;
+  }
+  return 1;
+}
+
+int
+policies_getinfo_helper(const char *question, char **answer)
+{
+  if (!strcmp(question, "exit-policy/default")) {
+    *answer = tor_strdup(DEFAULT_EXIT_POLICY);
+//  } else if (!strcmp(question, "exit-policy/prepend")) {
+  } else {
+    *answer = NULL;
   }
   return 0;
 }

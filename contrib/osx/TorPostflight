@@ -37,7 +37,7 @@ chown $TORUSER $LOGDIR
 chgrp daemon $LOGDIR
 chmod 700 $LOGDIR
 
-# Create the configuration file only if there wan't one already.
+# Create the configuration file only if there wasn't one already.
 if [ ! -f $TARGET/torrc ]; then
   cp $TARGET/torrc.sample $TARGET/torrc
 fi
@@ -63,11 +63,6 @@ if [ ! -e /var/log/tor -o -L /var/log/tor ]; then
   ln -sf $LOGDIR tor
 fi
 
-if [ -d /Library/StartupItems/Tor ]; then
-  rm -f /Library/StartupItems/Tor/Tor.loc
-  echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
-fi
-
 if [ -d /Library/StartupItems/Privoxy ]; then
   find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel
 fi
@@ -83,6 +78,14 @@ if [ -f $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.applescript ]; then
    chmod 755 $TARGET/Tor_Uninstaller.applescript
 fi
 
+if [ -f $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.app.tar.gz ]; then 
+   cp $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.app.tar.gz $TARGET/Tor_Uninstaller.app.tar.gz
+   cd $TARGET && tar zxf Tor_Uninstaller.app.tar.gz 
+   chmod -R 755 $TARGET/Tor_Uninstaller.app
+   chown -R _tor:_tor Tor_Uninstaller.app
+   rm $TARGET/Tor_Uninstaller.app.tar.gz
+fi
+
 if [ -f $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh ]; then
    cp $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh $TARGET/uninstall_tor_bundle.sh
    chmod 755 $TARGET/uninstall_tor_bundle.sh
@@ -90,4 +93,16 @@ fi
 
 if [ -f $PACKAGE_PATH/Contents/Resources/package_list.txt ]; then
    cp $PACKAGE_PATH/Contents/Resources/package_list.txt $TARGET/package_list.txt
+fi
+
+# If the pre-install script did it's thing, it should have saved the
+# config and server keys; put these back and clean up
+if [ -f /tmp/TorSavedMe.tar.gz ]; then
+   tar zxf /tmp/TorSavedMe.tar.gz -C /
+   rm /tmp/TorSavedMe.tar.gz
+fi
+
+if [ -d /Library/StartupItems/Tor ]; then
+   rm -f /Library/StartupItems/Tor/Tor.loc
+   echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
 fi

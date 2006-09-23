@@ -188,6 +188,8 @@ $Id$
   or none.
   NOTE: "EXTENDED" is only supported in Tor 0.1.1.9-alpha or later.
 
+  XXX Need to describe what each event does and is for -RD
+
 3.5. AUTHENTICATE
 
   Sent from the client to the server.  The syntax is:
@@ -316,6 +318,13 @@ $Id$
 
     "config-file" -- The location of Tor's configuration file ("torrc").
 
+    ["exit-policy/prepend" -- The default exit policy lines that Tor will
+      *prepend* to the ExitPolicy config option.
+     -- Never implemented. Useful?]
+
+    "exit-policy/default" -- The default exit policy lines that Tor will
+      *append* to the ExitPolicy config option.
+
     "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest
       server descriptor for a given OR, NUL-terminated.
 
@@ -337,10 +346,13 @@ $Id$
       via the control interface; the 'all' target returns the mappings
       set through any mechanism.
 
+    "address" -- the best guess at our external IP address. If we
+      have no guess, return a 551 error.
+
     "circuit-status"
       A series of lines as for a circuit status event. Each line is of
       the form:
-         CircuitID SP CircStatus SP Path CRLF
+         CircuitID SP CircStatus [SP Path] CRLF
 
     "stream-status"
       A series of lines as for a stream status event.  Each is of the form:
@@ -675,7 +687,7 @@ $Id$
 
    The syntax is:
 
-     "650" SP "CIRC" SP CircuitID SP CircStatus SP Path
+     "650" SP "CIRC" SP CircuitID SP CircStatus [SP Path]
 
       CircStatus =
                "LAUNCHED" / ; circuit ID assigned to new circuit
@@ -685,6 +697,9 @@ $Id$
                "CLOSED"     ; circuit closed (was built)
 
       Path = ServerID *("," ServerID)
+
+   The path is provided only when the circuit has been extended at least one
+   hop.
 
 4.1.2. Stream status changed
 
@@ -767,6 +782,11 @@ $Id$
   If the 'CookieAuthentication' option is true, Tor writes a "magic cookie"
   file named "control_auth_cookie" into its data directory.  To authenticate,
   the controller must send the contents of this file.
+
+  [With the v1 controller protocol, what we really mean is that you should
+   send the base16 of the contents of this file. Is this it, or is there
+   more to it? Should we write a control_auth_cookie.asc file too that
+   makes this step easier for people doing it manually? -RD]
 
   If the 'HashedControlPassword' option is set, it must contain the salted
   hash of a secret password.  The salted hash is computed according to the

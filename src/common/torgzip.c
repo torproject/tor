@@ -15,7 +15,7 @@ const char torgzip_c_id[] =
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#ifdef MS_WINDOWS
+#ifdef _MSC_VER
 #include "..\..\contrib\zlib\zlib.h"
 #else
 #include <zlib.h>
@@ -280,5 +280,99 @@ detect_compression_method(const char *in, size_t in_len)
   } else {
     return 0;
   }
+}
+
+struct tor_zlib_state_t {
+  struct z_stream_s stream;
+  int compress;
+};
+
+/** DOCDOC */
+tor_zlib_state_t *
+tor_zlib_new(int compress, compress_method_t method)
+{
+  tor_zlib_state_t *out;
+
+  if (method == GZIP_METHOD && !is_gzip_supported()) {
+    /* Old zlib version don't support gzip in inflateInit2 */
+    log_warn(LD_GENERAL, "Gzip not supported with zlib %s", ZLIB_VERSION);
+    return NULL;
+ }
+
+ out = tor_malloc_zero(sizeof(tor_zlib_state_t));
+ out->stream.zalloc = Z_NULL;
+ out->stream.zfree = Z_NULL;
+ out->stream.opaque = NULL;
+ out->compress = compress;
+ if (compress) {
+   if (deflateInit2(&out->stream, Z_BEST_COMPRESSION, Z_DEFLATED,
+                    method_bits(method), 8, Z_DEFAULT_STRATEGY) != Z_OK)
+     goto err;
+ } else {
+   if (inflateInit2(&out->stream, method_bits(method)) != Z_OK)
+     goto err;
+ }
+ return out;
+
+ err:
+ tor_free(out);
+ return NULL;
+}
+
+/** DOCDOC */
+tor_zlib_output_t
+tor_zlib_process(tor_zlib_state_t *state,
+                 char **out, size_t *out_len,
+                 const char **in, size_t *in_len,
+                 int finish)
+{
+  int err;
+  state->stream.next_in = (unsigned char*) *in;
+  state->stream.avail_in = *in_len;
+  state->stream.next_out = (unsigned char*) *out;
+  state->stream.avail_out = *out_len;
+
+  if (state->compress) {
+    err = deflate(&state->stream, finish ? Z_FINISH : Z_SYNC_FLUSH);
+  } else {
+    err = inflate(&state->stream, finish ? Z_FINISH : Z_SYNC_FLUSH);
+  }
+
+  *out = (char*) state->stream.next_out;
+  *out_len = state->stream.avail_out;
+  *in = (const char *) state->stream.next_in;
+  *in_len = state->stream.avail_in;
+
+  switch (err)
+    {
+    case Z_STREAM_END:
+      return TOR_ZLIB_DONE;
+    case Z_BUF_ERROR:
+      if (state->stream.avail_in == 0)
+        return Z_OK;
+      return TOR_ZLIB_BUF_FULL;
+    case Z_OK:
+      if (state->stream.avail_out == 0 || finish)
+        return TOR_ZLIB_BUF_FULL;
+      return TOR_ZLIB_OK;
+    default:
+      log_warn(LD_GENERAL, "Gzip returned an error: %s",
+               state->stream.msg ? state->stream.msg : "<no message>");
+      return TOR_ZLIB_ERR;
+    }
+}
+
+/** DOCDOC */
+void
+tor_zlib_free(tor_zlib_state_t *state)
+{
+  tor_assert(state);
+
+  if (state->compress)
+    deflateEnd(&state->stream);
+  else
+    inflateEnd(&state->stream);
+
+  tor_free(state);
 }
 

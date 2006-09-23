@@ -1,22 +1,164 @@
-Changes in version 0.1.1.24 - 2006-09-xx [ongoing]
-  o Major bugfixes:
-    - Allow really slow clients to not hang up five minutes into their
-      directory downloads (suggested by Adam J. Richter).
-    - Fix major performance regression from 0.1.0.x: instead of checking
-      whether we have enough directory information every time we want to
-      do something, only check when the directory information has changed.
-      This should improve client CPU usage by 25-50%.
+Changes in version 0.1.2.2-alpha - 2006-??-??
+  o Major features:
+    - Add server-side support for "reverse" DNS lookups (using PTR
+      records so clients can determine the canonical hostname for a given
+      IPv4 address).  This has been specified for a long time, but was
+      previously never implemented.  This is only supported by eventdns;
+      servers now announce in their descriptors whether they support
+      eventdns.
+    - Specify and implement client-side SOCKS5 interface for reverse DNS
+      lookups; see doc/socks-extensions.txt for full information.
 
-  o Minor bugfixes:
+  o Minor features:
+    - Check for name servers (like Earthlink's) that hijack failing DNS
+      requests and replace the 'no such server' answer with a "helpful"
+      redirect to an advertising-driven search portal.  We're a little clever
+      about this, in order to work around DNS hijackers who "helpfully"
+      decline to hijack known-invalid RFC2606 addresses.  [Resolves bug 330.]
+    - When asked to resolve a hostname, don't use non-exit servers unless
+      requested to do so.  This allows servers with broken DNS be useful to
+      the network.
+
+  o Security Fixes, minor
+    - If a client asked for a server by name, and we didn't have a
+      descriptor for a named server with that name, we might return an old
+      one.
+
+  o Minor Bugfixes
+    - Small performance improvements on parsing descriptors (x2).
+    - Major performance descriptor on inserting descriptors; change
+      algorithm from O(n^2) to O(n).
+    - Make the common memory allocation path faster on machines where
+      malloc(0) returns a pointer.
+    - Fix a debug log message in eventdns to say "X resolved to Y"
+      instead of "X resolved to X".
+    - Prevent the 'exitlist' script from printing the same result more
+      than once.
+
+  o Documentation
+    - Documented (and renamed) ServerDNSSearchDomains and
+      ServerDNSResolvConfFile options.
+
+Changes in version 0.1.2.1-alpha - 2006-08-27
+  o Major features:
+    - Add "eventdns" async dns library from Adam Langley, tweaked to
+      build on OSX and Windows. Only enabled if you pass the
+      --enable-eventdns argument to configure.
+    - Allow servers with no hostname or IP address to learn their
+      IP address by asking the directory authorities. This code only
+      kicks in when you would normally have exited with a "no address"
+      error. Nothing's authenticated, so use with care.
+    - Rather than waiting a fixed amount of time between retrying
+      application connections, we wait only 5 seconds for the first,
+      10 seconds for the second, and 15 seconds for each retry after
+      that. Hopefully this will improve the expected user experience.
+    - Patch from Tup to add support for transparent AP connections:
+      this basically bundles the functionality of trans-proxy-tor
+      into the Tor mainline. Now hosts with compliant pf/netfilter
+      implementations can redirect TCP connections straight to Tor
+      without diverting through SOCKS. Needs docs.
+    - Busy directory servers save lots of memory by spooling server
+      descriptors, v1 directories, and v2 networkstatus docs to buffers
+      as needed rather than en masse. Also mmap the cached-routers
+      files, so we don't need to keep the whole thing in memory too.
+    - Automatically avoid picking more than one node from the same
+      /16 network when constructing a circuit.
+    - Revise and clean up the torrc.sample that we ship with; add
+      a section for BandwidthRate and BandwidthBurst.
+
+  o Minor features:
+    - Split circuit_t into origin_circuit_t and or_circuit_t, and
+      split connection_t into edge, or, dir, control, and base structs.
+      These will save quite a bit of memory on busy servers, and they'll
+      also help us track down bugs in the code and bugs in the spec.
+    - Experimentally re-enable kqueue on OSX when using libevent 1.1b
+      or later. Log when we are doing this, so we can diagnose it when
+      it fails. (Also, recommend libevent 1.1b for kqueue and
+      win32 methods; deprecate libevent 1.0b harder; make libevent
+      recommendation system saner.)
+    - Start being able to build universal binaries on OS X (thanks
+      to Phobos).
+    - Export the default exit policy via the control port, so controllers
+      don't need to guess what it is / will be later.
+    - Add a man page entry for ProtocolWarnings.
+    - Add TestVia config option to the man page.
+    - Remove even more protocol-related warnings from Tor server logs,
+      such as bad TLS handshakes and malformed begin cells.
+    - Stop fetching descriptors if you're not a dir mirror and you
+      haven't tried to establish any circuits lately. [This currently
+      causes some dangerous behavior, because when you start up again
+      you'll use your ancient server descriptors.]
+    - New DirPort behavior: if you have your dirport set, you download
+      descriptors aggressively like a directory mirror, whether or not
+      your ORPort is set.
+    - Get rid of the router_retry_connections notion. Now routers
+      no longer try to rebuild long-term connections to directory
+      authorities, and directory authorities no longer try to rebuild
+      long-term connections to all servers. We still don't hang up
+      connections in these two cases though -- we need to look at it
+      more carefully to avoid flapping, and we likely need to wait til
+      0.1.1.x is obsolete.
+    - Drop compatibility with obsolete Tors that permit create cells
+      to have the wrong circ_id_type.
+    - Re-enable per-connection rate limiting. Get rid of the "OP
+      bandwidth" concept. Lay groundwork for "bandwidth classes" --
+      separate global buckets that apply depending on what sort of conn
+      it is.
+    - Start publishing one minute or so after we find our ORPort
+      to be reachable. This will help reduce the number of descriptors
+      we have for ourselves floating around, since it's quite likely
+      other things (e.g. DirPort) will change during that minute too.
+    - Fork the v1 directory protocol into its own spec document,
+      and mark dir-spec.txt as the currently correct (v2) spec.
+
+  o Major bugfixes:
+    - When we find our DirPort to be reachable, publish a new descriptor
+      so we'll tell the world (reported by pnx).
+    - Publish a new descriptor after we hup/reload. This is important
+      if our config has changed such that we'll want to start advertising
+      our DirPort now, etc.
     - Allow Tor to start when RunAsDaemon is set but no logs are set.
-    - Don't crash when the controller receives a third argument to an
-      "extendcircuit" request.
+    - When we have a state file we cannot parse, tell the user and
+      move it aside. Now we avoid situations where the user starts
+      Tor in 1904, Tor writes a state file with that timestamp in it,
+      the user fixes her clock, and Tor refuses to start.
     - Fix configure.in to not produce broken configure files with
       more recent versions of autoconf. Thanks to Clint for his auto*
       voodoo.
-    - Fix NetBSD bug that could allow someone to force uninitialized RAM
-      to be sent to a server's DNS resolver. This only affects NetBSD and
-      other platforms that do not bounds-check tolower().
+    - "tor --verify-config" now exits with -1(255) or 0 depending on
+      whether the config options are bad or good.
+    - Resolve bug 321 when using dnsworkers: append a period to every
+      address we resolve at the exit node, so that we do not accidentally
+      pick up local addresses, and so that failing searches are retried
+      in the resolver search domains. (This is already solved for
+      eventdns.) (This breaks Blossom servers for now.)
+    - If we are using an exit enclave and we can't connect, e.g. because
+      its webserver is misconfigured to not listen on localhost, then
+      back off and try connecting from somewhere else before we fail.
+
+  o Minor bugfixes:
+    - Start compiling on MinGW on Windows (patches from Mike Chiussi).
+    - Start compiling on MSVC6 on Windows (patches from Frediano Ziglio).
+    - Fix bug 314: Tor clients issued "unsafe socks" warnings even
+      when the IP address is mapped through MapAddress to a hostname.
+    - Start passing "ipv4" hints to getaddrinfo(), so servers don't do
+      useless IPv6 DNS resolves.
+    - Patch suggested by Karsten Loesing: respond to SIGNAL command
+      before we execute the signal, in case the signal shuts us down.
+    - Clean up AllowInvalidNodes man page entry.
+    - Claim a commonname of Tor, rather than TOR, in TLS handshakes.
+    - Add more asserts to track down an assert error on a windows Tor
+      server with connection_add being called with socket == -1.
+    - Handle reporting OR_CONN_EVENT_NEW events to the controller.
+    - Fix misleading log messages: an entry guard that is "unlisted",
+      as well as not known to be "down" (because we've never heard
+      of it), is not therefore "up".
+    - Remove code to special-case "-cvs" ending, since it has not
+      actually mattered since 0.0.9.
+    - Make our socks5 handling more robust to broken socks clients:
+      throw out everything waiting on the buffer in between socks
+      handshake phases, since they can't possibly (so the theory
+      goes) have predicted what we plan to respond to them.
 
 
 Changes in version 0.1.1.23 - 2006-07-30
@@ -57,7 +199,6 @@ Changes in version 0.1.1.22 - 2006-07-05
     - Fix a rare bug that was causing some servers to complain about
       "closing wedged cpuworkers" and skip some circuit create requests.
     - Make the Exit flag in directory status documents actually work.
-    - Add a preliminary OSX binary un-installer, and fix permissions.
 
 
 Changes in version 0.1.1.21 - 2006-06-10

@@ -84,9 +84,9 @@
 # Using the build date ensures that every build really does get
 # a different release number.  We use this trick for CVS versions.
 # For release versions, we don't want or need it.
-%define is_cvs_version %(echo %{native_version} | grep 'cvs' > /dev/null && echo 1 || echo 0)
+%define is_dev_version %(echo %{native_version} | grep 'dev' > /dev/null && echo 1 || echo 0)
 
-%if %{is_cvs_version}
+%if %{is_dev_version}
 %define blddate %(date -u +"%Y%m%d%H%M")
 %define release %{pkgspec}.%{specver}.%{ostag}.%{blddate}
 %else
@@ -122,7 +122,7 @@ Group: System Environment/Daemons
 
 License: BSD-like
 Vendor: R. Dingledine <arma@seul.org>
-Packager: Nick Mathewson <nickm@seul.org>
+Packager: Andrew Lewman <phobos@interloper.org>
 
 %if %{is_suse}
 Requires: openssl >= 0.9.6

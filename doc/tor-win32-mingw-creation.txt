@@ -1,0 +1,120 @@
+## Instructions for building Tor with MinGW (http://www.mingw.org/)
+##
+
+Stage One:  Download and Install MinGW.
+---------------------------------------
+
+Download mingw:
+http://prdownloads.sf.net/mingw/MinGW-5.0.3.exe?download
+
+Download msys:
+http://prdownloads.sf.net/mingw/MSYS-1.0.10.exe?download
+
+Download the mingw developer tool kit:
+http://prdownloads.sf.net/mingw/msysDTK-1.0.1.exe?download
+
+Download the mingw win32api:
+http://prdownloads.sf.net/mingw/w32api-3.6.tar.gz?download
+
+Install mingw, msys and mingw-dtk.
+
+Create a directory called "tor-mingw".
+
+Stage Two:  Download, extract, compile openssl
+----------------------------------------------
+
+Download openssl:
+http://www.openssl.org/source/openssl-0.9.8c.tar.gz
+
+Extract openssl:
+Copy the openssl tarball into the "tor-mingw" directory.
+Type "cd tor-mingw/"
+Type "tar zxf openssl-0.9.8c.tar.gz"
+
+Make openssl libraries:
+Type "cd tor-mingw/openssl-0.9.8c/"
+Type "./Configure mingw"
+Edit Makefile and remove the "test:" and "tests:" sections.
+Type "rm -rf ./test"
+Type "cd crypto/"
+Type "find ./ -name "*.h" -exec cp {} ../include/openssl/ \;"
+Type "cd ../ssl/"
+Type "find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
+Type "cd .."
+Type "cp *.h include/openssl/"
+# The next steps can take up to 30 minutes to complete.
+Type "make"
+Type "make install"
+
+Alternatively:
+Download the pre-compiled openssl for win32.
+Install and proceed.
+
+
+Stage Three:  Download, extract, compile zlib
+---------------------------------------------
+
+Download zlib source:
+http://www.zlib.net/zlib-1.2.3.tar.gz
+
+Extract zlib:
+Copy the zlib tarball into the "tor-mingw" directory
+Type "cd tor-mingw/"
+Type "tar zxf zlib-1.2.3.tar.gz"
+
+CHOICE:
+
+Make zlib.a:
+Type "cd tor-mingw/zlib-1.2.3/"
+Type "./configure"
+Type "make"
+Type "make install"
+
+OR 
+
+Make zlib1.dll:
+Type "cd tor-mingw/zlib-1.2.3"/
+Type "./configure"
+Type "make -f win32/Makefile.gcc"
+
+Done.
+
+
+Stage Four: Download, extract, and patch libevent-1.1b.
+------------------------------------------------------
+
+Download libevent-1.1b:
+http://www.monkey.org/~provos/libevent/
+
+Copy the libevent tarball into the "tor-mingw" directory.
+Type "cd tor-mingw"
+
+Extract libevent: 
+Type "tar zxf libevent-1.1b.tar.gz"
+
+Download the libevent-1.1b-mingw.diff from 
+http://cvsview.seul.org/tor/something/path.
+Copy the libevent-1.1b diff into the libevent-1.1b directory.
+Type "patch -p0 < libevent-1.1b-mingw.diff"
+
+Type "aclocal && autoheader && automake && autoconf".
+There may be WARNING messages.  There will be no output if all runs successfuly.
+
+Type "./configure --enable-static --disable-shared"
+Type "make"
+Type "make install"
+
+Stage Five:  Build Tor
+----------------------
+
+Download the current Tor alpha release from http://tor.eff.org/download.html.
+Copy the Tor tarball into the "tor-mingw" directory.
+Extract Tor:
+Type "tar zxf latest-tor-alpha.tar.gz"
+
+cd tor-<version>
+Type "./configure --enable-static --disable-shared"
+Type "make"
+
+You now have a tor.exe in src/or/.  This is Tor.
+You now have a tor_resolve.exe in src/tools/.

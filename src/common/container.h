@@ -29,24 +29,29 @@ void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
 void smartlist_remove(smartlist_t *sl, const void *element);
+void *smartlist_pop_last(smartlist_t *sl);
+void smartlist_reverse(smartlist_t *sl);
 void smartlist_string_remove(smartlist_t *sl, const char *element);
-int smartlist_isin(const smartlist_t *sl, const void *element);
-int smartlist_string_isin(const smartlist_t *sl, const char *element);
-int smartlist_string_num_isin(const smartlist_t *sl, int num);
-int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2);
+int smartlist_isin(const smartlist_t *sl, const void *element) ATTR_PURE;
+int smartlist_string_isin(const smartlist_t *sl, const char *element)
+  ATTR_PURE;
+int smartlist_string_num_isin(const smartlist_t *sl, int num) ATTR_PURE;
+int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2)
+  ATTR_PURE;
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);
 void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
+
 /* smartlist_choose() is defined in crypto.[ch] */
 #ifdef DEBUG_SMARTLIST
 /** Return the number of items in sl.
  */
-extern INLINE int smartlist_len(const smartlist_t *sl) {
+extern INLINE int smartlist_len(const smartlist_t *sl) ATTR_PURE {
   tor_assert(sl);
   return (sl)->num_used;
 }
 /** Return the <b>idx</b>th element of sl.
  */
-extern INLINE void *smartlist_get(const smartlist_t *sl, int idx) {
+extern INLINE void *smartlist_get(const smartlist_t *sl, int idx) ATTR_PURE {
   tor_assert(sl);
   tor_assert(idx>=0);
   tor_assert(sl->num_used < idx);
@@ -69,18 +74,34 @@ void smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
 void smartlist_sort(smartlist_t *sl,
                     int (*compare)(const void **a, const void **b));
+void smartlist_uniq(smartlist_t *sl,
+                    int (*compare)(const void **a, const void **b),
+                    void (*free_fn)(void *elt));
 void smartlist_sort_strings(smartlist_t *sl);
+void smartlist_sort_digests(smartlist_t *sl);
+void smartlist_uniq_strings(smartlist_t *sl);
+void smartlist_uniq_digests(smartlist_t *sl);
 void *smartlist_bsearch(smartlist_t *sl, const void *key,
-                        int (*compare)(const void *key, const void **member));
+                        int (*compare)(const void *key, const void **member))
+ ATTR_PURE;
+
+void smartlist_pqueue_add(smartlist_t *sl,
+                          int (*compare)(const void *a, const void *b),
+                          void *item);
+void *smartlist_pqueue_pop(smartlist_t *sl,
+                           int (*compare)(const void *a, const void *b));
+void smartlist_pqueue_assert_ok(smartlist_t *sl,
+                                int (*compare)(const void *a, const void *b));
 
 #define SPLIT_SKIP_SPACE   0x01
 #define SPLIT_IGNORE_BLANK 0x02
 int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
                            int flags, int max);
 char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate,
-                             size_t *len_out);
+                             size_t *len_out) ATTR_MALLOC;
 char *smartlist_join_strings2(smartlist_t *sl, const char *join,
-                              size_t join_len, int terminate, size_t *len_out);
+                              size_t join_len, int terminate, size_t *len_out)
+  ATTR_MALLOC;
 
 /** Iterate over the items in a smartlist <b>sl</b>, in order.  For each item,
  * assign it to a new local variable of type <b>type</b> named <b>var</b>, and
@@ -122,7 +143,8 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   prefix##iter_t *prefix##iter_next(maptype *map, prefix##iter_t *iter); \
   prefix##iter_t *prefix##iter_next_rmv(maptype *map, prefix##iter_t *iter); \
   void prefix##iter_get(prefix##iter_t *iter, keytype *keyp, void **valp); \
-  int prefix##iter_done(prefix##iter_t *iter);
+  int prefix##iter_done(prefix##iter_t *iter);                          \
+  void prefix##assert_ok(maptype *map);
 
 /* Map from const char * to void *. Implemented with a hash table. */
 DECLARE_MAP_FNS(strmap_t, const char *, strmap_);

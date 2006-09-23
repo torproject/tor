@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 9 February 2006 for Tor 0.1.1.13-alpha.
+## Last updated 31 July 2006 for Tor 0.1.2.1-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -23,7 +23,7 @@
 ## server, and not make any local application connections yourself.
 SocksPort 9050 # what port to open for local application connections
 SocksListenAddress 127.0.0.1 # accept connections only from localhost
-#SocksListenAddress 192.168.0.1:9100 # listen on a chosen IP/port too
+#SocksListenAddress 192.168.0.1:9100 # listen on this IP:port also
 
 ## Entry policies to allow/deny SOCKS requests based on IP address.
 ## First entry that matches wins. If no SocksPolicy is set, we accept
@@ -62,9 +62,12 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 
 ############### This section is just for location-hidden services ###
 
-## Look in .../hidden_service/hostname for the address to tell people.
-## HiddenServicePort x y:z says to redirect a port x request from the
-## client to y:z.
+## Once you have configured a hidden service, you can look at the
+## contents of the file ".../hidden_service/hostname" for the address
+## to tell people.
+##
+## HiddenServicePort x y:z says to redirect requests on port x to the
+## address y:z.
 
 #HiddenServiceDir @LOCALSTATEDIR@/lib/tor/hidden_service/
 #HiddenServicePort 80 127.0.0.1:80
@@ -77,29 +80,33 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 
 ################ This section is just for servers #####################
 
-## NOTE: If you enable these, you should consider mailing your identity
-## key fingerprint to the tor-ops, so we can add you to the list of
-## servers that clients will trust. See
-## http://tor.eff.org/cvs/tor/doc/tor-doc-server.html for details.
+## NOTE: If you enable these, you should consider mailing the contents
+## of the "fingerprint" file to the tor-ops, so nobody else can pick
+## your nickname and use a different key. See
+## http://tor.eff.org/docs/tor-doc-server.html for details.
 
-## Required: A unique handle for this server
+## Required: A unique handle for your server.
 #Nickname ididnteditheconfig
 
-## The IP or fqdn for this server. Leave commented out and Tor will guess.
+## The IP or FQDN for your server. Leave commented out and Tor will guess.
 #Address noname.example.com
 
-## Contact info that will be published in the directory, so we can
-## contact you if you need to upgrade or if something goes wrong.
-## This is optional but recommended.
+## Define these to limit your bandwidth usage. Note that BandwidthRate
+## must be at least 20 KB.
+#BandwidthRate 100 KB      # Throttle traffic to 100KB/s (800Kbps)
+#BandwidthBurst 200 KB     # But allow bursts up to 200KB/s (1600Kbps)
+
+## Contact info to be published in the directory, so we can contact you
+## if your server is misconfigured or something else goes wrong.
 #ContactInfo Random Person <nobody AT example dot com>
 ## You might also include your PGP or GPG fingerprint if you have one:
 #ContactInfo 1234D/FFFFFFFF Random Person <nobody AT example dot com>
 
-## Required: what port to advertise for tor connections
+## Required: what port to advertise for Tor connections.
 #ORPort 9001
 ## If you want to listen on a port other than the one advertised
-## in ORPort (e.g. to advertise 443 but bind to 9090), uncomment
-## the line below. You'll need to do ipchains or other port forwarding
+## in ORPort (e.g. to advertise 443 but bind to 9090), uncomment the
+## line below too. You'll need to do ipchains or other port forwarding
 ## yourself to make this work.
 #ORListenAddress 0.0.0.0:9090
 
@@ -108,15 +115,15 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#LimitBandwidth
 #DirPort 9030 # what port to advertise for directory connections
 ## If you want to listen on a port other than the one advertised
-## in DirPort (e.g. to advertise 80 but bind 9091), uncomment the line
-## below. You'll need to do ipchains or other port forwarding yourself
+## in DirPort (e.g. to advertise 80 but bind to 9091), uncomment the line
+## below too. You'll need to do ipchains or other port forwarding yourself
 ## to make this work.
 #DirListenAddress 0.0.0.0:9091
 
 ## Uncomment this if you run more than one Tor server, and add the
 ## nickname of each Tor server you control, even if they're on different
-## networks. We declare it here so clients can avoid using more than
-## one of your servers in a given circuit.
+## networks. You declare it here so Tor clients can avoid using more than
+## one of your servers in a single circuit.
 #MyFamily nickname1,nickname2,...
 
 ## A comma-separated list of exit policies. They're considered first
@@ -135,5 +142,5 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ##
 #ExitPolicy accept *:6660-6667,reject *:* # allow irc ports but no more
 #ExitPolicy accept *:119 # accept nntp as well as default exit policy
-#ExitPolicy reject *:* # middleman only -- no exits allowed
+#ExitPolicy reject *:* # no exits allowed
 

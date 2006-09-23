@@ -19,24 +19,23 @@ const char connection_or_c_id[] =
 
 #define TIGHT_CERT_ALLOW_SKEW (90*60)
 
-static int connection_tls_finish_handshake(connection_t *conn);
-static int connection_or_process_cells_from_inbuf(connection_t *conn);
+static int connection_tls_finish_handshake(or_connection_t *conn);
+static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
 
 /**************************************************************/
 
 /** Map from identity digest of connected OR or desired OR to a connection_t
  * with that identity digest.  If there is more than one such connection_t,
- * they form a linked list, with next_with_same_id as the next pointer.*/
+ * they form a linked list, with next_with_same_id as the next pointer. */
 static digestmap_t *orconn_identity_map = NULL;
 
 /** If conn is listed in orconn_identity_map, remove it, and clear
  * conn->identity_digest. */
 void
-connection_or_remove_from_identity_map(connection_t *conn)
+connection_or_remove_from_identity_map(or_connection_t *conn)
 {
-  connection_t *tmp;
+  or_connection_t *tmp;
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_OR);
   if (!orconn_identity_map)
     return;
   tmp = digestmap_get(orconn_identity_map, conn->identity_digest);
@@ -73,8 +72,9 @@ connection_or_clear_identity_map(void)
   for (i = 0; i < n; ++i) {
     connection_t* conn = carray[i];
     if (conn->type == CONN_TYPE_OR) {
-      memset(conn->identity_digest, 0, DIGEST_LEN);
-      conn->next_with_same_id = NULL;
+      or_connection_t *or_conn = TO_OR_CONN(conn);
+      memset(or_conn->identity_digest, 0, DIGEST_LEN);
+      or_conn->next_with_same_id = NULL;
     }
   }
 
@@ -87,11 +87,10 @@ connection_or_clear_identity_map(void)
 /** Change conn->identity_digest to digest, and add conn into
  * orconn_digest_map. */
 static void
-connection_or_set_identity_digest(connection_t *conn, const char *digest)
+connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 {
-  connection_t *tmp;
+  or_connection_t *tmp;
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_OR);
   tor_assert(digest);
 
   if (!orconn_identity_map)
@@ -136,10 +135,10 @@ cell_unpack(cell_t *dest, const char *src)
 }
 
 int
-connection_or_reached_eof(connection_t *conn)
+connection_or_reached_eof(or_connection_t *conn)
 {
   log_info(LD_OR,"OR connection reached EOF. Closing.");
-  connection_mark_for_close(conn);
+  connection_mark_for_close(TO_CONN(conn));
   return 0;
 }
 
@@ -149,13 +148,14 @@ connection_or_reached_eof(connection_t *conn)
  * and hope for better luck next time.
  */
 static int
-connection_or_read_proxy_response(connection_t *conn)
+connection_or_read_proxy_response(or_connection_t *or_conn)
 {
   char *headers;
   char *reason=NULL;
   int status_code;
   time_t date_header;
   int compression;
+  connection_t *conn = TO_CONN(or_conn);
 
   switch (fetch_from_buf_http(conn->inbuf,
                               &headers, MAX_HEADERS_SIZE,
@@ -185,7 +185,7 @@ connection_or_read_proxy_response(connection_t *conn)
              "HTTPS connect to '%s' successful! (200 %s) Starting TLS.",
              conn->address, escaped(reason));
     tor_free(reason);
-    if (connection_tls_start_handshake(conn, 0) < 0) {
+    if (connection_tls_start_handshake(or_conn, 0) < 0) {
       /* TLS handshaking error of some kind. */
       connection_mark_for_close(conn);
 
@@ -209,12 +209,11 @@ connection_or_read_proxy_response(connection_t *conn)
  * (else do nothing).
  */
 int
-connection_or_process_inbuf(connection_t *conn)
+connection_or_process_inbuf(or_connection_t *conn)
 {
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_OR);
 
-  switch (conn->state) {
+  switch (conn->_base.state) {
     case OR_CONN_STATE_PROXY_READING:
       return connection_or_read_proxy_response(conn);
     case OR_CONN_STATE_OPEN:
@@ -233,24 +232,22 @@ connection_or_process_inbuf(connection_t *conn)
  * return 0.
  */
 int
-connection_or_finished_flushing(connection_t *conn)
+connection_or_finished_flushing(or_connection_t *conn)
 {
   tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_OR);
+  assert_connection_ok(TO_CONN(conn),0);
 
-  assert_connection_ok(conn,0);
-
-  switch (conn->state) {
+  switch (conn->_base.state) {
     case OR_CONN_STATE_PROXY_FLUSHING:
       log_debug(LD_OR,"finished sending CONNECT to proxy.");
-      conn->state = OR_CONN_STATE_PROXY_READING;
-      connection_stop_writing(conn);
+      conn->_base.state = OR_CONN_STATE_PROXY_READING;
+      connection_stop_writing(TO_CONN(conn));
       break;
     case OR_CONN_STATE_OPEN:
-      connection_stop_writing(conn);
+      connection_stop_writing(TO_CONN(conn));
       break;
     default:
-      log_err(LD_BUG,"BUG: called in unexpected state %d.", conn->state);
+      log_err(LD_BUG,"BUG: called in unexpected state %d.", conn->_base.state);
       tor_fragile_assert();
       return -1;
   }
@@ -260,10 +257,11 @@ connection_or_finished_flushing(connection_t *conn)
 /** Connected handler for OR connections: begin the TLS handshake.
  */
 int
-connection_or_finished_connecting(connection_t *conn)
+connection_or_finished_connecting(or_connection_t *or_conn)
 {
-  tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_OR);
+  connection_t *conn;
+  tor_assert(or_conn);
+  conn = TO_CONN(or_conn);
   tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
 
   log_debug(LD_OR,"OR connect() to router at %s:%u finished.",
@@ -298,7 +296,7 @@ connection_or_finished_connecting(connection_t *conn)
     return 0;
   }
 
-  if (connection_tls_start_handshake(conn, 0) < 0) {
+  if (connection_tls_start_handshake(or_conn, 0) < 0) {
     /* TLS handshaking error of some kind. */
     connection_mark_for_close(conn);
     return -1;
@@ -306,63 +304,49 @@ connection_or_finished_connecting(connection_t *conn)
   return 0;
 }
 
-/** Initialize <b>conn</b> to include all the relevant data from <b>router</b>.
- * This function is called either from connection_or_connect(), if
- * we initiated the connect, or from connection_tls_finish_handshake()
- * if the other side initiated it.
- */
-static void
-connection_or_init_conn_from_router(connection_t *conn, routerinfo_t *router,
-                                    int started_here)
-{
-  or_options_t *options = get_options();
-
-  if (!started_here) {
-    conn->addr = router->addr;
-    conn->port = router->or_port;
-  }
-  conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
-  conn->identity_pkey = crypto_pk_dup_key(router->identity_pkey);
-  connection_or_set_identity_digest(conn, router->cache_info.identity_digest);
-  conn->nickname = tor_strdup(router->nickname);
-  tor_free(conn->address);
-  conn->address = tor_strdup(router->address);
-}
-
 /** If we don't necessarily know the router we're connecting to, but we
  * have an addr/port/id_digest, then fill in as much as we can. Start
  * by checking to see if this describes a router we know. */
 static void
-connection_or_init_conn_from_address(connection_t *conn,
+connection_or_init_conn_from_address(or_connection_t *conn,
                                      uint32_t addr, uint16_t port,
                                      const char *id_digest,
                                      int started_here)
 {
-  const char *n;
   or_options_t *options = get_options();
   routerinfo_t *r = router_get_by_digest(id_digest);
-  conn->addr = addr;
-  conn->port = port;
-  if (r) {
-    connection_or_init_conn_from_router(conn, r, started_here);
-    return;
-  }
-  /* This next part isn't really right, but it's good enough for now. */
-  conn->receiver_bucket = conn->bandwidth = (int)options->BandwidthBurst;
+  conn->bandwidthrate = (int)options->BandwidthRate;
+  conn->receiver_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
   connection_or_set_identity_digest(conn, id_digest);
-  /* If we're an authoritative directory server, we may know a
-   * nickname for this router. */
-  n = dirserv_get_nickname_by_digest(id_digest);
-  if (n) {
-    conn->nickname = tor_strdup(n);
+  conn->_base.addr = addr;
+  conn->_base.port = port;
+  if (r) {
+    if (!started_here) {
+      /* Override the addr/port, so our log messages will make sense.
+       * This is dangerous, since if we ever try looking up a conn by
+       * its actual addr/port, we won't remember. Careful! */
+      conn->_base.addr = r->addr;
+      conn->_base.port = r->or_port;
+    }
+    conn->nickname = tor_strdup(r->nickname);
+    tor_free(conn->_base.address);
+    conn->_base.address = tor_strdup(r->address);
   } else {
-    conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
-    conn->nickname[0] = '$';
-    base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
-                  conn->identity_digest, DIGEST_LEN);
+    const char *n;
+    /* If we're an authoritative directory server, we may know a
+     * nickname for this router. */
+    n = dirserv_get_nickname_by_digest(id_digest);
+    if (n) {
+      conn->nickname = tor_strdup(n);
+    } else {
+      conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
+      conn->nickname[0] = '$';
+      base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
+                    conn->identity_digest, DIGEST_LEN);
+    }
+    tor_free(conn->_base.address);
+    conn->_base.address = tor_dup_addr(addr);
   }
-  tor_free(conn->address);
-  conn->address = tor_dup_addr(addr);
 }
 
 /** Return the best connection of type OR with the
@@ -374,11 +358,11 @@ connection_or_init_conn_from_address(connection_t *conn,
  * 4) Then if there are any non-empty conns, ignore empty conns.
  * 5) Of the remaining conns, prefer newer conns.
  */
-connection_t *
+or_connection_t *
 connection_or_get_by_identity_digest(const char *digest)
 {
   int newer;
-  connection_t *conn, *best=NULL;
+  or_connection_t *conn, *best=NULL;
 
   if (!orconn_identity_map)
     return NULL;
@@ -386,26 +370,26 @@ connection_or_get_by_identity_digest(const char *digest)
   conn = digestmap_get(orconn_identity_map, digest);
 
   for (; conn; conn = conn->next_with_same_id) {
-    tor_assert(conn->magic == CONNECTION_MAGIC);
-    tor_assert(conn->type == CONN_TYPE_OR);
+    tor_assert(conn->_base.magic == OR_CONNECTION_MAGIC);
+    tor_assert(conn->_base.type == CONN_TYPE_OR);
     tor_assert(!memcmp(conn->identity_digest, digest, DIGEST_LEN));
-    if (conn->marked_for_close)
+    if (conn->_base.marked_for_close)
       continue;
     if (!best) {
       best = conn; /* whatever it is, it's better than nothing. */
       continue;
     }
-    if (best->state == OR_CONN_STATE_OPEN &&
-        conn->state != OR_CONN_STATE_OPEN)
+    if (best->_base.state == OR_CONN_STATE_OPEN &&
+        conn->_base.state != OR_CONN_STATE_OPEN)
       continue; /* avoid non-open conns if we can */
-    newer = best->timestamp_created < conn->timestamp_created;
+    newer = best->_base.timestamp_created < conn->_base.timestamp_created;
 
-    if (!best->is_obsolete && conn->is_obsolete)
+    if (!best->_base.or_is_obsolete && conn->_base.or_is_obsolete)
       continue; /* We never prefer obsolete over non-obsolete connections. */
 
     if (
       /* We prefer non-obsolete connections: */
-        (best->is_obsolete && !conn->is_obsolete) ||
+        (best->_base.or_is_obsolete && !conn->_base.or_is_obsolete) ||
       /* If both have circuits we prefer the newer: */
         (best->n_circuits && conn->n_circuits && newer) ||
       /* If neither has circuits we prefer the newer: */
@@ -432,26 +416,24 @@ connection_or_get_by_identity_digest(const char *digest)
  *
  * Return the launched conn, or NULL if it failed.
  */
-connection_t *
+or_connection_t *
 connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 {
-  connection_t *conn;
-  routerinfo_t *me;
+  or_connection_t *conn;
   or_options_t *options = get_options();
 
   tor_assert(id_digest);
 
-  if (server_mode(options) && (me=router_get_my_routerinfo()) &&
-      router_digest_is_me(id_digest)) {
+  if (server_mode(options) && router_digest_is_me(id_digest)) {
     log_info(LD_PROTOCOL,"Client asked me to connect to myself. Refusing.");
     return NULL;
   }
 
-  conn = connection_new(CONN_TYPE_OR);
+  conn = TO_OR_CONN(connection_new(CONN_TYPE_OR));
 
   /* set up conn so it's got all the data we need to remember */
   connection_or_init_conn_from_address(conn, addr, port, id_digest, 1);
-  conn->state = OR_CONN_STATE_CONNECTING;
+  conn->_base.state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED);
 
   if (options->HttpsProxy) {
@@ -460,7 +442,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
     port = options->HttpsProxyPort;
   }
 
-  switch (connection_connect(conn, conn->address, addr, port)) {
+  switch (connection_connect(TO_CONN(conn), conn->_base.address, addr, port)) {
     case -1:
       /* If the connection failed immediately, and we're using
        * an https proxy, our https proxy is down. Don't blame the
@@ -470,10 +452,10 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
         router_set_status(conn->identity_digest, 0);
       }
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
-      connection_free(conn);
+      connection_free(TO_CONN(conn));
       return NULL;
     case 0:
-      connection_watch_events(conn, EV_READ | EV_WRITE);
+      connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
       return conn;
@@ -496,16 +478,16 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
 int
-connection_tls_start_handshake(connection_t *conn, int receiving)
+connection_tls_start_handshake(or_connection_t *conn, int receiving)
 {
-  conn->state = OR_CONN_STATE_HANDSHAKING;
-  conn->tls = tor_tls_new(conn->s, receiving, 0);
+  conn->_base.state = OR_CONN_STATE_HANDSHAKING;
+  conn->tls = tor_tls_new(conn->_base.s, receiving);
   if (!conn->tls) {
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
   }
-  connection_start_reading(conn);
-  log_debug(LD_OR,"starting TLS handshake on fd %d", conn->s);
+  connection_start_reading(TO_CONN(conn));
+  log_debug(LD_OR,"starting TLS handshake on fd %d", conn->_base.s);
   if (connection_tls_continue_handshake(conn) < 0) {
     return -1;
   }
@@ -518,7 +500,7 @@ connection_tls_start_handshake(connection_t *conn, int receiving)
  * Return -1 if <b>conn</b> is broken, else return 0.
  */
 int
-connection_tls_continue_handshake(connection_t *conn)
+connection_tls_continue_handshake(or_connection_t *conn)
 {
   check_no_tls_errors();
   switch (tor_tls_handshake(conn->tls)) {
@@ -529,7 +511,7 @@ connection_tls_continue_handshake(connection_t *conn)
     case TOR_TLS_DONE:
      return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
-      connection_start_writing(conn);
+      connection_start_writing(TO_CONN(conn));
       log_debug(LD_OR,"wanted write");
       return 0;
     case TOR_TLS_WANTREAD: /* handshaking conns are *always* reading */
@@ -547,14 +529,12 @@ connection_tls_continue_handshake(connection_t *conn)
  * one day so we're clearer.
  */
 int
-connection_or_nonopen_was_started_here(connection_t *conn)
+connection_or_nonopen_was_started_here(or_connection_t *conn)
 {
-  tor_assert(conn->type == CONN_TYPE_OR);
-
-  if (tor_digest_is_zero(conn->identity_digest))
-    return 0;
-  else
-    return 1;
+  tor_assert(conn->_base.type == CONN_TYPE_OR);
+  if (!conn->tls)
+    return 1; /* it's still in proxy states or something */
+  return !tor_tls_is_server(conn->tls);
 }
 
 /** Conn just completed its handshake. Return 0 if all is well, and
@@ -569,13 +549,13 @@ connection_or_nonopen_was_started_here(connection_t *conn)
  * buffer is undefined.)
  *
  * As side effects,
- * 1) Set conn->circ_id_type according to tor-spec.txt
+ * 1) Set conn->circ_id_type according to tor-spec.txt.
  * 2) If we're an authdirserver and we initiated the connection: drop all
  *    descriptors that claim to be on that IP/port but that aren't
  *    this guy; and note that this guy is reachable.
  */
 static int
-connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
+connection_or_check_valid_handshake(or_connection_t *conn, char *digest_rcvd)
 {
   routerinfo_t *router;
   crypto_pk_env_t *identity_rcvd=NULL;
@@ -586,7 +566,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
   check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) {
     log_info(LD_PROTOCOL,"Peer (%s:%d) didn't send a cert! Closing.",
-             conn->address, conn->port);
+             conn->_base.address, conn->_base.port);
     return -1;
   }
   check_no_tls_errors();
@@ -594,17 +574,17 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
                                      sizeof(nickname))) {
     log_fn(severity,LD_PROTOCOL,"Other side (%s:%d) has a cert without a "
            "valid nickname. Closing.",
-           conn->address, conn->port);
+           conn->_base.address, conn->_base.port);
     return -1;
   }
   check_no_tls_errors();
   log_debug(LD_OR, "Other side (%s:%d) claims to be router '%s'",
-            conn->address, conn->port, nickname);
+            conn->_base.address, conn->_base.port, nickname);
 
   if (tor_tls_verify(severity, conn->tls, &identity_rcvd) < 0) {
     log_fn(severity,LD_OR,"Other side, which claims to be router '%s' (%s:%d),"
            " has a cert but it's invalid. Closing.",
-           nickname, conn->address, conn->port);
+           nickname, conn->_base.address, conn->_base.port);
     return -1;
   }
   check_no_tls_errors();
@@ -625,7 +605,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
     log_fn(severity, LD_OR,
            "Identity key not as expected for router claiming to be "
            "'%s' (%s:%d)",
-           nickname, conn->address, conn->port);
+           nickname, conn->_base.address, conn->_base.port);
     return -1;
   }
 
@@ -641,7 +621,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
       log_fn(severity, LD_OR,
              "Identity key not as expected for router at %s:%d: wanted %s "
              "but got %s",
-             conn->address, conn->port, expected, seen);
+             conn->_base.address, conn->_base.port, expected, seen);
       entry_guard_set_status(conn->identity_digest, 0);
       router_set_status(conn->identity_digest, 0);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
@@ -651,7 +631,7 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
       /* We initiated this connection to address:port.  Drop all routers
        * with the same address:port and a different key or nickname.
        */
-      dirserv_orconn_tls_done(conn->address, conn->port,
+      dirserv_orconn_tls_done(conn->_base.address, conn->_base.port,
                               digest_rcvd, nickname, as_advertised);
     }
     if (!as_advertised)
@@ -667,14 +647,12 @@ connection_or_check_valid_handshake(connection_t *conn, char *digest_rcvd)
  * If he initiated the connection, make sure he's not already connected,
  * then initialize conn from the information in router.
  *
- * If I'm not a server, set bandwidth to the default OP bandwidth.
- *
  * If all is successful, call circuit_n_conn_done() to handle events
  * that have been pending on the tls handshake completion. Also set the
  * directory to be dirty (only matters if I'm an authdirserver).
  */
 static int
-connection_tls_finish_handshake(connection_t *conn)
+connection_tls_finish_handshake(or_connection_t *conn)
 {
   char digest_rcvd[DIGEST_LEN];
   int started_here = connection_or_nonopen_was_started_here(conn);
@@ -684,17 +662,9 @@ connection_tls_finish_handshake(connection_t *conn)
     return -1;
 
   if (!started_here) {
-#if 0
-    connection_t *c;
-    if ((c=connection_or_get_by_identity_digest(digest_rcvd))) {
-      log_debug(LD_OR,
-                "Router '%s' is already connected on fd %d. Dropping fd %d.",
-                c->nickname, c->s, conn->s);
-      return -1;
-    }
-#endif
-    connection_or_init_conn_from_address(conn,conn->addr,conn->port,
-                                         digest_rcvd, 0);
+    connection_or_init_conn_from_address(conn,conn->_base.addr,
+                                         conn->_base.port, digest_rcvd, 0);
+
     /* Annotate that we received a TLS connection.
      * (Todo: only actually consider ourselves reachable if there
      * exists a testing circuit using conn.)
@@ -705,16 +675,12 @@ connection_tls_finish_handshake(connection_t *conn)
      * The reason this bandaid is here is because there's a bug in
      * Tor 0.1.1.x where middle hops don't always send their create
      * cell; so some servers rarely find themselves reachable. */
-//    if (!is_local_IP(conn->addr))
+//    if (!is_local_IP(conn->_base.addr))
 //      router_orport_found_reachable();
   }
 
-  if (!server_mode(get_options())) { /* If I'm an OP... */
-    conn->receiver_bucket = conn->bandwidth = DEFAULT_BANDWIDTH_OP;
-  }
-
   directory_set_dirty();
-  conn->state = OR_CONN_STATE_OPEN;
+  conn->_base.state = OR_CONN_STATE_OPEN;
   control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED);
   if (started_here) {
     rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
@@ -724,7 +690,7 @@ connection_tls_finish_handshake(connection_t *conn)
     }
     router_set_status(conn->identity_digest, 1);
   }
-  connection_watch_events(conn, EV_READ);
+  connection_watch_events(TO_CONN(conn), EV_READ);
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
   return 0;
 }
@@ -736,18 +702,17 @@ connection_tls_finish_handshake(connection_t *conn)
  * ready, then try to flush the record now.
  */
 void
-connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn)
+connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 {
   char networkcell[CELL_NETWORK_SIZE];
   char *n = networkcell;
 
   tor_assert(cell);
   tor_assert(conn);
-  tor_assert(connection_speaks_cells(conn));
 
   cell_pack(n, cell);
 
-  connection_write_to_buf(n, CELL_NETWORK_SIZE, conn);
+  connection_write_to_buf(n, CELL_NETWORK_SIZE, TO_CONN(conn));
 
 #define MIN_TLS_FLUSHLEN 15872
 /* openssl tls record size is 16383, this is close. The goal here is to
@@ -755,26 +720,28 @@ connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn)
  * during periods of high load we won't read the entire megabyte from
  * input before pushing any data out. It also has the feature of not
  * growing huge outbufs unless something is slow. */
-  if (conn->outbuf_flushlen-CELL_NETWORK_SIZE < MIN_TLS_FLUSHLEN &&
-      conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
-    int extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
-    conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
-    if (connection_handle_write(conn) < 0) {
-      if (!conn->marked_for_close) {
+  if (conn->_base.outbuf_flushlen-CELL_NETWORK_SIZE < MIN_TLS_FLUSHLEN &&
+      conn->_base.outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
+    int extra = conn->_base.outbuf_flushlen - MIN_TLS_FLUSHLEN;
+    conn->_base.outbuf_flushlen = MIN_TLS_FLUSHLEN;
+    if (connection_handle_write(TO_CONN(conn)) < 0) {
+      if (!conn->_base.marked_for_close) {
         /* this connection is broken. remove it. */
         log_warn(LD_BUG,
                  "Bug: unhandled error on write for OR conn (fd %d); removing",
-                 conn->s);
+                 conn->_base.s);
         tor_fragile_assert();
-        conn->has_sent_end = 1; /* don't cry wolf about duplicate close */
+        // XXX This was supposed to be edge-only!
+        // conn->has_sent_end = 1; /* don't cry wolf about duplicate close */
+
         /* XXX do we need a close-immediate here, so we don't try to flush? */
-        connection_mark_for_close(conn);
+        connection_mark_for_close(TO_CONN(conn));
       }
       return;
     }
     if (extra) {
-      conn->outbuf_flushlen += extra;
-      connection_start_writing(conn);
+      conn->_base.outbuf_flushlen += extra;
+      connection_start_writing(TO_CONN(conn));
     }
   }
 }
@@ -787,7 +754,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, connection_t *conn)
  * Always return 0.
  */
 static int
-connection_or_process_cells_from_inbuf(connection_t *conn)
+connection_or_process_cells_from_inbuf(or_connection_t *conn)
 {
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
@@ -795,13 +762,13 @@ connection_or_process_cells_from_inbuf(connection_t *conn)
 loop:
   log_debug(LD_OR,
             "%d: starting, inbuf_datalen %d (%d pending in tls object).",
-            conn->s,(int)buf_datalen(conn->inbuf),
+            conn->_base.s,(int)buf_datalen(conn->_base.inbuf),
             tor_tls_get_pending_bytes(conn->tls));
-  if (buf_datalen(conn->inbuf) < CELL_NETWORK_SIZE) /* whole response
-                                                       available? */
+  if (buf_datalen(conn->_base.inbuf) < CELL_NETWORK_SIZE) /* whole response
+                                                             available? */
     return 0; /* not yet */
 
-  connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, conn);
+  connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, TO_CONN(conn));
 
   /* retrieve cell info from buf (create the host-order struct from the
    * network-order string) */
@@ -819,12 +786,11 @@ loop:
  * Return 0.
  */
 int
-connection_or_send_destroy(uint16_t circ_id, connection_t *conn, int reason)
+connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
 {
   cell_t cell;
 
   tor_assert(conn);
-  tor_assert(connection_speaks_cells(conn));
 
   memset(&cell, 0, sizeof(cell_t));
   cell.circ_id = circ_id;
