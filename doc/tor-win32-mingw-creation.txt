@@ -18,6 +18,8 @@ http://prdownloads.sf.net/mingw/w32api-3.6.tar.gz?download
 
 Install mingw, msys and mingw-dtk.
 
+Create a directory called "tor-mingw".
+
 Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
@@ -25,28 +27,24 @@ Download openssl:
 http://www.openssl.org/source/openssl-0.9.8c.tar.gz
 
 Extract openssl:
-cp openssl-0.9.8c.tar.gz tor-mingw/
-cd tor-mingw/
-tar zxf openssl-0.9.8c.tar.gz
+Copy the openssl tarball into the "tor-mingw" directory.
+Type "cd tor-mingw/"
+Type "tar zxf openssl-0.9.8c.tar.gz"
 
-Make openssl.dll:
-cd tor-mingw/openssl-0.9.8c/
-cd crypto/
-find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
-find ./ -type f -name "*.c" -exec cp {} ../test/ \;
-cd ../ssl/
-find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
-cd ..
-cp *.h include/openssl/
-cp ssl/ssltest.c test/
-Edit Makefile and remove the "test" and "tests" sections.
-rm -rf ./test
-./Configure mingw
-make
-
-Note: this fails in test due to: 
-make[1]: *** No rule to make target `sha256t.o', needed by `sha256t.exe'.  Stop.
---need to research this - phobos
+Make openssl libraries:
+Type "cd tor-mingw/openssl-0.9.8c/"
+Type "./Configure mingw"
+Edit Makefile and remove the "test:" and "tests:" sections.
+Type "rm -rf ./test"
+Type "cd crypto/"
+Type "find ./ -name "*.h" -exec cp {} ../include/openssl/ \;"
+Type "cd ../ssl/"
+Type "find ./ -name "*.h" -exec cp {} ../include/openssl/ \;
+Type "cd .."
+Type "cp *.h include/openssl/"
+# The next steps can take up to 30 minutes to complete.
+Type "make"
+Type "make install"
 
 Alternatively:
 Download the pre-compiled openssl for win32.
@@ -60,13 +58,24 @@ Download zlib source:
 http://www.zlib.net/zlib-1.2.3.tar.gz
 
 Extract zlib:
-cp zlib-1.2.3.tar.gz tor-mingw/
-cd tor-mingw/
-tar zxf zlib-1.2.3.tar.gz
+Copy the zlib tarball into the "tor-mingw" directory
+Type "cd tor-mingw/"
+Type "tar zxf zlib-1.2.3.tar.gz"
+
+CHOICE:
+
+Make zlib.a:
+Type "cd tor-mingw/zlib-1.2.3/"
+Type "./configure"
+Type "make"
+Type "make install"
+
+OR 
 
 Make zlib1.dll:
-cd tor-mingw/zlib-1.2.3/
-make -f win32/Makefile.gcc
+Type "cd tor-mingw/zlib-1.2.3"/
+Type "./configure"
+Type "make -f win32/Makefile.gcc"
 
 Done.
 
@@ -77,38 +86,35 @@ Stage Four: Download, extract, and patch libevent-1.1b.
 Download libevent-1.1b:
 http://www.monkey.org/~provos/libevent/
 
-Start up MSYS:
-Start -> Programs -> MinGW -> MSYS -> msys
+Copy the libevent tarball into the "tor-mingw" directory.
+Type "cd tor-mingw"
 
-Create a directory to work within, for example, /c/tor-mingw.
+Extract libevent: 
+Type "tar zxf libevent-1.1b.tar.gz"
 
-Copy libevent and tor tarballs into this working dir:
-cp /path/to/libevent-1.1b.tar.gz /c/tor-mingw/
-cp /patch/to/tor-alpha.tar.gz /c/tor-mingw/
-cd /c/tor-mingw/
+Download the libevent-1.1b-mingw.diff from 
+http://cvsview.seul.org/tor/something/path.
+Copy the libevent-1.1b diff into the libevent-1.1b directory.
+Type "patch -p0 < libevent-1.1b-mingw.diff"
 
-Extract libevent: tar zxf libevent-1.1b.tar.gz
-Extract tor: tar zxf tor-alpha.tar.gz
-
-Copy the libevent-1.1b diff into libevent-1.1b:
-patch -p0 < ../tor-alpha/Win32Build/mingw/libevent-1.1b-mingw.diff
-
-Run "aclocal && autoheader && automake && autoconf".
+Type "aclocal && autoheader && automake && autoconf".
 There may be WARNING messages.  There will be no output if all runs successfuly.
 
-Run "./configure"
-Run "make"
-Run "make install"
+Type "./configure --enable-static --disable-shared"
+Type "make"
+Type "make install"
 
 Stage Five:  Build Tor
 ----------------------
 
-Extract the latest tor from svn in tor-mingw dir:
-tar zxf latest-tor-alpha.tar.gz
+Download the current Tor alpha release from http://tor.eff.org/download.html.
+Copy the Tor tarball into the "tor-mingw" directory.
+Extract Tor:
+Type "tar zxf latest-tor-alpha.tar.gz"
 
-cd tor-alpha
-./autogen.sh
-./configure 
-make
+cd tor-<version>
+Type "./configure --enable-static --disable-shared"
+Type "make"
 
 You now have a tor.exe in src/or/.  This is Tor.
+You now have a tor_resolve.exe in src/tools/.

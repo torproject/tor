@@ -41,6 +41,8 @@ R . If we fail to connect via an exit enclave, (warn and) try again
       so we can abandon then too.
 N - We need a separate list of "hidserv authorities" if we want to
     retire moria1 from the main list.
+P - Figure out why dll's compiled in mingw don't work right in Winxp.
+P - Figure out why openssl 0.9.8c "make test" fails at sha256t test.
 
 Items for 0.1.2.x:
   o re-enable blossom functionality: let tor servers decide if they
