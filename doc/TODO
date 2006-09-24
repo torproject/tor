@@ -183,6 +183,10 @@ NR- Write path-spec.txt
     - Tell people about OSX Uninstaller
     - Quietly document NT Service options
     - Switch canonical win32 compiler to mingw.
+NR  - Get some kind of "meta signing key" to be used solely to sign
+      releases/to certify releases when signed by the right people/
+      to certify sign the right people's keys?  Also use this to cert the SSL
+      key, etc.
 
   - Docs
     - More prominently, we should have a recommended apps list.
