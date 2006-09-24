@@ -121,6 +121,8 @@ d     - Special-case localhost?
     - Check for invalid characters in hostnames before trying to resolve
       them.  (This will help catch attempts do to mean things to our DNS
       server, and bad software that tries to do DNS lookups on whole URLs.)
+      - address_is_invalid_destination() is the right thing to call here
+        (and feel free to make that function smarter)
 
   - Performance improvements
 
