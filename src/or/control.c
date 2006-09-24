@@ -1482,7 +1482,7 @@ handle_getinfo_helper(const char *question, char **answer)
     }
     mappings = smartlist_create();
     addressmap_get_mappings(mappings, min_e, max_e);
-    *answer = smartlist_join_strings(mappings, "\n", 0, NULL);
+    *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
   } else if (!strcmp(question, "dir-usage")) {
@@ -1514,7 +1514,7 @@ handle_getinfo_helper(const char *question, char **answer)
     char *cp;
     if (!get_options()->DirPort) {
       log_warn(LD_CONTROL, "getinfo dir/status/ requires an open dirport.");
-      return 0;
+      return -1;
     }
     status_list = smartlist_create();
     dirserv_get_networkstatus_v2(status_list,

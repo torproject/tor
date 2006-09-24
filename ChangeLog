@@ -11,6 +11,8 @@ Changes in version 0.1.1.24 - 2006-09-xx [ongoing]
     - Allow Tor to start when RunAsDaemon is set but no logs are set.
     - Don't crash when the controller receives a third argument to an
       "extendcircuit" request.
+    - Controller protocol fixes: fix encoding in "getinfo addr-mappings"
+      response; fix error code when "getinfo dir/status/" fails.
     - Fix configure.in to not produce broken configure files with
       more recent versions of autoconf. Thanks to Clint for his auto*
       voodoo.
@@ -19,6 +21,7 @@ Changes in version 0.1.1.24 - 2006-09-xx [ongoing]
       other platforms that do not bounds-check tolower().
     - Warn when using libevent 1.1a or earlier with win32 or kqueue
       methods: these are known to be buggy.
+
 
 Changes in version 0.1.1.23 - 2006-07-30
   o Major bugfixes:
