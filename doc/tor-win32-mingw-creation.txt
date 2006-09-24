@@ -93,7 +93,7 @@ Extract libevent:
 Type "tar zxf libevent-1.1b.tar.gz"
 
 Download the libevent-1.1b-mingw.diff from 
-http://cvsview.seul.org/tor/something/path.
+http://cvs.seul.org/viewcvs/viewcvs.cgi/tor/trunk/Win32Build/mingw/libevent-1.1b-mingw.diff?rev=8456&root=tor&view=log
 Copy the libevent-1.1b diff into the libevent-1.1b directory.
 Type "patch -p0 < libevent-1.1b-mingw.diff"
 
