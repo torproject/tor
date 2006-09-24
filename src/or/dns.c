@@ -114,7 +114,7 @@ static void dns_found_answer(const char *address, int is_reverse,
                              uint32_t addr, const char *hostname, char outcome,
                              uint32_t ttl);
 static void send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
-			       uint8_t answer_type);
+                               uint8_t answer_type);
 static int launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ);
 #ifndef USE_EVENTDNS
 static void dnsworkers_rotate(void);
@@ -394,7 +394,7 @@ purge_expired_resolves(time_t now)
  */
 static void
 send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
-		   uint8_t answer_type)
+                   uint8_t answer_type)
 {
   char buf[RELAY_PAYLOAD_SIZE];
   size_t buflen;
@@ -428,7 +428,7 @@ send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
       return;
     }
   // log_notice(LD_EXIT, "Sending a regular RESOLVED reply: ");
-  
+
   if (!circ) {
     circuit_t *tmp = circuit_get_by_edge_conn(conn);
     if (! CIRCUIT_IS_ORIGIN(tmp))
@@ -450,7 +450,7 @@ send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
  */
 static void
 send_resolved_hostname_cell(edge_connection_t *conn, or_circuit_t *circ,
-			    const char *hostname)
+                            const char *hostname)
 {
   char buf[RELAY_PAYLOAD_SIZE];
   size_t buflen;
@@ -604,7 +604,7 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
       return -1;
     }
     //log_notice(LD_EXIT, "Looks like an address %s",
-    //	exitconn->_base.address);
+    //exitconn->_base.address);
   }
 
   /* now check the hash table to see if 'address' is already there. */
@@ -632,7 +632,7 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
         if (resolve->is_reverse) {
           tor_assert(is_resolve);
           send_resolved_hostname_cell(exitconn, oncirc,
-				      resolve->result.hostname);
+                                      resolve->result.hostname);
         } else {
           exitconn->_base.addr = resolve->result.addr;
           if (is_resolve)
@@ -643,7 +643,7 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
                   exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
-	/*  XXXX send back indication of failure for connect case? -NM*/
+        /*  XXXX send back indication of failure for connect case? -NM*/
         if (is_resolve)
           send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
