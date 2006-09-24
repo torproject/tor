@@ -1899,7 +1899,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   log_debug(LD_EXIT,"about to start the dns_resolve().");
 
   /* send it off to the gethostbyname farm */
-  switch (dns_resolve(n_stream)) {
+  switch (dns_resolve(n_stream, NULL)) {
     case 1: /* resolve worked */
 
       /* add it into the linked list of n_streams on this circuit */
@@ -1912,6 +1912,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       connection_exit_connect(n_stream);
       return 0;
     case -1: /* resolve failed */
+      /*  XXXX send back indication of failure for connect case? -NM*/
       /* n_stream got freed. don't touch it. */
       break;
     case 0: /* resolve added to pending list */
@@ -1954,7 +1955,7 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
   dummy_conn->_base.purpose = EXIT_PURPOSE_RESOLVE;
 
   /* send it off to the gethostbyname farm */
-  switch (dns_resolve(dummy_conn)) {
+  switch (dns_resolve(dummy_conn, circ)) {
     case -1: /* Impossible to resolve; a resolved cell was sent. */
       /* Connection freed; don't touch it. */
       return 0;

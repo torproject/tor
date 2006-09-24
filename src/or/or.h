@@ -2160,7 +2160,7 @@ void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);
 void dns_cancel_pending_resolve(const char *question);
-int dns_resolve(edge_connection_t *exitconn);
+int dns_resolve(edge_connection_t *exitconn, or_circuit_t *circ);
 void dns_launch_wildcard_checks(void);
 
 /********************************* hibernate.c **********************/

@@ -111,7 +111,7 @@ d     - Special-case localhost?
       o Connect to resolve cells, server-side.
       o Add element to routerinfo to note routers that aren't using eventdns,
         so we can avoid sending them reverse DNS etc.
-      - Fix the bug with server-side caching, whatever is causing it.
+      o Fix the bug with server-side caching, whatever is causing it.
       . Add client-side interface
         o SOCKS interface: specify
         o SOCKS interface: implement

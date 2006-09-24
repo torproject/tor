@@ -24,6 +24,11 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       descriptor for a named server with that name, we might return an old
       one.
 
+  o Major bugfixes
+    - When a client asks us to resolve (not connect to) an address,
+      and we have a cached answer, give them the cached answer.
+      Previously, we would give them no answer at all.
+
   o Minor Bugfixes
     - Small performance improvements on parsing descriptors (x2).
     - Major performance descriptor on inserting descriptors; change
