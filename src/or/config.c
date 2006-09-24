@@ -3591,7 +3591,7 @@ check_libevent_version(const char *m, const char *v, int server)
 
   if (!strcmp(m, "kqueue")) {
     if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e") ||
-        !strcmp(v, "1.1")) {
+        !strcmp(v, "1.1") || !strcmp(v, "1.1a")) {
       buggy = 1;
     }
   } else if (!strcmp(m, "epoll")) {
@@ -3605,6 +3605,11 @@ check_libevent_version(const char *m, const char *v, int server)
   } else if (!strcmp(m, "poll")) {
     if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
       slow = 1;
+  } else if (!strcmp(m, "win32")) {
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e") ||
+        !strcmp(v, "1.1") || !strcmp(v, "1.1a")) {
+      buggy = 1;
+    }
   }
 
   if (buggy) {
