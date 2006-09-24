@@ -6,6 +6,9 @@ Changes in version 0.1.1.24 - 2006-09-xx [ongoing]
       whether we have enough directory information every time we want to
       do something, only check when the directory information has changed.
       This should improve client CPU usage by 25-50%.
+    - If we're a directory mirror and we ask for "all" network status
+      documents, we would forget that's what we wanted and discard most
+      of them when they arrived.
 
   o Minor bugfixes:
     - Allow Tor to start when RunAsDaemon is set but no logs are set.

@@ -2363,7 +2363,7 @@ int router_load_single_router(const char *s, uint8_t purpose,
 void router_load_routers_from_string(const char *s, int from_cache,
                                      smartlist_t *requested_fingerprints);
 typedef enum {
-  NS_FROM_CACHE, NS_FROM_DIR, NS_GENERATED
+  NS_FROM_CACHE, NS_FROM_DIR_BY_FP, NS_FROM_DIR_ALL, NS_GENERATED
 } networkstatus_source_t;
 int router_set_networkstatus(const char *s, time_t arrived_at,
                              networkstatus_source_t source,

@@ -977,6 +977,7 @@ connection_dir_client_reached_eof(connection_t *conn)
 
   if (conn->purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     smartlist_t *which = NULL;
+    int source;
     char *cp;
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
              "'%s:%d'",(int) body_len, conn->address, conn->port);
@@ -993,11 +994,13 @@ connection_dir_client_reached_eof(connection_t *conn)
     note_request(was_compressed?"dl/status.z":"dl/status", orig_len);
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"fp/")) {
+      source = NS_FROM_DIR_BY_FP;
       which = smartlist_create();
       dir_split_resource_into_fingerprints(conn->requested_resource+3,
                                            which, NULL, 0);
     } else if (conn->requested_resource &&
                !strcmpstart(conn->requested_resource, "all")) {
+      source = NS_FROM_DIR_ALL;
       which = smartlist_create();
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                         trusted_dir_server_t *, ds,
@@ -1006,6 +1009,8 @@ connection_dir_client_reached_eof(connection_t *conn)
           base16_encode(cp, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
           smartlist_add(which, cp);
         });
+    } else {
+      source = NS_FROM_DIR_BY_FP; /* probably not reached */
     }
     cp = body;
     while (*cp) {
@@ -1013,7 +1018,7 @@ connection_dir_client_reached_eof(connection_t *conn)
       if (next)
         next[1] = '\0';
       /* learn from it, and then remove it from 'which' */
-      if (router_set_networkstatus(cp, time(NULL), NS_FROM_DIR, which)<0)
+      if (router_set_networkstatus(cp, time(NULL), source, which)<0)
         break;
       if (next) {
         next[1] = 'n';
