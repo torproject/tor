@@ -168,7 +168,7 @@ init_cache_map(void)
 #ifdef USE_EVENTDNS
 /** Helper: called by eventdns when eventdns wants to log something. */
 static void
-eventdns_log_cb(int warn, const char *msg)
+evdns_log_cb(int warn, const char *msg)
 {
   if (!strcmpstart(msg, "Resolve requested for") &&
       get_options()->SafeLogging) {
@@ -202,8 +202,8 @@ dns_reset(void)
 #ifdef USE_EVENTDNS
   or_options_t *options = get_options();
   if (! server_mode(options)) {
-    eventdns_clear_nameservers_and_suspend();
-    eventdns_search_clear();
+    evdns_clear_nameservers_and_suspend();
+    evdns_search_clear();
     nameservers_configured = 0;
     tor_free(resolv_conf_fname);
     resolv_conf_mtime = 0;
@@ -1387,7 +1387,7 @@ dns_launch_wildcard_checks(void)
 /** Eventdns helper: return true iff the eventdns result <b>err</b> is
  * a transient failure. */
 static int
-eventdns_err_is_transient(int err)
+evdns_err_is_transient(int err)
 {
   switch (err)
   {
@@ -1442,7 +1442,7 @@ configure_nameservers(int force)
     conf_fname = "/etc/resolv.conf";
 #endif
 
-  eventdns_set_log_fn(eventdns_log_cb);
+  evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
     if (stat(conf_fname, &st)) {
       log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s'",
@@ -1455,13 +1455,13 @@ configure_nameservers(int force)
       return 0;
     }
     if (nameservers_configured) {
-      eventdns_search_clear();
-      eventdns_clear_nameservers_and_suspend();
+      evdns_search_clear();
+      evdns_clear_nameservers_and_suspend();
     }
     log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
-    if (eventdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))
+    if (evdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))
       return -1;
-    if (eventdns_count_nameservers() == 0) {
+    if (evdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.", conf_fname);
       return -1;
     }
@@ -1469,26 +1469,26 @@ configure_nameservers(int force)
     resolv_conf_fname = tor_strdup(conf_fname);
     resolv_conf_mtime = st.st_mtime;
     if (nameservers_configured)
-      eventdns_resume();
+      evdns_resume();
   }
 #ifdef MS_WINDOWS
   else {
     if (nameservers_configured) {
-      eventdns_search_clear();
-      eventdns_clear_nameservers_and_suspend();
+      evdns_search_clear();
+      evdns_clear_nameservers_and_suspend();
     }
-    if (eventdns_config_windows_nameservers())  {
+    if (evdns_config_windows_nameservers())  {
       log_warn(LD_EXIT,"Could not config nameservers.");
       return -1;
     }
-    if (eventdns_count_nameservers() == 0) {
+    if (evdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any platform nameservers in "
                "your Windows configuration.  Perhaps you should list a "
                "ServerDNSResolvConfFile file in your torrc?");
       return -1;
     }
     if (nameservers_configured)
-      eventdns_resume();
+      evdns_resume();
     tor_free(resolv_conf_fname);
     resolv_conf_mtime = 0;
   }
@@ -1502,7 +1502,7 @@ configure_nameservers(int force)
  * See eventdns.h for arguments; 'arg' holds the address we tried to resolve.
  */
 static void
-eventdns_callback(int result, char type, int count, int ttl, void *addresses,
+evdns_callback(int result, char type, int count, int ttl, void *addresses,
                   void *arg)
 {
   char *string_address = arg;
@@ -1554,7 +1554,7 @@ eventdns_callback(int result, char type, int count, int ttl, void *addresses,
                escaped_safe_str(string_address));
     }
   } else {
-    if (eventdns_err_is_transient(result))
+    if (evdns_err_is_transient(result))
       status = DNS_RESOLVE_FAILED_TRANSIENT;
   }
   dns_found_answer(string_address, is_reverse, addr, hostname, status, ttl);
@@ -1583,13 +1583,13 @@ launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
   if (r == 0) {
     log_info(LD_EXIT, "Launching eventdns request for %s",
              escaped_safe_str(exitconn->_base.address));
-    r = eventdns_resolve_ipv4(exitconn->_base.address, options,
-                              eventdns_callback, addr);
+    r = evdns_resolve_ipv4(exitconn->_base.address, options,
+                              evdns_callback, addr);
   } else if (r == 1) {
     log_info(LD_EXIT, "Launching eventdns reverse request for %s",
              escaped_safe_str(exitconn->_base.address));
-    r = eventdns_resolve_reverse(&in, DNS_QUERY_NO_SEARCH,
-                                 eventdns_callback, addr);
+    r = evdns_resolve_reverse(&in, DNS_QUERY_NO_SEARCH,
+                                 evdns_callback, addr);
   } else if (r == -1) {
     log_warn(LD_BUG, "Somehow a malformed in-addr.arpa address reached here.");
   }
@@ -1598,7 +1598,7 @@ launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);
     if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE) {
-      if (eventdns_err_is_transient(r))
+      if (evdns_err_is_transient(r))
         send_resolved_cell(exitconn, circ, RESOLVED_TYPE_ERROR_TRANSIENT);
       else {
         exitconn->address_ttl = DEFAULT_DNS_TTL;
@@ -1658,7 +1658,7 @@ wildcard_increment_answer(const char *id)
 /** Callback function when we get an answer (possibly failing) for a request
  * for a (hopefully) nonexistent domain. */
 static void
-eventdns_wildcard_check_callback(int result, char type, int count, int ttl,
+evdns_wildcard_check_callback(int result, char type, int count, int ttl,
                                  void *addresses, void *arg)
 {
   static int notice_given = 0;
@@ -1704,8 +1704,8 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
   strlcat(name, suffix, sizeof(name));
 
   addr = tor_strdup(name);
-  r = eventdns_resolve_ipv4(name, DNS_QUERY_NO_SEARCH,
-                            eventdns_wildcard_check_callback, addr);
+  r = evdns_resolve_ipv4(name, DNS_QUERY_NO_SEARCH,
+                            evdns_wildcard_check_callback, addr);
   if (r)
     tor_free(addr);
 }

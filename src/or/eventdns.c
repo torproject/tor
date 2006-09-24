@@ -7,16 +7,16 @@
  * reformat the whitespace, add Tor dependencies, or so on.
  *
  * TODO:
- *	 - Support AAAA records
- *	 - Have a way to query for AAAA and A records simultaneously.
- *	 - Improve request API.
- *	 - (Can we suppress cnames? Should we?)
- *	 - Replace all externally visible magic numbers with #defined constants.
- *	 - Write documentation for APIs of all external functions.
+ *   - Have a way to query for AAAA and A records simultaneously.
+ *   - Improve request API.
+ *   - (Can we suppress cnames? Should we?)
+ *   - Replace all externally visible magic numbers with #defined constants.
+ *   - Write documentation for APIs of all external functions.
  */
 
 /* Async DNS Library
  * Adam Langley <agl@imperialviolet.org>
+ * http://www.imperialviolet.org/eventdns.html
  * Public Domain code
  *
  * This software is Public Domain. To view a copy of the public domain dedication,
@@ -25,7 +25,7 @@
  *
  * I ask and expect, but do not require, that all derivative works contain an
  * attribution similar to:
- *	Parts developed by Adam Langley <agl@imperialviolet.org>
+ *  Parts developed by Adam Langley <agl@imperialviolet.org>
  *
  * You may wish to replace the word "Parts" with something else depending on
  * the amount of original code.
@@ -59,16 +59,16 @@
  * one of them. In increasing order of preference:
  *
  * DNS_USE_GETTIMEOFDAY_FOR_ID:
- *	 Using the bottom 16 bits of the usec result from gettimeofday. This
- *	 is a pretty poor solution but should work anywhere.
+ *   Using the bottom 16 bits of the usec result from gettimeofday. This
+ *   is a pretty poor solution but should work anywhere.
  * DNS_USE_CPU_CLOCK_FOR_ID:
- *	 Using the bottom 16 bits of the nsec result from the CPU's time
- *	 counter. This is better, but may not work everywhere. Requires
- *	 POSIX realtime support and you'll need to link against -lrt on
- *	 glibc systems at least.
+ *  Using the bottom 16 bits of the nsec result from the CPU's time
+ *  counter. This is better, but may not work everywhere. Requires
+ *  POSIX realtime support and you'll need to link against -lrt on
+ *  glibc systems at least.
  * DNS_USE_OPENSSL_FOR_ID:
- *	 Uses the OpenSSL RAND_bytes call to generate the data. You must
- *	 have seeded the pool before making any calls to this library.
+ *  Uses the OpenSSL RAND_bytes call to generate the data. You must
+ *  have seeded the pool before making any calls to this library.
  *
  * The library keeps track of the state of nameservers and will avoid
  * them when they go down. Otherwise it will round robin between them.
@@ -76,9 +76,9 @@
  * Quick start guide:
  *	 #include "eventdns.h"
  *	 void callback(int result, char type, int count, int ttl,
- *		 void *addresses, void *arg);
- *	 eventdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");
- *	 eventdns_resolve("www.hostname.com", 0, callback, NULL);
+ *     void *addresses, void *arg);
+ *	 evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");
+ *	 evdns_resolve("www.hostname.com", 0, callback, NULL);
  *
  * When the lookup is complete the callback function is called. The
  * first argument will be one of the DNS_ERR_* defines in eventdns.h.
@@ -86,7 +86,7 @@
  * DNS_IPv4_A, count will be the number of IP addresses, ttl is the time
  * which the data can be cached for (in seconds), addresses will point
  * to an array of uint32_t's and arg will be whatever you passed to
- * eventdns_resolve.
+ * evdns_resolve.
  *
  * Searching:
  *
@@ -97,24 +97,24 @@
  *
  * Searching appears to be a single lookup from the point of view of the API,
  * although many DNS queries may be generated from a single call to
- * eventdns_resolve. Searching can also drastically slow down the resolution
+ * evdns_resolve. Searching can also drastically slow down the resolution
  * of names.
  *
  * To disable searching:
- *	 1. Never set it up. If you never call eventdns_resolv_conf_parse or
- *	 eventdns_search_add then no searching will occur.
+ *	 1. Never set it up. If you never call evdns_resolv_conf_parse or
+ *   evdns_search_add then no searching will occur.
  *
- *	 2. If you do call eventdns_resolv_conf_parse then don't pass
- *	 DNS_OPTION_SEARCH (or DNS_OPTIONS_ALL, which implies it).
+ *	 2. If you do call evdns_resolv_conf_parse then don't pass
+ *   DNS_OPTION_SEARCH (or DNS_OPTIONS_ALL, which implies it).
  *
- *	 3. When calling eventdns_resolve, pass the DNS_QUERY_NO_SEARCH flag.
+ *	 3. When calling evdns_resolve, pass the DNS_QUERY_NO_SEARCH flag.
  *
  * The order of searches depends on the number of dots in the name. If the
  * number is greater than the ndots setting then the names is first tried
  * globally. Otherwise each search domain is appended in turn.
  *
  * The ndots setting can either be set from a resolv.conf, or by calling
- * eventdns_search_ndots_set.
+ * evdns_search_ndots_set.
  *
  * For example, with ndots set to 1 (the default) and a search domain list of
  * ["myhome.net"]:
@@ -126,20 +126,20 @@
  *
  * API reference:
  *
- * int eventdns_nameserver_add(unsigned long int address)
+ * int evdns_nameserver_add(unsigned long int address)
  *	 Add a nameserver. The address should be an IP address in
  *	 network byte order. The type of address is chosen so that
  *	 it matches in_addr.s_addr.
  *	 Returns non-zero on error.
  *
- * int eventdns_nameserver_ip_add(const char *ip_as_string)
+ * int evdns_nameserver_ip_add(const char *ip_as_string)
  *	 This wraps the above function by parsing a string as an IP
  *	 address and adds it as a nameserver.
  *	 Returns non-zero on error
  *
- * int eventdns_resolve(const char *name, int flags,
- *			  eventdns_callback_type callback,
- *			  void *ptr)
+ * int evdns_resolve(const char *name, int flags,
+ *            evdns_callback_type callback,
+ *            void *ptr)
  *	 Resolve a name. The name parameter should be a DNS name.
  *	 The flags parameter should be 0, or DNS_QUERY_NO_SEARCH
  *	 which disables searching for this query. (see defn of
@@ -151,37 +151,37 @@
  *
  *	 Returns non-zero on error
  *
- * void eventdns_search_clear()
+ * void evdns_search_clear()
  *	 Clears the list of search domains
  *
- * void eventdns_search_add(const char *domain)
+ * void evdns_search_add(const char *domain)
  *	 Add a domain to the list of search domains
  *
- * void eventdns_search_ndots_set(int ndots)
+ * void evdns_search_ndots_set(int ndots)
  *	 Set the number of dots which, when found in a name, causes
  *	 the first query to be without any search domain.
  *
- * int eventdns_count_nameservers(void)
+ * int evdns_count_nameservers(void)
  *	 Return the number of configured nameservers (not necessarily the
  *	 number of running nameservers).  This is useful for double-checking
  *	 whether our calls to the various nameserver configuration functions
  *	 have been successful.
  *
- * int eventdns_clear_nameservers_and_suspend(void)
+ * int evdns_clear_nameservers_and_suspend(void)
  *	 Remove all currently configured nameservers, and suspend all pending
  *	 resolves.	Resolves will not necessarily be re-attempted until
- *	 eventdns_resume() is called.
+ *	 evdns_resume() is called.
  *
- * int eventdns_resume(void)
+ * int evdns_resume(void)
  *	 Re-attempt resolves left in limbo after an earlier call to
- *	 eventdns_clear_nameservers_and_suspend().
+ *	 evdns_clear_nameservers_and_suspend().
  *
- * int eventdns_config_windows_nameservers(void)
+ * int evdns_config_windows_nameservers(void)
  *	 Attempt to configure a set of nameservers based on platform settings on
  *	 a win32 host.	Preferentially tries to use GetNetworkParams; if that fails,
  *	 looks in the registry.	 Returns 0 on success, nonzero on failure.
  *
- * int eventdns_resolv_conf_parse(int flags, const char *filename)
+ * int evdns_resolv_conf_parse(int flags, const char *filename)
  *	 Parse a resolv.conf like file from the given filename.
  *
  *	 See the man page for resolv.conf for the format of this file.
@@ -283,8 +283,8 @@
 #include <arpa/inet.h>
 #endif
 
-#define EVENTDNS_LOG_DEBUG 0
-#define EVENTDNS_LOG_WARN 1
+#define EVDNS_LOG_DEBUG 0
+#define EVDNS_LOG_WARN 1
 
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX 255
@@ -326,11 +326,11 @@ typedef unsigned int uint;
 struct request {
 	u8 *request;  // the dns packet data
 	unsigned int request_len;
-	u8 reissue_count;
-	u8 tx_count;  // the number of times that this packet has been sent
-	u8 request_type; // TYPE_PTR or TYPE_A
+	int reissue_count;
+	int tx_count;  // the number of times that this packet has been sent
+	unsigned int request_type; // TYPE_PTR or TYPE_A
 	void *user_pointer;	 // the pointer given to us for this request
-	eventdns_callback_type user_callback;
+	evdns_callback_type user_callback;
 	struct nameserver *ns;	// the server which we last sent it
 
 	// elements used by the searching code
@@ -350,8 +350,8 @@ struct request {
 };
 
 struct reply {
-	u8 type;
-	u8 have_answer;
+	unsigned int type;
+	unsigned int have_answer;
 	union {
 		struct {
 			u32 addrcount;
@@ -395,8 +395,8 @@ static int global_requests_waiting = 0;
 static int global_max_requests_inflight = 64;
 
 static struct timeval global_timeout = {3, 0};	// 3 seconds
-static u8 global_max_reissues = 1;	// a reissue occurs when we get some errors from the server
-static u8 global_max_retransmits = 3;  // number of times we'll retransmit a request which timed out
+static int global_max_reissues = 1;	// a reissue occurs when we get some errors from the server
+static int global_max_retransmits = 3;  // number of times we'll retransmit a request which timed out
 // number of timeouts in a row before we consider this server to be down
 static int global_max_nameserver_timeout = 3;
 
@@ -405,25 +405,26 @@ static int global_max_nameserver_timeout = 3;
 static const struct timeval global_nameserver_timeouts[] = {{10, 0}, {60, 0}, {300, 0}, {900, 0}, {3600, 0}};
 static const int global_nameserver_timeouts_length = sizeof(global_nameserver_timeouts)/sizeof(struct timeval);
 
-const char *const eventdns_error_strings[] = {"no error", "The name server was unable to interpret the query", "The name server suffered an internal error", "The requested domain name does not exist", "The name server refused to reply to the request"};
+const char *const evdns_error_strings[] = {"no error", "The name server was unable to interpret the query", "The name server suffered an internal error", "The requested domain name does not exist", "The name server refused to reply to the request"};
 
 static struct nameserver *nameserver_pick(void);
-static void eventdns_request_insert(struct request *req, struct request **head);
+static void evdns_request_insert(struct request *req, struct request **head);
 static void nameserver_ready_callback(int fd, short events, void *arg);
-static int eventdns_transmit(void);
-static int eventdns_request_transmit(struct request *req);
+static int evdns_transmit(void);
+static int evdns_request_transmit(struct request *req);
 static void nameserver_send_probe(struct nameserver *const ns);
 static void search_request_finished(struct request *const);
 static int search_try_next(struct request *const req);
-static int search_request_new(int type, const char *const name, int flags, eventdns_callback_type user_callback, void *user_arg);
-static void eventdns_requests_pump_waiting_queue(void);
+static int search_request_new(int type, const char *const name, int flags, evdns_callback_type user_callback, void *user_arg);
+static void evdns_requests_pump_waiting_queue(void);
 static u16 transaction_id_pick(void);
-static struct request *request_new(int type, const char *name, int flags, eventdns_callback_type, void *ptr);
+static struct request *request_new(int type, const char *name, int flags, evdns_callback_type, void *ptr);
 static void request_submit(struct request *req);
 
 #ifdef MS_WINDOWS
 static int
-last_error(int sock) {
+last_error(int sock)
+{
 	int optval, optvallen=sizeof(optval);
 	int err = WSAGetLastError();
 	if (err == WSAEWOULDBLOCK && sock >= 0) {
@@ -437,11 +438,13 @@ last_error(int sock) {
 
 }
 static int
-error_is_eagain(int err) {
+error_is_eagain(int err)
+{
 	return err == EAGAIN || err == WSAEWOULDBLOCK;
 }
 static int
-inet_aton(const char *c, struct in_addr *addr) {
+inet_aton(const char *c, struct in_addr *addr)
+{
 	uint32_t r;
 	if (strcmp(c, "255.255.255.255") == 0) {
 		addr->s_addr = 0xffffffffu;
@@ -465,7 +468,8 @@ inet_aton(const char *c, struct in_addr *addr) {
 
 #ifndef NDEBUG
 static const char *
-debug_ntoa(u32 address) {
+debug_ntoa(u32 address)
+{
 	static char buf[32];
 	u32 a = ntohl(address);
 	sprintf(buf, "%d.%d.%d.%d",
@@ -477,25 +481,26 @@ debug_ntoa(u32 address) {
 }
 #endif
 
-static eventdns_debug_log_fn_type eventdns_log_fn = NULL;
+static evdns_debug_log_fn_type evdns_log_fn = NULL;
 
 void
-eventdns_set_log_fn(eventdns_debug_log_fn_type fn) {
-	eventdns_log_fn = fn;
+evdns_set_log_fn(evdns_debug_log_fn_type fn)
+{
+	evdns_log_fn = fn;
 }
 
 #ifdef __GNUC__
-#define EVENTDNS_LOG_CHECK	__attribute__ ((format(printf, 2, 3)))
+#define EVDNS_LOG_CHECK	__attribute__ ((format(printf, 2, 3)))
 #else
-#define EVENTDNS_LOG_CHECK
+#define EVDNS_LOG_CHECK
 #endif
 
-static void _eventdns_log(int warn, const char *fmt, ...) EVENTDNS_LOG_CHECK;
+static void _evdns_log(int warn, const char *fmt, ...) EVDNS_LOG_CHECK;
 static void
-_eventdns_log(int warn, const char *fmt, ...) {
+_evdns_log(int warn, const char *fmt, ...) {
 	va_list args;
 	static char buf[512];
-	if (!eventdns_log_fn)
+	if (!evdns_log_fn)
 		return;
 	va_start(args,fmt);
 #ifdef MS_WINDOWS
@@ -504,11 +509,11 @@ _eventdns_log(int warn, const char *fmt, ...) {
 	vsnprintf(buf, sizeof(buf), fmt, args);
 #endif
 	buf[sizeof(buf)-1] = '\0';
-	eventdns_log_fn(warn, buf);
+	evdns_log_fn(warn, buf);
 	va_end(args);
 }
 
-#define log _eventdns_log
+#define log _evdns_log
 
 // This walks the list of inflight requests to find the
 // one with a matching transaction id. Returns NULL on
@@ -558,7 +563,7 @@ nameserver_probe_failed(struct nameserver *const ns) {
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 	if (evtimer_add(&ns->timeout_event, (struct timeval *) timeout) < 0) {
-		log(EVENTDNS_LOG_WARN,
+		log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
 			debug_ntoa(ns->address));
 		// ???? Do more?
@@ -574,12 +579,12 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	// then don't do anything
 	if (!ns->state) return;
 
-	log(EVENTDNS_LOG_WARN, "Nameserver %s has failed: %s",
+	log(EVDNS_LOG_WARN, "Nameserver %s has failed: %s",
 			debug_ntoa(ns->address), msg);
 	global_good_nameservers--;
 	assert(global_good_nameservers >= 0);
 	if (global_good_nameservers == 0) {
-		log(EVENTDNS_LOG_WARN, "All nameservers have failed");
+		log(EVDNS_LOG_WARN, "All nameservers have failed");
 	}
 
 	ns->state = 0;
@@ -587,7 +592,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 	if (evtimer_add(&ns->timeout_event, (struct timeval *) &global_nameserver_timeouts[0]) < 0) {
-		log(EVENTDNS_LOG_WARN,
+		log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
 			debug_ntoa(ns->address));
 		// ???? Do more?
@@ -618,7 +623,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 static void
 nameserver_up(struct nameserver *const ns) {
 	if (ns->state) return;
-	log(EVENTDNS_LOG_WARN, "Nameserver %s is back up",
+	log(EVDNS_LOG_WARN, "Nameserver %s is back up",
 		debug_ntoa(ns->address));
 	evtimer_del(&ns->timeout_event);
 	ns->state = 1;
@@ -648,7 +653,7 @@ request_finished(struct request *const req, struct request **head) {
 		}
 	}
 
-	log(EVENTDNS_LOG_DEBUG, "Removing timeout for request %lx",
+	log(EVDNS_LOG_DEBUG, "Removing timeout for request %lx",
 		(unsigned long) req);
 	evtimer_del(&req->timeout_event);
 
@@ -665,7 +670,7 @@ request_finished(struct request *const req, struct request **head) {
 
 	free(req);
 
-	eventdns_requests_pump_waiting_queue();
+	evdns_requests_pump_waiting_queue();
 }
 
 // This is called when a server returns a funny error code.
@@ -698,7 +703,7 @@ request_reissue(struct request *req) {
 // this function looks for space on the inflight queue and promotes
 // requests from the waiting queue if it can.
 static void
-eventdns_requests_pump_waiting_queue(void) {
+evdns_requests_pump_waiting_queue(void) {
 	while (global_requests_inflight < global_max_requests_inflight &&
 		global_requests_waiting) {
 		struct request *req;
@@ -721,9 +726,9 @@ eventdns_requests_pump_waiting_queue(void) {
 		req->ns = nameserver_pick();
 		request_trans_id_set(req, transaction_id_pick());
 
-		eventdns_request_insert(req, &req_head);
-		eventdns_request_transmit(req);
-		eventdns_transmit();
+		evdns_request_insert(req, &req_head);
+		evdns_request_transmit(req);
+		evdns_transmit();
 	}
 }
 
@@ -986,7 +991,8 @@ transaction_id_pick(void) {
 #ifdef DNS_USE_CPU_CLOCK_FOR_ID
 		struct timespec ts;
 		const u16 trans_id = ts.tv_nsec & 0xffff;
-		if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts)) abort();
+		if (clock_gettime(CLOCK_MONOTONIC, &ts))
+			abort();
 #endif
 
 #ifdef DNS_USE_GETTIMEOFDAY_FOR_ID
@@ -1087,7 +1093,7 @@ nameserver_write_waiting(struct nameserver *ns, char waiting) {
 	event_set(&ns->event, ns->socket, EV_READ | (waiting ? EV_WRITE : 0) | EV_PERSIST,
 			  nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
-		log(EVENTDNS_LOG_WARN, "Error from libevent when adding event for %s",
+		log(EVDNS_LOG_WARN, "Error from libevent when adding event for %s",
 			debug_ntoa(ns->address));
 		// ???? Do more?
 	}
@@ -1102,7 +1108,7 @@ nameserver_ready_callback(int fd, short events, void *arg) {
 
 	if (events & EV_WRITE) {
 		ns->choaked = 0;
-		if (!eventdns_transmit()) {
+		if (!evdns_transmit()) {
 			nameserver_write_waiting(ns, 0);
 		}
 	}
@@ -1163,20 +1169,20 @@ dnsname_to_labels(u8 *const buf, const char *name, const int name_len) {
 // length. The actual request may be smaller than the value returned
 // here
 static int
-eventdns_request_len(const int name_len) {
+evdns_request_len(const int name_len) {
 	return 96 + // length of the DNS standard header
 		name_len + 2 +
 		4;	// space for the resource type
 }
 
 // build a dns request packet into buf. buf should be at least as long
-// as eventdns_request_len told you it should be.
+// as evdns_request_len told you it should be.
 //
 // Returns the amount of space used. Negative on error.
 static int
-eventdns_request_data_build(const char *const name, const int name_len, const u16 trans_id,
+evdns_request_data_build(const char *const name, const int name_len, const u16 trans_id,
 							const u16 type, const u16 class,
-							u8 *const buf) {
+						 u8 *const buf, size_t buf_len) {
 	int j = 0;	// current offset into buf
 	u16 _t;	 // used by the macros
 	u8 *labels;
@@ -1191,11 +1197,16 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 	APPEND16(0);  // no additional
 
 	labels = (u8 *) malloc(name_len + 2);
-	if (!labels) return -1;
+	if (labels == NULL)
+		return -1;
 	labels_len = dnsname_to_labels(labels, name, name_len);
 	if (labels_len < 0) {
 		free(labels);
 		return labels_len;
+	}
+	if (j + labels_len > buf_len) {
+		free(labels);
+		return (-1);
 	}
 	memcpy(buf + j, labels, labels_len);
 	j += labels_len;
@@ -1211,12 +1222,12 @@ eventdns_request_data_build(const char *const name, const int name_len, const u1
 // this is a libevent callback function which is called when a request
 // has timed out.
 static void
-eventdns_request_timeout_callback(int fd, short events, void *arg) {
+evdns_request_timeout_callback(int fd, short events, void *arg) {
 	struct request *const req = (struct request *) arg;
 	(void) fd;
 	(void) events;
 
-	log(EVENTDNS_LOG_DEBUG, "Request %lx timed out", (unsigned long) arg);
+	log(EVDNS_LOG_DEBUG, "Request %lx timed out", (unsigned long) arg);
 
 	req->ns->timedout++;
 	if (req->ns->timedout > global_max_nameserver_timeout) {
@@ -1230,7 +1241,7 @@ eventdns_request_timeout_callback(int fd, short events, void *arg) {
 		request_finished(req, &req_head);
 	} else {
 		// retransmit it
-		eventdns_request_transmit(req);
+		evdns_request_transmit(req);
 	}
 }
 
@@ -1241,7 +1252,7 @@ eventdns_request_timeout_callback(int fd, short events, void *arg) {
 //	 1 temporary failure
 //	 2 other failure
 static int
-eventdns_request_transmit_to(struct request *req, struct nameserver *server) {
+evdns_request_transmit_to(struct request *req, struct nameserver *server) {
 	const int r = send(server->socket, req->request, req->request_len, 0);
 	if (r < 0) {
 		int err = last_error(server->socket);
@@ -1262,11 +1273,11 @@ eventdns_request_transmit_to(struct request *req, struct nameserver *server) {
 //	 0 ok
 //	 1 failed
 static int
-eventdns_request_transmit(struct request *req) {
+evdns_request_transmit(struct request *req) {
 	int retcode = 0, r;
 
 	// if we fail to send this packet then this flag marks it
-	// for eventdns_transmit
+	// for evdns_transmit
 	req->transmit_me = 1;
 	if (req->trans_id == 0xffff) abort();
 
@@ -1276,7 +1287,7 @@ eventdns_request_transmit(struct request *req) {
 		return 1;
 	}
 
-	r = eventdns_request_transmit_to(req, req->ns);
+	r = evdns_request_transmit_to(req, req->ns);
 	switch (r) {
 	case 1:
 		// temp failure
@@ -1289,11 +1300,11 @@ eventdns_request_transmit(struct request *req) {
 		// fall through
 	default:
 		// all ok
-		log(EVENTDNS_LOG_DEBUG,
+		log(EVDNS_LOG_DEBUG,
 			"Setting timeout for request %lx", (unsigned long) req);
-		evtimer_set(&req->timeout_event, eventdns_request_timeout_callback, req);
+		evtimer_set(&req->timeout_event, evdns_request_timeout_callback, req);
 		if (evtimer_add(&req->timeout_event, &global_timeout) < 0) {
-			log(EVENTDNS_LOG_WARN,
+			log(EVDNS_LOG_WARN,
 				"Error from libevent when adding timer for "
 				"request %lx", (unsigned long) req);
 			// ???? Do more?
@@ -1324,7 +1335,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 	// here we need to send a probe to a given nameserver
 	// in the hope that it is up now.
 
-	log(EVENTDNS_LOG_DEBUG, "Sending probe to %s", debug_ntoa(ns->address));
+	log(EVDNS_LOG_DEBUG, "Sending probe to %s", debug_ntoa(ns->address));
 	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
 	if (!req) return;
 	// we force this into the inflight queue no matter what
@@ -1337,7 +1348,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 //	 0 didn't try to transmit anything
 //	 1 tried to transmit something
 static int
-eventdns_transmit(void) {
+evdns_transmit(void) {
 	char did_try_to_transmit = 0;
 
 	if (req_head) {
@@ -1346,7 +1357,7 @@ eventdns_transmit(void) {
 		do {
 			if (req->transmit_me) {
 				did_try_to_transmit = 1;
-				eventdns_request_transmit(req);
+				evdns_request_transmit(req);
 			}
 
 			req = req->next;
@@ -1358,7 +1369,7 @@ eventdns_transmit(void) {
 
 // exported function
 int
-eventdns_count_nameservers(void) {
+evdns_count_nameservers(void) {
 	const struct nameserver *server = server_head;
 	int n = 0;
 	if (!server)
@@ -1372,7 +1383,7 @@ eventdns_count_nameservers(void) {
 
 // exported function
 int
-eventdns_clear_nameservers_and_suspend(void) {
+evdns_clear_nameservers_and_suspend(void) {
 	struct nameserver *server = server_head, *started_at = server_head;
 	struct request *req = req_head, *req_started_at = req_head;
 
@@ -1402,7 +1413,7 @@ eventdns_clear_nameservers_and_suspend(void) {
 		req->transmit_me = 0;
 
 		global_requests_waiting++;
-		eventdns_request_insert(req, &req_waiting_head);
+		evdns_request_insert(req, &req_waiting_head);
 		/* We want to insert these suspended elements at the front of
 		 * the waiting queue, since they were pending before any of
 		 * the waiting entries were added.	This is a circular list,
@@ -1421,14 +1432,14 @@ eventdns_clear_nameservers_and_suspend(void) {
 
 // exported function
 int
-eventdns_resume(void) {
-	eventdns_requests_pump_waiting_queue();
+evdns_resume(void) {
+	evdns_requests_pump_waiting_queue();
 	return 0;
 }
 
 // exported function
 int
-eventdns_nameserver_add(unsigned long int address) {
+evdns_nameserver_add(unsigned long int address) {
 	// first check to see if we already have this nameserver
 
 	const struct nameserver *server = server_head, *const started_at = server_head;
@@ -1473,7 +1484,7 @@ eventdns_nameserver_add(unsigned long int address) {
 		goto out2;
 	}
 
-	log(EVENTDNS_LOG_DEBUG, "Added nameserver %s", debug_ntoa(address));
+	log(EVDNS_LOG_DEBUG, "Added nameserver %s", debug_ntoa(address));
 
 	// insert this nameserver into the list of them
 	if (!server_head) {
@@ -1496,22 +1507,22 @@ eventdns_nameserver_add(unsigned long int address) {
 	CLOSE_SOCKET(ns->socket);
  out1:
 	free(ns);
-	log(EVENTDNS_LOG_WARN, "Unable to add nameserver %s: error %d",
+	log(EVDNS_LOG_WARN, "Unable to add nameserver %s: error %d",
 		debug_ntoa(address), err);
 	return err;
 }
 
 // exported function
 int
-eventdns_nameserver_ip_add(const char *ip_as_string) {
+evdns_nameserver_ip_add(const char *ip_as_string) {
 	struct in_addr ina;
 	if (!inet_aton(ip_as_string, &ina)) return 4;
-	return eventdns_nameserver_add(ina.s_addr);
+	return evdns_nameserver_add(ina.s_addr);
 }
 
 // insert into the tail of the queue
 static void
-eventdns_request_insert(struct request *req, struct request **head) {
+evdns_request_insert(struct request *req, struct request **head) {
 	if (!*head) {
 		*head = req;
 		req->next = req->prev = req;
@@ -1535,11 +1546,11 @@ string_num_dots(const char *s) {
 }
 
 static struct request *
-request_new(int type, const char *name, int flags, eventdns_callback_type callback, void *user_ptr) {
+request_new(int type, const char *name, int flags, evdns_callback_type callback, void *user_ptr) {
 	const char issuing_now = (global_requests_inflight < global_max_requests_inflight) ? 1 : 0;
 
 	const int name_len = strlen(name);
-	const int request_max_len = eventdns_request_len(name_len);
+	const int request_max_len = evdns_request_len(name_len);
 	const u16 trans_id = issuing_now ? transaction_id_pick() : 0xffff;
 	// the request data is alloced in a single block with the header
 	struct request *const req = (struct request *) malloc(sizeof(struct request) + request_max_len);
@@ -1552,7 +1563,7 @@ request_new(int type, const char *name, int flags, eventdns_callback_type callba
 	// request data lives just after the header
 	req->request = ((u8 *) req) + sizeof(struct request);
 	req->request_appended = 1;	// denotes that the request data shouldn't be free()ed
-	rlen = eventdns_request_data_build(name, name_len, trans_id, type, CLASS_INET, req->request);
+	rlen = evdns_request_data_build(name, name_len, trans_id, type, CLASS_INET, req->request, request_max_len);
 	if (rlen < 0) goto err1;
 	req->request_len = rlen;
 	req->trans_id = trans_id;
@@ -1574,18 +1585,18 @@ request_submit(struct request *const req) {
 	if (req->ns) {
 		// if it has a nameserver assigned then this is going
 		// straight into the inflight queue
-		eventdns_request_insert(req, &req_head);
+		evdns_request_insert(req, &req_head);
 		global_requests_inflight++;
-		eventdns_request_transmit(req);
+		evdns_request_transmit(req);
 	} else {
-		eventdns_request_insert(req, &req_waiting_head);
+		evdns_request_insert(req, &req_waiting_head);
 		global_requests_waiting++;
 	}
 }
 
 // exported function
-int eventdns_resolve_ipv4(const char *name, int flags, eventdns_callback_type callback, void *ptr) {
-	log(EVENTDNS_LOG_DEBUG, "Resolve requested for %s", name);
+int evdns_resolve_ipv4(const char *name, int flags, evdns_callback_type callback, void *ptr) {
+	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
 	if (flags & DNS_QUERY_NO_SEARCH) {
 		struct request *const req = request_new(TYPE_A, name, flags, callback, ptr);
 		if (!req) return 1;
@@ -1596,7 +1607,7 @@ int eventdns_resolve_ipv4(const char *name, int flags, eventdns_callback_type ca
 	}
 }
 
-int eventdns_resolve_reverse(struct in_addr *in, int flags, eventdns_callback_type callback, void *ptr) {
+int evdns_resolve_reverse(struct in_addr *in, int flags, evdns_callback_type callback, void *ptr) {
 	char buf[32];
 	struct request *req;
 	u32 a;
@@ -1607,7 +1618,7 @@ int eventdns_resolve_reverse(struct in_addr *in, int flags, eventdns_callback_ty
 			(int)(u8)((a>>8 )&0xff),
 			(int)(u8)((a>>16)&0xff),
 			(int)(u8)((a>>24)&0xff));
-	log(EVENTDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
+	log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
 	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
 	if (!req) return 1;
 	request_submit(req);
@@ -1676,7 +1687,7 @@ search_postfix_clear(void) {
 
 // exported function
 void
-eventdns_search_clear(void) {
+evdns_search_clear(void) {
 	search_postfix_clear();
 }
 
@@ -1718,13 +1729,13 @@ search_reverse(void) {
 
 // exported function
 void
-eventdns_search_add(const char *domain) {
+evdns_search_add(const char *domain) {
 	search_postfix_add(domain);
 }
 
 // exported function
 void
-eventdns_search_ndots_set(const int ndots) {
+evdns_search_ndots_set(const int ndots) {
 	if (!global_search_state) global_search_state = search_state_new();
 		if (!global_search_state) return;
 	global_search_state->ndots = ndots;
@@ -1769,7 +1780,7 @@ search_make_new(const struct search_state *const state, int n, const char *const
 }
 
 static int
-search_request_new(int type, const char *const name, int flags, eventdns_callback_type user_callback, void *user_arg) {
+search_request_new(int type, const char *const name, int flags, evdns_callback_type user_callback, void *user_arg) {
 	assert(type == TYPE_A);
 	if ( ((flags & DNS_QUERY_NO_SEARCH) == 0) &&
 		 global_search_state &&
@@ -1820,7 +1831,7 @@ search_try_next(struct request *const req) {
 			if (string_num_dots(req->search_origname) < req->search_state->ndots) {
 				// yep, we need to try it raw
 				struct request *const newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
-				log(EVENTDNS_LOG_DEBUG, "Search: trying raw query %s", req->search_origname);
+				log(EVDNS_LOG_DEBUG, "Search: trying raw query %s", req->search_origname);
 				if (newreq) {
 					request_submit(newreq);
 					return 0;
@@ -1831,7 +1842,7 @@ search_try_next(struct request *const req) {
 
 		new_name = search_make_new(req->search_state, req->search_index, req->search_origname);
 				if (!new_name) return 1;
-		log(EVENTDNS_LOG_DEBUG, "Search: now trying %s (%d)", new_name, req->search_index);
+		log(EVDNS_LOG_DEBUG, "Search: now trying %s (%d)", new_name, req->search_index);
 		newreq = request_new(req->request_type, new_name, req->search_flags, req->user_callback, req->user_pointer);
 		free(new_name);
 		if (!newreq) return 1;
@@ -1863,10 +1874,10 @@ search_request_finished(struct request *const req) {
 // Parsing resolv.conf files
 
 static void
-eventdns_resolv_set_defaults(int flags) {
+evdns_resolv_set_defaults(int flags) {
 	// if the file isn't found then we assume a local resolver
 	if (flags & DNS_OPTION_SEARCH) search_set_from_hostname();
-	if (flags & DNS_OPTION_NAMESERVERS) eventdns_nameserver_ip_add("127.0.0.1");
+	if (flags & DNS_OPTION_NAMESERVERS) evdns_nameserver_ip_add("127.0.0.1");
 }
 
 #ifndef HAVE_STRTOK_R
@@ -1900,7 +1911,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 
 		if (inet_aton(nameserver, &ina)) {
 			// address is valid
-			eventdns_nameserver_add(ina.s_addr);
+			evdns_nameserver_add(ina.s_addr);
 		}
 	} else if (!strcmp(first_token, "domain") && (flags & DNS_OPTION_SEARCH)) {
 		const char *const domain = NEXT_TOKEN;
@@ -1924,7 +1935,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 				const int ndots = strtoint(&option[6]);
 				if (ndots == -1) continue;
 				if (!(flags & DNS_OPTION_SEARCH)) continue;
-				log(EVENTDNS_LOG_DEBUG,"Setting ndots to %d", ndots);
+				log(EVDNS_LOG_DEBUG,"Setting ndots to %d", ndots);
 				if (!global_search_state) global_search_state = search_state_new();
 								if (!global_search_state) return;
 				global_search_state->ndots = ndots;
@@ -1932,14 +1943,14 @@ resolv_conf_parse_line(char *const start, int flags) {
 				const int timeout = strtoint(&option[8]);
 				if (timeout == -1) continue;
 				if (!(flags & DNS_OPTION_MISC)) continue;
-				log(EVENTDNS_LOG_DEBUG,"Setting timeout to %d", timeout);
+				log(EVDNS_LOG_DEBUG,"Setting timeout to %d", timeout);
 				global_timeout.tv_sec = timeout;
 			} else if (!strncmp(option, "attempts:", 9)) {
 				int retries = strtoint(&option[9]);
 				if (retries == -1) continue;
 				if (retries > 255) retries = 255;
 				if (!(flags & DNS_OPTION_MISC)) continue;
-				log(EVENTDNS_LOG_DEBUG,"Setting retries to %d", retries);
+				log(EVDNS_LOG_DEBUG,"Setting retries to %d", retries);
 				global_max_retransmits = retries;
 			}
 		}
@@ -1956,24 +1967,24 @@ resolv_conf_parse_line(char *const start, int flags) {
 //	 4 out of memory
 //	 5 short read from file
 int
-eventdns_resolv_conf_parse(int flags, const char *const filename) {
+evdns_resolv_conf_parse(int flags, const char *const filename) {
 	struct stat st;
 	int fd;
 	u8 *resolv;
 	char *start;
 	int err = 0;
 
-	log(EVENTDNS_LOG_DEBUG,"Parsing resolve.conf file %s", filename);
+	log(EVDNS_LOG_DEBUG,"Parsing resolve.conf file %s", filename);
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
-		eventdns_resolv_set_defaults(flags);
+		evdns_resolv_set_defaults(flags);
 		return 0;
 	}
 
 	if (fstat(fd, &st)) { err = 2; goto out1; }
 	if (!st.st_size) {
-		eventdns_resolv_set_defaults(flags);
+		evdns_resolv_set_defaults(flags);
 		err = 0;
 		goto out1;
 	}
@@ -2000,7 +2011,7 @@ eventdns_resolv_conf_parse(int flags, const char *const filename) {
 
 	if (!server_head && (flags & DNS_OPTION_NAMESERVERS)) {
 		// no nameservers were configured.
-		eventdns_nameserver_ip_add("127.0.0.1");
+		evdns_nameserver_ip_add("127.0.0.1");
 	}
 	if (flags & DNS_OPTION_SEARCH && (!global_search_state || global_search_state->num_domains == 0)) {
 		search_set_from_hostname();
@@ -2016,7 +2027,7 @@ out1:
 #ifdef MS_WINDOWS
 // Add multiple nameservers from a space-or-comma-separated list.
 static int
-eventdns_nameserver_ip_add_line(const char *ips) {
+evdns_nameserver_ip_add_line(const char *ips) {
 	const char *addr;
 	char *buf;
 	int r;
@@ -2030,7 +2041,7 @@ eventdns_nameserver_ip_add_line(const char *ips) {
 		if (!buf) return 4;
 		memcpy(buf, addr, ips-addr);
 		buf[ips-addr] = '\0';
-		r = eventdns_nameserver_ip_add(buf);
+		r = evdns_nameserver_ip_add(buf);
 		free(buf);
 		if (r) return r;
 	}
@@ -2053,7 +2064,7 @@ load_nameservers_with_getnetworkparams(void) {
 	GetNetworkParams_fn_t fn;
 
 	if (!(handle = LoadLibrary("iphlpapi.dll"))) {
-		log(EVENTDNS_LOG_WARN,"Could not open iphlpapi.dll");
+		log(EVDNS_LOG_WARN,"Could not open iphlpapi.dll");
 		//right now status = 0, doesn't that mean "good" - mikec
 		status = -1;
 		goto done;
@@ -2062,7 +2073,7 @@ load_nameservers_with_getnetworkparams(void) {
 	if (!(fn =
 		  (GetNetworkParams_fn_t)
 		  GetProcAddress(handle, "GetNetworkParams"))) {
-		log(EVENTDNS_LOG_WARN,"Could not get address of function.");
+		log(EVDNS_LOG_WARN,"Could not get address of function.");
 		//same as above
 		status = -1;
 		goto done;
@@ -2086,7 +2097,7 @@ load_nameservers_with_getnetworkparams(void) {
 		fixed = buf;
 		r = fn(fixed, &size);
 		if (r != ERROR_SUCCESS) {
-			log(EVENTDNS_LOG_DEBUG,"fn() failed.");
+			log(EVDNS_LOG_DEBUG,"fn() failed.");
 			status = -1;
 			goto done;
 		}
@@ -2096,14 +2107,14 @@ load_nameservers_with_getnetworkparams(void) {
 	added_any = 0;
 	ns = &(fixed->DnsServerList);
 	while (ns) {
-		r = eventdns_nameserver_ip_add_line(ns->IpAddress.String);
+		r = evdns_nameserver_ip_add_line(ns->IpAddress.String);
 		if (r) {
-			log(EVENTDNS_LOG_DEBUG,"Could not add nameserver %s to list,error: %d",
+			log(EVDNS_LOG_DEBUG,"Could not add nameserver %s to list,error: %d",
 				(ns->IpAddress.String),(int)GetLastError());
 			status = r;
 			goto done;
 		} else {
-			log(EVENTDNS_LOG_DEBUG,"Succesfully added %s as nameserver",ns->IpAddress.String);
+			log(EVDNS_LOG_DEBUG,"Succesfully added %s as nameserver",ns->IpAddress.String);
 		}
 
 		added_any++;
@@ -2112,7 +2123,7 @@ load_nameservers_with_getnetworkparams(void) {
 
 	if (!added_any) {
 		//should we ever get here? - mikec
-		log(EVENTDNS_LOG_DEBUG,"No name servers added.");
+		log(EVDNS_LOG_DEBUG,"No name servers added.");
 		status = -1;
 	}
 
@@ -2138,7 +2149,7 @@ config_nameserver_from_reg_key(HKEY key, const char *subkey) {
 
 	if (RegQueryValueEx(key, subkey, 0, &type, (LPBYTE)buf, &bufsz)
 		== ERROR_SUCCESS && bufsz > 1) {
-		status = eventdns_nameserver_ip_add_line(buf);
+		status = evdns_nameserver_ip_add_line(buf);
 	}
 
 	free(buf);
@@ -2156,11 +2167,11 @@ load_nameservers_from_registry(void) {
 	int r;
 #define TRY(k, name)													\
 	if (!found && config_nameserver_from_reg_key(k,name) == 0) {		\
-		log(EVENTDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);	\
+		log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);	\
 		found = 1;														\
 	} else {															\
 		if (!found)														\
-			log(EVENTDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",	\
+			log(EVDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",	\
 				#k,#name);												\
 	}
 
@@ -2169,7 +2180,7 @@ load_nameservers_from_registry(void) {
 
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
 						 KEY_READ, &nt_key) != ERROR_SUCCESS) {
-			log(EVENTDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
+			log(EVDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
 			return -1;
 		}
 
@@ -2178,7 +2189,7 @@ load_nameservers_from_registry(void) {
 						 &interfaces_key);
 
 		if (r != ERROR_SUCCESS ) {
-			log(EVENTDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
+			log(EVDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
 			return -1;
 		}
 
@@ -2192,7 +2203,7 @@ load_nameservers_from_registry(void) {
 		HKEY win_key = 0;
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
 						 KEY_READ, &win_key) != ERROR_SUCCESS) {
-			log(EVENTDNS_LOG_DEBUG,"Couldn't open registry key, %d",(int)GetLastError());
+			log(EVDNS_LOG_DEBUG,"Couldn't open registry key, %d",(int)GetLastError());
 			return -1;
 
 		}
@@ -2201,7 +2212,7 @@ load_nameservers_from_registry(void) {
 	}
 
 	if (found == 0) {
-		log(EVENTDNS_LOG_WARN,"Didn't find any nameservers.");
+		log(EVDNS_LOG_WARN,"Didn't find any nameservers.");
 	}
 
 	return found ? 0 : -1;
@@ -2209,7 +2220,7 @@ load_nameservers_from_registry(void) {
 }
 
 int
-eventdns_config_windows_nameservers(void) {
+evdns_config_windows_nameservers(void) {
 	if (load_nameservers_with_getnetworkparams() == 0) {
 		return 0;
 	}
@@ -2218,7 +2229,7 @@ eventdns_config_windows_nameservers(void) {
 }
 #endif
 
-#ifdef EVENTDNS_MAIN
+#ifdef EVDNS_MAIN
 void
 main_callback(int result, char type, int count, int ttl,
 			  void *addrs, void *orig) {
@@ -2261,8 +2272,8 @@ main(int c, char **v) {
 	}
 	event_init();
 	if (verbose)
-		eventdns_set_log_fn(logfn);
-	eventdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS, "/etc/resolv.conf");
+		evdns_set_log_fn(logfn);
+	evdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS, "/etc/resolv.conf");
 	for (; idx < c; ++idx) {
 		if (reverse) {
 			struct in_addr addr;
@@ -2271,15 +2282,28 @@ main(int c, char **v) {
 				continue;
 			}
 			fprintf(stderr, "resolving %s...\n",v[idx]);
-			eventdns_resolve_reverse(&addr, 0, main_callback, v[idx]);
+			evdns_resolve_reverse(&addr, 0, main_callback, v[idx]);
 		} else {
 			fprintf(stderr, "resolving (fwd) %s...\n",v[idx]);
-			eventdns_resolve_ipv4(v[idx], 0, main_callback, v[idx]);
+			evdns_resolve_ipv4(v[idx], 0, main_callback, v[idx]);
 		}
 	}
 	fflush(stdout);
 	event_dispatch();
 	return 0;
+}
+
+int
+evdns_init()
+{
+        int res = 0;
+#ifdef MS_WINDOWS
+        evdns_config_windows_nameservers(void);
+#else
+        res = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");
+#endif
+
+        return (res);
 }
 
 #endif
