@@ -36,7 +36,7 @@ static int runningrouters_is_dirty = 1;
 static int the_v2_networkstatus_is_dirty = 1;
 
 static void directory_remove_invalid(void);
-static cached_dir_t *dirserv_regenerate_directory(void);
+static int dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
 /* Should be static; exposed for testing */
 int add_fingerprint_to_dir(const char *nickname, const char *fp,
@@ -51,7 +51,6 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
                         const char **msg, int should_log);
 static int dirserv_thinks_router_is_reachable(routerinfo_t *router,
                                               time_t now);
-static void clear_cached_dir(cached_dir_t *d);
 
 /************** Fingerprint handling code ************/
 
@@ -122,31 +121,24 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
   return 0;
 }
 
-/** Load the nickname-\>fingerprint mappings stored in the approved-routers
- * file.  The file format is line-based, with each non-blank holding one
- * nickname, some space, and a fingerprint for that nickname.  On success,
- * replace the current fingerprint list with the new list and return 0.  On
- * failure, leave the current fingerprint list untouched, and
- * return -1. */
+/** Parse the nickname-\>fingerprint mappings stored in the file named
+ * <b>fname</b>.  The file format is line-based, with each non-blank
+ * holding one nickname, some space, and a fingerprint for that
+ * nickname.  On success, replace the current fingerprint list with
+ * the contents of <b>fname</b> and return 0.  On failure, leave the
+ * current fingerprint list untouched, and return -1. */
 int
-dirserv_load_fingerprint_file(void)
+dirserv_parse_fingerprint_file(const char *fname)
 {
-  char fname[512];
   char *cf;
   char *nickname, *fingerprint;
   smartlist_t *fingerprint_list_new;
   int result;
   config_line_t *front=NULL, *list;
-  or_options_t *options = get_options();
-
-  tor_snprintf(fname, sizeof(fname),
-               "%s/approved-routers", options->DataDirectory);
-  log_info(LD_GENERAL,
-           "Reloading approved fingerprints from \"%s\"...", fname);
 
   cf = read_file_to_str(fname, 0);
   if (!cf) {
-    if (options->NamingAuthoritativeDir) {
+    if (get_options()->NamingAuthoritativeDir) {
       log_warn(LD_FS, "Cannot open fingerprint file '%s'. Failing.", fname);
       return -1;
     } else {
@@ -462,7 +454,6 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
     case FP_INVALID:
       ri->is_named = ri->is_valid = 0;
       break;
-    case FP_REJECT:
     default:
       tor_assert(0);
   }
@@ -489,7 +480,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   *msg = NULL;
 
   /* Check: is the descriptor syntactically valid? */
-  ri = router_parse_entry_from_string(desc, NULL, 1);
+  ri = router_parse_entry_from_string(desc, NULL);
   if (!ri) {
     log_warn(LD_DIRSERV, "Couldn't parse uploaded server descriptor");
     *msg = "Rejected: Couldn't parse server descriptor.";
@@ -665,7 +656,7 @@ list_single_server_status(routerinfo_t *desc, int is_live)
 /** Each server needs to have passed a reachability test no more
  * than this number of seconds ago, or he is listed as down in
  * the directory. */
-#define REACHABLE_TIMEOUT (45*60)
+#define REACHABLE_TIMEOUT (30*60)
 
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
@@ -769,12 +760,11 @@ live_enough_for_v1_dir(routerinfo_t *ri, time_t now)
 /** Generate a new v1 directory and write it into a newly allocated string.
  * Point *<b>dir_out</b> to the allocated string.  Sign the
  * directory with <b>private_key</b>.  Return 0 on success, -1 on
- * failure. If <b>complete</b> is set, give us all the descriptors;
- * otherwise leave out non-running and non-valid ones.
+ * failure.
  */
 int
 dirserv_dump_directory_to_string(char **dir_out,
-                                 crypto_pk_env_t *private_key, int complete)
+                                 crypto_pk_env_t *private_key)
 {
   char *cp;
   char *router_status;
@@ -808,7 +798,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-                    if (complete || live_enough_for_v1_dir(ri, now))
+                    if (live_enough_for_v1_dir(ri, now))
                       buf_len += ri->cache_info.signed_descriptor_len+1);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
@@ -834,7 +824,7 @@ dirserv_dump_directory_to_string(char **dir_out,
     {
       size_t len = ri->cache_info.signed_descriptor_len;
       const char *body;
-      if (!complete && !live_enough_for_v1_dir(ri, now))
+      if (!live_enough_for_v1_dir(ri, now))
         continue;
       if (cp+len+1 >= buf+buf_len)
         goto truncated;
@@ -874,12 +864,12 @@ dirserv_dump_directory_to_string(char **dir_out,
 }
 
 /** Most recently generated encoded signed directory. (auth dirservers only.)*/
-static cached_dir_t *the_directory = NULL;
+static cached_dir_t the_directory = { NULL, NULL, 0, 0, 0 };
 
 /* Used only by non-auth dirservers: The directory and runningrouters we'll
  * serve when requested. */
-static cached_dir_t *cached_directory = NULL;
-static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
+static cached_dir_t cached_directory = { NULL, NULL, 0, 0, 0 };
+static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0 };
 
 /* Used for other dirservers' v2 network statuses.  Map from hexdigest to
  * cached_dir_t. */
@@ -889,7 +879,7 @@ static digestmap_t *cached_v2_networkstatus = NULL;
  * <b>directory</b> published on <b>when</b>, unless <b>when</b> is older than
  * the last value, or too far in the future.
  *
- * Does not copy <b>directory</b>; frees it if it isn't used.
+ * Does not copy <b>directory</b>; free it if it isn't used.
  */
 static void
 set_cached_dir(cached_dir_t *d, char *directory, time_t when)
@@ -916,32 +906,6 @@ set_cached_dir(cached_dir_t *d, char *directory, time_t when)
   }
 }
 
-/** DOCDOC */
-void
-cached_dir_decref(cached_dir_t *d)
-{
-  if (!d || --d->refcnt > 0)
-    return;
-  clear_cached_dir(d);
-  tor_free(d);
-}
-
-/** DOCDOC */
-static cached_dir_t *
-new_cached_dir(char *s, time_t published)
-{
-  cached_dir_t *d = tor_malloc_zero(sizeof(cached_dir_t));
-  d->refcnt = 1;
-  d->dir = s;
-  d->dir_len = strlen(s);
-  d->published = published;
-  if (tor_gzip_compress(&(d->dir_z), &(d->dir_z_len), d->dir, d->dir_len,
-                        ZLIB_METHOD)) {
-    log_warn(LD_BUG, "Error compressing directory");
-  }
-  return d;
-}
-
 /** Remove all storage held in <b>d</b>, but do not free <b>d</b> itself. */
 static void
 clear_cached_dir(cached_dir_t *d)
@@ -953,10 +917,11 @@ clear_cached_dir(cached_dir_t *d)
 
 /** Free all storage held by the cached_dir_t in <b>d</b>. */
 static void
-_free_cached_dir(void *_d)
+free_cached_dir(void *_d)
 {
   cached_dir_t *d = (cached_dir_t *)_d;
-  cached_dir_decref(d);
+  clear_cached_dir(d);
+  tor_free(d);
 }
 
 /** If we have no cached directory, or it is older than <b>when</b>, then
@@ -966,12 +931,9 @@ void
 dirserv_set_cached_directory(const char *directory, time_t published,
                              int is_running_routers)
 {
-  if (is_running_routers) {
-    set_cached_dir(&cached_runningrouters, tor_strdup(directory), published);
-  } else {
-    cached_dir_decref(cached_directory);
-    cached_directory = new_cached_dir(tor_strdup(directory), published);
-  }
+  cached_dir_t *d;
+  d = is_running_routers ? &cached_runningrouters : &cached_directory;
+  set_cached_dir(d, tor_strdup(directory), published);
 }
 
 /** We've just received a v2 network-status for an authoritative directory
@@ -985,30 +947,28 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
                                     const char *identity,
                                     time_t published)
 {
-  cached_dir_t *d, *old_d;
+  cached_dir_t *d;
   smartlist_t *trusted_dirs;
   if (!cached_v2_networkstatus)
     cached_v2_networkstatus = digestmap_new();
 
-  old_d = digestmap_get(cached_v2_networkstatus, identity);
-  if (!old_d && !networkstatus)
-    return;
-
-  if (networkstatus) {
-    if (!old_d || published > old_d->published) {
-      d = new_cached_dir(tor_strdup(networkstatus), published);
-      digestmap_set(cached_v2_networkstatus, identity, d);
-      if (old_d)
-        cached_dir_decref(old_d);
-    }
-  } else {
-    if (old_d) {
-      digestmap_remove(cached_v2_networkstatus, identity);
-      cached_dir_decref(old_d);
-    }
+  if (!(d = digestmap_get(cached_v2_networkstatus, identity))) {
+    if (!networkstatus)
+      return;
+    d = tor_malloc_zero(sizeof(cached_dir_t));
+    digestmap_set(cached_v2_networkstatus, identity, d);
   }
 
-  /* Now purge old entries. */
+  tor_assert(d);
+  if (networkstatus) {
+    if (published > d->published) {
+      set_cached_dir(d, tor_strdup(networkstatus), published);
+    }
+  } else {
+    free_cached_dir(d);
+    digestmap_remove(cached_v2_networkstatus, identity);
+  }
+
   trusted_dirs = router_get_trusted_dir_servers();
   if (digestmap_size(cached_v2_networkstatus) >
       smartlist_len(trusted_dirs) + MAX_UNTRUSTED_NETWORKSTATUSES) {
@@ -1033,7 +993,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
     tor_assert(oldest);
     d = digestmap_remove(cached_v2_networkstatus, oldest);
     if (d)
-      cached_dir_decref(d);
+      free_cached_dir(d);
   }
 }
 
@@ -1045,7 +1005,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
 static cached_dir_t *
 dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
                             cached_dir_t *auth_src,
-                            time_t dirty, cached_dir_t *(*regenerate)(void),
+                            time_t dirty, int (*regenerate)(void),
                             const char *name,
                             int is_v1_object)
 {
@@ -1058,7 +1018,7 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
     /* We're authoritative. */
     if (regenerate != NULL) {
       if (dirty && dirty + DIR_REGEN_SLACK_TIME < time(NULL)) {
-        if (!(auth_src = regenerate())) {
+        if (regenerate()) {
           log_err(LD_BUG, "Couldn't generate %s?", name);
           exit(1);
         }
@@ -1082,11 +1042,10 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
  * this kind of object.
  **/
 static size_t
-dirserv_get_obj(const char **out,
-                int compress,
+dirserv_get_obj(const char **out, int compress,
                 cached_dir_t *cache_src,
                 cached_dir_t *auth_src,
-                time_t dirty, cached_dir_t *(*regenerate)(void),
+                time_t dirty, int (*regenerate)(void),
                 const char *name,
                 int is_v1_object)
 {
@@ -1105,54 +1064,53 @@ dirserv_get_obj(const char **out,
   }
 }
 
-/** Return the most recently generated encoded signed directory, generating a
- * new one as necessary.  If not an authoritative directory may return NULL if
- * no directory is yet cached.*/
-cached_dir_t *
-dirserv_get_directory(void)
+/** Set *<b>directory</b> to the most recently generated encoded signed
+ * directory, generating a new one as necessary.  If not an authoritative
+ * directory may return 0 if no directory is yet cached.*/
+size_t
+dirserv_get_directory(const char **directory, int compress)
 {
-  return dirserv_pick_cached_dir_obj(cached_directory, the_directory,
-                                     the_directory_is_dirty,
-                                     dirserv_regenerate_directory,
-                                     "server directory", 1);
+  return dirserv_get_obj(directory, compress,
+                         &cached_directory, &the_directory,
+                         the_directory_is_dirty,
+                         dirserv_regenerate_directory,
+                         "server directory", 1);
 }
 
 /**
- * Generate a fresh v1 directory (authdirservers only); set the_directory
- * and return a pointer to the new value.
+ * Generate a fresh v1 directory (authdirservers only.)
  */
-static cached_dir_t *
+static int
 dirserv_regenerate_directory(void)
 {
   char *new_directory=NULL;
 
   if (dirserv_dump_directory_to_string(&new_directory,
-                                       get_identity_key(), 0)) {
+                                       get_identity_key())) {
     log_warn(LD_BUG, "Error creating directory.");
     tor_free(new_directory);
-    return NULL;
+    return -1;
   }
-  cached_dir_decref(the_directory);
-  the_directory = new_cached_dir(new_directory, time(NULL));
+  set_cached_dir(&the_directory, new_directory, time(NULL));
   log_info(LD_DIRSERV,"New directory (size %d) has been built.",
-           (int)the_directory->dir_len);
+           (int)the_directory.dir_len);
   log_debug(LD_DIRSERV,"New directory (size %d):\n%s",
-            (int)the_directory->dir_len, the_directory->dir);
+            (int)the_directory.dir_len, the_directory.dir);
 
   the_directory_is_dirty = 0;
 
   /* Save the directory to disk so we re-load it quickly on startup.
    */
-  dirserv_set_cached_directory(the_directory->dir, time(NULL), 0);
+  dirserv_set_cached_directory(the_directory.dir, time(NULL), 0);
 
-  return the_directory;
+  return 0;
 }
 
 /** For authoritative directories: the current (v1) network status */
-static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
+static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0 };
 
 /** Replace the current running-routers list with a newly generated one. */
-static cached_dir_t *
+static int
 generate_runningrouters(void)
 {
   char *s=NULL;
@@ -1197,11 +1155,11 @@ generate_runningrouters(void)
   set_cached_dir(&the_runningrouters, s, time(NULL));
   runningrouters_is_dirty = 0;
 
-  return &the_runningrouters;
+  return 0;
  err:
   tor_free(s);
   tor_free(router_status);
-  return NULL;
+  return -1;
 }
 
 /** Set *<b>rr</b> to the most recently generated encoded signed
@@ -1218,7 +1176,7 @@ dirserv_get_runningrouters(const char **rr, int compress)
 }
 
 /** For authoritative directories: the current (v2) network status */
-static cached_dir_t *the_v2_networkstatus = NULL;
+static cached_dir_t the_v2_networkstatus = { NULL, NULL, 0, 0, 0 };
 
 static int
 should_generate_v2_networkstatus(void)
@@ -1302,9 +1260,6 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   if (smartlist_len(bandwidths)) {
     fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
                                                smartlist_len(bandwidths)/8);
-    if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH)
-      fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
-                                                 smartlist_len(bandwidths)/4);
     guard_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
                                                 smartlist_len(bandwidths)/2);
   }
@@ -1323,7 +1278,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 /** For authoritative directories only: replace the contents of
  * <b>the_v2_networkstatus</b> with a newly generated network status
  * object. */
-static cached_dir_t *
+static int
 generate_v2_networkstatus(void)
 {
 #define LONGEST_STATUS_FLAG_NAME_LEN 7
@@ -1335,7 +1290,7 @@ generate_v2_networkstatus(void)
    /* second line */                                                    \
    (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
 
-  cached_dir_t *r = NULL;
+  int r = -1;
   size_t len, identity_pkey_len;
   char *status = NULL, *client_versions = NULL, *server_versions = NULL,
     *identity_pkey = NULL, *hostname = NULL;
@@ -1355,7 +1310,7 @@ generate_v2_networkstatus(void)
   int versioning = options->VersioningAuthoritativeDir;
   const char *contact;
 
-  if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
+  if (resolve_my_address(options, &addr, &hostname)<0) {
     log_warn(LD_NET, "Couldn't resolve my hostname");
     goto done;
   }
@@ -1404,9 +1359,9 @@ generate_v2_networkstatus(void)
                naming ? " Names" : "",
                versioning ? " Versions" : "",
                versioning ? "client-versions " : "",
-               versioning ? client_versions : "",
+               client_versions,
                versioning ? "\nserver-versions " : "",
-               versioning ? server_versions : "",
+               server_versions,
                versioning ? "\n" : "",
                identity_pkey);
   outp = status + strlen(status);
@@ -1497,14 +1452,13 @@ generate_v2_networkstatus(void)
     goto done;
   }
 
-  if (the_v2_networkstatus)
-    cached_dir_decref(the_v2_networkstatus);
-  the_v2_networkstatus = new_cached_dir(status, time(NULL));
+  set_cached_dir(&the_v2_networkstatus, status, time(NULL));
   status = NULL; /* So it doesn't get double-freed. */
   the_v2_networkstatus_is_dirty = 0;
-  router_set_networkstatus(the_v2_networkstatus->dir,
-                           time(NULL), NS_GENERATED, NULL);
-  r = the_v2_networkstatus;
+  router_set_networkstatus(the_v2_networkstatus.dir, time(NULL), NS_GENERATED,
+                           NULL);
+
+  r = 0;
  done:
   tor_free(client_versions);
   tor_free(server_versions);
@@ -1512,45 +1466,6 @@ generate_v2_networkstatus(void)
   tor_free(hostname);
   tor_free(identity_pkey);
   return r;
-}
-
-/* DOCDOC */
-void
-dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
-                                          const char *key)
-{
-  tor_assert(result);
-
-  if (!cached_v2_networkstatus)
-    cached_v2_networkstatus = digestmap_new();
-
-  if (should_generate_v2_networkstatus())
-    generate_v2_networkstatus();
-
-  if (!strcmp(key,"authority")) {
-    if (get_options()->AuthoritativeDir) {
-      routerinfo_t *me = router_get_my_routerinfo();
-      if (me)
-        smartlist_add(result,
-                      tor_memdup(me->cache_info.identity_digest, DIGEST_LEN));
-    }
-  } else if (!strcmp(key, "all")) {
-    digestmap_iter_t *iter;
-    iter = digestmap_iter_init(cached_v2_networkstatus);
-    while (!digestmap_iter_done(iter)) {
-      const char *ident;
-      void *val;
-      digestmap_iter_get(iter, &ident, &val);
-      smartlist_add(result, tor_memdup(ident, DIGEST_LEN));
-      iter = digestmap_iter_next(cached_v2_networkstatus, iter);
-    }
-    smartlist_sort_digests(result);
-    if (smartlist_len(result) == 0)
-      log_warn(LD_DIRSERV,
-               "Client requested 'all' network status objects; we have none.");
-  } else if (!strcmpstart(key, "fp/")) {
-    dir_split_resource_into_fingerprints(key+3, result, NULL, 1, 1);
-  }
 }
 
 /** Look for a network status object as specified by <b>key</b>, which should
@@ -1571,7 +1486,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
     if (get_options()->AuthoritativeDir) {
       cached_dir_t *d =
         dirserv_pick_cached_dir_obj(NULL,
-                                    the_v2_networkstatus,
+                                    &the_v2_networkstatus,
                                     the_v2_networkstatus_is_dirty,
                                     generate_v2_networkstatus,
                                     "network status list", 0);
@@ -1598,7 +1513,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
                "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
     smartlist_t *digests = smartlist_create();
-    dir_split_resource_into_fingerprints(key+3, digests, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key+3, digests, NULL, 1);
     SMARTLIST_FOREACH(digests, char *, cp,
         {
           cached_dir_t *cached;
@@ -1617,44 +1532,6 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
         });
     smartlist_free(digests);
   }
-}
-
-/** As dirserv_get_routerdescs(), but instead of getting signed_descriptor_t
- * pointers, adds copies of digests to fps_out.  For a /tor/server/d/ request,
- * adds descriptor digests; for other requests, adds identity digests.
- */
-int
-dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
-                                    const char **msg)
-{
-  *msg = NULL;
-
-  if (!strcmp(key, "/tor/server/all")) {
-    routerlist_t *rl = router_get_routerlist();
-    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
-                      smartlist_add(fps_out,
-                      tor_memdup(r->cache_info.identity_digest, DIGEST_LEN)));
-  } else if (!strcmp(key, "/tor/server/authority")) {
-    routerinfo_t *ri = router_get_my_routerinfo();
-    if (ri)
-      smartlist_add(fps_out,
-                    tor_memdup(ri->cache_info.identity_digest, DIGEST_LEN));
-  } else if (!strcmpstart(key, "/tor/server/d/")) {
-    key += strlen("/tor/server/d/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
-  } else if (!strcmpstart(key, "/tor/server/fp/")) {
-    key += strlen("/tor/server/fp/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
-  } else {
-    *msg = "Key not recognized";
-    return -1;
-  }
-
-  if (!smartlist_len(fps_out)) {
-    *msg = "Servers unavailable";
-    return -1;
-  }
-  return 0;
 }
 
 /** Add a signed_descriptor_t to <b>descs_out</b> for each router matching
@@ -1692,7 +1569,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/d/");
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, digests, NULL, 1);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          signed_descriptor_t *sd = router_get_by_descriptor_digest(d);
@@ -1705,7 +1582,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     smartlist_t *digests = smartlist_create();
     time_t cutoff = time(NULL) - ROUTER_MAX_AGE_TO_PUBLISH;
     key += strlen("/tor/server/fp/");
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, digests, NULL, 1);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          if (router_digest_is_me(d)) {
@@ -1756,7 +1633,6 @@ dirserv_orconn_tls_done(const char *address,
   tor_assert(address);
   tor_assert(digest_rcvd);
   tor_assert(nickname_rcvd);
-  (void) as_advertised; // XXXX This should really be implemented. -NM
 
   // XXXXNM We should really have a better solution here than dropping
   // XXXXNM whole routers; otherwise, they come back way too easily.
@@ -1795,211 +1671,6 @@ dirserv_orconn_tls_done(const char *address,
   }
 }
 
-/** Auth dir server only: if <b>try_all</b> is 1, launch connections to
- * all known routers; else we want to load balance such that we only
- * try a few connections per call.
- *
- * The load balancing is such that if we get called once every ten
- * seconds, we will cycle through all the tests in 1280 seconds (a
- * bit over 20 minutes).
- */
-void
-dirserv_test_reachability(int try_all)
-{
-  time_t now = time(NULL);
-  routerlist_t *rl = router_get_routerlist();
-  static char ctr = 0;
-
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
-    const char *id_digest = router->cache_info.identity_digest;
-    if (router_is_me(router))
-      continue;
-    if (try_all || (((uint8_t)id_digest[0]) % 128) == ctr) {
-      log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
-                router->nickname, router->address, router->or_port);
-      /* Remember when we started trying to determine reachability */
-      if (!router->testing_since)
-        router->testing_since = now;
-      connection_or_connect(router->addr, router->or_port,
-                            id_digest);
-    }
-  });
-  if (!try_all) /* increment ctr */
-    ctr = (ctr + 1) % 128;
-}
-
-/** When we're spooling data onto our outbuf, add more whenever we dip
- * below this threshold. */
-#define DIRSERV_BUFFER_MIN 16384
-
-static int
-connection_dirserv_finish_spooling(dir_connection_t *conn)
-{
-  if (conn->zlib_state) {
-    connection_write_to_buf_zlib(conn, "", 0, 1);
-    tor_zlib_free(conn->zlib_state);
-    conn->zlib_state = NULL;
-  }
-  conn->dir_spool_src = DIR_SPOOL_NONE;
-  return 0;
-}
-
-/** DOCDOC */
-static int
-connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
-{
-  int by_fp = conn->dir_spool_src == DIR_SPOOL_SERVER_BY_FP;
-
-  while (smartlist_len(conn->fingerprint_stack) &&
-         buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
-    const char *body;
-    char *fp = smartlist_pop_last(conn->fingerprint_stack);
-    signed_descriptor_t *sd = NULL;
-    if (by_fp) {
-      if (router_digest_is_me(fp)) {
-        sd = &(router_get_my_routerinfo()->cache_info);
-      } else {
-        routerinfo_t *ri = router_get_by_digest(fp);
-        if (ri &&
-            ri->cache_info.published_on > time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH)
-          sd = &ri->cache_info;
-      }
-    } else
-      sd = router_get_by_descriptor_digest(fp);
-    tor_free(fp);
-    if (!sd)
-      continue;
-    body = signed_descriptor_get_body(sd);
-    if (conn->zlib_state) {
-      int last = ! smartlist_len(conn->fingerprint_stack);
-      connection_write_to_buf_zlib(conn, body,
-                                   sd->signed_descriptor_len, last);
-      if (last) {
-        tor_zlib_free(conn->zlib_state);
-        conn->zlib_state = NULL;
-      }
-    } else {
-      connection_write_to_buf(body,
-                              sd->signed_descriptor_len,
-                              TO_CONN(conn));
-    }
-  }
-
-  if (!smartlist_len(conn->fingerprint_stack)) {
-    /* We just wrote the last one; finish up. */
-    conn->dir_spool_src = DIR_SPOOL_NONE;
-    smartlist_free(conn->fingerprint_stack);
-    conn->fingerprint_stack = NULL;
-  }
-  return 0;
-}
-
-/** DOCDOC */
-static int
-connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
-{
-  int bytes, remaining;
-
-  bytes = DIRSERV_BUFFER_MIN - buf_datalen(conn->_base.outbuf);
-  tor_assert(bytes > 0);
-  tor_assert(conn->cached_dir);
-  if (bytes < 8192)
-    bytes = 8192;
-  remaining = conn->cached_dir->dir_z_len - conn->cached_dir_offset;
-  if (bytes > remaining)
-    bytes = remaining;
-
-  if (conn->zlib_state) {
-    connection_write_to_buf_zlib(conn,
-                             conn->cached_dir->dir_z + conn->cached_dir_offset,
-                             bytes, bytes == remaining);
-  } else {
-    connection_write_to_buf(conn->cached_dir->dir_z + conn->cached_dir_offset,
-                            bytes, TO_CONN(conn));
-  }
-  conn->cached_dir_offset += bytes;
-  if (conn->cached_dir_offset == (int)conn->cached_dir->dir_z_len) {
-    /* We just wrote the last one; finish up. */
-    connection_dirserv_finish_spooling(conn);
-    cached_dir_decref(conn->cached_dir);
-    conn->cached_dir = NULL;
-  }
-  return 0;
-}
-
-/* DOCDOC */
-static int
-connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
-{
-
-  while (buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
-    if (conn->cached_dir) {
-      int uncompressing = (conn->zlib_state != NULL);
-      int r = connection_dirserv_add_dir_bytes_to_outbuf(conn);
-      if (conn->dir_spool_src == DIR_SPOOL_NONE) {
-        /* add_dir_bytes thinks we're done with the cached_dir.  But we
-         * may have more cached_dirs! */
-        conn->dir_spool_src = DIR_SPOOL_NETWORKSTATUS;
-        /* This bit is tricky.  If we were uncompressing the last
-         * networkstatus, we may need to make a new zlib object to
-         * uncompress the next one. */
-        if (uncompressing && ! conn->zlib_state &&
-            conn->fingerprint_stack &&
-            smartlist_len(conn->fingerprint_stack)) {
-          conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
-        }
-      }
-      if (r) return r;
-    } else if (conn->fingerprint_stack &&
-               smartlist_len(conn->fingerprint_stack)) {
-      /* Add another networkstatus; start serving it. */
-      char *fp = smartlist_pop_last(conn->fingerprint_stack);
-      cached_dir_t *d;
-      if (router_digest_is_me(fp))
-        d = the_v2_networkstatus;
-      else
-        d = digestmap_get(cached_v2_networkstatus, fp);
-      tor_free(fp);
-      if (d) {
-        ++d->refcnt;
-        conn->cached_dir = d;
-        conn->cached_dir_offset = 0;
-      }
-    } else {
-      connection_dirserv_finish_spooling(conn);
-      if (conn->fingerprint_stack)
-        smartlist_free(conn->fingerprint_stack);
-      conn->fingerprint_stack = NULL;
-      return 0;
-    }
-  }
-  return 0;
-}
-
-/** Called whenever we have flushed some directory data in state
- * SERVER_WRITING. */
-int
-connection_dirserv_flushed_some(dir_connection_t *conn)
-{
-  tor_assert(conn->_base.state == DIR_CONN_STATE_SERVER_WRITING);
-
-  if (buf_datalen(conn->_base.outbuf) >= DIRSERV_BUFFER_MIN)
-    return 0;
-
-  switch (conn->dir_spool_src) {
-    case DIR_SPOOL_SERVER_BY_DIGEST:
-    case DIR_SPOOL_SERVER_BY_FP:
-      return connection_dirserv_add_servers_to_outbuf(conn);
-    case DIR_SPOOL_CACHED_DIR:
-      return connection_dirserv_add_dir_bytes_to_outbuf(conn);
-    case DIR_SPOOL_NETWORKSTATUS:
-      return connection_dirserv_add_networkstatus_bytes_to_outbuf(conn);
-    case DIR_SPOOL_NONE:
-    default:
-      return 0;
-  }
-}
-
 /** Release all storage used by the directory server. */
 void
 dirserv_free_all(void)
@@ -2012,13 +1683,13 @@ dirserv_free_all(void)
     smartlist_free(fingerprint_list);
     fingerprint_list = NULL;
   }
-  cached_dir_decref(the_directory);
+  clear_cached_dir(&the_directory);
   clear_cached_dir(&the_runningrouters);
-  cached_dir_decref(the_v2_networkstatus);
-  cached_dir_decref(cached_directory);
+  clear_cached_dir(&the_v2_networkstatus);
+  clear_cached_dir(&cached_directory);
   clear_cached_dir(&cached_runningrouters);
   if (cached_v2_networkstatus) {
-    digestmap_free(cached_v2_networkstatus, _free_cached_dir);
+    digestmap_free(cached_v2_networkstatus, free_cached_dir);
     cached_v2_networkstatus = NULL;
   }
 }

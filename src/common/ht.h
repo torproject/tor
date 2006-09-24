@@ -99,7 +99,7 @@ ht_string_hash(const char *s)
 #define HT_PROTOTYPE(name, type, field, hashfn, eqfn)                   \
   int name##_HT_GROW(struct name *ht, unsigned min_capacity);           \
   void name##_HT_CLEAR(struct name *ht);                                \
-  int _##name##_HT_REP_IS_BAD(struct name *ht);                         \
+  int _##name##_HT_REP_OK(struct name *ht);                             \
   /* Helper: returns a pointer to the right location in the table       \
    * 'head' to find or insert the element 'elm'. */                     \
   static INLINE struct type **                                          \
@@ -187,6 +187,7 @@ ht_string_hash(const char *s)
                        int (*fn)(struct type *, void *),                \
                        void *data)                                      \
   {                                                                     \
+    /* XXXX use tricks to prevent concurrent mod? */                    \
     unsigned idx;                                                       \
     int remove;                                                         \
     struct type **p, **nextp, *next;                                    \
@@ -259,6 +260,77 @@ ht_string_hash(const char *s)
       return NULL;                                                      \
     }                                                                   \
   }
+
+#if 0
+/* Helpers for an iterator type that saves some mod operations at the expense
+ * of many branches. Not worth it, it seems. */
+
+#define HT_ITER(type)                               \
+  struct type##_ITER {                              \
+    struct type **hti_nextp;                        \
+    unsigned hti_bucket;                            \
+  }
+
+  static INLINE void                                                    \
+  name##_HT_ITER_START(struct name *head, struct type##_ITER *iter)     \
+  {                                                                     \
+    /* XXXX Magic to stop modifications? */                             \
+    iter->hti_bucket = 0;                                               \
+    while (iter->hti_bucket < head->hth_table_length) {                 \
+      iter->hti_nextp = &head->hth_table[iter->hti_bucket];             \
+      if (*iter->hti_nextp)                                             \
+        return;                                                         \
+      ++iter->hti_bucket;                                               \
+    }                                                                   \
+    iter->hti_nextp = NULL;                                             \
+  }                                                                     \
+  static INLINE int                                                     \
+  name##_HT_ITER_DONE(struct name *head, struct type##_ITER *iter)      \
+  {                                                                     \
+    return iter->hti_nextp == NULL;                                     \
+  }                                                                     \
+  static INLINE struct type *                                           \
+  name##_HT_ITER_GET(struct name *head, struct type##_ITER *iter)       \
+  {                                                                     \
+    return *iter->hti_nextp;                                            \
+  }                                                                     \
+  static INLINE void                                                    \
+  name##_HT_ITER_NEXT(struct name *head, struct type##_ITER *iter)      \
+  {                                                                     \
+    if (!iter->hti_nextp)                                               \
+      return;                                                           \
+    if ((*iter->hti_nextp)->field.hte_next) {                           \
+      iter->hti_nextp = &(*iter->hti_nextp)->field.hte_next;            \
+      return;                                                           \
+    }                                                                   \
+    while (++iter->hti_bucket < head->hth_table_length) {               \
+      iter->hti_nextp = &head->hth_table[iter->hti_bucket];             \
+      if (*iter->hti_nextp)                                             \
+        return;                                                         \
+      ++iter->hti_bucket;                                               \
+    }                                                                   \
+    iter->hti_nextp = NULL;                                             \
+  }                                                                     \
+  static INLINE void                                                    \
+  name##_HT_ITER_NEXT_RMV(struct name *head, struct type##_ITER *iter)  \
+  {                                                                     \
+    if (!iter->hti_nextp)                                               \
+      return;                                                           \
+    --head->hth_n_entries;                                              \
+    if ((*iter->hti_nextp)->field.hte_next) {                           \
+      *iter->hti_nextp = (*iter->hti_nextp)->field.hte_next;            \
+      if (*iter->hti_nextp)                                             \
+        return;                                                         \
+    }                                                                   \
+    while (++iter->hti_bucket < head->hth_table_length) {               \
+      iter->hti_nextp = &head->hth_table[iter->hti_bucket];             \
+      if (*iter->hti_nextp)                                             \
+        return;                                                         \
+      ++iter->hti_bucket;                                               \
+    }                                                                   \
+    iter->hti_nextp = NULL;                                             \
+  }
+#endif
 
 #define HT_GENERATE(name, type, field, hashfn, eqfn, load, mallocfn,    \
                     reallocfn, freefn)                                  \
@@ -345,41 +417,38 @@ ht_string_hash(const char *s)
     head->hth_table_length = 0;                                         \
     HT_INIT(head);                                                      \
   }                                                                     \
-  /* Debugging helper: return false iff the representation of 'head' is \
+  /* Debugging helper: return true iff the representation of 'head' is  \
    * internally consistent. */                                          \
   int                                                                   \
-  _##name##_HT_REP_IS_BAD(struct name *head)                            \
+  _##name##_HT_REP_OK(struct name *head)                                \
   {                                                                     \
     unsigned n, i;                                                      \
     struct type *elm;                                                   \
     if (!head->hth_table_length) {                                      \
-      if (!head->hth_table && !head->hth_n_entries &&                   \
-          !head->hth_load_limit && head->hth_prime_idx == -1)           \
-        return 0;                                                       \
-      else                                                              \
-        return 1;                                                       \
+      return !head->hth_table && !head->hth_n_entries &&                \
+        !head->hth_load_limit && head->hth_prime_idx == -1;             \
     }                                                                   \
     if (!head->hth_table || head->hth_prime_idx < 0 ||                  \
         !head->hth_load_limit)                                          \
-      return 2;                                                         \
+      return 0;                                                         \
     if (head->hth_n_entries > head->hth_load_limit)                     \
-      return 3;                                                         \
+      return 0;                                                         \
     if (head->hth_table_length != name##_PRIMES[head->hth_prime_idx])   \
-      return 4;                                                         \
+      return 0;                                                         \
     if (head->hth_load_limit != (unsigned)(load*head->hth_table_length)) \
-      return 5;                                                         \
+      return 0;                                                         \
     for (n = i = 0; i < head->hth_table_length; ++i) {                  \
       for (elm = head->hth_table[i]; elm; elm = elm->field.hte_next) {  \
         if (elm->field.hte_hash != hashfn(elm))                         \
-          return 1000 + i;                                              \
+          return 0;                                                     \
         if ((elm->field.hte_hash % head->hth_table_length) != i)        \
-          return 10000 + i;                                             \
+          return 0;                                                     \
         ++n;                                                            \
       }                                                                 \
     }                                                                   \
     if (n != head->hth_n_entries)                                       \
-      return 6;                                                         \
-    return 0;                                                           \
+      return 0;                                                         \
+    return 1;                                                           \
   }
 
 /*

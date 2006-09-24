@@ -232,8 +232,7 @@ init_key_from_file(const char *fname)
 }
 
 /** Initialize all OR private keys, and the TLS context, as necessary.
- * On OPs, this only initializes the tls context. Return 0 on success,
- * or -1 if Tor should die.
+ * On OPs, this only initializes the tls context.
  */
 int
 init_keys(void)
@@ -261,10 +260,10 @@ init_keys(void)
       return -1;
     set_identity_key(prkey);
     /* Create a TLS context; default the client nickname to "client". */
-    if (tor_tls_context_new(get_identity_key(),
+    if (tor_tls_context_new(get_identity_key(), 1,
                             options->Nickname ? options->Nickname : "client",
                             MAX_SSL_KEY_LIFETIME) < 0) {
-      log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
+      log_err(LD_GENERAL,"Error creating TLS context for OP.");
       return -1;
     }
     return 0;
@@ -303,7 +302,7 @@ init_keys(void)
   }
 
   /* 3. Initialize link key and TLS context. */
-  if (tor_tls_context_new(get_identity_key(), options->Nickname,
+  if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
                           MAX_SSL_KEY_LIFETIME) < 0) {
     log_err(LD_GENERAL,"Error initializing TLS context");
     return -1;
@@ -311,15 +310,15 @@ init_keys(void)
   /* 4. Build our router descriptor. */
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
+  if (!mydesc) {
+    log_err(LD_GENERAL,"Error initializing descriptor.");
+    return -1;
+  }
   if (authdir_mode(options)) {
     const char *m;
     /* We need to add our own fingerprint so it gets recognized. */
     if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
       log_err(LD_GENERAL,"Error adding own fingerprint to approved set");
-      return -1;
-    }
-    if (!mydesc) {
-      log_err(LD_GENERAL,"Error initializing descriptor.");
       return -1;
     }
     if (dirserv_add_descriptor(mydesc, &m) < 0) {
@@ -329,6 +328,13 @@ init_keys(void)
     }
   }
 
+#if 0
+  tor_snprintf(keydir,sizeof(keydir),"%s/router.desc", datadir);
+  log_info(LD_GENERAL,"Dumping descriptor to \"%s\"...",keydir);
+  if (write_str_to_file(keydir, mydesc,0)) {
+    return -1;
+  }
+#endif
   /* 5. Dump fingerprint to 'fingerprint' */
   tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
   log_info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
@@ -353,7 +359,9 @@ init_keys(void)
   if (!authdir_mode(options))
     return 0;
   /* 6. [authdirserver only] load approved-routers file */
-  if (dirserv_load_fingerprint_file() < 0) {
+  tor_snprintf(keydir,sizeof(keydir),"%s/approved-routers", datadir);
+  log_info(LD_DIRSERV,"Loading approved fingerprints from \"%s\"...",keydir);
+  if (dirserv_parse_fingerprint_file(keydir) < 0) {
     log_err(LD_GENERAL,"Error loading fingerprints");
     return -1;
   }
@@ -364,7 +372,8 @@ init_keys(void)
                            (uint16_t)options->DirPort, digest,
                            options->V1AuthoritativeDir);
   }
-  return 0; /* success */
+  /* success */
+  return 0;
 }
 
 /* Keep track of whether we should upload our server descriptor,
@@ -376,12 +385,13 @@ static int can_reach_or_port = 0;
 /** Whether we can reach our DirPort from the outside. */
 static int can_reach_dir_port = 0;
 
-/** Return 1 if ORPort is known reachable; else return 0. */
+/** Return 1 if or port is known reachable; else return 0. */
 int
 check_whether_orport_reachable(void)
 {
   or_options_t *options = get_options();
-  return options->AssumeReachable ||
+  return clique_mode(options) ||
+         options->AssumeReachable ||
          can_reach_or_port;
 }
 
@@ -436,23 +446,22 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
  * Success is noticed in connection_dir_client_reached_eof().
  */
 void
-consider_testing_reachability(int test_or, int test_dir)
+consider_testing_reachability(void)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  int orport_reachable = check_whether_orport_reachable();
-  if (!me)
+  if (!me) {
+    log_warn(LD_BUG,
+             "Bug: router_get_my_routerinfo() did not find my routerinfo?");
     return;
+  }
 
-  if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
-    log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
-             !orport_reachable ? "reachability" : "bandwidth",
-             me->address, me->or_port);
+  if (!check_whether_orport_reachable()) {
     log_info(LD_CIRC, "Testing reachability of my ORPort: %s:%d.",
              me->address, me->or_port);
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   }
 
-  if (test_dir && !check_whether_dirport_reachable()) {
+  if (!check_whether_dirport_reachable()) {
     /* ask myself, via tor, for my server descriptor. */
     directory_initiate_command_router(me, DIR_PURPOSE_FETCH_SERVERDESC,
                                       1, "authority", NULL, 0);
@@ -464,12 +473,14 @@ void
 router_orport_found_reachable(void)
 {
   if (!can_reach_or_port) {
-    log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
-               "the outside. Excellent.%s",
-               get_options()->PublishServerDescriptor ?
-                 " Publishing server descriptor." : "");
+    if (!clique_mode(get_options()))
+      log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
+                 "the outside. Excellent.%s",
+                 get_options()->PublishServerDescriptor ?
+                   " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
+    consider_publishable_server(time(NULL), 1);
   }
 }
 
@@ -481,51 +492,17 @@ router_dirport_found_reachable(void)
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
-    mark_my_descriptor_dirty();
   }
 }
-
-#define UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST (6*60*60)
 
 /** Our router has just moved to a new IP. Reset stats. */
 void
 server_has_changed_ip(void)
 {
-  if (stats_n_seconds_working > UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST)
-    reset_bandwidth_test();
   stats_n_seconds_working = 0;
   can_reach_or_port = 0;
   can_reach_dir_port = 0;
   mark_my_descriptor_dirty();
-}
-
-/** We have enough testing circuit open. Send a bunch of "drop"
- * cells down each of them, to exercise our bandwidth. */
-void
-router_perform_bandwidth_test(int num_circs, time_t now)
-{
-  int num_cells = get_options()->BandwidthRate * 10 / CELL_NETWORK_SIZE;
-  int max_cells = num_cells < CIRCWINDOW_START ?
-                    num_cells : CIRCWINDOW_START;
-  int cells_per_circuit = max_cells / num_circs;
-  origin_circuit_t *circ = NULL;
-
-  log_notice(LD_OR,"Performing bandwidth self-test.");
-  while ((circ = circuit_get_next_by_pk_and_purpose(circ, NULL,
-                                              CIRCUIT_PURPOSE_TESTING))) {
-    /* dump cells_per_circuit drop cells onto this circ */
-    int i = cells_per_circuit;
-    if (circ->_base.state != CIRCUIT_STATE_OPEN)
-      continue;
-    circ->_base.timestamp_dirty = now;
-    while (i-- > 0) {
-      if (connection_edge_send_command(NULL, TO_CIRCUIT(circ),
-                                       RELAY_COMMAND_DROP,
-                                       NULL, 0, circ->cpath->prev)<0) {
-        return; /* stop if error */
-      }
-    }
-  }
 }
 
 /** Return true iff we believe ourselves to be an authoritative
@@ -592,7 +569,7 @@ proxy_mode(or_options_t *options)
  * - We have the AuthoritativeDirectory option set.
  */
 static int
-decide_if_publishable_server(void)
+decide_if_publishable_server(time_t now)
 {
   or_options_t *options = get_options();
 
@@ -616,7 +593,7 @@ decide_if_publishable_server(void)
  * determine what IP address and ports to test.
  */
 void
-consider_publishable_server(int force)
+consider_publishable_server(time_t now, int force)
 {
   int rebuilt;
 
@@ -624,7 +601,7 @@ consider_publishable_server(int force)
     return;
 
   rebuilt = router_rebuild_descriptor(0);
-  if (decide_if_publishable_server()) {
+  if (decide_if_publishable_server(now)) {
     set_server_advertised(1);
     if (rebuilt == 0)
       router_upload_dir_desc_to_dirservers(force);
@@ -634,8 +611,57 @@ consider_publishable_server(int force)
 }
 
 /*
- * Clique maintenance -- to be phased out.
+ * Clique maintenance
  */
+
+/** OR only: if in clique mode, try to open connections to all of the
+ * other ORs we know about. Otherwise, open connections to those we
+ * think are in clique mode.
+ *
+ * If <b>testing_reachability</b> is 0, try to open the connections
+ * but only if we don't already have one. If it's 1, then we're an
+ * auth dir server, and we should try to connect regardless of
+ * whether we already have a connection open -- but if <b>try_all</b>
+ * is 0, we want to load balance such that we only try a few connections
+ * per call.
+ *
+ * The load balancing is such that if we get called once every ten
+ * seconds, we will cycle through all the tests in 1280 seconds (a
+ * bit over 20 minutes).
+ */
+void
+router_retry_connections(int testing_reachability, int try_all)
+{
+  time_t now = time(NULL);
+  routerlist_t *rl = router_get_routerlist();
+  or_options_t *options = get_options();
+  static char ctr = 0;
+
+  tor_assert(server_mode(options));
+
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
+    const char *id_digest = router->cache_info.identity_digest;
+    if (router_is_me(router))
+      continue;
+    if (!clique_mode(options) && !router_is_clique_mode(router))
+      continue;
+    if ((testing_reachability &&
+         (try_all || (((uint8_t)id_digest[0]) % 128) == ctr)) ||
+        (!testing_reachability &&
+         !connection_or_get_by_identity_digest(id_digest))) {
+      log_debug(LD_OR,"%sconnecting to %s at %s:%u.",
+                clique_mode(options) ? "(forced) " : "",
+                router->nickname, router->address, router->or_port);
+      /* Remember when we started trying to determine reachability */
+      if (!router->testing_since)
+        router->testing_since = now;
+      connection_or_connect(router->addr, router->or_port,
+                            id_digest);
+    }
+  });
+  if (testing_reachability && !try_all) /* increment ctr */
+    ctr = (ctr + 1) % 128;
+}
 
 /** Return true iff this OR should try to keep connections open to all
  * other ORs. */
@@ -670,7 +696,7 @@ router_upload_dir_desc_to_dirservers(int force)
 
   s = router_get_my_descriptor();
   if (!s) {
-    log_info(LD_GENERAL, "No descriptor; skipping upload");
+    log_warn(LD_GENERAL, "No descriptor; skipping upload");
     return;
   }
   if (!get_options()->PublishServerDescriptor)
@@ -685,16 +711,16 @@ router_upload_dir_desc_to_dirservers(int force)
  * conn.  Return 0 if we accept; non-0 if we reject.
  */
 int
-router_compare_to_my_exit_policy(edge_connection_t *conn)
+router_compare_to_my_exit_policy(connection_t *conn)
 {
   tor_assert(desc_routerinfo);
 
   /* make sure it's resolved to something. this way we can't get a
      'maybe' below. */
-  if (!conn->_base.addr)
+  if (!conn->addr)
     return -1;
 
-  return compare_addr_to_addr_policy(conn->_base.addr, conn->_base.port,
+  return compare_addr_to_addr_policy(conn->addr, conn->port,
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 }
 
@@ -751,10 +777,7 @@ router_get_my_descriptor(void)
   const char *body;
   if (!router_get_my_routerinfo())
     return NULL;
-  /* Make sure this is nul-terminated. */
-  tor_assert(desc_routerinfo->cache_info.saved_location == SAVED_NOWHERE);
   body = signed_descriptor_get_body(&desc_routerinfo->cache_info);
-  tor_assert(!body[desc_routerinfo->cache_info.signed_descriptor_len]);
   log_debug(LD_GENERAL,"my desc is '%s'", body);
   return body;
 }
@@ -762,29 +785,9 @@ router_get_my_descriptor(void)
 /*DOCDOC*/
 static smartlist_t *warned_nonexistent_family = NULL;
 
-static int router_guess_address_from_dir_headers(uint32_t *guess);
-
-/** Return our current best guess at our address, either because
- * it's configured in torrc, or because we've learned it from
- * dirserver headers. */
-int
-router_pick_published_address(or_options_t *options, uint32_t *addr)
-{
-  if (resolve_my_address(LOG_INFO, options, addr, NULL) < 0) {
-    log_info(LD_CONFIG, "Could not determine our address locally. "
-             "Checking if directory headers provide any hints.");
-    if (router_guess_address_from_dir_headers(addr) < 0) {
-      log_info(LD_CONFIG, "No hints from directory headers either. "
-               "Will try again later.");
-      return -1;
-    }
-  }
-  return 0;
-}
-
 /** If <b>force</b> is true, or our descriptor is out-of-date, rebuild
  * a fresh routerinfo and signed server descriptor for this OR.
- * Return 0 on success, -1 on temporary error.
+ * Return 0 on success, -1 on error.
  */
 int
 router_rebuild_descriptor(int force)
@@ -798,16 +801,12 @@ router_rebuild_descriptor(int force)
   if (desc_clean_since && !force)
     return 0;
 
-  if (router_pick_published_address(options, &addr) < 0) {
-    /* Stop trying to rebuild our descriptor every second. We'll
-     * learn that it's time to try again when server_has_changed_ip()
-     * marks it dirty. */
-    desc_clean_since = time(NULL);
+  if (resolve_my_address(options, &addr, NULL) < 0) {
+    log_warn(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return -1;
   }
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
-  ri->routerlist_index = -1;
   ri->address = tor_dup_addr(addr);
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
@@ -878,11 +877,6 @@ router_rebuild_descriptor(int force)
        }
        tor_free(name);
      });
-
-    /* remove duplicates from the list */
-    smartlist_sort_strings(ri->declared_family);
-    smartlist_uniq_strings(ri->declared_family);
-
     smartlist_free(family);
   }
   ri->cache_info.signed_descriptor_body = tor_malloc(8192);
@@ -949,31 +943,6 @@ check_descriptor_bandwidth_changed(time_t now)
   }
 }
 
-static void
-log_addr_has_changed(int severity, uint32_t prev, uint32_t cur)
-{
-  char addrbuf_prev[INET_NTOA_BUF_LEN];
-  char addrbuf_cur[INET_NTOA_BUF_LEN];
-  struct in_addr in_prev;
-  struct in_addr in_cur;
-
-  in_prev.s_addr = htonl(prev);
-  tor_inet_ntoa(&in_prev, addrbuf_prev, sizeof(addrbuf_prev));
-
-  in_cur.s_addr = htonl(cur);
-  tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
-
-  if (prev)
-    log_fn(severity, LD_GENERAL,
-           "Our IP Address has changed from %s to %s; "
-           "rebuilding descriptor.",
-           addrbuf_prev, addrbuf_cur);
-  else
-    log_notice(LD_GENERAL,
-             "Guessed our IP address as %s.",
-             addrbuf_cur);
-}
-
 /** Check whether our own address as defined by the Address configuration
  * has changed. This is for routers that get their address from a service
  * like dyndns. If our address has changed, mark our descriptor dirty. */
@@ -982,72 +951,34 @@ check_descriptor_ipaddress_changed(time_t now)
 {
   uint32_t prev, cur;
   or_options_t *options = get_options();
-  (void) now;
 
   if (!desc_routerinfo)
     return;
 
   prev = desc_routerinfo->addr;
-  if (resolve_my_address(LOG_INFO, options, &cur, NULL) < 0) {
-    log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
+  if (resolve_my_address(options, &cur, NULL) < 0) {
+    log_warn(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
   }
 
   if (prev != cur) {
-    log_addr_has_changed(LOG_INFO, prev, cur);
+    char addrbuf_prev[INET_NTOA_BUF_LEN];
+    char addrbuf_cur[INET_NTOA_BUF_LEN];
+    struct in_addr in_prev;
+    struct in_addr in_cur;
+
+    in_prev.s_addr = htonl(prev);
+    tor_inet_ntoa(&in_prev, addrbuf_prev, sizeof(addrbuf_prev));
+
+    in_cur.s_addr = htonl(cur);
+    tor_inet_ntoa(&in_cur, addrbuf_cur, sizeof(addrbuf_cur));
+
+    log_info(LD_GENERAL,
+             "Our IP Address has changed from %s to %s; "
+             "rebuilding descriptor.",
+             addrbuf_prev, addrbuf_cur);
     mark_my_descriptor_dirty();
-    /* the above call is probably redundant, since resolve_my_address()
-     * probably already noticed and marked it dirty. */
   }
-}
-
-static uint32_t last_guessed_ip = 0;
-
-/** A directory authority told us our IP address is <b>suggestion</b>.
- * If this address is different from the one we think we are now, and
- * if our computer doesn't actually know its IP address, then switch. */
-void
-router_new_address_suggestion(const char *suggestion)
-{
-  uint32_t addr, cur;
-  struct in_addr in;
-  or_options_t *options = get_options();
-
-  /* first, learn what the IP address actually is */
-  if (!tor_inet_aton(suggestion, &in)) {
-    log_debug(LD_DIR, "Malformed X-Your-Address-Is header. Ignoring.");
-    return;
-  }
-  addr = ntohl(in.s_addr);
-
-  log_debug(LD_DIR, "Got X-Your-Address-Is: %s.", suggestion);
-
-  if (!server_mode(options) ||
-      resolve_my_address(LOG_INFO, options, &cur, NULL) >= 0) {
-    /* We're all set -- we already know our address. Great. */
-    last_guessed_ip = cur; /* store it in case we need it later */
-    return;
-  }
-
-  if (last_guessed_ip != addr) {
-    log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr);
-    server_has_changed_ip();
-    last_guessed_ip = addr; /* router_rebuild_descriptor() will fetch it */
-  }
-}
-
-/** We failed to resolve our address locally, but we'd like to build
- * a descriptor and publish / test reachability. If we have a guess
- * about our address based on directory headers, answer it and return
- * 0; else return -1. */
-static int
-router_guess_address_from_dir_headers(uint32_t *guess)
-{
-  if (last_guessed_ip) {
-    *guess = last_guessed_ip;
-    return 0;
-  }
-  return -1;
 }
 
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
@@ -1151,13 +1082,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
-                    "signing-key\n%s"
-#ifdef USE_EVENTDNS
-                    "opt eventdns 1\n"
-#else
-                    "opt eventdns 0\n"
-#endif
-                    "%s%s%s",
+                    "signing-key\n%s%s%s%s",
     router->nickname,
     router->address,
     router->or_port,
@@ -1236,7 +1161,6 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
       written += result;
     }
   } /* end for */
-
   if (written+256 > maxlen) /* Not enough room for signature. */
     return -1;
 
@@ -1262,7 +1186,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   cp = s_tmp = s_dup = tor_strdup(s);
-  ri_tmp = router_parse_entry_from_string(cp, NULL, 1);
+  ri_tmp = router_parse_entry_from_string(cp, NULL);
   if (!ri_tmp) {
     log_err(LD_BUG,
             "We just generated a router descriptor we can't parse: <<%s>>",
@@ -1305,10 +1229,10 @@ is_legal_hexdigest(const char *s)
 {
   size_t len;
   tor_assert(s);
-  if (s[0] == '$') s++;
   len = strlen(s);
-  return (len == HEX_DIGEST_LEN &&
-          strspn(s,HEX_CHARACTERS)==len);
+  return (len == HEX_DIGEST_LEN+1 &&
+          s[0] == '$' &&
+          strspn(s+1,HEX_CHARACTERS)==len-1);
 }
 
 /** Forget that we have issued any router-related warnings, so that we'll

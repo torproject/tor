@@ -26,9 +26,9 @@ typedef struct tor_tls_t tor_tls_t;
 #define TOR_TLS_DONE         0
 
 void tor_tls_free_all(void);
-int tor_tls_context_new(crypto_pk_env_t *rsa,
+int tor_tls_context_new(crypto_pk_env_t *rsa, int isServer,
                         const char *nickname, unsigned int key_lifetime);
-tor_tls_t *tor_tls_new(int sock, int is_server);
+tor_tls_t *tor_tls_new(int sock, int is_server, int use_no_cert);
 int tor_tls_is_server(tor_tls_t *tls);
 void tor_tls_free(tor_tls_t *tls);
 int tor_tls_peer_has_cert(tor_tls_t *tls);

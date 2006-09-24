@@ -76,8 +76,6 @@ static config_abbrev_t _option_abbrevs[] = {
   { "NumHelperNodes", "NumEntryGuards", 0, 0},
   { "UseEntryNodes", "UseEntryGuards", 0, 0},
   { "NumEntryNodes", "NumEntryGuards", 0, 0},
-  { "ResolvConf", "ServerDNSResolvConfFile", 0, 1},
-  { "SearchDomains", "ServerDNSSearchDomains", 0, 1},
   { NULL, NULL, 0, 0},
 };
 /* A list of state-file abbreviations, for compatibility. */
@@ -101,6 +99,10 @@ typedef struct config_var_t {
   off_t var_offset; /**< Offset of the corresponding member of or_options_t. */
   const char *initvalue; /**< String (or null) describing initial value. */
 } config_var_t;
+
+/** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
+#define STRUCT_OFFSET(tp, member) \
+  ((off_t) (((char*)&((tp*)0)->member)-(char*)0))
 
 #define STRUCT_VAR_P(st, off) \
   ((void*) ( ((char*)st) + off ) )
@@ -132,7 +134,6 @@ static config_var_t _option_vars[] = {
   VAR("AuthDirReject",       LINELIST, AuthDirReject,        NULL),
   VAR("AuthDirRejectUnlisted",BOOL,    AuthDirRejectUnlisted,"0"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
-  VAR("AvoidDiskWrites",     BOOL,     AvoidDiskWrites,      "0"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "6 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "3 MB"),
   VAR("CircuitBuildTimeout", INTERVAL, CircuitBuildTimeout,  "1 minute"),
@@ -147,7 +148,8 @@ static config_var_t _option_vars[] = {
   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
   VAR("DirListenAddress",    LINELIST, DirListenAddress,     NULL),
-  OBSOLETE("DirFetchPeriod"),
+  /* if DirFetchPeriod is 0, see get_dir_fetch_period() in main.c */
+  VAR("DirFetchPeriod",      INTERVAL, DirFetchPeriod,       "0 seconds"),
   VAR("DirPolicy",           LINELIST, DirPolicy,            NULL),
   VAR("DirPort",             UINT,     DirPort,              "0"),
   OBSOLETE("DirPostPeriod"),
@@ -182,7 +184,7 @@ static config_var_t _option_vars[] = {
   VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
   VAR("LongLivedPorts",      CSV,      LongLivedPorts,
-                         "21,22,706,1863,5050,5190,5222,5223,6667,8300"),
+                         "21,22,706,1863,5050,5190,5222,5223,6667,8300,8888"),
   VAR("MapAddress",          LINELIST, AddressMap,           NULL),
   VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"128 TB"),
   VAR("MaxCircuitDirtiness", INTERVAL, MaxCircuitDirtiness,  "10 minutes"),
@@ -211,8 +213,6 @@ static config_var_t _option_vars[] = {
   VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),
   VAR("RecommendedServerVersions", LINELIST, RecommendedServerVersions,  NULL),
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
-  VAR("RelayBandwidthBurst", MEMUNIT,  RelayBandwidthBurst,  "0"),
-  VAR("RelayBandwidthRate",  MEMUNIT,  RelayBandwidthRate,   "0"),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
   VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "1 hour"),
@@ -222,15 +222,13 @@ static config_var_t _option_vars[] = {
   VAR("RunTesting",          BOOL,     RunTesting,           "0"),
   VAR("SafeLogging",         BOOL,     SafeLogging,          "1"),
   VAR("SafeSocks",           BOOL,     SafeSocks,            "0"),
-  VAR("ServerDNSDetectHijacking",BOOL,   ServerDNSDetectHijacking,"1"),
-  VAR("ServerDNSResolvConfFile", STRING, ServerDNSResolvConfFile, NULL),
-  VAR("ServerDNSSearchDomains",  BOOL,   ServerDNSSearchDomains,  "0"),
   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),
   VAR("SocksListenAddress",  LINELIST, SocksListenAddress,   NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),
   VAR("SocksPort",           UINT,     SocksPort,            "9050"),
   VAR("SocksTimeout",        INTERVAL, SocksTimeout,         "2 minutes"),
-  OBSOLETE("StatusFetchPeriod"),
+  /* if StatusFetchPeriod is 0, see get_status_fetch_period() in main.c */
+  VAR("StatusFetchPeriod",   INTERVAL, StatusFetchPeriod,    "0 seconds"),
   VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes,     "0"),
   VAR("StrictExitNodes",     BOOL,     StrictExitNodes,      "0"),
   VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
@@ -239,8 +237,6 @@ static config_var_t _option_vars[] = {
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
   VAR("TrackHostExitsExpire",INTERVAL, TrackHostExitsExpire, "30 minutes"),
   OBSOLETE("TrafficShaping"),
-  VAR("TransListenAddress",  LINELIST, TransListenAddress,   NULL),
-  VAR("TransPort",           UINT,     TransPort,            "0"),
   VAR("UseEntryGuards",      BOOL,     UseEntryGuards,       "1"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
@@ -395,15 +391,11 @@ static int or_state_validate(or_state_t *old_options, or_state_t *options,
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
-static void print_svn_version(void);
+static void print_cvs_version(void);
 static void init_libevent(void);
 static int opt_streq(const char *s1, const char *s2);
-typedef enum {
-  LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_OTHER
-} le_version_t;
-static le_version_t decode_libevent_version(void);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-static void check_libevent_version(const char *m, int server);
+static void check_libevent_version(const char *m, const char *v, int server);
 #endif
 
 /*static*/ or_options_t *options_new(void);
@@ -453,7 +445,7 @@ static or_state_t *global_state = NULL;
 static void *
 config_alloc(config_format_t *fmt)
 {
-  void *opts = tor_malloc_zero(fmt->size);
+  void *opts = opts = tor_malloc_zero(fmt->size);
   *(uint32_t*)STRUCT_VAR_P(opts, fmt->magic_offset) = fmt->magic;
   CHECK(fmt, opts);
   return opts;
@@ -522,9 +514,7 @@ safe_str(const char *address)
     return address;
 }
 
-/** Equivalent to escaped(safe_str(address)).  See reentrancy node on
- * escaped(): don't use this outside the main thread, or twice in the same
- * log statement. */
+/** Equivalent to escaped(safe_str(address)) */
 const char *
 escaped_safe_str(const char *address)
 {
@@ -540,7 +530,6 @@ add_default_trusted_dirservers(void)
 {
   int i;
   const char *dirservers[] = {
-    /* eventually we should mark moria1 as "v1only" */
     "moria1 v1 18.244.0.188:9031 "
       "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
     "moria2 v1 18.244.0.114:80 "
@@ -798,22 +787,18 @@ options_act(or_options_t *old_options)
       log_info(LD_GENERAL,
                "Worker-related options changed. Rotating workers.");
       if (server_mode(options) && !server_mode(old_options)) {
+        extern int has_completed_circuit;
         if (init_keys() < 0) {
           log_err(LD_GENERAL,"Error initializing keys; exiting");
           return -1;
         }
         server_has_changed_ip();
-        if (has_completed_circuit || !any_predicted_circuits(time(NULL)))
+        if (has_completed_circuit)
           inform_testing_reachability();
       }
       cpuworkers_rotate();
-      dns_reset();
+      dnsworkers_rotate();
     }
-#ifdef USE_EVENTDNS
-    else {
-      dns_reset();
-    }
-#endif
   }
 
   /* Check if we need to parse and add the EntryNodes config option. */
@@ -821,12 +806,6 @@ options_act(or_options_t *old_options)
       (!old_options ||
        !opt_streq(old_options->EntryNodes, options->EntryNodes)))
     entry_nodes_should_be_added();
-
-  /* If the user wants to avoid certain nodes, make sure none of them
-   * are already entryguards */
-  if (options->ExcludeNodes) {
-    // XXX TODO
-  }
 
   /* Since our options changed, we might need to regenerate and upload our
    * server descriptor.
@@ -1295,8 +1274,18 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
   if (!var) {
     log_warn(LD_CONFIG, "Unknown option '%s'.  Failing.", key);
     return NULL;
+  } else if (var->type == CONFIG_TYPE_LINELIST_S) {
+    log_warn(LD_CONFIG,
+             "Can't return context-sensitive '%s' on its own", key);
+    return NULL;
   }
   value = STRUCT_VAR_P(options, var->var_offset);
+
+  if (var->type == CONFIG_TYPE_LINELIST ||
+      var->type == CONFIG_TYPE_LINELIST_V) {
+    /* Linelist requires special handling: we just copy and return it. */
+    return config_lines_dup(*(const config_line_t**)value);
+  }
 
   result = tor_malloc_zero(sizeof(config_line_t));
   result->key = tor_strdup(var->name);
@@ -1353,17 +1342,6 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
       tor_free(result->key);
       tor_free(result);
       return NULL;
-    case CONFIG_TYPE_LINELIST_S:
-      log_warn(LD_CONFIG,
-               "Can't return context-sensitive '%s' on its own", key);
-      tor_free(result->key);
-      tor_free(result);
-      return NULL;
-    case CONFIG_TYPE_LINELIST:
-    case CONFIG_TYPE_LINELIST_V:
-      tor_free(result->key);
-      tor_free(result);
-      return config_lines_dup(*(const config_line_t**)value);
     default:
       tor_free(result->key);
       tor_free(result);
@@ -1513,7 +1491,6 @@ static void
 option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
 {
   void *lvalue = STRUCT_VAR_P(options, var->var_offset);
-  (void)fmt; /* unused */
   switch (var->type) {
     case CONFIG_TYPE_STRING:
       tor_free(*(char**)lvalue);
@@ -1596,8 +1573,8 @@ print_usage(void)
  * public IP address.
  */
 int
-resolve_my_address(int warn_severity, or_options_t *options,
-                   uint32_t *addr_out, char **hostname_out)
+resolve_my_address(or_options_t *options, uint32_t *addr_out,
+                   char **hostname_out)
 {
   struct in_addr in;
   struct hostent *rent;
@@ -1607,8 +1584,6 @@ resolve_my_address(int warn_severity, or_options_t *options,
   char tmpbuf[INET_NTOA_BUF_LEN];
   static uint32_t old_addr=0;
   const char *address = options->Address;
-  int notice_severity = warn_severity <= LOG_NOTICE ?
-                          LOG_NOTICE : warn_severity;
 
   tor_assert(addr_out);
 
@@ -1619,13 +1594,13 @@ resolve_my_address(int warn_severity, or_options_t *options,
     explicit_hostname = 0; /* it's implicit */
 
     if (gethostname(hostname, sizeof(hostname)) < 0) {
-      log_fn(warn_severity, LD_NET,"Error obtaining local hostname");
+      log_warn(LD_NET,"Error obtaining local hostname");
       return -1;
     }
     log_debug(LD_CONFIG,"Guessed local host name as '%s'",hostname);
   }
 
-  /* now we know hostname. resolve it and keep only the IP address */
+  /* now we know hostname. resolve it and keep only the IP */
 
   if (tor_inet_aton(hostname, &in) == 0) {
     /* then we have to resolve it */
@@ -1635,22 +1610,21 @@ resolve_my_address(int warn_severity, or_options_t *options,
       uint32_t interface_ip;
 
       if (explicit_hostname) {
-        log_fn(warn_severity, LD_CONFIG,
-               "Could not resolve local Address '%s'. Failing.", hostname);
+        log_warn(LD_CONFIG,"Could not resolve local Address '%s'. Failing.",
+                 hostname);
         return -1;
       }
-      log_fn(notice_severity, LD_CONFIG,
-             "Could not resolve guessed local hostname '%s'. "
-             "Trying something else.", hostname);
-      if (get_interface_address(warn_severity, &interface_ip)) {
-        log_fn(warn_severity, LD_CONFIG,
-               "Could not get local interface IP address. Failing.");
+      log_notice(LD_CONFIG, "Could not resolve guessed local hostname '%s'. "
+                            "Trying something else.", hostname);
+      if (get_interface_address(&interface_ip)) {
+        log_warn(LD_CONFIG, "Could not get local interface IP address. "
+                 "Failing.");
         return -1;
       }
       in.s_addr = htonl(interface_ip);
       tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-      log_fn(notice_severity, LD_CONFIG, "Learned IP address '%s' for "
-             "local interface. Using that.", tmpbuf);
+      log_notice(LD_CONFIG, "Learned IP address '%s' for local interface."
+               " Using that.", tmpbuf);
       strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
     } else {
       tor_assert(rent->h_length == 4);
@@ -1661,26 +1635,24 @@ resolve_my_address(int warn_severity, or_options_t *options,
         uint32_t interface_ip;
 
         tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-        log_fn(notice_severity, LD_CONFIG, "Guessed local hostname '%s' "
-               "resolves to a private IP address (%s).  Trying something "
-               "else.", hostname, tmpbuf);
+        log_notice(LD_CONFIG, "Guessed local hostname '%s' resolves to a "
+          "private IP address (%s).  Trying something else.", hostname,
+          tmpbuf);
 
-        if (get_interface_address(warn_severity, &interface_ip)) {
-          log_fn(warn_severity, LD_CONFIG,
-                 "Could not get local interface IP address. Too bad.");
+        if (get_interface_address(&interface_ip)) {
+          log_warn(LD_CONFIG, "Could not get local interface IP address. "
+                              "Too bad.");
         } else if (is_internal_IP(interface_ip, 0)) {
           struct in_addr in2;
           in2.s_addr = htonl(interface_ip);
           tor_inet_ntoa(&in2,tmpbuf,sizeof(tmpbuf));
-          log_fn(notice_severity, LD_CONFIG,
-                 "Interface IP address '%s' is a private address too. "
-                 "Ignoring.", tmpbuf);
+          log_notice(LD_CONFIG, "Interface IP '%s' is a private address "
+                                "too.  Ignoring.", tmpbuf);
         } else {
           in.s_addr = htonl(interface_ip);
           tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-          log_fn(notice_severity, LD_CONFIG,
-                 "Learned IP address '%s' for local interface."
-                 " Using that.", tmpbuf);
+          log_notice(LD_CONFIG, "Learned IP address '%s' for local interface."
+                                " Using that.", tmpbuf);
           strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
         }
       }
@@ -1694,18 +1666,18 @@ resolve_my_address(int warn_severity, or_options_t *options,
     if (!options->DirServers) {
       /* if they are using the default dirservers, disallow internal IPs
        * always. */
-      log_fn(warn_severity, LD_CONFIG,
-             "Address '%s' resolves to private IP address '%s'. "
-             "Tor servers that use the default DirServers must have public "
-             "IP addresses.", hostname, tmpbuf);
+      log_warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. "
+               "Tor servers that use the default DirServers must have public "
+               "IP addresses.",
+               hostname, tmpbuf);
       return -1;
     }
     if (!explicit_ip) {
       /* even if they've set their own dirservers, require an explicit IP if
        * they're using an internal address. */
-      log_fn(warn_severity, LD_CONFIG, "Address '%s' resolves to private "
-             "IP address '%s'. Please set the Address config option to be "
-             "the IP address you want to use.", hostname, tmpbuf);
+      log_warn(LD_CONFIG,"Address '%s' resolves to private IP '%s'. Please "
+               "set the Address config option to be the IP you want to use.",
+               hostname, tmpbuf);
       return -1;
     }
   }
@@ -1713,9 +1685,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   log_debug(LD_CONFIG, "Resolved Address to '%s'.", tmpbuf);
   *addr_out = ntohl(in.s_addr);
   if (old_addr && old_addr != *addr_out) {
-    /* Leave this as a notice, regardless of the requested severity,
-     * at least until dynamic IP address support becomes bulletproof. */
-    log_notice(LD_NET, "Your IP address seems to have changed. Updating.");
+    log_notice(LD_NET, "Your IP seems to have changed. Updating.");
     server_has_changed_ip();
   }
   old_addr = *addr_out;
@@ -1993,40 +1963,23 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
   return 0;
 }
 
-#if 0
-/* XXXX Unused. */
-/** Return 0 if every element of sl is a string holding an IP address, or if sl
- * is NULL.  Otherwise set *msg and return -1. */
-static int
-validate_ips_csv(smartlist_t *sl, const char *name, char **msg)
-{
-  char buf[1024];
-  tor_assert(name);
-
-  if (!sl)
-    return 0;
-
-  SMARTLIST_FOREACH(sl, const char *, cp,
-  {
-    struct in_addr in;
-    if (0 == tor_inet_aton(cp, &in)) {
-      int r = tor_snprintf(buf, sizeof(buf),
-                        "Malformed address '%s' out of range in %s", cp, name);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
-      return -1;
-    }
-  });
-  return 0;
-}
-#endif
-
+/** Lowest allowable value for DirFetchPeriod; if this is too low, clients can
+ * overload the directory system. */
+#define MIN_DIR_FETCH_PERIOD (10*60)
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (5*60)
+/** Lowest allowable value for StatusFetchPeriod; if this is too low, clients
+ * can overload the directory system. */
+#define MIN_STATUS_FETCH_PERIOD (5*60)
 
 /** Highest allowable value for DirFetchPeriod, StatusFetchPeriod, and
  * RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
+/** Highest allowable value for DirFetchPeriod for directory caches. */
+#define MAX_CACHE_DIR_FETCH_PERIOD (60*60)
+/** Highest allowable value for StatusFetchPeriod for directory caches. */
+#define MAX_CACHE_STATUS_FETCH_PERIOD (15*60)
 
 /** Return 0 if every setting in <b>options</b> is reasonable, and a
  * permissible transition from <b>old_options</b>. Else return -1.
@@ -2078,39 +2031,27 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->ControlPort == 0 && options->ControlListenAddress != NULL)
     REJECT("ControlPort must be defined if ControlListenAddress is defined.");
 
-  if (options->TransPort == 0 && options->TransListenAddress != NULL)
-    REJECT("TransPort must be defined if TransListenAddress is defined.");
-
 #if 0 /* don't complain, since a standard configuration does this! */
   if (options->SocksPort == 0 && options->SocksListenAddress != NULL)
     REJECT("SocksPort must be defined if SocksListenAddress is defined.");
 #endif
 
-  for (i = 0; i < 2; ++i) {
-    int is_socks = i==0;
-    config_line_t *line, *opt, *old;
-    const char *tp = is_socks ? "SOCKS proxy" : "transparent proxy";
-    if (is_socks) {
-      opt = options->SocksListenAddress;
-      old = old_options ? old_options->SocksListenAddress : NULL;
-    } else {
-      opt = options->TransListenAddress;
-      old = old_options ? old_options->TransListenAddress : NULL;
-    }
-
-    for (line = opt; line; line = line->next) {
-      char *address = NULL;
+  if (options->SocksListenAddress) {
+    config_line_t *line = NULL;
+    char *address = NULL;
+    for (line = options->SocksListenAddress; line; line = line->next) {
       uint16_t port;
       uint32_t addr;
-      if (parse_addr_port(LOG_WARN, line->value, &address, &addr, &port)<0)
+      if (parse_addr_port(line->value, &address, &addr, &port)<0)
         continue; /* We'll warn about this later. */
       if (!is_internal_IP(addr, 1) &&
-          (!old_options || !config_lines_eq(old, opt))) {
+          (!old_options || !config_lines_eq(old_options->SocksListenAddress,
+                                            options->SocksListenAddress))) {
         log_warn(LD_CONFIG,
-             "You specified a public address '%s' for a %s. Other "
+             "You specified a public address '%s' for a SOCKS listener. Other "
              "people on the Internet might find your computer and use it as "
-             "an open %s. Please don't allow this unless you have "
-             "a good reason.", address, tp, tp);
+             "an open SOCKS proxy. Please don't allow this unless you have "
+             "a good reason.", address);
       }
       tor_free(address);
     }
@@ -2157,10 +2098,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->PublishServerDescriptor = 0;
   }
 
-  if (authdir_mode(options)) {
+  if (server_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
-    if (resolve_my_address(LOG_WARN, options, &tmp, NULL) < 0)
+    if (resolve_my_address(options, &tmp, NULL) < 0)
       REJECT("Failed to resolve/guess local address. See logs for details.");
   }
 
@@ -2172,23 +2113,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->SocksPort < 0 || options->SocksPort > 65535)
     REJECT("SocksPort option out of bounds.");
 
-  if (options->TransPort < 0 || options->TransPort > 65535)
-    REJECT("TransPort option out of bounds.");
-
-  if (options->SocksPort == 0 && options->TransPort == 0 &&
-      options->ORPort == 0)
-    REJECT("SocksPort, TransPort, and ORPort are all undefined? Quitting.");
+  if (options->SocksPort == 0 && options->ORPort == 0)
+    REJECT("SocksPort and ORPort are both undefined? Quitting.");
 
   if (options->ControlPort < 0 || options->ControlPort > 65535)
     REJECT("ControlPort option out of bounds.");
 
   if (options->DirPort < 0 || options->DirPort > 65535)
     REJECT("DirPort option out of bounds.");
-
-#ifndef USE_TRANSPARENT
-  if (options->TransPort || options->TransListenAddress)
-    REJECT("TransPort and TransListenAddress are disabled in this build.");
-#endif
 
   if (options->StrictExitNodes &&
       (!options->ExitNodes || !strlen(options->ExitNodes)) &&
@@ -2364,12 +2296,51 @@ options_validate(or_options_t *old_options, or_options_t *options,
       (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0))
     REJECT("PathlenCoinWeight option must be >=0.0 and <1.0.");
 
+  if (options->DirFetchPeriod &&
+      options->DirFetchPeriod < MIN_DIR_FETCH_PERIOD) {
+    log(LOG_WARN, LD_CONFIG,
+        "DirFetchPeriod option must be at least %d seconds. Clipping.",
+        MIN_DIR_FETCH_PERIOD);
+    options->DirFetchPeriod = MIN_DIR_FETCH_PERIOD;
+  }
+  if (options->StatusFetchPeriod &&
+      options->StatusFetchPeriod < MIN_STATUS_FETCH_PERIOD) {
+    log(LOG_WARN, LD_CONFIG,
+        "StatusFetchPeriod option must be at least %d seconds. Clipping.",
+        MIN_STATUS_FETCH_PERIOD);
+    options->StatusFetchPeriod = MIN_STATUS_FETCH_PERIOD;
+  }
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
     log(LOG_WARN,LD_CONFIG,"RendPostPeriod option must be at least %d seconds."
         " Clipping.", MIN_REND_POST_PERIOD);
     options->RendPostPeriod = MIN_REND_POST_PERIOD;
   }
 
+  if (options->DirPort && ! options->AuthoritativeDir) {
+    if (options->DirFetchPeriod > MAX_CACHE_DIR_FETCH_PERIOD) {
+      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have "
+          "DirFetchPeriod less than %d seconds. Clipping.",
+          MAX_CACHE_DIR_FETCH_PERIOD);
+      options->DirFetchPeriod = MAX_CACHE_DIR_FETCH_PERIOD;
+    }
+    if (options->StatusFetchPeriod > MAX_CACHE_STATUS_FETCH_PERIOD) {
+      log(LOG_WARN, LD_CONFIG, "Caching directory servers must have "
+          "StatusFetchPeriod less than %d seconds. Clipping.",
+          MAX_CACHE_STATUS_FETCH_PERIOD);
+      options->StatusFetchPeriod = MAX_CACHE_STATUS_FETCH_PERIOD;
+    }
+  }
+
+  if (options->DirFetchPeriod > MAX_DIR_PERIOD) {
+    log(LOG_WARN, LD_CONFIG, "DirFetchPeriod is too large; clipping to %ds.",
+        MAX_DIR_PERIOD);
+    options->DirFetchPeriod = MAX_DIR_PERIOD;
+  }
+  if (options->StatusFetchPeriod > MAX_DIR_PERIOD) {
+    log(LOG_WARN, LD_CONFIG,"StatusFetchPeriod is too large; clipping to %ds.",
+        MAX_DIR_PERIOD);
+    options->StatusFetchPeriod = MAX_DIR_PERIOD;
+  }
   if (options->RendPostPeriod > MAX_DIR_PERIOD) {
     log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
         MAX_DIR_PERIOD);
@@ -2408,7 +2379,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to parse accounting options. See logs for details.");
 
   if (options->HttpProxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->HttpProxy, NULL,
+    if (parse_addr_port(options->HttpProxy, NULL,
                         &options->HttpProxyAddr, &options->HttpProxyPort) < 0)
       REJECT("HttpProxy failed to parse or resolve. Please fix.");
     if (options->HttpProxyPort == 0) { /* give it a default */
@@ -2422,7 +2393,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HttpsProxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->HttpsProxy, NULL,
+    if (parse_addr_port(options->HttpsProxy, NULL,
                         &options->HttpsProxyAddr, &options->HttpsProxyPort) <0)
       REJECT("HttpsProxy failed to parse or resolve. Please fix.");
     if (options->HttpsProxyPort == 0) { /* give it a default */
@@ -2444,12 +2415,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->UseEntryGuards && ! options->NumEntryGuards)
     REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
-
-#ifndef USE_EVENTDNS
-  if (options->ServerDNSResolvConfFile)
-    log(LOG_WARN, LD_CONFIG,
-       "ServerDNSResolvConfFile only works when eventdns support is enabled.");
-#endif
 
   if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))
     return -1;
@@ -2574,8 +2539,6 @@ options_transition_affects_workers(or_options_t *old_options,
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       old_options->NumCpus != new_options->NumCpus ||
       old_options->ORPort != new_options->ORPort ||
-      old_options->ServerDNSSearchDomains !=
-                                       new_options->ServerDNSSearchDomains ||
       old_options->SafeLogging != new_options->SafeLogging ||
       !config_lines_eq(old_options->Logs, new_options->Logs))
     return 1;
@@ -2734,7 +2697,7 @@ options_init_from_torrc(int argc, char **argv)
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
     printf("Tor version %s.\n",VERSION);
     if (argc > 2 && (!strcmp(argv[2],"--version"))) {
-      print_svn_version();
+      print_cvs_version();
     }
     exit(0);
   }
@@ -2769,11 +2732,11 @@ options_init_from_torrc(int argc, char **argv)
   if (using_default_torrc) {
     /* didn't find one, try CONFDIR */
     const char *dflt = get_default_conf_file();
+    char *fn = NULL;
     if (dflt && file_status(dflt) == FN_FILE) {
       fname = tor_strdup(dflt);
     } else {
 #ifndef MS_WINDOWS
-      char *fn;
       fn = expand_filename("~/.torrc");
       if (fn && file_status(fn) == FN_FILE) {
         fname = fn;
@@ -3205,8 +3168,8 @@ parse_redirect_line(smartlist_t *result, config_line_t *line, char **msg)
   if (0==strcasecmp(smartlist_get(elements,1), "pass")) {
     r->is_redirect = 0;
   } else {
-    if (parse_addr_port(LOG_WARN, smartlist_get(elements,1),NULL,
-                        &r->addr_dest, &r->port_dest)) {
+    if (parse_addr_port(smartlist_get(elements,1),NULL,&r->addr_dest,
+                             &r->port_dest)) {
       *msg = tor_strdup("Error parsing dest address in RedirectExit line");
       goto err;
     }
@@ -3271,7 +3234,7 @@ parse_dir_server_line(const char *line, int validate_only)
     goto err;
   }
   addrport = smartlist_get(items, 0);
-  if (parse_addr_port(LOG_WARN, addrport, &address, NULL, &port)<0) {
+  if (parse_addr_port(addrport, &address, NULL, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing DirServer address '%s'", addrport);
     goto err;
   }
@@ -3401,8 +3364,6 @@ write_configuration_file(const char *fname, or_options_t *options)
         break;
       case FN_NOENT:
         break;
-      case FN_ERROR:
-      case FN_DIR:
       default:
         log_warn(LD_CONFIG,
                  "Config file \"%s\" is not a file? Failing.", fname);
@@ -3594,20 +3555,7 @@ init_libevent(void)
    */
   suppress_libevent_log_msg("Function not implemented");
 #ifdef __APPLE__
-  if (decode_libevent_version() < LE_11B) {
-    setenv("EVENT_NOKQUEUE","1",1);
-  } else if (!getenv("EVENT_NOKQUEUE")) {
-    const char *ver = NULL;
-#ifdef HAVE_EVENT_GET_VERSION
-    ver = event_get_version();
-#endif
-    /* If we're 1.1b or later, we'd better have get_version() */
-    tor_assert(ver);
-    log(LOG_NOTICE, LD_GENERAL, "Enabling experimental OS X kqueue support "
-        "with libevent %s.  If this turns out to not work, "
-        "set the environment variable EVENT_NOKQUEUE, and tell the Tor "
-        "developers.", ver);
-  }
+  setenv("EVENT_NOKQUEUE","1",1);
 #endif
   event_init();
   suppress_libevent_log_msg(NULL);
@@ -3617,78 +3565,46 @@ init_libevent(void)
   log(LOG_NOTICE, LD_GENERAL,
       "Initialized libevent version %s using method %s. Good.",
       event_get_version(), event_get_method());
-  check_libevent_version(event_get_method(), get_options()->ORPort != 0);
+  check_libevent_version(event_get_method(), event_get_version(),
+                         get_options()->ORPort != 0);
 #else
   log(LOG_NOTICE, LD_GENERAL,
       "Initialized old libevent (version 1.0b or earlier).");
   log(LOG_WARN, LD_GENERAL,
-      "You have a *VERY* old version of libevent.  It is likely to be buggy; "
-      "please build Tor with a more recent version.");
+      "You have a very old version of libevent.  It is likely to be buggy; "
+      "please consider building Tor with a more recent version.");
 #endif
 }
 
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-static const struct {
-  const char *name; le_version_t version;
-} le_version_table[] = {
-  /* earlier versions don't have get_version. */
-  { "1.0c", LE_10C },
-  { "1.0d", LE_10D },
-  { "1.0e", LE_10E },
-  { "1.1",  LE_11 },
-  { "1.1a", LE_11A },
-  { "1.1b", LE_11B },
-  { NULL, 0 }
-};
-
-static le_version_t
-decode_libevent_version(void)
-{
-  const char *v = event_get_version();
-  int i;
-  for (i=0; le_version_table[i].name; ++i) {
-    if (!strcmp(le_version_table[i].name, v)) {
-      return le_version_table[i].version;
-    }
-  }
-  return LE_OTHER;
-}
-
 /**
  * Compare the given libevent method and version to a list of versions
  * which are known not to work.  Warn the user as appropriate.
  *
  */
 static void
-check_libevent_version(const char *m, int server)
+check_libevent_version(const char *m, const char *v, int server)
 {
   int buggy = 0, iffy = 0, slow = 0;
-  le_version_t version;
-  const char *v = event_get_version();
 
-  version = decode_libevent_version();
+  tor_assert(m && v);
 
-  /* XXX Would it be worthwhile disabling the methods that we know
-   * are buggy, rather than just warning about them and then proceeding
-   * to use them? If so, we should probably not wrap this whole thing
-   * in HAVE_EVENT_GET_VERSION and HAVE_EVENT_GET_METHOD. -RD */
   if (!strcmp(m, "kqueue")) {
-    if (version < LE_11B)
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e") ||
+        !strcmp(v, "1.1")) {
       buggy = 1;
+    }
   } else if (!strcmp(m, "epoll")) {
-    if (version < LE_11)
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
       iffy = 1;
   } else if (!strcmp(m, "poll")) {
-    if (version < LE_10E)
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d"))
       buggy = 1;
-    else if (version < LE_11)
+    else if (!strcmp(v, "1.0e"))
       slow = 1;
   } else if (!strcmp(m, "poll")) {
-    if (version < LE_11)
+    if (!strcmp(v, "1.0c") || !strcmp(v, "1.0d") || !strcmp(v, "1.0e"))
       slow = 1;
-  } else if (!strcmp(m, "win32")) {
-    if (version < LE_11B)
-      buggy = 1;
   }
 
   if (buggy) {
@@ -3706,12 +3622,6 @@ check_libevent_version(const char *m, int server)
         v,m);
   }
 
-}
-#else
-static le_version_t
-decode_libevent_version(void)
-{
-  return LE_OLD;
 }
 #endif
 
@@ -3744,10 +3654,6 @@ static int
 or_state_validate(or_state_t *old_state, or_state_t *state,
                   int from_setconf, char **msg)
 {
-  /* We don't use these; only options do. Still, we need to match that
-   * signature. */
-  (void) from_setconf;
-  (void) old_state;
   if (entry_guards_parse_state(state, 0, msg)<0) {
     return -1;
   }
@@ -3798,7 +3704,7 @@ or_state_load(void)
   or_state_t *new_state = NULL;
   char *contents = NULL, *fname;
   char *errmsg = NULL;
-  int r = -1, badstate = 0;
+  int r = -1;
 
   fname = get_or_state_fname();
   switch (file_status(fname)) {
@@ -3810,8 +3716,6 @@ or_state_load(void)
       break;
     case FN_NOENT:
       break;
-    case FN_ERROR:
-    case FN_DIR:
     default:
       log_warn(LD_GENERAL,"State file \"%s\" is not a file? Failing.", fname);
       goto done;
@@ -3828,68 +3732,30 @@ or_state_load(void)
                                   lines, 0, 0, &errmsg);
     config_free_lines(lines);
     if (assign_retval<0)
-      badstate = 1;
-    if (errmsg) {
-      log_warn(LD_GENERAL, "%s", errmsg);
-      tor_free(errmsg);
-    }
+      goto done;
   }
 
-  if (!badstate && or_state_validate(NULL, new_state, 1, &errmsg) < 0)
-    badstate = 1;
-
-  if (errmsg) {
-    log_warn(LD_GENERAL, "%s", errmsg);
-    tor_free(errmsg);
-  }
-
-  if (badstate && !contents) {
-    log_warn(LD_BUG, "Uh oh.  We couldn't even validate our own default state."
-             " This is a bug in Tor.");
+  if (or_state_validate(NULL, new_state, 1, &errmsg) < 0) {
     goto done;
-  } else if (badstate && contents) {
-    int i;
-    file_status_t status;
-    size_t len = strlen(fname)+16;
-    char *fname2 = tor_malloc(len);
-    for (i = 0; i < 100; ++i) {
-      tor_snprintf(fname2, len, "%s.%d", fname, i);
-      status = file_status(fname2);
-      if (status == FN_NOENT)
-        break;
-    }
-    if (i == 100) {
-      log_warn(LD_BUG, "Unable to parse state in \"%s\"; too many saved bad "
-               "state files to move aside. Discarding the old state file.",
-               fname);
-      unlink(fname);
-    } else {
-      log_warn(LD_BUG, "Unable to parse state in \"%s\". Moving it aside "
-               "to \"%s\".  This could be a bug in Tor; please tell "
-               "the developers.", fname, fname2);
-      rename(fname, fname2);
-    }
-    tor_free(fname2);
-    tor_free(contents);
-    config_free(&state_format, new_state);
-
-    new_state = tor_malloc_zero(sizeof(or_state_t));
-    new_state->_magic = OR_STATE_MAGIC;
-    config_init(&state_format, new_state);
-  } else if (contents) {
-    log_info(LD_GENERAL, "Loaded state from \"%s\"", fname);
-  } else {
-    log_info(LD_GENERAL, "Initialized state");
   }
+
+  if (contents)
+    log_info(LD_GENERAL, "Loaded state from \"%s\"", fname);
+  else
+    log_info(LD_GENERAL, "Initialized state");
   or_state_set(new_state);
   new_state = NULL;
   if (!contents) {
     global_state->dirty = 1;
     or_state_save();
   }
-  r = 0;
 
+  r = 0;
  done:
+  if (errmsg) {
+    log_warn(LD_GENERAL, "%s", errmsg);
+    tor_free(errmsg);
+  }
   tor_free(fname);
   tor_free(contents);
   if (new_state)
@@ -3996,47 +3862,47 @@ config_getinfo_helper(const char *question, char **answer)
 #include "../common/ht.h"
 #include "../common/test.h"
 
-extern const char aes_c_id[];
-extern const char compat_c_id[];
-extern const char container_c_id[];
-extern const char crypto_c_id[];
-extern const char log_c_id[];
-extern const char torgzip_c_id[];
-extern const char tortls_c_id[];
-extern const char util_c_id[];
-
-extern const char buffers_c_id[];
-extern const char circuitbuild_c_id[];
-extern const char circuitlist_c_id[];
-extern const char circuituse_c_id[];
-extern const char command_c_id[];
-//  extern const char config_c_id[];
-extern const char connection_c_id[];
-extern const char connection_edge_c_id[];
-extern const char connection_or_c_id[];
-extern const char control_c_id[];
-extern const char cpuworker_c_id[];
-extern const char directory_c_id[];
-extern const char dirserv_c_id[];
-extern const char dns_c_id[];
-extern const char hibernate_c_id[];
-extern const char main_c_id[];
-extern const char onion_c_id[];
-extern const char policies_c_id[];
-extern const char relay_c_id[];
-extern const char rendclient_c_id[];
-extern const char rendcommon_c_id[];
-extern const char rendmid_c_id[];
-extern const char rendservice_c_id[];
-extern const char rephist_c_id[];
-extern const char router_c_id[];
-extern const char routerlist_c_id[];
-extern const char routerparse_c_id[];
-
 /** Dump the version of every file to the log. */
 static void
-print_svn_version(void)
+print_cvs_version(void)
 {
+  extern const char aes_c_id[];
+  extern const char compat_c_id[];
+  extern const char container_c_id[];
+  extern const char crypto_c_id[];
+  extern const char log_c_id[];
+  extern const char torgzip_c_id[];
+  extern const char tortls_c_id[];
+  extern const char util_c_id[];
+
+  extern const char buffers_c_id[];
+  extern const char circuitbuild_c_id[];
+  extern const char circuitlist_c_id[];
+  extern const char circuituse_c_id[];
+  extern const char command_c_id[];
+//  extern const char config_c_id[];
+  extern const char connection_c_id[];
+  extern const char connection_edge_c_id[];
+  extern const char connection_or_c_id[];
+  extern const char control_c_id[];
+  extern const char cpuworker_c_id[];
+  extern const char directory_c_id[];
+  extern const char dirserv_c_id[];
+  extern const char dns_c_id[];
+  extern const char hibernate_c_id[];
+  extern const char main_c_id[];
+  extern const char onion_c_id[];
+  extern const char policies_c_id[];
+  extern const char relay_c_id[];
+  extern const char rendclient_c_id[];
+  extern const char rendcommon_c_id[];
+  extern const char rendmid_c_id[];
+  extern const char rendservice_c_id[];
+  extern const char rephist_c_id[];
+  extern const char router_c_id[];
+  extern const char routerlist_c_id[];
+  extern const char routerparse_c_id[];
+
   puts(AES_H_ID);
   puts(COMPAT_H_ID);
   puts(CONTAINER_H_ID);

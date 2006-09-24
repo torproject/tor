@@ -23,97 +23,33 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad tor~/src/or/config.c tor/src/or/config.c
---- tor~/src/or/config.c	2006-07-23 19:31:29.000000000 +0200
-+++ tor/src/or/config.c	2006-07-24 05:13:19.924871985 +0200
-@@ -12,6 +12,7 @@
-  **/
- 
- #include "or.h"
-+#include <pwd.h>
- #ifdef MS_WINDOWS
- #include <shlobj.h>
- #endif
-@@ -396,6 +397,10 @@
- static void check_libevent_version(const char *m, const char *v, int server);
- #endif
- 
-+static int debian_running_as_debiantor();
-+static int debian_config_fix_defaults();
-+
-+
- /*static*/ or_options_t *options_new(void);
- 
- #define OR_OPTIONS_MAGIC 9090909
-@@ -2663,7 +2668,7 @@
- int
- options_init_from_torrc(int argc, char **argv)
- {
--  or_options_t *oldoptions, *newoptions;
-+  or_options_t *oldoptions, *newoptions = NULL;
-   config_line_t *cl;
-   char *cf=NULL, *fname=NULL, *errmsg=NULL;
-   int i, retval;
-@@ -2671,6 +2676,9 @@
-   static char **backup_argv;
-   static int backup_argc;
- 
-+  if (debian_config_fix_defaults() < 0)
-+    goto err;
-+
-   if (argv) { /* first time we're called. save commandline args */
-     backup_argv = argv;
-     backup_argc = argc;
-@@ -3948,3 +3956,52 @@
-   puts(routerparse_c_id);
- }
- 
-+/* Checks whether we are running as the debian-tor user.
-+ *   Returns -1 on error, 1 if we are debian-tor, 0 if not */
-+static int
-+debian_running_as_debiantor()
-+{
-+  struct passwd *pw = NULL;
-+  int uid;
-+
-+  uid = getuid();
-+  pw = getpwuid(uid);
-+  if (!pw) {
-+    log(LOG_WARN, LD_GENERAL, "Could not get passwd information for %d.", uid);
-+    return -1;
-+  }
-+  assert(pw->pw_name);
-+  if (strcmp(pw->pw_name, "debian-tor") == 0)
-+    return 1;
-+  else
-+    return 0;
-+}
-+
-+static int
-+debian_config_fix_defaults()
-+{
-+  config_var_t *var;
-+  static int fixed = 0;
-+  int running_as_debian;
-+
-+  if (fixed) return 0;
-+  fixed = 1;
-+
-+  running_as_debian = debian_running_as_debiantor();
-+  if (running_as_debian < 0) return -1;
-+  if (!running_as_debian) return 0;
-+
-+  var = config_find_option(&options_format, "DataDirectory");
-+  tor_assert(var);
-+  var->initvalue = tor_strdup("/var/lib/tor");
-+
-+  var = config_find_option(&options_format, "PidFile");
-+  tor_assert(var);
-+  var->initvalue = tor_strdup("/var/run/tor/tor.pid");
-+
-+  var = config_find_option(&options_format, "RunAsDaemon");
-+  tor_assert(var);
-+  var->initvalue = tor_strdup("1");
-+
-+  return 0;
-+}
+diff -urNad tor-0.1.1.5/src/or/config.c /tmp/dpep.Xv4cHn/tor-0.1.1.5/src/or/config.c
+--- tor-0.1.1.9/src/or/config.c		2005-10-17 03:54:24.917618642 +0200
++++ /tmp/foo/tor/src/or/config.c	2005-10-17 03:57:52.040022393 +0200
+@@ -111,7 +111,7 @@
+   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
+   VAR("ControlPort",         UINT,     ControlPort,          "0"),
+   VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
+-  VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
++  VAR("DataDirectory",       STRING,   DataDirectory,        "/var/lib/tor"),
+   VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
+   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
+   VAR("DirBindAddress",      LINELIST, DirBindAddress,       NULL),
+@@ -162,7 +162,7 @@
+   VAR("ORPort",              UINT,     ORPort,               "0"),
+   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
+   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
+-  VAR("PidFile",             STRING,   PidFile,              NULL),
++  VAR("PidFile",             STRING,   PidFile,              "/var/run/tor/tor.pid"),
+   VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
+   VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
+   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
+@@ -174,7 +174,7 @@
+   VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "20 minutes"),
+   VAR("RephistTrackTime",    INTERVAL, RephistTrackTime,     "24 hours"),
+   OBSOLETE("RouterFile"),
+-  VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "0"),
++  VAR("RunAsDaemon",         BOOL,     RunAsDaemon,          "1"),
+   VAR("RunTesting",          BOOL,     RunTesting,           "0"),
+   VAR("SafeLogging",         BOOL,     SafeLogging,          "1"),
+   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),

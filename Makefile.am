@@ -15,7 +15,6 @@ EXTRA_DIST = INSTALL README AUTHORS LICENSE ChangeLog tor.spec tor.spec.in
 #install-data-local:
 #	$(INSTALL) -m 755 -d $(LOCALSTATEDIR)/lib/tor
 
-# Assume a tarball is in .. for now.
 dist-rpm: 
 	RPM_BUILD_DIR="/tmp/tor-rpm-build-$$$$";                \
 	rm -rf $$RPM_BUILD_DIR;                                 \
@@ -23,7 +22,7 @@ dist-rpm:
 	for subdir in BUILD RPMS SOURCES SPECS SRPMS; do        \
 	    mkdir $$RPM_BUILD_DIR/$$subdir;                     \
 	done;                                                   \
-	mkdir $$RPM_BUILD_DIR/SOURCES/tor-$(VERSION);           \
+        mkdir $$RPM_BUILD_DIR/SOURCES/tor-$(VERSION);           \
         cp -R ./ $$RPM_BUILD_DIR/SOURCES/tor-$(VERSION)/;       \
         pushd $$RPM_BUILD_DIR/SOURCES/;                         \
         tar zcf tor-$(VERSION).tar.gz ./;                       \
@@ -55,8 +54,8 @@ doxygen:
 
 # Avoid strlcpy.c, strlcat.c, tree.h
 check-spaces:
-	./contrib/checkSpace.pl -C                    \
-	        src/common/*.h                        \
-		src/common/[^as]*.c                   \
-		src/or/[^et]*.[ch] src/or/t*.c src/or/eventdns_tor.h
+	./contrib/checkSpace.pl -C             \
+	        src/common/*.h                 \
+		src/common/[^s]*.c             \
+		src/or/[^t]*.[ch] src/or/t*.c
 

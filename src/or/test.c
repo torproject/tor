@@ -416,6 +416,19 @@ test_crypto(void)
   test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
   tor_free(cp);
 
+  /* Check DER encoding */
+  i=crypto_pk_DER64_encode_public_key(pk1, &cp);
+  test_assert(i>0);
+  test_assert(cp);
+  test_assert(!strchr(cp, ' '));
+  test_assert(!strchr(cp, '\n'));
+  test_eq(0, crypto_pk_cmp_keys(pk1, pk1));
+  crypto_free_pk_env(pk2);
+  pk2 = crypto_pk_DER64_decode_public_key(cp);
+  test_assert(pk2);
+  test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
+  tor_free(cp);
+
   test_eq(128, crypto_pk_keysize(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
 
@@ -773,16 +786,6 @@ test_util(void)
   test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
   test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
 
-  /* Test reverse() and pop_last() */
-  smartlist_reverse(sl);
-  cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp,"the,router,onion,nickm,by,arma,and");
-  tor_free(cp);
-  cp = smartlist_pop_last(sl);
-  test_streq(cp, "and");
-  tor_free(cp);
-  test_eq(smartlist_len(sl), 6);
-
   /* Test tor_strstrip() */
   strcpy(buf, "Testing 1 2 3");
   test_eq(0, tor_strstrip(buf, ",!"));
@@ -807,28 +810,27 @@ test_util(void)
 
   /* Test parse_addr_port */
   cp = NULL; u32 = 3; u16 = 3;
-  test_assert(!parse_addr_port(LOG_WARN, "1.2.3.4", &cp, &u32, &u16));
+  test_assert(!parse_addr_port("1.2.3.4", &cp, &u32, &u16));
   test_streq(cp, "1.2.3.4");
   test_eq(u32, 0x01020304u);
   test_eq(u16, 0);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "4.3.2.1:99", &cp, &u32, &u16));
+  test_assert(!parse_addr_port("4.3.2.1:99", &cp, &u32, &u16));
   test_streq(cp, "4.3.2.1");
   test_eq(u32, 0x04030201u);
   test_eq(u16, 99);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "nonexistent.address:4040",
-                               &cp, NULL, &u16));
+  test_assert(!parse_addr_port("nonexistent.address:4040", &cp, NULL, &u16));
   test_streq(cp, "nonexistent.address");
   test_eq(u16, 4040);
   tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "localhost:9999", &cp, &u32, &u16));
+  test_assert(!parse_addr_port("localhost:9999", &cp, &u32, &u16));
   test_streq(cp, "localhost");
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 9999);
   tor_free(cp);
   u32 = 3;
-  test_assert(!parse_addr_port(LOG_WARN, "localhost", NULL, &u32, &u16));
+  test_assert(!parse_addr_port("localhost", NULL, &u32, &u16));
   test_eq(cp, NULL);
   test_eq(u32, 0x7f000001u);
   test_eq(u16, 0);
@@ -921,73 +923,11 @@ test_util(void)
   smartlist_free(sl);
 }
 
-static int
-_compare_strings_for_pqueue(const void *s1, const void *s2)
-{
-  return strcmp((const char*)s1, (const char*)s2);
-}
-
-static void
-test_pqueue(void)
-{
-  smartlist_t *sl;
-  int (*cmp)(const void *, const void*);
-#define OK() smartlist_pqueue_assert_ok(sl, cmp)
-
-  cmp = _compare_strings_for_pqueue;
-
-  sl = smartlist_create();
-  smartlist_pqueue_add(sl, cmp, (char*)"cows");
-  smartlist_pqueue_add(sl, cmp, (char*)"zebras");
-  smartlist_pqueue_add(sl, cmp, (char*)"fish");
-  smartlist_pqueue_add(sl, cmp, (char*)"frogs");
-  smartlist_pqueue_add(sl, cmp, (char*)"apples");
-  smartlist_pqueue_add(sl, cmp, (char*)"squid");
-  smartlist_pqueue_add(sl, cmp, (char*)"daschunds");
-  smartlist_pqueue_add(sl, cmp, (char*)"eggplants");
-  smartlist_pqueue_add(sl, cmp, (char*)"weissbier");
-  smartlist_pqueue_add(sl, cmp, (char*)"lobsters");
-  smartlist_pqueue_add(sl, cmp, (char*)"roquefort");
-
-  OK();
-
-  test_eq(smartlist_len(sl), 11);
-  test_streq(smartlist_get(sl, 0), "apples");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "apples");
-  test_eq(smartlist_len(sl), 10);
-  OK();
-  test_streq(smartlist_pqueue_pop(sl, cmp), "cows");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "daschunds");
-  smartlist_pqueue_add(sl, cmp, (char*)"chinchillas");
-  OK();
-  smartlist_pqueue_add(sl, cmp, (char*)"fireflies");
-  OK();
-  test_streq(smartlist_pqueue_pop(sl, cmp), "chinchillas");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "eggplants");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "fireflies");
-  OK();
-  test_streq(smartlist_pqueue_pop(sl, cmp), "fish");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "frogs");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "lobsters");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "roquefort");
-  OK();
-  test_eq(smartlist_len(sl), 3);
-  test_streq(smartlist_pqueue_pop(sl, cmp), "squid");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "weissbier");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "zebras");
-  test_eq(smartlist_len(sl), 0);
-  OK();
-#undef OK
-  smartlist_free(sl);
-}
-
 static void
 test_gzip(void)
 {
-  char *buf1, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
-  const char *ccp2;
+  char *buf1, *buf2=NULL, *buf3=NULL;
   size_t len1, len2;
-  tor_zlib_state_t *state;
 
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   test_eq(detect_compression_method(buf1, strlen(buf1)), 0);
@@ -1053,35 +993,6 @@ test_gzip(void)
                                  ZLIB_METHOD, 1, LOG_INFO));
   tor_assert(!buf3);
 
-  /* Now, try streaming compression. */
-  tor_free(buf1);
-  tor_free(buf2);
-  tor_free(buf3);
-  state = tor_zlib_new(1, ZLIB_METHOD);
-  tor_assert(state);
-  cp1 = buf1 = tor_malloc(1024);
-  len1 = 1024;
-  ccp2 = "ABCDEFGHIJABCDEFGHIJ";
-  len2 = 21;
-  test_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0)
-              == TOR_ZLIB_OK);
-  test_eq(len2, 0); /* Make sure we compressed it all. */
-  test_assert(cp1 > buf1);
-
-  len2 = 0;
-  cp2 = cp1;
-  test_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1)
-              == TOR_ZLIB_DONE);
-  test_eq(len2, 0);
-  test_assert(cp1 > cp2); /* Make sure we really added something. */
-
-  tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
-                                  ZLIB_METHOD, 1, LOG_WARN));
-  test_streq(buf3, "ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
-  tor_free(buf3);
-
-  tor_zlib_free(state);
-
   tor_free(buf2);
   tor_free(buf3);
   tor_free(buf1);
@@ -1105,10 +1016,8 @@ test_strmap(void)
   test_eq_ptr(strmap_get(map,"K1"), (void*)100);
   test_eq_ptr(strmap_get(map,"K2"), (void*)101);
   test_eq_ptr(strmap_get(map,"K-not-there"), NULL);
-  strmap_assert_ok(map);
 
   v = strmap_remove(map,"K2");
-  strmap_assert_ok(map);
   test_eq_ptr(v, (void*)101);
   test_eq_ptr(strmap_get(map,"K2"), NULL);
   test_eq_ptr(strmap_remove(map,"K2"), NULL);
@@ -1116,10 +1025,8 @@ test_strmap(void)
   strmap_set(map, "K2", (void*)101);
   strmap_set(map, "K3", (void*)102);
   strmap_set(map, "K4", (void*)103);
-  strmap_assert_ok(map);
   strmap_set(map, "K5", (void*)104);
   strmap_set(map, "K6", (void*)105);
-  strmap_assert_ok(map);
 
 #if 0
   iter = strmap_iter_init(map);
@@ -1146,7 +1053,6 @@ test_strmap(void)
   test_eq_ptr(strmap_get(map, "K5"), (void*)10816);
 #endif
 
-  strmap_assert_ok(map);
   /* Clean up after ourselves. */
   strmap_free(map, NULL);
 
@@ -1154,11 +1060,9 @@ test_strmap(void)
   map = strmap_new();
   strmap_set_lc(map,"Ab.C", (void*)1);
   test_eq_ptr(strmap_get(map,"ab.c"), (void*)1);
-  strmap_assert_ok(map);
   test_eq_ptr(strmap_get_lc(map,"AB.C"), (void*)1);
   test_eq_ptr(strmap_get(map,"AB.C"), NULL);
   test_eq_ptr(strmap_remove_lc(map,"aB.C"), (void*)1);
-  strmap_assert_ok(map);
   test_eq_ptr(strmap_get_lc(map,"AB.C"), NULL);
   strmap_free(map,NULL);
 }
@@ -1240,8 +1144,6 @@ test_onion_handshake(void)
   test_memneq(c_keys, s_buf, 40);
   crypto_free_pk_env(pk);
 }
-
-extern smartlist_t *fingerprint_list;
 
 static void
 test_dir_format(void)
@@ -1357,11 +1259,6 @@ test_dir_format(void)
   strcat(buf2, pk1_str);
   strcat(buf2, "signing-key\n");
   strcat(buf2, pk2_str);
-#ifdef USE_EVENTDNS
-  strcat(buf2, "opt eventdns 1\n");
-#else
-  strcat(buf2, "opt eventdns 0\n");
-#endif
   strcat(buf2, bw_lines);
   strcat(buf2, "router-signature\n");
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
@@ -1372,7 +1269,7 @@ test_dir_format(void)
 
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   cp = buf;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1);
+  rp1 = router_parse_entry_from_string((const char*)cp,NULL);
   test_assert(rp1);
   test_streq(rp1->address, r1.address);
   test_eq(rp1->or_port, r1.or_port);
@@ -1395,7 +1292,7 @@ test_dir_format(void)
   test_streq(buf, buf2);
 
   cp = buf;
-  rp2 = router_parse_entry_from_string(&cp,1);
+  rp2 = router_parse_entry_from_string(&cp);
   test_assert(rp2);
   test_streq(rp2->address, r2.address);
   test_eq(rp2->or_port, r2.or_port);
@@ -1416,6 +1313,7 @@ test_dir_format(void)
 
   /* Okay, now for the directories. */
   {
+    extern smartlist_t *fingerprint_list;
     fingerprint_list = smartlist_create();
     crypto_pk_get_fingerprint(pk2, buf, 1);
     add_fingerprint_to_dir("Magri", buf, fingerprint_list);
@@ -1435,7 +1333,7 @@ test_dir_format(void)
   test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);
   test_eq(dirserv_add_descriptor(buf,&m), 2);
   get_options()->Nickname = tor_strdup("DirServer");
-  test_assert(!dirserv_dump_directory_to_string(&cp,pk3, 0));
+  test_assert(!dirserv_dump_directory_to_string(&cp,pk3));
   crypto_pk_get_digest(pk3, d);
   test_assert(!router_parse_directory(cp));
   test_eq(2, smartlist_len(dir1->routers));
@@ -1460,30 +1358,35 @@ test_dir_format(void)
   test_eq(4, ver1.micro);
   test_eq(VER_PRE, ver1.status);
   test_eq(2, ver1.patchlevel);
+  test_eq(IS_CVS, ver1.cvs);
   test_eq(0, tor_version_parse("0.3.4rc1", &ver1));
   test_eq(0, ver1.major);
   test_eq(3, ver1.minor);
   test_eq(4, ver1.micro);
   test_eq(VER_RC, ver1.status);
   test_eq(1, ver1.patchlevel);
+  test_eq(IS_NOT_CVS, ver1.cvs);
   test_eq(0, tor_version_parse("1.3.4", &ver1));
   test_eq(1, ver1.major);
   test_eq(3, ver1.minor);
   test_eq(4, ver1.micro);
   test_eq(VER_RELEASE, ver1.status);
   test_eq(0, ver1.patchlevel);
+  test_eq(IS_NOT_CVS, ver1.cvs);
   test_eq(0, tor_version_parse("1.3.4.999", &ver1));
   test_eq(1, ver1.major);
   test_eq(3, ver1.minor);
   test_eq(4, ver1.micro);
   test_eq(VER_RELEASE, ver1.status);
   test_eq(999, ver1.patchlevel);
+  test_eq(IS_NOT_CVS, ver1.cvs);
   test_eq(0, tor_version_parse("0.1.2.4-alpha", &ver1));
   test_eq(0, ver1.major);
   test_eq(1, ver1.minor);
   test_eq(2, ver1.micro);
   test_eq(4, ver1.patchlevel);
   test_eq(VER_RELEASE, ver1.status);
+  test_eq(IS_NOT_CVS, ver1.cvs);
   test_streq("alpha", ver1.status_tag);
   test_eq(0, tor_version_parse("0.1.2.4", &ver1));
   test_eq(0, ver1.major);
@@ -1491,6 +1394,7 @@ test_dir_format(void)
   test_eq(2, ver1.micro);
   test_eq(4, ver1.patchlevel);
   test_eq(VER_RELEASE, ver1.status);
+  test_eq(IS_NOT_CVS, ver1.cvs);
   test_streq("", ver1.status_tag);
 
 #define test_eq_vs(vs1, vs2) test_eq_type(version_status_t, "%d", (vs1), (vs2))
@@ -1711,8 +1615,6 @@ main(int c, char**v)
 {
   or_options_t *options = options_new();
   char *errmsg = NULL;
-  (void) c;
-  (void) v;
   options->command = CMD_RUN_UNITTESTS;
   network_init();
   setup_directory();
@@ -1748,7 +1650,6 @@ main(int c, char**v)
   test_util();
   test_strmap();
   test_control_formats();
-  test_pqueue();
   puts("\n========================= Onion Skins =====================");
   test_onion();
   test_onion_handshake();

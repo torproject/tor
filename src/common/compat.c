@@ -24,9 +24,8 @@ const char compat_c_id[] =
 
 #ifdef MS_WINDOWS
 #include <process.h>
-#include <windows.h>
-#endif
 
+#endif
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
 #endif
@@ -88,13 +87,6 @@ const char compat_c_id[] =
 #ifdef HAVE_SYS_UTIME_H
 #include <sys/utime.h>
 #endif
-#ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
-#endif
-
-#ifdef USE_BSOCKETS
-#include <bsocket.h>
-#endif
 
 #include "log.h"
 #include "util.h"
@@ -110,135 +102,6 @@ const char compat_c_id[] =
 /* used by inet_addr, not defined on solaris anywhere!? */
 #ifndef INADDR_NONE
 #define INADDR_NONE ((unsigned long) -1)
-#endif
-
-#ifdef HAVE_SYS_MMAN_H
-tor_mmap_t *
-tor_mmap_file(const char *filename)
-{
-  int fd; /* router file */
-  char *string;
-  int page_size;
-  tor_mmap_t *res;
-  size_t size;
-
-  tor_assert(filename);
-
-  fd = open(filename, O_RDONLY, 0);
-  if (fd<0) {
-    log_warn(LD_FS,"Could not open \"%s\" for mmap().",filename);
-    return NULL;
-  }
-
-  size = lseek(fd, 0, SEEK_END);
-  lseek(fd, 0, SEEK_SET);
-  /* ensure page alignment */
-  page_size = getpagesize();
-  size += (size%page_size) ? page_size-(size%page_size) : 0;
-
-  string = mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0);
-  if (string == MAP_FAILED) {
-    close(fd);
-    log_warn(LD_FS,"Could not mmap file \"%s\": %s", filename,
-             strerror(errno));
-    return NULL;
-  }
-
-  close(fd);
-
-  res = tor_malloc_zero(sizeof(tor_mmap_t));
-  res->data = string;
-  res->size = size;
-
-  return res;
-}
-void
-tor_munmap_file(tor_mmap_t *handle)
-{
-  munmap((char*)handle->data, handle->size);
-  tor_free(handle);
-}
-#elif defined(MS_WINDOWS)
-typedef struct win_mmap_t {
-  tor_mmap_t base;
-  HANDLE file_handle;
-  HANDLE mmap_handle;
-} tor_mmap_impl_t;
-tor_mmap_t *
-tor_mmap_file(const char *filename)
-{
-  struct win_mmap_t *res = tor_malloc_zero(sizeof(struct win_mmap_t));
-  res->mmap_handle = res->file_handle = INVALID_HANDLE_VALUE;
-
-  res->file_handle = CreateFile(filename,
-                                GENERIC_READ,
-                                0, NULL,
-                                OPEN_EXISTING,
-                                FILE_ATTRIBUTE_NORMAL,
-                                0);
-
-  if (res->file_handle == INVALID_HANDLE_VALUE)
-    goto err;
-
-  res->base.size = GetFileSize(res->file_handle, NULL);
-
-  res->mmap_handle = CreateFileMapping(res->file_handle,
-                                       NULL,
-                                       PAGE_READONLY,
-                                       (res->base.size >> 32),
-                                       (res->base.size & 0xfffffffful),
-                                       NULL);
-  if (res->mmap_handle != INVALID_HANDLE_VALUE)
-    goto err;
-  res->base.data = (char*) MapViewOfFile(res->mmap_handle,
-                                         FILE_MAP_READ,
-                                         0, 0, 0);
-  if (!res->base.data)
-    goto err;
-
-  return &(res->base);
- err:
-  tor_munmap_file(&res->base);
-  return NULL;
-}
-void
-tor_munmap_file(tor_mmap_t *handle)
-{
-  struct win_mmap_t *h = (struct win_mmap_t*)
-    (((char*)handle) - STRUCT_OFFSET(struct win_mmap_t, base));
-  if (handle->data)
-
-  /*this is an ugly cast, but without it, "data" in struct tor_mmap_t would
-    have to be redefined as const*/
-    UnmapViewOfFile( (LPVOID) handle->data);
-
-  if (h->mmap_handle != INVALID_HANDLE_VALUE)
-    CloseHandle(h->mmap_handle);
-  if (h->file_handle != INVALID_HANDLE_VALUE)
-    CloseHandle(h->file_handle);
-  tor_free(h);
-}
-#else
-tor_mmap_t *
-tor_mmap_file(const char *filename)
-{
-  char *res = read_file_to_str(filename, 1);
-  tor_mmap_t *handle;
-  if (! res)
-    return NULL;
-  handle = tor_malloc_zero(sizeof(tor_mmap_t));
-  handle->data = res;
-  handle->size = strlen(res) + 1;
-  return handle;
-}
-void
-tor_munmap_file(tor_mmap_t *handle)
-{
-  char *d = (char*)handle->data;
-  tor_free(d);
-  memset(handle, sizeof(tor_mmap_t), 0);
-  tor_free(handle);
-}
 #endif
 
 /** Replacement for snprintf.  Differs from platform snprintf in two
@@ -343,6 +206,7 @@ tor_fix_source_file(const char *fname)
 }
 #endif
 
+#ifndef UNALIGNED_INT_ACCESS_OK
 /**
  * Read a 16-bit value beginning at <b>cp</b>.  Equivalent to
  * *(uint16_t*)(cp), but will not cause segfaults on platforms that forbid
@@ -385,6 +249,7 @@ set_uint32(char *cp, uint32_t v)
 {
   memcpy(cp,&v,4);
 }
+#endif
 
 /**
  * Rename the file <b>from</b> to the file <b>to</b>.  On unix, this is
@@ -429,8 +294,8 @@ touch_file(const char *fname)
 void
 set_socket_nonblocking(int socket)
 {
-#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
-  unsigned long nonblocking = 1;
+#ifdef MS_WINDOWS
+  int nonblocking = 1;
   ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
   fcntl(socket, F_SETFL, O_NONBLOCK);
@@ -457,13 +322,10 @@ set_socket_nonblocking(int socket)
 int
 tor_socketpair(int family, int type, int protocol, int fd[2])
 {
-//don't use win32 socketpairs (they are always bad)
-#if defined(HAVE_SOCKETPAIR) && !defined(MS_WINDOWS)
+#ifdef HAVE_SOCKETPAIR
   int r;
   r = socketpair(family, type, protocol, fd);
   return r < 0 ? -errno : r;
-#elif defined(USE_BSOCKETS)
-  return bsockepair(family, type, protocol, fd);
 #else
     /* This socketpair does not work when localhost is down. So
      * it's really not the same thing at all. But it's close enough
@@ -494,8 +356,17 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     }
 
     listener = socket(AF_INET, type, 0);
-    if (listener < 0)
+    if (listener == -1)
       return -tor_socket_errno(-1);
+    if (!SOCKET_IS_POLLABLE(listener)) {
+      log_warn(LD_NET, "Too many connections; can't open socketpair");
+      tor_close_socket(listener);
+#ifdef MS_WINDOWS
+      return -ENFILE;
+#else
+      return -ENCONN;
+#endif
+    }
     memset(&listen_addr, 0, sizeof(listen_addr));
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -507,8 +378,12 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
       goto tidy_up_and_fail;
 
     connector = socket(AF_INET, type, 0);
-    if (connector < 0)
+    if (connector == -1)
       goto tidy_up_and_fail;
+    if (!SOCKET_IS_POLLABLE(connector)) {
+      log_warn(LD_NET, "Too many connections; can't open socketpair");
+      goto tidy_up_and_fail;
+    }
     /* We want to find out the port number to connect to.  */
     size = sizeof(connect_addr);
     if (getsockname(listener, (struct sockaddr *) &connect_addr, &size) == -1)
@@ -521,8 +396,12 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 
     size = sizeof(listen_addr);
     acceptor = accept(listener, (struct sockaddr *) &listen_addr, &size);
-    if (acceptor < 0)
+    if (acceptor == -1)
       goto tidy_up_and_fail;
+    if (!SOCKET_IS_POLLABLE(acceptor)) {
+      log_warn(LD_NET, "Too many connections; can't open socketpair");
+      goto tidy_up_and_fail;
+    }
     if (size != sizeof(listen_addr))
       goto abort_tidy_up_and_fail;
     tor_close_socket(listener);
@@ -578,7 +457,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
   log_fn(LOG_INFO, LD_NET,
          "This platform is missing getrlimit(). Proceeding.");
   if (limit < cap) {
-    log_info(LD_CONFIG, "ConnLimit must be at most %d. Using that.", (int)cap);
+    log_info(LD_CONFIG, "ConnLimit must be at most %d. Using that.", cap);
     limit = cap;
   }
 #else
@@ -749,7 +628,7 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    err = getaddrinfo(name, NULL, &hints, &res);
+    err = getaddrinfo(name, NULL, NULL, &res);
     if (!err) {
       for (res_p = res; res_p; res_p = res_p->ai_next) {
         if (res_p->ai_family == AF_INET) {
@@ -846,7 +725,6 @@ get_uname(void)
           { 3, 51, "Windows NT 3.51" },
           { -1, -1, NULL }
         };
-#ifdef VER_SUITE_BACKOFFICE
         static struct {
           unsigned int mask; const char *str;
         } win_mask_table[] = {
@@ -864,10 +742,10 @@ get_uname(void)
           { VER_SUITE_TERMINAL,           " {terminal services}" },
           { 0, NULL },
         };
-#endif
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
         if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
+          int err = GetLastError();
           strlcpy(uname_result, "Bizarre version of Windows where GetVersionEx"
                   " doesn't work.", sizeof(uname_result));
           uname_result_is_set = 1;
@@ -903,7 +781,6 @@ get_uname(void)
                       (int)info.dwMajorVersion,(int)info.dwMinorVersion,
                       info.szCSDVersion);
         }
-#ifdef VER_SUITE_BACKOFFICE
         if (info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
           strlcat(uname_result, " [domain controller]", sizeof(uname_result));
         } else if (info.wProductType == VER_NT_SERVER) {
@@ -923,7 +800,6 @@ get_uname(void)
           tor_snprintf(uname_result+len, sizeof(uname_result)-len,
                        " {0x%x}", info.wSuiteMask);
         }
-#endif
 #else
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
 #endif
@@ -942,14 +818,14 @@ get_uname(void)
  * invoke them in a way pthreads would expect.
  */
 typedef struct tor_pthread_data_t {
-  void (*func)(void *);
+  int (*func)(void *);
   void *data;
 } tor_pthread_data_t;
 static void *
 tor_pthread_helper_fn(void *_data)
 {
   tor_pthread_data_t *data = _data;
-  void (*func)(void*);
+  int (*func)(void*);
   void *arg;
   func = data->func;
   arg = data->data;
@@ -969,7 +845,7 @@ tor_pthread_helper_fn(void *_data)
  * running.
  */
 int
-spawn_func(void (*func)(void *), void *data)
+spawn_func(int (*func)(void *), void *data)
 {
 #if defined(USE_WIN32_THREADS)
   int rv;
@@ -1012,10 +888,6 @@ spawn_exit(void)
 {
 #if defined(USE_WIN32_THREADS)
   _endthread();
-  //we should never get here. my compiler thinks that _endthread returns, this
-  //is an attempt to fool it.
-  tor_assert(0);
-  _exit(0);
 #elif defined(USE_PTHREADS)
   pthread_exit(NULL);
 #else
@@ -1023,7 +895,6 @@ spawn_exit(void)
    * call _exit, not exit, from child processes. */
   _exit(0);
 #endif
-
 }
 
 /** Set *timeval to the current time of day.  On error, log and terminate.
@@ -1163,7 +1034,7 @@ tor_mutex_acquire(tor_mutex_t *m)
       tor_assert(0);
       break;
     case WAIT_FAILED:
-      log_warn(LD_GENERAL, "Failed to acquire mutex: %d",(int) GetLastError());
+      log_warn(LD_GENERAL, "Failed to acquire mutex: %d", GetLastError());
   }
 }
 void
@@ -1172,7 +1043,7 @@ tor_mutex_release(tor_mutex_t *m)
   BOOL r;
   r = ReleaseMutex(m->handle);
   if (!r) {
-    log_warn(LD_GENERAL, "Failed to release mutex: %d", (int) GetLastError());
+    log_warn(LD_GENERAL, "Failed to release mutex: %d", GetLastError());
   }
 }
 unsigned long
@@ -1239,7 +1110,7 @@ struct tor_mutex_t {
  * should call tor_socket_errno <em>at most once</em> on the failing
  * socket to get the error.
  */
-#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
+#ifdef MS_WINDOWS
 int
 tor_socket_errno(int sock)
 {
@@ -1255,7 +1126,7 @@ tor_socket_errno(int sock)
 }
 #endif
 
-#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
+#ifdef MS_WINDOWS
 #define E(code, s) { code, (s " [" #code " ]") }
 struct { int code; const char *msg; } windows_socket_errors[] = {
   E(WSAEINTR, "Interrupted function call"),

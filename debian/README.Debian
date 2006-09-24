@@ -1,14 +1,13 @@
 This is the Debian package for Tor, The Onion Router.
 
-Some changes have been made to the Tor source to integrate it better into
-Debian.  If Tor is started as the 'debian-tor' user, then:
+The following changes have been made to the Tor source to integrate it better
+into Debian:
 
 - RunAsDaemon is enabled by default.
 - PidFile is set to /var/run/tor/tor.pid.  No default upstream.
 - default logging goes to /var/log/tor/log instead of stdout.
 - DataDirectory is set to /var/lib/tor by default.  Uses $HOME/.tor upstream.
 
-If Tor is started as any other user it behaves just like upstream's.
 
 -- 
-Peter Palfrader, Mon, 24 Jul 2006 05:20:30 +0200
+Peter Palfrader, Fri, 12 Nov 2004 18:08:54 +0100

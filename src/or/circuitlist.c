@@ -33,7 +33,7 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
  * very important here, since we need to do it every time a cell arrives.) */
 typedef struct orconn_circid_circuit_map_t {
   HT_ENTRY(orconn_circid_circuit_map_t) node;
-  or_connection_t *or_conn;
+  connection_t *or_conn;
   uint16_t circ_id;
   circuit_t *circuit;
 } orconn_circid_circuit_map_t;
@@ -68,13 +68,34 @@ HT_GENERATE(orconn_circid_map, orconn_circid_circuit_map_t, node,
  */
 orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
-static void
-circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
-                                 or_connection_t *conn,
-                                 uint16_t old_id, or_connection_t *old_conn)
+/** Set the p_conn or n_conn field of a circuit <b>circ</b>, along
+ * with the corresponding circuit ID, and add the circuit as appropriate
+ * to the (orconn,id)-\>circuit map. */
+void
+circuit_set_circid_orconn(circuit_t *circ, uint16_t id,
+                          connection_t *conn,
+                          enum which_conn_changed_t which)
 {
+  uint16_t old_id;
+  connection_t *old_conn;
   orconn_circid_circuit_map_t search;
   orconn_circid_circuit_map_t *found;
+
+  tor_assert(!conn || conn->type == CONN_TYPE_OR);
+
+  if (which == P_CONN_CHANGED) {
+    old_id = circ->p_circ_id;
+    old_conn = circ->p_conn;
+    circ->p_circ_id = id;
+    circ->p_conn = conn;
+  } else {
+    old_id = circ->n_circ_id;
+    old_conn = circ->n_conn;
+    circ->n_circ_id = id;
+    circ->n_conn = conn;
+  }
+  if (conn == old_conn && old_id == id)
+    return;
 
   if (_last_circid_orconn_ent &&
       ((old_id == _last_circid_orconn_ent->circ_id &&
@@ -85,7 +106,7 @@ circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
   }
 
   if (old_conn) { /* we may need to remove it from the conn-circid map */
-    tor_assert(old_conn->_base.magic == OR_CONNECTION_MAGIC);
+    tor_assert(old_conn->magic == CONNECTION_MAGIC);
     search.circ_id = old_id;
     search.or_conn = old_conn;
     found = HT_REMOVE(orconn_circid_map, &orconn_circid_circuit_map, &search);
@@ -112,47 +133,6 @@ circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
     HT_INSERT(orconn_circid_map, &orconn_circid_circuit_map, found);
   }
   ++conn->n_circuits;
-}
-
-/** Set the p_conn field of a circuit <b>circ</b>, along
- * with the corresponding circuit ID, and add the circuit as appropriate
- * to the (orconn,id)-\>circuit map. */
-void
-circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
-                            or_connection_t *conn)
-{
-  uint16_t old_id;
-  or_connection_t *old_conn;
-
-  old_id = circ->p_circ_id;
-  old_conn = circ->p_conn;
-  circ->p_circ_id = id;
-  circ->p_conn = conn;
-
-  if (id == old_id && conn == old_conn)
-    return;
-  circuit_set_circid_orconn_helper(TO_CIRCUIT(circ), id, conn,
-                                   old_id, old_conn);
-}
-
-/** Set the n_conn field of a circuit <b>circ</b>, along
- * with the corresponding circuit ID, and add the circuit as appropriate
- * to the (orconn,id)-\>circuit map. */
-void
-circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
-                            or_connection_t *conn)
-{
-  uint16_t old_id;
-  or_connection_t *old_conn;
-
-  old_id = circ->n_circ_id;
-  old_conn = circ->n_conn;
-  circ->n_circ_id = id;
-  circ->n_conn = conn;
-
-  if (id == old_id && conn == old_conn)
-    return;
-  circuit_set_circid_orconn_helper(circ, id, conn, old_id, old_conn);
 }
 
 /** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing
@@ -220,7 +200,7 @@ circuit_close_all_marked(void)
   }
 }
 
-/** Return the head of the global linked list of circuits. */
+/** Return the head of the global linked list of circuits. **/
 circuit_t *
 _circuit_get_global_list(void)
 {
@@ -244,53 +224,36 @@ circuit_state_to_string(int state)
   }
 }
 
-/* DOCDOC */
-static void
-init_circuit_base(circuit_t *circ)
+/** Allocate space for a new circuit, initializing with <b>p_circ_id</b>
+ * and <b>p_conn</b>. Add it to the global circuit list.
+ */
+circuit_t *
+circuit_new(uint16_t p_circ_id, connection_t *p_conn)
 {
+  circuit_t *circ;
+  static uint32_t n_circuits_allocated = 1;
+  /* never zero, since a global ID of 0 is treated specially by the
+   * controller */
+
+  circ = tor_malloc_zero(sizeof(circuit_t));
+  circ->magic = CIRCUIT_MAGIC;
+
   circ->timestamp_created = time(NULL);
+
+  /* CircIDs */
+  if (p_conn) {
+    circuit_set_circid_orconn(circ, p_circ_id, p_conn, P_CONN_CHANGED);
+  }
+  /* circ->n_circ_id remains 0 because we haven't identified the next hop
+   * yet */
 
   circ->package_window = CIRCWINDOW_START;
   circ->deliver_window = CIRCWINDOW_START;
 
-  circuit_add(circ);
-}
-
-/** Allocate space for a new circuit, initializing with <b>p_circ_id</b>
- * and <b>p_conn</b>. Add it to the global circuit list.
- */
-origin_circuit_t *
-origin_circuit_new(void)
-{
-  origin_circuit_t *circ;
-  /* never zero, since a global ID of 0 is treated specially by the
-   * controller */
-  static uint32_t n_circuits_allocated = 1;
-
-  circ = tor_malloc_zero(sizeof(origin_circuit_t));
-  circ->_base.magic = ORIGIN_CIRCUIT_MAGIC;
-
   circ->next_stream_id = crypto_rand_int(1<<16);
   circ->global_identifier = n_circuits_allocated++;
 
-  init_circuit_base(TO_CIRCUIT(circ));
-
-  return circ;
-}
-
-or_circuit_t *
-or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn)
-{
-  /* CircIDs */
-  or_circuit_t *circ;
-
-  circ = tor_malloc_zero(sizeof(or_circuit_t));
-  circ->_base.magic = OR_CIRCUIT_MAGIC;
-
-  if (p_conn)
-    circuit_set_p_circid_orconn(circ, p_circ_id, p_conn);
-
-  init_circuit_base(TO_CIRCUIT(circ));
+  circuit_add(circ);
 
   return circ;
 }
@@ -300,53 +263,35 @@ or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn)
 static void
 circuit_free(circuit_t *circ)
 {
-  void *mem;
   tor_assert(circ);
-  if (CIRCUIT_IS_ORIGIN(circ)) {
-    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-    mem = ocirc;
-    tor_assert(circ->magic == ORIGIN_CIRCUIT_MAGIC);
-    if (ocirc->build_state) {
-      if (ocirc->build_state->chosen_exit)
-        extend_info_free(ocirc->build_state->chosen_exit);
-      if (ocirc->build_state->pending_final_cpath)
-        circuit_free_cpath_node(ocirc->build_state->pending_final_cpath);
-    }
-    tor_free(ocirc->build_state);
-
-    circuit_free_cpath(ocirc->cpath);
-
-  } else {
-    or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);
-    mem = ocirc;
-    tor_assert(circ->magic == OR_CIRCUIT_MAGIC);
-
-    if (ocirc->p_crypto)
-      crypto_free_cipher_env(ocirc->p_crypto);
-    if (ocirc->p_digest)
-      crypto_free_digest_env(ocirc->p_digest);
-    if (ocirc->n_crypto)
-      crypto_free_cipher_env(ocirc->n_crypto);
-    if (ocirc->n_digest)
-      crypto_free_digest_env(ocirc->n_digest);
-
-    if (ocirc->rend_splice) {
-      or_circuit_t *other = ocirc->rend_splice;
-      tor_assert(other->_base.magic == OR_CIRCUIT_MAGIC);
-      other->rend_splice = NULL;
-    }
-
-    tor_free(circ->onionskin);
-
-    /* remove from map. */
-    circuit_set_p_circid_orconn(ocirc, 0, NULL);
+  tor_assert(circ->magic == CIRCUIT_MAGIC);
+  if (circ->n_crypto)
+    crypto_free_cipher_env(circ->n_crypto);
+  if (circ->p_crypto)
+    crypto_free_cipher_env(circ->p_crypto);
+  if (circ->n_digest)
+    crypto_free_digest_env(circ->n_digest);
+  if (circ->p_digest)
+    crypto_free_digest_env(circ->p_digest);
+  if (circ->build_state) {
+    if (circ->build_state->chosen_exit)
+      extend_info_free(circ->build_state->chosen_exit);
+    if (circ->build_state->pending_final_cpath)
+      circuit_free_cpath_node(circ->build_state->pending_final_cpath);
   }
-
+  tor_free(circ->build_state);
+  tor_free(circ->onionskin);
+  circuit_free_cpath(circ->cpath);
+  if (circ->rend_splice) {
+    tor_assert(circ->rend_splice->magic == CIRCUIT_MAGIC);
+    circ->rend_splice->rend_splice = NULL;
+  }
   /* Remove from map. */
-  circuit_set_n_circid_orconn(circ, 0, NULL);
+  circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
+  circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
 
   memset(circ, 0xAA, sizeof(circuit_t)); /* poison memory */
-  tor_free(mem);
+  tor_free(circ);
 }
 
 /** Deallocate space associated with the linked list <b>cpath</b>. */
@@ -376,14 +321,11 @@ circuit_free_all(void)
   circuit_t *next;
   while (global_circuitlist) {
     next = global_circuitlist->next;
-    if (! CIRCUIT_IS_ORIGIN(global_circuitlist)) {
-      or_circuit_t *or_circ = TO_OR_CIRCUIT(global_circuitlist);
-      while (or_circ->resolving_streams) {
-        edge_connection_t *next;
-        next = or_circ->resolving_streams->next_stream;
-        connection_free(TO_CONN(or_circ->resolving_streams));
-        or_circ->resolving_streams = next;
-      }
+    while (global_circuitlist->resolving_streams) {
+      connection_t *next;
+      next = global_circuitlist->resolving_streams->next_stream;
+      connection_free(global_circuitlist->resolving_streams);
+      global_circuitlist->resolving_streams = next;
     }
     circuit_free(global_circuitlist);
     global_circuitlist = next;
@@ -416,92 +358,18 @@ circuit_free_cpath_node(crypt_path_t *victim)
   tor_free(victim);
 }
 
-/** A helper function for circuit_dump_by_conn() below. Log a bunch
- * of information about circuit <b>circ</b>.
- */
-static void
-circuit_dump_details(int severity, circuit_t *circ, int conn_array_index,
-                     const char *type, int this_circid, int other_circid)
-{
-  log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d (other side %d), "
-      "state %d (%s), born %d:",
-      conn_array_index, type, this_circid, other_circid, circ->state,
-      circuit_state_to_string(circ->state), (int)circ->timestamp_created);
-  if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
-    circuit_log_path(severity, LD_CIRC, TO_ORIGIN_CIRCUIT(circ));
-  }
-}
-
-/** Log, at severity <b>severity</b>, information about each circuit
- * that is connected to <b>conn</b>.
- */
-void
-circuit_dump_by_conn(connection_t *conn, int severity)
-{
-  circuit_t *circ;
-  edge_connection_t *tmpconn;
-
-  for (circ=global_circuitlist;circ;circ = circ->next) {
-    circid_t n_circ_id = circ->n_circ_id, p_circ_id = 0;
-    if (circ->marked_for_close)
-      continue;
-
-    if (! CIRCUIT_IS_ORIGIN(circ))
-      p_circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
-
-    if (! CIRCUIT_IS_ORIGIN(circ) && TO_OR_CIRCUIT(circ)->p_conn &&
-        TO_CONN(TO_OR_CIRCUIT(circ)->p_conn) == conn)
-      circuit_dump_details(severity, circ, conn->conn_array_index, "App-ward",
-                           p_circ_id, n_circ_id);
-    if (CIRCUIT_IS_ORIGIN(circ)) {
-      for (tmpconn=TO_ORIGIN_CIRCUIT(circ)->p_streams; tmpconn;
-           tmpconn=tmpconn->next_stream) {
-        if (TO_CONN(tmpconn) == conn) {
-          circuit_dump_details(severity, circ, conn->conn_array_index,
-                               "App-ward", p_circ_id, n_circ_id);
-        }
-      }
-    }
-    if (circ->n_conn && TO_CONN(circ->n_conn) == conn)
-      circuit_dump_details(severity, circ, conn->conn_array_index, "Exit-ward",
-                           n_circ_id, p_circ_id);
-    if (! CIRCUIT_IS_ORIGIN(circ)) {
-      for (tmpconn=TO_OR_CIRCUIT(circ)->n_streams; tmpconn;
-           tmpconn=tmpconn->next_stream) {
-        if (TO_CONN(tmpconn) == conn) {
-          circuit_dump_details(severity, circ, conn->conn_array_index,
-                               "Exit-ward", n_circ_id, p_circ_id);
-        }
-      }
-    }
-    if (!circ->n_conn && circ->n_addr && circ->n_port &&
-        circ->n_addr == conn->addr &&
-        circ->n_port == conn->port &&
-        conn->type == CONN_TYPE_OR &&
-        !memcmp(TO_OR_CONN(conn)->identity_digest, circ->n_conn_id_digest,
-                DIGEST_LEN)) {
-      circuit_dump_details(severity, circ, conn->conn_array_index,
-                           (circ->state == CIRCUIT_STATE_OPEN &&
-                            !CIRCUIT_IS_ORIGIN(circ)) ?
-                             "Endpoint" : "Pending",
-                           n_circ_id, p_circ_id);
-    }
-  }
-}
-
 /** Return the circuit whose global ID is <b>id</b>, or NULL if no
  * such circuit exists. */
-origin_circuit_t *
+circuit_t *
 circuit_get_by_global_id(uint32_t id)
 {
   circuit_t *circ;
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (CIRCUIT_IS_ORIGIN(circ) &&
-        TO_ORIGIN_CIRCUIT(circ)->global_identifier == id) {
+    if (circ->global_identifier == id) {
       if (circ->marked_for_close)
         return NULL;
       else
-        return TO_ORIGIN_CIRCUIT(circ);
+        return circ;
     }
   }
   return NULL;
@@ -513,10 +381,12 @@ circuit_get_by_global_id(uint32_t id)
  * Return NULL if no such circuit exists.
  */
 static INLINE circuit_t *
-circuit_get_by_circid_orconn_impl(uint16_t circ_id, or_connection_t *conn)
+circuit_get_by_circid_orconn_impl(uint16_t circ_id, connection_t *conn)
 {
   orconn_circid_circuit_map_t search;
   orconn_circid_circuit_map_t *found;
+
+  tor_assert(conn->type == CONN_TYPE_OR);
 
   if (_last_circid_orconn_ent &&
       circ_id == _last_circid_orconn_ent->circ_id &&
@@ -537,13 +407,10 @@ circuit_get_by_circid_orconn_impl(uint16_t circ_id, or_connection_t *conn)
   {
     circuit_t *circ;
     for (circ=global_circuitlist;circ;circ = circ->next) {
-      if (! CIRCUIT_IS_ORIGIN(circ)) {
-        or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
-        if (or_circ->p_conn == conn && or_circ->p_circ_id == circ_id) {
-          log_warn(LD_BUG,
-                   "circuit matches p_conn, but not in hash table (Bug!)");
-          return circ;
-        }
+      if (circ->p_conn == conn && circ->p_circ_id == circ_id) {
+        log_warn(LD_BUG,
+                 "circuit matches p_conn, but not in hash table (Bug!)");
+        return circ;
       }
       if (circ->n_conn == conn && circ->n_circ_id == circ_id) {
         log_warn(LD_BUG,
@@ -562,7 +429,7 @@ circuit_get_by_circid_orconn_impl(uint16_t circ_id, or_connection_t *conn)
  * Return NULL if no such circuit exists.
  */
 circuit_t *
-circuit_get_by_circid_orconn(uint16_t circ_id, or_connection_t *conn)
+circuit_get_by_circid_orconn(uint16_t circ_id, connection_t *conn)
 {
   circuit_t *circ = circuit_get_by_circid_orconn_impl(circ_id, conn);
   if (!circ || circ->marked_for_close)
@@ -577,7 +444,7 @@ circuit_get_by_circid_orconn(uint16_t circ_id, or_connection_t *conn)
  * Return NULL if no such circuit exists.
  */
 int
-circuit_id_used_on_conn(uint16_t circ_id, or_connection_t *conn)
+circuit_id_used_on_conn(uint16_t circ_id, connection_t *conn)
 {
   circuit_t *circ = circuit_get_by_circid_orconn_impl(circ_id, conn);
   if (circ && circ->marked_for_close)
@@ -589,14 +456,13 @@ circuit_id_used_on_conn(uint16_t circ_id, or_connection_t *conn)
 
 /** Return the circuit that a given edge connection is using. */
 circuit_t *
-circuit_get_by_edge_conn(edge_connection_t *conn)
+circuit_get_by_edge_conn(connection_t *conn)
 {
   circuit_t *circ;
+  tor_assert(CONN_IS_EDGE(conn));
 
   circ = conn->on_circuit;
-  tor_assert(!circ ||
-             (CIRCUIT_IS_ORIGIN(circ) ? circ->magic == ORIGIN_CIRCUIT_MAGIC
-                                      : circ->magic == OR_CIRCUIT_MAGIC));
+  tor_assert(!circ || circ->magic == CIRCUIT_MAGIC);
 
   return circ;
 }
@@ -606,24 +472,18 @@ circuit_get_by_edge_conn(edge_connection_t *conn)
  * been marked already.
  */
 void
-circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason)
+circuit_unlink_all_from_or_conn(connection_t *conn, int reason)
 {
   circuit_t *circ;
   for (circ = global_circuitlist; circ; circ = circ->next) {
-    int mark = 0;
-    if (circ->n_conn == conn) {
-        circuit_set_n_circid_orconn(circ, 0, NULL);
-        mark = 1;
+    if (circ->n_conn == conn || circ->p_conn == conn) {
+      if (circ->n_conn == conn)
+        circuit_set_circid_orconn(circ, 0, NULL, N_CONN_CHANGED);
+      if (circ->p_conn == conn)
+        circuit_set_circid_orconn(circ, 0, NULL, P_CONN_CHANGED);
+      if (!circ->marked_for_close)
+        circuit_mark_for_close(circ, reason);
     }
-    if (! CIRCUIT_IS_ORIGIN(circ)) {
-      or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
-      if (or_circ->p_conn == conn) {
-        circuit_set_p_circid_orconn(or_circ, 0, NULL);
-        mark = 1;
-      }
-    }
-    if (mark && !circ->marked_for_close)
-      circuit_mark_for_close(circ, reason);
   }
 }
 
@@ -633,65 +493,42 @@ circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason)
  *
  * Return NULL if no such circuit exists.
  */
-origin_circuit_t *
+circuit_t *
 circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
 {
   circuit_t *circ;
 
-  tor_assert(CIRCUIT_PURPOSE_IS_ORIGIN(purpose));
-
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (!circ->marked_for_close &&
         circ->purpose == purpose &&
-        !rend_cmp_service_ids(rend_query, TO_ORIGIN_CIRCUIT(circ)->rend_query))
-      return TO_ORIGIN_CIRCUIT(circ);
+        !rend_cmp_service_ids(rend_query, circ->rend_query))
+      return circ;
   }
   return NULL;
 }
 
 /** Return the first circuit in global_circuitlist after <b>start</b>
- * whose purpose is <b>purpose</b> is purpose, and (if set) whose
- * <b>digest</b> matches the rend_pk_digest field. Return NULL if no
- * circuit is found.
+ * whose rend_pk_digest field is <b>digest</b> and whose purpose is
+ * <b>purpose</b>. Returns NULL if no circuit is found.
  * If <b>start</b> is NULL, begin at the start of the list.
- * DOCDOC origin.
  */
-origin_circuit_t *
-circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
+circuit_t *
+circuit_get_next_by_pk_and_purpose(circuit_t *start,
                                    const char *digest, uint8_t purpose)
 {
   circuit_t *circ;
-  tor_assert(CIRCUIT_PURPOSE_IS_ORIGIN(purpose));
   if (start == NULL)
     circ = global_circuitlist;
   else
-    circ = TO_CIRCUIT(start)->next;
+    circ = start->next;
 
   for ( ; circ; circ = circ->next) {
     if (circ->marked_for_close)
       continue;
     if (circ->purpose != purpose)
       continue;
-    if (!digest)
-      return TO_ORIGIN_CIRCUIT(circ);
-    else if (!memcmp(TO_ORIGIN_CIRCUIT(circ)->rend_pk_digest,
-                     digest, DIGEST_LEN))
-      return TO_ORIGIN_CIRCUIT(circ);
-  }
-  return NULL;
-}
-
-/* DOCDOC */
-static or_circuit_t *
-circuit_get_by_rend_token_and_purpose(uint8_t purpose, const char *token,
-                                      size_t len)
-{
-  circuit_t *circ;
-  for (circ = global_circuitlist; circ; circ = circ->next) {
-    if (! circ->marked_for_close &&
-        circ->purpose == purpose &&
-        ! memcmp(TO_OR_CIRCUIT(circ)->rend_token, token, len))
-      return TO_OR_CIRCUIT(circ);
+    if (!memcmp(circ->rend_pk_digest, digest, DIGEST_LEN))
+      return circ;
   }
   return NULL;
 }
@@ -699,23 +536,17 @@ circuit_get_by_rend_token_and_purpose(uint8_t purpose, const char *token,
 /** Return the circuit waiting for a rendezvous with the provided cookie.
  * Return NULL if no such circuit is found.
  */
-or_circuit_t *
+circuit_t *
 circuit_get_rendezvous(const char *cookie)
 {
-  return circuit_get_by_rend_token_and_purpose(
-                                     CIRCUIT_PURPOSE_REND_POINT_WAITING,
-                                     cookie, REND_COOKIE_LEN);
-}
-
-/** Return the circuit waiting for intro cells of the given digest.
- * Return NULL if no such circuit is found.
- */
-or_circuit_t *
-circuit_get_intro_point(const char *digest)
-{
-  return circuit_get_by_rend_token_and_purpose(
-                                     CIRCUIT_PURPOSE_INTRO_POINT, digest,
-                                     DIGEST_LEN);
+  circuit_t *circ;
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (! circ->marked_for_close &&
+        circ->purpose == CIRCUIT_PURPOSE_REND_POINT_WAITING &&
+        ! memcmp(circ->rend_cookie, cookie, REND_COOKIE_LEN) )
+      return circ;
+  }
+  return NULL;
 }
 
 /** Return a circuit that is open, has specified <b>purpose</b>,
@@ -728,43 +559,41 @@ circuit_get_intro_point(const char *digest)
  *
  * Only return internal circuits if that is requested.
  */
-origin_circuit_t *
+circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
                             int need_uptime,
                             int need_capacity, int internal)
 {
-  circuit_t *_circ;
-  origin_circuit_t *best=NULL;
+  circuit_t *circ;
+  circuit_t *best=NULL;
 
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
             "capacity %d, internal %d",
             purpose, need_uptime, need_capacity, internal);
 
-  for (_circ=global_circuitlist; _circ; _circ = _circ->next) {
-    if (CIRCUIT_IS_ORIGIN(_circ) &&
-        _circ->state == CIRCUIT_STATE_OPEN &&
-        !_circ->marked_for_close &&
-        _circ->purpose == purpose &&
-        !_circ->timestamp_dirty) {
-      origin_circuit_t *circ = TO_ORIGIN_CIRCUIT(_circ);
-      if ((!need_uptime || circ->build_state->need_uptime) &&
-          (!need_capacity || circ->build_state->need_capacity) &&
-          (internal == circ->build_state->is_internal)) {
-        if (info) {
-          /* need to make sure we don't duplicate hops */
-          crypt_path_t *hop = circ->cpath;
-          do {
-            if (!memcmp(hop->extend_info->identity_digest,
-                        info->identity_digest, DIGEST_LEN))
-              goto next;
-            hop=hop->next;
-          } while (hop!=circ->cpath);
-        }
-        if (!best || (best->build_state->need_uptime && !need_uptime))
-          best = circ;
-      next: ;
+  for (circ=global_circuitlist; circ; circ = circ->next) {
+    if (CIRCUIT_IS_ORIGIN(circ) &&
+        circ->state == CIRCUIT_STATE_OPEN &&
+        !circ->marked_for_close &&
+        circ->purpose == purpose &&
+        !circ->timestamp_dirty &&
+        (!need_uptime || circ->build_state->need_uptime) &&
+        (!need_capacity || circ->build_state->need_capacity) &&
+        (internal == circ->build_state->is_internal)) {
+      if (info) {
+        /* need to make sure we don't duplicate hops */
+        crypt_path_t *hop = circ->cpath;
+        do {
+          if (!memcmp(hop->extend_info->identity_digest,
+                      info->identity_digest, DIGEST_LEN))
+            goto next;
+          hop=hop->next;
+        } while (hop!=circ->cpath);
       }
+      if (!best || (best->build_state->need_uptime && !need_uptime))
+        best = circ;
+      next: ;
     }
   }
   return best;
@@ -825,6 +654,8 @@ void
 _circuit_mark_for_close(circuit_t *circ, int reason, int line,
                         const char *file)
 {
+  connection_t *conn;
+
   assert_circuit_ok(circ);
   tor_assert(line);
   tor_assert(file);
@@ -854,7 +685,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   }
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
-    onion_pending_remove(TO_OR_CIRCUIT(circ));
+    onion_pending_remove(circ);
   }
   /* If the circuit ever became OPEN, we sent it to the reputation history
    * module then.  If it isn't OPEN, we send it there now to remember which
@@ -862,74 +693,60 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
    */
   if (circ->state != CIRCUIT_STATE_OPEN) {
     if (CIRCUIT_IS_ORIGIN(circ)) {
-      origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-      circuit_build_failed(ocirc); /* take actions if necessary */
-      circuit_rep_hist_note_result(ocirc);
+      circuit_build_failed(circ); /* take actions if necessary */
     }
+    circuit_rep_hist_note_result(circ);
   }
   if (circ->state == CIRCUIT_STATE_OR_WAIT) {
     if (circuits_pending_or_conns)
       smartlist_remove(circuits_pending_or_conns, circ);
   }
   if (CIRCUIT_IS_ORIGIN(circ)) {
-    control_event_circuit_status(TO_ORIGIN_CIRCUIT(circ),
+    control_event_circuit_status(circ,
      (circ->state == CIRCUIT_STATE_OPEN)?CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED);
   }
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
-    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
-    tor_assert(ocirc->build_state->chosen_exit);
+    tor_assert(circ->build_state->chosen_exit);
     /* treat this like getting a nack from it */
     log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). "
              "Removing from descriptor.",
-             safe_str(ocirc->rend_query),
-             safe_str(build_state_get_exit_nickname(ocirc->build_state)));
-    rend_client_remove_intro_point(ocirc->build_state->chosen_exit,
-                                   ocirc->rend_query);
+             safe_str(circ->rend_query),
+             safe_str(build_state_get_exit_nickname(circ->build_state)));
+    rend_client_remove_intro_point(circ->build_state->chosen_exit,
+                                   circ->rend_query);
   }
+
   if (circ->n_conn)
     connection_or_send_destroy(circ->n_circ_id, circ->n_conn, reason);
-
-  if (! CIRCUIT_IS_ORIGIN(circ)) {
-    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
-    edge_connection_t *conn;
-    for (conn=or_circ->n_streams; conn; conn=conn->next_stream)
-      connection_edge_destroy(or_circ->p_circ_id, conn);
-
-    while (or_circ->resolving_streams) {
-      conn = or_circ->resolving_streams;
-      or_circ->resolving_streams = conn->next_stream;
-      if (!conn->_base.marked_for_close) {
-        /* The other side will see a DESTROY, and infer that the connections
-         * are closing because the circuit is getting torn down.  No need
-         * to send an end cell. */
-        conn->_base.edge_has_sent_end = 1;
-        connection_mark_for_close(TO_CONN(conn));
-      }
-      conn->on_circuit = NULL;
+  for (conn=circ->n_streams; conn; conn=conn->next_stream)
+    connection_edge_destroy(circ->n_circ_id, conn);
+  while (circ->resolving_streams) {
+    conn = circ->resolving_streams;
+    circ->resolving_streams = conn->next_stream;
+    if (!conn->marked_for_close) {
+      /* The other side will see a DESTROY, and infer that the connections
+       * are closing because the circuit is getting torn down.  No need
+       * to send an end cell. */
+      conn->has_sent_end = 1;
+      connection_mark_for_close(conn);
     }
-
-    if (or_circ->p_conn)
-      connection_or_send_destroy(or_circ->p_circ_id, or_circ->p_conn, reason);
-  } else {
-    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-    edge_connection_t *conn;
-    for (conn=ocirc->p_streams; conn; conn=conn->next_stream)
-      connection_edge_destroy(circ->n_circ_id, conn);
+    conn->on_circuit = NULL;
   }
+  if (circ->p_conn)
+    connection_or_send_destroy(circ->p_circ_id, circ->p_conn, reason);
+  for (conn=circ->p_streams; conn; conn=conn->next_stream)
+    connection_edge_destroy(circ->p_circ_id, conn);
 
   circ->marked_for_close = line;
   circ->marked_for_close_file = file;
 
-  if (! CIRCUIT_IS_ORIGIN(circ)) {
-    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
-    if (or_circ->rend_splice) {
-      if (!or_circ->rend_splice->_base.marked_for_close) {
-        /* do this after marking this circuit, to avoid infinite recursion. */
-        circuit_mark_for_close(TO_CIRCUIT(or_circ->rend_splice), reason);
-      }
-      or_circ->rend_splice = NULL;
+  if (circ->rend_splice) {
+    if (!circ->rend_splice->marked_for_close) {
+      /* do this after marking this circuit, to avoid infinite recursion. */
+      circuit_mark_for_close(circ->rend_splice, reason);
     }
+    circ->rend_splice = NULL;
   }
 }
 
@@ -992,49 +809,46 @@ assert_cpath_ok(const crypt_path_t *cp)
 void
 assert_circuit_ok(const circuit_t *c)
 {
-  edge_connection_t *conn;
-  const or_circuit_t *or_circ = NULL;
-  const origin_circuit_t *origin_circ = NULL;
+  connection_t *conn;
 
   tor_assert(c);
-  tor_assert(c->magic == ORIGIN_CIRCUIT_MAGIC || c->magic == OR_CIRCUIT_MAGIC);
+  tor_assert(c->magic == CIRCUIT_MAGIC);
   tor_assert(c->purpose >= _CIRCUIT_PURPOSE_MIN &&
              c->purpose <= _CIRCUIT_PURPOSE_MAX);
 
-  if (CIRCUIT_IS_ORIGIN(c))
-    origin_circ = TO_ORIGIN_CIRCUIT((circuit_t*)c);
-  else
-    or_circ = TO_OR_CIRCUIT((circuit_t*)c);
-
   if (c->n_conn) {
+    tor_assert(c->n_conn->type == CONN_TYPE_OR);
     tor_assert(!memcmp(c->n_conn->identity_digest, c->n_conn_id_digest,
                        DIGEST_LEN));
     if (c->n_circ_id)
       tor_assert(c == circuit_get_by_circid_orconn(c->n_circ_id, c->n_conn));
   }
-  if (or_circ && or_circ->p_conn) {
-    if (or_circ->p_circ_id)
-      tor_assert(c == circuit_get_by_circid_orconn(or_circ->p_circ_id,
-                                                   or_circ->p_conn));
+  if (c->p_conn) {
+    tor_assert(c->p_conn->type == CONN_TYPE_OR);
+    if (c->p_circ_id)
+      tor_assert(c == circuit_get_by_circid_orconn(c->p_circ_id, c->p_conn));
   }
-#if 0 /* false now that rendezvous exits are attached to p_streams */
-  if (origin_circ)
-    for (conn = origin_circ->p_streams; conn; conn = conn->next_stream)
-      tor_assert(conn->_base.type == CONN_TYPE_AP);
-#endif
-  if (or_circ)
-    for (conn = or_circ->n_streams; conn; conn = conn->next_stream)
-      tor_assert(conn->_base.type == CONN_TYPE_EXIT);
+  for (conn = c->p_streams; conn; conn = conn->next_stream)
+    tor_assert(conn->type == CONN_TYPE_AP);
+  for (conn = c->n_streams; conn; conn = conn->next_stream)
+    tor_assert(conn->type == CONN_TYPE_EXIT);
 
   tor_assert(c->deliver_window >= 0);
   tor_assert(c->package_window >= 0);
   if (c->state == CIRCUIT_STATE_OPEN) {
     tor_assert(!c->onionskin);
-    if (or_circ) {
-      tor_assert(or_circ->n_crypto);
-      tor_assert(or_circ->p_crypto);
-      tor_assert(or_circ->n_digest);
-      tor_assert(or_circ->p_digest);
+    if (c->cpath) {
+      tor_assert(CIRCUIT_IS_ORIGIN(c));
+      tor_assert(!c->n_crypto);
+      tor_assert(!c->p_crypto);
+      tor_assert(!c->n_digest);
+      tor_assert(!c->p_digest);
+    } else {
+      tor_assert(!CIRCUIT_IS_ORIGIN(c));
+      tor_assert(c->n_crypto);
+      tor_assert(c->p_crypto);
+      tor_assert(c->n_digest);
+      tor_assert(c->p_digest);
     }
   }
   if (c->state == CIRCUIT_STATE_OR_WAIT && !c->marked_for_close) {
@@ -1044,18 +858,17 @@ assert_circuit_ok(const circuit_t *c)
     tor_assert(!circuits_pending_or_conns ||
                !smartlist_isin(circuits_pending_or_conns, c));
   }
-  if (origin_circ && origin_circ->cpath) {
-    assert_cpath_ok(origin_circ->cpath);
+  if (c->cpath) {
+    assert_cpath_ok(c->cpath);
   }
   if (c->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED) {
-    tor_assert(or_circ);
     if (!c->marked_for_close) {
-      tor_assert(or_circ->rend_splice);
-      tor_assert(or_circ->rend_splice->rend_splice == or_circ);
+      tor_assert(c->rend_splice);
+      tor_assert(c->rend_splice->rend_splice == c);
     }
-    tor_assert(or_circ->rend_splice != or_circ);
+    tor_assert(c->rend_splice != c);
   } else {
-    tor_assert(!or_circ || !or_circ->rend_splice);
+    tor_assert(!c->rend_splice);
   }
 }
 

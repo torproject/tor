@@ -131,64 +131,57 @@ static int disable_log_messages = 0;
 static int authentication_cookie_is_set = 0;
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
-static void connection_printf_to_buf(control_connection_t *conn,
+static void connection_printf_to_buf(connection_t *conn,
                                      const char *format, ...)
   CHECK_PRINTF(2,3);
 /*static*/ size_t write_escaped_data(const char *data, size_t len,
                                      int translate_newlines, char **out);
 /*static*/ size_t read_escaped_data(const char *data, size_t len,
                                     int translate_newlines,  char **out);
-static void send_control0_message(control_connection_t *conn, uint16_t type,
+static void send_control0_message(connection_t *conn, uint16_t type,
                                  uint32_t len, const char *body);
-static void send_control_done(control_connection_t *conn);
-static void send_control_done2(control_connection_t *conn, const char *msg,
+static void send_control_done(connection_t *conn);
+static void send_control_done2(connection_t *conn, const char *msg,
                                size_t len);
-static void send_control0_error(control_connection_t *conn, uint16_t error,
+static void send_control0_error(connection_t *conn, uint16_t error,
                                const char *message);
 static void send_control0_event(uint16_t event, uint32_t len,
                                 const char *body);
 static void send_control1_event(uint16_t event, const char *format, ...)
   CHECK_PRINTF(2,3);
-static int handle_control_setconf(control_connection_t *conn, uint32_t len,
+static int handle_control_setconf(connection_t *conn, uint32_t len,
                                   char *body);
-static int handle_control_resetconf(control_connection_t *conn, uint32_t len,
+static int handle_control_resetconf(connection_t *conn, uint32_t len,
                                     char *body);
-static int handle_control_getconf(control_connection_t *conn, uint32_t len,
+static int handle_control_getconf(connection_t *conn, uint32_t len,
                                   const char *body);
-static int handle_control_setevents(control_connection_t *conn, uint32_t len,
+static int handle_control_setevents(connection_t *conn, uint32_t len,
                                     const char *body);
-static int handle_control_authenticate(control_connection_t *conn,
-                                       uint32_t len,
+static int handle_control_authenticate(connection_t *conn, uint32_t len,
                                        const char *body);
-static int handle_control_saveconf(control_connection_t *conn, uint32_t len,
+static int handle_control_saveconf(connection_t *conn, uint32_t len,
                                    const char *body);
-static int handle_control_signal(control_connection_t *conn, uint32_t len,
+static int handle_control_signal(connection_t *conn, uint32_t len,
                                  const char *body);
-static int handle_control_mapaddress(control_connection_t *conn, uint32_t len,
+static int handle_control_mapaddress(connection_t *conn, uint32_t len,
                                      const char *body);
-static int handle_control_getinfo(control_connection_t *conn, uint32_t len,
+static int handle_control_getinfo(connection_t *conn, uint32_t len,
                                   const char *body);
-static int handle_control_extendcircuit(control_connection_t *conn,
-                                        uint32_t len,
+static int handle_control_extendcircuit(connection_t *conn, uint32_t len,
                                         const char *body);
-static int handle_control_setpurpose(control_connection_t *conn,
-                                     int for_circuits,
+static int handle_control_setpurpose(connection_t *conn, int for_circuits,
                                      uint32_t len, const char *body);
-static int handle_control_attachstream(control_connection_t *conn,
-                                       uint32_t len,
+static int handle_control_attachstream(connection_t *conn, uint32_t len,
                                         const char *body);
-static int handle_control_postdescriptor(control_connection_t *conn,
-                                         uint32_t len,
+static int handle_control_postdescriptor(connection_t *conn, uint32_t len,
                                          const char *body);
-static int handle_control_redirectstream(control_connection_t *conn,
-                                         uint32_t len,
+static int handle_control_redirectstream(connection_t *conn, uint32_t len,
                                          const char *body);
-static int handle_control_closestream(control_connection_t *conn, uint32_t len,
+static int handle_control_closestream(connection_t *conn, uint32_t len,
                                       const char *body);
-static int handle_control_closecircuit(control_connection_t *conn,
-                                       uint32_t len,
+static int handle_control_closecircuit(connection_t *conn, uint32_t len,
                                        const char *body);
-static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
+static int write_stream_target_to_buf(connection_t *conn, char *buf,
                                       size_t len);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
@@ -242,11 +235,10 @@ control_update_global_event_mask(void)
   for (i = 0; i < n_conns; ++i) {
     if (conns[i]->type == CONN_TYPE_CONTROL &&
         STATE_IS_OPEN(conns[i]->state)) {
-      control_connection_t *conn = TO_CONTROL_CONN(conns[i]);
-      if (STATE_IS_V0(conn->_base.state))
-        global_event_mask0 |= conn->event_mask;
+      if (STATE_IS_V0(conns[i]->state))
+        global_event_mask0 |= conns[i]->event_mask;
       else
-        global_event_mask1 |= conn->event_mask;
+        global_event_mask1 |= conns[i]->event_mask;
     }
   }
 
@@ -289,10 +281,10 @@ control_adjust_event_log_severity(void)
  * <b>conn</b>-\>outbuf
  */
 static INLINE void
-connection_write_str_to_buf(const char *s, control_connection_t *conn)
+connection_write_str_to_buf(const char *s, connection_t *conn)
 {
   size_t len = strlen(s);
-  connection_write_to_buf(s, len, TO_CONN(conn));
+  connection_write_to_buf(s, len, conn);
 }
 
 /** Given a <b>len</b>-character string in <b>data</b>, made of lines
@@ -454,7 +446,7 @@ get_escaped_string(const char *start, size_t in_len_max,
  * Currently the length of the message is limited to 1024 (including the
  * ending \n\r\0. */
 static void
-connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
+connection_printf_to_buf(connection_t *conn, const char *format, ...)
 {
 #define CONNECTION_PRINTF_TO_BUF_BUFFERSIZE 1024
   va_list ap;
@@ -470,41 +462,41 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-2] = '\n';
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-3] = '\r';
   }
-  connection_write_to_buf(buf, len, TO_CONN(conn));
+  connection_write_to_buf(buf, len, conn);
 }
 
 /** Send a message of type <b>type</b> containing <b>len</b> bytes
  * from <b>body</b> along the control connection <b>conn</b> */
 static void
-send_control0_message(control_connection_t *conn, uint16_t type, uint32_t len,
-                      const char *body)
+send_control0_message(connection_t *conn, uint16_t type, uint32_t len,
+                     const char *body)
 {
   char buf[10];
   tor_assert(conn);
-  tor_assert(STATE_IS_V0(conn->_base.state));
+  tor_assert(STATE_IS_V0(conn->state));
   tor_assert(len || !body);
   tor_assert(type <= _CONTROL0_CMD_MAX_RECOGNIZED);
   if (len < 65536) {
     set_uint16(buf, htons(len));
     set_uint16(buf+2, htons(type));
-    connection_write_to_buf(buf, 4, TO_CONN(conn));
+    connection_write_to_buf(buf, 4, conn);
     if (len)
-      connection_write_to_buf(body, len, TO_CONN(conn));
+      connection_write_to_buf(body, len, conn);
   } else {
     set_uint16(buf, htons(65535));
     set_uint16(buf+2, htons(CONTROL0_CMD_FRAGMENTHEADER));
     set_uint16(buf+4, htons(type));
     set_uint32(buf+6, htonl(len));
-    connection_write_to_buf(buf, 10, TO_CONN(conn));
-    connection_write_to_buf(body, 65535-6, TO_CONN(conn));
+    connection_write_to_buf(buf, 10, conn);
+    connection_write_to_buf(body, 65535-6, conn);
     len -= (65535-6);
     body += (65535-6);
     while (len) {
       size_t chunklen = (len<65535)?len:65535;
       set_uint16(buf, htons((uint16_t)chunklen));
       set_uint16(buf+2, htons(CONTROL0_CMD_FRAGMENT));
-      connection_write_to_buf(buf, 4, TO_CONN(conn));
-      connection_write_to_buf(body, chunklen, TO_CONN(conn));
+      connection_write_to_buf(buf, 4, conn);
+      connection_write_to_buf(body, chunklen, conn);
       len -= chunklen;
       body += chunklen;
     }
@@ -513,9 +505,9 @@ send_control0_message(control_connection_t *conn, uint16_t type, uint32_t len,
 
 /** Send a "DONE" message down the control connection <b>conn</b> */
 static void
-send_control_done(control_connection_t *conn)
+send_control_done(connection_t *conn)
 {
-  if (STATE_IS_V0(conn->_base.state)) {
+  if (STATE_IS_V0(conn->state)) {
     send_control0_message(conn, CONTROL0_CMD_DONE, 0, NULL);
   } else {
     connection_write_str_to_buf("250 OK\r\n", conn);
@@ -526,7 +518,7 @@ send_control_done(control_connection_t *conn)
  * as provided in the <b>len</b> bytes at <b>msg</b>.
  */
 static void
-send_control_done2(control_connection_t *conn, const char *msg, size_t len)
+send_control_done2(connection_t *conn, const char *msg, size_t len)
 {
   if (len==0)
     len = strlen(msg);
@@ -536,8 +528,7 @@ send_control_done2(control_connection_t *conn, const char *msg, size_t len)
 /** Send an error message with error code <b>error</b> and body
  * <b>message</b> down the connection <b>conn</b> */
 static void
-send_control0_error(control_connection_t *conn, uint16_t error,
-                    const char *message)
+send_control0_error(connection_t *conn, uint16_t error, const char *message)
 {
   char buf[256];
   size_t len;
@@ -570,13 +561,11 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
   for (i = 0; i < n_conns; ++i) {
     if (conns[i]->type == CONN_TYPE_CONTROL &&
         !conns[i]->marked_for_close &&
-        conns[i]->state == CONTROL_CONN_STATE_OPEN_V0) {
-      control_connection_t *control_conn = TO_CONTROL_CONN(conns[i]);
-      if (control_conn->event_mask & (1<<event)) {
-        send_control0_message(control_conn, CONTROL0_CMD_EVENT, buflen, buf);
-        if (event == EVENT_ERR_MSG)
-          _connection_controller_force_write(control_conn);
-      }
+        conns[i]->state == CONTROL_CONN_STATE_OPEN_V0 &&
+        conns[i]->event_mask & (1<<event)) {
+      send_control0_message(conns[i], CONTROL0_CMD_EVENT, buflen, buf);
+      if (event == EVENT_ERR_MSG)
+        _connection_controller_force_write(conns[i]);
     }
   }
 
@@ -597,13 +586,11 @@ send_control1_event_string(uint16_t event, const char *msg)
   for (i = 0; i < n_conns; ++i) {
     if (conns[i]->type == CONN_TYPE_CONTROL &&
         !conns[i]->marked_for_close &&
-        conns[i]->state == CONTROL_CONN_STATE_OPEN_V1) {
-      control_connection_t *control_conn = TO_CONTROL_CONN(conns[i]);
-      if (control_conn->event_mask & (1<<event)) {
-        connection_write_to_buf(msg, strlen(msg), TO_CONN(control_conn));
-        if (event == EVENT_ERR_MSG)
-          _connection_controller_force_write(control_conn);
-      }
+        conns[i]->state == CONTROL_CONN_STATE_OPEN_V1 &&
+        conns[i]->event_mask & (1<<event)) {
+      connection_write_to_buf(msg, strlen(msg), conns[i]);
+      if (event == EVENT_ERR_MSG)
+        _connection_controller_force_write(conns[i]);
     }
   }
 }
@@ -639,7 +626,7 @@ send_control1_event(uint16_t event, const char *format, ...)
 }
 
 /** Given a text circuit <b>id</b>, return the corresponding circuit. */
-static origin_circuit_t *
+static circuit_t *
 get_circ(const char *id)
 {
   unsigned long n_id;
@@ -651,17 +638,17 @@ get_circ(const char *id)
 }
 
 /** Given a text stream <b>id</b>, return the corresponding AP connection. */
-static edge_connection_t *
+static connection_t *
 get_stream(const char *id)
 {
   unsigned long n_id;
   int ok;
-  edge_connection_t *conn;
+  connection_t *conn;
   n_id = tor_parse_ulong(id, 10, 0, ULONG_MAX, &ok, NULL);
   if (!ok)
     return NULL;
   conn = connection_get_by_global_id(n_id);
-  if (!conn || conn->_base.type != CONN_TYPE_AP)
+  if (!conn || conn->type != CONN_TYPE_AP)
     return NULL;
   return conn;
 }
@@ -670,14 +657,14 @@ get_stream(const char *id)
  * it passes <b>use_defaults</b> on to options_trial_assign().
  */
 static int
-control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
+control_setconf_helper(connection_t *conn, uint32_t len, char *body,
                        int use_defaults, int clear_first)
 {
   int r;
   config_line_t *lines=NULL;
   char *start = body;
   char *errstring = NULL;
-  int v0 = STATE_IS_V0(conn->_base.state);
+  int v0 = STATE_IS_V0(conn->state);
 
   if (!v0) {
     char *config = tor_malloc(len+1);
@@ -774,7 +761,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
 /** Called when we receive a SETCONF message: parse the body and try
  * to update our configuration.  Reply with a DONE or ERROR message. */
 static int
-handle_control_setconf(control_connection_t *conn, uint32_t len, char *body)
+handle_control_setconf(connection_t *conn, uint32_t len, char *body)
 {
   return control_setconf_helper(conn, len, body, 0, 1);
 }
@@ -782,9 +769,9 @@ handle_control_setconf(control_connection_t *conn, uint32_t len, char *body)
 /** Called when we receive a RESETCONF message: parse the body and try
  * to update our configuration.  Reply with a DONE or ERROR message. */
 static int
-handle_control_resetconf(control_connection_t *conn, uint32_t len, char *body)
+handle_control_resetconf(connection_t *conn, uint32_t len, char *body)
 {
-  int v0 = STATE_IS_V0(conn->_base.state);
+  int v0 = STATE_IS_V0(conn->state);
   tor_assert(!v0);
   return control_setconf_helper(conn, len, body, 1, 1);
 }
@@ -792,8 +779,7 @@ handle_control_resetconf(control_connection_t *conn, uint32_t len, char *body)
 /** Called when we receive a GETCONF message.  Parse the request, and
  * reply with a CONFVALUE or an ERROR message */
 static int
-handle_control_getconf(control_connection_t *conn, uint32_t body_len,
-                       const char *body)
+handle_control_getconf(connection_t *conn, uint32_t body_len, const char *body)
 {
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
@@ -801,10 +787,9 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
   char *msg = NULL;
   size_t msg_len;
   or_options_t *options = get_options();
-  int v0 = STATE_IS_V0(conn->_base.state);
+  int v0 = STATE_IS_V0(conn->state);
 
   questions = smartlist_create();
-  (void) body_len; /* body is nul-terminated; so we can ignore len. */
   if (v0) {
     smartlist_split_string(questions, body, "\n",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -872,7 +857,7 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
       tor_assert(strlen(tmp)>4);
       tmp[3] = ' ';
       msg = smartlist_join_strings(answers, "", 0, &msg_len);
-      connection_write_to_buf(msg, msg_len, TO_CONN(conn));
+      connection_write_to_buf(msg, msg_len, conn);
     } else {
       connection_write_str_to_buf("250 OK\r\n", conn);
     }
@@ -896,14 +881,13 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
 /** Called when we get a SETEVENTS message: update conn->event_mask,
  * and reply with DONE or ERROR. */
 static int
-handle_control_setevents(control_connection_t *conn, uint32_t len,
-                         const char *body)
+handle_control_setevents(connection_t *conn, uint32_t len, const char *body)
 {
   uint16_t event_code;
   uint32_t event_mask = 0;
   unsigned int extended = 0;
 
-  if (STATE_IS_V0(conn->_base.state)) {
+  if (STATE_IS_V0(conn->state)) {
     if (len % 2) {
       send_control0_error(conn, ERR_SYNTAX,
                           "Odd number of bytes in setevents message");
@@ -965,7 +949,7 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
     smartlist_free(events);
   }
   conn->event_mask = event_mask;
-  conn->_base.control_events_are_extended = extended;
+  conn->control_events_are_extended = extended;
 
   control_update_global_event_mask();
   send_control_done(conn);
@@ -1002,14 +986,13 @@ decode_hashed_password(char *buf, const char *hashed)
  * OPEN.  Reply with DONE or ERROR.
  */
 static int
-handle_control_authenticate(control_connection_t *conn, uint32_t len,
-                            const char *body)
+handle_control_authenticate(connection_t *conn, uint32_t len, const char *body)
 {
   int used_quoted_string = 0;
   or_options_t *options = get_options();
   char *password;
   size_t password_len;
-  if (STATE_IS_V0(conn->_base.state)) {
+  if (STATE_IS_V0(conn->state)) {
     password = (char*)body;
     password_len = len;
   } else {
@@ -1063,7 +1046,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   }
 
  err:
-  if (STATE_IS_V0(conn->_base.state))
+  if (STATE_IS_V0(conn->state))
     send_control0_error(conn,ERR_REJECTED_AUTHENTICATION,
                         "Authentication failed");
   else {
@@ -1077,12 +1060,12 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   }
   return 0;
  ok:
-  log_info(LD_CONTROL, "Authenticated control connection (%d)", conn->_base.s);
+  log_info(LD_CONTROL, "Authenticated control connection (%d)", conn->s);
   send_control_done(conn);
-  if (STATE_IS_V0(conn->_base.state))
-    conn->_base.state = CONTROL_CONN_STATE_OPEN_V0;
+  if (STATE_IS_V0(conn->state))
+    conn->state = CONTROL_CONN_STATE_OPEN_V0;
   else {
-    conn->_base.state = CONTROL_CONN_STATE_OPEN_V1;
+    conn->state = CONTROL_CONN_STATE_OPEN_V1;
     tor_free(password);
   }
   return 0;
@@ -1091,13 +1074,11 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
 /** Called when we get a SAVECONF command. Try to flush the current options to
  * disk, and report success or failure. */
 static int
-handle_control_saveconf(control_connection_t *conn, uint32_t len,
+handle_control_saveconf(connection_t *conn, uint32_t len,
                         const char *body)
 {
-  (void) len;
-  (void) body;
   if (options_save_current()<0) {
-    if (STATE_IS_V0(conn->_base.state))
+    if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_INTERNAL,
                           "Unable to write configuration to disk.");
     else
@@ -1113,11 +1094,11 @@ handle_control_saveconf(control_connection_t *conn, uint32_t len,
  * report success or failure. (If the signal results in a shutdown, success
  * may not be reported.) */
 static int
-handle_control_signal(control_connection_t *conn, uint32_t len,
+handle_control_signal(connection_t *conn, uint32_t len,
                       const char *body)
 {
   int sig;
-  if (STATE_IS_V0(conn->_base.state)) {
+  if (STATE_IS_V0(conn->state)) {
     if (len != 1) {
       send_control0_error(conn, ERR_SYNTAX,
                           "Body of SIGNAL command too long or too short.");
@@ -1153,16 +1134,14 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
       return 0;
   }
 
-  if (!control_signal_check(sig)) {
-    if (STATE_IS_V0(conn->_base.state))
+  if (control_signal_act(sig) < 0) {
+    if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_SYNTAX, "Unrecognized signal number.");
     else
-      connection_write_str_to_buf("551 Unable to act on signal\r\n",
+      connection_write_str_to_buf("551 Internal error acting on signal\r\n",
                                   conn);
   } else {
-    /* Send DONE first, in case the signal makes us shut down. */
     send_control_done(conn);
-    control_signal_act(sig);
   }
   return 0;
 }
@@ -1170,17 +1149,14 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
 /** Called when we get a MAPADDRESS command; try to bind all listed addresses,
  * and report success or failrue. */
 static int
-handle_control_mapaddress(control_connection_t *conn, uint32_t len,
-                          const char *body)
+handle_control_mapaddress(connection_t *conn, uint32_t len, const char *body)
 {
   smartlist_t *elts;
   smartlist_t *lines;
   smartlist_t *reply;
   char *r;
   size_t sz;
-  int v0 = STATE_IS_V0(conn->_base.state);
-  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
-
+  int v0 = STATE_IS_V0(conn->state);
   lines = smartlist_create();
   elts = smartlist_create();
   reply = smartlist_create();
@@ -1276,12 +1252,12 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
     if (smartlist_len(reply)) {
       ((char*)smartlist_get(reply,smartlist_len(reply)-1))[3] = ' ';
       r = smartlist_join_strings(reply, "\r\n", 1, &sz);
-      connection_write_to_buf(r, sz, TO_CONN(conn));
+      connection_write_to_buf(r, sz, conn);
       tor_free(r);
     } else {
       const char *response =
         "512 syntax error: not enough arguments to mapaddress.\r\n";
-      connection_write_to_buf(response, strlen(response), TO_CONN(conn));
+      connection_write_to_buf(response, strlen(response), conn);
     }
   }
 
@@ -1307,16 +1283,13 @@ list_getinfo_options(void)
     "addr-mappings/cache Addresses remapped by DNS cache.\n"
     "addr-mappings/configl Addresses remapped from configuration options.\n"
     "addr-mappings/control Addresses remapped by a controller.\n"
-    "address The best guess at our external IP address.\n"
     "circuit-status Status of each current circuit.\n"
-    "config-file Current location of the \"torrc\" file.\n"
     "config/names List of configuration options, types, and documentation.\n"
     "desc/id/* Server descriptor by hex ID\n"
     "desc/name/* Server descriptor by nickname.\n"
     "desc/all-recent Latest server descriptor for every router\n"
     "dir/server/* Fetch server descriptors -- see dir-spec.txt\n"
     "entry-guards Which nodes will we use as entry guards?\n"
-    "exit-policy/default Default lines appended to config->ExitPolicy\n"
     "info/names List of GETINFO options, types, and documentation.\n"
     "network-status List of hex IDs, nicknames, server statuses.\n"
     "orconn-status Status of each current OR connection.\n"
@@ -1326,7 +1299,7 @@ list_getinfo_options(void)
 
 /** Lookup the 'getinfo' entry <b>question</b>, and return
  * the answer in <b>*answer</b> (or NULL if key not recognized).
- * Return 0 if success, or -1 if recognized but internal error. */
+ * Return 0 if success, or -1 if internal error. */
 static int
 handle_getinfo_helper(const char *question, char **answer)
 {
@@ -1350,14 +1323,14 @@ handle_getinfo_helper(const char *question, char **answer)
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
-        *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
+        *answer = tor_strdup(body);
     }
   } else if (!strcmpstart(question, "desc/name/")) {
     routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"),1);
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
-        *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
+        *answer = tor_strdup(body);
     }
   } else if (!strcmp(question, "desc/all-recent")) {
     routerlist_t *routerlist = router_get_routerlist();
@@ -1367,8 +1340,7 @@ handle_getinfo_helper(const char *question, char **answer)
       {
         const char *body = signed_descriptor_get_body(&ri->cache_info);
         if (body)
-          smartlist_add(sl,
-                  tor_strndup(body, ri->cache_info.signed_descriptor_len));
+          smartlist_add(sl, tor_strdup(body));
       });
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
@@ -1392,7 +1364,7 @@ handle_getinfo_helper(const char *question, char **answer)
       const char *state;
       if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
         continue;
-      path = circuit_list_path(TO_ORIGIN_CIRCUIT(circ),0);
+      path = circuit_list_path(circ,0);
       if (circ->state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
       else if (strlen(path))
@@ -1403,7 +1375,7 @@ handle_getinfo_helper(const char *question, char **answer)
       slen = strlen(path)+strlen(state)+20;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%lu %s %s",
-                   (unsigned long)TO_ORIGIN_CIRCUIT(circ)->global_identifier,
+                   (unsigned long)circ->global_identifier,
                    state, path);
       smartlist_add(status, s);
       tor_free(path);
@@ -1419,24 +1391,19 @@ handle_getinfo_helper(const char *question, char **answer)
     get_connection_array(&conns, &n_conns);
     for (i=0; i < n_conns; ++i) {
       const char *state;
-      edge_connection_t *conn;
       char *s;
       size_t slen;
       circuit_t *circ;
-      origin_circuit_t *origin_circ = NULL;
       if (conns[i]->type != CONN_TYPE_AP ||
           conns[i]->marked_for_close ||
-          conns[i]->state == AP_CONN_STATE_SOCKS_WAIT ||
-          conns[i]->state == AP_CONN_STATE_ORIGDST_WAIT)
+          conns[i]->state == AP_CONN_STATE_SOCKS_WAIT)
         continue;
-      conn = TO_EDGE_CONN(conns[i]);
-      switch (conn->_base.state)
+      switch (conns[i]->state)
         {
         case AP_CONN_STATE_CONTROLLER_WAIT:
         case AP_CONN_STATE_CIRCUIT_WAIT:
-          if (conn->socks_request &&
-              (conn->socks_request->command == SOCKS_COMMAND_RESOLVE ||
-               conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR))
+          if (conns[i]->socks_request &&
+              conns[i]->socks_request->command == SOCKS_COMMAND_RESOLVE)
             state = "NEWRESOLVE";
           else
             state = "NEW";
@@ -1450,19 +1417,16 @@ handle_getinfo_helper(const char *question, char **answer)
           state = "SUCCEEDED"; break;
         default:
           log_warn(LD_BUG, "Asked for stream in unknown state %d",
-                   conn->_base.state);
+                   conns[i]->state);
           continue;
         }
-      circ = circuit_get_by_edge_conn(conn);
-      if (circ && CIRCUIT_IS_ORIGIN(circ))
-        origin_circ = TO_ORIGIN_CIRCUIT(circ);
-      write_stream_target_to_buf(conn, buf, sizeof(buf));
+      circ = circuit_get_by_edge_conn(conns[i]);
+      write_stream_target_to_buf(conns[i], buf, sizeof(buf));
       slen = strlen(buf)+strlen(state)+32;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%lu %s %lu %s",
-                   (unsigned long) conn->global_identifier,state,
-                   origin_circ?
-                         (unsigned long)origin_circ->global_identifier : 0ul,
+                   (unsigned long) conns[i]->global_identifier,state,
+                   circ?(unsigned long)circ->global_identifier : 0ul,
                    buf);
       smartlist_add(status, s);
     }
@@ -1479,11 +1443,10 @@ handle_getinfo_helper(const char *question, char **answer)
       char *s;
       char name[128];
       size_t slen;
-      or_connection_t *conn;
-      if (conns[i]->type != CONN_TYPE_OR || conns[i]->marked_for_close)
+      connection_t *conn = conns[i];
+      if (conn->type != CONN_TYPE_OR || conn->marked_for_close)
         continue;
-      conn = TO_OR_CONN(conns[i]);
-      if (conn->_base.state == OR_CONN_STATE_OPEN)
+      if (conn->state == OR_CONN_STATE_OPEN)
         state = "CONNECTED";
       else if (conn->nickname)
         state = "LAUNCHED";
@@ -1493,7 +1456,7 @@ handle_getinfo_helper(const char *question, char **answer)
         strlcpy(name, conn->nickname, sizeof(name));
       else
         tor_snprintf(name, sizeof(name), "%s:%d",
-                     conn->_base.address, conn->_base.port);
+                     conn->address, conn->port);
 
       slen = strlen(name)+strlen(state)+2;
       s = tor_malloc(slen+1);
@@ -1519,14 +1482,9 @@ handle_getinfo_helper(const char *question, char **answer)
     }
     mappings = smartlist_create();
     addressmap_get_mappings(mappings, min_e, max_e);
-    *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
+    *answer = smartlist_join_strings(mappings, "\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
-  } else if (!strcmp(question, "address")) {
-    uint32_t addr;
-    if (router_pick_published_address(get_options(), &addr) < 0)
-      return -1;
-    *answer = tor_dup_addr(addr);
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmpstart(question, "dir/server/")) {
@@ -1556,7 +1514,7 @@ handle_getinfo_helper(const char *question, char **answer)
     char *cp;
     if (!get_options()->DirPort) {
       log_warn(LD_CONTROL, "getinfo dir/status/ requires an open dirport.");
-      return -1;
+      return 0;
     }
     status_list = smartlist_create();
     dirserv_get_networkstatus_v2(status_list,
@@ -1569,8 +1527,6 @@ handle_getinfo_helper(const char *question, char **answer)
       cp += d->dir_len;
       });
     *cp = '\0';
-  } else if (!strcmpstart(question, "exit-policy/")) {
-    return policies_getinfo_helper(question, answer);
   }
   return 0;
 }
@@ -1578,16 +1534,14 @@ handle_getinfo_helper(const char *question, char **answer)
 /** Called when we receive a GETINFO command.  Try to fetch all requested
  * information, and reply with information or error message. */
 static int
-handle_control_getinfo(control_connection_t *conn, uint32_t len,
-                       const char *body)
+handle_control_getinfo(connection_t *conn, uint32_t len, const char *body)
 {
   smartlist_t *questions = NULL;
   smartlist_t *answers = NULL;
   smartlist_t *unrecognized = NULL;
   char *msg = NULL, *ans = NULL;
   size_t msg_len;
-  int v0 = STATE_IS_V0(conn->_base.state);
-  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
+  int v0 = STATE_IS_V0(conn->state);
 
   questions = smartlist_create();
   if (v0)
@@ -1650,7 +1604,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
         size_t len;
         len = write_escaped_data(v, strlen(v), 1, &esc);
         connection_printf_to_buf(conn, "250+%s=\r\n", k);
-        connection_write_to_buf(esc, len, TO_CONN(conn));
+        connection_write_to_buf(esc, len, conn);
         tor_free(esc);
       }
     }
@@ -1672,23 +1626,20 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** If *<b>string</b> contains a recognized purpose (for
+/** If <b>string</b> contains a recognized purpose (for
  * circuits if <b>for_circuits</b> is 1, else for routers),
  * possibly prefaced with the string "purpose=", then assign it
- * and return 0. Otherwise return -1.
- *
- * If it's prefaced with "purpose=", then set *<b>string</b> to
- * the remainder of the string. */
+ * and return 0. Otherwise return -1. */
 static int
-get_purpose(char **string, int for_circuits, uint8_t *purpose)
+get_purpose(char *string, int for_circuits, uint8_t *purpose)
 {
-  if (!strcmpstart(*string, "purpose="))
-    *string += strlen("purpose=");
+  if (!strcmpstart(string, "purpose="))
+    string += strlen("purpose=");
 
-  if (!strcmp(*string, "general"))
+  if (!strcmp(string, "general"))
     *purpose = for_circuits ? CIRCUIT_PURPOSE_C_GENERAL :
                               ROUTER_PURPOSE_GENERAL;
-  else if (!strcmp(*string, "controller"))
+  else if (!strcmp(string, "controller"))
     *purpose = for_circuits ? CIRCUIT_PURPOSE_CONTROLLER :
                               ROUTER_PURPOSE_GENERAL;
   else { /* not a recognized purpose */
@@ -1700,17 +1651,17 @@ get_purpose(char **string, int for_circuits, uint8_t *purpose)
 /** Called when we get an EXTENDCIRCUIT message.  Try to extend the listed
  * circuit, and report success or failure. */
 static int
-handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
+handle_control_extendcircuit(connection_t *conn, uint32_t len,
                              const char *body)
 {
   smartlist_t *router_nicknames=NULL, *routers=NULL;
   uint32_t circ_id;
-  origin_circuit_t *circ = NULL;
+  circuit_t *circ = NULL;
   int zero_circ, v0;
   char reply[4];
   uint8_t intended_purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
-  v0 = STATE_IS_V0(conn->_base.state);
+  v0 = STATE_IS_V0(conn->state);
   router_nicknames = smartlist_create();
 
   if (v0) {
@@ -1753,18 +1704,13 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
     smartlist_split_string(router_nicknames, smartlist_get(args,1), ",", 0, 0);
 
     if (zero_circ && smartlist_len(args)>2) {
-      char *purp = smartlist_get(args,2);
-      if (get_purpose(&purp, 1, &intended_purpose) < 0) {
-        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
+      if (get_purpose(smartlist_get(args,2), 1, &intended_purpose) < 0) {
+        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
+                                 (char *)smartlist_get(args,2));
         SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
         smartlist_free(args);
         goto done;
       }
-    }
-    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-    smartlist_free(args);
-    if (!zero_circ && !circ) {
-      goto done;
     }
     SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
     smartlist_free(args);
@@ -1796,7 +1742,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   if (zero_circ) {
     /* start a new circuit */
-    circ = origin_circuit_init(intended_purpose, 0, 0, 0);
+    circ = circuit_init(intended_purpose, 0, 0, 0);
   }
 
   /* now circ refers to something that is ready to be extended */
@@ -1810,7 +1756,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   /* now that we've populated the cpath, start extending */
   if (zero_circ) {
     if (circuit_handle_first_hop(circ) < 0) {
-      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
       if (v0)
         send_control0_error(conn, ERR_INTERNAL, "couldn't start circuit");
       else
@@ -1818,12 +1764,12 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       goto done;
     }
   } else {
-    if (circ->_base.state == CIRCUIT_STATE_OPEN) {
-      circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
+    if (circ->state == CIRCUIT_STATE_OPEN) {
+      circuit_set_state(circ, CIRCUIT_STATE_BUILDING);
       if (circuit_send_next_onion_skin(circ) < 0) {
         log_info(LD_CONTROL,
                  "send_next_onion_skin failed; circuit marked for closing.");
-        circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+        circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
         if (v0)
           send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
         else
@@ -1852,14 +1798,13 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
  * is 1) or SETROUTERPURPOSE message. If we can find
  * the circuit/router and it's a valid purpose, change it. */
 static int
-handle_control_setpurpose(control_connection_t *conn, int for_circuits,
+handle_control_setpurpose(connection_t *conn, int for_circuits,
                           uint32_t len, const char *body)
 {
-  origin_circuit_t *circ = NULL;
+  circuit_t *circ = NULL;
   routerinfo_t *ri = NULL;
   uint8_t new_purpose;
   smartlist_t *args = smartlist_create();
-  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(args)<2) {
@@ -1883,16 +1828,14 @@ handle_control_setpurpose(control_connection_t *conn, int for_circuits,
     }
   }
 
-  {
-    char *purp = smartlist_get(args,1);
-    if (get_purpose(&purp, for_circuits, &new_purpose) < 0) {
-      connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
-      goto done;
-    }
+  if (get_purpose(smartlist_get(args,1), for_circuits, &new_purpose) < 0) {
+    connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
+                             (char *)smartlist_get(args,1));
+    goto done;
   }
 
   if (for_circuits)
-    circ->_base.purpose = new_purpose;
+    circ->purpose = new_purpose;
   else
     ri->purpose = new_purpose;
   connection_write_str_to_buf("250 OK\r\n", conn);
@@ -1906,14 +1849,14 @@ done:
 /** Called when we get an ATTACHSTREAM message.  Try to attach the requested
  * stream, and report success or failure. */
 static int
-handle_control_attachstream(control_connection_t *conn, uint32_t len,
+handle_control_attachstream(connection_t *conn, uint32_t len,
                             const char *body)
 {
-  edge_connection_t *ap_conn = NULL;
-  origin_circuit_t *circ = NULL;
+  connection_t *ap_conn = NULL;
+  circuit_t *circ = NULL;
   int zero_circ;
 
-  if (STATE_IS_V0(conn->_base.state)) {
+  if (STATE_IS_V0(conn->state)) {
     uint32_t conn_id;
     uint32_t circ_id;
     if (len < 8) {
@@ -1962,10 +1905,10 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
       return 0;
   }
 
-  if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT &&
-      ap_conn->_base.state != AP_CONN_STATE_CONNECT_WAIT &&
-      ap_conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
-    if (STATE_IS_V0(conn->_base.state)) {
+  if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT &&
+      ap_conn->state != AP_CONN_STATE_CONNECT_WAIT &&
+      ap_conn->state != AP_CONN_STATE_RESOLVE_WAIT) {
+    if (STATE_IS_V0(conn->state)) {
       send_control0_error(conn, ERR_NO_STREAM,
                           "Connection is not managed by controller.");
     } else {
@@ -1977,29 +1920,28 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   }
 
   /* Do we need to detach it first? */
-  if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT) {
+  if (ap_conn->state != AP_CONN_STATE_CONTROLLER_WAIT) {
     circuit_t *tmpcirc = circuit_get_by_edge_conn(ap_conn);
-    connection_edge_end(ap_conn, END_STREAM_REASON_TIMEOUT,
-                        ap_conn->cpath_layer);
+    connection_edge_end(ap_conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* Un-mark it as ending, since we're going to reuse it. */
-    ap_conn->_base.edge_has_sent_end = 0;
+    ap_conn->has_sent_end = 0;
     if (tmpcirc)
       circuit_detach_stream(tmpcirc,ap_conn);
-    ap_conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
+    ap_conn->state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
-  if (circ && (circ->_base.state != CIRCUIT_STATE_OPEN)) {
-    if (STATE_IS_V0(conn->_base.state))
+  if (circ && circ->state != CIRCUIT_STATE_OPEN) {
+    if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_INTERNAL,
-                          "Refuse to attach stream to non-open, origin circ.");
+                          "Refuse to attach stream to non-open circ.");
     else
       connection_write_str_to_buf(
-                     "551 Can't attach stream to non-open, origin circuit\r\n",
-                     conn);
+                          "551 Can't attach stream to non-open circuit\r\n",
+                          conn);
     return 0;
   }
   if (connection_ap_handshake_rewrite_and_attach(ap_conn, circ) < 0) {
-    if (STATE_IS_V0(conn->_base.state))
+    if (STATE_IS_V0(conn->state))
       send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");
     else
       connection_write_str_to_buf("551 Unable to attach stream\r\n", conn);
@@ -2012,11 +1954,11 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
 /** Called when we get a POSTDESCRIPTOR message.  Try to learn the provided
  * descriptor, and report success or failure. */
 static int
-handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
+handle_control_postdescriptor(connection_t *conn, uint32_t len,
                               const char *body)
 {
   char *desc;
-  int v0 = STATE_IS_V0(conn->_base.state);
+  int v0 = STATE_IS_V0(conn->state);
   const char *msg=NULL;
   uint8_t purpose = ROUTER_PURPOSE_GENERAL;
 
@@ -2030,10 +1972,9 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
     smartlist_split_string(args, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args)) {
-      char *purp = smartlist_get(args,0);
-      if (get_purpose(&purp, 0, &purpose) < 0) {
+      if (get_purpose(smartlist_get(args,0), 0, &purpose) < 0) {
         connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
-                                 purp);
+                                 (char *)smartlist_get(args,0));
         SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
         smartlist_free(args);
         return 0;
@@ -2072,14 +2013,14 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
 /** Called when we receive a REDIRECTSTERAM command.  Try to change the target
  * address of the named AP stream, and report success or failure. */
 static int
-handle_control_redirectstream(control_connection_t *conn, uint32_t len,
+handle_control_redirectstream(connection_t *conn, uint32_t len,
                               const char *body)
 {
-  edge_connection_t *ap_conn = NULL;
+  connection_t *ap_conn = NULL;
   uint32_t conn_id;
   char *new_addr = NULL;
   uint16_t new_port = 0;
-  if (STATE_IS_V0(conn->_base.state)) {
+  if (STATE_IS_V0(conn->state)) {
     if (len < 6) {
       send_control0_error(conn, ERR_SYNTAX,
                           "redirectstream message too short");
@@ -2088,8 +2029,8 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
     conn_id = ntohl(get_uint32(body));
 
     if (!(ap_conn = connection_get_by_global_id(conn_id))
-        || ap_conn->_base.state != CONN_TYPE_AP
-        || ap_conn->socks_request) {
+        || ap_conn->state != CONN_TYPE_AP
+        || !ap_conn->socks_request) {
       send_control0_error(conn, ERR_NO_STREAM,
                           "No AP connection found with given ID");
       return 0;
@@ -2139,13 +2080,13 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
 /** Called when we get a CLOSESTREAM command; try to close the named stream
  * and report success or failure. */
 static int
-handle_control_closestream(control_connection_t *conn, uint32_t len,
+handle_control_closestream(connection_t *conn, uint32_t len,
                            const char *body)
 {
-  edge_connection_t *ap_conn=NULL;
+  connection_t *ap_conn=NULL;
   uint8_t reason=0;
 
-  if (STATE_IS_V0(conn->_base.state)) {
+  if (STATE_IS_V0(conn->state)) {
     uint32_t conn_id;
     if (len < 6) {
       send_control0_error(conn, ERR_SYNTAX, "closestream message too short");
@@ -2156,8 +2097,8 @@ handle_control_closestream(control_connection_t *conn, uint32_t len,
     reason = *(uint8_t*)(body+4);
 
     if (!(ap_conn = connection_get_by_global_id(conn_id))
-        || ap_conn->_base.state != CONN_TYPE_AP
-        || ap_conn->socks_request) {
+        || ap_conn->state != CONN_TYPE_AP
+        || !ap_conn->socks_request) {
       send_control0_error(conn, ERR_NO_STREAM,
                           "No AP connection found with given ID");
       return 0;
@@ -2197,13 +2138,13 @@ handle_control_closestream(control_connection_t *conn, uint32_t len,
 /** Called when we get a CLOSECIRCUIT command; try to close the named circuit
  * and report success or failure. */
 static int
-handle_control_closecircuit(control_connection_t *conn, uint32_t len,
+handle_control_closecircuit(connection_t *conn, uint32_t len,
                             const char *body)
 {
-  origin_circuit_t *circ = NULL;
+  circuit_t *circ = NULL;
   int safe = 0;
 
-  if (STATE_IS_V0(conn->_base.state)) {
+  if (STATE_IS_V0(conn->state)) {
     uint32_t circ_id;
     if (len < 5) {
       send_control0_error(conn, ERR_SYNTAX, "closecircuit message too short");
@@ -2245,7 +2186,7 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   }
 
   if (!safe || !circ->p_streams) {
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NONE);
+    circuit_mark_for_close(circ, END_CIRC_REASON_NONE);
   }
 
   send_control_done(conn);
@@ -2258,7 +2199,7 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
  * fragments and report failure.
  */
 static int
-handle_control_fragments(control_connection_t *conn, uint16_t command_type,
+handle_control_fragments(connection_t *conn, uint16_t command_type,
                          uint32_t body_len, char *body)
 {
   if (command_type == CONTROL0_CMD_FRAGMENTHEADER) {
@@ -2299,22 +2240,24 @@ handle_control_fragments(control_connection_t *conn, uint16_t command_type,
 
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
-connection_control_finished_flushing(control_connection_t *conn)
+connection_control_finished_flushing(connection_t *conn)
 {
   tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_CONTROL);
 
-  connection_stop_writing(TO_CONN(conn));
+  connection_stop_writing(conn);
   return 0;
 }
 
 /** Called when <b>conn</b> has gotten its socket closed. */
 int
-connection_control_reached_eof(control_connection_t *conn)
+connection_control_reached_eof(connection_t *conn)
 {
   tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_CONTROL);
 
   log_info(LD_CONTROL,"Control connection reached EOF. Closing.");
-  connection_mark_for_close(TO_CONN(conn));
+  connection_mark_for_close(conn);
   return 0;
 }
 
@@ -2322,15 +2265,16 @@ connection_control_reached_eof(control_connection_t *conn)
  * commands from conn->inbuf, and execute them.
  */
 static int
-connection_control_process_inbuf_v1(control_connection_t *conn)
+connection_control_process_inbuf_v1(connection_t *conn)
 {
   size_t data_len;
   int cmd_len;
   char *args;
 
   tor_assert(conn);
-  tor_assert(conn->_base.state == CONTROL_CONN_STATE_OPEN_V1 ||
-             conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V1);
+  tor_assert(conn->type == CONN_TYPE_CONTROL);
+  tor_assert(conn->state == CONTROL_CONN_STATE_OPEN_V1 ||
+             conn->state == CONTROL_CONN_STATE_NEEDAUTH_V1);
 
   if (!conn->incoming_cmd) {
     conn->incoming_cmd = tor_malloc(1024);
@@ -2345,7 +2289,7 @@ connection_control_process_inbuf_v1(control_connection_t *conn)
     /* First, fetch a line. */
     do {
       data_len = conn->incoming_cmd_len - conn->incoming_cmd_cur_len;
-      r = fetch_from_buf_line(conn->_base.inbuf,
+      r = fetch_from_buf_line(conn->inbuf,
                               conn->incoming_cmd+conn->incoming_cmd_cur_len,
                               &data_len);
       if (r == 0)
@@ -2395,11 +2339,11 @@ connection_control_process_inbuf_v1(control_connection_t *conn)
 
   if (!strcasecmp(conn->incoming_cmd, "QUIT")) {
     connection_write_str_to_buf("250 closing connection\r\n", conn);
-    connection_mark_for_close(TO_CONN(conn));
+    connection_mark_for_close(conn);
     return 0;
   }
 
-  if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V1 &&
+  if (conn->state == CONTROL_CONN_STATE_NEEDAUTH_V1 &&
       strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
     connection_write_str_to_buf("514 Authentication required.\r\n", conn);
     conn->incoming_cmd_cur_len = 0;
@@ -2470,7 +2414,7 @@ connection_control_process_inbuf_v1(control_connection_t *conn)
  * commands from conn->inbuf, and execute them.
  */
 static int
-connection_control_process_inbuf_v0(control_connection_t *conn)
+connection_control_process_inbuf_v0(connection_t *conn)
 {
   uint32_t body_len;
   uint16_t command_type;
@@ -2478,16 +2422,15 @@ connection_control_process_inbuf_v0(control_connection_t *conn)
 
  again:
   /* Try to suck a control message from the buffer. */
-  switch (fetch_from_buf_control0(conn->_base.inbuf, &body_len, &command_type,
-                          &body,
-                          conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V0))
+  switch (fetch_from_buf_control0(conn->inbuf, &body_len, &command_type, &body,
+                                conn->state == CONTROL_CONN_STATE_NEEDAUTH_V0))
     {
     case -2:
       tor_free(body);
       log_info(LD_CONTROL,
                "Detected v1 control protocol on connection (fd %d)",
-               conn->_base.s);
-      conn->_base.state = CONTROL_CONN_STATE_NEEDAUTH_V1;
+               conn->s);
+      conn->state = CONTROL_CONN_STATE_NEEDAUTH_V1;
       return connection_control_process_inbuf_v1(conn);
     case -1:
       tor_free(body);
@@ -2505,7 +2448,7 @@ connection_control_process_inbuf_v0(control_connection_t *conn)
 
   /* We got a command.  If we need authentication, only authentication
    * commands will be considered. */
-  if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V0 &&
+  if (conn->state == CONTROL_CONN_STATE_NEEDAUTH_V0 &&
       command_type != CONTROL0_CMD_AUTHENTICATE) {
     log_info(LD_CONTROL, "Rejecting '%s' command; authentication needed.",
              control_cmd_to_string(command_type));
@@ -2619,11 +2562,12 @@ connection_control_process_inbuf_v0(control_connection_t *conn)
 /** Called when <b>conn</b> has received more bytes on its inbuf.
  */
 int
-connection_control_process_inbuf(control_connection_t *conn)
+connection_control_process_inbuf(connection_t *conn)
 {
   tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_CONTROL);
 
-  if (STATE_IS_V0(conn->_base.state))
+  if (STATE_IS_V0(conn->state))
     return connection_control_process_inbuf_v0(conn);
   else
     return connection_control_process_inbuf_v1(conn);
@@ -2632,12 +2576,13 @@ connection_control_process_inbuf(control_connection_t *conn)
 /** Something has happened to circuit <b>circ</b>: tell any interested
  * control connections. */
 int
-control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
+control_event_circuit_status(circuit_t *circ, circuit_status_event_t tp)
 {
   char *path, *msg;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
+  tor_assert(CIRCUIT_IS_ORIGIN(circ));
 
   path = circuit_list_path(circ,0);
   if (EVENT_IS_INTERESTING0(EVENT_CIRCUIT_STATUS)) {
@@ -2678,7 +2623,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
  * <b>conn</b>, and write it to <b>buf</b>.  Return 0 on success, -1 on
  * failure. */
 static int
-write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
+write_stream_target_to_buf(connection_t *conn, char *buf, size_t len)
 {
   char buf2[256];
   if (conn->chosen_exit_name)
@@ -2697,11 +2642,12 @@ write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
 /** Something has happened to the stream associated with AP connection
  * <b>conn</b>: tell any interested control connections. */
 int
-control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
+control_event_stream_status(connection_t *conn, stream_status_event_t tp)
 {
   char *msg;
   size_t len;
   char buf[256];
+  tor_assert(conn->type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
 
   if (!EVENT_IS_INTERESTING(EVENT_STREAM_STATUS))
@@ -2721,7 +2667,6 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
   if (EVENT_IS_INTERESTING1(EVENT_STREAM_STATUS)) {
     const char *status;
     circuit_t *circ;
-    origin_circuit_t *origin_circ = NULL;
     switch (tp)
       {
       case STREAM_EVENT_SENT_CONNECT: status = "SENTCONNECT"; break;
@@ -2737,13 +2682,10 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
         return 0;
       }
     circ = circuit_get_by_edge_conn(conn);
-    if (circ && CIRCUIT_IS_ORIGIN(circ))
-      origin_circ = TO_ORIGIN_CIRCUIT(circ);
     send_control1_event(EVENT_STREAM_STATUS,
                         "650 STREAM %lu %s %lu %s\r\n",
                         (unsigned long)conn->global_identifier, status,
-                        origin_circ?
-                           (unsigned long)origin_circ->global_identifier : 0ul,
+                        circ?(unsigned long)circ->global_identifier : 0ul,
                         buf);
     /* XXX need to specify its intended exit, etc? */
   }
@@ -2753,10 +2695,12 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
 /** Something has happened to the OR connection <b>conn</b>: tell any
  * interested control connections. */
 int
-control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
+control_event_or_conn_status(connection_t *conn,or_conn_status_event_t tp)
 {
   char buf[HEX_DIGEST_LEN+3]; /* status, dollar, identity, NUL */
   size_t len;
+
+  tor_assert(conn->type == CONN_TYPE_OR);
 
   if (!EVENT_IS_INTERESTING(EVENT_OR_CONN_STATUS))
     return 0;
@@ -2774,14 +2718,13 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
       strlcpy(name, conn->nickname, sizeof(name));
     else
       tor_snprintf(name, sizeof(name), "%s:%d",
-                   conn->_base.address, conn->_base.port);
+                   conn->address, conn->port);
     switch (tp)
       {
       case OR_CONN_EVENT_LAUNCHED: status = "LAUNCHED"; break;
       case OR_CONN_EVENT_CONNECTED: status = "CONNECTED"; break;
       case OR_CONN_EVENT_FAILED: status = "FAILED"; break;
       case OR_CONN_EVENT_CLOSED: status = "CLOSED"; break;
-      case OR_CONN_EVENT_NEW: status = "NEW"; break;
       default:
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
@@ -2838,7 +2781,6 @@ void
 control_event_logmsg(int severity, unsigned int domain, const char *msg)
 {
   int oldlog, event;
-  (void) domain;
 
   if (disable_log_messages)
     return;
@@ -2916,12 +2858,8 @@ control_event_descriptors_changed(smartlist_t *routers)
     tor_free(msg);
   }
   if (EVENT_IS_INTERESTING1(EVENT_NEW_DESC)) {
-    char *ids = smartlist_join_strings(identities, " ", 0, &len);
-    size_t len = strlen(ids)+32;
-    msg = tor_malloc(len);
-    tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
-    send_control1_event_string(EVENT_NEW_DESC, msg);
-    tor_free(ids);
+    msg = smartlist_join_strings(identities, " ", 0, &len);
+    send_control1_event(EVENT_NEW_DESC, "650 NEWDESC %s\r\n", msg);
     tor_free(msg);
   }
   SMARTLIST_FOREACH(identities, char *, cp, tor_free(cp));

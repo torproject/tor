@@ -6,14 +6,12 @@
   Use tor_malloc, tor_free, tor_snprintf, tor_strdup, and tor_gettimeofday
   instead of their generic equivalents.  (They always succeed or exit.)
 
-  You can get a full list of the compatibility functions that Tor provides
-  by looking through src/common/util.h and src/common/compat.h.
-
-  Use 'INLINE' instead of 'inline', so that we work properly on Windows.
+  Use INLINE instead of 'inline', so that we work properly on windows.
 
 1.2. Calling and naming conventions
 
-  Whenever possible, functions should return -1 on error and 0 on success.
+  Whenever possible, functions should return -1 on error and and 0 on
+  success.
 
   For multi-word identifiers, use lowercase words combined with
   underscores. (e.g., "multi_word_identifier").  Use ALL_CAPS for macros and
@@ -54,7 +52,7 @@
       you need to (or can) do about it.
     DEBUG is for everything louder than INFO.
 
-  [XXX Proposed convention: every message of severity INFO or higher should
+  [XXX Proposed convention: every messages of severity INFO or higher should
   either (A) be intelligible to end-users who don't know the Tor source; or
   (B) somehow inform the end-users that they aren't expected to understand
   the message (perhaps with a string like "internal error").  Option (A) is
@@ -62,8 +60,8 @@
 
 1.5. Doxygen
 
-  We use the 'doxygen' utility to generate documentation from our
-  source code. Here's how to use it:
+  We use the 'doxygen' utility to generate documentation from our source code.
+  Here's how to use it:
 
   1. Begin every file that should be documented with
          /**
@@ -100,17 +98,16 @@
        struct foo {
          /** You can put the comment before an element; */
          int a;
-         int b; /**< Or use the less-than symbol to put the comment
-                 * after the element. */
+         int b; /**< Or use the less-than symbol to put the comment after the element. */
        };
 
   5. To generate documentation from the Tor source code, type:
 
      $ doxygen -g
 
-     To generate a file called 'Doxyfile'.  Edit that file and run
-     'doxygen' to generate the API documentation.
+     To generate a file called 'Doxyfile'.  Edit that file and run 'doxygen' to
+     generate the API documentation.
 
-  6. See the Doxygen manual for more information; this summary just
-     scratches the surface.
+  6. See the Doxygen manual for more information; this summary just scratches
+     the surface.
 

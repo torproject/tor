@@ -189,10 +189,6 @@ crypto_global_init(int useAccel)
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
-    /* XXX the below is a bug, since we can't know if we're supposed
-     * to be using hardware acceleration or not. we should arrange
-     * for this function to be called before init_keys. But make it
-     * not complain loudly, at least until we make acceleration work. */
     if (useAccel < 0) {
       log_info(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
     }
@@ -503,13 +499,13 @@ crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
   }
 
   BIO_get_mem_ptr(b, &buf);
-  (void)BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
+  BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
   BIO_free(b);
 
   tor_assert(buf->length >= 0);
   *dest = tor_malloc(buf->length+1);
   memcpy(*dest, buf->data, buf->length);
-  (*dest)[buf->length] = 0; /* nul terminate it */
+  (*dest)[buf->length] = 0; /* null terminate it */
   *len = buf->length;
   BUF_MEM_free(buf);
 
@@ -577,6 +573,70 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   BIO_free(bio);
   tor_free(s);
   return r;
+}
+
+/** Allocate a new string in *<b>out</b>, containing the public portion of the
+ * RSA key in <b>env</b>, encoded first with DER, then in base-64.  Return the
+ * length of the encoded representation on success, and -1 on failure.
+ *
+ * <i>This function is for temporary use only.  We need a simple
+ * one-line representation for keys to work around a bug in parsing
+ * directories containing "opt keyword\n-----BEGIN OBJECT----" entries
+ * in versions of Tor up to 0.0.9pre2.</i>
+ */
+int
+crypto_pk_DER64_encode_public_key(crypto_pk_env_t *env, char **out)
+{
+  int len;
+  char buf[PK_BYTES*2]; /* Too long, but hey, stacks are big. */
+  tor_assert(env);
+  tor_assert(out);
+  len = crypto_pk_asn1_encode(env, buf, sizeof(buf));
+  if (len < 0) {
+    return -1;
+  }
+  *out = tor_malloc(len * 2); /* too long, but safe. */
+  if (base64_encode(*out, len*2, buf, len) < 0) {
+    log_warn(LD_CRYPTO, "Error base64-encoding DER-encoded key");
+    tor_free(*out);
+    return -1;
+  }
+  /* Remove spaces */
+  tor_strstrip(*out, " \r\n\t");
+  return strlen(*out);
+}
+
+/** Decode a base-64 encoded DER representation of an RSA key from <b>in</b>,
+ * and store the result in <b>env</b>.  Return 0 on success, -1 on failure.
+ *
+ * <i>This function is for temporary use only.  We need a simple
+ * one-line representation for keys to work around a bug in parsing
+ * directories containing "opt keyword\n-----BEGIN OBJECT----" entries
+ * in versions of Tor up to 0.0.9pre2.</i>
+ */
+crypto_pk_env_t *
+crypto_pk_DER64_decode_public_key(const char *in)
+{
+  char partitioned[PK_BYTES*2 + 16];
+  char buf[PK_BYTES*2];
+  int len;
+  tor_assert(in);
+  len = strlen(in);
+
+  if (strlen(in) > PK_BYTES*2) {
+    return NULL;
+  }
+  /* base64_decode doesn't work unless we insert linebreaks every 64
+   * characters.  how dumb. */
+  if (tor_strpartition(partitioned, sizeof(partitioned), in, "\n", 64,
+                       ALWAYS_TERMINATE))
+    return NULL;
+  len = base64_decode(buf, sizeof(buf), partitioned, strlen(partitioned));
+  if (len<0) {
+    log_warn(LD_CRYPTO,"Error base-64 decoding key");
+    return NULL;
+  }
+  return crypto_pk_asn1_decode(buf, len);
 }
 
 /** Return true iff <b>env</b> has a valid key.
@@ -1806,8 +1866,6 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 static void
 _openssl_locking_cb(int mode, int n, const char *file, int line)
 {
-  (void)file;
-  (void)line;
   if (!_openssl_mutexes)
     /* This is not a really good  fix for the
      * "release-freed-lock-from-separate-thread-on-shutdown" problem, but

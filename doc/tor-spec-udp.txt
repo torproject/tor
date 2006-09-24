@@ -383,32 +383,5 @@ Other sections:
 
 What changes need to happen to each node's exit policy to support this? -RD
 
-Switching to UDP means managing the queues of incoming packets better,
-so we don't miss packets. How does this interact with doing large public
-key operations (handshakes) in the same thread?
 
-========================================================================
-COMMENTS
-========================================================================
 
-[16 May 2006]
-
-I don't favor this approach; it makes packet traffic partitioned from
-stream traffic end-to-end.  The architecture I'd like to see is:
-
-  A *All* Tor-to-Tor traffic is UDP/DTLS, unless we need to fall back on
-    TCP/TLS for firewall penetration or something.  (This also gives us an
-    upgrade path for routing through legacy servers.)
-
-  B Stream traffic is handled with end-to-end per-stream acks/naks and
-    retries.  On failure, the data is retransmitted in a new RELAY_DATA cell;
-    a cell isn't retransmitted.
-
-We'll need to do A anyway, to fix our behavior on packet-loss.  Once we've
-done so, B is more or less inevitable, and we can support end-to-end UDP
-traffic "for free".
-
-(Also, there are some details that this draft spec doesn't address.  For
-example, what happens when a UDP packet doesn't fit in a single cell?)
-
--NM

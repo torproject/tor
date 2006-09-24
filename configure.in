@@ -4,7 +4,7 @@ dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 dnl See LICENSE for licensing information
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.1.2.1-alpha-dev)
+AM_INIT_AUTOMAKE(tor, 0.1.1.23)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
@@ -44,26 +44,6 @@ if test $enable_threads = "yes"; then
   AC_DEFINE(ENABLE_THREADS, 1, [Defined if we will try to use multithreading])
 fi
 
-AC_ARG_ENABLE(eventdns,
-     AC_HELP_STRING(--enable-eventdns, enable asynchronous dns module),
-     [case "${enableval}" in
-        yes) eventdns=true ;;
-        no)  eventdns=false ;;
-        *) AC_MSG_ERROR(bad value for --enable-eventdns) ;;
-      esac], [eventdns=true])
-AM_CONDITIONAL(EVENTDNS, test x$eventdns = xtrue)
-if test x$eventdns = xtrue; then
-   AC_DEFINE([USE_EVENTDNS], 1, "Define to 1 if we'll be using eventdns.c")
-fi
-
-AC_ARG_ENABLE(transparent,
-     AC_HELP_STRING(--disable-transparent, disable transparent proxy support),
-     [case "${enableval}" in
-        yes) transparent=true ;;
-        no)  transparent=false ;;
-        *) AC_MSG_ERROR(bad value for --enable-transparent) ;;
-      esac], [transparent=true])
-
 case $host in
    *-*-solaris* )
      AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])
@@ -73,31 +53,6 @@ esac
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
-
-# If WIN32 is defined and non-zero, we are building for win32
-AC_MSG_CHECKING([for win32])
-AC_TRY_COMPILE(,
-[
-#ifdef WIN32
-#if WIN32
-//all is well
-#else
-#error
-#endif
-#else
-#error
-#endif
-],
-bwin32=true; AC_MSG_RESULT([yes]),
-bwin32=false; AC_MSG_RESULT([no])
-)
-
-if test $bwin32 = true; then
-
-AC_DEFINE(MS_WINDOWS,1, [Define to 1 if we are building for a Windows platform.])
-
-
-fi
 
 # The big search for OpenSSL
 # copied from openssh's configure.ac
@@ -158,12 +113,7 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
   le_found=no
   for ledir in $trylibeventdir "" $prefix /usr/local ; do
     LDFLAGS="$saved_LDFLAGS"
-
-    if test $bwin32 = true; then
-        LIBS="$saved_LIBS -levent -lws2_32"
-    else
-        LIBS="$saved_LIBS -levent"
-    fi
+    LIBS="$saved_LIBS -levent"
 
     # Skip the directory if it isn't there.
     if test ! -z "$ledir" -a ! -d "$ledir" ; then
@@ -203,12 +153,7 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
     AC_MSG_ERROR([Could not find a linkable libevent. You can specify an explicit path using --with-libevent-dir])
   fi
 ])
-
-if test $bwin32 = true; then
-LIBS="$LIBS -levent -lws2_32"
-else
 LIBS="$LIBS -levent"
-fi
 if test $ac_cv_libevent_dir != "(system)"; then
   if test -d "$ac_cv_libevent_dir/lib" ; then
     LDFLAGS="-L$ac_cv_libevent_dir/lib $LDFLAGS"
@@ -224,7 +169,6 @@ if test $ac_cv_libevent_dir != "(system)"; then
   fi
 fi
 
-if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether we need extra options to link libevent],
                ac_cv_libevent_linker_option, [
     saved_LDFLAGS="$LDFLAGS"
@@ -256,7 +200,6 @@ AC_CACHE_CHECK([whether we need extra options to link libevent],
 if test $ac_cv_libevent_linker_option != '(none)' ; then
    LDFLAGS="$ac_cv_libevent_linker_option $LDFLAGS"
 fi
-fi
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
@@ -268,12 +211,7 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
   ssl_found=no
   for ssldir in $tryssldir "" $prefix /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /usr/pkg /opt /opt/openssl ; do
     LDFLAGS="$saved_LDFLAGS"
-
-    if test $bwin32 = true; then
-      LIBS="$saved_LIBS -lssl -lcrypto -lws2_32 -lgdi32"
-    else
-      LIBS="$saved_LIBS -lssl -lcrypto"
-    fi
+    LIBS="$saved_LIBS -lssl -lcrypto"
 
     # Skip the directory if it isn't there.
     if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
@@ -312,13 +250,7 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
     AC_MSG_ERROR([Could not find a linkable OpenSSL. You can specify an explicit path using --with-ssl-dir])
   fi
 ])
-
-if test $bwin32 = true; then
-LIBS="$LIBS -lssl -lcrypto -lws2_32 -lgdi32"
-else
 LIBS="$LIBS -lssl -lcrypto"
-fi
-
 if test "$ac_cv_openssl_dir" != "(system)"; then
   if test -d "$ac_cv_openssl_dir/lib" ; then
     LDFLAGS="-L$ac_cv_openssl_dir/lib $LDFLAGS"
@@ -334,8 +266,6 @@ if test "$ac_cv_openssl_dir" != "(system)"; then
   fi
 fi
 
-if test -z $CROSS_COMPILE
-then
 AC_CACHE_CHECK([whether we need extra options to link OpenSSL],
                ac_cv_openssl_linker_option, [
     saved_LDFLAGS="$LDFLAGS"
@@ -395,7 +325,6 @@ return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
 if test "$ac_cv_openssl_linker_option" != '(none)' ; then
    LDFLAGS="$ac_cv_openssl_linker_option $LDFLAGS"
 fi
-fi
 
 dnl Make sure to enable support for large off_t if avalable.
 
@@ -405,72 +334,19 @@ dnl The warning message here is no longer strictly accurate.
 
 AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h time.h pwd.h grp.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
 
-AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. Tor requires libevent to build.),
-[#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#else
-  struct timeval {
-    long tv_sec;
-    long tv_usec;
- };
-#endif])
+AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. Tor requires libevent to build.))
 
 AC_CHECK_HEADERS(zlib.h, , AC_MSG_ERROR(Zlib header (zlib.h) not found. Tor requires zlib to build. You may need to install a zlib development package.))
 
 dnl These headers are not essential
 
-AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h limits.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h inttypes.h utime.h sys/utime.h sys/mman.h)
+AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h stddef.h inttypes.h utime.h sys/utime.h)
 
-AC_CHECK_HEADERS(net/if.h, [net_if_found=1], [net_if_found=0],
-[#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif])
-AC_CHECK_HEADERS(net/pfvar.h, [net_pfvar_found=1], [net_pfvar_found=0],
-[#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NET_IF_H
-#include <net/if.h>
-#endif])
-AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
-        [linux_netfilter_ipv4=1], [linux_netfilter_ipv4=0],
-[#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif])
-
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem strtok_r)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit setrlimit strlcat strlcpy strtoull getpwnam getpwuid ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem)
 
 if test $enable_threads = "yes"; then
   AC_CHECK_HEADERS(pthread.h)
   AC_CHECK_FUNCS(pthread_create)
-fi
-
-if test x$transparent = xtrue ; then
-   transparent_ok=0
-   if test x$net_if_found = x1 -a x$net_pfvar_found = x1 ; then
-     transparent_ok=1
-   fi
-   if test x$linux_netfilter_ipv4 = x1 ; then
-     transparent_ok=1
-   fi
-   if test x$transparent_ok = x1 ; then
-     AC_DEFINE(USE_TRANSPARENT, 1, "Define to enable transparent proxy support")
-     case $host in
-       *-*-openbsd*)
-         AC_DEFINE(OPENBSD, 1, "Define to handle pf on OpenBSD properly") ;;
-     esac
-   else
-     AC_MSG_NOTICE([Transparent proxy support enabled, but missing headers.])
-   fi
 fi
 
 AC_FUNC_FSEEKO
@@ -501,20 +377,11 @@ AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(time_t)
-
-AC_CHECK_TYPES([uint, u_char])
-
-if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
 AC_TRY_RUN([
 int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }],
   tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes)
 ])
-else
-  # Cross-compiling; let's hope the target platform isn't loony.
-  AC_MSG_NOTICE([Cross compiling: assuming that time_t is signed.])
-  tor_cv_time_t_signed=yes
-fi
 
 if test $tor_cv_time_t_signed = yes; then
   AC_DEFINE([TIME_T_IS_SIGNED], 1,
@@ -531,8 +398,36 @@ AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
 
 AC_CHECK_SIZEOF(cell_t)
 
+# Now, let's see about alignment requirements.  On some platforms, we override
+# the default.
+case $host in
+ ia64-*-* | arm-*-* | sparc-*-* | sparc64-*-* )
+    tor_cv_unaligned_ok=no
+    ;;
+ # On the following architectures unaligned access works, but is not done in
+ # hardware.  This means that when you try to do unaligned access the kernel
+ # gets to sort out an exception and then work around to somehow make your
+ # reqest work, which is quite expensive.  Therefore it's probably better to
+ # not even do it.
+ alpha-*-* | mips-*-* | mipsel-*-* )
+    tor_cv_unaligned_ok=no
+    ;;
+ *)
+AC_CACHE_CHECK([whether unaligned int access is allowed], tor_cv_unaligned_ok,
+[AC_RUN_IFELSE([AC_LANG_SOURCE(
+[[int main () { char s[] = "A\x00\x00\x00\x00\x00\x00\x00";
+return *(int*)(&s[1]); }]])],
+       [tor_cv_unaligned_ok=yes],
+       [tor_cv_unaligned_ok=no],
+       [tor_cv_unaligned_ok=cross])])
+esac
+
+if test $tor_cv_unaligned_ok = yes; then
+  AC_DEFINE([UNALIGNED_INT_ACCESS_OK], 1,
+            [Define to 1 iff unaligned int access is allowed])
+fi
+
 # Now make sure that NULL can be represented as zero bytes.
-if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
 [[#include <stdlib.h>
@@ -547,42 +442,9 @@ return memcmp(&p1,&p2,sizeof(char*))?1:0; }]])],
        [tor_cv_null_is_zero=no],
        [tor_cv_null_is_zero=cross])])
 
-else
-  # Cross-compiling; let's hope that the target isn't raving mad.
-  AC_MSG_NOTICE([Cross-compiling: we'll assume that NULL is represented as a sequence of 0-valued bytes.])
-  tor_cv_null_is_zero=yes
-fi
-
 if test $tor_cv_null_is_zero = yes; then
   AC_DEFINE([NULL_REP_IS_ZERO_BYTES], 1,
             [Define to 1 iff memset(0) sets pointers to NULL])
-fi
-
-# And what happens when we malloc zero?
-
-if test -z "$CROSS_COMPILE"; then
-AC_CACHE_CHECK([whether we can malloc(0) safely.], tor_cv_malloc_zero_works,
-[AC_RUN_IFELSE([AC_LANG_SOURCE(
-[[#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#ifdef HAVE_STDDEF_H
-#include <stddef.h>
-#endif
-int main () { return malloc(0)?0:1; }]])],
-       [tor_cv_malloc_zero_works=yes],
-       [tor_cv_malloc_zero_works=no],
-       [tor_cv_malloc_zero_works=cross])])
-
-else
-  # Cross-compiling; let's hope that the target isn't raving mad.
-  AC_MSG_NOTICE([Cross-compiling: we'll assume that we need to check malloc() arguments for 0.])
-  tor_cv_malloc_zero_works=no
-fi
-
-if test $tor_cv_malloc_zero_works = yes; then
-  AC_DEFINE([MALLOC_ZERO_WORKS], 1,
-            [Define to 1 iff malloc(0) returns a pointer])
 fi
 
 # Whether we should use the dmalloc memory allocation debugging library.
@@ -695,6 +557,7 @@ if test $ac_cv_have_func_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
 fi
 
+
 if test $ac_cv_have_FUNC_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNC__, 1, [Defined if the compiler supports __FUNC__])
 fi
@@ -703,6 +566,7 @@ if test $ac_cv_have_FUNCTION_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
            [Defined if the compiler supports __FUNCTION__])
 fi
+
 
 # $prefix stores the value of the --prefix command line option, or
 # NONE if the option wasn't set.  In the case that it wasn't set, make
@@ -738,7 +602,7 @@ else
 fi
 # Add some more warnings which we use in the cvs version but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
-#CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline -Wnested-externs -Wswitch-enums"
+#CFLAGS="$CFLAGS -W -Wno-unused-parameter -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline"
 # Add these in when you feel like fun.
 #CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement -Wold-style-definition"
 

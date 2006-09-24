@@ -4,9 +4,8 @@ $Id$
 
 -1. Deprecation
 
-THIS PROTOCOL IS DEPRECATED.  It is still documented here because Tor
-0.1.1.x happens to support much of it; but the support for v0 is not
-maintained, so you should expect it to rot in unpredictable ways.
+THIS PROTOCOL IS DEPRECATED.  It is still documented here because it is the
+only Tor control protocol supported in the Tor implementation right now.
 
 0. Scope
 

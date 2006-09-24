@@ -58,15 +58,10 @@ struct buf_t {
   char *cur;      /**< The first byte used for storing data in the buffer. */
   size_t highwater; /**< Largest observed datalen since last buf_shrink */
   size_t len;     /**< Maximum amount of data that <b>mem</b> can hold. */
-  size_t memsize; /**< How many bytes did we actually allocate? Can be less
-                   * than 'len' if we shortened 'len' by a few bytes to make
-                   * zlib wrap around more easily. */
   size_t datalen; /**< Number of bytes currently in <b>mem</b>. */
 };
 
-/** How many bytes, total, are used in all buffers? */
 uint64_t buf_total_used = 0;
-/** How many bytes, total, are allocated in all buffers? */
 uint64_t buf_total_alloc = 0;
 
 /** Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
@@ -93,14 +88,13 @@ buf_normalize(buf_t *buf)
     char *newmem, *oldmem;
     size_t sz = (buf->mem+buf->len)-buf->cur;
     log_warn(LD_BUG, "Unexpected non-normalized buffer.");
-    newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(buf->memsize)));
-    SET_GUARDS(newmem, buf->memsize);
+    newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(buf->len)));
+    SET_GUARDS(newmem, buf->len);
     memcpy(newmem, buf->cur, sz);
     memcpy(newmem+sz, buf->mem, buf->datalen-sz);
     oldmem = RAW_MEM(buf->mem);
     tor_free(oldmem); /* Can't use tor_free directly. */
     buf->mem = buf->cur = newmem;
-    buf->len = buf->memsize;
     check();
   }
 }
@@ -235,7 +229,7 @@ buf_resize(buf_t *buf, size_t new_capacity)
             buf->len-offset);
     buf->cur += new_capacity-buf->len;
   }
-  buf->memsize = buf->len = new_capacity;
+  buf->len = new_capacity;
 
 #ifdef CHECK_AFTER_RESIZE
   assert_buf_ok(buf);
@@ -255,18 +249,15 @@ buf_resize(buf_t *buf, size_t new_capacity)
 static INLINE int
 buf_ensure_capacity(buf_t *buf, size_t capacity)
 {
-  size_t new_len, min_len;
+  size_t new_len;
   if (buf->len >= capacity)  /* Don't grow if we're already big enough. */
     return 0;
   if (capacity > MAX_BUF_SIZE) /* Don't grow past the maximum. */
     return -1;
-  /* Find the smallest new_len equal to (2**X) for some X; such that
-   * new_len is at least capacity, and at least 2*buf->len.
+  /* Find the smallest new_len equal to (2**X)*len for some X; such that
+   * new_len is at least capacity.
    */
-  min_len = buf->len*2;
-  new_len = 16;
-  while (new_len < min_len)
-    new_len *= 2;
+  new_len = buf->len*2;
   while (new_len < capacity)
     new_len *= 2;
   /* Resize the buffer. */
@@ -334,7 +325,7 @@ buf_new_with_capacity(size_t size)
   buf->magic = BUFFER_MAGIC;
   buf->cur = buf->mem = GUARDED_MEM(tor_malloc(ALLOC_LEN(size)));
   SET_GUARDS(buf->mem, size);
-  buf->len = buf->memsize = size;
+  buf->len = size;
 
   buf_total_alloc += size;
   assert_buf_ok(buf);
@@ -355,7 +346,6 @@ buf_clear(buf_t *buf)
   buf_total_used -= buf->datalen;
   buf->datalen = 0;
   buf->cur = buf->mem;
-  buf->len = buf->memsize;
 }
 
 /** Return the number of bytes stored in <b>buf</b> */
@@ -408,7 +398,7 @@ read_to_buf_impl(int s, size_t at_most, buf_t *buf,
   int read_result;
 
 //  log_fn(LOG_DEBUG,"reading at most %d bytes.",at_most);
-  read_result = tor_socket_recv(s, pos, at_most, 0);
+  read_result = recv(s, pos, at_most, 0);
   if (read_result < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
@@ -582,7 +572,7 @@ flush_buf_impl(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   int write_result;
 
-  write_result = tor_socket_send(s, buf->cur, sz, 0);
+  write_result = send(s, buf->cur, sz, 0);
   if (write_result < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
@@ -882,14 +872,14 @@ fetch_from_buf_http(buf_t *buf,
   if (headers_out) {
     *headers_out = tor_malloc(headerlen+1);
     memcpy(*headers_out,buf->cur,headerlen);
-    (*headers_out)[headerlen] = 0; /* nul terminate it */
+    (*headers_out)[headerlen] = 0; /* null terminate it */
   }
   if (body_out) {
     tor_assert(body_used);
     *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
     memcpy(*body_out,buf->cur+headerlen,bodylen);
-    (*body_out)[bodylen] = 0; /* nul terminate it */
+    (*body_out)[bodylen] = 0; /* null terminate it */
   }
   buf_remove_from_front(buf, headerlen+bodylen);
   return 1;
@@ -957,9 +947,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           req->reply[1] = '\xFF'; /* reject all methods */
           return -1;
         }
-        /* remove packet from buf. also remove any other extraneous
-         * bytes, to support broken socks clients. */
-        buf_clear(buf);
+        buf_remove_from_front(buf,2+nummethods); /* remove packet from buf */
 
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
@@ -974,9 +962,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         return 0; /* not yet */
       req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
-          req->command != SOCKS_COMMAND_RESOLVE &&
-          req->command != SOCKS_COMMAND_RESOLVE_PTR) {
-        /* not a connect or resolve or a resolve_ptr? we don't support it. */
+          req->command != SOCKS_COMMAND_RESOLVE) {
+        /* not a connect or resolve? we don't support it. */
         log_warn(LD_APP,"socks5: command %d not recognized. Rejecting.",
                  req->command);
         return -1;
@@ -1000,8 +987,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           strlcpy(req->address,tmpbuf,sizeof(req->address));
           req->port = ntohs(*(uint16_t*)(buf->cur+8));
           buf_remove_from_front(buf, 10);
-          if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
-              !addressmap_have_mapping(req->address) &&
+          if (!address_is_in_virtual_range(req->address) &&
               !have_warned_about_unsafe_socks) {
             log_warn(LD_APP,
                 "Your application (using socks5 on port %d) is giving "
@@ -1025,11 +1011,6 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
             log_warn(LD_APP,
                      "socks5 hostname is %d bytes, which doesn't fit in "
                      "%d. Rejecting.", len+1,MAX_SOCKS_ADDR_LEN);
-            return -1;
-          }
-          if (req->command == SOCKS_COMMAND_RESOLVE_PTR) {
-            log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
-                     "hostname type. Rejecting.");
             return -1;
           }
           memcpy(req->address,buf->cur+5,len);
@@ -1066,8 +1047,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE) {
-        /* not a connect or resolve? we don't support it. (No resolve_ptr with
-         * socks4.) */
+        /* not a connect or resolve? we don't support it. */
         log_warn(LD_APP,"socks4: command %d not recognized. Rejecting.",
                  req->command);
         return -1;
@@ -1103,7 +1083,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
       startaddr = NULL;
       if (socks4_prot != socks4a &&
-          !addressmap_have_mapping(tmpbuf) &&
+          !address_is_in_virtual_range(tmpbuf) &&
           !have_warned_about_unsafe_socks) {
         log_warn(LD_APP,
                  "Your application (using socks4 on port %d) is giving Tor "
@@ -1304,62 +1284,6 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
   return 1;
 }
 
-/** Compress on uncompress the <b>data_len</b> bytes in <b>data</b> using the
- * zlib state <b>state</b>, appending the result to <b>buf</b>.  If
- * <b>done</b> is true, flush the data in the state and finish the
- * compression/uncompression.  Return -1 on failure, 0 on success. */
-int
-write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
-                  const char *data, size_t data_len,
-                  int done)
-{
-  char *next;
-  size_t old_avail, avail;
-  int over = 0;
-  do {
-    buf_ensure_capacity(buf, buf->datalen + 1024);
-    next = _buf_end(buf);
-    if (next < buf->cur)
-      old_avail = avail = buf->cur - next;
-    else
-      old_avail = avail = (buf->mem + buf->len) - next;
-    switch (tor_zlib_process(state, &next, &avail, &data, &data_len, done)) {
-      case TOR_ZLIB_DONE:
-        over = 1;
-        break;
-      case TOR_ZLIB_ERR:
-        return -1;
-      case TOR_ZLIB_OK:
-        if (data_len == 0)
-          over = 1;
-        break;
-      case TOR_ZLIB_BUF_FULL:
-        if (avail && buf->len >= 1024 + buf->datalen) {
-          /* Zlib says we need more room (ZLIB_BUF_FULL), and we're not about
-           * to wrap around (avail != 0), and resizing won't actually make us
-           * un-full: we're at the end of the buffer, and zlib refuses to
-           * append more here, but there's a pile of free space at the start
-           * of the buffer (about 1K).  So chop a few characters off the
-           * end of the buffer.  This feels silly; anybody got a better hack?
-           *
-           * (We don't just want to expand the buffer nevertheless. Consider a
-           * 1/3 full buffer with a single byte free at the end. zlib will
-           * often refuse to append to that, and so we want to use the
-           * beginning, not double the buffer to be just 1/6 full.)
-           */
-          tor_assert(next >= buf->cur);
-          buf->len -= avail;
-        }
-        break;
-    }
-    buf->datalen += old_avail - avail;
-    if (buf->datalen > buf->highwater)
-      buf->highwater = buf->datalen;
-    buf_total_used += old_avail - avail;
-  } while (!over);
-  return 0;
-}
-
 /** Log an error and exit if <b>buf</b> is corrupted.
  */
 void
@@ -1374,7 +1298,7 @@ assert_buf_ok(buf_t *buf)
   {
     uint32_t u32 = get_uint32(buf->mem - 4);
     tor_assert(u32 == START_MAGIC);
-    u32 = get_uint32(buf->mem + buf->memsize);
+    u32 = get_uint32(buf->mem + buf->len);
     tor_assert(u32 == END_MAGIC);
   }
 #endif

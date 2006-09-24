@@ -50,12 +50,13 @@ static time_t time_to_fetch_directory = 0;
 /** When do we next download a running-routers summary? */
 static time_t time_to_fetch_running_routers = 0;
 
-/** Array of all open connections.  The first n_conns elements are valid. */
+/** Array of all open connections; each element corresponds to the element of
+ * poll_array in the same position.  The first nfds elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS+1] =
         { NULL };
 static smartlist_t *closeable_connection_lst = NULL;
 
-static int n_conns=0; /**< Number of connections currently active. */
+static int nfds=0; /**< Number of connections currently active. */
 
 /** We set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working. */
@@ -111,8 +112,8 @@ static char* nt_strerror(uint32_t errnum);
 /** How old do we let a connection to an OR get before deciding it's
  * obsolete? */
 #define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7)
-/** How long do we let OR connections handshake before we decide that
- * they are obsolete? */
+/** How long do we OR connections to handshake before we decide that they
+ * could be obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT           (60)
 
 /********* END VARIABLES ************/
@@ -120,7 +121,8 @@ static char* nt_strerror(uint32_t errnum);
 /****************************************************************************
 *
 * This section contains accessors and other methods on the connection_array
-* variables (which are global within this file and unavailable outside it).
+* and poll_array variables (which are global within this file and unavailable
+* outside it).
 *
 ****************************************************************************/
 
@@ -134,15 +136,15 @@ connection_add(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->s >= 0);
 
-  if (n_conns >= get_options()->_ConnLimit-1) {
+  if (nfds >= get_options()->_ConnLimit-1) {
     log_warn(LD_NET,"Failing because we have %d connections already. Please "
-             "raise your ulimit -n.", n_conns);
+             "raise your ulimit -n.", nfds);
     return -1;
   }
 
-  tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
-  conn->conn_array_index = n_conns;
-  connection_array[n_conns] = conn;
+  tor_assert(conn->poll_index == -1); /* can only connection_add once */
+  conn->poll_index = nfds;
+  connection_array[nfds] = conn;
 
   conn->read_event = tor_malloc_zero(sizeof(struct event));
   conn->write_event = tor_malloc_zero(sizeof(struct event));
@@ -151,10 +153,10 @@ connection_add(connection_t *conn)
   event_set(conn->write_event, conn->s, EV_WRITE|EV_PERSIST,
             conn_write_callback, conn);
 
-  n_conns++;
+  nfds++;
 
-  log_debug(LD_NET,"new conn type %s, socket %d, n_conns %d.",
-            conn_type_to_string(conn->type), conn->s, n_conns);
+  log_debug(LD_NET,"new conn type %s, socket %d, nfds %d.",
+            conn_type_to_string(conn->type), conn->s, nfds);
 
   return 0;
 }
@@ -169,24 +171,24 @@ connection_remove(connection_t *conn)
   int current_index;
 
   tor_assert(conn);
-  tor_assert(n_conns>0);
+  tor_assert(nfds>0);
 
-  log_debug(LD_NET,"removing socket %d (type %s), n_conns now %d",
-            conn->s, conn_type_to_string(conn->type), n_conns-1);
+  log_debug(LD_NET,"removing socket %d (type %s), nfds now %d",
+            conn->s, conn_type_to_string(conn->type), nfds-1);
 
-  tor_assert(conn->conn_array_index >= 0);
-  current_index = conn->conn_array_index;
-  if (current_index == n_conns-1) { /* this is the end */
-    n_conns--;
+  tor_assert(conn->poll_index >= 0);
+  current_index = conn->poll_index;
+  if (current_index == nfds-1) { /* this is the end */
+    nfds--;
     return 0;
   }
 
   connection_unregister(conn);
 
   /* replace this one with the one at the end */
-  n_conns--;
-  connection_array[current_index] = connection_array[n_conns];
-  connection_array[current_index]->conn_array_index = current_index;
+  nfds--;
+  connection_array[current_index] = connection_array[nfds];
+  connection_array[current_index]->poll_index = current_index;
 
   return 0;
 }
@@ -210,11 +212,11 @@ connection_unlink(connection_t *conn, int remove)
   }
   smartlist_remove(closeable_connection_lst, conn);
   if (conn->type == CONN_TYPE_EXIT) {
-    assert_connection_edge_not_dns_pending(TO_EDGE_CONN(conn));
+    assert_connection_edge_not_dns_pending(conn);
   }
-  if (conn->type == CONN_TYPE_OR) {
-    if (!tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest))
-      connection_or_remove_from_identity_map(TO_OR_CONN(conn));
+  if (conn->type == CONN_TYPE_OR &&
+      !tor_digest_is_zero(conn->identity_digest)) {
+    connection_or_remove_from_identity_map(conn);
   }
   connection_free(conn);
 }
@@ -241,7 +243,7 @@ int
 connection_in_array(connection_t *conn)
 {
   int i;
-  for (i=0; i<n_conns; ++i) {
+  for (i=0; i<nfds; ++i) {
     if (conn==connection_array[i])
       return 1;
   }
@@ -256,7 +258,7 @@ void
 get_connection_array(connection_t ***array, int *n)
 {
   *array = connection_array;
-  *n = n_conns;
+  *n = nfds;
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
@@ -380,10 +382,10 @@ close_closeable_connections(void)
   int i;
   for (i = 0; i < smartlist_len(closeable_connection_lst); ) {
     connection_t *conn = smartlist_get(closeable_connection_lst, i);
-    if (conn->conn_array_index < 0) {
+    if (conn->poll_index < 0) {
       connection_unlink(conn, 0); /* blow it away right now */
     } else {
-      if (!conn_close_if_marked(conn->conn_array_index))
+      if (!conn_close_if_marked(conn->poll_index))
         ++i;
     }
   }
@@ -395,8 +397,6 @@ static void
 conn_read_callback(int fd, short event, void *_conn)
 {
   connection_t *conn = _conn;
-  (void)fd;
-  (void)event;
 
   log_debug(LD_NET,"socket %d wants to read.",conn->s);
 
@@ -411,8 +411,7 @@ conn_read_callback(int fd, short event, void *_conn)
       tor_fragile_assert();
 #endif
       if (CONN_IS_EDGE(conn))
-        connection_edge_end_errno(TO_EDGE_CONN(conn),
-                                  TO_EDGE_CONN(conn)->cpath_layer);
+        connection_edge_end_errno(conn, conn->cpath_layer);
       connection_mark_for_close(conn);
     }
   }
@@ -428,8 +427,6 @@ static void
 conn_write_callback(int fd, short events, void *_conn)
 {
   connection_t *conn = _conn;
-  (void)fd;
-  (void)events;
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "socket %d wants to write.",conn->s));
 
@@ -442,10 +439,7 @@ conn_write_callback(int fd, short events, void *_conn)
            "Bug: unhandled error on write for %s connection (fd %d); removing",
            conn_type_to_string(conn->type), conn->s);
       tor_fragile_assert();
-      if (CONN_IS_EDGE(conn)) {
-        /* otherwise we cry wolf about duplicate close */
-        conn->edge_has_sent_end = 1;
-      }
+      conn->has_sent_end = 1; /* otherwise we cry wolf about duplicate close */
       /* XXX do we need a close-immediate here, so we don't try to flush? */
       connection_mark_for_close(conn);
     }
@@ -491,7 +485,7 @@ conn_close_if_marked(int i)
                 conn->marked_for_close_file, conn->marked_for_close);
     if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
-        retval = flush_buf_tls(TO_OR_CONN(conn)->tls, conn->outbuf, sz,
+        retval = flush_buf_tls(conn->tls, conn->outbuf, sz,
                                &conn->outbuf_flushlen);
       } else
         retval = -1; /* never flush non-open broken tls connections */
@@ -540,21 +534,52 @@ void
 directory_all_unreachable(time_t now)
 {
   connection_t *conn;
-  (void)now;
 
   stats_n_seconds_working=0; /* reset it */
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
-    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     log_notice(LD_NET,
                "Is your network connection down? "
                "Failing connection to '%s:%d'.",
-               safe_str(edge_conn->socks_request->address),
-               edge_conn->socks_request->port);
-    connection_mark_unattached_ap(edge_conn,
-                                  END_STREAM_REASON_NET_UNREACHABLE);
+               safe_str(conn->socks_request->address),
+               conn->socks_request->port);
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_NET_UNREACHABLE);
   }
+}
+
+/**
+ * Return the interval to wait between directory downloads, in seconds.
+ */
+static INLINE int
+get_dir_fetch_period(or_options_t *options)
+{
+  if (options->DirFetchPeriod)
+    /* Value from config file. */
+    return options->DirFetchPeriod;
+  else if (options->DirPort)
+    /* Default for directory server */
+    return 60*60;
+  else
+    /* Default for average user. */
+    return 120*60;
+}
+
+/**
+ * Return the interval to wait betweeen router status downloads, in seconds.
+ */
+static INLINE int
+get_status_fetch_period(or_options_t *options)
+{
+  if (options->StatusFetchPeriod)
+    /* Value from config file. */
+    return options->StatusFetchPeriod;
+  else if (options->DirPort)
+    /* Default for directory server */
+    return 15*60;
+  else
+    /* Default for average user. */
+    return 30*60;
 }
 
 /** This function is called whenever we successfully pull down some new
@@ -572,9 +597,14 @@ directory_info_has_arrived(time_t now, int from_cache)
     return;
   }
 
-  if (server_mode(options) && !we_are_hibernating() && !from_cache &&
-      (has_completed_circuit || !any_predicted_circuits(now)))
-    consider_testing_reachability(1, 1);
+  if (server_mode(options) &&
+      !we_are_hibernating()) { /* connect to the appropriate routers */
+    if (!authdir_mode(options))
+      router_retry_connections(0, 1);
+    if (!from_cache &&
+        (has_completed_circuit || !any_predicted_circuits(now)))
+      consider_testing_reachability();
+  }
 }
 
 /** Perform regular maintenance tasks for a single connection.  This
@@ -586,10 +616,9 @@ run_connection_housekeeping(int i, time_t now)
   cell_t cell;
   connection_t *conn = connection_array[i];
   or_options_t *options = get_options();
-  or_connection_t *or_conn;
 
-  if (conn->outbuf && !buf_datalen(conn->outbuf) && conn->type == CONN_TYPE_OR)
-    TO_OR_CONN(conn)->timestamp_lastempty = now;
+  if (conn->outbuf && !buf_datalen(conn->outbuf))
+    conn->timestamp_lastempty = now;
 
   if (conn->marked_for_close) {
     /* nothing to do here */
@@ -611,7 +640,7 @@ run_connection_housekeeping(int i, time_t now)
         buf_datalen(conn->inbuf)>=1024) {
       log_info(LD_DIR,"Trying to extract information from wedged server desc "
                "download.");
-      connection_dir_reached_eof(TO_DIR_CONN(conn));
+      connection_dir_reached_eof(conn);
     } else {
       connection_mark_for_close(conn);
     }
@@ -621,19 +650,17 @@ run_connection_housekeeping(int i, time_t now)
   if (!connection_speaks_cells(conn))
     return; /* we're all done here, the rest is just for OR conns */
 
-  or_conn = TO_OR_CONN(conn);
-
-  if (!conn->or_is_obsolete) {
+  if (!conn->is_obsolete) {
     if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
       log_info(LD_OR,
                "Marking OR conn to %s:%d obsolete (fd %d, %d secs old).",
                conn->address, conn->port, conn->s,
                (int)(now - conn->timestamp_created));
-      conn->or_is_obsolete = 1;
+      conn->is_obsolete = 1;
     } else {
-      or_connection_t *best =
-        connection_or_get_by_identity_digest(or_conn->identity_digest);
-      if (best && best != or_conn &&
+      connection_t *best =
+        connection_or_get_by_identity_digest(conn->identity_digest);
+      if (best && best != conn &&
           (conn->state == OR_CONN_STATE_OPEN ||
            now > conn->timestamp_created + TLS_HANDSHAKE_TIMEOUT)) {
           /* We only mark as obsolete connections that already are in
@@ -648,16 +675,16 @@ run_connection_housekeeping(int i, time_t now)
                  "(fd %d, %d secs old).",
                  conn->address, conn->port, conn->s,
                  (int)(now - conn->timestamp_created));
-        conn->or_is_obsolete = 1;
+        conn->is_obsolete = 1;
       }
     }
   }
 
-  if (conn->or_is_obsolete && !or_conn->n_circuits) {
+  if (conn->is_obsolete && !conn->n_circuits) {
     /* no unmarked circs -- mark it now */
     log_info(LD_OR,
              "Expiring non-used OR connection to fd %d (%s:%d) [Obsolete].",
-             conn->s, conn->address, conn->port);
+             conn->s,conn->address, conn->port);
     connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1;
     return;
@@ -666,20 +693,20 @@ run_connection_housekeeping(int i, time_t now)
   /* If we haven't written to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
   if (now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
-    routerinfo_t *router = router_get_by_digest(or_conn->identity_digest);
+    routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     if (!connection_state_is_open(conn)) {
       log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
-    } else if (we_are_hibernating() && !or_conn->n_circuits &&
+    } else if (we_are_hibernating() && !conn->n_circuits &&
                !buf_datalen(conn->outbuf)) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
                "[Hibernating or exiting].",
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
-    } else if (!clique_mode(options) && !or_conn->n_circuits &&
+    } else if (!clique_mode(options) && !conn->n_circuits &&
                (!router || !server_mode(options) ||
                 !router_is_clique_mode(router))) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
@@ -688,7 +715,7 @@ run_connection_housekeeping(int i, time_t now)
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (
-         now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
+         now >= conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
          now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
       log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
              "Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to "
@@ -703,7 +730,7 @@ run_connection_housekeeping(int i, time_t now)
              conn->address, conn->port);
       memset(&cell,0,sizeof(cell_t));
       cell.command = CELL_PADDING;
-      connection_or_write_cell_to_buf(&cell, or_conn);
+      connection_or_write_cell_to_buf(&cell, conn);
     }
   }
 }
@@ -722,7 +749,6 @@ run_scheduled_events(time_t now)
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
-  static time_t time_to_check_for_wildcarded_dns = 0;
   or_options_t *options = get_options();
   int i;
   int have_dir_info;
@@ -743,15 +769,13 @@ run_scheduled_events(time_t now)
     rotate_onion_key();
     cpuworkers_rotate();
     if (router_rebuild_descriptor(1)<0) {
-      log_info(LD_CONFIG, "Couldn't rebuild router descriptor");
+      log_warn(LD_BUG, "Couldn't rebuild router descriptor");
     }
     if (advertised_server_mode())
       router_upload_dir_desc_to_dirservers(0);
   }
 
   if (time_to_try_getting_descriptors < now) {
-    /* XXXX  Maybe we should do this every 10sec when not enough info,
-     * and every 60sec when we have enough info -NM */
     update_router_descriptor_downloads(now);
     time_to_try_getting_descriptors = now + DESCRIPTOR_RETRY_INTERVAL;
   }
@@ -767,7 +791,7 @@ run_scheduled_events(time_t now)
     last_rotated_certificate = now;
   if (last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
     log_info(LD_GENERAL,"Rotating tls context.");
-    if (tor_tls_context_new(get_identity_key(), options->Nickname,
+    if (tor_tls_context_new(get_identity_key(), 1, options->Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_warn(LD_BUG, "Error reinitializing TLS context");
       /* XXX is it a bug here, that we just keep going? */
@@ -792,7 +816,7 @@ run_scheduled_events(time_t now)
 
   if (now % 10 == 0 && authdir_mode(options) && !we_are_hibernating()) {
     /* try to determine reachability */
-    dirserv_test_reachability(0);
+    router_retry_connections(1, 0);
   }
 
   /** 2. Periodically, we consider getting a new directory, getting a
@@ -811,8 +835,7 @@ run_scheduled_events(time_t now)
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
 
-#define V1_DIR_FETCH_PERIOD (60*60)
-    time_to_fetch_directory = now + V1_DIR_FETCH_PERIOD;
+    time_to_fetch_directory = now + get_dir_fetch_period(options);
 
     /* Also, take this chance to remove old information from rephist
      * and the rend cache. */
@@ -828,8 +851,7 @@ run_scheduled_events(time_t now)
     if (!authdir_mode(options) || !options->V1AuthoritativeDir) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
-#define V1_RUNNINGROUTERS_FETCH_PERIOD (20*60)
-    time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
+    time_to_fetch_running_routers = now + get_status_fetch_period(options);
   }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
@@ -843,14 +865,14 @@ run_scheduled_events(time_t now)
     }
     mark_my_descriptor_dirty_if_older_than(
                                   now - FORCE_REGENERATE_DESCRIPTOR_INTERVAL);
-    consider_publishable_server(0);
+    consider_publishable_server(now, 0);
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */
     if (server_mode(options) &&
         (has_completed_circuit || !any_predicted_circuits(now)) &&
         stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
         !we_are_hibernating())
-      consider_testing_reachability(1, 1);
+      consider_testing_reachability();
 
     /* If any networkstatus documents are no longer recent, we need to
      * update all the descriptors' running status. */
@@ -898,11 +920,11 @@ run_scheduled_events(time_t now)
     circuit_build_needed_circs(now);
 
   /** 5. We do housekeeping for each connection... */
-  for (i=0;i<n_conns;i++) {
+  for (i=0;i<nfds;i++) {
     run_connection_housekeeping(i, now);
   }
   if (time_to_shrink_buffers < now) {
-    for (i=0;i<n_conns;i++) {
+    for (i=0;i<nfds;i++) {
       connection_t *conn = connection_array[i];
       if (conn->outbuf)
         buf_shrink(conn->outbuf);
@@ -924,18 +946,6 @@ run_scheduled_events(time_t now)
    * we'll pass it to poll/select and bad things will happen.
    */
   close_closeable_connections();
-
-  /** 9. and if we're a server, check whether our DNS is telling stories to
-   * us. */
-  if (server_mode(options) && time_to_check_for_wildcarded_dns < now) {
-    if (!time_to_check_for_wildcarded_dns) {
-      time_to_check_for_wildcarded_dns = now + 60 + crypto_rand_int(120);
-    } else {
-      dns_launch_wildcard_checks();
-      time_to_check_for_wildcarded_dns = now + 12*3600 +
-        crypto_rand_int(12*3600);
-    }
-  }
 }
 
 static struct event *timeout_event = NULL;
@@ -952,9 +962,6 @@ second_elapsed_callback(int fd, short event, void *args)
   size_t bytes_read;
   int seconds_elapsed;
   or_options_t *options = get_options();
-  (void)fd;
-  (void)event;
-  (void)args;
   if (!timeout_event) {
     timeout_event = tor_malloc_zero(sizeof(struct event));
     evtimer_set(timeout_event, second_elapsed_callback, NULL);
@@ -1007,11 +1014,9 @@ second_elapsed_callback(int fd, short event, void *args)
                me->address, me->dir_port);
   }
 
-/** If more than this many seconds have elapsed, probably the clock
- * jumped: doesn't count. */
-#define NUM_JUMPED_SECONDS_BEFORE_WARN 10
-/* This used to be 100, but I cranked it down for Mike Chiussi -RD */
-  if (seconds_elapsed < NUM_JUMPED_SECONDS_BEFORE_WARN)
+  /* if more than 100s have elapsed, probably the clock jumped: doesn't
+   * count. */
+  if (seconds_elapsed < 100)
     stats_n_seconds_working += seconds_elapsed;
   else
     circuit_note_clock_jumped(seconds_elapsed);
@@ -1051,6 +1056,7 @@ got_libevent_error(void)
 static int
 do_hup(void)
 {
+  char keydir[512];
   or_options_t *options = get_options();
 
   log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
@@ -1070,8 +1076,11 @@ do_hup(void)
   options = get_options(); /* they have changed now */
   if (authdir_mode(options)) {
     /* reload the approved-routers file */
-    if (dirserv_load_fingerprint_file() < 0) {
-      /* warnings are logged from dirserv_load_fingerprint_file() directly */
+    tor_snprintf(keydir, sizeof(keydir),
+                 "%s/approved-routers", options->DataDirectory);
+    log_info(LD_GENERAL,
+             "Reloading approved fingerprints from \"%s\"...", keydir);
+    if (dirserv_parse_fingerprint_file(keydir) < 0) {
       log_info(LD_GENERAL, "Error reloading fingerprints. "
                "Continuing with old list.");
     }
@@ -1092,14 +1101,11 @@ do_hup(void)
 
   if (server_mode(options)) {
 //    const char *descriptor;
-    mark_my_descriptor_dirty();
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();
-    dns_reset();
+    dnsworkers_rotate();
 #if 0
-    const char *descriptor;
-    char keydir[512];
     /* Write out a fresh descriptor, but leave old one on failure. */
     router_rebuild_descriptor(1);
     descriptor = router_get_my_descriptor();
@@ -1122,11 +1128,7 @@ do_main_loop(void)
 {
   int loop_result;
 
-  /* initialize dns resolve map, spawn workers if needed */
-  if (dns_init() < 0) {
-    log_err(LD_GENERAL,"Error initializing dns subsystem; exiting");
-    return -1;
-  }
+  dns_init(); /* initialize dns resolve map, spawn workers if needed */
 
   handle_signals(1);
 
@@ -1158,7 +1160,7 @@ do_main_loop(void)
 
   if (authdir_mode(get_options())) {
     /* the directory is already here, run startup things */
-    dirserv_test_reachability(1);
+    router_retry_connections(1, 1);
   }
 
   if (server_mode(get_options())) {
@@ -1217,33 +1219,16 @@ do_main_loop(void)
   }
 }
 
-/* DOCDOC */
-int
-control_signal_check(int the_signal)
-{
-  switch (the_signal)
-    {
-    case 1:
-    case 2:
-    case 10:
-    case 12:
-    case 15:
-    case SIGNEWNYM:
-      return 1;
-    default:
-      return 0;
-    }
-}
-
 /** Used to implement the SIGNAL control command: if we accept
- * <b>the_signal</b> as a remote pseudo-signal, act on it. */
+ * <b>the_signal</b> as a remote pseudo-signal, then act on it and
+ * return 0.  Else return -1. */
 /* We don't re-use catch() here because:
  *   1. We handle a different set of signals than those allowed in catch.
  *   2. Platforms without signal() are unlikely to define SIGfoo.
  *   3. The control spec is defined to use fixed numeric signal values
  *      which just happen to match the unix values.
  */
-void
+int
 control_signal_act(int the_signal)
 {
   switch (the_signal)
@@ -1267,9 +1252,9 @@ control_signal_act(int the_signal)
       signal_callback(0,0,(void*)(uintptr_t)SIGNEWNYM);
       break;
     default:
-      log_warn(LD_BUG, "Unrecognized signal number %d.", the_signal);
-      break;
+      return -1;
     }
+  return 0;
 }
 
 /** Libevent callback: invoked when we get a signal.
@@ -1278,8 +1263,6 @@ static void
 signal_callback(int fd, short events, void *arg)
 {
   uintptr_t sig = (uintptr_t)arg;
-  (void)fd;
-  (void)events;
   switch (sig)
     {
     case SIGTERM:
@@ -1328,21 +1311,21 @@ signal_callback(int fd, short events, void *arg)
   }
 }
 
-extern uint64_t buf_total_used;
-extern uint64_t buf_total_alloc;
-extern uint64_t rephist_total_alloc;
-extern uint32_t rephist_total_num;
-
 /**
  * Write current memory usage information to the log.
  */
 static void
 dumpmemusage(int severity)
 {
+  extern uint64_t buf_total_used;
+  extern uint64_t buf_total_alloc;
+  extern uint64_t rephist_total_alloc;
+  extern uint32_t rephist_total_num;
+
   log(severity, LD_GENERAL,
       "In buffers: "U64_FORMAT" used/"U64_FORMAT" allocated (%d conns).",
       U64_PRINTF_ARG(buf_total_used), U64_PRINTF_ARG(buf_total_alloc),
-      n_conns);
+      nfds);
   log(severity, LD_GENERAL, "In rephist: "U64_FORMAT" used by %d Tors.",
       U64_PRINTF_ARG(rephist_total_alloc), rephist_total_num);
   dump_routerlist_mem_usage(severity);
@@ -1360,7 +1343,7 @@ dumpstats(int severity)
 
   log(severity, LD_GENERAL, "Dumping stats:");
 
-  for (i=0;i<n_conns;i++) {
+  for (i=0;i<nfds;i++) {
     conn = connection_array[i];
     log(severity, LD_GENERAL,
         "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
@@ -1369,7 +1352,7 @@ dumpstats(int severity)
         (int)(now - conn->timestamp_created));
     if (!connection_is_listener(conn)) {
       log(severity,LD_GENERAL,
-          "Conn %d is to %s:%d.", i,
+          "Conn %d is to '%s:%d'.", i,
           safe_str(conn->address), conn->port);
       log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",
@@ -1404,12 +1387,12 @@ dumpstats(int severity)
       U64_PRINTF_ARG(stats_n_destroy_cells_processed));
   if (stats_n_data_cells_packaged)
     log(severity,LD_NET,"Average packaged cell fullness: %2.3f%%",
-        100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
-             U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
+        100*(((double)stats_n_data_bytes_packaged) /
+             (stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
   if (stats_n_data_cells_received)
     log(severity,LD_NET,"Average delivered cell fullness: %2.3f%%",
-        100*(U64_TO_DBL(stats_n_data_bytes_received) /
-             U64_TO_DBL(stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
+        100*(((double)stats_n_data_bytes_received) /
+             (stats_n_data_cells_received*RELAY_PAYLOAD_SIZE)) );
 
   if (now - time_of_process_start >= 0)
     elapsed = now - time_of_process_start;
@@ -1521,7 +1504,8 @@ tor_init(int argc, char *argv[])
   atexit(exit_function);
 
   if (options_init_from_torrc(argc,argv) < 0) {
-    log_err(LD_CONFIG,"Reading config failed--see warnings above.");
+    log_err(LD_CONFIG,"Reading config failed--see warnings above. "
+            "For usage, try -h.");
     return -1;
   }
 
@@ -1598,32 +1582,30 @@ tor_cleanup(void)
 }
 
 /** Read/create keys as needed, and echo our fingerprint to stdout. */
-static int
+static void
 do_list_fingerprint(void)
 {
   char buf[FINGERPRINT_LEN+1];
   crypto_pk_env_t *k;
   const char *nickname = get_options()->Nickname;
   if (!server_mode(get_options())) {
-    log_err(LD_GENERAL,
-            "Clients don't have long-term identity keys. Exiting.\n");
-    return -1;
+    printf("Clients don't have long-term identity keys. Exiting.\n");
+    return;
   }
   tor_assert(nickname);
   if (init_keys() < 0) {
     log_err(LD_BUG,"Error initializing keys; exiting");
-    return -1;
+    return;
   }
   if (!(k = get_identity_key())) {
     log_err(LD_GENERAL,"Error: missing identity key.");
-    return -1;
+    return;
   }
   if (crypto_pk_get_fingerprint(k, buf, 1)<0) {
-    log_err(LD_BUG, "Error computing fingerprint");
-    return -1;
+    log_warn(LD_BUG, "Error computing fingerprint");
+    return;
   }
   printf("%s %s\n", nickname, buf);
-  return 0;
 }
 
 /** Entry point for password hashing: take the desired password from
@@ -1791,7 +1773,7 @@ nt_service_main(void)
   if (!StartServiceCtrlDispatcher(table)) {
     result = GetLastError();
     errmsg = nt_strerror(result);
-    printf("Service error %d : %s\n", (int) result, errmsg);
+    printf("Service error %d : %s\n", result, errmsg);
     LocalFree(errmsg);
     if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
       if (tor_init(backup_argc, backup_argv) < 0)
@@ -1915,7 +1897,7 @@ nt_service_stop(SC_HANDLE hService)
     }
     else {
       errmsg = nt_strerror(GetLastError());
-      printf("Service failed to stop : %s\n",errmsg);
+      printf("Service failed to stop : %s\n");
       LocalFree(errmsg);
     }
   }
@@ -2028,6 +2010,7 @@ nt_service_remove(void)
 {
   SC_HANDLE hSCManager = NULL;
   SC_HANDLE hService = NULL;
+  BOOL result = FALSE;
   char *errmsg;
 
   if ((hSCManager = nt_service_open_scm()) == NULL) {
@@ -2131,11 +2114,10 @@ _tor_dmalloc_free(void *p)
 int
 tor_main(int argc, char *argv[])
 {
-  int result = 0;
 #ifdef USE_DMALLOC
-  int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,
-                                      _tor_dmalloc_free);
-  log_notice(LD_CONFIG, "Set up dmalloc; returned %d", r);
+    int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,
+                                        _tor_dmalloc_free);
+    log_notice(LD_CONFIG, "Set up damalloc; returned %d", r);
 #endif
 #ifdef MS_WINDOWS_SERVICE
   backup_argv = argv;
@@ -2172,26 +2154,22 @@ tor_main(int argc, char *argv[])
 #ifdef MS_WINDOWS_SERVICE
     service_status.dwCurrentState = SERVICE_RUNNING;
 #endif
-    result = do_main_loop();
+    do_main_loop();
     break;
   case CMD_LIST_FINGERPRINT:
-    result = do_list_fingerprint();
+    do_list_fingerprint();
     break;
   case CMD_HASH_PASSWORD:
     do_hash_password();
-    result = 0;
     break;
   case CMD_VERIFY_CONFIG:
     printf("Configuration was valid\n");
-    result = 0;
     break;
-  case CMD_RUN_UNITTESTS: /* only set by test.c */
   default:
     log_warn(LD_BUG,"Illegal command number %d: internal error.",
              get_options()->command);
-    result = -1;
   }
   tor_cleanup();
-  return result;
+  return -1;
 }
 

@@ -19,10 +19,6 @@
  If you're using Tor 0.1.1.18-rc or later, you should look at
  the "FetchUselessDescriptors" config option in the man page.
 
- Note that this script won't give you a perfect list of IP addresses
- that might connect to you using Tor, since some Tor servers might exit
- from other addresses than the one they publish.
-
 """
 
 #
@@ -200,13 +196,6 @@ class Server:
         self.ip = ip
         self.policy = policy
 
-def uniq_sort(lst):
-    d = {}
-    for item in lst: d[item] = 1
-    lst = d.keys()
-    lst.sort()
-    return lst
-
 def run():
     servers = []
     policy = []
@@ -244,13 +233,12 @@ def run():
     else:
         printlist = accepters
 
-    ents = []
     if VERBOSE:
-        ents = uniq_sort([ "%s\t%s"%(s.ip,s.name) for s in printlist ])
+        for s in printlist:
+            print "%s\t%s"%(s.ip,s.name)
     else:
-        ents = uniq_sort([ s.ip for s in printlist ])
-    for e in ents:
-        print e
+        for s in printlist:
+            print s.ip
 
 def _test():
     import doctest, exitparse

@@ -31,17 +31,5 @@ int is_gzip_supported(void);
 
 int detect_compression_method(const char *in, size_t in_len);
 
-typedef enum {
-  TOR_ZLIB_OK, TOR_ZLIB_DONE, TOR_ZLIB_BUF_FULL, TOR_ZLIB_ERR
-}  tor_zlib_output_t;
-typedef struct tor_zlib_state_t tor_zlib_state_t;
-tor_zlib_state_t *tor_zlib_new(int compress, compress_method_t method);
-
-tor_zlib_output_t tor_zlib_process(tor_zlib_state_t *state,
-                                   char **out, size_t *out_len,
-                                   const char **in, size_t *in_len,
-                                   int finish);
-void tor_zlib_free(tor_zlib_state_t *state);
-
 #endif
 

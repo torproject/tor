@@ -134,7 +134,7 @@ niutil -destroy . /users/$TOR_USER
 ## clean up
 echo ". Cleaning up"
 rm -rf $TEMP_BOM_CONTENTS
-rm -rf /Library/Privoxy/ /Library/StartupItems/Privoxy/ /Library/Tor/ /Library/StartupItems/Tor/
+rm -rf /Library/Privoxy/ /Library/StartupItems/Tor/ /Library/StartupItems/Privoxy/ /Library/Tor/
 
 echo ". Finished"
 

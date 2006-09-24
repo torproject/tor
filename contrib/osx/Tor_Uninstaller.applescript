@@ -35,34 +35,31 @@
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -- ===============================================================================
 
-on run
-	
-	-- Validate & find disk paths
-	set boot_disk to (path to startup disk) as string
-	set default_tor_path to boot_disk & "Library:Tor"
-	set default_privoxy_path to boot_disk & "Library:Privoxy"
-	set default_tor_startup_path to boot_disk & "Library:StartupItems:Tor"
-	set default_privoxy_startup_path to boot_disk & "Library:StartupItems:Privoxy"
-	set shell_script to default_tor_path & ":uninstall_tor_bundle.sh"
-	set doomed_path_list to {default_tor_path, default_privoxy_path, default_tor_startup_path, default_privoxy_startup_path}
-	
-	-- Display what we're removing and ask for validation
-	-- this is the simplest way to do this
-	set remove_me to display dialog "Welcome to the Tor + Privoxy Uninstaller.  This program will remove:" & return & return & POSIX path of default_tor_path & return & POSIX path of default_privoxy_path & return & POSIX path of default_tor_startup_path & return & POSIX path of default_privoxy_startup_path & return & return & "If this looks correct, choose Yes.  Otherwise, choose No." buttons {"Yes", "No"} default button "No"
-	
-	-- Run a shell script to do all the unix work since applescript can't see it at all
-	if button returned of result is "Yes" then
-		try
-			do shell script (POSIX path of shell_script) with administrator privileges
-		on error
-			display dialog "Too many errors, quitting." buttons {"Quit"} default button "Quit" with icon stop giving up after 3
-			quit
-		end try
-		-- So Long and Thanks for all the Fish!
-		display dialog "Thank you for using tor!" buttons {"Ok"} giving up after 3
-	else
-		display dialog "Thank you for your continued use of Tor & Privoxy" buttons {"You're welcome."} giving up after 3
-	end if
-	
-end run
+-- Validate & find disk paths
+set boot_disk to (path to startup disk) as string
+set default_tor_path to boot_disk & "Library:Tor"
+set default_privoxy_path to boot_disk & "Library:Privoxy"
+set default_tor_startup_path to boot_disk & "Library:StartupItems:Tor"
+set default_privoxy_startup_path to boot_disk & "Library:StartupItems:Privoxy"
+set shell_script to default_tor_path & ":uninstall_tor_bundle.sh"
+set doomed_path_list to {default_tor_path, default_privoxy_path, default_tor_startup_path, default_privoxy_startup_path}
+
+-- Display what we're removing and ask for validation
+-- this is the simplest way to do this
+set remove_me to display dialog "Welcome to the Tor + Privoxy Uninstaller.  This program will remove:" & return & default_tor_path & return & default_privoxy_path & return & default_tor_startup_path & return & default_privoxy_startup_path & return & return & "If this does not look right, choose Yes.  Otherwise, choose No." buttons {"Yes", "No"} default button "No"
+
+-- Run a shell script to do all the unix work since applescript can't see it at all
+if button returned of result is "Yes" then
+	try
+		do shell script (shell_script) with administrator privileges
+	on error
+		display dialog "Too many errors, quitting." buttons {"Quit"} default button "Quit" with icon stop giving up after 5
+		quit
+	end try
+	-- So Long and Thanks for all the Fish!
+	display dialog "Thank you for using tor!" buttons {"Ok"} giving up after 5
+else
+	display dialog "Thank you for your continued use of Tor & Privoxy" buttons {"You're welcome."}
+end if
+
 -- We're done

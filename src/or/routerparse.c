@@ -54,7 +54,6 @@ typedef enum {
   K_SERVER_VERSIONS,
   K_R,
   K_S,
-  K_EVENTDNS,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -146,7 +145,6 @@ static struct {
   { "dir-options",         K_DIR_OPTIONS,         ARGS,    NO_OBJ, NETSTATUS },
   { "client-versions",     K_CLIENT_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
   { "server-versions",     K_SERVER_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
-  { "eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ, RTR },
   { NULL, -1, NO_ARGS, NO_OBJ, ANY }
 };
 
@@ -542,6 +540,14 @@ find_dir_signing_key(const char *str)
   if (tok->key) {
     key = tok->key;
     tok->key = NULL; /* steal reference. */
+  } else if (tok->n_args >= 1) {
+    /** XXXX Once all the directories are running 0.1.0.6-rc or later, we
+     * can remove this logic. */
+    key = crypto_pk_DER64_decode_public_key(tok->args[0]);
+    if (!key) {
+      log_warn(LD_DIR, "Unparseable dir-signing-key argument");
+      return NULL;
+    }
   } else {
     log_warn(LD_DIR, "Dir-signing-key token contained no key");
     return NULL;
@@ -637,20 +643,17 @@ check_directory_signature(const char *digest,
  * are marked running and valid.  Advances *s to a point immediately
  * following the last router entry.  Ignore any trailing router entries that
  * are not complete. Returns 0 on success and -1 on failure.
- * DOCDOC saved_location
  */
 int
-router_parse_list_from_string(const char **s, smartlist_t *dest,
-                              saved_location_t saved_location)
+router_parse_list_from_string(const char **s, smartlist_t *dest)
 {
   routerinfo_t *router;
-  const char *end, *cp, *start;
+  const char *end, *cp;
 
   tor_assert(s);
   tor_assert(*s);
   tor_assert(dest);
 
-  start = *s;
   while (1) {
     *s = eat_whitespace(*s);
     /* Don't start parsing the rest of *s unless it contains a router. */
@@ -681,19 +684,13 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
       continue;
     }
 
-    router = router_parse_entry_from_string(*s, end,
-                                            saved_location != SAVED_IN_CACHE);
+    router = router_parse_entry_from_string(*s, end);
 
+    *s = end;
     if (!router) {
       log_warn(LD_DIR, "Error reading router; skipping");
-      *s = end;
       continue;
     }
-    if (saved_location != SAVED_NOWHERE) {
-      router->cache_info.saved_location = saved_location;
-      router->cache_info.saved_offset = *s - start;
-    }
-    *s = end;
     smartlist_add(dest, router);
   }
 
@@ -703,11 +700,9 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
 /** Helper function: reads a single router entry from *<b>s</b> ...
  * *<b>end</b>.  Mallocs a new router and returns it if all goes well, else
  * returns NULL.
- * DOCDOC cache_copy
  */
 routerinfo_t *
-router_parse_entry_from_string(const char *s, const char *end,
-                               int cache_copy)
+router_parse_entry_from_string(const char *s, const char *end)
 {
   routerinfo_t *router = NULL;
   char signed_digest[128];
@@ -754,9 +749,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->routerlist_index = -1;
-  if (cache_copy)
-    router->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
+  router->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
   router->cache_info.signed_descriptor_len = end-s;
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
@@ -876,13 +869,6 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   if ((tok = find_first_by_keyword(tokens, K_CONTACT))) {
     router->contact_info = tor_strdup(tok->args[0]);
-  }
-
-  if ((tok = find_first_by_keyword(tokens, K_EVENTDNS))) {
-    router->has_old_dnsworkers = tok->n_args && !strcmp(tok->args[0], "0");
-  } else if (router->platform) {
-    if (! tor_version_as_new_as(router->platform, "0.1.2.2-alpha"))
-      router->has_old_dnsworkers = 1;
   }
 
   exit_policy_tokens = find_all_exitpolicy(tokens);
@@ -1085,15 +1071,6 @@ _compare_routerstatus_entries(const void **_a, const void **_b)
   return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
 }
 
-static void
-_free_duplicate_routerstatus_entry(void *e)
-{
-  log_warn(LD_DIR,
-           "Network-status has two entries for the same router. "
-           "Dropping one.");
-  routerstatus_free(e);
-}
-
 /** Given a versioned (v2 or later) network-status object in <b>s</b>, try to
  * parse it and return the result.  Return NULL on failure.  Check the
  * signature of the network status, but do not (yet) check the signing key for
@@ -1236,8 +1213,20 @@ networkstatus_parse_from_string(const char *s)
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, _compare_routerstatus_entries);
-  smartlist_uniq(ns->entries, _compare_routerstatus_entries,
-                 _free_duplicate_routerstatus_entry);
+
+  /* Kill duplicate entries. */
+  for (i=0; i < smartlist_len(ns->entries)-1; ++i) {
+    routerstatus_t *rs1 = smartlist_get(ns->entries, i);
+    routerstatus_t *rs2 = smartlist_get(ns->entries, i+1);
+    if (!memcmp(rs1->identity_digest,
+                rs2->identity_digest, DIGEST_LEN)) {
+      log_warn(LD_DIR,
+               "Network-status has two entries for the same router. "
+               "Dropping one.");
+      smartlist_del_keeporder(ns->entries, i--);
+      routerstatus_free(rs1);
+    }
+  }
 
   if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
     log_warn(LD_DIR, "Error tokenizing network-status footer.");
@@ -1810,7 +1799,7 @@ tor_version_parse(const char *s, tor_version_t *out)
 {
   char *eos=NULL, *cp=NULL;
   /* Format is:
-   *   "Tor " ? NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ - tag ] ]
+   *   "Tor " ? NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ -cvs ] ]
    */
   tor_assert(s);
   tor_assert(out);
@@ -1836,6 +1825,7 @@ tor_version_parse(const char *s, tor_version_t *out)
   if (!*eos) {
     out->status = VER_RELEASE;
     out->patchlevel = 0;
+    out->cvs = IS_NOT_CVS;
     return 0;
   }
   cp = eos;
@@ -1859,10 +1849,15 @@ tor_version_parse(const char *s, tor_version_t *out)
   if (!eos || eos==cp) return -1;
   cp = eos;
 
-  /* Get status tag. */
+  /* Get cvs status and status tag. */
   if (*cp == '-' || *cp == '.')
     ++cp;
   strlcpy(out->status_tag, cp, sizeof(out->status_tag));
+  if (0==strcmp(cp, "cvs")) {
+    out->cvs = IS_CVS;
+  } else {
+    out->cvs = IS_NOT_CVS;
+  }
 
   return 0;
 }
@@ -1886,7 +1881,11 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
   else if ((i = a->patchlevel - b->patchlevel))
     return i;
 
-  return strcmp(a->status_tag, b->status_tag);
+  if (a->major > 0 || a->minor > 0) {
+    return strcmp(a->status_tag, b->status_tag);
+  } else {
+    return (a->cvs - b->cvs);
+  }
 }
 
 /** Return true iff versions <b>a</b> and <b>b</b> belong to the same series.
@@ -1929,9 +1928,22 @@ _compare_tor_version_str_ptr(const void **_a, const void **_b)
 void
 sort_version_list(smartlist_t *versions, int remove_duplicates)
 {
-  smartlist_sort(versions, _compare_tor_version_str_ptr);
+  int i;
 
-  if (remove_duplicates)
-    smartlist_uniq(versions, _compare_tor_version_str_ptr, NULL);
+  smartlist_sort(versions, _compare_tor_version_str_ptr);
+  if (!remove_duplicates)
+    return;
+
+  for (i = 1; i < smartlist_len(versions); ++i) {
+    const void *a, *b;
+    a = smartlist_get(versions, i-1);
+    b = smartlist_get(versions, i);
+    /* use version_cmp so we catch multiple representations of the same
+     * version */
+    if (_compare_tor_version_str_ptr(&a,&b) == 0) {
+      tor_free(smartlist_get(versions, i));
+      smartlist_del_keeporder(versions, i--);
+    }
+  }
 }
 

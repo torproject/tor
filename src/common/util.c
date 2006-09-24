@@ -46,6 +46,26 @@ const char util_c_id[] = "$Id$";
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
+#ifdef HAVE_SYS_LIMITS_H
+#include <sys/limits.h>
+#endif
+#ifdef HAVE_MACHINE_LIMITS_H
+#if !defined(__FreeBSD__) && !defined(__FreeBSD_kernel__)
+  /* FreeBSD has a bug where it complains that this file is obsolete,
+     and I should migrate to using sys/limits. It complains even when
+     I include both.
+     __FreeBSD_kernel__ is defined by Debian GNU/kFreeBSD which
+      does the same thing (but doesn't defined __FreeBSD__).
+     */
+#include <machine/limits.h>
+#endif
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h> /* Must be included before sys/stat.h for Ultrix */
+#endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -106,21 +126,19 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
 {
   void *result;
 
-#ifndef MALLOC_ZERO_WORKS
   /* Some libcs don't do the right thing on size==0. Override them. */
   if (size==0) {
     size=1;
   }
-#endif
   result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
 
-  if (PREDICT(result == NULL, 0)) {
+  if (!result) {
     log_err(LD_MM,"Out of memory. Dying.");
-    /* If these functions die within a worker process, they won't call
-     * spawn_exit, but that's ok, since the parent will run out of memory soon
-     * anyway. */
+    /* XXX if these functions die within a worker process, they won't
+     * call spawn_exit */
     exit(1);
   }
+//  memset(result,'X',size); /* deadbeef to encourage bugs */
   return result;
 }
 
@@ -146,7 +164,7 @@ _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
   void *result;
 
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
-  if (PREDICT(result == NULL, 0)) {
+  if (!result) {
     log_err(LD_MM,"Out of memory. Dying.");
     exit(1);
   }
@@ -164,7 +182,7 @@ _tor_strdup(const char *s DMALLOC_PARAMS)
   tor_assert(s);
 
   dup = dmalloc_strdup(file, line, s, 0);
-  if (PREDICT(dup == NULL, 0)) {
+  if (!dup) {
     log_err(LD_MM,"Out of memory. Dying.");
     exit(1);
   }
@@ -190,26 +208,6 @@ _tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
   strncpy(dup, s, n);
   dup[n]='\0';
   return dup;
-}
-
-/** Allocate a chunk of <b>len</b> bytes, with the same contents starting at
- * <b>mem</b>. */
-void *
-_tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
-{
-  char *dup;
-  tor_assert(mem);
-  dup = _tor_malloc(len DMALLOC_FN_ARGS);
-  memcpy(dup, mem, len);
-  return dup;
-}
-
-/** Helper for places that need to take a function pointer to the right
- * spelling of "free()". */
-void
-_tor_free(void *mem)
-{
-  tor_free(mem);
 }
 
 /* =====
@@ -347,19 +345,6 @@ tor_strisprint(const char *s)
   return 1;
 }
 
-/** Return 1 if no character in <b>s</b> is uppercase, else return 0.
- */
-int
-tor_strisnonupper(const char *s)
-{
-  while (*s) {
-    if (TOR_ISUPPER(*s))
-      return 0;
-    s++;
-  }
-  return 1;
-}
-
 /* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
@@ -414,23 +399,17 @@ eat_whitespace(const char *s)
 {
   tor_assert(s);
 
-  while (1) {
-    switch (*s) {
-    case '\0':
-    default:
-      return s;
-    case ' ':
-    case '\t':
-    case '\n':
-    case '\r':
-      ++s;
-      break;
-    case '#':
-      ++s;
+  while (TOR_ISSPACE(*s) || *s == '#') {
+    while (TOR_ISSPACE(*s))
+      s++;
+    if (*s == '#') { /* read to a \n or \0 */
       while (*s && *s != '\n')
-        ++s;
+        s++;
+      if (!*s)
+        return s;
     }
   }
+  return s;
 }
 
 /** Return a pointer to the first char of s that is not a space or a tab,
@@ -450,47 +429,20 @@ const char *
 find_whitespace(const char *s)
 {
   /* tor_assert(s); */
-  while (1) {
-    switch (*s)
-    {
-    case '\0':
-    case '#':
-    case ' ':
-    case '\r':
-    case '\n':
-    case '\t':
-      return s;
-    default:
-      ++s;
-    }
-  }
-}
 
-/** Return true iff the 'len' bytes at 'mem' are all zero. */
-int
-tor_mem_is_zero(const char *mem, size_t len)
-{
-  static const char ZERO[] = {
-    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-  };
-  while (len >= sizeof(ZERO)) {
-    if (memcmp(mem, ZERO, sizeof(ZERO)))
-      return 0;
-    len -= sizeof(ZERO);
-    mem += sizeof(ZERO);
-  }
-  /* Deal with leftover bytes. */
-  if (len)
-    return ! memcmp(mem, ZERO, len);
+  while (*s && !TOR_ISSPACE(*s) && *s != '#')
+    s++;
 
-  return 1;
+  return s;
 }
 
 /** Return true iff the DIGEST_LEN bytes in digest are all zero. */
 int
 tor_digest_is_zero(const char *digest)
 {
-  return tor_mem_is_zero(digest, DIGEST_LEN);
+  static char ZERO_DIGEST[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+
+  return !memcmp(digest, ZERO_DIGEST, DIGEST_LEN);
 }
 
 #define CHECK_STRTOX_RESULT()                           \
@@ -961,7 +913,7 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
 
   while (written != count) {
     if (isSocket)
-      result = tor_socket_send(fd, buf+written, count-written, 0);
+      result = send(fd, buf+written, count-written, 0);
     else
       result = write(fd, buf+written, count-written);
     if (result<0)
@@ -987,7 +939,7 @@ read_all(int fd, char *buf, size_t count, int isSocket)
 
   while (numread != count) {
     if (isSocket)
-      result = tor_socket_recv(fd, buf+numread, count-numread, 0);
+      result = recv(fd, buf+numread, count-numread, 0);
     else
       result = read(fd, buf+numread, count-numread);
     if (result<0)
@@ -1018,8 +970,6 @@ clean_name_for_stat(char *name)
       return;
     name[len-1]='\0';
   }
-#else
-  (void)name;
 #endif
 }
 
@@ -1542,8 +1492,8 @@ is_local_IP(uint32_t ip)
  * Return 0 on success, -1 on failure.
  */
 int
-parse_addr_port(int severity, const char *addrport, char **address,
-                uint32_t *addr, uint16_t *port_out)
+parse_addr_port(const char *addrport, char **address, uint32_t *addr,
+                uint16_t *port_out)
 {
   const char *colon;
   char *_address = NULL;
@@ -1557,14 +1507,14 @@ parse_addr_port(int severity, const char *addrport, char **address,
     _address = tor_strndup(addrport, colon-addrport);
     _port = (int) tor_parse_long(colon+1,10,1,65535,NULL,NULL);
     if (!_port) {
-      log_fn(severity, LD_GENERAL, "Port %s out of range", escaped(colon+1));
+      log_warn(LD_GENERAL, "Port %s out of range", escaped(colon+1));
       ok = 0;
     }
     if (!port_out) {
       char *esc_addrport = esc_for_log(addrport);
-      log_fn(severity, LD_GENERAL,
-             "Port %s given on %s when not required",
-             escaped(colon+1), esc_addrport);
+      log_warn(LD_GENERAL,
+               "Port %s given on %s when not required",
+               escaped(colon+1), esc_addrport);
       tor_free(esc_addrport);
       ok = 0;
     }
@@ -1576,7 +1526,7 @@ parse_addr_port(int severity, const char *addrport, char **address,
   if (addr) {
     /* There's an addr pointer, so we need to resolve the hostname. */
     if (tor_lookup_hostname(_address,addr)) {
-      log_fn(severity, LD_NET, "Couldn't look up %s", escaped(_address));
+      log_warn(LD_NET, "Couldn't look up %s", escaped(_address));
       ok = 0;
       *addr = 0;
     }
@@ -1767,9 +1717,8 @@ tor_dup_addr(uint32_t addr)
   return tor_strdup(buf);
 }
 
-/* Return true iff <b>name</b> looks like it might be a hostname,
- * nickname, key, or IP address of some kind, suitable for the
- * controller's "mapaddress" command. */
+/* Return true iff <b>name</b> looks like it might be a hostname or IP
+ * address of some kind. */
 int
 is_plausible_address(const char *name)
 {
@@ -1795,7 +1744,7 @@ is_plausible_address(const char *name)
  * failure.
  */
 int
-get_interface_address(int severity, uint32_t *addr)
+get_interface_address(uint32_t *addr)
 {
   int sock=-1, r=-1;
   struct sockaddr_in target_addr, my_addr;
@@ -1807,8 +1756,7 @@ get_interface_address(int severity, uint32_t *addr)
   sock = socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
   if (sock < 0) {
     int e = tor_socket_errno(-1);
-    log_fn(severity, LD_NET, "unable to create socket: %s",
-           tor_socket_strerror(e));
+    log_warn(LD_NET, "unable to create socket: %s", tor_socket_strerror(e));
     goto err;
   }
 
@@ -1822,15 +1770,14 @@ get_interface_address(int severity, uint32_t *addr)
 
   if (connect(sock,(struct sockaddr *)&target_addr,sizeof(target_addr))<0) {
     int e = tor_socket_errno(sock);
-    log_fn(severity, LD_NET, "connect() failed: %s", tor_socket_strerror(e));
+    log_warn(LD_NET, "connnect() failed: %s", tor_socket_strerror(e));
     goto err;
   }
 
   /* XXXX Can this be right on IPv6 clients? */
   if (getsockname(sock, (struct sockaddr*)&my_addr, &my_addr_len)) {
     int e = tor_socket_errno(sock);
-    log_fn(severity, LD_NET, "getsockname() failed: %s",
-           tor_socket_strerror(e));
+    log_warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
     goto err;
   }
 
