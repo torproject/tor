@@ -128,8 +128,8 @@ Packager: Nick Mathewson <nickm@seul.org>
 Requires: openssl >= 0.9.6
 BuildRequires: openssl-devel >= 0.9.6, rpm >= 4.0, zlib-devel
 %else 
-Requires: openssl >= 0.9.6, libevent >= 1.1b
-BuildRequires: openssl-devel >= 0.9.6, libevent-devel >= 1.1b
+Requires: openssl >= 0.9.6, libevent >= 1.1a
+BuildRequires: openssl-devel >= 0.9.6, libevent-devel >= 1.1a
 %endif
 %if %{is_fc}
 BuildRequires: rpm-build >= 4.0
