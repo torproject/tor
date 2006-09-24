@@ -192,6 +192,8 @@ NR  - Get some kind of "meta signing key" to be used solely to sign
       releases/to certify releases when signed by the right people/
       to certify sign the right people's keys?  Also use this to cert the SSL
       key, etc.
+    - If we haven't replaced privoxy, lock down its configuration in all
+      packages, as documented in tor-doc-unix.html
 
   - Docs
     - More prominently, we should have a recommended apps list.
