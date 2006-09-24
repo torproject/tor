@@ -716,7 +716,9 @@ if test "x$exec_prefix" = "xNONE"; then
   exec_prefix=$prefix
 fi
 
-CONFDIR=`eval echo $sysconfdir/tor`
+if test "x$CONFDIR" = "x"; then
+  CONFDIR=`eval echo $sysconfdir/tor`
+fi
 AC_SUBST(CONFDIR)
 AH_TEMPLATE([CONFDIR],[tor's configuration directory])
 AC_DEFINE_UNQUOTED(CONFDIR,"$CONFDIR")
@@ -741,8 +743,6 @@ fi
 #CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline -Wnested-externs -Wswitch-enums"
 # Add these in when you feel like fun.
 #CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement -Wold-style-definition"
-
-echo "confdir: $CONFDIR"
 
 AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh)
 

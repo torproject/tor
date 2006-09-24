@@ -39,6 +39,8 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       instead of "X resolved to X".
     - Prevent the 'exitlist' script from printing the same result more
       than once.
+    - Build correctly for use on OS X platforms with case-sensitive
+      filesystems.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and
