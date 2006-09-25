@@ -16,6 +16,9 @@ const char main_c_id[] =
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
+#ifdef USE_EVENTDNS
+void evdns_shutdown(int);
+#endif
 
 /********* PROTOTYPES **********/
 
@@ -1548,6 +1551,11 @@ tor_init(int argc, char *argv[])
 void
 tor_free_all(int postfork)
 {
+#ifdef USE_EVENTDNS
+  if (!postfork) {
+    evdns_shutdown(1);
+  }
+#endif
   routerlist_free_all();
   addressmap_free_all();
   set_exit_redirects(NULL); /* free the registered exit redirects */

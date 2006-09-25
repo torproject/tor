@@ -36,6 +36,8 @@
 #define DNS_ERR_UNKNOWN 66
 /* Communication with the server timed out */
 #define DNS_ERR_TIMEOUT 67
+/* The request was canceled because the DNS subsystem was shut down. */
+#define DNS_ERR_SHUTDOWN 68
 
 #define DNS_IPv4_A 1
 #define DNS_PTR 2
@@ -50,6 +52,7 @@
 typedef void (*evdns_callback_type) (int result, char type, int count, int ttl, void *addresses, void *arg);
 
 int evdns_init(void);
+void evdns_shutdown(int fail_requests);
 int evdns_nameserver_add(unsigned long int address);
 int evdns_count_nameservers(void);
 int evdns_clear_nameservers_and_suspend(void);

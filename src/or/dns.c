@@ -1557,7 +1557,8 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
     if (evdns_err_is_transient(result))
       status = DNS_RESOLVE_FAILED_TRANSIENT;
   }
-  dns_found_answer(string_address, is_reverse, addr, hostname, status, ttl);
+  if (result != DNS_ERR_SHUTDOWN)
+    dns_found_answer(string_address, is_reverse, addr, hostname, status, ttl);
   tor_free(string_address);
 }
 
