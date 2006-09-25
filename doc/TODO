@@ -271,6 +271,7 @@ Deferred from 0.1.2.x:
       - Implement
 
 Minor items for 0.1.2.x as time permits:
+  - Flesh out options_description array in src/or/config.c
   - Don't let 'newnym' be triggered more often than every n seconds.
   - change log_fn() to log() on notice/warn/err logs where we can.
   - the deb now uses --verify-config to distinguish between configuration
