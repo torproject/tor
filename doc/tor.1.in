@@ -371,10 +371,17 @@ NodeFamily is only needed when a server doesn't list the family itself
 (with MyFamily). This option can be used multiple times.
 .LP
 .TP
+\fBEnforceDistinctSubnets \fR\fB0\fR|\fB1\fR\fP
+If 1, Tor will not put two servers whose IP addressess are "too
+close" to appear on the same circuit.  Currently, two addresses are
+"too close" if they lie in the same /16 range. (Default: 1)
+
 .\" \fBPathlenCoinWeight \fR\fI0.0-1.0\fP
 .\" Paths are 3 hops plus a geometric distribution centered around this coinweight.
 .\" Must be >=0.0 and <1.0. (Default: 0.3) NOT USED CURRENTLY
 .\" .TP
+.LP
+.TP
 \fBRendNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
 A list of preferred nodes to use for the rendezvous point, if possible.
 .LP

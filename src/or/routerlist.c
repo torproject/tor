@@ -629,10 +629,12 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
 {
   routerinfo_t *r;
   config_line_t *cl;
+  or_options_t *options = get_options();
 
   /* First, add any routers with similar network addresses.
    * XXX It's possible this will be really expensive; we'll see. */
-  routerlist_add_network_family(sl, router);
+  if (options->EnforceDistinctSubnets)
+    routerlist_add_network_family(sl, router);
 
   if (!router->declared_family)
     return;

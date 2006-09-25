@@ -1581,6 +1581,8 @@ typedef struct {
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
                      * resolver from the file here rather than from
                      * /etc/resolv.conf (Unix) or the registry (Windows). */
+  int EnforceDistinctSubnets; /** If true, don't allow multiple routers in the
+                               * same network zone in the same circuit. */
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

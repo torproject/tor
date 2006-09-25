@@ -152,6 +152,7 @@ static config_var_t _option_vars[] = {
   VAR("DirPort",             UINT,     DirPort,              "0"),
   OBSOLETE("DirPostPeriod"),
   VAR("DirServer",           LINELIST, DirServers,           NULL),
+  VAR("EnforceDistinctSubnets", BOOL,  EnforceDistinctSubnets,"1"),
   VAR("EntryNodes",          STRING,   EntryNodes,           NULL),
   VAR("ExcludeNodes",        STRING,   ExcludeNodes,         NULL),
   VAR("ExitNodes",           STRING,   ExitNodes,            NULL),
