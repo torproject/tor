@@ -75,6 +75,8 @@ bind to this port rather than the one specified in ControlPort. We
 strongly recommend that you leave this alone unless you know what you're
 doing, since giving attackers access to your control listener is really
 dangerous. (Default: 127.0.0.1)
+This directive can be specified multiple times to bind to multiple
+addresses/ports.
 .LP
 .TP
 \fBHashedControlPassword \fR\fIhashed_password\fP
@@ -390,8 +392,9 @@ connections. (Default: 9050)
 \fBSocksListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
 Bind to this address to listen for connections from Socks-speaking
 applications. (Default: 127.0.0.1) You can also specify a port
-(e.g. 192.168.0.1:9100). This directive can be specified multiple times
-to bind to multiple addresses/ports.
+(e.g. 192.168.0.1:9100).
+This directive can be specified multiple times to bind to multiple
+addresses/ports.
 .LP
 .TP
 \fBSocksPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
@@ -573,6 +576,8 @@ Advertise this port to listen for connections from Tor clients and servers.
 Bind to this IP address to listen for connections from Tor clients and
 servers. If you specify a port, bind to this port rather than the one
 specified in ORPort. (Default: 0.0.0.0)
+This directive can be specified multiple times to bind to multiple
+addresses/ports.
 .LP
 .TP
 \fBPublishServerDescriptor \fR\fB0\fR|\fB1\fR\fP
@@ -706,6 +711,8 @@ Advertise the directory service on this port.
 \fBDirListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
 Bind the directory service to this address. If you specify a port, bind
 to this port rather than the one specified in DirPort. (Default: 0.0.0.0)
+This directive can be specified multiple times to bind to multiple
+addresses/ports.
 .LP
 .TP
 \fBDirPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
