@@ -1,4 +1,4 @@
-confdir = $(sysconfdir)/tor
+confdir = $(sysconfdir)/Tor
 
 EXTRA_DIST = PrivoxyConfDesc.plist PrivoxyConfInfo.plist    \
     ReadMe.rtf StartupParameters.plist Tor TorBundleDesc.plist.in        \
