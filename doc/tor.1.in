@@ -372,8 +372,8 @@ NodeFamily is only needed when a server doesn't list the family itself
 .LP
 .TP
 \fBEnforceDistinctSubnets \fR\fB0\fR|\fB1\fR\fP
-If 1, Tor will not allow two servers whose IP addressess are "too
-close" to appear on the same circuit.  Currently, two addresses are
+If 1, Tor will not put two servers whose IP addresses are "too
+close" on the same circuit.  Currently, two addresses are
 "too close" if they lie in the same /16 range. (Default: 1)
 
 .\" \fBPathlenCoinWeight \fR\fI0.0-1.0\fP
