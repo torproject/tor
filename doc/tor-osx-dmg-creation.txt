@@ -45,8 +45,9 @@ file privoxyosx_setup_3.0.3.zip
 
 2) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
-     configure --prefix=/Library/Tor --bindir=/Library/Tor \
-     --sysconfdir=/Library --enable-static --disable-shared
+     CONFDIR=/Library/Tor ./configure --prefix=/Library/Tor \
+     --bindir=/Library/Tor --sysconfdir=/Library  \
+     --enable-static --disable-shared
 
 3) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.
@@ -85,9 +86,10 @@ by default, in /usr/local/lib/.
 
 7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
-CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc"
-\ LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
-configure --prefix=/Library/Tor --bindir=/Library/Tor \
+CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc" \
+LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
+CONFDIR=/Library/Tor \
+./configure --prefix=/Library/Tor --bindir=/Library/Tor \
 --sysconfdir=/Library --enable-static --disable-shared \
 --disable-dependency-tracking
 
