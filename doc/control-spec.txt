@@ -347,7 +347,7 @@ $Id$
       set through any mechanism.
 
     "address" -- the best guess at our external IP address. If we
-      have no guess, return a 551 error.
+      have no guess, return a 551 error. (Added in 0.1.2.2-alpha)
 
     "circuit-status"
       A series of lines as for a circuit status event. Each line is of

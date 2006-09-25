@@ -1,50 +1,105 @@
 Changes in version 0.1.2.2-alpha - 2006-??-??
   o Major features:
     - Add server-side support for "reverse" DNS lookups (using PTR
-      records so clients can determine the canonical hostname for a given
-      IPv4 address).  This has been specified for a long time, but was
-      previously never implemented.  This is only supported by eventdns;
-      servers now announce in their descriptors whether they support
-      eventdns.
+      records so clients can determine the canonical hostname for a
+      given IPv4 address).  This has been specified for a long time,
+      but was previously never implemented.  This is only supported by
+      eventdns; servers now announce in their descriptors whether they
+      support eventdns.
     - Specify and implement client-side SOCKS5 interface for reverse DNS
       lookups; see doc/socks-extensions.txt for full information.
 
   o Minor features:
     - Check for name servers (like Earthlink's) that hijack failing DNS
-      requests and replace the 'no such server' answer with a "helpful"
-      redirect to an advertising-driven search portal.  We're a little clever
-      about this, in order to work around DNS hijackers who "helpfully"
-      decline to hijack known-invalid RFC2606 addresses.  [Resolves bug 330.]
+      requests and replace the no-such-server answer with a "helpful"
+      redirect to an advertising-driven search portal.  We're a little
+      clever about this, in order to work around DNS hijackers who
+      "helpfully" decline to hijack known-invalid RFC2606 addresses.
+      Config option "ServerDNSDetectHijacking 0" lets you turn it off.
     - When asked to resolve a hostname, don't use non-exit servers unless
-      requested to do so.  This allows servers with broken DNS be useful to
-      the network.
+      requested to do so.  This allows servers with broken DNS to
+      be useful to the network.
 
-  o Security Fixes, minor
+  o Security Fixes, minor:
     - If a client asked for a server by name, and we didn't have a
-      descriptor for a named server with that name, we might return an old
-      one.
+      descriptor for a named server with that name, we might return an
+      old one.
+    - Fix NetBSD bug that could allow someone to force uninitialized RAM
+      to be sent to a server's DNS resolver. This only affects NetBSD
+      and other platforms that do not bounds-check tolower().
 
-  o Major bugfixes
-    - When a client asks us to resolve (not connect to) an address,
-      and we have a cached answer, give them the cached answer.
-      Previously, we would give them no answer at all.
+  o Major bugfixes:
+    - Avoiding crashing on race condition in dns.c:
+      tor_assert(! resolve->expire)
+    - When a client asks the server to resolve (not connect to)
+      an address, and it has a cached answer, give them the cached answer.
+      Previously, the server would give them no answer at all.
 
-  o Minor Bugfixes
-    - Small performance improvements on parsing descriptors (x2).
-    - Major performance descriptor on inserting descriptors; change
+  o Minor Bugfixes:
+    - Two small performance improvements on parsing descriptors.
+    - Major performance improvement on inserting descriptors: change
       algorithm from O(n^2) to O(n).
     - Make the common memory allocation path faster on machines where
       malloc(0) returns a pointer.
     - Fix a debug log message in eventdns to say "X resolved to Y"
       instead of "X resolved to X".
-    - Prevent the 'exitlist' script from printing the same result more
-      than once.
-    - Build correctly for use on OS X platforms with case-sensitive
-      filesystems.
+    - Prevent the contrib/exitlist script from printing the same
+      result more than once.
+    - Resume building on non-gcc compilers and ancient gcc. Resume
+      building with the -O0 compile flag. Resume building cleanly on
+      Debian woody.
+    - Correct includes for net/if.h and net/pfvar.h on OpenBSD (from Tup).
+    - Improve Tor's chances of building and running on Cygwin again.
+    - If we're a directory mirror and we ask for "all" network status
+      documents, we would discard status documents from authorities
+      we don't recognize.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and
       ServerDNSResolvConfFile options.
+
+
+
+  o Packaging:
+    - Patches so Tor builds with MinGW on Windows.
+    - The Debian package now uses --verify-config when (re)starting,
+      to distinguish configuration errors from other errors.
+    - Update rpms to require libevent 1.1b.
+    - Remove architecture from OS X builds. The official builds are
+      now universal binaries.
+
+    - Make eventdns on-by-default.
+    - Divide eventdns log messages into warn and info messages.
+    - Add new config option "ResolvConf" to let the server operator
+      choose an alternate resolve.conf file.
+
+    - Allow really slow clients to not hang up five minutes into their
+      directory downloads (suggested by Adam J. Richter).
+    - Apply patch from Adam Langley: fix assert() in eventdns.c.
+    - Finally fix the openssl warnings with newer gccs that believe that
+      ignoring a return value is okay, but casting a return value and
+      then ignoring it is a sign of madness.
+    - Don't crash when the controller receives a third argument to an
+      "extendcircuit" request.
+    - Add a "getinfo address" controller command.
+    - Controller protocol fixes: fix encoding in "getinfo addr-mappings"
+      response; fix error code when "getinfo dir/status/" fails.
+    - Start remembering X-Your-Address-Is directory hints even if you're
+      a client, so you can become a server more smoothly.
+    - Avoid crash when telling controller stream-status and a stream
+      is detached.
+    - Avoid crashing when we mmap a router cache file of size 0.
+    - Avoid duplicate entries on MyFamily line in server descriptor.
+    - Patch from Steve Hildrey: Generate network status correctly on
+      non-versioning dirservers.
+    - Send out a burst of long-range drop cells after we've established
+      that we're reachable. Spread them over 4 circuits, so hopefully
+      a few will be fast. This exercises our bandwidth and bootstraps
+      us quicker.
+    - Remove 8888 as a long lived port, and add 6697 (ircs).
+
+    (stopped at r8478)
+
 
 Changes in version 0.1.2.1-alpha - 2006-08-27
   o Major features:

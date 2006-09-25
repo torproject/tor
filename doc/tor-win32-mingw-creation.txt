@@ -73,7 +73,7 @@ Type "make install"
 OR 
 
 Make zlib1.dll:
-Type "cd tor-mingw/zlib-1.2.3"/
+Type "cd tor-mingw/zlib-1.2.3/"
 Type "./configure"
 Type "make -f win32/Makefile.gcc"
 

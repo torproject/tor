@@ -525,8 +525,8 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
  * If resolve failed, unlink exitconn if needed, free it, and return -1.
  *
- * If <b>circ</b> is provided, and this is a resolve request, we have
- * a cached answer, send the answer back along circ; otherwise, send
+ * If <b>oncirc</b> is provided, and this is a resolve request, we have
+ * a cached answer, send the answer back along oncirc; otherwise, send
  * the answer back along <b>exitconn</b>'s attached circuit.
  *
  * Else, if seen before and pending, add conn to the pending list,
@@ -571,7 +571,7 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
 
   /* Check whether this is a reverse lookup.  If it's malformed, or it's a
    * .in-addr.arpa address but this isn't a resolve request, kill the
-   * connecction.
+   * connection.
    */
   if ((r = parse_inaddr_arpa_address(exitconn->_base.address, NULL)) != 0) {
     if (r == 1)
@@ -833,8 +833,8 @@ dns_cancel_pending_resolve(const char *address)
 }
 
 /** Helper: adds an entry to the DNS cache mapping <b>address</b> to the ipv4
- * address <b>addr</b> (if is_reverse is 0) or the hostname <b>hostname</b> if
- * (is_reverse is 1).  <b>ttl</b> is a cache ttl; <b>outcome</b> is one of
+ * address <b>addr</b> (if is_reverse is 0) or the hostname <b>hostname</b> (if
+ * is_reverse is 1).  <b>ttl</b> is a cache ttl; <b>outcome</b> is one of
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  **/
 static void
@@ -1727,15 +1727,15 @@ dns_launch_wildcard_checks(void)
   for (i = 0; i < N_WILDCARD_CHECKS; ++i) {
     /* RFC2606 reserves these.  Sadly, some DNS hijackers, in a silly attempt
      * to 'comply' with rfc2606, refrain from giving A records for these.
-     * This is the standards-complaince equivalent of making sure that your
+     * This is the standards-compliance equivalent of making sure that your
      * crackhouse's elevator inspection certificate is up to date.
      */
     launch_wildcard_check(2, 16, "%s.invalid");
     launch_wildcard_check(2, 16, "%s.test");
 
-    /* Thy somese will break specs if there are ever any number of
+    /* These will break specs if there are ever any number of
      * 8+-character top-level domains. */
-    launch_wildcard_check(8, 16,"");
+    launch_wildcard_check(8, 16, "");
 
     /* Try some random .com/org/net domains. This will work fine so long as
      * not too many resolve to the same place. */

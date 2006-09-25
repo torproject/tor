@@ -348,7 +348,9 @@ typedef enum {
 #define _DIR_PURPOSE_MAX 9
 
 #define _EXIT_PURPOSE_MIN 1
+/** This exit stream wants to do an ordinary connect. */
 #define EXIT_PURPOSE_CONNECT 1
+/** This exit stream wants to do a resolve (either normal or reverse). */
 #define EXIT_PURPOSE_RESOLVE 2
 #define _EXIT_PURPOSE_MAX 2
 
@@ -1575,10 +1577,10 @@ typedef struct {
                       * addresses to be FQDNs, but rather search for them in
                       * the local domains. */
   int ServerDNSDetectHijacking; /**< Boolean: If true, check for DNS failure
-                                 * hijacking */
+                                 * hijacking. */
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
                      * resolver from the file here rather than from
-                     * /etc/resolv.conf (unix) or the registry (windows) */
+                     * /etc/resolv.conf (Unix) or the registry (Windows). */
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

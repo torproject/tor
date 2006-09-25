@@ -47,10 +47,11 @@ Tor's extensions to the SOCKS protocol
   (We support RESOLVE in SOCKS4 too, even though it is unnecessary.)
 
   For SOCKS5 only, we support reverse resolution with a new command value,
-  "RESOLVE_PTR".  In response to a "RESOLVE_PTR" SOCKS5 command with an IPv4
-  address as its target, Tor attempts to find the canonical hostname for that
-  IPv4 record, and returns it in the "server bound address" portion of the
-  reply.  (This was not supported before Tor 0.1.2.2-alpha)
+  "RESOLVE_PTR" [F1]. In response to a "RESOLVE_PTR" SOCKS5 command with
+  an IPv4 address as its target, Tor attempts to find the canonical
+  hostname for that IPv4 record, and returns it in the "server bound
+  address" portion of the reply.
+  (This command was not supported before Tor 0.1.2.2-alpha.)
 
 3. HTTP-resistance
 

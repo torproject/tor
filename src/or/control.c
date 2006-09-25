@@ -1326,7 +1326,8 @@ list_getinfo_options(void)
 
 /** Lookup the 'getinfo' entry <b>question</b>, and return
  * the answer in <b>*answer</b> (or NULL if key not recognized).
- * Return 0 if success, or -1 if recognized but internal error. */
+ * Return 0 if success or unrecognized, or -1 if recognized but
+ * internal error. */
 static int
 handle_getinfo_helper(const char *question, char **answer)
 {
@@ -1572,7 +1573,7 @@ handle_getinfo_helper(const char *question, char **answer)
   } else if (!strcmpstart(question, "exit-policy/")) {
     return policies_getinfo_helper(question, answer);
   }
-  return 0;
+  return 0; /* unrecognized */
 }
 
 /** Called when we receive a GETINFO command.  Try to fetch all requested
