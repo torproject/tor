@@ -307,7 +307,8 @@ ht_string_hash(const char *s)
           elm = next;                                                   \
         }                                                               \
       }                                                                 \
-      freefn(head->hth_table);                                          \
+      if (head->hth_table)                                              \
+        freefn(head->hth_table);                                        \
       head->hth_table = new_table;                                      \
     } else {                                                            \
       unsigned b, b2;                                                   \
