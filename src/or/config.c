@@ -182,7 +182,7 @@ static config_var_t _option_vars[] = {
   VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
   VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
   VAR("LongLivedPorts",      CSV,      LongLivedPorts,
-                         "21,22,706,1863,5050,5190,5222,5223,6667,8300"),
+                         "21,22,706,1863,5050,5190,5222,5223,6667,6697,8300"),
   VAR("MapAddress",          LINELIST, AddressMap,           NULL),
   VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"128 TB"),
   VAR("MaxCircuitDirtiness", INTERVAL, MaxCircuitDirtiness,  "10 minutes"),
@@ -522,7 +522,7 @@ safe_str(const char *address)
     return address;
 }
 
-/** Equivalent to escaped(safe_str(address)).  See reentrancy node on
+/** Equivalent to escaped(safe_str(address)).  See reentrancy note on
  * escaped(): don't use this outside the main thread, or twice in the same
  * log statement. */
 const char *
