@@ -1569,7 +1569,8 @@ tor_free_all(int postfork)
   /* stuff in main.c */
   smartlist_free(closeable_connection_lst);
   tor_free(timeout_event);
-
+  /* Stuff in util.c */
+  escaped(NULL);
   if (!postfork) {
     close_logs(); /* free log strings. do this last so logs keep working. */
   }
