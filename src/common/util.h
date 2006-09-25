@@ -80,7 +80,7 @@ void _tor_free(void *mem);
 extern int dmalloc_free(const char *file, const int line, void *pnt,
                         const int func_id);
 #define tor_free(p) do { \
-    if (PREDICT((p)!=NULL, 1) {                     \
+    if (PREDICT((p)!=NULL, 1)) {                     \
       dmalloc_free(_SHORT_FILE_, __LINE__, (p), 0); \
       (p)=NULL;                                     \
     }                                               \
