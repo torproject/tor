@@ -1505,6 +1505,9 @@ routerlist_free_all(void)
     smartlist_free(routerstatus_list);
     routerstatus_list = NULL;
   }
+  if (named_server_map) {
+    strmap_free(named_server_map, _tor_free);
+  }
 }
 
 /** Free all storage held by the routerstatus object <b>rs</b>. */
