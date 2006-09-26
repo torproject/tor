@@ -1204,7 +1204,7 @@ evdns_request_data_build(const char *const name, const int name_len, const u16 t
 		free(labels);
 		return labels_len;
 	}
-	if (j + labels_len > buf_len) {
+	if ((size_t)(j + labels_len) > buf_len) {
 		free(labels);
 		return (-1);
 	}
