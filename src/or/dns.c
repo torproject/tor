@@ -861,8 +861,13 @@ add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
   strlcpy(resolve->address, address, sizeof(resolve->address));
   resolve->is_reverse = is_reverse;
   if (is_reverse) {
-    tor_assert(hostname);
-    resolve->result.hostname = tor_strdup(hostname);
+    if (outcome == DNS_RESOLVE_SUCCEEDED) {
+      tor_assert(hostname);
+      resolve->result.hostname = tor_strdup(hostname);
+    } else {
+      tor_assert(! hostname);
+      resolve->result.hostname = NULL;
+    }
   } else {
     tor_assert(!hostname);
     resolve->result.addr = addr;
