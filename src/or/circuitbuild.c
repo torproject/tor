@@ -1732,15 +1732,17 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   char buf[HEX_DIGEST_LEN+1];
   int changed = 0;
 
+  tor_assert(options);
+
   /* Do we want to mark this guard as bad? */
   if (!ri)
     reason = "unlisted";
   else if (!ri->is_running)
     reason = "down";
-  else if (!ri->is_possible_guard)
+  else if (!ri->is_possible_guard &&
+           !router_nickname_is_in_list(ri, options->EntryNodes))
     reason = "not recommended as a guard";
-  else if (options && ri &&
-           router_nickname_is_in_list(ri, options->ExcludeNodes))
+  else if (router_nickname_is_in_list(ri, options->ExcludeNodes))
     reason = "excluded";
 
   if (reason && ! e->bad_since) {
