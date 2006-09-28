@@ -1313,6 +1313,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
            (unsigned long)stable_uptime);
   log_info(LD_DIRSERV, "Bandwidth cutoff is %lu bytes.",
            (unsigned long)fast_bandwidth);
+  log_info(LD_DIRSERV, "Guard bandwidth cutoff is %lu bytes.",
+           (unsigned long)guard_bandwidth);
 
   SMARTLIST_FOREACH(uptimes, uint32_t *, up, tor_free(up));
   SMARTLIST_FOREACH(bandwidths, uint32_t *, bw, tor_free(bw));
