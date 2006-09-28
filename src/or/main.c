@@ -1036,6 +1036,7 @@ second_elapsed_callback(int fd, short event, void *args)
             "Error from libevent when setting one-second timeout event");
 }
 
+#ifndef MS_WINDOWS
 /** Called when a possibly ignorable libevent error occurs; ensures that we
  * don't get into an infinite loop by ignoring too many errors from
  * libevent. */
@@ -1048,6 +1049,7 @@ got_libevent_error(void)
   }
   return 0;
 }
+#endif
 
 /** Called when we get a SIGHUP: reload configuration files and keys,
  * retry all connections, re-upload all descriptors, and so on. */

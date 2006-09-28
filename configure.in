@@ -403,7 +403,9 @@ AC_SYS_LARGEFILE
 
 dnl The warning message here is no longer strictly accurate.
 
-AC_CHECK_HEADERS(unistd.h string.h signal.h netdb.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/ioctl.h sys/socket.h sys/time.h netinet/in.h arpa/inet.h errno.h assert.h time.h pwd.h grp.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+AC_CHECK_HEADERS(unistd.h string.h signal.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/time.h errno.h assert.h time.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+
+AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h)
 
 AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. Tor requires libevent to build.),
 [#ifdef HAVE_SYS_TYPES_H
@@ -501,6 +503,7 @@ AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(__int64)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(time_t)
+AC_CHECK_SIZEOF(size_t)
 
 AC_CHECK_TYPES([uint, u_char])
 

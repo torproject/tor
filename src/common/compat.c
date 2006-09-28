@@ -185,7 +185,11 @@ tor_mmap_file(const char *filename)
   res->mmap_handle = CreateFileMapping(res->file_handle,
                                        NULL,
                                        PAGE_READONLY,
+#if SIZEOF_SIZE_T > 4
                                        (res->base.size >> 32),
+#else
+                                       0,
+#endif
                                        (res->base.size & 0xfffffffful),
                                        NULL);
   if (res->mmap_handle != INVALID_HANDLE_VALUE)
