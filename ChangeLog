@@ -27,6 +27,10 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       directory authorities don't think it's a good guard, treat it as if it
       were unlisted: stop using it as a guard, and throw it off the guards
       list if it stays that way for a long time.
+    - Allow directory authorities to be marked separately as authorities for
+      the v1 directory protocol, the v2 directory protocol, and as hidden
+      service directories.  This should make it easier to migrate trust away
+      from one of the two authorities currently running on Moria.
 
   o Security Fixes, minor:
     - If a client asked for a server by name, and we didn't have a

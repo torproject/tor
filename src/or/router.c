@@ -361,8 +361,10 @@ init_keys(void)
   crypto_pk_get_digest(get_identity_key(), digest);
   if (!router_digest_is_trusted_dir(digest)) {
     add_trusted_dir_server(options->Nickname, NULL,
-                           (uint16_t)options->DirPort, digest,
-                           options->V1AuthoritativeDir);
+                          (uint16_t)options->DirPort, digest,
+                          options->V1AuthoritativeDir, /* v1 authority */
+                          1, /* v2 authority */
+                          options->V1AuthoritativeDir /* hidserv authority */);
   }
   return 0; /* success */
 }

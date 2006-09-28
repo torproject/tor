@@ -98,14 +98,19 @@ security. (Default: 0)
 Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 .LP
 .TP
-\fBDirServer \fR[\fInickname\fR] [\fBv1\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
+\fBDirServer \fR[\fInickname\fR] [\fBflags\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
 Use a nonstandard authoritative directory server at the provided
 address and port, with the specified key fingerprint.  This option can
 be repeated many times, for multiple authoritative directory
-servers.  If the "v1" option is provided, Tor will use this server as an
+servers.  Flags are separated by spaces, and determine what kind of an
+authority this directory is.  By default, every authority is authoritative
+for current ("v2")-style directories, unless the "no-v2" flag is given.  If the "v1" flags is provided, Tor will use this server as an
 authority for old-style (v1) directories as well.  (Only directory mirrors
-care about this.) If no \fBdirserver\fP line is given, Tor will use the default
-directory servers: moria1, moria2, and tor26.  NOTE: this option is intended
+care about this.)  Tor will use this server as an authority for hidden
+service information if the "hs" flag is set, or if the "v1" flag is set and
+the "no-hs" flag is \fBnot\fP set.
+If no \fBdirserver\fP line is given, Tor will use the default
+directory servers.  NOTE: this option is intended
 for setting up a private Tor network with its own directory authorities.  If
 you use it, you will be distinguishable from other users, because you won't
 believe the same authorities they do.

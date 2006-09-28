@@ -90,19 +90,22 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
 {
   smartlist_t *dirservers;
   int post_via_tor;
-  int post_to_v1_only;
+  int post_to_hidserv_only;
 
   dirservers = router_get_trusted_dir_servers();
   tor_assert(dirservers);
   /* Only old dirservers handle rendezvous descriptor publishing. */
-  post_to_v1_only = (purpose == DIR_PURPOSE_UPLOAD_RENDDESC);
+  post_to_hidserv_only = (purpose == DIR_PURPOSE_UPLOAD_RENDDESC);
   /* This tries dirservers which we believe to be down, but ultimately, that's
    * harmless, and we may as well err on the side of getting things uploaded.
    */
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
       routerstatus_t *rs = &(ds->fake_status);
-      if (post_to_v1_only && !ds->is_v1_authority)
+      if (post_to_hidserv_only && !ds->is_hidserv_authority)
+        continue;
+      if (!post_to_hidserv_only &&
+          !(ds->is_v1_authority || ds->is_v2_authority))
         continue;
       post_via_tor = purpose_is_private(purpose) ||
               !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
@@ -124,26 +127,37 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   or_options_t *options = get_options();
   int prefer_authority = server_mode(options) && options->DirPort != 0;
   int directconn = !purpose_is_private(purpose);
+  authority_type_t type;
 
-  int need_v1_support = purpose == DIR_PURPOSE_FETCH_DIR ||
-                        purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
-                        purpose == DIR_PURPOSE_FETCH_RENDDESC;
-  int need_v2_support = purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
-                        purpose == DIR_PURPOSE_FETCH_SERVERDESC;
+  switch (purpose) {
+    case DIR_PURPOSE_FETCH_NETWORKSTATUS:
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+      type = V2_AUTHORITY;
+      break;
+    case DIR_PURPOSE_FETCH_DIR:
+    case DIR_PURPOSE_FETCH_RUNNING_LIST:
+      type = V1_AUTHORITY;
+      break;
+    case DIR_PURPOSE_FETCH_RENDDESC:
+      type = HIDSERV_AUTHORITY;
+      break;
+    default:
+      log_warn(LD_BUG, "Unexpected purpose %d", (int)purpose);
+      return;
+  }
 
-  if (!options->FetchServerDescriptors &&
-      (need_v1_support || need_v2_support))
+  if (!options->FetchServerDescriptors && type != HIDSERV_AUTHORITY)
     return;
 
   if (directconn) {
     if (prefer_authority) {
       /* only ask authdirservers, and don't ask myself */
-      rs = router_pick_trusteddirserver(need_v1_support, 1, 1,
+      rs = router_pick_trusteddirserver(type, 1, 1,
                                         retry_if_no_servers);
     }
     if (!rs) {
       /* anybody with a non-zero dirport will do */
-      rs = router_pick_directory_server(1, 1, need_v2_support,
+      rs = router_pick_directory_server(1, 1, type==V2_AUTHORITY,
                                         retry_if_no_servers);
       if (!rs) {
         const char *which;
@@ -158,7 +172,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
         log_info(LD_DIR,
                  "No router found for %s; falling back to dirserver list",
                  which);
-        rs = router_pick_trusteddirserver(need_v1_support, 1, 1,
+        rs = router_pick_trusteddirserver(type, 1, 1,
                                           retry_if_no_servers);
         if (!rs)
           directconn = 0; /* last resort: try routing it via Tor */
@@ -169,10 +183,11 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
     /* Never use fascistfirewall; we're going via Tor. */
     if (purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask authdirservers, any of them will do */
-      rs = router_pick_trusteddirserver(1, 0, 0, retry_if_no_servers);
+      rs = router_pick_trusteddirserver(HIDSERV_AUTHORITY, 0, 0,
+                                        retry_if_no_servers);
     } else {
       /* anybody with a non-zero dirport will do. Disregard firewalls. */
-      rs = router_pick_directory_server(1, 0, need_v2_support,
+      rs = router_pick_directory_server(1, 0, type == V2_AUTHORITY,
                                         retry_if_no_servers);
       /* If we have any hope of building an indirect conn, we know some router
        * descriptors.  If (rs==NULL), we can't build circuits anyway, so

@@ -35,13 +35,16 @@ x - If the client's clock is too far in the past, it will drop (or
       D The right thing here is to revamp our node selection implementation.
         (Deferred until oprofile says this matters.)
     o make it configurable, so people can turn it on or off.
+N - Test guard unreachable logic; make sure that we actually attempt to
+    connect to guards that we think are unreachable from time to time.
+    Make sure that we don't freak out when the network is down.
 N - Clients stop dumping old descriptors if the network-statuses
     claim they're still valid.
 R . If we fail to connect via an exit enclave, (warn and) try again
     without demanding that exit node.
     - And recognize when extending to the enclave node is failing,
       so we can abandon then too.
-N - We need a separate list of "hidserv authorities" if we want to
+  o We need a separate list of "hidserv authorities" if we want to
     retire moria1 from the main list.
 P - Figure out why dll's compiled in mingw don't work right in Winxp.
 P - Figure out why openssl 0.9.8c "make test" fails at sha256t test.
@@ -57,6 +60,12 @@ R   - Actually list all the events (notice and warn log messages are a good
       place to look.)  Divide messages into categories, perhaps.
 N   - Specify general event system
 R   - Specify actual events.
+
+N - Have (and document) a BEGIN_DIR relay cell that means "Connect to your
+    directory port."
+    - Specify
+    - Implement
+    - Use for something, so we can be sure it works.
 
 x - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness

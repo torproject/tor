@@ -2506,8 +2506,14 @@ typedef struct trusted_dir_server_t {
   char digest[DIGEST_LEN]; /**< Digest of identity key */
   unsigned int is_running:1; /**< True iff we think this server is running. */
   /** True iff this server is an authority for the older ("v1") directory
-   * protocol.  (All authorities are v2 authorities.) */
+   * protocol. */
   unsigned int is_v1_authority:1;
+  /** True iff this server is an authority for the newer ("v2") directory
+   * protocol. */
+  unsigned int is_v2_authority:1;
+  /** True iff this server is an authority for hidden services */
+  unsigned int is_hidserv_authority:1;
+
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
@@ -2524,7 +2530,10 @@ routerstatus_t *router_pick_directory_server(int requireother,
                                              int fascistfirewall,
                                              int for_v2_directory,
                                              int retry_if_no_servers);
-routerstatus_t *router_pick_trusteddirserver(int need_v1_authority,
+typedef enum {
+  V1_AUTHORITY, V2_AUTHORITY, HIDSERV_AUTHORITY,
+} authority_type_t;
+routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
                                              int requireother,
                                              int fascistfirewall,
                                              int retry_if_no_servers);
@@ -2592,7 +2601,8 @@ int router_exit_policy_rejects_all(routerinfo_t *router);
 
 void add_trusted_dir_server(const char *nickname,
                             const char *address, uint16_t port,
-                            const char *digest, int is_v1_authority);
+                            const char *digest, int is_v1_authority,
+                            int is_v2_authority, int is_hidserv_authority);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);

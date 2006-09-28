@@ -22,7 +22,7 @@ static routerstatus_t *router_pick_directory_server_impl(int requireother,
                                                          int fascistfirewall,
                                                          int for_v2_directory);
 static routerstatus_t *router_pick_trusteddirserver_impl(
-                 int need_v1_authority, int requireother, int fascistfirewall);
+                 authority_type_t type, int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void routerstatus_list_update_from_networkstatus(time_t now);
@@ -96,6 +96,19 @@ static int have_warned_about_old_version = 0;
 /** True iff we have logged a warning about this OR's version being newer than
  * listed by the authorities  */
 static int have_warned_about_new_version = 0;
+
+/** Return the number of v2 directory authorities */
+static INLINE int
+get_n_v2_authorities(void)
+{
+  int n = 0;
+  if (!trusted_dir_servers)
+    return 0;
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+                    if (ds->is_v2_authority)
+                      ++n);
+  return n;
+}
 
 /** Repopulate our list of network_status_t objects from the list cached on
  * disk.  Return 0 on success, -1 on failure. */
@@ -465,14 +478,14 @@ router_get_trusteddirserver_by_digest(const char *digest)
  * Other args are as in router_pick_trusteddirserver_impl().
  */
 routerstatus_t *
-router_pick_trusteddirserver(int need_v1_authority,
+router_pick_trusteddirserver(authority_type_t type,
                              int requireother,
                              int fascistfirewall,
                              int retry_if_no_servers)
 {
   routerstatus_t *choice;
 
-  choice = router_pick_trusteddirserver_impl(need_v1_authority,
+  choice = router_pick_trusteddirserver_impl(type,
                                              requireother, fascistfirewall);
   if (choice || !retry_if_no_servers)
     return choice;
@@ -480,7 +493,7 @@ router_pick_trusteddirserver(int need_v1_authority,
   log_info(LD_DIR,
            "No trusted dirservers are reachable. Trying them all again.");
   mark_all_trusteddirservers_up();
-  return router_pick_trusteddirserver_impl(need_v1_authority,
+  return router_pick_trusteddirserver_impl(type,
                                            requireother, fascistfirewall);
 }
 
@@ -540,7 +553,7 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
  * system.
  */
 static routerstatus_t *
-router_pick_trusteddirserver_impl(int need_v1_authority,
+router_pick_trusteddirserver_impl(authority_type_t type,
                                   int requireother, int fascistfirewall)
 {
   smartlist_t *sl;
@@ -555,7 +568,11 @@ router_pick_trusteddirserver_impl(int need_v1_authority,
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
     {
       if (!d->is_running) continue;
-      if (need_v1_authority && !d->is_v1_authority)
+      if (type == V1_AUTHORITY && !d->is_v1_authority)
+        continue;
+      if (type == V2_AUTHORITY && !d->is_v2_authority)
+        continue;
+      if (type == HIDSERV_AUTHORITY && !d->is_hidserv_authority)
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
@@ -1310,9 +1327,7 @@ dump_routerlist_mem_usage(int severity)
 static int
 max_descriptors_per_router(void)
 {
-  int n_authorities = 0;
-  if (trusted_dir_servers)
-    n_authorities = smartlist_len(trusted_dir_servers);
+  int n_authorities = get_n_v2_authorities();
   return (n_authorities < 5) ? 5 : n_authorities;
 }
 
@@ -2219,7 +2234,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   }
   base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
   if (!(trusted_dir =
-        router_get_trusteddirserver_by_digest(ns->identity_digest))) {
+        router_get_trusteddirserver_by_digest(ns->identity_digest))
+      || !trusted_dir->is_v2_authority) {
     log_info(LD_DIR, "Network status was signed, but not by an authoritative "
              "directory we recognize.");
     if (!get_options()->DirPort) {
@@ -2536,6 +2552,8 @@ update_networkstatus_cache_downloads(time_t now)
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
        {
          char resource[HEX_DIGEST_LEN+6]; /* fp/hexdigit.z\0 */
+         if (!ds->is_v2_authority)
+           continue;
          if (router_digest_is_me(ds->digest))
            continue;
          if (connection_get_by_type_addr_port_purpose(
@@ -2594,17 +2612,19 @@ update_networkstatus_client_downloads(time_t now)
    * *one* if the most recent one's publication time is under
    * NETWORKSTATUS_CLIENT_DL_INTERVAL.
    */
-  if (!trusted_dir_servers || !smartlist_len(trusted_dir_servers))
+  if (!get_n_v2_authorities())
     return;
-  n_dirservers = n_running_dirservers = smartlist_len(trusted_dir_servers);
+  n_dirservers = n_running_dirservers = 0;
   missing = smartlist_create();
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
        networkstatus_t *ns = networkstatus_get_by_digest(ds->digest);
-       if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
-         --n_running_dirservers;
+       if (!ds->is_v2_authority)
          continue;
-       }
+       ++n_dirservers;
+       if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES)
+         continue;
+       ++n_running_dirservers;
        if (ns && ns->published_on > now-NETWORKSTATUS_MAX_AGE)
          ++n_live;
        else
@@ -2649,6 +2669,8 @@ update_networkstatus_client_downloads(time_t now)
       if (i >= n_dirservers)
         i = 0;
       ds = smartlist_get(trusted_dir_servers, i);
+      if (! ds->is_v2_authority)
+        continue;
       if (n_failed < n_dirservers &&
           ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
         ++n_failed;
@@ -2726,7 +2748,8 @@ router_exit_policy_rejects_all(routerinfo_t *router)
  * <b>address</b> is NULL, add ourself. */
 void
 add_trusted_dir_server(const char *nickname, const char *address,
-                       uint16_t port, const char *digest, int is_v1_authority)
+                       uint16_t port, const char *digest, int is_v1_authority,
+                       int is_v2_authority, int is_hidserv_authority)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
@@ -2760,6 +2783,8 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->dir_port = port;
   ent->is_running = 1;
   ent->is_v1_authority = is_v1_authority;
+  ent->is_v2_authority = is_v2_authority;
+  ent->is_hidserv_authority = is_hidserv_authority;
   memcpy(ent->digest, digest, DIGEST_LEN);
 
   dlen = 64 + strlen(hostname) + (nickname?strlen(nickname):0);
@@ -3115,8 +3140,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
   if (!warned_conflicts)
     warned_conflicts = smartlist_create();
 
-  n_trusted = smartlist_len(trusted_dir_servers);
   n_statuses = smartlist_len(networkstatus_list);
+  n_trusted = get_n_v2_authorities();
 
   if (n_statuses <= n_trusted/2) {
     /* Not enough statuses to adjust status. */
@@ -3620,8 +3645,8 @@ update_router_descriptor_client_downloads(time_t now)
     return;
   }
 
-  if (networkstatus_list && smartlist_len(networkstatus_list) <=
-                            smartlist_len(trusted_dir_servers)/2) {
+  if (networkstatus_list &&
+      smartlist_len(networkstatus_list) <= get_n_v2_authorities()/2) {
     log_info(LD_DIR,
              "Not enough networkstatus documents to launch requests.");
   }
@@ -3859,7 +3884,7 @@ update_router_have_minimum_dir_info(void)
     res = 0;
     goto done;
   }
-  n_authorities = smartlist_len(trusted_dir_servers);
+  n_authorities = get_n_v2_authorities();
   n_ns = smartlist_len(networkstatus_list);
   if (n_ns<=n_authorities/2) {
     log_info(LD_DIR,
@@ -3904,6 +3929,8 @@ have_tried_downloading_all_statuses(int n_failures)
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
     {
+      if (!ds->is_v2_authority)
+        continue;
       /* If we don't have the status, and we haven't failed to get the status,
        * we haven't tried to get the status. */
       if (!networkstatus_get_by_digest(ds->digest) &&

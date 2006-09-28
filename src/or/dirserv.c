@@ -1025,7 +1025,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
       digestmap_iter_get(iter, &ident, &val);
       d = val;
       if (d->published < oldest_published &&
-          !router_get_trusteddirserver_by_digest(ident)) {
+          !router_digest_is_trusted_dir(ident)) {
         oldest = ident;
         oldest_published = d->published;
       }

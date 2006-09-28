@@ -3244,7 +3244,8 @@ parse_dir_server_line(const char *line, int validate_only)
   char *addrport=NULL, *address=NULL, *nickname=NULL, *fingerprint=NULL;
   uint16_t port;
   char digest[DIGEST_LEN];
-  int is_v1_authority = 0;
+  int is_v1_authority = 0, is_hidserv_authority = 0,
+    is_not_hidserv_authority = 0, is_v2_authority = 1;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
@@ -3260,12 +3261,28 @@ parse_dir_server_line(const char *line, int validate_only)
     smartlist_del_keeporder(items, 0);
   }
 
-  if (!strcmp(smartlist_get(items, 0), "v1")) {
-    char *v1 = smartlist_get(items, 0);
-    tor_free(v1);
-    is_v1_authority = 1;
+  while (smartlist_len(items)) {
+    char *flag = smartlist_get(items, 0);
+    if (TOR_ISDIGIT(flag[0]))
+      break;
+    if (!strcasecmp(flag, "v1")) {
+      is_v1_authority = is_hidserv_authority = 1;
+    } else if (!strcasecmp(flag, "hs")) {
+      is_hidserv_authority = 1;
+    } else if (!strcasecmp(flag, "no-hs")) {
+      is_not_hidserv_authority = 1;
+    } else if (!strcasecmp(flag, "no-v2")) {
+      is_v2_authority = 0;
+    } else {
+      log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirServer line",
+               flag);
+    }
+    tor_free(flag);
     smartlist_del_keeporder(items, 0);
   }
+
+  if (is_not_hidserv_authority)
+    is_hidserv_authority = 0;
 
   if (smartlist_len(items) < 2) {
     log_warn(LD_CONFIG, "Too few arguments to DirServer line.");
@@ -3295,7 +3312,9 @@ parse_dir_server_line(const char *line, int validate_only)
   if (!validate_only) {
     log_debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address, (int)port,
               (char*)smartlist_get(items,1));
-    add_trusted_dir_server(nickname, address, port, digest, is_v1_authority);
+    add_trusted_dir_server(nickname, address, port, digest, is_v1_authority,
+                           is_v2_authority, is_hidserv_authority);
+
   }
 
   r = 0;
