@@ -1025,7 +1025,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     } else {
       /* Can we even end up here? -- weasel*/
       source = NS_FROM_DIR_BY_FP;
-      log_warn(LD_BUG, "we received a networkstatus but we didn't ask"
+      log_warn(LD_BUG, "we received a networkstatus but we didn't ask "
                        "for it by fp/ nor did we ask for all.");
     }
     cp = body;
