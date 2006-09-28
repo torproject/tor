@@ -33,7 +33,8 @@ typedef struct {
   time_t unreachable_since; /**< 0 if we can connect to this guard, or the
                              * time at which we first noticed we couldn't
                              * connect to it. */
-  time_t last_attempted;
+  time_t last_attempted; /**< 0 if we can connect to this guard, or the time
+                          * at which we last failed to connect to it. */
 } entry_guard_t;
 
 /** A list of our chosen entry guards. */
@@ -1719,7 +1720,10 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
   return state->chosen_exit->nickname;
 }
 
-/** DOCDOC */
+/** Check whether the entry guard <b>e</b> is usable, given the directory
+ * authorities' opinion about the rouer (stored in <b>ri</b>) and the user's
+ * configuration (in <b>options</b>).  Set <b>e</b>-&gt;bad_since
+ * accordingly. Return true iff the entry guard's status changs.*/
 static int
 entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
                        or_options_t *options)
@@ -1760,7 +1764,8 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   return changed;
 }
 
-/** DOCDOC */
+/** Return true iff enought time has passed since we last tried connect to the
+ * unreachable guard <b>e</b> that we're willing to try again. */
 static int
 entry_is_time_to_retry(entry_guard_t *e, time_t now)
 {
@@ -1786,7 +1791,8 @@ entry_is_time_to_retry(entry_guard_t *e, time_t now)
  * - Listed as 'stable' or 'fast' by the current dirserver concensus,
  *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>; and
  * - Allowed by our current ReachableAddresses config option.
- * DOCDOC assume_reachable.
+ * - Currently thought to be reachable by us (unless assume_reachable
+ *   is true).
  */
 static INLINE routerinfo_t *
 entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
@@ -1837,6 +1843,8 @@ is_an_entry_guard(char *digest)
   return 0;
 }
 
+/** Dump a description of our list of entry guards to the log at level
+ * <b>severity</b> */
 static void
 log_entry_guards(int severity)
 {
@@ -2115,6 +2123,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded)
  * config's EntryNodes first? */
 static int should_add_entry_nodes = 0;
 
+/** Called when the value of EntryNodes changes in our configuration. */
 void
 entry_nodes_should_be_added(void)
 {
@@ -2122,6 +2131,8 @@ entry_nodes_should_be_added(void)
   should_add_entry_nodes = 1;
 }
 
+/** Add all nodes in EntryNodes that aren't currently guard nodes to the list
+ * of guard nodes, at the front. */
 void
 entry_guards_prepend_from_config(void)
 {

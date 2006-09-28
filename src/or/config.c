@@ -317,9 +317,9 @@ static config_var_description_t state_description[] = {
 
   { "EntryGuard", "One of the nodes we have chosen as a fixed entry" },
   { "EntryGuardDownSince",
-    "The last entry guard has been down since this time." },
+    "The last entry guard has been unreachable since this time." },
   { "EntryGuardUnlistedSince",
-    "The last entry guard has been unlisted since this time." },
+    "The last entry guard has been unusable since this time." },
   { "LastWritten", "When was this state file last regenerated?" },
 
   { "TorVersion", "Which version of Tor generated this state file?" },
