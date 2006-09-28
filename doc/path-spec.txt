@@ -22,13 +22,14 @@ should cover, but not an exhaustive list.  -NM
    Tor begins building circuits as soon as it has enough directory
    information to do so (see section 5.1 of dir-spec.txt).  Some circuits are
    built preemptively because we expect to need them later (for user
-   traffic), and some are build because of immediate need (for user traffic
+   traffic), and some are built because of immediate need (for user traffic
    that no current circuit can handle, for testing the network or our
-   availability, and so on).
+   reachability, and so on).
 
    When a client application creates a new stream (by opening a SOCKS
    connection or launching a resolve request), we attach it to an appropriate
-   open (or in-progress) circuit if one exists, and launch a new circuit only
+   open circuit if one exists, or wait if one is in-progress. We launch
+   a new circuit only
    if no current circuit can handle the request.  We rotate circuits over
    time to avoid some profiling attacks.
 
@@ -56,10 +57,6 @@ should cover, but not an exhaustive list.  -NM
    A "path" is an ordered sequence of nodes, not yet built as a circuit.
 
    A "clean" circuit is one that has not yet been used for any traffic.
-
-   A "stable" node is one that we believe to have the 'Stable' flag set on
-   the basis of our current directory information.  A "stable" circuit is one
-   that consists entirely of "stable" nodes.
 
    A "fast" or "stable" node is one that we believe to have the 'Fast' or
    'Stable' flag set on the basis of our current directory information.  A
@@ -93,7 +90,7 @@ should cover, but not an exhaustive list.  -NM
    Additionally, when a client request exists that no circuit (built or
    pending) might support, we cannibalize an existing circuit (2.1.4) or
    create a new circuit to support the request.  We do so by picking a
-   request at random, building or cannibalizing a circuit to support it, and
+   request arbitrarily, building or cannibalizing a circuit to support it, and
    repeating until every unattached request might be supported by a pending
    or built circuit.
 
@@ -101,17 +98,20 @@ should cover, but not an exhaustive list.  -NM
 
 2.1.2. When servers build circuits
 
+   At start and whenever the IP address changes, for testing reachability
+   of their ORPort.
    XXXX
 
-2.1.3. When authorities build circuits
+2.1.3. When directory authorities build circuits
 
+   There are no authority-specific circuits, I think.
    XXXX
 
 2.1.4. Hidden-service circuits
 
    See section 4 below.
 
-2.1.4. Cannibalizing circuits
+2.1.5. Cannibalizing circuits
 
    When Tor has a request (either an unattached stream or unattached resolve
    request) that no current circuit can support, it looks for an existing
@@ -123,7 +123,12 @@ should cover, but not an exhaustive list.  -NM
    might support a stream, we begin building a new circuit that might support
    the stream.
 
-   [XXXX always? really?]
+2.1.6. Rate limiting of failed circuits
+
+   If we fail to build a circuit N times in a X second period (see Section
+   2.3 for how this works), we stop building circuits until the X seconds
+   have elapsed.
+   XXX
 
 2.2. Path selection and constraints
 
@@ -132,16 +137,19 @@ should cover, but not an exhaustive list.  -NM
    we generate obey the following constraints:
      - We do not choose the same router twice for the same path.
      - We do not choose any router in the same family as another in the same
-       circuit.
+       path.
      - We do not choose any router in the same /16 subnet as another in the
-       same circuit.
+       same path.
      - We don't choose any non-running or non-valid router unless we have
-       been configured to do so.
+       been configured to do so. By default, we are configured to allow
+       non-valid routers in "middle" and "rendezvous" positions.
      - If we're using Guard nodes, the first node must be a Guard (see 5
        below)
      - XXXX Choosing the length
 
-   When choosing among multiple candidates for a path element, we choose
+   For circuits that are not "fast", when choosing among multiple
+   candidates for a path element, we choose randomly. For "fast" circuits,
+   we choose
    a given router with probability proportional to its advertised bandwidth
    [the smaller of the 'rate' and 'observed' arguments to the "bandwidth"
    element in its descriptor].  If a router's advertised bandwidth is greater
@@ -157,12 +165,12 @@ should cover, but not an exhaustive list.  -NM
      - All connection requests for connections that we think will need to
        stay open a long time require Stable circuits.  Currently, Tor decides
        this by examining the request's target port, and comparing it to a
-       list of "long-lived" ports. (Default: 21, 22, 706, 1863, 5050, 5190,
-       5222, 5223, 6667, 8300, 8888.)
+       list of "long-lived" ports. (Default: 21, 22, 706, 1863, 5050,
+       5190, 5222, 5223, 6667, 6697, 8300.)
      - DNS resolves require an exit node whose exit policy is not equivalent
        to "reject *:*".
      - Reverse DNS resolves require a version of Tor with advertised eventdns
-       support, running 0.1.2.1-alpha-dev or later.
+       support (available in Tor 0.1.2.1-alpha-dev and later).
      - All connection requests require an exit node whose exit policy
        supports their target address and port (if known), or which "might
        support it" (if the address isn't known).  See 2.2.1.
@@ -170,8 +178,9 @@ should cover, but not an exhaustive list.  -NM
 
 2.2.1. Choosing an exit
 
-   If we know what IP we want to resolve, we can trivially tell whether a
-   given router will support it by simulating its declared exit policy.
+   If we know what IP address we want to resolve, we can trivially tell
+   whether a given router will support it by simulating its declared
+   exit policy.
 
    Because we often connect to addresses of the form hostname:port, we do not
    always know the target IP address when we select an exit node.  In these
@@ -190,7 +199,7 @@ should cover, but not an exhaustive list.  -NM
      and StrictExitNodes is false, then Tor treats that request as if
      ExitNodes were not provided.)
 
-   - "EntryNodes" and "StrictEntryNodes" behave analagously.
+   - "EntryNodes" and "StrictEntryNodes" behave analogously.
 
    - If a user tries to connect to or resolve a hostname of the form
      <target>.<servername>.exit, the request is rewritten to a request for
@@ -205,9 +214,10 @@ should cover, but not an exhaustive list.  -NM
    supported by the pending circuit thus become unsupported, and a new
    circuit needs to be constructed.
 
-   If we fail to being a circuit with an EXITPOLICY error, we decide that the
-   exit node's exit policy is not correctly advertised, so we treat the exit
-   node as if it were a non-exit until we retrieve a fresh descriptor for it.
+   If a stream "begin" attempt fails with an EXITPOLICY error, we
+   decide that the exit node's exit policy is not correctly advertised,
+   so we treat the exit node as if it were a non-exit until we retrieve
+   a fresh descriptor for it.
 
    XXXX
 
@@ -216,11 +226,11 @@ should cover, but not an exhaustive list.  -NM
    A Tor client tracks how much time has passed since it last received a
    request for a connection on each port.  (For the purposes of this section,
    requests for hostname resolves are considered requests to a separate
-   port).  Tor forgets about ports that haven't been used for an hour
-   [PREDICTED_CIRCS_RELEVANCE_TIME].
+   "special" port).  Tor forgets about ports that haven't been used for
+   an hour [PREDICTED_CIRCS_RELEVANCE_TIME].
 
    The ports that have been used in the last hour are considered "predicted",
-   and Tor will try to maintain a clean circuits to them as described in 2.1.
+   and Tor will try to maintain a clean circuit to them as described in 2.1.
 
    For bootstrapping purposes, port 80 is treated as used at startup time.
 
@@ -234,14 +244,14 @@ should cover, but not an exhaustive list.  -NM
    considers the reason given in the CLOSE relay cell. [XXX yes, and?]
 
 
-   After a request has remained unattached for [XXXX retries? interval?], Tor
+   After a request has remained unattached for [XXXX interval?], Tor
    abandons the attempt and signals an error to the client as appropriate
    (e.g., by closing the SOCKS connection).
 
    XXX Timeouts and when Tor auto-retries.
     * What stream-end-reasons are appropriate for retrying.
 
-   XXX What if no reply to BEGIN/RESOLVE?
+   If no reply to BEGIN/RESOLVE, then the stream will timeout and fail.
 
 4. Hidden-service related circuits
 
@@ -257,24 +267,6 @@ should cover, but not an exhaustive list.  -NM
 
 
 (From some emails by arma)
-
-Hi folks,
-
-I've gotten the codebase to the point that I'm going to start trying
-to make helper nodes work well. With luck they will be on by default in
-the final 0.1.1.x release.
-
-For background on helper nodes, read
-http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#RestrictedEntry
-
-First order of business: the phrase "helper node" sucks. We always have
-to define it after we say it to somebody. Nick likes the phrase "contact
-node", because they are your point-of-contact into the network. That is
-better than phrases like "bridge node". The phrase "fixed entry node"
-doesn't seem to work with non-math people, because they wonder what was
-broken about it. I'm sort of partial to the phrase "entry node" or maybe
-"restricted entry node". In any case, if you have ideas on names, please
-mail me off-list and I'll collate them.
 
 Right now the code exists to pick helper nodes, store our choices to
 disk, and use them for our entry nodes. But there are three topics
