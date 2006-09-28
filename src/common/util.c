@@ -910,6 +910,10 @@ format_iso_time(char *buf, time_t t)
   strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_gmtime_r(&t, &tm));
 }
 
+/** Given an ISO-formatted UTC time value (after the epoch) in <b>cp</b>,
+ * parse it and store its value in *<b>t</b>.  Return 0 on success, -1 on
+ * failure.  Ignore extraneous stuff in <b>cp</b> separated by whitespace from
+ * the end of the time string. */
 int
 parse_iso_time(const char *cp, time_t *t)
 {

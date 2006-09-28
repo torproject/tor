@@ -2275,6 +2275,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         break;
     } else {
       time_t when;
+      time_t last_try = 0;
       if (!node) {
         *msg = tor_strdup("Unable to parse entry nodes: "
                "EntryGuardDownSince/UnlistedSince without EntryGuard");
@@ -2285,10 +2286,16 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
                           "Bad time in EntryGuardDownSince/UnlistedSince");
         break;
       }
-      if (!strcasecmp(line->key, "EntryGuardDownSince"))
+      if (strlen(line->value) >= ISO_TIME_LEN+ISO_TIME_LEN+1) {
+        /* ignore failure */
+        parse_iso_time(line->value+ISO_TIME_LEN+1, &last_try);
+      }
+      if (!strcasecmp(line->key, "EntryGuardDownSince")) {
         node->unreachable_since = when;
-      else
+        node->last_attempted = last_try;
+      } else {
         node->bad_since = when;
+      }
     }
   }
 
@@ -2348,8 +2355,12 @@ entry_guards_update_state(or_state_t *state)
       if (e->unreachable_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardDownSince");
-        line->value = tor_malloc(ISO_TIME_LEN+1);
+        line->value = tor_malloc(ISO_TIME_LEN+1+ISO_TIME_LEN+1);
         format_iso_time(line->value, e->unreachable_since);
+        if (e->last_attempted) {
+          line->value[ISO_TIME_LEN] = ' ';
+          format_iso_time(line->value+ISO_TIME_LEN+1, e->last_attempted);
+        }
         next = &(line->next);
       }
       if (e->bad_since) {
