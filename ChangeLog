@@ -23,6 +23,10 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       servers on the same /16" behavior.  It's still on by default; this
       is mostly for people who want to operate private test networks with
       all the machines on the same subnet.
+    - If one of our entry guards is on the ExcludeNodes list, or the
+      directory authorities don't think it's a good guard, treat it as if it
+      were unlisted: stop using it as a guard, and throw it off the guards
+      list if it stays that way for a long time.
 
   o Security Fixes, minor:
     - If a client asked for a server by name, and we didn't have a
@@ -59,11 +63,14 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       we don't recognize.
     - Avoid a memory corruption bug when creating a hash table for the first
       time.
+    - Track unreachable entry guards correctly: don't conflate 'unreachable
+      by us right now' with 'listed as down by the directory authorities'.
+      With the old code, if a guard was unreachable by us but listed as
+      running, it would clog our guard list forever.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and
       ServerDNSResolvConfFile options.
-
 
 
   o Packaging:

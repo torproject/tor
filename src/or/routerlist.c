@@ -24,7 +24,6 @@ static routerstatus_t *router_pick_directory_server_impl(int requireother,
 static routerstatus_t *router_pick_trusteddirserver_impl(
                  int need_v1_authority, int requireother, int fascistfirewall);
 static void mark_all_trusteddirservers_up(void);
-static int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void routerstatus_list_update_from_networkstatus(time_t now);
 static void local_routerstatus_free(local_routerstatus_t *rs);
@@ -662,9 +661,12 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   }
 }
 
-/** Given a comma-and-whitespace separated list of nicknames, see which
- * nicknames in <b>list</b> name routers in our routerlist that are
- * currently running.  Add the routerinfos for those routers to <b>sl</b>.
+/** Given a (possibly NULL) comma-and-whitespace separated list of nicknames,
+ * see which nicknames in <b>list</b> name routers in our routerlist, and add
+ * the routerinfos for those routers to <b>sl</b>.  If <b>must_be_running</b>,
+ * only include routers that we think are running.  If <b>warn_if_down</b>,
+ * warn if some included routers aren't running.  If <b>warn_if_unnamed</b>,
+ * warn if any non-Named routers are specified by nickname.
  */
 void
 add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
@@ -718,10 +720,11 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
   smartlist_free(nickname_list);
 }
 
-/** Return 1 iff any member of the comma-separated list <b>list</b> is an
- * acceptable nickname or hexdigest for <b>router</b>.  Else return 0.
+/** Return 1 iff any member of the (possibly NULL) comma-separated list
+ * <b>list</b> is an acceptable nickname or hexdigest for <b>router</b>.  Else
+ * return 0.
  */
-static int
+int
 router_nickname_is_in_list(routerinfo_t *router, const char *list)
 {
   smartlist_t *nickname_list;
@@ -2954,7 +2957,7 @@ routers_update_all_from_networkstatus(void)
     }
   }
 
-  entry_guards_set_status_from_directory();
+  entry_guards_compute_status();
 
   if (!have_warned_about_old_version &&
       have_tried_downloading_all_statuses(4)) {

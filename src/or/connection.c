@@ -428,7 +428,7 @@ connection_about_to_close_connection(connection_t *conn)
       if (conn->state != OR_CONN_STATE_OPEN) {
         if (connection_or_nonopen_was_started_here(or_conn)) {
           rep_hist_note_connect_failed(or_conn->identity_digest, time(NULL));
-          entry_guard_set_status(or_conn->identity_digest, 0);
+          entry_guard_register_connect_status(or_conn->identity_digest, 0);
           router_set_status(or_conn->identity_digest, 0);
           control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED);
         }

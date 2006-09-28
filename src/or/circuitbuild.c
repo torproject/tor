@@ -27,10 +27,13 @@ typedef struct {
   char identity[DIGEST_LEN];
   uint8_t made_contact; /**< 0 if we have never connected to this router,
                          * 1 if we have. */
-  time_t down_since; /**< 0 if this router is currently up, or the time at
-                      * which it was observed to go down. */
-  time_t unlisted_since; /**< 0 if this router is currently listed, or the
-                          * time at which it became unlisted */
+  time_t bad_since; /**< 0 if this guard is currently usable, or the time at
+                      * which it was observed to become (according to the
+                      * directory or the user configuration) unusable. */
+  time_t unreachable_since; /**< 0 if we can connect to this guard, or the
+                             * time at which we first noticed we couldn't
+                             * connect to it. */
+  time_t last_attempted;
 } entry_guard_t;
 
 /** A list of our chosen entry guards. */
@@ -1716,6 +1719,65 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
   return state->chosen_exit->nickname;
 }
 
+/** DOCDOC */
+static int
+entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
+                       or_options_t *options)
+{
+  const char *reason = NULL;
+  char buf[HEX_DIGEST_LEN+1];
+  int changed = 0;
+
+  /* Do we want to mark this guard as bad? */
+  if (!ri)
+    reason = "unlisted";
+  else if (!ri->is_running)
+    reason = "down";
+  else if (!ri->is_possible_guard)
+    reason = "not recommended as a guard";
+  else if (options && ri &&
+           router_nickname_is_in_list(ri, options->ExcludeNodes))
+    reason = "excluded";
+
+  if (reason && ! e->bad_since) {
+    /* Router is newly bad. */
+    base16_encode(buf, sizeof(buf), e->identity, DIGEST_LEN);
+    log_info(LD_CIRC, "Entry guard %s (%s) is %s: marking as unusable",
+             e->nickname, buf, reason);
+
+    e->bad_since = time(NULL);
+    changed = 1;
+  } else if (!reason && e->bad_since) {
+    /* There's nothing wrong with the router any more. */
+    base16_encode(buf, sizeof(buf), e->identity, DIGEST_LEN);
+    log_info(LD_CIRC, "Entry guard %s (%s) is no longer unusable: "
+             "marking as ok", e->nickname, buf);
+
+    e->bad_since = 0;
+    changed = 1;
+  }
+
+  return changed;
+}
+
+/** DOCDOC */
+static int
+entry_is_time_to_retry(entry_guard_t *e, time_t now)
+{
+  long diff;
+  if (e->last_attempted < e->unreachable_since)
+    return 1;
+  diff = now - e->unreachable_since;
+  if (diff < 6*60*60)
+    return now > (e->last_attempted + 60*60);
+  else if (diff < 3*24*60*60)
+    return now > (e->last_attempted + 4*60*60);
+  else if (diff < 7*24*60*60)
+    return now > (e->last_attempted + 18*60*60);
+  else
+    return now > (e->last_attempted + 36*60*60);
+}
+
 /** Return the router corresponding to <b>e</b>, if <b>e</b> is
  * working well enough that we are willing to use it as an entry
  * right now. (Else return NULL.) In particular, it must be
@@ -1724,16 +1786,22 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
  * - Listed as 'stable' or 'fast' by the current dirserver concensus,
  *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>; and
  * - Allowed by our current ReachableAddresses config option.
+ * DOCDOC assume_reachable.
  */
 static INLINE routerinfo_t *
-entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity)
+entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
+              int assume_reachable)
 {
   routerinfo_t *r;
-  if (e->down_since && e->made_contact)
+  if (e->bad_since)
+    return NULL;
+  if (!assume_reachable &&
+      e->unreachable_since && !entry_is_time_to_retry(e, time(NULL)))
     return NULL;
   r = router_get_by_digest(e->identity);
   if (!r)
     return NULL;
+  /* Remove this check -- it seems redundant wrt the Guard flag? XXXX NM */
   if (router_is_unreliable(r, need_uptime, need_capacity, 0))
     return NULL;
   if (firewall_is_fascist_or() &&
@@ -1751,7 +1819,7 @@ num_live_entry_guards(void)
     return 0;
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
-      if (entry_is_live(entry, 0, 1))
+      if (entry_is_live(entry, 0, 1, 0))
         ++n;
     });
   return n;
@@ -1778,10 +1846,9 @@ log_entry_guards(int severity)
 
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
-      tor_snprintf(buf, sizeof(buf), "%s (%s%s%s)",
+      tor_snprintf(buf, sizeof(buf), "%s (%s%s)",
                    e->nickname,
-                   (e->down_since || e->unlisted_since) ? "down " : "up ",
-                   e->unlisted_since ? "unlisted " : "listed ",
+                   e->bad_since ? "down " : "up ",
                    e->made_contact ? "made-contact" : "never-contacted");
       smartlist_add(elements, tor_strdup(buf));
     });
@@ -1859,12 +1926,9 @@ entry_guards_free_all(void)
   }
 }
 
-/** How long (in seconds) do we allow an entry guard to be nonfunctional
- * before we give up on it? */
-#define ENTRY_ALLOW_DOWNTIME (30*24*60*60)
-/** How long (in seconds) do we allow an entry guard to be unlisted in the
- * directory before we give up on it? */
-#define ENTRY_ALLOW_UNLISTED (30*24*60*60)
+/** How long (in seconds) do we allow an entry guard to be nonfunctional,
+ * unlisted, excuded, or otherwise nonusable before we give up on it? */
+#define ENTRY_GUARD_REMOVE_AFTER (30*24*60*60)
 
 /** Remove all entry guards that have been down or unlisted for so
  * long that we don't think they'll come up again. Return 1 if we
@@ -1880,23 +1944,14 @@ remove_dead_entries(void)
 
   for (i = 0; i < smartlist_len(entry_guards); ) {
     entry_guard_t *entry = smartlist_get(entry_guards, i);
-    const char *why = NULL;
-    time_t since = 0;
-    if (entry->unlisted_since &&
-        entry->unlisted_since + ENTRY_ALLOW_UNLISTED < now) {
-      why = "unlisted";
-      since = entry->unlisted_since;
-    } else if (entry->down_since &&
-               entry->down_since + ENTRY_ALLOW_DOWNTIME < now) {
-      why = "down";
-      since = entry->down_since;
-    }
-    if (why) {
+    if (entry->bad_since &&
+        entry->bad_since + ENTRY_GUARD_REMOVE_AFTER < now) {
+
       base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
-      format_local_iso_time(tbuf, since);
-      log_info(LD_CIRC,
-               "Entry guard '%s' (%s) has been %s since %s; removing.",
-               entry->nickname, dbuf, why, tbuf);
+      format_local_iso_time(tbuf, entry->bad_since);
+      log_info(LD_CIRC, "Entry guard '%s' (%s) has been down or unlisted "
+               "since %s; removing.",
+               entry->nickname, dbuf, tbuf);
       tor_free(entry);
       smartlist_del_keeporder(entry_guards, i);
       log_entry_guards(LOG_INFO);
@@ -1914,62 +1969,32 @@ remove_dead_entries(void)
  * An entry is 'unlisted' if the directory doesn't include it.
  */
 void
-entry_guards_set_status_from_directory(void)
+entry_guards_compute_status(void)
 {
   /* Don't call this on startup; only on a fresh download.  Otherwise we'll
    * think that things are unlisted. */
-  routerlist_t *routers;
   time_t now;
   int changed = 0;
   int severity = LOG_INFO;
+  or_options_t *options;
   if (! entry_guards)
     return;
 
-  routers = router_get_routerlist();
+  options = get_options();
 
   now = time(NULL);
 
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       routerinfo_t *r = router_get_by_digest(entry->identity);
-      if (! r) {
-        if (! entry->unlisted_since) {
-          entry->unlisted_since = time(NULL);
-          changed = 1;
-          log_info(LD_CIRC,"Entry guard '%s' is not listed by directories.",
-                   entry->nickname);
-          severity = LOG_INFO;
-        }
-      } else {
-        if (entry->unlisted_since) {
-          log_info(LD_CIRC,"Entry guard '%s' is listed again by directories.",
-                   entry->nickname);
-          changed = 1;
-          severity = LOG_INFO;
-        }
-        entry->unlisted_since = 0;
-        if (! r->is_running) {
-          if (! entry->down_since) {
-            entry->down_since = now;
-            log_info(LD_CIRC, "Entry guard '%s' is now down.",
-                     entry->nickname);
-            changed = 1;
-            severity = LOG_INFO;
-          }
-        } else {
-          if (entry->down_since) {
-            log_info(LD_CIRC,"Entry guard '%s' is up in latest directories.",
-                     entry->nickname);
-            changed = 1;
-          }
-          entry->down_since = 0;
-        }
-      }
-      log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s, and %s.",
+      if (entry_guard_set_status(entry, r, options))
+        changed = 1;
+
+      log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s and %s.",
                entry->nickname,
-               (entry->down_since || entry->unlisted_since) ? "down" : "up",
-               entry->unlisted_since ? "unlisted" : "listed",
-               entry_is_live(entry, 0, 1) ? "live" : "not live");
+               entry->unreachable_since ? "unreachable" : "reachable",
+               entry->bad_since ? "unusable" : "usable",
+               entry_is_live(entry, 0, 1, 0) ? "live" : "not live");
     });
 
   if (remove_dead_entries())
@@ -1989,78 +2014,97 @@ entry_guards_set_status_from_directory(void)
  * Return 0 normally, or -1 if we want to tear down the new connection.
  */
 int
-entry_guard_set_status(const char *digest, int succeeded)
+entry_guard_register_connect_status(const char *digest, int succeeded)
 {
   int changed = 0;
   int refuse_conn = 0;
+  int first_contact = 0;
+  entry_guard_t *entry = NULL;
+  int idx = -1;
+  char buf[HEX_DIGEST_LEN+1];
 
   if (! entry_guards)
     return 0;
 
-  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
-      if (!memcmp(entry->identity, digest, DIGEST_LEN)) {
-        if (succeeded) {
-          if (!entry->made_contact) {
-            /* We've just added a new long-term entry guard. Perhaps
-             * the network just came back? We should give our earlier
-             * entries another try too, and close this connection so
-             * we don't use it before we've given the others a shot. */
-            entry->made_contact = 1;
-            SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
-              {
-                routerinfo_t *r;
-                if (e == entry)
-                  break;
-                if (e->made_contact) {
-                  e->down_since = 0;
-                  r = entry_is_live(e, 0, 1);
-                  if (r) {
-                    refuse_conn = 1;
-                    r->is_running = 1;
-                  }
-                }
-              });
-            log_info(LD_CIRC,
-                     "Connected to new entry guard '%s'. Marking earlier "
-                     "entry guards up. %d/%d entry guards usable/new.",
-                     entry->nickname,
-                     num_live_entry_guards(), smartlist_len(entry_guards));
-            log_entry_guards(LOG_INFO);
-            changed = 1;
-          }
-          if (entry->down_since) {
-            entry->down_since = 0;
-            log_info(LD_CIRC,
-                  "Connection to formerly down entry guard '%s' succeeded. "
-                  "%d/%d entry guards usable/new.", entry->nickname,
-                  num_live_entry_guards(), smartlist_len(entry_guards));
-            log_entry_guards(LOG_INFO);
-            changed = 1;
-          }
-        } else {
-          if (!entry->made_contact) { /* dump him */
-            log_info(LD_CIRC,
-                   "Connection to never-contacted entry guard '%s' failed. "
-                   "Removing from the list. %d/%d entry guards usable/new.",
-                   entry->nickname,
-                   num_live_entry_guards()-1, smartlist_len(entry_guards)-1);
-            tor_free(entry);
-            smartlist_del_keeporder(entry_guards, entry_sl_idx);
-            log_entry_guards(LOG_INFO);
-            changed = 1;
-          } else if (!entry->down_since) {
-            entry->down_since = time(NULL);
-            log_info(LD_CIRC, "Connection to entry guard '%s' failed. "
-                     "%d/%d entry guards usable/new.",
-                     entry->nickname,
-                     num_live_entry_guards(), smartlist_len(entry_guards));
-            log_entry_guards(LOG_INFO);
-            changed = 1;
-          }
-        }
+      if (!memcmp(e->identity, digest, DIGEST_LEN)) {
+        entry = e;
+        idx = e_sl_idx;
+        break;
       }
     });
+
+  if (!entry)
+    return 0;
+
+  base16_encode(buf, sizeof(buf), entry->identity, DIGEST_LEN);
+
+  if (succeeded) {
+    if (entry->unreachable_since) {
+      log_info(LD_CIRC, "Entry guard '%s' (%s) is now reachable again. Good.",
+               entry->nickname, buf);
+      entry->unreachable_since = 0;
+      entry->last_attempted = time(NULL);
+      changed = 1;
+    }
+    if (!entry->made_contact) {
+      entry->made_contact = 1;
+      first_contact = changed = 1;
+    }
+  } else { /* ! succeeded */
+    if (!entry->made_contact) {
+      /* We've never connected to this one. */
+      log_info(LD_CIRC,
+               "Connection to never-contacted entry guard '%s' (%s) failed. "
+               "Removing from the list. %d/%d entry guards usable/new.",
+               entry->nickname, buf,
+               num_live_entry_guards()-1, smartlist_len(entry_guards)-1);
+      tor_free(entry);
+      smartlist_del_keeporder(entry_guards, idx);
+      log_entry_guards(LOG_INFO);
+      changed = 1;
+    } else if (!entry->unreachable_since) {
+      log_info(LD_CIRC, "Unable to connect to entry guard '%s' (%s). "
+               "Marking as unreachable.", entry->nickname, buf);
+      changed = 1;
+    } else {
+      char tbuf[ISO_TIME_LEN+1];
+      format_iso_time(tbuf, entry->unreachable_since);
+      log_debug(LD_CIRC, "Failed to connect to unreachable entry guard "
+                "'%s' (%s).  It has been unreachable since %s.",
+                entry->nickname, buf, tbuf);
+      entry->last_attempted = time(NULL);
+    }
+  }
+
+  if (first_contact) {
+    /* We've just added a new long-term entry guard. Perhaps the network just
+     * came back? We should give our earlier entries another try too,
+     * and close this connection so we don't use it before we've given
+     * the others a shot. */
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
+        routerinfo_t *r;
+        if (e == entry)
+          break;
+        if (e->made_contact) {
+          r = entry_is_live(e, 0, 1, 1);
+          if (r && !r->is_running) {
+            refuse_conn = 1;
+            r->is_running = 1;
+          }
+        }
+      });
+    if (refuse_conn) {
+      log_info(LD_CIRC,
+               "Connected to new entry guard '%s' (%s). Marking earlier "
+               "entry guards up. %d/%d entry guards usable/new.",
+               entry->nickname, buf,
+               num_live_entry_guards(), smartlist_len(entry_guards));
+      log_entry_guards(LOG_INFO);
+      changed = 1;
+    }
+  }
 
   if (changed)
     entry_guards_changed();
@@ -2150,7 +2194,7 @@ choose_random_entry(cpath_build_state_t *state)
   smartlist_clear(live_entry_guards);
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
-      r = entry_is_live(entry, need_uptime, need_capacity);
+      r = entry_is_live(entry, need_uptime, need_capacity, 0);
       if (r && r != chosen_exit) {
         smartlist_add(live_entry_guards, r);
         if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
@@ -2242,9 +2286,9 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         break;
       }
       if (!strcasecmp(line->key, "EntryGuardDownSince"))
-        node->down_since = when;
+        node->unreachable_since = when;
       else
-        node->unlisted_since = when;
+        node->bad_since = when;
     }
   }
 
@@ -2301,18 +2345,18 @@ entry_guards_update_state(or_state_t *state)
       tor_snprintf(line->value,HEX_DIGEST_LEN+MAX_NICKNAME_LEN+2,
                    "%s %s", e->nickname, dbuf);
       next = &(line->next);
-      if (e->down_since) {
+      if (e->unreachable_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardDownSince");
         line->value = tor_malloc(ISO_TIME_LEN+1);
-        format_iso_time(line->value, e->down_since);
+        format_iso_time(line->value, e->unreachable_since);
         next = &(line->next);
       }
-      if (e->unlisted_since) {
+      if (e->bad_since) {
         *next = line = tor_malloc_zero(sizeof(config_line_t));
         line->key = tor_strdup("EntryGuardUnlistedSince");
         line->value = tor_malloc(ISO_TIME_LEN+1);
-        format_iso_time(line->value, e->unlisted_since);
+        format_iso_time(line->value, e->bad_since);
         next = &(line->next);
       }
     });
@@ -2344,12 +2388,9 @@ entry_guards_getinfo(const char *question, char **answer)
         time_t when = 0;
         if (!e->made_contact) {
           status = "never-connected";
-        } else if (e->unlisted_since) {
-          when = e->unlisted_since;
-          status = "unlisted";
-        } else if (e->down_since) {
-          when = e->down_since;
-          status = "down";
+        } else if (e->bad_since) {
+          when = e->bad_since;
+          status = "unusable";
         } else {
           status = "up";
         }

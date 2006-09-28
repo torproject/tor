@@ -1707,8 +1707,8 @@ void extend_info_free(extend_info_t *info);
 routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
-void entry_guards_set_status_from_directory(void);
-int entry_guard_set_status(const char *digest, int succeeded);
+void entry_guards_compute_status(void);
+int entry_guard_register_connect_status(const char *digest, int succeeded);
 void entry_nodes_should_be_added(void);
 void entry_guards_prepend_from_config(void);
 void entry_guards_update_state(or_state_t *state);
@@ -2534,6 +2534,7 @@ void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running,
                                     int warn_if_down, int warn_if_unnamed);
+int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 routerinfo_t *router_find_exact_exit_enclave(const char *address,
                                              uint16_t port);

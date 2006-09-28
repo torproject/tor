@@ -24,8 +24,9 @@ x - When we've been idle a long time, we stop fetching server
     until we've fetched correct ones.
 x - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
-N - when we start, remove any entryguards that are listed in excludenodes.
-N - Remember the last time we saw one of our entry guards labelled with
+  o when we start, remove^Wmark as unusable any entryguards that are listed
+    in excludenodes.
+  o Remember the last time we saw one of our entry guards labeled with
     the GUARD flag. If it's been too long, it is not suitable for use.
     If it's been really too long, remove it from the list.
   o Figure out avoiding duplicate /24 lines
