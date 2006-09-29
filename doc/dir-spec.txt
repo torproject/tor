@@ -765,8 +765,6 @@ $Id$
    SHOULD NOT ever use a router in response to a user request for a router
    called "Unnamed".
 
-   [Should the above become MUST NOTs? -RD]
-
 6.2. Software versions
 
    An implementation of Tor SHOULD warn when it has fetched (or has
