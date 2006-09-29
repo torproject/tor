@@ -139,7 +139,7 @@ should cover, but not an exhaustive list.  -NM
      - We do not choose any router in the same family as another in the same
        path.
      - We do not choose any router in the same /16 subnet as another in the
-       same path.
+       same path (unless EnforceDistinctSubnets is 0).
      - We don't choose any non-running or non-valid router unless we have
        been configured to do so. By default, we are configured to allow
        non-valid routers in "middle" and "rendezvous" positions.
