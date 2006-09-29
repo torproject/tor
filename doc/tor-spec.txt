@@ -721,6 +721,9 @@ TODO:
    If the Tor server is not running a directory service, it should respond
    with a REASON_NOTDIRECTORY RELAY_END cell.
 
+   [RELAY_BEGIN_DIR was not supported before Tor 0.1.2.2-alpha; clients
+   SHOULD NOT send it to routers running earlier version of Tor.]
+
 6.3. Closing streams
 
    When an anonymized TCP connection is closed, or an edge node
