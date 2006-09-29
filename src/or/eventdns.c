@@ -785,8 +785,9 @@ reply_handle(struct request *const req,
 			// we regard these errors as marking a bad nameserver
 			if (req->reissue_count < global_max_reissues) {
 				char msg[64];
-				snprintf(msg, sizeof(msg), "Bad response %d",
-					 error);
+
+				snprintf(msg, sizeof(msg), "Bad response %d (%s)",
+						 error, evdns_err_to_string(error));
 				nameserver_failed(req->ns, msg);
 				if (!request_reissue(req)) return;
 			}
@@ -2292,6 +2293,7 @@ main(int c, char **v) {
 	event_dispatch();
 	return 0;
 }
+#endif
 
 int
 evdns_init(void)
@@ -2306,7 +2308,24 @@ evdns_init(void)
         return (res);
 }
 
-#endif
+const char *
+evdns_err_to_string(int err)
+{
+    switch (err) {
+	case DNS_ERR_NONE: return "no error";
+	case DNS_ERR_FORMAT: return "misformatted query";
+	case DNS_ERR_SERVERFAILED: return "server failed";
+	case DNS_ERR_NOTEXIST: return "name does not exist";
+	case DNS_ERR_NOTIMPL: return "query not implemented";
+	case DNS_ERR_REFUSED: return "refused";
+
+	case DNS_ERR_TRUNCATED: return "reply truncated or ill-formed";
+	case DNS_ERR_UNKNOWN: return "unknown";
+	case DNS_ERR_TIMEOUT: return "request timed out";
+	case DNS_ERR_SHUTDOWN: return "dns subsystem shut down";
+	default: return "[Unknown error code]";
+	}
+}
 
 void
 evdns_shutdown(int fail_requests)

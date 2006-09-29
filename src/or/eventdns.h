@@ -53,6 +53,7 @@ typedef void (*evdns_callback_type) (int result, char type, int count, int ttl, 
 
 int evdns_init(void);
 void evdns_shutdown(int fail_requests);
+const char * evdns_err_to_string(int err);
 int evdns_nameserver_add(unsigned long int address);
 int evdns_count_nameservers(void);
 int evdns_clear_nameservers_and_suspend(void);

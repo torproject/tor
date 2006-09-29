@@ -85,6 +85,7 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       by us right now' with 'listed as down by the directory authorities'.
       With the old code, if a guard was unreachable by us but listed as
       running, it would clog our guard list forever.
+    - Make eventdns give strings for DNS errors, not just error numbers.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and
