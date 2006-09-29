@@ -2112,6 +2112,8 @@ char *directory_dump_request_log(void);
 
 /********************************* dirserv.c ***************************/
 
+#define UNNAMED_ROUTER_NICKNAME "Unnamed"
+
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_load_fingerprint_file(void);

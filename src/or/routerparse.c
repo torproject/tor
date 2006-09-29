@@ -1064,6 +1064,9 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
     }
   }
 
+  if (!strcasecmp(rs->nickname, UNNAMED_ROUTER_NICKNAME))
+    rs->is_named = 0;
+
   goto done;
  err:
   if (rs)

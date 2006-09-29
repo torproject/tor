@@ -1731,20 +1731,21 @@ resolve_my_address(int warn_severity, or_options_t *options,
 static char *
 get_default_nickname(void)
 {
+  static const char * const bad_default_nicknames[] = {
+    "localhost",
+    NULL,
+  };
   char localhostname[256];
   char *cp, *out, *outp;
+  int i;
 
   if (gethostname(localhostname, sizeof(localhostname)) < 0)
     return NULL;
 
   /* Put it in lowercase; stop at the first dot. */
-  for (cp = localhostname; *cp; ++cp) {
-    if (*cp == '.') {
-      *cp = '\0';
-      break;
-    }
-    *cp = TOR_TOLOWER(*cp);
-  }
+  if ((cp = strchr(localhostname, '.')))
+    *cp = '\0';
+  tor_strlower(localhostname);
 
   /* Strip invalid characters. */
   cp = localhostname;
@@ -1760,6 +1761,14 @@ get_default_nickname(void)
   /* Enforce length. */
   if (strlen(out) > MAX_NICKNAME_LEN)
     out[MAX_NICKNAME_LEN]='\0';
+
+  /* Check for dumb names. */
+  for (i = 0; bad_default_nicknames[i]; ++i) {
+    if (!strcmp(out, bad_default_nicknames[i])) {
+      tor_free(out);
+      return NULL;
+    }
+  }
 
   return out;
 }
@@ -2122,10 +2131,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->Nickname == NULL) {
     if (server_mode(options)) {
-      if (!(options->Nickname = get_default_nickname()))
-        REJECT("Error obtaining local hostname");
-      log_notice(LD_CONFIG, "Choosing default nickname '%s'",
-                 options->Nickname);
+      if (!(options->Nickname = get_default_nickname())) {
+        log_notice(LD_CONFIG, "Couldn't pick a nickname hostname based on "
+                   "our hostname; using %s instead.", UNNAMED_ROUTER_NICKNAME);
+        options->Nickname = tor_strdup(UNNAMED_ROUTER_NICKNAME);
+      } else {
+        log_notice(LD_CONFIG, "Choosing default nickname '%s'",
+                   options->Nickname);
+      }
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {

@@ -89,6 +89,12 @@ add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list)
   fingerprint = tor_strdup(fp);
   tor_strstrip(fingerprint, " ");
 
+  if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME)) {
+    log_warn(LD_DIRSERV, "Tried to add a mapping for reserved nickname %s",
+             UNNAMED_ROUTER_NICKNAME);
+    return 0;
+  }
+
   if (nickname[0] != '!') {
     for (i = 0; i < smartlist_len(list); ++i) {
       ent = smartlist_get(list, i);
@@ -317,7 +323,10 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
   if (0==strcasecmp(nn_ent->fingerprint, fp)) {
     if (should_log)
       log_debug(LD_DIRSERV,"Good fingerprint for '%s'",nickname);
-    return FP_NAMED; /* Right fingerprint. */
+    if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME))
+      return FP_VALID;
+    else
+      return FP_NAMED; /* Right fingerprint. */
   } else {
     if (should_log) {
       char *esc_contact = esc_for_log(contact);
@@ -1447,6 +1456,9 @@ generate_v2_networkstatus(void)
         tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
       char identity64[BASE64_DIGEST_LEN+1];
       char digest64[BASE64_DIGEST_LEN+1];
+
+      if (!strcasecmp(ri->nickname, UNNAMED_ROUTER_NICKNAME))
+        f_named = 0;
 
       format_iso_time(published, ri->cache_info.published_on);
 

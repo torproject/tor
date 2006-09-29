@@ -79,8 +79,8 @@ N - Simplify authority operation
 
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
-    - Reduce resource load
-N     - Come up with good 'nicknames' automatically, or make no-nickname
+    . Reduce resource load
+      o Come up with good 'nicknames' automatically, or make no-nickname
         routers workable. [Make a magic nickname "Unnamed" that can't be
         registered and can't be looked up by nickname.]
 d     - Tolerate clock skew on bridge relays.

@@ -759,6 +759,12 @@ $Id$
 
    (XXXX The last-bound thing above isn't implemented)
 
+   Not every router needs a nickname.  When a router doesn't configure a
+   nickname, it publishes with the default nickname "Unnamed".  Authorities
+   SHOULD NOT ever mark a router with this nickname as Named; client software
+   SHOULD NOT ever use a router in response to a user request for a router
+   called "Unnamed".
+
 6.2. Software versions
 
    An implementation of Tor SHOULD warn when it has fetched (or has
