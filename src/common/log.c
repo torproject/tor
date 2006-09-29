@@ -60,6 +60,26 @@ sev_to_string(int severity)
   }
 }
 
+/** Helper: decide whether to include the function name in the log message.
+ * */
+static INLINE int
+should_log_function_name(uint32_t domain, int severity)
+{
+  switch (severity) {
+    case LOG_DEBUG:
+    case LOG_INFO:
+      /* All debugging messages occur in interesting places. */
+      return 1;
+    case LOG_NOTICE:
+    case LOG_WARN:
+    case LOG_ERR:
+      /* We care about places where bugs occur. */
+      return (domain == LD_BUG);
+    default:
+      assert(0); return 0;
+  }
+}
+
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 #ifdef HAVE_SYSLOG_H
@@ -137,7 +157,7 @@ log_tor_version(logfile_t *lf, int reset)
  */
 static INLINE char *
 format_msg(char *buf, size_t buf_len,
-           int severity, const char *funcname,
+           uint32_t domain, int severity, const char *funcname,
            const char *format, va_list ap)
 {
   size_t n;
@@ -150,7 +170,7 @@ format_msg(char *buf, size_t buf_len,
   n = _log_prefix(buf, buf_len, severity);
   end_of_prefix = buf+n;
 
-  if (funcname) {
+  if (funcname && should_log_function_name(domain, severity)) {
     r = tor_snprintf(buf+n, buf_len-n, "%s(): ", funcname);
     if (r<0)
       n = strlen(buf);
@@ -206,7 +226,7 @@ logv(int severity, uint32_t domain, const char *funcname, const char *format,
 
     if (!formatted) {
       end_of_prefix =
-        format_msg(buf, sizeof(buf), severity, funcname, format, ap);
+        format_msg(buf, sizeof(buf), domain, severity, funcname, format, ap);
       formatted = 1;
     }
     if (lf->is_syslog) {

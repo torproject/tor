@@ -42,6 +42,9 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       any router is the canonical Unnamed.
     - New controller event to alert the controller when our server descriptor
       has changed.
+    - Only include function names in log messages for debugging messages;
+      in other cases, the content of the message should be clear on its own,
+      and including the function name only seems to confuse users.
 
   o Security Fixes, minor:
     - If a client asked for a server by name, and we didn't have a
