@@ -8,30 +8,36 @@ my $last = "";
 
 while (<>) {
     if ($more) {
-        if (/\s*(?:LD_[A-Z]*,)?\"((?:[^\"\\]+|\\.*)+)\"(.*)/) {
+        if (/LD_BUG/) {
+            $more = 0;
+            next;
+        }
+        if (/\"((?:[^\"\\]+|\\.*)+)\"(.*)/) {
             $last .= $1;
             if ($2 !~ /[,\)]/) {
                 $more = 1;
             } else {
-                $count{$last}++;
+                $count{lc $last}++;
                 $more = 0;
             }
         } elsif (/[,\)]/) {
-            $count{$last}++;
+            $count{lc $last}++;
             $more = 0;
         } elsif ($more == 2) {
             print "SKIPPED more\n";
         }
-    } elsif (/log_(?:warn|err|notice)\([^\"]*\"((?:[^\"\\]+|\\.)*)\"(.*)/) {
-        my $s = $1;
-        if ($2 =~ /[,\)]/ ) {
-            $count{$s}++;
+    } elsif (/log_(?:warn|err|notice)\(\s*(LD_[A-Z_]*)\s*,\s*\"((?:[^\"\\]+|\\.)*)\"(.*)/) {
+        next if ($1 eq 'LD_BUG');
+        my $s = $2;
+        if ($3 =~ /[,\)]/ ) {
+            $count{lc $s}++;
         } else {
             $more = 1;
             $last = $s;
         }
-    } elsif (/log_(?:warn|err|notice)\((?:LD_[A-Z]*,)?(.*)/) {
-        my $extra = $1;
+    } elsif (/log_(?:warn|err|notice)\(\s*((?:LD_[A-Z_]*)?)(.*)/) {
+        next if ($1 eq 'LD_BUG');
+        my $extra = $2;
         chomp $extra;
         $last = "";
         $more = 2 if ($extra eq '');
