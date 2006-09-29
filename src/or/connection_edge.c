@@ -1310,7 +1310,8 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   if (getsockname(conn->_base.s, (struct sockaddr*)&proxy_addr,
                   &proxy_addr_len) < 0) {
     int e = tor_socket_errno(conn->_base.s);
-    log_warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
+    log_warn(LD_NET, "getsockname() to determine transocks destination "
+             "failed: %s", tor_socket_strerror(e));
     return -1;
   }
 

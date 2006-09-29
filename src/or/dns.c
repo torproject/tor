@@ -1069,7 +1069,7 @@ connection_dns_finished_flushing(connection_t *conn)
 int
 connection_dns_reached_eof(connection_t *conn)
 {
-  log_warn(LD_EXIT,"Read eof. Worker died unexpectedly.");
+  log_warn(LD_EXIT,"Read eof. DNS worker died unexpectedly.");
   if (conn->state == DNSWORKER_STATE_BUSY) {
     /* don't cancel the resolve here -- it would be cancelled in
      * connection_about_to_close_connection(), since conn is still
@@ -1278,7 +1278,7 @@ spawn_dnsworker(void)
 
   fdarray = tor_malloc(sizeof(int)*2);
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
-    log_warn(LD_NET, "Couldn't construct socketpair: %s",
+    log_warn(LD_NET, "Couldn't construct socketpair for dns worker: %s",
              tor_socket_strerror(-err));
     tor_free(fdarray);
     return -1;

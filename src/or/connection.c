@@ -743,7 +743,9 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     remotelen=256;
     memset(addrbuf, 0, sizeof(addrbuf));
     if (getsockname(news, (struct sockaddr*)addrbuf, &remotelen)<0) {
-      log_warn(LD_NET, "getsockname() failed.");
+      int e = tor_socket_errno(news);
+      log_warn(LD_NET, "getsockname() for new connection failed: %s",
+               tor_socket_strerror(tor_socket_strerror(e)));
     } else {
       if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen,
                             LOG_WARN) < 0) {
@@ -963,7 +965,7 @@ retry_listeners(int type, config_line_t *cfg,
     if (force) {
       /* It's a listener, and we're relaunching all listeners of this
        * type. Close this one. */
-      log_fn(LOG_NOTICE, LD_NET, "Closing %s on %s:%d",
+      log_notice(LD_NET, "Force-closing listener %s on %s:%d",
              conn_type_to_string(type), conn->address, conn->port);
       connection_close_immediate(conn);
       connection_mark_for_close(conn);
@@ -988,7 +990,7 @@ retry_listeners(int type, config_line_t *cfg,
       });
     if (! line) {
       /* This one isn't configured. Close it. */
-      log_notice(LD_NET, "Closing %s on %s:%d",
+      log_notice(LD_NET, "Closing no-longer-configured %s on %s:%d",
                  conn_type_to_string(type), conn->address, conn->port);
       if (replaced_conns) {
         smartlist_add(replaced_conns, conn);
@@ -2005,7 +2007,8 @@ client_check_address_changed(int sock)
 
   if (getsockname(sock, (struct sockaddr*)&out_addr, &out_addr_len)<0) {
     int e = tor_socket_errno(sock);
-    log_warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
+    log_warn(LD_NET, "getsockname() to check for address change failed: %s",
+             tor_socket_strerror(e));
     return;
   }
 

@@ -622,7 +622,7 @@ read_bandwidth_usage(void)
   n_written = tor_parse_uint64(smartlist_get(elts,4), 10, 0, UINT64_MAX,
                                &ok, NULL);
   if (!ok) {
-    log_warn(LD_ACCT, "Error parsing number of bytes read");
+    log_warn(LD_ACCT, "Error parsing number of bytes written");
     goto err;
   }
   n_seconds = (uint32_t)tor_parse_ulong(smartlist_get(elts,5), 10,0,ULONG_MAX,

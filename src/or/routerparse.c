@@ -462,12 +462,12 @@ router_parse_runningrouters(const char *str)
   smartlist_t *tokens = NULL;
 
   if (router_get_runningrouters_hash(str, digest)) {
-    log_warn(LD_DIR, "Unable to compute digest of directory");
+    log_warn(LD_DIR, "Unable to compute digest of running-routers");
     goto err;
   }
   tokens = smartlist_create();
   if (tokenize_string(str,str+strlen(str),tokens,DIR)) {
-    log_warn(LD_DIR, "Error tokenizing directory"); goto err;
+    log_warn(LD_DIR, "Error tokenizing running-routers"); goto err;
   }
   if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
     log_warn(LD_DIR, "Unrecognized keyword %s; can't parse running-routers",
@@ -859,7 +859,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
     tor_strstrip(tok->args[0], " ");
     if (base16_decode(d, DIGEST_LEN, tok->args[0], strlen(tok->args[0]))) {
-      log_warn(LD_DIR, "Couldn't decode fingerprint %s",
+      log_warn(LD_DIR, "Couldn't decode router fingerprint %s",
                escaped(tok->args[0]));
       goto err;
     }
@@ -1034,7 +1034,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   }
 
   if (tor_inet_aton(tok->args[5], &in) == 0) {
-    log_warn(LD_DIR, "Error parsing address %s", escaped(tok->args[5]));
+    log_warn(LD_DIR, "Error parsing router address in network-status %s",
+             escaped(tok->args[5]));
     goto err;
   }
   rs->addr = ntohl(in.s_addr);
@@ -1147,7 +1148,8 @@ networkstatus_parse_from_string(const char *s)
   }
   ns->source_address = tok->args[0]; tok->args[0] = NULL;
   if (tor_inet_aton(tok->args[1], &in) == 0) {
-    log_warn(LD_DIR, "Error parsing address %s", escaped(tok->args[1]));
+    log_warn(LD_DIR, "Error parsing network-status source address %s",
+             escaped(tok->args[1]));
     goto err;
   }
   ns->source_addr = ntohl(in.s_addr);
@@ -1168,7 +1170,8 @@ networkstatus_parse_from_string(const char *s)
   }
   if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
-    log_warn(LD_DIR, "Couldn't decode fingerprint %s", escaped(tok->args[0]));
+    log_warn(LD_DIR, "Couldn't decode networkstatus fingerprint %s",
+             escaped(tok->args[0]));
     goto err;
   }
 
@@ -1766,7 +1769,7 @@ router_get_hash_impl(const char *s, char *digest,
   ++end;
 
   if (crypto_digest(digest, start, end-start)) {
-    log_warn(LD_DIR,"couldn't compute digest");
+    log_warn(LD_BUG,"couldn't compute digest");
     return -1;
   }
 

@@ -139,7 +139,7 @@ rotate_onion_key(void)
       goto error;
   }
   if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-    log_err(LD_FS,"Couldn't write generated key to \"%s\".", fname);
+    log_err(LD_FS,"Couldn't write generated onion key to \"%s\".", fname);
     goto error;
   }
   log_info(LD_GENERAL, "Rotating onion key");
@@ -169,7 +169,7 @@ init_key_from_file_name_changed(const char *fname_old,
 
   /* The old filename exists, and the new one doesn't.  Rename and load. */
   if (rename(fname_old, fname_new) < 0) {
-    log_warn(LD_FS, "Couldn't rename \"%s\" to \"%s\": %s",
+    log_warn(LD_FS, "Couldn't rename key file \"%s\" to \"%s\": %s",
              fname_old, fname_new, strerror(errno));
     return NULL;
   }

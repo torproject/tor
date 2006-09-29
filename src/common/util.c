@@ -907,7 +907,7 @@ parse_rfc1123_time(const char *buf, time_t *t)
   }
   if (m<0) {
     char *esc = esc_for_log(buf);
-    log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
+    log_warn(LD_GENERAL, "Got invalid RFC1123 time %s: No such month", esc);
     tor_free(esc);
     return -1;
   }
@@ -958,17 +958,17 @@ parse_iso_time(const char *cp, time_t *t)
   struct tm st_tm;
 #ifdef HAVE_STRPTIME
   if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
-    log_warn(LD_GENERAL, "Published time was unparseable"); return -1;
+    log_warn(LD_GENERAL, "ISO time was unparseable by strptime"); return -1;
   }
 #else
   unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
   if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month,
                 &day, &hour, &minute, &second) < 6) {
-    log_warn(LD_GENERAL, "Published time was unparseable"); return -1;
+    log_warn(LD_GENERAL, "ISO time time was unparseable"); return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
           hour > 23 || minute > 59 || second > 61) {
-    log_warn(LD_GENERAL, "Published time was nonsensical"); return -1;
+    log_warn(LD_GENERAL, "ISO time was nonsensical"); return -1;
   }
   st_tm.tm_year = year-1900;
   st_tm.tm_mon = month-1;
@@ -1876,7 +1876,7 @@ get_interface_address(int severity, uint32_t *addr)
   /* XXXX Can this be right on IPv6 clients? */
   if (getsockname(sock, (struct sockaddr*)&my_addr, &my_addr_len)) {
     int e = tor_socket_errno(sock);
-    log_fn(severity, LD_NET, "getsockname() failed: %s",
+    log_fn(severity, LD_NET, "getsockname() to determine interface failed: %s",
            tor_socket_strerror(e));
     goto err;
   }

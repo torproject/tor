@@ -734,7 +734,7 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
   tor_assert(sig);
 
   if (crypto_digest(digest,data,datalen)<0) {
-    log_warn(LD_CRYPTO, "couldn't compute digest");
+    log_warn(LD_BUG, "couldn't compute digest");
     return -1;
   }
   r = crypto_pk_public_checksig(env,buf,sig,siglen);

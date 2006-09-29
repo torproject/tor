@@ -652,12 +652,13 @@ switch_id(char *user, char *group)
     }
 
     if (setgid(gr->gr_gid) != 0) {
-      log_warn(LD_GENERAL,"Error setting GID: %s", strerror(errno));
+      log_warn(LD_GENERAL,"Error setting to configured GID: %s",
+               strerror(errno));
       return -1;
     }
   } else if (user) {
     if (setgid(pw->pw_gid) != 0) {
-      log_warn(LD_GENERAL,"Error setting GID: %s", strerror(errno));
+      log_warn(LD_GENERAL,"Error setting to user GID: %s", strerror(errno));
       return -1;
     }
   }

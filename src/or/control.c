@@ -726,7 +726,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
     tor_free(config);
   } else {
     if (config_get_lines(body, &lines) < 0) {
-      log_warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
+      log_warn(LD_CONTROL,"V0 controller gave us config lines we can't parse.");
       send_control0_error(conn, ERR_SYNTAX, "Couldn't parse configuration");
       return 0;
     }
@@ -2262,7 +2262,8 @@ handle_control_fragments(control_connection_t *conn, uint16_t command_type,
 {
   if (command_type == CONTROL0_CMD_FRAGMENTHEADER) {
     if (conn->incoming_cmd) {
-      log_warn(LD_CONTROL, "Dropping incomplete fragmented command");
+      log_warn(LD_CONTROL, "Dropping incomplete fragmented command; new "
+               "fragmented command was begun.");
       tor_free(conn->incoming_cmd);
     }
     if (body_len < 6) {

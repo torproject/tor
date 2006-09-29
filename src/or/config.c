@@ -663,7 +663,7 @@ options_act_reversible(or_options_t *old_options, char **msg)
 
   SMARTLIST_FOREACH(new_listeners, connection_t *, conn,
   {
-    log_notice(LD_NET, "Closing %s on %s:%d",
+    log_notice(LD_NET, "Closing partially-constructed listener %s on %s:%d",
                conn_type_to_string(conn->type), conn->address, conn->port);
     connection_close_immediate(conn);
     connection_mark_for_close(conn);
@@ -800,7 +800,7 @@ options_act(or_options_t *old_options)
                "Worker-related options changed. Rotating workers.");
       if (server_mode(options) && !server_mode(old_options)) {
         if (init_keys() < 0) {
-          log_err(LD_GENERAL,"Error initializing keys; exiting");
+          log_err(LD_BUG,"Error initializing keys; exiting");
           return -1;
         }
         server_has_changed_ip();
@@ -3473,7 +3473,7 @@ write_configuration_file(const char *fname, or_options_t *options)
     }
     log_notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
     if (rename(fname, fn_tmp) < 0) {
-      log_warn(LD_FS, "Couldn't rename \"%s\" to \"%s\": %s",
+      log_warn(LD_FS, "Couldn't rename configuration file \"%s\" to \"%s\": %s",
              fname, fn_tmp, strerror(errno));
       tor_free(fn_tmp);
       goto err;

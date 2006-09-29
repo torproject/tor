@@ -238,7 +238,7 @@ main(int argc, char **argv)
   }
 
   if (network_init()<0) {
-    log_err(LD_NET,"Error initializing network; exiting.");
+    log_err(LD_BUG,"Error initializing network; exiting.");
     return 1;
   }
 

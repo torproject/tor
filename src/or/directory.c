@@ -968,7 +968,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              (int)body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
       log_warn(LD_DIR,"Received http status code %d (%s) from server "
-               "'%s:%d'. I'll try again soon.",
+               "'%s:%d' while fetching directory. I'll try again soon.",
                status_code, escaped(reason), conn->_base.address,
                conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
@@ -986,7 +986,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Received running-routers list (size %d)", (int)body_len);
     if (status_code != 200) {
       log_warn(LD_DIR,"Received http status code %d (%s) from server "
-               "'%s:%d'. I'll try again soon.",
+               "'%s:%d' while fetching running-routers. I'll try again soon.",
                status_code, escaped(reason), conn->_base.address,
                conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
@@ -1157,7 +1157,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         break;
       default:
         log_warn(LD_GENERAL,
-             "http status %d (%s) reason unexpected (server '%s:%d').",
+             "http status %d (%s) reason unexpected while uploding "
+             "descriptor to server '%s:%d').",
              status_code, escaped(reason), conn->_base.address,
              conn->_base.port);
         break;
@@ -1192,7 +1193,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "rendezvous query?", escaped(reason));
         break;
       default:
-        log_warn(LD_REND,"http status %d (%s) response unexpected (server "
+        log_warn(LD_REND,"http status %d (%s) response unexpected while "
+                 "fetching hidden service descriptor (server "
                  "'%s:%d').",
                  status_code, escaped(reason), conn->_base.address,
                  conn->_base.port);

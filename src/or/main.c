@@ -1139,7 +1139,7 @@ do_main_loop(void)
    * TLS context. */
   if (! identity_key_is_set()) {
     if (init_keys() < 0) {
-      log_err(LD_GENERAL,"Error initializing keys; exiting");
+      log_err(LD_BUG,"Error initializing keys; exiting");
       return -1;
     }
   }
@@ -1520,7 +1520,7 @@ tor_init(int argc, char *argv[])
       "Do not rely on it for strong anonymity.",VERSION);
 
   if (network_init()<0) {
-    log_err(LD_NET,"Error initializing network; exiting.");
+    log_err(LD_BUG,"Error initializing network; exiting.");
     return -1;
   }
   atexit(exit_function);
@@ -1622,7 +1622,7 @@ do_list_fingerprint(void)
   }
   tor_assert(nickname);
   if (init_keys() < 0) {
-    log_err(LD_BUG,"Error initializing keys; exiting");
+    log_err(LD_BUG,"Error initializing keys; can't display fingerprint");
     return -1;
   }
   if (!(k = get_identity_key())) {

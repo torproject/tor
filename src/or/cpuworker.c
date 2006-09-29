@@ -110,7 +110,7 @@ cpuworkers_rotate(void)
 int
 connection_cpu_reached_eof(connection_t *conn)
 {
-  log_warn(LD_GENERAL,"Read eof. Worker died unexpectedly.");
+  log_warn(LD_GENERAL,"Read eof. CPU worker died unexpectedly.");
   if (conn->state != CPUWORKER_STATE_IDLE) {
     /* the circ associated with this cpuworker will have to wait until
      * it gets culled in run_connection_housekeeping(), since we have
@@ -322,7 +322,7 @@ spawn_cpuworker(void)
 
   fdarray = tor_malloc(sizeof(int)*2);
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
-    log_warn(LD_NET, "Couldn't construct socketpair: %s",
+    log_warn(LD_NET, "Couldn't construct socketpair for cpuworker: %s",
              tor_socket_strerror(-err));
     tor_free(fdarray);
     return -1;
