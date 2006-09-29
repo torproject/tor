@@ -85,8 +85,8 @@ N - Simplify authority operation
         registered and can't be looked up by nickname.]
 d     - Tolerate clock skew on bridge relays.
 d     - A way to examine and twiddle router flags from controller.
-      - A way to export server descriptors to controllers
-N         - Event / getinfo for "when did routerdesc last change".
+      o A way to export server descriptors to controllers
+          o Event for "when did routerdesc last change".
 d     - a way to pick entries based wholly on extend_info equivalent;
         a way to export extend_info equivalent.
 R     - option to dl directory info via tor
@@ -410,6 +410,8 @@ Future version:
     - Specify; implement.
   - let each hidden service (or other thing) specify its own
     OutboundBindAddress?
+  - Stop using tor_socketpair to make connection bridges: do an
+    implementation that uses buffers only.
 
 Blue-sky:
   - Patch privoxy and socks protocol to pass strings to the browser.

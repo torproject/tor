@@ -77,7 +77,8 @@ const char control_c_id[] =
 #define LAST_V0_EVENT         0x000B
 #define EVENT_ADDRMAP         0x000C
 #define EVENT_AUTHDIR_NEWDESCS 0x000D
-#define _EVENT_MAX            0x000D
+#define EVENT_DESCCHANGED     0x000E
+#define _EVENT_MAX            0x000E
 
 /** Array mapping from message type codes to human-readable message
  * type names. Used for compatibility with version 0 of the control
@@ -952,6 +953,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
           event_code = EVENT_ADDRMAP;
         else if (!strcasecmp(ev, "AUTHDIR_NEWDESCS"))
           event_code = EVENT_AUTHDIR_NEWDESCS;
+        else if (!strcasecmp(ev, "DESCCHANGED"))
+          event_code = EVENT_DESCCHANGED;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
@@ -2979,6 +2982,15 @@ control_event_or_authdir_new_descriptor(const char *action,
   tor_free(esc);
   tor_free(buf);
 
+  return 0;
+}
+
+/** Our own router descriptor has changed; tell any controllers that care.
+ */
+int
+control_event_my_descriptor_changed(void)
+{
+  send_control1_event(EVENT_DESCCHANGED, "650 DESCCHANGED\r\n");
   return 0;
 }
 

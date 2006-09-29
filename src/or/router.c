@@ -903,6 +903,7 @@ router_rebuild_descriptor(int force)
 
   desc_clean_since = time(NULL);
   desc_needs_upload = 1;
+  control_event_my_descriptor_changed();
   return 0;
 }
 

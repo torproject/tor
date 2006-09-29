@@ -2063,6 +2063,7 @@ int control_event_address_mapped(const char *from, const char *to,
 int control_event_or_authdir_new_descriptor(const char *action,
                                             const char *descriptor,
                                             const char *msg);
+int control_event_my_descriptor_changed(void);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);
