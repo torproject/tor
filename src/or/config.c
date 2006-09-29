@@ -1610,15 +1610,28 @@ resolve_my_address(or_options_t *options, uint32_t *addr_out,
       uint32_t interface_ip;
 
       if (explicit_hostname) {
-        log_warn(LD_CONFIG,"Could not resolve local Address '%s'. Failing.",
-                 hostname);
+        log_warn(LD_CONFIG,"Could not resolve local address '%s'. %s.",
+                 hostname,
+                 old_addr ? "Falling back to old address" : "Failing");
+        if (old_addr) {
+          if (hostname_out)
+            *hostname_out = tor_strdup(hostname);
+          *addr_out = old_addr;
+          return 0;
+        }
         return -1;
       }
       log_notice(LD_CONFIG, "Could not resolve guessed local hostname '%s'. "
                             "Trying something else.", hostname);
       if (get_interface_address(&interface_ip)) {
         log_warn(LD_CONFIG, "Could not get local interface IP address. "
-                 "Failing.");
+                 "%s.", old_addr ? "Falling back to old address" : "Failing");
+        if (old_addr) {
+          if (hostname_out)
+            *hostname_out = tor_strdup(hostname);
+          *addr_out = old_addr;
+          return 0;
+        }
         return -1;
       }
       in.s_addr = htonl(interface_ip);

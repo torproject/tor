@@ -9,6 +9,8 @@ Changes in version 0.1.1.24 - 2006-09-xx [ongoing]
     - If we're a directory mirror and we ask for "all" network status
       documents, we would forget that's what we wanted and discard most
       of them when they arrived.
+    - Don't crash if, after a server has been running for a while, it can't
+      resolve its hostname.
 
   o Minor bugfixes:
     - Allow Tor to start when RunAsDaemon is set but no logs are set.
