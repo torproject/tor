@@ -745,7 +745,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     if (getsockname(news, (struct sockaddr*)addrbuf, &remotelen)<0) {
       int e = tor_socket_errno(news);
       log_warn(LD_NET, "getsockname() for new connection failed: %s",
-               tor_socket_strerror(tor_socket_strerror(e)));
+               tor_socket_strerror(e));
     } else {
       if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen,
                             LOG_WARN) < 0) {
