@@ -173,7 +173,7 @@ $Id$
 
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
-         "AUTHDIR_NEWDESCS"
+         "AUTHDIR_NEWDESCS" / "DESCCHANGED"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -419,12 +419,12 @@ $Id$
     "dir/server/d/<D1>+<D2>+<D3>"
     "dir/server/authority"
     "dir/server/all"
-      [DRAFT] [Not Implemented] A series of lines listing directory
-      contents, provided according to the specification for the URLs listed
-      in Section 4.4 of dir-spec.txt.  Note that Tor MUST NOT provide
-      private information, such as descriptors for routers not marked as
-      general-purpose.  When asked for 'authority' information for which this
-      Tor is not authoritative, Tor replies with an empty string.
+      A series of lines listing directory contents, provided according to the
+      specification for the URLs listed in Section 4.4 of dir-spec.txt.  Note
+      that Tor MUST NOT provide private information, such as descriptors for
+      routers not marked as general-purpose.  When asked for 'authority'
+      information for which this Tor is not authoritative, Tor replies with
+      an empty string.
 
   Examples:
      C: GETINFO version desc/name/moria1
@@ -772,6 +772,13 @@ $Id$
        Descriptor CRLF "." CRLF
      Action = "ACCEPTED" / "DROPPED" / "REJECTED"
      Message = Text
+
+4.1.9. Our descriptor changed
+
+  Syntax:
+     "650" SP "DESCCHANGED"
+
+  [First added in 0.1.2.2-alpha.]
 
 5. Implementation notes
 
