@@ -589,7 +589,8 @@ connection_edge_end_reason_socks5_response(int reason)
     case END_STREAM_REASON_NET_UNREACHABLE:
       return SOCKS5_NET_UNREACHABLE;
     default:
-      log_warn(LD_PROTOCOL,"Reason for ending (%d) not recognized.",reason);
+      log_warn(LD_PROTOCOL,"Reason for ending (%d) not recognized; "
+               "sending generic socks error.",reason);
       return SOCKS5_GENERAL_ERROR;
   }
 }

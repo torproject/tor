@@ -217,7 +217,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
           goto err;
         }
         if (inflateInit2(stream, method_bits(method)) != Z_OK) {
-          log_warn(LD_GENERAL, "Error from inflateInit2: %s",
+          log_warn(LD_GENERAL, "Error from second inflateInit2: %s",
                    stream->msg?stream->msg:"<no message>");
           goto err;
         }

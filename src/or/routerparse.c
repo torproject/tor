@@ -1016,12 +1016,14 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   strlcpy(rs->nickname, tok->args[0], sizeof(rs->nickname));
 
   if (digest_from_base64(rs->identity_digest, tok->args[1])) {
-    log_warn(LD_DIR, "Error decoding digest %s", escaped(tok->args[1]));
+    log_warn(LD_DIR, "Error decoding identity digest %s",
+             escaped(tok->args[1]));
     goto err;
   }
 
   if (digest_from_base64(rs->descriptor_digest, tok->args[2])) {
-    log_warn(LD_DIR, "Error decoding digest %s", escaped(tok->args[2]));
+    log_warn(LD_DIR, "Error decoding descriptor digest %s",
+             escaped(tok->args[2]));
     goto err;
   }
 
@@ -1747,7 +1749,7 @@ router_get_hash_impl(const char *s, char *digest,
   char *start, *end;
   start = strstr(s, start_str);
   if (!start) {
-    log_warn(LD_DIR,"couldn't find \"%s\"",start_str);
+    log_warn(LD_DIR,"couldn't find start of hashed material \"%s\"",start_str);
     return -1;
   }
   if (start != s && *(start-1) != '\n') {
@@ -1758,7 +1760,7 @@ router_get_hash_impl(const char *s, char *digest,
   }
   end = strstr(start+strlen(start_str), end_str);
   if (!end) {
-    log_warn(LD_DIR,"couldn't find \"%s\"",end_str);
+    log_warn(LD_DIR,"couldn't find end of hashed material \"%s\"",end_str);
     return -1;
   }
   end = strchr(end+strlen(end_str), '\n');

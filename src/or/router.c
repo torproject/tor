@@ -127,7 +127,7 @@ rotate_onion_key(void)
   tor_snprintf(fname_prev,sizeof(fname_prev),
            "%s/keys/secret_onion_key.old",get_options()->DataDirectory);
   if (!(prkey = crypto_new_pk_env())) {
-    log_err(LD_GENERAL,"Error creating crypto environment.");
+    log_err(LD_GENERAL,"Error constructing rotated onion key");
     goto error;
   }
   if (crypto_pk_generate_key(prkey)) {
@@ -187,7 +187,7 @@ init_key_from_file(const char *fname)
   FILE *file = NULL;
 
   if (!(prkey = crypto_new_pk_env())) {
-    log_err(LD_GENERAL,"Error creating crypto environment.");
+    log_err(LD_GENERAL,"Error constructing key");
     goto error;
   }
 

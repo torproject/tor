@@ -345,7 +345,8 @@ rend_service_load_keys(void)
     /* Load key */
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
         strlcat(fname,"/private_key",sizeof(fname)) >= sizeof(fname)) {
-      log_warn(LD_CONFIG, "Directory name too long: \"%s\".", s->directory);
+      log_warn(LD_CONFIG, "Directory name too long to store key file: \"%s\".",
+               s->directory);
       return -1;
     }
     s->private_key = init_key_from_file(fname);
@@ -363,7 +364,8 @@ rend_service_load_keys(void)
     }
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
         strlcat(fname,"/hostname",sizeof(fname)) >= sizeof(fname)) {
-      log_warn(LD_CONFIG, "Directory name too long: \"%s\".", s->directory);
+      log_warn(LD_CONFIG, "Directory name too long to store hostname file:"
+               " \"%s\".", s->directory);
       return -1;
     }
     tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
