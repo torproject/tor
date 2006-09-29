@@ -60,8 +60,7 @@ sev_to_string(int severity)
   }
 }
 
-/** Helper: decide whether to include the function name in the log message.
- * */
+/** Helper: decide whether to include the function name in the log message. */
 static INLINE int
 should_log_function_name(uint32_t domain, int severity)
 {
@@ -434,6 +433,8 @@ add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
   return 0;
 }
 
+/** Adjust the configured severity of any logs whose callback function is
+ * <b>cb</b>. */
 void
 change_callback_log_severity(int loglevelMin, int loglevelMax,
                              log_callback cb)
@@ -577,7 +578,10 @@ switch_logs_debug(void)
 }
 
 #ifdef HAVE_EVENT_SET_LOG_CALLBACK
+/** A string which, if it appears in a libevent log, should be ignored. */
 static const char *suppress_msg = NULL;
+/** Callback function passed to event_set_log() so we can intercept
+ * log messages from libevent. */
 static void
 libevent_logging_callback(int severity, const char *msg)
 {
@@ -608,11 +612,13 @@ libevent_logging_callback(int severity, const char *msg)
       break;
   }
 }
+/** Set hook to intercept log messages from libevent. */
 void
 configure_libevent_logging(void)
 {
   event_set_log_callback(libevent_logging_callback);
 }
+/** Ignore any libevent log message that contains <b>msg</b> */
 void
 suppress_libevent_log_msg(const char *msg)
 {

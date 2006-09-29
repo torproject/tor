@@ -493,6 +493,8 @@ tor_digest_is_zero(const char *digest)
   return tor_mem_is_zero(digest, DIGEST_LEN);
 }
 
+/* Helper: common code to check whether the result of a strtol or strtoul or
+ * strtoll is correct. */
 #define CHECK_STRTOX_RESULT()                           \
   /* Was at least one character converted? */           \
   if (endptr == s)                                      \
@@ -530,6 +532,7 @@ tor_parse_long(const char *s, int base, long min, long max,
   CHECK_STRTOX_RESULT();
 }
 
+/** As tor_parse_log, but return an unsigned long */
 unsigned long
 tor_parse_ulong(const char *s, int base, unsigned long min,
                 unsigned long max, int *ok, char **next)
@@ -541,7 +544,8 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   CHECK_STRTOX_RESULT();
 }
 
-/** Only base 10 is guaranteed to work for now. */
+/** As tor_parse_log, but return a unit64_t.  Only base 10 is guaranteed to
+ * work for now. */
 uint64_t
 tor_parse_uint64(const char *s, int base, uint64_t min,
                  uint64_t max, int *ok, char **next)
@@ -570,6 +574,10 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
   CHECK_STRTOX_RESULT();
 }
 
+/** Encode the <b>srclen</b> bytes at <b>src</b> in a NUL-terminated,
+ * uppercase hexadecimal string; store it in the <b>destlen</b>-byte buffer
+ * <b>dest</b>.
+ */
 void
 base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
@@ -589,23 +597,35 @@ base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   *cp = '\0';
 }
 
-static const char HEX_DIGITS[] = "0123456789ABCDEFabcdef";
-
+/** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
 static INLINE int
 hex_decode_digit(char c)
 {
-  const char *cp;
-  int n;
-  cp = strchr(HEX_DIGITS, c);
-  if (!cp)
-    return -1;
-  n = cp-HEX_DIGITS;
-  if (n<=15)
-    return n; /* digit or uppercase */
-  else
-    return n-6; /* lowercase */
+  switch (c) {
+    case '0': return 0;
+    case '1': return 1;
+    case '2': return 2;
+    case '3': return 3;
+    case '4': return 4;
+    case '5': return 5;
+    case '6': return 6;
+    case '7': return 7;
+    case '8': return 8;
+    case '9': return 9;
+    case 'A': case 'a': return 10;
+    case 'B': case 'b': return 11;
+    case 'C': case 'c': return 12;
+    case 'D': case 'd': return 13;
+    case 'E': case 'e': return 14;
+    case 'F': case 'f': return 15;
+    default:
+      return -1;
+  }
 }
 
+/** Given a hexadecimal string of <b>srclen</b> bytes in <b>src/b>, decode it
+ * and store the result in the <b>destlen</b>-byte buffer at <b>dest</b>.
+ * Return 0 on success, -1 on failure. */
 int
 base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
@@ -832,6 +852,11 @@ static const char *MONTH_NAMES[] =
   { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
+/** Set <b>buf</b> to the RFC1123 encoding of the GMT value of <b>t</b>.
+ * The buffer must be at least RFC1123_TIME_LEN+1 bytes long.
+ *
+ * (RFC1123 format is Fri, 29 Sep 2006 15:54:20 GMT)
+ */
 void
 format_rfc1123_time(char *buf, time_t t)
 {
@@ -848,6 +873,11 @@ format_rfc1123_time(char *buf, time_t t)
   memcpy(buf+8, MONTH_NAMES[tm.tm_mon], 3);
 }
 
+/** Parse the the RFC1123 encoding of some time (in GMT) from <b>buf</b>,
+ * and store the result in *<b>t</b>.
+ *
+ * Return 0 on succcess, -1 on failure.
+*/
 int
 parse_rfc1123_time(const char *buf, time_t *t)
 {
@@ -896,6 +926,11 @@ parse_rfc1123_time(const char *buf, time_t *t)
   return 0;
 }
 
+/** Set <b>buf</b> to the ISO???? encoding of the local value of <b>t</b>.
+ * The buffer must be at least ISO_TIME_LEN+1 bytes long.
+ *
+ * (ISO???? format is 2006-10-29 10:57:20)
+ */
 void
 format_local_iso_time(char *buf, time_t t)
 {
@@ -903,6 +938,9 @@ format_local_iso_time(char *buf, time_t t)
   strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_localtime_r(&t, &tm));
 }
 
+/** Set <b>buf</b> to the ISO???? encoding of the GMT value of <b>t</b>.
+ * The buffer must be at least ISO_TIME_LEN+1 bytes long.
+ */
 void
 format_iso_time(char *buf, time_t t)
 {
@@ -1149,7 +1187,10 @@ write_str_to_file(const char *fname, const char *str, int bin)
   return write_bytes_to_file(fname, str, strlen(str), bin);
 }
 
-/* DOCDOC */
+/** Helper: given a set of flags as passed to open(2), open the file
+ * <b>fname</b> and write all the sized_chunk_t structs in <b>chunks</t> to
+ * the file.  Do so as atomically as possible e.g. by opening temp files and
+ * renaming. */
 static int
 write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
                           int open_flags)
@@ -1204,7 +1245,8 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
   return -1;
 }
 
-/* DOCDOC */
+/* Given a smartlist of sized_chunk_t, write them atomically to a file
+ * <b>fname</b>, overwriting or creating the file as necessary.  */
 int
 write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin)
 {
@@ -1228,7 +1270,8 @@ write_bytes_to_file(const char *fname, const char *str, size_t len,
   return r;
 }
 
-/* DOCDOC */
+/** As write_bytes_to_file, but if the file already exists, append the bytes
+ * to the end of the file instead of overwriting it. */
 int
 append_bytes_to_file(const char *fname, const char *str, size_t len,
                      int bin)

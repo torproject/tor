@@ -77,7 +77,9 @@ const char crypto_c_id[] =
 #define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
 
 #ifdef TOR_IS_MULTITHREADED
+/** A number of prealloced mutexes for use by openssl. */
 static tor_mutex_t **_openssl_mutexes = NULL;
+/** How many mutexes have we allocated for use by openssl? */
 static int _n_openssl_mutexes = -1;
 #endif
 
@@ -164,6 +166,7 @@ crypto_log_errors(int severity, const char *doing)
 }
 
 #ifndef NO_ENGINES
+/** Log any OpenSSL engines we're using at NOTICE. */
 static void
 log_engine(const char *fn, ENGINE *e)
 {
@@ -1711,6 +1714,9 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   return ret;
 }
 
+/** Base-64 encode DIGEST_LINE bytes from <b>digest</b>, remove the trailing =
+ * and newline characters, and store the nul-terminated result in the first
+ * BASE64_DIGEST_LEN+1 bytes of <b>d64</b>.  */
 int
 digest_to_base64(char *d64, const char *digest)
 {
@@ -1721,6 +1727,9 @@ digest_to_base64(char *d64, const char *digest)
   return 0;
 }
 
+/** Given a base-64 encoded, nul-terminated digest in <b>d64</b> (without
+ * trailing newline or = characters), decode it and store the result in the
+ * first DIGEST_LEN bytes at <b>digest</b>. */
 int
 digest_from_base64(char *digest, const char *d64)
 {
@@ -1803,6 +1812,7 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 }
 
 #ifdef TOR_IS_MULTITHREADED
+/** Helper: openssl uses this callback to manipulate mutexes. */
 static void
 _openssl_locking_cb(int mode, int n, const char *file, int line)
 {
@@ -1819,6 +1829,8 @@ _openssl_locking_cb(int mode, int n, const char *file, int line)
     tor_mutex_release(_openssl_mutexes[n]);
 }
 
+/** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
+ * multithreaded. */
 static int
 setup_openssl_threading(void)
 {

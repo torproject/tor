@@ -29,6 +29,8 @@ const char torgzip_c_id[] =
 #include "log.h"
 #include "torgzip.h"
 
+/** Set to 1 if zlib is a version that supports gzip; set to 0 if it doesn't;
+ * set to -1 if we haven't checked yet. */
 static int gzip_is_supported = -1;
 
 /** Return true iff we support gzip-based compression.  Otherwise, we need to
@@ -49,6 +51,7 @@ is_gzip_supported(void)
   return gzip_is_supported;
 }
 
+/** Return the 'bits' value to tell zlib to use <b>method</b>.*/
 static INLINE int
 method_bits(compress_method_t method)
 {
@@ -152,6 +155,10 @@ tor_gzip_compress(char **out, size_t *out_len,
  * buffer, using the method described in <b>method</b>.  Store the uncompressed
  * string in *<b>out</b>, and its length in *<b>out_len</b>.  Return 0 on
  * success, -1 on failure.
+ *
+ * If <b>complete_only</b> is true, we consider a truncated input as a
+ * failure; otherwise we decompress as much as we can.  Warn about truncated
+ * or corrupt inputs at <b>protocol_warn_level</b>.
  */
 int
 tor_gzip_uncompress(char **out, size_t *out_len,
@@ -287,7 +294,9 @@ struct tor_zlib_state_t {
   int compress;
 };
 
-/** DOCDOC */
+/** Construct and return a tor_zlib_state_t object using <b>method</b>.  If
+ * <b>compress</b>, it's for compression; otherwise it's for
+ * decompression.  */
 tor_zlib_state_t *
 tor_zlib_new(int compress, compress_method_t method)
 {
@@ -319,7 +328,16 @@ tor_zlib_new(int compress, compress_method_t method)
  return NULL;
 }
 
-/** DOCDOC */
+/** Compress/decommpress some bytes using <b>state</b>.  Read up to
+ * *<b>in_len</b> bytes from *<b>in</b>, and write up to *<b>out_len</b> bytes
+ * to *<b>out</b>, adjusting the values as we go.  If <b>finish</b> is true,
+ * we've reached the end of the input.
+ *
+ * Return TOR_ZLIB_DONE if we've finished the entire compression/decompression.
+ * Return TOR_ZLIB_OK if we're processed everything from the input.
+ * Return TOR_ZLIB_BUF_FULL if we're out of space on <b>out</b>.
+ * Return TOR_ZLIB_ERR if the stream is corrupt.
+ */
 tor_zlib_output_t
 tor_zlib_process(tor_zlib_state_t *state,
                  char **out, size_t *out_len,
@@ -349,7 +367,7 @@ tor_zlib_process(tor_zlib_state_t *state,
       return TOR_ZLIB_DONE;
     case Z_BUF_ERROR:
       if (state->stream.avail_in == 0)
-        return Z_OK;
+        return TOR_ZLIB_OK;
       return TOR_ZLIB_BUF_FULL;
     case Z_OK:
       if (state->stream.avail_out == 0 || finish)
@@ -362,7 +380,7 @@ tor_zlib_process(tor_zlib_state_t *state,
     }
 }
 
-/** DOCDOC */
+/** Deallocate <b>state</b>. */
 void
 tor_zlib_free(tor_zlib_state_t *state)
 {

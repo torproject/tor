@@ -493,10 +493,23 @@ smartlist_uniq_strings(smartlist_t *sl)
   smartlist_uniq(sl, _compare_string_ptrs, NULL);
 }
 
-#define LEFT_CHILD(i)  ( ((i)+1)*2 - 1)
-#define RIGHT_CHILD(i) ( ((i)+1)*2 )
-#define PARENT(i)      ( ((i)+1)/2 - 1)
+/* Heap-based priority queue implementation for O(lg N) insert and remove.
+ * Recall that the heap property is that, for every index I, h[I] <
+ * H[LEFT_CHILD[I]] and h[I] < H[RIGHT_CHILD[I]].
+ */
 
+/* For a 1-indexed array, we would use LEFT_CHILD[x] = 2*x and RIGHT_CHILD[x]
+ * = 2*x + 1.  But this is C, so we have to adjust a little. */
+//#define LEFT_CHILD(i)  ( ((i)+1)*2 - 1)
+//#define RIGHT_CHILD(i) ( ((i)+1)*2 )
+//#define PARENT(i)      ( ((i)+1)/2 - 1)
+#define LEFT_CHILD(i)  ( 2*(i) + 1 )
+#define RIGHT_CHILD(i) ( 2*(i) + 2 )
+#define PARENT(i)      ( ((i)-1) / 2 )
+
+/** Helper. <b>sl</b> may have at most one violation of the heap property:
+ * the item at <b>idx</b> may be greater than one or both of its children.
+ * Restore the heap property. */
 static INLINE void
 smartlist_heapify(smartlist_t *sl,
                   int (*compare)(const void *a, const void *b),
@@ -528,6 +541,8 @@ smartlist_heapify(smartlist_t *sl,
   }
 }
 
+/** Insert <b>item</b> into the heap stored in <b>sl</b>, where order
+ * is determined by <b>compare</b> */
 void
 smartlist_pqueue_add(smartlist_t *sl,
                      int (*compare)(const void *a, const void *b),
@@ -549,6 +564,9 @@ smartlist_pqueue_add(smartlist_t *sl,
   }
 }
 
+/** Remove and return the top-priority item from the heap stored in <b>sl</b>,
+ * where order is determined by <b>compare</b>.  <b>sl</b> must not be
+ * empty. */
 void *
 smartlist_pqueue_pop(smartlist_t *sl,
                      int (*compare)(const void *a, const void *b))
@@ -564,6 +582,8 @@ smartlist_pqueue_pop(smartlist_t *sl,
   return top;
 }
 
+/** Assert that the heap property is correctly maintained by the heap stored
+ * in <b>sl</b>, where order is determined by <b>compare</b>. */
 void
 smartlist_pqueue_assert_ok(smartlist_t *sl,
                            int (*compare)(const void *a, const void *b))
@@ -609,13 +629,14 @@ smartlist_uniq_digests(smartlist_t *sl)
 DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_);
 DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
 
-/** Helper: compare strmap_t_entry objects by key value. */
+/** Helper: compare strmap_entry_t objects by key value. */
 static INLINE int
 strmap_entries_eq(strmap_entry_t *a, strmap_entry_t *b)
 {
   return !strcmp(a->key, b->key);
 }
 
+/** Helper: return a hash value for a strmap_entry_t */
 static INLINE unsigned int
 strmap_entry_hash(strmap_entry_t *a)
 {
@@ -629,6 +650,7 @@ digestmap_entries_eq(digestmap_entry_t *a, digestmap_entry_t *b)
   return !memcmp(a->key, b->key, DIGEST_LEN);
 }
 
+/** Helper: return a hash value for a digest_map_t */
 static INLINE unsigned int
 digestmap_entry_hash(digestmap_entry_t *a)
 {
@@ -1029,6 +1051,7 @@ digestmap_isempty(digestmap_t *map)
   return HT_EMPTY(&map->head);
 }
 
+/** Return the number of items in <b>map</b> */
 int
 strmap_size(strmap_t *map)
 {
