@@ -1308,7 +1308,7 @@ spawn_dnsworker(void)
   conn->address = tor_strdup("<unused>");
 
   if (connection_add(conn) < 0) { /* no space, forget it */
-    log_warn(LD_NET,"connection_add failed. Giving up.");
+    log_warn(LD_NET,"connection_add for dnsworker failed. Giving up.");
     connection_free(conn); /* this closes fd */
     return -1;
   }
@@ -1362,7 +1362,7 @@ spawn_enough_dnsworkers(void)
 
   while (num_dnsworkers < num_dnsworkers_needed) {
     if (spawn_dnsworker() < 0) {
-      log_warn(LD_EXIT,"Spawn failed. Will try again later.");
+      log_warn(LD_EXIT,"DNS worker spawn failed. Will try again later.");
       return -1;
     }
     num_dnsworkers++;

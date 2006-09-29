@@ -79,7 +79,7 @@ tor_gzip_compress(char **out, size_t *out_len,
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in deflateInit2 */
-    log_warn(LD_GENERAL, "Gzip not supported with zlib %s", ZLIB_VERSION);
+    log_warn(LD_BUG, "Gzip not supported with zlib %s", ZLIB_VERSION);
     return -1;
   }
 
@@ -132,7 +132,7 @@ tor_gzip_compress(char **out, size_t *out_len,
  done:
   *out_len = stream->total_out;
   if (deflateEnd(stream)!=Z_OK) {
-    log_warn(LD_GENERAL, "Error freeing gzip structures");
+    log_warn(LD_BUG, "Error freeing gzip structures");
     goto err;
   }
   tor_free(stream);
@@ -178,7 +178,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in inflateInit2 */
-    log_warn(LD_GENERAL, "Gzip not supported with zlib %s", ZLIB_VERSION);
+    log_warn(LD_BUG, "Gzip not supported with zlib %s", ZLIB_VERSION);
     return -1;
   }
 
@@ -213,7 +213,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
           goto done;
         /* There may be more compressed data here. */
         if ((r = inflateEnd(stream)) != Z_OK) {
-          log_warn(LD_GENERAL, "Error freeing gzip structures");
+          log_warn(LD_BUG, "Error freeing gzip structures");
           goto err;
         }
         if (inflateInit2(stream, method_bits(method)) != Z_OK) {
@@ -251,7 +251,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   r = inflateEnd(stream);
   tor_free(stream);
   if (r != Z_OK) {
-    log_warn(LD_GENERAL, "Error freeing gzip structures");
+    log_warn(LD_BUG, "Error freeing gzip structures");
     goto err;
   }
 
@@ -304,7 +304,7 @@ tor_zlib_new(int compress, compress_method_t method)
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in inflateInit2 */
-    log_warn(LD_GENERAL, "Gzip not supported with zlib %s", ZLIB_VERSION);
+    log_warn(LD_BUG, "Gzip not supported with zlib %s", ZLIB_VERSION);
     return NULL;
  }
 

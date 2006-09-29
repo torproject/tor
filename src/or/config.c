@@ -2930,8 +2930,8 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
       char *tmp_sev = tor_strndup(range, cp - range);
       levelMin = parse_log_level(tmp_sev);
       if (levelMin < 0) {
-        log_warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
-                 "err|warn|notice|info|debug", tmp_sev);
+        log_warn(LD_CONFIG, "Unrecognized minimum log severity '%s': must be "
+                 "one of err|warn|notice|info|debug", tmp_sev);
         tor_free(tmp_sev);
         return -1;
       }
@@ -2942,8 +2942,8 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
     } else {
       levelMax = parse_log_level(cp+1);
       if (levelMax < 0) {
-        log_warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
-                 "err|warn|notice|info|debug", cp+1);
+        log_warn(LD_CONFIG, "Unrecognized maximum log severity '%s': must be "
+                 "one of err|warn|notice|info|debug", cp+1);
         return -1;
       }
     }
@@ -3025,7 +3025,7 @@ options_init_logs(or_options_t *options, int validate_only)
     smartlist_split_string(elts, opt->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
     if (smartlist_len(elts) == 0) {
-      log_warn(LD_CONFIG, "Bad syntax on Log option 'Log %s'", opt->value);
+      log_warn(LD_CONFIG, "No arguments to Log option 'Log %s'", opt->value);
       ok = 0; goto cleanup;
     }
     if (parse_log_severity_range(smartlist_get(elts,0), &levelMin,
@@ -3045,7 +3045,8 @@ options_init_logs(or_options_t *options, int validate_only)
     }
     if (!strcasecmp(smartlist_get(elts,1), "file")) {
       if (smartlist_len(elts) != 3) {
-        log_warn(LD_CONFIG, "Bad syntax on Log option 'Log %s'", opt->value);
+        log_warn(LD_CONFIG, "Bad syntax on file Log option 'Log %s'",
+                 opt->value);
         ok = 0; goto cleanup;
       }
       if (!validate_only) {
@@ -3057,7 +3058,8 @@ options_init_logs(or_options_t *options, int validate_only)
       goto cleanup;
     }
     if (smartlist_len(elts) != 2) {
-      log_warn(LD_CONFIG, "Bad syntax on Log option 'Log %s'", opt->value);
+      log_warn(LD_CONFIG, "Wrong number of arguments on Log option 'Log %s'",
+               opt->value);
       ok = 0; goto cleanup;
     }
     if (!strcasecmp(smartlist_get(elts,1), "stdout")) {
@@ -3263,8 +3265,8 @@ parse_dir_server_line(const char *line, int validate_only)
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
-  if (smartlist_len(items) < 2) {
-    log_warn(LD_CONFIG, "Too few arguments to DirServer line.");
+  if (smartlist_len(items) < 1) {
+    log_warn(LD_CONFIG, "No arguments on DirServer line.");
     goto err;
   }
 

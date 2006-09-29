@@ -481,7 +481,7 @@ router_parse_runningrouters(const char *str)
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_warn(LD_DIR, "Missing published time on directory.");
+    log_warn(LD_DIR, "Missing published time on running-routers.");
     goto err;
   }
   tor_assert(tok->n_args == 1);
@@ -818,7 +818,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_warn(LD_DIR, "Missing published time"); goto err;
+    log_warn(LD_DIR, "Missing published time on router descriptor"); goto err;
   }
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &router->cache_info.published_on) < 0)
@@ -854,7 +854,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     /* If there's a fingerprint line, it must match the identity digest. */
     char d[DIGEST_LEN];
     if (tok->n_args < 1) {
-      log_warn(LD_DIR, "Too few arguments to fingerprint");
+      log_warn(LD_DIR, "Too few arguments to router fingerprint");
       goto err;
     }
     tor_strstrip(tok->args[0], " ");
@@ -1163,7 +1163,7 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
   if (tok->n_args < 1) {
-    log_warn(LD_DIR, "Too few arguments to fingerprint");
+    log_warn(LD_DIR, "Too few arguments to networkstatus fingerprint");
     goto err;
   }
   if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
@@ -1221,7 +1221,7 @@ networkstatus_parse_from_string(const char *s)
   }
 
   if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_warn(LD_DIR, "Missing published time on directory.");
+    log_warn(LD_DIR, "Missing published time on network-status.");
     goto err;
   }
   tor_assert(tok->n_args == 1);

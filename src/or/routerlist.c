@@ -2492,10 +2492,11 @@ router_get_combined_status_by_nickname(const char *nickname,
     char fp[HEX_DIGEST_LEN+1];
     base16_encode(fp, sizeof(fp),
                   best->status.identity_digest, DIGEST_LEN);
-    log_warn(LD_CONFIG, "You specified a server \"%s\" by name, but the "
-             "directory authorities do not have a binding for this nickname. "
-             "To make sure you get the same server in the future, refer to "
-             "it by key, as \"$%s\".", nickname, fp);
+    log_warn(LD_CONFIG,
+         "To look up a status, you specified a server \"%s\" by name, but the "
+         "directory authorities do not have a binding for this nickname. "
+         "To make sure you get the same server in the future, refer to "
+         "it by key, as \"$%s\".", nickname, fp);
     best->name_lookup_warned = 1;
   }
   smartlist_free(matches);

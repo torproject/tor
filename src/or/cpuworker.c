@@ -348,7 +348,7 @@ spawn_cpuworker(void)
   conn->address = tor_strdup("localhost");
 
   if (connection_add(conn) < 0) { /* no space, forget it */
-    log_warn(LD_NET,"connection_add failed. Giving up.");
+    log_warn(LD_NET,"connection_add for cpuworker failed. Giving up.");
     connection_free(conn); /* this closes fd */
     return -1;
   }
@@ -374,7 +374,7 @@ spawn_enough_cpuworkers(void)
 
   while (num_cpuworkers < num_cpuworkers_needed) {
     if (spawn_cpuworker() < 0) {
-      log_warn(LD_GENERAL,"Spawn failed. Will try again later.");
+      log_warn(LD_GENERAL,"Cpuworker spawn failed. Will try again later.");
       return;
     }
     num_cpuworkers++;

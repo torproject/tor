@@ -654,7 +654,7 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
   conn->port = usePort;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
-    log_warn(LD_NET,"connection_add failed. Giving up.");
+    log_warn(LD_NET,"connection_add for listener failed. Giving up.");
     connection_free(conn);
     goto err;
   }
