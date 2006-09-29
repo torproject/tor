@@ -450,6 +450,7 @@ typedef enum {
 #define RELAY_COMMAND_DROP 10
 #define RELAY_COMMAND_RESOLVE 11
 #define RELAY_COMMAND_RESOLVED 12
+#define RELAY_COMMAND_BEGIN_DIR 13
 
 #define RELAY_COMMAND_ESTABLISH_INTRO 32
 #define RELAY_COMMAND_ESTABLISH_RENDEZVOUS 33
@@ -474,6 +475,7 @@ typedef enum {
 #define END_STREAM_REASON_RESOURCELIMIT 11
 #define END_STREAM_REASON_CONNRESET 12
 #define END_STREAM_REASON_TORPROTOCOL 13
+#define END_STREAM_REASON_NOTDIRECTORY 14
 
 /* These high-numbered end reasons are not part of the official spec,
  * and are not intended to be put in relay end cells. They are here

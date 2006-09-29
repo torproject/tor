@@ -8,6 +8,11 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       support eventdns.
     - Specify and implement client-side SOCKS5 interface for reverse DNS
       lookups; see doc/socks-extensions.txt for full information.
+    - Add a BEGIN_DIR relay cell type for an easier in-protocol way to
+      connect to directory servers through Tor.  Previously, clients could
+      only connect to director servers over Tor from exit nodes, but couldn't
+      get directory information anonymously from a non-exit cache without
+      getting a directory server involved.
 
   o Minor features:
     - Check for name servers (like Earthlink's) that hijack failing DNS

@@ -29,6 +29,7 @@ static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
 static int connection_ap_process_transparent(edge_connection_t *conn);
+static int connection_exit_connect_dir(edge_connection_t *exit_conn);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -1813,33 +1814,41 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   }
 
   relay_header_unpack(&rh, cell->payload);
-
-  if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Relay begin cell has no \\0. Dropping.");
-    return 0;
-  }
-  if (parse_addr_port(LOG_PROTOCOL_WARN, cell->payload+RELAY_HEADER_SIZE,
-                      &address,NULL,&port)<0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Unable to parse addr:port in relay begin cell. Dropping.");
-    return 0;
-  }
-  if (port==0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Missing port in relay begin cell. Dropping.");
-    tor_free(address);
-    return 0;
-  }
+  if (rh.command == RELAY_COMMAND_BEGIN) {
+    if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Relay begin cell has no \\0. Dropping.");
+      return 0;
+    }
+    if (parse_addr_port(LOG_PROTOCOL_WARN, cell->payload+RELAY_HEADER_SIZE,
+                        &address,NULL,&port)<0) {
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Unable to parse addr:port in relay begin cell. Dropping.");
+      return 0;
+    }
+    if (port==0) {
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Missing port in relay begin cell. Dropping.");
+      tor_free(address);
+      return 0;
+    }
 #if 0
-  if (!tor_strisprint(address)) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Non-printing characters in address %s in relay "
-           "begin cell. Dropping.", escaped(address));
-    tor_free(address);
+    if (!tor_strisprint(address)) {
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Non-printing characters in address %s in relay "
+             "begin cell. Dropping.", escaped(address));
+      tor_free(address);
+      return 0;
+    }
+#endif
+  } else if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
+    or_options_t *options = get_options();
+    address = tor_strdup("127.0.0.1");
+    port = options->DirPort; /* not actually used. */
+  } else {
+    log_warn(LD_BUG, "Got an unexpected command %d", (int)rh.command);
     return 0;
   }
-#endif
 
   log_debug(LD_EXIT,"Creating new exit connection.");
   n_stream = TO_EDGE_CONN(connection_new(CONN_TYPE_EXIT));
@@ -1850,6 +1859,15 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   /* leave n_stream->s at -1, because it's not yet valid */
   n_stream->package_window = STREAMWINDOW_START;
   n_stream->deliver_window = STREAMWINDOW_START;
+
+  if (rh.command == RELAY_COMMAND_BEGIN_DIR &&
+      (!get_options()->DirPort || circ->purpose != CIRCUIT_PURPOSE_OR)) {
+    connection_edge_end(n_stream, END_STREAM_REASON_NOTDIRECTORY,
+                        n_stream->cpath_layer);
+    connection_free(TO_CONN(n_stream));
+    tor_free(address);
+    return 0;
+  }
 
   if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
@@ -1897,6 +1915,13 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     return 0;
   }
   log_debug(LD_EXIT,"about to start the dns_resolve().");
+
+  if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
+    n_stream->next_stream = TO_OR_CIRCUIT(circ)->n_streams;
+    n_stream->on_circuit = circ;
+    TO_OR_CIRCUIT(circ)->n_streams = n_stream;
+    return connection_exit_connect_dir(n_stream);
+  }
 
   /* send it off to the gethostbyname farm */
   switch (dns_resolve(n_stream, NULL)) {
@@ -2065,6 +2090,83 @@ connection_exit_connect(edge_connection_t *edge_conn)
                                  RELAY_COMMAND_CONNECTED,
                                  connected_payload, 8, edge_conn->cpath_layer);
   }
+}
+
+/** Given an exit conn that should attach to us as a directory server, open a
+ * bridge connection with a socketpair, create a new directory conn, and join
+ * them together.  Return 0 on success (or if there was an error we could send
+ * back an end cell for).  Return -1 if the circuit needs to be torn down.
+ * Either connects exit_conn, or frees it, or marks it as appropriate.
+ */
+static int
+connection_exit_connect_dir(edge_connection_t *exit_conn)
+{
+  int fd[2];
+  int err;
+  dir_connection_t *dir_conn = NULL;
+
+  log_info(LD_EXIT, "Opening dir bridge");
+
+  if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd)) < 0) {
+    log_warn(LD_NET,
+             "Couldn't construct socketpair (%s). Network down? Delaying.",
+             tor_socket_strerror(-err));
+    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT,
+                        exit_conn->cpath_layer);
+    connection_free(TO_CONN(exit_conn));
+    return 0;
+  }
+
+  tor_assert(fd[0] >= 0);
+  tor_assert(fd[1] >= 0);
+
+  set_socket_nonblocking(fd[0]);
+  set_socket_nonblocking(fd[1]);
+
+  exit_conn->_base.s = fd[0];
+  exit_conn->_base.state = EXIT_CONN_STATE_OPEN;
+
+  dir_conn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR));
+  dir_conn->_base.s = fd[1];
+
+  dir_conn->_base.addr = 0x7f000001;
+  dir_conn->_base.port = 0;
+  dir_conn->_base.address = tor_strdup("Tor network");
+  dir_conn->_base.type = CONN_TYPE_DIR;
+  dir_conn->_base.purpose = DIR_PURPOSE_SERVER;
+  dir_conn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
+
+  if (connection_add(TO_CONN(exit_conn))<0) {
+    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT,
+                        exit_conn->cpath_layer);
+    /* XXXX Have I got the free/mark distinction right? -NM */
+    connection_free(TO_CONN(exit_conn));
+    connection_free(TO_CONN(dir_conn));
+    return 0;
+  }
+
+  if (connection_add(TO_CONN(dir_conn))<0) {
+    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT,
+                        exit_conn->cpath_layer);
+    connection_close_immediate(TO_CONN(exit_conn));
+    connection_mark_for_close(TO_CONN(exit_conn));
+    connection_free(TO_CONN(dir_conn));
+    return 0;
+  }
+
+  connection_start_reading(TO_CONN(dir_conn));
+  connection_start_reading(TO_CONN(exit_conn));
+
+  if (connection_edge_send_command(exit_conn,
+                                   circuit_get_by_edge_conn(exit_conn),
+                                   RELAY_COMMAND_CONNECTED, NULL, 0,
+                                   exit_conn->cpath_layer) < 0) {
+    connection_mark_for_close(TO_CONN(exit_conn));
+    connection_mark_for_close(TO_CONN(dir_conn));
+    return 0;
+  }
+
+  return 0;
 }
 
 /** Return 1 if <b>conn</b> is a rendezvous stream, or 0 if

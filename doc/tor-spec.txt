@@ -624,6 +624,7 @@ TODO:
         10 -- RELAY_DROP      [forward or backward]
         11 -- RELAY_RESOLVE   [forward]
         12 -- RELAY_RESOLVED  [backward]
+        13 -- RELAY_BEGIN_DIR [forward]
 
    Commands labelled as "forward" must only be sent by the originator
    of the circuit. Commands labelled as "backward" must only be sent by
@@ -710,6 +711,16 @@ TODO:
    Relay RELAY_DROP cells are long-range dummies; upon receiving such
    a cell, the OR or OP must drop it.
 
+6.2.1. Opening a directory stream
+
+   If a Tor server is a directory server, it should respond to a
+   RELAY_BEGIN_DIR cell as if it had received a BEGIN cell requesting a
+   connection to its directory port.  RELAY_BEGIN_DIR cells ignore exit
+   policy, since the stream is local to the Tor process.
+
+   If the Tor server is not running a directory service, it should respond
+   with a REASON_NOTDIRECTORY RELAY_END cell.
+
 6.3. Closing streams
 
    When an anonymized TCP connection is closed, or an edge node
@@ -738,6 +749,8 @@ TODO:
       12 -- REASON_CONNRESET      (Connection was unexpectedly reset)
       13 -- REASON_TORPROTOCOL    (Sent when closing connection because of
                                    Tor protocol violations.)
+      14 -- REASON_NOTDIRECTORY   (Client send RELAY_BEGIN_DIR to a
+                                   non-directory server.)
 
    (With REASON_EXITPOLICY, the 4-byte IPv4 address or 16-byte IPv6 address
    forms the optional data; no other reason currently has extra data.

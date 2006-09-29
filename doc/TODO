@@ -52,7 +52,7 @@ P - Figure out why openssl 0.9.8c "make test" fails at sha256t test.
 Items for 0.1.2.x:
   o re-enable blossom functionality: let tor servers decide if they
     will use local search when resolving, or not.
-N   - Document it.
+    o Document it.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
 N   - Backend implementation
@@ -61,11 +61,13 @@ R   - Actually list all the events (notice and warn log messages are a good
 N   - Specify general event system
 R   - Specify actual events.
 
-N - Have (and document) a BEGIN_DIR relay cell that means "Connect to your
+N . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     directory port."
-    - Specify
-    - Implement
+    o Specify
+    o Implement
     - Use for something, so we can be sure it works.
+    - Test and debug
+
 
 x - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness

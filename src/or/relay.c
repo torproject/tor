@@ -944,6 +944,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 //      log_info(domain,"Got a relay-level padding cell. Dropping.");
       return 0;
     case RELAY_COMMAND_BEGIN:
+    case RELAY_COMMAND_BEGIN_DIR:
       if (layer_hint &&
           circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
         log_warn(LD_APP,"relay begin request unsupported at AP. Dropping.");
