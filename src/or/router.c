@@ -735,10 +735,8 @@ router_get_my_routerinfo(void)
 {
   if (!server_mode(get_options()))
     return NULL;
-
-  if (!desc_routerinfo || !desc_clean_since)
-    if (router_rebuild_descriptor(!desc_routerinfo))
-      return NULL;
+  if (router_rebuild_descriptor(0))
+    return NULL;
   return desc_routerinfo;
 }
 
