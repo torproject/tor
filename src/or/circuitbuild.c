@@ -116,20 +116,29 @@ circuit_list_path(origin_circuit_t *circ, int verbose)
                  circ->build_state->desired_path_len,
                  circ->_base.state == CIRCUIT_STATE_OPEN ? "" : ", exit ",
                  circ->_base.state == CIRCUIT_STATE_OPEN ? "" :
-                   (nickname?nickname:"*unnamed*"));
+                 (nickname?nickname:"*unnamed*"));
     smartlist_add(elements, tor_strdup(buf));
   }
 
   hop = circ->cpath;
   do {
-    const char *elt;
+    routerinfo_t *ri;
+    char *elt;
     if (!hop)
       break;
     if (!verbose && hop->state != CPATH_STATE_OPEN)
       break;
     if (!hop->extend_info)
       break;
-    elt = hop->extend_info->nickname;
+    if ((ri = router_get_by_digest(hop->extend_info->identity_digest)) &&
+        ri->is_named) {
+      elt = tor_strdup(hop->extend_info->nickname);
+    } else {
+      elt = tor_malloc(HEX_DIGEST_LEN+2);
+      elt[0] = '$';
+      base16_encode(elt+1, HEX_DIGEST_LEN+1,
+                    hop->extend_info->identity_digest, DIGEST_LEN);
+    }
     tor_assert(elt);
     if (verbose) {
       size_t len = strlen(elt)+2+strlen(states[hop->state])+1;
@@ -137,8 +146,9 @@ circuit_list_path(origin_circuit_t *circ, int verbose)
       tor_assert(hop->state <= 2);
       tor_snprintf(v,len,"%s(%s)",elt,states[hop->state]);
       smartlist_add(elements, v);
+      tor_free(elt);
     } else {
-      smartlist_add(elements, tor_strdup(elt));
+      smartlist_add(elements, elt);
     }
     hop = hop->next;
   } while (hop != circ->cpath);
