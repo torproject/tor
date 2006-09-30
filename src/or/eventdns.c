@@ -2351,6 +2351,8 @@ evdns_shutdown(int fail_requests)
 			CLOSE_SOCKET(server->socket);
 		(void) event_del(&server->event);
 		free(server);
+		if (server_next == server_head)
+			break;
 	}
 	server_head = NULL;
 	global_good_nameservers = 0;
