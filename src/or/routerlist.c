@@ -1385,7 +1385,6 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
     smartlist_add(rl->old_routers, sd);
-    ri->routerlist_index = -1;
   } else {
     routerinfo_free(ri);
   }
