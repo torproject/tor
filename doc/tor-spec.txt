@@ -410,6 +410,11 @@ TODO:
    [Versions of Tor before 0.1.0.6-rc did not support these cell types;
     clients should not send CREATE_FAST cells to older Tor servers.]
 
+   If an OR sees a circuit created with CREATE_FAST, the OR is sure to be the
+   first hop of a circuit.  ORs SHOULD reject attempts to create streams with
+   RELAY_BEGIN exiting the circuit at the first hop: letting Tor be used as a
+   single hop proxy makes exit nodes a more attractive target for compromise.
+
 5.2. Setting circuit keys
 
    Once the handshake between the OP and an OR is completed, both can

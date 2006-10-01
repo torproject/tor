@@ -41,15 +41,17 @@ N - Bug 200: disprefer exit nodes for entry, middle.
     - If 2/3 support port X, weight exits 1/2; weight non-exits 1.
     - (Exit fraction - 1/3):Non-exit fraction
     - (e - 1/3)/(1-e)
-N - Bug 303: block exit from circuits created with create-fast
-    - Specify and document
-    - Implement
-    - Note that we'd like a better speed-bump too.
+  o Bug 303: block exit from circuits created with create-fast
+    o Specify and document
+    o Implement
+    o Note that we'd like a better speed-bump too.
   o Bug 336: CIRC events should have digests when appropriate.
 N - figure out the right thing to do when telling nicknames to
     controllers.  We should always give digest, and possibly sometimes give
     nickname? Or digest, and nickname, with indication of whether name is
     canonical?
+    - edmanm likes $DIGEST~nickname for unNamed routers, and
+      $DIGEST=nickname for Named routers. So do I.
 N - Bug 326: make eventdns thrash less.
 N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
@@ -84,6 +86,7 @@ N . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     - Use for something, so we can be sure it works.
     - Test and debug
 
+N - Send back RELAY_END cells on malformed RELAY_BEGIN.
 
 x - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
@@ -390,6 +393,8 @@ R - Streamline how we pick entry nodes.
 Future version:
   - Configuration format really wants sections.
   - Good RBL substitute.
+  - Our current approach to block attempts to use Tor as a single-hop proxy
+    is pretty lame; we should get a better one.
   . Update the hidden service stuff for the new dir approach.
     - switch to an ascii format, maybe sexpr?
     - authdirservers publish blobs of them.

@@ -1877,6 +1877,15 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       return 0;
     }
 #endif
+    if (!CIRCUIT_IS_ORIGIN(circ) && TO_OR_CIRCUIT(circ)->is_first_hop) {
+      /* Don't let clients use us as a single-hop proxy; it attracts attackers
+       * and users who'd be better off with, well, single-hop proxies.
+       */
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Attempt to open a stream on first hop of circuit. Rejecting.");
+      tor_free(address);
+      return 0;
+    }
   } else if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
     or_options_t *options = get_options();
     address = tor_strdup("127.0.0.1");

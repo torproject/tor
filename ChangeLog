@@ -55,6 +55,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Fix NetBSD bug that could allow someone to force uninitialized RAM
       to be sent to a server's DNS resolver. This only affects NetBSD
       and other platforms that do not bounds-check tolower().
+    - Reject (most) attempts to use Tor as a one-hop proxy; if many people
+      start using Tor as a one-hop proxy, exit nodes become a more attractive
+      target for compromise. (Fixes bug 303.)
 
   o Major bugfixes:
     - Avoiding crashing on race condition in dns.c:

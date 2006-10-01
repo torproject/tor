@@ -770,6 +770,21 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   return best;
 }
 
+/** Return the number of hops in circuit's path. */
+int
+circuit_get_cpath_len(origin_circuit_t *circ)
+{
+  int n = 0;
+  if (circ && circ->cpath) {
+    crypt_path_t *cpath, *cpath_next = NULL;
+    for (cpath = circ->cpath; cpath_next != circ->cpath; cpath = cpath_next) {
+      cpath_next = cpath->next;
+      ++n;
+    }
+  }
+  return n;
+}
+
 /** Go through the circuitlist; mark-for-close each circuit that starts
  *  at us but has not yet been used. */
 void

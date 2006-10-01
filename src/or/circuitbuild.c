@@ -925,6 +925,8 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, char *payload,
   else
     memcpy(circ->handshake_digest, cell.payload+DIGEST_LEN, DIGEST_LEN);
 
+  circ->is_first_hop = (cell_type == CELL_CREATED_FAST);
+
   connection_or_write_cell_to_buf(&cell, circ->p_conn);
   log_debug(LD_CIRC,"Finished sending 'created' cell.");
 

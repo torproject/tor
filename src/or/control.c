@@ -1997,6 +1997,16 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
                      conn);
     return 0;
   }
+  if (circ && circuit_get_cpath_len(circ) < 2) {
+    if (STATE_IS_V0(conn->_base.state))
+      send_control0_error(conn, ERR_INTERNAL,
+                          "Refuse to attach stream to one-hop circuit.");
+    else
+      connection_write_str_to_buf(
+                     "551 Can't attach stream to one-hop circuit.\r\n",
+                     conn);
+    return 0;
+  }
   if (connection_ap_handshake_rewrite_and_attach(ap_conn, circ) < 0) {
     if (STATE_IS_V0(conn->_base.state))
       send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");

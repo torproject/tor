@@ -1232,8 +1232,6 @@ typedef struct origin_circuit_t {
    * for this circuit. This includes ciphers for each hop,
    * integrity-checking digests for each hop, and package/delivery
    * windows for each hop.
-   *
-   * The cpath field is defined only when we are the circuit's origin.
    */
   crypt_path_t *cpath;
 
@@ -1307,10 +1305,15 @@ typedef struct or_circuit_t {
   /** A hash of location-hidden service's PK if purpose is INTRO_POINT, or a
    * rendezvous cookie if purpose is REND_POINT_WAITING. Filled with zeroes
    * otherwise.
+   * ???? move to a subtype or adjunct structure? Wastes 20 bytes. -NM 
    */
   char rend_token[REND_TOKEN_LEN];
 
+  /* ???? move to a subtype or adjunct structure? Wastes 20 bytes -NM */
   char handshake_digest[DIGEST_LEN]; /**< Stores KH for the handshake. */
+
+  /** True iff this circuit was made with a CREATE_FAST cell. */
+  unsigned int is_first_hop : 1;
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t.*/
@@ -1751,6 +1754,7 @@ void circuit_mark_all_unused_circs(void);
 void circuit_expire_all_dirty_circs(void);
 void _circuit_mark_for_close(circuit_t *circ, int reason,
                              int line, const char *file);
+int circuit_get_cpath_len(origin_circuit_t *circ);
 
 #define circuit_mark_for_close(c, reason)                               \
   _circuit_mark_for_close((c), (reason), __LINE__, _SHORT_FILE_)
