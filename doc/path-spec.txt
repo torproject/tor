@@ -157,15 +157,24 @@ of their choices.
        below)
      - XXXX Choosing the length
 
-   For circuits that are not "fast", when choosing among multiple
-   candidates for a path element, we choose randomly. For "fast" circuits,
-   we choose
-   a given router with probability proportional to its advertised bandwidth
-   [the smaller of the 'rate' and 'observed' arguments to the "bandwidth"
-   element in its descriptor].  If a router's advertised bandwidth is greater
-   than MAX_BELIEVEABLE_BANDWIDTH (1.5 MB/sec), we clip to that value.
+   For circuits that do not need to be not "fast", when choosing among
+   multiple candidates for a path element, we choose randomly.
 
-   (XXXX We should do something to shift traffic away from exit nodes.)
+   For "fast" circuits, we a given router as an exit with probability
+   proportional to its advertised bandwidth [the smaller of the 'rate' and
+   'observed' arguments to the "bandwidth" element in its descriptor].  If a
+   router's advertised bandwidth is greater than MAX_BELIEVEABLE_BANDWIDTH
+   (1.5 MB/sec), we clip to that value.
+
+   For non-exit positions on "fast" circuits, we pick routers as above, but
+   we weight the clipped advertised bandwidth of Exit-flagged nodes depending
+   on the fraction of bandwidth available from non-Exit nodes.  Call the
+   total clipped advertised bandwidth for Exit nodes under consideration E,
+   and the total clipped advertised bandwidth for non-Exit nodes under
+   consideration N.  If E<N/2, we do not consider Exit-flagged nodes.
+   Otherwise, we weight their bandwidth with the factor (E-N/2)/(N+E-N/2) ==
+   (2E - N)/(2E + N).  This ensures that bandwidth is evenly distributed over
+   nodes in 3-hop paths.
 
    Additionally, we may be building circuits with one or more requests in
    mind.  Each kind of request puts certain constraints on paths:

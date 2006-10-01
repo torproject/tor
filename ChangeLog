@@ -47,6 +47,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       and including the function name only seems to confuse users.
     - Fix CIRC controller events so that controllers can learn the identity
       digests of non-Named servers used in circuit paths. (Fixes bug 336.)
+    - Avoid choosing Exit nodes for entry or middle hops when the bandwidth
+      available in non-Exit nodes is much higher then the bandwidth available
+      in Exit nodes. (Fixes bug 200.)
 
   o Security Fixes, minor:
     - If a client asked for a server by name, and we didn't have a
@@ -93,6 +96,8 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       With the old code, if a guard was unreachable by us but listed as
       running, it would clog our guard list forever.
     - Make eventdns give strings for DNS errors, not just error numbers.
+    - Be prepared in case we ever have a network with  more than 2GB per
+      second total advertised capacity.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and

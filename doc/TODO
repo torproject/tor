@@ -35,12 +35,10 @@ x - If the client's clock is too far in the past, it will drop (or
       D The right thing here is to revamp our node selection implementation.
         (Deferred until oprofile says this matters.)
     o make it configurable, so people can turn it on or off.
-N - Add script to grep for identical log msgs.
-N - Bug 200: disprefer exit nodes for entry, middle.
-    - If less than 1/3 support port X, only use as exit.
-    - If 2/3 support port X, weight exits 1/2; weight non-exits 1.
-    - (Exit fraction - 1/3):Non-exit fraction
-    - (e - 1/3)/(1-e)
+  o Add script to grep for identical log msgs.
+  o Bug 200: disprefer exit nodes for entry, middle.
+    o Specify
+    o Implement
   o Bug 303: block exit from circuits created with create-fast
     o Specify and document
     o Implement

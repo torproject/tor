@@ -884,46 +884,70 @@ router_get_advertised_bandwidth(routerinfo_t *router)
  * the advertised bandwidth of each router.
  */
 routerinfo_t *
-routerlist_sl_choose_by_bandwidth(smartlist_t *sl)
+routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
 {
   int i;
   routerinfo_t *router;
-  smartlist_t *bandwidths;
-  uint32_t this_bw, tmp, total_bw=0, rand_bw;
-  uint32_t *p;
+  uint32_t *bandwidths;
+  uint32_t this_bw;
+  uint64_t total_nonexit_bw = 0, total_exit_bw = 0, total_bw = 0;
+  uint64_t rand_bw, tmp;
+  double exit_weight;
 
   /* First count the total bandwidth weight, and make a smartlist
    * of each value. */
-  bandwidths = smartlist_create();
+  bandwidths = tor_malloc(sizeof(uint32_t)*smartlist_len(sl));
   for (i = 0; i < smartlist_len(sl); ++i) {
     router = smartlist_get(sl, i);
     this_bw = router_get_advertised_bandwidth(router);
     /* if they claim something huge, don't believe it */
     if (this_bw > MAX_BELIEVABLE_BANDWIDTH)
       this_bw = MAX_BELIEVABLE_BANDWIDTH;
-    p = tor_malloc(sizeof(uint32_t));
-    *p = this_bw;
-    smartlist_add(bandwidths, p);
-    total_bw += this_bw;
+    bandwidths[i] = this_bw;
+    if (router->is_exit)
+      total_exit_bw += this_bw;
+    else
+      total_nonexit_bw += this_bw;
   }
-  if (!total_bw) {
-    SMARTLIST_FOREACH(bandwidths, uint32_t*, p, tor_free(p));
-    smartlist_free(bandwidths);
+  if (!(total_exit_bw+total_nonexit_bw)) {
+    tor_free(bandwidths);
     return smartlist_choose(sl);
   }
+  if (for_exit) {
+    exit_weight = 1.0;
+    total_bw = total_exit_bw + total_nonexit_bw;
+  } else if (total_exit_bw < total_nonexit_bw / 2) {
+    exit_weight = 0.0;
+    total_bw = total_nonexit_bw;
+  } else {
+    uint64_t leftover = (total_exit_bw - total_nonexit_bw / 2);
+    exit_weight = U64_TO_DBL(leftover) /
+      U64_TO_DBL(leftover + total_nonexit_bw);
+    total_bw =  total_nonexit_bw +
+      DBL_TO_U64(exit_weight * U64_TO_DBL(total_exit_bw));
+  }
+  /*
+  log_debug(LD_CIRC, "Total bw = "U64_FORMAT", total exit bw = "U64_FORMAT
+            ", total nonexit bw = "U64_FORMAT", exit weight = %lf "
+            "(for exit == %d)",
+            U64_PRINTF_ARG(total_bw), U64_PRINTF_ARG(total_exit_bw),
+            U64_PRINTF_ARG(total_nonexit_bw), exit_weight, for_exit);
+  */
+
   /* Second, choose a random value from the bandwidth weights. */
-  rand_bw = crypto_rand_int(total_bw);
+  rand_bw = crypto_rand_uint64(total_bw);
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
-  for (i=0; ; i++) {
-    tor_assert(i < smartlist_len(sl));
-    p = smartlist_get(bandwidths, i);
-    tmp += *p;
+  for (i=0; i < smartlist_len(sl); i++) {
+    router = smartlist_get(sl, i);
+    if (router->is_exit)
+      tmp += ((uint64_t)(bandwidths[i] * exit_weight));
+    else
+      tmp += bandwidths[i];
     if (tmp >= rand_bw)
       break;
   }
-  SMARTLIST_FOREACH(bandwidths, uint32_t*, p, tor_free(p));
-  smartlist_free(bandwidths);
+  tor_free(bandwidths);
   return (routerinfo_t *)smartlist_get(sl, i);
 }
 
@@ -944,7 +968,8 @@ router_choose_random_node(const char *preferred,
                           smartlist_t *excludedsmartlist,
                           int need_uptime, int need_capacity,
                           int need_guard,
-                          int allow_invalid, int strict)
+                          int allow_invalid, int strict,
+                          int weight_for_exit)
 {
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice = NULL;
@@ -975,8 +1000,8 @@ router_choose_random_node(const char *preferred,
       smartlist_subtract(sl,excludedsmartlist);
     routerlist_sl_remove_unreliable_routers(sl, need_uptime,
                                             need_capacity, need_guard);
-    if (need_capacity)
-      choice = routerlist_sl_choose_by_bandwidth(sl);
+    if (need_capacity) /* XXXX Is this documented in path spec. -NM */
+      choice = routerlist_sl_choose_by_bandwidth(sl, weight_for_exit);
     else
       choice = smartlist_choose(sl);
     smartlist_free(sl);
@@ -989,7 +1014,8 @@ router_choose_random_node(const char *preferred,
                need_uptime?", stable":"",
                need_guard?", guard":"");
       choice = router_choose_random_node(
-        NULL, excluded, excludedsmartlist, 0, 0, 0, allow_invalid, 0);
+        NULL, excluded, excludedsmartlist,
+        0, 0, 0, allow_invalid, 0, weight_for_exit);
     }
   }
   smartlist_free(excludednodes);
@@ -3422,6 +3448,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       router->is_fast = rs->status.is_fast;
       router->is_stable = rs->status.is_stable;
       router->is_possible_guard = rs->status.is_possible_guard;
+      router->is_exit =  rs->status.is_exit;
     }
     if (router->is_running && ds) {
       ds->n_networkstatus_failures = 0;

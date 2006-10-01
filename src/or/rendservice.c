@@ -1005,7 +1005,7 @@ rend_services_introduce(void)
       router = router_choose_random_node(service->intro_prefer_nodes,
                service->intro_exclude_nodes, exclude_routers, 1, 0, 0,
                get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION,
-               0);
+               0, 0);
       if (!router) {
         log_warn(LD_REND,
                  "Could only establish %d introduction points for %s.",

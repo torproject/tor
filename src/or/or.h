@@ -918,6 +918,7 @@ typedef struct {
   unsigned int is_fast:1; /** Do we think this is a fast OR? */
   unsigned int is_stable:1; /** Do we think this is a stable OR? */
   unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
+  unsigned int is_exit:1; /**< Do we think this is an OK exit? */
 
 /** Tor can use this desc for circuit-building. */
 #define ROUTER_PURPOSE_GENERAL 0
@@ -2562,13 +2563,15 @@ routerinfo_t *router_find_exact_exit_enclave(const char *address,
 int router_is_unreliable(routerinfo_t *router, int need_uptime,
                          int need_capacity, int need_guard);
 uint32_t router_get_advertised_bandwidth(routerinfo_t *router);
-routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl);
+routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit);
+
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
                                         smartlist_t *excludedsmartlist,
                                         int need_uptime, int need_bandwidth,
                                         int need_guard,
-                                        int allow_invalid, int strict);
+                                        int allow_invalid, int strict,
+                                        int weight_for_exit);
 routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);

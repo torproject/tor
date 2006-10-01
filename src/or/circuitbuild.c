@@ -1199,7 +1199,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     smartlist_subtract(sl,excludedexits);
     if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
-    router = routerlist_sl_choose_by_bandwidth(sl);
+    router = routerlist_sl_choose_by_bandwidth(sl, 1);
   } else {
     /* Either there are no pending connections, or no routers even seem to
      * possibly support any of them.  Choose a router at random that satisfies
@@ -1238,7 +1238,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
         smartlist_intersect(sl,preferredexits);
         /* XXX sometimes the above results in null, when the requested
          * exit node is down. we should pick it anyway. */
-      router = routerlist_sl_choose_by_bandwidth(sl);
+      router = routerlist_sl_choose_by_bandwidth(sl, 1);
       if (router)
         break;
     }
@@ -1282,14 +1282,14 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, get_options()->ExcludeNodes,
                NULL, need_uptime, need_capacity, 0,
-               get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0);
+               get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0, 0);
       else
         return choose_good_exit_server_general(dir,need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       return router_choose_random_node(
                options->RendNodes, options->RendExcludeNodes,
                NULL, need_uptime, need_capacity, 0,
-               options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS, 0);
+               options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS, 0, 0);
   }
   log_warn(LD_BUG,"Bug: unhandled purpose %d", purpose);
   tor_fragile_assert();
@@ -1508,7 +1508,7 @@ choose_good_middle_server(uint8_t purpose,
   choice = router_choose_random_node(preferred,
            options->ExcludeNodes, excluded,
            state->need_uptime, state->need_capacity, 0,
-           options->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0);
+           options->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0, 0);
   if (preferred)
     tor_free(preferred);
   smartlist_free(excluded);
@@ -1571,7 +1571,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
            excluded, state ? state->need_uptime : 0,
            state ? state->need_capacity : 0,
            state ? 0 : 1,
-           options->_AllowInvalid & ALLOW_INVALID_ENTRY, 0);
+           options->_AllowInvalid & ALLOW_INVALID_ENTRY, 0, 0);
   smartlist_free(excluded);
   return choice;
 }
