@@ -13,9 +13,7 @@ streams to circuits.  Other implementations MAY take other approaches, but
 implementors should be aware of the anonymity and load-balancing implications
 of their choices.
 
-                      THIS SPEC ISN'T DONE OR CORRECT.
-I'm just copying in relevant info so far.  The starred points are things we
-should cover, but not an exhaustive list.  -NM
+                    THIS SPEC ISN'T DONE OR CORRECT YET.
 
 1. General operation
 
@@ -28,8 +26,8 @@ should cover, but not an exhaustive list.  -NM
 
    When a client application creates a new stream (by opening a SOCKS
    connection or launching a resolve request), we attach it to an appropriate
-   open circuit if one exists, or wait if one is in-progress. We launch
-   a new circuit only
+   open circuit if one exists, or wait if an appropriate circuit is
+   in-progress. We launch a new circuit only
    if no current circuit can handle the request.  We rotate circuits over
    time to avoid some profiling attacks.
 
@@ -42,28 +40,26 @@ should cover, but not an exhaustive list.  -NM
 
    This document describes Tor's automatic path selection logic only; path
    selection can be overridden by a controller (with the EXTENDCIRCUIT and
-   ATTACHSTREAM commands).  Paths constructed through these means will
+   ATTACHSTREAM commands).  Paths constructed through these means may
    violate some constraints given below.
 
-1b. Types of circuits.
-
-* Stable / Ordinary
-* Internal / Exit
-
-   XXXX
-
-1c. Terminology
+1b. Terminology
 
    A "path" is an ordered sequence of nodes, not yet built as a circuit.
 
    A "clean" circuit is one that has not yet been used for any traffic.
 
-   A "fast" or "stable" node is one that we believe to have the 'Fast' or
-   'Stable' flag set on the basis of our current directory information.  A
-   "fast" or "stable" circuit is one consisting only of "fast" or "stable"
-   nodes.
+   A "fast" or "stable" node is one that has the 'Fast' or 'Stable' flag
+   set respectively, based on our current directory information.  A "fast"
+   or "stable" circuit is one consisting only of "fast" or "stable" nodes.
 
-   A "request" is a client-side connection or DNS resolve that needs to be
+   In an "exit" circuit, the final node is chosen based on waiting stream
+   requests if any, and in any case it avoids nodes with exit policy of
+   "reject *:*". An "internal" circuit, on the other hand, is one where
+   the final node is chosen just like a middle node (ignoring its exit
+   policy).
+
+   A "request" is a client-side stream or DNS resolve that needs to be
    served by a circuit.
 
    A "pending" circuit is one that we have started to build, but which has
@@ -79,32 +75,44 @@ should cover, but not an exhaustive list.  -NM
 
 2.1. When we build.
 
-2.1.1. When clients build circuits
+2.1.1. Clients build circuits preemptively
 
-   When running as a client, Tor tries to maintain at least 3 clean circuits,
-   so that new streams can be handled quickly.  To increase the likelihood of
-   success, Tor tries to predict what exit nodes will be useful by choosing
-   from among nodes that support the ports we have used in the recent past.
-   (see 2.4).  [XXXX describe in detail how predicted ports work.]
+   When running as a client, Tor tries to maintain at least a certain
+   number of clean circuits, so that new streams can be handled
+   quickly.  To increase the likelihood of success, Tor tries to
+   predict what circuits will be useful by choosing from among nodes
+   that support the ports we have used in the recent past (by default
+   one hour). Specifically, on startup Tor tries to maintain one clean
+   fast exit circuit that allows connections to port 80, and at least
+   two internal circuits in case we get a resolve request or hidden
+   service request (at least three internal circuits if we _run_ a
+   hidden service).
+
+   After that, Tor will adapt the circuits that it preemptively builds
+   based on the requests it sees from the user: it tries to have a clean
+   fast exit circuit available for every port seen recently (one circuit
+   is adequate for several ports or even all of them), and it tries to
+   have the above internal circuits available if we've seen resolves
+   or hidden service activity recently. Lastly, note that if there are
+   no requests from the user for an hour, Tor will predict no use and
+   build no preemptive circuits.
+
+   The Tor client SHOULD NOT store its list of predicted requests to a
+   persistent medium.
+
+2.1.2. Clients build circuits on demand
 
    Additionally, when a client request exists that no circuit (built or
-   pending) might support, we cannibalize an existing circuit (2.1.4) or
-   create a new circuit to support the request.  We do so by picking a
-   request arbitrarily, building or cannibalizing a circuit to support it, and
-   repeating until every unattached request might be supported by a pending
-   or built circuit.
+   pending) might support, we cannibalize an existing circuit (2.1.4)
+   or create a new circuit to support the request.  We do so by picking
+   a request arbitrarily, building or cannibalizing a circuit to support
+   it, and repeating until every unattached request might be supported
+   by a pending or built circuit.
 
-   XXXX when long idle, we build nothing.
+2.1.3. Servers build circuits for testing reachability
 
-2.1.2. When servers build circuits
-
-   At start and whenever the IP address changes, for testing reachability
-   of their ORPort.
-   XXXX
-
-2.1.3. When directory authorities build circuits
-
-   There are no authority-specific circuits, I think.
+   Tor servers test reachability of their ORPort on start and whenever
+   their IP address changes.
    XXXX
 
 2.1.4. Hidden-service circuits
@@ -129,6 +137,9 @@ should cover, but not an exhaustive list.  -NM
    2.3 for how this works), we stop building circuits until the X seconds
    have elapsed.
    XXX
+
+2.1.7. When to tear down circuits
+
 
 2.2. Path selection and constraints
 
@@ -220,21 +231,6 @@ should cover, but not an exhaustive list.  -NM
    a fresh descriptor for it.
 
    XXXX
-
-2.4. Tracking "predicted" ports
-
-   A Tor client tracks how much time has passed since it last received a
-   request for a connection on each port.  (For the purposes of this section,
-   requests for hostname resolves are considered requests to a separate
-   "special" port).  Tor forgets about ports that haven't been used for
-   an hour [PREDICTED_CIRCS_RELEVANCE_TIME].
-
-   The ports that have been used in the last hour are considered "predicted",
-   and Tor will try to maintain a clean circuit to them as described in 2.1.
-
-   For bootstrapping purposes, port 80 is treated as used at startup time.
-
-   Tor clients SHOULD NOT store predicted ports to a persistent medium.
 
 3. Attaching streams to circuits
 
