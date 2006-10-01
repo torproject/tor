@@ -33,8 +33,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       list if it stays that way for a long time.
     - Allow directory authorities to be marked separately as authorities for
       the v1 directory protocol, the v2 directory protocol, and as hidden
-      service directories.  This should make it easier to migrate trust away
-      from one of the two authorities currently running on Moria.
+      service directories, to make it easier to retire old authorities.
+      V1 authorities should set "HSAuthoritativeDir 1" to continue being
+      hidden service authorities too.
     - Reserve the nickname "Unnamed" for routers that can't pick a hostname;
       any router can call itself Unnamed; directory servers will never
       allocate Unnamed to any particular router; clients won't believe that
@@ -60,6 +61,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Reject (most) attempts to use Tor as a one-hop proxy; if many people
       start using Tor as a one-hop proxy, exit nodes become a more attractive
       target for compromise. (Fixes bug 303.)
+    - Just because your DirPort is open doesn't mean people should be
+      able to remotely teach you about hidden service descriptors. Now
+      only accept rendezvous posts if you've got HSAuthoritativeDir set.
 
   o Major bugfixes:
     - Avoiding crashing on race condition in dns.c:

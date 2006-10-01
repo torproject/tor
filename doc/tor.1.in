@@ -716,6 +716,11 @@ registered binding.  See \fBapproved-routers\fP in the \fBFILES\fP
 section below.
 .LP
 .TP
+\fBHSAuthoritativeDir \fR\fB0\fR|\fB1\fR\fP
+When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor also
+accepts and serves hidden service descriptors. (Default: 0)
+.LP
+.TP
 \fBDirPort \fR\fIPORT\fP
 Advertise the directory service on this port.
 .LP

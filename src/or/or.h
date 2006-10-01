@@ -1442,8 +1442,10 @@ typedef struct {
   int DirPort; /**< Port to listen on for directory connections. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
-  int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory?
+  int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 1 directories? */
+  int HSAuthoritativeDir; /**< Boolean: does this an authoritative directory
+                           * handle hidden service requests? */
   int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that's willing to bind names? */
   int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative

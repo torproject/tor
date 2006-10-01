@@ -1433,6 +1433,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
   size_t dlen;
   const char *cp;
   char *url = NULL;
+  or_options_t *options = get_options();
   /* We ignore the body of a GET request. */
   (void)body;
   (void)body_len;
@@ -1596,25 +1597,15 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     return 0;
   }
 
-  if (!strcmpstart(url,"/tor/rendezvous/") ||
-      !strcmpstart(url,"/tor/rendezvous1/")) {
+  if (options->HSAuthoritativeDir &&
+      (!strcmpstart(url,"/tor/rendezvous/") ||
+       !strcmpstart(url,"/tor/rendezvous1/"))) {
     /* rendezvous descriptor fetch */
     const char *descp;
     size_t desc_len;
     int versioned = !strcmpstart(url,"/tor/rendezvous1/");
     const char *query = url+strlen("/tor/rendezvous/")+(versioned?1:0);
 
-    if (!authdir_mode(get_options())) {
-      /* We don't hand out rend descs. In fact, it could be a security
-       * risk, since rend_cache_lookup_desc() below would provide it
-       * if we're gone to the site recently, and 404 if we haven't.
-       *
-       * Reject. */
-      write_http_status_line(conn, 400, "Nonauthoritative directory does not "
-                             "store rendezvous descriptors");
-      tor_free(url);
-      return 0;
-    }
     switch (rend_cache_lookup_desc(query, versioned?-1:0, &descp, &desc_len)) {
       case 1: /* valid */
         write_http_response_header(conn, desc_len, "application/octet-stream",
@@ -1656,7 +1647,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
 
   if (!strcmp(url,"/tor/dir-all-weaselhack") &&
       (conn->_base.addr == 0x7f000001ul) &&
-      authdir_mode(get_options())) {
+      authdir_mode(options)) {
     /* XXX until weasel rewrites his scripts  XXXX012 */
     char *new_directory=NULL;
 
@@ -1694,12 +1685,13 @@ directory_handle_command_post(dir_connection_t *conn, char *headers,
                               char *body, size_t body_len)
 {
   char *url = NULL;
+  or_options_t *options = get_options();
 
   log_debug(LD_DIRSERV,"Received POST command.");
 
   conn->_base.state = DIR_CONN_STATE_SERVER_WRITING;
 
-  if (!authdir_mode(get_options())) {
+  if (!authdir_mode(options)) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
     write_http_status_line(conn, 400, "Nonauthoritative directory does not "
@@ -1736,7 +1728,8 @@ directory_handle_command_post(dir_connection_t *conn, char *headers,
     goto done;
   }
 
-  if (!strcmpstart(url,"/tor/rendezvous/publish")) {
+  if (options->HSAuthoritativeDir &&
+      !strcmpstart(url,"/tor/rendezvous/publish")) {
     /* rendezvous descriptor post */
     if (rend_cache_store(body, body_len) < 0) {
 //      char tmp[1024*2+1];

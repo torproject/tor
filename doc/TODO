@@ -176,7 +176,7 @@ N   - Later, servers will stop generating new descriptors simply
 
   - Critical but minor bugs, backport candidates.
 d   - Failed rend desc fetches sometimes don't get retried. True/false?
-R   - non-v1 authorities should not accept rend descs.
+    o non-v1 authorities should not accept rend descs.
 R   - support dir 503s better
       o clients don't log as loudly when they receive them
       - they don't count toward the 3-strikes rule

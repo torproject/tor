@@ -364,7 +364,7 @@ init_keys(void)
                           (uint16_t)options->DirPort, digest,
                           options->V1AuthoritativeDir, /* v1 authority */
                           1, /* v2 authority */
-                          options->V1AuthoritativeDir /* hidserv authority */);
+                          options->HSAuthoritativeDir /* hidserv authority */);
   }
   return 0; /* success */
 }
