@@ -1,18 +1,17 @@
 Changes in version 0.1.2.2-alpha - 2006-10-??
   o Major features:
     - Add server-side support for "reverse" DNS lookups (using PTR
-      records so clients can determine the canonical hostname for a
-      given IPv4 address).  This has been specified for a long time,
-      but was previously never implemented.  This is only supported by
-      eventdns; servers now announce in their descriptors whether they
+      records so clients can determine the canonical hostname for a given
+      IPv4 address). Only supported by servers using our eventdns async
+      library; servers now announce in their descriptors whether they
       support eventdns.
     - Specify and implement client-side SOCKS5 interface for reverse DNS
       lookups; see doc/socks-extensions.txt for full information.
     - Add a BEGIN_DIR relay cell type for an easier in-protocol way to
-      connect to directory servers through Tor.  Previously, clients could
-      only connect to director servers over Tor from exit nodes, but couldn't
-      get directory information anonymously from a non-exit cache without
-      getting a directory server involved.
+      connect to directory servers through Tor. Previously, clients
+      could only connect to directory servers over Tor from exit nodes,
+      but couldn't get directory information anonymously from a non-exit
+      cache without getting a separate exit node involved.
 
   o Minor features:
     - Check for name servers (like Earthlink's) that hijack failing DNS
@@ -71,8 +70,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
 
   o Minor Bugfixes:
     - Two small performance improvements on parsing descriptors.
-    - Fix big bug affecting performance for both serving and reaching
-      hidden services.
+    - We were building exactly the wrong circuits when we anticipated
+      hidden service requirements, meaning Tor would have to build all
+      its circuits on demand.
     - Major performance improvement on inserting descriptors: change
       algorithm from O(n^2) to O(n).
     - Make the common memory allocation path faster on machines where
@@ -96,13 +96,12 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       With the old code, if a guard was unreachable by us but listed as
       running, it would clog our guard list forever.
     - Make eventdns give strings for DNS errors, not just error numbers.
-    - Be prepared in case we ever have a network with  more than 2GB per
+    - Be prepared in case we ever have a network with more than 2GB per
       second total advertised capacity.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and
       ServerDNSResolvConfFile options.
-
 
   o Packaging:
     - Patches so Tor builds with MinGW on Windows.
