@@ -1669,7 +1669,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   }
 
   /* send it off to the gethostbyname farm */
-  switch (dns_resolve(n_stream)) {
+  switch (dns_resolve(n_stream, NULL)) {
     case 1: /* resolve worked */
 
       /* add it into the linked list of n_streams on this circuit */
@@ -1723,7 +1723,7 @@ connection_exit_begin_resolve(cell_t *cell, circuit_t *circ)
   dummy_conn->purpose = EXIT_PURPOSE_RESOLVE;
 
   /* send it off to the gethostbyname farm */
-  switch (dns_resolve(dummy_conn)) {
+  switch (dns_resolve(dummy_conn, circ)) {
     case -1: /* Impossible to resolve; a resolved cell was sent. */
       /* Connection freed; don't touch it. */
       return 0;

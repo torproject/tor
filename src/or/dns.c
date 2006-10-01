@@ -71,13 +71,14 @@ typedef struct cached_resolve_t {
 } cached_resolve_t;
 
 static void purge_expired_resolves(uint32_t now);
-static int assign_to_dnsworker(connection_t *exitconn);
+static int assign_to_dnsworker(connection_t *exitconn, circuit_t *oncirc);
 static void dns_purge_resolve(cached_resolve_t *resolve);
 static void dns_found_answer(char *address, uint32_t addr, char outcome);
 static int dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static int spawn_enough_dnsworkers(void);
-static void send_resolved_cell(connection_t *conn, uint8_t answer_type);
+static void send_resolved_cell(connection_t *conn, circuit_t *circ,
+                               uint8_t answer_type);
 
 /** Hash table of cached_resolve objects. */
 static HT_HEAD(cache_map, cached_resolve_t) cache_root;
@@ -199,7 +200,7 @@ purge_expired_resolves(uint32_t now)
 /** Send a response to the RESOVLE request of a connection. answer_type must
  *  be one of RESOLVED_TYPE_(IPV4|ERROR|ERROR_TRANSIENT) */
 static void
-send_resolved_cell(connection_t *conn, uint8_t answer_type)
+send_resolved_cell(connection_t *conn, circuit_t *circ, uint8_t answer_type)
 {
   char buf[RELAY_PAYLOAD_SIZE];
   size_t buflen;
@@ -229,7 +230,12 @@ send_resolved_cell(connection_t *conn, uint8_t answer_type)
     default:
       tor_assert(0);
     }
-  connection_edge_send_command(conn, circuit_get_by_edge_conn(conn),
+
+  if (circ == NULL) {
+    circ = circuit_get_by_edge_conn(conn);
+  }
+
+  connection_edge_send_command(conn, circ,
                                RELAY_COMMAND_RESOLVED, buf, buflen,
                                conn->cpath_layer);
 }
@@ -261,7 +267,7 @@ insert_resolve(cached_resolve_t *r)
  * dns farm, and return 0.
  */
 int
-dns_resolve(connection_t *exitconn)
+dns_resolve(connection_t *exitconn, circuit_t *oncirc)
 {
   cached_resolve_t *resolve;
   cached_resolve_t search;
@@ -277,7 +283,7 @@ dns_resolve(connection_t *exitconn)
   if (tor_inet_aton(exitconn->address, &in) != 0) {
     exitconn->addr = ntohl(in.s_addr);
     if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
-      send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
+      send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_IPV4);
     return 1;
   }
 
@@ -310,13 +316,13 @@ dns_resolve(connection_t *exitconn)
         log_debug(LD_EXIT,"Connection (fd %d) found cached answer for %s",
                   exitconn->s, escaped_safe_str(exitconn->address));
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
-          send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
+          send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_IPV4);
         return 1;
       case CACHE_STATE_FAILED:
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
                   exitconn->s, escaped_safe_str(exitconn->address));
         if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
-          send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
+          send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
         if (circ)
           circuit_detach_stream(circ, exitconn);
@@ -339,14 +345,14 @@ dns_resolve(connection_t *exitconn)
   exitconn->state = EXIT_CONN_STATE_RESOLVING;
 
   insert_resolve(resolve);
-  return assign_to_dnsworker(exitconn);
+  return assign_to_dnsworker(exitconn, oncirc);
 }
 
 /** Find or spawn a dns worker process to handle resolving
  * <b>exitconn</b>-\>address; tell that dns worker to begin resolving.
  */
 static int
-assign_to_dnsworker(connection_t *exitconn)
+assign_to_dnsworker(connection_t *exitconn, circuit_t *oncirc)
 {
   connection_t *dnsconn;
   unsigned char len;
@@ -365,7 +371,7 @@ assign_to_dnsworker(connection_t *exitconn)
   if (!dnsconn) {
     log_warn(LD_EXIT,"no idle dns workers. Failing.");
     if (exitconn->purpose == EXIT_PURPOSE_RESOLVE)
-      send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
+      send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR_TRANSIENT);
     goto err;
   }
 
@@ -631,7 +637,7 @@ dns_found_answer(char *address, uint32_t addr, char outcome)
         /* This detach must happen after we send the end cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       } else {
-        send_resolved_cell(pendconn, RESOLVED_TYPE_ERROR);
+        send_resolved_cell(pendconn, NULL, RESOLVED_TYPE_ERROR);
         /* This detach must happen after we send the resolved cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       }
@@ -655,7 +661,7 @@ dns_found_answer(char *address, uint32_t addr, char outcome)
         /* prevent double-remove.  This isn't really an accurate state,
          * but it does the right thing. */
         pendconn->state = EXIT_CONN_STATE_RESOLVEFAILED;
-        send_resolved_cell(pendconn, RESOLVED_TYPE_IPV4);
+        send_resolved_cell(pendconn, NULL, RESOLVED_TYPE_IPV4);
         circ = circuit_get_by_edge_conn(pendconn);
         tor_assert(circ);
         circuit_detach_stream(circ, pendconn);
