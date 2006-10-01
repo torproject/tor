@@ -5,9 +5,11 @@ Changes in version 0.1.1.25 - 2006-10-?? [ongoing]
       Previously, we would give them no answer at all.
 
   o Minor bugfixes:
-    - Avoid a memory corruption bug when creating a hash table for the first
-      time.
-
+    - Avoid a memory corruption bug when creating a hash table for
+      the first time.
+    - We were building exactly the wrong circuits when we anticipated
+      hidden service requirements, meaning Tor would have to build all
+      its circuits on demand.
 
 
 Changes in version 0.1.1.24 - 2006-09-29

@@ -905,9 +905,9 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
   }
   if (predicted_internal_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
     return 0; /* too long ago */
-  if (predicted_internal_uptime_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+  if (predicted_internal_uptime_time + PREDICTED_CIRCS_RELEVANCE_TIME >= now)
     *need_uptime = 1;
-  if (predicted_internal_capacity_time + PREDICTED_CIRCS_RELEVANCE_TIME < now)
+  if (predicted_internal_capacity_time + PREDICTED_CIRCS_RELEVANCE_TIME >= now)
     *need_capacity = 1;
   return 1;
 }
