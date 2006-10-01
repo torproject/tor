@@ -56,9 +56,9 @@ N - Test guard unreachable logic; make sure that we actually attempt to
     Make sure that we don't freak out when the network is down.
 N - Clients stop dumping old descriptors if the network-statuses
     claim they're still valid.
-R . If we fail to connect via an exit enclave, (warn and) try again
+  o If we fail to connect via an exit enclave, (warn and) try again
     without demanding that exit node.
-    - And recognize when extending to the enclave node is failing,
+    o And recognize when extending to the enclave node is failing,
       so we can abandon then too.
   o We need a separate list of "hidserv authorities" if we want to
     retire moria1 from the main list.
@@ -299,6 +299,9 @@ Deferred from 0.1.2.x:
       - Implement
 
 Minor items for 0.1.2.x as time permits:
+  - add a "default.action" file to the tor/vidalia bundle so we can fix the
+    https thing in the default configuration:
+    http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#PrivoxyWeirdSSLPort
   - even if your torrc lists yourself in your myfamily line, don't list it in
     the descriptor.
   - Flesh out options_description array in src/or/config.c

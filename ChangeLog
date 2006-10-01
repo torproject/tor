@@ -1,4 +1,4 @@
-Changes in version 0.1.2.2-alpha - 2006-??-??
+Changes in version 0.1.2.2-alpha - 2006-10-??
   o Major features:
     - Add server-side support for "reverse" DNS lookups (using PTR
       records so clients can determine the canonical hostname for a
@@ -65,6 +65,8 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
 
   o Minor Bugfixes:
     - Two small performance improvements on parsing descriptors.
+    - Fix big bug affecting performance for both serving and reaching
+      hidden services.
     - Major performance improvement on inserting descriptors: change
       algorithm from O(n^2) to O(n).
     - Make the common memory allocation path faster on machines where
@@ -131,6 +133,8 @@ Changes in version 0.1.2.2-alpha - 2006-??-??
       a few will be fast. This exercises our bandwidth and bootstraps
       us quicker.
     - Remove 8888 as a long lived port, and add 6697 (ircs).
+    - If we fail to build a circuit to an intended enclave, and it's
+      not mandatory that we use that enclave, stop wanting it.
 
     (stopped at r8478)
 
