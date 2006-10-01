@@ -520,7 +520,7 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
     tmp=ap;
     while (tmp) {
       if (tmp->next && addr_policy_covers(ap, tmp->next)) {
-        log(LOG_INFO, LD_CONFIG, "Removing exit policy %s.  It is made "
+        log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is made "
             "redundant by %s.", tmp->next->string, ap->string);
         victim = tmp->next;
         tmp->next = victim->next;
@@ -550,8 +550,8 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
       }
       if (ap->policy_type == tmp->policy_type &&
           addr_policy_covers(tmp, ap)) {
-        log(LOG_INFO, LD_CONFIG, "Removing exit policy %s.  It is made "
-            "redundant by %s.", ap->string, tmp->string);
+        log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is already "
+            "covered by %s.", ap->string, tmp->string);
         victim = ap;
         ap = ap->next;
 

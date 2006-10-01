@@ -2132,7 +2132,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->Nickname == NULL) {
     if (server_mode(options)) {
       if (!(options->Nickname = get_default_nickname())) {
-        log_notice(LD_CONFIG, "Couldn't pick a nickname hostname based on "
+        log_notice(LD_CONFIG, "Couldn't pick a nickname based on "
                    "our hostname; using %s instead.", UNNAMED_ROUTER_NICKNAME);
         options->Nickname = tor_strdup(UNNAMED_ROUTER_NICKNAME);
       } else {
