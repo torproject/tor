@@ -91,11 +91,13 @@ of their choices.
    After that, Tor will adapt the circuits that it preemptively builds
    based on the requests it sees from the user: it tries to have a clean
    fast exit circuit available for every port seen recently (one circuit
-   is adequate for several ports or even all of them), and it tries to
-   have the above internal circuits available if we've seen resolves
-   or hidden service activity recently. Lastly, note that if there are
-   no requests from the user for an hour, Tor will predict no use and
-   build no preemptive circuits.
+   is adequate for many predicted ports -- it doesn't keep a separate
+   circuit for each port), and it tries to have the above internal
+   circuits available if we've seen resolves or hidden service activity
+   recently. If there are 12 clean circuits open, it doesn't open more
+   even if it has more predictions. Lastly, note that if there are no
+   requests from the user for an hour, Tor will predict no use and build
+   no preemptive circuits.
 
    The Tor client SHOULD NOT store its list of predicted requests to a
    persistent medium.
@@ -103,11 +105,19 @@ of their choices.
 2.1.2. Clients build circuits on demand
 
    Additionally, when a client request exists that no circuit (built or
-   pending) might support, we cannibalize an existing circuit (2.1.4)
-   or create a new circuit to support the request.  We do so by picking
-   a request arbitrarily, building or cannibalizing a circuit to support
-   it, and repeating until every unattached request might be supported
-   by a pending or built circuit.
+   pending) might support, we create a new circuit to support the request.
+   We do so by picking a request arbitrarily, launching a circuit to
+   support it, and repeating until every unattached request might be
+   supported by a pending or built circuit.
+
+   For hidden service interations, we can "cannibalize" a clean internal
+   circuit if one is available, so we don't need to build those circuits
+   from scratch on demand.
+
+   We can also cannibalize clean circuits when the client asks to exit
+   at a given node -- either via mapaddress or the ".exit" notation,
+   or because the destination is running at the same location as an
+   exit node.
 
 2.1.3. Servers build circuits for testing reachability
 
@@ -119,26 +129,14 @@ of their choices.
 
    See section 4 below.
 
-2.1.5. Cannibalizing circuits
-
-   When Tor has a request (either an unattached stream or unattached resolve
-   request) that no current circuit can support, it looks for an existing
-   clean circuit to cannibalize.  If it finds one, it tries to extend it
-   another hop to an exit node that might support the stream.  [Must be
-   internal???]
-
-   If no circuit exists, or is currently being built, along a path that
-   might support a stream, we begin building a new circuit that might support
-   the stream.
-
-2.1.6. Rate limiting of failed circuits
+2.1.5. Rate limiting of failed circuits
 
    If we fail to build a circuit N times in a X second period (see Section
    2.3 for how this works), we stop building circuits until the X seconds
    have elapsed.
    XXX
 
-2.1.7. When to tear down circuits
+2.1.6. When to tear down circuits
 
 
 2.2. Path selection and constraints
