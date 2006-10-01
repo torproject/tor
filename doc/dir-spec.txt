@@ -387,9 +387,9 @@ $Id$
    authorities MAY do things differently, so long as clients keep working
    well.  Clients MUST NOT depend on the exact behaviors in this section.)
 
-   "Valid" -- a router is 'Valid' if it seems to have been running well for a
-   while, and is running a version of Tor not known to be broken, and the
-   directory authority has not blacklisted it as suspicious.
+   "Valid" -- a router is 'Valid' if it is running a version of Tor not
+   known to be broken, and the directory authority has not blacklisted
+   it as suspicious.
 
    "Named" -- Directory authority administrators may decide to support name
    binding.  If they do, then they must maintain a file of
