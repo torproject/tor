@@ -2223,6 +2223,11 @@ assert_connection_ok(connection_t *conn, time_t now)
    */
 #endif
 
+  if (conn->chosen_exit_optional) {
+    tor_assert(conn->type == CONN_TYPE_AP);
+    tor_assert((TO_EDGE_CONN(conn))->chosen_exit_name);
+  }
+
   if (conn->type == CONN_TYPE_OR) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_OPEN) {

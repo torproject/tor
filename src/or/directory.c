@@ -236,7 +236,7 @@ directory_initiate_command_router(routerinfo_t *router,
 }
 
 /** Launch a new connection to the directory server <b>status</b> to upload or
- * download a service or rendezvous descriptor. <b>purpose</b> determines what
+ * download a server or rendezvous descriptor. <b>purpose</b> determines what
  * kind of directory connection we're launching, and must be one of
  * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}.
  *

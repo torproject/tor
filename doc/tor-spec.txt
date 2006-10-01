@@ -757,7 +757,7 @@ TODO:
       12 -- REASON_CONNRESET      (Connection was unexpectedly reset)
       13 -- REASON_TORPROTOCOL    (Sent when closing connection because of
                                    Tor protocol violations.)
-      14 -- REASON_NOTDIRECTORY   (Client send RELAY_BEGIN_DIR to a
+      14 -- REASON_NOTDIRECTORY   (Client sent RELAY_BEGIN_DIR to a
                                    non-directory server.)
 
    (With REASON_EXITPOLICY, the 4-byte IPv4 address or 16-byte IPv6 address
