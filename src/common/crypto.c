@@ -1645,6 +1645,28 @@ crypto_rand_int(unsigned int max)
   }
 }
 
+/** Return a pseudorandom integer, chosen uniformly from the values
+ * between 0 and max-1. */
+uint64_t
+crypto_rand_uint64(uint64_t max)
+{
+  uint64_t val;
+  uint64_t cutoff;
+  tor_assert(max < UINT64_MAX);
+  tor_assert(max > 0); /* don't div by 0 */
+
+  /* We ignore any values that are >= 'cutoff,' to avoid biasing the
+   * distribution with clipping at the upper end of unsigned int's
+   * range.
+   */
+  cutoff = UINT64_MAX - (UINT64_MAX%max);
+  while (1) {
+    crypto_rand((char*)&val, sizeof(val));
+    if (val < cutoff)
+      return val % max;
+  }
+}
+
 /** Return a randomly chosen element of sl; or NULL if sl is empty.
  */
 void *

@@ -15,6 +15,7 @@
 #define CRYPTO_H_ID "$Id$"
 
 #include <stdio.h>
+#include "torint.h"
 
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
@@ -152,6 +153,7 @@ int crypto_expand_key_material(const char *key_in, size_t in_len,
 int crypto_seed_rng(void);
 int crypto_rand(char *to, size_t n);
 int crypto_rand_int(unsigned int max);
+uint64_t crypto_rand_uint64(uint64_t max);
 
 struct smartlist_t;
 void *smartlist_choose(const struct smartlist_t *sl);
