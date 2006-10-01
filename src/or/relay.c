@@ -721,7 +721,7 @@ connection_edge_process_end_not_open(
         if (conn->_base.chosen_exit_optional) {
           /* stop wanting a specific exit */
           conn->_base.chosen_exit_optional = 0;
-          tor_free(conn->chosen_exit_name);
+          tor_free(conn->chosen_exit_name); /* clears it */
         }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;
@@ -745,7 +745,7 @@ connection_edge_process_end_not_open(
           if (conn->_base.chosen_exit_optional) {
             /* stop wanting a specific exit */
             conn->_base.chosen_exit_optional = 0;
-            tor_free(conn->chosen_exit_name);
+            tor_free(conn->chosen_exit_name); /* clears it */
           }
           if (connection_ap_detach_retriable(conn, circ) >= 0)
             return 0;
@@ -770,7 +770,7 @@ connection_edge_process_end_not_open(
         if (conn->_base.chosen_exit_optional) {
           /* stop wanting a specific exit */
           conn->_base.chosen_exit_optional = 0;
-          tor_free(conn->chosen_exit_name);
+          tor_free(conn->chosen_exit_name); /* clears it */
         }
         if (connection_ap_detach_retriable(conn, circ) >= 0)
           return 0;

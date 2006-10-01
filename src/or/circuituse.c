@@ -748,6 +748,11 @@ circuit_build_failed(origin_circuit_t *circ)
     case CIRCUIT_PURPOSE_C_GENERAL:
       /* If we never built the circuit, note it as a failure. */
       circuit_increment_failure_count();
+      if (failed_at_last_hop) {
+        /* Make sure any streams that demand our last hop as their exit
+         * know that it's unlikely to happen. */
+        circuit_discard_optional_exit_enclaves(circ->cpath->prev->extend_info);
+      }
       break;
     case CIRCUIT_PURPOSE_TESTING:
       circuit_testing_failed(circ, failed_at_last_hop);

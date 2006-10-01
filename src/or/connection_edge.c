@@ -453,6 +453,41 @@ connection_ap_attach_pending(void)
   }
 }
 
+/** A circuit failed to finish on its last hop <b>info</b>. If there
+ * are any streams waiting with this exit node in mind, but they
+ * don't absolutely require it, make them give up on it.
+ */
+void
+circuit_discard_optional_exit_enclaves(extend_info_t *info)
+{
+  connection_t **carray;
+  connection_t *conn;
+  edge_connection_t *edge_conn;
+  routerinfo_t *r1, *r2;
+  int n, i;
+
+  get_connection_array(&carray, &n);
+
+  for (i = 0; i < n; ++i) {
+    conn = carray[i];
+    if (conn->marked_for_close ||
+        conn->type != CONN_TYPE_AP ||
+        !conn->chosen_exit_optional)
+      continue;
+    edge_conn = TO_EDGE_CONN(conn);
+    r1 = router_get_by_nickname(edge_conn->chosen_exit_name, 0);
+    r2 = router_get_by_nickname(info->nickname, 0);
+    if (r1 && r2 && r1==r2) {
+      tor_assert(edge_conn->socks_request);
+      log_info(LD_APP, "Giving up on enclave exit '%s' for destination %s.",
+               safe_str(edge_conn->chosen_exit_name),
+               escaped_safe_str(edge_conn->socks_request->address));
+      conn->chosen_exit_optional = 0;
+      tor_free(edge_conn->chosen_exit_name); /* clears it */
+    }
+  }
+}
+
 /** The AP connection <b>conn</b> has just failed while attaching or
  * sending a BEGIN or resolving on <b>circ</b>, but another circuit
  * might work.  Detach the circuit, and either reattach it, launch a
