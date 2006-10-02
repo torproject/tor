@@ -1120,14 +1120,13 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
 
   SMARTLIST_FOREACH(options->TrackHostExits, const char *, cp, {
     if (cp[0] == '.') { /* match end */
-      /* XXX strstr is probably really bad here. */
-      if ((str = strstr(conn->socks_request->address, &cp[1]))) {
+      if (!strcasecmpend(conn->socks_request->address, cp)) {
         if (str == conn->socks_request->address
           || strcmp(str, &cp[1]) == 0) {
           found_needle = 1;
         }
       }
-    } else if (strcmp(cp, conn->socks_request->address) == 0) {
+    } else if (strcasecmp(cp, conn->socks_request->address) == 0) {
       found_needle = 1;
     }
   });

@@ -106,6 +106,8 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Make eventdns give strings for DNS errors, not just error numbers.
     - Be prepared in case we ever have a network with more than 2GB per
       second total advertised capacity.
+    - Make TrackExitHosts case-insensitive, and fix the behavior of .suffix
+      TrackExitHosts items to avoid matching in the middle of an address.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and
