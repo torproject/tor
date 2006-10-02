@@ -1534,13 +1534,18 @@ tor_listdir(const char *dirname)
   return result;
 }
 
-/** Return true iff <b>filename</b> is a relative path.  (XXXX doesn't work on
- * windows.) */
+/** Return true iff <b>filename</b> is a relative path. */
 int
 path_is_relative(const char *filename)
 {
   if (filename && filename[0] == '/')
     return 0;
+#ifdef MS_WINDOWS
+  else if (filename && filename[0] == '\\')
+    return 0;
+  else if (filename && strlen(filename)>3 && TOR_ISALPHA(filename[0]) &&
+           filename[1] == ':' && filename[2] == '\\')
+#endif
   else
     return 1;
 }
