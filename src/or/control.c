@@ -101,6 +101,9 @@ static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
   "postdescriptor",
   "fragmentheader",
   "fragment",
+  "redirectstream",
+  "closestream",
+  "closecircuit",
 };
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control

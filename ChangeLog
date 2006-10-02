@@ -10,6 +10,9 @@ Changes in version 0.1.1.25 - 2006-10-?? [ongoing]
     - We were building exactly the wrong circuits when we anticipated
       hidden service requirements, meaning Tor would have to build all
       its circuits on demand.
+    - Avoid possibility of controller-triggered crash when misusing certain
+      commands from a v0 controller on platforms that do not handle
+      printf("%s",NULL) gracefully.
 
 
 Changes in version 0.1.1.24 - 2006-09-29
