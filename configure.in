@@ -588,6 +588,27 @@ if test $tor_cv_malloc_zero_works = yes; then
             [Define to 1 iff malloc(0) returns a pointer])
 fi
 
+# whether we seem to be in a 2s-complement world.
+if test -z "$CROSS_COMPILE"; then
+AC_CACHE_CHECK([whether we are using 2s-complement arithmetic], tor_cv_twos_complement,
+[AC_RUN_IFELSE([AC_LANG_SOURCE(
+[[int main () { int problem = ((-99) != (~99)+1);
+return problem ? 1 : 0; }]])],
+       [tor_cv_twos_complement=yes],
+       [tor_cv_twos_complement=no],
+       [tor_cv_twos_complement=cross])])
+
+else
+  # Cross-compiling; let's hope that the target isn't raving mad.
+  AC_MSG_NOTICE([Cross-compiling: we'll assume that NULL is represented as a sequence of 0-valued bytes.])
+  tor_cv_twos_complement=yes
+fi
+
+if test $tor_cv_twos_complement = yes; then
+  AC_DEFINE([USING_TWOS_COMPLEMENT], 1,
+            [Define to 1 iff we represent negative integers with two's complement])
+fi
+
 # Whether we should use the dmalloc memory allocation debugging library.
 AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
 AC_ARG_WITH(dmalloc,

@@ -220,9 +220,12 @@ typedef uint32_t uintptr_t;
 #error "Missing type uint64_t"
 #endif
 
-/* XXXX This assumes a sane (2's-complement) representation.  But if you
- *  aren't 2's complement, and you don't define LONG_MAX, then you're so
- *  bizarre that I want nothing to do with you. */
+/* This assumes a sane (2's-complement) representation.  But if you
+ * aren't 2's complement, and you don't define LONG_MAX, then you're so
+ * bizarre that I want nothing to do with you. */
+#ifndef USING_TWOS_COMPLEMENT
+#error "Seems that your platform doesn't use 2's complement arithmetic. Argh."
+#endif
 #ifndef LONG_MAX
 #if (SIZEOF_LONG == 4)
 #define LONG_MAX 0x7fffffffL
