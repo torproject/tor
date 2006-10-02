@@ -1572,17 +1572,6 @@ is_internal_IP(uint32_t ip, int for_listening)
   return 0;
 }
 
-/** Return true iff <b>ip</b> (in host order) is judged to be on the
- * same network as us. For now, check if it's an internal IP.
- *
- * XXX Also check if it's on the same class C network as our public IP.
- */
-int
-is_local_IP(uint32_t ip)
-{
-  return is_internal_IP(ip, 0);
-}
-
 /** Parse a string of the form "host[:port]" from <b>addrport</b>.  If
  * <b>address</b> is provided, set *<b>address</b> to a copy of the
  * host portion of the string.  If <b>addr</b> is provided, try to

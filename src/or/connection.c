@@ -1425,7 +1425,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     *max_to_read = at_most - result;
   }
 
-  if (result > 0 && !is_local_IP(conn->addr)) { /* remember it */
+  if (result > 0 && !is_internal_IP(conn->addr, 0)) { /* remember it */
     rep_hist_note_bytes_read(result, time(NULL));
     connection_read_bucket_decrement(conn, result);
   }
@@ -1601,7 +1601,7 @@ connection_handle_write(connection_t *conn)
   }
 
   if (result > 0) {
-    if (!is_local_IP(conn->addr)) { /* remember it */
+    if (!is_internal_IP(conn->addr, 0)) { /* remember it */
       rep_hist_note_bytes_written(result, time(NULL));
       global_write_bucket -= result;
     }
@@ -1646,7 +1646,7 @@ _connection_controller_force_write(control_connection_t *control_conn)
   }
 
   if (result > 0) {
-    if (!is_local_IP(conn->addr)) { /* remember it */
+    if (!is_internal_IP(conn->addr, 0)) { /* remember it */
       rep_hist_note_bytes_written(result, time(NULL));
       global_write_bucket -= result;
     }

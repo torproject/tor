@@ -188,7 +188,6 @@ int path_is_relative(const char *filename) ATTR_PURE;
 
 /* Net helpers */
 int is_internal_IP(uint32_t ip, int for_listening) ATTR_PURE;
-int is_local_IP(uint32_t ip) ATTR_PURE;
 int parse_addr_port(int severity, const char *addrport, char **address,
                     uint32_t *addr, uint16_t *port_out);
 int parse_port_range(const char *port, uint16_t *port_min_out,

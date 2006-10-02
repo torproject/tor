@@ -1590,6 +1590,8 @@ print_usage(void)
 "See man page for options, or http://tor.eff.org/ for documentation.\n");
 }
 
+/** Last value actually set by resolve_my_address. */
+static uint32_t last_resolved_addr = 0;
 /**
  * Based on <b>options-\>Address</b>, guess our public IP address and put it
  * (in host order) into *<b>addr_out</b>. If <b>hostname_out</b> is provided,
@@ -1607,7 +1609,6 @@ resolve_my_address(int warn_severity, or_options_t *options,
   int explicit_ip=1;
   int explicit_hostname=1;
   char tmpbuf[INET_NTOA_BUF_LEN];
-  static uint32_t old_addr=0;
   const char *address = options->Address;
   int notice_severity = warn_severity <= LOG_NOTICE ?
                           LOG_NOTICE : warn_severity;
@@ -1714,17 +1715,40 @@ resolve_my_address(int warn_severity, or_options_t *options,
 
   log_debug(LD_CONFIG, "Resolved Address to '%s'.", tmpbuf);
   *addr_out = ntohl(in.s_addr);
-  if (old_addr && old_addr != *addr_out) {
+  if (last_resolved_addr && last_resolved_addr != *addr_out) {
     /* Leave this as a notice, regardless of the requested severity,
      * at least until dynamic IP address support becomes bulletproof. */
     log_notice(LD_NET, "Your IP address seems to have changed. Updating.");
     server_has_changed_ip();
   }
-  old_addr = *addr_out;
+  last_resolved_addr = *addr_out;
   if (hostname_out)
     *hostname_out = tor_strdup(hostname);
   return 0;
 }
+
+/** Return true iff <b>ip</b> (in host order) is judged to be on the
+ * same network as us, or on a private network.
+ */
+int
+is_local_IP(uint32_t ip)
+{
+  if (is_internal_IP(ip, 0))
+    return 1;
+  /* Check whether ip is on the same /24 as we are.
+   *
+   * It's possible that this next check will hit before the first time
+   * resolve_my_address actually succeeds.  (For clients, it is likely that
+   * resolve_my_address will never be called at all).  In those cases,
+   * last_resolved_addr will be 0, and so checking to see whether ip is on the
+   * same /24 as last_resolved_addr will be the same as checking whether it
+   * was on net 0, which is already done by is_internal_IP.
+   */
+  if ((last_resolved_addr & 0xffffff00ul) == (ip & 0xffffff00ul))
+    return 1;
+  return 0;
+}
+
 
 /** Called when we don't have a nickname set.  Try to guess a good nickname
  * based on the hostname, and return it in a newly allocated string. If we

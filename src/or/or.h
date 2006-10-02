@@ -1821,6 +1821,7 @@ int options_trial_assign(config_line_t *list, int use_defaults,
                          int clear_first, char **msg);
 int resolve_my_address(int warn_severity, or_options_t *options,
                        uint32_t *addr, char **hostname_out);
+int is_local_IP(uint32_t ip) ATTR_PURE;
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
 int options_init_logs(or_options_t *options, int validate_only);
