@@ -128,7 +128,6 @@
 #include "../common/torgzip.h"
 
 /* These signals are defined to help control_signal_act work.
- * XXXX Move into compat.h ?
  */
 #ifndef SIGHUP
 #define SIGHUP 1
@@ -491,7 +490,7 @@ typedef enum {
 #define RESOLVED_TYPE_ERROR_TRANSIENT 0xF0
 #define RESOLVED_TYPE_ERROR 0xF1
 
-/* XXX We should document the meaning of these. */
+/* DOCDOC We should document the meaning of these. */
 #define END_CIRC_AT_ORIGIN           -1
 #define _END_CIRC_REASON_MIN            0
 #define END_CIRC_REASON_NONE            0
@@ -1306,7 +1305,7 @@ typedef struct or_circuit_t {
   /** A hash of location-hidden service's PK if purpose is INTRO_POINT, or a
    * rendezvous cookie if purpose is REND_POINT_WAITING. Filled with zeroes
    * otherwise.
-   * ???? move to a subtype or adjunct structure? Wastes 20 bytes. -NM 
+   * ???? move to a subtype or adjunct structure? Wastes 20 bytes. -NM
    */
   char rend_token[REND_TOKEN_LEN];
 

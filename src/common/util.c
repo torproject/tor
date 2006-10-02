@@ -1867,7 +1867,6 @@ get_interface_address(int severity, uint32_t *addr)
     goto err;
   }
 
-  /* XXXX Can this be right on IPv6 clients? */
   if (getsockname(sock, (struct sockaddr*)&my_addr, &my_addr_len)) {
     int e = tor_socket_errno(sock);
     log_fn(severity, LD_NET, "getsockname() to determine interface failed: %s",

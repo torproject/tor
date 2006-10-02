@@ -824,12 +824,6 @@ options_act(or_options_t *old_options)
        !opt_streq(old_options->EntryNodes, options->EntryNodes)))
     entry_nodes_should_be_added();
 
-  /* If the user wants to avoid certain nodes, make sure none of them
-   * are already entryguards */
-  if (options->ExcludeNodes) {
-    // XXX TODO
-  }
-
   /* Since our options changed, we might need to regenerate and upload our
    * server descriptor.
    */
@@ -1749,7 +1743,6 @@ is_local_IP(uint32_t ip)
   return 0;
 }
 
-
 /** Called when we don't have a nickname set.  Try to guess a good nickname
  * based on the hostname, and return it in a newly allocated string. If we
  * can't, return NULL and let the caller warn if it wants to. */
@@ -2027,33 +2020,6 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
   });
   return 0;
 }
-
-#if 0
-/* XXXX Unused. */
-/** Return 0 if every element of sl is a string holding an IP address, or if sl
- * is NULL.  Otherwise set *msg and return -1. */
-static int
-validate_ips_csv(smartlist_t *sl, const char *name, char **msg)
-{
-  char buf[1024];
-  tor_assert(name);
-
-  if (!sl)
-    return 0;
-
-  SMARTLIST_FOREACH(sl, const char *, cp,
-  {
-    struct in_addr in;
-    if (0 == tor_inet_aton(cp, &in)) {
-      int r = tor_snprintf(buf, sizeof(buf),
-                        "Malformed address '%s' out of range in %s", cp, name);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
-      return -1;
-    }
-  });
-  return 0;
-}
-#endif
 
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
@@ -3399,7 +3365,8 @@ normalize_data_directory(or_options_t *options)
    }
    if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
      /* If our homedir is /, we probably don't want to use it. */
-     /* XXXX Default to /var/lib/tor? */
+     /* Default to LOCALSTATEDIR/tor which is probably closer to what we
+      * want. */
      log_warn(LD_CONFIG,
               "Default DataDirectory is \"~/.tor\".  This expands to "
               "\"%s\", which is probably not what you want.  Using \"%s/tor\" "
@@ -3498,7 +3465,8 @@ write_configuration_file(const char *fname, or_options_t *options)
     }
     log_notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
     if (rename(fname, fn_tmp) < 0) {
-      log_warn(LD_FS, "Couldn't rename configuration file \"%s\" to \"%s\": %s",
+      log_warn(LD_FS,
+             "Couldn't rename configuration file \"%s\" to \"%s\": %s",
              fname, fn_tmp, strerror(errno));
       tor_free(fn_tmp);
       goto err;
@@ -3527,9 +3495,11 @@ int
 options_save_current(void)
 {
   if (torrc_fname) {
-    /* XXX This fails if we can't write to our configuration file.
-     *   Arguably, we should try falling back to datadirectory or something.
-     *   But just as arguably, we shouldn't. */
+    /* This fails if we can't write to our configuration file.
+     *
+     * If we try falling back to datadirectory or something, we have a better
+     * chance of saving the configuration, but a better chance of doing
+     * something the user never expected. Let's just warn instead. */
     return write_configuration_file(torrc_fname, get_options());
   }
   return write_configuration_file(get_default_conf_file(), get_options());

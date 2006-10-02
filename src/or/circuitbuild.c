@@ -176,6 +176,7 @@ circuit_log_path(int severity, unsigned int domain, origin_circuit_t *circ)
  * extended; the _first_ hop that isn't open (if any) is marked as
  * unable to extend.
  */
+/* XXXX Someday we should learn from or circuits too. */
 void
 circuit_rep_hist_note_result(origin_circuit_t *circ)
 {
@@ -183,14 +184,8 @@ circuit_rep_hist_note_result(origin_circuit_t *circ)
   char *prev_digest = NULL;
   routerinfo_t *router;
   hop = circ->cpath;
-  if (!hop) {
-    /* XXX
-     * if !hop, then we're not the beginning of this circuit.
-     * for now, just forget about it. later, we should remember when
-     * extends-through-us failed, too.
-     */
+  if (!hop) /* circuit hasn't started building yet. */
     return;
-  }
   if (server_mode(get_options())) {
     routerinfo_t *me = router_get_my_routerinfo();
     if (!me)
@@ -865,8 +860,8 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer)
 
     for (stream = circ->p_streams; stream; stream=stream->next_stream) {
       if (stream->cpath_layer == victim) {
-        /* XXXX NM LD_CIRC? */
-        log_info(LD_APP, "Marking stream %d for close.", stream->stream_id);
+        log_info(LD_APP, "Marking stream %d for close because of truncate.",
+                 stream->stream_id);
         /* no need to send 'end' relay cells,
          * because the other side's already dead
          */
@@ -1564,8 +1559,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
           smartlist_add(excluded, r);
       });
   }
-  // XXX we should exclude busy exit nodes here, too,
-  // but only if there are enough other nodes available.
+
   choice = router_choose_random_node(
            NULL, options->ExcludeNodes,
            excluded, state ? state->need_uptime : 0,

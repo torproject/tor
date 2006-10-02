@@ -726,7 +726,8 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
     tor_free(config);
   } else {
     if (config_get_lines(body, &lines) < 0) {
-      log_warn(LD_CONTROL,"V0 controller gave us config lines we can't parse.");
+      log_warn(LD_CONTROL,
+               "V0 controller gave us config lines we can't parse.");
       send_control0_error(conn, ERR_SYNTAX, "Couldn't parse configuration");
       return 0;
     }

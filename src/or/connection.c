@@ -1991,7 +1991,6 @@ alloc_http_authenticator(const char *authenticator)
  * whether our address has changed and we need to generate keys.  If we do,
  * call init_keys().
  */
-/* XXXX Handle IPv6, eventually. */
 static void
 client_check_address_changed(int sock)
 {
