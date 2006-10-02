@@ -1010,6 +1010,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
 {
   int used_quoted_string = 0;
   or_options_t *options = get_options();
+  const char *errstr = NULL;
   char *password;
   size_t password_len;
   if (STATE_IS_V0(conn->_base.state)) {
@@ -1043,8 +1044,16 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     }
   }
   if (options->CookieAuthentication) {
-    if (password_len == AUTHENTICATION_COOKIE_LEN &&
-        !memcmp(authentication_cookie, password, password_len)) {
+    if (password_len != AUTHENTICATION_COOKIE_LEN) {
+      log_warn(LD_CONTROL, "Got authentication cookie with wrong length (%d)",
+               password_len);
+      errstr = "Wrong length on authentication cookie.";
+      goto err;
+    } else if (memcmp(authentication_cookie, password, password_len)) {
+      log_warn(LD_CONTROL, "Got mismatched authentication cookie");
+      errstr = "Authentication cookie did not match expected value.";
+      goto err;
+    } else {
       goto ok;
     }
   } else if (options->HashedControlPassword) {
@@ -1053,11 +1062,20 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     if (decode_hashed_password(expected, options->HashedControlPassword)<0) {
       log_warn(LD_CONTROL,
                "Couldn't decode HashedControlPassword: invalid base16");
+      errstr = "Couldn't decode HashedControlPassword value in configuration.";
       goto err;
     }
     secret_to_key(received,DIGEST_LEN,password,password_len,expected);
     if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
       goto ok;
+
+    if (used_quoted_string)
+      errstr = "Password did not match HashedControlPassword value from "
+        "configuration";
+    else
+      errstr = "Password did not match HashedControlPassword value from "
+        "configuration. Maybe you tried a plain text password? "
+        "If so, the standard requires you put it in double quotes.";
     goto err;
   } else {
     /* if Tor doesn't demand any stronger authentication, then
@@ -1071,12 +1089,10 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
                         "Authentication failed");
   else {
     tor_free(password);
-    if (used_quoted_string)
-      connection_write_str_to_buf("515 Authentication failed\r\n", conn);
-    else
-      connection_write_str_to_buf(
-         "515 Authentication failed.  Maybe you tried a plain text password?  "
-         "If so, the standard requires you put it in double quotes.\r\n",conn);
+    if (!errstr)
+      errstr = "Unknown reason.";
+    connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n",
+                             errstr);
   }
   return 0;
  ok:

@@ -788,12 +788,7 @@ $Id$
 
   If the 'CookieAuthentication' option is true, Tor writes a "magic cookie"
   file named "control_auth_cookie" into its data directory.  To authenticate,
-  the controller must send the contents of this file.
-
-  [With the v1 controller protocol, what we really mean is that you should
-   send the base16 of the contents of this file. Is this it, or is there
-   more to it? Should we write a control_auth_cookie.asc file too that
-   makes this step easier for people doing it manually? -RD]
+  the controller must send the contents of this file, encoded in hexadecimal.
 
   If the 'HashedControlPassword' option is set, it must contain the salted
   hash of a secret password.  The salted hash is computed according to the

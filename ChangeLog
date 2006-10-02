@@ -50,6 +50,7 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Avoid choosing Exit nodes for entry or middle hops when the bandwidth
       available in non-Exit nodes is much higher then the bandwidth available
       in Exit nodes. (Fixes bug 200.)
+    - Give more meaningful errors on control authentication failure.
 
   o Security Fixes, minor:
     - If a client asked for a server by name, and we didn't have a
