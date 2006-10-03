@@ -60,6 +60,11 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Avoid possibility of controller-triggered crash when misusing certain
       commands from a v0 controller on platforms that do not handle
       printf("%s",NULL) gracefully.
+    - Add an (off by default) feature so that controllers can get more useful
+      identifiers for servers.  Instead of learning identity digests for
+      un-Named servers and nicknames for Named servers, the new identifiers
+      include digest, nickname, and indication of Named status.  See
+      control-spec.txt for more information.
 
   o Security Fixes, minor:
     - If a client asked for a server by name, and we didn't have a
