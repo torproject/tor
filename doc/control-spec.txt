@@ -618,7 +618,7 @@ $Id$
      Same as passing 'EXTENDED' to SETEVENTS; this is the preferred way to
      request the extended event syntax.
 
-     This will not be enabled-by-default until at least XXX (or, at least two
+     This will not be always-enabled until at least XXX (or, at least two
      stable releases after XXX, the release where it was first used for
      anything.)
 
@@ -630,6 +630,10 @@ $Id$
      known Named routers and Fingerprint for unknown or unNamed routers; the
      LongName format includes a Fingerprint, an indication of Named status,
      and a Nickname (if one is known).
+
+     This will not be always-enabled until at least 0.1.4.x (or at least two
+     stable releases after 0.1.2.2-alpha, the release where it was first
+     available.)
 
 4. Replies
 
@@ -870,12 +874,12 @@ $Id$
   If you ask for lots of events, and 16MB of them queue up on the buffer,
   the Tor process will close the socket.
 
-5.3. Backward compatibility
+5.3. Backward compatibility with v0 control protocol.
 
   For backward compatibility with the "version 0" control protocol, Tor checks
   whether the third octet the first command is zero.  If it is, Tor
   assumes that version 0 is in use.  This feature is deprecated, and will be
-  removed in the 0.1.2.x Tor development series.
+  removed in the 0.1.3.x Tor development series.
 
   In order to detect which version of the protocol is supported controllers
   should send the sequence [00 00 0D 0A].  This is a valid and unrecognized
