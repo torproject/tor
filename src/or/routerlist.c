@@ -1033,12 +1033,24 @@ static INLINE int
 router_hex_digest_matches(routerinfo_t *router, const char *hexdigest)
 {
   char digest[DIGEST_LEN];
+  size_t len;
   tor_assert(hexdigest);
   if (hexdigest[0] == '$')
     ++hexdigest;
 
-  if (strlen(hexdigest) != HEX_DIGEST_LEN ||
-      base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0)
+  len = strlen(hexdigest);
+  if (len < HEX_DIGEST_LEN)
+    return 0;
+  else if (len > HEX_DIGEST_LEN &&
+           (hexdigest[HEX_DIGEST_LEN] == '=' ||
+            hexdigest[HEX_DIGEST_LEN] == '~')) {
+    if (strcasecmp(hexdigest+HEX_DIGEST_LEN+1, router->nickname))
+      return 0;
+    if (hexdigest[HEX_DIGEST_LEN] == '=' && !router->is_named)
+      return 0;
+  }
+
+  if (base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0)
     return 0;
   return (!memcmp(digest, router->cache_info.identity_digest, DIGEST_LEN));
 }
@@ -1079,7 +1091,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       !strcasecmp(nickname, get_options()->Nickname))
     return router_get_my_routerinfo();
 
-  maybedigest = (strlen(nickname) == HEX_DIGEST_LEN) &&
+  maybedigest = (strlen(nickname) >= HEX_DIGEST_LEN) &&
     (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
 
   if (named_server_map &&
@@ -1096,7 +1108,10 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
     } else if (maybedigest &&
                !memcmp(digest, router->cache_info.identity_digest, DIGEST_LEN)
                ) {
-      return router;
+      if (router_hex_digest_matches(router, nickname))
+        return router;
+      else
+        best_match = router; // XXXX NM not exactly right.
     }
   });
 
@@ -1190,17 +1205,35 @@ routerinfo_t *
 router_get_by_hexdigest(const char *hexdigest)
 {
   char digest[DIGEST_LEN];
+  size_t len;
+  routerinfo_t *ri;
 
   tor_assert(hexdigest);
   if (!routerlist)
     return NULL;
   if (hexdigest[0]=='$')
     ++hexdigest;
-  if (strlen(hexdigest) != HEX_DIGEST_LEN ||
+  len = strlen(hexdigest);
+  if (len < HEX_DIGEST_LEN ||
       base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN) < 0)
     return NULL;
 
-  return router_get_by_digest(digest);
+  ri = router_get_by_digest(digest);
+
+  if (len > HEX_DIGEST_LEN) {
+    if (hexdigest[HEX_DIGEST_LEN] == '=') {
+      if (strcasecmp(ri->nickname, hexdigest+HEX_DIGEST_LEN+1) ||
+          !ri->is_named)
+        return NULL;
+    } else if (hexdigest[HEX_DIGEST_LEN] == '~') {
+      if (strcasecmp(ri->nickname, hexdigest+HEX_DIGEST_LEN+1))
+        return NULL;
+    } else {
+      return NULL;
+    }
+  }
+
+  return ri;
 }
 
 /** Return the router in our routerlist whose 20-byte key digest

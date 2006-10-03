@@ -111,7 +111,8 @@ static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
  * list to find out.
  **/
 static uint32_t global_event_mask0 = 0;
-static uint32_t global_event_mask1 = 0;
+static uint32_t global_event_mask1long = 0;
+static uint32_t global_event_mask1short = 0;
 
 /** True iff we have disabled log messages from being sent to the controller */
 static int disable_log_messages = 0;
@@ -119,9 +120,13 @@ static int disable_log_messages = 0;
 /** Macro: true if any control connection is interested in events of type
  * <b>e</b>. */
 #define EVENT_IS_INTERESTING0(e) (global_event_mask0 & (1<<(e)))
-#define EVENT_IS_INTERESTING1(e) (global_event_mask1 & (1<<(e)))
-#define EVENT_IS_INTERESTING(e) \
-  ((global_event_mask0|global_event_mask1) & (1<<(e)))
+#define EVENT_IS_INTERESTING1(e) \
+  ((global_event_mask1long|global_event_mask1short) & (1<<(e)))
+#define EVENT_IS_INTERESTING1L(e) (global_event_mask1long & (1<<(e)))
+#define EVENT_IS_INTERESTING1S(e) (global_event_mask1short & (1<<(e)))
+#define EVENT_IS_INTERESTING(e)                                         \
+  ((global_event_mask0|global_event_mask1short|global_event_mask1long)  \
+   & (1<<(e)))
 
 /** If we're using cookie-type authentication, how long should our cookies be?
  */
@@ -131,6 +136,10 @@ static int disable_log_messages = 0;
  * stored it to disk. */
 static int authentication_cookie_is_set = 0;
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
+
+typedef enum {
+  SHORT_NAMES,LONG_NAMES,ALL_NAMES
+} name_type_t;
 
 static void connection_printf_to_buf(control_connection_t *conn,
                                      const char *format, ...)
@@ -148,8 +157,9 @@ static void send_control0_error(control_connection_t *conn, uint16_t error,
                                const char *message);
 static void send_control0_event(uint16_t event, uint32_t len,
                                 const char *body);
-static void send_control1_event(uint16_t event, const char *format, ...)
-  CHECK_PRINTF(2,3);
+static void send_control1_event(uint16_t event, name_type_t which,
+                                const char *format, ...)
+  CHECK_PRINTF(3,4);
 static int handle_control_setconf(control_connection_t *conn, uint32_t len,
                                   char *body);
 static int handle_control_resetconf(control_connection_t *conn, uint32_t len,
@@ -238,7 +248,8 @@ control_update_global_event_mask(void)
   connection_t **conns;
   int n_conns, i;
   global_event_mask0 = 0;
-  global_event_mask1 = 0;
+  global_event_mask1short = 0;
+  global_event_mask1long = 0;
   get_connection_array(&conns, &n_conns);
   for (i = 0; i < n_conns; ++i) {
     if (conns[i]->type == CONN_TYPE_CONTROL &&
@@ -246,8 +257,10 @@ control_update_global_event_mask(void)
       control_connection_t *conn = TO_CONTROL_CONN(conns[i]);
       if (STATE_IS_V0(conn->_base.state))
         global_event_mask0 |= conn->event_mask;
+      else if (conn->use_long_names)
+        global_event_mask1long |= conn->event_mask;
       else
-        global_event_mask1 |= conn->event_mask;
+        global_event_mask1short |= conn->event_mask;
     }
   }
 
@@ -587,7 +600,7 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
 /* Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is given by <b>msg</b>. */
 static void
-send_control1_event_string(uint16_t event, const char *msg)
+send_control1_event_string(uint16_t event, name_type_t which, const char *msg)
 {
   connection_t **conns;
   int n_conns, i;
@@ -600,6 +613,13 @@ send_control1_event_string(uint16_t event, const char *msg)
         !conns[i]->marked_for_close &&
         conns[i]->state == CONTROL_CONN_STATE_OPEN_V1) {
       control_connection_t *control_conn = TO_CONTROL_CONN(conns[i]);
+      if (which == SHORT_NAMES) {
+        if (control_conn->use_long_names)
+          continue;
+      } else if (which == LONG_NAMES) {
+        if (! control_conn->use_long_names)
+          continue;
+      }
       if (control_conn->event_mask & (1<<event)) {
         connection_write_to_buf(msg, strlen(msg), TO_CONN(control_conn));
         if (event == EVENT_ERR_MSG)
@@ -616,7 +636,7 @@ send_control1_event_string(uint16_t event, const char *msg)
  * Currently the length of the message is limited to 1024 (including the
  * ending \n\r\0. */
 static void
-send_control1_event(uint16_t event, const char *format, ...)
+send_control1_event(uint16_t event, name_type_t which, const char *format, ...)
 {
 #define SEND_CONTROL1_EVENT_BUFFERSIZE 1024
   int r;
@@ -636,7 +656,7 @@ send_control1_event(uint16_t event, const char *format, ...)
     buf[SEND_CONTROL1_EVENT_BUFFERSIZE-3] = '\r';
   }
 
-  send_control1_event_string(event, buf);
+  send_control1_event_string(event, which, buf);
 }
 
 /** Given a text circuit <b>id</b>, return the corresponding circuit. */
@@ -2661,12 +2681,14 @@ connection_control_process_inbuf(control_connection_t *conn)
 int
 control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
 {
-  char *path, *msg;
+  char *path=NULL, *msg;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
 
-  path = circuit_list_path(circ,0);
+  if (EVENT_IS_INTERESTING0(EVENT_CIRCUIT_STATUS) ||
+      EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS))
+    path = circuit_list_path(circ,0);
   if (EVENT_IS_INTERESTING0(EVENT_CIRCUIT_STATUS)) {
     size_t path_len = strlen(path);
     msg = tor_malloc(1+4+path_len+1); /* event, circid, path, NUL. */
@@ -2690,10 +2712,20 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
-    send_control1_event(EVENT_CIRCUIT_STATUS,
-                        "650 CIRC %lu %s %s\r\n",
-                        (unsigned long)circ->global_identifier,
-                        status, path);
+    if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
+      send_control1_event(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
+                          "650 CIRC %lu %s %s\r\n",
+                          (unsigned long)circ->global_identifier,
+                          status, path);
+    }
+    if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
+      char *vpath = circuit_list_path_for_controller(circ);
+      send_control1_event(EVENT_CIRCUIT_STATUS, LONG_NAMES,
+                          "650 CIRC %lu %s %s\r\n",
+                          (unsigned long)circ->global_identifier,
+                          status, vpath);
+      tor_free(vpath);
+    }
   }
   tor_free(path);
 
@@ -2766,7 +2798,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
     circ = circuit_get_by_edge_conn(conn);
     if (circ && CIRCUIT_IS_ORIGIN(circ))
       origin_circ = TO_ORIGIN_CIRCUIT(circ);
-    send_control1_event(EVENT_STREAM_STATUS,
+    send_control1_event(EVENT_STREAM_STATUS, ALL_NAMES,
                         "650 STREAM %lu %s %lu %s\r\n",
                         (unsigned long)conn->global_identifier, status,
                         origin_circ?
@@ -2813,7 +2845,7 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
-    send_control1_event(EVENT_OR_CONN_STATUS,
+    send_control1_event(EVENT_OR_CONN_STATUS, ALL_NAMES/*XXXX NM*/,
                         "650 ORCONN %s %s\r\n",
                         name, status);
   }
@@ -2833,7 +2865,7 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
     send_control0_event(EVENT_BANDWIDTH_USED, 8, buf);
   }
   if (EVENT_IS_INTERESTING1(EVENT_BANDWIDTH_USED)) {
-    send_control1_event(EVENT_BANDWIDTH_USED,
+    send_control1_event(EVENT_BANDWIDTH_USED, ALL_NAMES,
                         "650 BW %lu %lu\r\n",
                         (unsigned long)n_read,
                         (unsigned long)n_written);
@@ -2907,7 +2939,7 @@ control_event_logmsg(int severity, unsigned int domain, const char *msg)
       default: s = "UnknownLogSeverity"; break;
     }
     ++disable_log_messages;
-    send_control1_event(event, "650 %s %s\r\n", s, b?b:msg);
+    send_control1_event(event, ALL_NAMES, "650 %s %s\r\n", s, b?b:msg);
     --disable_log_messages;
     tor_free(b);
   }
@@ -2922,34 +2954,55 @@ control_event_descriptors_changed(smartlist_t *routers)
 {
   size_t len;
   char *msg;
-  smartlist_t *identities;
+  smartlist_t *identities = NULL;
   char buf[HEX_DIGEST_LEN+1];
 
   if (!EVENT_IS_INTERESTING(EVENT_NEW_DESC))
     return 0;
-  identities = smartlist_create();
-  SMARTLIST_FOREACH(routers, routerinfo_t *, r,
-  {
-    base16_encode(buf,sizeof(buf),r->cache_info.identity_digest,DIGEST_LEN);
-    smartlist_add(identities, tor_strdup(buf));
-  });
+  if (EVENT_IS_INTERESTING0(EVENT_NEW_DESC) ||
+      EVENT_IS_INTERESTING1S(EVENT_NEW_DESC)) {
+    identities = smartlist_create();
+    SMARTLIST_FOREACH(routers, routerinfo_t *, r,
+    {
+      base16_encode(buf,sizeof(buf),r->cache_info.identity_digest,DIGEST_LEN);
+      smartlist_add(identities, tor_strdup(buf));
+    });
+  }
   if (EVENT_IS_INTERESTING0(EVENT_NEW_DESC)) {
     msg = smartlist_join_strings(identities, ",", 0, &len);
     send_control0_event(EVENT_NEW_DESC, len+1, msg);
     tor_free(msg);
   }
-  if (EVENT_IS_INTERESTING1(EVENT_NEW_DESC)) {
+  if (EVENT_IS_INTERESTING1S(EVENT_NEW_DESC)) {
     char *ids = smartlist_join_strings(identities, " ", 0, &len);
     size_t len = strlen(ids)+32;
     msg = tor_malloc(len);
     tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
-    send_control1_event_string(EVENT_NEW_DESC, msg);
+    send_control1_event_string(EVENT_NEW_DESC, SHORT_NAMES, msg);
     tor_free(ids);
     tor_free(msg);
   }
-  SMARTLIST_FOREACH(identities, char *, cp, tor_free(cp));
-  smartlist_free(identities);
-
+  if (EVENT_IS_INTERESTING1L(EVENT_NEW_DESC)) {
+    smartlist_t *names;
+    names = smartlist_create();
+    SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
+        char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
+        smartlist_add(names, b);
+      });
+    char *ids = smartlist_join_strings(names, " ", 0, &len);
+    size_t len = strlen(ids)+32;
+    msg = tor_malloc(len);
+    tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
+    send_control1_event_string(EVENT_NEW_DESC, LONG_NAMES, msg);
+    tor_free(ids);
+    tor_free(msg);
+    SMARTLIST_FOREACH(names, char *, cp, tor_free(cp));
+    smartlist_free(names);
+  }
+  if (identities) {
+    SMARTLIST_FOREACH(identities, char *, cp, tor_free(cp));
+    smartlist_free(identities);
+  }
   return 0;
 }
 
@@ -2962,12 +3015,13 @@ control_event_address_mapped(const char *from, const char *to, time_t expires)
     return 0;
 
   if (expires < 3)
-    send_control1_event(EVENT_ADDRMAP,
+    send_control1_event(EVENT_ADDRMAP, ALL_NAMES,
                         "650 ADDRMAP %s %s NEVER\r\n", from, to);
   else {
     char buf[ISO_TIME_LEN+1];
     format_local_iso_time(buf,expires);
-    send_control1_event(EVENT_ADDRMAP, "650 ADDRMAP %s %s \"%s\"\r\n",
+    send_control1_event(EVENT_ADDRMAP, ALL_NAMES,
+                        "650 ADDRMAP %s %s \"%s\"\r\n",
                         from, to, buf);
   }
 
@@ -3005,7 +3059,7 @@ control_event_or_authdir_new_descriptor(const char *action,
   buf = tor_malloc(totallen);
   strlcpy(buf, firstline, totallen);
   strlcpy(buf+strlen(firstline), esc, totallen);
-  send_control1_event_string(EVENT_AUTHDIR_NEWDESCS, buf);
+  send_control1_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_NAMES, buf);
 
   tor_free(esc);
   tor_free(buf);
@@ -3018,7 +3072,7 @@ control_event_or_authdir_new_descriptor(const char *action,
 int
 control_event_my_descriptor_changed(void)
 {
-  send_control1_event(EVENT_DESCCHANGED, "650 DESCCHANGED\r\n");
+  send_control1_event(EVENT_DESCCHANGED, ALL_NAMES, "650 DESCCHANGED\r\n");
   return 0;
 }
 

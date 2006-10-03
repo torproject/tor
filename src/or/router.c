@@ -1306,8 +1306,28 @@ is_legal_hexdigest(const char *s)
   tor_assert(s);
   if (s[0] == '$') s++;
   len = strlen(s);
-  return (len == HEX_DIGEST_LEN &&
-          strspn(s,HEX_CHARACTERS)==len);
+  if (len > HEX_DIGEST_LEN) {
+    if (s[HEX_DIGEST_LEN] == '=' ||
+        s[HEX_DIGEST_LEN] == '~') {
+      if (!is_legal_nickname(s+HEX_DIGEST_LEN+1))
+        return 0;
+    } else {
+      return 0;
+    }
+  }
+  return (len >= HEX_DIGEST_LEN &&
+          strspn(s,HEX_CHARACTERS)==HEX_DIGEST_LEN);
+}
+
+/** DOCDOC buf must have MAX_VERBOSE_NICKNAME_LEN+1 bytes. */
+void
+router_get_verbose_nickname(char *buf, routerinfo_t *router)
+{
+  buf[0] = '$';
+  base16_encode(buf+1, HEX_DIGEST_LEN+1, router->cache_info.identity_digest,
+                DIGEST_LEN);
+  buf[1+HEX_DIGEST_LEN] = router->is_named ? '=' : '~';
+  strlcpy(buf+1+HEX_DIGEST_LEN+1, router->nickname, MAX_NICKNAME_LEN+1);
 }
 
 /** Forget that we have issued any router-related warnings, so that we'll

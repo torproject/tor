@@ -159,6 +159,49 @@ circuit_list_path(origin_circuit_t *circ, int verbose)
   return s;
 }
 
+/* DOCDOC long names only */
+char *
+circuit_list_path_for_controller(origin_circuit_t *circ)
+{
+  smartlist_t *elements = smartlist_create();
+  crypt_path_t *hop;
+  char *elt, *s;
+  routerinfo_t *ri;
+
+  hop = circ->cpath;
+  do {
+    if (!hop)
+      break;
+    if (hop->state != CPATH_STATE_OPEN)
+      break;
+    if (!hop->extend_info)
+      break;
+    elt = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
+    if ((ri = router_get_by_digest(hop->extend_info->identity_digest))) {
+      router_get_verbose_nickname(elt, ri);
+    } else if (hop->extend_info->nickname &&
+               is_legal_nickname(hop->extend_info->nickname)) {
+      elt[0] = '$';
+      base16_encode(elt+1, HEX_DIGEST_LEN+1,
+                    hop->extend_info->identity_digest, DIGEST_LEN);
+      elt[HEX_DIGEST_LEN+1]= '~';
+      strlcpy(elt+HEX_DIGEST_LEN+2,
+              hop->extend_info->nickname, MAX_NICKNAME_LEN+1);
+    } else {
+      elt[0] = '$';
+      base16_encode(elt+1, HEX_DIGEST_LEN+1,
+                    hop->extend_info->identity_digest, DIGEST_LEN);
+    }
+    smartlist_add(elements, elt);
+    hop = hop->next;
+  } while (hop != circ->cpath);
+
+  s = smartlist_join_strings(elements, ",", 0, NULL);
+  SMARTLIST_FOREACH(elements, char*, cp, tor_free(cp));
+  smartlist_free(elements);
+  return s;
+}
+
 /** Log, at severity <b>severity</b>, the nicknames of each router in
  * circ's cpath. Also log the length of the cpath, and the intended
  * exit point.

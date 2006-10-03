@@ -1269,19 +1269,40 @@ test_dir_format(void)
   test_assert( is_legal_nickname("a"));
   test_assert(!is_legal_nickname(""));
   test_assert(!is_legal_nickname("abcdefghijklmnopqrst")); /* 20 chars */
-  test_assert(!is_legal_nickname("abcdefghijklmnopqrst")); /* 20 chars */
   test_assert(!is_legal_nickname("hyphen-")); /* bad char */
   test_assert( is_legal_nickname("abcdefghijklmnopqrs")); /* 19 chars */
   test_assert(!is_legal_nickname("$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA"));
   /* valid */
   test_assert( is_legal_nickname_or_hexdigest(
                                  "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  test_assert( is_legal_nickname_or_hexdigest(
+                         "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA=fred"));
+  test_assert( is_legal_nickname_or_hexdigest(
+                         "$AAAAAAAA01234AAAAAAAAAAAAAAAAAAAAAAAAAAA~fred"));
   /* too short */
   test_assert(!is_legal_nickname_or_hexdigest(
                                  "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
   /* illegal char */
   test_assert(!is_legal_nickname_or_hexdigest(
                                  "$AAAAAAzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  /* hex part too long */
+  test_assert(!is_legal_nickname_or_hexdigest(
+                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
+  test_assert(!is_legal_nickname_or_hexdigest(
+                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=fred"));
+  /* Bad nickname */
+  test_assert(!is_legal_nickname_or_hexdigest(
+                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="));
+  test_assert(!is_legal_nickname_or_hexdigest(
+                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~"));
+  test_assert(!is_legal_nickname_or_hexdigest(
+                       "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~hyphen-"));
+  test_assert(!is_legal_nickname_or_hexdigest(
+                       "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~"
+                       "abcdefghijklmnoppqrst"));
+  /* Bad extra char. */
+  test_assert(!is_legal_nickname_or_hexdigest(
+                         "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA!"));
   test_assert(is_legal_nickname_or_hexdigest("xyzzy"));
   test_assert(is_legal_nickname_or_hexdigest("abcdefghijklmnopqrs"));
   test_assert(!is_legal_nickname_or_hexdigest("abcdefghijklmnopqrst"));

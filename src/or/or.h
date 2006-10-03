@@ -157,6 +157,9 @@
 #define MAX_NICKNAME_LEN 19
 /* Hex digest plus dollar sign. */
 #define MAX_HEX_NICKNAME_LEN (HEX_DIGEST_LEN+1)
+/* $Hexdigest=nickname */
+#define MAX_VERBOSE_NICKNAME_LEN (1+HEX_DIGEST_LEN+1+MAX_NICKNAME_LEN)
+
 /** Maximum size, in bytes, for resized buffers. */
 #define MAX_BUF_SIZE ((1<<24)-1)
 #define MAX_DIR_SIZE MAX_BUF_SIZE
@@ -783,6 +786,9 @@ typedef struct control_connection_t {
 
   uint32_t event_mask; /**< Bitfield: which events does this controller
                         * care about? */
+  unsigned int use_long_names:1; /**< True if we should use long nicknames
+                                  * on this (v1) connection. Only settable
+                                  * via v1 controllers. */
   uint32_t incoming_cmd_len;
   uint32_t incoming_cmd_cur_len;
   char *incoming_cmd;
@@ -1680,6 +1686,7 @@ void assert_buf_ok(buf_t *buf);
 /********************************* circuitbuild.c **********************/
 
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
+char *circuit_list_path_for_controller(origin_circuit_t *circ);
 void circuit_log_path(int severity, unsigned int domain,
                       origin_circuit_t *circ);
 void circuit_rep_hist_note_result(origin_circuit_t *circ);
@@ -2504,6 +2511,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);
+void router_get_verbose_nickname(char *buf, routerinfo_t *router);
 void router_reset_warnings(void);
 void router_free_all(void);
 
@@ -2547,6 +2555,7 @@ typedef enum {
   V1_AUTHORITY, V2_AUTHORITY, HIDSERV_AUTHORITY,
 } authority_type_t;
 routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
+
                                              int requireother,
                                              int fascistfirewall,
                                              int retry_if_no_servers);
