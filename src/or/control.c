@@ -999,7 +999,7 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
     smartlist_free(events);
   }
   conn->event_mask = event_mask;
-  conn->_base.control_events_are_extended = extended;
+  conn->use_extended_events = extended;
 
   control_update_global_event_mask();
   send_control_done(conn);
@@ -2315,13 +2315,16 @@ handle_control_usefeature(control_connection_t *conn,
 {
   tor_assert(! STATE_IS_V0(conn->_base.state));
   smartlist_t *args;
-  int verbose_names = 0, bad = 0;
+  int verbose_names = 0, extended_events = 0;
+  int bad = 0;
   args = smartlist_create();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH(args, const char *, arg, {
       if (!strcasecmp(arg, "VERBOSE_NAMES"))
         verbose_names = 1;
+      if (!strcasecmp(arg, "EXTENDED_EVENTS"))
+        extended_events = 1;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",
                                  arg);
@@ -2335,6 +2338,8 @@ handle_control_usefeature(control_connection_t *conn,
       conn->use_long_names = 1;
       control_update_global_event_mask();
     }
+    if (extended_events)
+      conn->use_extended_events = 1;
     send_control_done(conn);
   }
 

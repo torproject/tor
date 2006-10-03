@@ -642,9 +642,6 @@ typedef struct connection_t {
   unsigned edge_has_sent_end:1; /**< For debugging; only used on edge
                          * connections.  Set once we've set the stream end,
                          * and check in circuit_about_to_close_connection(). */
-  /** For control connections only. If set, we send extended info with control
-   * events as appropriate. */
-  unsigned int control_events_are_extended:1;
   /** Used for OR conns that shouldn't get any new circs attached to them. */
   unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
@@ -789,6 +786,10 @@ typedef struct control_connection_t {
   unsigned int use_long_names:1; /**< True if we should use long nicknames
                                   * on this (v1) connection. Only settable
                                   * via v1 controllers. */
+  /** For control connections only. If set, we send extended info with control
+   * events as appropriate. */
+  unsigned int use_extended_events:1;
+
   uint32_t incoming_cmd_len;
   uint32_t incoming_cmd_cur_len;
   char *incoming_cmd;
