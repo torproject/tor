@@ -55,7 +55,8 @@ N . Improve behavior when telling nicknames and digests to controllers.
       server with digest D named N".  Nothing else matches.)
     o Add ability to selectively send 'long' nicknames on v1 connections.
     o Add a feature to actually turn on the switch.
-    - Implement response for ORCONN.
+    o Implement response for ORCONN.
+    - As used in responses to getinfo requests?
     . Verify that everything actually does the right thing.
     - Specify everything.
 
@@ -131,6 +132,9 @@ N - DNS improvements
     o Option to deal with broken DNS of the "ggoogle.com? Ah, you meant
       ads.me.com!" variety.
       o Autodetect whether DNS is broken in this way.
+      - Additional fix: allow clients to have some addresses that mean,
+        notfound.  Yes, this blacklists IPs for having ever been used by
+        DNS hijackers.
     o Don't ask reject *:* nodes for DNS unless client wants you to.
     . Asynchronous DNS
       o Document and rename SearchDomains, ResolvConf options

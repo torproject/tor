@@ -2323,7 +2323,7 @@ handle_control_usefeature(control_connection_t *conn,
   SMARTLIST_FOREACH(args, const char *, arg, {
       if (!strcasecmp(arg, "VERBOSE_NAMES"))
         verbose_names = 1;
-      if (!strcasecmp(arg, "EXTENDED_EVENTS"))
+      else if (!strcasecmp(arg, "EXTENDED_EVENTS"))
         extended_events = 1;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",
@@ -2882,11 +2882,6 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
   if (EVENT_IS_INTERESTING1(EVENT_OR_CONN_STATUS)) {
     const char *status;
     char name[128];
-    if (conn->nickname)
-      strlcpy(name, conn->nickname, sizeof(name));
-    else
-      tor_snprintf(name, sizeof(name), "%s:%d",
-                   conn->_base.address, conn->_base.port);
     switch (tp)
       {
       case OR_CONN_EVENT_LAUNCHED: status = "LAUNCHED"; break;
@@ -2898,9 +2893,32 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
-    send_control1_event(EVENT_OR_CONN_STATUS, ALL_NAMES/*XXXX NM*/,
-                        "650 ORCONN %s %s\r\n",
-                        name, status);
+    if (EVENT_IS_INTERESTING1S(EVENT_OR_CONN_STATUS)) {
+      if (conn->nickname)
+        strlcpy(name, conn->nickname, sizeof(name));
+      else
+        tor_snprintf(name, sizeof(name), "%s:%d",
+                     conn->_base.address, conn->_base.port);
+      send_control1_event(EVENT_OR_CONN_STATUS, SHORT_NAMES,
+                          "650 ORCONN %s %s\r\n",
+                          name, status);
+    }
+    if (EVENT_IS_INTERESTING1L(EVENT_OR_CONN_STATUS)) {
+      routerinfo_t *ri = router_get_by_digest(conn->identity_digest);
+      if (ri) {
+        router_get_verbose_nickname(name, ri);
+      } else if (! tor_digest_is_zero(conn->identity_digest)) {
+        name[0] = '$';
+        base16_encode(name+1, sizeof(name)-1, conn->identity_digest,
+                      DIGEST_LEN);
+      } else {
+        tor_snprintf(name, sizeof(name), "%s:%d",
+                     conn->_base.address, conn->_base.port);
+      }
+      send_control1_event(EVENT_OR_CONN_STATUS, LONG_NAMES,
+                          "650 ORCONN %s %s\r\n",
+                          name, status);
+    }
   }
   return 0;
 }
