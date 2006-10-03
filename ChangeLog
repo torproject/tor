@@ -51,6 +51,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       available in non-Exit nodes is much higher then the bandwidth available
       in Exit nodes. (Fixes bug 200.)
     - Give more meaningful errors on control authentication failure.
+    - Avoid possibility of controller-triggered crash when misusing certain
+      commands from a v0 controller on platforms that do not handle
+      printf("%s",NULL) gracefully.
     - When deciding whether an IP is "local", check for IPs on the same /24
       as us.  This prevents some false positives during reachability
       detection.
