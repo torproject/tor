@@ -44,18 +44,19 @@ x - If the client's clock is too far in the past, it will drop (or
     o Implement
     o Note that we'd like a better speed-bump too.
   o Bug 336: CIRC events should have digests when appropriate.
-N - Improve behavior when telling nicknames and digests to controllers.
+N . Improve behavior when telling nicknames and digests to controllers.
     We should give digest, and nickname, with indication of whether name is
     canonical.
-    - edmanm likes $DIGEST~nickname for unNamed routers, and
+    o edmanm likes $DIGEST~nickname for unNamed routers, and
       $DIGEST=nickname for Named routers. So do I.
     o Make the code accept it where we currently ask for the nickname of
       another server. Semantics should be strict to start ($D=N means, "give
       me the Named server with digest D named N"; $D~N means "give me a
       server with digest D named N".  Nothing else matches.)
     o Add ability to selectively send 'long' nicknames on v1 connections.
-    - Add a feature to actually turn on the switch.
-    - Verify that everything actually does the right thing.
+    o Add a feature to actually turn on the switch.
+    - Implement response for ORCONN.
+    . Verify that everything actually does the right thing.
     - Specify everything.
 
 N - Bug 326: make eventdns thrash less.

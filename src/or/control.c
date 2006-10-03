@@ -22,7 +22,8 @@ const char control_c_id[] =
  *
  */
 
-/* Recognized message type codes. */
+/* Recognized version 0 message type codes; do not add new codes to this list.
+ * Version 0 is dead; version 1 doesn't use codes. */
 #define CONTROL0_CMD_ERROR        0x0000
 #define CONTROL0_CMD_DONE         0x0001
 #define CONTROL0_CMD_SETCONF      0x0002
@@ -46,7 +47,7 @@ const char control_c_id[] =
 #define CONTROL0_CMD_CLOSECIRCUIT   0x0014
 #define _CONTROL0_CMD_MAX_RECOGNIZED 0x0014
 
-/* Recognized error codes. */
+/* Recognized version 0 error codes.  Do not expand. */
 #define ERR_UNSPECIFIED             0x0000
 #define ERR_INTERNAL                0x0001
 #define ERR_UNRECOGNIZED_TYPE       0x0002
@@ -61,7 +62,10 @@ const char control_c_id[] =
 #define ERR_NO_CIRC                 0x000B
 #define ERR_NO_ROUTER               0x000C
 
-/* Recognized asynchronous event types. */
+/* Recognized asynchronous event types.  It's okay to expand this list
+ * because it use used both as a list of v0 event types, and as indices
+ * into the bitfield to determine which controllers want which events.
+ */
 #define _EVENT_MIN            0x0001
 #define EVENT_CIRCUIT_STATUS  0x0001
 #define EVENT_STREAM_STATUS   0x0002
@@ -82,7 +86,7 @@ const char control_c_id[] =
 
 /** Array mapping from message type codes to human-readable message
  * type names. Used for compatibility with version 0 of the control
- * protocol. */
+ * protocol.  Do not add new items to this list. */
 static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
   "error",
   "done",
@@ -102,6 +106,9 @@ static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
   "postdescriptor",
   "fragmentheader",
   "fragment",
+  "redirectstream",
+  "closestream",
+  "closecircuit",
 };
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -199,6 +206,9 @@ static int handle_control_closestream(control_connection_t *conn, uint32_t len,
 static int handle_control_closecircuit(control_connection_t *conn,
                                        uint32_t len,
                                        const char *body);
+static int handle_control_usefeature(control_connection_t *conn,
+                                     uint32_t len,
+                                     const char *body);
 static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
                                       size_t len);
 
@@ -240,8 +250,8 @@ log_severity_to_event(int severity)
   }
 }
 
-/** Set <b>global_event_maskX</b> (where X is 0 or 1) to the bitwise OR
- * of each live control connection's event_mask field. */
+/** Set <b>global_event_mask*</b> to the bitwise OR of each live control
+ * connection's event_mask field. */
 void
 control_update_global_event_mask(void)
 {
@@ -2298,6 +2308,41 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static int
+handle_control_usefeature(control_connection_t *conn,
+                          uint32_t len,
+                          const char *body)
+{
+  tor_assert(! STATE_IS_V0(conn->_base.state));
+  smartlist_t *args;
+  int verbose_names = 0, bad = 0;
+  args = smartlist_create();
+  smartlist_split_string(args, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(args, const char *, arg, {
+      if (!strcasecmp(arg, "VERBOSE_NAMES"))
+        verbose_names = 1;
+      else {
+        connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",
+                                 arg);
+        bad = 1;
+        break;
+      }
+    });
+
+  if (!bad) {
+    if (verbose_names) {
+      conn->use_long_names = 1;
+      control_update_global_event_mask();
+    }
+    send_control_done(conn);
+  }
+
+  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+  smartlist_free(args);
+  return 0;
+}
+
 /** Called when we get a v0 FRAGMENTHEADER or FRAGMENT command; try to append
  * the data to conn->incoming_cmd, setting conn->incoming_(type|len|cur_len)
  * as appropriate.  If the command is malformed, drop it and all pending
@@ -2503,6 +2548,9 @@ connection_control_process_inbuf_v1(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "CLOSECIRCUIT")) {
     if (handle_control_closecircuit(conn, data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "USEFEATURE")) {
+    if (handle_control_usefeature(conn, data_len, args))
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
