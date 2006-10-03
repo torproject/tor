@@ -78,9 +78,29 @@ $Id$
 
   ; Identifiers for servers.
   ServerID = Nickname / Fingerprint
+
   Nickname = 1*19 NicknameChar
   NicknameChar = "a"-"z" / "A"-"Z" / "0" - "9"
   Fingerprint = "$" 40*HEXDIG
+
+  ; A "=" indicates that the given nickname is canonical; a "~" indicates
+  ; that the given nickname is not canonical.
+  LongName = Fingerprint [ ( "=" / "~" ) Nickname ]
+
+  ; How a controller tells Tor about a particular OR.  There are four
+  ; possible formats:
+  ;    $Digest -- The router whose identity key hashes to the given digest.
+  ;        This is the preferred way to refer to an OR.
+  ;    $Digest~Name -- The router whose identity key hashes to the given
+  ;        digest, but only if the routes has the given nickname.
+  ;    $Digest=Name -- The router whose identity key hashes to the given
+  ;        digest, but only if the router is Named and has the given
+  ;        nickname.
+  ;    Name -- The Named router with the given nickname, or, if no such
+  ;        router exists, any router whose nickname matches the one given.
+  ;        This is not a safe way to refer to routers, since Named status
+  ;        could under some circumstances change over time.
+  ServerSpec = LongName / Nickname
 
   ; Unique identifiers for streams or circuits.  Currently, Tor only
   ; uses digits, but this may change
@@ -438,7 +458,7 @@ $Id$
 
   Sent from the client to the server.  The format is:
       "EXTENDCIRCUIT" SP CircuitID SP
-                      ServerID *("," ServerID) SP
+                      ServerSpec *("," ServerSpec) SP
                       ("purpose=" Purpose) CRLF
 
   This request takes one of two forms: either the CircuitID is zero, in
@@ -570,6 +590,46 @@ $Id$
 
   Tells the server to hang up on this controller connection. This command
   can be used before authenticating.
+
+3.19. USEFEATURE
+
+  The syntax is:
+
+    "USEFEATURE" *(SP FeatureName) CRLF
+    FeatureName = 1*(ALPHA / DIGIT / "_" / "-")
+
+  Sometimes extensions to the controller protocol break compatibility with
+  older controllers.  In this case, whenever possible, the extensions are
+  first included in Tor disabled by default, and only enabled on a given
+  controller connection when the 'USEFEATURE' command is given.  Once a
+  "USEFEATURE" command is given, it applies to all subsequent interactions on
+  the same connection; to disable an enabled feature, a new controller
+  connection must be opened.
+
+  This is a forward-compatibility mechanism; each feature will eventually
+  become a regular part of the control protocol in some future version of Tor.
+  Tor will ignore a request to use any feature that is already on by default.
+  Tor will give a "552" error if any requested feature is not recognized.
+
+  Feature names are case-insensitive.
+
+  EXTENDED_EVENTS
+
+     Same as passing 'EXTENDED' to SETEVENTS; this is the preferred way to
+     request the extended event syntax.
+
+     This will not be enabled-by-default until at least XXX (or, at least two
+     stable releases after XXX, the release where it was first used for
+     anything.)
+
+  VERBOSE_NAMES
+
+     Instead of ServerID as specified elsewhere, the controller should
+     identify ORs by LongName in events and GETINFO results.  This format is
+     strictly more informative, since rather than including Nickname for
+     known Named routers and Fingerprint for unknown or unNamed routers; the
+     LongName format includes a Fingerprint, an indication of Named status,
+     and a Nickname (if one is known).
 
 4. Replies
 
