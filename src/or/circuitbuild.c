@@ -1443,6 +1443,7 @@ compute_preferred_testing_list(const char *answer)
         ((tor_version_as_new_as(r->platform,"0.1.1.21-cvs") &&
           !tor_version_as_new_as(r->platform,"0.1.2.0-alpha-cvs")) ||
          tor_version_as_new_as(r->platform,"0.1.2.1-alpha")) &&
+        !is_local_IP(r->addr) &&
         !router_get_trusteddirserver_by_digest(r->cache_info.identity_digest))
       smartlist_add(choices, r));
   router = smartlist_choose(choices);

@@ -1729,9 +1729,10 @@ is_local_IP(uint32_t ip)
 {
   if (is_internal_IP(ip, 0))
     return 1;
-  /* Check whether ip is on the same /24 as we are.
-   *
-   * It's possible that this next check will hit before the first time
+  /* Check whether ip is on the same /24 as we are. */
+  if (get_options()->EnforceDistinctSubnets == 0)
+    return 0;
+  /* It's possible that this next check will hit before the first time
    * resolve_my_address actually succeeds.  (For clients, it is likely that
    * resolve_my_address will never be called at all).  In those cases,
    * last_resolved_addr will be 0, and so checking to see whether ip is on the
