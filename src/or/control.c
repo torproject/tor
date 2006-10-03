@@ -211,6 +211,8 @@ static int handle_control_usefeature(control_connection_t *conn,
                                      const char *body);
 static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
                                       size_t len);
+static void orconn_target_get_name(int long_names, char *buf, size_t len,
+                                   or_connection_t *conn);
 
 /** Given a possibly invalid message type code <b>cmd</b>, return a
  * human-readable string equivalent. */
@@ -1379,7 +1381,8 @@ list_getinfo_options(void)
  * Return 0 if success or unrecognized, or -1 if recognized but
  * internal error. */
 static int
-handle_getinfo_helper(const char *question, char **answer)
+handle_getinfo_helper(control_connection_t *control_conn,
+                      const char *question, char **answer)
 {
   *answer = NULL; /* unrecognized key by default */
   if (!strcmp(question, "version")) {
@@ -1389,9 +1392,11 @@ handle_getinfo_helper(const char *question, char **answer)
   } else if (!strcmpstart(question, "accounting/")) {
     return accounting_getinfo_helper(question, answer);
   } else if (!strcmpstart(question, "helper-nodes")) { /* deprecated */
-    return entry_guards_getinfo(question, answer);
+    return entry_guards_getinfo(control_conn->use_long_names,
+                                question, answer);
   } else if (!strcmpstart(question, "entry-guards")) {
-    return entry_guards_getinfo(question, answer);
+    return entry_guards_getinfo(control_conn->use_long_names,
+                                question, answer);
   } else if (!strcmpstart(question, "config/")) {
     return config_getinfo_helper(question, answer);
   } else if (!strcmp(question, "info/names")) {
@@ -1443,7 +1448,10 @@ handle_getinfo_helper(const char *question, char **answer)
       const char *state;
       if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
         continue;
-      path = circuit_list_path(TO_ORIGIN_CIRCUIT(circ),0);
+      if (control_conn->use_long_names)
+        path = circuit_list_path_for_controller(TO_ORIGIN_CIRCUIT(circ));
+      else
+        path = circuit_list_path(TO_ORIGIN_CIRCUIT(circ),0);
       if (circ->state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
       else if (strlen(path))
@@ -1540,12 +1548,8 @@ handle_getinfo_helper(const char *question, char **answer)
         state = "LAUNCHED";
       else
         state = "NEW";
-      if (conn->nickname)
-        strlcpy(name, conn->nickname, sizeof(name));
-      else
-        tor_snprintf(name, sizeof(name), "%s:%d",
-                     conn->_base.address, conn->_base.port);
-
+      orconn_target_get_name(control_conn->use_long_names, name, sizeof(name),
+                             conn);
       slen = strlen(name)+strlen(state)+2;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%s %s", name, state);
@@ -1651,7 +1655,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   unrecognized = smartlist_create();
   SMARTLIST_FOREACH(questions, const char *, q,
   {
-    if (handle_getinfo_helper(q, &ans) < 0) {
+    if (handle_getinfo_helper(conn, q, &ans) < 0) {
       if (v0)
         send_control0_error(conn, ERR_INTERNAL, body);
       else
@@ -2313,10 +2317,11 @@ handle_control_usefeature(control_connection_t *conn,
                           uint32_t len,
                           const char *body)
 {
-  tor_assert(! STATE_IS_V0(conn->_base.state));
   smartlist_t *args;
   int verbose_names = 0, extended_events = 0;
   int bad = 0;
+  (void) len; /* body is nul-terminated; it's safe to ignore the length */
+  tor_assert(! STATE_IS_V0(conn->_base.state));
   args = smartlist_create();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -2862,6 +2867,32 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
   return 0;
 }
 
+static void
+orconn_target_get_name(int long_names,
+                       char *name, size_t len, or_connection_t *conn)
+{
+  if (long_names) {
+    if (conn->nickname)
+      strlcpy(name, conn->nickname, len);
+    else
+      tor_snprintf(name, len, "%s:%d",
+                   conn->_base.address, conn->_base.port);
+  } else {
+    routerinfo_t *ri = router_get_by_digest(conn->identity_digest);
+    if (ri) {
+      tor_assert(len > MAX_VERBOSE_NICKNAME_LEN);
+      router_get_verbose_nickname(name, ri);
+    } else if (! tor_digest_is_zero(conn->identity_digest)) {
+      name[0] = '$';
+      base16_encode(name+1, len-1, conn->identity_digest,
+                    DIGEST_LEN);
+    } else {
+      tor_snprintf(name, len, "%s:%d",
+                   conn->_base.address, conn->_base.port);
+    }
+  }
+}
+
 /** Something has happened to the OR connection <b>conn</b>: tell any
  * interested control connections. */
 int
@@ -2894,27 +2925,13 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
         return 0;
       }
     if (EVENT_IS_INTERESTING1S(EVENT_OR_CONN_STATUS)) {
-      if (conn->nickname)
-        strlcpy(name, conn->nickname, sizeof(name));
-      else
-        tor_snprintf(name, sizeof(name), "%s:%d",
-                     conn->_base.address, conn->_base.port);
+      orconn_target_get_name(0, name, sizeof(name), conn);
       send_control1_event(EVENT_OR_CONN_STATUS, SHORT_NAMES,
                           "650 ORCONN %s %s\r\n",
                           name, status);
     }
     if (EVENT_IS_INTERESTING1L(EVENT_OR_CONN_STATUS)) {
-      routerinfo_t *ri = router_get_by_digest(conn->identity_digest);
-      if (ri) {
-        router_get_verbose_nickname(name, ri);
-      } else if (! tor_digest_is_zero(conn->identity_digest)) {
-        name[0] = '$';
-        base16_encode(name+1, sizeof(name)-1, conn->identity_digest,
-                      DIGEST_LEN);
-      } else {
-        tor_snprintf(name, sizeof(name), "%s:%d",
-                     conn->_base.address, conn->_base.port);
-      }
+      orconn_target_get_name(1, name, sizeof(name), conn);
       send_control1_event(EVENT_OR_CONN_STATUS, LONG_NAMES,
                           "650 ORCONN %s %s\r\n",
                           name, status);
@@ -3054,14 +3071,15 @@ control_event_descriptors_changed(smartlist_t *routers)
     tor_free(msg);
   }
   if (EVENT_IS_INTERESTING1L(EVENT_NEW_DESC)) {
-    smartlist_t *names;
-    names = smartlist_create();
+    smartlist_t *names = smartlist_create();
+    char *ids;
+    size_t len;
     SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
         char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
         smartlist_add(names, b);
       });
-    char *ids = smartlist_join_strings(names, " ", 0, &len);
-    size_t len = strlen(ids)+32;
+    ids = smartlist_join_strings(names, " ", 0, &len);
+    len = strlen(ids)+32;
     msg = tor_malloc(len);
     tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
     send_control1_event_string(EVENT_NEW_DESC, LONG_NAMES, msg);

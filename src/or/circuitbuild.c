@@ -2445,18 +2445,18 @@ entry_guards_update_state(or_state_t *state)
  * For backward compatibility, we also handle the string "helper-nodes".
  * */
 int
-entry_guards_getinfo(const char *question, char **answer)
+entry_guards_getinfo(int use_long_names, const char *question, char **answer)
 {
   if (!strcmp(question,"entry-guards") ||
       !strcmp(question,"helper-nodes")) {
     smartlist_t *sl = smartlist_create();
     char tbuf[ISO_TIME_LEN+1];
-    char dbuf[HEX_DIGEST_LEN+1];
+    char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
     if (!entry_guards)
       entry_guards = smartlist_create();
     SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
       {
-        size_t len = HEX_DIGEST_LEN+ISO_TIME_LEN+32;
+        size_t len = MAX_VERBOSE_NICKNAME_LEN+ISO_TIME_LEN+32;
         char *c = tor_malloc(len);
         const char *status = NULL;
         time_t when = 0;
@@ -2468,12 +2468,24 @@ entry_guards_getinfo(const char *question, char **answer)
         } else {
           status = "up";
         }
-        base16_encode(dbuf, sizeof(dbuf), e->identity, DIGEST_LEN);
+        if (use_long_names) {
+          routerinfo_t *ri = router_get_by_digest(e->identity);
+          if (ri) {
+            router_get_verbose_nickname(nbuf, ri);
+          } else {
+            nbuf[0] = '$';
+            base16_encode(nbuf+1, sizeof(nbuf)-1, e->identity, DIGEST_LEN);
+            /* e->nickname field is not very reliable if we don't know about
+             * this router any longer; don't include it. */
+          }
+        } else {
+          base16_encode(nbuf, sizeof(nbuf), e->identity, DIGEST_LEN);
+        }
         if (when) {
           format_iso_time(tbuf, when);
-          tor_snprintf(c, len, "$%s %s %s\n", dbuf, status, tbuf);
+          tor_snprintf(c, len, "$%s %s %s\n", nbuf, status, tbuf);
         } else {
-          tor_snprintf(c, len, "$%s %s\n", dbuf, status);
+          tor_snprintf(c, len, "$%s %s\n", nbuf, status);
         }
         smartlist_add(sl, c);
       });

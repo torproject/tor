@@ -1728,7 +1728,8 @@ void entry_nodes_should_be_added(void);
 void entry_guards_prepend_from_config(void);
 void entry_guards_update_state(or_state_t *state);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
-int entry_guards_getinfo(const char *question, char **answer);
+int entry_guards_getinfo(int use_long_names,
+                         const char *question, char **answer);
 void entry_guards_free_all(void);
 
 /********************************* circuitlist.c ***********************/
