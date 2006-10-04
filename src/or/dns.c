@@ -1736,8 +1736,8 @@ dns_launch_wildcard_checks(void)
      * This is the standards-compliance equivalent of making sure that your
      * crackhouse's elevator inspection certificate is up to date.
      */
-    launch_wildcard_check(2, 16, "%s.invalid");
-    launch_wildcard_check(2, 16, "%s.test");
+    launch_wildcard_check(2, 16, ".invalid");
+    launch_wildcard_check(2, 16, ".test");
 
     /* These will break specs if there are ever any number of
      * 8+-character top-level domains. */
@@ -1745,9 +1745,9 @@ dns_launch_wildcard_checks(void)
 
     /* Try some random .com/org/net domains. This will work fine so long as
      * not too many resolve to the same place. */
-    launch_wildcard_check(8, 16, "%s.com");
-    launch_wildcard_check(8, 16, "%s.org");
-    launch_wildcard_check(8, 16, "%s.net");
+    launch_wildcard_check(8, 16, ".com");
+    launch_wildcard_check(8, 16, ".org");
+    launch_wildcard_check(8, 16, ".net");
   }
 }
 
