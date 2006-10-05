@@ -1,6 +1,6 @@
 #!/bin/sh
 # $Id$
-# Copyright 2004-2005 Nick Mathewson.
+# Copyright 2004-2005 Nick Mathewson. 
 # See LICENSE in Tor distribution for licensing information.
 
 # This script builds a Macintosh OS X metapackage containing 4 packages:
@@ -26,7 +26,7 @@ PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.3.zip
 #   man packagemaker
 
 # Make sure VERSION is set, so we don't name the package
-# "Tor--$OS-Bundle.dmg"
+# "Tor--$OS-$ARCH-Bundle.dmg"
 if [ "XX$VERSION" = 'XX' ]; then
   echo "VERSION not set."
   exit 1
@@ -39,12 +39,12 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
     case "$OSVER" in
-    	"10.5") OS="leopard";;
-	"10.4") OS="tiger";;
-	"10.3") OS="panther";;
-	"10.2") OS="jaguar";;
-	"10.1") OS="puma";;
-	"10.0") OS="cheetah";;
+    	"10.5") OS="leopard" ARCH="universal";;
+	"10.4") OS="tiger" ARCH="universal";;
+	"10.3") OS="panther" ARCH="ppc";;
+	"10.2") OS="jaguar" ARCH="ppc";;
+	"10.1") OS="puma" ARCH="ppc";;
+	"10.0") OS="cheetah" ARCH="ppc";;
 	*) OS="unknown";;
     esac
 else
@@ -77,7 +77,6 @@ cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
 #cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
 chmod 755 contrib/osx/TorPostflight
 cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
-cp contrib/osx/TorPreFlight $BUILD_DIR/tor_resources/preflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
 cp contrib/osx/Tor_Uninstaller.applescript $BUILD_DIR/tor_resources/Tor_Uninstaller.applescript
 cp contrib/osx/Tor_Uninstaller.app.tar.gz $BUILD_DIR/tor_resources/Tor_Uninstaller.app.tar.gz
@@ -147,7 +146,7 @@ $PACKAGEMAKER -build                      \
 ### Assemble the metapackage.  Packagemaker won't buld metapackages from
 # the command line, so we need to do it by hand.
 
-MPKG=$BUILD_DIR/output/Tor-$VERSION-$OS-Bundle.mpkg
+MPKG=$BUILD_DIR/output/Tor-$VERSION-$OS-$ARCH-Bundle.mpkg
 mkdir -p "$MPKG/Contents/Resources"
 echo -n "pmkrpkg1" > "$MPKG/Contents/PkgInfo"
 cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
@@ -174,10 +173,10 @@ cp LICENSE $BUILD_DIR/output/Tor\ License.txt
 
 find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 
-mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$OS-Bundle"
-rm -f "Tor-$VERSION-$OS-Bundle.dmg"
+mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$OS-$ARCH-Bundle"
+rm -f "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
 USER="`whoami`"
-sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor-$VERSION-$OS-Bundle" "Tor-$VERSION-$OS-Bundle.dmg"
-sudo chown "$USER" "Tor-$VERSION-$OS-Bundle.dmg"
+sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor-$VERSION-$OS-$ARCH-Bundle" "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
+sudo chown "$USER" "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
 
 sudo rm -rf $BUILD_DIR
