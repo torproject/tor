@@ -9,80 +9,77 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       lookups; see doc/socks-extensions.txt for full information.
     - Add a BEGIN_DIR relay cell type for an easier in-protocol way to
       connect to directory servers through Tor. Previously, clients
-      could only connect to directory servers over Tor from exit nodes,
-      but couldn't get directory information anonymously from a non-exit
-      cache without getting a separate exit node involved.
+      could only connect to directory servers over Tor from exit nodes.
 
   o Minor features:
     - Check for name servers (like Earthlink's) that hijack failing DNS
       requests and replace the no-such-server answer with a "helpful"
-      redirect to an advertising-driven search portal.  We're a little
+      redirect to an advertising-driven search portal. We're a little
       clever about this, in order to work around DNS hijackers who
       "helpfully" decline to hijack known-invalid RFC2606 addresses.
       Config option "ServerDNSDetectHijacking 0" lets you turn it off.
     - When asked to resolve a hostname, don't use non-exit servers unless
-      requested to do so.  This allows servers with broken DNS to
-      be useful to the network.
+      requested to do so. This allows servers with broken DNS to be
+      useful to the network.
     - Add an "EnforceDistinctSubnets" option to control our "exclude
       servers on the same /16" behavior.  It's still on by default; this
       is mostly for people who want to operate private test networks with
       all the machines on the same subnet.
     - If one of our entry guards is on the ExcludeNodes list, or the
-      directory authorities don't think it's a good guard, treat it as if it
-      were unlisted: stop using it as a guard, and throw it off the guards
-      list if it stays that way for a long time.
-    - Allow directory authorities to be marked separately as authorities for
-      the v1 directory protocol, the v2 directory protocol, and as hidden
-      service directories, to make it easier to retire old authorities.
-      V1 authorities should set "HSAuthoritativeDir 1" to continue being
-      hidden service authorities too.
-    - Reserve the nickname "Unnamed" for routers that can't pick a hostname;
-      any router can call itself Unnamed; directory servers will never
-      allocate Unnamed to any particular router; clients won't believe that
-      any router is the canonical Unnamed.
-    - New controller event to alert the controller when our server descriptor
-      has changed.
+      directory authorities don't think it's a good guard, treat it as
+      if it were unlisted: stop using it as a guard, and throw it off
+      the guards list if it stays that way for a long time.
+    - Allow directory authorities to be marked separately as authorities
+      for the v1 directory protocol, the v2 directory protocol, and
+      as hidden service directories, to make it easier to retire old
+      authorities.  V1 authorities should set "HSAuthoritativeDir 1"
+      to continue being hidden service authorities too.
+    - Reserve the nickname "Unnamed" for routers that can't pick
+      a hostname; any router can call itself Unnamed; directory
+      authorities will never allocate Unnamed to any particular router;
+      clients won't believe that any router is the canonical Unnamed.
+    - New controller event to alert the controller when our server
+      descriptor has changed.
     - Only include function names in log messages for debugging messages;
-      in other cases, the content of the message should be clear on its own,
-      and including the function name only seems to confuse users.
-    - Fix CIRC controller events so that controllers can learn the identity
-      digests of non-Named servers used in circuit paths. (Fixes bug 336.)
-    - Avoid choosing Exit nodes for entry or middle hops when the bandwidth
-      available in non-Exit nodes is much higher then the bandwidth available
-      in Exit nodes. (Fixes bug 200.)
+      in other cases, the content of the message should be clear on its
+      own, and including the function name only seems to confuse users.
+    - Fix CIRC controller events so that controllers can learn the
+      identity digests of non-Named servers used in circuit paths.
+    - Avoid choosing Exit nodes for entry or middle hops when the
+      bandwidth available in non-Exit nodes is much higher than the
+      bandwidth available in Exit nodes.
     - Give more meaningful errors on control authentication failure.
     - Avoid possibility of controller-triggered crash when misusing certain
       commands from a v0 controller on platforms that do not handle
       printf("%s",NULL) gracefully.
-    - When deciding whether an IP is "local", check for IPs on the same /24
-      as us.  This prevents some false positives during reachability
-      detection.
-    - Avoid possibility of controller-triggered crash when misusing certain
-      commands from a v0 controller on platforms that do not handle
+    - Avoid some false positives during reachability testing: don't try
+      to test via a server that's on the same /24 as us.
+    - Avoid controller-triggered crash when misusing certain commands
+      from a v0 controller on platforms that do not handle
       printf("%s",NULL) gracefully.
     - Add an (off by default) feature so that controllers can get more useful
-      identifiers for servers.  Instead of learning identity digests for
+      identifiers for servers. Instead of learning identity digests for
       un-Named servers and nicknames for Named servers, the new identifiers
-      include digest, nickname, and indication of Named status.  See
+      include digest, nickname, and indication of Named status. See
       control-spec.txt for more information.
 
   o Security Fixes, minor:
-    - If a client asked for a server by name, and we didn't have a
-      descriptor for a named server with that name, we might return an
-      old one.
+    - If a client asked for a server by name, and there's a named server
+      in our network-status but we don't have its descriptor yet, we
+      would return an unnamed one instead.
     - Fix NetBSD bug that could allow someone to force uninitialized RAM
       to be sent to a server's DNS resolver. This only affects NetBSD
       and other platforms that do not bounds-check tolower().
-    - Reject (most) attempts to use Tor as a one-hop proxy; if many people
-      start using Tor as a one-hop proxy, exit nodes become a more attractive
-      target for compromise. (Fixes bug 303.)
+    - Reject (most) attempts to use Tor circuits with length one. (If
+      many people start using Tor as a one-hop proxy, exit nodes become
+      a more attractive target for compromise.)
     - Just because your DirPort is open doesn't mean people should be
       able to remotely teach you about hidden service descriptors. Now
       only accept rendezvous posts if you've got HSAuthoritativeDir set.
 
   o Major bugfixes:
     - Avoiding crashing on race condition in dns.c:
-      tor_assert(! resolve->expire)
+      tor_assert(!resolve->expire)
     - When a client asks the server to resolve (not connect to)
       an address, and it has a cached answer, give them the cached answer.
       Previously, the server would give them no answer at all.

@@ -1711,7 +1711,7 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
 
   addr = tor_strdup(name);
   r = evdns_resolve_ipv4(name, DNS_QUERY_NO_SEARCH,
-                            evdns_wildcard_check_callback, addr);
+                         evdns_wildcard_check_callback, addr);
   if (r)
     tor_free(addr);
 }

@@ -1885,7 +1885,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
        * and users who'd be better off with, well, single-hop proxies.
        */
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Attempt to open a stream on first hop of circuit. Rejecting.");
+             "Attempt to open a stream on first hop of circuit. Dropping.");
       tor_free(address);
       return 0;
     }
