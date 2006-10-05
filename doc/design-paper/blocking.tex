@@ -55,8 +55,8 @@ IP addresses, or by filtering the signature of the Tor TLS handshake).
 Now that we've got an overlay network, we're most of the way there in
 terms of building a blocking-resistant tool.
 
-And it improves the anonymity that Tor can provide to add more different
-classes of users and goals to the Tor network.
+And adding more different classes of users and goals to the Tor network
+improves the anonymity for all Tor users~\cite{econymics,tor-weis06}.
 
 \subsection{A single system that works for multiple blocked domains}
 
@@ -80,35 +80,55 @@ Three main network attacks by censors currently:
 \item Intercept DNS requests.
 \end{tightlist}
 
-Assume the network firewall has very limited CPU~\cite{clayton06}.
+Assume the network firewall has very limited CPU per
+user~\cite{clayton-pet2006}.
 
 Assume that readers of blocked content will not be punished much
-(relative to writers).
+(relative to publishers).
 
 Assume that while various different adversaries can coordinate and share
 notes, there will be a significant time lag between one attacker learning
 how to overcome a facet of our design and other attackers picking it up.
 
+(Corollary: in the early stages of deployment, the insider threat isn't
+as high of a risk.)
 
+Assume that our users have control over their hardware and software -- no
+spyware, no cameras watching their screen, etc.
 
+Assume that the user will fetch a genuine version of Tor, rather than
+one supplied by the adversary; see~\ref{subsec:trust-chain} for discussion
+on helping the user confirm that he has a genuine version.
 
 \section{Related schemes}
 
 \subsection{public single-hop proxies}
 
+Anonymizer and friends
+
 \subsection{personal single-hop proxies}
 
-Easier to deploy; might not require client-side software.
+Psiphon, circumventor, cgiproxy.
 
-\subsection{break your sensitive strings into multiple tcp packets}
+Simpler to deploy; might not require client-side software.
+
+\subsection{break your sensitive strings into multiple tcp packets;
+ignore RSTs}
 
 \subsection{steganography}
 
-% \subsection{}
+infranet
 
-\section{Useful building blocks}
+\subsection{Internal caching networks}
 
-\subsection{Tor}
+Freenet is deployed inside China and caches outside content.
+
+\subsection{Skype}
+
+port-hopping. encryption. voice communications not so susceptible to
+keystroke loggers (even graphical ones).
+
+\section{Components of the current Tor design}
 
 Anonymizing networks such as
 Tor~\cite{tor-design}
@@ -122,16 +142,16 @@ to do operations on the Internet without being noticed.
 
 Tor provides three security properties:
 \begin{tightlist}
-\item A local observer can't learn, or influence, your destination.
-\item The destination, or somebody watching the destination, can't learn
-your location.
-\item No single piece of the infrastructure can link you to your
+\item 1. A local observer can't learn, or influence, your destination.
+\item 2. No single piece of the infrastructure can link you to your
 destination.
+\item 3. The destination, or somebody watching the destination,
+can't learn your location.
 \end{tightlist}
 
 We care most clearly about property number 1. But when the arms race
 progresses, property 2 will become important -- so the blocking adversary
-can't learn user+destination just by volunteering a relay. It's not so
+can't learn user+destination pairs just by volunteering a relay. It's not so
 clear to see that property 3 is important, but consider websites and
 services that are pressured into treating clients from certain network
 locations differently.
@@ -151,15 +171,37 @@ can build arbitrary overlay paths given a set of descriptors~\cite{blossom}
 
 \subsection{Tor directory servers}
 
+central trusted locations that keep track of what Tor servers are
+available and usable.
+
+(threshold trust, so not quite so bad. See
+Section~\ref{subsec:trust-chain} for details.)
+
 \subsection{Tor user base}
 
-\section{The Design, version one}
+Hundreds of thousands of users from around the world. Some with publically
+reachable IP addresses.
+
+\section{Why hasn't Tor been blocked yet?}
+
+Hard to say. People think it's hard to block? Not enough users, or not
+enough ordinary users? Nobody has been embarrassed by it yet? "Steam
+valve"?
+
+\section{Components of a blocking-resistant design}
+
+Here we describe what we need to add to the current Tor design.
 
 \subsection{Bridge relays}
 
 Some Tor users on the free side of the network will opt to become
-bridge relays. They will relay a bit of traffic and won't need to allow
-exits. They sign up on the bridge directory authorities, below.
+\emph{bridge relays}. They will relay a small amount of bandwidth into
+the main Tor network, so they won't need to allow
+exits.
+
+They sign up on the bridge directory authorities (described below),
+and they use Tor to publish their descriptor so an attacker observing
+the bridge directory authority's network can't enumerate bridges.
 
 ...need to outline instructions for a Tor config that will publish
 to an alternate directory authority, and for controller commands
@@ -168,19 +210,20 @@ that will do this cleanly.
 \subsection{The bridge directory authority (BDA)}
 
 They aggregate server descriptors just like the main authorities, and
-answer all queries as usual, except they don't publish network statuses.
+answer all queries as usual, except they don't publish full directories
+or network statuses.
 
 So once you know a bridge relay's key, you can get the most recent
 server descriptor for it.
 
-XXX need to figure out how to fetch some server statuses from the BDA
+Problem 1: need to figure out how to fetch some server statuses from the BDA
 without fetching all statuses. A new URL to fetch I presume?
 
-\subsection{Blocked users}
+\subsection{Putting them together}
 
 If a blocked user has a server descriptor for one working bridge relay,
-then he can make secure connections to the BDA to update his knowledge
-about other bridge
+then he can use it to make secure connections to the BDA to update his
+knowledge about other bridge
 relays, and he can make secure connections to the main Tor network
 and directory servers to build circuits and connect to the rest of
 the Internet.
@@ -190,17 +233,67 @@ for all transactions (and how to know that the pages you get have not
 been modified by the local attacker) to how to learn about a working
 bridge relay.
 
-The simplest format for communicating information about a bridge relay
-is as an IP address and port for its directory cache. From there, the
-user can ask the directory cache for an up-to-date copy of that bridge
-relay's server descriptor, including its current circuit keys, the port
-it uses for Tor connections, and so on.
+The following section describes ways to bootstrap knowledge of your first
+bridge relay, and ways to maintain connectivity once you know a few
+bridge relays. (See Section~\ref{later} for a discussion of exactly
+what information is sufficient to characterize a bridge relay.)
 
-However, connecting directly to the directory cache involves a plaintext
-http request, so the censor could create a firewall signature for the
-request and/or its response, thus preventing these connections. If that
-happens, the first fix is to use SSL -- not for authentication, but
-just for encryption so requests look different every time.
+\section{Discovering and maintaining working bridge relays}
+
+Most government firewalls are not perfect. They allow connections to
+Google cache or some open proxy servers, or they let file-sharing or
+Skype or World-of-Warcraft connections through.
+For users who can't use any of these techniques, hopefully they know
+a friend who can -- for example, perhaps the friend already knows some
+bridge relay addresses.
+(If they can't get around it at all, then we can't help them -- they
+should go meet more people.)
+
+Thus they can reach the BDA. From here we either assume a social
+network or other mechanism for learning IP:dirport or key fingerprints
+as above, or we assume an account server that allows us to limit the
+number of new bridge relays an external attacker can discover.
+
+Going to be an arms race. Need a bag of tricks. Hard to say
+which ones will work. Don't spend them all at once.
+
+\subsection{Discovery based on social networks}
+
+A token that can be exchanged at the BDA (assuming you
+can reach it) for a new IP:dirport or server descriptor.
+
+The account server
+
+Users can establish reputations, perhaps based on social network
+connectivity, perhaps based on not getting their bridge relays blocked,
+
+(Lesson from designing reputation systems~\cite{p2p-econ}: easy to
+reward good behavior, hard to punish bad behavior.
+
+\subsection{How to give bridge addresses out}
+
+Hold a fraction in reserve, in case our currently deployed tricks
+all fail at once; so we can move to new approaches quickly.
+(Bridges that sign up and don't get used yet will be sad; but this
+is a transient problem -- if bridges are on by default, nobody will
+mind not being used.)
+
+Perhaps each bridge should be known by a single bridge directory
+authority. This makes it easier to trace which users have learned about
+it, so easier to blame or reward. It also makes things more brittle,
+since loss of that authority means its bridges aren't advertised until
+they switch, and means its bridge users are sad too.
+(Need a slick hash algorithm that will map our identity key to a
+bridge authority, in a way that's sticky even when we add bridge
+directory authorities, but isn't sticky when our authority goes
+away. Does this exist?)
+
+Divide bridgets into buckets. You can learn only from the bucket your
+IP address maps to.
+
+\section{Security improvements}
+
+\subsection{Minimum info required to describe a bridge}
 
 There's another possible attack here: since we only learn an IP address
 and port, a local attacker could intercept our directory request and
@@ -216,59 +309,91 @@ If the bridge relay moves to a new IP address, the client can then
 use the bridge directory authority to look up a fresh server descriptor
 using this fingerprint.
 
-another option is to conclude
-that it will be better to tunnel through a Tor circuit when fetching them.
+\subsubsection{Scanning-resistance}
 
-The following section describes ways to bootstrap knowledge of your first
-bridge relay, and ways to maintain connectivity once you know a few
-bridge relays.
+If it's trivial to verify that we're a bridge, and we run on a predictable
+port, then it's conceivable our attacker would scan the whole Internet
+looking for bridges. It would be nice to slow down this attack. It would
+be even nicer to make it hard to learn whether we're a bridge without
+first knowing some secret.
 
-\section{Discovering and maintaining working bridge relays}
-
-\subsection{Initial network discovery}
-
-We make the assumption that the firewall is not perfect. People can
-get around it through the usual means, or they know a friend who can.
-If they can't get around it at all, then we can't help them -- they
-should go meet more people.
-
-Thus they can reach the BDA. From here we either assume a social
-network or other mechanism for learning IP:dirport or key fingerprints
-as above, or we assume an account server that allows us to limit the
-number of new bridge relays an external attacker can discover.
+% XXX this para is in the wrong section
+Could provide a password to the bridge user. He provides a nonced hash of
+it or something when he connects. We'd need to give him an ID key for the
+bridge too, and wait to present the password until we've TLSed, else the
+adversary can pretend to be the bridge and MITM him to learn the password.
 
 
+\subsection{Hiding Tor's network signatures}
 
-\section{The Design, version two}
+The simplest format for communicating information about a bridge relay
+is as an IP address and port for its directory cache. From there, the
+user can ask the directory cache for an up-to-date copy of that bridge
+relay's server descriptor, including its current circuit keys, the port
+it uses for Tor connections, and so on.
 
-\item A blinded token, which can be exchanged at the BDA (assuming you
-can reach it) for a new IP:dirport or server descriptor.
+However, connecting directly to the directory cache involves a plaintext
+http request, so the censor could create a firewall signature for the
+request and/or its response, thus preventing these connections. Therefore
+we've modified the Tor protocol so that users can connect to the directory
+cache via the main Tor port -- they establish a TLS connection with
+the bridge as normal, and then send a Tor "begindir" relay cell to
+establish a connection to its directory cache.
 
-\subsection{The account server}
+Predictable SSL ports:
+We should encourage most servers to listen on port 443, which is
+where SSL normally listens.
+Is that all it will take, or should we set things up so some fraction
+of them pick random ports? I can see that both helping and hurting.
 
-Users can establish reputations, perhaps based on social network
-connectivity, perhaps based on not getting their bridge relays blocked,
+Predictable TLS handshakes:
+Right now Tor has some predictable strings in its TLS handshakes.
+These can be removed; but should they be replaced with nothing, or
+should we try to emulate some popular browser? In any case our
+protocol demands a pair of certs on both sides -- how much will this
+make Tor handshakes stand out?
+
+\subsection{Anonymity issues from becoming a bridge relay}
+
+You can actually harm your anonymity by relaying traffic in Tor.  This is
+the same issue that ordinary Tor servers face. On the other hand, it
+provides improved anonymity against some attacks too:
+
+\begin{verbatim}
+http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerAnonymity
+\end{verbatim}
 
 
+
+\section{Performance improvements}
+
+\subsection{Fetch server descriptors just-in-time}
+
+I guess we should encourage most places to do this, so blocked
+users don't stand out.
 
 \section{Other issues}
 
 \subsection{How many bridge relays should you know about?}
 
 If they're ordinary Tor users on cable modem or DSL, many of them will
-disappear periodically. How many bridge relays should a blockee know
-about before he's likely to have at least one up at any given point?
+disappear and/or move periodically. How many bridge relays should a
+blockee know
+about before he's likely to have at least one reachable at any given point?
+How do we factor in a parameter for "speed that his bridges get discovered
+and blocked"?
 
 The related question is: if the bridge relays change IP addresses
-periodically, how often does the blockee need to "check in" in order
+periodically, how often does the bridge user need to "check in" in order
 to keep from being cut out of the loop?
 
 \subsection{How do we know if a bridge relay has been blocked?}
 
 We need some mechanism for testing reachability from inside the
-blocked area. The easiest answer is for certain users inside
-the area to sign up as testing relays, and then we can route through
-them and see if it works.
+blocked area.
+
+The easiest answer is for certain users inside the area to sign up as
+testing relays, and then we can route through them and see if it works.
 
 First problem is that different network areas block different net masks,
 and it will likely be hard to know which users are in which areas. So
@@ -283,40 +408,26 @@ declare that things are blocked for them, since they could be tricking
 us. (This matters even moreso if our reputation system above relies on
 whether things get blocked to punish or reward.)
 
+Another answer is not to measure directly, but rather let the bridges
+report whether they're being used. If they periodically report to their
+bridge directory authority how much use they're seeing, the authority
+can make smart decisions from there.
 
+If they install a geoip database, they can periodically report to their
+bridge directory authority which countries they're seeing use from. This
+might help us to track which countries are making use of Ramp, and can
+also let us learn about new steps the adversary has taken in the arms
+race. (If the bridges don't want to install a whole geoip subsystem, they
+can report samples of the /24 network for their users, and the authorities
+can do the geoip work. This tradeoff has clear downsides though.)
 
+Worry: adversary signs up a bunch of already-blocked bridges. If we're
+stingy giving out bridges, users in that country won't get useful ones.
+(Worse, we'll blame the users when the bridges report they're not
+being used?)
 
-\subsection{Tunneling directory lookups through Tor}
-
-All you need to do is bootstrap, and then you can use
-your Tor connection to maintain your Tor connection,
-including doing secure directory fetches.
-
-\subsection{Predictable SSL ports}
-
-We should encourage most servers to listen on port 443, which is
-where SSL normally listens.
-
-Is that all it will take, or should we set things up so some fraction
-of them pick random ports? I can see that both helping and hurting.
-
-\subsection{Predictable TLS handshakes}
-
-Right now Tor has some predictable strings in its TLS handshakes.
-These can be removed; but should they be replaced with nothing, or
-should we try to emulate some popular browser? In any case our
-protocol demands a pair of certs on both sides -- how much will this
-make Tor handshakes stand out?
-
-\section{Anonymity issues from becoming a bridge relay}
-
-You can actually harm your anonymity by relaying traffic in Tor.  This is
-the same issue that ordinary Tor servers face. On the other hand, it
-provides improved anonymity against some attacks too:
-
-\begin{verbatim}
-http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerAnonymity
-\end{verbatim}
+Worry: the adversary could choose not to block bridges but just record
+connections to them. So be it, I guess.
 
 \subsection{Cablemodem users don't provide important websites}
 
@@ -328,6 +439,45 @@ The first answer is to aim to get volunteers both from traditionally
 
 The second answer (not so good) would be to encourage more use of consumer
 networks for popular and useful websites.
+
+Other attack: China pressures Verizon to discourage its users from
+running bridges.
+
+\subsection{The trust chain}
+\label{subsec:trust-chain}
+
+Tor's ``public key infrastructure'' provides a chain of trust to
+let users verify that they're actually talking to the right servers.
+There are four pieces to this trust chain.
+
+Firstly, when Tor clients are establishing circuits, at each step
+they demand that the next Tor server in the path prove knowledge of
+its private key~\cite{tor-design}. This step prevents the first node
+in the path from just spoofing the rest of the path. Secondly, the
+Tor directory authorities provide a signed list of servers along with
+their public keys --- so unless the adversary can control a threshold
+of directory authorities, he can't trick the Tor client into using other
+Tor servers. Thirdly, the location and keys of the directory authorities,
+in turn, is hard-coded in the Tor source code --- so as long as the user
+got a genuine version of Tor, he can know that he is using the genuine
+Tor network. And lastly, the source code and other packages are signed
+with the GPG keys of the Tor developers, so users can confirm that they
+did in fact download a genuine version of Tor.
+
+But how can a user in an oppressed country know that he has the correct
+key fingerprints for the developers? As with other security systems, it
+ultimately comes down to human interaction. The keys are signed by dozens
+of people around the world, and we have to hope that our users have met
+enough people in the PGP web of trust~\cite{pgp-wot} that they can learn
+the correct keys. For users that aren't connected to the global security
+community, though, this question remains a critical weakness.
+
+\subsection{Bridge users without Tor clients}
+
+They could always open their socks proxy. This is bad though, firstly
+because they learn the bridge users' destinations, and secondly because
+we've learned that open socks proxies tend to attract abusive users who
+have no idea they're using Tor.
 
 \section{Future designs}
 
@@ -344,11 +494,13 @@ is a lot trickier because it brings in the complexity of whether the
 internal bridges will remain available, can maintain reachability with
 the outside world, etc.
 
-Hidden services as bridges.
+Hidden services as bridges. Hidden services as bridge directory authorities.
 
-%\bibliographystyle{plain} \bibliography{tor-design}
+Make all Tor users become bridges if they're reachable -- needs more work
+on usability first, but we're making progress.
+
+\bibliographystyle{plain} \bibliography{tor-design}
 
 \end{document}
 
-% need a way for users to get tor itself. (discuss trust chain.)
 
