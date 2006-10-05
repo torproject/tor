@@ -32,12 +32,6 @@ if [ "XX$VERSION" = 'XX' ]; then
   exit 1
 fi
 
-if [ -x /usr/bin/arch ]; then
-  ARCH=`/usr/bin/arch`
-else
-  ARCH="unknown"
-fi
-
 ## Determine OSX Version
 # map version to name
 if [ -x /usr/bin/sw_vers ]; then
@@ -45,12 +39,12 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
     case "$OSVER" in
-    	"10.5") OS="leopard";;
-	"10.4") OS="tiger";;
-	"10.3") OS="panther";;
-	"10.2") OS="jaguar";;
-	"10.1") OS="puma";;
-	"10.0") OS="cheetah";;
+    	"10.5") OS="leopard" ARCH="universal";;
+	"10.4") OS="tiger" ARCH="universal";;
+	"10.3") OS="panther" ARCH="ppc";;
+	"10.2") OS="jaguar" ARCH="ppc";;
+	"10.1") OS="puma" ARCH="ppc";;
+	"10.0") OS="cheetah" ARCH="ppc";;
 	*) OS="unknown";;
     esac
 else
