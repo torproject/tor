@@ -418,7 +418,7 @@ static int search_try_next(struct request *const req);
 static int search_request_new(int type, const char *const name, int flags, evdns_callback_type user_callback, void *user_arg);
 static void evdns_requests_pump_waiting_queue(void);
 static u16 transaction_id_pick(void);
-static struct request *request_new(int type, const char *name, int flags, evdns_callback_type, void *ptr);
+static struct request *request_new(int type, const char *name, int flags, evdns_callback_type callback, void *ptr);
 static void request_submit(struct request *req);
 
 #ifdef MS_WINDOWS
@@ -785,7 +785,6 @@ reply_handle(struct request *const req,
 			// we regard these errors as marking a bad nameserver
 			if (req->reissue_count < global_max_reissues) {
 				char msg[64];
-
 				snprintf(msg, sizeof(msg), "Bad response %d (%s)",
 						 error, evdns_err_to_string(error));
 				nameserver_failed(req->ns, msg);
@@ -924,9 +923,9 @@ reply_parse(u8 *packet, int length) {
 
 	// now we have the answer section which looks like
 	// <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
+
 	for (i = 0; i < answers; ++i) {
 		u16 type, class;
-		//int pre = j;
 
 		// XXX I'd be more comfortable if we actually checked the name
 		// here. -NM
@@ -947,6 +946,7 @@ reply_parse(u8 *packet, int length) {
 			addrcount = datalength >> 2;  // each IP address is 4 bytes
 			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, (unsigned)addrcount);
 			ttl_r = MIN(ttl_r, ttl);
+
 			// we only bother with the first four addresses.
 			if (j + 4*addrtocopy > length) return -1;
 			memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
@@ -1189,7 +1189,14 @@ evdns_request_data_build(const char *const name, const int name_len, const u16 t
 	u8 *labels;
 	int labels_len;
 
-#define APPEND16(x) do { _t = htons(x); memcpy(buf + j, &_t, 2); j += 2; } while(0);
+#define APPEND16(x) do {                           \
+        if (j + 2 > buf_len)                       \
+            return (-1);                           \
+        _t = htons(x);                             \
+        memcpy(buf + j, &_t, 2);                   \
+        j += 2;                                    \
+    } while (0)
+
 	APPEND16(trans_id);
 	APPEND16(0x0100);  // standard query, recusion needed
 	APPEND16(1);  // one question
@@ -1337,6 +1344,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 	// in the hope that it is up now.
 
 	log(EVDNS_LOG_DEBUG, "Sending probe to %s", debug_ntoa(ns->address));
+
 	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
 	if (!req) return;
 	// we force this into the inflight queue no matter what
@@ -1563,9 +1571,12 @@ request_new(int type, const char *name, int flags, evdns_callback_type callback,
 
 	// request data lives just after the header
 	req->request = ((u8 *) req) + sizeof(struct request);
-	req->request_appended = 1;	// denotes that the request data shouldn't be free()ed
-	rlen = evdns_request_data_build(name, name_len, trans_id, type, CLASS_INET, req->request, request_max_len);
-	if (rlen < 0) goto err1;
+    // denotes that the request data shouldn't be free()ed
+	req->request_appended = 1;
+	rlen = evdns_request_data_build(name, name_len, trans_id,
+                           type, CLASS_INET, req->request, request_max_len);
+	if (rlen < 0)
+        goto err1;
 	req->request_len = rlen;
 	req->trans_id = trans_id;
 	req->tx_count = 0;
@@ -1596,11 +1607,14 @@ request_submit(struct request *const req) {
 }
 
 // exported function
-int evdns_resolve_ipv4(const char *name, int flags, evdns_callback_type callback, void *ptr) {
+int evdns_resolve_ipv4(const char *name, int flags,
+                       evdns_callback_type callback, void *ptr) {
 	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
 	if (flags & DNS_QUERY_NO_SEARCH) {
-		struct request *const req = request_new(TYPE_A, name, flags, callback, ptr);
-		if (!req) return 1;
+		struct request *const req =
+            request_new(TYPE_A, name, flags, callback, ptr);
+		if (req == NULL)
+            return 1;
 		request_submit(req);
 		return 0;
 	} else {
@@ -1936,7 +1950,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 				const int ndots = strtoint(&option[6]);
 				if (ndots == -1) continue;
 				if (!(flags & DNS_OPTION_SEARCH)) continue;
-				log(EVDNS_LOG_DEBUG,"Setting ndots to %d", ndots);
+				log(EVDNS_LOG_DEBUG, "Setting ndots to %d", ndots);
 				if (!global_search_state) global_search_state = search_state_new();
 								if (!global_search_state) return;
 				global_search_state->ndots = ndots;
@@ -1944,14 +1958,14 @@ resolv_conf_parse_line(char *const start, int flags) {
 				const int timeout = strtoint(&option[8]);
 				if (timeout == -1) continue;
 				if (!(flags & DNS_OPTION_MISC)) continue;
-				log(EVDNS_LOG_DEBUG,"Setting timeout to %d", timeout);
+				log(EVDNS_LOG_DEBUG, "Setting timeout to %d", timeout);
 				global_timeout.tv_sec = timeout;
 			} else if (!strncmp(option, "attempts:", 9)) {
 				int retries = strtoint(&option[9]);
 				if (retries == -1) continue;
 				if (retries > 255) retries = 255;
 				if (!(flags & DNS_OPTION_MISC)) continue;
-				log(EVDNS_LOG_DEBUG,"Setting retries to %d", retries);
+				log(EVDNS_LOG_DEBUG, "Setting retries to %d", retries);
 				global_max_retransmits = retries;
 			}
 		}
@@ -1975,7 +1989,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	char *start;
 	int err = 0;
 
-	log(EVDNS_LOG_DEBUG,"Parsing resolve.conf file %s", filename);
+	log(EVDNS_LOG_DEBUG, "Parsing resolv.conf file %s", filename);
 
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
@@ -2065,16 +2079,14 @@ load_nameservers_with_getnetworkparams(void) {
 	GetNetworkParams_fn_t fn;
 
 	if (!(handle = LoadLibrary("iphlpapi.dll"))) {
-		log(EVDNS_LOG_WARN,"Could not open iphlpapi.dll");
+		log(EVDNS_LOG_WARN, "Could not open iphlpapi.dll");
 		//right now status = 0, doesn't that mean "good" - mikec
 		status = -1;
 		goto done;
 	}
 
-	if (!(fn =
-		  (GetNetworkParams_fn_t)
-		  GetProcAddress(handle, "GetNetworkParams"))) {
-		log(EVDNS_LOG_WARN,"Could not get address of function.");
+	if (!(fn = (GetNetworkParams_fn_t) GetProcAddress(handle, "GetNetworkParams"))) {
+		log(EVDNS_LOG_WARN, "Could not get address of function.");
 		//same as above
 		status = -1;
 		goto done;
@@ -2098,7 +2110,7 @@ load_nameservers_with_getnetworkparams(void) {
 		fixed = buf;
 		r = fn(fixed, &size);
 		if (r != ERROR_SUCCESS) {
-			log(EVDNS_LOG_DEBUG,"fn() failed.");
+			log(EVDNS_LOG_DEBUG, "fn() failed.");
 			status = -1;
 			goto done;
 		}
@@ -2124,7 +2136,7 @@ load_nameservers_with_getnetworkparams(void) {
 
 	if (!added_any) {
 		//should we ever get here? - mikec
-		log(EVDNS_LOG_DEBUG,"No name servers added.");
+		log(EVDNS_LOG_DEBUG, "No nameservers added.");
 		status = -1;
 	}
 
@@ -2158,7 +2170,6 @@ config_nameserver_from_reg_key(HKEY key, const char *subkey) {
 }
 
 #define SERVICES_KEY "System\\CurrentControlSet\\Services\\"
-
 #define WIN_NS_9X_KEY  SERVICES_KEY "VxD\\MSTCP"
 #define WIN_NS_NT_KEY  SERVICES_KEY "Tcpip\\Parameters"
 
@@ -2168,12 +2179,11 @@ load_nameservers_from_registry(void) {
 	int r;
 #define TRY(k, name)													\
 	if (!found && config_nameserver_from_reg_key(k,name) == 0) {		\
-		log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);	\
+		log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);      \
 		found = 1;														\
-	} else {															\
-		if (!found)														\
-			log(EVDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",	\
-				#k,#name);												\
+	} else if (!found) {                                                \
+        log(EVDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",         \
+            #k,#name);                                                  \
 	}
 
 	if (((int)GetVersion()) > 0) { /* NT */
@@ -2184,16 +2194,13 @@ load_nameservers_from_registry(void) {
 			log(EVDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
 			return -1;
 		}
-
 		r = RegOpenKeyEx(nt_key, "Interfaces", 0,
 						 KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS,
 						 &interfaces_key);
-
-		if (r != ERROR_SUCCESS ) {
+		if (r != ERROR_SUCCESS) {
 			log(EVDNS_LOG_DEBUG,"Couldn't open interfaces key, %d",(int)GetLastError());
 			return -1;
 		}
-
 		TRY(nt_key, "NameServer");
 		TRY(nt_key, "DhcpNameServer");
 		TRY(interfaces_key, "NameServer");
@@ -2204,9 +2211,8 @@ load_nameservers_from_registry(void) {
 		HKEY win_key = 0;
 		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
 						 KEY_READ, &win_key) != ERROR_SUCCESS) {
-			log(EVDNS_LOG_DEBUG,"Couldn't open registry key, %d",(int)GetLastError());
+			log(EVDNS_LOG_DEBUG, "Couldn't open registry key, %d", (int)GetLastError());
 			return -1;
-
 		}
 		TRY(win_key, "NameServer");
 		RegCloseKey(win_key);
@@ -2222,9 +2228,8 @@ load_nameservers_from_registry(void) {
 
 int
 evdns_config_windows_nameservers(void) {
-	if (load_nameservers_with_getnetworkparams() == 0) {
+	if (load_nameservers_with_getnetworkparams() == 0)
 		return 0;
-	}
 
 	return load_nameservers_from_registry();
 }
