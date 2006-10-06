@@ -85,6 +85,8 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       Previously, the server would give them no answer at all.
 
   o Minor Bugfixes:
+    - When testing reachability of our dirport, don't launch a new
+      test if there's already one in progress.
     - Two small performance improvements on parsing descriptors.
     - We were building exactly the wrong circuits when we anticipated
       hidden service requirements, meaning Tor would have to build all

@@ -452,7 +452,10 @@ consider_testing_reachability(int test_or, int test_dir)
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me, 0, 1, 1);
   }
 
-  if (test_dir && !check_whether_dirport_reachable()) {
+  if (test_dir && !check_whether_dirport_reachable() &&
+      !connection_get_by_type_addr_port_purpose(
+                CONN_TYPE_DIR, me->addr, me->dir_port,
+                DIR_PURPOSE_FETCH_SERVERDESC)) {
     /* ask myself, via tor, for my server descriptor. */
     directory_initiate_command_router(me, DIR_PURPOSE_FETCH_SERVERDESC,
                                       1, "authority", NULL, 0);
