@@ -1,11 +1,12 @@
-tor (0.1.1.23-XXXXXX) unstable; urgency=low
+tor (0.1.1.24-1) unstable; urgency=low
 
+  * New upstream version.
   * Update debian/copyright:
     - tree.h has vanished somewhere along the current branch
     - ht.h is new and credits Christopher Clark
     - We didn't mention Matej Pfajfar's copyright before.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 13 Aug 2006 01:22:42 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri,  6 Oct 2006 23:32:45 +0200
 
 tor (0.1.1.23-1) unstable; urgency=medium
 
