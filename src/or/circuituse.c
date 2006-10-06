@@ -740,7 +740,8 @@ circuit_build_failed(origin_circuit_t *circ)
                "(%s:%d). I'm going to try to rotate to a better connection.",
                n_conn->_base.address, n_conn->_base.port);
       n_conn->_base.or_is_obsolete = 1;
-      entry_guard_register_connect_status(n_conn->identity_digest, 0);
+      entry_guard_register_connect_status(n_conn->identity_digest, 0,
+                                          time(NULL));
     }
   }
 

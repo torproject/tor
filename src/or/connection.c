@@ -398,6 +398,7 @@ connection_about_to_close_connection(connection_t *conn)
   dir_connection_t *dir_conn;
   or_connection_t *or_conn;
   edge_connection_t *edge_conn;
+  time_t now = time(NULL);
 
   assert(conn->marked_for_close);
 
@@ -427,8 +428,8 @@ connection_about_to_close_connection(connection_t *conn)
       /* Remember why we're closing this connection. */
       if (conn->state != OR_CONN_STATE_OPEN) {
         if (connection_or_nonopen_was_started_here(or_conn)) {
-          rep_hist_note_connect_failed(or_conn->identity_digest, time(NULL));
-          entry_guard_register_connect_status(or_conn->identity_digest, 0);
+          rep_hist_note_connect_failed(or_conn->identity_digest, now);
+          entry_guard_register_connect_status(or_conn->identity_digest,0,now);
           router_set_status(or_conn->identity_digest, 0);
           control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED);
         }
@@ -442,10 +443,10 @@ connection_about_to_close_connection(connection_t *conn)
          * flushing still get noted as dead, not disconnected.  But this is an
          * improvement. -NM
          */
-        rep_hist_note_disconnect(or_conn->identity_digest, time(NULL));
+        rep_hist_note_disconnect(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED);
       } else if (or_conn->identity_digest) {
-        rep_hist_note_connection_died(or_conn->identity_digest, time(NULL));
+        rep_hist_note_connection_died(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED);
       }
       break;

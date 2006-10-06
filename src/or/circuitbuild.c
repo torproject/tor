@@ -1772,11 +1772,11 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
 
 /** Check whether the entry guard <b>e</b> is usable, given the directory
  * authorities' opinion about the rouer (stored in <b>ri</b>) and the user's
- * configuration (in <b>options</b>).  Set <b>e</b>-&gt;bad_since
- * accordingly. Return true iff the entry guard's status changs.*/
+ * configuration (in <b>options</b>). Set <b>e</b>-&gt;bad_since
+ * accordingly. Return true iff the entry guard's status changes. */
 static int
 entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
-                       or_options_t *options)
+                       time_t now, or_options_t *options)
 {
   const char *reason = NULL;
   char buf[HEX_DIGEST_LEN+1];
@@ -1798,16 +1798,16 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   if (reason && ! e->bad_since) {
     /* Router is newly bad. */
     base16_encode(buf, sizeof(buf), e->identity, DIGEST_LEN);
-    log_info(LD_CIRC, "Entry guard %s (%s) is %s: marking as unusable",
+    log_info(LD_CIRC, "Entry guard %s (%s) is %s: marking as unusable.",
              e->nickname, buf, reason);
 
-    e->bad_since = time(NULL);
+    e->bad_since = now;
     changed = 1;
   } else if (!reason && e->bad_since) {
     /* There's nothing wrong with the router any more. */
     base16_encode(buf, sizeof(buf), e->identity, DIGEST_LEN);
     log_info(LD_CIRC, "Entry guard %s (%s) is no longer unusable: "
-             "marking as ok", e->nickname, buf);
+             "marking as ok.", e->nickname, buf);
 
     e->bad_since = 0;
     changed = 1;
@@ -1841,8 +1841,8 @@ entry_is_time_to_retry(entry_guard_t *e, time_t now)
  * - Listed as either up or never yet contacted;
  * - Present in the routerlist;
  * - Listed as 'stable' or 'fast' by the current dirserver concensus,
- *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>; and
- * - Allowed by our current ReachableAddresses config option.
+ *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>;
+ * - Allowed by our current ReachableAddresses config option; and
  * - Currently thought to be reachable by us (unless assume_reachable
  *   is true).
  */
@@ -1987,7 +1987,7 @@ entry_guards_free_all(void)
 }
 
 /** How long (in seconds) do we allow an entry guard to be nonfunctional,
- * unlisted, excuded, or otherwise nonusable before we give up on it? */
+ * unlisted, excluded, or otherwise nonusable before we give up on it? */
 #define ENTRY_GUARD_REMOVE_AFTER (30*24*60*60)
 
 /** Remove all entry guards that have been down or unlisted for so
@@ -2047,7 +2047,7 @@ entry_guards_compute_status(void)
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       routerinfo_t *r = router_get_by_digest(entry->identity);
-      if (entry_guard_set_status(entry, r, options))
+      if (entry_guard_set_status(entry, r, now, options))
         changed = 1;
 
       log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s and %s.",
@@ -2074,7 +2074,8 @@ entry_guards_compute_status(void)
  * Return 0 normally, or -1 if we want to tear down the new connection.
  */
 int
-entry_guard_register_connect_status(const char *digest, int succeeded)
+entry_guard_register_connect_status(const char *digest, int succeeded,
+                                    time_t now)
 {
   int changed = 0;
   int refuse_conn = 0;
@@ -2105,7 +2106,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded)
       log_info(LD_CIRC, "Entry guard '%s' (%s) is now reachable again. Good.",
                entry->nickname, buf);
       entry->unreachable_since = 0;
-      entry->last_attempted = time(NULL);
+      entry->last_attempted = now;
       changed = 1;
     }
     if (!entry->made_contact) {
@@ -2127,6 +2128,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded)
     } else if (!entry->unreachable_since) {
       log_info(LD_CIRC, "Unable to connect to entry guard '%s' (%s). "
                "Marking as unreachable.", entry->nickname, buf);
+      entry->unreachable_since = entry->last_attempted = now;
       changed = 1;
     } else {
       char tbuf[ISO_TIME_LEN+1];
@@ -2134,7 +2136,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded)
       log_debug(LD_CIRC, "Failed to connect to unreachable entry guard "
                 "'%s' (%s).  It has been unreachable since %s.",
                 entry->nickname, buf, tbuf);
-      entry->last_attempted = time(NULL);
+      entry->last_attempted = now;
     }
   }
 

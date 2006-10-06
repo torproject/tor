@@ -1723,7 +1723,8 @@ routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 void entry_guards_compute_status(void);
-int entry_guard_register_connect_status(const char *digest, int succeeded);
+int entry_guard_register_connect_status(const char *digest, int succeeded,
+                                        time_t now);
 void entry_nodes_should_be_added(void);
 void entry_guards_prepend_from_config(void);
 void entry_guards_update_state(or_state_t *state);
