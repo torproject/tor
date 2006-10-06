@@ -385,12 +385,13 @@ purge_expired_resolves(time_t now)
   assert_cache_ok();
 }
 
-/** Send a response to the RESOLVE request of a connection. answer_type must
- * be one of RESOLVED_TYPE_(IPV4|ERROR|ERROR_TRANSIENT)
+/** Send a response to the RESOLVE request of a connection.
+ * <b>answer_type</b> must be one of
+ * RESOLVED_TYPE_(IPV4|ERROR|ERROR_TRANSIENT).
  *
  * If <b>circ</b> is provided, and we have a cached answer, send the
- * answer back along circ; otherwise, send the answer back along *
- * <b>exitconn</b>'s attached circuit.
+ * answer back along circ; otherwise, send the answer back along
+ * <b>conn</b>'s attached circuit.
  */
 static void
 send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
@@ -446,7 +447,7 @@ send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
  *
  * If <b>circ</b> is provided, and we have a cached answer, send the
  * answer back along circ; otherwise, send the answer back along
- * <b>exitconn</b>'s attached circuit.
+ * <b>conn</b>'s attached circuit.
  */
 static void
 send_resolved_hostname_cell(edge_connection_t *conn, or_circuit_t *circ,

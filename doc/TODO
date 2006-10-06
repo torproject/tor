@@ -322,6 +322,9 @@ Deferred from 0.1.2.x:
       - Implement
 
 Minor items for 0.1.2.x as time permits:
+  - The Debian package now uses --verify-config when (re)starting,
+    to distinguish configuration errors from other errors. Perhaps
+    the RPM and other startup scripts should too?
   - add a "default.action" file to the tor/vidalia bundle so we can fix the
     https thing in the default configuration:
     http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#PrivoxyWeirdSSLPort

@@ -1,26 +1,34 @@
 Changes in version 0.1.2.2-alpha - 2006-10-??
   o Major features:
+    - Make our async eventdns library on-by-default for Tor servers,
+      and plan to deprecate using separate dnsworker threads. Let us
+      know if you encounter bugs.
     - Add server-side support for "reverse" DNS lookups (using PTR
       records so clients can determine the canonical hostname for a given
-      IPv4 address). Only supported by servers using our eventdns async
-      library; servers now announce in their descriptors whether they
-      support eventdns.
+      IPv4 address). Only supported by servers using eventdns; servers
+      now announce in their descriptors whether they support eventdns.
     - Specify and implement client-side SOCKS5 interface for reverse DNS
       lookups; see doc/socks-extensions.txt for full information.
     - Add a BEGIN_DIR relay cell type for an easier in-protocol way to
-      connect to directory servers through Tor. Previously, clients
-      could only connect to directory servers over Tor from exit nodes.
-
-  o Minor features:
-    - Check for name servers (like Earthlink's) that hijack failing DNS
-      requests and replace the no-such-server answer with a "helpful"
+      connect to directory servers through Tor. Previously, clients needed
+      to find Tor exits to make private connections to directory servers.
+    - Avoid choosing Exit nodes for entry or middle hops when the
+      total bandwidth available from non-Exit nodes is much higher than
+      the total bandwidth available from Exit nodes.
+    - Workaround for name servers (like Earthlink's) that hijack failing
+      DNS requests and replace the no-such-server answer with a "helpful"
       redirect to an advertising-driven search portal. We're a little
       clever about this, in order to work around DNS hijackers who
       "helpfully" decline to hijack known-invalid RFC2606 addresses.
       Config option "ServerDNSDetectHijacking 0" lets you turn it off.
-    - When asked to resolve a hostname, don't use non-exit servers unless
-      requested to do so. This allows servers with broken DNS to be
-      useful to the network.
+    - Send out a burst of long-range padding cells once we've established
+      that we're reachable. Spread them over 4 circuits, so hopefully
+      a few will be fast. This exercises our bandwidth and bootstraps
+      us into the directory quicker.
+
+  o New/improved config options:
+    - Add new config option "ResolvConf" to let the server operator
+      choose an alternate resolve.conf file.
     - Add an "EnforceDistinctSubnets" option to control our "exclude
       servers on the same /16" behavior.  It's still on by default; this
       is mostly for people who want to operate private test networks with
@@ -34,39 +42,43 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       as hidden service directories, to make it easier to retire old
       authorities.  V1 authorities should set "HSAuthoritativeDir 1"
       to continue being hidden service authorities too.
+    - Remove 8888 as a LongLivedPort, and add 6697 (IRCS).
+
+  o Minor features, controller:
+    - Fix CIRC controller events so that controllers can learn the
+      identity digests of non-Named servers used in circuit paths.
+    - Give more meaningful errors on control authentication failure.
+    - Add an (off by default) feature so that controllers can get
+      more useful identifiers for servers. Instead of learning identity
+      digests for un-Named servers and nicknames for Named servers,
+      the new identifiers include digest, nickname, and indication of
+      Named status. See control-spec.txt for more information.
+    - Add a "getinfo address" controller command so it can display Tor's
+      best guess to the user.
+
+  o Minor features, other:
+    - When asked to resolve a hostname, don't use non-exit servers unless
+      requested to do so. This allows servers with broken DNS to be
+      useful to the network.
+    - Divide eventdns log messages into warn and info messages.
     - Reserve the nickname "Unnamed" for routers that can't pick
       a hostname; any router can call itself Unnamed; directory
       authorities will never allocate Unnamed to any particular router;
       clients won't believe that any router is the canonical Unnamed.
-    - New controller event to alert the controller when our server
-      descriptor has changed.
     - Only include function names in log messages for debugging messages;
       in other cases, the content of the message should be clear on its
       own, and including the function name only seems to confuse users.
-    - Fix CIRC controller events so that controllers can learn the
-      identity digests of non-Named servers used in circuit paths.
-    - Avoid choosing Exit nodes for entry or middle hops when the
-      bandwidth available in non-Exit nodes is much higher than the
-      bandwidth available in Exit nodes.
-    - Give more meaningful errors on control authentication failure.
-    - Avoid possibility of controller-triggered crash when misusing certain
-      commands from a v0 controller on platforms that do not handle
-      printf("%s",NULL) gracefully.
     - Avoid some false positives during reachability testing: don't try
       to test via a server that's on the same /24 as us.
-    - Avoid controller-triggered crash when misusing certain commands
-      from a v0 controller on platforms that do not handle
-      printf("%s",NULL) gracefully.
-    - Add an (off by default) feature so that controllers can get more useful
-      identifiers for servers. Instead of learning identity digests for
-      un-Named servers and nicknames for Named servers, the new identifiers
-      include digest, nickname, and indication of Named status. See
-      control-spec.txt for more information.
+    - New controller event to alert the controller when our server
+      descriptor has changed.
+    - If we fail to build a circuit to an intended enclave, and it's
+      not mandatory that we use that enclave, stop wanting it.
 
-  o Security Fixes, minor:
+  o Major bugfixes, anonymity/security:
     - If a client asked for a server by name, and there's a named server
       in our network-status but we don't have its descriptor yet, we
-      would return an unnamed one instead.
+      could return an unnamed one instead.
     - Fix NetBSD bug that could allow someone to force uninitialized RAM
       to be sent to a server's DNS resolver. This only affects NetBSD
       and other platforms that do not bounds-check tolower().
@@ -77,94 +89,93 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       able to remotely teach you about hidden service descriptors. Now
       only accept rendezvous posts if you've got HSAuthoritativeDir set.
 
-  o Major bugfixes:
+  o Major bugfixes, other:
     - Avoiding crashing on race condition in dns.c:
       tor_assert(!resolve->expire)
     - When a client asks the server to resolve (not connect to)
       an address, and it has a cached answer, give them the cached answer.
       Previously, the server would give them no answer at all.
-
-  o Minor Bugfixes:
-    - When testing reachability of our dirport, don't launch a new
-      test if there's already one in progress.
-    - Two small performance improvements on parsing descriptors.
+    - Allow really slow clients to not hang up five minutes into their
+      directory downloads (suggested by Adam J. Richter).
     - We were building exactly the wrong circuits when we anticipated
       hidden service requirements, meaning Tor would have to build all
       its circuits on demand.
+    - Avoid crashing when we mmap a router cache file of size 0.
+    - When testing reachability of our DirPort, don't launch new
+      tests when there's already one in progress -- unreachable
+      servers were stacking up dozens of testing streams.
+
+  o Minor bugfixes, correctness:
+    - If we're a directory mirror and we ask for "all" network status
+      documents, we would discard status documents from authorities
+      we don't recognize.
+    - Avoid a memory corruption bug when creating a hash table for
+      the first time.
+    - Avoid controller-triggered crash when misusing certain commands
+      from a v0 controller on platforms that do not handle
+      printf("%s",NULL) gracefully.
+    - Don't crash when the controller receives a third argument to an
+      "extendcircuit" request.
+    - Controller protocol fixes: fix encoding in "getinfo addr-mappings"
+      response; fix error code when "getinfo dir/status/" fails.
+    - Avoid crash when telling controller stream-status and a stream
+      is detached.
+    - Apply patch from Adam Langley: fix assert() in eventdns.c.
+    - Fix a debug log message in eventdns to say "X resolved to Y"
+      instead of "X resolved to X".
+    - Make eventdns give strings for DNS errors, not just error numbers.
+    - Track unreachable entry guards correctly: don't conflate
+      'unreachable by us right now' with 'listed as down by the directory
+      authorities'. With the old code, if a guard was unreachable by
+      us but listed as running, it would clog our guard list forever.
+    - Behave correctly in case we ever have a network with more than
+      2GB per second total advertised capacity.
+    - Make TrackExitHosts case-insensitive, and fix the behavior of
+      ".suffix" TrackExitHosts items to avoid matching in the middle of
+      an address.
+    - Finally fix the openssl warnings from newer gccs that believe that
+      ignoring a return value is okay, but casting a return value and
+      then ignoring it is a sign of madness.
+    - Prevent the contrib/exitlist script from printing the same
+      result more than once.
+    - Patch from Steve Hildrey: Generate network status correctly on
+      non-versioning dirservers.
+
+  o Minor bugfixes, performance:
+    - Two small performance improvements on parsing descriptors.
     - Major performance improvement on inserting descriptors: change
       algorithm from O(n^2) to O(n).
     - Make the common memory allocation path faster on machines where
       malloc(0) returns a pointer.
-    - Fix a debug log message in eventdns to say "X resolved to Y"
-      instead of "X resolved to X".
-    - Prevent the contrib/exitlist script from printing the same
-      result more than once.
+    - Start remembering X-Your-Address-Is directory hints even if you're
+      a client, so you can become a server more smoothly.
+    - Avoid duplicate entries on MyFamily line in server descriptor.
+
+  o Packaging, features:
+    - Remove architecture from OS X builds. The official builds are
+      now universal binaries.
+    - The Debian package now uses --verify-config when (re)starting,
+      to distinguish configuration errors from other errors.
+    - Update RPMs to require libevent 1.1b.
+
+  o Packaging, bugfixes:
+    - Patches so Tor builds with MinGW on Windows.
+    - Patches so Tor might build and run on Cygwin again.
     - Resume building on non-gcc compilers and ancient gcc. Resume
       building with the -O0 compile flag. Resume building cleanly on
       Debian woody.
     - Correct includes for net/if.h and net/pfvar.h on OpenBSD (from Tup).
-    - Improve Tor's chances of building and running on Cygwin again.
-    - If we're a directory mirror and we ask for "all" network status
-      documents, we would discard status documents from authorities
-      we don't recognize.
-    - Avoid a memory corruption bug when creating a hash table for the first
-      time.
-    - Track unreachable entry guards correctly: don't conflate 'unreachable
-      by us right now' with 'listed as down by the directory authorities'.
-      With the old code, if a guard was unreachable by us but listed as
-      running, it would clog our guard list forever.
-    - Make eventdns give strings for DNS errors, not just error numbers.
-    - Be prepared in case we ever have a network with more than 2GB per
-      second total advertised capacity.
-    - Make TrackExitHosts case-insensitive, and fix the behavior of .suffix
-      TrackExitHosts items to avoid matching in the middle of an address.
     - Add autoconf checks so Tor can build on Solaris x86 again.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and
       ServerDNSResolvConfFile options.
+    - Be clearer that the *ListenAddress directives can be repeated
+      multiple times.
 
-  o Packaging:
-    - Patches so Tor builds with MinGW on Windows.
-    - The Debian package now uses --verify-config when (re)starting,
-      to distinguish configuration errors from other errors.
-    - Update rpms to require libevent 1.1b.
-    - Remove architecture from OS X builds. The official builds are
-      now universal binaries.
-
-    - Make eventdns on-by-default.
-    - Divide eventdns log messages into warn and info messages.
-    - Add new config option "ResolvConf" to let the server operator
-      choose an alternate resolve.conf file.
-
-    - Allow really slow clients to not hang up five minutes into their
-      directory downloads (suggested by Adam J. Richter).
-    - Apply patch from Adam Langley: fix assert() in eventdns.c.
-    - Finally fix the openssl warnings with newer gccs that believe that
-      ignoring a return value is okay, but casting a return value and
-      then ignoring it is a sign of madness.
-    - Don't crash when the controller receives a third argument to an
-      "extendcircuit" request.
-    - Add a "getinfo address" controller command.
-    - Controller protocol fixes: fix encoding in "getinfo addr-mappings"
-      response; fix error code when "getinfo dir/status/" fails.
-    - Start remembering X-Your-Address-Is directory hints even if you're
-      a client, so you can become a server more smoothly.
-    - Avoid crash when telling controller stream-status and a stream
-      is detached.
-    - Avoid crashing when we mmap a router cache file of size 0.
-    - Avoid duplicate entries on MyFamily line in server descriptor.
-    - Patch from Steve Hildrey: Generate network status correctly on
-      non-versioning dirservers.
-    - Send out a burst of long-range drop cells after we've established
-      that we're reachable. Spread them over 4 circuits, so hopefully
-      a few will be fast. This exercises our bandwidth and bootstraps
-      us quicker.
-    - Remove 8888 as a long lived port, and add 6697 (ircs).
-    - If we fail to build a circuit to an intended enclave, and it's
-      not mandatory that we use that enclave, stop wanting it.
-
-    (stopped at r8478)
+    (stopped at r8519)
+    - Build correctly for use on OS X platforms with case-sensitive
+      filesystems.
 
 
 Changes in version 0.1.2.1-alpha - 2006-08-27
