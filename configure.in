@@ -142,6 +142,7 @@ AC_SUBST(TORGROUP)
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
+AC_SEARCH_LIBS(inet_aton, [resolv])
 
 if test $enable_threads = "yes"; then
   AC_SEARCH_LIBS(pthread_create, [pthread])
