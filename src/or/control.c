@@ -1079,7 +1079,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   if (options->CookieAuthentication) {
     if (password_len != AUTHENTICATION_COOKIE_LEN) {
       log_warn(LD_CONTROL, "Got authentication cookie with wrong length (%d)",
-               password_len);
+               (int)password_len);
       errstr = "Wrong length on authentication cookie.";
       goto err;
     } else if (memcmp(authentication_cookie, password, password_len)) {
