@@ -225,6 +225,7 @@
 #include "eventdns.h"
 #include "eventdns_tor.h"
 //#define NDEBUG
+#include "../common/torint.h"
 
 #ifndef DNS_USE_CPU_CLOCK_FOR_ID
 #ifndef DNS_USE_GETTIMEOFDAY_FOR_ID
@@ -261,7 +262,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <sys/time.h>
-#include <stdint.h>
+// #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
