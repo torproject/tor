@@ -794,7 +794,7 @@ run_scheduled_events(time_t now)
     accounting_run_housekeeping(now);
 
   if (now % 10 == 0 && authdir_mode(options) && !we_are_hibernating()) {
-    /* try to determine reachability */
+    /* try to determine reachability of the other Tor servers */
     dirserv_test_reachability(0);
   }
 
@@ -802,10 +802,6 @@ run_scheduled_events(time_t now)
    * new running-routers list, and/or force-uploading our descriptor
    * (if we've passed our internal checks). */
   if (time_to_fetch_directory < now) {
-    /* purge obsolete entries */
-    routerlist_remove_old_routers();
-    networkstatus_list_clean(now);
-
     /* Only caches actually need to fetch directories now. */
     if (options->DirPort && !options->V1AuthoritativeDir) {
       /* XXX actually, we should only do this if we want to advertise
@@ -813,17 +809,8 @@ run_scheduled_events(time_t now)
       if (any_trusted_dir_is_v1_authority())
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
-
-#define V1_DIR_FETCH_PERIOD (60*60)
+#define V1_DIR_FETCH_PERIOD (6*60*60)
     time_to_fetch_directory = now + V1_DIR_FETCH_PERIOD;
-
-    /* Also, take this chance to remove old information from rephist
-     * and the rend cache. */
-    rep_history_clean(now - options->RephistTrackTime);
-    rend_cache_clean();
-    /* And while we are at it, save the state with bandwidth history
-     * and more. */
-    or_state_save();
   }
 
   /* Caches need to fetch running_routers; directory clients don't. */
@@ -831,9 +818,17 @@ run_scheduled_events(time_t now)
     if (!authdir_mode(options) || !options->V1AuthoritativeDir) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
-#define V1_RUNNINGROUTERS_FETCH_PERIOD (20*60)
+#define V1_RUNNINGROUTERS_FETCH_PERIOD (30*60)
     time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
-  }
+
+     /* Also, take this chance to remove old information from rephist
+     * and the rend cache. */
+    rep_history_clean(now - options->RephistTrackTime);
+    rend_cache_clean();
+    /* And while we are at it, save the state with bandwidth history
+     * and more. */
+    or_state_save();
+ }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */
@@ -857,6 +852,9 @@ run_scheduled_events(time_t now)
 
     /* If any networkstatus documents are no longer recent, we need to
      * update all the descriptors' running status. */
+    /* purge obsolete entries */
+    routerlist_remove_old_routers();
+    networkstatus_list_clean(now);
     networkstatus_list_update_recent(now);
     routers_update_all_from_networkstatus();
 
