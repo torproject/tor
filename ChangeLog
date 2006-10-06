@@ -116,6 +116,7 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       second total advertised capacity.
     - Make TrackExitHosts case-insensitive, and fix the behavior of .suffix
       TrackExitHosts items to avoid matching in the middle of an address.
+    - Add autoconf checks so Tor can build on Solaris x86 again.
 
   o Documentation
     - Documented (and renamed) ServerDNSSearchDomains and
