@@ -1,0 +1,141 @@
+#! /bin/bash
+
+### BEGIN INIT INFO
+# Provides:          tor
+# Required-Start:    $local_fs, $remote_fs, $network, $named, $time
+# Required-Stop:     $local_fs, $remote_fs, $network, $named, $time
+# Should-Start:      $syslog
+# Should-Stop:       $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Starts The Onion Router daemon processes
+# Description:       Start The Onion Router, a TCP overlay
+#                    network client that provides anonymous
+#                    transport.
+### END INIT INFO
+
+set -e
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/sbin/tor
+NAME=tor
+DESC="tor daemon"
+TORPIDDIR=/var/run/tor
+TORPID=$TORPIDDIR/tor.pid
+DEFAULTSFILE=/etc/default/$NAME
+WAITFORDAEMON=60
+ARGS=""
+MAX_FILEDESCRIPTORS=8192
+NICE=""
+
+test -x $DAEMON || exit 0
+
+# Include tor defaults if available
+if [ -f $DEFAULTSFILE ] ; then
+	. $DEFAULTSFILE
+fi
+
+wait_for_deaddaemon () {
+	pid=$1
+	sleep 1
+	if test -n "$pid"
+	then
+		if kill -0 $pid 2>/dev/null
+		then
+			echo -n "."
+			cnt=0
+			while kill -0 $pid 2>/dev/null
+			do
+				cnt=`expr $cnt + 1`
+				if [ $cnt -gt $WAITFORDAEMON ]
+				then
+					echo " FAILED."
+					return 1
+				fi
+				sleep 1
+				echo -n "."
+			done
+		fi
+	fi
+	return 0
+}
+
+case "$1" in
+  start)
+	if [ "$RUN_DAEMON" != "yes" ]; then
+		echo "Not starting $DESC (Disabled in $DEFAULTSFILE)."
+	else
+		if test ! -d $TORPIDDIR; then
+			echo "There is no $TORPIDDIR directory.  Creating one for you."
+			mkdir -m 02700 "$TORPIDDIR"
+			chown debian-tor:debian-tor "$TORPIDDIR"
+		fi
+		if test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
+		else
+			if [ -n "$MAX_FILEDESCRIPTORS" ]; then
+				echo -n "Raising maximum number of filedescriptors (ulimit -n) to $MAX_FILEDESCRIPTORS"
+				if ulimit -n "$MAX_FILEDESCRIPTORS" ; then
+					echo "."
+				else
+					echo ": FAILED."
+				fi
+			fi
+			echo "Starting $DESC: $NAME..."
+			start-stop-daemon --start --quiet --oknodo \
+				--chuid debian-tor:debian-tor \
+				--pidfile $TORPID \
+				$NICE \
+				--exec $DAEMON -- $ARGS
+			echo "done."
+		fi
+	fi
+	;;
+  stop)
+	echo -n "Stopping $DESC: "
+	pid=`cat $TORPID 2>/dev/null` || true
+	if   test ! -d $TORPIDDIR; then echo "There is no $TORPIDDIR directory." >&2; exit 1
+	elif test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
+	elif test ! -f $TORPID -o -z "$pid"
+	then
+		echo "not running (there is no $TORPID)."
+	elif start-stop-daemon --stop --signal INT --quiet --pidfile $TORPID --exec $DAEMON
+	then
+		wait_for_deaddaemon $pid
+		echo "$NAME."
+	elif kill -0 $pid 2>/dev/null
+	then
+		echo "FAILED (Is $pid not $NAME?  Is $DAEMON a different binary now?)."
+	else
+		echo "FAILED ($DAEMON died: process $pid not running; or permission denied)."
+	fi
+	;;
+  reload|force-reload)
+	echo -n "Reloading $DESC configuration: "
+	pid=`cat $TORPID 2>/dev/null` || true
+	if   test ! -d $TORPIDDIR; then echo "There is no $TORPIDDIR directory." >&2; exit 1
+	elif test ! -x $TORPIDDIR; then echo "Cannot access $TORPIDDIR directory, are you root?" >&2; exit 1;
+	elif test ! -f $TORPID -o -z "$pid"
+	then
+		echo "not running (there is no $TORPID)."
+	elif start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --exec $DAEMON
+	then
+		echo "$NAME."
+	elif kill -0 $pid 2>/dev/null
+	then
+		echo "FAILED (Is $pid not $NAME?  Is $DAEMON a different binary now?)."
+	else
+		echo "FAILED ($DAEMON died: process $pid not running; or permission denied)."
+	fi
+	;;
+  restart)
+	$0 stop
+	sleep 1
+	$0 start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|reload|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0
