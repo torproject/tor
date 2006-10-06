@@ -88,6 +88,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Just because your DirPort is open doesn't mean people should be
       able to remotely teach you about hidden service descriptors. Now
       only accept rendezvous posts if you've got HSAuthoritativeDir set.
+    - When eventdns is enabled, allow multithreaded builds on NetBSD and
+      OpenBSD.  (We had previously disabled threads on these platforms
+      because they didn't have working thread-safe resolver functions)
 
   o Major bugfixes, other:
     - Avoiding crashing on race condition in dns.c:
