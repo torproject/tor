@@ -80,7 +80,7 @@ const char crypto_c_id[] =
 /** A number of prealloced mutexes for use by openssl. */
 static tor_mutex_t **_openssl_mutexes = NULL;
 /** How many mutexes have we allocated for use by openssl? */
-static int _n_openssl_mutexes = -1;
+static int _n_openssl_mutexes = 0;
 #endif
 
 /** A public key, or a public/private keypair. */
