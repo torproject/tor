@@ -926,10 +926,10 @@ parse_rfc1123_time(const char *buf, time_t *t)
   return 0;
 }
 
-/** Set <b>buf</b> to the ISO???? encoding of the local value of <b>t</b>.
+/** Set <b>buf</b> to the ISO8601 encoding of the local value of <b>t</b>.
  * The buffer must be at least ISO_TIME_LEN+1 bytes long.
  *
- * (ISO???? format is 2006-10-29 10:57:20)
+ * (ISO8601 format is 2006-10-29 10:57:20)
  */
 void
 format_local_iso_time(char *buf, time_t t)
@@ -938,7 +938,7 @@ format_local_iso_time(char *buf, time_t t)
   strftime(buf, ISO_TIME_LEN+1, "%Y-%m-%d %H:%M:%S", tor_localtime_r(&t, &tm));
 }
 
-/** Set <b>buf</b> to the ISO???? encoding of the GMT value of <b>t</b>.
+/** Set <b>buf</b> to the ISO8601 encoding of the GMT value of <b>t</b>.
  * The buffer must be at least ISO_TIME_LEN+1 bytes long.
  */
 void

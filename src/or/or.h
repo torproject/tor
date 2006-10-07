@@ -1048,7 +1048,9 @@ typedef struct {
   /** List of signed_descriptor_t for older router descriptors we're
    * caching. */
   smartlist_t *old_routers;
-  /** DOCDOC */
+  /** Mmaped file holding server descriptors.  If present, any router whose
+   * cache_info.saved_location == SAVED_IN_CACHE is stored in this file
+   * starting at cache_info.saved_offset */
   tor_mmap_t *mmap_descriptors;
 } routerlist_t;
 

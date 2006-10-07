@@ -37,7 +37,7 @@ const char tortls_c_id[] =
 /** How long do identity certificates live? (sec) */
 #define IDENTITY_CERT_LIFETIME  (365*24*60*60)
 
-/* DOCDOC */
+/** Structure holding the TLS state for a single connection. */
 typedef struct tor_tls_context_t {
   SSL_CTX *ctx;
 } tor_tls_context_t;
