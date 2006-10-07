@@ -1,5 +1,11 @@
 
-EXTRA_DIST = tor-spec.txt HACKING rend-spec.txt control-spec.txt dir-spec.txt socks-extensions.txt website img tor-resolve.1 version-spec.txt path-spec.txt tor-osx-dmg-creation.txt tor-rpm-creation.txt
+EXTRA_DIST = tor-spec.txt rend-spec.txt control-spec.txt     \
+             dir-spec.txt socks-extensions.txt path-spec.txt \
+             version-spec.txt                                \
+             website img HACKING                             \
+             tor-resolve.1                                   \
+             tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
+             tor-win32-mingw-creation.txt
 
 man_MANS = tor.1 tor-resolve.1
 
