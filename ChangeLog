@@ -8,8 +8,11 @@ Changes in version 0.1.1.25 - 2006-10-?? [ongoing]
       its circuits on demand.
     - If none of our live entry guards have a high uptime, but we
       require a guard with a high uptime, try adding a new guard before
-      we give up on our requirement. This patch should make long-lived
+      we give up on the requirement. This patch should make long-lived
       connections more stable on average.
+    - When testing reachability of our DirPort, don't launch new
+      tests when there's already one in progress -- unreachable
+      servers were stacking up dozens of testing streams.
 
   o Minor bugfixes:
     - Avoid a memory corruption bug when creating a hash table for
