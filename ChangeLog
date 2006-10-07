@@ -65,9 +65,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       a hostname; any router can call itself Unnamed; directory
       authorities will never allocate Unnamed to any particular router;
       clients won't believe that any router is the canonical Unnamed.
-    - Only include function names in log messages for debugging messages;
-      in other cases, the content of the message should be clear on its
-      own, and including the function name only seems to confuse users.
+    - Only include function names in log messages for info/debug messages.
+      For notice/warn/err, the content of the message should be clear on
+      its own, and printing the function name only seems to confuse users.
     - Avoid some false positives during reachability testing: don't try
       to test via a server that's on the same /24 as us.
     - New controller event to alert the controller when our server
@@ -176,7 +176,7 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Be clearer that the *ListenAddress directives can be repeated
       multiple times.
 
-    (stopped at r8519)
+    (stopped at r8536)
     - Build correctly for use on OS X platforms with case-sensitive
       filesystems.
 

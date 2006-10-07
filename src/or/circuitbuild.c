@@ -1816,7 +1816,7 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   return changed;
 }
 
-/** Return true iff enought time has passed since we last tried connect to the
+/** Return true iff enough time has passed since we last tried connect to the
  * unreachable guard <b>e</b> that we're willing to try again. */
 static int
 entry_is_time_to_retry(entry_guard_t *e, time_t now)
@@ -1896,7 +1896,7 @@ is_an_entry_guard(char *digest)
 }
 
 /** Dump a description of our list of entry guards to the log at level
- * <b>severity</b> */
+ * <b>severity</b>. */
 static void
 log_entry_guards(int severity)
 {

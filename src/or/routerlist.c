@@ -2294,8 +2294,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   }
   base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
   if (!(trusted_dir =
-        router_get_trusteddirserver_by_digest(ns->identity_digest))
-      || !trusted_dir->is_v2_authority) {
+        router_get_trusteddirserver_by_digest(ns->identity_digest)) ||
+      !trusted_dir->is_v2_authority) {
     log_info(LD_DIR, "Network status was signed, but not by an authoritative "
              "directory we recognize.");
     if (!get_options()->DirPort) {

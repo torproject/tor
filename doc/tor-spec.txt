@@ -727,7 +727,7 @@ TODO:
    with a REASON_NOTDIRECTORY RELAY_END cell.
 
    [RELAY_BEGIN_DIR was not supported before Tor 0.1.2.2-alpha; clients
-   SHOULD NOT send it to routers running earlier version of Tor.]
+   SHOULD NOT send it to routers running earlier versions of Tor.]
 
 6.3. Closing streams
 

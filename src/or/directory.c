@@ -129,6 +129,8 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   int directconn = !purpose_is_private(purpose);
   authority_type_t type;
 
+  /* FFFF we could break this switch into its own function, and call
+   * it elsewhere in directory.c. -RD */
   switch (purpose) {
     case DIR_PURPOSE_FETCH_NETWORKSTATUS:
     case DIR_PURPOSE_FETCH_SERVERDESC:
@@ -182,7 +184,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   if (!directconn) {
     /* Never use fascistfirewall; we're going via Tor. */
     if (purpose == DIR_PURPOSE_FETCH_RENDDESC) {
-      /* only ask authdirservers, any of them will do */
+      /* only ask hidserv authorities, any of them will do */
       rs = router_pick_trusteddirserver(HIDSERV_AUTHORITY, 0, 0,
                                         retry_if_no_servers);
     } else {
@@ -191,7 +193,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                         retry_if_no_servers);
       /* If we have any hope of building an indirect conn, we know some router
        * descriptors.  If (rs==NULL), we can't build circuits anyway, so
-       * there's no point in falling back to the authorities in this case.  */
+       * there's no point in falling back to the authorities in this case. */
     }
   }
 

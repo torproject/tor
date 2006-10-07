@@ -66,23 +66,23 @@ const char control_c_id[] =
  * because it use used both as a list of v0 event types, and as indices
  * into the bitfield to determine which controllers want which events.
  */
-#define _EVENT_MIN            0x0001
-#define EVENT_CIRCUIT_STATUS  0x0001
-#define EVENT_STREAM_STATUS   0x0002
-#define EVENT_OR_CONN_STATUS  0x0003
-#define EVENT_BANDWIDTH_USED  0x0004
-#define EVENT_LOG_OBSOLETE    0x0005
-#define EVENT_NEW_DESC        0x0006
-#define EVENT_DEBUG_MSG       0x0007
-#define EVENT_INFO_MSG        0x0008
-#define EVENT_NOTICE_MSG      0x0009
-#define EVENT_WARN_MSG        0x000A
-#define EVENT_ERR_MSG         0x000B
-#define LAST_V0_EVENT         0x000B
-#define EVENT_ADDRMAP         0x000C
+#define _EVENT_MIN             0x0001
+#define EVENT_CIRCUIT_STATUS   0x0001
+#define EVENT_STREAM_STATUS    0x0002
+#define EVENT_OR_CONN_STATUS   0x0003
+#define EVENT_BANDWIDTH_USED   0x0004
+#define EVENT_LOG_OBSOLETE     0x0005
+#define EVENT_NEW_DESC         0x0006
+#define EVENT_DEBUG_MSG        0x0007
+#define EVENT_INFO_MSG         0x0008
+#define EVENT_NOTICE_MSG       0x0009
+#define EVENT_WARN_MSG         0x000A
+#define EVENT_ERR_MSG          0x000B
+#define LAST_V0_EVENT          0x000B
+#define EVENT_ADDRMAP          0x000C
 #define EVENT_AUTHDIR_NEWDESCS 0x000D
-#define EVENT_DESCCHANGED     0x000E
-#define _EVENT_MAX            0x000E
+#define EVENT_DESCCHANGED      0x000E
+#define _EVENT_MAX             0x000E
 
 /** Array mapping from message type codes to human-readable message
  * type names. Used for compatibility with version 0 of the control

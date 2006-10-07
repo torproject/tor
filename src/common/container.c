@@ -542,7 +542,7 @@ smartlist_heapify(smartlist_t *sl,
 }
 
 /** Insert <b>item</b> into the heap stored in <b>sl</b>, where order
- * is determined by <b>compare</b> */
+ * is determined by <b>compare</b>. */
 void
 smartlist_pqueue_add(smartlist_t *sl,
                      int (*compare)(const void *a, const void *b),
@@ -636,7 +636,7 @@ strmap_entries_eq(strmap_entry_t *a, strmap_entry_t *b)
   return !strcmp(a->key, b->key);
 }
 
-/** Helper: return a hash value for a strmap_entry_t */
+/** Helper: return a hash value for a strmap_entry_t. */
 static INLINE unsigned int
 strmap_entry_hash(strmap_entry_t *a)
 {
@@ -650,7 +650,7 @@ digestmap_entries_eq(digestmap_entry_t *a, digestmap_entry_t *b)
   return !memcmp(a->key, b->key, DIGEST_LEN);
 }
 
-/** Helper: return a hash value for a digest_map_t */
+/** Helper: return a hash value for a digest_map_t. */
 static INLINE unsigned int
 digestmap_entry_hash(digestmap_entry_t *a)
 {
@@ -1051,7 +1051,7 @@ digestmap_isempty(digestmap_t *map)
   return HT_EMPTY(&map->head);
 }
 
-/** Return the number of items in <b>map</b> */
+/** Return the number of items in <b>map</b>. */
 int
 strmap_size(strmap_t *map)
 {

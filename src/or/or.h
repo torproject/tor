@@ -2535,7 +2535,7 @@ typedef struct trusted_dir_server_t {
   /** True iff this server is an authority for the newer ("v2") directory
    * protocol. */
   unsigned int is_v2_authority:1;
-  /** True iff this server is an authority for hidden services */
+  /** True iff this server is an authority for hidden services. */
   unsigned int is_hidserv_authority:1;
 
   int n_networkstatus_failures; /**< How many times have we asked for this

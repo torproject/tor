@@ -2144,7 +2144,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
  * bridge connection with a socketpair, create a new directory conn, and join
  * them together.  Return 0 on success (or if there was an error we could send
  * back an end cell for).  Return -1 if the circuit needs to be torn down.
- * Either connects exit_conn, or frees it, or marks it as appropriate.
+ * Either connects exit_conn, or frees it, or marks it, as appropriate.
  */
 static int
 connection_exit_connect_dir(edge_connection_t *exit_conn)
@@ -2187,7 +2187,6 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
   if (connection_add(TO_CONN(exit_conn))<0) {
     connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT,
                         exit_conn->cpath_layer);
-    /* XXXX Have I got the free/mark distinction right? -NM */
     connection_free(TO_CONN(exit_conn));
     connection_free(TO_CONN(dir_conn));
     return 0;
