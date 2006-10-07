@@ -2228,10 +2228,6 @@ choose_random_entry(cpath_build_state_t *state)
    * using him.
    * (We might get 2 live-but-crummy entry guards, but so be it.) */
   if (smartlist_len(live_entry_guards) < 2) {
-    if (need_uptime) {
-      need_uptime = 0; /* try without that requirement */
-      goto retry;
-    }
     if (!options->StrictEntryNodes) {
       /* still no? try adding a new entry then */
       r = add_an_entry_guard(NULL);
@@ -2239,6 +2235,10 @@ choose_random_entry(cpath_build_state_t *state)
         smartlist_add(live_entry_guards, r);
         entry_guards_changed();
       }
+    }
+    if (!r && need_uptime) {
+      need_uptime = 0; /* try without that requirement */
+      goto retry;
     }
     if (!r && need_capacity) {
         /* still no? last attempt, try without requiring capacity */
