@@ -117,7 +117,8 @@ N - Simplify authority operation
         routers workable. [Make a magic nickname "Unnamed" that can't be
         registered and can't be looked up by nickname.]
 d     - Tolerate clock skew on bridge relays.
-d     - A way to examine and twiddle router flags from controller.
+N     - A way to examine router flags from controller.
+d     - A way to adjust router flags from the controller
       o A way to export server descriptors to controllers
           o Event for "when did routerdesc last change".
 d     - a way to pick entries based wholly on extend_info equivalent;
