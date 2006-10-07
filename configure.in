@@ -76,31 +76,6 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
-# If WIN32 is defined and non-zero, we are building for win32
-AC_MSG_CHECKING([for win32])
-AC_TRY_COMPILE(,
-[
-#ifdef WIN32
-#if WIN32
-//all is well
-#else
-#error
-#endif
-#else
-#error
-#endif
-],
-bwin32=true; AC_MSG_RESULT([yes]),
-bwin32=false; AC_MSG_RESULT([no])
-)
-
-if test $bwin32 = true; then
-
-AC_DEFINE(MS_WINDOWS,1, [Define to 1 if we are building for a Windows platform.])
-
-
-fi
-
 # The big search for OpenSSL
 # copied from openssh's configure.ac
 tryssldir=""
@@ -140,6 +115,29 @@ AC_ARG_WITH(tor-group,
         ]
 )
 AC_SUBST(TORGROUP)
+
+
+dnl If WIN32 is defined and non-zero, we are building for win32
+AC_MSG_CHECKING([for win32])
+AC_TRY_RUN([int main(int c, char **v) {
+#ifdef WIN32
+#if WIN32
+  return 0;
+#else
+  return 1;
+#endif
+#else
+  return 2;
+#endif
+}],
+bwin32=true; AC_MSG_RESULT([yes]),
+bwin32=false; AC_MSG_RESULT([no])
+)
+
+if test $bwin32 = true; then
+AC_DEFINE(MS_WINDOWS, 1, [Define to 1 if we are building for Windows.])
+          
+fi
 
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
