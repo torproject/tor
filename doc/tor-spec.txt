@@ -621,12 +621,12 @@ TODO:
          2 -- RELAY_DATA      [forward or backward]
          3 -- RELAY_END       [forward or backward]
          4 -- RELAY_CONNECTED [backward]
-         5 -- RELAY_SENDME    [forward or backward]
-         6 -- RELAY_EXTEND    [forward]
-         7 -- RELAY_EXTENDED  [backward]
-         8 -- RELAY_TRUNCATE  [forward]
-         9 -- RELAY_TRUNCATED [backward]
-        10 -- RELAY_DROP      [forward or backward]
+         5 -- RELAY_SENDME    [forward or backward] [sometimes control]
+         6 -- RELAY_EXTEND    [forward]             [control]
+         7 -- RELAY_EXTENDED  [backward]            [control]
+         8 -- RELAY_TRUNCATE  [forward]             [control]
+         9 -- RELAY_TRUNCATED [backward]            [control]
+        10 -- RELAY_DROP      [forward or backward] [control]
         11 -- RELAY_RESOLVE   [forward]
         12 -- RELAY_RESOLVED  [backward]
         13 -- RELAY_BEGIN_DIR [forward]
@@ -657,7 +657,10 @@ TODO:
    All RELAY cells pertaining to the same tunneled stream have the
    same stream ID.  StreamIDs are chosen arbitrarily by the OP.  RELAY
    cells that affect the entire circuit rather than a particular
-   stream use a StreamID of zero.
+   stream use a StreamID of zero -- they are marked in the table above
+   as "[control]" style cells. (Sendme cells are marked as "sometimes
+   control" because they can take include a StreamID or not depending
+   on their purpose -- see Section 7.)
 
    The 'Length' field of a relay cell contains the number of bytes in
    the relay payload which contain real payload data. The remainder of
