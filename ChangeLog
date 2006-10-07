@@ -300,6 +300,40 @@ Changes in version 0.1.2.1-alpha - 2006-08-27
       goes) have predicted what we plan to respond to them.
 
 
+Changes in version 0.1.1.24 - 2006-09-29
+  o Major bugfixes:
+    - Allow really slow clients to not hang up five minutes into their
+      directory downloads (suggested by Adam J. Richter).
+    - Fix major performance regression from 0.1.0.x: instead of checking
+      whether we have enough directory information every time we want to
+      do something, only check when the directory information has changed.
+      This should improve client CPU usage by 25-50%.
+    - Don't crash if, after a server has been running for a while,
+      it can't resolve its hostname.
+    - When a client asks us to resolve (not connect to) an address,
+      and we have a cached answer, give them the cached answer.
+      Previously, we would give them no answer at all.
+
+  o Minor bugfixes:
+    - Allow Tor to start when RunAsDaemon is set but no logs are set.
+    - Don't crash when the controller receives a third argument to an
+      "extendcircuit" request.
+    - Controller protocol fixes: fix encoding in "getinfo addr-mappings"
+      response; fix error code when "getinfo dir/status/" fails.
+    - Fix configure.in to not produce broken configure files with
+      more recent versions of autoconf. Thanks to Clint for his auto*
+      voodoo.
+    - Fix security bug on NetBSD that could allow someone to force
+      uninitialized RAM to be sent to a server's DNS resolver. This
+      only affects NetBSD and other platforms that do not bounds-check
+      tolower().
+    - Warn user when using libevent 1.1a or earlier with win32 or kqueue
+      methods: these are known to be buggy.
+    - If we're a directory mirror and we ask for "all" network status
+      documents, we would discard status documents from authorities
+      we don't recognize.
+
+
 Changes in version 0.1.1.23 - 2006-07-30
   o Major bugfixes:
     - Fast Tor servers, especially exit nodes, were triggering asserts
