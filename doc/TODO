@@ -76,6 +76,12 @@ P - Figure out why dll's compiled in mingw don't work right in Winxp.
 P - Figure out why openssl 0.9.8c "make test" fails at sha256t test.
 
 Items for 0.1.2.x:
+  - Now that we're avoiding exits when picking non-exit positions,
+    we need to consider how to pick nodes for internal circuits. If
+    we avoid exits for all positions, we skew the load balancig. If
+    we accept exits for all positions, we leak whether it's an internal
+    circuit at every step. If we accept exits only at the last hop, we
+    reintroduce Lasse's attacks from the Oakland paper.
   o re-enable blossom functionality: let tor servers decide if they
     will use local search when resolving, or not.
     o Document it.
