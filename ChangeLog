@@ -176,9 +176,13 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Be clearer that the *ListenAddress directives can be repeated
       multiple times.
 
-    (stopped at r8536)
+    (stopped at r8571)
     - Build correctly for use on OS X platforms with case-sensitive
       filesystems.
+    - Bugfix: when we tunnel our dir fetches via tor, don't believe
+      the X-Forwarded-For header.
+    - stop trying to hammer router_rebuild_descriptor() when we don't
+      have a public address we like yet.
 
 
 Changes in version 0.1.2.1-alpha - 2006-08-27

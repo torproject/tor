@@ -1160,7 +1160,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         break;
       default:
         log_warn(LD_GENERAL,
-             "http status %d (%s) reason unexpected while uploding "
+             "http status %d (%s) reason unexpected while uploading "
              "descriptor to server '%s:%d').",
              status_code, escaped(reason), conn->_base.address,
              conn->_base.port);
@@ -1197,8 +1197,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         break;
       default:
         log_warn(LD_REND,"http status %d (%s) response unexpected while "
-                 "fetching hidden service descriptor (server "
-                 "'%s:%d').",
+                 "fetching hidden service descriptor (server '%s:%d').",
                  status_code, escaped(reason), conn->_base.address,
                  conn->_base.port);
         break;

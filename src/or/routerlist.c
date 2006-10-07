@@ -3481,7 +3481,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       router->is_fast = rs->status.is_fast;
       router->is_stable = rs->status.is_stable;
       router->is_possible_guard = rs->status.is_possible_guard;
-      router->is_exit =  rs->status.is_exit;
+      router->is_exit = rs->status.is_exit;
     }
     if (router->is_running && ds) {
       ds->n_networkstatus_failures = 0;

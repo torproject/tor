@@ -590,7 +590,7 @@ connection_edge_end_reason_socks5_response(int reason)
       return SOCKS5_NET_UNREACHABLE;
     default:
       log_warn(LD_PROTOCOL,"Reason for ending (%d) not recognized; "
-               "sending generic socks error.",reason);
+               "sending generic socks error.", reason);
       return SOCKS5_GENERAL_ERROR;
   }
 }

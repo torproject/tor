@@ -532,7 +532,7 @@ tor_parse_long(const char *s, int base, long min, long max,
   CHECK_STRTOX_RESULT();
 }
 
-/** As tor_parse_log, but return an unsigned long */
+/** As tor_parse_log, but return an unsigned long. */
 unsigned long
 tor_parse_ulong(const char *s, int base, unsigned long min,
                 unsigned long max, int *ok, char **next)
@@ -964,7 +964,7 @@ parse_iso_time(const char *cp, time_t *t)
   unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
   if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month,
                 &day, &hour, &minute, &second) < 6) {
-    log_warn(LD_GENERAL, "ISO time time was unparseable"); return -1;
+    log_warn(LD_GENERAL, "ISO time was unparseable"); return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
           hour > 23 || minute > 59 || second > 61) {
@@ -1246,7 +1246,7 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
 }
 
 /* Given a smartlist of sized_chunk_t, write them atomically to a file
- * <b>fname</b>, overwriting or creating the file as necessary.  */
+ * <b>fname</b>, overwriting or creating the file as necessary. */
 int
 write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin)
 {
@@ -1254,7 +1254,7 @@ write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin)
   return write_chunks_to_file_impl(fname, chunks, flags);
 }
 
-/** As write_str_to_file, but does not assume a NUL-terminated *
+/** As write_str_to_file, but does not assume a NUL-terminated
  * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
 int
 write_bytes_to_file(const char *fname, const char *str, size_t len,

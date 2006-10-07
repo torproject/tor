@@ -618,7 +618,7 @@ configure_libevent_logging(void)
 {
   event_set_log_callback(libevent_logging_callback);
 }
-/** Ignore any libevent log message that contains <b>msg</b> */
+/** Ignore any libevent log message that contains <b>msg</b>. */
 void
 suppress_libevent_log_msg(const char *msg)
 {

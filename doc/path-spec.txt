@@ -160,11 +160,11 @@ of their choices.
    For circuits that do not need to be not "fast", when choosing among
    multiple candidates for a path element, we choose randomly.
 
-   For "fast" circuits, we a given router as an exit with probability
+   For "fast" circuits, we pick a given router as an exit with probability
    proportional to its advertised bandwidth [the smaller of the 'rate' and
    'observed' arguments to the "bandwidth" element in its descriptor].  If a
-   router's advertised bandwidth is greater than MAX_BELIEVEABLE_BANDWIDTH
-   (1.5 MB/sec), we clip to that value.
+   router's advertised bandwidth is greater than MAX_BELIEVABLE_BANDWIDTH
+   (1.5 MB/s), we clip to that value.
 
    For non-exit positions on "fast" circuits, we pick routers as above, but
    we weight the clipped advertised bandwidth of Exit-flagged nodes depending

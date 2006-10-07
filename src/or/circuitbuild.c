@@ -49,8 +49,7 @@ static int circuit_deliver_create_cell(circuit_t *circ,
                                        uint8_t cell_type, char *payload);
 static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
-static int onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
-                              cpath_build_state_t *state);
+static int onion_extend_cpath(origin_circuit_t *circ);
 static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
@@ -263,7 +262,7 @@ onion_populate_cpath(origin_circuit_t *circ)
 {
   int r;
 again:
-  r = onion_extend_cpath(circ->_base.purpose, &circ->cpath, circ->build_state);
+  r = onion_extend_cpath(circ);
   if (r < 0) {
     log_info(LD_CIRC,"Generating cpath hop failed.");
     return -1;
@@ -1632,23 +1631,12 @@ onion_next_hop_in_cpath(crypt_path_t *cpath)
  * based on <b>state</b>. Append the hop info to head_ptr.
  */
 static int
-onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
-                   cpath_build_state_t *state)
+onion_extend_cpath(origin_circuit_t *circ)
 {
-  int cur_len;
-  crypt_path_t *cpath;
+  uint8_t purpose = circ->_base.purpose;
+  cpath_build_state_t *state = circ->build_state;
+  int cur_len = circuit_get_cpath_len(circ);
   extend_info_t *info = NULL;
-
-  tor_assert(head_ptr);
-
-  if (!*head_ptr) {
-    cur_len = 0;
-  } else {
-    cur_len = 1;
-    for (cpath = *head_ptr; cpath->next != *head_ptr; cpath = cpath->next) {
-      ++cur_len;
-    }
-  }
 
   if (cur_len >= state->desired_path_len) {
     log_debug(LD_CIRC, "Path is complete: %d steps long",
@@ -1667,7 +1655,7 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
       info = extend_info_from_router(r);
   } else {
     routerinfo_t *r =
-      choose_good_middle_server(purpose, state, *head_ptr, cur_len);
+      choose_good_middle_server(purpose, state, circ->cpath, cur_len);
     if (r)
       info = extend_info_from_router(r);
   }
@@ -1681,7 +1669,7 @@ onion_extend_cpath(uint8_t purpose, crypt_path_t **head_ptr,
   log_debug(LD_CIRC,"Chose router %s for hop %d (exit is %s)",
             info->nickname, cur_len+1, build_state_get_exit_nickname(state));
 
-  onion_append_hop(head_ptr, info);
+  onion_append_hop(&circ->cpath, info);
   extend_info_free(info);
   return 0;
 }
