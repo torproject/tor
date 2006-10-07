@@ -91,13 +91,14 @@ get_unique_circ_id_by_conn(or_connection_t *conn)
   return test_circ_id;
 }
 
-/** If <b>verbose</b> is false, allocate and return a comma-separated
- * list of the currently built elements of circuit_t.  If
- * <b>verbose</b> is true, also list information about link status in
- * a more verbose format using spaces.
+/** If <b>verbose</b> is false, allocate and return a comma-separated list of
+ * the currently built elements of circuit_t.  If <b>verbose</b> is true, also
+ * list information about link status in a more verbose format using spaces.
+ * If <b>verbose_names</b> is false, give nicknames for Named routers and hex
+ * digests for others; if <b>verbose_names</b> is true, 
  */
-char *
-circuit_list_path(origin_circuit_t *circ, int verbose)
+static char *
+circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
 {
   crypt_path_t *hop;
   smartlist_t *elements;
@@ -129,14 +130,33 @@ circuit_list_path(origin_circuit_t *circ, int verbose)
       break;
     if (!hop->extend_info)
       break;
-    if ((ri = router_get_by_digest(hop->extend_info->identity_digest)) &&
-        ri->is_named) {
-      elt = tor_strdup(hop->extend_info->nickname);
-    } else {
-      elt = tor_malloc(HEX_DIGEST_LEN+2);
-      elt[0] = '$';
-      base16_encode(elt+1, HEX_DIGEST_LEN+1,
-                    hop->extend_info->identity_digest, DIGEST_LEN);
+    if (verbose_names) {
+      elt = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
+      if ((ri = router_get_by_digest(hop->extend_info->identity_digest))) {
+        router_get_verbose_nickname(elt, ri);
+      } else if (hop->extend_info->nickname &&
+                 is_legal_nickname(hop->extend_info->nickname)) {
+        elt[0] = '$';
+        base16_encode(elt+1, HEX_DIGEST_LEN+1,
+                      hop->extend_info->identity_digest, DIGEST_LEN);
+        elt[HEX_DIGEST_LEN+1]= '~';
+        strlcpy(elt+HEX_DIGEST_LEN+2,
+                hop->extend_info->nickname, MAX_NICKNAME_LEN+1);
+      } else {
+        elt[0] = '$';
+        base16_encode(elt+1, HEX_DIGEST_LEN+1,
+                      hop->extend_info->identity_digest, DIGEST_LEN);
+      }
+    } else { /* ! verbose_names */
+      if ((ri = router_get_by_digest(hop->extend_info->identity_digest)) &&
+          ri->is_named) {
+        elt = tor_strdup(hop->extend_info->nickname);
+      } else {
+        elt = tor_malloc(HEX_DIGEST_LEN+2);
+        elt[0] = '$';
+        base16_encode(elt+1, HEX_DIGEST_LEN+1,
+                      hop->extend_info->identity_digest, DIGEST_LEN);
+      }
     }
     tor_assert(elt);
     if (verbose) {
@@ -158,47 +178,24 @@ circuit_list_path(origin_circuit_t *circ, int verbose)
   return s;
 }
 
-/* DOCDOC long names only */
+/** If <b>verbose</b> is false, allocate and return a comma-separated
+ * list of the currently built elements of circuit_t.  If
+ * <b>verbose</b> is true, also list information about link status in
+ * a more verbose format using spaces.
+ */
+char *
+circuit_list_path(origin_circuit_t *circ, int verbose)
+{
+  return circuit_list_path_impl(circ, verbose, 0);
+}
+
+/** Allocate and return a comma-separated list of the currently built elements
+ * of circuit_t, giving each as a verbose nickname.
+ */
 char *
 circuit_list_path_for_controller(origin_circuit_t *circ)
 {
-  smartlist_t *elements = smartlist_create();
-  crypt_path_t *hop;
-  char *elt, *s;
-  routerinfo_t *ri;
-
-  hop = circ->cpath;
-  do {
-    if (!hop)
-      break;
-    if (hop->state != CPATH_STATE_OPEN)
-      break;
-    if (!hop->extend_info)
-      break;
-    elt = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
-    if ((ri = router_get_by_digest(hop->extend_info->identity_digest))) {
-      router_get_verbose_nickname(elt, ri);
-    } else if (hop->extend_info->nickname &&
-               is_legal_nickname(hop->extend_info->nickname)) {
-      elt[0] = '$';
-      base16_encode(elt+1, HEX_DIGEST_LEN+1,
-                    hop->extend_info->identity_digest, DIGEST_LEN);
-      elt[HEX_DIGEST_LEN+1]= '~';
-      strlcpy(elt+HEX_DIGEST_LEN+2,
-              hop->extend_info->nickname, MAX_NICKNAME_LEN+1);
-    } else {
-      elt[0] = '$';
-      base16_encode(elt+1, HEX_DIGEST_LEN+1,
-                    hop->extend_info->identity_digest, DIGEST_LEN);
-    }
-    smartlist_add(elements, elt);
-    hop = hop->next;
-  } while (hop != circ->cpath);
-
-  s = smartlist_join_strings(elements, ",", 0, NULL);
-  SMARTLIST_FOREACH(elements, char*, cp, tor_free(cp));
-  smartlist_free(elements);
-  return s;
+  return circuit_list_path_impl(circ, 0, 1);
 }
 
 /** Log, at severity <b>severity</b>, the nicknames of each router in
