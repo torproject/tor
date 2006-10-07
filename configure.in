@@ -603,7 +603,7 @@ return problem ? 1 : 0; }]])],
 
 else
   # Cross-compiling; let's hope that the target isn't raving mad.
-  AC_MSG_NOTICE([Cross-compiling: we'll assume that NULL is represented as a sequence of 0-valued bytes.])
+  AC_MSG_NOTICE([Cross-compiling: we'll assume that negative integers are represented with two's complement.])
   tor_cv_twos_complement=yes
 fi
 
