@@ -1842,6 +1842,8 @@ entry_is_time_to_retry(entry_guard_t *e, time_t now)
  * - Present in the routerlist;
  * - Listed as 'stable' or 'fast' by the current dirserver concensus,
  *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>;
+ *   (This check is currently redundant with the Guard flag, but in
+ *   the future that might change. Best to leave it in for now.)
  * - Allowed by our current ReachableAddresses config option; and
  * - Currently thought to be reachable by us (unless assume_reachable
  *   is true).
@@ -1859,7 +1861,6 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
   r = router_get_by_digest(e->identity);
   if (!r)
     return NULL;
-  /* Remove this check -- it seems redundant wrt the Guard flag? XXXX NM */
   if (router_is_unreliable(r, need_uptime, need_capacity, 0))
     return NULL;
   if (firewall_is_fascist_or() &&
@@ -2272,22 +2273,25 @@ choose_random_entry(cpath_build_state_t *state)
    * using him.
    * (We might get 2 live-but-crummy entry guards, but so be it.) */
   if (smartlist_len(live_entry_guards) < 2) {
-    if (need_uptime) {
-      need_uptime = 0; /* try without that requirement */
-      goto retry;
-    }
     if (!options->StrictEntryNodes) {
       /* still no? try adding a new entry then */
+      /* XXX if guard doesn't imply fast and stable, then we need
+       * to tell add_an_entry_guard below what we want, or it might
+       * be a long time til we get it. -RD */
       r = add_an_entry_guard(NULL);
       if (r) {
         smartlist_add(live_entry_guards, r);
         entry_guards_changed();
       }
     }
+    if (!r && need_uptime) {
+      need_uptime = 0; /* try without that requirement */
+      goto retry;
+    }
     if (!r && need_capacity) {
-        /* still no? last attempt, try without requiring capacity */
-        need_capacity = 0;
-        goto retry;
+      /* still no? last attempt, try without requiring capacity */
+      need_capacity = 0;
+      goto retry;
     }
     /* live_entry_guards will be empty below. Oh well, we tried. */
   }
