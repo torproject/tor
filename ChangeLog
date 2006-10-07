@@ -1,14 +1,13 @@
-Changes in version 0.1.2.2-alpha - 2006-10-??
+Changes in version 0.1.2.2-alpha - 2006-10-07
   o Major features:
     - Make our async eventdns library on-by-default for Tor servers,
-      and plan to deprecate using separate dnsworker threads. Let us
-      know if you encounter bugs.
+      and plan to deprecate the separate dnsworker threads.
     - Add server-side support for "reverse" DNS lookups (using PTR
       records so clients can determine the canonical hostname for a given
       IPv4 address). Only supported by servers using eventdns; servers
       now announce in their descriptors whether they support eventdns.
     - Specify and implement client-side SOCKS5 interface for reverse DNS
-      lookups; see doc/socks-extensions.txt for full information.
+      lookups (see doc/socks-extensions.txt).
     - Add a BEGIN_DIR relay cell type for an easier in-protocol way to
       connect to directory servers through Tor. Previously, clients needed
       to find Tor exits to make private connections to directory servers.
@@ -17,20 +16,20 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       the total bandwidth available from Exit nodes.
     - Workaround for name servers (like Earthlink's) that hijack failing
       DNS requests and replace the no-such-server answer with a "helpful"
-      redirect to an advertising-driven search portal. We're a little
-      clever about this, in order to work around DNS hijackers who
-      "helpfully" decline to hijack known-invalid RFC2606 addresses.
-      Config option "ServerDNSDetectHijacking 0" lets you turn it off.
+      redirect to an advertising-driven search portal. Also work around
+      DNS hijackers who "helpfully" decline to hijack known-invalid
+      RFC2606 addresses. Config option "ServerDNSDetectHijacking 0"
+      lets you turn it off.
     - Send out a burst of long-range padding cells once we've established
       that we're reachable. Spread them over 4 circuits, so hopefully
       a few will be fast. This exercises our bandwidth and bootstraps
-      us into the directory quicker.
+      us into the directory more quickly.
 
   o New/improved config options:
     - Add new config option "ResolvConf" to let the server operator
-      choose an alternate resolve.conf file.
+      choose an alternate resolve.conf file when using eventdns.
     - Add an "EnforceDistinctSubnets" option to control our "exclude
-      servers on the same /16" behavior.  It's still on by default; this
+      servers on the same /16" behavior. It's still on by default; this
       is mostly for people who want to operate private test networks with
       all the machines on the same subnet.
     - If one of our entry guards is on the ExcludeNodes list, or the
@@ -40,21 +39,23 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Allow directory authorities to be marked separately as authorities
       for the v1 directory protocol, the v2 directory protocol, and
       as hidden service directories, to make it easier to retire old
-      authorities.  V1 authorities should set "HSAuthoritativeDir 1"
+      authorities. V1 authorities should set "HSAuthoritativeDir 1"
       to continue being hidden service authorities too.
     - Remove 8888 as a LongLivedPort, and add 6697 (IRCS).
 
   o Minor features, controller:
     - Fix CIRC controller events so that controllers can learn the
       identity digests of non-Named servers used in circuit paths.
-    - Give more meaningful errors on control authentication failure.
-    - Add an (off by default) feature so that controllers can get
-      more useful identifiers for servers. Instead of learning identity
-      digests for un-Named servers and nicknames for Named servers,
-      the new identifiers include digest, nickname, and indication of
-      Named status. See control-spec.txt for more information.
+    - Let controllers ask for more useful identifiers for servers. Instead
+      of learning identity digests for un-Named servers and nicknames
+      for Named servers, the new identifiers include digest, nickname,
+      and indication of Named status. Off by default; see control-spec.txt
+      for more information.
     - Add a "getinfo address" controller command so it can display Tor's
       best guess to the user.
+    - New controller event to alert the controller when our server
+      descriptor has changed.
+    - Give more meaningful errors on controller authentication failure.
 
   o Minor features, other:
     - When asked to resolve a hostname, don't use non-exit servers unless
@@ -62,23 +63,24 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       useful to the network.
     - Divide eventdns log messages into warn and info messages.
     - Reserve the nickname "Unnamed" for routers that can't pick
-      a hostname; any router can call itself Unnamed; directory
+      a hostname: any router can call itself Unnamed; directory
       authorities will never allocate Unnamed to any particular router;
       clients won't believe that any router is the canonical Unnamed.
     - Only include function names in log messages for info/debug messages.
       For notice/warn/err, the content of the message should be clear on
-      its own, and printing the function name only seems to confuse users.
+      its own, and printing the function name only confuses users.
     - Avoid some false positives during reachability testing: don't try
       to test via a server that's on the same /24 as us.
-    - New controller event to alert the controller when our server
-      descriptor has changed.
     - If we fail to build a circuit to an intended enclave, and it's
       not mandatory that we use that enclave, stop wanting it.
+    - When eventdns is enabled, allow multithreaded builds on NetBSD and
+      OpenBSD. (We had previously disabled threads on these platforms
+      because they didn't have working thread-safe resolver functions)
 
   o Major bugfixes, anonymity/security:
     - If a client asked for a server by name, and there's a named server
       in our network-status but we don't have its descriptor yet, we
-      could return an unnamed one instead.
+      could return an unnamed server instead.
     - Fix NetBSD bug that could allow someone to force uninitialized RAM
       to be sent to a server's DNS resolver. This only affects NetBSD
       and other platforms that do not bounds-check tolower().
@@ -88,13 +90,9 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Just because your DirPort is open doesn't mean people should be
       able to remotely teach you about hidden service descriptors. Now
       only accept rendezvous posts if you've got HSAuthoritativeDir set.
-    - When eventdns is enabled, allow multithreaded builds on NetBSD and
-      OpenBSD.  (We had previously disabled threads on these platforms
-      because they didn't have working thread-safe resolver functions)
 
   o Major bugfixes, other:
-    - Avoiding crashing on race condition in dns.c:
-      tor_assert(!resolve->expire)
+    - Don't crash on race condition in dns.c: tor_assert(!resolve->expire)
     - When a client asks the server to resolve (not connect to)
       an address, and it has a cached answer, give them the cached answer.
       Previously, the server would give them no answer at all.
@@ -117,13 +115,13 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
     - Avoid controller-triggered crash when misusing certain commands
       from a v0 controller on platforms that do not handle
       printf("%s",NULL) gracefully.
-    - Don't crash when the controller receives a third argument to an
+    - Don't crash when a controller sends a third argument to an
       "extendcircuit" request.
     - Controller protocol fixes: fix encoding in "getinfo addr-mappings"
       response; fix error code when "getinfo dir/status/" fails.
     - Avoid crash when telling controller stream-status and a stream
       is detached.
-    - Apply patch from Adam Langley: fix assert() in eventdns.c.
+    - Patch from Adam Langley to fix assert() in eventdns.c.
     - Fix a debug log message in eventdns to say "X resolved to Y"
       instead of "X resolved to X".
     - Make eventdns give strings for DNS errors, not just error numbers.
@@ -132,7 +130,7 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       authorities'. With the old code, if a guard was unreachable by
       us but listed as running, it would clog our guard list forever.
     - Behave correctly in case we ever have a network with more than
-      2GB per second total advertised capacity.
+      2GB/s total advertised capacity.
     - Make TrackExitHosts case-insensitive, and fix the behavior of
       ".suffix" TrackExitHosts items to avoid matching in the middle of
       an address.
@@ -143,6 +141,8 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       result more than once.
     - Patch from Steve Hildrey: Generate network status correctly on
       non-versioning dirservers.
+    - Don't listen to the X-Your-Address-Is hint if you did the lookup
+      via Tor; otherwise you'll think you're the exit node's IP address.
 
   o Minor bugfixes, performance:
     - Two small performance improvements on parsing descriptors.
@@ -163,10 +163,11 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
 
   o Packaging, bugfixes:
     - Patches so Tor builds with MinGW on Windows.
-    - Patches so Tor might build and run on Cygwin again.
+    - Patches so Tor might run on Cygwin again.
     - Resume building on non-gcc compilers and ancient gcc. Resume
       building with the -O0 compile flag. Resume building cleanly on
       Debian woody.
+    - Run correctly on OS X platforms with case-sensitive filesystems.
     - Correct includes for net/if.h and net/pfvar.h on OpenBSD (from Tup).
     - Add autoconf checks so Tor can build on Solaris x86 again.
 
@@ -175,14 +176,6 @@ Changes in version 0.1.2.2-alpha - 2006-10-??
       ServerDNSResolvConfFile options.
     - Be clearer that the *ListenAddress directives can be repeated
       multiple times.
-
-    (stopped at r8571)
-    - Build correctly for use on OS X platforms with case-sensitive
-      filesystems.
-    - Bugfix: when we tunnel our dir fetches via tor, don't believe
-      the X-Forwarded-For header.
-    - stop trying to hammer router_rebuild_descriptor() when we don't
-      have a public address we like yet.
 
 
 Changes in version 0.1.2.1-alpha - 2006-08-27

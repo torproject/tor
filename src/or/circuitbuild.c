@@ -218,7 +218,7 @@ circuit_log_path(int severity, unsigned int domain, origin_circuit_t *circ)
  * extended; the _first_ hop that isn't open (if any) is marked as
  * unable to extend.
  */
-/* XXXX Someday we should learn from or circuits too. */
+/* XXXX Someday we should learn from OR circuits too. */
 void
 circuit_rep_hist_note_result(origin_circuit_t *circ)
 {

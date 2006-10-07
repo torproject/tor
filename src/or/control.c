@@ -63,7 +63,7 @@ const char control_c_id[] =
 #define ERR_NO_ROUTER               0x000C
 
 /* Recognized asynchronous event types.  It's okay to expand this list
- * because it use used both as a list of v0 event types, and as indices
+ * because it is used both as a list of v0 event types, and as indices
  * into the bitfield to determine which controllers want which events.
  */
 #define _EVENT_MIN             0x0001
@@ -1058,8 +1058,8 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       if (base16_decode(password, i/2+1, body, i)<0) {
         connection_write_str_to_buf(
             "551 Invalid hexadecimal encoding.  Maybe you tried a plain text "
-            "password?  If so, the standard requires you put it in double "
-            "quotes.\r\n", conn);
+            "password?  If so, the standard requires that you put it in "
+            "double quotes.\r\n", conn);
         tor_free(password);
         return 0;
       }
@@ -1108,7 +1108,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     else
       errstr = "Password did not match HashedControlPassword value from "
         "configuration. Maybe you tried a plain text password? "
-        "If so, the standard requires you put it in double quotes.";
+        "If so, the standard requires that you put it in double quotes.";
     goto err;
   } else {
     /* if Tor doesn't demand any stronger authentication, then

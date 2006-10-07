@@ -92,7 +92,7 @@ $Id$
   ;    $Digest -- The router whose identity key hashes to the given digest.
   ;        This is the preferred way to refer to an OR.
   ;    $Digest~Name -- The router whose identity key hashes to the given
-  ;        digest, but only if the routes has the given nickname.
+  ;        digest, but only if the router has the given nickname.
   ;    $Digest=Name -- The router whose identity key hashes to the given
   ;        digest, but only if the router is Named and has the given
   ;        nickname.
@@ -601,7 +601,7 @@ $Id$
   Sometimes extensions to the controller protocol break compatibility with
   older controllers.  In this case, whenever possible, the extensions are
   first included in Tor disabled by default, and only enabled on a given
-  controller connection when the 'USEFEATURE' command is given.  Once a
+  controller connection when the "USEFEATURE" command is given.  Once a
   "USEFEATURE" command is given, it applies to all subsequent interactions on
   the same connection; to disable an enabled feature, a new controller
   connection must be opened.
@@ -624,10 +624,10 @@ $Id$
 
   VERBOSE_NAMES
 
-     Instead of ServerID as specified elsewhere, the controller should
+     Instead of ServerID as specified above, the controller should
      identify ORs by LongName in events and GETINFO results.  This format is
-     strictly more informative, since rather than including Nickname for
-     known Named routers and Fingerprint for unknown or unNamed routers; the
+     strictly more informative: rather than including Nickname for
+     known Named routers and Fingerprint for unknown or unNamed routers, the
      LongName format includes a Fingerprint, an indication of Named status,
      and a Nickname (if one is known).
 

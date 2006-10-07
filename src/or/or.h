@@ -2558,7 +2558,6 @@ typedef enum {
   V1_AUTHORITY, V2_AUTHORITY, HIDSERV_AUTHORITY,
 } authority_type_t;
 routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
-
                                              int requireother,
                                              int fascistfirewall,
                                              int retry_if_no_servers);
