@@ -208,7 +208,7 @@ $Id$
   or none.
   NOTE: "EXTENDED" is only supported in Tor 0.1.1.9-alpha or later.
 
-  XXX Need to describe what each event does and is for -RD
+  Each event is described in more detail in Section 4.1.
 
 3.5. AUTHENTICATE
 
@@ -809,7 +809,7 @@ $Id$
      BytesRead = 1*DIGIT
      BytesWritten = 1*DIGIT
 
-4.1.5. Log message
+4.1.5. Log messages
 
   The syntax is:
      "650" SP Severity SP ReplyText
@@ -843,6 +843,32 @@ $Id$
      "650" SP "DESCCHANGED"
 
   [First added in 0.1.2.2-alpha.]
+
+4.1.10. Misc other events
+
+  Syntax:
+     "650" SP Type SP Action SP Arguments
+     Type = "MISC_CLIENT" / "MISC_SERVER"
+     Action and Arguments (if any) are described below.
+
+  Actions for MISC_CLIENT events can be as follows:
+
+     CIRCUIT_ESTABLISHED means that Tor is able to establish circuits
+     for client use. This event will only be sent if we just built a
+     circuit that changed our mind -- that is, prior to this event we
+     didn't know whether we could establish circuits.
+
+     CLOCK_JUMPED means that Tor spent enough time without CPU cycles
+     that it has closed all its circuits and will establishing them
+     anew. This typically happens when a laptop goes to sleep and then
+     wakes up again. It also happens when the system is swapping so
+     heavily that Tor is starving. The Arguments line is this case is
+     a single non-negative integer representing the number of seconds
+     Tor thinks it was unconscious for.
+
+  Actions for MISC_SERVER events can be as follows:
+
+
 
 5. Implementation notes
 
