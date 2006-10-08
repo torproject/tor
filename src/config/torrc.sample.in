@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 31 July 2006 for Tor 0.1.2.1-alpha.
+## Last updated 8 October 2006 for Tor 0.1.2.3-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -75,8 +75,6 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #HiddenServiceDir @LOCALSTATEDIR@/lib/tor/other_hidden_service/
 #HiddenServicePort 80 127.0.0.1:80
 #HiddenServicePort 22 127.0.0.1:22
-#HiddenServiceNodes moria1,moria2
-#HiddenServiceExcludeNodes bad,otherbad
 
 ################ This section is just for servers #####################
 

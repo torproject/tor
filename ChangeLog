@@ -1,8 +1,11 @@
 Changes in version 0.1.2.3-alpha - 2006-10-??
-
   o Minor bugfixes:
     - Change NT service functions to be loaded on demand.  This lets us
       build with mingw without breaking Tor for Windows 98 users.
+    - Do DirPort reachability tests less often, since a single test
+      chews through many circuits before giving up.
+    - In the hidden service example in torrc.sample, stop recommending
+      esoteric and discouraged hidden service options.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07
