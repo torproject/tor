@@ -2305,7 +2305,7 @@ evdns_init(void)
 {
         int res = 0;
 #ifdef MS_WINDOWS
-        evdns_config_windows_nameservers(void);
+        evdns_config_windows_nameservers();
 #else
         res = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");
 #endif
