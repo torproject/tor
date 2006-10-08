@@ -72,6 +72,9 @@ case $host in
      ;;
 esac
 
+AC_ARG_ENABLE(gcc-warnings,
+     AC_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
+
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
@@ -762,12 +765,17 @@ if test $ac_cv_c_compiler_gnu = yes; then
   CFLAGS="$CFLAGS -Wall -g -O2"
 else
   CFLAGS="$CFLAGS -g -O"
+  enable_gcc_warnings=no
 fi
+
 # Add some more warnings which we use in the cvs version but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
-#CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline -Wnested-externs -Wswitch-enums"
-# Add these in when you feel like fun.
-#CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement -Wold-style-definition"
+if test x$enable_gcc_warnings = xyes; then
+  CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline -Wnested-externs"
+#-Wswitch-enums?
+  # Add these in when you feel like fun.
+  CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement -Wold-style-definition"
+fi
 
 AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh)
 
