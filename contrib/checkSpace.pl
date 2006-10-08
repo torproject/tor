@@ -83,7 +83,7 @@ for $fn (@ARGV) {
             if (/(\w+)\s\(/) {
                 if ($1 ne "if" and $1 ne "while" and $1 ne "for" and
                     $1 ne "switch" and $1 ne "return" and $1 ne "int" and
-                    $1 ne "elsif" and
+                    $1 ne "elsif" and $1 ne "WINAPI" and
                     $1 ne "void" and $1 ne "__attribute__") {
                     print "     fn ():$fn:$.\n";
                 }

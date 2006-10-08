@@ -1,3 +1,10 @@
+Changes in version 0.1.2.3-alpha - 2006-10-??
+
+  o Minor bugfixes:
+    - Change NT service functions to be loaded on demand.  This lets us
+      build with mingw without breaking Tor for Windows 98 users.
+
+
 Changes in version 0.1.2.2-alpha - 2006-10-07
   o Major features:
     - Make our async eventdns library on-by-default for Tor servers,

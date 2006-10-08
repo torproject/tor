@@ -623,7 +623,7 @@ connection_or_check_valid_handshake(or_connection_t *conn, char *digest_rcvd)
              "Identity key not as expected for router at %s:%d: wanted %s "
              "but got %s",
              conn->_base.address, conn->_base.port, expected, seen);
-      entry_guard_register_connect_status(conn->identity_digest, 0, time(NULL));
+      entry_guard_register_connect_status(conn->identity_digest,0,time(NULL));
       router_set_status(conn->identity_digest, 0);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
       as_advertised = 0;
