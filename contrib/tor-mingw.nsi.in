@@ -188,6 +188,7 @@ Section "Uninstall"
    RMDir /r "$INSTDIR\Documents"
    RMDir $INSTDIR
    RMDir /r "$SMPROGRAMS\Tor"
+   RMDir /r "$APPDATA\Tor"
    Delete "$SMSTARTUP\Tor.lnk"
    DeleteRegKey HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Tor"
 SectionEnd
