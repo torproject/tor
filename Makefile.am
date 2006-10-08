@@ -56,6 +56,9 @@ dist-osx:
 doxygen:
 	doxygen && cd doc/doxygen/latex && make
 
+test:
+	./src/or/test
+
 # Avoid strlcpy.c, strlcat.c, tree.h
 check-spaces:
 	./contrib/checkSpace.pl -C                    \
@@ -66,3 +69,4 @@ check-spaces:
 check-logs:
 	./contrib/checkLogs.pl                        \
 		src/*/*.[ch] | sort -n
+
