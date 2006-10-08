@@ -1654,6 +1654,117 @@ do_hash_password(void)
 }
 
 #ifdef MS_WINDOWS_SERVICE
+
+struct service_fns {
+  int loaded;
+
+  BOOL WINAPI (ChangeServiceConfig2_fn*)(
+                             SC_HANDLE hService,
+                             DWORD dwInfoLevel,
+                             LPVOID lpInfo);
+
+  BOOL WINAPI (CloseServiceHandle_fn*)(
+                             SC_HANDLE hSCObject);
+
+  BOOL WINAPI (ControlService_fn*)(
+                             SC_HANDLE hService,
+                             DWORD dwControl,
+                             LPSERVICE_STATUS lpServiceStatus);
+
+  SC_HANDLE WINAPI (CreateService_fn*)(
+                             SC_HANDLE hSCManager,
+                             LPCTSTR lpServiceName,
+                             LPCTSTR lpDisplayName,
+                             DWORD dwDesiredAccess,
+                             DWORD dwServiceType,
+                             DWORD dwStartType,
+                             DWORD dwErrorControl,
+                             LPCTSTR lpBinaryPathName,
+                             LPCTSTR lpLoadOrderGroup,
+                             LPDWORD lpdwTagId,
+                             LPCTSTR lpDependencies,
+                             LPCTSTR lpServiceStartName,
+                             LPCTSTR lpPassword);
+
+  BOOL WINAPI (DeleteService_fn*)(
+                             SC_HANDLE hService);
+
+  SC_HANDLE WINAPI (OpenSCManager_fn*)(
+                             LPCTSTR lpMachineName,
+                             LPCTSTR lpDatabaseName,
+                             DWORD dwDesiredAccess);
+
+  SC_HANDLE WINAPI (OpenService_fn*)(
+                             SC_HANDLE hSCManager,
+                             LPCTSTR lpServiceName,
+                             DWORD dwDesiredAccess);
+
+  BOOL WINAPI (QueryServiceStatus_fn*)(
+                             SC_HANDLE hService,
+                             LPSERVICE_STATUS lpServiceStatus);
+
+  SERVICE_STATUS_HANDLE WINAPI (RegisterServiceCtrlHandler_fn*)(
+                             LPCTSTR lpServiceName,
+                             LPHANDLER_FUNCTION lpHandlerProc);
+
+  BOOL WINAPI (SetServiceStatus_fn*)(SERVICE_STATUS_HANDLE,
+                             LPSERVICE_STATUS);
+
+  BOOL WINAPI (StartServiceCtrlDispatcher_fn*)(
+                             const SERVICE_TABLE_ENTRY* lpServiceTable);
+
+  BOOL WINAPI (StartService_fn*)(
+                             SC_HANDLE hService,
+                             DWORD dwNumServiceArgs,
+                             LPCTSTR* lpServiceArgVectors);
+
+} service_fns = { 0,
+                  NULL, NULL, NULL, NULL, NULL, NULL,
+                  NULL, NULL, NULL, NULL, NULL, NULL, };
+
+static int
+nt_service_loadlibrary(void)
+{
+  HMODULE library = 0;
+  void *fn;
+
+  if (loaded)
+    return 0;
+
+  if (!(library = LoadLibrary("advapi32.dll"))) {
+    log_err(LD_GENERAL, "Couldn't open advapi32.dll.  Are you trying to use "
+            "NT services on Windows 98? That doesn't work.");
+    return -1;
+  }
+
+#define LOAD(f) do {                                                    \
+    if (!(fn = GetProcAddress(library, #f))) {                          \
+      log_err(LD_BUF, "Couldn't find %s in advapi32.dll! We probably got " \
+              "the name wrong.", #f);                                   \
+      return -1;                                                        \
+    } else {                                                            \
+      service_fns.f ## _fn = fn;                                        \
+    }                                                                   \
+  } while (0)
+
+  LOAD(ChangeServiceConfig2);
+  LOAD(CloseServiceHandle);
+  LOAD(ControlService);
+  LOAD(CreateService);
+  LOAD(DeleteService);
+  LOAD(OpenSCManager);
+  LOAD(OpenService);
+  LOAD(QueryServiceStatus);
+  LOAD(RegisterServiceCtrlHandler);
+  LOAD(SetServiceStatus);
+  LOAD(StartServiceCtrlDispatcher);
+  LOAD(StartService);
+
+  service_fns.loaded = 1;
+
+  return 0;
+}
+
 /** Checks if torrc is present in the same directory
  *  as the service executable.
  *  Return 1 if it is, 0 if it is not present. */
@@ -1704,10 +1815,13 @@ nt_torrc_is_present()
 static int
 nt_service_is_stopped(void)
 {
+  if (nt_service_loadlibrary()<0)
+    return -1;
+
   if (service_status.dwCurrentState == SERVICE_STOP_PENDING) {
     service_status.dwWin32ExitCode = 0;
     service_status.dwCurrentState = SERVICE_STOPPED;
-    SetServiceStatus(hStatus, &service_status);
+    service_fns.SetServiceStatus_fn(hStatus, &service_status);
     return 1;
   } else if (service_status.dwCurrentState == SERVICE_STOPPED) {
     return 1;
@@ -1723,6 +1837,9 @@ nt_service_control(DWORD request)
   exit_now.tv_sec  = 0;
   exit_now.tv_usec = 0;
 
+  if (nt_service_loadlibrary()<0)
+    return;
+
   switch (request) {
     case SERVICE_CONTROL_STOP:
         case SERVICE_CONTROL_SHUTDOWN:
@@ -1732,7 +1849,7 @@ nt_service_control(DWORD request)
           event_loopexit(&exit_now);
           return;
   }
-  SetServiceStatus(hStatus, &service_status);
+  service_fns.SetServiceStatus_fn(hStatus, &service_status);
 }
 
 /** DOCDOC */
@@ -1740,6 +1857,8 @@ void
 nt_service_body(int argc, char **argv)
 {
   int r;
+  if (nt_service_loadlibrary()<0)
+    return;
   service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   service_status.dwCurrentState = SERVICE_START_PENDING;
   service_status.dwControlsAccepted =
@@ -1748,7 +1867,7 @@ nt_service_body(int argc, char **argv)
   service_status.dwServiceSpecificExitCode = 0;
   service_status.dwCheckPoint = 0;
   service_status.dwWaitHint = 1000;
-  hStatus = RegisterServiceCtrlHandler(GENSRV_SERVICENAME,
+  hStatus = service_fns.RegisterServiceCtrlHandler_fn(GENSRV_SERVICENAME,
                                    (LPHANDLER_FUNCTION) nt_service_control);
 
   if (hStatus == 0) {
@@ -1775,11 +1894,11 @@ nt_service_body(int argc, char **argv)
     service_status.dwCurrentState = SERVICE_STOPPED;
     service_status.dwWin32ExitCode = r;
     service_status.dwServiceSpecificExitCode = r;
-    SetServiceStatus(hStatus, &service_status);
+    service_fns.SetServiceStatus_fn(hStatus, &service_status);
     return;
   }
   service_status.dwCurrentState = SERVICE_RUNNING;
-  SetServiceStatus(hStatus, &service_status);
+  service_fns.SetServiceStatus_fn(hStatus, &service_status);
   do_main_loop();
   tor_cleanup();
   return;
@@ -1792,12 +1911,14 @@ nt_service_main(void)
   SERVICE_TABLE_ENTRY table[2];
   DWORD result = 0;
   char *errmsg;
+  if (nt_service_loadlibrary()<0)
+    return;
   table[0].lpServiceName = GENSRV_SERVICENAME;
   table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)nt_service_body;
   table[1].lpServiceName = NULL;
   table[1].lpServiceProc = NULL;
 
-  if (!StartServiceCtrlDispatcher(table)) {
+  if (!service_fns.StartServiceCtrlDispatcher_fn(table)) {
     result = GetLastError();
     errmsg = nt_strerror(result);
     printf("Service error %d : %s\n", (int) result, errmsg);
@@ -1833,9 +1954,10 @@ nt_service_open_scm(void)
 {
   SC_HANDLE hSCManager;
   char *errmsg = NULL;
-
-  if ((hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE))
-      == NULL) {
+  if (nt_service_loadlibrary()<0)
+    return 0;
+  if ((hSCManager = service_fns.OpenSCManager_fn(
+                            NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
     errmsg = nt_strerror(GetLastError());
     printf("OpenSCManager() failed : %s\n", errmsg);
     LocalFree(errmsg);
@@ -1850,7 +1972,9 @@ nt_service_open(SC_HANDLE hSCManager)
   SC_HANDLE hService;
   char *errmsg = NULL;
 
-  if ((hService = OpenService(hSCManager, GENSRV_SERVICENAME,
+  if (nt_service_loadlibrary()<0)
+    return 0;
+  if ((hService = service_fns.OpenService_fn(hSCManager, GENSRV_SERVICENAME,
                               SERVICE_ALL_ACCESS)) == NULL) {
     errmsg = nt_strerror(GetLastError());
     printf("OpenService() failed : %s\n", errmsg);
@@ -1865,15 +1989,18 @@ nt_service_start(SC_HANDLE hService)
 {
   char *errmsg = NULL;
 
-  QueryServiceStatus(hService, &service_status);
+  if (nt_service_loadlibrary()<0)
+    return -1;
+
+  service_fns.QueryServiceStatus_fn(hService, &service_status);
   if (service_status.dwCurrentState == SERVICE_RUNNING) {
     printf("Service is already running\n");
     return 1;
   }
 
-  if (StartService(hService, 0, NULL)) {
+  if (service_fns.StartService_fn(hService, 0, NULL)) {
     /* Loop until the service has finished attempting to start */
-    while (QueryServiceStatus(hService, &service_status)) {
+    while (service_fns.QueryServiceStatus_fn(hService, &service_status)) {
       if (service_status.dwCurrentState == SERVICE_START_PENDING)
         Sleep(500);
       else
@@ -1904,15 +2031,18 @@ int
 nt_service_stop(SC_HANDLE hService)
 {
   char *errmsg = NULL;
+  if (nt_service_loadlibrary()<0)
+    return -1;
 
-  QueryServiceStatus(hService, &service_status);
+  service_fns.QueryServiceStatus_fn(hService, &service_status);
   if (service_status.dwCurrentState == SERVICE_STOPPED) {
     printf("Service is already stopped\n");
     return 1;
   }
 
-  if (ControlService(hService, SERVICE_CONTROL_STOP, &service_status)) {
-    while (QueryServiceStatus(hService, &service_status)) {
+  if (service_fns.ControlService_fn(hService, SERVICE_CONTROL_STOP,
+                                    &service_status)) {
+    while (service_fns.QueryServiceStatus_fn(hService, &service_status)) {
       if (service_status.dwCurrentState == SERVICE_STOP_PENDING)
         Sleep(500);
       else
@@ -1972,6 +2102,8 @@ nt_service_install(void)
   char *errmsg;
   int len = 0;
 
+  if (nt_service_loadlibrary()<0)
+    return -1;
   if (0 == GetModuleFileName(NULL, szPath, MAX_PATH))
     return 0;
 
@@ -2002,7 +2134,7 @@ nt_service_install(void)
    * - and changed the lpPassword param to "" instead of NULL as per an
    *   MSDN article.
    */
-  if ((hService = CreateService(hSCManager, GENSRV_SERVICENAME,
+  if ((hService = service_fns.CreateService_fn(hSCManager, GENSRV_SERVICENAME,
                                 GENSRV_DISPLAYNAME,
                                 SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
                                 SERVICE_AUTO_START, SERVICE_ERROR_IGNORE,
@@ -2010,7 +2142,7 @@ nt_service_install(void)
                                 NULL, NULL, NULL, NULL, "")) == NULL) {
     errmsg = nt_strerror(GetLastError());
     printf("CreateService() failed : %s\n", errmsg);
-    CloseServiceHandle(hSCManager);
+    service_fns.CloseServiceHandle_fn(hSCManager);
     LocalFree(errmsg);
     tor_free(command);
     return 0;
@@ -2018,14 +2150,15 @@ nt_service_install(void)
 
   /* Set the service's description */
   sdBuff.lpDescription = GENSRV_DESCRIPTION;
-  ChangeServiceConfig2(hService, SERVICE_CONFIG_DESCRIPTION, &sdBuff);
+  service_fns.ChangeServiceConfig2_fn(hService, SERVICE_CONFIG_DESCRIPTION,
+                                      &sdBuff);
   printf("Service installed successfully\n");
 
   /* Start the service initially */
   nt_service_start(hService);
 
-  CloseServiceHandle(hService);
-  CloseServiceHandle(hSCManager);
+  service_fns.CloseServiceHandle_fn(hService);
+  service_fns.CloseServiceHandle_fn(hSCManager);
   tor_free(command);
 
   return 0;
@@ -2039,17 +2172,20 @@ nt_service_remove(void)
   SC_HANDLE hService = NULL;
   char *errmsg;
 
+  if (nt_service_loadlibrary()<0)
+    return -1;
+
   if ((hSCManager = nt_service_open_scm()) == NULL) {
     return 0;
   }
 
   if ((hService = nt_service_open(hSCManager)) == NULL) {
-    CloseServiceHandle(hSCManager);
+    service_fns.CloseServiceHandle_fn(hSCManager);
     return 0;
   }
 
   if (nt_service_stop(hService)) {
-    if (DeleteService(hService)) {
+    if (service_fns.DeleteService_fn(hService)) {
       printf("Removed service successfully\n");
     }
     else {
@@ -2062,8 +2198,8 @@ nt_service_remove(void)
     printf("Service could not be removed\n");
   }
 
-  CloseServiceHandle(hService);
-  CloseServiceHandle(hSCManager);
+  service_fns.CloseServiceHandle_fn(hService);
+  service_fns.CloseServiceHandle_fn(hSCManager);
 
   return 0;
 }
@@ -2151,6 +2287,10 @@ tor_main(int argc, char *argv[])
   backup_argc = argc;
   if ((argc >= 3) &&
       (!strcmp(argv[1], "-service") || !strcmp(argv[1], "--service"))) {
+    if (nt_service_loadlibrary() < 0) {
+      printf("Unable to load library support for NT services.\n");
+      return -1;
+    }
     if (!strcmp(argv[2], "install"))
       return nt_service_install();
     if (!strcmp(argv[2], "remove"))
@@ -2164,6 +2304,10 @@ tor_main(int argc, char *argv[])
   }
   // These are left so as not to confuse people who are used to these options
   if (argc >= 2) {
+    if (nt_service_loadlibrary() < 0) {
+      printf("Unable to load library support for NT services.\n");
+      return -1;
+    }
     if (!strcmp(argv[1], "-install") || !strcmp(argv[1], "--install"))
       return nt_service_install();
     if (!strcmp(argv[1], "-remove") || !strcmp(argv[1], "--remove"))
