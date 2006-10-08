@@ -571,22 +571,6 @@ circuit_get_by_circid_orconn(uint16_t circ_id, or_connection_t *conn)
     return circ;
 }
 
-/** Return true iff there is a circ such that
- *  - circ-\>n_circ_id or circ-\>p_circ_id is equal to <b>circ_id</b>, and
- *  - circ is attached to <b>conn</b>, either as p_conn or n_conn.
- * Return NULL if no such circuit exists.
- */
-int
-circuit_id_used_on_conn(uint16_t circ_id, or_connection_t *conn)
-{
-  circuit_t *circ = circuit_get_by_circid_orconn_impl(circ_id, conn);
-  if (circ && circ->marked_for_close)
-    log_fn(LOG_NOTICE, LD_CIRC,
-           "I was about to re-use a circuit ID that had been marked."
-           " Good thing we fixed that bug!");
-  return circ != NULL;
-}
-
 /** Return the circuit that a given edge connection is using. */
 circuit_t *
 circuit_get_by_edge_conn(edge_connection_t *conn)

@@ -1750,7 +1750,6 @@ origin_circuit_t *origin_circuit_new(void);
 or_circuit_t *or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id,
                                         or_connection_t *conn);
-int circuit_id_used_on_conn(uint16_t circ_id, or_connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(edge_connection_t *conn);
 void circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason);
 origin_circuit_t *circuit_get_by_global_id(uint32_t id);

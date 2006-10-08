@@ -87,7 +87,7 @@ get_unique_circ_id_by_conn(or_connection_t *conn)
       return 0;
     }
     test_circ_id |= high_bit;
-  } while (circuit_id_used_on_conn(test_circ_id, conn));
+  } while (circuit_get_by_circid_orconn(test_circ_id, conn));
   return test_circ_id;
 }
 
