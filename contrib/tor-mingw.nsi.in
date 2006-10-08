@@ -3,40 +3,14 @@
 ; See LICENSE for licencing information
 ;-----------------------------------------
 ;
-; How to make an installer:
-;   Step 0. If you are a Tor maintainer, make sure that tor.nsi and
-;           src/win32/orconfig.h all have the correct version number.
-;   Step 1. Download and install OpenSSL.  Make sure that the OpenSSL
-;           version listed below matches the one you downloaded.
-;   Step 2. Download and install NSIS (http://nsis.sourceforge.net)
-;   Step 3. Make a directory under the main tor directory called "bin".
-;   Step 4. Copy ssleay32.dll and libeay32.dll from OpenSSL into "bin".
-;   Step 5. Run man2html on tor.1.in; call the result tor-reference.html
-;           Run man2html on tor-resolve.1; call the result tor-resolve.html
-;   Step 6. Copy torrc.sample.in to torrc.sample.
-;   Step 7. Build tor.exe and tor_resolve.exe; save the result into bin.
-;   Step 8. cd into contrib and run "makensis tor.nsi".
-;
-; Problems:
-;   - Copying torrc.sample.in to torrc.sample and tor.1.in (implicitly)
-;     to tor.1 is a Bad Thing, and leaves us with @autoconf@ vars in the final
-;     result.
-;   - Building Tor requires too much windows C clue.
-;     - We should have actual makefiles for VC that do the right thing.
-;   - I need to learn more NSIS juju to solve these:
-;     - There should be a batteries-included installer that comes with
-;       privoxy too. (Check privoxy license on this; be sure to include
-;       all privoxy documents.)
-;   - The filename should probably have a revision number.
-
 !include "MUI.nsh"
 
-!define VERSION "0.1.2.1-alpha-dev"
+!define VERSION "%VERSION%"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "http://tor.eff.org/"
 
-!define LICENSE "..\LICENSE"
-;BIN is where it expects to find tor.exe, tor_resolve.exe, libcrypto.a
+!define LICENSE "LICENSE"
+;BIN is where it expects to find tor.exe, tor-resolve.exe, libcrypto.a
 ;and libssl.a
 !define BIN "..\bin"
 
@@ -91,7 +65,7 @@ Section "Tor" Tor
    SectionIn RO
    SetOutPath $INSTDIR
    File "${BIN}\tor.exe"
-   File "${BIN}\tor_resolve.exe"
+   File "${BIN}\tor-resolve.exe"
    WriteIniStr "$INSTDIR\Tor Website.url" "InternetShortcut" "URL" ${WEBSITE}
 
    StrCpy $configfile "torrc"
@@ -121,7 +95,7 @@ SectionEnd
 
 Section "Documents" Docs
    SetOutPath "$INSTDIR\Documents"
-   ;File "..\doc\FAQ"
+   ;File "doc\FAQ"
    File "..\doc\HACKING"
    File "..\doc\control-spec.txt"
    File "..\doc\dir-spec.txt"
@@ -178,7 +152,7 @@ Section "Uninstall"
    Delete "$INSTDIR\libcrypto.a"
    Delete "$INSTDIR\libssl.a"
    Delete "$INSTDIR\tor.exe"
-   Delete "$INSTDIR\tor_resolve.exe"
+   Delete "$INSTDIR\tor-resolve.exe"
    Delete "$INSTDIR\Tor Website.url"
    Delete "$INSTDIR\torrc"
    Delete "$INSTDIR\torrc.sample"
