@@ -833,6 +833,7 @@ run_scheduled_events(time_t now)
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */
   if (time_to_check_descriptor < now) {
+    static int dirport_reachability_count = 0;
     time_to_check_descriptor = now + CHECK_DESCRIPTOR_INTERVAL;
     check_descriptor_bandwidth_changed(now);
     if (time_to_check_ipaddress < now) {
@@ -847,8 +848,11 @@ run_scheduled_events(time_t now)
     if (server_mode(options) &&
         (has_completed_circuit || !any_predicted_circuits(now)) &&
         stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
-        !we_are_hibernating())
-      consider_testing_reachability(1, 1);
+        !we_are_hibernating()) {
+      consider_testing_reachability(1, dirport_reachability_count==0);
+      if (++dirport_reachability_count > 5)
+        dirport_reachability_count = 0;
+    }
 
     /* If any networkstatus documents are no longer recent, we need to
      * update all the descriptors' running status. */

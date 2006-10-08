@@ -21,8 +21,6 @@ const char dirserv_c_id[] =
  * directory authorities. */
 #define MAX_UNTRUSTED_NETWORKSTATUSES 16
 
-extern long stats_n_seconds_working;
-
 typedef enum {
   FP_NAMED, /**< Listed in fingerprint file. */
   FP_VALID, /**< Unlisted but believed valid. */
