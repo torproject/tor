@@ -1184,13 +1184,13 @@ static int
 evdns_request_data_build(const char *const name, const int name_len, const u16 trans_id,
 							const u16 type, const u16 class,
 						 u8 *const buf, size_t buf_len) {
-	int j = 0;	// current offset into buf
+	off_t j = 0;	// current offset into buf
 	u16 _t;	 // used by the macros
 	u8 *labels;
 	int labels_len;
 
 #define APPEND16(x) do {                           \
-        if (j + 2 > buf_len)                       \
+        if (j + 2 > buf_len)			   \
             return (-1);                           \
         _t = htons(x);                             \
         memcpy(buf + j, &_t, 2);                   \
