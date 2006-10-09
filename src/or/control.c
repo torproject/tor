@@ -2975,7 +2975,7 @@ static void
 orconn_target_get_name(int long_names,
                        char *name, size_t len, or_connection_t *conn)
 {
-  if (long_names) {
+  if (! long_names) {
     if (conn->nickname)
       strlcpy(name, conn->nickname, len);
     else
@@ -2990,8 +2990,8 @@ orconn_target_get_name(int long_names,
       name[0] = '$';
       base16_encode(name+1, len-1, conn->identity_digest,
                     DIGEST_LEN);
-    } else {
-      tor_snprintf(name, len, "%s:%d",
+    } else { 
+     tor_snprintf(name, len, "%s:%d",
                    conn->_base.address, conn->_base.port);
     }
   }

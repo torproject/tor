@@ -15,6 +15,9 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       uses EVENT_NEW_DESC with verbose nicknames.
     - When stopping an NT service, wait up to 10 sec for it to actually
       stop.  (Patch from Matt Edman; resolves bug 295.)
+    - Fix handling of verbose nicknames with ORCONN controller events:
+      make them show up exactly when requested, rather than exactly when
+      not requested.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07
