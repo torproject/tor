@@ -305,6 +305,7 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *info,
 
   if (onion_pick_cpath_exit(circ, info) < 0 ||
       onion_populate_cpath(circ) < 0) {
+    /* XXX should there be a 'couldn't build a path' reason? */
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return NULL;
   }
@@ -425,7 +426,8 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
        * set_circid_orconn here. */
       circ->n_conn = or_conn;
       if (CIRCUIT_IS_ORIGIN(circ)) {
-        if ((err_reason = circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ))) < 0) {
+        if ((err_reason =
+             circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ))) < 0) {
           log_info(LD_CIRC,
                    "send_next_onion_skin failed; circuit marked for closing.");
           circuit_mark_for_close(circ, -err_reason);
@@ -892,7 +894,7 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer)
    *     means that a connection broke or an extend failed. For now,
    *     just give up.
    */
-  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_OR_CONN_CLOSED);
   return 0;
 
 #if 0

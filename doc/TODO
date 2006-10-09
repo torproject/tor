@@ -58,6 +58,11 @@ N . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
 
 N - Send back RELAY_END cells on malformed RELAY_BEGIN.
 
+N - Change the circuit end reason display a little for reasons from
+    destroyed/truncated circuits.  We want to indicate both that we're
+    closing because somebody told us to, and why they told us they wanted to
+    close.
+
 x - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
     and diversity for bootstrapping clients.

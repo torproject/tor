@@ -428,6 +428,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
   int circ_needs_uptime;
+  int reason = END_CIRC_REASON_TORPROTOCOL;
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
                 circuit->rend_pk_digest,10);
@@ -493,12 +494,14 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     if ((int)len != 7+DIGEST_LEN+2+klen+20+128) {
       log_warn(LD_PROTOCOL, "Bad length %u for version 2 INTRODUCE2 cell.",
                (int)len);
+      reason = END_CIRC_REASON_TORPROTOCOL;
       goto err;
     }
     extend_info->onion_key = crypto_pk_asn1_decode(buf+7+DIGEST_LEN+2, klen);
     if (!extend_info->onion_key) {
       log_warn(LD_PROTOCOL,
                "Error decoding onion key in version 2 INTRODUCE2 cell.");
+      reason = END_CIRC_REASON_TORPROTOCOL;
       goto err;
     }
     ptr = buf+7+DIGEST_LEN+2+klen;
@@ -537,6 +540,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     if (!router) {
       log_info(LD_REND, "Couldn't find router %s named in rendezvous cell.",
                escaped(rp_nickname));
+      /* XXXX Add a no-such-router reason? */
+      reason = END_CIRC_REASON_TORPROTOCOL;
       goto err;
     }
 
@@ -545,6 +550,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
 
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
     log_warn(LD_PROTOCOL, "Bad length %u for INTRODUCE2 cell.", (int)len);
+    reason = END_CIRC_REASON_TORPROTOCOL;
     return -1;
   }
 
@@ -556,11 +562,13 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   if (!dh || crypto_dh_generate_public(dh)<0) {
     log_warn(LD_BUG,"Internal error: couldn't build DH state "
              "or generate public key.");
+    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
   if (crypto_dh_compute_secret(dh, ptr+REND_COOKIE_LEN, DH_KEY_LEN, keys,
                                DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't complete DH handshake");
+    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
 
@@ -583,6 +591,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     log_warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
              "point '%s' for service %s.",
              extend_info->nickname, serviceid);
+    reason = END_CIRC_REASON_CONNECTFAILED;
     goto err;
   }
   log_info(LD_REND,
@@ -612,7 +621,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
  err:
   if (dh) crypto_dh_free(dh);
   if (launched)
-    circuit_mark_for_close(TO_CIRCUIT(launched), END_CIRC_REASON_TORPROTOCOL);
+    circuit_mark_for_close(TO_CIRCUIT(launched), reason);
   if (extend_info) extend_info_free(extend_info);
   return -1;
 }
@@ -717,6 +726,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   char buf[RELAY_PAYLOAD_SIZE];
   char auth[DIGEST_LEN + 9];
   char serviceid[REND_SERVICE_ID_LEN+1];
+  int reason = END_CIRC_REASON_TORPROTOCOL;
 
   tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   tor_assert(circuit->cpath);
@@ -728,6 +738,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
              serviceid, circuit->_base.n_circ_id);
+    /* XXXX Add a no-such-servicer reason? */
+    reason = END_CIRC_REASON_CONNECTFAILED;
     goto err;
   }
 
@@ -748,6 +760,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   r = crypto_pk_private_sign_digest(service->private_key, buf+len, buf, len);
   if (r<0) {
     log_warn(LD_BUG, "Internal error: couldn't sign introduction request.");
+    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
   len += r;
@@ -758,12 +771,13 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
     log_info(LD_GENERAL,
              "Couldn't send introduction request for service %s on circuit %d",
              serviceid, circuit->_base.n_circ_id);
+    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
 
   return;
  err:
-  circuit_mark_for_close(TO_CIRCUIT(circuit), END_CIRC_REASON_TORPROTOCOL);
+  circuit_mark_for_close(TO_CIRCUIT(circuit), reason);
 }
 
 /** Called when we get an INTRO_ESTABLISHED cell; mark the circuit as a
@@ -808,6 +822,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   crypt_path_t *hop;
   char serviceid[REND_SERVICE_ID_LEN+1];
   char hexcookie[9];
+  int reason;
 
   tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   tor_assert(circuit->cpath);
@@ -828,6 +843,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   if (!service) {
     log_warn(LD_GENERAL, "Internal error: unrecognized service ID on "
              "introduction circuit.");
+    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
 
@@ -836,6 +852,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   if (crypto_dh_get_public(hop->dh_handshake_state,
                            buf+REND_COOKIE_LEN, DH_KEY_LEN)<0) {
     log_warn(LD_GENERAL,"Couldn't get DH public key.");
+    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
   memcpy(buf+REND_COOKIE_LEN+DH_KEY_LEN, hop->handshake_digest,
@@ -847,6 +864,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
                                    buf, REND_COOKIE_LEN+DH_KEY_LEN+DIGEST_LEN,
                                    circuit->cpath->prev)<0) {
     log_warn(LD_GENERAL, "Couldn't send RENDEZVOUS1 cell.");
+    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
 
@@ -869,7 +887,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
 
   return;
  err:
-  circuit_mark_for_close(TO_CIRCUIT(circuit), END_CIRC_REASON_TORPROTOCOL);
+  circuit_mark_for_close(TO_CIRCUIT(circuit), reason);
 }
 
 /*

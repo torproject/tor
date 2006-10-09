@@ -751,7 +751,7 @@ $Id$
 
    The syntax is:
 
-     "650" SP "CIRC" SP CircuitID SP CircStatus [SP Path] 
+     "650" SP "CIRC" SP CircuitID SP CircStatus [SP Path]
           [SP "REASON=" Reason] CRLF
 
       CircStatus =
@@ -763,14 +763,18 @@ $Id$
 
       Path = ServerID *("," ServerID)
 
-      Reason = "NONE" / "TORPROTOCOL" / "INTERNAL" / "REQUESTED" / 
+      Reason = "NONE" / "TORPROTOCOL" / "INTERNAL" / "REQUESTED" /
                "HIBERNATING" / "RESOURCELIMIT" / "CONNECTFAILED" /
                "OR_IDENTITY" / "OR_CONN_CLOSED"
 
    The path is provided only when the circuit has been extended at least one
    hop.
 
-   Reason is provided only for FAILED and CLOSED events.
+   The "REASON" field is provided only for FAILED and CLOSED events, and only
+   if extended events are enabled (see 3.19).  Clients MUST accept reasons
+   not listed above.
+
+   [XXXX Explain what the reasons mean.]
 
 4.1.2. Stream status changed
 

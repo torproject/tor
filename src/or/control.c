@@ -144,9 +144,13 @@ static int disable_log_messages = 0;
 static int authentication_cookie_is_set = 0;
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
-typedef enum {
-  SHORT_NAMES,LONG_NAMES,ALL_NAMES
-} name_type_t;
+#define SHORT_NAMES 1
+#define LONG_NAMES 2
+#define ALL_NAMES (SHORT_NAMES|LONG_NAMES)
+#define EXTENDED_FORMAT 4
+#define NONEXTENDED_FORMAT 8
+#define ALL_FORMATS (EXTENDED_FORMAT|NONEXTENDED_FORMAT)
+typedef int event_format_t;
 
 static void connection_printf_to_buf(control_connection_t *conn,
                                      const char *format, ...)
@@ -164,8 +168,11 @@ static void send_control0_error(control_connection_t *conn, uint16_t error,
                                const char *message);
 static void send_control0_event(uint16_t event, uint32_t len,
                                 const char *body);
-static void send_control1_event(uint16_t event, name_type_t which,
+static void send_control1_event(uint16_t event, event_format_t which,
                                 const char *format, ...)
+  CHECK_PRINTF(3,4);
+static void send_control1_event_extended(uint16_t event, event_format_t which,
+                                         const char *format, ...)
   CHECK_PRINTF(3,4);
 static int handle_control_setconf(control_connection_t *conn, uint32_t len,
                                   char *body);
@@ -614,9 +621,12 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
 }
 
 /* Send an event to all v1 controllers that are listening for code
- * <b>event</b>.  The event's body is given by <b>msg</b>. */
+ * <b>event</b>.  The event's body is given by <b>msg</b>.
+ *
+ * docdoc which, is_extended */
 static void
-send_control1_event_string(uint16_t event, name_type_t which, const char *msg)
+send_control1_event_string(uint16_t event, event_format_t which,
+                           const char *msg)
 {
   connection_t **conns;
   int n_conns, i;
@@ -629,11 +639,18 @@ send_control1_event_string(uint16_t event, name_type_t which, const char *msg)
         !conns[i]->marked_for_close &&
         conns[i]->state == CONTROL_CONN_STATE_OPEN_V1) {
       control_connection_t *control_conn = TO_CONTROL_CONN(conns[i]);
-      if (which == SHORT_NAMES) {
-        if (control_conn->use_long_names)
+      if (control_conn->use_long_names) {
+        if (!(which & LONG_NAMES))
           continue;
-      } else if (which == LONG_NAMES) {
-        if (! control_conn->use_long_names)
+      } else {
+        if (!(which & SHORT_NAMES))
+          continue;
+      }
+      if (control_conn->use_extended_events) {
+        if (!(which & EXTENDED_FORMAT))
+          continue;
+      } else {
+        if (!(which & NONEXTENDED_FORMAT))
           continue;
       }
       if (control_conn->event_mask & (1<<event)) {
@@ -645,24 +662,17 @@ send_control1_event_string(uint16_t event, name_type_t which, const char *msg)
   }
 }
 
-/* Send an event to all v1 controllers that are listening for code
- * <b>event</b>.  The event's body is created by the printf-style format in
- * <b>format</b>, and other arguments as provided.
- *
- * Currently the length of the message is limited to 1024 (including the
- * ending \n\r\0. */
 static void
-send_control1_event(uint16_t event, name_type_t which, const char *format, ...)
+send_control1_event_impl(uint16_t event, event_format_t which, int extended,
+                         const char *format, va_list ap)
 {
 #define SEND_CONTROL1_EVENT_BUFFERSIZE 1024
   int r;
   char buf[SEND_CONTROL1_EVENT_BUFFERSIZE]; /* XXXX Length */
-  va_list ap;
   size_t len;
+  char *cp;
 
-  va_start(ap, format);
   r = tor_vsnprintf(buf, sizeof(buf), format, ap);
-  va_end(ap);
   if (r<0) {
     log_warn(LD_BUG, "Unable to format event for controller.");
     return;
@@ -676,7 +686,51 @@ send_control1_event(uint16_t event, name_type_t which, const char *format, ...)
     buf[SEND_CONTROL1_EVENT_BUFFERSIZE-3] = '\r';
   }
 
-  send_control1_event_string(event, which, buf);
+  if (extended && (cp = strchr(buf, '@'))) {
+    which &= ~ALL_FORMATS;
+    *cp = ' ';
+    send_control1_event_string(event, which|EXTENDED_FORMAT, buf);
+    memcpy(cp, "\r\n\0", 3);
+    send_control1_event_string(event, which|NONEXTENDED_FORMAT, buf);
+  } else {
+    send_control1_event_string(event, which|ALL_FORMATS, buf);
+  }
+}
+
+/* Send an event to all v1 controllers that are listening for code
+ * <b>event</b>.  The event's body is created by the printf-style format in
+ * <b>format</b>, and other arguments as provided.
+ *
+ * Currently the length of the message is limited to 1024 (including the
+ * ending \n\r\0. */
+static void
+send_control1_event(uint16_t event, event_format_t which,
+                    const char *format, ...)
+{
+  va_list ap;
+  va_start(ap, format);
+  send_control1_event_impl(event, which, 0, format, ap);
+  va_end(ap);
+}
+
+/* Send an event to all v1 controllers that are listening for code
+ * <b>event</b>.  The event's body is created by the printf-style format in
+ * <b>format</b>, and other arguments as provided.
+ *
+ * If the format contains a single '@' character, it will be replaced with a
+ * space and all text after that character will be sent only to controllers
+ * that have enabled extended events.
+ *
+ * Currently the length of the message is limited to 1024 (including the
+ * ending \n\r\0. */
+static void
+send_control1_event_extended(uint16_t event, event_format_t which,
+                             const char *format, ...)
+{
+  va_list ap;
+  va_start(ap, format);
+  send_control1_event_impl(event, which, 1, format, ap);
+  va_end(ap);
 }
 
 /** Given a text circuit <b>id</b>, return the corresponding circuit. */
@@ -1009,7 +1063,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
     smartlist_free(events);
   }
   conn->event_mask = event_mask;
-  conn->use_extended_events = extended;
+  if (extended)
+    conn->use_extended_events = 1;
 
   control_update_global_event_mask();
   send_control_done(conn);
@@ -2338,7 +2393,7 @@ handle_control_usefeature(control_connection_t *conn,
   SMARTLIST_FOREACH(args, const char *, arg, {
       if (!strcasecmp(arg, "VERBOSE_NAMES"))
         verbose_names = 1;
-      else if (!strcasecmp(arg, "EXTENDED_EVENTS"))
+      else if (!strcasecmp(arg, "EXTENDED_FORMAT"))
         extended_events = 1;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",
@@ -2744,11 +2799,43 @@ connection_control_process_inbuf(control_connection_t *conn)
     return connection_control_process_inbuf_v1(conn);
 }
 
+static const char *
+circuit_end_reason_to_string(int reason)
+{
+  switch (reason) {
+    case END_CIRC_AT_ORIGIN:
+      /* This shouldn't get passed here; it's a catch-all reason. */
+      return "REASON=ORIGIN";
+    case END_CIRC_REASON_NONE:
+      /* This shouldn't get passed here; it's a catch-all reason. */
+      return "REASON=NONE";
+    case END_CIRC_REASON_TORPROTOCOL:
+      return "REASON=TORPROTOCOL";
+    case END_CIRC_REASON_INTERNAL:
+      return "REASON=INTERNAL";
+    case END_CIRC_REASON_REQUESTED:
+      return "REASON=REQUESTED";
+    case END_CIRC_REASON_HIBERNATING:
+      return "REASON=HIBERNATING";
+    case END_CIRC_REASON_RESOURCELIMIT:
+      return "REASON=RESOURCELIMIT";
+    case END_CIRC_REASON_CONNECTFAILED:
+      return "REASON=CONNECTFAILED";
+    case END_CIRC_REASON_OR_IDENTITY:
+      return "REASON=OR_IDENTITY";
+    case END_CIRC_REASON_OR_CONN_CLOSED:
+      return "REASON=OR_CONN_CLOSED";
+    default:
+      log_warn(LD_BUG, "Unrecognized reason code %d", (int)reason);
+      return NULL;
+  }
+}
+
 /** Something has happened to circuit <b>circ</b>: tell any interested
  * control connections. */
 int
 control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
-        int rsn)
+                             int reason_code)
 {
   char *path=NULL, *msg;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
@@ -2783,34 +2870,20 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
         return 0;
       }
 
-    if(tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
-        switch (rsn)
-          {
-          case END_CIRC_AT_ORIGIN: reason = " REASON=ORIGIN"; break;
-          case END_CIRC_REASON_NONE: reason = " REASON=NONE"; break;
-          case END_CIRC_REASON_TORPROTOCOL: reason = " REASON=TORPROTOCOL"; break;
-          case END_CIRC_REASON_INTERNAL: reason = " REASON=INTERNAL"; break;
-          case END_CIRC_REASON_REQUESTED: reason = " REASON=REQUESTED"; break;
-          case END_CIRC_REASON_HIBERNATING: reason = " REASON=HIBERNATING"; break;
-          case END_CIRC_REASON_RESOURCELIMIT: reason = " REASON=RESOURCELIMIT"; break;
-          case END_CIRC_REASON_CONNECTFAILED: reason = " REASON=CONNECTFAILED"; break;
-          case END_CIRC_REASON_OR_IDENTITY: reason = " REASON=OR_IDENTITY"; break;
-          case END_CIRC_REASON_OR_CONN_CLOSED: reason = " REASON=OR_CONN_CLOSED"; break;
-          default:
-            log_warn(LD_BUG, "Unrecognized reason code %d", (int)rsn);
-          }
+    if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
+      reason = circuit_end_reason_to_string(reason_code);
     }
 
     if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
-      send_control1_event(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
-                          "650 CIRC %lu %s %s%s\r\n",
+      send_control1_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
+                          "650 CIRC %lu %s %s@%s\r\n",
                           (unsigned long)circ->global_identifier,
                           status, path, reason);
     }
     if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
       char *vpath = circuit_list_path_for_controller(circ);
-      send_control1_event(EVENT_CIRCUIT_STATUS, LONG_NAMES,
-                          "650 CIRC %lu %s %s%s\r\n",
+      send_control1_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
+                          "650 CIRC %lu %s %s@%s\r\n",
                           (unsigned long)circ->global_identifier,
                           status, vpath, reason);
       tor_free(vpath);
@@ -3097,7 +3170,7 @@ control_event_descriptors_changed(smartlist_t *routers)
     size_t len = strlen(ids)+32;
     msg = tor_malloc(len);
     tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
-    send_control1_event_string(EVENT_NEW_DESC, SHORT_NAMES, msg);
+    send_control1_event_string(EVENT_NEW_DESC, SHORT_NAMES|ALL_FORMATS, msg);
     tor_free(ids);
     tor_free(msg);
   }
@@ -3114,7 +3187,7 @@ control_event_descriptors_changed(smartlist_t *routers)
     len = strlen(ids)+32;
     msg = tor_malloc(len);
     tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
-    send_control1_event_string(EVENT_NEW_DESC, LONG_NAMES, msg);
+    send_control1_event_string(EVENT_NEW_DESC, LONG_NAMES|ALL_FORMATS, msg);
     tor_free(ids);
     tor_free(msg);
     SMARTLIST_FOREACH(names, char *, cp, tor_free(cp));
@@ -3180,7 +3253,8 @@ control_event_or_authdir_new_descriptor(const char *action,
   buf = tor_malloc(totallen);
   strlcpy(buf, firstline, totallen);
   strlcpy(buf+strlen(firstline), esc, totallen);
-  send_control1_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_NAMES, buf);
+  send_control1_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_NAMES|ALL_FORMATS,
+                             buf);
 
   tor_free(esc);
   tor_free(buf);

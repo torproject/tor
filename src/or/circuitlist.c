@@ -824,7 +824,7 @@ void
 _circuit_mark_for_close(circuit_t *circ, int reason, int line,
                         const char *file)
 {
-  int orig_reason = reason;
+  int orig_reason = reason; /* Passed to the controller */
   assert_circuit_ok(circ);
   tor_assert(line);
   tor_assert(file);
@@ -844,10 +844,8 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     }
     reason = END_CIRC_REASON_NONE;
   } else if (CIRCUIT_IS_ORIGIN(circ) && reason != END_CIRC_REASON_NONE) {
-    /* Don't warn about this; there are plenty of places where our code
-     * is origin-agnostic. */
-    /* In fact, due to the desire to export reason information to the 
-     * controller, it has been made even more "origin-agnostic" than before */
+    /* We don't send reasons when closing circuits at the origin, but we want
+     * to track them anyway so we can give them to the controller. */
     reason = END_CIRC_REASON_NONE;
   }
   if (reason < _END_CIRC_REASON_MIN || reason > _END_CIRC_REASON_MAX) {
