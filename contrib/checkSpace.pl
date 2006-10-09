@@ -80,10 +80,10 @@ for $fn (@ARGV) {
             #    print "     {X:$fn:$.\n";
             #}
             ## Warn about function calls with space before parens.
-            if (/(\w+)\s\(/) {
+            if (/(\w+)\s\(([A-Z]*)/) {
                 if ($1 ne "if" and $1 ne "while" and $1 ne "for" and
                     $1 ne "switch" and $1 ne "return" and $1 ne "int" and
-                    $1 ne "elsif" and $1 ne "WINAPI" and
+                    $1 ne "elsif" and $1 ne "WINAPI" and $2 ne "WINAPI" and
                     $1 ne "void" and $1 ne "__attribute__") {
                     print "     fn ():$fn:$.\n";
                 }
