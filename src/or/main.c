@@ -2050,8 +2050,8 @@ nt_service_stop(SC_HANDLE hService)
     while (service_fns.QueryServiceStatus_fn(hService, &service_status) &&
            (service_status.dwCurrentState != SERVICE_STOPPED) &&
            (wait_time < MAX_SERVICE_WAIT_TIME)) {
-        Sleep(1000);
-        wait_time++;
+      Sleep(1000);
+      wait_time++;
     }
     if (service_status.dwCurrentState == SERVICE_STOPPED) {
       printf("Service stopped successfully\n");
@@ -2157,7 +2157,7 @@ nt_service_install(void)
   /* Set the service's description */
   sdBuff.lpDescription = GENSRV_DESCRIPTION;
   service_fns.ChangeServiceConfig2A_fn(hService, SERVICE_CONFIG_DESCRIPTION,
-                                      &sdBuff);
+                                       &sdBuff);
   printf("Service installed successfully\n");
 
   /* Start the service initially */
