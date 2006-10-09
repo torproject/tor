@@ -4,6 +4,10 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       field is sent only to controllers that have enabled the extended
       event format. (Patch from Mike Perry)
 
+  o Security bugfixes:
+    - When the user sends a NEWNYM signal, clear the client-side DNS
+      cache too. Otherwise we continue to act on previous information.
+
   o Minor bugfixes:
     - Change NT service functions to be loaded on demand.  This lets us
       build with mingw without breaking Tor for Windows 98 users.

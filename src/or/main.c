@@ -1331,6 +1331,7 @@ signal_callback(int fd, short events, void *arg)
 #endif
     case SIGNEWNYM:
       circuit_expire_all_dirty_circs();
+      addressmap_clear_transient();
       break;
   }
 }
