@@ -6,6 +6,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       chews through many circuits before giving up.
     - In the hidden service example in torrc.sample, stop recommending
       esoteric and discouraged hidden service options.
+    - Avoid sending junk to controllers or segfaulting when a controller
+      uses EVENT_NEW_DESC with verbose nicknames.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07

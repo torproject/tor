@@ -490,6 +490,10 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
   va_start(ap,format);
   r = tor_vsnprintf(buf, sizeof(buf), format, ap);
   va_end(ap);
+  if (r<0) {
+    log_warn(LD_BUG, "Unable to format string for controller.");
+    return;
+  }
   len = strlen(buf);
   if (memcmp("\r\n\0", buf+len-2, 3)) {
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-1] = '\0';
@@ -659,6 +663,10 @@ send_control1_event(uint16_t event, name_type_t which, const char *format, ...)
   va_start(ap, format);
   r = tor_vsnprintf(buf, sizeof(buf), format, ap);
   va_end(ap);
+  if (r<0) {
+    log_warn(LD_BUG, "Unable to format event for controller.");
+    return;
+  }
 
   len = strlen(buf);
   if (memcmp("\r\n\0", buf+len-2, 3)) {
@@ -3076,6 +3084,7 @@ control_event_descriptors_changed(smartlist_t *routers)
     size_t len;
     SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
         char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
+        router_get_verbose_nickname(b, ri);
         smartlist_add(names, b);
       });
     ids = smartlist_join_strings(names, " ", 0, &len);
