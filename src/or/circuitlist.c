@@ -780,7 +780,7 @@ circuit_mark_all_unused_circs(void)
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         !circ->timestamp_dirty)
-      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+      circuit_mark_for_close(circ, END_CIRC_REASON_REQUESTED);
   }
 }
 
@@ -824,6 +824,7 @@ void
 _circuit_mark_for_close(circuit_t *circ, int reason, int line,
                         const char *file)
 {
+  int orig_reason = reason;
   assert_circuit_ok(circ);
   tor_assert(line);
   tor_assert(file);
@@ -845,11 +846,13 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   } else if (CIRCUIT_IS_ORIGIN(circ) && reason != END_CIRC_REASON_NONE) {
     /* Don't warn about this; there are plenty of places where our code
      * is origin-agnostic. */
+    /* In fact, due to the desire to export reason information to the 
+     * controller, it has been made even more "origin-agnostic" than before */
     reason = END_CIRC_REASON_NONE;
   }
   if (reason < _END_CIRC_REASON_MIN || reason > _END_CIRC_REASON_MAX) {
     log_warn(LD_BUG, "Reason %d out of range at %s:%d", reason, file, line);
-    reason = END_CIRC_REASON_NONE;
+    orig_reason = reason = END_CIRC_REASON_NONE;
   }
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
@@ -872,7 +875,8 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   }
   if (CIRCUIT_IS_ORIGIN(circ)) {
     control_event_circuit_status(TO_ORIGIN_CIRCUIT(circ),
-     (circ->state == CIRCUIT_STATE_OPEN)?CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED);
+     (circ->state == CIRCUIT_STATE_OPEN)?CIRC_EVENT_CLOSED:CIRC_EVENT_FAILED,
+     orig_reason);
   }
   if (circ->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);

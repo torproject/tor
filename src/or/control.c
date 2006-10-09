@@ -1867,8 +1867,9 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   /* now that we've populated the cpath, start extending */
   if (zero_circ) {
-    if (circuit_handle_first_hop(circ) < 0) {
-      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+    int err_reason = 0;
+    if ((err_reason = circuit_handle_first_hop(circ)) < 0) {
+      circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
       if (v0)
         send_control0_error(conn, ERR_INTERNAL, "couldn't start circuit");
       else
@@ -1877,11 +1878,12 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
     }
   } else {
     if (circ->_base.state == CIRCUIT_STATE_OPEN) {
+      int err_reason = 0;
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
-      if (circuit_send_next_onion_skin(circ) < 0) {
+      if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
         log_info(LD_CONTROL,
                  "send_next_onion_skin failed; circuit marked for closing.");
-        circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+        circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
         if (v0)
           send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
         else
@@ -2745,7 +2747,8 @@ connection_control_process_inbuf(control_connection_t *conn)
 /** Something has happened to circuit <b>circ</b>: tell any interested
  * control connections. */
 int
-control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
+control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
+        int rsn)
 {
   char *path=NULL, *msg;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
@@ -2767,6 +2770,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
   }
   if (EVENT_IS_INTERESTING1(EVENT_CIRCUIT_STATUS)) {
     const char *status;
+    const char *reason = "";
     switch (tp)
       {
       case CIRC_EVENT_LAUNCHED: status = "LAUNCHED"; break;
@@ -2778,18 +2782,37 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp)
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
+
+    if(tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
+        switch (rsn)
+          {
+          case END_CIRC_AT_ORIGIN: reason = " REASON=ORIGIN"; break;
+          case END_CIRC_REASON_NONE: reason = " REASON=NONE"; break;
+          case END_CIRC_REASON_TORPROTOCOL: reason = " REASON=TORPROTOCOL"; break;
+          case END_CIRC_REASON_INTERNAL: reason = " REASON=INTERNAL"; break;
+          case END_CIRC_REASON_REQUESTED: reason = " REASON=REQUESTED"; break;
+          case END_CIRC_REASON_HIBERNATING: reason = " REASON=HIBERNATING"; break;
+          case END_CIRC_REASON_RESOURCELIMIT: reason = " REASON=RESOURCELIMIT"; break;
+          case END_CIRC_REASON_CONNECTFAILED: reason = " REASON=CONNECTFAILED"; break;
+          case END_CIRC_REASON_OR_IDENTITY: reason = " REASON=OR_IDENTITY"; break;
+          case END_CIRC_REASON_OR_CONN_CLOSED: reason = " REASON=OR_CONN_CLOSED"; break;
+          default:
+            log_warn(LD_BUG, "Unrecognized reason code %d", (int)rsn);
+          }
+    }
+
     if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
       send_control1_event(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
-                          "650 CIRC %lu %s %s\r\n",
+                          "650 CIRC %lu %s %s%s\r\n",
                           (unsigned long)circ->global_identifier,
-                          status, path);
+                          status, path, reason);
     }
     if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
       char *vpath = circuit_list_path_for_controller(circ);
       send_control1_event(EVENT_CIRCUIT_STATUS, LONG_NAMES,
-                          "650 CIRC %lu %s %s\r\n",
+                          "650 CIRC %lu %s %s%s\r\n",
                           (unsigned long)circ->global_identifier,
-                          status, vpath);
+                          status, vpath, reason);
       tor_free(vpath);
     }
   }

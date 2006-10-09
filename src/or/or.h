@@ -2069,7 +2069,7 @@ int connection_control_reached_eof(control_connection_t *conn);
 int connection_control_process_inbuf(control_connection_t *conn);
 
 int control_event_circuit_status(origin_circuit_t *circ,
-                                 circuit_status_event_t e);
+                                 circuit_status_event_t e, int rsn);
 int control_event_stream_status(edge_connection_t *conn,
                                 stream_status_event_t e);
 int control_event_or_conn_status(or_connection_t *conn,

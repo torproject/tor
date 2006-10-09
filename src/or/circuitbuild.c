@@ -299,19 +299,20 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *info,
                           int need_uptime, int need_capacity, int internal)
 {
   origin_circuit_t *circ;
+  int err_reason = 0;
 
   circ = origin_circuit_init(purpose, need_uptime, need_capacity, internal);
 
   if (onion_pick_cpath_exit(circ, info) < 0 ||
       onion_populate_cpath(circ) < 0) {
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return NULL;
   }
 
-  control_event_circuit_status(circ, CIRC_EVENT_LAUNCHED);
+  control_event_circuit_status(circ, CIRC_EVENT_LAUNCHED, 0);
 
-  if (circuit_handle_first_hop(circ) < 0) {
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+  if ((err_reason = circuit_handle_first_hop(circ)) < 0) {
+    circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
     return NULL;
   }
   return circ;
@@ -320,7 +321,7 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *info,
 /** Start establishing the first hop of our circuit. Figure out what
  * OR we should connect to, and if necessary start the connection to
  * it. If we're already connected, then send the 'create' cell.
- * Return 0 for ok, -1 if circ should be marked-for-close. */
+ * Return 0 for ok, -reason if circ should be marked-for-close. */
 int
 circuit_handle_first_hop(origin_circuit_t *circ)
 {
@@ -328,6 +329,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   or_connection_t *n_conn;
   char tmpbuf[INET_NTOA_BUF_LEN];
   struct in_addr in;
+  int err_reason = 0;
 
   firsthop = onion_next_hop_in_cpath(circ->cpath);
   tor_assert(firsthop);
@@ -360,7 +362,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
                                      firsthop->extend_info->identity_digest);
       if (!n_conn) { /* connect failed, forget the whole thing */
         log_info(LD_CIRC,"connect to firsthop failed. Closing.");
-        return -1;
+        return -END_CIRC_REASON_CONNECTFAILED;
       }
     }
 
@@ -375,9 +377,9 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     circ->_base.n_port = n_conn->_base.port;
     circ->_base.n_conn = n_conn;
     log_debug(LD_CIRC,"Conn open. Delivering first onion skin.");
-    if (circuit_send_next_onion_skin(circ) < 0) {
+    if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
       log_info(LD_CIRC,"circuit_send_next_onion_skin failed.");
-      return -1;
+      return err_reason;
     }
   }
   return 0;
@@ -394,6 +396,7 @@ void
 circuit_n_conn_done(or_connection_t *or_conn, int status)
 {
   smartlist_t *changed_circs;
+  int err_reason = 0;
 
   log_debug(LD_CIRC,"or_conn to %s, status=%d",
             or_conn->nickname ? or_conn->nickname : "NULL", status);
@@ -422,10 +425,10 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
        * set_circid_orconn here. */
       circ->n_conn = or_conn;
       if (CIRCUIT_IS_ORIGIN(circ)) {
-        if (circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)) < 0) {
+        if ((err_reason = circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ))) < 0) {
           log_info(LD_CIRC,
                    "send_next_onion_skin failed; circuit marked for closing.");
-          circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+          circuit_mark_for_close(circ, -err_reason);
           continue;
           /* XXX could this be bad, eg if next_onion_skin failed because conn
            *     died? */
@@ -865,7 +868,7 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
   log_info(LD_CIRC,"Finished building %scircuit hop:",
            (reply_type == CELL_CREATED_FAST) ? "fast " : "");
   circuit_log_path(LOG_INFO,LD_CIRC,circ);
-  control_event_circuit_status(circ, CIRC_EVENT_EXTENDED);
+  control_event_circuit_status(circ, CIRC_EVENT_EXTENDED, 0);
 
   return 0;
 }
@@ -889,7 +892,7 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer)
    *     means that a connection broke or an extend failed. For now,
    *     just give up.
    */
-  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return 0;
 
 #if 0
@@ -1393,12 +1396,13 @@ circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info)
 int
 circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info)
 {
+  int err_reason = 0;
   circuit_append_new_exit(circ, info);
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
-  if (circuit_send_next_onion_skin(circ)<0) {
+  if ((err_reason = circuit_send_next_onion_skin(circ))<0) {
     log_warn(LD_CIRC, "Couldn't extend circuit to new point '%s'.",
              info->nickname);
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+    circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
     return -1;
   }
   return 0;

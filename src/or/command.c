@@ -273,18 +273,19 @@ command_process_created_cell(cell_t *cell, or_connection_t *conn)
 
   if (CIRCUIT_IS_ORIGIN(circ)) { /* we're the OP. Handshake this. */
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+    int err_reason = 0;
     log_debug(LD_OR,"at OP. Finishing handshake.");
-    if (circuit_finish_handshake(origin_circ, cell->command,
-                                 cell->payload) < 0) {
+    if ((err_reason = circuit_finish_handshake(origin_circ, cell->command,
+                                 cell->payload)) < 0) {
       log_warn(LD_OR,"circuit_finish_handshake failed.");
-      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+      circuit_mark_for_close(circ, -err_reason);
       return;
     }
     log_debug(LD_OR,"Moving to next skin.");
-    if (circuit_send_next_onion_skin(origin_circ) < 0) {
+    if ((err_reason = circuit_send_next_onion_skin(origin_circ)) < 0) {
       log_info(LD_OR,"circuit_send_next_onion_skin failed.");
       /* XXX push this circuit_close lower */
-      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+      circuit_mark_for_close(circ, -err_reason);
       return;
     }
   } else { /* pack it into an extended relay cell, and send it. */

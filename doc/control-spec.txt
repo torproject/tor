@@ -751,7 +751,8 @@ $Id$
 
    The syntax is:
 
-     "650" SP "CIRC" SP CircuitID SP CircStatus [SP Path]
+     "650" SP "CIRC" SP CircuitID SP CircStatus [SP Path] 
+          [SP "REASON=" Reason] CRLF
 
       CircStatus =
                "LAUNCHED" / ; circuit ID assigned to new circuit
@@ -762,8 +763,14 @@ $Id$
 
       Path = ServerID *("," ServerID)
 
+      Reason = "NONE" / "TORPROTOCOL" / "INTERNAL" / "REQUESTED" / 
+               "HIBERNATING" / "RESOURCELIMIT" / "CONNECTFAILED" /
+               "OR_IDENTITY" / "OR_CONN_CLOSED"
+
    The path is provided only when the circuit has been extended at least one
    hop.
+
+   Reason is provided only for FAILED and CLOSED events.
 
 4.1.2. Stream status changed
 

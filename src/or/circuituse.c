@@ -265,7 +265,7 @@ circuit_expire_building(time_t now)
                circuit_state_to_string(victim->state), victim->purpose);
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
-    circuit_mark_for_close(victim, END_CIRC_AT_ORIGIN);
+    circuit_mark_for_close(victim, END_CIRC_REASON_CONNECTFAILED);
   }
 }
 
@@ -583,7 +583,7 @@ circuit_expire_old_circuits(time_t now)
       log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, purp %d)",
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
-      circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+      circuit_mark_for_close(circ, END_CIRC_REASON_REQUESTED);
     } else if (!circ->timestamp_dirty &&
                circ->state == CIRCUIT_STATE_OPEN &&
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
@@ -591,7 +591,7 @@ circuit_expire_old_circuits(time_t now)
         log_debug(LD_CIRC,
                   "Closing circuit that has been unused for %d seconds.",
                   (int)(now - circ->timestamp_created));
-        circuit_mark_for_close(circ, END_CIRC_AT_ORIGIN);
+        circuit_mark_for_close(circ, END_CIRC_REASON_REQUESTED);
       }
     }
   }
@@ -674,7 +674,7 @@ circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 void
 circuit_has_opened(origin_circuit_t *circ)
 {
-  control_event_circuit_status(circ, CIRC_EVENT_BUILT);
+  control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
 
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
