@@ -22,6 +22,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
     - Fix handling of verbose nicknames with ORCONN controller events:
       make them show up exactly when requested, rather than exactly when
       not requested.
+    - When reporting verbose nicknames in entry_guards_getinfo(), avoid
+      printing a duplicate "$" in the keys we send.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07

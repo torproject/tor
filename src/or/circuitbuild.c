@@ -2481,9 +2481,9 @@ entry_guards_getinfo(int use_long_names, const char *question, char **answer)
         }
         if (when) {
           format_iso_time(tbuf, when);
-          tor_snprintf(c, len, "$%s %s %s\n", nbuf, status, tbuf);
+          tor_snprintf(c, len, "%s %s %s\n", nbuf, status, tbuf);
         } else {
-          tor_snprintf(c, len, "$%s %s\n", nbuf, status);
+          tor_snprintf(c, len, "%s %s\n", nbuf, status);
         }
         smartlist_add(sl, c);
       });
