@@ -14,6 +14,10 @@ Changes in version 0.1.1.25 - 2006-10-?? [ongoing]
       tests when there's already one in progress -- unreachable
       servers were stacking up dozens of testing streams.
 
+  o Security bugfixes:
+    - When the user sends a NEWNYM signal, clear the client-side DNS
+      cache too. Otherwise we continue to act on previous information.
+
   o Minor bugfixes:
     - Avoid a memory corruption bug when creating a hash table for
       the first time.
