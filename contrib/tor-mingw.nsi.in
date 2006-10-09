@@ -5,7 +5,7 @@
 ;
 !include "MUI.nsh"
 
-!define VERSION "%VERSION%"
+!define VERSION "0.1.2.2-alpha"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "http://tor.eff.org/"
 
@@ -25,6 +25,13 @@ Caption "Tor ${VERSION} Setup"
 BrandingText "The Onion Router"
 CRCCheck on
 XPStyle on
+VIProductVersion "${VERSION}"
+VIAddVersionKey "ProductName" "The Onion Router: Tor"
+VIAddVersionKey "Comments" "http://tor.eff.org"
+VIAddVersionKey "LegalTrademarks" "Three line BSD"
+VIAddVersionKey "LegalCopyright" "©2004-2006, Roger Dingledine, Nick Mathewson"
+VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at http://tor.eff.org/"
+VIAddVersionKey "FileVersion" "${VERSION}"
 
 ;Use upx on the installer header to shrink the size.
 !packhdr header.dat "upx --best header.dat"
