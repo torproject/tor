@@ -154,7 +154,6 @@ connection_or_read_proxy_response(or_connection_t *or_conn)
   char *reason=NULL;
   int status_code;
   time_t date_header;
-  int compression;
   connection_t *conn = TO_CONN(or_conn);
 
   switch (fetch_from_buf_http(conn->inbuf,
@@ -171,7 +170,7 @@ connection_or_read_proxy_response(or_connection_t *or_conn)
   }
 
   if (parse_http_response(headers, &status_code, &date_header,
-                          &compression, &reason) < 0) {
+                          NULL, &reason) < 0) {
     log_warn(LD_OR,
              "Unparseable headers from proxy (connecting to '%s'). Closing.",
              conn->address);

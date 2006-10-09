@@ -13,7 +13,7 @@
 #define TORGZIP_H_ID "$Id$"
 
 typedef enum {
-  GZIP_METHOD=1, ZLIB_METHOD=2, UNKNOWN_METHOD=3
+  NO_METHOD=0, GZIP_METHOD=1, ZLIB_METHOD=2, UNKNOWN_METHOD=3
 } compress_method_t;
 
 int

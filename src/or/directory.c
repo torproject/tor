@@ -717,7 +717,7 @@ http_set_address_origin(const char *headers, connection_t *conn)
  */
 int
 parse_http_response(const char *headers, int *code, time_t *date,
-                    int *compression, char **reason)
+                    compress_method_t *compression, char **reason)
 {
   int n1, n2;
   char datestr[RFC1123_TIME_LEN+1];
@@ -771,7 +771,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
         enc = s+18; break;
       });
     if (!enc || !strcmp(enc, "identity")) {
-      *compression = 0;
+      *compression = NO_METHOD;
     } else if (!strcmp(enc, "deflate") || !strcmp(enc, "x-deflate")) {
       *compression = ZLIB_METHOD;
     } else if (!strcmp(enc, "gzip") || !strcmp(enc, "x-gzip")) {
@@ -779,7 +779,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
     } else {
       log_info(LD_HTTP, "Unrecognized content encoding: %s. Trying to deal.",
                escaped(enc));
-      *compression = -1;
+      *compression = UNKNOWN_METHOD;
     }
   }
   SMARTLIST_FOREACH(parsed_headers, char *, s, tor_free(s));
@@ -834,7 +834,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   int status_code;
   time_t now, date_header=0;
   int delta;
-  int compression;
+  compress_method_t compression;
   int plausible;
   int skewed=0;
   int allow_partial = conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC;
@@ -909,11 +909,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   plausible = body_is_plausible(body, body_len, conn->_base.purpose);
-  if (compression || !plausible) {
+  if (compression != NO_METHOD || !plausible) {
     char *new_body = NULL;
     size_t new_len = 0;
-    int guessed = detect_compression_method(body, body_len);
-    if (compression <= 0 || guessed != compression) {
+    compress_method_t guessed = detect_compression_method(body, body_len);
+    if (compression == UNKNOWN_METHOD || guessed != compression) {
       /* Tell the user if we don't believe what we're told about compression.*/
       const char *description1, *description2;
       if (compression == ZLIB_METHOD)
@@ -940,12 +940,14 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                (compression>0 && guessed>0)?"  Trying both.":"");
     }
     /* Try declared compression first if we can. */
-    if (compression > 0)
+    if (compression == GZIP_METHOD  || compression == ZLIB_METHOD)
       tor_gzip_uncompress(&new_body, &new_len, body, body_len, compression,
                           !allow_partial, LOG_PROTOCOL_WARN);
     /* Okay, if that didn't work, and we think that it was compressed
      * differently, try that. */
-    if (!new_body && guessed > 0 && compression != guessed)
+    if (!new_body &&
+        (guessed == GZIP_METHOD || guessed == ZLIB_METHOD) &&
+        compression != guessed)
       tor_gzip_uncompress(&new_body, &new_len, body, body_len, guessed,
                           !allow_partial, LOG_PROTOCOL_WARN);
     /* If we're pretty sure that we have a compressed directory, and
