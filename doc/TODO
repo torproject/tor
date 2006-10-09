@@ -224,11 +224,6 @@ For blocking-resistance scheme:
   X allow ordinary-looking ssl for dir connections. need a new dirport
     for this, or can we handle both ssl and non-ssl, or should we
     entirely switch to ssl in certain cases?
-Rd- Official way to do authenticated dir conns: connect to OR port,
-    and exit to 'localhost:dir-port'.
-    - Make everybody with a dir-port implicitly accept exit to
-      localhost:dir-port.
-    - Check whether this works with one-hop circ case.
 d - need to figure out how to fetch status of a few servers from the BDA
     without fetching all statuses. A new URL to fetch I presume?
 
@@ -302,7 +297,7 @@ Minor items for 0.1.2.x as time permits:
     us play nice with websites when Tor users want to crawl them; it
     also introduces DoS opportunities.
 ! - The bw_accounting file should get merged into the state file.
-R - Streamline how we pick entry nodes.
+  - Streamline how we pick entry nodes.
 ! - Better installers and build processes.
     - Commit edmanm's win32 makefile to tor contrib, or write a new one.
   - Christian Grothoff's attack of infinite-length circuit.
