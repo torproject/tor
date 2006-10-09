@@ -24,6 +24,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       not requested.
     - When reporting verbose nicknames in entry_guards_getinfo(), avoid
       printing a duplicate "$" in the keys we send.
+    - Stop triggering asserts if the controller tries to extend hidden
+      service circuits.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07

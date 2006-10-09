@@ -703,9 +703,9 @@ circuit_has_opened(origin_circuit_t *circ)
     case CIRCUIT_PURPOSE_TESTING:
       circuit_testing_opened(circ);
       break;
-    default:
-      log_err(LD_BUG,"unhandled purpose %d",circ->_base.purpose);
-      tor_assert(0);
+    /* default:
+     * This won't happen in normal operation, but might happen if the
+     * controller did it. Just let it slide. */
   }
 }
 
@@ -793,10 +793,9 @@ circuit_build_failed(origin_circuit_t *circ)
                failed_at_last_hop?"last":"non-last");
       rend_service_relaunch_rendezvous(circ);
       break;
-    default:
-      /* Other cases are impossible, since this function is only called with
-       * unbuilt circuits. */
-      tor_assert(0);
+    /* default:
+     * This won't happen in normal operation, but might happen if the
+     * controller did it. Just let it slide. */
   }
 }
 
