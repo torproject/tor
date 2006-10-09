@@ -8,6 +8,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       esoteric and discouraged hidden service options.
     - Avoid sending junk to controllers or segfaulting when a controller
       uses EVENT_NEW_DESC with verbose nicknames.
+    - When stopping an NT service, wait up to 10 sec for it to actually
+      stop.  (Patch from Matt Edman; resolves bug 295.)
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07

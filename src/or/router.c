@@ -500,12 +500,12 @@ server_has_changed_ip(void)
   mark_my_descriptor_dirty();
 }
 
-/** We have enough testing circuit open. Send a bunch of "drop"
+/** We have enough testing circuits open. Send a bunch of "drop"
  * cells down each of them, to exercise our bandwidth. */
 void
 router_perform_bandwidth_test(int num_circs, time_t now)
 {
-  int num_cells = get_options()->BandwidthRate * 10 / CELL_NETWORK_SIZE;
+  int num_cells = (int)(get_options()->BandwidthRate * 10 / CELL_NETWORK_SIZE);
   int max_cells = num_cells < CIRCWINDOW_START ?
                     num_cells : CIRCWINDOW_START;
   int cells_per_circuit = max_cells / num_circs;

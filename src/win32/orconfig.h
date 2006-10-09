@@ -220,6 +220,9 @@
 
 #define HAVE_EVENT_H
 
+/* Define to 1 iff we represent negative integers with two's complement */
+#define USING_TWOS_COMPLEMENT
+
 /* Version number of package */
 #define VERSION "0.1.2.2-alpha-dev"
 
