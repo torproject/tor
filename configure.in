@@ -338,7 +338,7 @@ if test "$ac_cv_openssl_dir" != "(system)"; then
   fi
 fi
 
-if test -z $CROSS_COMPILE
+if test -z "$CROSS_COMPILE"
 then
 AC_CACHE_CHECK([whether we need extra options to link OpenSSL],
                ac_cv_openssl_linker_option, [
