@@ -41,6 +41,11 @@
 #include <inttypes.h>
 #endif
 
+#ifdef MS_WINDOWS
+/* Windows likes to capitalize ssize_t.  Charming. */
+#define ssize_t SSIZE_T
+#endif
+
 #if (SIZEOF_INT8_T != 0)
 #define HAVE_INT8_T
 #endif

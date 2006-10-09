@@ -110,7 +110,6 @@
 #include <process.h>
 #include <direct.h>
 #include <windows.h>
-#define ssize_t SSIZE_T
 #define snprintf _snprintf
 #endif
 
