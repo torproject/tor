@@ -920,7 +920,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         description1 = "as deflated";
       else if (compression == GZIP_METHOD)
         description1 = "as gzipped";
-      else if (compression == 0)
+      else if (compression == NO_METHOD)
         description1 = "as uncompressed";
       else
         description1 = "with an unknown Content-Encoding";
