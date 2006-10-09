@@ -24,6 +24,7 @@ Name "Tor"
 Caption "Tor ${VERSION} Setup"
 BrandingText "The Onion Router"
 CRCCheck on
+XPStyle on
 
 ;Use upx on the installer header to shrink the size.
 !packhdr header.dat "upx --best header.dat"
@@ -66,6 +67,7 @@ Section "Tor" Tor
    SetOutPath $INSTDIR
    File "${BIN}\tor.exe"
    File "${BIN}\tor-resolve.exe"
+   File "${BIN}\tor.ico"
    WriteIniStr "$INSTDIR\Tor Website.url" "InternetShortcut" "URL" ${WEBSITE}
 
    StrCpy $configfile "torrc"
@@ -123,7 +125,7 @@ Section "Start Menu" StartMenu
    IfFileExists "$SMPROGRAMS\Tor\*.*" "" +2
       RMDir /r "$SMPROGRAMS\Tor"
    CreateDirectory "$SMPROGRAMS\Tor"
-   CreateShortCut "$SMPROGRAMS\Tor\Tor.lnk" "$INSTDIR\tor.exe"
+   CreateShortCut "$SMPROGRAMS\Tor\Tor.lnk" "$INSTDIR\tor.exe" "" "$INSTDIR\tor.ico" 
    CreateShortCut "$SMPROGRAMS\Tor\Torrc.lnk" "Notepad.exe" "$configdir\torrc"
    CreateShortCut "$SMPROGRAMS\Tor\Tor Website.lnk" "$INSTDIR\Tor Website.url"
    CreateShortCut "$SMPROGRAMS\Tor\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
@@ -137,12 +139,12 @@ SectionEnd
 
 Section "Desktop" Desktop
    SetOutPath $INSTDIR
-   CreateShortCut "$DESKTOP\Tor.lnk" "$INSTDIR\tor.exe"
+   CreateShortCut "$DESKTOP\Tor.lnk" "$INSTDIR\tor.exe" "" "$INSTDIR\tor.ico" 
 SectionEnd
 
 Section /o "Run at startup" Startup
    SetOutPath $INSTDIR
-   CreateShortCut "$SMSTARTUP\Tor.lnk" "$INSTDIR\tor.exe" "" "" 0 SW_SHOWMINIMIZED
+   CreateShortCut "$SMSTARTUP\Tor.lnk" "$INSTDIR\tor.exe" "" "$INSTDIR\tor.ico" "" SW_SHOWMINIMIZED
 SectionEnd
 
 SubSectionEnd
@@ -156,6 +158,7 @@ Section "Uninstall"
    Delete "$INSTDIR\Tor Website.url"
    Delete "$INSTDIR\torrc"
    Delete "$INSTDIR\torrc.sample"
+   Delete "$INSTDIR\tor.ico"
    StrCmp $configdir $INSTDIR +2 ""
       RMDir /r $configdir
    Delete "$INSTDIR\Uninstall.exe"
