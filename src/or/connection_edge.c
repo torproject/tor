@@ -2311,7 +2311,8 @@ parse_extended_hostname(char *address)
     char query[REND_SERVICE_ID_LEN+1];
 
     s = strrchr(address,'.');
-    if (!s) return 0; /* no dot, thus normal */
+    if (!s)
+      return NORMAL_HOSTNAME; /* no dot, thus normal */
     if (!strcmp(s+1,"exit")) {
       *s = 0; /* nul-terminate it */
       return EXIT_HOSTNAME; /* .exit */

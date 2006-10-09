@@ -29,7 +29,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
 int is_gzip_supported(void);
 
-int detect_compression_method(const char *in, size_t in_len);
+compress_method_t detect_compression_method(const char *in, size_t in_len);
 
 typedef enum {
   TOR_ZLIB_OK, TOR_ZLIB_DONE, TOR_ZLIB_BUF_FULL, TOR_ZLIB_ERR

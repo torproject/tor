@@ -1555,13 +1555,11 @@ option_reset(config_format_t *fmt, or_options_t *options,
              config_var_t *var, int use_defaults)
 {
   config_line_t *c;
-  void *lvalue;
   char *msg = NULL;
   CHECK(fmt, options);
   option_clear(fmt, options, var); /* clear it first */
   if (!use_defaults)
     return; /* all done */
-  lvalue = STRUCT_VAR_P(options, var->var_offset);
   if (var->initvalue) {
     c = tor_malloc_zero(sizeof(config_line_t));
     c->key = tor_strdup(var->name);
@@ -3247,7 +3245,7 @@ static int
 parse_dir_server_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
-  int r, idx;
+  int r;
   char *addrport=NULL, *address=NULL, *nickname=NULL, *fingerprint=NULL;
   uint16_t port;
   char digest[DIGEST_LEN];
@@ -3262,7 +3260,6 @@ parse_dir_server_line(const char *line, int validate_only)
     goto err;
   }
 
-  idx = 0;
   if (is_legal_nickname(smartlist_get(items, 0))) {
     nickname = smartlist_get(items, 0);
     smartlist_del_keeporder(items, 0);

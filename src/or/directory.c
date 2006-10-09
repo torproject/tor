@@ -1008,7 +1008,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     smartlist_t *which = NULL;
-    int source;
+    networkstatus_source_t source;
     char *cp;
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);

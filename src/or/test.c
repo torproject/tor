@@ -1174,6 +1174,7 @@ test_control_formats(void)
   sz = read_escaped_data(inp, strlen(inp), 1, &out);
   test_streq(out,
              ".This is a test\nof the emergency \nbroadcast\n.system.\nZ.\n");
+  test_eq(sz, strlen(out));
 
   tor_free(out);
 }

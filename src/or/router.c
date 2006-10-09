@@ -243,7 +243,6 @@ init_keys(void)
   char fingerprint[FINGERPRINT_LEN+1];
   /*nickname<space>fp\n\0 */
   char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
-  char *cp;
   const char *mydesc, *datadir;
   crypto_pk_env_t *prkey;
   char digest[20];
@@ -279,7 +278,6 @@ init_keys(void)
   if (check_private_dir(keydir, CPD_CREATE)) {
     return -1;
   }
-  cp = keydir + strlen(keydir); /* End of string. */
 
   /* 1. Read identity key. Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/identity.key",datadir);
@@ -1093,7 +1091,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   char *bandwidth_usage;
   char *family_line;
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-  char *s_tmp, *s_dup;
+  char *s_dup;
   const char *cp;
   routerinfo_t *ri_tmp;
 #endif
@@ -1263,7 +1261,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   s[written+1] = 0;
 
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-  cp = s_tmp = s_dup = tor_strdup(s);
+  cp = s_dup = tor_strdup(s);
   ri_tmp = router_parse_entry_from_string(cp, NULL, 1);
   if (!ri_tmp) {
     log_err(LD_BUG,

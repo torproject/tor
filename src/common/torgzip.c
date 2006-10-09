@@ -274,9 +274,9 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
 /** Try to tell whether the <b>in_len</b>-byte string in <b>in</b> is likely
  * to be compressed or not.  If it is, return the likeliest compression method.
- * Otherwise, return 0.
+ * Otherwise, return UNKNOWN_METHOD.
  */
-int
+compress_method_t
 detect_compression_method(const char *in, size_t in_len)
 {
   if (in_len > 2 && !memcmp(in, "\x1f\x8b", 2)) {
@@ -285,7 +285,7 @@ detect_compression_method(const char *in, size_t in_len)
              (ntohs(get_uint16(in)) % 31) == 0) {
     return ZLIB_METHOD;
   } else {
-    return 0;
+    return UNKNOWN_METHOD;
   }
 }
 

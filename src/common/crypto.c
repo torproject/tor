@@ -879,12 +879,11 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
                                  size_t fromlen,
                                  int padding, int warnOnFailure)
 {
-  int overhead, outlen, r;
+  int outlen, r;
   size_t pkeylen;
   crypto_cipher_env_t *cipher = NULL;
   char buf[PK_BYTES+1];
 
-  overhead = crypto_get_rsa_padding_overhead(crypto_get_rsa_padding(padding));
   pkeylen = crypto_pk_keysize(env);
 
   if (fromlen <= pkeylen) {

@@ -226,7 +226,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 
   if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint, 0)) {
     log_warn(LD_BUG,"Error computing fingerprint");
-    return -1;
+    return FP_REJECT;
   }
 
   return dirserv_get_status_impl(fingerprint, router->nickname,

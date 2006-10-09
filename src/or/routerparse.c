@@ -110,7 +110,7 @@ typedef enum {
 
 /** Table mapping keywords to token value and to argument rules. */
 static struct {
-  const char *t; int v; arg_syntax s; obj_syntax os; int ws;
+  const char *t; directory_keyword v; arg_syntax s; obj_syntax os; int ws;
 } token_table[] = {
   { "accept",              K_ACCEPT,              ARGS,    NO_OBJ,  RTR },
   { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ,
@@ -265,14 +265,11 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
 version_status_t
 tor_version_is_obsolete(const char *myversion, const char *versionlist)
 {
-  const char *vl;
   tor_version_t mine, other;
   int found_newer = 0, found_older = 0, found_newer_in_series = 0,
     found_any_in_series = 0, r, same;
   version_status_t ret = VS_UNRECOMMENDED;
   smartlist_t *version_sl;
-
-  vl = versionlist;
 
   log_debug(LD_CONFIG,"Checking whether version '%s' is in '%s'",
             myversion, versionlist);
