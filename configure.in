@@ -771,10 +771,17 @@ fi
 # Add some more warnings which we use in the cvs version but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
 if test x$enable_gcc_warnings = xyes; then
-  CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Winit-self -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wmissing-field-initializers -Wredundant-decls -Winline -Wnested-externs"
-#-Wswitch-enums?
-  # Add these in when you feel like fun.
-  CFLAGS="$CFLAGS -Wbad-function-cast -Werror -Wdeclaration-after-statement -Wold-style-definition"
+  AC_TRY_COMPILE([], [
+#if !defined(__GNUC__) || (__GNUC__ < 4)
+#error
+#endif], have_gcc4=yes, have_gcc4=no)
+
+  CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wredundant-decls -Winline -Wnested-externs -Wbad-function-cast -Werror"
+
+  if test x$have_gcc4 = xyes ; then 
+    # These warnings break gcc 3.3.5 and work on gcc 4.0.2
+    CFLAGS="$CFLAGS -Winit-self -Wmissing-field-initializers -Wdeclaration-after-statement -Wold-style-definition"
+  fi
 fi
 
 AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh)
