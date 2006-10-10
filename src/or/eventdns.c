@@ -1190,7 +1190,7 @@ evdns_request_data_build(const char *const name, const int name_len, const u16 t
 	int labels_len;
 
 #define APPEND16(x) do {                           \
-        if (j + 2 > buf_len)			   \
+        if (j + 2 > (off_t)buf_len)				   \
             return (-1);                           \
         _t = htons(x);                             \
         memcpy(buf + j, &_t, 2);                   \
