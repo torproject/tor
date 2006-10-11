@@ -37,22 +37,14 @@
 
 1.4. Log conventions
 
-  Log convention: use only these four log severities.
+  http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#LogLevels
 
-    ERR is if something fatal just happened.
-    WARN if something bad happened, but we're still running. The
-      bad thing is either a bug in the code, an attack or buggy
-      protocol/implementation of the remote peer, etc. The operator should
-      examine the bad thing and try to correct it.
-    NOTICE if it's something the operator will want to know about.
-    (No error or warning messages should be expected during normal OR or OP
-      operation. I expect most people to run on -l notice eventually. If a
-      library function is currently called such that failure always means
-      ERR, then the library function should log WARN and let the caller
-      log ERR.)
-    INFO means something happened (maybe bad, maybe ok), but there's nothing
-      you need to (or can) do about it.
-    DEBUG is for everything louder than INFO.
+  No error or warning messages should be expected during normal OR or OP
+  operation.
+
+  If a library function is currently called such that failure always
+  means ERR, then the library function should log WARN and let the caller
+  log ERR.
 
   [XXX Proposed convention: every message of severity INFO or higher should
   either (A) be intelligible to end-users who don't know the Tor source; or
