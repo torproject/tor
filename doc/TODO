@@ -363,6 +363,10 @@ Minor items for 0.1.2.x as time permits:
 Future version:
   - Configuration format really wants sections.
   - Good RBL substitute.
+  - Authorities should try using exits for http to connect to some URLS
+    (specified in a configuration file, so as not to make the List Of Things
+    Not To Censor completely obvious) and ask them for results.  Exits that
+    don't give good answers should have the BadExit flag set.
   - Our current approach to block attempts to use Tor as a single-hop proxy
     is pretty lame; we should get a better one.
   . Update the hidden service stuff for the new dir approach.

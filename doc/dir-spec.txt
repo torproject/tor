@@ -355,6 +355,9 @@ $Id$
           - A directory port (or "0" for none")
       "s" -- A series of whitespace-separated status flags, in any order:
           "Authority" if the router is a directory authority.
+          "BadExit" if the router is believed to be useless as an exit node
+             (because its ISP censors it, because it is behind a restrictive
+             proxy, or for some similar reason).
           "Exit" if the router is useful for building general-purpose exit
              circuits.
           "Fast" if the router is suitable for high-bandwidth circuits.

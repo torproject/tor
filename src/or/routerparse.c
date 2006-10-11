@@ -1061,6 +1061,9 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
         rs->is_v2_dir = 1;
       else if (!strcmp(tok->args[i], "Guard"))
         rs->is_possible_guard = 1;
+      else if (!strcmp(tok->args[i], "BadExit"))
+        rs->is_bad_exit = 1;
+
     }
   }
 

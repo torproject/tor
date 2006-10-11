@@ -925,6 +925,8 @@ typedef struct {
   unsigned int is_stable:1; /** Do we think this is a stable OR? */
   unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
   unsigned int is_exit:1; /**< Do we think this is an OK exit? */
+  unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
+                               * or otherwise nasty? */
 
 /** Tor can use this desc for circuit-building. */
 #define ROUTER_PURPOSE_GENERAL 0
@@ -972,6 +974,8 @@ typedef struct routerstatus_t {
                              * directories.)  */
   unsigned int is_possible_guard:1; /**< True iff this router would be a good
                                      * choice as an entry guard. */
+  unsigned int is_bad_exit:1; /**< True iff this node is a bad choice for
+                               * an exit node. */
 
   /** True if we, as a directory mirror, want to download the corresponding
    * routerinfo from the authority who gave us this routerstatus.  (That is,

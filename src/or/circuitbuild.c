@@ -1165,12 +1165,9 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
        */
       continue;
     }
-    if (!router->is_running) {
+    if (!router->is_running || router->is_bad_exit) {
       n_supported[i] = -1;
-//      log_fn(LOG_DEBUG,
-//           "Skipping node %s (index %d) -- directory says it's not running.",
-//           router->nickname, i);
-      continue; /* skip routers that are known to be down */
+      continue; /* skip routers that are known to be down or bad exits */
     }
     if (router_is_unreliable(router, need_uptime, need_capacity, 0)) {
       n_supported[i] = -1;
