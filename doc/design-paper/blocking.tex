@@ -137,7 +137,7 @@ as high of a risk.)
 We assume that our users have control over their hardware and
 software -- they don't have any spyware installed, there are no
 cameras watching their screen, etc. Unfortunately, in many situations
-these attackers are very real~\cite{zuckerman-threatmodels}; yet
+such attackers are very real~\cite{zuckerman-threatmodels}; yet
 software-based security systems like ours are poorly equipped to handle
 a user who is entirely observed and controlled by the adversary. See
 Section~\ref{subsec:cafes-and-livecds} for more discussion of what little
@@ -158,7 +158,7 @@ Anonymizer and friends
 
 Psiphon, circumventor, cgiproxy.
 
-Simpler to deploy; might not require client-side software.
+Simpler to deploy; can work without new client-side software.
 
 \subsection{JAP}
 
@@ -285,8 +285,8 @@ bridge relay.
 
 The following section describes ways to bootstrap knowledge of your first
 bridge relay, and ways to maintain connectivity once you know a few
-bridge relays. (See Section~\ref{later} for a discussion of exactly
-what information is sufficient to characterize a bridge relay.)
+bridge relays. (See Section~\ref{subsec:first-bridge} for a discussion
+of exactly what information is sufficient to characterize a bridge relay.)
 
 \section{Discovering and maintaining working bridge relays}
 
@@ -369,6 +369,13 @@ design above.
 Is it useful to load balance which bridges are handed out? The above
 bucket concept makes some bridges wildly popular and others less so.
 But I guess that's the point.
+
+\subsection{Bootstrapping: finding your first bridge}
+\label{subsec:first-bridge}
+
+Some techniques are sufficient to get us an IP address and a port,
+and others can get us IP:port:key. Lay out some plausible options
+for how users can bootstrap into learning their first bridge.
 
 \section{Security improvements}
 
