@@ -1,8 +1,12 @@
-tor (0.1.2.1-alpha-XXXX) XXXerimental; urgency=low
+tor (0.1.2.2-alpha-1) experimental; urgency=low
 
-  * Minor update of debian/copyright [arma].
+  [ Peter Palfrader ]
+  * New upstream version.
 
- -- Peter Palfrader <weasel@debian.org>  Sun,  3 Sep 2006 19:53:45 +0200
+  [ Roger Dingledine ]
+  * Minor update of debian/copyright.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 10 Oct 2006 03:26:00 +0200
 
 tor (0.1.2.1-alpha-1) experimental; urgency=low
 
