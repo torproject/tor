@@ -855,14 +855,15 @@ $Id$
 
   [First added in 0.1.2.2-alpha.]
 
-4.1.10. Misc other events
+4.1.10. Status events
 
   Syntax:
      "650" SP Type SP Action SP Arguments
-     Type = "MISC_CLIENT" / "MISC_SERVER"
-     Action and Arguments (if any) are described below.
+     Type = "STATUS_CLIENT" / "STATUS_SERVER"
+     Action is a string, and Arguments is a series of key=value
+     pairs; more details below.
 
-  Actions for MISC_CLIENT events can be as follows:
+  Actions for STATUS_CLIENT events can be as follows:
 
      CIRCUIT_ESTABLISHED means that Tor is able to establish circuits
      for client use. This event will only be sent if we just built a
@@ -873,11 +874,12 @@ $Id$
      that it has closed all its circuits and will establishing them
      anew. This typically happens when a laptop goes to sleep and then
      wakes up again. It also happens when the system is swapping so
-     heavily that Tor is starving. The Arguments line is this case is
-     a single non-negative integer representing the number of seconds
-     Tor thinks it was unconscious for.
+     heavily that Tor is starving. The Arguments line in this case is
+     "time=NUM", a non-negative integer representing the number of
+     seconds Tor thinks it was unconscious for.
 
-  Actions for MISC_SERVER events can be as follows:
+
+  Actions for STATUS_SERVER events can be as follows:
 
 
 
