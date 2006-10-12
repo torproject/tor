@@ -115,8 +115,8 @@ destination hostnames.
 We assume the network firewall has very limited CPU per
 connection~\cite{clayton:pet2006}. Against an adversary who spends
 hours looking through the contents of each packet, we would need
-some stronger mechanism such as steganography, which is a much harder
-problem~\cite{foo,bar,baz}.
+some stronger mechanism such as steganography, which introduces its
+own problems~\cite{active-wardens,foo,bar}.
 
 We assume that readers of blocked content will not be punished much,
 relative to publishers. So far in places like China, the authorities
@@ -134,12 +134,19 @@ how to overcome a facet of our design and other attackers picking it up.
 (Corollary: in the early stages of deployment, the insider threat isn't
 as high of a risk.)
 
-We assume that our users have control over their hardware and software --
-no spyware, no cameras watching their screen, etc.
+We assume that our users have control over their hardware and
+software -- they don't have any spyware installed, there are no
+cameras watching their screen, etc. Unfortunately, in many situations
+these attackers are very real~\cite{zuckerman-threatmodels}; yet
+software-based security systems like ours are poorly equipped to handle
+a user who is entirely observed and controlled by the adversary. See
+Section~\ref{subsec:cafes-and-livecds} for more discussion of what little
+we can do about this issue.
 
-Assume that the user will fetch a genuine version of Tor, rather than
-one supplied by the adversary; see~\ref{subsec:trust-chain} for discussion
-on helping the user confirm that he has a genuine version.
+We assume that the user will fetch a genuine version of Tor, rather than
+one supplied by the adversary; see Section~\ref{subsec:trust-chain}
+for discussion on helping the user confirm that he has a genuine version
+and that he can connected to the real Tor network.
 
 \section{Related schemes}
 
@@ -152,6 +159,11 @@ Anonymizer and friends
 Psiphon, circumventor, cgiproxy.
 
 Simpler to deploy; might not require client-side software.
+
+\subsection{JAP}
+
+Stefan's WPES paper is probably the closest related work, and is
+the starting point for the design in this paper.
 
 \subsection{break your sensitive strings into multiple tcp packets;
 ignore RSTs}
@@ -302,6 +314,8 @@ can reach it) for a new IP:dirport or server descriptor.
 
 The account server
 
+runs as a Tor controller for the bridge authority
+
 Users can establish reputations, perhaps based on social network
 connectivity, perhaps based on not getting their bridge relays blocked,
 
@@ -326,41 +340,37 @@ bridge authority, in a way that's sticky even when we add bridge
 directory authorities, but isn't sticky when our authority goes
 away. Does this exist?)
 
-Divide bridgets into buckets. You can learn only from the bucket your
-IP address maps to.
+Divide bridges into buckets based on their identity key.
+[Design question: need an algorithm to deterministically map a bridge's
+identity key into a category that isn't too gameable. Take a keyed
+hash of the identity key plus a secret the bridge authority keeps?
+An adversary signing up bridges won't easily be able to learn what
+category he's been put in, so it's slow to attack.]
+
+One portion of the bridges is the public bucket. If you ask the
+bridge account server for a public bridge, it will give you a random
+one of these. We expect they'll be the first to be blocked, but they'll
+help the system bootstrap until it *does* get blocked, and remember that
+we're dealing with different blocking regimes around the world that will
+progress at different rates.
+
+The generalization of the public bucket is a bucket based on the bridge
+user's IP address: you can learn a random entry only from the subbucket
+your IP address (actually, your /24) maps to.
+
+Another portion of the bridges can be sectioned off to be given out in
+a time-release basis. The bucket is partitioned into pieces which are
+deterministically available only in certain time windows.
+
+And of course another portion is made available for the social network
+design above.
+
+
+Is it useful to load balance which bridges are handed out? The above
+bucket concept makes some bridges wildly popular and others less so.
+But I guess that's the point.
 
 \section{Security improvements}
-
-\subsection{Minimum info required to describe a bridge}
-
-There's another possible attack here: since we only learn an IP address
-and port, a local attacker could intercept our directory request and
-give us some other server descriptor. But notice that we don't need
-strong authentication for the bridge relay. Since the Tor client will
-ship with trusted keys for the bridge directory authority and the Tor
-network directory authorities, the user can decide if the bridge relays
-are lying to him or not.
-
-Once the Tor client has fetched the server descriptor at least once,
-he should remember the identity key fingerprint for that bridge relay.
-If the bridge relay moves to a new IP address, the client can then
-use the bridge directory authority to look up a fresh server descriptor
-using this fingerprint.
-
-\subsection{Scanning-resistance}
-
-If it's trivial to verify that we're a bridge, and we run on a predictable
-port, then it's conceivable our attacker would scan the whole Internet
-looking for bridges. It would be nice to slow down this attack. It would
-be even nicer to make it hard to learn whether we're a bridge without
-first knowing some secret.
-
-\subsection{Password protecting the bridges}
-Could provide a password to the bridge user. He provides a nonced hash of
-it or something when he connects. We'd need to give him an ID key for the
-bridge too, and wait to present the password until we've TLSed, else the
-adversary can pretend to be the bridge and MITM him to learn the password.
-
 
 \subsection{Hiding Tor's network signatures}
 \label{subsec:enclave-dirs}
@@ -368,11 +378,11 @@ adversary can pretend to be the bridge and MITM him to learn the password.
 The simplest format for communicating information about a bridge relay
 is as an IP address and port for its directory cache. From there, the
 user can ask the directory cache for an up-to-date copy of that bridge
-relay's server descriptor, including its current circuit keys, the port
+relay's server descriptor, to learn its current circuit keys, the port
 it uses for Tor connections, and so on.
 
 However, connecting directly to the directory cache involves a plaintext
-http request, so the censor could create a firewall signature for the
+http request, so the censor could create a network signature for the
 request and/or its response, thus preventing these connections. Therefore
 we've modified the Tor protocol so that users can connect to the directory
 cache via the main Tor port -- they establish a TLS connection with
@@ -392,9 +402,62 @@ should we try to emulate some popular browser? In any case our
 protocol demands a pair of certs on both sides -- how much will this
 make Tor handshakes stand out?
 
+\subsection{Minimum info required to describe a bridge}
+
+In the previous subsection, we described a way for the bridge user
+to bootstrap into the network just by knowing the IP address and
+Tor port of a bridge. What about local spoofing attacks? That is,
+since we never learned an identity key fingerprint for the bridge,
+a local attacker could intercept our connection and pretend to be
+the bridge we had in mind. It turns out that giving false information
+isn't that bad -- since the Tor client ships with trusted keys for the
+bridge directory authority and the Tor network directory authorities,
+the user can learn whether he's being given a real connection to the
+bridge authorities or not. (If the adversary intercepts every connection
+the user makes and gives him a bad connection each time, there's nothing
+we can do.)
+
+What about anonymity-breaking attacks from observing traffic? Not so bad
+either, since the adversary could do the same attacks just by monitoring
+the network traffic.
+
+Once the Tor client has fetched the bridge's server descriptor at least
+once, he should remember the identity key fingerprint for that bridge
+relay. Thus if the bridge relay moves to a new IP address, the client
+can then query the bridge directory authority to look up a fresh server
+descriptor using this fingerprint.
+
+So we've shown that it's \emph{possible} to bootstrap into the network
+just by learning the IP address and port of a bridge, but are there
+situations where it's more convenient or more secure to learn its
+identity fingerprint at the beginning too? We discuss that question
+more in Section~\ref{sec:bootstrapping}, but first we introduce more
+security topics.
+
+\subsection{Scanning-resistance}
+
+If it's trivial to verify that we're a bridge, and we run on a predictable
+port, then it's conceivable our attacker would scan the whole Internet
+looking for bridges. (In fact, he can just scan likely networks like
+cablemodem and DSL services -- see Section~\ref{block-cable} for a related
+attack.) It would be nice to slow down this attack. It would
+be even nicer to make it hard to learn whether we're a bridge without
+first knowing some secret.
+
+\subsection{Password protecting the bridges}
+
+Could provide a password to the bridge user. He provides a nonced hash of
+it or something when he connects. We'd need to give him an ID key for the
+bridge too, and wait to present the password until we've TLSed, else the
+adversary can pretend to be the bridge and MITM him to learn the password.
+
+
+
+
 \subsection{Observers can tell who is publishing and who is reading}
 \label{subsec:upload-padding}
 
+Should bridge users sometimes send bursts of long-range drop cells?
 
 
 \subsection{Anonymity effects from becoming a bridge relay}
@@ -428,6 +491,29 @@ It is an open research question whether the benefits outweigh the risks. A
 lot of the decision rests on which the attacks users are most worried
 about. For most users, we don't think running a bridge relay will be
 that damaging.
+
+\subsection{Trusting local hardware: Internet cafes and LiveCDs}
+\label{subsec:cafes-and-livecds}
+
+Assuming that users have their own trusted hardware is not
+always reasonable.
+
+For Internet cafe Windows computers that let you attach your own USB key,
+a USB-based Tor image would be smart. There's Torpark, and hopefully
+there will be more options down the road. Worries about hardware or
+software keyloggers and other spyware -- and physical surveillance.
+
+If the system lets you boot from a CD or from a USB key, you can gain
+a bit more security by bringing a privacy LiveCD with you. Hardware
+keyloggers and physical surveillance still a worry. LiveCDs also useful
+if it's your own hardware, since it's easier to avoid leaving breadcrumbs
+everywhere.
+
+\subsection{Forward compatibility and retiring bridge authorities}
+
+Eventually we'll want to change the identity key and/or location
+of a bridge authority. How do we do this mostly cleanly?
+
 
 \section{Performance improvements}
 
@@ -493,14 +579,18 @@ being used?)
 Worry: the adversary could choose not to block bridges but just record
 connections to them. So be it, I guess.
 
-\subsection{How to know if it's working?}
+\subsection{How to learn how well the whole idea is working}
 
 We need some feedback mechanism to learn how much use the bridge network
 as a whole is actually seeing. Part of the reason for this is so we can
 respond and adapt the design; part is because the funders expect to see
 progress reports.
 
+The above geoip-based approach to detecting blocked bridges gives us a
+solution though.
+
 \subsection{Cablemodem users don't provide important websites}
+\label{subsec:block-cable}
 
 ...so our adversary could just block all DSL and cablemodem networks,
 and for the most part only our bridge relays would be affected.
@@ -543,12 +633,43 @@ enough people in the PGP web of trust~\cite{pgp-wot} that they can learn
 the correct keys. For users that aren't connected to the global security
 community, though, this question remains a critical weakness.
 
-\subsection{Bridge users without Tor clients}
+% XXX make clearer the trust chain step for bridge directory authorities
 
-They could always open their socks proxy. This is bad though, firstly
+\subsection{How to motivate people to run bridge relays}
+
+One of the traditional ways to get people to run software that benefits
+others is to give them motivation to install it themselves.  An often
+suggested approach is to install it as a stunning screensaver so everybody
+will be pleased to run it. We take a similar approach here, by leveraging
+the fact that these users are already interested in protecting their
+own Internet traffic, so they will install and run the software.
+
+Make all Tor users become bridges if they're reachable -- needs more work
+on usability first, but we're making progress.
+
+Also, we can make a snazzy network graph with Vidalia that emphasizes
+the connections the bridge user is currently relaying. (Minor anonymity
+implications, but hey.) (In many cases there won't be much activity,
+so this may backfire. Or it may be better suited to full-fledged Tor
+servers.)
+
+\subsection{What if the clients can't install software?}
+
+Bridge users without Tor clients
+
+Bridge relays could always open their socks proxy. This is bad though,
+firstly
 because they learn the bridge users' destinations, and secondly because
 we've learned that open socks proxies tend to attract abusive users who
 have no idea they're using Tor.
+
+Bridges could require passwords in the socks handshake (not supported
+by most software including Firefox). Or they could run web proxies
+that require authentication and then pass the requests into Tor. This
+approach is probably a good way to help bootstrap the Psiphon network,
+if one of its barriers to deployment is a lack of volunteers willing
+to exit directly to websites. But it clearly drops some of the nice
+anonymity features Tor provides.
 
 \section{Future designs}
 
@@ -566,9 +687,6 @@ internal bridges will remain available, can maintain reachability with
 the outside world, etc.
 
 Hidden services as bridges. Hidden services as bridge directory authorities.
-
-Make all Tor users become bridges if they're reachable -- needs more work
-on usability first, but we're making progress.
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
