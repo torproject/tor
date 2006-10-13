@@ -2876,16 +2876,16 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
 
     if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
       send_control1_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
-                          "650 CIRC %lu %s %s@%s\r\n",
+                          "650 CIRC %lu %s%s%s@%s\r\n",
                           (unsigned long)circ->global_identifier,
-                          status, path, reason);
+                          status, path?" ":"", path, reason);
     }
     if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
       char *vpath = circuit_list_path_for_controller(circ);
       send_control1_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
-                          "650 CIRC %lu %s %s@%s\r\n",
+                          "650 CIRC %lu %s%s%s@%s\r\n",
                           (unsigned long)circ->global_identifier,
-                          status, vpath, reason);
+                          status, vpath?" ":"", vpath, reason);
       tor_free(vpath);
     }
   }
