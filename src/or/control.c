@@ -2370,7 +2370,7 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   }
 
   if (!safe || !circ->p_streams) {
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NONE);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_REQUESTED);
   }
 
   send_control_done(conn);
@@ -2990,7 +2990,7 @@ orconn_target_get_name(int long_names,
       name[0] = '$';
       base16_encode(name+1, len-1, conn->identity_digest,
                     DIGEST_LEN);
-    } else { 
+    } else {
      tor_snprintf(name, len, "%s:%d",
                    conn->_base.address, conn->_base.port);
     }

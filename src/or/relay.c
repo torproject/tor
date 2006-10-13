@@ -158,7 +158,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
 
   if (relay_crypt(circ, cell, cell_direction, &layer_hint, &recognized) < 0) {
     log_warn(LD_BUG,"relay crypt failed. Dropping connection.");
-    return -1;
+    return -END_CIRC_REASON_INTERNAL;
   }
 
   if (recognized) {
