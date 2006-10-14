@@ -369,6 +369,10 @@ $Id$
     "address" -- the best guess at our external IP address. If we
       have no guess, return a 551 error. (Added in 0.1.2.2-alpha)
 
+    "fingerprint" -- the contents of the fingerprint file that Tor
+      writes as a server; or a 551 if we're not a server currently.
+      (Added in 0.1.2.3-alpha)
+
     "circuit-status"
       A series of lines as for a circuit status event. Each line is of
       the form:
@@ -445,6 +449,14 @@ $Id$
       routers not marked as general-purpose.  When asked for 'authority'
       information for which this Tor is not authoritative, Tor replies with
       an empty string.
+
+    "status/general/..."
+    "status/client/circuit-established"
+    "status/server/..."
+      These provide the current internal Tor values for various Tor
+      states. See Section 4.1.10 for explanations. (Only a few of the
+      status events are available as getinfo's currently. Let us know if
+      you want more exposed.)
 
   Examples:
      C: GETINFO version desc/name/moria1
@@ -857,31 +869,91 @@ $Id$
 
 4.1.10. Status events
 
+  [Don't rely on any of these until we work out more of the details. -RD]
+
   Syntax:
      "650" SP Type SP Action SP Arguments
-     Type = "STATUS_CLIENT" / "STATUS_SERVER"
+     Type = "STATUS_GENERAL" / "STATUS_CLIENT" / "STATUS_SERVER"
      Action is a string, and Arguments is a series of key=value
      pairs; more details below.
 
+  Actions for STATUS_GENERAL events can be as follows:
+
+     DANGEROUS_VERSION
+     "current=version"
+     "recommended=version,version,..."
+     "reason=new/old/unrecommended"
+
+     CLOCK_JUMPED
+     "time=NUM"
+       Tor spent enough time without CPU cycles that it has closed all
+       its circuits and will establishing them anew. This typically
+       happens when a laptop goes to sleep and then wakes up again. It
+       also happens when the system is swapping so heavily that Tor is
+       starving. The "time" argument includes the number of seconds Tor
+       thinks it was unconscious for.
+
+     TOO_MANY_CONNECTIONS
+     "limit=NUM"
+       Tor has reached its ulimit -n or whatever the native limit is on
+       file descriptors or sockets. The user should really do something
+       about this. The "limit" argument shows the number of connections
+       currently open.
+
+     BUG
+     "reason=STRING"
+       Tor has encountered a situation that its developers never expected,
+       and the developers would like to learn that it happened. Perhaps
+       the controller can explain this to the user and encourage her to
+       file a bug report?
+
+
   Actions for STATUS_CLIENT events can be as follows:
 
-     CIRCUIT_ESTABLISHED means that Tor is able to establish circuits
-     for client use. This event will only be sent if we just built a
-     circuit that changed our mind -- that is, prior to this event we
-     didn't know whether we could establish circuits.
+     CIRCUIT_ESTABLISHED
+       Tor is able to establish circuits for client use. This event will
+       only be sent if we just built a circuit that changed our mind --
+       that is, prior to this event we didn't know whether we could
+       establish circuits.
 
-     CLOCK_JUMPED means that Tor spent enough time without CPU cycles
-     that it has closed all its circuits and will establishing them
-     anew. This typically happens when a laptop goes to sleep and then
-     wakes up again. It also happens when the system is swapping so
-     heavily that Tor is starving. The Arguments line in this case is
-     "time=NUM", a non-negative integer representing the number of
-     seconds Tor thinks it was unconscious for.
+     DANGEROUS_SOCKS
+     "protocol=socks4/socks4a/socks5"
+     "address=IP:port"
+
+     SOCKS_UNKNOWN_PROTOCOL
+       A connection was made to Tor's SOCKS port that tried to use it
+       for something other than the SOCKS protocol. Perhaps the user is
+       using Tor as an HTTP proxy?
+
+     DIR_ALL_UNREACHABLE
+       Tor believes that none of the known directory servers are
+       reachable -- this is most likely because the local network is
+       down or otherwise not working, and might help to explain for the
+       user why Tor appears to be broken.
+
 
 
   Actions for STATUS_SERVER events can be as follows:
 
+     EXTERNAL_ADDRESS
+     "address=IP"
+     "method=guessed/resolved/..."
 
+     CHECKING_REACHABILITY
+     "oraddress=IP:port"
+     "diraddress=IP:port"
+     "timeout=NUM"
+
+     REACHABILITY_FAILED
+     "oraddress=IP:port"
+     "diraddress=IP:port"
+
+
+
+
+
+  Controllers must tolerate hearing about status types and actions
+  that they don't recognize.
 
 5. Implementation notes
 
