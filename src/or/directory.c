@@ -202,7 +202,8 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                             resource, NULL, 0);
   else {
     log_notice(LD_DIR,
-               "No running dirservers known. Will try again later. "
+               "While fetching directory info, "
+               "no running dirservers known. Will try again later. "
                "(purpose %d)", purpose);
     if (!purpose_is_private(purpose)) {
       /* remember we tried them all and failed. */

@@ -905,7 +905,8 @@ circuit_launch_by_nickname(uint8_t purpose, const char *exit_nickname,
   if (exit_nickname) {
     router = router_get_by_nickname(exit_nickname, 1);
     if (!router) {
-      log_warn(LD_GENERAL, "No such OR as '%s'", exit_nickname);
+      log_warn(LD_GENERAL, "Trying to launch circ by nickname, but "
+               "no such OR as '%s'", exit_nickname);
       return NULL;
     }
   }

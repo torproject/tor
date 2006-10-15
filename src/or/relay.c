@@ -286,7 +286,8 @@ relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
 
         thishop = thishop->next;
       } while (thishop != cpath && thishop->state == CPATH_STATE_OPEN);
-      log_warn(LD_OR,"in-cell at client not recognized. Closing.");
+      log_fn(LOG_PROTOCOL_WARN, LD_OR,
+             "Incoming cell at client not recognized. Closing.");
       return -1;
     } else { /* we're in the middle. Just one crypt. */
       if (relay_crypt_one_payload(TO_OR_CIRCUIT(circ)->p_crypto,
@@ -529,7 +530,7 @@ connection_edge_end_reason_str(int reason)
 {
   switch (reason) {
     case -1:
-      log_warn(LD_PROTOCOL,
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "End cell arrived with length 0. Should be at least 1.");
       return "MALFORMED";
     case END_STREAM_REASON_MISC:           return "misc error";
@@ -545,7 +546,8 @@ connection_edge_end_reason_str(int reason)
     case END_STREAM_REASON_CONNRESET:      return "connection reset";
     case END_STREAM_REASON_TORPROTOCOL:    return "Tor protocol error";
     default:
-      log_warn(LD_PROTOCOL,"Reason for ending (%d) not recognized.",reason);
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Reason for ending (%d) not recognized.",reason);
       return "unknown";
   }
 }
@@ -589,8 +591,9 @@ connection_edge_end_reason_socks5_response(int reason)
     case END_STREAM_REASON_NET_UNREACHABLE:
       return SOCKS5_NET_UNREACHABLE;
     default:
-      log_warn(LD_PROTOCOL,"Reason for ending (%d) not recognized; "
-               "sending generic socks error.", reason);
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Reason for ending (%d) not recognized; "
+             "sending generic socks error.", reason);
       return SOCKS5_GENERAL_ERROR;
   }
 }
@@ -819,8 +822,8 @@ connection_edge_process_relay_cell_not_open(
       rh->command == RELAY_COMMAND_CONNECTED) {
     tor_assert(CIRCUIT_IS_ORIGIN(circ));
     if (conn->_base.state != AP_CONN_STATE_CONNECT_WAIT) {
-      log_warn(LD_APP,"Got 'connected' while not in state connect_wait. "
-               "Dropping.");
+      log_fn(LOG_PROTOCOL_WARN, LD_APP,
+             "Got 'connected' while not in state connect_wait. Dropping.");
       return 0;
     }
 //    log_fn(LOG_INFO,"Connected! Notifying application.");
@@ -862,15 +865,16 @@ connection_edge_process_relay_cell_not_open(
     int ttl;
     int answer_len;
     if (conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
-      log_warn(LD_APP,"Got a 'resolved' cell while not in state resolve_wait. "
-               "Dropping.");
+      log_fn(LOG_PROTOCOL_WARN, LD_APP, "Got a 'resolved' cell while "
+             "not in state resolve_wait. Dropping.");
       return 0;
     }
     tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE ||
                conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR);
     answer_len = cell->payload[RELAY_HEADER_SIZE+1];
     if (rh->length < 2 || answer_len+2>rh->length) {
-      log_warn(LD_PROTOCOL, "Dropping malformed 'resolved' cell");
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Dropping malformed 'resolved' cell");
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return 0;
     }
@@ -928,8 +932,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   log_debug(domain, "Now seen %d relay cells here.", num_seen);
 
   if (rh.length > RELAY_PAYLOAD_SIZE) {
-    log_warn(LD_PROTOCOL,
-             "Relay cell length field too long. Closing circuit.");
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Relay cell length field too long. Closing circuit.");
     return - END_CIRC_REASON_TORPROTOCOL;
   }
 
@@ -948,11 +952,13 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
     case RELAY_COMMAND_BEGIN_DIR:
       if (layer_hint &&
           circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
-        log_warn(LD_APP,"relay begin request unsupported at AP. Dropping.");
+        log_fn(LOG_PROTOCOL_WARN, LD_APP,
+               "Relay begin request unsupported at AP. Dropping.");
         return 0;
       }
       if (conn) {
-        log_warn(domain,"begin cell for known stream. Dropping.");
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "Begin cell for known stream. Dropping.");
         return 0;
       }
       connection_exit_begin_conn(cell, circ);
@@ -1016,14 +1022,15 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_EXTEND:
       if (conn) {
-        log_warn(domain,"'extend' for non-zero stream. Dropping.");
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "'extend' cell received for non-zero stream. Dropping.");
         return 0;
       }
       return circuit_extend(cell, circ);
     case RELAY_COMMAND_EXTENDED:
       if (!layer_hint) {
-        log_warn(LD_PROTOCOL,
-                 "'extended' unsupported at non-origin. Dropping.");
+        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+               "'extended' unsupported at non-origin. Dropping.");
         return 0;
       }
       log_debug(domain,"Got an extended cell! Yay.");
@@ -1040,7 +1047,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_TRUNCATE:
       if (layer_hint) {
-        log_warn(LD_APP,"'truncate' unsupported at origin. Dropping.");
+        log_fn(LOG_PROTOCOL_WARN, LD_APP,
+               "'truncate' unsupported at origin. Dropping.");
         return 0;
       }
       if (circ->n_conn) {
@@ -1058,7 +1066,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_TRUNCATED:
       if (!layer_hint) {
-        log_warn(LD_EXIT,"'truncated' unsupported at non-origin. Dropping.");
+        log_fn(LOG_PROTOCOL_WARN, LD_EXIT,
+               "'truncated' unsupported at non-origin. Dropping.");
         return 0;
       }
       circuit_truncated(TO_ORIGIN_CIRCUIT(circ), layer_hint);
@@ -1101,21 +1110,25 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     case RELAY_COMMAND_RESOLVE:
       if (layer_hint) {
-        log_warn(LD_APP,"resolve request unsupported at AP; dropping.");
+        log_fn(LOG_PROTOCOL_WARN, LD_APP,
+               "resolve request unsupported at AP; dropping.");
         return 0;
       } else if (conn) {
-        log_warn(domain, "resolve request for known stream; dropping.");
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "resolve request for known stream; dropping.");
         return 0;
       } else if (circ->purpose != CIRCUIT_PURPOSE_OR) {
-        log_warn(domain, "resolve request on circ with purpose %d; dropping",
-                 circ->purpose);
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "resolve request on circ with purpose %d; dropping",
+               circ->purpose);
         return 0;
       }
       connection_exit_begin_resolve(cell, TO_OR_CIRCUIT(circ));
       return 0;
     case RELAY_COMMAND_RESOLVED:
       if (conn) {
-        log_warn(domain,"'resolved' unsupported while open. Closing circ.");
+        log_fn(LOG_PROTOCOL_WARN, domain,
+               "'resolved' unsupported while open. Closing circ.");
         return -END_CIRC_REASON_TORPROTOCOL;
       }
       log_info(domain,
