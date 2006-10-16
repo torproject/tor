@@ -451,9 +451,8 @@ $Id$
       information for which this Tor is not authoritative, Tor replies with
       an empty string.
 
-    "status/general/..."
-    "status/client/circuit-established"
-    "status/server/..."
+    "status/circuit-established"
+    "status/..."
       These provide the current internal Tor values for various Tor
       states. See Section 4.1.10 for explanations. (Only a few of the
       status events are available as getinfo's currently. Let us know if
@@ -874,12 +873,42 @@ $Id$
 
   Syntax:
      "650" SP Type SP Action SP Arguments
-     Type = "STATUS_GENERAL" / "STATUS_CLIENT" / "STATUS_SERVER"
+     Type = "STATUS_NOTICE" / "STATUS_WARN"
      Action is a string, and Arguments is a series of key=value
-     pairs; more details below.
+     pairs on the same line.
 
-  Actions for STATUS_GENERAL events can be as follows:
+  Actions for STATUS_NOTICE events can be as follows:
 
+client notices:
+     CIRCUIT_ESTABLISHED
+       Tor is able to establish circuits for client use. This event will
+       only be sent if we just built a circuit that changed our mind --
+       that is, prior to this event we didn't know whether we could
+       establish circuits.
+
+     DIR_ALL_UNREACHABLE
+       Tor believes that none of the known directory servers are
+       reachable -- this is most likely because the local network is
+       down or otherwise not working, and might help to explain for the
+       user why Tor appears to be broken.
+
+     GUARD_NODES_CHANGED
+
+server notices:
+     EXTERNAL_ADDRESS
+     "address=IP"
+     "method=guessed/resolved/..."
+
+     // hibernating
+
+     CHECKING_REACHABILITY
+     "oraddress=IP:port"
+     "diraddress=IP:port"
+     "timeout=NUM"
+
+  Actions for STATUS_WARN events can be as follows:
+
+general warns:
      DANGEROUS_VERSION
      "current=version"
      "recommended=version,version,..."
@@ -916,14 +945,7 @@ $Id$
      // (either from talking to a dir authority, or from perusing a
      //  network-status timestamp)
 
-  Actions for STATUS_CLIENT events can be as follows:
-
-     CIRCUIT_ESTABLISHED
-       Tor is able to establish circuits for client use. This event will
-       only be sent if we just built a circuit that changed our mind --
-       that is, prior to this event we didn't know whether we could
-       establish circuits.
-
+client warns:
      DANGEROUS_SOCKS
      "protocol=socks4/socks4a/socks5"
      "address=IP:port"
@@ -933,38 +955,18 @@ $Id$
        for something other than the SOCKS protocol. Perhaps the user is
        using Tor as an HTTP proxy?
 
-     DIR_ALL_UNREACHABLE
-       Tor believes that none of the known directory servers are
-       reachable -- this is most likely because the local network is
-       down or otherwise not working, and might help to explain for the
-       user why Tor appears to be broken.
-
-     GUARD_NODES_CHANGED
-
      BAD_HOSTNAME
 
      // a nickname we asked for is unavailable. no need for this
      // quite yet, since no end-user controllers let you configure that.
 
-  Actions for STATUS_SERVER events can be as follows:
-
-     EXTERNAL_ADDRESS
-     "address=IP"
-     "method=guessed/resolved/..."
-
+server warns:
      // something about failing to parse our address?
      // from resolve_my_address() in config.c
-
-     // hibernating
 
      // sketchy libevent, sketchy OS, sketchy threading
 
      // too many onions queued. threading problem or slow cpu?
-
-     CHECKING_REACHABILITY
-     "oraddress=IP:port"
-     "diraddress=IP:port"
-     "timeout=NUM"
 
      REACHABILITY_FAILED
      "oraddress=IP:port"
