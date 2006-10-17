@@ -13,9 +13,6 @@ http://prdownloads.sf.net/mingw/MSYS-1.0.10.exe?download
 Download the mingw developer tool kit:
 http://prdownloads.sf.net/mingw/msysDTK-1.0.1.exe?download
 
-Download the mingw win32api:
-http://prdownloads.sf.net/mingw/w32api-3.6.tar.gz?download
-
 Install mingw, msys and mingw-dtk.
 
 Create a directory called "tor-mingw".
@@ -24,15 +21,15 @@ Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
 Download openssl:
-http://www.openssl.org/source/openssl-0.9.8c.tar.gz
+http://www.openssl.org/source/openssl-0.9.8d.tar.gz
 
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
 Type "cd tor-mingw/"
-Type "tar zxf openssl-0.9.8c.tar.gz"
+Type "tar zxf openssl-0.9.8d.tar.gz"
 
 Make openssl libraries:
-Type "cd tor-mingw/openssl-0.9.8c/"
+Type "cd tor-mingw/openssl-0.9.8d/"
 Type "./Configure mingw"
 Edit Makefile and remove the "test:" and "tests:" sections.
 Type "rm -rf ./test"
