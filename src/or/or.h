@@ -494,7 +494,9 @@ typedef enum {
 #define RESOLVED_TYPE_ERROR 0xF1
 
 /* DOCDOC We should document the meaning of these. */
-#define END_CIRC_AT_ORIGIN           -1
+/* Negative reasons are internal */
+#define END_CIRC_REASON_NOPATH          -2
+#define END_CIRC_AT_ORIGIN              -1
 #define _END_CIRC_REASON_MIN            0
 #define END_CIRC_REASON_NONE            0
 #define END_CIRC_REASON_TORPROTOCOL     1
@@ -505,7 +507,11 @@ typedef enum {
 #define END_CIRC_REASON_CONNECTFAILED   6
 #define END_CIRC_REASON_OR_IDENTITY     7
 #define END_CIRC_REASON_OR_CONN_CLOSED  8
-#define _END_CIRC_REASON_MAX            8
+#define END_CIRC_REASON_FINISHED        9
+#define END_CIRC_REASON_TIMEOUT         10
+#define END_CIRC_REASON_DESTROYED       11
+#define END_CIRC_REASON_NOSUCHSERVICE   12
+#define _END_CIRC_REASON_MAX            12
 
 /** Length of 'y' portion of 'y.onion' URL. */
 #define REND_SERVICE_ID_LEN 16

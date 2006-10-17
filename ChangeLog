@@ -6,7 +6,9 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
   o Minor features, controller:
     - Add a REASON field to CIRC events; for backward compatibility, this
       field is sent only to controllers that have enabled the extended
-      event format. (Patch from Mike Perry)
+      event format.  Also, add additional reason codes to explain why a
+      given circuit has been destroyed or truncated. (Patches from Mike
+      Perry)
 
   o Security bugfixes:
     - When the user sends a NEWNYM signal, clear the client-side DNS

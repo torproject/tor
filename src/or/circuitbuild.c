@@ -305,8 +305,7 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *info,
 
   if (onion_pick_cpath_exit(circ, info) < 0 ||
       onion_populate_cpath(circ) < 0) {
-    /* XXX should there be a 'couldn't build a path' reason? */
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NOPATH);
     return NULL;
   }
 

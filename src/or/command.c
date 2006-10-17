@@ -379,18 +379,12 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
     circuit_set_n_circid_orconn(circ, 0, NULL);
     if (CIRCUIT_IS_ORIGIN(circ)) {
       /* Prevent arbitrary destroys from going unnoticed by controller */
-      /* XXXX Not quite right; what we want is to tell the controller the
-       *      exact reason that we were asked to close, but tell it that we
-       *      closed because we were asked. Anything else is not accurate.
-       *      OR_CONN_CLOSED is certainly wrong, since a destroy doesn't mean
-       *      that the underlying OR connection got closed. -NM */
-#if 0
       if (reason == END_CIRC_AT_ORIGIN ||
           reason == END_CIRC_REASON_NONE ||
+          reason == END_CIRC_REASON_FINISHED ||
           reason == END_CIRC_REASON_REQUESTED) {
-        reason = END_CIRC_REASON_OR_CONN_CLOSED;
+        reason = END_CIRC_REASON_DESTROYED;
       }
-#endif
       circuit_mark_for_close(circ, reason);
     } else {
       char payload[1];

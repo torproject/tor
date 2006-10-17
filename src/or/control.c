@@ -2825,6 +2825,16 @@ circuit_end_reason_to_string(int reason)
       return "REASON=OR_IDENTITY";
     case END_CIRC_REASON_OR_CONN_CLOSED:
       return "REASON=OR_CONN_CLOSED";
+    case END_CIRC_REASON_FINISHED:
+      return "REASON=FINISHED";
+    case END_CIRC_REASON_TIMEOUT:
+      return "REASON=TIMEOUT";
+    case END_CIRC_REASON_DESTROYED:
+      return "REASON=DESTROYED";
+    case END_CIRC_REASON_NOPATH:
+      return "REASON=NOPATH";
+    case END_CIRC_REASON_NOSUCHSERVICE:
+      return "REASON=NOSUCHSERVICE";
     default:
       log_warn(LD_BUG, "Unrecognized reason code %d", (int)reason);
       return NULL;

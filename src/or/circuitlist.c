@@ -780,7 +780,7 @@ circuit_mark_all_unused_circs(void)
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         !circ->timestamp_dirty)
-      circuit_mark_for_close(circ, END_CIRC_REASON_REQUESTED);
+      circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
   }
 }
 
@@ -843,7 +843,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
                file, line, circ->purpose);
     }
     reason = END_CIRC_REASON_NONE;
-  } else if (CIRCUIT_IS_ORIGIN(circ) && reason != END_CIRC_REASON_NONE) {
+  } else if (CIRCUIT_IS_ORIGIN(circ) && reason < _END_CIRC_REASON_MIN) {
     /* We don't send reasons when closing circuits at the origin, but we want
      * to track them anyway so we can give them to the controller. */
     reason = END_CIRC_REASON_NONE;

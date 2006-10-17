@@ -265,8 +265,7 @@ circuit_expire_building(time_t now)
                circuit_state_to_string(victim->state), victim->purpose);
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
-    /* XXXX Should there be a timeout reason? CONNECTFAILED isn't right. */
-    circuit_mark_for_close(victim, END_CIRC_REASON_CONNECTFAILED);
+    circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
   }
 }
 
@@ -584,8 +583,7 @@ circuit_expire_old_circuits(time_t now)
       log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, purp %d)",
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
-      /* XXXX Should there be a timeout reason? REQUESTED isn't right. */
-      circuit_mark_for_close(circ, END_CIRC_REASON_REQUESTED);
+      circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     } else if (!circ->timestamp_dirty &&
                circ->state == CIRCUIT_STATE_OPEN &&
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
@@ -593,8 +591,7 @@ circuit_expire_old_circuits(time_t now)
         log_debug(LD_CIRC,
                   "Closing circuit that has been unused for %d seconds.",
                   (int)(now - circ->timestamp_created));
-        /* XXXX Should there be a timeout reason? REQUESTED isn't right. */
-        circuit_mark_for_close(circ, END_CIRC_REASON_REQUESTED);
+        circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
       }
     }
   }

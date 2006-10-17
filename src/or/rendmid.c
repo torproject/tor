@@ -90,7 +90,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
   while ((c = circuit_get_intro_point(pk_digest))) {
     log_info(LD_REND, "Replacing old circuit for service %s",
              safe_str(serviceid));
-    circuit_mark_for_close(TO_CIRCUIT(c), END_CIRC_REASON_REQUESTED);
+    circuit_mark_for_close(TO_CIRCUIT(c), END_CIRC_REASON_FINISHED);
     /* Now it's marked, and it won't be returned next time. */
   }
 

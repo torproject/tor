@@ -3666,6 +3666,7 @@ static const struct {
   { "1.1",  LE_11 },
   { "1.1a", LE_11A },
   { "1.1b", LE_11B },
+  { "1.2",  LE_12 },
   { NULL, 0 }
 };
 

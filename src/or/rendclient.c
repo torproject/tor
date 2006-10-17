@@ -211,7 +211,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     }
     /* close the circuit: we won't need it anymore. */
     circ->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACKED;
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
   } else {
     /* It's a NAK; the introduction point didn't relay our request. */
     circ->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCING;

@@ -738,8 +738,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
              serviceid, circuit->_base.n_circ_id);
-    /* XXXX Add a no-such-servicer reason? */
-    reason = END_CIRC_REASON_CONNECTFAILED;
+    reason = END_CIRC_REASON_NOSUCHSERVICE;
     goto err;
   }
 
