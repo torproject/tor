@@ -379,10 +379,12 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
     circuit_set_n_circid_orconn(circ, 0, NULL);
     if (CIRCUIT_IS_ORIGIN(circ)) {
       /* Prevent arbitrary destroys from going unnoticed by controller */
-      if (reason == END_CIRC_AT_ORIGIN ||
-          reason == END_CIRC_REASON_NONE ||
+      if (reason == END_CIRC_REASON_NONE ||
           reason == END_CIRC_REASON_FINISHED ||
           reason == END_CIRC_REASON_REQUESTED) {
+        /* XXXX This logic is wrong.  Really, we should report the fact that
+         * the circuit was closed because of a DESTROY, *and* we should report
+         * the reason that we were given. -NM */
         reason = END_CIRC_REASON_DESTROYED;
       }
       circuit_mark_for_close(circ, reason);
