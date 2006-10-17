@@ -400,8 +400,11 @@ static int config_parse_interval(const char *s, int *ok);
 static void print_svn_version(void);
 static void init_libevent(void);
 static int opt_streq(const char *s1, const char *s2);
+/** Versions of libevent. */
 typedef enum {
-  LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_OTHER
+  /* Note: we compare these, so it's important that "old" precede everything,
+   * and that "other" come last. */
+  LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_OTHER
 } le_version_t;
 static le_version_t decode_libevent_version(void);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
