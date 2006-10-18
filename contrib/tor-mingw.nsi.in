@@ -130,8 +130,10 @@ Section "TorButton for FireFox" Torbutton
    File "${BIN}\torbutton-1.0.4-fx+tb.xpi"
 
    ReadRegStr $1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe" "Path"
+   ; This message box is for debugging
    MessageBox MB_OK "Firefox is installed at $1"
-     StrCmp $1 "" +1 0
+     StrCmp $1 "" +4 0 ; if Path is empty or null, then skip to an error, otherwise proceed normally
+        ; This message box is for debugging
         MessageBox MB_OK "I'm going to run $1firefox.exe --install-global-extension $INSTDIR\torbutton"
 	Exec '"$1firefox.exe" -install-global-extension $INSTDIR\torbutton-1.0.4-fx+tb.xpi'
 	Goto +2
