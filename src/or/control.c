@@ -2837,7 +2837,7 @@ circuit_end_reason_to_string(int reason)
       return "REASON=NOSUCHSERVICE";
     default:
       log_warn(LD_BUG, "Unrecognized reason code %d", (int)reason);
-      return NULL;
+      return "REASON=UNRECOGNIZED"; /* should never get called */
   }
 }
 

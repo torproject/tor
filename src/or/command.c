@@ -384,7 +384,16 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
           reason == END_CIRC_REASON_REQUESTED) {
         /* XXXX This logic is wrong.  Really, we should report the fact that
          * the circuit was closed because of a DESTROY, *and* we should report
-         * the reason that we were given. -NM */
+         * the reason that we were given. -NM
+         *   Hrmm. We could store the fact that we sent a truncate and the
+         * reason for this truncate in circuit_t. If we ever get a destroy
+         * that doesn't match this reason, we could complain loudly -MP
+         *   That won't work for the cases where the destroy is not because of
+         * a truncate, though.  The idea is that if we get a DESTROYED cell
+         * with reason 'CONNECTFAILED' and another DESTROYED cell with reason
+         * 'RESOURCELIMIT', the controller may want to know the reported
+         * reason. -NM
+         */
         reason = END_CIRC_REASON_DESTROYED;
       }
       circuit_mark_for_close(circ, reason);
