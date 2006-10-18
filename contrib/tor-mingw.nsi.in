@@ -34,7 +34,7 @@ VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. Yo
 VIAddVersionKey "FileVersion" "${VERSION}"
 
 ;Use upx on the installer header to shrink the size.
-!packhdr header.dat "upx --best header.dat"
+;!packhdr header.dat "upx --best header.dat"
 
 !define MUI_WELCOMEPAGE_TITLE "Welcome to the Tor ${VERSION} Setup Wizard"
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of Tor ${VERSION}.\r\n\r\nIf you have previously installed Tor and it is currently running, please exit Tor first before continuing this installation.\r\n\r\n$_CLICK"
@@ -123,6 +123,19 @@ Section "Documents" Docs
    File "..\AUTHORS"
    File "..\ChangeLog"
    File "..\LICENSE"
+SectionEnd
+
+Section "TorButton for FireFox" Torbutton
+   SetOutPath $INSTDIR
+   File "${BIN}\torbutton-1.0.4-fx+tb.xpi"
+
+   ReadRegStr $1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe" "Path"
+   MessageBox MB_OK "Firefox is installed at $1"
+     StrCmp $1 "" +1 0
+        MessageBox MB_OK "I'm going to run $1firefox.exe --install-global-extension $INSTDIR\torbutton"
+	Exec '"$1firefox.exe" -install-global-extension $INSTDIR\torbutton-1.0.4-fx+tb.xpi'
+	Goto +2
+	MessageBox MB_OK|MB_ICONSTOP "FireFox wasn't found on your system.  Not installing Torbutton."
 SectionEnd
 
 SubSection /e "Shortcuts" Shortcuts
