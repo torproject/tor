@@ -793,3 +793,7 @@ $Id$
 
    ...
 
+7.0 Error and return codes in the directory protocol
+
+We should write down what return codes dirservers send in what situations.
+
