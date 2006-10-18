@@ -466,12 +466,21 @@ $Id$
       any current problems with Tor's operation.
       [The answers should include notice events, not just warns and
       errs, for example so Tor can learn whether any circuits have been
-      established yet.]
+      established yet.-RD]
+        [notice, warn, and errs need to be separated here, though.
+        Otherwise, when we add a new status event type in the future,
+        controllers won't know whether it's good or bad. -NM]
+
       [Does this mean that Tor must keep state on its side of all the
       statuses it's sent, and recognize when they're cancelled out,
       and so on? It's a shame that Tor needs to do this and also Vidalia
-      needs to do this.]
+      needs to do this. -RD]
+        [Is there a good alternative? If we want controllers who connect
+        to a running Tor to see its status, I think we need to do this. -NM]
 
+      [What is the format of this list? Is it space-separated,
+      newline-separated?  Does it include keywords, arguments, etc?  Also,
+      what about STATUS_GENERAL? -NM]
 
   Examples:
      C: GETINFO version desc/name/moria1
