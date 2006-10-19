@@ -66,6 +66,7 @@ static void note_request(const char *key, size_t bytes);
 #define RUNNINGROUTERS_CACHE_LIFETIME (20*60)
 #define NETWORKSTATUS_CACHE_LIFETIME (5*60)
 #define ROUTERDESC_CACHE_LIFETIME (30*60)
+#define ROUTERDESC_BY_DIGEST_CACHE_LIFETIME (48*60*60)
 #define ROBOTS_CACHE_LIFETIME (24*60*60)
 
 /********* END VARIABLES ************/
@@ -1617,7 +1618,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     } else if (!strcmpstart(url, "/tor/server/d/")) {
       request_type = deflated?"/tor/server/d.z":"/tor/server/d";
       if (smartlist_len(conn->fingerprint_stack) == 1)
-        cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
+        cache_lifetime = ROUTERDESC_BY_DIGEST_CACHE_LIFETIME;
     } else {
       request_type = "/tor/server/?";
     }
