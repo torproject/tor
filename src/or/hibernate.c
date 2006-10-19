@@ -587,7 +587,7 @@ read_bandwidth_usage(void)
 
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
                get_options()->DataDirectory);
-  if (!(s = read_file_to_str(fname, 0))) {
+  if (!(s = read_file_to_str(fname, 0, NULL))) {
     return 0;
   }
   elts = smartlist_create();

@@ -460,7 +460,7 @@ crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env,
   int r;
 
   /* Read the file into a string. */
-  contents = read_file_to_str(keyfile, 0);
+  contents = read_file_to_str(keyfile, 0, NULL);
   if (!contents) {
     log_warn(LD_CRYPTO, "Error reading private key from \"%s\"", keyfile);
     return -1;

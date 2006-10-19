@@ -136,7 +136,7 @@ router_reload_networkstatus(void)
       }
       tor_snprintf(filename,sizeof(filename),"%s/cached-status/%s",
                    get_options()->DataDirectory, fn);
-      s = read_file_to_str(filename, 0);
+      s = read_file_to_str(filename, 0, NULL);
       if (s) {
         stat(filename, &st);
         if (router_set_networkstatus(s, st.st_mtime, NS_FROM_CACHE, NULL)<0) {
@@ -369,7 +369,7 @@ router_reload_router_list(void)
 
   tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
-  contents = read_file_to_str(fname, 1);
+  contents = read_file_to_str(fname, 1, NULL);
   if (contents) {
     stat(fname, &st);
     router_load_routers_from_string(contents,

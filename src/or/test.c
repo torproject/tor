@@ -1164,6 +1164,58 @@ test_strmap(void)
 }
 
 static void
+test_mmap(void)
+{
+  char *fname1 = tor_strdup(get_fname("mapped_1"));
+  char *fname2 = tor_strdup(get_fname("mapped_2"));
+  char *fname3 = tor_strdup(get_fname("mapped_3"));
+  const size_t buflen = 17000;
+  char *buf = tor_malloc(17000);
+  tor_mmap_t *mapping;
+
+  crypto_rand(buf, buflen);
+
+  write_str_to_file(fname1, "Short file.", 1);
+  write_bytes_to_file(fname2, buf, buflen, 1);
+  write_bytes_to_file(fname3, buf, 16384, 1);
+
+  mapping = tor_mmap_file(fname1);
+  test_assert(mapping);
+  test_eq(mapping->size, strlen("Short file."));
+  test_streq(mapping->data, "Short file.");
+  /* make sure we can unlink. */
+  test_assert(unlink(fname1) == 0);
+  test_streq(mapping->data, "Short file.");
+  tor_munmap_file(mapping);
+
+  /* Make sure that we fail to map a no-longer-existant file. */
+  mapping = tor_mmap_file(fname1);
+  test_assert(mapping == NULL);
+
+  /* Now try a big file that stretches across a few pages and isn't aligned */
+  mapping = tor_mmap_file(fname2);
+  test_assert(mapping);
+  test_eq(mapping->size, buflen);
+  test_memeq(mapping->data, buf, buflen);
+  tor_munmap_file(mapping);
+
+  /* Now try a big aligned file. */
+  mapping = tor_mmap_file(fname3);
+  test_assert(mapping);
+  test_eq(mapping->size, 16384);
+  test_memeq(mapping->data, buf, 16384);
+
+  /* fname1 got unlinked above */
+  unlink(fname2);
+  unlink(fname3);
+
+  tor_free(fname1);
+  tor_free(fname2);
+  tor_free(fname3);
+  tor_free(buf);
+}
+
+static void
 test_control_formats(void)
 {
   char *out;
@@ -1771,6 +1823,7 @@ main(int c, char**v)
   test_strmap();
   test_control_formats();
   test_pqueue();
+  test_mmap();
   puts("\n========================= Onion Skins =====================");
   test_onion();
   test_onion_handshake();

@@ -1288,6 +1288,9 @@ append_bytes_to_file(const char *fname, const char *str, size_t len,
 
 /** Read the contents of <b>filename</b> into a newly allocated
  * string; return the string on success or NULL on failure.
+ *
+ * If <b>size_out</b> is provided, store the length of the result in
+ * <b>size_out</b>
  */
 /*
  * This function <em>may</em> return an erroneous result if the file
@@ -1297,7 +1300,7 @@ append_bytes_to_file(const char *fname, const char *str, size_t len,
  * be truncated.
  */
 char *
-read_file_to_str(const char *filename, int bin)
+read_file_to_str(const char *filename, int bin, size_t *size_out)
 {
   int fd; /* router file */
   struct stat statbuf;
@@ -1351,6 +1354,8 @@ read_file_to_str(const char *filename, int bin)
   }
 #endif
   close(fd);
+  if (size_out)
+    *size_out = (size_t) r;
 
   return string;
 }

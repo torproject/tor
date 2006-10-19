@@ -2801,7 +2801,7 @@ options_init_from_torrc(int argc, char **argv)
 
   /* get config lines, assign them */
   if (file_status(fname) != FN_FILE ||
-      !(cf = read_file_to_str(fname,0))) {
+      !(cf = read_file_to_str(fname,0,NULL))) {
     if (using_default_torrc == 1) {
       log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
           "using reasonable defaults.", fname);
@@ -3421,7 +3421,7 @@ write_configuration_file(const char *fname, or_options_t *options)
   if (fname) {
     switch (file_status(fname)) {
       case FN_FILE:
-        old_val = read_file_to_str(fname, 0);
+        old_val = read_file_to_str(fname, 0, NULL);
         if (strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
           rename_old = 1;
         }
@@ -3835,7 +3835,7 @@ or_state_load(void)
   fname = get_or_state_fname();
   switch (file_status(fname)) {
     case FN_FILE:
-      if (!(contents = read_file_to_str(fname, 0))) {
+      if (!(contents = read_file_to_str(fname, 0, NULL))) {
         log_warn(LD_FS, "Unable to read state file \"%s\"", fname);
         goto done;
       }

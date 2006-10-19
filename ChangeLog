@@ -42,6 +42,9 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       service circuits.
     - Correctly set maximum connection limit on Cygwin.
     - Try to detect windows correctly when cross-compiling.
+    - Detect the size of the routers file correctly even if it is corrupted
+      (on systems without mmap) or not page-aligned (on systems with mmap).
+      This bug was harmless.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07

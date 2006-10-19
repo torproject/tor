@@ -113,14 +113,19 @@ const char compat_c_id[] =
 #endif
 
 #ifdef HAVE_SYS_MMAN_H
+typedef struct tor_mmap_impl_t {
+  tor_mmap_t base;
+  size_t mapping_size; /**< Size of the actual mapping. (This is this file
+                        * size, rounded up to the nearest page.) */
+} tor_mmap_impl_t;
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
   int fd; /* router file */
   char *string;
   int page_size;
-  tor_mmap_t *res;
-  size_t size;
+  tor_mmap_impl_t *res;
+  size_t size, filesize;
 
   tor_assert(filename);
 
@@ -130,7 +135,7 @@ tor_mmap_file(const char *filename)
     return NULL;
   }
 
-  size = lseek(fd, 0, SEEK_END);
+  size = filesize = lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
   /* ensure page alignment */
   page_size = getpagesize();
@@ -146,28 +151,31 @@ tor_mmap_file(const char *filename)
 
   close(fd);
 
-  res = tor_malloc_zero(sizeof(tor_mmap_t));
-  res->data = string;
-  res->size = size;
+  res = tor_malloc_zero(sizeof(tor_mmap_impl_t));
+  res->base.data = string;
+  res->base.size = filesize;
+  res->mapping_size = size;
 
-  return res;
+  return &(res->base);
 }
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  munmap((char*)handle->data, handle->size);
-  tor_free(handle);
+  tor_mmap_impl_t *h = (tor_mmap_impl_t*)
+    (((char*)handle) - STRUCT_OFFSET(tor_mmap_impl_t, base));
+  munmap((char*)h->base.data, h->mapping_size);
+  tor_free(h);
 }
 #elif defined(MS_WINDOWS)
 typedef struct win_mmap_t {
   tor_mmap_t base;
   HANDLE file_handle;
   HANDLE mmap_handle;
-} tor_mmap_impl_t;
+} win_mmap_t;
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
-  struct win_mmap_t *res = tor_malloc_zero(sizeof(struct win_mmap_t));
+  win_mmap_t *res = tor_malloc_zero(sizeof(win_mmap_t));
   res->mmap_handle = res->file_handle = INVALID_HANDLE_VALUE;
 
   res->file_handle = CreateFile(filename,
@@ -208,8 +216,8 @@ tor_mmap_file(const char *filename)
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  struct win_mmap_t *h = (struct win_mmap_t*)
-    (((char*)handle) - STRUCT_OFFSET(struct win_mmap_t, base));
+  win_mmap_t *h = (win_mmap_t*)
+    (((char*)handle) - STRUCT_OFFSET(win_mmap_t, base));
   if (handle->data)
 
   /*this is an ugly cast, but without it, "data" in struct tor_mmap_t would
@@ -226,13 +234,14 @@ tor_munmap_file(tor_mmap_t *handle)
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
-  char *res = read_file_to_str(filename, 1);
+  size_t size;
+  char *res = read_file_to_str(filename, 1, &size);
   tor_mmap_t *handle;
   if (! res)
     return NULL;
   handle = tor_malloc_zero(sizeof(tor_mmap_t));
   handle->data = res;
-  handle->size = strlen(res) + 1;
+  handle->size = size;
   return handle;
 }
 void
