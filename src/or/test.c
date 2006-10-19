@@ -205,6 +205,11 @@ test_buffers(void)
   }
 
 #if 0
+  {
+  int s;
+  int eof;
+  int i;
+  buf_t *buf2;
   /****
    * read_to_buf
    ****/
@@ -264,6 +269,7 @@ test_buffers(void)
   test_eq(buf_capacity(buf), MAX_BUF_SIZE);
   test_eq(buf_datalen(buf), 256-6-32);
   test_eq(eof, 1);
+  }
 #endif
 
   buf_free(buf);
@@ -323,20 +329,6 @@ test_crypto(void)
   crypto_rand(data1, 100);
   crypto_rand(data2, 100);
   test_memneq(data1,data2,100);
-
-#if 0
-  /* Try out identity ciphers. */
-  env1 = crypto_new_cipher_env(CRYPTO_CIPHER_IDENTITY);
-  test_neq(env1, 0);
-  test_eq(crypto_cipher_generate_key(env1), 0);
-  test_eq(crypto_cipher_encrypt_init_cipher(env1), 0);
-  for (i = 0; i < 1024; ++i) {
-    data1[i] = (char) i*73;
-  }
-  crypto_cipher_encrypt(env1, data2, data1, 1024);
-  test_memeq(data1, data2, 1024);
-  crypto_free_cipher_env(env1);
-#endif
 
   /* Now, test encryption and decryption with stream cipher. */
   data1[0]='\0';
@@ -585,7 +577,6 @@ test_util(void)
 {
   struct timeval start, end;
   struct tm a_time;
-  smartlist_t *sl;
   char timestr[RFC1123_TIME_LEN+1];
   char buf[1024];
   time_t t_res;
@@ -642,146 +633,6 @@ test_util(void)
   i = parse_rfc1123_time(timestr, &t_res);
   test_eq(i,0);
   test_eq(t_res, (time_t)1091580502UL);
-
-  /* Test smartlist */
-  sl = smartlist_create();
-  smartlist_add(sl, (void*)1);
-  smartlist_add(sl, (void*)2);
-  smartlist_add(sl, (void*)3);
-  smartlist_add(sl, (void*)4);
-  smartlist_del_keeporder(sl, 1);
-  smartlist_insert(sl, 1, (void*)22);
-  smartlist_insert(sl, 0, (void*)0);
-  smartlist_insert(sl, 5, (void*)555);
-  test_eq_ptr((void*)0,   smartlist_get(sl,0));
-  test_eq_ptr((void*)1,   smartlist_get(sl,1));
-  test_eq_ptr((void*)22,  smartlist_get(sl,2));
-  test_eq_ptr((void*)3,   smartlist_get(sl,3));
-  test_eq_ptr((void*)4,   smartlist_get(sl,4));
-  test_eq_ptr((void*)555, smartlist_get(sl,5));
-
-  smartlist_clear(sl);
-  smartlist_split_string(sl, "abc", ":", 0, 0);
-  test_eq(1, smartlist_len(sl));
-  test_streq("abc", smartlist_get(sl, 0));
-  smartlist_split_string(sl, "a::bc::", "::", 0, 0);
-  test_eq(4, smartlist_len(sl));
-  test_streq("a", smartlist_get(sl, 1));
-  test_streq("bc", smartlist_get(sl, 2));
-  test_streq("", smartlist_get(sl, 3));
-  cp = smartlist_join_strings(sl, "", 0, NULL);
-  test_streq(cp, "abcabc");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "!", 0, NULL);
-  test_streq(cp, "abc!a!bc!");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "XY", 0, NULL);
-  test_streq(cp, "abcXYaXYbcXY");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "XY", 1, NULL);
-  test_streq(cp, "abcXYaXYbcXYXY");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "", 1, NULL);
-  test_streq(cp, "abcabc");
-  tor_free(cp);
-
-  smartlist_split_string(sl, "/def/  /ghijk", "/", 0, 0);
-  test_eq(8, smartlist_len(sl));
-  test_streq("", smartlist_get(sl, 4));
-  test_streq("def", smartlist_get(sl, 5));
-  test_streq("  ", smartlist_get(sl, 6));
-  test_streq("ghijk", smartlist_get(sl, 7));
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-  smartlist_clear(sl);
-
-  smartlist_split_string(sl, "a,bbd,cdef", ",", SPLIT_SKIP_SPACE, 0);
-  test_eq(3, smartlist_len(sl));
-  test_streq("a", smartlist_get(sl,0));
-  test_streq("bbd", smartlist_get(sl,1));
-  test_streq("cdef", smartlist_get(sl,2));
-  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
-                         SPLIT_SKIP_SPACE, 0);
-  test_eq(8, smartlist_len(sl));
-  test_streq("z", smartlist_get(sl,3));
-  test_streq("zhasd", smartlist_get(sl,4));
-  test_streq("", smartlist_get(sl,5));
-  test_streq("bnud", smartlist_get(sl,6));
-  test_streq("", smartlist_get(sl,7));
-
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-  smartlist_clear(sl);
-
-  smartlist_split_string(sl, " ab\tc \td ef  ", NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  test_eq(4, smartlist_len(sl));
-  test_streq("ab", smartlist_get(sl,0));
-  test_streq("c", smartlist_get(sl,1));
-  test_streq("d", smartlist_get(sl,2));
-  test_streq("ef", smartlist_get(sl,3));
-  smartlist_split_string(sl, "ghi\tj", NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  test_eq(6, smartlist_len(sl));
-  test_streq("ghi", smartlist_get(sl,4));
-  test_streq("j", smartlist_get(sl,5));
-
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-  smartlist_clear(sl);
-
-  cp = smartlist_join_strings(sl, "XY", 0, NULL);
-  test_streq(cp, "");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "XY", 1, NULL);
-  test_streq(cp, "XY");
-  tor_free(cp);
-
-  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  test_eq(3, smartlist_len(sl));
-  test_streq("z", smartlist_get(sl, 0));
-  test_streq("zhasd", smartlist_get(sl, 1));
-  test_streq("bnud", smartlist_get(sl, 2));
-  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
-  test_eq(5, smartlist_len(sl));
-  test_streq("z", smartlist_get(sl, 3));
-  test_streq("zhasd <>  <> bnud<>", smartlist_get(sl, 4));
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-  smartlist_clear(sl);
-
-  smartlist_split_string(sl, "abcd\n", "\n",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  test_eq(1, smartlist_len(sl));
-  test_streq("abcd", smartlist_get(sl, 0));
-  smartlist_split_string(sl, "efgh", "\n",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  test_eq(2, smartlist_len(sl));
-  test_streq("efgh", smartlist_get(sl, 1));
-
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-  smartlist_clear(sl);
-
-  /* Test smartlist sorting. */
-  smartlist_split_string(sl, "the,onion,router,by,arma,and,nickm", ",", 0, 0);
-  test_eq(7, smartlist_len(sl));
-  smartlist_sort(sl, _compare_strs);
-  cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp,"and,arma,by,nickm,onion,router,the");
-  tor_free(cp);
-
-  test_streq("nickm", smartlist_bsearch(sl, "zNicKM",
-                                        _compare_without_first_ch));
-  test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
-  test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
-
-  /* Test reverse() and pop_last() */
-  smartlist_reverse(sl);
-  cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp,"the,router,onion,nickm,by,arma,and");
-  tor_free(cp);
-  cp = smartlist_pop_last(sl);
-  test_streq(cp, "and");
-  tor_free(cp);
-  test_eq(smartlist_len(sl), 6);
 
   /* Test tor_strstrip() */
   strcpy(buf, "Testing 1 2 3");
@@ -916,8 +767,182 @@ test_util(void)
   test_streq("\"abcd\"", escaped("abcd"));
   test_streq("\"\\\\\\n\\r\\t\\\"\\'\"", escaped("\\\n\r\t\"\'"));
   test_streq("\"z\\001abc\\277d\"", escaped("z\001abc\277d"));
+}
 
-  /* XXXX test older functions. */
+static void
+test_smartlist(void)
+{
+  smartlist_t *sl;
+  char *cp;
+
+  /* XXXX test add_all, remove, string_remove, isin, string_isin,
+   * string_num_isin, overlap, intersect, subtract,
+   * sort_strings, sort_digests, uniq_strings, uniq_digests, bsearch,
+   * join_strings2
+   */
+
+  /* Test smartlist */
+  sl = smartlist_create();
+  smartlist_add(sl, (void*)1);
+  smartlist_add(sl, (void*)2);
+  smartlist_add(sl, (void*)3);
+  smartlist_add(sl, (void*)4);
+  smartlist_del_keeporder(sl, 1);
+  smartlist_insert(sl, 1, (void*)22);
+  smartlist_insert(sl, 0, (void*)0);
+  smartlist_insert(sl, 5, (void*)555);
+  test_eq_ptr((void*)0,   smartlist_get(sl,0));
+  test_eq_ptr((void*)1,   smartlist_get(sl,1));
+  test_eq_ptr((void*)22,  smartlist_get(sl,2));
+  test_eq_ptr((void*)3,   smartlist_get(sl,3));
+  test_eq_ptr((void*)4,   smartlist_get(sl,4));
+  test_eq_ptr((void*)555, smartlist_get(sl,5));
+  /* Try deleting in the middle. */
+  smartlist_del(sl, 1);
+  test_eq_ptr((void*)555, smartlist_get(sl, 1));
+  /* Try deleting at the end. */
+  smartlist_del(sl, 4);
+  test_eq(4, smartlist_len(sl));
+
+  /* Test split and join */
+  smartlist_clear(sl);
+  test_eq(0, smartlist_len(sl));
+  smartlist_split_string(sl, "abc", ":", 0, 0);
+  test_eq(1, smartlist_len(sl));
+  test_streq("abc", smartlist_get(sl, 0));
+  smartlist_split_string(sl, "a::bc::", "::", 0, 0);
+  test_eq(4, smartlist_len(sl));
+  test_streq("a", smartlist_get(sl, 1));
+  test_streq("bc", smartlist_get(sl, 2));
+  test_streq("", smartlist_get(sl, 3));
+  cp = smartlist_join_strings(sl, "", 0, NULL);
+  test_streq(cp, "abcabc");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "!", 0, NULL);
+  test_streq(cp, "abc!a!bc!");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "XY", 0, NULL);
+  test_streq(cp, "abcXYaXYbcXY");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "XY", 1, NULL);
+  test_streq(cp, "abcXYaXYbcXYXY");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "", 1, NULL);
+  test_streq(cp, "abcabc");
+  tor_free(cp);
+
+  smartlist_split_string(sl, "/def/  /ghijk", "/", 0, 0);
+  test_eq(8, smartlist_len(sl));
+  test_streq("", smartlist_get(sl, 4));
+  test_streq("def", smartlist_get(sl, 5));
+  test_streq("  ", smartlist_get(sl, 6));
+  test_streq("ghijk", smartlist_get(sl, 7));
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  smartlist_split_string(sl, "a,bbd,cdef", ",", SPLIT_SKIP_SPACE, 0);
+  test_eq(3, smartlist_len(sl));
+  test_streq("a", smartlist_get(sl,0));
+  test_streq("bbd", smartlist_get(sl,1));
+  test_streq("cdef", smartlist_get(sl,2));
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
+                         SPLIT_SKIP_SPACE, 0);
+  test_eq(8, smartlist_len(sl));
+  test_streq("z", smartlist_get(sl,3));
+  test_streq("zhasd", smartlist_get(sl,4));
+  test_streq("", smartlist_get(sl,5));
+  test_streq("bnud", smartlist_get(sl,6));
+  test_streq("", smartlist_get(sl,7));
+
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  smartlist_split_string(sl, " ab\tc \td ef  ", NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(4, smartlist_len(sl));
+  test_streq("ab", smartlist_get(sl,0));
+  test_streq("c", smartlist_get(sl,1));
+  test_streq("d", smartlist_get(sl,2));
+  test_streq("ef", smartlist_get(sl,3));
+  smartlist_split_string(sl, "ghi\tj", NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(6, smartlist_len(sl));
+  test_streq("ghi", smartlist_get(sl,4));
+  test_streq("j", smartlist_get(sl,5));
+
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  cp = smartlist_join_strings(sl, "XY", 0, NULL);
+  test_streq(cp, "");
+  tor_free(cp);
+  cp = smartlist_join_strings(sl, "XY", 1, NULL);
+  test_streq(cp, "XY");
+  tor_free(cp);
+
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(3, smartlist_len(sl));
+  test_streq("z", smartlist_get(sl, 0));
+  test_streq("zhasd", smartlist_get(sl, 1));
+  test_streq("bnud", smartlist_get(sl, 2));
+  smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+  test_eq(5, smartlist_len(sl));
+  test_streq("z", smartlist_get(sl, 3));
+  test_streq("zhasd <>  <> bnud<>", smartlist_get(sl, 4));
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  smartlist_split_string(sl, "abcd\n", "\n",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(1, smartlist_len(sl));
+  test_streq("abcd", smartlist_get(sl, 0));
+  smartlist_split_string(sl, "efgh", "\n",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  test_eq(2, smartlist_len(sl));
+  test_streq("efgh", smartlist_get(sl, 1));
+
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Test smartlist sorting. */
+  smartlist_split_string(sl, "the,onion,router,by,arma,and,nickm", ",", 0, 0);
+  test_eq(7, smartlist_len(sl));
+  smartlist_sort(sl, _compare_strs);
+  cp = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp,"and,arma,by,nickm,onion,router,the");
+  tor_free(cp);
+
+  test_streq("nickm", smartlist_bsearch(sl, "zNicKM",
+                                        _compare_without_first_ch));
+  test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
+  test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
+
+  /* Test reverse() and pop_last() */
+  smartlist_reverse(sl);
+  cp = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp,"the,router,onion,nickm,by,arma,and");
+  tor_free(cp);
+  cp = smartlist_pop_last(sl);
+  test_streq(cp, "and");
+  tor_free(cp);
+  test_eq(smartlist_len(sl), 6);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Test uniq() */
+  smartlist_split_string(sl,
+                         "noon,radar,a,man,a,plan,a,canal,panama,radar,noon",
+                         ",", 0, 0);
+  smartlist_sort(sl, _compare_strs);
+  smartlist_uniq(sl, _compare_strs, NULL);
+  cp = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp, "a,canal,man,noon,panama,plan,radar");
+  tor_free(cp);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
   smartlist_free(sl);
 }
 
@@ -1091,9 +1116,11 @@ static void
 test_strmap(void)
 {
   strmap_t *map;
-//  strmap_iter_t *iter;
-//  const char *k;
+  strmap_iter_t *iter;
+  const char *k;
   void *v;
+  char *visited;
+  smartlist_t *found_keys;
 
   map = strmap_new();
   v = strmap_set(map, "K1", (void*)99);
@@ -1121,30 +1148,31 @@ test_strmap(void)
   strmap_set(map, "K6", (void*)105);
   strmap_assert_ok(map);
 
-#if 0
+  /* Test iterator. */
   iter = strmap_iter_init(map);
-  strmap_iter_get(iter,&k,&v);
-  test_streq(k, "K1");
-  test_eq(v, (void*)10000);
-  iter = strmap_iter_next(map,iter);
-  strmap_iter_get(iter,&k,&v);
-  test_streq(k, "K2");
-  test_eq(v, (void*)10201);
-  iter = strmap_iter_next_rmv(map,iter);
-  strmap_iter_get(iter,&k,&v);
-  test_streq(k, "K3");
-  test_eq(v, (void*)10404);
-  iter = strmap_iter_next(map,iter); /* K5 */
-  test_assert(!strmap_iter_done(iter));
-  iter = strmap_iter_next(map,iter); /* K6 */
-  test_assert(!strmap_iter_done(iter));
-  iter = strmap_iter_next(map,iter); /* done */
-  test_assert(strmap_iter_done(iter));
+  found_keys = smartlist_create();
+  while (!strmap_iter_done(iter)) {
+    strmap_iter_get(iter,&k,&v);
+    smartlist_add(found_keys, tor_strdup(k));
+    test_eq_ptr(v, strmap_get(map, k));
+
+    if (!strcmp(k, "K2")) {
+      iter = strmap_iter_next_rmv(map,iter);
+    } else {
+      iter = strmap_iter_next(map,iter);
+    }
+  }
 
   /* Make sure we removed K2, but not the others. */
   test_eq_ptr(strmap_get(map, "K2"), NULL);
-  test_eq_ptr(strmap_get(map, "K5"), (void*)10816);
-#endif
+  test_eq_ptr(strmap_get(map, "K5"), (void*)104);
+  /* Make sure we visited everyone once */
+  smartlist_sort_strings(found_keys);
+  visited = smartlist_join_strings(found_keys, ":", 0, NULL);
+  test_streq(visited, "K1:K2:K3:K4:K5:K6");
+  tor_free(visited);
+  SMARTLIST_FOREACH(found_keys, char *, cp, tor_free(cp));
+  smartlist_free(found_keys);
 
   strmap_assert_ok(map);
   /* Clean up after ourselves. */
@@ -1229,25 +1257,6 @@ test_control_formats(void)
   test_eq(sz, strlen(out));
 
   tor_free(out);
-}
-
-static void
-test_onion(void)
-{
-#if 0
-  char **names;
-  int i,num;
-
-  names = parse_nickname_list("  foo bar\t baz quux  ", &num);
-  test_eq(num,4);
-  test_streq(names[0],"foo");
-  test_streq(names[1],"bar");
-  test_streq(names[2],"baz");
-  test_streq(names[3],"quux");
-  for (i=0;i<num;i++)
-    tor_free(names[i]);
-  tor_free(names);
-#endif
 }
 
 static void
@@ -1820,12 +1829,12 @@ main(int c, char**v)
   puts("\n========================= Util ============================");
   test_gzip();
   test_util();
+  test_smartlist();
   test_strmap();
   test_control_formats();
   test_pqueue();
   test_mmap();
   puts("\n========================= Onion Skins =====================");
-  test_onion();
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
