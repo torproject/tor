@@ -8,6 +8,9 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       recommended by no authorities, or until we get a better one for the
       same router.  Make caches consider retaining old recommended
       routers for even longer.
+    - Directory servers now provide 'Pragma: no-cache' and 'Expires'
+      headers for content, so that we can work better in the presence of
+      caching HTTP proxies.
 
   o Minor features, controller:
     - Add a REASON field to CIRC events; for backward compatibility, this

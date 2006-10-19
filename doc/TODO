@@ -159,16 +159,16 @@ N     - split "router is down" from "dirport shouldn't be tried for a while"?
         when they feel like it.
       - update dir-spec with what we decided for each of these
 
-N   - provide no-cache no-index headers from the dirport?
-      - Specify
-        - cacheing
-          - Single network-statuses, single descriptors, "all", "authority",
+    o provide no-cache no-index headers from the dirport?
+      o Specify
+        o cacheing
+          o Single network-statuses, single descriptors, "all", "authority",
             and v1 directory stuff are all cacheable for a short time.
-          - Multiple network-statuses or descriptors are not cacheable.
-          - Be sure to be correct wrt HTTP/1.0
-        - indexing
-          - robots.txt
-      - Implement
+          o Multiple network-statuses or descriptors are not cacheable.
+          o Be sure to be correct wrt HTTP/1.0
+        o indexing
+          o robots.txt (oh, it was already there.)
+      o Implement
 
   - Windows server usability
     - Solve the ENOBUFS problem.

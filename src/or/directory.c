@@ -61,6 +61,13 @@ static void note_request(const char *key, size_t bytes);
 
 #define X_ADDRESS_HEADER "X-Your-Address-Is: "
 
+/* HTTP cache control: how long do we tell proxies they can cache things? */
+#define FULL_DIR_CACHE_LIFETIME (60*60)
+#define RUNNINGROUTERS_CACHE_LIFETIME (20*60)
+#define NETWORKSTATUS_CACHE_LIFETIME (5*60)
+#define ROUTERDESC_CACHE_LIFETIME (30*60)
+#define ROBOTS_CACHE_LIFETIME (24*60*60)
+
 /********* END VARIABLES ************/
 
 /** Return true iff the directory purpose 'purpose' must use an
@@ -1297,19 +1304,27 @@ write_http_status_line(dir_connection_t *conn, int status,
   connection_write_to_buf(buf, strlen(buf), TO_CONN(conn));
 }
 
-/** DOCDOC */
+/** Write the header for an HTTP/1.0 response onto <b>conn</b>->outbuf,
+ * with <b>type</b> as the Content-Type.
+ *
+ * If <b>length</b> is nonnegative, it is the Content-Length.
+ * If <b>encoding</b> is provided, it is the Content-Encoding.
+ * If <b>cache_lifetime</b> is greater than 0, the content may be cached for
+ * up to cache_lifetime seconds.  Otherwise, the content may not be cached. */
 static void
 write_http_response_header(dir_connection_t *conn, ssize_t length,
-                           const char *type, const char *encoding)
+                           const char *type, const char *encoding,
+                           int cache_lifetime)
 {
   char date[RFC1123_TIME_LEN+1];
   char tmp[1024];
   char *cp;
+  time_t now = time(NULL);
 
   tor_assert(conn);
   tor_assert(type);
 
-  format_rfc1123_time(date, time(NULL));
+  format_rfc1123_time(date, now);
   cp = tmp;
   tor_snprintf(cp, sizeof(tmp),
                "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n"
@@ -1324,6 +1339,20 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
   if (length >= 0) {
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
                  "Content-Length: %ld\r\n", (long)length);
+    cp += strlen(cp);
+  }
+  if (cache_lifetime > 0) {
+    char expbuf[RFC1123_TIME_LEN+1];
+    format_rfc1123_time(expbuf, now + cache_lifetime);
+    /* We could say 'Cache-control: max-age=%d' here if we start doing
+     * http/1.1 */
+    tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
+                 "Expires: %s\r\n", expbuf);
+    cp += strlen(cp);
+  } else {
+    /* We could say 'Cache-control: no-cache' here if we start doing
+     * http/1.1 */
+    strlcpy(cp, "Pragma: no-cache\r\n", sizeof(tmp)-(cp-tmp));
     cp += strlen(cp);
   }
   if (sizeof(tmp)-(cp-tmp) > 3)
@@ -1484,7 +1513,8 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
               deflated?"deflated ":"");
     write_http_response_header(conn, dlen,
                           deflated?"application/octet-stream":"text/plain",
-                          deflated?"deflate":"identity");
+                          deflated?"deflate":"identity",
+                          FULL_DIR_CACHE_LIFETIME);
     conn->cached_dir = d;
     conn->cached_dir_offset = 0;
     if (! deflated)
@@ -1513,7 +1543,8 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
 
     write_http_response_header(conn, dlen,
                  deflated?"application/octet-stream":"text/plain",
-                 deflated?"deflate":"identity");
+                 deflated?"deflate":"identity",
+                 RUNNINGROUTERS_CACHE_LIFETIME);
     connection_write_to_buf(cp, strlen(cp), TO_CONN(conn));
     return 0;
   }
@@ -1545,9 +1576,9 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     }
     // note_request(request_type,dlen);
     write_http_response_header(conn, -1,
-                   deflated?"application/octet_stream":"text/plain",
-                   deflated?"deflate":NULL);
-
+                 deflated?"application/octet_stream":"text/plain",
+                 deflated?"deflate":NULL,
+                 smartlist_len(dir_fps) == 1 ? NETWORKSTATUS_CACHE_LIFETIME:0);
     conn->fingerprint_stack = dir_fps;
     if (! deflated)
       conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
@@ -1565,23 +1596,31 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     int res;
     const char *msg;
     const char *request_type = NULL;
+    int cache_lifetime = 0;
     if (deflated)
       url[url_len-2] = '\0';
     conn->fingerprint_stack = smartlist_create();
     res = dirserv_get_routerdesc_fingerprints(conn->fingerprint_stack, url,
                                               &msg);
 
-    if (!strcmpstart(url, "/tor/server/fp/"))
+    if (!strcmpstart(url, "/tor/server/fp/")) {
       request_type = deflated?"/tor/server/fp.z":"/tor/server/fp";
-    else if (!strcmpstart(url, "/tor/server/authority"))
+      if (smartlist_len(conn->fingerprint_stack) == 1)
+        cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
+    } else if (!strcmpstart(url, "/tor/server/authority")) {
       request_type = deflated?"/tor/server/authority.z":
         "/tor/server/authority";
-    else if (!strcmpstart(url, "/tor/server/all"))
+      cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
+    } else if (!strcmpstart(url, "/tor/server/all")) {
       request_type = deflated?"/tor/server/all.z":"/tor/server/all";
-    else if (!strcmpstart(url, "/tor/server/d/"))
+      cache_lifetime = FULL_DIR_CACHE_LIFETIME;
+    } else if (!strcmpstart(url, "/tor/server/d/")) {
       request_type = deflated?"/tor/server/d.z":"/tor/server/d";
-    else
+      if (smartlist_len(conn->fingerprint_stack) == 1)
+        cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
+    } else {
       request_type = "/tor/server/?";
+    }
     if (!strcmpstart(url, "/tor/server/d/"))
       conn->dir_spool_src = DIR_SPOOL_SERVER_BY_DIGEST;
     else
@@ -1592,7 +1631,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     else {
       write_http_response_header(conn, -1,
                      deflated?"application/octet_stream":"text/plain",
-                     deflated?"deflate":NULL);
+                     deflated?"deflate":NULL, cache_lifetime);
       if (deflated)
         conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
       /* Prime the connection with some data. */
@@ -1613,7 +1652,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     switch (rend_cache_lookup_desc(query, versioned?-1:0, &descp, &desc_len)) {
       case 1: /* valid */
         write_http_response_header(conn, desc_len, "application/octet-stream",
-                                   NULL);
+                                   NULL, 0);
         note_request("/tor/rendezvous?/", desc_len);
         /* need to send descp separately, because it may include nuls */
         connection_write_to_buf(descp, desc_len, TO_CONN(conn));
@@ -1632,7 +1671,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
   if (!strcmpstart(url,"/tor/bytes.txt")) {
     char *bytes = directory_dump_request_log();
     size_t len = strlen(bytes);
-    write_http_response_header(conn, len, "text/plain", NULL);
+    write_http_response_header(conn, len, "text/plain", NULL, 0);
     connection_write_to_buf(bytes, len, TO_CONN(conn));
     tor_free(bytes);
     tor_free(url);
@@ -1643,7 +1682,8 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
                                            rewritten to /tor/robots.txt */
     char robots[] = "User-agent: *\r\nDisallow: /\r\n";
     size_t len = strlen(robots);
-    write_http_response_header(conn, len, "text/plain", NULL);
+    write_http_response_header(conn, len, "text/plain", NULL,
+                               ROBOTS_CACHE_LIFETIME);
     connection_write_to_buf(robots, len, TO_CONN(conn));
     tor_free(url);
     return 0;
@@ -1665,7 +1705,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
 
     dlen = strlen(new_directory);
 
-    write_http_response_header(conn, dlen, "text/plain", "identity");
+    write_http_response_header(conn, dlen, "text/plain", "identity", 0);
 
     connection_write_to_buf(new_directory, dlen, TO_CONN(conn));
     tor_free(new_directory);

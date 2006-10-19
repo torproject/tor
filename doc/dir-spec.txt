@@ -565,7 +565,6 @@ $Id$
 
    For debugging, directories SHOULD expose non-compressed objects at URLs like
    the above, but without the final ".z".
-
    Clients MUST handle compressed concatenated information in two forms:
      - A concatenated list of zlib-compressed objects.
      - A zlib-compressed concatenated list of objects.
@@ -801,7 +800,24 @@ $Id$
 
    ...
 
-7.0 Error and return codes in the directory protocol
+7. Standards compliance
 
-We should write down what return codes dirservers send in what situations.
+   All clients and servers MUST support HTTP 1.0.
+
+7.1. HTTP headers
+
+  Servers MAY set the Content-Length header.  Servers SHOULD set
+  Content-Encoding to "deflate" or "identity".
+
+  Servers MAY include an X-Your-Address-Is: header, whose value is the
+  apparent IP address of the client connecting to them (as a dotted quad).
+
+  Servers SHOULD disable caching of multiple network statuses or multiple
+  router descriptors.  Servers MAY enable caching of single descriptors,
+  single network statuses, the list of all router descriptors, a v1
+  directory, or a v1 running routers document.  XXX mention times.
+
+7.2. HTTP status codes
+
+  XXX We should write down what return codes dirservers send in what situations.
 
