@@ -1999,8 +1999,8 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
 }
 
 /** Deactivate any routers from the routerlist that are more than
- * ROUTER_MAX_AGE seconds old; remove old routers from the list of
- * cached routers if we have too many.
+ * ROUTER_MAX_AGE seconds old and not recommended by any networkstatuses;
+ * remove old routers from the list of cached routers if we have too many.
  */
 void
 routerlist_remove_old_routers(void)
@@ -2012,32 +2012,37 @@ routerlist_remove_old_routers(void)
   routerinfo_t *router;
   signed_descriptor_t *sd;
   digestmap_t *retain;
-  or_options_t *options = get_options();
   if (!routerlist || !networkstatus_list)
     return;
 
   retain = digestmap_new();
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
-  if (options->DirPort) {
-    SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
-      {
-        SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-          if (rs->published_on >= cutoff)
-            digestmap_set(retain, rs->descriptor_digest, (void*)1));
-      });
-  }
+  /* Build a list of all the descriptors that _anybody_ recommends. */
+  SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
+    {
+      SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
+        if (rs->published_on >= cutoff)
+          digestmap_set(retain, rs->descriptor_digest, (void*)1));
+    });
 
-  cutoff = now - ROUTER_MAX_AGE;
-  /* Remove too-old members of routerlist->routers. */
-  for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
-    router = smartlist_get(routerlist->routers, i);
-    if (router->cache_info.published_on <= cutoff &&
-        !digestmap_get(retain, router->cache_info.signed_descriptor_digest)) {
-      /* Too old.  Remove it. */
-      log_info(LD_DIR,
-               "Forgetting obsolete (too old) routerinfo for router '%s'",
-               router->nickname);
-      routerlist_remove(routerlist, router, i--, 1);
+  /* If we have a bunch of networkstatuses, we should consider pruning current
+   * routers that are too old and that nobody recommends.  (If we don't have
+   * enough networkstatuses, then we should get more before we decide to kill
+   * routers.) */
+  if (smartlist_len(networkstatus_list) > get_n_v2_authorities() / 2) {
+    cutoff = now - ROUTER_MAX_AGE;
+    /* Remove too-old unrecommended members of routerlist->routers. */
+    for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
+      router = smartlist_get(routerlist->routers, i);
+      if (router->cache_info.published_on <= cutoff &&
+          !digestmap_get(retain,router->cache_info.signed_descriptor_digest)) {
+        /* Too old: remove it.  (If we're a cache, just move it into
+         * old_routers.) */
+        log_info(LD_DIR,
+                 "Forgetting obsolete (too old) routerinfo for router '%s'",
+                 router->nickname);
+        routerlist_remove(routerlist, router, i--, 1);
+      }
     }
   }
 
@@ -2052,8 +2057,8 @@ routerlist_remove_old_routers(void)
     }
   }
 
-  /* Now we're looking at routerlist->old_routers for extraneous
-   * members. (We'd keep all the members if we could, but we'd like to save
+  /* Now we might have to look at routerlist->old_routers for extraneous
+   * members. (We'd keep all the members if we could, but we need to save
    * space.) First, check whether we have too many router descriptors, total.
    * We're okay with having too many for some given router, so long as the
    * total number doesn't approach max_descriptors_per_router()*len(router).
@@ -3593,10 +3598,6 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
   if (!rs->is_running && !options->FetchUselessDescriptors) {
     /* If we had this router descriptor, we wouldn't even bother using it.
      * But, if we want to have a complete list, fetch it anyway. */
-    return 0;
-  }
-  if (rs->published_on + ROUTER_MAX_AGE < now) {
-    /* This one is too old to consider. */
     return 0;
   }
   if (rs->published_on + ESTIMATED_PROPAGATION_TIME > now) {

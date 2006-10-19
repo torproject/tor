@@ -628,7 +628,7 @@ $Id$
    from an authority, they should not need to go to the authority directly
    again.)
 
-5.2. Downloading router descriptors
+5.2. Downloading and storing router descriptors
 
    Clients try to have the best descriptor for each router.  A descriptor is
    "best" if:
@@ -664,6 +664,12 @@ $Id$
 
    No descriptors are downloaded until the client has downloaded more than
    half of the network-status documents.
+
+   Clients retain the most recent descriptor they have downloaded for each
+   router so long as it is not too old (currently, 48 hours), OR so long as
+   it is recommended by at least one networkstatus AND no "better"
+   descriptor has been downloaded.  [Versions of Tor before 0.1.2.3-alpha
+   would discard descriptors simply for being published too far in the past.]
 
 5.3. Managing downloads
 

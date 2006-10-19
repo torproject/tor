@@ -188,8 +188,8 @@
 /** How old can a router get before we (as a server) will no longer
  * consider it live? In seconds. */
 #define ROUTER_MAX_AGE_TO_PUBLISH (60*60*20)
-/** How old do we let a saved descriptor get before removing it? */
-#define OLD_ROUTER_DESC_MAX_AGE (60*60*60)
+/** How old do we let a saved descriptor get before force-removing it? */
+#define OLD_ROUTER_DESC_MAX_AGE (60*60*24*5)
 /** How old do we let a networkstatus get before ignoring it? */
 #define NETWORKSTATUS_MAX_AGE (60*60*24)
 

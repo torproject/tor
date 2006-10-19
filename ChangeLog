@@ -3,6 +3,11 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
     - If most authorities set a (newly defined) BadExit flag for a server,
       do not consider it as a general-purpose exit.  Only consider
       authorities that advertise themselves as listing bad exits.
+    - Start making it possible for servers to publish less often: never
+      discard a descriptor simply for being too old until either it is
+      recommended by no authorities, or until we get a better one for the
+      same router.  Make caches consider retaining old recommended
+      routers for even longer.
 
   o Minor features, controller:
     - Add a REASON field to CIRC events; for backward compatibility, this

@@ -142,8 +142,8 @@ x   - Better estimates in the directory of whether servers have good uptime
 x     - spec
 d     - implement
 
-  - A more efficient dir protocol.
-N   - Later, servers will stop generating new descriptors simply
+  o Changes towards a more efficient dir protocol.
+    o Later, servers will stop generating new descriptors simply
       because 18 hours have passed: we must start tolerating this now.
 
   - Critical but minor bugs, backport candidates.
