@@ -36,6 +36,8 @@ void get_platform_str(char *platform, size_t len);
 size_t read_escaped_data(const char *data, size_t len, int translate_newlines,
                          char **out);
 or_options_t *options_new(void);
+int parse_addr_policy(config_line_t *cfg, addr_policy_t **dest,
+                      int assume_action);
 
 static char temp_dir[256];
 
@@ -1617,9 +1619,10 @@ test_dir_format(void)
 }
 
 static void
-test_exit_policies(void)
+test_policies(void)
 {
-  addr_policy_t *policy;
+  addr_policy_t *policy, *policy2;
+  config_line_t line;
 
   policy = router_parse_addr_policy_from_string("reject 192.168.0.0/16:*",-1);
   test_eq(NULL, policy->next);
@@ -1630,7 +1633,6 @@ test_exit_policies(void)
   test_eq(65535, policy->prt_max);
   test_streq("reject 192.168.0.0/16:*", policy->string);
 
-//  test_assert(exit_policy_implicitly_allows_local_networks(policy, 0));
   test_assert(ADDR_POLICY_ACCEPTED ==
           compare_addr_to_addr_policy(0x01020304u, 2, policy));
   test_assert(ADDR_POLICY_PROBABLY_ACCEPTED ==
@@ -1638,18 +1640,34 @@ test_exit_policies(void)
   test_assert(ADDR_POLICY_REJECTED ==
           compare_addr_to_addr_policy(0xc0a80102, 2, policy));
 
-  addr_policy_free(policy);
+  policy2 = NULL;
+  test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1));
+  test_assert(policy2);
 
-#if 0
-  /* Copied from router.c */
+  test_assert(!exit_policy_is_general_exit(policy));
+  test_assert(exit_policy_is_general_exit(policy2));
+
+  test_assert(cmp_addr_policies(policy, policy2));
+  test_assert(!cmp_addr_policies(policy2, policy2));
+
+  test_assert(!policy_is_reject_star(policy2));
+  test_assert(policy_is_reject_star(policy));
+
+  addr_policy_free(policy);
+  addr_policy_free(policy2);
+
+  /* make sure compacting logic works. */
   policy = NULL;
-  options_append_default_exit_policy(&policy);
+  line.key = (char*)"foo";
+  line.value = (char*)"accept *:80,reject private:*,reject *:*";
+  line.next = NULL;
+  test_assert(0 == policies_parse_exit_policy(&line, &policy, 0));
   test_assert(policy);
-  test_assert(!exit_policy_implicitly_allows_local_networks(policy, 1));
+  test_streq(policy->string, "accept *:80");
+  test_streq(policy->next->string, "reject *:*");
+  test_eq_ptr(policy->next->next, NULL);
 
   addr_policy_free(policy);
-#endif
-
 }
 
 static void
@@ -1838,8 +1856,8 @@ main(int c, char**v)
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
-  puts("\n========================= Exit policies ===================");
-  test_exit_policies();
+  puts("\n========================= Policies ===================");
+  test_policies();
   puts("\n========================= Rendezvous functionality ========");
   test_rend_fns();
   puts("");
