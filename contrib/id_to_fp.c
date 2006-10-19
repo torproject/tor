@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define die(s) do { fprintf(stderr, "%s\n", s); goto err; } while (0)
 
@@ -26,11 +27,24 @@ main(int argc, char **argv)
   unsigned char digest[20];
   int status = 1;
 
-  if (argc != 2)
-    die("I want a filename");
-  if (!(b = BIO_new_file(argv[1], "r")))
-    die("couldn't open file");
-
+  if (argc < 2) {
+    fprintf(stderr, "Reading key from stdin...\n");
+    if (!(b = BIO_new_fp(stdin, BIO_NOCLOSE)))
+      die("couldn't read from stdin");
+  } else if (argc == 2) {
+    if (strcmp(argv[1], "-h") == 0 ||
+        strcmp(argv[1], "--help") == 0) {
+      fprintf(stdout, "Usage: %s [keyfile]\n", argv[0]);
+      status = 0;
+      goto err;
+    } else {
+      if (!(b = BIO_new_file(argv[1], "r")))
+        die("couldn't open file");
+    }
+  } else {
+    fprintf(stderr, "Usage: %s [keyfile]\n", argv[0]);
+    goto err;
+  }
   if (!(key = PEM_read_bio_RSAPrivateKey(b, NULL, NULL, NULL)))
     die("couldn't parse key");
 
