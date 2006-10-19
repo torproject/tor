@@ -80,7 +80,7 @@
 
 /** Upper bound on maximum simultaneous connections; can be lowered by
  * config file. */
-#ifdef CYGWIN
+#if defined(CYGWIN) || defined(__CYGWIN__)
 /* http://archives.seul.org/or/talk/Aug-2006/msg00210.html */
 #define MAXCONNECTIONS 3200
 #else
