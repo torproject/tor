@@ -32,6 +32,7 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       printing a duplicate "$" in the keys we send.
     - Stop triggering asserts if the controller tries to extend hidden
       service circuits.
+    - Correctly set maximum connection limit on Cygwin.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07
