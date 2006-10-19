@@ -33,6 +33,7 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
     - Stop triggering asserts if the controller tries to extend hidden
       service circuits.
     - Correctly set maximum connection limit on Cygwin.
+    - Try to detect windows correctly when cross-compiling.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07

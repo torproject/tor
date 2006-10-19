@@ -122,7 +122,8 @@ AC_SUBST(TORGROUP)
 
 dnl If WIN32 is defined and non-zero, we are building for win32
 AC_MSG_CHECKING([for win32])
-AC_TRY_RUN([int main(int c, char **v) {
+AC_RUN_IFELSE([
+int main(int c, char **v) {
 #ifdef WIN32
 #if WIN32
   return 0;
@@ -134,13 +135,28 @@ AC_TRY_RUN([int main(int c, char **v) {
 #endif
 }],
 bwin32=true; AC_MSG_RESULT([yes]),
-bwin32=false; AC_MSG_RESULT([no])
+bwin32=false; AC_MSG_RESULT([no]),
+bwin32=cross; AC_MSG_RESULT([cross])
 )
+
+if test $bwin32 = cross; then
+AC_MSG_CHECKING([for win32 (cross)])
+AC_COMPILE_IFELSE([
+#ifdef WIN32
+int main(int c, char **v) {return 0;}
+#else
+#error
+int main(int c, char **v) {return x(y);}
+#endif
+],
+bwin32=true; AC_MSG_RESULT([yes]),
+bwin32=false; AC_MSG_RESULT([no]))
+fi
 
 if test $bwin32 = true; then
 AC_DEFINE(MS_WINDOWS, 1, [Define to 1 if we are building for Windows.])
-          
 fi
+
 
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
