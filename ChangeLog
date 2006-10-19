@@ -10,6 +10,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       event format.  Also, add additional reason codes to explain why a
       given circuit has been destroyed or truncated. (Patches from Mike
       Perry)
+    - Add a REMOTE_REASON field to CIRC events to tell the controller about
+      why a remote OR told us to close a circuit.
 
   o Security bugfixes:
     - When the user sends a NEWNYM signal, clear the client-side DNS

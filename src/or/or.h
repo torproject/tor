@@ -497,6 +497,7 @@ typedef enum {
 /* Negative reasons are internal */
 #define END_CIRC_REASON_NOPATH          -2
 #define END_CIRC_AT_ORIGIN              -1
+
 #define _END_CIRC_REASON_MIN            0
 #define END_CIRC_REASON_NONE            0
 #define END_CIRC_REASON_TORPROTOCOL     1
@@ -512,6 +513,11 @@ typedef enum {
 #define END_CIRC_REASON_DESTROYED       11
 #define END_CIRC_REASON_NOSUCHSERVICE   12
 #define _END_CIRC_REASON_MAX            12
+
+/* OR this with the argument to circuit_mark_for_close, or
+ * control_event_circuit_status to indicate that the reason came from a
+ * destroy or truncate cell. */
+#define END_CIRC_REASON_FLAG_REMOTE     512
 
 /** Length of 'y' portion of 'y.onion' URL. */
 #define REND_SERVICE_ID_LEN 16

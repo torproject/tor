@@ -2802,42 +2802,44 @@ connection_control_process_inbuf(control_connection_t *conn)
 static const char *
 circuit_end_reason_to_string(int reason)
 {
+  if (reason >= 0 && reason & END_CIRC_REASON_FLAG_REMOTE)
+    reason &= ~END_CIRC_REASON_FLAG_REMOTE;
   switch (reason) {
     case END_CIRC_AT_ORIGIN:
       /* This shouldn't get passed here; it's a catch-all reason. */
-      return "REASON=ORIGIN";
+      return "ORIGIN";
     case END_CIRC_REASON_NONE:
       /* This shouldn't get passed here; it's a catch-all reason. */
-      return "REASON=NONE";
+      return "NONE";
     case END_CIRC_REASON_TORPROTOCOL:
-      return "REASON=TORPROTOCOL";
+      return "TORPROTOCOL";
     case END_CIRC_REASON_INTERNAL:
-      return "REASON=INTERNAL";
+      return "INTERNAL";
     case END_CIRC_REASON_REQUESTED:
-      return "REASON=REQUESTED";
+      return "REQUESTED";
     case END_CIRC_REASON_HIBERNATING:
-      return "REASON=HIBERNATING";
+      return "HIBERNATING";
     case END_CIRC_REASON_RESOURCELIMIT:
-      return "REASON=RESOURCELIMIT";
+      return "RESOURCELIMIT";
     case END_CIRC_REASON_CONNECTFAILED:
-      return "REASON=CONNECTFAILED";
+      return "CONNECTFAILED";
     case END_CIRC_REASON_OR_IDENTITY:
-      return "REASON=OR_IDENTITY";
+      return "OR_IDENTITY";
     case END_CIRC_REASON_OR_CONN_CLOSED:
-      return "REASON=OR_CONN_CLOSED";
+      return "OR_CONN_CLOSED";
     case END_CIRC_REASON_FINISHED:
-      return "REASON=FINISHED";
+      return "FINISHED";
     case END_CIRC_REASON_TIMEOUT:
-      return "REASON=TIMEOUT";
+      return "TIMEOUT";
     case END_CIRC_REASON_DESTROYED:
-      return "REASON=DESTROYED";
+      return "DESTROYED";
     case END_CIRC_REASON_NOPATH:
-      return "REASON=NOPATH";
+      return "NOPATH";
     case END_CIRC_REASON_NOSUCHSERVICE:
-      return "REASON=NOSUCHSERVICE";
+      return "NOSUCHSERVICE";
     default:
       log_warn(LD_BUG, "Unrecognized reason code %d", (int)reason);
-      return "REASON=UNRECOGNIZED"; /* should never get called */
+      return NULL;
   }
 }
 
@@ -2867,7 +2869,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
   }
   if (EVENT_IS_INTERESTING1(EVENT_CIRCUIT_STATUS)) {
     const char *status;
-    const char *reason = "";
+    char reason_buf[64];
     switch (tp)
       {
       case CIRC_EVENT_LAUNCHED: status = "LAUNCHED"; break;
@@ -2881,7 +2883,21 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       }
 
     if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
-      reason = circuit_end_reason_to_string(reason_code);
+      const char *reason_str = circuit_end_reason_to_string(reason_code);
+      char *reason = NULL;
+      if (!reason_str) {
+        reason = tor_malloc(16);
+        tor_snprintf(reason, 16, "UNKNOWN_%d", reason_code);
+        reason_str = reason;
+      }
+      if (reason_code > 0 && reason_code & END_CIRC_REASON_FLAG_REMOTE) {
+        tor_snprintf(reason_buf, sizeof(reason_buf),
+                     "REASON=DESTROYED REMOTE_REASON=%s", reason_str);
+      } else {
+        tor_snprintf(reason_buf, sizeof(reason_buf),
+                     "REASON=%s", reason_str);
+      }
+      tor_free(reason);
     }
 
     if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
@@ -2889,7 +2905,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       send_control1_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
                           "650 CIRC %lu %s%s%s@%s\r\n",
                           (unsigned long)circ->global_identifier,
-                          status, sp, path, reason);
+                          status, sp, path, reason_buf);
     }
     if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
       char *vpath = circuit_list_path_for_controller(circ);
@@ -2897,7 +2913,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       send_control1_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
                           "650 CIRC %lu %s%s%s@%s\r\n",
                           (unsigned long)circ->global_identifier,
-                          status, sp, vpath, reason);
+                          status, sp, vpath, reason_buf);
       tor_free(vpath);
     }
   }

@@ -788,7 +788,7 @@ $Id$
    The syntax is:
 
      "650" SP "CIRC" SP CircuitID SP CircStatus [SP Path]
-          [SP "REASON=" Reason] CRLF
+          [SP "REASON=" Reason [SP "REMOTE_REASON=" Reason]] CRLF
 
       CircStatus =
                "LAUNCHED" / ; circuit ID assigned to new circuit
@@ -812,6 +812,11 @@ $Id$
    not listed above.  Reasons are as given in tor-spec.txt, except for:
 
       NOPATH          (Not enough nodes to make circuit)
+
+   The "REMOTE_REASON" field is provided only when we receive a DESTROY or
+   TRUNCATE cell, and only if extended events are enabled.  It contains the
+   actual reason given by the remote OR for closing the circuit. Clients MUST
+   accept reasons not listed above.  Reasons are as listed in tor-spec.txt.
 
 4.1.2. Stream status changed
 
