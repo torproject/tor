@@ -208,8 +208,9 @@ of their choices.
    such a connection if any clause that accepts any connections to that port
    precedes all clauses (if any) that reject all connections to that port.
 
-   Unless requested to do so by the user, we never choose a server flagged by
-   more than half of the authorities as BadExit for an exit server.
+   Unless requested to do so by the user, we never choose an exit server
+   flagged as "BadExit" by more than half of the authorities who advertise
+   themselves as listing bad exits.
 
 2.2.2. User configuration
 

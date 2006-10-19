@@ -329,6 +329,8 @@ $Id$
       "dir-options" -- A set of flags, in any order, separated by whitespace:
           "Names" if this directory authority performs name bindings.
           "Versions" if this directory authority recommends software versions.
+          "BadExits" if the directory authority flags nodes that it believes
+              are performing incorrectly as exit nodes.
 
    The dir-options entry is optional.  The "-versions" entries are required if
    the "Versions" flag is present.  The other entries are required and must

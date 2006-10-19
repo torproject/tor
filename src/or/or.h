@@ -1041,6 +1041,8 @@ typedef struct networkstatus_t {
   unsigned int recommends_versions:1; /**< True iff this directory server
                                        * recommends client and server software
                                        * versions. */
+  unsigned int lists_bad_exits:1; /** True iff this directory server marks
+                                   * malfunctioning exits as bad. */
 
   smartlist_t *entries; /**< List of routerstatus_t*.   This list is kept
                          * sorted by identity_digest. */

@@ -1205,6 +1205,8 @@ networkstatus_parse_from_string(const char *s)
         ns->binds_names = 1;
       if (!strcmp(tok->args[i], "Versions"))
         ns->recommends_versions = 1;
+      if (!strcmp(tok->args[i], "BadExits"))
+        ns->lists_bad_exits = 1;
     }
   }
 

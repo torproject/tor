@@ -3178,6 +3178,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
 {
   or_options_t *options = get_options();
   int n_trusted, n_statuses, n_recent = 0, n_naming = 0;
+  int n_listing_bad_exits = 0;
   int i, j, warned;
   int *index, *size;
   networkstatus_t **networkstatus;
@@ -3225,6 +3226,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
       ++n_naming;
     if (networkstatus[i]->is_recent)
       ++n_recent;
+    if (networkstatus[i]->lists_bad_exits)
+      ++n_listing_bad_exits;
   }
 
   /** Iterate over all entries in all networkstatuses, and build
@@ -3430,7 +3433,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     rs_out->status.is_possible_guard = n_guard > n_statuses/2;
     rs_out->status.is_stable = n_stable > n_statuses/2;
     rs_out->status.is_v2_dir = n_v2_dir > n_statuses/2;
-    rs_out->status.is_bad_exit = n_bad_exit > n_statuses/2;
+    rs_out->status.is_bad_exit = n_bad_exit > n_listing_bad_exits/2;
   }
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
                     local_routerstatus_free(rs));
