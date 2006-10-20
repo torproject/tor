@@ -32,8 +32,8 @@ N - Test guard unreachable logic; make sure that we actually attempt to
 N - Stop recommending exits as guards?
 N - Clients stop dumping old descriptors if the network-statuses
     claim they're still valid.
-P - Figure out why dll's compiled in mingw don't work right in Winxp.
-P - Figure out why openssl 0.9.8c "make test" fails at sha256t test.
+P - Figure out why dll's compiled in mingw don't work right in WinXP.
+P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
 
 Items for 0.1.2.x:
   - Now that we're avoiding exits when picking non-exit positions,
