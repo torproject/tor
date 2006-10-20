@@ -577,11 +577,14 @@ connection_edge_end_reason_str(int reason)
 
 /** Translate <b>reason</b> (as from a relay 'end' cell) into an
  * appropriate SOCKS5 reply code.
+ * DODCDOC 0
  */
 socks5_reply_status_t
 connection_edge_end_reason_socks5_response(int reason)
 {
   switch (reason) {
+    case 0:
+      return SOCKS5_SUCCEEDED;
     case END_STREAM_REASON_MISC:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_RESOLVEFAILED:
@@ -613,6 +616,8 @@ connection_edge_end_reason_socks5_response(int reason)
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_NET_UNREACHABLE:
       return SOCKS5_NET_UNREACHABLE;
+    case END_STREAM_REASON_SOCKSPROTOCOL:
+      return SOCKS5_GENERAL_ERROR;
     default:
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Reason for ending (%d) not recognized; "
@@ -701,6 +706,7 @@ connection_edge_process_end_not_open(
   struct in_addr in;
   routerinfo_t *exitrouter;
   int reason = *(cell->payload+RELAY_HEADER_SIZE);
+  int control_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
   (void) layer_hint; /* unused */
 
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&
@@ -749,7 +755,7 @@ connection_edge_process_end_not_open(
           conn->_base.chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name); /* clears it */
         }
-        if (connection_ap_detach_retriable(conn, circ) >= 0)
+        if (connection_ap_detach_retriable(conn, circ, control_reason) >= 0)
           return 0;
         /* else, conn will get closed below */
         break;
@@ -773,7 +779,7 @@ connection_edge_process_end_not_open(
             conn->_base.chosen_exit_optional = 0;
             tor_free(conn->chosen_exit_name); /* clears it */
           }
-          if (connection_ap_detach_retriable(conn, circ) >= 0)
+          if (connection_ap_detach_retriable(conn, circ, control_reason) >= 0)
             return 0;
           /* else, conn will get closed below */
         } else {
@@ -798,7 +804,7 @@ connection_edge_process_end_not_open(
           conn->_base.chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name); /* clears it */
         }
-        if (connection_ap_detach_retriable(conn, circ) >= 0)
+        if (connection_ap_detach_retriable(conn, circ, control_reason) >= 0)
           return 0;
         /* else, will close below */
         break;
@@ -874,7 +880,7 @@ connection_edge_process_relay_cell_not_open(
     circuit_log_path(LOG_INFO,LD_APP,TO_ORIGIN_CIRCUIT(circ));
     /* don't send a socks reply to transparent conns */
     if (!conn->socks_request->has_finished)
-      connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_SUCCEEDED);
+      connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
       /* (We already sent an end cell if possible) */

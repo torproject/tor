@@ -483,10 +483,6 @@ typedef enum {
 #define END_STREAM_REASON_TORPROTOCOL 13
 #define END_STREAM_REASON_NOTDIRECTORY 14
 
-/* OR this with the argument to control_event_stream_status to indicate that
- * the reason came from an END cell. */
-#define END_STREAM_REASON_FLAG_REMOTE     512
-
 /* These high-numbered end reasons are not part of the official spec,
  * and are not intended to be put in relay end cells. They are here
  * to be more informative when sending back socks replies to the
@@ -494,6 +490,11 @@ typedef enum {
 #define END_STREAM_REASON_ALREADY_SOCKS_REPLIED 256
 #define END_STREAM_REASON_CANT_ATTACH 257
 #define END_STREAM_REASON_NET_UNREACHABLE 258
+#define END_STREAM_REASON_SOCKSPROTOCOL 259
+
+/* OR this with the argument to control_event_stream_status to indicate that
+ * the reason came from an END cell. */
+#define END_STREAM_REASON_FLAG_REMOTE     512
 
 #define RESOLVED_TYPE_HOSTNAME 0
 #define RESOLVED_TYPE_IPV4 4
@@ -1966,7 +1967,7 @@ int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
 int connection_ap_make_bridge(char *address, uint16_t port);
 void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
                                          size_t replylen,
-                                         socks5_reply_status_t status);
+                                         int endreason);
 void connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
@@ -1982,7 +1983,8 @@ void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
 void circuit_discard_optional_exit_enclaves(extend_info_t *info);
 int connection_ap_detach_retriable(edge_connection_t *conn,
-                                   origin_circuit_t *circ);
+                                   origin_circuit_t *circ,
+                                   int reason);
 
 void addressmap_init(void);
 void addressmap_clean(time_t now);

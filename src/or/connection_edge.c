@@ -49,16 +49,13 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
   }
 
   if (!conn->socks_request->has_finished) {
-    socks5_reply_status_t socksreason =
-      connection_edge_end_reason_socks5_response(endreason);
-
     if (endreason == END_STREAM_REASON_ALREADY_SOCKS_REPLIED)
       log_warn(LD_BUG,
                "Bug: stream (marked at %s:%d) sending two socks replies?",
                file, line);
 
     if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
-      connection_ap_handshake_socks_reply(conn, NULL, 0, socksreason);
+      connection_ap_handshake_socks_reply(conn, NULL, 0, endreason);
     else
       connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
                                              0, NULL, -1);
@@ -421,7 +418,8 @@ connection_ap_expire_beginning(void)
     if (conn->num_socks_retries < 250) /* avoid overflow */
       conn->num_socks_retries++;
     /* move it back into 'pending' state, and try to attach. */
-    if (connection_ap_detach_retriable(conn, TO_ORIGIN_CIRCUIT(circ))<0) {
+    if (connection_ap_detach_retriable(conn, TO_ORIGIN_CIRCUIT(circ),
+                                       END_STREAM_REASON_TIMEOUT)<0) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     }
   } /* end for */
@@ -496,10 +494,10 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
  * Returns -1 on err, 1 on success, 0 on not-yet-sure.
  */
 int
-connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ)
+connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ,
+                               int reason)
 {
-  control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE,
-                              END_STREAM_REASON_FIXME_XXXX);
+  control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE, reason);
   conn->_base.timestamp_lastread = time(NULL);
   if (! get_options()->LeaveStreamsUnattached) {
     conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
@@ -1426,10 +1424,12 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
     if (socks->replylen) { /* we should send reply back */
       log_debug(LD_APP,"reply is already set for us. Using it.");
       connection_ap_handshake_socks_reply(conn, socks->reply, socks->replylen,
-                                          SOCKS5_GENERAL_ERROR);
+                                          END_STREAM_REASON_SOCKSPROTOCOL);
+
     } else {
       log_warn(LD_APP,"Fetching socks handshake failed. Closing.");
-      connection_ap_handshake_socks_reply(conn, NULL, 0, SOCKS5_GENERAL_ERROR);
+      connection_ap_handshake_socks_reply(conn, NULL, 0,
+                                          END_STREAM_REASON_SOCKSPROTOCOL);
     }
     connection_mark_unattached_ap(conn,
                                   END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
@@ -1761,7 +1761,7 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
   connection_ap_handshake_socks_reply(conn, buf, replylen,
           (answer_type == RESOLVED_TYPE_IPV4 ||
            answer_type == RESOLVED_TYPE_IPV6) ?
-                               SOCKS5_SUCCEEDED : SOCKS5_HOST_UNREACHABLE);
+                                      0 : END_STREAM_REASON_RESOLVEFAILED);
 }
 
 /** Send a socks reply to stream <b>conn</b>, using the appropriate
@@ -1772,18 +1772,21 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
  * to conn and return, else reply based on <b>status</b>.
  *
  * If <b>reply</b> is undefined, <b>status</b> can't be 0.
+ * DOCDOC endreason
  */
 void
 connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
-                                    size_t replylen,
-                                    socks5_reply_status_t status)
+                                    size_t replylen, int endreason)
 {
   char buf[256];
+  socks5_reply_status_t status =
+    connection_edge_end_reason_socks5_response(endreason);
+
   tor_assert(conn->socks_request); /* make sure it's an AP stream */
 
   control_event_stream_status(conn,
      status==SOCKS5_SUCCEEDED ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED,
-                              END_STREAM_REASON_FIXME_XXXX);
+                              endreason);
 
   if (conn->socks_request->has_finished) {
     log_warn(LD_BUG, "Harmless bug: duplicate calls to "
