@@ -10,12 +10,10 @@
 !define WEBSITE "http://tor.eff.org/"
 
 !define LICENSE "LICENSE"
-;BIN is where it expects to find tor.exe, tor-resolve.exe, libcrypto.a
-;and libssl.a
+;BIN is where it expects to find tor.exe, tor-resolve.exe, libcrypto.a and libssl.a
 !define BIN "..\bin"
 
 SetCompressor lzma
-;SetCompressor zlib
 OutFile ${INSTALLER}
 InstallDir $PROGRAMFILES\Tor
 SetOverWrite ifnewer
@@ -32,9 +30,6 @@ VIAddVersionKey "LegalTrademarks" "Three line BSD"
 VIAddVersionKey "LegalCopyright" "©2004-2006, Roger Dingledine, Nick Mathewson"
 VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at http://tor.eff.org/"
 VIAddVersionKey "FileVersion" "${VERSION}"
-
-;Use upx on the installer header to shrink the size.
-;!packhdr header.dat "upx --best header.dat"
 
 !define MUI_WELCOMEPAGE_TITLE "Welcome to the Tor ${VERSION} Setup Wizard"
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of Tor ${VERSION}.\r\n\r\nIf you have previously installed Tor and it is currently running, please exit Tor first before continuing this installation.\r\n\r\n$_CLICK"
@@ -130,14 +125,12 @@ Section "TorButton for FireFox" Torbutton
    File "${BIN}\torbutton-1.0.4-fx+tb.xpi"
 
    ReadRegStr $1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe" "Path"
-   ; This message box is for debugging
-   MessageBox MB_OK "Firefox is installed at $1"
-     StrCmp $1 "" +4 0 ; if Path is empty or null, then skip to an error, otherwise proceed normally
-        ; This message box is for debugging
-        MessageBox MB_OK "I'm going to run $1firefox.exe --install-global-extension $INSTDIR\torbutton"
-	Exec '"$1firefox.exe" -install-global-extension $INSTDIR\torbutton-1.0.4-fx+tb.xpi'
+   StrCmp $1 "" +2 0 ; if Path is empty or null, then skip to an error, otherwise proceed
+	Exec '"$1firefox.exe" -install-global-extension "$INSTDIR\torbutton-1.0.4-fx+tb.xpi"'
+	DetailPrint "Torbutton installed"
 	Goto +2
 	MessageBox MB_OK|MB_ICONSTOP "FireFox wasn't found on your system.  Not installing Torbutton."
+	DetailPrint "Firefox NOT found."
 SectionEnd
 
 SubSection /e "Shortcuts" Shortcuts

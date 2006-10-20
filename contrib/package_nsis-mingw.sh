@@ -23,6 +23,8 @@ cp src/tools/tor-resolve.exe win_tmp/bin/
 cp /usr/local/ssl/lib/libcrypto.a win_tmp/bin/
 cp /usr/local/ssl/lib/libssl.a win_tmp/bin/
 cp contrib/tor.ico win_tmp/bin/
+
+# YOU must copy torbutton xpi into the contrib dir
 cp contrib/torbutton-1.0.4-fx+tb.xpi win_tmp/bin/
 
 # There is no man2html in mingw.  
