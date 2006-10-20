@@ -2668,6 +2668,8 @@ void router_reset_status_download_failures(void);
 int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
 const char *esc_router_info(routerinfo_t *router);
 
+int networkstatus_getinfo_helper(const char *question, char **answer);
+
 /********************************* routerparse.c ************************/
 
 #define MAX_STATUS_TAG_LEN 32

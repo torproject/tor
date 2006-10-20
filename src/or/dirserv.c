@@ -1334,8 +1334,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 static cached_dir_t *
 generate_v2_networkstatus(void)
 {
-#define LONGEST_STATUS_FLAG_NAME_LEN 7
-#define N_STATUS_FLAGS 6
+#define LONGEST_STATUS_FLAG_NAME_LEN 9
+#define N_STATUS_FLAGS 9
 #define RS_ENTRY_LEN                                                    \
   ( /* first line */                                                    \
    MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \

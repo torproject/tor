@@ -349,6 +349,18 @@ $Id$
     "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest
       server descriptor for a given OR, NUL-terminated.
 
+    "ns/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest network
+      status info for a given OR.  Network status info is as given in
+      dir-spec.txt, and reflects the current beliefs of this Tor about the
+      router in question. [First implemented in 0.1.2.3-alpha]  Like
+      directory clients, controllers MUST tolerate unrecognized flags and
+      lines.  The published date and descriptor digest are those believed to
+      be best by this Tor, not necessarily those for a descriptor that Tor
+      currently has.
+
+    "ns/all" -- Network status info for all ORs we have an opinion about,
+      joined by newlines. [First implemented in 0.1.2.3-alpha.]
+
     "desc/all-recent" -- the latest server descriptor for every router that
       Tor knows about.
 

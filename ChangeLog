@@ -20,6 +20,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       Perry)
     - Add a REMOTE_REASON field to CIRC events to tell the controller about
       why a remote OR told us to close a circuit.
+    - There's now a GETINFO ns/... field so that controllers can ask Tor
+      about the current state of a router.
 
   o Security bugfixes:
     - When the user sends a NEWNYM signal, clear the client-side DNS

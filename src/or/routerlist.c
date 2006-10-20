@@ -4109,6 +4109,104 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
   return 1;
 }
 
+/** Generate networkstatus lines for a single routerstatus_t object, and
+ * return the result in a newly allocated string.  Used only by controller
+ * interface (for now.) */
+/* XXXX This should eventually merge into generate_v2_networkstatus() */
+static char *
+networkstatus_getinfo_helper_single(routerstatus_t *rs)
+{
+  char buf[192];
+  int r;
+  struct in_addr in;
+
+  int f_authority;
+  char published[ISO_TIME_LEN+1];
+  char ipaddr[INET_NTOA_BUF_LEN];
+  char identity64[BASE64_DIGEST_LEN+1];
+  char digest64[BASE64_DIGEST_LEN+1];
+
+  format_iso_time(published, rs->published_on);
+  digest_to_base64(identity64, rs->identity_digest);
+  digest_to_base64(digest64, rs->descriptor_digest);
+  in.s_addr = htonl(rs->addr);
+  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
+
+  f_authority = router_digest_is_trusted_dir(rs->identity_digest);
+
+  r = tor_snprintf(buf, sizeof(buf),
+                   "r %s %s %s %s %s %d %d\n"
+                   "s%s%s%s%s%s%s%s%s%s%s\n",
+                   rs->nickname,
+                   identity64,
+                   digest64,
+                   published,
+                   ipaddr,
+                   (int)rs->or_port,
+                   (int)rs->dir_port,
+
+                   f_authority?" Authority":"",
+                   rs->is_bad_exit?" BadExit":"",
+                   rs->is_exit?" Exit":"",
+                   rs->is_fast?" Fast":"",
+                   rs->is_possible_guard?" Guard":"",
+                   rs->is_named?" Named":"",
+                   rs->is_stable?" Stable":"",
+                   rs->is_running?" Running":"",
+                   rs->is_valid?" Valid":"",
+                   rs->is_v2_dir?" V2Dir":"");
+  if (r<0)
+    log_warn(LD_BUG, "Not enough space in buffer.");
+
+  return tor_strdup(buf);
+}
+
+/** If <b>question</b> is a string beginning with "ns/" in a format the
+ * control interface expects for a GETINFO question, set *<b>answer</b> to a
+ * newly-allocated string containing networkstatus lines for the appropriate
+ * ORs.  Return 0 on success, -1 on failure. */
+int
+networkstatus_getinfo_helper(const char *question, char **answer)
+{
+  local_routerstatus_t *status;
+
+  if (!routerstatus_list) {
+    *answer = tor_strdup("");
+    return 0;
+  }
+
+  if (!strcmpstart(question, "ns/all")) {
+    smartlist_t *statuses = smartlist_create();
+    SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, lrs,
+      {
+        routerstatus_t *rs = &(lrs->status);
+        smartlist_add(statuses, networkstatus_getinfo_helper_single(rs));
+      });
+    *answer = smartlist_join_strings(statuses, "", 0, NULL);
+    SMARTLIST_FOREACH(statuses, char *, cp, tor_free(cp));
+    smartlist_free(statuses);
+    return 0;
+  } else if (!strcmpstart(question, "ns/id/")) {
+    char d[DIGEST_LEN];
+
+    if (base16_decode(d, DIGEST_LEN, question+6, strlen(question+6)))
+      return -1;
+    status = router_get_combined_status_by_digest(d);
+  } else if (!strcmpstart(question, "ns/name/")) {
+    status = router_get_combined_status_by_nickname(question+8, 0);
+  } else {
+    return -1;
+  }
+
+  if (status) {
+    *answer = networkstatus_getinfo_helper_single(&status->status);
+  } else {
+    *answer = tor_strdup("");
+  }
+  return 0;
+}
+
+/*DOCDOC*/
 static void
 routerlist_assert_ok(routerlist_t *rl)
 {

@@ -30,7 +30,7 @@ N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.
 N - Stop recommending exits as guards?
-N - Clients stop dumping old descriptors if the network-statuses
+  o Clients stop dumping old descriptors if the network-statuses
     claim they're still valid.
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
@@ -76,7 +76,12 @@ N - Simplify authority operation
     being a client.
     . Reduce resource load
 d     - Tolerate clock skew on bridge relays.
-N     - A way to examine router flags from controller.
+      o A way to examine router flags from controller.
+        o Specify: GETINFO ns/id/x, ns/name/x, ns/all.
+        o Implement
+N     - A way to alert controller when router flags change.
+        - Specify: SETEVENTS NS
+        - Implement
 d     - A way to adjust router flags from the controller
 d     - a way to pick entries based wholly on extend_info equivalent;
         a way to export extend_info equivalent.

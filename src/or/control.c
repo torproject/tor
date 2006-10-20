@@ -1437,6 +1437,7 @@ list_getinfo_options(void)
     "orconn-status Status of each current OR connection.\n"
     "stream-status Status of each current application stream.\n"
     "version The current version of Tor.\n");
+  // XXXX Uptodate!
 }
 
 /** Lookup the 'getinfo' entry <b>question</b>, and return
@@ -1493,6 +1494,8 @@ handle_getinfo_helper(control_connection_t *control_conn,
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
+  } else if (!strcmpstart(question, "ns/")) {
+    return networkstatus_getinfo_helper(question, answer);
   } else if (!strcmpstart(question, "unregistered-servers-")) {
     *answer = dirserver_getinfo_unregistered(question +
                                              strlen("unregistered-servers-"));
