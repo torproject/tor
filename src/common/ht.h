@@ -26,14 +26,6 @@
 #define HT_INITIALIZER()                        \
   { NULL, 0, 0, 0, -1 }
 
-#define HT_INIT(root) do {                      \
-    (root)->hth_table_length = 0;               \
-    (root)->hth_table = NULL;                   \
-    (root)->hth_n_entries = 0;                  \
-    (root)->hth_load_limit = 0;                 \
-    (root)->hth_prime_idx = -1;                 \
-  } while (0)
-
 #define HT_ENTRY(type)                          \
   struct {                                      \
     struct type *hte_next;                      \
@@ -59,7 +51,7 @@
 #define HT_NEXT(name, head, elm)     name##_HT_NEXT((head), (elm))
 #define HT_NEXT_RMV(name, head, elm) name##_HT_NEXT_RMV((head), (elm))
 #define HT_CLEAR(name, head)         name##_HT_CLEAR(head)
-
+#define HT_INIT(name, head)          name##_HT_INIT(head)
 /* Helper: */
 static INLINE unsigned
 ht_improve_hash(unsigned h)
@@ -100,6 +92,14 @@ ht_string_hash(const char *s)
   int name##_HT_GROW(struct name *ht, unsigned min_capacity);           \
   void name##_HT_CLEAR(struct name *ht);                                \
   int _##name##_HT_REP_IS_BAD(struct name *ht);                         \
+  static INLINE void                                                    \
+  name##_HT_INIT(struct name *head) {                                   \
+    head->hth_table_length = 0;                                         \
+    head->hth_table = NULL;                                             \
+    head->hth_n_entries = 0;                                            \
+    head->hth_load_limit = 0;                                           \
+    head->hth_prime_idx = -1;                                           \
+  }                                                                     \
   /* Helper: returns a pointer to the right location in the table       \
    * 'head' to find or insert the element 'elm'. */                     \
   static INLINE struct type **                                          \
@@ -344,7 +344,7 @@ ht_string_hash(const char *s)
     if (head->hth_table)                                                \
       freefn(head->hth_table);                                          \
     head->hth_table_length = 0;                                         \
-    HT_INIT(head);                                                      \
+    name##_HT_INIT(head);                                               \
   }                                                                     \
   /* Debugging helper: return false iff the representation of 'head' is \
    * internally consistent. */                                          \

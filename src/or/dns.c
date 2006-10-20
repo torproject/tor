@@ -162,7 +162,7 @@ HT_GENERATE(cache_map, cached_resolve_t, node, cached_resolve_hash,
 static void
 init_cache_map(void)
 {
-  HT_INIT(&cache_root);
+  HT_INIT(cache_map, &cache_root);
 }
 
 #ifdef USE_EVENTDNS

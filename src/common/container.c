@@ -675,7 +675,7 @@ strmap_new(void)
 {
   strmap_t *result;
   result = tor_malloc(sizeof(strmap_t));
-  HT_INIT(&result->head);
+  HT_INIT(strmap_impl, &result->head);
   return result;
 }
 
@@ -686,7 +686,7 @@ digestmap_new(void)
 {
   digestmap_t *result;
   result = tor_malloc(sizeof(digestmap_t));
-  HT_INIT(&result->head);
+  HT_INIT(digestmap_impl, &result->head);
   return result;
 }
 
