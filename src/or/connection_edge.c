@@ -498,7 +498,8 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
 int
 connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ)
 {
-  control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE);
+  control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE,
+                              END_STREAM_REASON_FIXME_XXXX);
   conn->_base.timestamp_lastread = time(NULL);
   if (! get_options()->LeaveStreamsUnattached) {
     conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
@@ -1436,9 +1437,9 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
   } /* else socks handshake is done, continue processing */
 
   if (socks->command == SOCKS_COMMAND_CONNECT)
-    control_event_stream_status(conn, STREAM_EVENT_NEW);
+    control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
   else
-    control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE);
+    control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE, 0);
 
   if (options->LeaveStreamsUnattached) {
     conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
@@ -1480,7 +1481,7 @@ connection_ap_process_transparent(edge_connection_t *conn)
   }
   /* we have the original destination */
 
-  control_event_stream_status(conn, STREAM_EVENT_NEW);
+  control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
 
   if (options->LeaveStreamsUnattached) {
     conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
@@ -1557,7 +1558,7 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
   ap_conn->_base.state = AP_CONN_STATE_CONNECT_WAIT;
   log_info(LD_APP,"Address/port sent, ap socket %d, n_circ_id %d",
            ap_conn->_base.s, circ->_base.n_circ_id);
-  control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT);
+  control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT, 0);
   return 0;
 }
 
@@ -1623,7 +1624,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
   ap_conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
   log_info(LD_APP,"Address sent for resolve, ap socket %d, n_circ_id %d",
            ap_conn->_base.s, circ->_base.n_circ_id);
-  control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE);
+  control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE, 0);
   return 0;
 }
 
@@ -1781,7 +1782,8 @@ connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
   tor_assert(conn->socks_request); /* make sure it's an AP stream */
 
   control_event_stream_status(conn,
-     status==SOCKS5_SUCCEEDED ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED);
+     status==SOCKS5_SUCCEEDED ? STREAM_EVENT_SUCCEEDED : STREAM_EVENT_FAILED,
+                              END_STREAM_REASON_FIXME_XXXX);
 
   if (conn->socks_request->has_finished) {
     log_warn(LD_BUG, "Harmless bug: duplicate calls to "

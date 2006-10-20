@@ -835,6 +835,7 @@ $Id$
     The syntax is:
 
       "650" SP "STREAM" SP StreamID SP StreamStatus SP CircID SP Target
+          [SP "REASON=" Reason [ SP "REMOTE_REASON=" Reason ]] CRLF
 
       StreamStatus =
                "NEW"          / ; New request to connect
@@ -850,6 +851,24 @@ $Id$
 
   The circuit ID designates which circuit this stream is attached to.  If
   the stream is unattached, the circuit ID "0" is given.
+
+      Reason = "MISC" / "RESOLVEFAILED" / "CONNECTREFUSED" /
+               "EXITPOLICY" / "DESTROY" / "DONE" / "TIMEOUT" /
+               "HIBERNATING" / "INTERNAL"/ "RESOURCELIMIT" /
+               "CONNRESET" / "TORPROTOCOL" / "NOTDIRECTORY" / "END"
+
+   The "REASON" field is provided only for FAILED, CLOSED, and DETACHED
+   events, and only if extended events are enabled (see 3.19).  Clients MUST
+   accept reasons not listed above.  Reasons are as given in tor-spec.txt,
+   except for:
+
+      END          (We received a RELAY_END cell from the other side of thise
+                    stream.)
+
+   The "REMOTE_REASON" field is provided only when we receive a RELAY_END
+   cell, and only if extended events are enabled.  It contains the actual
+   reason given by the remote OR for closing the stream. Clients MUST accept
+   reasons not listed above.  Reasons are as listed in tor-spec.txt.
 
 4.1.3. OR Connection status changed
 

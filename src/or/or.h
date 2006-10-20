@@ -464,6 +464,10 @@ typedef enum {
 #define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
 #define RELAY_COMMAND_INTRODUCE_ACK 40
 
+/* XXXX Placeholder: remove me as soon as we have correct reasons sent
+ * everywhere. */
+#define END_STREAM_REASON_FIXME_XXXX 0
+
 #define END_STREAM_REASON_MISC 1
 #define END_STREAM_REASON_RESOLVEFAILED 2
 #define END_STREAM_REASON_CONNECTREFUSED 3
@@ -478,6 +482,10 @@ typedef enum {
 #define END_STREAM_REASON_CONNRESET 12
 #define END_STREAM_REASON_TORPROTOCOL 13
 #define END_STREAM_REASON_NOTDIRECTORY 14
+
+/* OR this with the argument to control_event_stream_status to indicate that
+ * the reason came from an END cell. */
+#define END_STREAM_REASON_FLAG_REMOTE     512
 
 /* These high-numbered end reasons are not part of the official spec,
  * and are not intended to be put in relay end cells. They are here
@@ -2089,7 +2097,8 @@ int connection_control_process_inbuf(control_connection_t *conn);
 int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e, int reason);
 int control_event_stream_status(edge_connection_t *conn,
-                                stream_status_event_t e);
+                                stream_status_event_t e,
+                                int reason);
 int control_event_or_conn_status(or_connection_t *conn,
                                  or_conn_status_event_t e);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);

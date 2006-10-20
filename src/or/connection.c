@@ -458,9 +458,9 @@ connection_about_to_close_connection(connection_t *conn)
         log_warn(LD_BUG,"Bug: Closing stream (marked at %s:%d) without sending"
                  " back a socks reply.",
                  conn->marked_for_close_file, conn->marked_for_close);
-      } else {
-        control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED);
       }
+      control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED,
+                                  END_STREAM_REASON_FIXME_XXXX);
       break;
     case CONN_TYPE_EXIT:
       edge_conn = TO_EDGE_CONN(conn);

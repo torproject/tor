@@ -2946,10 +2946,34 @@ write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
   return 0;
 }
 
+/* DOCDOC */
+static const char *
+stream_end_reason_to_string(int reason)
+{
+  reason &= ~END_CIRC_REASON_FLAG_REMOTE;
+  switch (reason) {
+    case END_STREAM_REASON_MISC: return "MISC";
+    case END_STREAM_REASON_RESOLVEFAILED: return "RESOLVEFAILED";
+    case END_STREAM_REASON_CONNECTREFUSED: return "CONNECTREFUSED";
+    case END_STREAM_REASON_EXITPOLICY: return "EXITPOLICY";
+    case END_STREAM_REASON_DESTROY: return "DESTROY";
+    case END_STREAM_REASON_DONE: return "DONE";
+    case END_STREAM_REASON_TIMEOUT: return "TIMEOUT";
+    case END_STREAM_REASON_HIBERNATING: return "HIBERNATING";
+    case END_STREAM_REASON_INTERNAL: return "INTERNAL";
+    case END_STREAM_REASON_RESOURCELIMIT: return "RESOURCELIMIT";
+    case END_STREAM_REASON_CONNRESET: return "CONNRESET";
+    case END_STREAM_REASON_TORPROTOCOL: return "TORPROTOCOL";
+    case END_STREAM_REASON_NOTDIRECTORY: return "NOTDIRECTORY";
+    default: return NULL;
+  }
+}
+
 /** Something has happened to the stream associated with AP connection
  * <b>conn</b>: tell any interested control connections. */
 int
-control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
+control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
+                            int reason_code)
 {
   char *msg;
   size_t len;
@@ -2971,9 +2995,11 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
     tor_free(msg);
   }
   if (EVENT_IS_INTERESTING1(EVENT_STREAM_STATUS)) {
+    char reason_buf[64];
     const char *status;
     circuit_t *circ;
     origin_circuit_t *origin_circ = NULL;
+    reason_buf[0] = '\0';
     switch (tp)
       {
       case STREAM_EVENT_SENT_CONNECT: status = "SENTCONNECT"; break;
@@ -2988,15 +3014,33 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp)
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
+    if (reason_code && (tp == STREAM_EVENT_FAILED ||
+                        tp == STREAM_EVENT_CLOSED ||
+                        tp == STREAM_EVENT_FAILED_RETRIABLE)) {
+      const char *reason_str = stream_end_reason_to_string(reason_code);
+      char *r = NULL;
+      if (!reason_str) {
+        r = tor_malloc(16);
+        tor_snprintf(r, 16, "UNKNOWN_%d", reason_code);
+        reason_str = r;
+      }
+      if (reason_code & END_STREAM_REASON_FLAG_REMOTE)
+        tor_snprintf(reason_buf, sizeof(reason_buf),
+                     "REASON=END REMOTE_REASON=%s", reason_str);
+      else
+        tor_snprintf(reason_buf, sizeof(reason_buf),
+                     "REASON=%s", reason_str);
+      tor_free(r);
+    }
     circ = circuit_get_by_edge_conn(conn);
     if (circ && CIRCUIT_IS_ORIGIN(circ))
       origin_circ = TO_ORIGIN_CIRCUIT(circ);
-    send_control1_event(EVENT_STREAM_STATUS, ALL_NAMES,
-                        "650 STREAM %lu %s %lu %s\r\n",
+    send_control1_event_extended(EVENT_STREAM_STATUS, ALL_NAMES,
+                        "650 STREAM %lu %s %lu %s@%s\r\n",
                         (unsigned long)conn->global_identifier, status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
-                        buf);
+                        buf, reason_buf);
     /* XXX need to specify its intended exit, etc? */
   }
   return 0;
