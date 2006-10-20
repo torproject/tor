@@ -194,7 +194,8 @@ $Id$
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
          "AUTHDIR_NEWDESCS" / "DESCCHANGED" / "STATUS_GENERAL" /
-         "STATUS_CLIENT" / "STATUS_SERVER" / "GUARDS"
+         "STATUS_CLIENT" / "STATUS_SERVER" / "GUARDS" / "NS" /
+         "NS_FULL"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -1084,6 +1085,13 @@ $Id$
      Type = "ENTRY"
      ...
   [needs to be fleshed out; not implemented yet]
+
+4.1.12. Network status has changed
+
+  Syntax:
+     "650" "+" "NS" CRLF  1*NetworkStatus "." CRLF
+
+  [First added in 0.1.2.3-alpha]
 
 5. Implementation notes
 

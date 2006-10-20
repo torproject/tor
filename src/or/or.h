@@ -2115,6 +2115,8 @@ int control_event_or_authdir_new_descriptor(const char *action,
                                             const char *descriptor,
                                             const char *msg);
 int control_event_my_descriptor_changed(void);
+int control_event_networkstatus_changed(smartlist_t *statuses);
+int control_event_networkstatus_changed_single(local_routerstatus_t *rs);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);
@@ -2682,6 +2684,7 @@ void router_reset_status_download_failures(void);
 int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
 const char *esc_router_info(routerinfo_t *router);
 
+char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 int networkstatus_getinfo_helper(const char *question, char **answer);
 
 /********************************* routerparse.c ************************/

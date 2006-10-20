@@ -79,9 +79,11 @@ d     - Tolerate clock skew on bridge relays.
       o A way to examine router flags from controller.
         o Specify: GETINFO ns/id/x, ns/name/x, ns/all.
         o Implement
-N     - A way to alert controller when router flags change.
-        - Specify: SETEVENTS NS
-        - Implement
+      o A way to alert controller when router flags change.
+        o Specify: SETEVENTS NS
+        o Implement
+N       - Hunt for places that change networkstatus info that I might have
+          missed.
 d     - A way to adjust router flags from the controller
 d     - a way to pick entries based wholly on extend_info equivalent;
         a way to export extend_info equivalent.

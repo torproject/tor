@@ -606,8 +606,10 @@ mark_all_trusteddirservers_up(void)
       dir->is_running = 1;
       dir->n_networkstatus_failures = 0;
       rs = router_get_combined_status_by_digest(dir->digest);
-      if (rs)
+      if (rs && !rs->status.is_running) {
         rs->status.is_running = 1;
+        control_event_networkstatus_changed_single(rs);
+      }
     });
   }
   last_networkstatus_download_attempted = 0;
@@ -1670,8 +1672,9 @@ router_set_status(const char *digest, int up)
     router->is_running = up;
   }
   status = router_get_combined_status_by_digest(digest);
-  if (status) {
+  if (status && status->status.is_running != up) {
     status->status.is_running = up;
+    control_event_networkstatus_changed_single(status);
   }
   router_dir_info_changed();
 }
@@ -3187,7 +3190,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
   int i, j, warned;
   int *index, *size;
   networkstatus_t **networkstatus;
-  smartlist_t *result;
+  smartlist_t *result, *changed_list;
   strmap_t *name_map;
   char conflict[DIGEST_LEN]; /* Sentinel value */
   desc_digest_count_t *digest_counts = NULL;
@@ -3287,6 +3290,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
   }
 
   result = smartlist_create();
+  changed_list = smartlist_create();
   digest_counts = tor_malloc_zero(sizeof(desc_digest_count_t)*n_statuses);
 
   /* Iterate through all of the sorted routerstatus lists in lockstep.
@@ -3439,6 +3443,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
     rs_out->status.is_stable = n_stable > n_statuses/2;
     rs_out->status.is_v2_dir = n_v2_dir > n_statuses/2;
     rs_out->status.is_bad_exit = n_bad_exit > n_listing_bad_exits/2;
+    if (!rs_old || memcmp(rs_old, rs_out, sizeof(local_routerstatus_t)))
+      smartlist_add(changed_list, rs_out);
   }
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
                     local_routerstatus_free(rs));
@@ -3454,6 +3460,9 @@ routerstatus_list_update_from_networkstatus(time_t now)
 
   networkstatus_list_has_changed = 0;
   routerstatus_list_has_changed = 1;
+
+  control_event_networkstatus_changed(changed_list);
+  smartlist_free(changed_list);
 }
 
 /** Given a list <b>routers</b> of routerinfo_t *, update each routers's
@@ -4113,7 +4122,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
  * return the result in a newly allocated string.  Used only by controller
  * interface (for now.) */
 /* XXXX This should eventually merge into generate_v2_networkstatus() */
-static char *
+char *
 networkstatus_getinfo_helper_single(routerstatus_t *rs)
 {
   char buf[192];

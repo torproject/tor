@@ -82,7 +82,9 @@ const char control_c_id[] =
 #define EVENT_ADDRMAP          0x000C
 #define EVENT_AUTHDIR_NEWDESCS 0x000D
 #define EVENT_DESCCHANGED      0x000E
-#define _EVENT_MAX             0x000E
+#define EVENT_NS               0x000F
+#define _EVENT_MAX             0x000F
+/* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Array mapping from message type codes to human-readable message
  * type names. Used for compatibility with version 0 of the control
@@ -1050,6 +1052,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
           event_code = EVENT_AUTHDIR_NEWDESCS;
         else if (!strcasecmp(ev, "DESCCHANGED"))
           event_code = EVENT_DESCCHANGED;
+        else if (!strcasecmp(ev, "NS"))
+          event_code = EVENT_NS;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
@@ -3345,6 +3349,49 @@ control_event_or_authdir_new_descriptor(const char *action,
   tor_free(buf);
 
   return 0;
+}
+
+/* DOCDOC takes a list of local_routerstatus_t */
+int
+control_event_networkstatus_changed(smartlist_t *statuses)
+{
+  smartlist_t *strs;
+  char *s;
+  if (!EVENT_IS_INTERESTING(EVENT_NS) || !smartlist_len(statuses))
+    return 0;
+
+  strs = smartlist_create();
+  smartlist_add(strs, tor_strdup("650+NS\r\n"));
+  SMARTLIST_FOREACH(statuses, local_routerstatus_t *, rs,
+    {
+      s = networkstatus_getinfo_helper_single(&rs->status);
+      if (!s) continue;
+      smartlist_add(strs, s);
+    });
+  smartlist_add(strs, tor_strdup("\r\n.\r\n"));
+
+  s = smartlist_join_strings(strs, "", 0, NULL);
+  SMARTLIST_FOREACH(strs, char *, cp, tor_free(cp));
+  smartlist_free(strs);
+  send_control1_event_string(EVENT_NS, ALL_NAMES|ALL_FORMATS, s);
+  tor_free(s);
+  return 0;
+}
+
+int
+control_event_networkstatus_changed_single(local_routerstatus_t *rs)
+{
+  smartlist_t *statuses;
+  int r;
+
+  if (!EVENT_IS_INTERESTING(EVENT_NS))
+    return 0;
+
+  statuses = smartlist_create();
+  smartlist_add(statuses, rs);
+  r = control_event_networkstatus_changed(statuses);
+  smartlist_free(statuses);
+  return r;
 }
 
 /** Our own router descriptor has changed; tell any controllers that care.

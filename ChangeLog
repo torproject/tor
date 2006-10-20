@@ -24,6 +24,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       about the current state of a router.
     - Stream events also have REASON and REMOTE_REASON fields, working much
       like those for circuit events.
+    - NS events to inform a controller when our opinion of a router's status
+      has changed.
 
   o Security bugfixes:
     - When the user sends a NEWNYM signal, clear the client-side DNS
