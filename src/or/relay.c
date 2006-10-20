@@ -446,6 +446,61 @@ relay_header_unpack(relay_header_t *dest, const char *src)
   dest->length = ntohs(get_uint16(src+9));
 }
 
+/** Make a relay cell out of <b>relay_command</b> and <b>payload</b>, and send
+ * it onto the open circuit <b>circ</b>. <b>stream_id</b> is the ID on
+ * <b>circ</b> for the stream that's sending the relay cell, or 0 if it's a
+ * control cell.  <b>cpath_layer</b> is NULL for OR->OP cells, or the
+ * destination hop for OP->OR cells.
+ *
+ * If you can't send the cell, mark the circuit for close and return -1. Else
+ * return 0.
+ */
+int
+relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
+                             int relay_command, const char *payload,
+                             size_t payload_len, crypt_path_t *cpath_layer)
+{
+  cell_t cell;
+  relay_header_t rh;
+  int cell_direction;
+  /* XXXX NM Split this function into a separate versions per circuit type? */
+
+  tor_assert(circ);
+
+  memset(&cell, 0, sizeof(cell_t));
+  cell.command = CELL_RELAY;
+  if (cpath_layer) {
+    cell.circ_id = circ->n_circ_id;
+    cell_direction = CELL_DIRECTION_OUT;
+  } else if (! CIRCUIT_IS_ORIGIN(circ)) {
+    cell.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
+    cell_direction = CELL_DIRECTION_IN;
+  } else {
+    return -1;
+  }
+
+  memset(&rh, 0, sizeof(rh));
+  rh.command = relay_command;
+  rh.stream_id = stream_id;
+  rh.length = payload_len;
+  relay_header_pack(cell.payload, &rh);
+  if (payload_len) {
+    tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
+    memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
+  }
+
+  log_debug(LD_OR,"delivering %d cell %s.", relay_command,
+            cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
+
+  if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer)
+      < 0) {
+    log_warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");
+    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+    return -1;
+  }
+  return 0;
+}
+
 /** Make a relay cell out of <b>relay_command</b> and <b>payload</b>, and
  * send it onto the open circuit <b>circ</b>. <b>fromconn</b> is the stream
  * that's sending the relay cell, or NULL if it's a control cell.
@@ -460,9 +515,6 @@ connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
                              int relay_command, const char *payload,
                              size_t payload_len, crypt_path_t *cpath_layer)
 {
-  cell_t cell;
-  relay_header_t rh;
-  int cell_direction;
   /* XXXX NM Split this function into a separate versions per circuit type? */
 
   if (fromconn && fromconn->_base.marked_for_close) {
@@ -486,39 +538,9 @@ connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
     return -1;
   }
 
-  memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_RELAY;
-  if (cpath_layer) {
-    cell.circ_id = circ->n_circ_id;
-    cell_direction = CELL_DIRECTION_OUT;
-  } else if (! CIRCUIT_IS_ORIGIN(circ)) {
-    cell.circ_id = TO_OR_CIRCUIT(circ)->p_circ_id;
-    cell_direction = CELL_DIRECTION_IN;
-  } else {
-    return -1;
-  }
-
-  memset(&rh, 0, sizeof(rh));
-  rh.command = relay_command;
-  if (fromconn)
-    rh.stream_id = fromconn->stream_id; /* else it's 0 */
-  rh.length = payload_len;
-  relay_header_pack(cell.payload, &rh);
-  if (payload_len) {
-    tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
-    memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
-  }
-
-  log_debug(LD_OR,"delivering %d cell %s.", relay_command,
-            cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
-
-  if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer)
-      < 0) {
-    log_warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");
-    circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
-    return -1;
-  }
-  return 0;
+  return relay_send_command_from_edge(fromconn ? fromconn->stream_id : 0,
+                                      circ, relay_command, payload,
+                                      payload_len, cpath_layer);
 }
 
 /** Translate <b>reason</b>, which came from a relay 'end' cell,
@@ -545,6 +567,7 @@ connection_edge_end_reason_str(int reason)
     case END_STREAM_REASON_RESOURCELIMIT:  return "server out of resources";
     case END_STREAM_REASON_CONNRESET:      return "connection reset";
     case END_STREAM_REASON_TORPROTOCOL:    return "Tor protocol error";
+    case END_STREAM_REASON_NOTDIRECTORY:   return "not a directory";
     default:
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Reason for ending (%d) not recognized.",reason);

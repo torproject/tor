@@ -48,6 +48,10 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
     - Detect the size of the routers file correctly even if it is corrupted
       (on systems without mmap) or not page-aligned (on systems with mmap).
       This bug was harmless.
+    - Implement the protocol correctly by always sending a RELAY_END cell
+      when an attempt to open a stream fails.  This should make clients
+      able to find a good exit faster in some cases, since unhandleable
+      requests will now get an error rather than timing out.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07
