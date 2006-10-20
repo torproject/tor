@@ -1443,8 +1443,9 @@ list_getinfo_options(void)
     "version The current version of Tor.\n");
   // XXXX Uptodate!
   /* This has been hard to keep up to date. Is it worth making
-  * a table with names, descriptions, and functions to call,
-  * so there's only one place to maintain? -RD */
+  * a table with names, descriptions, whether to match with
+  * strsmpstart, and a functions to call, so there's only one
+  * place to maintain? -RD */
 }
 
 /** Lookup the 'getinfo' entry <b>question</b>, and return
@@ -2887,6 +2888,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
   if (EVENT_IS_INTERESTING1(EVENT_CIRCUIT_STATUS)) {
     const char *status;
     char reason_buf[64];
+    int providing_reason=0;
     switch (tp)
       {
       case CIRC_EVENT_LAUNCHED: status = "LAUNCHED"; break;
@@ -2902,6 +2904,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
     if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
       const char *reason_str = circuit_end_reason_to_string(reason_code);
       char *reason = NULL;
+      providing_reason=1;
       if (!reason_str) {
         reason = tor_malloc(16);
         tor_snprintf(reason, 16, "UNKNOWN_%d", reason_code);
@@ -2919,18 +2922,30 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
 
     if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
       const char *sp = strlen(path) ? " " : "";
-      send_control1_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
-                          "650 CIRC %lu %s%s%s@%s\r\n",
-                          (unsigned long)circ->global_identifier,
-                          status, sp, path, reason_buf);
+      if (providing_reason)
+        send_control1_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
+                            "650 CIRC %lu %s%s%s@%s\r\n",
+                            (unsigned long)circ->global_identifier,
+                            status, sp, path, reason_buf);
+      else
+        send_control1_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
+                            "650 CIRC %lu %s%s%s\r\n",
+                            (unsigned long)circ->global_identifier,
+                            status, sp, path);
     }
     if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
       char *vpath = circuit_list_path_for_controller(circ);
       const char *sp = strlen(vpath) ? " " : "";
-      send_control1_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
-                          "650 CIRC %lu %s%s%s@%s\r\n",
-                          (unsigned long)circ->global_identifier,
-                          status, sp, vpath, reason_buf);
+      if (providing_reason)
+        send_control1_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
+                            "650 CIRC %lu %s%s%s@%s\r\n",
+                            (unsigned long)circ->global_identifier,
+                            status, sp, vpath, reason_buf);
+      else
+        send_control1_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
+                            "650 CIRC %lu %s%s%s\r\n",
+                            (unsigned long)circ->global_identifier,
+                            status, sp, vpath);
       tor_free(vpath);
     }
   }
