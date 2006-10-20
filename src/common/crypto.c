@@ -156,6 +156,8 @@ crypto_log_errors(int severity, const char *doing)
     lib = (const char*)ERR_lib_error_string(err);
     func = (const char*)ERR_func_error_string(err);
     if (!msg) msg = "(null)";
+    if (!lib) lib = "(null)";
+    if (!func) func = "(null)";
     if (doing) {
       log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
           doing, msg, lib, func);
