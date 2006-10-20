@@ -1438,6 +1438,9 @@ list_getinfo_options(void)
     "stream-status Status of each current application stream.\n"
     "version The current version of Tor.\n");
   // XXXX Uptodate!
+  /* This has been hard to keep up to date. Is it worth making
+  * a table with names, descriptions, and functions to call,
+  * so there's only one place to maintain? -RD */
 }
 
 /** Lookup the 'getinfo' entry <b>question</b>, and return

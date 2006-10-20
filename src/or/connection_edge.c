@@ -1857,12 +1857,12 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   /* Note: we have to use relay_send_command_from_edge here, not
    * connection_edge_end or connection_edge_send_command, since those require
    * that we have a stream connected to a circuit, and we don't connect to a
-   * circuit unitl we have a pending/sucessful resolve. */
+   * circuit until we have a pending/successful resolve. */
 
   if (!server_mode(get_options()) &&
       circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Relay begin cell at non-server. Dropping.");
+           "Relay begin cell at non-server. Closing.");
     end_payload[0] = END_STREAM_REASON_EXITPOLICY;
     relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                  end_payload, 1, NULL);
@@ -1872,7 +1872,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   if (rh.command == RELAY_COMMAND_BEGIN) {
     if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Relay begin cell has no \\0. Dropping.");
+             "Relay begin cell has no \\0. Closing.");
       end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);
@@ -1881,7 +1881,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     if (parse_addr_port(LOG_PROTOCOL_WARN, cell->payload+RELAY_HEADER_SIZE,
                         &address,NULL,&port)<0) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Unable to parse addr:port in relay begin cell. Dropping.");
+             "Unable to parse addr:port in relay begin cell. Closing.");
       end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);
@@ -1889,7 +1889,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     }
     if (port==0) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Missing port in relay begin cell. Dropping.");
+             "Missing port in relay begin cell. Closing.");
       end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);
@@ -1900,7 +1900,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     if (!tor_strisprint(address)) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Non-printing characters in address %s in relay "
-             "begin cell. Dropping.", escaped(address));
+             "begin cell. Closing.", escaped(address));
       end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);
@@ -1913,7 +1913,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
        * and users who'd be better off with, well, single-hop proxies.
        */
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Attempt to open a stream on first hop of circuit. Dropping.");
+             "Attempt to open a stream on first hop of circuit. Closing.");
       end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);
@@ -2193,7 +2193,8 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
 
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd)) < 0) {
     log_warn(LD_NET,
-             "Couldn't construct socketpair (%s). Out of sockets?",
+             "Couldn't construct socketpair (%s). "
+             "Network down? Out of sockets?",
              tor_socket_strerror(-err));
     connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT,
                         exit_conn->cpath_layer);

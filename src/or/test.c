@@ -1218,7 +1218,7 @@ test_mmap(void)
   test_streq(mapping->data, "Short file.");
   tor_munmap_file(mapping);
 
-  /* Make sure that we fail to map a no-longer-existant file. */
+  /* Make sure that we fail to map a no-longer-existent file. */
   mapping = tor_mmap_file(fname1);
   test_assert(mapping == NULL);
 

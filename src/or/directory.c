@@ -1305,7 +1305,7 @@ write_http_status_line(dir_connection_t *conn, int status,
   connection_write_to_buf(buf, strlen(buf), TO_CONN(conn));
 }
 
-/** Write the header for an HTTP/1.0 response onto <b>conn</b>->outbuf,
+/** Write the header for an HTTP/1.0 response onto <b>conn</b>-\>outbuf,
  * with <b>type</b> as the Content-Type.
  *
  * If <b>length</b> is nonnegative, it is the Content-Length.

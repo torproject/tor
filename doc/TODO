@@ -90,13 +90,6 @@ R     - option to dl directory info via tor
           non-Tor DL when not enough info present.
       D Count TLS bandwidth more accurately
 
-    - Improvements to bandwidth counting
-R     - look into "uncounting" bytes spent on local connections, so
-        we can bandwidthrate but still have fast downloads.
-R     - "bandwidth classes", for incoming vs initiated-here conns.
-d     - Write limiting; separate token bucket for write
-        - Write-limit directory responses (need to research)
-
 N - DNS improvements
     o Option to deal with broken DNS of the "ggoogle.com? Ah, you meant
       ads.me.com!" variety.
@@ -233,6 +226,12 @@ d - need to figure out how to fetch status of a few servers from the BDA
     without fetching all statuses. A new URL to fetch I presume?
 
 Deferred from 0.1.2.x:
+  - Improvements to bandwidth counting
+R   - look into "uncounting" bytes spent on local connections, so
+      we can bandwidthrate but still have fast downloads.
+R   - "bandwidth classes", for incoming vs initiated-here conns.
+d   - Write limiting; separate token bucket for write
+      - Write-limit directory responses (need to research)
   - Directory guards
   - RAM use in directory authorities.
   - Memory use improvements:
@@ -278,6 +277,9 @@ Deferred from 0.1.2.x:
       - Implement
 
 Minor items for 0.1.2.x as time permits:
+  - some way for the authorities to set BadExit for some nodes manually.
+  - "getinfo fingerprint" controller command
+  - "setevent guards" controller command
   - The Debian package now uses --verify-config when (re)starting,
     to distinguish configuration errors from other errors. Perhaps
     the RPM and other startup scripts should too?
@@ -288,14 +290,14 @@ Minor items for 0.1.2.x as time permits:
     the descriptor.
   - Flesh out options_description array in src/or/config.c
   - Don't let 'newnym' be triggered more often than every n seconds.
-  - change log_fn() to log() on notice/warn/err logs where we can.
+  o change log_fn() to log() on notice/warn/err logs where we can.
   - the deb now uses --verify-config to distinguish between configuration
     errors and other errors. Should the rpm, the ports, etc do this too?
   X If we try to publish as a nickname that's already claimed, should
     we append a number (or increment the number) and try again? This
     way people who read their logs can fix it as before, but people
     who don't read their logs will still offer Tor servers.
-    - Fall back to unnamed; warn user; sent controller event.
+    - Fall back to unnamed; warn user; send controller event.
 ! - Tor should bind its ports before dropping privs, so users don't
     have to do the ipchains dance.
   - Rate limit exit connections to a given destination -- this helps

@@ -669,6 +669,8 @@ $Id$
    it is recommended by at least one networkstatus AND no "better"
    descriptor has been downloaded.  [Versions of Tor before 0.1.2.3-alpha
    would discard descriptors simply for being published too far in the past.]
+   [The code seems to discard descriptors in all cases after they're 5
+   days old. True? -RD]
 
 5.3. Managing downloads
 
@@ -806,7 +808,7 @@ $Id$
 
 7.1. HTTP headers
 
-  Servers MAY set the Content-Length header.  Servers SHOULD set
+  Servers MAY set the Content-Length: header.  Servers SHOULD set
   Content-Encoding to "deflate" or "identity".
 
   Servers MAY include an X-Your-Address-Is: header, whose value is the

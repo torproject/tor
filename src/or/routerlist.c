@@ -4164,7 +4164,7 @@ networkstatus_getinfo_helper_single(routerstatus_t *rs)
 /** If <b>question</b> is a string beginning with "ns/" in a format the
  * control interface expects for a GETINFO question, set *<b>answer</b> to a
  * newly-allocated string containing networkstatus lines for the appropriate
- * ORs.  Return 0 on success, -1 on failure. */
+ * ORs.  Return 0 on success, -1 on unrecognized question format. */
 int
 networkstatus_getinfo_helper(const char *question, char **answer)
 {
@@ -4175,7 +4175,7 @@ networkstatus_getinfo_helper(const char *question, char **answer)
     return 0;
   }
 
-  if (!strcmpstart(question, "ns/all")) {
+  if (!strcmp(question, "ns/all")) {
     smartlist_t *statuses = smartlist_create();
     SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, lrs,
       {
@@ -4202,6 +4202,8 @@ networkstatus_getinfo_helper(const char *question, char **answer)
     *answer = networkstatus_getinfo_helper_single(&status->status);
   } else {
     *answer = tor_strdup("");
+    /* XXX this should return a 552, not a 250; but handle_getinfo_helper()
+     * isn't set up to handle that. That should be fixed too. :) -RD */
   }
   return 0;
 }

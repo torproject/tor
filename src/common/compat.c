@@ -257,8 +257,8 @@ tor_munmap_file(tor_mmap_t *handle)
 /** Replacement for snprintf.  Differs from platform snprintf in two
  * ways: First, always NUL-terminates its output.  Second, always
  * returns -1 if the result is truncated.  (Note that this return
- * behavior does <i>not</i> conform to C99; it just happens to be the
- * easiest to emulate "return -1" with conformant implementations than
+ * behavior does <i>not</i> conform to C99; it just happens to be
+ * easier to emulate "return -1" with conformant implementations than
  * it is to emulate "return number that would be written" with
  * non-conformant implementations.) */
 int
