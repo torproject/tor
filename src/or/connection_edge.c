@@ -1829,7 +1829,8 @@ connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
  * Note that we don't call connection_add() on the new stream! We wait
  * for connection_exit_connect() to do that.
  *
- * Return -1 if we want to tear down <b>circ</b>. Else return 0.
+ * Return -(some circuit end reason) if we want to tear down <b>circ</b>.
+ * Else return 0.
  */
 int
 connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
@@ -2168,8 +2169,9 @@ connection_exit_connect(edge_connection_t *edge_conn)
 /** Given an exit conn that should attach to us as a directory server, open a
  * bridge connection with a socketpair, create a new directory conn, and join
  * them together.  Return 0 on success (or if there was an error we could send
- * back an end cell for).  Return -1 if the circuit needs to be torn down.
- * Either connects exit_conn, frees it, or marks it, as appropriate.
+ * back an end cell for).  Return -(some circuit end reason) if the circuit
+ * needs to be torn down.  Either connects exit_conn, frees it, or marks it,
+ * as appropriate.
  */
 static int
 connection_exit_connect_dir(edge_connection_t *exit_conn)
