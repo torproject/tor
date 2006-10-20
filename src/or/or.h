@@ -756,6 +756,9 @@ typedef struct edge_connection_t {
   uint16_t stream_id; /**< The stream ID used for this edge connection on its
                        * circuit */
 
+  /** The reason why this connection is closing; passed to the controller. */
+  uint16_t end_reason;
+
   /** Quasi-global identifier for this connection; used for control.c */
   /* XXXX NM This can get re-used after 2**32 streams */
   uint32_t global_identifier;

@@ -2101,6 +2101,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
                         ap_conn->cpath_layer);
     /* Un-mark it as ending, since we're going to reuse it. */
     ap_conn->_base.edge_has_sent_end = 0;
+    ap_conn->end_reason = 0;
     if (tmpcirc)
       circuit_detach_stream(tmpcirc,ap_conn);
     ap_conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;

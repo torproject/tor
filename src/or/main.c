@@ -447,6 +447,9 @@ conn_write_callback(int fd, short events, void *_conn)
       tor_fragile_assert();
       if (CONN_IS_EDGE(conn)) {
         /* otherwise we cry wolf about duplicate close */
+        edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+        if (!edge_conn->end_reason)
+          edge_conn->end_reason = END_STREAM_REASON_INTERNAL;
         conn->edge_has_sent_end = 1;
       }
       /* XXX do we need a close-immediate here, so we don't try to flush? */

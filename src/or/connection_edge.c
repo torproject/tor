@@ -63,6 +63,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
 
   _connection_mark_for_close(TO_CONN(conn), line, file);
   conn->_base.hold_open_until_flushed = 1;
+  conn->end_reason = endreason;
 }
 
 /** There was an EOF. Send an end and mark the connection for close.
@@ -155,6 +156,7 @@ connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn)
     } else {
       /* closing the circuit, nothing to send an END to */
       conn->_base.edge_has_sent_end = 1;
+      conn->end_reason = END_STREAM_REASON_DESTROY;
       connection_mark_for_close(TO_CONN(conn));
       conn->_base.hold_open_until_flushed = 1;
     }
@@ -213,6 +215,7 @@ connection_edge_end(edge_connection_t *conn, char reason,
   }
 
   conn->_base.edge_has_sent_end = 1;
+  conn->end_reason = reason;
   return 0;
 }
 
@@ -408,6 +411,7 @@ connection_ap_expire_beginning(void)
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
     /* un-mark it as ending, since we're going to reuse it */
     conn->_base.edge_has_sent_end = 0;
+    conn->end_reason = 0;
     /* kludge to make us not try this circuit again, yet to allow
      * current streams on it to survive if they can: make it
      * unattractive to use for new streams */

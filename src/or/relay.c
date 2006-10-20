@@ -533,6 +533,7 @@ connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
     } else {
       log_info(LD_EXIT,"no circ. Closing conn.");
       fromconn->_base.edge_has_sent_end = 1; /* no circ to send to */
+      fromconn->end_reason = END_STREAM_REASON_INTERNAL;
       connection_mark_for_close(TO_CONN(fromconn));
     }
     return -1;
@@ -817,10 +818,11 @@ connection_edge_process_end_not_open(
        connection_edge_end_reason_str(rh->length > 0 ? reason : -1));
   if (conn->_base.type == CONN_TYPE_AP) {
     circuit_log_path(LOG_INFO,LD_APP,circ);
-    connection_mark_unattached_ap(conn, reason);
+    connection_mark_unattached_ap(conn, control_reason);
   } else {
     /* we just got an 'end', don't need to send one */
     conn->_base.edge_has_sent_end = 1;
+    conn->end_reason = control_reason;
     connection_mark_for_close(TO_CONN(conn));
   }
   return 0;
@@ -1024,23 +1026,25 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case RELAY_COMMAND_END:
+      reason = rh.length > 0 ?
+        *(uint8_t *)(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
       if (!conn) {
         log_info(domain,"end cell (%s) dropped, unknown stream.",
-                 connection_edge_end_reason_str(rh.length > 0 ?
-                   *(char *)(cell->payload+RELAY_HEADER_SIZE) : -1));
+                 connection_edge_end_reason_str(reason));
         return 0;
       }
 /* XXX add to this log_fn the exit node's nickname? */
       log_info(domain,"%d: end cell (%s) for stream %d. Removing stream.",
                conn->_base.s,
-               connection_edge_end_reason_str(rh.length > 0 ?
-                 *(char *)(cell->payload+RELAY_HEADER_SIZE) : -1),
+               connection_edge_end_reason_str(reason),
                conn->stream_id);
       if (conn->socks_request && !conn->socks_request->has_finished)
         log_warn(LD_BUG,
                  "Bug: open stream hasn't sent socks answer yet? Closing.");
       /* We just *got* an end; no reason to send one. */
       conn->_base.edge_has_sent_end = 1;
+      if (!conn->end_reason)
+        conn->end_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
       if (!conn->_base.marked_for_close) {
         /* only mark it if not already marked. it's possible to
          * get the 'end' right around when the client hangs up on us. */
@@ -1216,6 +1220,7 @@ repeat_connection_edge_package_raw_inbuf:
   circ = circuit_get_by_edge_conn(conn);
   if (!circ) {
     log_info(domain,"conn has no circuit! Closing.");
+    conn->end_reason = END_STREAM_REASON_CANT_ATTACH;
     return -1;
   }
 

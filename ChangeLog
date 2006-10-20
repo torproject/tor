@@ -22,6 +22,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       why a remote OR told us to close a circuit.
     - There's now a GETINFO ns/... field so that controllers can ask Tor
       about the current state of a router.
+    - Stream events also have REASON and REMOTE_REASON fields, working much
+      like those for circuit events.
 
   o Security bugfixes:
     - When the user sends a NEWNYM signal, clear the client-side DNS

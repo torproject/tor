@@ -459,8 +459,14 @@ connection_about_to_close_connection(connection_t *conn)
                  " back a socks reply.",
                  conn->marked_for_close_file, conn->marked_for_close);
       }
+      if (!edge_conn->end_reason) {
+        // XXXX Disable this before 0.1.2.x-final ships.
+        log_warn(LD_BUG,"Bug: Closing stream (marked at %s:%d) without having"
+                 " set end_reason. Please tell Nick.",
+                 conn->marked_for_close_file, conn->marked_for_close);
+      }
       control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED,
-                                  END_STREAM_REASON_FIXME_XXXX);
+                                  edge_conn->end_reason);
       break;
     case CONN_TYPE_EXIT:
       edge_conn = TO_EDGE_CONN(conn);
