@@ -1655,10 +1655,11 @@ wildcard_increment_answer(const char *id)
     log(notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider has given \"%s\" as an answer for %d different "
         "invalid addresses. Apparently they are hijacking DNS failures. "
-        "I'll trying to correct for this by treating future occurrences of "
+        "I'll try to correct for this by treating future occurrences of "
         "\"%s\" as 'not found'.", id, *ip, id);
       smartlist_add(dns_wildcard_list, tor_strdup(id));
     }
+    notice_given = 1;
   }
 }
 
