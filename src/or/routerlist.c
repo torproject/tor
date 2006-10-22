@@ -265,12 +265,8 @@ router_rebuild_store(int force)
   smartlist_add_all(routers, routerlist->routers);
   smartlist_sort(routers, _compare_routers_by_age);
   for (i = 0; i < 2; ++i) {
-    smartlist_t *lst = smartlist_create();
     /* We sort the routers by age to enhance locality on disk. */
-    if (i==0)
-      lst = old_routers;
-    else
-      lst = routers;
+    smartlist_t *lst = (i == 0) ? old_routers : routers;
     /* Now, add the appropriate members to chunk_list */
     SMARTLIST_FOREACH(lst, void *, ptr,
     {
@@ -280,7 +276,6 @@ router_rebuild_store(int force)
       const char *body = signed_descriptor_get_body(sd);
       if (!body) {
         log_warn(LD_BUG, "Bug! No descriptor available for router.");
-        smartlist_free(lst);
         goto done;
       }
       c = tor_malloc(sizeof(sized_chunk_t));
@@ -318,8 +313,6 @@ router_rebuild_store(int force)
       signed_descriptor_get_body(sd);
     });
   }
-  smartlist_free(old_routers);
-  smartlist_free(routers);
 
   tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
@@ -331,11 +324,11 @@ router_rebuild_store(int force)
   router_journal_len = 0;
   router_bytes_dropped = 0;
  done:
+  smartlist_free(old_routers);
+  smartlist_free(routers);
   tor_free(fname);
-  if (chunk_list) {
-    SMARTLIST_FOREACH(chunk_list, sized_chunk_t *, c, tor_free(c));
-    smartlist_free(chunk_list);
-  }
+  SMARTLIST_FOREACH(chunk_list, sized_chunk_t *, c, tor_free(c));
+  smartlist_free(chunk_list);
   return r;
 }
 
