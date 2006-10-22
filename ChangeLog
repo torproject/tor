@@ -58,6 +58,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       when an attempt to open a stream fails.  This should make clients
       able to find a good exit faster in some cases, since unhandleable
       requests will now get an error rather than timing out.
+    - Resolve two memory leaks when rebuilding the on-disk router cache
+      (reported by fookoowa).
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07
