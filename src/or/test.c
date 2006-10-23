@@ -986,9 +986,9 @@ test_smartlist(void)
     smartlist_t *primes = smartlist_create();
     int i;
     for (i=1; i < 10; i += 2)
-      smartlist_add(odds, (void*)i);
+      smartlist_add(odds, (void*)(uintptr_t)i);
     for (i=0; i < 10; i += 2)
-      smartlist_add(evens, (void*)i);
+      smartlist_add(evens, (void*)(uintptr_t)i);
 
     /* add_all */
     smartlist_add_all(ints, odds);
