@@ -70,6 +70,8 @@ secure\cite{goldberg-tap}, relies more on particular aspects of RSA and our
 implementation thereof than we had initially believed.  To future-proof
 against changes, we should replace it with a less delicate approach.
 
+\tmp{Stream migration?}
+
 \subsection{Scalability}
 
 \subsubsection{Improved directory performance}
@@ -147,6 +149,13 @@ gets us more users happy to run servers.
 
 
 \subsection{Blue-sky: UDP}
+
+\tmp{support udp}
+
+\tmp{Use udp as a transport}
+
+
+
 
 \section{Blocking resistance}
 
@@ -266,14 +275,27 @@ major packages within an hour or so of source release.
 \tmp{We'd like to know how much of the network is getting used.}
 
 \subsection{Controller library}
-\tmp{release a general-purpose controller library}
+We've done lots of design and development on our controller interface, which
+allows UI applications and other tools to interact with Tor.  We could
+encorage the development of more such tools by releasing a {\bf
+  general-purpose controller library}, ideally with API support for several
+popular programming languages.
 
 \section{User experience}
 
 \subsection{Get blocked less, get blocked less hard}
-\tmp{Implement  and publicize blind-signature based credential scheme}
+Right now, some services block access to Tor because they don't have a better
+way to keep vandals from abusing them than blocking IP addresses associated
+with vandalism.  Our approach so far has been to educate them about better
+solutions that currently exist, but we should also {\bf create better
+solutions for limiting vandalism by anonymous users} like credential and
+blind-signature based implementations, and encourage their use.
 
-\tmp{Maybe make a minimal RBL thing}
+Those who do block Tor users also block overbroadly, sometimes blacklisting
+operators of Tor servers that do not permit exit to their services.  We could
+obviate innocent reasons for doing so by designing a {\bf narrowly-targeted Tor
+  RBL service} so that those who wanted to overblock Tor clould no longer
+plead incompetence.
 
 \subsection{All-in-one bundle}
 \tmp{a.k.a ``Torpedo'', but rename this.}
@@ -284,13 +306,19 @@ major packages within an hour or so of source release.
 \subsection{Interface improvements}
 \tmp{Allow controllers to manipulate server status.}
 
+
 \subsection{Firewall-level deployment}
-\tmp{Make our new TransPort logic more portable and tested}
+Another useful deployment mode for some users is using {\bf Tor in a firewall
+  configuration}, and directing all their traffic through Tor.  This can be a
+little tricky to set up currently, but it's an effective way to make sure no
+traffic leaves the host un-anonymized.  To achieve this, we need to {\bf
+  improve and port our new TransPort} feature which allows Tor to be used
+without SOCKS support; to {\bf add an anonymizing DNS proxy} feature to Tor;
+and to {\bf construct a recommended set of firewall configurations} to redirect
+traffic to Tor.
 
-\tmp{Write logic for Tor to act as a DNS server}
-
-\tmp{Write necessary glue code, scripts, and docs so users who want to use
-  Tor as a firewall-like thing can.  Consider a livecd.}
+This is an area where {\bf deployment via a livecd}, or an installation
+targetted at specialized home routing hardware, could be useful.
 
 \subsection{Localization}
 Right now, most of our user-facing code is internationalized.  We need to
@@ -307,19 +335,28 @@ translators only need to use a single tool to translate the whole Tor suite.
 
 \subsection{Unified documentation scheme}
 
-\tmp{Keep track of all the docs we've got}
+We need to {\bf inventory our documentation.}  Our documentation so far has
+been mostly produced on an {\it ad hoc} basis, in response to particular
+needs and requests.  We should figure out what documentation we have, whih of
+it (if any) should get priotority, and whether we can't put it all into a
+single format.
 
-\tmp{Unify the docs into a single book-like thing}  This will also help us
-identify what sections of the ``book'' are missing.
+We could {\bf unify the docs} into a single book-like thing.  This will also
+help us identify what sections of the ``book'' are missing.
 
 \subsection{Missing technical documentation}
 
-\tmp{Revised design paper, or design paper plus errata}
+We should {\bf revise our design paper} to reflect the new decisions and
+research we've made since it was published in 2004.  This will help other
+researchers evaluate and suggest improvements to Tor's current design.
 
-\tmp{``How to play nice with Tor''}
+Other projects sometimes implement the client side of our prototocol.  We
+encourage this, but we should write {\bf a document about how to avoid
+excessive resource use}, so we don't need to worry that they will do so
+without regard to the effect of their choices on server resources.
 
+\subsection{Missing user documentation}
 
-
-
+\tmp{Discoursive and comprehensive docs}
 
 \end{document}
