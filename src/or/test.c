@@ -30,8 +30,6 @@ const char test_c_id[] =
 int have_failed = 0;
 
 /* These functions are file-local, but are exposed so we can test. */
-void add_fingerprint_to_dir(const char *nickname, const char *fp,
-                            smartlist_t *list);
 void get_platform_str(char *platform, size_t len);
 size_t read_escaped_data(const char *data, size_t len, int translate_newlines,
                          char **out);
@@ -91,6 +89,18 @@ remove_directory(void)
     smartlist_free(elements);
   }
   rmdir(temp_dir);
+}
+
+static crypto_pk_env_t *
+pk_generate(int idx)
+{
+  static crypto_pk_env_t *pregen[3] = {NULL, NULL, NULL};
+  tor_assert(idx < (int)(sizeof(pregen)/sizeof(pregen[0])));
+  if (! pregen[idx]) {
+    pregen[idx] = crypto_new_pk_env();
+    tor_assert(!crypto_pk_generate_key(pregen[idx]));
+  }
+  return crypto_pk_dup_key(pregen[idx]);
 }
 
 static void
@@ -401,10 +411,9 @@ test_crypto(void)
              "\x50\xC2\x6C\x9C\xD0\xD8\x9D", 20);
 
   /* Public-key ciphers */
-  pk1 = crypto_new_pk_env();
+  pk1 = pk_generate(0);
   pk2 = crypto_new_pk_env();
   test_assert(pk1 && pk2);
-  test_assert(! crypto_pk_generate_key(pk1));
   test_assert(! crypto_pk_write_public_key_to_string(pk1, &cp, &size));
   test_assert(! crypto_pk_read_public_key_from_string(pk2, cp, size));
   test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
@@ -777,13 +786,9 @@ test_smartlist(void)
   smartlist_t *sl;
   char *cp;
 
-  /* XXXX test add_all, remove, string_remove, isin, string_isin,
-   * string_num_isin, overlap, intersect, subtract,
-   * sort_strings, sort_digests, uniq_strings, uniq_digests, bsearch,
-   * join_strings2
-   */
+  /* XXXX test sort_strings, sort_digests, uniq_strings, uniq_digests */
 
-  /* Test smartlist */
+  /* Test smartlist add, del_keeporder, insert, get. */
   sl = smartlist_create();
   smartlist_add(sl, (void*)1);
   smartlist_add(sl, (void*)2);
@@ -805,6 +810,10 @@ test_smartlist(void)
   /* Try deleting at the end. */
   smartlist_del(sl, 4);
   test_eq(4, smartlist_len(sl));
+
+  /* test isin. */
+  test_assert(smartlist_isin(sl, (void*)3));
+  test_assert(!smartlist_isin(sl, (void*)99));
 
   /* Test split and join */
   smartlist_clear(sl);
@@ -935,15 +944,88 @@ test_smartlist(void)
 
   /* Test uniq() */
   smartlist_split_string(sl,
-                         "noon,radar,a,man,a,plan,a,canal,panama,radar,noon",
-                         ",", 0, 0);
+                     "50,noon,radar,a,man,a,plan,a,canal,panama,radar,noon,50",
+                     ",", 0, 0);
   smartlist_sort(sl, _compare_strs);
   smartlist_uniq(sl, _compare_strs, NULL);
   cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp, "a,canal,man,noon,panama,plan,radar");
+  test_streq(cp, "50,a,canal,man,noon,panama,plan,radar");
   tor_free(cp);
+
+  /* Test string_isin. */
+  test_assert(smartlist_string_isin(sl, "noon"));
+  test_assert(!smartlist_string_isin(sl, "noonoon"));
+  test_assert(smartlist_string_num_isin(sl, 50));
+  test_assert(!smartlist_string_num_isin(sl, 60));
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
+
+  /* Test string_remove and remove and join_strings2 */
+  smartlist_split_string(sl,
+                    "Some say the Earth will end in ice and some in fire",
+                    " ", 0, 0);
+  cp = smartlist_get(sl, 4);
+  test_streq(cp, "will");
+  smartlist_add(sl, cp);
+  smartlist_remove(sl, cp);
+  cp = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp, "Some,say,the,Earth,fire,end,in,ice,and,some,in");
+  tor_free(cp);
+  smartlist_string_remove(sl, "in");
+  cp = smartlist_join_strings2(sl, "+XX", 1, 0, NULL);
+  test_streq(cp, "Some+say+the+Earth+fire+end+some+ice+and");
+  tor_free(cp);
+
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  {
+    smartlist_t *ints = smartlist_create();
+    smartlist_t *odds = smartlist_create();
+    smartlist_t *evens = smartlist_create();
+    smartlist_t *primes = smartlist_create();
+    int i;
+    for (i=1; i < 10; i += 2)
+      smartlist_add(odds, (void*)i);
+    for (i=0; i < 10; i += 2)
+      smartlist_add(evens, (void*)i);
+
+    /* add_all */
+    smartlist_add_all(ints, odds);
+    smartlist_add_all(ints, evens);
+    test_eq(smartlist_len(ints), 10);
+
+    smartlist_add(primes, (void*)2);
+    smartlist_add(primes, (void*)3);
+    smartlist_add(primes, (void*)5);
+    smartlist_add(primes, (void*)7);
+
+    /* overlap */
+    test_assert(smartlist_overlap(ints, odds));
+    test_assert(smartlist_overlap(odds, primes));
+    test_assert(smartlist_overlap(evens, primes));
+    test_assert(!smartlist_overlap(odds, evens));
+
+    /* intersect */
+    smartlist_add_all(sl, odds);
+    smartlist_intersect(sl, primes);
+    test_eq(smartlist_len(sl), 3);
+    test_assert(smartlist_isin(sl, (void*)3));
+    test_assert(smartlist_isin(sl, (void*)5));
+    test_assert(smartlist_isin(sl, (void*)7));
+
+    /* subtract */
+    smartlist_add_all(sl, primes);
+    smartlist_subtract(sl, odds);
+    test_eq(smartlist_len(sl), 1);
+    test_assert(smartlist_isin(sl, (void*)2));
+
+    smartlist_free(odds);
+    smartlist_free(evens);
+    smartlist_free(ints);
+    smartlist_free(primes);
+    smartlist_clear(sl);
+  }
 
   smartlist_free(sl);
 }
@@ -1276,8 +1358,7 @@ test_onion_handshake(void)
   /* shared */
   crypto_pk_env_t *pk = NULL;
 
-  pk = crypto_new_pk_env();
-  test_assert(! crypto_pk_generate_key(pk));
+  pk = pk_generate(0);
 
   /* client handshake 1. */
   memset(c_buf, 0, ONIONSKIN_CHALLENGE_LEN);
@@ -1323,12 +1404,9 @@ test_dir_format(void)
   tor_version_t ver1;
   char *bw_lines = NULL;
 
-  test_assert( (pk1 = crypto_new_pk_env()) );
-  test_assert( (pk2 = crypto_new_pk_env()) );
-  test_assert( (pk3 = crypto_new_pk_env()) );
-  test_assert(! crypto_pk_generate_key(pk1));
-  test_assert(! crypto_pk_generate_key(pk2));
-  test_assert(! crypto_pk_generate_key(pk3));
+  pk1 = pk_generate(0);
+  pk2 = pk_generate(1);
+  pk3 = pk_generate(2);
 
   test_assert( is_legal_nickname("a"));
   test_assert(!is_legal_nickname(""));
@@ -1497,7 +1575,6 @@ test_dir_format(void)
   test_streq(rp2->exit_policy->next->address, "18.*");
   test_streq(rp2->exit_policy->next->port, "24");
   test_assert(rp2->exit_policy->next->next == NULL);
-#endif
 
   /* Okay, now for the directories. */
   {
@@ -1507,7 +1584,7 @@ test_dir_format(void)
     crypto_pk_get_fingerprint(pk1, buf, 1);
     add_fingerprint_to_dir("Fred", buf, fingerprint_list);
   }
-#if 0
+
   {
   char d[DIGEST_LEN];
   const char *m;
@@ -1682,10 +1759,8 @@ test_rend_fns(void)
   size_t len;
   crypto_pk_env_t *pk1, *pk2;
   time_t now;
-  pk1 = crypto_new_pk_env();
-  pk2 = crypto_new_pk_env();
-  test_assert(!crypto_pk_generate_key(pk1));
-  test_assert(!crypto_pk_generate_key(pk2));
+  pk1 = pk_generate(0);
+  pk2 = pk_generate(1);
 
   /* Test unversioned descriptor */
   d1 = tor_malloc_zero(sizeof(rend_service_descriptor_t));
