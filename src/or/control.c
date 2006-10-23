@@ -83,7 +83,10 @@ const char control_c_id[] =
 #define EVENT_AUTHDIR_NEWDESCS 0x000D
 #define EVENT_DESCCHANGED      0x000E
 #define EVENT_NS               0x000F
-#define _EVENT_MAX             0x000F
+#define EVENT_STATUS_CLIENT    0x0010
+#define EVENT_STATUS_SERVER    0x0011
+#define EVENT_STATUS_GENERAL   0x0012
+#define _EVENT_MAX             0x0012
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Array mapping from message type codes to human-readable message
@@ -1054,6 +1057,12 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
           event_code = EVENT_DESCCHANGED;
         else if (!strcasecmp(ev, "NS"))
           event_code = EVENT_NS;
+        else if (!strcasecmp(ev, "STATUS_GENERAL"))
+          event_code = EVENT_STATUS_GENERAL;
+        else if (!strcasecmp(ev, "STATUS_CLIENT"))
+          event_code = EVENT_STATUS_CLIENT;
+        else if (!strcasecmp(ev, "STATUS_SERVER"))
+          event_code = EVENT_STATUS_SERVER;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
@@ -2408,10 +2417,10 @@ handle_control_usefeature(control_connection_t *conn,
       else if (!strcasecmp(arg, "EXTENDED_EVENTS")) /* <- documented */
         extended_events = 1;
       else if (!strcasecmp(arg, "EXTENDED_FORMAT")) {
-        /* remove this in 0.1.2.4; EXTENDED_FORMAT only ever worked for a little
-         * while during 0.1.2.2-alpha-dev. */
+        /* remove this in 0.1.2.4; EXTENDED_FORMAT only ever worked for a
+         * little while during 0.1.2.2-alpha-dev. */
         log_warn(LD_GENERAL,
-                 "EXTENDED_FORMAT is deprecated; use EXTENDED_EVENTS instead.");
+                "EXTENDED_FORMAT is deprecated; use EXTENDED_EVENTS instead.");
         extended_events = 1;
       } else {
         connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",
@@ -3399,6 +3408,7 @@ control_event_networkstatus_changed(smartlist_t *statuses)
   return 0;
 }
 
+/* DOCDOC */
 int
 control_event_networkstatus_changed_single(local_routerstatus_t *rs)
 {
@@ -3422,6 +3432,96 @@ control_event_my_descriptor_changed(void)
 {
   send_control1_event(EVENT_DESCCHANGED, ALL_NAMES, "650 DESCCHANGED\r\n");
   return 0;
+}
+
+/* DOCDOC */
+static int
+control_event_status(int type, int severity, const char *format, va_list args)
+{
+  char format_buf[160];
+  const char *status, *sev;
+
+  switch (type) {
+    case EVENT_STATUS_GENERAL:
+      status = "STATUS_GENERAL";
+      break;
+    case EVENT_STATUS_CLIENT:
+      status = "STATUS_CLIENT";
+      break;
+    case EVENT_STATUS_SERVER:
+      status = "STATUS_SEVER";
+      break;
+    default:
+      log_warn(LD_BUG, "Unrecognized status type %d", type);
+      return -1;
+  }
+  switch (severity) {
+    case LOG_NOTICE:
+      sev = "NOTICE";
+      break;
+    case LOG_WARN:
+      sev = "WARN";
+      break;
+    case LOG_ERR:
+      sev = "ERR";
+      break;
+    default:
+      log_warn(LD_BUG, "Unrecognized status severity %d", severity);
+      return -1;
+  }
+  if (tor_snprintf(format_buf, sizeof(format_buf), "650 %s %s %s\r\n",
+                   status, sev, format)<0) {
+    log_warn(LD_BUG, "Format string too long.");
+    return -1;
+  }
+
+  send_control1_event_impl(type, ALL_NAMES|ALL_FORMATS, 0, format_buf, args);
+  return 0;
+}
+
+/* DOCDOC */
+int
+control_event_general_status(int severity, const char *format, ...)
+{
+  va_list ap;
+  int r;
+  if (!EVENT_IS_INTERESTING1(EVENT_STATUS_GENERAL))
+    return 0;
+
+  va_start(ap, format);
+  r = control_event_status(EVENT_STATUS_GENERAL, severity, format, ap);
+  va_end(ap);
+  return r;
+}
+
+/* DOCDOC */
+int
+control_event_client_status(int severity, const char *format, ...)
+{
+  va_list ap;
+  int r;
+  if (!EVENT_IS_INTERESTING1(EVENT_STATUS_CLIENT))
+    return 0;
+
+  va_start(ap, format);
+  r = control_event_status(EVENT_STATUS_CLIENT, severity, format, ap);
+  va_end(ap);
+  return r;
+}
+
+/* DOCDOC */
+int
+control_event_server_status(int severity, const char *format, ...)
+{
+  va_list ap;
+  int r;
+  if (!EVENT_IS_INTERESTING1(EVENT_STATUS_SERVER))
+    return 0;
+
+  va_start(ap, format);
+  r = control_event_status(EVENT_STATUS_SERVER, severity, format, ap);
+  va_end(ap);
+  return r;
 }
 
 /** Choose a random authentication cookie and write it to disk.

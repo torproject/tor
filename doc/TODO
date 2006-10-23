@@ -44,10 +44,10 @@ Items for 0.1.2.x:
     reintroduce Lasse's attacks from the Oakland paper.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
-N   - Backend implementation
+    o Backend implementation
 R   - Actually list all the events (notice and warn log messages are a good
       place to look.)  Divide messages into categories, perhaps.
-N   - Specify general event system
+R   - Specify general event system
 R   - Specify actual events.
 
 N . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
@@ -220,7 +220,7 @@ Topics to think about during 0.1.2.x development:
   - Design next-version protocol for connections
 
 For blocking-resistance scheme:
-  X allow ordinary-looking ssl for dir connections. need a new dirport
+  o allow ordinary-looking ssl for dir connections. need a new dirport
     for this, or can we handle both ssl and non-ssl, or should we
     entirely switch to ssl in certain cases?
 d - need to figure out how to fetch status of a few servers from the BDA
