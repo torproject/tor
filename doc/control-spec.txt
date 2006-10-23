@@ -938,13 +938,19 @@ $Id$
      Type = "STATUS_GENERAL" / "STATUS_CLIENT" / "STATUS_SERVER"
      Severity = "NOTICE" / "WARN" / "ERR"
 
-     Action is a string, and Arguments is a series of key=value
+     Action is a string, and Arguments is a series of keyword=value
      pairs on the same line.
 
+     Controllers who listen to these events will be assumed to want
+     both EXTENDED_EVENTS and VERBOSE_NAMES; see the USEFEATURE command
+     for details.
+
+[
      The reserved keyword "message" can optionally be used to provide a
      string describing the nature of the action. Message strings MUST
      NOT include items that a controller might be tempted to parse,
      such as numbers.
+no plans to use this yet -RD]
 
   Actions for STATUS_GENERAL severity NOTICE events can be as follows:
 
@@ -969,10 +975,10 @@ $Id$
        since we don't really know what the user should do anyway. Hm.]
 
      TOO_MANY_CONNECTIONS
-     "limit=NUM"
+     "current=NUM"
        Tor has reached its ulimit -n or whatever the native limit is on
        file descriptors or sockets. The user should really do something
-       about this. The "limit" argument shows the number of connections
+       about this. The "current" argument shows the number of connections
        currently open.
 
      BUG

@@ -608,6 +608,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         log(LOG_NOTICE, LD_GENERAL,
             "Tor has successfully opened a circuit. "
             "Looks like client functionality is working.");
+        control_event_client_status(LOG_NOTICE, "CIRCUIT_ESTABLISHED");
         if (server_mode(options) && !check_whether_orport_reachable()) {
           inform_testing_reachability();
           consider_testing_reachability(1, 1);

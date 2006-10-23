@@ -2420,7 +2420,7 @@ handle_control_usefeature(control_connection_t *conn,
         /* remove this in 0.1.2.4; EXTENDED_FORMAT only ever worked for a
          * little while during 0.1.2.2-alpha-dev. */
         log_warn(LD_GENERAL,
-                "EXTENDED_FORMAT is deprecated; use EXTENDED_EVENTS instead.");
+                 "EXTENDED_FORMAT is deprecated; use EXTENDED_EVENTS instead.");
         extended_events = 1;
       } else {
         connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",

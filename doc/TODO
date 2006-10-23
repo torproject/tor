@@ -278,6 +278,7 @@ d   - Write limiting; separate token bucket for write
       - Implement
 
 Minor items for 0.1.2.x as time permits:
+  - don't do dns hijacking tests if we're reject *:* exit policy?
   o Some way for the authorities to set BadExit for some nodes manually.
   - When we export something from foo.c file for testing purposes only,
     make a foo_test.h file for test.c to include.
