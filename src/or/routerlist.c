@@ -3995,7 +3995,6 @@ update_router_have_minimum_dir_info(void)
         "is your network connection down?)");
     control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }
-  need_to_update_have_min_dir_info = 0; /* XXX redundant */
   have_min_dir_info = res;
 }
 
