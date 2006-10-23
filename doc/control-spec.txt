@@ -941,9 +941,8 @@ $Id$
      Action is a string, and Arguments is a series of keyword=value
      pairs on the same line.
 
-     Controllers who listen to these events will be assumed to want
-     both EXTENDED_EVENTS and VERBOSE_NAMES; see the explanations
-     in the USEFEATURE section command for details.
+     These events are always produced with EXTENDED_EVENTS and VERBOSE_NAMES;
+     see the explanations in the USEFEATURE section command for details.
 
   Actions for STATUS_GENERAL severity NOTICE events can be as follows:
 

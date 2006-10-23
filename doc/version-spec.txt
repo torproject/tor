@@ -32,9 +32,10 @@ All versions should be distinguishable purely by those four
 numbers. The status tag is purely informational, and lets you know how
 stable we think the release is: "alpha" is pretty unstable; "rc" is a
 release candidate; and no tag at all means that we have a final
-release. If the tag ends with "-cvs", you're looking at a development
-snapshot that came after a given release.  If we *do* encounter two
-versions that differ only by status tag, we compare them lexically.
+release. If the tag ends with "-cvs" or "-dev", you're looking at a
+development snapshot that came after a given release.  If we *do*
+encounter two versions that differ only by status tag, we compare them
+lexically.
 
 Now, we start each development branch with (say) 0.1.1.1-alpha.  The
 patchlevel increments consistently as the status tag changes, for
