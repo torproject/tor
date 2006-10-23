@@ -128,7 +128,7 @@ static config_var_t _option_vars[] = {
   VAR("AllowInvalidNodes",   CSV,      AllowInvalidNodes,
                                                         "middle,rendezvous"),
   VAR("AssumeReachable",     BOOL,     AssumeReachable,      "0"),
-  VAR("AuthDirBadExit",      LINELIST, AuthDirReject,        NULL),
+  VAR("AuthDirBadExit",      LINELIST, AuthDirBadExit,       NULL),
   VAR("AuthDirInvalid",      LINELIST, AuthDirInvalid,       NULL),
   VAR("AuthDirReject",       LINELIST, AuthDirReject,        NULL),
   VAR("AuthDirRejectUnlisted",BOOL,    AuthDirRejectUnlisted,"0"),
