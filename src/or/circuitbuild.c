@@ -652,14 +652,14 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
 void
 circuit_note_clock_jumped(int seconds_elapsed)
 {
-  if (server_mode(get_options()))
-    log(LOG_WARN, LD_GENERAL,
-        "Please report: your clock just jumped %d seconds forward; "
-        "assuming established circuits no longer work.", seconds_elapsed);
-  else
-    log(LOG_NOTICE, LD_GENERAL, "Your clock just jumped %d seconds forward; "
-        "assuming established circuits no longer work.", seconds_elapsed);
+  int severity = server_mode(get_options()) ? LOG_WARN : LOG_NOTICE;
+  log(severity, LD_GENERAL, "Your clock just jumped %d seconds forward; "
+      "assuming established circuits no longer work.", seconds_elapsed);
+  control_event_general_status(LOG_WARN, "CLOCK_JUMPED TIME=%d",
+                               seconds_elapsed);
   has_completed_circuit=0; /* so it'll log when it works again */
+  control_event_client_status(severity, "CIRCUIT_NOT_ESTABLISHED REASON=%s",
+                              "CLOCK_JUMPED");
   circuit_mark_all_unused_circs();
   circuit_expire_all_dirty_circs();
 }

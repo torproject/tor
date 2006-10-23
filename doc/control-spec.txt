@@ -40,10 +40,10 @@ $Id$
 
 2.1. Description format
 
-  The message formats listed below use ABNF as described in RFC2234.
+  The message formats listed below use ABNF as described in RFC 2234.
   The protocol itself is loosely based on SMTP (see RFC 2821).
 
-  We use the following nonterminals from RFC2822: atom, qcontent
+  We use the following nonterminals from RFC 2822: atom, qcontent
 
   We define the following general-use nonterminals:
 
@@ -113,7 +113,7 @@ $Id$
   ; A "Data" section is a sequence of octets concluded by the terminating
   ; sequence CRLF "." CRLF.  The terminating sequence may not appear in the
   ; body of the data.  Leading periods on lines in the data are escaped with
-  ; an additional leading period as in RFC2821 section 4.5.2
+  ; an additional leading period as in RFC 2821 section 4.5.2.
   Data = *DataLine "." CRLF
   DataLine = CRLF / "." 1*LineItem CRLF / NonDotItem *LineItem CRLF
   LineItem = NonCR / 1*CR NonCRLF
@@ -942,26 +942,10 @@ $Id$
      pairs on the same line.
 
      Controllers who listen to these events will be assumed to want
-     both EXTENDED_EVENTS and VERBOSE_NAMES; see the USEFEATURE command
-     for details.
-
-[
-     The reserved keyword "message" can optionally be used to provide a
-     string describing the nature of the action. Message strings MUST
-     NOT include items that a controller might be tempted to parse,
-     such as numbers.
-no plans to use this yet -RD]
+     both EXTENDED_EVENTS and VERBOSE_NAMES; see the explanations
+     in the USEFEATURE section command for details.
 
   Actions for STATUS_GENERAL severity NOTICE events can be as follows:
-
-     [none yet]
-
-  Actions for STATUS_GENERAL severity WARN events can be as follows:
-
-     DANGEROUS_VERSION
-     "current=version"
-     "recommended=version,version,..."
-     "reason=new/old/unrecommended"
 
      CLOCK_JUMPED
      "time=NUM"
@@ -971,8 +955,21 @@ no plans to use this yet -RD]
        also happens when the system is swapping so heavily that Tor is
        starving. The "time" argument includes the number of seconds Tor
        thinks it was unconscious for.
-       [This status event can generally be ignored by the controller,
-       since we don't really know what the user should do anyway. Hm.]
+       This status event is sent as WARN severity if Tor is acting
+       as a server currently.
+
+       [Recommendation for controller: ignore it, since we don't really
+       know what the user should do anyway. Hm.]
+
+     DIR_REACHABLE
+     [not implemented yet]
+
+  Actions for STATUS_GENERAL severity WARN events can be as follows:
+
+     DANGEROUS_VERSION
+     "current=version"
+     "reason=new/old/unrecommended"
+     "recommended=\"version, version, ...\""
 
      TOO_MANY_CONNECTIONS
      "current=NUM"
@@ -981,6 +978,7 @@ no plans to use this yet -RD]
        about this. The "current" argument shows the number of connections
        currently open.
 
+   [rest not implemented yet]
      BUG
      "reason=STRING"
        Tor has encountered a situation that its developers never expected,
@@ -1000,16 +998,26 @@ no plans to use this yet -RD]
 
   Actions for STATUS_GENERAL severity ERR events can be as follows:
 
-     BAD_PROXY
+U    BAD_PROXY
      // bad http or https proxy?
 
-     DIR_ALL_UNREACHABLE
+I    DIR_ALL_UNREACHABLE
        Tor believes that none of the known directory servers are
        reachable -- this is most likely because the local network is
        down or otherwise not working, and might help to explain for the
        user why Tor appears to be broken.
 
   Actions for STATUS_CLIENT severity NOTICE events can be as follows:
+  [all implemented]
+
+     ENOUGH_DIR_INFO
+       Tor now knows enough network-status documents and enough server
+       descriptors that it's going to start trying to build circuits now.
+
+     NOT_ENOUGH_DIR_INFO
+       We discarded expired statuses and router descriptors to fall
+       below the desired threshold of directory information. We won't
+       try to build any circuits until ENOUGH_DIR_INFO occurs again.
 
      CIRCUIT_ESTABLISHED
        Tor is able to establish circuits for client use. This event will
@@ -1017,11 +1025,24 @@ no plans to use this yet -RD]
        that is, prior to this event we didn't know whether we could
        establish circuits.
 
-     ENOUGH_DIR_INFO
-       Tor now knows enough network-status documents and enough server
-       descriptors that it's going to start trying to build circuits now.
+       Suggested use: controllers can notify their users that Tor is
+       ready for use as a client once they see this status event. [Perhaps
+       controllers should also have a timeout if too much time passes and
+       this event hasn't arrived, to give tips on how to troubleshoot.
+       On the other hand, hopefully Tor will send further status events
+       if it can identify the problem.]
+
+     CIRCUIT_NOT_ESTABLISHED
+     "reason=" "EXTERNAL_ADDRESS" / "DIR_ALL_UNREACHABLE" / "CLOCK_JUMPED"
+       We are no longer confident that we can build circuits. The "reason"
+       keyword provides an explanation: which other status event type caused
+       our lack of confidence.
+
+       Suggested use: Vidalia can turn its onion yellow again.
+       [Note: only REASON=CLOCK_JUMPED is implemented currently.]
 
   Actions for STATUS_CLIENT severity WARN events can be as follows:
+  [none implemented yet]
 
      DANGEROUS_SOCKS
      "protocol=socks4/socks4a/socks5"
@@ -1042,6 +1063,7 @@ no plans to use this yet -RD]
      [none yet]
 
   Actions for STATUS_SERVER severity NOTICE events can be as follows:
+  [none implemented yet]
 
      EXTERNAL_ADDRESS
      "address=IP"
@@ -1059,6 +1081,7 @@ no plans to use this yet -RD]
        directory authorities, with no complaints.
 
   Actions for STATUS_SERVER severity WARN events can be as follows:
+  [not implemented yet]
 
      // something about failing to parse our address?
      // from resolve_my_address() in config.c
@@ -1076,6 +1099,7 @@ no plans to use this yet -RD]
      // think it's malformed, you're invalid, or wrong key.
 
   Actions for STATUS_SERVER severity ERR events can be as follows:
+  [not implemented yet]
 
      REACHABILITY_FAILED
      "oraddress=IP:port"

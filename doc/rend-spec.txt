@@ -265,7 +265,7 @@ $Id$
    Omitting a string is taken to mean auth type [00 00].
    See section 2 of this document for details on auth mechanisms.
 
-   [Yes, numbers are allowed at the beginning.  See RFC1123. -NM]
+   [Yes, numbers are allowed at the beginning.  See RFC 1123. -NM]
 
 1.6. Alice's OP retrieves a service descriptor.
 

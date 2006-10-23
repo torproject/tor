@@ -3080,6 +3080,9 @@ routers_update_all_from_networkstatus(void)
                  n_versioning-n_recommended, n_versioning, n_versioning/2,
                  n_versioning/2 > 1 ? "ies" : "y", rec);
           have_warned_about_new_version = 1;
+          control_event_general_status(LOG_WARN, "DANGEROUS_VERSION "
+                 "CURRENT=%s REASON=%s RECOMMENDED=\"%s\"",
+                 VERSION, "NEW", rec);
           tor_free(rec);
         }
       } else {
@@ -3092,6 +3095,9 @@ routers_update_all_from_networkstatus(void)
                  n_versioning-n_recommended, n_versioning, n_versioning/2,
                  n_versioning/2 > 1 ? "ies" : "y", rec);
         have_warned_about_old_version = 1;
+        control_event_general_status(LOG_WARN, "DANGEROUS_VERSION "
+                 "CURRENT=%s REASON=%s RECOMMENDED=\"%s\"",
+                 VERSION, consensus == VS_OLD ? "OLD" : "UNRECOMMENDED", rec);
         tor_free(rec);
       }
     } else {
@@ -3980,14 +3986,16 @@ update_router_have_minimum_dir_info(void)
   if (res && !have_min_dir_info) {
     log(LOG_NOTICE, LD_DIR,
         "We now have enough directory information to build circuits.");
+    control_event_client_status(LOG_NOTICE, "ENOUGH_DIR_INFO");
   }
   if (!res && have_min_dir_info) {
     log(LOG_NOTICE, LD_DIR,"Our directory information is no longer up-to-date "
         "enough to build circuits.%s",
         num_running > 2 ? "" : " (Not enough servers seem reachable -- "
         "is your network connection down?)");
+    control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }
-  need_to_update_have_min_dir_info = 0;
+  need_to_update_have_min_dir_info = 0; /* XXX redundant */
   have_min_dir_info = res;
 }
 
