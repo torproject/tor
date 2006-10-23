@@ -43,20 +43,21 @@ To maintain backward compatibility, we've postponed major protocol
 changes and redesigns for a long time.  Because of this, there are a number
 of sensible revisions we've been putting off until we could deploy several of
 them at once.  To do each of these, we first need to discuss design
-alternatives with cryptographers and other outside collaborators to
+alternatives with other cryptographers and outside collaborators to
 make sure that our choices are secure.
 
 First of all, our protocol needs better {\bf versioning support} so that we
 can make backward-incompatible changes to our core protocol.  There are
 difficult anonymity issues here, since many naive designs would make it easy
-to tell clients apart based on their supported versions.
+to tell clients apart (and then track them) based on their supported versions.
 
 With protocol versioning support would come the ability to {\bf future-proof
   our ciphersuites}.  For example, not only our OR protocol, but also our
 directory protocol, is pretty firmly tied to the SHA-1 hash function, which
-though not insecure for our purposes, has begun to show its age.  We should
+though not yet known to be insecure for our purposes, has begun to show
+its age.  We should
 remove assumptions thoughout our design based on the assumption that public
-keys, secret keys, or digests will remain any particular size infinitely.
+keys, secret keys, or digests will remain any particular size indefinitely.
 
 A new protocol could support {\bf multiple cell sizes}.  Right now, all data
 passes through the Tor network divided into 512-byte cells.  This is
@@ -66,15 +67,19 @@ investigate the extent to which multiple sizes could make it easier for an
 adversary to fingerprint a traffic pattern.
 
 Our OR {\bf authentication protocol}, though provably
-secure\cite{goldberg-tap}, relies more on particular aspects of RSA and our
+secure\cite{tap:pet2006}, relies more on particular aspects of RSA and our
 implementation thereof than we had initially believed.  To future-proof
 against changes, we should replace it with a less delicate approach.
 
 \tmp{Stream migration?}
 
+\tmp{Use a better AES mode that has built-in integrity checking,
+doesn't grow with the number of hops, is not patented, and
+is implemented and maintained by smart people.}
+
 \subsection{Scalability}
 
-\subsubsection{Improved directory performance}
+\subsubsection{Improved directory efficiency}
 Right now, clients download a statement of the {\bf network status} made by
 each directory authority.  We could reduce network bandwidth significantly by
 having the authorities jointly sign a statement reflecting their vote on the
@@ -87,7 +92,8 @@ a great deal of information that's only of interest to the directory
 authorities, and not of interest to clients.  We can do this by having each
 router upload a short-form and a long-form signed descriptor, and having
 clients download only the short form.  Even a naive version of this would
-save about 40\% of the bandwidth currently spent on descriptors.
+save about 40\% of the bandwidth currently spent by clients downloading
+descriptors.
 
 We should {\bf have routers upload their descriptors even less often}, so
 that clients do not need to download replacements every 18 hours whether any
@@ -145,12 +151,28 @@ gets us more users happy to run servers.
 
 \tmp{Do research to figure out how well capacity is actually used.}
 
+\tmp{Adapt to congestion better. Dynamic SENDME window sizes.}
+
 \tmp{Tune pathgen algorithms to use it better.}
 
+\subsection{Performance: one Tor client, many users}
+
+\tmp{Many organizations want to manage a single Tor client on their
+firewall for many users, rather than having each user install a separate
+Tor client.} Nobody has tried this before, and we bet it will scale
+really poorly.
+
+Other stress-testing, and fix bottlenecks we find.
+
+\subsection{Tor servers on asymmetric bandwidth}
+
+\subsection{Running Tor as both client and server}
+
+many performance tradeoffs and balances that need more attention.
 
 \subsection{Blue-sky: UDP}
 
-\tmp{support udp}
+\tmp{support udp traffic}
 
 \tmp{Use udp as a transport}
 
@@ -169,7 +191,7 @@ tool.
 \subsection{Implementation: client-side and bridges-side}
 Our anticensorship design calls for some nodes to act as ``bridges'' that can
 circumvent a national firewall, and others inside the firewall to act as pure
-clients.  The design here is quite clear-cut; we're probably ready to begin
+clients.  This part of the design is quite clear-cut; we're probably ready to begin
 implementing it.  To implement bridges, we need only to have servers publish
 themselves as limited-availability relays to a special bridge authority if
 they judge they'd make good servers.  Clients need a flexible interface to
@@ -187,9 +209,23 @@ adversary can't see what users are saying, some aspects of our protocol are
 easy to fingerprint {\em as} Tor.  We should correct this where possible.
 
 \subsection{Implementation: bridge authorities}
+
+The design here is also reasonably clear-cut: we need to run some
+directory authorities with a slightly modified protocol that doesn't leak
+the entire list of bridges. Thus users can learn up-to-date information
+for bridges they already know about, but they can't learn about arbitrary
+new bridges.
+
+\subsection{Implementation: how users discover bridges}
+
 Our design anticipates an arms race between discovery methods and censors.
 We need to begin the infrastructure on our side quickly, preferably in a
 flexible language like Python, so we can adapt quickly to censorship.
+
+\subsection{The Tor website, docs, and mirrors}
+
+They're the first to be blocked. How do users learn about Tor in the
+first place, and how do they fetch a genuine copy of Tor?
 
 \section{Security}
 
@@ -206,12 +242,17 @@ right now, but it would be useful to learn that one did.  Alternatively,
 proving that one didn't would free up researchers in the field to go work on
 other things.
 
+\tmp{website fingperprinting}  They work great in simulations, but in
+practice we hear they don't work nearly as well. We should get some actual
+numbers on both sides of the issue, and figure out what's going on.
+
 \subsection{Implementation security}
 
 \tmp{Encrypt more keys}
 
 \tmp{Talk Coverity or somebody with a copy of vs2005 into running tools on
-  our code}
+  our code} And figure out a way to get our code checked periodically rather
+  than just once.
 
 \tmp{Directory guards}
 
@@ -277,19 +318,23 @@ major packages within an hour or so of source release.
 \subsection{Controller library}
 We've done lots of design and development on our controller interface, which
 allows UI applications and other tools to interact with Tor.  We could
-encorage the development of more such tools by releasing a {\bf
+encourage the development of more such tools by releasing a {\bf
   general-purpose controller library}, ideally with API support for several
 popular programming languages.
 
 \section{User experience}
 
-\subsection{Get blocked less, get blocked less hard}
-Right now, some services block access to Tor because they don't have a better
+\subsection{Get blocked less, get blocked less broadly}
+Right now, some services block connections from the Tor network because
+they don't have a better
 way to keep vandals from abusing them than blocking IP addresses associated
 with vandalism.  Our approach so far has been to educate them about better
 solutions that currently exist, but we should also {\bf create better
 solutions for limiting vandalism by anonymous users} like credential and
-blind-signature based implementations, and encourage their use.
+blind-signature based implementations, and encourage their use. Other
+promising starting points including writing a patch and explanation for
+Wikipedia, and helping Freenode to document, maintain, and expand its
+current Tor-friendly position.
 
 Those who do block Tor users also block overbroadly, sometimes blacklisting
 operators of Tor servers that do not permit exit to their services.  We could
@@ -303,8 +348,13 @@ plead incompetence.
 \subsection{LiveCD Tor}
 \tmp{a.k.a anonym.os done right}
 
+\subsection{A Tor client in a VM}
+\tmp{a.k.a JanusVM} which is quite related to the firewall-level deployment
+section below
+
 \subsection{Interface improvements}
 \tmp{Allow controllers to manipulate server status.}
+(Why is this in the User Experience section?)
 
 
 \subsection{Firewall-level deployment}
@@ -320,10 +370,19 @@ traffic to Tor.
 This is an area where {\bf deployment via a livecd}, or an installation
 targetted at specialized home routing hardware, could be useful.
 
+\subsection{Assess software and configurations for anonymity risks}
+
+which firefox extensions to use, and which to avoid. best practices for
+how to torify each class of application.
+
+clean up our own bundled software:
+E.g. Merge the good features of Foxtor into Torbutton
+
 \subsection{Localization}
 Right now, most of our user-facing code is internationalized.  We need to
 internationalize the last few hold-outs (like the Tor installer), and get
 more translations for the parts that are already internationalized.
+[Do you mean the Vidalia bundle installer, or the Tor-installer-for-experts? -RD]
 
 Also, we should look into a {\bf unified translator's solution}.  Currently,
 since different tools have been internationalized using the
@@ -331,14 +390,21 @@ framework-appropriate method, different tools require translators to localize
 them via different interfaces.  Inasmuch as possible, we should make
 translators only need to use a single tool to translate the whole Tor suite.
 
+\section{Support}
+
+would be nice to set up some actual user support infrastructure, especially
+focusing on server operators and on coordinating volunteers.
+
+
+
 \section{Documentation}
 
 \subsection{Unified documentation scheme}
 
 We need to {\bf inventory our documentation.}  Our documentation so far has
 been mostly produced on an {\it ad hoc} basis, in response to particular
-needs and requests.  We should figure out what documentation we have, whih of
-it (if any) should get priotority, and whether we can't put it all into a
+needs and requests.  We should figure out what documentation we have, which of
+it (if any) should get priority, and whether we can't put it all into a
 single format.
 
 We could {\bf unify the docs} into a single book-like thing.  This will also
@@ -359,4 +425,7 @@ without regard to the effect of their choices on server resources.
 
 \tmp{Discoursive and comprehensive docs}
 
+\bibliographystyle{plain} \bibliography{tor-design}
+
 \end{document}
+
