@@ -70,7 +70,6 @@ x - We should ship with a list of stable dir mirrors -- they're not
 
 N - Simplify authority operation
     - Follow weasel's proposal, crossed with mixminion dir config format
-    - Reject/invalidate by IP.
 
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
@@ -279,7 +278,9 @@ d   - Write limiting; separate token bucket for write
       - Implement
 
 Minor items for 0.1.2.x as time permits:
-  - some way for the authorities to set BadExit for some nodes manually.
+  o Some way for the authorities to set BadExit for some nodes manually.
+  - When we export something from foo.c file for testing purposes only,
+    make a foo_test.h file for test.c to include.
   - "getinfo fingerprint" controller command
   - "setevent guards" controller command
   - The Debian package now uses --verify-config when (re)starting,

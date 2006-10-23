@@ -11,6 +11,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
     - Directory servers now provide 'Pragma: no-cache' and 'Expires'
       headers for content, so that we can work better in the presence of
       caching HTTP proxies.
+    - Allow authorities to list nodes as bad exits by fingerprint or by
+      address.
 
   o Minor features, controller:
     - Add a REASON field to CIRC events; for backward compatibility, this

@@ -18,6 +18,7 @@ static addr_policy_t *socks_policy = NULL;
 static addr_policy_t *dir_policy = NULL;
 static addr_policy_t *authdir_reject_policy = NULL;
 static addr_policy_t *authdir_invalid_policy = NULL;
+static addr_policy_t *authdir_badexit_policy = NULL;
 
 /** Parsed addr_policy_t describing which addresses we believe we can start
  * circuits at. */
@@ -203,6 +204,15 @@ authdir_policy_valid_address(uint32_t addr, uint16_t port)
   return addr_policy_permits_address(addr, port, authdir_invalid_policy);
 }
 
+/** Return 1 if <b>addr</b>:<b>port</b> should be marked as a bad exit,
+ * based on <b>authdir_badexit_policy</b>. Else return 0.
+ */
+int
+authdir_policy_badexit_address(uint32_t addr, uint16_t port)
+{
+  return ! addr_policy_permits_address(addr, port, authdir_badexit_policy);
+}
+
 #define REJECT(arg) \
   do { *msg = tor_strdup(arg); goto err; } while (0)
 int
@@ -271,6 +281,8 @@ policies_parse_from_options(or_options_t *options)
                           &authdir_reject_policy, ADDR_POLICY_REJECT);
   load_policy_from_option(options->AuthDirInvalid,
                           &authdir_invalid_policy, ADDR_POLICY_REJECT);
+  load_policy_from_option(options->AuthDirBadExit,
+                          &authdir_badexit_policy, ADDR_POLICY_REJECT);
   parse_reachable_addresses();
 }
 

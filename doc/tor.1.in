@@ -779,6 +779,12 @@ option is only useful for authoritative directories, so you probably
 don't want to use it.
 .LP
 .TP
+\fBAuthDirBadExit \fR\fIAddressPattern\fR...\fP
+Authoritative directories only.  A set of address patterns for servers that
+will be listed as bad exits in any network status document this authority
+publishes, if \fBAuthDirListBadExits\fR is set.
+.LP
+.TP
 \fBAuthDirInvalid \fR\fIAddressPattern\fR...\fP
 Authoritative directories only. A set of address patterns for servers that
 will never be listed as "valid" in any network status document that this
@@ -790,6 +796,14 @@ Authoritative directories only.  A set of address patterns for servers that
 will never be listed at all in any network status document that this
 authority publishes, or accepted as an OR address in any descriptor submitted
 for publication by this authority.
+.LP
+.TP
+\fBAuthDirListBadExits \fR\fB0\fR|\fB1\fR\fP
+Authoritative directories only.  If set to 1, this directory has
+some opinion about which nodes are unsuitable as exit nodes.  (Do not
+set this to 1 unless you plan to list nonfunctioning exits as bad;
+otherwise, you are effectively voting in favor of every declared exit
+as an exit.)
 .LP
 .TP
 \fBAuthDirRejectUnlisted \fR\fB0\fR|\fB1\fR\fP

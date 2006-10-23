@@ -21,13 +21,6 @@ const char dirserv_c_id[] =
  * directory authorities. */
 #define MAX_UNTRUSTED_NETWORKSTATUSES 16
 
-typedef enum {
-  FP_NAMED, /**< Listed in fingerprint file. */
-  FP_VALID, /**< Unlisted but believed valid. */
-  FP_INVALID, /**< Believed invalid. */
-  FP_REJECT, /**< We will not publish this router. */
-} router_status_t;
-
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
@@ -37,11 +30,12 @@ static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
 /* Should be static; exposed for testing */
+struct authdir_config_t;
 int add_fingerprint_to_dir(const char *nickname, const char *fp,
-                           smartlist_t *list);
-static router_status_t dirserv_router_get_status(const routerinfo_t *router,
-                                                 const char **msg);
-static router_status_t
+                           struct authdir_config_t *list);
+static uint32_t dirserv_router_get_status(const routerinfo_t *router,
+                                          const char **msg);
+static uint32_t
 dirserv_get_status_impl(const char *fp, const char *nickname,
                         const char *address,
                         uint32_t addr, uint16_t or_port,
@@ -53,39 +47,57 @@ static void clear_cached_dir(cached_dir_t *d);
 
 /************** Fingerprint handling code ************/
 
-/** A member of fingerprint_list: maps a name to a fingerprint.
- **/
-typedef struct fingerprint_entry_t {
-  char *nickname; /**< The name of a router (if this fingerprint is bound to a
-                   * name); the string "!reject" (if this fingerprint should
-                   * always be rejected); or the string "!invalid" (if this
-                   * fingerprint should be accepted but never marked as
-                   * valid. */
-  char *fingerprint; /**< Stored as HEX_DIGEST_LEN characters, followed by a
-                      * NUL */
-} fingerprint_entry_t;
+#define FP_NAMED   1  /**< Listed in fingerprint file. */
+#define FP_INVALID 2  /**< Believed invalid. */
+#define FP_REJECT  4  /**< We will not publish this router. */
+#define FP_BADEXIT 8 /**< We'll tell clients not to use this as an exit. */
+
+typedef struct router_status_t {
+  char nickname[MAX_NICKNAME_LEN+1];
+  uint32_t status;
+} router_status_t;
 
 /** List of nickname-\>identity fingerprint mappings for all the routers
- * that we name.  Used to prevent router impersonation. */
+ * that we name.  Used to prevent router impersonation. DODDOC */
+typedef struct authdir_config_t {
+  strmap_t *fp_by_name; /* Map from lc nickname to fingerprint */
+  digestmap_t *status_by_digest; /* Map from digest to FP_x mask */
+} authdir_config_t;
+
 /* Should be static; exposed for testing */
-smartlist_t *fingerprint_list = NULL;
+authdir_config_t *fingerprint_list = NULL;
+
+static authdir_config_t *
+authdir_config_new(void)
+{
+  authdir_config_t *list = tor_malloc_zero(sizeof(authdir_config_t));
+  list->fp_by_name = strmap_new();
+  list->status_by_digest = digestmap_new();
+  return list;
+}
 
 /** Add the fingerprint <b>fp</b> for the nickname <b>nickname</b> to
  * the smartlist of fingerprint_entry_t's <b>list</b>. Return 0 if it's
  * new, or 1 if we replaced the old value.
  */
 int /* Should be static; exposed for testing */
-add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list)
+add_fingerprint_to_dir(const char *nickname, const char *fp,
+                       authdir_config_t *list)
 {
-  int i;
-  fingerprint_entry_t *ent;
   char *fingerprint;
+  char d[DIGEST_LEN];
+  router_status_t *status;
   tor_assert(nickname);
   tor_assert(fp);
   tor_assert(list);
 
   fingerprint = tor_strdup(fp);
   tor_strstrip(fingerprint, " ");
+  if (base16_decode(d, DIGEST_LEN, fingerprint, strlen(fingerprint))) {
+    log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
+             escaped(fp));
+    return 0;
+  }
 
   if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME)) {
     log_warn(LD_DIRSERV, "Tried to add a mapping for reserved nickname %s",
@@ -93,20 +105,33 @@ add_fingerprint_to_dir(const char *nickname, const char *fp, smartlist_t *list)
     return 0;
   }
 
+  status = digestmap_get(list->status_by_digest, d);
+  if (!status) {
+    status = tor_malloc_zero(sizeof(router_status_t));
+    digestmap_set(list->status_by_digest, d, status);
+  }
+
   if (nickname[0] != '!') {
-    for (i = 0; i < smartlist_len(list); ++i) {
-      ent = smartlist_get(list, i);
-      if (!strcasecmp(ent->nickname,nickname)) {
-        tor_free(ent->fingerprint);
-        ent->fingerprint = fingerprint;
-        return 1;
+    char *old_fp = strmap_get_lc(list->fp_by_name, nickname);
+    if (old_fp) {
+      if (!strcasecmp(fingerprint, old_fp)) {
+        tor_free(fingerprint);
+      } else {
+        tor_free(old_fp);
+        strmap_set_lc(list->fp_by_name, nickname, fingerprint);
       }
     }
+    status->status |= FP_NAMED;
+    strlcpy(status->nickname, nickname, sizeof(status->nickname));
+  } else {
+    if (!strcasecmp(nickname, "!reject")) {
+      status->status |= FP_REJECT;
+    } else if (!strcasecmp(nickname, "!invalid")) {
+      status->status |= FP_INVALID;
+    } else if (!strcasecmp(nickname, "!badexit")) {
+      status->status |= FP_BADEXIT;
+    }
   }
-  ent = tor_malloc(sizeof(fingerprint_entry_t));
-  ent->nickname = tor_strdup(nickname);
-  ent->fingerprint = fingerprint;
-  smartlist_add(list, ent);
   return 0;
 }
 
@@ -121,7 +146,7 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
     return -1;
   }
   if (!fingerprint_list)
-    fingerprint_list = smartlist_create();
+    fingerprint_list = authdir_config_new();
   add_fingerprint_to_dir(nickname, fp, fingerprint_list);
   return 0;
 }
@@ -138,7 +163,7 @@ dirserv_load_fingerprint_file(void)
   char fname[512];
   char *cf;
   char *nickname, *fingerprint;
-  smartlist_t *fingerprint_list_new;
+  authdir_config_t *fingerprint_list_new;
   int result;
   config_line_t *front=NULL, *list;
   or_options_t *options = get_options();
@@ -165,7 +190,7 @@ dirserv_load_fingerprint_file(void)
     return -1;
   }
 
-  fingerprint_list_new = smartlist_create();
+  fingerprint_list_new = authdir_config_new();
 
   for (list=front; list; list=list->next) {
     nickname = list->key; fingerprint = list->value;
@@ -177,7 +202,8 @@ dirserv_load_fingerprint_file(void)
     }
     if (!is_legal_nickname(nickname) &&
         strcasecmp(nickname, "!reject") &&
-        strcasecmp(nickname, "!invalid")) {
+        strcasecmp(nickname, "!invalid") &&
+        strcasecmp(nickname, "!badexit")) {
       log_notice(LD_CONFIG,
                  "Invalid nickname '%s' in fingerprint file. Skipping.",
                  nickname);
@@ -200,6 +226,23 @@ dirserv_load_fingerprint_file(void)
                  DEFAULT_CLIENT_NICKNAME);
       continue;
     }
+    if (0==strcasecmp(nickname, DEFAULT_CLIENT_NICKNAME)) {
+      /* If you approved an OR called "client", then clients who use
+       * the default nickname could all be rejected.  That's no good. */
+      log_notice(LD_CONFIG,
+                 "Authorizing a nickname '%s' would break "
+                 "many clients; skipping.",
+                 DEFAULT_CLIENT_NICKNAME);
+      continue;
+    }
+    if (0==strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME)) {
+      /* If you approved an OR called "unnamed", then clients will be
+       * confused.*/
+      log_notice(LD_CONFIG,
+                 "Authorizing a nickname '%s' is not allowed; skipping.",
+                 UNNAMED_ROUTER_NICKNAME);
+      continue;
+    }
     if (add_fingerprint_to_dir(nickname, fingerprint, fingerprint_list_new)
         != 0)
       log_notice(LD_CONFIG, "Duplicate nickname '%s'.", nickname);
@@ -219,17 +262,17 @@ dirserv_load_fingerprint_file(void)
  *
  * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
  * *<b>msg</b> to an explanation of why. */
-static router_status_t
+static uint32_t
 dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 {
-  char fingerprint[FINGERPRINT_LEN+1];
+  char d[DIGEST_LEN];
 
-  if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint, 0)) {
+  if (crypto_pk_get_digest(router->identity_pkey, d)) {
     log_warn(LD_BUG,"Error computing fingerprint");
     return FP_REJECT;
   }
 
-  return dirserv_get_status_impl(fingerprint, router->nickname,
+  return dirserv_get_status_impl(d, router->nickname,
                                  router->address,
                                  router->addr, router->or_port,
                                  router->platform, router->contact_info,
@@ -241,17 +284,15 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 int
 dirserv_would_reject_router(routerstatus_t *rs)
 {
-  char fp[FINGERPRINT_LEN+1];
-  router_status_t res;
-  base16_encode(fp, sizeof(fp), rs->identity_digest, DIGEST_LEN);
+  uint32_t res;
 
-  res = dirserv_get_status_impl(fp, rs->nickname,
+  res = dirserv_get_status_impl(rs->identity_digest, rs->nickname,
                                 "", /* address is only used in logs */
                                 rs->addr, rs->or_port,
                                 NULL, NULL,
                                 NULL, 0);
 
-  return (res == FP_REJECT);
+  return (res & FP_REJECT) != 0;
 }
 
 /** Helper: As dirserv_get_router_status, but takes the router fingerprint
@@ -261,42 +302,71 @@ dirserv_would_reject_router(routerstatus_t *rs)
  * If should_log is false, do not log messages.  (There's not much point in
  * logging that we're rejecting servers we'll not download.)
  */
-static router_status_t
-dirserv_get_status_impl(const char *fp, const char *nickname,
+static uint32_t
+dirserv_get_status_impl(const char *id_digest, const char *nickname,
                         const char *address,
                         uint32_t addr, uint16_t or_port,
                         const char *platform, const char *contact,
                         const char **msg, int should_log)
 {
-  fingerprint_entry_t *nn_ent = NULL, *fp_ent = NULL;
+  char fp[HEX_DIGEST_LEN+1];
   int reject_unlisted = get_options()->AuthDirRejectUnlisted;
+  uint32_t result = 0;
+  router_status_t *status_by_digest;
+  char *fp_by_name;
   if (!fingerprint_list)
-    fingerprint_list = smartlist_create();
+    fingerprint_list = authdir_config_new();
+
+  base16_encode(fp, sizeof(fp), id_digest, DIGEST_LEN);
 
   if (should_log)
     log_debug(LD_DIRSERV, "%d fingerprints known.",
-              smartlist_len(fingerprint_list));
-  SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t *, ent,
-  {
-    if (!strcasecmp(fp,ent->fingerprint))
-      fp_ent = ent;
-    if (!strcasecmp(nickname,ent->nickname))
-      nn_ent = ent;
-  });
+              digestmap_size(fingerprint_list->status_by_digest));
 
-  if (fp_ent) {
-    if (!strcasecmp(fp_ent->nickname, "!reject")) {
+  if ((fp_by_name =
+       strmap_get_lc(fingerprint_list->fp_by_name, nickname))) {
+    if (!strcasecmp(fp, fp_by_name)) {
+      result |= FP_NAMED;
+      if (should_log)
+        log_debug(LD_DIRSERV,"Good fingerprint for '%s'",nickname);
+    } else {
+      if (should_log) {
+        char *esc_contact = esc_for_log(contact);
+        log_warn(LD_DIRSERV,
+                 "Mismatched fingerprint for '%s': expected '%s' got '%s'. "
+                 "ContactInfo '%s', platform '%s'.)",
+                 nickname, fp_by_name, fp,
+                 esc_contact,
+                 platform ? escaped(platform) : "");
+        tor_free(esc_contact);
+      }
       if (msg)
-        *msg = "Fingerprint is marked rejected";
-      return FP_REJECT;
-    } else if (!strcasecmp(fp_ent->nickname, "!invalid")) {
-      if (msg)
-        *msg = "Fingerprint is marked invalid";
-      return FP_INVALID;
+        *msg = "Rejected: There is already a named server with this nickname "
+          "and a different fingerprint.";
+      return FP_REJECT; /* Wrong fingerprint. */
     }
   }
+  status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
+                                   id_digest);
+  result |= (status_by_digest->status & ~FP_NAMED);
 
-  if (!nn_ent) { /* No such server known with that nickname */
+  if (result & FP_REJECT) {
+    if (msg)
+      *msg = "Fingerprint is marked rejected";
+    return FP_REJECT;
+  } else if (result & FP_INVALID) {
+    if (msg)
+      *msg = "Fingerprint is marked invalid";
+  }
+
+  if (authdir_policy_badexit_address(addr, or_port)) {
+    if (should_log)
+      log_info(LD_DIRSERV, "Marking '%s' as bad exit because of address '%s'",
+               nickname, address);
+    result |= FP_BADEXIT;
+  }
+
+  if (!(result & FP_NAMED)) {
     if (!authdir_policy_permits_address(addr, or_port)) {
       if (should_log)
         log_info(LD_DIRSERV, "Rejecting '%s' because of address '%s'",
@@ -309,38 +379,17 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
       if (should_log)
         log_info(LD_DIRSERV, "Not marking '%s' valid because of address '%s'",
                  nickname, address);
-      return FP_INVALID;
+      result |= FP_INVALID;
     }
-    if (should_log)
-      log_debug(LD_DIRSERV,"No fingerprint found for '%s'",nickname);
+    if (reject_unlisted)
+      return FP_REJECT;
+    /* 0.1.0.2-rc was the first version that did enough self-testing that
+     * we're willing to take its word about whether it's running . */
     if (!platform || tor_version_as_new_as(platform,"0.1.0.2-rc"))
-      return reject_unlisted ? FP_REJECT : FP_VALID;
-    else
-      return FP_INVALID;
+      result |= FP_INVALID;
   }
-  if (0==strcasecmp(nn_ent->fingerprint, fp)) {
-    if (should_log)
-      log_debug(LD_DIRSERV,"Good fingerprint for '%s'",nickname);
-    if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME))
-      return FP_VALID;
-    else
-      return FP_NAMED; /* Right fingerprint. */
-  } else {
-    if (should_log) {
-      char *esc_contact = esc_for_log(contact);
-      log_warn(LD_DIRSERV,
-               "Mismatched fingerprint for '%s': expected '%s' got '%s'. "
-               "ContactInfo '%s', platform '%s'.)",
-               nickname, nn_ent->fingerprint, fp,
-               esc_contact,
-               platform ? escaped(platform) : "");
-       tor_free(esc_contact);
-    }
-    if (msg)
-      *msg = "Rejected: There is already a named server with this nickname "
-        "and a different fingerprint.";
-    return FP_REJECT; /* Wrong fingerprint. */
-  }
+
+  return result;
 }
 
 /** If we are an authoritative dirserver, and the list of approved
@@ -349,35 +398,25 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
 const char *
 dirserv_get_nickname_by_digest(const char *digest)
 {
-  char hexdigest[HEX_DIGEST_LEN+1];
+  router_status_t *status;
   if (!fingerprint_list)
     return NULL;
   tor_assert(digest);
 
-  base16_encode(hexdigest, HEX_DIGEST_LEN+1, digest, DIGEST_LEN);
-  SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t*, ent,
-                    { if (!strcasecmp(hexdigest, ent->fingerprint))
-                         return ent->nickname; } );
-  return NULL;
+  status = digestmap_get(fingerprint_list->status_by_digest, digest);
+  return status ? status->nickname : NULL;
 }
 
 /** Clear the current fingerprint list. */
 void
 dirserv_free_fingerprint_list(void)
 {
-  int i;
-  fingerprint_entry_t *ent;
   if (!fingerprint_list)
     return;
 
-  for (i = 0; i < smartlist_len(fingerprint_list); ++i) {
-    ent = smartlist_get(fingerprint_list, i);
-    tor_free(ent->nickname);
-    tor_free(ent->fingerprint);
-    tor_free(ent);
-  }
-  smartlist_free(fingerprint_list);
-  fingerprint_list = NULL;
+  strmap_free(fingerprint_list->fp_by_name, _tor_free);
+  digestmap_free(fingerprint_list->status_by_digest, _tor_free);
+  tor_free(fingerprint_list);
 }
 
 /*
@@ -419,11 +458,11 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                int complain)
 {
   /* Okay.  Now check whether the fingerprint is recognized. */
-  router_status_t status = dirserv_router_get_status(ri, msg);
+  uint32_t status = dirserv_router_get_status(ri, msg);
   time_t now;
   int severity = complain ? LOG_NOTICE : LOG_INFO;
   tor_assert(msg);
-  if (status == FP_REJECT)
+  if (status & FP_REJECT)
     return -1; /* msg is already set. */
 
   /* Is there too much clock skew? */
@@ -458,21 +497,9 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
     return -1;
   }
   /* Okay, looks like we're willing to accept this one. */
-  switch (status) {
-    case FP_NAMED:
-      ri->is_named = ri->is_valid = 1;
-      break;
-    case FP_VALID:
-      ri->is_named = 0;
-      ri->is_valid = 1;
-      break;
-    case FP_INVALID:
-      ri->is_named = ri->is_valid = 0;
-      break;
-    case FP_REJECT:
-    default:
-      tor_assert(0);
-  }
+  ri->is_named = (status & FP_NAMED) ? 1 : 0;
+  ri->is_valid = (status & FP_INVALID) ? 0 : 1;
+  ri->is_bad_exit = (status & FP_BADEXIT) ? 1 : 0;
 
   return 0;
 }
@@ -553,38 +580,31 @@ directory_remove_invalid(void)
   for (i = 0; i < smartlist_len(rl->routers); ++i) {
     const char *msg;
     routerinfo_t *ent = smartlist_get(rl->routers, i);
-    router_status_t r = dirserv_router_get_status(ent, &msg);
-    switch (r) {
-      case FP_REJECT:
-        log_info(LD_DIRSERV, "Router '%s' is now rejected: %s",
-                 ent->nickname, msg?msg:"");
-        routerlist_remove(rl, ent, i--, 0);
-        changed = 1;
-        break;
-      case FP_NAMED:
-        if (!ent->is_valid || !ent->is_named) {
-          log_info(LD_DIRSERV,
-                   "Router '%s' is now valid and named.", ent->nickname);
-          ent->is_valid = ent->is_named = 1;
-          changed = 1;
-        }
-        break;
-      case FP_VALID:
-        if (!ent->is_valid || ent->is_named) {
-          log_info(LD_DIRSERV, "Router '%s' is now valid.", ent->nickname);
-          ent->is_valid = 1;
-          ent->is_named = 0;
-          changed = 1;
-        }
-        break;
-      case FP_INVALID:
-        if (ent->is_valid || ent->is_named) {
-          log_info(LD_DIRSERV,
-                   "Router '%s' is no longer valid.", ent->nickname);
-          ent->is_valid = ent->is_named = 0;
-          changed = 1;
-        }
-        break;
+    uint32_t r = dirserv_router_get_status(ent, &msg);
+    if (r & FP_REJECT) {
+      log_info(LD_DIRSERV, "Router '%s' is now rejected: %s",
+               ent->nickname, msg?msg:"");
+      routerlist_remove(rl, ent, i--, 0);
+      changed = 1;
+    }
+    if (!(r & FP_NAMED) != !ent->is_named) {
+      log_info(LD_DIRSERV,
+               "Router '%s' is now %snamed.", ent->nickname,
+               (r&FP_NAMED)?"":"un");
+      ent->is_named = (r&FP_NAMED)?1:0;
+      changed = 1;
+    }
+    if (!(r & FP_INVALID) != !!ent->is_valid) {
+      log_info(LD_DIRSERV, "Router '%s' is now %svalid.", ent->nickname,
+               (r&FP_INVALID) ? "in" : "");
+      ent->is_valid = (r&FP_INVALID)?0:1;
+      changed = 1;
+    }
+    if (!(r & FP_BADEXIT) != !ent->is_bad_exit) {
+      log_info(LD_DIRSERV, "Router '%s' is now a %s exit", ent->nickname,
+               (r & FP_BADEXIT) ? "bad" : "good");
+      ent->is_bad_exit = (r&FP_BADEXIT) ? 1: 0;
+      changed = 1;
     }
   }
   if (changed)
@@ -598,7 +618,6 @@ directory_remove_invalid(void)
 char *
 dirserver_getinfo_unregistered(const char *question)
 {
-  router_status_t r;
   smartlist_t *answerlist;
   char buf[1024];
   char *answer;
@@ -607,9 +626,9 @@ dirserver_getinfo_unregistered(const char *question)
 
   answerlist = smartlist_create();
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ent, {
-    r = dirserv_router_get_status(ent, NULL);
+    uint32_t r = dirserv_router_get_status(ent, NULL);
     if (router_get_advertised_bandwidth(ent) >= (size_t)min_bw &&
-        r != FP_NAMED) {
+        !(r & FP_NAMED)) {
       /* then log this one */
       tor_snprintf(buf, sizeof(buf),
                    "%s: BW %d on '%s'.",
@@ -1361,6 +1380,7 @@ generate_v2_networkstatus(void)
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   int naming = options->NamingAuthoritativeDir;
   int versioning = options->VersioningAuthoritativeDir;
+  int listbadexits = options->AuthDirListBadExits;
   const char *contact;
 
   if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
@@ -1401,7 +1421,7 @@ generate_v2_networkstatus(void)
                "fingerprint %s\n"
                "contact %s\n"
                "published %s\n"
-               "dir-options%s%s\n"
+               "dir-options%s%s%s\n"
                "%s%s" /* client versions %s */
                "%s%s%s" /* \nserver versions %s \n */
                "dir-signing-key\n%s\n",
@@ -1410,6 +1430,7 @@ generate_v2_networkstatus(void)
                contact,
                published,
                naming ? " Names" : "",
+               listbadexits ? " BadExits" : "",
                versioning ? " Versions" : "",
                versioning ? "client-versions " : "",
                versioning ? client_versions : "",
@@ -1448,6 +1469,7 @@ generate_v2_networkstatus(void)
       int f_valid = ri->is_valid;
       int f_guard = f_fast && f_stable &&
         router_get_advertised_bandwidth(ri) > guard_bandwidth;
+      int f_bad_exit = listbadexits && ri->is_bad_exit;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */
       int f_v2_dir = ri->dir_port &&
@@ -1468,7 +1490,7 @@ generate_v2_networkstatus(void)
 
       if (tor_snprintf(outp, endp-outp,
                        "r %s %s %s %s %s %d %d\n"
-                       "s%s%s%s%s%s%s%s%s%s\n",
+                       "s%s%s%s%s%s%s%s%s%s%s\n",
                        ri->nickname,
                        identity64,
                        digest64,
@@ -1477,6 +1499,7 @@ generate_v2_networkstatus(void)
                        ri->or_port,
                        ri->dir_port,
                        f_authority?" Authority":"",
+                       f_bad_exit?" BadExit":"",
                        f_exit?" Exit":"",
                        f_fast?" Fast":"",
                        f_guard?" Guard":"",
@@ -2015,14 +2038,8 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
 void
 dirserv_free_all(void)
 {
-  if (fingerprint_list) {
-    SMARTLIST_FOREACH(fingerprint_list, fingerprint_entry_t*, fp,
-                      { tor_free(fp->nickname);
-                        tor_free(fp->fingerprint);
-                        tor_free(fp); });
-    smartlist_free(fingerprint_list);
-    fingerprint_list = NULL;
-  }
+  dirserv_free_fingerprint_list();
+
   cached_dir_decref(the_directory);
   clear_cached_dir(&the_runningrouters);
   cached_dir_decref(the_v2_networkstatus);
