@@ -1572,10 +1572,14 @@ typedef struct {
   config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
   smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
+  config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
+                                 * mark as bad exits. */
   config_line_t *AuthDirReject; /**< Address policy for descriptors to
                                  * reject. */
   config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
                                   * never mark as valid. */
+  int AuthDirListBadExits; /**< True iff we should list bad exits,
+                            * and vote for all other exits as good. */
   int AuthDirRejectUnlisted; /**< Boolean: do we reject all routers that
                               * aren't named in our fingerprint file? */
   char *AccountingStart; /**< How long is the accounting interval, and when
@@ -2321,6 +2325,7 @@ int dir_policy_permits_address(uint32_t addr);
 int socks_policy_permits_address(uint32_t addr);
 int authdir_policy_permits_address(uint32_t addr, uint16_t port);
 int authdir_policy_valid_address(uint32_t addr, uint16_t port);
+int authdir_policy_badexit_address(uint32_t addr, uint16_t port);
 
 int validate_addr_policies(or_options_t *options, char **msg);
 void policies_parse_from_options(or_options_t *options);
@@ -2349,8 +2354,8 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
 int relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
-                                 int relay_command, const char *payload,
-                                 size_t payload_len, crypt_path_t *cpath_layer);
+                               int relay_command, const char *payload,
+                               size_t payload_len, crypt_path_t *cpath_layer);
 int connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
                                  size_t payload_len,
