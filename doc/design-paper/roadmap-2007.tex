@@ -17,6 +17,11 @@
 \maketitle
 \pagestyle{plain}
 
+% TO DO:
+%   add cites
+%   add time estimates
+
+
 \section{Introduction}
 Hi, Roger!  Hi, Shava.  This paragraph should get deleted soon.  Right now,
 this document goes into about as much detail as I'd like to go into for a
@@ -71,11 +76,14 @@ secure\cite{tap:pet2006}, relies more on particular aspects of RSA and our
 implementation thereof than we had initially believed.  To future-proof
 against changes, we should replace it with a less delicate approach.
 
-\tmp{Stream migration?}
+We might design a {\bf stream migration} feature so that streams tunneled
+over Tor could be more resilient to dropped connections and changed IPs.
 
-\tmp{Use a better AES mode that has built-in integrity checking,
-doesn't grow with the number of hops, is not patented, and
-is implemented and maintained by smart people.}
+As a part of our design, we should investigate possible {\bf cipher modes}
+other than counter mode.  For example, a mode with built-in integrity
+checking, error propagation, and random access could simplify our protocol
+significantly.  Sadly, many of these are patented and unavailable for us.
+
 
 \subsection{Scalability}
 
@@ -136,47 +144,85 @@ operation that require less RAM, and that write to disk less frequently (to
 avoid wearing out flash RAM).
 
 \subsection{Performance: resource usage}
+We've been working on {\bf using less RAM}, especially on servers.  This has
+paid off a lot for directory caches in the 0.1.2, which in some cases are
+using 90\% less memory than they used to require.  But we can do better,
+especially in the area around our buffer management algorithms, by using an
+approach more like the BSD and Linux kernels use instead of our current ring
+buffer approach.  (For OR connections, we can just use queues of cell-sized
+chunks produced with a specialized allocator.)  This could potentially save
+around 25 to 50\% of the memory currently allocated for network buffers, and
+make Tor a more attractive proposition for restricted-memory environments
+like old computers, mobile devices, and the like.
 
-\tmp{Use less RAM when we have little.  Make buffer code smarter}
+We should improve our {\bf bandwidth limiting}.  The current system has been
+crucial in making users willing to run servers: nobody is willing to run a
+server if it might use an unbounded amount of bandwidth, especially if they
+are charged for their usage.  We can make our system better by letting users
+configure bandwidth limits independently for their own traffic and traffic
+relayed for others; and by adding write limits for users running directory
+servers.
 
-\tmp{Allow separate bandwidth buckets for different bandwidth classes}  This
-gets us more users happy to run servers.
-
-\tmp{Write-limiting for directory servers}
-
-\tmp{Don't use so many sockets} We can save some for hidden services and for
-  encrypted directories.
+On many hosts, sockets are still in short supply, and will be until we can
+migrate our protocol to UDP.  We can {\bf use fewer sockets} by making our
+self-to-self connections happen internally to the code rather than involving
+the operating system's socket implementation.
 
 \subsection{Performance: network usage}
+We know too little about how well our current path
+selection algorithms actually spread traffic around the network in practice.
+We should {\bf research the efficacy of our traffic allocation} and either
+assure ourselves that it is close enough to optimal as to need no improvement
+(unlikely) or {\bf identify ways to improve network usage}, and get more
+users' traffic delivered faster.  Performing this research will require
+careful thought about anonymity implications.
 
-\tmp{Do research to figure out how well capacity is actually used.}
+We should also {\bf examine the efficacy of our congestion control
+  algorithm}, and see whether we can improve client performance in the
+presence of a congested network through dynamic `sendme' window sizes or
+other means.  This will have anonymity implications too if we aren't careful.
 
-\tmp{Adapt to congestion better. Dynamic SENDME window sizes.}
+% \tmp{Tune pathgen algorithms to use it better.}
+% 
+% I think I've included this in the above -NM
 
-\tmp{Tune pathgen algorithms to use it better.}
-
-\subsection{Performance: one Tor client, many users}
-
-\tmp{Many organizations want to manage a single Tor client on their
+\subsection{Performance scenario: one Tor client, many users}
+We should {\bf improve Tor's performance when a single Tor handles many
+  clients}.  Many organizations want to manage a single Tor client on their
 firewall for many users, rather than having each user install a separate
-Tor client.} Nobody has tried this before, and we bet it will scale
-really poorly.
+Tor client.  We haven't optimized for this scenario, and it is likely that
+there are some code paths in the current implementation that become
+inefficient when a single Tor is servicing hundreds or thousands of client
+connections.  (Additionally, it is likely that such clients have interesting
+anonymity requirements the we should investigate.)  We should profile Tor
+under appropriate loads, identify bottlenecks, and fix them.
 
-Other stress-testing, and fix bottlenecks we find.
+% \tmp{Other stress-testing, and fix bottlenecks we find.}
+%
+% I've moved this into 'improved testing harness' below
 
 \subsection{Tor servers on asymmetric bandwidth}
 
+\tmp{Roger, please write? I don't know what to say here.}
+
 \subsection{Running Tor as both client and server}
 
-many performance tradeoffs and balances that need more attention.
+\tmp{many performance tradeoffs and balances that need more attention.
+  Roger, please write.}
 
-\subsection{Blue-sky: UDP}
-
-\tmp{support udp traffic}
-
-\tmp{Use udp as a transport}
-
-
+\subsection{Protocol redesign for UDP}
+Tor has relayed only TCP traffic since its first versions, and has used
+TLS-over-TCP to do so.  This approach has proved reliable and flexible, but
+in the long term we will need to allow UDP traffic on the network, and switch
+some or all of the network to using a UDP transport.  {\bf Supporting UDP
+  traffic} will make Tor more suitable for protocols that require UDP, such
+as many VOIP protocols.  {\bf Using a UDP transport} could greatly reduce
+resource limitations on servers, and make the network far less interruptable
+by lossy connections.  Either of these protocol changes would require a great
+deal of design work, however.  We hope to be able to enlist the aid of a few
+talented graduate students to assist with the initial design and
+specification, but the actual implementation will require significant testing
+of different reliable transport approaches.
 
 
 \section{Blocking resistance}
@@ -222,60 +268,126 @@ Our design anticipates an arms race between discovery methods and censors.
 We need to begin the infrastructure on our side quickly, preferably in a
 flexible language like Python, so we can adapt quickly to censorship.
 
-\subsection{The Tor website, docs, and mirrors}
+\subsection{Resisting censorship of the Tor website, docs, and mirrors}
 
-They're the first to be blocked. How do users learn about Tor in the
-first place, and how do they fetch a genuine copy of Tor?
+We should take some effort to consider {\bf initial distribution of Tor and
+  related information} in countries where the Tor website and mirrors are
+censored.  (Right now, most countries that block access to Tor block only the
+main website and leave mirrors and the network itself untouched.)  Falling
+back on word-of-mouth is always a good last resort, but we should also take
+steps to make sure it's relatively easy for users to get ahold of a copy.
 
 \section{Security}
 
 \subsection{Security research projects}
 
-\tmp{Mixed-latency}
+We should investigate approaches with some promise to help Tor resist
+end-to-end traffic correlation attacks.  It's an open research question
+whether (and to what extent) {\bf mixed-latency} networks, {\bf low-volume
+  long-distance padding}, or other approaches can resist these attacks, which
+are currently some of the most effective against careful Tor users.  We
+should research these questions and perform simulations to identify
+opportunities for strengthening our design without dropping performance to
+unacceptable levels. %Cite something
 
-\tmp{long-distance padding}
+We've got some preliminary results suggesting that {\bf a topology-aware
+  routing algorithm}~\cite{routing-zones} could reduce Tor users'
+vulnerability against local or ISP-level adversaries, by ensuring that they
+are never in a position to watch both ends of a connection.  We need to
+examine the effects of this approach in more detail and consider side-effects
+on anonymity against other kinds of adversaries.  If the approach still looks
+promising, we should investigate ways for clients to implement it (or an
+approximation of it) without having to download routing tables for the whole
+internet.
 
-\tmp{router-zones}
+%\tmp{defenses against end-to-end correlation}  We don't expect any to work
+%right now, but it would be useful to learn that one did.  Alternatively,
+%proving that one didn't would free up researchers in the field to go work on
+%other things.
+%
+% See above; I think I got this.
 
-\tmp{defenses against end-to-end correlation}  We don't expect any to work
-right now, but it would be useful to learn that one did.  Alternatively,
-proving that one didn't would free up researchers in the field to go work on
-other things.
-
-\tmp{website fingperprinting}  They work great in simulations, but in
-practice we hear they don't work nearly as well. We should get some actual
-numbers on both sides of the issue, and figure out what's going on.
+We should research the efficacy of {\bf website fingperprinting} attacks,
+wherein an adversary tries to match the distinctive traffic and timing
+pattern of the resources constituting a given website to the traffic pattern
+of a user's client.  These attacks work great in simulations, but in
+practice we hear they don't work nearly as well.  We should get some actual
+numbers to investigte the issue, and figure out what's going on.  If we
+resist these attacks, or can improve our design to resist them, we should.
+% add cites
 
 \subsection{Implementation security}
+Right now, each Tor node stores its keys unencrypted.  We should {\bf encrypt
+  more Tor keys} so that Tor authorities can require a startup password.  We
+should look into adding intermediary medium-term ``signing keys'' between
+identity keys and onion keys, so that a password could be required to replace
+a signing key, but not to start Tor.  This would improve Tor's long-term
+security, especially in its directory authority infrastructure.
 
-\tmp{Encrypt more keys}
+We should also {\bf mark RAM that holds key material as non-swappable} so
+that there is no risk of recovering key material from a hard disk
+compromise.  This would require submitting patches upstream to OpenSSL, where
+support for marking memory as sensitive is currently in a very preliminary
+state.
 
-\tmp{Talk Coverity or somebody with a copy of vs2005 into running tools on
-  our code} And figure out a way to get our code checked periodically rather
-  than just once.
+There are numerous tools for identifying trouble spots in code (such as
+Coverity or even VS2005's code analysis tool) and we should convince somebody
+to run some of them against the Tor codebase.  Ideally, we could figure out a
+way to get our code checked periodically rather than just once.
 
-\tmp{Directory guards}
+We should try {\bf protocol fuzzing} to identify errors in our
+implementation.
+
+Our guard nodes help prevent an attacker from being able to become a chosen
+client's entry point by having each client choose a few favorite entry points
+as ``guards'' and stick to them.   We should implement a {\bf directory
+  guards} feature to keep adversaries from enumerating Tor users by acting as
+a directory cache.
 
 \subsection{Detect corrupt exits and other servers}
+With the success of our network, we've attracted servers in many locations,
+operated by many kinds of people.  Unfortunately, some of these locations
+have compromised or defective networks, and some of these people are
+untrustworthy or incompetent.  Our current design relies on authority
+administrators to identify bad nodes and mark them as nonfunctioning.  We
+should {\bf automate the process of identifying malfunctioning nodes} as
+follows:
 
-\tmp{Improved feedback mechanism for tools like SOAT to use}
+We should create a generic {\bf feedback mechanism for add-on tools} like
+Mike Perry's ``Snakes on a Tor'' to report failing nodes to authorities.
 
-\tmp{More tools like SOAT: check for routers that bork SSL, routers that
-  sniff (and use) passwords...}
+We should write tools to {\bf detect more kinds of innocent node failure},
+such as nodes whose network providers intercept SSL, nodes whose network
+providers censor popular websites, and so on.  We should also try to detect
+{\bf routers that snoop traffic}; we could do this by launching connections
+to throwaway accounts, and seeing which accounts get used.
 
-\tmp{Add a way for authorities to declare families.}
+We should add {\bf an efficient way for authorities to mark a set of servers
+  as probably collaborating} though not necessarily otherwise dishonest.
+This happens when an administrator starts multiple routers, but doesn't mark
+them as belonging to the same family.
 
-\tmp{Make authority administration simpler so authority ops spend less time
-  on random junk and more time on care and feeding of the network.}
+To avoid attacks where an adversary claims good performance in order to
+attract traffic, we should {\bf have authorities measure node performance}
+(including stability and bandwidth) themselves, and not simply believe what
+they're told.  Measuring bandwidth can be tricky, since it's hard to
+distinguish between a server with low capacity, and a high-capacity server
+with most of its capacity in use.
 
-\tmp{Authorities should measure Stable (and maybe Fast) themselves, and not
-  just believe declared router uptime.}
+{\bf Operating a directory authority should be easier.}  We rely on authority
+operators to keep the network running well, but right now their job involves
+too much busywork and administrative overhead.  A better interface for them
+to use could free their time to work on exception cases rather than on
+adding named nodes to the network.
 
 \subsection{Protocol security}
 
-\tmp{Build in hooks for DoS-resistance: when we need it, we'll really need
-  it.}
-
+In addition to other protocol changes discussed above,
+% And should we move somve of them down here? -NM
+we should add {\bf hooks for denial-of-service resistance}; we have some
+prelimiary designs, but we shouldn't postpone them until we realy need them.
+If somebody tries a DDoS attack against the Tor network, we won't want to
+wait for all the servers and clients to upgrade to a new version.
 
 \section{Development infrastructure}
 
@@ -299,6 +411,11 @@ testing framework.
 
 We should also write flexible {\bf automated single-host deployment tests} so
 we can more easily verify that the current codebase works with the network.
+
+We should build automated {\bf stress testing} frameworks so we can see which
+realistic loads cause Tor to perform badly, and regularly profile Tor against
+these loads.  This would give us {\it in vitro} performance values to
+supplement our deployment experience.
 
 \subsection{Centralized build system}
 We currently rely on a separate packager to maintain the packaging system and
@@ -354,7 +471,7 @@ section below
 
 \subsection{Interface improvements}
 \tmp{Allow controllers to manipulate server status.}
-(Why is this in the User Experience section?)
+% (Why is this in the User Experience section?) -RD
 
 
 \subsection{Firewall-level deployment}
@@ -372,17 +489,20 @@ targetted at specialized home routing hardware, could be useful.
 
 \subsection{Assess software and configurations for anonymity risks}
 
-which firefox extensions to use, and which to avoid. best practices for
-how to torify each class of application.
+\tmp{which firefox extensions to use, and which to avoid. best practices for
+how to torify each class of application.}
 
-clean up our own bundled software:
-E.g. Merge the good features of Foxtor into Torbutton
+\tmp{clean up our own bundled software:
+E.g. Merge the good features of Foxtor into Torbutton}
 
 \subsection{Localization}
 Right now, most of our user-facing code is internationalized.  We need to
 internationalize the last few hold-outs (like the Tor installer), and get
 more translations for the parts that are already internationalized.
-[Do you mean the Vidalia bundle installer, or the Tor-installer-for-experts? -RD]
+
+%[Do you mean the Vidalia bundle installer, or the Tor-installer-for-experts?
+%-RD]
+% The latter -NM
 
 Also, we should look into a {\bf unified translator's solution}.  Currently,
 since different tools have been internationalized using the
@@ -392,9 +512,8 @@ translators only need to use a single tool to translate the whole Tor suite.
 
 \section{Support}
 
-would be nice to set up some actual user support infrastructure, especially
-focusing on server operators and on coordinating volunteers.
-
+\tmp{would be nice to set up some actual user support infrastructure, especially
+focusing on server operators and on coordinating volunteers.}
 
 
 \section{Documentation}
