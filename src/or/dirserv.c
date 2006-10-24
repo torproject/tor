@@ -566,6 +566,13 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   }
 }
 
+
+static INLINE int
+bool_neq(int a, int b)
+{
+  return (a && !b) || (!a && b);
+}
+
 /** Remove all descriptors whose nicknames or fingerprints no longer
  * are allowed by our fingerprint list. (Descriptors that used to be
  * good can become bad when we reload the fingerprint list.)
@@ -587,20 +594,20 @@ directory_remove_invalid(void)
       routerlist_remove(rl, ent, i--, 0);
       changed = 1;
     }
-    if (!(r & FP_NAMED) != !ent->is_named) {
+    if (bool_neq((r & FP_NAMED), ent->is_named)) {
       log_info(LD_DIRSERV,
                "Router '%s' is now %snamed.", ent->nickname,
                (r&FP_NAMED)?"":"un");
       ent->is_named = (r&FP_NAMED)?1:0;
       changed = 1;
     }
-    if (!(r & FP_INVALID) != !!ent->is_valid) {
+    if (bool_neq((r & FP_INVALID), !ent->is_valid)) {
       log_info(LD_DIRSERV, "Router '%s' is now %svalid.", ent->nickname,
                (r&FP_INVALID) ? "in" : "");
       ent->is_valid = (r&FP_INVALID)?0:1;
       changed = 1;
     }
-    if (!(r & FP_BADEXIT) != !ent->is_bad_exit) {
+    if (bool_neq((r & FP_BADEXIT), ent->is_bad_exit)) {
       log_info(LD_DIRSERV, "Router '%s' is now a %s exit", ent->nickname,
                (r & FP_BADEXIT) ? "bad" : "good");
       ent->is_bad_exit = (r&FP_BADEXIT) ? 1: 0;
