@@ -160,6 +160,13 @@ a user who is entirely observed and controlled by the adversary. See
 Section~\ref{subsec:cafes-and-livecds} for more discussion of what little
 we can do about this issue.
 
+We assume that widespread access to the Internet is economically and/or
+socially valuable in each deployment country. After all, if censorship
+is more important than Internet access, the firewall administrators have
+an easy job: they should simply block everything. The corollary to this
+assumption is that we should design so that increased blocking of our
+system results in increased economic damage or public outcry.
+
 We assume that the user will be able to fetch a genuine
 version of Tor, rather than one supplied by the adversary; see
 Section~\ref{subsec:trust-chain} for discussion on helping the user
@@ -272,7 +279,7 @@ something else: hundreds of thousands of different and often-changing
 addresses that we can leverage for our blocking-resistance design.
 
 We discuss and adapt these components further in
-Section~\ref{sec:components}. But first we examine the strengths and
+Section~\ref{sec:bridges}. But first we examine the strengths and
 weaknesses of other blocking-resistance approaches, so we can expand
 our repertoire of building blocks and ideas.
 
@@ -455,55 +462,112 @@ We should recognize that we're \emph{already} in the arms race. These
 constraints can give us insight into the priorities and capabilities of
 our various attackers.
 
-\section{Components of a blocking-resistant design}
-\label{sec:components}
+\section{The relay component of our blocking-resistant design}
+\label{sec:bridges}
 
-We need to address three problems:
-- adapting the relay component of Tor so it resists blocking better.
-- Discovery.
-- Tor's network signature.
+Section~\ref{sec:current-tor} describes many reasons why Tor is
+well-suited as a building block in our context, but several changes will
+allow the design to resist blocking better. The most critical changes are
+to get more relay addresses, and to distribute them to users differently.
 
-Here we describe the new pieces we need to add to the current Tor design.
+%We need to address three problems:
+%- adapting the relay component of Tor so it resists blocking better.
+%- Discovery.
+%- Tor's network signature.
+
+%Here we describe the new pieces we need to add to the current Tor design.
 
 \subsection{Bridge relays}
 
-Some Tor users on the free side of the network will opt to become
-\emph{bridge relays}. They will relay a small amount of bandwidth into
-the main Tor network, and they won't need to allow exits.
+Hundreds of thousands of people around the world use Tor. We can leverage
+our already self-selected user base to produce a list of thousands of
+often-changing IP addresses. Specifically, we can give them a little
+button in the GUI that says ``Tor for Freedom'', and users who click
+the button will turn into \emph{bridge relays}, or just \emph{bridges}
+for short. They can rate limit relayed connections to 10 KB/s (almost
+nothing for a broadband user in a free country, but plenty for a user
+who otherwise has no access at all), and since they are just relaying
+bytes back and forth between blocked users and the main Tor network, they
+won't need to make any external connections to Internet sites. Because
+of this separation of roles, and because we're making use of software
+that the volunteers have already installed for their own use, we expect
+our scheme to attract and maintain more volunteers than previous schemes.
 
-They sign up on the bridge directory authorities (described below),
-and they use Tor to publish their descriptor so an attacker observing
-the bridge directory authority's network can't enumerate bridges.
+As usual, there are new anonymity and security implications from running a
+bridge relay, particularly from letting people relay traffic through your
+Tor client; but we leave this discussion for Section~\ref{sec:security}.
 
-...need to outline instructions for a Tor config that will publish
-to an alternate directory authority, and for controller commands
-that will do this cleanly.
+%...need to outline instructions for a Tor config that will publish
+%to an alternate directory authority, and for controller commands
+%that will do this cleanly.
 
 \subsection{The bridge directory authority (BDA)}
 
-They aggregate server descriptors just like the main authorities, and
-answer all queries as usual, except they don't publish full directories
-or network statuses.
+How do the bridge relays advertise their existence to the world? We
+introduce a second new component of the design: a specialized directory
+authority that aggregates and tracks bridges. Bridge relays periodically
+publish server descriptors (summaries of their keys, locations, etc,
+signed by their long-term identity key), just like the relays in the
+``main'' Tor network, but in this case they publish them only to the
+bridge directory authorities.
 
-So once you know a bridge relay's key, you can get the most recent
-server descriptor for it.
+The main difference between bridge authorities and the directory
+authorities for the main Tor network is that the main authorities provide
+out a list of every known relay, but the bridge authorities only give
+out a server descriptor if you already know its identity key. That is,
+you can keep up-to-date on a bridge's location and other information
+once you know about it, but you can't just grab a list of all the bridges.
 
-Since bridge authorities don't answer full network statuses, we
-need to add a new way for users to learn the current status for a
-single relay or a small set of relays --- to answer such questions as
-``is it running?''  or ``is it behaving correctly?'' We describe in
-Section~\ref{subsec:enclave-dirs} a way for the bridge authority to
-publish this information without resorting to signing each answer
-individually.
+The identity keys, IP address, and directory port for the bridge
+authorities ship by default with the Tor software, so the bridge relays
+can be confident they're publishing to the right location, and the
+blocked users can establish an encrypted authenticated channel. See
+Section~\ref{subsec:trust-chain} for more discussion of the public key
+infrastructure and trust chain.
+
+Bridges use Tor to publish their descriptors privately and securely,
+so even an attacker monitoring the bridge directory authority's network
+can't make a list of all the addresses contacting the authority and
+track them that way.
+
+%\subsection{A simple matter of engineering}
+%
+%Although we've described bridges and bridge authorities in simple terms
+%above, some design modifications and features are needed in the Tor
+%codebase to add them. We describe the four main changes here.
+%
+%Firstly, we need to get smarter about rate limiting:
+%Bandwidth classes
+%
+%Secondly, while users can in fact configure which directory authorities
+%they use, we need to add a new type of directory authority and teach
+%bridges to fetch directory information from the main authorities while
+%publishing server descriptors to the bridge authorities. We're most of
+%the way there, since we can already specify attributes for directory
+%authorities:
+%add a separate flag named ``blocking''.
+%
+%Thirdly, need to build paths using bridges as the first
+%hop. One more hole in the non-clique assumption.
+%
+%Lastly, since bridge authorities don't answer full network statuses,
+%we need to add a new way for users to learn the current status for a
+%single relay or a small set of relays --- to answer such questions as
+%``is it running?'' or ``is it behaving correctly?'' We describe in
+%Section~\ref{subsec:enclave-dirs} a way for the bridge authority to
+%publish this information without resorting to signing each answer
+%individually.
 
 \subsection{Putting them together}
 
-If a blocked user has address information for one working bridge relay,
-then he can use it to make secure connections to the BDA to update his
-knowledge about other bridge
-relays, and he can make secure connections to the main Tor network
-and directory servers to build circuits and connect to the rest of
-the Internet.
+If a blocked user knows the identity keys of a set of bridge relays, and
+he has correct address information for at least one of them, he can use
+that one to make a secure connection to the bridge authority and update
+his knowledge about the other bridge relays. He can also use it to make
+secure connections to the main Tor network and directory servers, so he
+can build circuits and connect to the rest of the Internet. All of these
+updates happen in the background: from the blocked user's perspective,
+he just accesses the Internet via his Tor client like always.
 
 So now we've reduced the problem from how to circumvent the firewall
 for all transactions (and how to know that the pages you get have not
@@ -512,11 +576,29 @@ bridge relay.
 
 The following section describes ways to bootstrap knowledge of your first
 bridge relay, and ways to maintain connectivity once you know a few
-bridge relays. (See Section~\ref{subsec:first-bridge} for a discussion
-of exactly what information is sufficient to characterize a bridge relay.)
+bridge relays.
+% (See Section~\ref{subsec:first-bridge} for a discussion
+%of exactly what information is sufficient to characterize a bridge relay.)
 
 \section{Discovering and maintaining working bridge relays}
 \label{sec:discovery}
+
+Tor's modular design means that we can develop a better relay component
+independently of developing the discovery component. This modularity's
+great promise is that we can pick any discovery approach we like; but the
+unfortunate fact is that we have no magic bullet for discovery. We're
+in the same arms race as all the other designs we described in
+Section~\ref{sec:related}.
+
+3 options:
+
+- independent proxies. just tell your friends.
+
+- public proxies. given out like circumventors. or all sorts of other rate limiting ways.
+
+- social network scheme, with accounts and stuff.
+
+
 
 In the first subsection we describe how to find a first bridge.
 
@@ -869,6 +951,11 @@ community, though, this question remains a critical weakness.
 
 % XXX make clearer the trust chain step for bridge directory authorities
 
+\subsection{Security through obscurity: publishing our design}
+
+Many other schemes like dynaweb use the typical arms race strategy of
+not publishing their plans. Our goal here is to produce a design ---
+a framework --- that can be public and still secure. Where's the tradeoff?
 
 \section{Performance improvements}
 \label{sec:performance}
@@ -971,9 +1058,6 @@ both good and bad.
 
 \subsection{The Tor website: how to get the software}
 
-
-
-\section{Related work}
 
 
 \section{Future designs}
