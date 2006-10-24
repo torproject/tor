@@ -194,8 +194,7 @@ $Id$
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
          "AUTHDIR_NEWDESCS" / "DESCCHANGED" / "STATUS_GENERAL" /
-         "STATUS_CLIENT" / "STATUS_SERVER" / "GUARDS" / "NS" /
-         "NS_FULL"
+         "STATUS_CLIENT" / "STATUS_SERVER" / "GUARDS" / "NS"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -446,6 +445,14 @@ $Id$
          OptionName SP Documentation CRLF
          OptionPrefix SP Documentation CRLF
          OptionPrefix = OptionName "/*"
+
+    "events/names"
+      A space-separated list of all the events supported by this version of
+      Tor's SETEVENTS.
+
+    "features/names"
+      A space-separated list of all the events supported by this version of
+      Tor's USEFEATURE.
 
     "dir/status/authority"
     "dir/status/fp/<F>"

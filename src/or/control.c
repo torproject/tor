@@ -1482,6 +1482,12 @@ handle_getinfo_helper(control_connection_t *control_conn,
     return config_getinfo_helper(question, answer);
   } else if (!strcmp(question, "info/names")) {
     *answer = list_getinfo_options();
+  } else if (!strcmp(question, "events/names")) {
+    *answer = tor_strdup("CIRC STREAM ORCONN BW DEBUG INFO NOTICE WARN ERR "
+                         "NEWDESC ADDRMAP AUTHDIR_NEWDESCS DESCCHANGED "
+                         "NS STATUS_GENERAL STATUS_CLIENT STATUS_SERVER");
+  } else if (!strcmp(question, "features/names")) {
+    *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
   } else if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
     if (ri) {
@@ -2420,7 +2426,8 @@ handle_control_usefeature(control_connection_t *conn,
         /* remove this in 0.1.2.4; EXTENDED_FORMAT only ever worked for a
          * little while during 0.1.2.2-alpha-dev. */
         log_warn(LD_GENERAL,
-                 "EXTENDED_FORMAT is deprecated; use EXTENDED_EVENTS instead.");
+                 "EXTENDED_FORMAT is deprecated; use EXTENDED_EVENTS "
+                 "instead.");
         extended_events = 1;
       } else {
         connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",
