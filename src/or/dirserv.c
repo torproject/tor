@@ -385,7 +385,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
       return FP_REJECT;
     /* 0.1.0.2-rc was the first version that did enough self-testing that
      * we're willing to take its word about whether it's running . */
-    if (!platform || tor_version_as_new_as(platform,"0.1.0.2-rc"))
+    if (platform && !tor_version_as_new_as(platform,"0.1.0.2-rc"))
       result |= FP_INVALID;
   }
 
