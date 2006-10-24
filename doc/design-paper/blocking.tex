@@ -574,11 +574,109 @@ for all transactions (and how to know that the pages you get have not
 been modified by the local attacker) to how to learn about a working
 bridge relay.
 
-The following section describes ways to bootstrap knowledge of your first
-bridge relay, and ways to maintain connectivity once you know a few
-bridge relays.
+There's another catch though. We need to make sure that simply connecting
+to a bridge relay doesn't set off red flags.
+
+%The following section describes ways to bootstrap knowledge of your first
+%bridge relay, and ways to maintain connectivity once you know a few
+%bridge relays.
+
 % (See Section~\ref{subsec:first-bridge} for a discussion
 %of exactly what information is sufficient to characterize a bridge relay.)
+
+\section{Hiding Tor's network signatures}
+\label{sec:network-signature}
+\label{subsec:enclave-dirs}
+
+Currently, Tor uses two protocols for its network communications. The
+main protocol uses TLS for encrypted and authenticated communication
+between Tor instances. The second protocol is standard HTTP, used for
+fetching directory information. All Tor servers listen on their ``ORPort''
+for TLS connections, and some of them opt to listen on their ``DirPort''
+as well, to serve directory information. Tor servers choose whatever port
+numbers they like; the server descriptor they publish to the directory
+tells users where to connect.
+
+One format for communicating address information about a bridge relay is
+its IP address and DirPort. From there, the user can ask the bridge's
+directory cache for an up-to-date copy of its server descriptor, and
+learn its current circuit keys, its ORPort, and so on.
+
+However, connecting directly to the directory cache involves a plaintext
+HTTP request. A censor could create a network signature for the request
+and/or its response, thus preventing these connections. To resolve this
+vulnerability, we've modified the Tor protocol so that users can connect
+to the directory cache via the main Tor port --- they establish a TLS
+connection with the bridge as normal, and then send a special ``begindir''
+relay command to establish an internal connection to its directory cache.
+
+Therefore a better way to summarize a bridge's address is by its IP
+address and ORPort, so all communications between the client and the
+bridge will the ordinary TLS. But there are other details that need
+more investigation.
+
+What port should bridges pick for their ORPort? We currently recommend
+that they listen on port 443 (the default HTTPS port) if they want to
+be most useful, because clients behind standard firewalls will have
+the best chance to reach them. Is this the best choice in all cases,
+or should we encourage some fraction of them pick random ports, or other
+ports commonly permitted on firewalls like 53 (DNS) or 110 (POP)? We need
+more research on our potential users, and their current and anticipated
+firewall restrictions.
+
+Furthermore, we need to look at the specifics of Tor's TLS handshake.
+Right now Tor uses some predictable strings in its TLS handshakes. For
+example, it sets the X.509 organizationName field to "Tor", and it puts
+the Tor server's nickname in the certificate's commonName field. We
+should tweak the handshake protocol so it doesn't rely on any details
+in the certificate headers, yet it remains secure. Should we replace
+it with blank entries for each field, or should we research the common
+values that Firefox and Internet Explorer use and try to imitate those?
+
+Lastly, Tor's TLS handshake involves sending two certificates in each
+direction: one certificate contains the self-signed identity key for
+the router, and the second contains the current link key, signed by the
+identity key. We use these to authenticate that we're talking to the right
+router, and also to establish perfect forward secrecy for that link.
+How much will these extra certificates make Tor's TLS handshake stand
+out? We have to work on normalizing our appearance not just in terms
+of the fields used in each certificate, but also in the number of
+certificates we present for each side.
+% Nick, I need help with the above paragraph. What are the two certs
+% for really, and how much work would it be to start acting like a normal
+% browser? -RD
+
+\subsection{Identity keys as part of addressing information}
+
+We have described a way for the blocked user to bootstrap into the
+network once he knows the IP address and ORPort of a bridge. What about
+local spoofing attacks? That is, since we never learned an identity
+key fingerprint for the bridge, a local attacker could intercept our
+connection and pretend to be the bridge we had in mind. It turns out
+that giving false information isn't that bad --- since the Tor client
+ships with trusted keys for the bridge directory authority and the Tor
+network directory authorities, the user can learn whether he's being
+given a real connection to the bridge authorities or not. (After all,
+if the adversary intercepts every connection the user makes and gives
+him a bad connection each time, there's nothing we can do.)
+
+What about anonymity-breaking attacks from observing traffic, if the
+blocked user doesn't start out knowing the identity key of his intended
+bridge? The vulnerabilities aren't so bad in this case either ---
+the adversary could do the same attacks just by monitoring the network
+traffic.
+
+Once the Tor client has fetched the bridge's server descriptor, it should
+remember the identity key fingerprint for that bridge relay. Thus if
+the bridge relay moves to a new IP address, the client can query the
+bridge directory authority to look up a fresh server descriptor using
+this fingerprint.
+
+So we've shown that it's \emph{possible} to bootstrap into the network
+just by learning the IP address and ORPort of a bridge, but are there
+situations where it's more convenient or more secure to learn the bridge's
+identity fingerprint as well as instead, while bootstrapping? We keep
+that question in mind as we next investigate bootstrapping and discovery.
 
 \section{Discovering and maintaining working bridge relays}
 \label{sec:discovery}
@@ -796,70 +894,6 @@ solution though.
 
 \section{Security considerations}
 \label{sec:security}
-
-\subsection{Hiding Tor's network signatures}
-\label{subsec:enclave-dirs}
-
-A short paragraph about Tor's current network appearance.
-
-The simplest format for communicating information about a bridge relay
-is as an IP address and port for its directory cache. From there, the
-user can ask the directory cache for an up-to-date copy of that bridge
-relay's server descriptor, to learn its current circuit keys, the port
-it uses for Tor connections, and so on.
-
-However, connecting directly to the directory cache involves a plaintext
-HTTP request. A censor could create a network signature for the
-request and/or its response, thus preventing these connections. Therefore
-we've modified the Tor protocol so that users can connect to the directory
-cache via the main Tor port --- they establish a TLS connection with
-the bridge as normal, and then send a Tor "begindir" relay cell to
-establish a connection to its directory cache.
-
-Predictable SSL ports:
-We should encourage most servers to listen on port 443, which is
-where SSL normally listens.
-Is that all it will take, or should we set things up so some fraction
-of them pick random ports? I can see that both helping and hurting.
-
-Predictable TLS handshakes:
-Right now Tor has some predictable strings in its TLS handshakes.
-These can be removed; but should they be replaced with nothing, or
-should we try to emulate some popular browser? In any case our
-protocol demands a pair of certs on both sides --- how much will this
-make Tor handshakes stand out?
-
-\subsection{Minimum info required to describe a bridge}
-
-In the previous subsection, we described a way for the bridge user
-to bootstrap into the network just by knowing the IP address and
-Tor port of a bridge. What about local spoofing attacks? That is,
-since we never learned an identity key fingerprint for the bridge,
-a local attacker could intercept our connection and pretend to be
-the bridge we had in mind. It turns out that giving false information
-isn't that bad --- since the Tor client ships with trusted keys for the
-bridge directory authority and the Tor network directory authorities,
-the user can learn whether he's being given a real connection to the
-bridge authorities or not. (If the adversary intercepts every connection
-the user makes and gives him a bad connection each time, there's nothing
-we can do.)
-
-What about anonymity-breaking attacks from observing traffic? Not so bad
-either, since the adversary could do the same attacks just by monitoring
-the network traffic.
-
-Once the Tor client has fetched the bridge's server descriptor at least
-once, he should remember the identity key fingerprint for that bridge
-relay. Thus if the bridge relay moves to a new IP address, the client
-can then query the bridge directory authority to look up a fresh server
-descriptor using this fingerprint.
-
-So we've shown that it's \emph{possible} to bootstrap into the network
-just by learning the IP address and port of a bridge, but are there
-situations where it's more convenient or more secure to learn its
-identity fingerprint at the beginning too? We discuss that question
-more in Section~\ref{sec:bootstrapping}, but first we introduce more
-security topics.
 
 \subsection{Observers can tell who is publishing and who is reading}
 \label{subsec:upload-padding}
