@@ -113,13 +113,11 @@ add_fingerprint_to_dir(const char *nickname, const char *fp,
 
   if (nickname[0] != '!') {
     char *old_fp = strmap_get_lc(list->fp_by_name, nickname);
-    if (old_fp) {
-      if (!strcasecmp(fingerprint, old_fp)) {
-        tor_free(fingerprint);
-      } else {
-        tor_free(old_fp);
-        strmap_set_lc(list->fp_by_name, nickname, fingerprint);
-      }
+    if (old_fp && !strcasecmp(fingerprint, old_fp)) {
+      tor_free(fingerprint);
+    } else {
+      tor_free(old_fp);
+      strmap_set_lc(list->fp_by_name, nickname, fingerprint);
     }
     status->status |= FP_NAMED;
     strlcpy(status->nickname, nickname, sizeof(status->nickname));
@@ -320,7 +318,8 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
   base16_encode(fp, sizeof(fp), id_digest, DIGEST_LEN);
 
   if (should_log)
-    log_debug(LD_DIRSERV, "%d fingerprints known.",
+    log_debug(LD_DIRSERV, "%d fingerprints, %d digests known.",
+              strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
   if ((fp_by_name =
