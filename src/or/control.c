@@ -1439,12 +1439,14 @@ list_getinfo_options(void)
     "circuit-status Status of each current circuit.\n"
     "config-file Current location of the \"torrc\" file.\n"
     "config/names List of configuration options, types, and documentation.\n"
-    "desc/id/* Server descriptor by hex ID\n"
+    "desc/id/* Server descriptor by hex ID.\n"
     "desc/name/* Server descriptor by nickname.\n"
-    "desc/all-recent Latest server descriptor for every router\n"
-    "dir/server/* Fetch server descriptors -- see dir-spec.txt\n"
+    "desc/all-recent Latest server descriptor for every router.\n"
+    "dir/server/* Fetch server descriptors -- see dir-spec.txt.\n"
     "entry-guards Which nodes will we use as entry guards?\n"
-    "exit-policy/default Default lines appended to config->ExitPolicy\n"
+    "events/names What events the controller can ask for.\n"
+    "exit-policy/default Default lines appended to config->ExitPolicy.\n"
+    "features/names What arguments can USEFEATURE take?\n"
     "info/names List of GETINFO options, types, and documentation.\n"
     "network-status List of hex IDs, nicknames, server statuses.\n"
     "orconn-status Status of each current OR connection.\n"
@@ -1453,7 +1455,7 @@ list_getinfo_options(void)
   // XXXX Uptodate!
   /* This has been hard to keep up to date. Is it worth making
   * a table with names, descriptions, whether to match with
-  * strsmpstart, and a functions to call, so there's only one
+  * strsmpstart, and functions to call, so there's only one
   * place to maintain? -RD */
 }
 
