@@ -348,7 +348,8 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
   }
   status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
                                    id_digest);
-  result |= (status_by_digest->status & ~FP_NAMED);
+  if (status_by_digest)
+    result |= (status_by_digest->status & ~FP_NAMED);
 
   if (result & FP_REJECT) {
     if (msg)
