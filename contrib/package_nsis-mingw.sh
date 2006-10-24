@@ -25,7 +25,7 @@ cp /usr/local/ssl/lib/libssl.a win_tmp/bin/
 cp contrib/tor.ico win_tmp/bin/
 
 # YOU must copy torbutton xpi into the contrib dir
-cp contrib/torbutton-1.0.4-fx+tb.xpi win_tmp/bin/
+#cp contrib/torbutton-1.0.4-fx+tb.xpi win_tmp/bin/
 
 # There is no man2html in mingw.  
 # Maybe we should add this into make dist instead.

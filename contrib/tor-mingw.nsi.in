@@ -120,18 +120,18 @@ Section "Documents" Docs
    File "..\LICENSE"
 SectionEnd
 
-Section "TorButton for FireFox" Torbutton
-   SetOutPath $INSTDIR
-   File "${BIN}\torbutton-1.0.4-fx+tb.xpi"
-
-   ReadRegStr $1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe" "Path"
-   StrCmp $1 "" +2 0 ; if Path is empty or null, then skip to an error, otherwise proceed
-	Exec '"$1firefox.exe" -install-global-extension "$INSTDIR\torbutton-1.0.4-fx+tb.xpi"'
-	DetailPrint "Torbutton installed"
-	Goto +2
-	MessageBox MB_OK|MB_ICONSTOP "FireFox wasn't found on your system.  Not installing Torbutton."
-	DetailPrint "Firefox NOT found."
-SectionEnd
+;Section "TorButton for FireFox" Torbutton
+;   SetOutPath $INSTDIR
+;   File "${BIN}\torbutton-1.0.4-fx+tb.xpi"
+;
+;   ReadRegStr $1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe" "Path"
+;   StrCmp $1 "" +2 0 ; if Path is empty or null, then skip to an error, otherwise proceed
+;	Exec '"$1firefox.exe" -install-global-extension "$INSTDIR\torbutton-1.0.4-fx+tb.xpi"'
+;	DetailPrint "Torbutton installed"
+;	Goto +2
+;	MessageBox MB_OK|MB_ICONSTOP "FireFox wasn't found on your system.  Not installing Torbutton."
+;	DetailPrint "Firefox NOT found."
+;SectionEnd
 
 SubSection /e "Shortcuts" Shortcuts
 
