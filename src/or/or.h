@@ -2273,7 +2273,6 @@ void connection_start_writing(connection_t *conn);
 void directory_all_unreachable(time_t now);
 void directory_info_has_arrived(time_t now, int from_cache);
 
-int control_signal_check(int the_signal);
 void control_signal_act(int the_signal);
 void handle_signals(int is_parent);
 void tor_cleanup(void);

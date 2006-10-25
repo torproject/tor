@@ -1252,6 +1252,18 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
       return 0;
     } else {
       sig = (uint8_t)body[0];
+      switch (sig)
+      {
+      case 1: sig = SIGHUP; break;
+      case 2: sig = SIGINT; break;
+      case 10: sig = SIGUSR1; break;
+      case 12: sig = SIGUSR2; break;
+      case 15: sig = SIGTERM; break;
+      case SIGNEWNYM: break;
+      default:
+        send_control0_error(conn, ERR_SYNTAX, "Unrecognized signal number.");
+        return 0;
+      }
     }
   } else {
     int n = 0;
@@ -1281,17 +1293,9 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
       return 0;
   }
 
-  if (!control_signal_check(sig)) {
-    if (STATE_IS_V0(conn->_base.state))
-      send_control0_error(conn, ERR_SYNTAX, "Unrecognized signal number.");
-    else
-      connection_write_str_to_buf("551 Unable to act on signal\r\n",
-                                  conn);
-  } else {
-    /* Send DONE first, in case the signal makes us shut down. */
-    send_control_done(conn);
-    control_signal_act(sig);
-  }
+  /* Send DONE first, in case the signal makes us shut down. */
+  send_control_done(conn);
+  control_signal_act(sig);
   return 0;
 }
 

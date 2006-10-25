@@ -1229,24 +1229,6 @@ do_main_loop(void)
   }
 }
 
-/* DOCDOC */
-int
-control_signal_check(int the_signal)
-{
-  switch (the_signal)
-    {
-    case 1:
-    case 2:
-    case 10:
-    case 12:
-    case 15:
-    case SIGNEWNYM:
-      return 1;
-    default:
-      return 0;
-    }
-}
-
 /** Used to implement the SIGNAL control command: if we accept
  * <b>the_signal</b> as a remote pseudo-signal, act on it. */
 /* We don't re-use catch() here because:

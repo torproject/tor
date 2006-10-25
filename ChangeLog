@@ -64,6 +64,8 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       requests will now get an error rather than timing out.
     - Resolve two memory leaks when rebuilding the on-disk router cache
       (reported by fookoowa).
+    - Controller signals now work on non-Unix platforms that don't define
+      SIGUSR1 and SIGUSR2 the way we expect.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07
