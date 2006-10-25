@@ -130,8 +130,15 @@ and will probably not be needed in 2007, but they must be designed in 2007 if
 they are to be deployed in 2008.
 
 \subsubsection{Relay incentives}
-
-\tmp{We need incentives to relay.}
+To support more users on the network, we need to get more servers.  So far,
+we've relied on volunteerism to attract server operators, and so far it's
+served us well.  But in the long run, we need to {\bf design incentices for
+  users to run servers} and relay traffic for others.  Most obviously, we
+could try to build the network so that servers offered improved service for
+other servers, but we would need to do so without weakening anonymity and
+making it obvious which connections originate from users running servers.  We
+have some preliminary designs here~\cite{challenges}, but need to perform
+some more research to make sure they would be safe and effective.
 
 \subsection{Portability}
 Our {\bf Windows implementation}, though much improved, continues to lag
@@ -426,11 +433,19 @@ should create the necessary infrastructure for us to produce binaries for all
 major packages within an hour or so of source release.
 
 \subsection{Improved metrics}
-\tmp{We'd like to know how the network is doing.}
+We need a way to {\bf measure the network's health, capacity, and degree of
+  utilization}.  Our current means for doing this are ad hoc and not
+completely accurate.
 
-\tmp{We'd like to know where users are in an even less intrusive way.}
+We need better ways to {\bf tell which countries are users are coming from,
+  and how many there are}.  A good perspective of the network helps us
+allocate resources and identify trouble spots, but our current approaches
+will work less and less well as we make it harder for adversaries to
+enumerate users.  We'll probably want to shift to a smarter, statistical
+approach rather than our current ``count and extrapolate'' method.
 
-\tmp{We'd like to know how much of the network is getting used.}
+% \tmp{We'd like to know how much of the network is getting used.}
+% I think this is covered above -NM
 
 \subsection{Controller library}
 We've done lots of design and development on our controller interface, which
@@ -460,19 +475,26 @@ obviate innocent reasons for doing so by designing a {\bf narrowly-targeted Tor
 plead incompetence.
 
 \subsection{All-in-one bundle}
-\tmp{a.k.a ``Torpedo'', but rename this.}
+We need a well-tested, well-documented bundle of Tor and supporting
+applications configured to use it correctly.  We have an intial
+implementation well under way, but it will need additional work in
+identifying requisite Firefox extensions, identifying security threats,
+improving user experience, and so on.  This will need significantly more work
+before it's ready for a general public release.
 
 \subsection{LiveCD Tor}
-\tmp{a.k.a anonym.os done right}
+We need a nice bootable livecd containing a minimal OS and a few applications
+configured to use it correctly.  The Anonym.OS project demonstrated that this
+is quite feasible, but their project is not currently maintained.
 
 \subsection{A Tor client in a VM}
 \tmp{a.k.a JanusVM} which is quite related to the firewall-level deployment
-section below
+section below .  Roger, can you write this?
 
-\subsection{Interface improvements}
-\tmp{Allow controllers to manipulate server status.}
+%\subsection{Interface improvements}
+%\tmp{Allow controllers to manipulate server status.}
 % (Why is this in the User Experience section?) -RD
-
+% I think it's better left to a generic ``make controller iface bettter'' item.
 
 \subsection{Firewall-level deployment}
 Another useful deployment mode for some users is using {\bf Tor in a firewall
@@ -488,12 +510,21 @@ This is an area where {\bf deployment via a livecd}, or an installation
 targetted at specialized home routing hardware, could be useful.
 
 \subsection{Assess software and configurations for anonymity risks}
+Right now, users and packagers are more or less on their own when selecting
+firefox extensions.  We should {\bf assemble a recommended list of browser
+  extensions} through experiment, and include this in the application bundles
+we distribute.
 
-\tmp{which firefox extensions to use, and which to avoid. best practices for
-how to torify each class of application.}
+We should also describe {\bf best practices for using Tor with each class of
+  application}.  \tmp{Roger, say more}
 
-\tmp{clean up our own bundled software:
-E.g. Merge the good features of Foxtor into Torbutton}
+The Foxtor and Torbutton extensions serve similar purposes; we should pick a
+favorite, and merge in the useful features of the other.
+
+%\tmp{clean up our own bundled software:
+%E.g. Merge the good features of Foxtor into Torbutton}
+%
+% What else did you have in mind? -NM
 
 \subsection{Localization}
 Right now, most of our user-facing code is internationalized.  We need to
@@ -513,7 +544,8 @@ translators only need to use a single tool to translate the whole Tor suite.
 \section{Support}
 
 \tmp{would be nice to set up some actual user support infrastructure, especially
-focusing on server operators and on coordinating volunteers.}
+focusing on server operators and on coordinating volunteers.} Roger, can you
+write this ?  I don't know what ``user support infrastructure'' is.
 
 
 \section{Documentation}
@@ -542,7 +574,11 @@ without regard to the effect of their choices on server resources.
 
 \subsection{Missing user documentation}
 
-\tmp{Discoursive and comprehensive docs}
+Our documentation falls into two broad categories: some is `discoursive' and
+explains in detail why users should take certain actions, and other
+documenation is `comprehensive' and describes all of Tor's features.  Right
+now, we have no document that is both deep, readable, and thorough.  We
+should correct this by identifying missing spots in our design.
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
