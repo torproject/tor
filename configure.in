@@ -157,7 +157,6 @@ if test $bwin32 = true; then
 AC_DEFINE(MS_WINDOWS, 1, [Define to 1 if we are building for Windows.])
 fi
 
-
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
@@ -166,6 +165,17 @@ AC_SEARCH_LIBS(inet_aton, [resolv])
 if test $enable_threads = "yes"; then
   AC_SEARCH_LIBS(pthread_create, [pthread])
   AC_SEARCH_LIBS(pthread_detach, [pthread])
+fi
+
+dnl -------------------------------------------------------------------
+dnl Check for functions before libevent, since libevent-1.2 apparently
+dnl exports strlcpy without defining it in a header.
+
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull ftello getaddrinfo localtime_r gmtime_r memmem strtok_r)
+
+if test $enable_threads = "yes"; then
+  AC_CHECK_HEADERS(pthread.h)
+  AC_CHECK_FUNCS(pthread_create)
 fi
 
 dnl ------------------------------------------------------
@@ -277,6 +287,9 @@ if test $ac_cv_libevent_linker_option != '(none)' ; then
    LDFLAGS="$ac_cv_libevent_linker_option $LDFLAGS"
 fi
 fi
+
+dnl Now check for particular libevent functions.
+AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
@@ -468,13 +481,6 @@ AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
 [#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif])
-
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull ftello getaddrinfo localtime_r gmtime_r event_get_version event_get_method event_set_log_callback memmem strtok_r)
-
-if test $enable_threads = "yes"; then
-  AC_CHECK_HEADERS(pthread.h)
-  AC_CHECK_FUNCS(pthread_create)
-fi
 
 if test x$transparent = xtrue ; then
    transparent_ok=0
