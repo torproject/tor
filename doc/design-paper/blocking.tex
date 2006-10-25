@@ -574,8 +574,9 @@ for all transactions (and how to know that the pages you get have not
 been modified by the local attacker) to how to learn about a working
 bridge relay.
 
-There's another catch though. We need to make sure that simply connecting
-to a bridge relay doesn't set off red flags.
+There's another catch though. We need to make sure that the network
+traffic we generate by simply connecting to a bridge relay doesn't stand
+out too much.
 
 %The following section describes ways to bootstrap knowledge of your first
 %bridge relay, and ways to maintain connectivity once you know a few
@@ -633,7 +634,7 @@ in the certificate headers, yet it remains secure. Should we replace
 it with blank entries for each field, or should we research the common
 values that Firefox and Internet Explorer use and try to imitate those?
 
-Lastly, Tor's TLS handshake involves sending two certificates in each
+Worse, Tor's TLS handshake involves sending two certificates in each
 direction: one certificate contains the self-signed identity key for
 the router, and the second contains the current link key, signed by the
 identity key. We use these to authenticate that we're talking to the right
@@ -645,6 +646,20 @@ certificates we present for each side.
 % Nick, I need help with the above paragraph. What are the two certs
 % for really, and how much work would it be to start acting like a normal
 % browser? -RD
+
+Lastly, what if the adversary starts observing the network traffic even
+more closely? Even if our TLS handshake looks innocent, our traffic timing
+and volume still look different than a user making a secure web connection
+to his bank. The same techniques used in the growing trend to build tools
+to recognize encrypted Bittorrent traffic~\cite{bt-traffic-shaping}
+could be used to identify Tor communication and recognize bridge
+relays. Rather than trying to look like encrypted web traffic, we may be
+better off trying to blend with some other encrypted network protocol. The
+first step is to compare typical network behavior for a Tor client to
+typical network behavior for various other protocols. This statistical
+cat-and-mouse game is made more complex by the fact that Tor transports a
+variety of protocols, and we'll want to automatically handle web browsing
+differently from, say, instant messaging.
 
 \subsection{Identity keys as part of addressing information}
 
