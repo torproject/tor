@@ -147,6 +147,7 @@
 /* Controller signals start at a high number so we don't
  * conflict with system-defined signals. */
 #define SIGNEWNYM 129
+#define SIGCLEARDNSCACHE 130
 
 #if (SIZEOF_CELL_T != 0)
 /* On Irix, stdlib.h defines a cell_t type, so we need to make sure

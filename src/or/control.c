@@ -1283,6 +1283,8 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
       sig = SIGTERM;
     else if (!strcasecmp(s, "NEWNYM"))
       sig = SIGNEWNYM;
+    else if (!strcasecmp(s, "CLEARDNSCACHE"))
+      sig = SIGCLEARDNSCACHE;
     else {
       connection_printf_to_buf(conn, "552 Unrecognized signal code \"%s\"\r\n",
                                s);

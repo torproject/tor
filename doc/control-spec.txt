@@ -242,7 +242,8 @@ $Id$
      "SIGNAL" SP Signal CRLF
 
      Signal = "RELOAD" / "SHUTDOWN" / "DUMP" / "DEBUG" / "HALT" /
-              "HUP" / "INT" / "USR1" / "USR2" / "TERM" / "NEWNYM"
+              "HUP" / "INT" / "USR1" / "USR2" / "TERM" / "NEWNYM" /
+              "CLEARDNSCACHE"
 
   The meaning of the signals are:
 
@@ -254,8 +255,10 @@ $Id$
                    circuits. (like USR1)
       DEBUG     -- Debug: switch all open logs to loglevel debug. (like USR2)
       HALT      -- Immediate shutdown: clean up and exit now. (like TERM)
+      CLEARDNSCACHE -- Forget the client-side cached IPs for all hostnames.
       NEWNYM    -- Switch to clean circuits, so new application requests
-                   don't share any circuits with old ones.
+                   don't share any circuits with old ones.  Also clears
+                   the client-side DNS cache.
 
   The server responds with "250 OK" if the signal is recognized (or simply
   closes the socket if it was asked to close immediately), or "552

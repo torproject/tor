@@ -1260,6 +1260,9 @@ control_signal_act(int the_signal)
     case SIGNEWNYM:
       signal_callback(0,0,(void*)(uintptr_t)SIGNEWNYM);
       break;
+    case SIGCLEARDNSCACHE:
+      signal_callback(0,0,(void*)(uintptr_t)SIGCLEARDNSCACHE);
+      break;
     default:
       log_warn(LD_BUG, "Unrecognized signal number %d.", the_signal);
       break;
@@ -1318,6 +1321,9 @@ signal_callback(int fd, short events, void *arg)
 #endif
     case SIGNEWNYM:
       circuit_expire_all_dirty_circs();
+      addressmap_clear_transient();
+      break;
+    case SIGCLEARDNSCACHE:
       addressmap_clear_transient();
       break;
   }
