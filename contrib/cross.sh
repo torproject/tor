@@ -50,10 +50,14 @@
 # disable the platform-specific tests in configure
 export CROSS_COMPILE=yes
 
+# for error conditions
+EXITVAL=0
+
 if [ ! -f configure ]
 then
-  echo "Please run this script from the root of the Tor distribution."
-  exit -1
+  echo "Please run this script from the root of the Tor distribution"
+  echo "and ensure that autogen.sh has been run."
+  EXITVAL=-1
 fi
 
 if [ -z $PREFIX ]
@@ -61,7 +65,7 @@ then
   echo "You must define \$PREFIX since you are cross-compiling."
   echo "Select a non-system location (i.e. /tmp/tor-cross):"
   echo "	export PREFIX=/tmp/tor-cross"
-  exit -1
+  EXITVAL=-1
 fi
 
 if [ -z $CROSSPATH ]
@@ -69,7 +73,7 @@ then
   echo "You must define the location of your cross-compiler's"
   echo "directory using \$CROSSPATH; for example,"
   echo "	export CROSSPATH=/opt/cross/staging_dir_mipsel/bin"
-  exit -1
+  EXITVAL=-1
 fi
 
 if [ -z $ARCH_PREFIX ]
@@ -78,14 +82,14 @@ then
   echo "if you normally cross-compile applications using"
   echo "mipsel-linux-uclibc-gcc, you would set \$ARCH_PREFIX like so:"
   echo "	export ARCH_PREFIX=mipsel-linux-uclibc-"
-  exit -1
+  EXITVAL=-1
 fi
 
 if [ -z $HOST ]
 then
   echo "You must specify a target processor with \$HOST; for example:"
   echo "	export HOST=mipsel-unknown-elf"
-  exit -1
+  EXITVAL=-1
 fi
 
 if [ -z $BUILD ]
@@ -94,7 +98,13 @@ then
   echo "	export BUILD=i686-pc-linux-gnu"
   echo "If you wish to let configure autodetect the host, set \$BUILD to 'auto':"
   echo "	export BUILD=auto"
-  exit -1
+  EXITVAL=-1
+fi
+
+if [ $EXITVAL -ne 0 ]
+then
+  echo "Remember, you can hard-code these values in cross.sh if needed."
+  exit $EXITVAL
 fi
 
 # clean up any existing object files
@@ -111,10 +121,14 @@ export CC=${ARCH_PREFIX}gcc
 if [ $BUILD == "auto" ]
 then
   ./configure \
+	--enable-debug \
+	--enable-eventdns \
 	--prefix=$PREFIX \
 	--host=$HOST
 else
   ./configure \
+	--enable-debug \
+	--enable-eventdns \
 	--prefix=$PREFIX \
 	--host=$HOST \
 	--build=$BUILD
@@ -134,6 +148,16 @@ fi
 
 make
 
+# has a problem occurred?
+if [ $? -ne 0 ]
+then
+  echo ""
+  echo "A problem has been detected with make."
+  echo "Please check the output above and rerun make."
+  echo ""
+  exit -1
+fi
+
 # if $STRIP has length (i.e. STRIP=yes), strip the binaries
 if [ ! -z $STRIP ]
 then
@@ -147,4 +171,3 @@ echo ""
 echo "Tor should be compiled at this point.  Now run 'make install' to"
 echo "install to $PREFIX"
 echo ""
-
