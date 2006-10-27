@@ -32,6 +32,9 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       can tell which events and features are supported.
     - A new CLEARDNSCACHE signal to allow controllers to clear the
       client-side DNS cache without expiring circuits.
+    - When the controller does a "GETINFO network-status", tell it about even
+      those routers whose descriptors are very old, and use long nicknames
+      where appropriate.
 
   o Security bugfixes:
     - When the user sends a NEWNYM signal, clear the client-side DNS

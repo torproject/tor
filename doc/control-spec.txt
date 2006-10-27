@@ -369,7 +369,10 @@ $Id$
 
     "network-status" -- a space-separated list of all known OR identities.
       This is in the same format as the router-status line in directories;
-      see tor-spec.txt for details.
+      see dir-spec-v1.txt section 3 for details.  (If VERBOSE_NAMES is
+      enabled, the output will not conform to dir-spec-v1.txt; instead, the
+      result will be a space-separated list of LongName, each preceded by a
+      "!" if it is believed to be not running.)
 
     "addr-mappings/all"
     "addr-mappings/config"

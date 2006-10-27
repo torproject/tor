@@ -566,7 +566,6 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   }
 }
 
-
 static INLINE int
 bool_neq(int a, int b)
 {
@@ -731,9 +730,13 @@ dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
 /** Based on the routerinfo_ts in <b>routers</b>, allocate the
  * contents of a router-status line, and store it in
  * *<b>router_status_out</b>.  Return 0 on success, -1 on failure.
+ *
+ * If for_controller is true, include the routers with very old descriptors.
+ * If for_controller is &gt;1, use the verbose nickname format.
  */
 int
-list_server_status(smartlist_t *routers, char **router_status_out)
+list_server_status(smartlist_t *routers, char **router_status_out,
+                   int for_controller)
 {
   /* List of entries in a router-status style: An optional !, then an optional
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
@@ -751,8 +754,16 @@ list_server_status(smartlist_t *routers, char **router_status_out)
       /* Update router status in routerinfo_t. */
       ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
     }
-    if (ri->cache_info.published_on >= cutoff)
+    if (for_controller == 1 || ri->cache_info.published_on >= cutoff)
       smartlist_add(rs_entries, list_single_server_status(ri, ri->is_running));
+    else if (for_controller > 2) {
+      char name_buf[MAX_VERBOSE_NICKNAME_LEN+2];
+      char *cp = name_buf;
+      if (!ri->is_running)
+        *cp++ = '!';
+      router_get_verbose_nickname(cp, ri);
+      smartlist_add(rs_entries, tor_strdup(name_buf));
+    }
   });
 
   *router_status_out = smartlist_join_strings(rs_entries, " ", 0, NULL);
@@ -824,7 +835,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   tor_assert(dir_out);
   *dir_out = NULL;
 
-  if (list_server_status(rl->routers, &router_status))
+  if (list_server_status(rl->routers, &router_status, 0))
     return -1;
 
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
@@ -1198,7 +1209,7 @@ generate_runningrouters(void)
   size_t identity_pkey_len;
   routerlist_t *rl = router_get_routerlist();
 
-  if (list_server_status(rl->routers, &router_status)) {
+  if (list_server_status(rl->routers, &router_status, 0)) {
     goto err;
   }
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,

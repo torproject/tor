@@ -2189,7 +2189,8 @@ char *dirserver_getinfo_unregistered(const char *question);
 void dirserv_free_descriptors(void);
 int dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
                                                    time_t now);
-int list_server_status(smartlist_t *routers, char **router_status_out);
+int list_server_status(smartlist_t *routers, char **router_status_out,
+                       int for_controller);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key,
                                      int complete);
