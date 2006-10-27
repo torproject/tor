@@ -3078,7 +3078,7 @@ options_init_logs(or_options_t *options, int validate_only)
       if (!validate_only)
         add_syslog_log(levelMin, levelMax);
 #else
-      log_warn(LD_CONFIG, "Syslog is not supported in this compilation.");
+      log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");
 #endif
     } else {
       log_warn(LD_CONFIG, "Unrecognized log type %s",
