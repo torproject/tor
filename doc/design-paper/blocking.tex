@@ -305,7 +305,7 @@ Existing commercial anonymity solutions (like Anonymizer.com) are based
 on a set of single-hop proxies. In these systems, each user connects to
 a single proxy, which then relays the user's traffic. These public proxy
 systems are typically characterized by two features: they control and
-operator the proxies centrally, and many different users get assigned
+operate the proxies centrally, and many different users get assigned
 to each proxy.
 
 In terms of the relay component, single proxies provide weak security
@@ -343,7 +343,8 @@ Access control systems on the proxy let them provide service only to
 users with certain characteristics, such as paying customers or people
 from certain IP address ranges.
 
-Discovery despite a government-level firewall is a complex and unsolved
+Discovery in the face of a government-level firewall is a complex and
+unsolved
 topic, and we're stuck in this same arms race ourselves; we explore it
 in more detail in Section~\ref{sec:discovery}. But first we examine the
 other end of the spectrum --- getting volunteers to run the proxies,
@@ -413,7 +414,8 @@ first introduction into the Tor network.
 
 \subsection{JAP}
 
-Stefan's WPES paper is probably the closest related work, and is
+Stefan's WPES paper~\cite{koepsell:wpes2004} is probably the closest
+related work, and is
 the starting point for the design in this paper.
 
 \subsection{steganography}
@@ -446,7 +448,7 @@ perceived to be for experts only, and thus not worth attention yet. The
 more subtle variant on this theory is that we've positioned Tor in the
 public eye as a tool for retaining civil liberties in more free countries,
 so perhaps blocking authorities don't view it as a threat. (We revisit
-this idea when we consider whether and how to publicize a a Tor variant
+this idea when we consider whether and how to publicize a Tor variant
 that improves blocking-resistance --- see Section~\ref{subsec:publicity}
 for more discussion.)
 
@@ -501,7 +503,7 @@ Tor client; but we leave this discussion for Section~\ref{sec:security}.
 %to an alternate directory authority, and for controller commands
 %that will do this cleanly.
 
-\subsection{The bridge directory authority (BDA)}
+\subsection{The bridge directory authority}
 
 How do the bridge relays advertise their existence to the world? We
 introduce a second new component of the design: a specialized directory
@@ -559,6 +561,7 @@ track them that way.
 %individually.
 
 \subsection{Putting them together}
+\label{subsec:relay-together}
 
 If a blocked user knows the identity keys of a set of bridge relays, and
 he has correct address information for at least one of them, he can use
@@ -613,7 +616,7 @@ relay command to establish an internal connection to its directory cache.
 
 Therefore a better way to summarize a bridge's address is by its IP
 address and ORPort, so all communications between the client and the
-bridge will the ordinary TLS. But there are other details that need
+bridge will use ordinary TLS. But there are other details that need
 more investigation.
 
 What port should bridges pick for their ORPort? We currently recommend
@@ -621,13 +624,14 @@ that they listen on port 443 (the default HTTPS port) if they want to
 be most useful, because clients behind standard firewalls will have
 the best chance to reach them. Is this the best choice in all cases,
 or should we encourage some fraction of them pick random ports, or other
-ports commonly permitted on firewalls like 53 (DNS) or 110 (POP)? We need
+ports commonly permitted through firewalls like 53 (DNS) or 110
+(POP)? We need
 more research on our potential users, and their current and anticipated
 firewall restrictions.
 
 Furthermore, we need to look at the specifics of Tor's TLS handshake.
 Right now Tor uses some predictable strings in its TLS handshakes. For
-example, it sets the X.509 organizationName field to "Tor", and it puts
+example, it sets the X.509 organizationName field to ``Tor'', and it puts
 the Tor server's nickname in the certificate's commonName field. We
 should tweak the handshake protocol so it doesn't rely on any details
 in the certificate headers, yet it remains secure. Should we replace
@@ -678,8 +682,9 @@ him a bad connection each time, there's nothing we can do.)
 What about anonymity-breaking attacks from observing traffic, if the
 blocked user doesn't start out knowing the identity key of his intended
 bridge? The vulnerabilities aren't so bad in this case either ---
-the adversary could do the same attacks just by monitoring the network
+the adversary could do similar attacks just by monitoring the network
 traffic.
+% cue paper by steven and george
 
 Once the Tor client has fetched the bridge's server descriptor, it should
 remember the identity key fingerprint for that bridge relay. Thus if
@@ -703,13 +708,59 @@ unfortunate fact is that we have no magic bullet for discovery. We're
 in the same arms race as all the other designs we described in
 Section~\ref{sec:related}.
 
-3 options:
+In this section we describe four approaches to adding discovery
+components for our design, in order of increasing complexity. Note that
+we can deploy all four schemes at once --- bridges and blocked users can
+use the discovery approach that is most appropriate for their situation.
 
-- independent proxies. just tell your friends.
+\subsection{Independent bridges, no central discovery}
+
+The first design is simply to have no centralized discovery component at
+all. Volunteers run bridges, and we assume they have some blocked users
+in mind and communicate their address information to them out-of-band
+(for example, through gmail). This design allows for small personal
+bridges that have only one or a handful of users in mind, but it can
+also support an entire community of users. For example, Citizen Lab's
+upcoming Psiphon single-hop proxy tool~\cite{psiphon} plans to use this
+\emph{social network} approach as its discovery component.
+
+There are some variations on this design. In the above example, the
+operator of the bridge seeks out and informs each new user about his
+bridge's address information and/or keys. Another approach involves
+blocked users introducing new blocked users to the bridges they know.
+That is, somebody in the blocked area can pass along a bridge's address to
+somebody else they trust. This scheme brings in appealing but complex game
+theory properties: the blocked user making the decision has an incentive
+only to delegate to trustworthy people, since an adversary who learns
+the bridge's address and filters it makes it unavailable for both of them.
+
+\subsection{Families of bridges}
+
+Because the blocked users are running our software too, we have many
+opportunities to improve usability or robustness. Our second design builds
+on the first by encouraging volunteers to run several bridges at once
+(or coordinate with other bridge volunteers), such that some fraction
+of the bridges are likely to be available at any given time.
+
+The blocked user's Tor client could periodically fetch an updated set of
+recommended bridges from any of the working bridges. Now the client can
+learn new additions to the bridge pool, and can expire abandoned bridges
+or bridges that the adversary has blocked, without the user ever needing
+to care. To simplify maintenance of the community's bridge pool, rather
+than mirroring all of the information at each bridge, each community
+could instead run its own bridge directory authority (accessed via the
+available bridges),
+
+\subsection{Social networks with directory-side support}
+
+In the above designs, 
+
+- social network scheme, with accounts and stuff.
+
+
 
 - public proxies. given out like circumventors. or all sorts of other rate limiting ways.
 
-- social network scheme, with accounts and stuff.
 
 
 
@@ -797,12 +848,12 @@ Users can establish reputations, perhaps based on social network
 connectivity, perhaps based on not getting their bridge relays blocked,
 
 Probably the most critical lesson learned in past work on reputation
-systems in privacy-oriented environments~\cite{p2p-econ} is the need for
+systems in privacy-oriented environments~\cite{rep-anon} is the need for
 verifiable transactions. That is, the entity computing and advertising
 reputations for participants needs to actually learn in a convincing
 way that a given transaction was successful or unsuccessful.
 
-(Lesson from designing reputation systems~\cite{p2p-econ}: easy to
+(Lesson from designing reputation systems~\cite{rep-anon}: easy to
 reward good behavior, hard to punish bad behavior.
 
 \subsection{How to allocate bridge addresses to users}
@@ -915,9 +966,9 @@ solution though.
 
 Should bridge users sometimes send bursts of long-range drop cells?
 
-\subsection{Anonymity effects from becoming a bridge relay}
+\subsection{Anonymity effects from acting as a bridge relay}
 
-Against some attacks, becoming a bridge relay can improve anonymity. The
+Against some attacks, relaying traffic for others can improve anonymity. The
 simplest example is an attacker who owns a small number of Tor servers. He
 will see a connection from the bridge, but he won't be able to know
 whether the connection originated there or was relayed from somebody else.
@@ -943,7 +994,7 @@ willing to relay will allow this sort of attacker to determine if it's
 being used as a bridge but not whether it is adding traffic of its own.
 
 It is an open research question whether the benefits outweigh the risks. A
-lot of the decision rests on which the attacks users are most worried
+lot of the decision rests on which attacks the users are most worried
 about. For most users, we don't think running a bridge relay will be
 that damaging.
 
@@ -955,7 +1006,8 @@ always reasonable.
 
 For Internet cafe Windows computers that let you attach your own USB key,
 a USB-based Tor image would be smart. There's Torpark, and hopefully
-there will be more options down the road. Worries about hardware or
+there will be more thoroughly analyzed options down the road. Worries
+about hardware or
 software keyloggers and other spyware --- and physical surveillance.
 
 If the system lets you boot from a CD or from a USB key, you can gain
@@ -1088,7 +1140,7 @@ Bridge users without Tor clients
 
 Bridge relays could always open their socks proxy. This is bad though,
 firstly
-because they learn the bridge users' destinations, and secondly because
+because bridges learn the bridge users' destinations, and secondly because
 we've learned that open socks proxies tend to attract abusive users who
 have no idea they're using Tor.
 
@@ -1098,12 +1150,25 @@ that require authentication and then pass the requests into Tor. This
 approach is probably a good way to help bootstrap the Psiphon network,
 if one of its barriers to deployment is a lack of volunteers willing
 to exit directly to websites. But it clearly drops some of the nice
-anonymity features Tor provides.
+anonymity and security features Tor provides.
 
 \subsection{Publicity attracts attention}
 \label{subsec:publicity}
 
-both good and bad.
+Many people working on this field want to publicize the existence
+and extent of censorship concurrently with the deployment of their
+circumvention software. The easy reason for this two-pronged push is
+to attract volunteers for running proxies in their systems; but in many
+cases their main goal is not to build the software, but rather to educate
+the world about the censorship. The media also tries to do its part by
+broadcasting the existence of each new circumvention system.
+
+But at the same time, this publicity attracts the attention of the
+censors. We can slow down the arms race by not attracting as much
+attention, and just spreading by word of mouth. If our goal is to
+establish a solid social network of bridges and bridge users before
+the adversary gets involved, does this attention tradeoff work to our
+advantage?
 
 \subsection{The Tor website: how to get the software}
 
@@ -1125,6 +1190,8 @@ internal bridges will remain available, can maintain reachability with
 the outside world, etc.
 
 Hidden services as bridges. Hidden services as bridge directory authorities.
+
+\section{Conclusion}
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
@@ -1164,7 +1231,7 @@ be a thing that human interacts with.
 
 rate limiting mechanisms:
 energy spent. captchas. relaying traffic for others?
-send us $10, we'll give you an account
+send us \$10, we'll give you an account
 
 so how do we reward people for being good?
 
