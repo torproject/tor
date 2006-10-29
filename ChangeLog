@@ -1,4 +1,4 @@
-Changes in version 0.1.1.25 - 2006-10-?? [ongoing]
+Changes in version 0.1.1.25 - 2006-11-?? [ongoing]
   o Major bugfixes:
     - When a client asks us to resolve (not connect to) an address,
       and we have a cached answer, give them the cached answer.
@@ -24,6 +24,7 @@ Changes in version 0.1.1.25 - 2006-10-?? [ongoing]
     - Avoid possibility of controller-triggered crash when misusing
       certain commands from a v0 controller on platforms that do not
       handle printf("%s",NULL) gracefully.
+    - Avoid infinite loop on unexpected controller input.
 
 
 Changes in version 0.1.1.24 - 2006-09-29

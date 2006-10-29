@@ -1232,7 +1232,7 @@ find_char_on_buf(buf_t *buf, char *start, size_t len, char c)
   size_t len_rest;
   char *cp;
   _split_range(buf, start, &len, &len_rest);
-  cp = memchr(buf->cur, c, len);
+  cp = memchr(start, c, len);
   if (cp || !len_rest)
     return cp;
   return memchr(buf->mem, c, len_rest);
