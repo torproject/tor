@@ -1,12 +1,12 @@
 Changes in version 0.1.2.3-alpha - 2006-10-??
   o Minor features:
-    - If most authorities set a (newly defined) BadExit flag for a server,
-      do not consider it as a general-purpose exit.  Only consider
-      authorities that advertise themselves as listing bad exits.
+    - If most authorities set a BadExit flag for a server, do not consider
+      it as a general-purpose exit. Only consider authorities that
+      advertise themselves as listing bad exits.
     - Start making it possible for servers to publish less often: never
       discard a descriptor simply for being too old until either it is
-      recommended by no authorities, or until we get a better one for the
-      same router.  Make caches consider retaining old recommended
+      recommended by no authorities, or until we get a better one for
+      the same router. Make caches consider retaining old recommended
       routers for even longer.
     - Directory servers now provide 'Pragma: no-cache' and 'Expires'
       headers for content, so that we can work better in the presence of
@@ -24,17 +24,17 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       controller about why a remote OR told us to close a circuit.
     - There's now a GETINFO ns/... field so that controllers can ask Tor
       about the current state of a router.
-    - Stream events also have REASON and REMOTE_REASON fields, working much
-      like those for circuit events.
-    - NS events to inform a controller when our opinion of a router's status
-      has changed.
+    - Stream events also have REASON and REMOTE_REASON fields, working
+      much like those for circuit events.
+    - NS events to inform a controller when our opinion of a router's
+      status has changed.
     - Add a GETINFO events/names and GETINFO features/names so controllers
       can tell which events and features are supported.
     - A new CLEARDNSCACHE signal to allow controllers to clear the
       client-side DNS cache without expiring circuits.
-    - When the controller does a "GETINFO network-status", tell it about even
-      those routers whose descriptors are very old, and use long nicknames
-      where appropriate.
+    - When the controller does a "GETINFO network-status", tell it
+      about even those routers whose descriptors are very old, and use
+      long nicknames where appropriate.
 
   o Security bugfixes:
     - When the user sends a NEWNYM signal, clear the client-side DNS
@@ -42,7 +42,7 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
 
   o Minor bugfixes:
     - Change NT service functions to be loaded on demand.  This lets us
-      build with mingw without breaking Tor for Windows 98 users.
+      build with MinGW without breaking Tor for Windows 98 users.
     - Do DirPort reachability tests less often, since a single test
       chews through many circuits before giving up.
     - In the hidden service example in torrc.sample, stop recommending
@@ -55,22 +55,33 @@ Changes in version 0.1.2.3-alpha - 2006-10-??
       make them show up exactly when requested, rather than exactly when
       not requested.
     - When reporting verbose nicknames in entry_guards_getinfo(), avoid
-      printing a duplicate "$" in the keys we send.
+      printing a duplicate "$" in the keys we send (reported by mwenge).
     - Stop triggering asserts if the controller tries to extend hidden
-      service circuits.
-    - Correctly set maximum connection limit on Cygwin.
-    - Try to detect windows correctly when cross-compiling.
-    - Detect the size of the routers file correctly even if it is corrupted
-      (on systems without mmap) or not page-aligned (on systems with mmap).
-      This bug was harmless.
-    - Implement the protocol correctly by always sending a RELAY_END cell
-      when an attempt to open a stream fails.  This should make clients
-      able to find a good exit faster in some cases, since unhandleable
-      requests will now get an error rather than timing out.
+      service circuits (reported by mwenge).
+    - Correctly set maximum connection limit on Cygwin. (This time
+      for sure!)
+    - Try to detect Windows correctly when cross-compiling.
+    - Detect the size of the routers file correctly even if it is
+      corrupted (on systems without mmap) or not page-aligned (on systems
+      with mmap). This bug was harmless.
+    - Sometimes we didn't bother sending a RELAY_END cell when an attempt
+      to open a stream fails; now we do in more cases. This should
+      make clients able to find a good exit faster in some cases, since
+      unhandleable requests will now get an error rather than timing out.
     - Resolve two memory leaks when rebuilding the on-disk router cache
       (reported by fookoowa).
+    - Avoid infinite loop on unexpected controller input.
+    - Clean up minor code warnings suggested by the MIPSpro C compiler,
+      and reported by some Centos users.
     - Controller signals now work on non-Unix platforms that don't define
       SIGUSR1 and SIGUSR2 the way we expect.
+
+    - Libevent-1.2 exports, but does not define in its headers, strlcpy.
+      Try to fix this in configure.in by checking for most functions
+      before we check for libevent.
+
+    - Patch from Michael Mohr to cross.sh, so it checks more values
+      before failing, and always enables eventdns.
 
 
 Changes in version 0.1.2.2-alpha - 2006-10-07
@@ -150,7 +161,7 @@ Changes in version 0.1.2.2-alpha - 2006-10-07
       not mandatory that we use that enclave, stop wanting it.
     - When eventdns is enabled, allow multithreaded builds on NetBSD and
       OpenBSD. (We had previously disabled threads on these platforms
-      because they didn't have working thread-safe resolver functions)
+      because they didn't have working thread-safe resolver functions.)
 
   o Major bugfixes, anonymity/security:
     - If a client asked for a server by name, and there's a named server

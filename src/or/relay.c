@@ -554,7 +554,7 @@ connection_edge_end_reason_str(int reason)
   switch (reason) {
     case -1:
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "End cell arrived with length 0. Should be at least 1.");
+             "End cell arrived with length 0. Should be at least 1.");
       return "MALFORMED";
     case END_STREAM_REASON_MISC:           return "misc error";
     case END_STREAM_REASON_RESOLVEFAILED:  return "resolve failed";

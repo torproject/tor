@@ -352,7 +352,7 @@ $Id$
     "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest
       server descriptor for a given OR, NUL-terminated.
 
-    "ns/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest network
+    "ns/id/<OR identity>" or "ns/name/<OR nickname>" -- the latest network
       status info for a given OR.  Network status info is as given in
       dir-spec.txt, and reflects the current beliefs of this Tor about the
       router in question. Like directory clients, controllers MUST
@@ -954,8 +954,9 @@ $Id$
      Action is a string, and Arguments is a series of keyword=value
      pairs on the same line.
 
-     These events are always produced with EXTENDED_EVENTS and VERBOSE_NAMES;
-     see the explanations in the USEFEATURE section command for details.
+     These events are always produced with EXTENDED_EVENTS and
+     VERBOSE_NAMES; see the explanations in the USEFEATURE section
+     for details.
 
   Actions for STATUS_GENERAL severity NOTICE events can be as follows:
 

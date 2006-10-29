@@ -235,7 +235,7 @@ dirserv_load_fingerprint_file(void)
     }
     if (0==strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME)) {
       /* If you approved an OR called "unnamed", then clients will be
-       * confused.*/
+       * confused. */
       log_notice(LD_CONFIG,
                  "Authorizing a nickname '%s' is not allowed; skipping.",
                  UNNAMED_ROUTER_NICKNAME);
@@ -384,7 +384,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     if (reject_unlisted)
       return FP_REJECT;
     /* 0.1.0.2-rc was the first version that did enough self-testing that
-     * we're willing to take its word about whether it's running . */
+     * we're willing to take its word about whether it's running. */
     if (platform && !tor_version_as_new_as(platform,"0.1.0.2-rc"))
       result |= FP_INVALID;
   }
