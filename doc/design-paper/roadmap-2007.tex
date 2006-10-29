@@ -240,28 +240,34 @@ resistance.  We should workshop it with other experts in the field to get
 their ideas about how we can improve Tor's efficacy as an anti-censorship
 tool.
 
-
 \subsection{Implementation: client-side and bridges-side}
-Our anticensorship design calls for some nodes to act as ``bridges'' that can
-circumvent a national firewall, and others inside the firewall to act as pure
-clients.  This part of the design is quite clear-cut; we're probably ready to begin
-implementing it.  To implement bridges, we need only to have servers publish
-themselves as limited-availability relays to a special bridge authority if
-they judge they'd make good servers.  Clients need a flexible interface to
-learn about bridges and to act on knowledge of bridges.
+
+Our anticensorship design calls for some nodes to act as ``bridges''
+that are outside a national firewall, and others inside the firewall to
+act as pure clients.  This part of the design is quite clear-cut; we're
+probably ready to begin implementing it.  To {\bf implement bridges}, we
+need to have servers publish themselves as limited-availability relays
+to a special bridge authority if they judge they'd make good servers.
+We will also need to help provide documentation for port forwarding,
+and an easy configuration tool for running as a bridge.
+
+To {\bf implement clients}, we need to provide a flexible interface to
+learn about bridges and to act on knowledge of bridges. We also need
+to teach them how to know to use bridges as their first hop, and how to
+fetch directory information from both classes of directory authority.
 
 Clients also need to {\bf use the encrypted directory variant} added in Tor
 0.1.2.3-alpha.  This will let them retrieve directory information over Tor
-once they've got their initial bridges.
+once they've got their initial bridges. We may want to get the rest of the
+Tor user base to begin using this encrypted directory variant too, to
+provide cover.
 
 Bridges will want to be able to {\bf listen on multiple addresses and ports}
 if they can, to give the adversary more ports to block.
 
-Additionally, we should {\bf resist content-based filters}.  Though an
-adversary can't see what users are saying, some aspects of our protocol are
-easy to fingerprint {\em as} Tor.  We should correct this where possible.
+\subsection{Research: anonymity implications from becoming a bridge}
 
-\subsection{Implementation: bridge authorities}
+\subsection{Implementation: bridge authority}
 
 The design here is also reasonably clear-cut: we need to run some
 directory authorities with a slightly modified protocol that doesn't leak
@@ -269,11 +275,46 @@ the entire list of bridges. Thus users can learn up-to-date information
 for bridges they already know about, but they can't learn about arbitrary
 new bridges.
 
-\subsection{Implementation: how users discover bridges}
+\subsection{Normalizing the Tor protocol on the wire}
+Additionally, we should {\bf resist content-based filters}.  Though an
+adversary can't see what users are saying, some aspects of our protocol are
+easy to fingerprint {\em as} Tor.  We should correct this where possible.
 
+Look like Firefox; or look like nothing?
+Future research: investigate timing similarities with other protocols.
+
+\subsection{Access control for bridges}
+Design/impl: password-protecting bridges, in light of above.
+And/or more general access control.
+
+\subsection{Research: scanning-resistance}
+
+\subsection{Research/Design/Impl: how users discover bridges}
 Our design anticipates an arms race between discovery methods and censors.
 We need to begin the infrastructure on our side quickly, preferably in a
 flexible language like Python, so we can adapt quickly to censorship.
+
+phase one: personal bridges
+phase two: families of personal bridges
+phase three: more structured social network
+phase four: bag of tricks
+Research: phase five...
+
+Integration with Psiphon, etc?
+
+\subsection{Document best practices for users}
+Document best practices for various activities common among
+blocked users (e.g. WordPress use).
+
+\subsection{Research: how to know if a bridge has been blocked?}
+
+\subsection{GeoIP maintenance, and "private" user statistics}
+How to know if the whole idea is working?
+
+\subsection{Research: hiding whether the user is reading or publishing?}
+
+\subsection{Research: how many bridges do you need to know to maintain
+reachability?}
 
 \subsection{Resisting censorship of the Tor website, docs, and mirrors}
 
