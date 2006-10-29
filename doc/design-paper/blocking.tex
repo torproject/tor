@@ -724,8 +724,8 @@ also support an entire community of users. For example, Citizen Lab's
 upcoming Psiphon single-hop proxy tool~\cite{psiphon} plans to use this
 \emph{social network} approach as its discovery component.
 
-There are some variations on this design. In the above example, the
-operator of the bridge seeks out and informs each new user about his
+There are some variations on bootstrapping in this design. In the simple
+case, the operator of the bridge informs each chosen user about his
 bridge's address information and/or keys. Another approach involves
 blocked users introducing new blocked users to the bridges they know.
 That is, somebody in the blocked area can pass along a bridge's address to
@@ -734,7 +734,17 @@ theory properties: the blocked user making the decision has an incentive
 only to delegate to trustworthy people, since an adversary who learns
 the bridge's address and filters it makes it unavailable for both of them.
 
-\subsection{Families of bridges}
+Note that a central set of bridge directory authorities can still be
+compatible with a decentralized discovery process. That is, how users
+first learn about bridges is entirely up to the bridges, but the process
+of fetching up-to-date descriptors for them can still proceed as described
+in Section~\ref{sec:bridges}. Of course, creating a central place that
+knows about all the bridges may not be smart, especially if every other
+piece of the system is decentralized. Further, if a user only knows
+about one bridge and he loses track of it, it may be quite a hassle to
+reach the bridge authority. We address these concerns next.
+
+\subsection{Families of bridges, no central discovery}
 
 Because the blocked users are running our software too, we have many
 opportunities to improve usability or robustness. Our second design builds
