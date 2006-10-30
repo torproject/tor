@@ -958,7 +958,7 @@ $Id$
      VERBOSE_NAMES; see the explanations in the USEFEATURE section
      for details.
 
-  Actions for STATUS_GENERAL severity NOTICE events can be as follows:
+  Actions for STATUS_GENERAL events can be as follows:
 
      CLOCK_JUMPED
      "time=NUM"
@@ -968,8 +968,8 @@ $Id$
        also happens when the system is swapping so heavily that Tor is
        starving. The "time" argument includes the number of seconds Tor
        thinks it was unconscious for.
-       This status event is sent as WARN severity if Tor is acting
-       as a server currently.
+       This status event is sent as NOTICE severity normally, but WARN
+       severity if Tor is acting as a server currently.
 
        [Recommendation for controller: ignore it, since we don't really
        know what the user should do anyway. Hm.]
@@ -977,7 +977,7 @@ $Id$
      DIR_REACHABLE
      [not implemented yet]
 
-  Actions for STATUS_GENERAL severity WARN events can be as follows:
+  typically severity WARN events:
 
      DANGEROUS_VERSION
      "current=version"
