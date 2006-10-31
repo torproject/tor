@@ -934,6 +934,89 @@ rep_hist_circbuilding_dormant(time_t now)
   return 1;
 }
 
+static uint32_t n_signed_dir_objs = 0;
+static uint32_t n_signed_routerdescs = 0;
+static uint32_t n_verified_dir_objs = 0;
+static uint32_t n_verified_routerdescs = 0;
+static uint32_t n_onionskins_encrypted = 0;
+static uint32_t n_onionskins_decrypted = 0;
+static uint32_t n_tls_client_handshakes = 0;
+static uint32_t n_tls_server_handshakes = 0;
+static uint32_t n_rend_client_ops = 0;
+static uint32_t n_rend_mid_ops = 0;
+static uint32_t n_rend_server_ops = 0;
+
+void
+note_crypto_pk_op(pk_op_t operation)
+{
+  switch (operation)
+    {
+    case SIGN_DIR:
+      n_signed_dir_objs++;
+      break;
+    case SIGN_RTR:
+      n_signed_routerdescs++;
+      break;
+    case VERIFY_DIR:
+      n_verified_dir_objs++;
+      break;
+    case VERIFY_RTR:
+      n_verified_routerdescs++;
+      break;
+    case ENC_ONIONSKIN:
+      n_onionskins_encrypted++;
+      break;
+    case DEC_ONIONSKIN:
+      n_onionskins_decrypted++;
+      break;
+    case TLS_HANDSHAKE_C:
+      n_tls_client_handshakes++;
+      break;
+    case TLS_HANDSHAKE_S:
+      n_tls_client_handshakes++;
+      break;
+    case REND_CLIENT:
+      n_rend_client_ops++;
+      break;
+    case REND_MID:
+      n_rend_mid_ops++;
+      break;
+    case REND_SERVER:
+      n_rend_server_ops++;
+      break;
+    default:
+      log_warn(LD_BUG, "Unknown pk operation %d", operation);
+  }
+}
+
+void
+dump_pk_ops(int severity)
+{
+  log(severity, LD_GENERAL,
+      "PK operations: %lu directory objects signed, "
+      "%lu directory objects verified, "
+      "%lu routerdescs signed, "
+      "%lu routerdescs verified, "
+      "%lu onionskins encrypted, "
+      "%lu onionskins decrypted, "
+      "%lu client-side TLS handshakes, "
+      "%lu server-side TLS handshakes, "
+      "%lu rendezvous client operations, "
+      "%lu rendezvous middle operations, "
+      "%lu rendezvous server operations.",
+      (unsigned long) n_signed_dir_objs,
+      (unsigned long) n_verified_dir_objs,
+      (unsigned long) n_signed_routerdescs,
+      (unsigned long) n_verified_routerdescs,
+      (unsigned long) n_onionskins_encrypted,
+      (unsigned long) n_onionskins_decrypted,
+      (unsigned long) n_tls_client_handshakes,
+      (unsigned long) n_tls_server_handshakes,
+      (unsigned long) n_rend_client_ops,
+      (unsigned long) n_rend_mid_ops,
+      (unsigned long) n_rend_server_ops);
+}
+
 /** Free all storage held by the OR/link history caches, by the
  * bandwidth history arrays, or by the port history. */
 void

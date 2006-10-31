@@ -1247,6 +1247,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   if (router_get_router_hash(s, digest) < 0)
     return -1;
 
+  note_crypto_pk_op(SIGN_RTR);
   if (router_append_dirobj_signature(s+written,maxlen-written,
                                      digest,ident_key)<0) {
     log_warn(LD_BUG, "Couldn't sign router descriptor");

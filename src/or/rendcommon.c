@@ -97,6 +97,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
       cp += 6+DIGEST_LEN+2+klen;
     }
   }
+  note_crypto_pk_op(REND_SERVER);
   i = crypto_pk_private_sign_digest(key, cp, *str_out, cp-*str_out);
   if (i<0) {
     tor_free(*str_out);
@@ -198,6 +199,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
              (int)((size_t)(end-cp) - keylen));
     goto error;
   }
+  note_crypto_pk_op(REND_CLIENT);
   if (crypto_pk_public_checksig_digest(result->pk,
                                        (char*)str,cp-str, /* data */
                                        (char*)cp,end-cp  /* signature*/

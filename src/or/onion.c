@@ -196,6 +196,8 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   puts("");
 #endif
 
+  note_crypto_pk_op(ENC_ONIONSKIN);
+
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
   if (crypto_pk_public_hybrid_encrypt(dest_router_key, onion_skin_out,
                                       challenge, DH_KEY_LEN,
@@ -237,6 +239,7 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
     k = i==0?private_key:prev_private_key;
     if (!k)
       break;
+    note_crypto_pk_op(DEC_ONIONSKIN);
     len = crypto_pk_private_hybrid_decrypt(k, challenge,
                                            onion_skin, ONIONSKIN_CHALLENGE_LEN,
                                            PK_PKCS1_OAEP_PADDING,0);

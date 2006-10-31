@@ -904,6 +904,7 @@ dirserv_dump_directory_to_string(char **dir_out,
     tor_free(buf);
     return -1;
   }
+  note_crypto_pk_op(SIGN_DIR);
   if (router_append_dirobj_signature(buf,buf_len,digest,private_key)<0) {
     tor_free(buf);
     return -1;
@@ -1235,6 +1236,7 @@ generate_runningrouters(void)
     log_warn(LD_BUG,"couldn't compute digest");
     goto err;
   }
+  note_crypto_pk_op(SIGN_DIR);
   if (router_append_dirobj_signature(s, len, digest, private_key)<0)
     goto err;
 
@@ -1544,6 +1546,7 @@ generate_v2_networkstatus(void)
     goto done;
   }
 
+  note_crypto_pk_op(SIGN_DIR);
   if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
     log_warn(LD_BUG, "Unable to sign router status.");
     goto done;

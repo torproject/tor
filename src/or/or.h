@@ -2408,6 +2408,16 @@ int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 int any_predicted_circuits(time_t now);
 int rep_hist_circbuilding_dormant(time_t now);
 
+typedef enum {
+  SIGN_DIR, SIGN_RTR,
+  VERIFY_DIR, VERIFY_RTR,
+  ENC_ONIONSKIN, DEC_ONIONSKIN,
+  TLS_HANDSHAKE_C, TLS_HANDSHAKE_S,
+  REND_CLIENT, REND_MID, REND_SERVER,
+} pk_op_t;
+void note_crypto_pk_op(pk_op_t operation);
+void dump_pk_ops(int severity);
+
 void rep_hist_free_all(void);
 
 /********************************* rendclient.c ***************************/

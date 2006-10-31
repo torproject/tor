@@ -1435,6 +1435,7 @@ dumpstats(int severity)
 
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
+  dump_pk_ops(severity);
 }
 
 /** Called by exit() as we shut down the process.

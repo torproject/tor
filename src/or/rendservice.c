@@ -471,6 +471,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     return -1;
   }
   /* Next N bytes is encrypted with service key */
+  note_crypto_pk_op(REND_SERVER);
   r = crypto_pk_private_hybrid_decrypt(
        service->private_key,buf,request+DIGEST_LEN,request_len-DIGEST_LEN,
        PK_PKCS1_OAEP_PADDING,1);
@@ -756,6 +757,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   if (crypto_digest(buf+len, auth, DIGEST_LEN+9))
     goto err;
   len += 20;
+  note_crypto_pk_op(REND_SERVER);
   r = crypto_pk_private_sign_digest(service->private_key, buf+len, buf, len);
   if (r<0) {
     log_warn(LD_BUG, "Internal error: couldn't sign introduction request.");

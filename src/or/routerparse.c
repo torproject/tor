@@ -396,6 +396,7 @@ router_parse_directory(const char *str)
     log_warn(LD_DIR,"Expected a single directory signature"); goto err;
   }
   declared_key = find_dir_signing_key(str);
+  note_crypto_pk_op(VERIFY_DIR);
   if (check_directory_signature(digest, tok, NULL, declared_key, 1)<0)
     goto err;
 
@@ -490,6 +491,7 @@ router_parse_runningrouters(const char *str)
     goto err;
   }
   declared_key = find_dir_signing_key(str);
+  note_crypto_pk_op(VERIFY_DIR);
   if (check_directory_signature(digest, tok, NULL, declared_key, 1) < 0)
     goto err;
 
@@ -910,6 +912,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR, "Bad object type or length on router signature");
     goto err;
   }
+  note_crypto_pk_op(VERIFY_RTR);
   if ((t=crypto_pk_public_checksig(router->identity_pkey, signed_digest,
                                    tok->object_body, 128)) != 20) {
     log_warn(LD_DIR, "Invalid signature %d",t);
@@ -1264,6 +1267,7 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
 
+  note_crypto_pk_op(VERIFY_DIR);
   if (check_directory_signature(ns_digest, tok, NULL, ns->signing_key, 0))
     goto err;
 

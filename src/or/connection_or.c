@@ -488,6 +488,8 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
   }
   connection_start_reading(TO_CONN(conn));
   log_debug(LD_OR,"starting TLS handshake on fd %d", conn->_base.s);
+  note_crypto_pk_op(receiving ? TLS_HANDSHAKE_S : TLS_HANDSHAKE_C);
+
   if (connection_tls_continue_handshake(conn) < 0) {
     return -1;
   }
