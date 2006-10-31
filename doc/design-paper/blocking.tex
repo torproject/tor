@@ -4,11 +4,11 @@
 \usepackage{amsmath}
 \usepackage{epsfig}
 
-%\setlength{\textwidth}{5.9in}
-%\setlength{\textheight}{8.4in}
-%\setlength{\topmargin}{.5cm}
-%\setlength{\oddsidemargin}{1cm}
-%\setlength{\evensidemargin}{1cm}
+\setlength{\textwidth}{5.9in}
+\setlength{\textheight}{8.4in}
+\setlength{\topmargin}{.5cm}
+\setlength{\oddsidemargin}{1cm}
+\setlength{\evensidemargin}{1cm}
 
 \newenvironment{tightlist}{\begin{list}{$\bullet$}{
   \setlength{\itemsep}{0mm}
@@ -20,7 +20,7 @@
 
 \begin{document}
 
-\title{Design of a blocking-resistant anonymity system}
+\title{Design of a blocking-resistant anonymity system\\DRAFT}
 
 %\author{Roger Dingledine\inst{1} \and Nick Mathewson\inst{1}}
 \author{Roger Dingledine \and Nick Mathewson}
@@ -763,16 +763,28 @@ available bridges),
 
 \subsection{Social networks with directory-side support}
 
-In the above designs, 
+Pick some seeds --- trusted people in the blocked area --- and give
+them each a few hundred bridge addresses. Run a website next to the
+bridge authority, where they can log in (they only need persistent
+pseudonyms). Give them tokens slowly over time. They can use these
+tokens to delegate trust to other people they know. The tokens can
+be exchanged for new accounts on the website.
 
-- social network scheme, with accounts and stuff.
+Accounts in ``good standing'' accrue new bridge addresses and new
+tokens.
+
+This is great, except how do we decide that an account is in good
+standing? One answer is to measure based on whether the bridge addresses
+we give it end up blocked. But how do we decide if they get blocked?
+Other questions below too.
+
+\subsection{Public bridges, allocated in different ways}
+
+public proxies. given out like circumventors. or all sorts of other rate
+limiting ways.
 
 
-
-- public proxies. given out like circumventors. or all sorts of other rate limiting ways.
-
-
-
+\subsection{Remaining unsorted notes}
 
 In the first subsection we describe how to find a first bridge.
 
@@ -836,23 +848,21 @@ There are two reasons why we're in better shape. Firstly, the users don't
 actually need to reach the watering hole directly: it can respond to
 email, for example. Secondly, 
 
-% In fact, the JAP
-%project~\cite{web-mix,koepsell:wpes2004} suggested an alternative approach
-%to a mailing list: new users email a central address and get an automated
-%response listing a proxy for them.
-% While the exact details of the
-%proposal are still to be worked out, the idea of giving out
+In fact, the JAP
+project~\cite{web-mix,koepsell:wpes2004} suggested an alternative approach
+to a mailing list: new users email a central address and get an automated
+response listing a proxy for them.
+While the exact details of the
+proposal are still to be worked out, the idea of giving out
 
 
 
 \subsection{Discovery based on social networks}
 
-A token that can be exchanged at the BDA (assuming you
-can reach it) for a new IP:dirport or server descriptor.
+A token that can be exchanged at the bridge authority (assuming you
+can reach it) for a new bridge address.
 
-The account server
-
-runs as a Tor controller for the bridge authority
+The account server runs as a Tor controller for the bridge authority.
 
 Users can establish reputations, perhaps based on social network
 connectivity, perhaps based on not getting their bridge relays blocked,
@@ -970,6 +980,22 @@ solution though.
 
 \section{Security considerations}
 \label{sec:security}
+
+\subsection{Possession of Tor in oppressed areas}
+
+Many people speculate that installing and using a Tor client in areas with
+particularly extreme firewalls is a high risk --- and the risk increases
+as the firewall gets more restrictive. This is probably true, but there's
+a counter pressure as well: as the firewall gets more restrictive, more
+ordinary people use Tor for more mainstream activities, such as learning
+about Wall Street prices or looking at pictures of women's ankles. So
+if the restrictive firewall pushes up the number of Tor users, then the
+``typical'' Tor user becomes more mainstream.
+
+Hard to say which of these pressures will ultimately win out.
+
+...
+% Nick can rewrite/elaborate on this section?
 
 \subsection{Observers can tell who is publishing and who is reading}
 \label{subsec:upload-padding}
