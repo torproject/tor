@@ -8,6 +8,7 @@
     %  \setlength{\topsep}{0mm}
     }}{\end{list}}
 \newcommand{\tmp}[1]{{\bf #1} [......] \\}
+\newcommand{\plan}[1]{ {\bf (#1)}}
 
 \begin{document}
 
@@ -33,7 +34,7 @@ I don't make it clear how they fit into larger goals, and lots of larger
 goals that don't break down into little things. It isn't all stuff we can do
 for sure, and it isn't even all stuff we can do for sure in 2007.  The
 tmp\{\} macro indicates stuff I haven't said enough about.  That said, here
-goes...
+plangoes...
 
 Tor (the software) and Tor (the overall software/network/support/document
 suite) are now experiencing all the crises of success.  Over the next year,
@@ -64,26 +65,31 @@ its age.  We should
 remove assumptions thoughout our design based on the assumption that public
 keys, secret keys, or digests will remain any particular size indefinitely.
 
-A new protocol could support {\bf multiple cell sizes}.  Right now, all data
-passes through the Tor network divided into 512-byte cells.  This is
-efficient for high-bandwidth protocols, but inefficient for protocols
-like SSH or AIM that send information in small chunks.  Of course, we need to
-investigate the extent to which multiple sizes could make it easier for an
-adversary to fingerprint a traffic pattern.
-
 Our OR {\bf authentication protocol}, though provably
 secure\cite{tap:pet2006}, relies more on particular aspects of RSA and our
 implementation thereof than we had initially believed.  To future-proof
 against changes, we should replace it with a less delicate approach.
 
+\plan{For all the above: 2 person-months to specify, spread over several
+  months with time for interaction with external participants.  One
+  person-month to implement.  Start specifying in early 2007.}
+
 We might design a {\bf stream migration} feature so that streams tunneled
 over Tor could be more resilient to dropped connections and changed IPs.
+\plan{Not in 2007.}
+
+A new protocol could support {\bf multiple cell sizes}.  Right now, all data
+passes through the Tor network divided into 512-byte cells.  This is
+efficient for high-bandwidth protocols, but inefficient for protocols
+like SSH or AIM that send information in small chunks.  Of course, we need to
+investigate the extent to which multiple sizes could make it easier for an
+adversary to fingerprint a traffic pattern. \plan{Not in 2007.}
 
 As a part of our design, we should investigate possible {\bf cipher modes}
 other than counter mode.  For example, a mode with built-in integrity
 checking, error propagation, and random access could simplify our protocol
 significantly.  Sadly, many of these are patented and unavailable for us.
-
+\plan{Not in 2007.}
 
 \subsection{Scalability}
 
@@ -93,7 +99,9 @@ each directory authority.  We could reduce network bandwidth significantly by
 having the authorities jointly sign a statement reflecting their vote on the
 current network status.  This would save clients up to 160K per hour, and
 make their view of the network more uniform.  Of course, we'd need to make
-sure the voting process was secure and resilient to failures in the network.
+sure the voting process was secure and resilient to failures in the
+network.\plan{Must do; specify in 2006. 2 weeks to specify, 3-4 weeks to
+  implement.}
 
 We should {\bf shorten router descriptors}, since the current format includes
 a great deal of information that's only of interest to the directory
@@ -101,13 +109,14 @@ authorities, and not of interest to clients.  We can do this by having each
 router upload a short-form and a long-form signed descriptor, and having
 clients download only the short form.  Even a naive version of this would
 save about 40\% of the bandwidth currently spent by clients downloading
-descriptors.
+descriptors.\plan{Must do; specify in 2006. 3-4 weeks.}
 
 We should {\bf have routers upload their descriptors even less often}, so
 that clients do not need to download replacements every 18 hours whether any
 information has changed or not.  (As of Tor 0.1.2.3-alpha, clients tolerate
 routers that don't upload often, but routers still upload at least every 18
-hours to support older clients.)
+hours to support older clients.) \plan{Must do, but not until 0.1.1.x is
+deprecated in mid 2007. 1 week.}
 
 \subsubsection{Non-clique topology}
 Our current network design achieves a certain amount of its anonymity by
@@ -120,14 +129,16 @@ At worst, if these scalability issues become troubling before a solution is
 found, we can design and build a solution to {\bf split the network into
 multiple slices} until a better solution comes along.  This is not ideal,
 since rather than looking like all other users from a point of view of path
-selection, users would ``only'' look like 200,000--300,000 other users.
+selection, users would ``only'' look like 200,000--300,000 other
+users.\plan{Not unless needed.}
 
 We are in the process of designing {\bf improved schemes for network
   scalability}.  Some approaches focus on limiting what an adversary can know
 about what a user knows; others focus on reducing the extent to which an
 adversary can exploit this knowledge.  These are currently in their infancy,
 and will probably not be needed in 2007, but they must be designed in 2007 if
-they are to be deployed in 2008.
+they are to be deployed in 2008.\plan{Design in 2007; unknown difficulty.
+  Write a paper.}
 
 \subsubsection{Relay incentives}
 To support more users on the network, we need to get more servers.  So far,
@@ -138,17 +149,23 @@ could try to build the network so that servers offered improved service for
 other servers, but we would need to do so without weakening anonymity and
 making it obvious which connections originate from users running servers.  We
 have some preliminary designs here~\cite{challenges}, but need to perform
-some more research to make sure they would be safe and effective.
+some more research to make sure they would be safe and effective.\plan{Write
+  a draft paper; 2 person-months.}
 
 \subsection{Portability}
 Our {\bf Windows implementation}, though much improved, continues to lag
 behind Unix and Mac OS X, especially when running as a server.  We hope to
 merge promising patches from Mike Chiussi to address this point, and bring
-Windows performance on par with other platforms.
+Windows performance on par with other platforms.\plan{Do in 2007; 1.5 months
+  to integrate not counting Mike's work.}
 
 We should have {\bf better support for portable devices}, including modes of
 operation that require less RAM, and that write to disk less frequently (to
-avoid wearing out flash RAM).
+avoid wearing out flash RAM).\plan{Optional; 2 weeks.}
+
+We should {\bf stop using socketpair on Windows}; instead, we can use
+in-memory structures to communicate between cpuworkers and the main thread,
+and between connections.\plan{Optional; 1 week.}
 
 \subsection{Performance: resource usage}
 We've been working on {\bf using less RAM}, especially on servers.  This has
@@ -160,7 +177,8 @@ buffer approach.  (For OR connections, we can just use queues of cell-sized
 chunks produced with a specialized allocator.)  This could potentially save
 around 25 to 50\% of the memory currently allocated for network buffers, and
 make Tor a more attractive proposition for restricted-memory environments
-like old computers, mobile devices, and the like.
+like old computers, mobile devices, and the like.\plan{Do in 2007; 2-3 weeks
+  plus one week measurement.}
 
 We should improve our {\bf bandwidth limiting}.  The current system has been
 crucial in making users willing to run servers: nobody is willing to run a
@@ -168,12 +186,12 @@ server if it might use an unbounded amount of bandwidth, especially if they
 are charged for their usage.  We can make our system better by letting users
 configure bandwidth limits independently for their own traffic and traffic
 relayed for others; and by adding write limits for users running directory
-servers.
+servers.\plan{Do in 2006; 2-3 weeks.}
 
 On many hosts, sockets are still in short supply, and will be until we can
 migrate our protocol to UDP.  We can {\bf use fewer sockets} by making our
 self-to-self connections happen internally to the code rather than involving
-the operating system's socket implementation.
+the operating system's socket implementation.\plan{Optional; 1 week.}
 
 \subsection{Performance: network usage}
 We know too little about how well our current path
@@ -189,9 +207,12 @@ We should also {\bf examine the efficacy of our congestion control
 presence of a congested network through dynamic `sendme' window sizes or
 other means.  This will have anonymity implications too if we aren't careful.
 
-% \tmp{Tune pathgen algorithms to use it better.}
-% 
-% I think I've included this in the above -NM
+\plan{For both of the above: research, design and write
+  a measurement tool in 2007: 1 month.  See if we can interest a graduate
+  student.}
+
+We should work on making Tor perform better on networks with low bandwidth
+and high packet loss.\plan{Do in 2007 if we're funded to do it; 4-6 weeks.}
 
 \subsection{Performance scenario: one Tor client, many users}
 We should {\bf improve Tor's performance when a single Tor handles many
@@ -202,20 +223,24 @@ there are some code paths in the current implementation that become
 inefficient when a single Tor is servicing hundreds or thousands of client
 connections.  (Additionally, it is likely that such clients have interesting
 anonymity requirements the we should investigate.)  We should profile Tor
-under appropriate loads, identify bottlenecks, and fix them.
-
-% \tmp{Other stress-testing, and fix bottlenecks we find.}
-%
-% I've moved this into 'improved testing harness' below
+under appropriate loads, identify bottlenecks, and fix them.\plan{Do in 2007
+  if we're funded to do it; 4-8 weeks.}
 
 \subsection{Tor servers on asymmetric bandwidth}
 
-\tmp{Roger, please write? I don't know what to say here.}
+Tor should work better on servers that have asymmetric connections like cable
+or DSL.  Because Tor has separate TCP connections between each
+hop, if the incoming bytes are arriving just fine and the outgoing bytes are
+all getting dropped on the floor, the TCP push-back mechanisms don't really
+transmit this information back to the incoming streams.\plan{Do in 2007 since
+  related to bandwidth limiting.  3-4 weeks.}
+
 
 \subsection{Running Tor as both client and server}
 
 \tmp{many performance tradeoffs and balances that need more attention.
-  Roger, please write.}
+  Roger, please write.} \plan{No idea; try profiling and improving things in
+  2007.}
 
 \subsection{Protocol redesign for UDP}
 Tor has relayed only TCP traffic since its first versions, and has used
@@ -229,8 +254,8 @@ by lossy connections.  Either of these protocol changes would require a great
 deal of design work, however.  We hope to be able to enlist the aid of a few
 talented graduate students to assist with the initial design and
 specification, but the actual implementation will require significant testing
-of different reliable transport approaches.
-
+of different reliable transport approaches.\plan{Maybe do a design in 2007 if
+we find an interested academic.  Ian or Ben L might be good partners here.}
 
 \section{Blocking resistance}
 
@@ -337,6 +362,7 @@ are currently some of the most effective against careful Tor users.  We
 should research these questions and perform simulations to identify
 opportunities for strengthening our design without dropping performance to
 unacceptable levels. %Cite something
+\plan{Start doing this in 2007; write a paper.  8-16 weeks.}
 
 We've got some preliminary results suggesting that {\bf a topology-aware
   routing algorithm}~\cite{routing-zones} could reduce Tor users'
@@ -346,7 +372,7 @@ examine the effects of this approach in more detail and consider side-effects
 on anonymity against other kinds of adversaries.  If the approach still looks
 promising, we should investigate ways for clients to implement it (or an
 approximation of it) without having to download routing tables for the whole
-internet.
+Internet. \plan{Not in 2007 unless a graduate student wants to do it.}
 
 %\tmp{defenses against end-to-end correlation}  We don't expect any to work
 %right now, but it would be useful to learn that one did.  Alternatively,
@@ -363,6 +389,8 @@ practice we hear they don't work nearly as well.  We should get some actual
 numbers to investigte the issue, and figure out what's going on.  If we
 resist these attacks, or can improve our design to resist them, we should.
 % add cites
+\plan{Possibly part of end-to-end correlation paper.  Otherwise, not in 2007
+  unless a graduate student is interested.}
 
 \subsection{Implementation security}
 Right now, each Tor node stores its keys unencrypted.  We should {\bf encrypt
@@ -370,27 +398,31 @@ Right now, each Tor node stores its keys unencrypted.  We should {\bf encrypt
 should look into adding intermediary medium-term ``signing keys'' between
 identity keys and onion keys, so that a password could be required to replace
 a signing key, but not to start Tor.  This would improve Tor's long-term
-security, especially in its directory authority infrastructure.
+security, especially in its directory authority infrastructure.\plan{Design this
+  as a part of the revised ``v2.1'' directory protocol; implement it in
+  2007. 3-4 weeks.}
 
 We should also {\bf mark RAM that holds key material as non-swappable} so
 that there is no risk of recovering key material from a hard disk
 compromise.  This would require submitting patches upstream to OpenSSL, where
 support for marking memory as sensitive is currently in a very preliminary
-state.
+state.\plan{Nice to do, but not in immediate Tor scope.}
 
 There are numerous tools for identifying trouble spots in code (such as
 Coverity or even VS2005's code analysis tool) and we should convince somebody
 to run some of them against the Tor codebase.  Ideally, we could figure out a
-way to get our code checked periodically rather than just once.
+way to get our code checked periodically rather than just once.\plan{Almost
+  no time once we talk somebody into it.}
 
 We should try {\bf protocol fuzzing} to identify errors in our
-implementation.
+implementation.\plan{Not in 2007 unless we find a grad student or
+  undergraduate who wants to try.}
 
 Our guard nodes help prevent an attacker from being able to become a chosen
 client's entry point by having each client choose a few favorite entry points
 as ``guards'' and stick to them.   We should implement a {\bf directory
   guards} feature to keep adversaries from enumerating Tor users by acting as
-a directory cache.
+a directory cache.\plan{Do in 2007; 2 weeks.}
 
 \subsection{Detect corrupt exits and other servers}
 With the success of our network, we've attracted servers in many locations,
@@ -403,30 +435,35 @@ follows:
 
 We should create a generic {\bf feedback mechanism for add-on tools} like
 Mike Perry's ``Snakes on a Tor'' to report failing nodes to authorities.
+\plan{Do in 2006; 1-2 weeks.}
 
 We should write tools to {\bf detect more kinds of innocent node failure},
 such as nodes whose network providers intercept SSL, nodes whose network
 providers censor popular websites, and so on.  We should also try to detect
 {\bf routers that snoop traffic}; we could do this by launching connections
-to throwaway accounts, and seeing which accounts get used.
+to throwaway accounts, and seeing which accounts get used.\plan{Do in 2007;
+  ask Mike Perry if he's interested.  4-6 weeks.}
 
 We should add {\bf an efficient way for authorities to mark a set of servers
   as probably collaborating} though not necessarily otherwise dishonest.
 This happens when an administrator starts multiple routers, but doesn't mark
-them as belonging to the same family.
+them as belonging to the same family.\plan{Do during v2.1 directory protocol
+  redesign; 1-2 weeks to implement.}
 
 To avoid attacks where an adversary claims good performance in order to
 attract traffic, we should {\bf have authorities measure node performance}
 (including stability and bandwidth) themselves, and not simply believe what
-they're told.  Measuring bandwidth can be tricky, since it's hard to
-distinguish between a server with low capacity, and a high-capacity server
-with most of its capacity in use.
+they're told.  Measuring stability can be done by tracking MTBF.  Measuring
+bandwidth can be tricky, since it's hard to distinguish between a server with
+low capacity, and a high-capacity server with most of its capacity in
+use.\plan{Do ``Stable'' in 2007; 2-3 weeks.  ``Fast'' will be harder; do it
+  if we can interest a grad student.}
 
 {\bf Operating a directory authority should be easier.}  We rely on authority
 operators to keep the network running well, but right now their job involves
 too much busywork and administrative overhead.  A better interface for them
 to use could free their time to work on exception cases rather than on
-adding named nodes to the network.
+adding named nodes to the network.\plan{Do in 2007; 4-5 weeks.}
 
 \subsection{Protocol security}
 
@@ -435,7 +472,8 @@ In addition to other protocol changes discussed above,
 we should add {\bf hooks for denial-of-service resistance}; we have some
 prelimiary designs, but we shouldn't postpone them until we realy need them.
 If somebody tries a DDoS attack against the Tor network, we won't want to
-wait for all the servers and clients to upgrade to a new version.
+wait for all the servers and clients to upgrade to a new
+version.\plan{Research project; do this in 2007 if funded.}
 
 \section{Development infrastructure}
 
@@ -452,18 +490,24 @@ We need also to {\bf add our dependencies} to the build farm, so that we can
 ensure that libraries we need (especially libevent) do not stop working on
 any important platform between one release and the next.
 
+\plan{This is ongoing as more buildbots arrive.}
+
 \subsection{Improved testing harness}
-Currently, our {\bf unit tests} cover only about XX\% of the code base.  This
+Currently, our {\bf unit tests} cover only about 20\% of the code base.  This
 is uncomfortably low; we should write more and switch to a more flexible
-testing framework.
+testing framework.\plan{Ongoing basis, time permitting.}
 
 We should also write flexible {\bf automated single-host deployment tests} so
-we can more easily verify that the current codebase works with the network.
+we can more easily verify that the current codebase works with the
+network.\plan{Worthwile in 2007; would save lots of time.  2-4 weeks.}
 
 We should build automated {\bf stress testing} frameworks so we can see which
 realistic loads cause Tor to perform badly, and regularly profile Tor against
 these loads.  This would give us {\it in vitro} performance values to
-supplement our deployment experience.
+supplement our deployment experience.\plan{Worthwhile in 2007; 2-6 weeks.}
+
+We should improve our memory profiling code.\plan{...}
+
 
 \subsection{Centralized build system}
 We currently rely on a separate packager to maintain the packaging system and
@@ -471,12 +515,13 @@ to build Tor on each platform for which we distribute binaries.  Separate
 package maintainers is sensible, but separate package builders has meant
 long turnaround times between source releases and package releases.  We
 should create the necessary infrastructure for us to produce binaries for all
-major packages within an hour or so of source release.
+major packages within an hour or so of source release.\plan{We should
+  brainstorm this at least in 2007.}
 
 \subsection{Improved metrics}
 We need a way to {\bf measure the network's health, capacity, and degree of
   utilization}.  Our current means for doing this are ad hoc and not
-completely accurate.
+completely accurate
 
 We need better ways to {\bf tell which countries are users are coming from,
   and how many there are}.  A good perspective of the network helps us
@@ -484,6 +529,8 @@ allocate resources and identify trouble spots, but our current approaches
 will work less and less well as we make it harder for adversaries to
 enumerate users.  We'll probably want to shift to a smarter, statistical
 approach rather than our current ``count and extrapolate'' method.
+
+\plan{All of this in 2007 if funded; 4-8 weeks}
 
 % \tmp{We'd like to know how much of the network is getting used.}
 % I think this is covered above -NM
@@ -493,7 +540,7 @@ We've done lots of design and development on our controller interface, which
 allows UI applications and other tools to interact with Tor.  We could
 encourage the development of more such tools by releasing a {\bf
   general-purpose controller library}, ideally with API support for several
-popular programming languages.
+popular programming languages.\plan{2006 or 2007; 1-2 weeks.}
 
 \section{User experience}
 
@@ -507,7 +554,7 @@ solutions for limiting vandalism by anonymous users} like credential and
 blind-signature based implementations, and encourage their use. Other
 promising starting points including writing a patch and explanation for
 Wikipedia, and helping Freenode to document, maintain, and expand its
-current Tor-friendly position.
+current Tor-friendly position.\plan{Do a writeup here in 2007; 1-2 weeks.}
 
 Those who do block Tor users also block overbroadly, sometimes blacklisting
 operators of Tor servers that do not permit exit to their services.  We could
