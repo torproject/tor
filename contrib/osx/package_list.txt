@@ -2,3 +2,4 @@ Tor
 Privoxy
 torstartup
 privoxyconf
+Vidalia
