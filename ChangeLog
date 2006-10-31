@@ -25,6 +25,8 @@ Changes in version 0.1.1.25 - 2006-11-?? [ongoing]
       certain commands from a v0 controller on platforms that do not
       handle printf("%s",NULL) gracefully.
     - Avoid infinite loop on unexpected controller input.
+    - Don't log spurious warnings when we see a circuit close reason we
+      don't recognize; it's probably just from a newer version of Tor.
 
 
 Changes in version 0.1.1.24 - 2006-09-29
