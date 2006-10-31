@@ -374,7 +374,7 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
     /* the destroy came from behind */
     circuit_set_p_circid_orconn(TO_OR_CIRCUIT(circ), 0, NULL);
-    circuit_mark_for_close(circ, reason);
+    circuit_mark_for_close(circ, reason|END_CIRC_REASON_FLAG_REMOTE);
   } else { /* the destroy came from ahead */
     circuit_set_n_circid_orconn(circ, 0, NULL);
     if (CIRCUIT_IS_ORIGIN(circ)) {

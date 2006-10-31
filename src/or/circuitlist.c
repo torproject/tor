@@ -849,12 +849,13 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     reason = END_CIRC_REASON_NONE;
   }
 
-  if (reason & END_CIRC_REASON_FLAG_REMOTE)
+  if (reason & END_CIRC_REASON_FLAG_REMOTE) {
     reason &= ~END_CIRC_REASON_FLAG_REMOTE;
 
   if (reason < _END_CIRC_REASON_MIN || reason > _END_CIRC_REASON_MAX) {
-    log_warn(LD_BUG, "Reason %d out of range at %s:%d", reason, file, line);
-    orig_reason = reason = END_CIRC_REASON_NONE;
+    if (!(orig_reason & END_CIRC_REASON_FLAG_REMOTE))
+      log_warn(LD_BUG, "Reason %d out of range at %s:%d", reason, file, line);
+    reason = END_CIRC_REASON_NONE;
   }
 
   if (circ->state == CIRCUIT_STATE_ONIONSKIN_PENDING) {
