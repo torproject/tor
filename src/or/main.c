@@ -1333,6 +1333,7 @@ extern uint64_t buf_total_used;
 extern uint64_t buf_total_alloc;
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
+void dump_distinct_digests_xx(int severity); // xxxx0124 remove
 
 /**
  * Write current memory usage information to the log.
@@ -1436,6 +1437,7 @@ dumpstats(int severity)
   rep_hist_dump_stats(now,severity);
   rend_service_dump_stats(severity);
   dump_pk_ops(severity);
+  dump_distinct_digests_xx(severity);
 }
 
 /** Called by exit() as we shut down the process.
