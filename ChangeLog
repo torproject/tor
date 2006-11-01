@@ -5,6 +5,10 @@ Changes in version 0.1.2.4-alpha - 2006-11-??
   o Minor bugfixes
     - Don't log spurious warnings when we see a circuit close reason we
       don't recognize; it's probably just from a newer version of Tor.
+    - Have directory authorities allow larger amounts of drift in uptime
+      without replacing the server descriptor: previously, a server that
+      restarted every 30 minutes could have 48 "interesting" descriptors per
+      day.
 
 Changes in version 0.1.2.3-alpha - 2006-10-29
   o Minor features:

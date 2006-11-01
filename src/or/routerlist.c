@@ -4048,7 +4048,7 @@ router_reset_descriptor_download_failures(void)
 #define ROUTER_MAX_COSMETIC_TIME_DIFFERENCE (12*60*60)
 
 /** We allow uptime to vary from how much it ought to be by this much. */
-#define ROUTER_ALLOW_UPTIME_DRIFT (30*60)
+#define ROUTER_ALLOW_UPTIME_DRIFT (6*60*60)
 
 /** Return true iff the only differences between r1 and r2 are such that
  * would not cause a recent (post 0.1.1.6) dirserver to republish.
@@ -4057,6 +4057,7 @@ int
 router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
 {
   time_t r1pub, r2pub;
+  int time_difference;
   tor_assert(r1 && r2);
 
   /* r1 should be the one that was published first. */
@@ -4107,11 +4108,13 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
     return 0;
 
   /* Did uptime fail to increase by approximately the amount we would think,
-   * give or take 30 minutes? */
+   * give or take 4 hours? */
   r1pub = r1->cache_info.published_on;
   r2pub = r2->cache_info.published_on;
-  if (abs(r2->uptime - (r1->uptime + (r2pub - r1pub)))
-      > ROUTER_ALLOW_UPTIME_DRIFT)
+  time_difference = abs(r2->uptime - (r1->uptime + (r2pub - r1pub)));
+  if (time_difference > ROUTER_ALLOW_UPTIME_DRIFT &&
+      time_difference > r1->uptime * .05 &&
+      time_difference > r2->uptime * .05)
     return 0;
 
   /* Otherwise, the difference is cosmetic. */
