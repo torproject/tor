@@ -849,7 +849,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     reason = END_CIRC_REASON_NONE;
   }
 
-  if (reason & END_CIRC_REASON_FLAG_REMOTE) {
+  if (reason & END_CIRC_REASON_FLAG_REMOTE)
     reason &= ~END_CIRC_REASON_FLAG_REMOTE;
 
   if (reason < _END_CIRC_REASON_MIN || reason > _END_CIRC_REASON_MAX) {
