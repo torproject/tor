@@ -973,7 +973,7 @@ note_crypto_pk_op(pk_op_t operation)
       n_tls_client_handshakes++;
       break;
     case TLS_HANDSHAKE_S:
-      n_tls_client_handshakes++;
+      n_tls_server_handshakes++;
       break;
     case REND_CLIENT:
       n_rend_client_ops++;
