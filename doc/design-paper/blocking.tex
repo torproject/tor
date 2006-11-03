@@ -408,15 +408,15 @@ for ``open proxy list'' yields a wide variety of freely available lists
 of HTTP, HTTPS, and SOCKS proxies. Many small companies have sprung up
 providing more refined lists to paying customers.
 
-There are some downsides to using these oen proxies though. Firstly,
+There are some downsides to using these open proxies though. First,
 the proxies are of widely varying quality in terms of bandwidth and
-stability, and many of them are entirely unreachable. Secondly, unlike
+stability, and many of them are entirely unreachable. Second, unlike
 networks of volunteers like Tor, the legality of routing traffic through
 these proxies is questionable: it's widely believed that most of them
 don't realize what they're offering, and probably wouldn't allow it if
-they realized. Thirdly, in many cases the connection to the proxy is
+they realized. Third, in many cases the connection to the proxy is
 unencrypted, so firewalls that filter based on keywords in IP packets
-will not be hindered. And lastly, many users are suspicious that some
+will not be hindered. And last, many users are suspicious that some
 open proxies are a little \emph{too} convenient: are they run by the
 adversary, in which case they get to monitor all the user's requests
 just as single-hop proxies can?
@@ -452,7 +452,7 @@ keystroke loggers (even graphical ones).
 
 \subsection{Tor itself}
 
-And lastly, we include Tor itself in the list of current solutions
+And last, we include Tor itself in the list of current solutions
 to firewalls. Tens of thousands of people use Tor from countries that
 routinely filter their Internet. Tor's website has been blocked in most
 of them. But why hasn't the Tor network been blocked yet?
@@ -676,7 +676,7 @@ present certificates, so that clients are harder to distinguish from servers.
 But in a blocking-resistance environment, clients should not present
 certificates at all.
 
-Lastly, what if the adversary starts observing the network traffic even
+Last, what if the adversary starts observing the network traffic even
 more closely? Even if our TLS handshake looks innocent, our traffic timing
 and volume still look different than a user making a secure web connection
 to his bank. The same techniques used in the growing trend to build tools
@@ -869,9 +869,9 @@ each of the above designs: not only do we have to attract many volunteer
 proxies, but the users also need to get to a single site that is sure
 to be blocked.
 
-There are two reasons why we're in better shape. Firstly, the users don't
+There are two reasons why we're in better shape. First, the users don't
 actually need to reach the watering hole directly: it can respond to
-email, for example. Secondly, 
+email, for example. Second, 
 
 In fact, the JAP
 project~\cite{web-mix,koepsell:wpes2004} suggested an alternative approach
@@ -1089,17 +1089,17 @@ Tor's ``public key infrastructure'' provides a chain of trust to
 let users verify that they're actually talking to the right servers.
 There are four pieces to this trust chain.
 
-Firstly, when Tor clients are establishing circuits, at each step
+First, when Tor clients are establishing circuits, at each step
 they demand that the next Tor server in the path prove knowledge of
 its private key~\cite{tor-design}. This step prevents the first node
-in the path from just spoofing the rest of the path. Secondly, the
+in the path from just spoofing the rest of the path. Second, the
 Tor directory authorities provide a signed list of servers along with
 their public keys---so unless the adversary can control a threshold
 of directory authorities, he can't trick the Tor client into using other
-Tor servers. Thirdly, the location and keys of the directory authorities,
+Tor servers. Third, the location and keys of the directory authorities,
 in turn, is hard-coded in the Tor source code---so as long as the user
 got a genuine version of Tor, he can know that he is using the genuine
-Tor network. And lastly, the source code and other packages are signed
+Tor network. And last, the source code and other packages are signed
 with the GPG keys of the Tor developers, so users can confirm that they
 did in fact download a genuine version of Tor.
 
@@ -1204,8 +1204,8 @@ servers.)
 Bridge users without Tor clients
 
 Bridge relays could always open their socks proxy. This is bad though,
-firstly
-because bridges learn the bridge users' destinations, and secondly because
+first
+because bridges learn the bridge users' destinations, and second because
 we've learned that open socks proxies tend to attract abusive users who
 have no idea they're using Tor.
 
