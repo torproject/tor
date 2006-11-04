@@ -772,13 +772,6 @@ elements. Otherwise, if the address is not an IP or is a private IP,
 it will reject the router descriptor. Defaults to 0.
 .LP
 .TP
-\fBRunTesting \fR\fB0\fR|\fB1\fR\fP
-If set to 1, Tor tries to build circuits through all of the servers it
-knows about, so it can tell which are up and which are down.  This
-option is only useful for authoritative directories, so you probably
-don't want to use it.
-.LP
-.TP
 \fBAuthDirBadExit \fR\fIAddressPattern\fR...\fP
 Authoritative directories only.  A set of address patterns for servers that
 will be listed as bad exits in any network status document this authority
