@@ -1,8 +1,8 @@
-Changes in version 0.1.1.25 - 2006-11-?? [ongoing]
+Changes in version 0.1.1.25 - 2006-11-04
   o Major bugfixes:
-    - When a client asks us to resolve (not connect to) an address,
-      and we have a cached answer, give them the cached answer.
-      Previously, we would give them no answer at all.
+    - When a client asks us to resolve (rather than connect to)
+      an address, and we have a cached answer, give them the cached
+      answer. Previously, we would give them no answer at all.
     - We were building exactly the wrong circuits when we predict
       hidden service requirements, meaning Tor would have to build all
       its circuits on demand.
@@ -27,6 +27,8 @@ Changes in version 0.1.1.25 - 2006-11-?? [ongoing]
     - Avoid infinite loop on unexpected controller input.
     - Don't log spurious warnings when we see a circuit close reason we
       don't recognize; it's probably just from a newer version of Tor.
+    - Add Vidalia to the OS X uninstaller script, so when we uninstall
+      Tor/Privoxy we also uninstall Vidalia.
 
 
 Changes in version 0.1.1.24 - 2006-09-29
