@@ -503,7 +503,13 @@ fi
 
 AC_FUNC_FSEEKO
 
-AC_CHECK_MEMBERS([struct timeval.tv_sec])
+AC_CHECK_MEMBERS([struct timeval.tv_sec], , ,
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif])
 
 dnl In case we aren't given a working stdint.h, we'll need to grow our own.
 dnl Watch out.
