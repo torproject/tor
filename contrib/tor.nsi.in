@@ -2,7 +2,7 @@
 ; Originally written by J Doe.
 ; See LICENSE for licencing information
 ;-----------------------------------------
-; NOTE: This file is obsolete. Look at tor-mingw.nsi.in instead.
+; NOTE: This file might be obsolete. Look at tor-mingw.nsi.in instead.
 ;-----------------------------------------
 ; How to make an installer:
 ;   Step 0. If you are a Tor maintainer, make sure that tor.nsi and
@@ -128,6 +128,7 @@ Section "Documents" Docs
    File "..\doc\dir-spec.txt"
    File "..\doc\rend-spec.txt"
    File "..\doc\socks-extensions.txt"
+   File "..\doc\tor-spec.txt"
    File "..\doc\version-spec.txt"
    ;
    ; WEBSITE-FILES-HERE
@@ -156,7 +157,7 @@ Section "Start Menu" StartMenu
    CreateShortCut "$SMPROGRAMS\Tor\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
    IfFileExists "$INSTDIR\Documents\*.*" "" endifdocs
       CreateDirectory "$SMPROGRAMS\Tor\Documents"
-      CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Manual.lnk" "$INSTDIR\Documents\tor-doc.html"
+      CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Manual.lnk" "$INSTDIR\Documents\tor-reference.html"
       CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Documentation.lnk" "$INSTDIR\Documents"
       CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Specification.lnk" "$INSTDIR\Documents\tor-spec.txt"
    endifdocs:
