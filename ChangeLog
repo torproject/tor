@@ -9,6 +9,9 @@ Changes in version 0.1.2.4-alpha - 2006-11-??
       without replacing the server descriptor: previously, a server that
       restarted every 30 minutes could have 48 "interesting" descriptors per
       day.
+    - Start linking to the Tor specification and Tor reference manual
+      correctly in the Windows installer.
+
 
 Changes in version 0.1.2.3-alpha - 2006-10-29
   o Minor features:

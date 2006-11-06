@@ -2,7 +2,8 @@
 ; Originally written by J Doe.
 ; See LICENSE for licencing information
 ;-----------------------------------------
-;
+; NOTE: This file is obsolete. Look at tor-mingw.nsi.in instead.
+;-----------------------------------------
 ; How to make an installer:
 ;   Step 0. If you are a Tor maintainer, make sure that tor.nsi and
 ;           src/win32/orconfig.h all have the correct version number.
