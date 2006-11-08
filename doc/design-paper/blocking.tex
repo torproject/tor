@@ -555,6 +555,7 @@ can't make a list of all the addresses contacting the authority and
 track them that way.  Bridges may publish to only a subset of the
 authorities, to limit the potential impact of an authority compromise.
 
+
 %\subsection{A simple matter of engineering}
 %
 %Although we've described bridges and bridge authorities in simple terms
@@ -610,6 +611,75 @@ out too much.
 
 % (See Section~\ref{subsec:first-bridge} for a discussion
 %of exactly what information is sufficient to characterize a bridge relay.)
+
+\subsubsection{Multiple questions about directory authorities}
+
+% This dumps many of the notes I had in one place, because I wanted
+% them to get into the tex document, rather than constantly living in
+% a separate notes document. They need to be changed and moved, but
+% now they're in the right document. -PFS
+
+9. Bridge directories must not simply be a handful of nodes that
+provide the list of bridges. They must flood or otherwise distribute
+information out to other Tor nodes as mirrors. That way it becomes
+difficult for censors to flood the bridge directory servers with
+requests, effectively denying access for others. But, there's lots of
+churn and a much larger size than Tor directories.  We are forced to
+handle the directory scaling problem here much sooner than for the
+network in general.
+
+I think some kind of DHT like scheme would work here. A Tor node is
+assigned a chunk of the directory.  Lookups in the directory should be
+via hashes of keys (fingerprints) and that should determine the Tor
+nodes responsible. Ordinary directories can publish lists of Tor nodes
+responsible for fingerprint ranges.  Clients looking to update info on
+some bridge will make a Tor connection to one of the nodes responsible
+for that address.  Instead of shutting down a circuit after getting
+info on one address, extend it to another that is responsible for that
+address (the node from which you are extending knows you are doing so
+anyway). Keep going.  This way you can amortize the Tor connection.
+
+10. We need some way to give new identity keys out to those who need
+them without letting those get immediately blocked by authorities. One
+way is to give a fingerprint that gets you more fingerprints, as
+already described. These are meted out/updated periodically but allow
+us to keep track of which sources are compromised: if a distribution
+fingerprint repeatedly leads to quickly blocked bridges, it should be
+suspect, dropped, etc. Since we're using hashes, there shouldn't be a
+correlation with bridge directory mirrors, bridges, portions of the
+network observed, etc. It should just be that the authorities know
+about that key that leads to new addresses.
+
+This last point is very much like the issues in the valet nodes paper,
+which is essentially about blocking resistance wrt exiting the Tor network,
+while this paper is concerned with blocking the entering to the Tor network.
+In fact the tickets used to connect to the IPo (Introduction Point),
+could serve as an example, except that instead of authorizing
+a connection to the Hidden Service, it's authorizing the downloading
+of more fingerprints.
+
+Also, the fingerprints can follow the hash(q + '1' + cookie) scheme of
+that paper (where q = hash(PK + salt) gave the q.onion address).  This
+allows us to control and track which fingerprint was causing problems.
+
+Note that, unlike many settings, the reputation problem should not be
+hard here. If a bridge says it is blocked, then it might as well be.
+If an adversary can say that the bridge is blocked wrt
+$\mathcal{censor}_i$, then it might as well be, since
+$\mathcal{censor}_i$ can presumaby then block that bridge if it so
+chooses.
+
+11. How much damage can the adversary do by running nodes in the Tor
+network and watching for bridge nodes connecting to it?  (This is
+analogous to an Introduction Point watching for Valet Nodes connecting
+to it.) What percentage of the network do you need to own to do how
+much damage. Here the entry-guard design comes in helpfully.  So we
+need to have bridges use entry-guards, but (cf. 3 above) not use
+bridges as entry-guards. Here's a serious tradeoff (again akin to the
+ratio of valets to IPos) the more bridges/client the worse the
+anonymity of that client. The fewer bridges/client the worse the 
+blocking resistance of that client.
+
 
 \section{Hiding Tor's network signatures}
 \label{sec:network-signature}
@@ -693,6 +763,10 @@ differently from, say, instant messaging.
 
 % Tor cells are 512 bytes each. So TLS records will be roughly
 % multiples of this size? How bad is this?
+% Look at ``Inferring the Source of Encrypted HTTP Connections''
+% by Marc Liberatore and Brian Neil Levine (CCS 2006)
+% They substantially flesh out the numbers for the  web fingerprinting
+% attack.
 
 \subsection{Identity keys as part of addressing information}
 
@@ -1193,6 +1267,22 @@ adversary can pretend to be the bridge and MITM him to learn the password.
 
 We could some kind of ID-based knocking protocol, or we could act like an
 unconfigured HTTPS server if treated like one.
+
+We can assume that the attacker can easily recognize https connections
+to unknown servers. It can then attempt to connect to them and block
+connections to servers that seem suspicious. It may be that password
+protected web sites will not be suspicious in general, in which case
+that may be the easiest way to give controlled access to the bridge.
+If such sites that have no other overt features are automatically
+blocked when detected, then we may need to be more subtle.
+Possibilities include serving an innocuous web page if a TLS encrypted
+request is received without the authorization needed to access the Tor
+network and only responding to a requested access to the Tor network
+of proper authentication is given. If an unauthenticated request to
+access the Tor network is sent, the bridge should respond as if
+it has received a message it does not understand (as would be the
+case were it not a bridge).
+
 
 \subsection{How to motivate people to run bridge relays}
 
