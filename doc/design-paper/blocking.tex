@@ -60,8 +60,8 @@ Historically, research on anonymizing systems has focused on a passive
 attacker who monitors the user (call her Alice) and tries to discover her
 activities, yet lets her reach any piece of the network. In more modern
 threat models such as Tor's, the adversary is allowed to perform active
-attacks such as modifying communications in hopes of tricking Alice
-into revealing her destination, or intercepting some of her connections
+attacks such as modifying communications to trick Alice
+into revealing her destination, or intercepting some connections
 to run a man-in-the-middle attack. But these systems still assume that
 Alice can eventually reach the anonymizing network.
 
@@ -108,8 +108,7 @@ whistleblowers in firewalled corporate network; and for people in
 unanticipated oppressive situations. In fact, by designing with
 a variety of adversaries in mind, we can take advantage of the fact that
 adversaries will be in different stages of the arms race at each location,
-and thereby retain partial utility in servers even when they are blocked
-by some of the adversaries.
+so a server blocked in one locale can still be useful in others.
 
 We assume there are three main network attacks in use by censors
 currently~\cite{clayton:pet2006}:
@@ -124,8 +123,8 @@ destination hostnames.
 \end{tightlist}
 
 We assume the network firewall has limited CPU and memory per
-connection~\cite{clayton:pet2006}. Against an adversary who spends
-hours looking through the contents of each packet, we would need
+connection~\cite{clayton:pet2006}. Against an adversary who carefully
+examines the contents of every packet, we would need
 some stronger mechanism such as steganography, which introduces its
 own problems~\cite{active-wardens,tcpstego,bar}.
 
@@ -303,7 +302,7 @@ Relay-based blocking-resistance schemes generally have two main
 components: a relay component and a discovery component. The relay part
 encompasses the process of establishing a connection, sending traffic
 back and forth, and so on---everything that's done once the user knows
-where he's going to connect. Discovery is the step before that: the
+where she's going to connect. Discovery is the step before that: the
 process of finding one or more usable relays.
 
 For example, we can divide the pieces of Tor in the previous section
@@ -316,7 +315,8 @@ in mind, we now examine several categories of relay-based schemes.
 
 Existing commercial anonymity solutions (like Anonymizer.com) are based
 on a set of single-hop proxies. In these systems, each user connects to
-a single proxy, which then relays the user's traffic. These public proxy
+a single proxy, which then relays traffic between the user and her
+destination. These public proxy
 systems are typically characterized by two features: they control and
 operate the proxies centrally, and many different users get assigned
 to each proxy.
@@ -393,8 +393,9 @@ some cases he may know and trust some people on the outside, but in many
 cases he's just out of luck. Just as hard, how does a new volunteer in
 Ohio find a person in China who needs it?
 
-%discovery is also hard because the hosts keep vanishing if they're
-%on dynamic ip. But not so bad, since they can use dyndns addresses.
+% another key feature of a proxy run by your uncle is that you
+% self-censor, so you're unlikely to bring abuse complaints onto
+% your uncle. self-censoring clearly has a downside too, though.
 
 This challenge leads to a hybrid design---centrally-distributed
 personal proxies---which we will investigate in more detail in
@@ -467,7 +468,7 @@ this idea when we consider whether and how to publicize a Tor variant
 that improves blocking-resistance---see Section~\ref{subsec:publicity}
 for more discussion.)
 
-The broader explanation is that  the maintainance of most government-level
+The broader explanation is that the maintainance of most government-level
 filters is aimed at stopping widespread information flow and appearing to be
 in control, not by the impossible goal of blocking all possible ways to bypass
 censorship. Censors realize that there will always
@@ -690,6 +691,9 @@ cat-and-mouse game is made more complex by the fact that Tor transports a
 variety of protocols, and we'll want to automatically handle web browsing
 differently from, say, instant messaging.
 
+% Tor cells are 512 bytes each. So TLS records will be roughly
+% multiples of this size? How bad is this?
+
 \subsection{Identity keys as part of addressing information}
 
 We have described a way for the blocked user to bootstrap into the
@@ -751,7 +755,7 @@ upcoming Psiphon single-hop proxy tool~\cite{psiphon} plans to use this
 
 There are some variations on bootstrapping in this design. In the simple
 case, the operator of the bridge informs each chosen user about his
-bridge's address information and/or keys. Another approach involves
+bridge's address information and/or keys. A different approach involves
 blocked users introducing new blocked users to the bridges they know.
 That is, somebody in the blocked area can pass along a bridge's address to
 somebody else they trust. This scheme brings in appealing but complex game
@@ -777,14 +781,13 @@ on the first by encouraging volunteers to run several bridges at once
 (or coordinate with other bridge volunteers), such that some fraction
 of the bridges are likely to be available at any given time.
 
-The blocked user's Tor client could periodically fetch an updated set of
+The blocked user's Tor client would periodically fetch an updated set of
 recommended bridges from any of the working bridges. Now the client can
 learn new additions to the bridge pool, and can expire abandoned bridges
 or bridges that the adversary has blocked, without the user ever needing
-to care. To simplify maintenance of the community's bridge pool, rather
-than mirroring all of the information at each bridge, each community
-could instead run its own bridge directory authority (accessed via the
-available bridges),
+to care. To simplify maintenance of the community's bridge pool, each
+community could run its own bridge directory authority---accessed via
+the available bridges, or mirrored at each bridge.
 
 \subsection{Social networks with directory-side support}
 
@@ -1002,6 +1005,11 @@ progress reports.
 The above geoip-based approach to detecting blocked bridges gives us a
 solution though.
 
+\subsection{Advantages of deploying all solutions at once}
+
+For once we're not in the position of the defender: we don't have to
+defend against every possible filtering scheme, we just have to defend
+against at least one.
 
 \section{Security considerations}
 \label{sec:security}
@@ -1058,6 +1066,11 @@ It is an open research question whether the benefits outweigh the risks. A
 lot of the decision rests on which attacks the users are most worried
 about. For most users, we don't think running a bridge relay will be
 that damaging.
+
+Need to examine how entry guards fit in. If the blocked user doesn't use
+the bridge's entry guards, then the bridge doesn't gain as much cover
+benefit. If he does, first how does that actually work, and second is
+it turtles all the way down (need to use the guard's guards, ...)?
 
 \subsection{Trusting local hardware: Internet cafes and LiveCDs}
 \label{subsec:cafes-and-livecds}
@@ -1201,7 +1214,10 @@ servers.)
 
 \subsection{What if the clients can't install software?}
 
-Bridge users without Tor clients
+[this section should probably move to the related work section,
+or just disappear entirely.]
+
+Bridge users without Tor software
 
 Bridge relays could always open their socks proxy. This is bad though,
 first
@@ -1216,6 +1232,10 @@ approach is probably a good way to help bootstrap the Psiphon network,
 if one of its barriers to deployment is a lack of volunteers willing
 to exit directly to websites. But it clearly drops some of the nice
 anonymity and security features Tor provides.
+
+A hybrid approach where the user gets his anonymity from Tor but his
+software-less use from a web proxy running on a trusted machine on the
+free side.
 
 \subsection{Publicity attracts attention}
 \label{subsec:publicity}
@@ -1257,6 +1277,13 @@ the outside world, etc.
 Hidden services as bridges. Hidden services as bridge directory authorities.
 
 \section{Conclusion}
+
+a technical solution won't solve the whole problem. after all, china's
+firewall is *socially* very successful, even if technologies exist to
+get around it.
+
+but having a strong technical solution is still useful as a piece of the
+puzzle.
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
