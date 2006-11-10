@@ -1,5 +1,7 @@
 \documentclass{article}
 
+\usepackage{url}
+
 \newenvironment{tightlist}{\begin{list}{$\bullet$}{
   \setlength{\itemsep}{0mm}
     \setlength{\parsep}{0mm}
@@ -24,17 +26,17 @@
 
 
 \section{Introduction}
-Hi, Roger!  Hi, Shava.  This paragraph should get deleted soon.  Right now,
-this document goes into about as much detail as I'd like to go into for a
-technical audience, since that's the audience I know best.  It doesn't have
-time estimates everywhere.  It isn't well prioritized, and it doesn't
-distinguish well between things that need lots of research and things that
-don't.  The breakdowns don't all make sense.  There are lots of things where
-I don't make it clear how they fit into larger goals, and lots of larger
-goals that don't break down into little things. It isn't all stuff we can do
-for sure, and it isn't even all stuff we can do for sure in 2007.  The
-tmp\{\} macro indicates stuff I haven't said enough about.  That said, here
-plangoes...
+%Hi, Roger!  Hi, Shava.  This paragraph should get deleted soon.  Right now,
+%this document goes into about as much detail as I'd like to go into for a
+%technical audience, since that's the audience I know best.  It doesn't have
+%time estimates everywhere.  It isn't well prioritized, and it doesn't
+%distinguish well between things that need lots of research and things that
+%don't.  The breakdowns don't all make sense.  There are lots of things where
+%I don't make it clear how they fit into larger goals, and lots of larger
+%goals that don't break down into little things. It isn't all stuff we can do
+%for sure, and it isn't even all stuff we can do for sure in 2007.  The
+%tmp\{\} macro indicates stuff I haven't said enough about.  That said, here
+%plangoes...
 
 Tor (the software) and Tor (the overall software/network/support/document
 suite) are now experiencing all the crises of success.  Over the next year,
@@ -62,7 +64,7 @@ With protocol versioning support would come the ability to {\bf future-proof
 directory protocol, is pretty firmly tied to the SHA-1 hash function, which
 though not yet known to be insecure for our purposes, has begun to show
 its age.  We should
-remove assumptions thoughout our design based on the assumption that public
+remove assumptions throughout our design based on the assumption that public
 keys, secret keys, or digests will remain any particular size indefinitely.
 
 Our OR {\bf authentication protocol}, though provably
@@ -143,12 +145,13 @@ they are to be deployed in 2008.\plan{Design in 2007; unknown difficulty.
 \subsubsection{Relay incentives}
 To support more users on the network, we need to get more servers.  So far,
 we've relied on volunteerism to attract server operators, and so far it's
-served us well.  But in the long run, we need to {\bf design incentices for
+served us well.  But in the long run, we need to {\bf design incentives for
   users to run servers} and relay traffic for others.  Most obviously, we
 could try to build the network so that servers offered improved service for
 other servers, but we would need to do so without weakening anonymity and
 making it obvious which connections originate from users running servers.  We
-have some preliminary designs here~\cite{challenges}, but need to perform
+have some preliminary designs here~\cite{tor-challenges}~\cite{incentives-txt},
+but need to perform
 some more research to make sure they would be safe and effective.\plan{Write
   a draft paper; 2 person-months.}
 
@@ -235,12 +238,13 @@ all getting dropped on the floor, the TCP push-back mechanisms don't really
 transmit this information back to the incoming streams.\plan{Do in 2007 since
   related to bandwidth limiting.  3-4 weeks.}
 
-
 \subsection{Running Tor as both client and server}
 
-\tmp{many performance tradeoffs and balances that need more attention.
-  Roger, please write.} \plan{No idea; try profiling and improving things in
-  2007.}
+Many performance tradeoffs and balances that might need more attention.
+We first need to track and fix whatever bottlenecks emerge; but we also
+need to invent good algorithms for prioritizing the client's traffic
+without starving the server's traffic too much.\plan{No idea; try
+profiling and improving things in 2007.}
 
 \subsection{Protocol redesign for UDP}
 Tor has relayed only TCP traffic since its first versions, and has used
@@ -249,7 +253,7 @@ in the long term we will need to allow UDP traffic on the network, and switch
 some or all of the network to using a UDP transport.  {\bf Supporting UDP
   traffic} will make Tor more suitable for protocols that require UDP, such
 as many VOIP protocols.  {\bf Using a UDP transport} could greatly reduce
-resource limitations on servers, and make the network far less interruptable
+resource limitations on servers, and make the network far less interruptible
 by lossy connections.  Either of these protocol changes would require a great
 deal of design work, however.  We hope to be able to enlist the aid of a few
 talented graduate students to assist with the initial design and
@@ -365,7 +369,7 @@ unacceptable levels. %Cite something
 \plan{Start doing this in 2007; write a paper.  8-16 weeks.}
 
 We've got some preliminary results suggesting that {\bf a topology-aware
-  routing algorithm}~\cite{routing-zones} could reduce Tor users'
+  routing algorithm}~\cite{feamster:wpes2004} could reduce Tor users'
 vulnerability against local or ISP-level adversaries, by ensuring that they
 are never in a position to watch both ends of a connection.  We need to
 examine the effects of this approach in more detail and consider side-effects
@@ -381,12 +385,12 @@ Internet. \plan{Not in 2007 unless a graduate student wants to do it.}
 %
 % See above; I think I got this.
 
-We should research the efficacy of {\bf website fingperprinting} attacks,
+We should research the efficacy of {\bf website fingerprinting} attacks,
 wherein an adversary tries to match the distinctive traffic and timing
 pattern of the resources constituting a given website to the traffic pattern
 of a user's client.  These attacks work great in simulations, but in
 practice we hear they don't work nearly as well.  We should get some actual
-numbers to investigte the issue, and figure out what's going on.  If we
+numbers to investigate the issue, and figure out what's going on.  If we
 resist these attacks, or can improve our design to resist them, we should.
 % add cites
 \plan{Possibly part of end-to-end correlation paper.  Otherwise, not in 2007
@@ -468,9 +472,9 @@ adding named nodes to the network.\plan{Do in 2007; 4-5 weeks.}
 \subsection{Protocol security}
 
 In addition to other protocol changes discussed above,
-% And should we move somve of them down here? -NM
+% And should we move some of them down here? -NM
 we should add {\bf hooks for denial-of-service resistance}; we have some
-prelimiary designs, but we shouldn't postpone them until we realy need them.
+preliminary designs, but we shouldn't postpone them until we really need them.
 If somebody tries a DDoS attack against the Tor network, we won't want to
 wait for all the servers and clients to upgrade to a new
 version.\plan{Research project; do this in 2007 if funded.}
@@ -499,7 +503,7 @@ testing framework.\plan{Ongoing basis, time permitting.}
 
 We should also write flexible {\bf automated single-host deployment tests} so
 we can more easily verify that the current codebase works with the
-network.\plan{Worthwile in 2007; would save lots of time.  2-4 weeks.}
+network.\plan{Worthwhile in 2007; would save lots of time.  2-4 weeks.}
 
 We should build automated {\bf stress testing} frameworks so we can see which
 realistic loads cause Tor to perform badly, and regularly profile Tor against
@@ -559,13 +563,13 @@ current Tor-friendly position.\plan{Do a writeup here in 2007; 1-2 weeks.}
 Those who do block Tor users also block overbroadly, sometimes blacklisting
 operators of Tor servers that do not permit exit to their services.  We could
 obviate innocent reasons for doing so by designing a {\bf narrowly-targeted Tor
-  RBL service} so that those who wanted to overblock Tor clould no longer
+  RBL service} so that those who wanted to overblock Tor could no longer
 plead incompetence.\plan{Possibly in 2007 if we decide it's a good idea; 3
   weeks.}
 
 \subsection{All-in-one bundle}
 We need a well-tested, well-documented bundle of Tor and supporting
-applications configured to use it correctly.  We have an intial
+applications configured to use it correctly.  We have an initial
 implementation well under way, but it will need additional work in
 identifying requisite Firefox extensions, identifying security threats,
 improving user experience, and so on.  This will need significantly more work
@@ -578,12 +582,17 @@ is quite feasible, but their project is not currently maintained.
 
 \subsection{A Tor client in a VM}
 \tmp{a.k.a JanusVM} which is quite related to the firewall-level deployment
-section below .  Roger, can you write this?
+section below. JanusVM is a Linux kernel running in VMWare. It gets an IP
+address from the network, and serves as a DHCP server for its host Windows
+machine. It intercepts all outgoing traffic and redirects it into Privoxy,
+Tor, etc. This Linux-in-Windows approach may help us with scalability in
+the short term, and it may also be a good long-term solution rather than
+accepting all security risks in Windows.
 
 %\subsection{Interface improvements}
 %\tmp{Allow controllers to manipulate server status.}
 % (Why is this in the User Experience section?) -RD
-% I think it's better left to a generic ``make controller iface bettter'' item.
+% I think it's better left to a generic ``make controller iface better'' item.
 
 \subsection{Firewall-level deployment}
 Another useful deployment mode for some users is using {\bf Tor in a firewall
@@ -596,16 +605,19 @@ and to {\bf construct a recommended set of firewall configurations} to redirect
 traffic to Tor.
 
 This is an area where {\bf deployment via a livecd}, or an installation
-targetted at specialized home routing hardware, could be useful.
+targeted at specialized home routing hardware, could be useful.
 
 \subsection{Assess software and configurations for anonymity risks}
 Right now, users and packagers are more or less on their own when selecting
-firefox extensions.  We should {\bf assemble a recommended list of browser
+Firefox extensions.  We should {\bf assemble a recommended list of browser
   extensions} through experiment, and include this in the application bundles
 we distribute.
 
 We should also describe {\bf best practices for using Tor with each class of
-  application}.  \tmp{Roger, say more}
+  application}. For example, Ethan Zuckerman has written a detailed
+tutorial on how to use Tor, Firefox, GMail, and Wordpress to blog with
+improved safety. There are many other cases on the Internet where anonymity
+would be helpful, and there are a lot of ways to screw up using Tor.
 
 The Foxtor and Torbutton extensions serve similar purposes; we should pick a
 favorite, and merge in the useful features of the other.
@@ -632,10 +644,16 @@ translators only need to use a single tool to translate the whole Tor suite.
 
 \section{Support}
 
-\tmp{would be nice to set up some actual user support infrastructure, especially
-focusing on server operators and on coordinating volunteers.} Roger, can you
-write this ?  I don't know what ``user support infrastructure'' is.
+It would be nice to set up some {\bf user support infrastructure} and
+{\bf contributor support infrastructure}, especially focusing on server
+operators and on coordinating volunteers.
 
+This includes intuitive and easy ticket systems for bug reports and
+feature suggestions (not just mailing lists with a half dozen people
+and no clear roles for who answers what), but it also includes a more
+personalized and efficient framework for interaction so we keep the
+attention and interest of the contributors, and so we make them feel
+helpful and wanted.
 
 \section{Documentation}
 
@@ -656,7 +674,7 @@ We should {\bf revise our design paper} to reflect the new decisions and
 research we've made since it was published in 2004.  This will help other
 researchers evaluate and suggest improvements to Tor's current design.
 
-Other projects sometimes implement the client side of our prototocol.  We
+Other projects sometimes implement the client side of our protocol.  We
 encourage this, but we should write {\bf a document about how to avoid
 excessive resource use}, so we don't need to worry that they will do so
 without regard to the effect of their choices on server resources.
@@ -665,7 +683,7 @@ without regard to the effect of their choices on server resources.
 
 Our documentation falls into two broad categories: some is `discoursive' and
 explains in detail why users should take certain actions, and other
-documenation is `comprehensive' and describes all of Tor's features.  Right
+documentation is `comprehensive' and describes all of Tor's features.  Right
 now, we have no document that is both deep, readable, and thorough.  We
 should correct this by identifying missing spots in our design.
 
