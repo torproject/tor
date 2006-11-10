@@ -384,7 +384,7 @@ getting new addresses for them as the old addresses are blocked, they
 aim to have a large number of entirely independent proxies, each managing
 its own (much smaller) set of users.
 
-As the Circumventor site~\cite{circumventor} explains, ``You don't
+As the Circumventor site explains, ``You don't
 actually install the Circumventor \emph{on} the computer that is blocked
 from accessing Web sites. You, or a friend of yours, has to install the
 Circumventor on some \emph{other} machine which is not censored.''
@@ -747,7 +747,7 @@ situations where it's more convenient or more secure to learn the bridge's
 identity fingerprint as well as instead, while bootstrapping? We keep
 that question in mind as we next investigate bootstrapping and discovery.
 
-\section{Discovering and maintaining working bridge relays}
+\section{Discovering working bridge relays}
 \label{sec:discovery}
 
 Tor's modular design means that we can develop a better relay component
@@ -757,10 +757,38 @@ unfortunate fact is that we have no magic bullet for discovery. We're
 in the same arms race as all the other designs we described in
 Section~\ref{sec:related}.
 
-In this section we describe three approaches to adding discovery
-components for our design. Note that we should deploy all the schemes
-at once---bridges and blocked users can then use the discovery approach
-that is most appropriate for their situation.
+In this section we describe a variety of approaches to adding discovery
+components for our design.
+
+\subsection{Bootstrapping: finding your first bridge.}
+\label{subsec:first-bridge}
+
+In Section~\ref{subsec:relay-together}, we showed that a user who knows
+a working bridge address can use it to reach the bridge authority and
+to stay connected to the Tor network. But how do new users reach the
+bridge authority in the first place? After all, the bridge authority
+will be one of the first addresses that a censor blocks.
+
+First, we should recognize that most government firewalls are not
+perfect. That is, they may allow connections to Google cache or some
+open proxy servers, or they let file-sharing traffic, Skype, instant
+messaging, or World-of-Warcraft connections through. Different users will
+have different mechanisms for bypassing the firewall initially. Second,
+we should remember that most people don't operate in a vacuum; users will
+hopefully know other people who are in other situations or have other
+resources available. In the rest of this section we develop a toolkit
+of different options and mechanisms, so that we can enable users in a
+diverse set of contexts to bootstrap into the system.
+
+(For users who can't use any of these techniques, hopefully they know
+a friend who can---for example, perhaps the friend already knows some
+bridge relay addresses. If they can't get around it at all, then we
+can't help them---they should go meet more people or learn more about
+the technology running the firewall in their area.)
+
+By deploying all the schemes in the toolkit at once, we let bridges and
+blocked users employ the discovery approach that is most appropriate
+for their situation.
 
 \subsection{Independent bridges, no central discovery}
 
@@ -782,6 +810,9 @@ somebody else they trust. This scheme brings in appealing but complex game
 theoretic properties: the blocked user making the decision has an incentive
 only to delegate to trustworthy people, since an adversary who learns
 the bridge's address and filters it makes it unavailable for both of them.
+Also, delegating known bridges to members of your social network can be
+dangerous: an the adversary who can learn who knows which bridges may
+be able to reconstruct the social network.
 
 Note that a central set of bridge directory authorities can still be
 compatible with a decentralized discovery process. That is, how users
@@ -798,7 +829,7 @@ reach the bridge authority. We address these concerns next.
 Because the blocked users are running our software too, we have many
 opportunities to improve usability or robustness. Our second design builds
 on the first by encouraging volunteers to run several bridges at once
-(or coordinate with other bridge volunteers), such that some fraction
+(or coordinate with other bridge volunteers), such that some
 of the bridges are likely to be available at any given time.
 
 The blocked user's Tor client would periodically fetch an updated set of
@@ -813,73 +844,64 @@ the available bridges, and also mirrored at each bridge.
 
 What about people who want to volunteer as bridges but don't know any
 suitable blocked users? What about people who are blocked but don't
-know anybody on the outside? Here we describe a way to make use of these
+know anybody on the outside? Here we describe how to make use of these
 \emph{public bridges} in a way that still makes it hard for the attacker
 to learn all of them.
 
-The basic idea is to divide public bridges into a set of buckets based on
-identity key, where each bucket has a different policy for distributing
-its bridge addresses to users. Each of these \emph{distribution policies}
+The basic idea is to divide public bridges into a set of pools based on
+identity key. Each pool corresponds to a \emph{distribution strategy}:
+an approach to distributing its bridge addresses to users. Each strategy
 is designed to exercise a different scarce resource or property of
 the user.
 
-How do we divide bridges into buckets such that they're evenly distributed
-and the allocation is hard to influence or predict, but also in a way
-that's amenable to creating more buckets later on without reshuffling
-all the bridges? We compute the bucket for a given bridge by hashing the
-bridge's identity key along with a secret that only the bridge authority
-knows: the first $n$ bits of this hash dictate the bucket number,
-where $n$ is a parameter that describes how many buckets we want at this
-point. We choose $n=3$ to start, so we have 8 buckets available; but as
-we later invent new distribution policies, we can increment $n$ to split
-the 8 into 16 buckets. Since a bridge can't predict the next bit in its
-hash, it can't anticipate which identity key will correspond to a certain
-bucket when the buckets are split. Further, since the bridge authority
-doesn't provide any feedback to the bridge about which bucket it's in,
-an adversary signing up bridges to fill a certain bucket will be slowed.
+How do we divide bridges between these strategy pools such that they're
+evenly distributed and the allocation is hard to influence or predict,
+but also in a way that's amenable to creating more strategies later
+on without reshuffling all the pools? We assign a given bridge
+to a strategy pool by hashing the bridge's identity key along with a
+secret that only the bridge authority knows: the first $n$ bits of this
+hash dictate the strategy pool number, where $n$ is a parameter that
+describes how many strategy pools we want at this point. We choose $n=3$
+to start, so we divide bridges between 8 pools; but as we later invent
+new distribution strategies, we can increment $n$ to split the 8 into
+16. Since a bridge can't predict the next bit in its hash, it can't
+anticipate which identity key will correspond to a certain new pool
+when the pools are split. Further, since the bridge authority doesn't
+provide any feedback to the bridge about which strategy pool it's in,
+an adversary who signs up bridges with the goal of filling a certain
+pool~\cite{casc-rep} will be hindered.
 
-% This algorithm is not ideal. When we split buckets, each existing
-% bucket is cut in half, where half the bridges remain with the
+% This algorithm is not ideal. When we split pools, each existing
+% pool is cut in half, where half the bridges remain with the
 % old distribution policy, and half will be under what the new one
 % is. So the new distribution policy inherits a bunch of blocked
 % bridges if the old policy was too loose, or a bunch of unblocked
 % bridges if its policy was still secure. -RD
 %
-%
-% Having talked to Roger on the phone, I realized that the following
-% paragraph was based on completely misunderstanding ``bucket'' as
-% used here. But as per his request, I'm leaving it in in case it
-% guides rewording so that equally careless readers are less likely
-% to go astray. -PFS
-%
-% I don't understand this adversary. Why do we care if an adversary
-% fills a particular bucket if bridge requests are returned from
-% random buckets? Put another way, bridge requests _should_ be returned
-% from unpredictable buckets because we want to be resilient against
-% whatever optimal distribution of adversary bridges an adversary manages
-% to arrange. (Cf. casc-rep) I think it should be more chordlike. 
+% I think it should be more chordlike.
 % Bridges are allocated to wherever on the ring which is divided
 % into arcs (buckets).
 % If a bucket gets too full, you can just split it.
 % More on this below. -PFS
 
-The first distribution policy (used for the first bucket) publishes bridge
+The first distribution strategy (used for the first pool) publishes bridge
 addresses in a time-release fashion. The bridge authority divides the
-available bridges into partitions which are deterministically available
-only in certain time windows. That is, over the course of a given time
-slot (say, an hour), each requestor is given a random bridge from within
-that partition. When the next time slot arrives, a new set of bridges
-are available for discovery. Thus a bridge is always available when a new
+available bridges into partitions, and each partition is deterministically
+available only in certain time windows. That is, over the course of a
+given time slot (say, an hour), each requestor is given a random bridge
+from within that partition. When the next time slot arrives, a new set
+of bridges from the pool are available for discovery. Thus some bridge
+address is always available when a new
 user arrives, but to learn about all bridges the attacker needs to fetch
-the new addresses at every new time slot. By varying the length of the
+all new addresses at every new time slot. By varying the length of the
 time slots, we can make it harder for the attacker to guess when to check
 back. We expect these bridges will be the first to be blocked, but they'll
 help the system bootstrap until they \emph{do} get blocked. Further,
 remember that we're dealing with different blocking regimes around the
 world that will progress at different rates---so this bucket will still
-be useful to some users even as the arms race progresses.
+be useful to some users even as the arms races progress.
 
-The second distribution policy publishes bridge addresses based on the IP
+The second distribution strategy publishes bridge addresses based on the IP
 address of the requesting user. Specifically, the bridge authority will
 divide the available bridges in the bucket into a bunch of partitions
 (as in the first distribution scheme), hash the requestor's IP address
@@ -887,23 +909,30 @@ with a secret of its own (as in the above allocation scheme for creating
 buckets), and give the requestor a random bridge from the appropriate
 partition. To raise the bar, we should discard the last octet of the
 IP address before inputting it to the hash function, so an attacker
-who only controls a ``/24'' address only counts as one user. A large
-attacker like China will still be able to control many addresses, but
-the hassle of needing to establish connections from each network (or
-spoof TCP connections) may still slow them down. (We could also imagine
-a policy that combines the time-based and location-based policies to
-further constrain and rate-limit the available bridge addresses.)
+who only controls a single ``/24'' network only counts as one user. A
+large attacker like China will still be able to control many addresses,
+but the hassle of establishing connections from each network (or spoofing
+TCP connections) may still slow them down. Similarly, as a special case,
+we should treat IP addresses that are Tor exit nodes as all being on
+the same network.
 
-The third policy is based on Circumventor's discovery strategy. Realizing
-that its adoption will remain limited without some central coordination
-mechanism, the Circumventor project has started a mailing list to
+The third strategy combines the time-based and location-based
+strategies to further constrain and rate-limit the available bridge
+addresses. Specifically, the bridge address provided in a given time
+slot to a given network location is deterministic within the partition,
+rather than chosen randomly each time from the partition. Thus, repeated
+requests during that time slot from a given network are given the same
+bridge address as the first request.
+
+The fourth strategy is based on Circumventor's discovery strategy.
+The Circumventor project, realizing that its adoption will remain limited
+if it has no central coordination mechanism, has started a mailing list to
 distribute new proxy addresses every few days. From experimentation it
 seems they have concluded that sending updates every three or four days
-is sufficient to stay ahead of the current attackers. We could give out
-bridge addresses from the third bucket in a similar fashion
+is sufficient to stay ahead of the current attackers.
 
-The fourth policy provides an alternative approach to a mailing list:
-users provide an email address, and receive an automated response
+The fifth strategy provides an alternative approach to a mailing list:
+users provide an email address and receive an automated response
 listing an available bridge address. We could limit one response per
 email address. To further rate limit queries, we could require a CAPTCHA
 solution~\cite{captcha} in each case too. In fact, we wouldn't need to
@@ -911,152 +940,43 @@ implement the CAPTCHA on our side: if we only deliver bridge addresses
 to Yahoo or GMail addresses, we can leverage the rate-limiting schemes
 that other parties already impose for account creation.
 
-The fifth policy ties in
+The sixth strategy ties in the social network design with public
+bridges and a reputation system. We pick some seeds---trusted people in
+blocked areas---and give them each a few dozen bridge addresses and a few
+\emph{delegation tokens}. We run a website next to the bridge authority,
+where the seeds can log in (they can log in via Tor, and they don't need
+to provide actual identities, just persistent pseudonyms). The seeds can
+delegate trust to other people they know by giving them a token. The
+tokens can be exchanged for new accounts on the website. Accounts in
+``good standing'' then accrue new bridge addresses and new tokens.
+As usual, reputation schemes bring in a host of new complexities
+(for example, how do we decide that an account is in good
+standing?), so we put off deeper discussion of the social network
+reputation strategy for Section\ref{sec:accounts}.
+
+Pools seven and eight are held in reserve, in case our currently deployed
+tricks all fail at once and the adversary blocks all those bridges---so
+we can adapt and move to new approaches quickly, and have some bridges
+immediately available for the new schemes. New strategies might be based
+on some other scarce resource, such as relaying traffic for others or
+other proof of energy spent. (We might also worry about the incentives
+for bridges that sign up and get allocated to the reserve pools: will they
+be unhappy that they're not being used? But this is a transient problem:
+if Tor users are bridges by default, nobody will mind not being used yet.
+See also Section~\ref{subsec:incentives}.)
+
+%Is it useful to load balance which bridges are handed out? The above
+%bucket concept makes some bridges wildly popular and others less so.
+%But I guess that's the point.
+
+\subsection{Public bridges with coordinated discovery}
+
+We presented the above discovery strategies in the context of a single
+bridge directory authority, but in practice we will want to distribute
+the operations over several bridge authorities---a single point of
+failure or attack is a bad move.
+
 ...
-reputation system
-Pick some seeds---trusted people in the blocked area---and give
-them each a few hundred bridge addresses. Run a website next to the
-bridge authority, where they can log in (they only need persistent
-pseudonyms). Give them tokens slowly over time. They can use these
-tokens to delegate trust to other people they know. The tokens can
-be exchanged for new accounts on the website.
-Accounts in ``good standing'' accrue new bridge addresses and new
-tokens.
-This is great, except how do we decide that an account is in good
-standing? One answer is to measure based on whether the bridge addresses
-we give it end up blocked. But how do we decide if they get blocked?
-Other questions below too.
-\ref{sec:accounts}
-
-Buckets six through eight are held in reserve, in case our currently
-deployed tricks all fail at once---so we can adapt and move to
-new approaches quickly, and have some bridges available for the new
-schemes. (Bridges that sign up and don't get used yet may be unhappy that
-they're not being used; but this is a transient problem: if bridges are
-on by default, nobody will mind not being used yet.)
-
-
-\subsubsection{Public Bridges with Coordinated Discovery}
-
-****Pretty much this whole subsubsection will probably need to be
-deferred until ``later'' and moved to after end document, but I'm leaving
-it here for now in case useful.******
-
-Rather than be entirely centralized, we can have a coordinated
-collection of bridge authorities, analogous to how Tor network
-directory authorities now work.
-
-Key components
-``Authorities'' will distribute caches of what they know to overlapping
-collections of nodes so that no one node is owned by one authority.
-Also so that it is impossible to DoS info maintained by one authority
-simply by making requests to it.
-
-Where a bridge gets assigned is not predictable by the bridge?
-
-If authorities don't know the IP addresses of the bridges they
-are responsible for, they can't abuse that info (or be attacked for
-having it). But, they also can't, e.g., control being sent massive
-lists of nodes that were never good. This raises another question.
-We generally decry use of IP address for location, etc. but we
-need to do that to limit the introduction of functional but useless
-IP addresses because, e.g., they are in China and the adversary
-owns massive chunks of the IP space there.
-
-We don't want an arbitrary someone to be able to contact the
-authorities and say an IP address is bad because it would be easy
-for an adversary to take down all the suspicious bridges
-even if they provide good cover websites, etc. Only the bridge
-itself and/or the directory authority can declare a bridge blocked
-from somewhere.
-
-
-9. Bridge directories must not simply be a handful of nodes that
-provide the list of bridges. They must flood or otherwise distribute
-information out to other Tor nodes as mirrors. That way it becomes
-difficult for censors to flood the bridge directory servers with
-requests, effectively denying access for others. But, there's lots of
-churn and a much larger size than Tor directories.  We are forced to
-handle the directory scaling problem here much sooner than for the
-network in general. Authorities can pass their bridge directories
-(and policy info) to some moderate number of unidentified Tor nodes.
-Anyone contacting one of those nodes can get bridge info. the nodes
-must remain somewhat synched to prevent the adversary from abusing,
-e.g., a timed release policy or the distribution to those nodes must
-be resilient even if they are not coordinating.
-
-I think some kind of DHT like scheme would work here. A Tor node is
-assigned a chunk of the directory.  Lookups in the directory should be
-via hashes of keys (fingerprints) and that should determine the Tor
-nodes responsible. Ordinary directories can publish lists of Tor nodes
-responsible for fingerprint ranges.  Clients looking to update info on
-some bridge will make a Tor connection to one of the nodes responsible
-for that address.  Instead of shutting down a circuit after getting
-info on one address, extend it to another that is responsible for that
-address (the node from which you are extending knows you are doing so
-anyway). Keep going.  This way you can amortize the Tor connection.
-
-10. We need some way to give new identity keys out to those who need
-them without letting those get immediately blocked by authorities. One
-way is to give a fingerprint that gets you more fingerprints, as
-already described. These are meted out/updated periodically but allow
-us to keep track of which sources are compromised: if a distribution
-fingerprint repeatedly leads to quickly blocked bridges, it should be
-suspect, dropped, etc. Since we're using hashes, there shouldn't be a
-correlation with bridge directory mirrors, bridges, portions of the
-network observed, etc. It should just be that the authorities know
-about that key that leads to new addresses.
-
-This last point is very much like the issues in the valet nodes paper,
-which is essentially about blocking resistance wrt exiting the Tor network,
-while this paper is concerned with blocking the entering to the Tor network.
-In fact the tickets used to connect to the IPo (Introduction Point),
-could serve as an example, except that instead of authorizing
-a connection to the Hidden Service, it's authorizing the downloading
-of more fingerprints.
-
-Also, the fingerprints can follow the hash(q + '1' + cookie) scheme of
-that paper (where q = hash(PK + salt) gave the q.onion address).  This
-allows us to control and track which fingerprint was causing problems.
-
-Note that, unlike many settings, the reputation problem should not be
-hard here. If a bridge says it is blocked, then it might as well be.
-If an adversary can say that the bridge is blocked wrt
-$\mathit{censor}_i$, then it might as well be, since
-$\mathit{censor}_i$ can presumably then block that bridge if it so
-chooses.
-
-11. How much damage can the adversary do by running nodes in the Tor
-network and watching for bridge nodes connecting to it?  (This is
-analogous to an Introduction Point watching for Valet Nodes connecting
-to it.) What percentage of the network do you need to own to do how
-much damage. Here the entry-guard design comes in helpfully.  So we
-need to have bridges use entry-guards, but (cf. 3 above) not use
-bridges as entry-guards. Here's a serious tradeoff (again akin to the
-ratio of valets to IPos) the more bridges/client the worse the
-anonymity of that client. The fewer bridges/client the worse the 
-blocking resistance of that client.
-
-
-\subsubsection{Bootstrapping: finding your first bridge.}
-\label{subsec:first-bridge}
-How do users find their first public bridge, so they can reach the
-bridge authority to learn more?
-Most government firewalls are not perfect. That is, they allow connections to
-Google cache or some open proxy servers, or they let file-sharing traffic or
-Skype or World-of-Warcraft connections through. We assume that the
-users have some mechanism for bypassing the firewall initially.
-For users who can't use any of these techniques, hopefully they know
-a friend who can---for example, perhaps the friend already knows some
-bridge relay addresses.
-(If they can't get around it at all, then we can't help them---they
-should go meet more people.)
-
-Is it useful to load balance which bridges are handed out? The above
-bucket concept makes some bridges wildly popular and others less so.
-But I guess that's the point.
-
-Families of bridges: give out 4 or 8 at once, bound together.
 
 \subsection{Advantages of deploying all solutions at once}
 
@@ -1064,35 +984,27 @@ For once we're not in the position of the defender: we don't have to
 defend against every possible filtering scheme, we just have to defend
 against at least one.
 
+adversary has to guess how to allocate his resources
 
+(nick, want to write this section?)
 
-\subsection{Remaining unsorted notes}
+%\subsection{Remaining unsorted notes}
 
-In the first subsection we describe how to find a first bridge.
+%In the first subsection we describe how to find a first bridge.
 
-Thus they can reach the BDA. From here we either assume a social
-network or other mechanism for learning IP:dirport or key fingerprints
-as above, or we assume an account server that allows us to limit the
-number of new bridge relays an external attacker can discover.
+%Going to be an arms race. Need a bag of tricks. Hard to say
+%which ones will work. Don't spend them all at once.
 
-Going to be an arms race. Need a bag of tricks. Hard to say
-which ones will work. Don't spend them all at once.
-
-Some techniques are sufficient to get us an IP address and a port,
-and others can get us IP:port:key. Lay out some plausible options
-for how users can bootstrap into learning their first bridge.
-
-attack: adversary can reconstruct your social network by learning who
-knows which bridges.
-
-
-
-
-
+%Some techniques are sufficient to get us an IP address and a port,
+%and others can get us IP:port:key. Lay out some plausible options
+%for how users can bootstrap into learning their first bridge.
 
 %\section{The account / reputation system}
 \section{Social networks with directory-side support}
 \label{sec:accounts}
+
+One answer is to measure based on whether the bridge addresses
+we give it end up blocked. But how do we decide if they get blocked?
 
 Perhaps each bridge should be known by a single bridge directory
 authority. This makes it easier to trace which users have learned about
@@ -1191,8 +1103,7 @@ if the restrictive firewall pushes up the number of Tor users, then the
 
 Hard to say which of these pressures will ultimately win out.
 
-...
-% Nick can rewrite/elaborate on this section?
+Nick, want to rewrite/elaborate on this section?
 
 \subsection{Observers can tell who is publishing and who is reading}
 \label{subsec:upload-padding}
@@ -1323,6 +1234,8 @@ The related question is: if the bridge relays change IP addresses
 periodically, how often does the bridge user need to "check in" in order
 to keep from being cut out of the loop?
 
+Families of bridges: give out 4 or 8 at once, bound together.
+
 \subsection{Cablemodem users don't provide important websites}
 \label{subsec:block-cable}
 
@@ -1375,6 +1288,7 @@ case were it not a bridge).
 
 
 \subsection{How to motivate people to run bridge relays}
+\label{subsec:incentives}
 
 One of the traditional ways to get people to run software that benefits
 others is to give them motivation to install it themselves.  An often
@@ -1391,6 +1305,9 @@ the connections the bridge user is currently relaying. (Minor anonymity
 implications, but hey.) (In many cases there won't be much activity,
 so this may backfire. Or it may be better suited to full-fledged Tor
 servers.)
+
+% Also consider everybody-a-server. Many of the scalability questions
+% are easier when you're talking about making everybody a bridge.
 
 \subsection{What if the clients can't install software?}
 
@@ -1497,9 +1414,108 @@ should be 4 or 8 depends on our churn.
 the account server. let's call it a database, it doesn't have to
 be a thing that human interacts with.
 
-rate limiting mechanisms:
-energy spent. captchas. relaying traffic for others?
-send us \$10, we'll give you an account
-
 so how do we reward people for being good?
+
+\subsubsection{Public Bridges with Coordinated Discovery}
+
+****Pretty much this whole subsubsection will probably need to be
+deferred until ``later'' and moved to after end document, but I'm leaving
+it here for now in case useful.******
+
+Rather than be entirely centralized, we can have a coordinated
+collection of bridge authorities, analogous to how Tor network
+directory authorities now work.
+
+Key components
+``Authorities'' will distribute caches of what they know to overlapping
+collections of nodes so that no one node is owned by one authority.
+Also so that it is impossible to DoS info maintained by one authority
+simply by making requests to it.
+
+Where a bridge gets assigned is not predictable by the bridge?
+
+If authorities don't know the IP addresses of the bridges they
+are responsible for, they can't abuse that info (or be attacked for
+having it). But, they also can't, e.g., control being sent massive
+lists of nodes that were never good. This raises another question.
+We generally decry use of IP address for location, etc. but we
+need to do that to limit the introduction of functional but useless
+IP addresses because, e.g., they are in China and the adversary
+owns massive chunks of the IP space there.
+
+We don't want an arbitrary someone to be able to contact the
+authorities and say an IP address is bad because it would be easy
+for an adversary to take down all the suspicious bridges
+even if they provide good cover websites, etc. Only the bridge
+itself and/or the directory authority can declare a bridge blocked
+from somewhere.
+
+
+9. Bridge directories must not simply be a handful of nodes that
+provide the list of bridges. They must flood or otherwise distribute
+information out to other Tor nodes as mirrors. That way it becomes
+difficult for censors to flood the bridge directory servers with
+requests, effectively denying access for others. But, there's lots of
+churn and a much larger size than Tor directories.  We are forced to
+handle the directory scaling problem here much sooner than for the
+network in general. Authorities can pass their bridge directories
+(and policy info) to some moderate number of unidentified Tor nodes.
+Anyone contacting one of those nodes can get bridge info. the nodes
+must remain somewhat synched to prevent the adversary from abusing,
+e.g., a timed release policy or the distribution to those nodes must
+be resilient even if they are not coordinating.
+
+I think some kind of DHT like scheme would work here. A Tor node is
+assigned a chunk of the directory.  Lookups in the directory should be
+via hashes of keys (fingerprints) and that should determine the Tor
+nodes responsible. Ordinary directories can publish lists of Tor nodes
+responsible for fingerprint ranges.  Clients looking to update info on
+some bridge will make a Tor connection to one of the nodes responsible
+for that address.  Instead of shutting down a circuit after getting
+info on one address, extend it to another that is responsible for that
+address (the node from which you are extending knows you are doing so
+anyway). Keep going.  This way you can amortize the Tor connection.
+
+10. We need some way to give new identity keys out to those who need
+them without letting those get immediately blocked by authorities. One
+way is to give a fingerprint that gets you more fingerprints, as
+already described. These are meted out/updated periodically but allow
+us to keep track of which sources are compromised: if a distribution
+fingerprint repeatedly leads to quickly blocked bridges, it should be
+suspect, dropped, etc. Since we're using hashes, there shouldn't be a
+correlation with bridge directory mirrors, bridges, portions of the
+network observed, etc. It should just be that the authorities know
+about that key that leads to new addresses.
+
+This last point is very much like the issues in the valet nodes paper,
+which is essentially about blocking resistance wrt exiting the Tor network,
+while this paper is concerned with blocking the entering to the Tor network.
+In fact the tickets used to connect to the IPo (Introduction Point),
+could serve as an example, except that instead of authorizing
+a connection to the Hidden Service, it's authorizing the downloading
+of more fingerprints.
+
+Also, the fingerprints can follow the hash(q + '1' + cookie) scheme of
+that paper (where q = hash(PK + salt) gave the q.onion address).  This
+allows us to control and track which fingerprint was causing problems.
+
+Note that, unlike many settings, the reputation problem should not be
+hard here. If a bridge says it is blocked, then it might as well be.
+If an adversary can say that the bridge is blocked wrt
+$\mathit{censor}_i$, then it might as well be, since
+$\mathit{censor}_i$ can presumably then block that bridge if it so
+chooses.
+
+11. How much damage can the adversary do by running nodes in the Tor
+network and watching for bridge nodes connecting to it?  (This is
+analogous to an Introduction Point watching for Valet Nodes connecting
+to it.) What percentage of the network do you need to own to do how
+much damage. Here the entry-guard design comes in helpfully.  So we
+need to have bridges use entry-guards, but (cf. 3 above) not use
+bridges as entry-guards. Here's a serious tradeoff (again akin to the
+ratio of valets to IPos) the more bridges/client the worse the
+anonymity of that client. The fewer bridges/client the worse the 
+blocking resistance of that client.
+
+
 
