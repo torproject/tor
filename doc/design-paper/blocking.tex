@@ -82,13 +82,16 @@ by blocking all the server IP addresses in the directory, or by filtering
 based on the signature of the Tor TLS handshake. Here we describe an
 extended design that builds upon the current Tor network to provide an
 anonymizing
-network that also resists this blocking. Specifically,
-Section~\ref{sec:adversary} discusses our threat model---that is,
+network that resists censorship as well as anonymity-breaking attacks.
+In section~\ref{sec:adversary} we discuss our threat model---that is,
 the assumptions we make about our adversary. Section~\ref{sec:current-tor}
 describes the components of the current Tor design and how they can be
 leveraged for a new blocking-resistant design. Section~\ref{sec:related}
-explains the features and drawbacks of the currently deployed solutions;
-and ...
+explains the features and drawbacks of the currently deployed solutions.
+In sections~\ref{sec:bridges} through~\ref{sec:discovery}, we explore the
+components of our designs in detail.  Section~\ref{sec:security} considers
+security implications; ..... %write the rest.
+
 
 % The other motivation is for places where we're concerned they will
 % try to enumerate a list of Tor users. So even if they're not blocking
@@ -152,7 +155,8 @@ We assume that the attackers' goals are somewhat complex.
   blocked information is also not a goal, given the broadness of most
   censorship regimes. This seems borne out by fact.\footnote{So far in places
   like China, the authorities mainly go after people who publish materials
-  and coordinate organized movements~\cite{mackinnon}.  If they find that a
+  and coordinate organized movements~\cite{mackinnon-personal}.
+  If they find that a
   user happens to be reading a site that should be blocked, the typical
   response is simply to block the site. Of course, even with an encrypted
   connection, the adversary may be able to distinguish readers from
@@ -230,7 +234,7 @@ Section~\ref{subsec:trust-chain} for discussion on helping the user
 confirm that he has a genuine version and that he can connect to the
 real Tor network.
 
-\section{Components of the current Tor design}
+\section{Adapting the current Tor design to anticensorship}
 \label{sec:current-tor}
 
 Tor is popular and sees a lot of use. It's the largest anonymity
