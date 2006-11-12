@@ -1316,60 +1316,87 @@ community, though, this question remains a critical weakness.
 %not publishing their plans. Our goal here is to produce a design---a
 %framework---that can be public and still secure. Where's the tradeoff?
 
-\section{Performance improvements}
-\label{sec:performance}
-
-\subsection{Fetch server descriptors just-in-time}
-
-I guess we should encourage most places to do this, so blocked
-users don't stand out.
-
-
-network-status and directory optimizations. caching better. partitioning
-issues?
+%\section{Performance improvements}
+%\label{sec:performance}
+%
+%\subsection{Fetch server descriptors just-in-time}
+%
+%I guess we should encourage most places to do this, so blocked
+%users don't stand out.
+%
+%
+%network-status and directory optimizations. caching better. partitioning
+%issues?
 
 \section{Maintaining reachability}
 
 \subsection{How many bridge relays should you know about?}
 
-If they're ordinary Tor users on cable modem or DSL, many of them will
-disappear and/or move periodically. How many bridge relays should a
-blockee know
-about before he's likely to have at least one reachable at any given point?
-How do we factor in a parameter for "speed that his bridges get discovered
-and blocked"?
+The strategies described in Section~\ref{sec:discovery} talked about
+learning one bridge address at a time. But if most bridges are ordinary
+Tor users on cable modem or DSL connection, many of them will disappear
+and/or move periodically. How many bridge relays should a blocked user
+know about so that she is likely to have at least one reachable at any
+given point? This is already a challenging problem if we only consider
+natural churn: the best approach is to see what bridges we attract in
+reality and measure their churn. We may also need to factor in a parameter
+for how quickly bridges get discovered and blocked by the attacker;
+we leave this for future work after we have more deployment experience.
 
-The related question is: if the bridge relays change IP addresses
-periodically, how often does the bridge user need to "check in" in order
-to keep from being cut out of the loop?
+A related question is: if the bridge relays change IP addresses
+periodically, how often does the blocked user need to fetch updates in
+order to keep from being cut out of the loop?
 
-Families of bridges: give out 4 or 8 at once, bound together.
+Once we have more experience and intuition, we should explore technical
+solutions to this problem too. For example, if the discovery strategies
+give out $k$ bridge addresses rather than a single bridge address, perhaps
+we can improve robustness from the user perspective without significantly
+aiding the adversary. Rather than giving out a new random subset of $k$
+addresses at each point, we could bind them together into \emph{bridge
+families}, so all users that learn about one member of the bridge family
+are told about the rest as well.
 
-\subsection{Cablemodem users don't provide important websites}
+This scheme may also help defend against attacks to map the set of
+bridges. That is, if all blocked users learn a random subset of bridges,
+the attacker should learn about a few bridges, monitor the country-level
+firewall for connections to them, then watch those users to see what
+other bridges they use, and repeat. By segmenting the bridge address
+space, we can limit the exposure of other users.
+
+\subsection{Cablemodem users don't usually provide important websites}
 \label{subsec:block-cable}
 
-...so our adversary could just block all DSL and cablemodem networks,
-and for the most part only our bridge relays would be affected.
+Another attacker we might be concerned about is that the attacker could
+just block all DSL and cablemodem network addresses, on the theory that
+they don't run any important services anyway. If most of our bridges
+are on these networks, this attack could really hurt.
 
 The first answer is to aim to get volunteers both from traditionally
 ``consumer'' networks and also from traditionally ``producer'' networks.
+Since bridges don't need to be Tor exit nodes, as we improve our usability
+it seems quite feasible to get a lot of websites helping out.
 
-The second answer (not so good) would be to encourage more use of consumer
-networks for popular and useful websites.  (But P2P exists; minor websites
-exist; gaming exists; IM exists; ...)
+The second answer (not as practical) would be to encourage more use of
+consumer networks for popular and useful Internet services. 
+%(But P2P exists;
+%minor websites exist; gaming exists; IM exists; ...)
 
-Other attack: China pressures Verizon to discourage its users from
-running bridges.
+A related attack we might worry about is based on large countries putting
+economic pressure on companies that want to expand their business. For
+example, what happens if Verizon wants to sell services in China, and
+China pressures Verizon to discourage its users in the free world from
+running bridges?
 
-\subsection{Scanning-resistance}
+\subsection{Scanning resistance: making bridges more subtle}
 
-If it's trivial to verify that we're a bridge, and we run on a predictable
-port, then it's conceivable our attacker would scan the whole Internet
-looking for bridges. (In fact, he can just scan likely networks like
-cablemodem and DSL services---see Section~\ref{block-cable} for a related
-attack.) It would be nice to slow down this attack. It would
-be even nicer to make it hard to learn whether we're a bridge without
-first knowing some secret.
+If it's trivial to verify that a given address is operating as a bridge,
+and most bridges run on a predictable port, then it's conceivable our
+attacker could scan the whole Internet looking for bridges. (In fact, he
+can just concentrate on scanning likely networks like cablemodem and DSL
+services---see Section~\ref{block-cable} above for related attacks.) It
+would be nice to slow down this attack. It would be even nicer to make
+it hard to learn whether we're a bridge without first knowing some
+secret. We call this general property \emph{scanning resistance}.
 
 Password protecting the bridges.
 Could provide a password to the bridge user. He provides a nonced hash of
@@ -1377,7 +1404,7 @@ it or something when he connects. We'd need to give him an ID key for the
 bridge too, and wait to present the password until we've TLSed, else the
 adversary can pretend to be the bridge and MITM him to learn the password.
 
-We could some kind of ID-based knocking protocol, or we could act like an
+We could use some kind of ID-based knocking protocol, or we could act like an
 unconfigured HTTPS server if treated like one.
 
 We can assume that the attacker can easily recognize https connections
@@ -1464,14 +1491,17 @@ advantage?
 \subsection{The Tor website: how to get the software}
 
 One of the first censoring attacks against a system like ours is to
-block the website and make the software itself hard to find. After
-all, our system works well once the user is running an authentic
-copy of Tor and has found a working bridge, but up until that point
-we need to rely on their individual skills and ingenuity.
+block the website and make the software itself hard to find. Our system
+should work well once the user is running an authentic
+copy of Tor and has found a working bridge, but to get to that point
+we rely on their individual skills and ingenuity.
+
 Right now, most countries that block access to Tor block only the main
 website and leave mirrors and the network itself untouched.
 Falling back on word-of-mouth is always a good last resort, but we should
-also take steps to make sure it's relatively easy for users to get a copy.
+also take steps to make sure it's relatively easy for users to get a copy,
+such as publicizing the mirrors more and making copies available through
+other media.
 See Section~\ref{subsec:first-bridge} for more discussion.
 
 \section{Future designs}
