@@ -141,6 +141,13 @@ tor_mmap_file(const char *filename)
   page_size = getpagesize();
   size += (size%page_size) ? page_size-(size%page_size) : 0;
 
+  if (!size) {
+    /* zero-length file. if we call mmap on it, we'll end up setting
+     * data to NULL below, and bad things will happen. So just fail. */
+    log_notice(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
+    return NULL;
+  }
+
   string = mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0);
   if (string == MAP_FAILED) {
     close(fd);

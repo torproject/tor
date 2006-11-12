@@ -7,10 +7,12 @@ Changes in version 0.1.2.4-alpha - 2006-11-??
       don't recognize; it's probably just from a newer version of Tor.
     - Have directory authorities allow larger amounts of drift in uptime
       without replacing the server descriptor: previously, a server that
-      restarted every 30 minutes could have 48 "interesting" descriptors per
-      day.
+      restarted every 30 minutes could have 48 "interesting" descriptors
+      per day.
     - Start linking to the Tor specification and Tor reference manual
       correctly in the Windows installer.
+    - Avoid assert failure when our cached-routers file is empty on
+      startup.
 
 
 Changes in version 0.1.2.3-alpha - 2006-10-29
