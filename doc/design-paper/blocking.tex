@@ -32,12 +32,12 @@
 
 \begin{abstract}
 
-Websites around the world are increasingly being blocked by
-government-level firewalls. Many people use anonymizing networks like
-Tor to contact sites without letting an attacker trace their activities,
-and as an added benefit they are no longer affected by local censorship.
-But if the attacker simply denies access to the Tor network itself,
-blocked users can no longer benefit from the security Tor offers.
+Internet censorship is on the rise as websites around the world are
+increasingly blocked by government-level firewalls.  Although popular
+anonymizing networks like Tor were originally designed to keep attackers from
+tracing people's activities, many people are also using them to evade local
+censorship.  But if the censor simply denies access to the Tor network
+itself, blocked users can no longer benefit from the security Tor offers.
 
 Here we describe a design that builds upon the current Tor network
 to provide an anonymizing network that resists blocking
@@ -47,16 +47,17 @@ by government-level attackers.
 
 \section{Introduction and Goals}
 
-Anonymizing networks such as Tor~\cite{tor-design} bounce traffic around
-a network of relays. They aim to hide not only what is being said, but
-also who is communicating with whom, which users are using which websites,
-and so on. These systems have a broad range of users, including ordinary
-citizens who want to avoid being profiled for targeted advertisements,
-corporations who don't want to reveal information to their competitors,
-and law enforcement and government intelligence agencies who need to do
-operations on the Internet without being noticed.
+Anonymizing networks like Tor~\cite{tor-design} bounce traffic around a
+network of encrypting relays.  Unlike encryption, which hides only {\it what}
+is said, these network also aim to hide who is communicating with whom, which
+users are using which websites, and similar relations.  These systems have a
+broad range of users, including ordinary citizens who want to avoid being
+profiled for targeted advertisements, corporations who don't want to reveal
+information to their competitors, and law enforcement and government
+intelligence agencies who need to do operations on the Internet without being
+noticed.
 
-Historically, research on anonymizing systems has focused on a passive
+Historical anonymity research has focused on an
 attacker who monitors the user (call her Alice) and tries to discover her
 activities, yet lets her reach any piece of the network. In more modern
 threat models such as Tor's, the adversary is allowed to perform active
@@ -78,13 +79,14 @@ network from China each day.
 The current Tor design is easy to block if the attacker controls Alice's
 connection to the Tor network---by blocking the directory authorities,
 by blocking all the server IP addresses in the directory, or by filtering
-based on the signature of the Tor TLS handshake. Here we describe a
-design that builds upon the current Tor network to provide an anonymizing
+based on the signature of the Tor TLS handshake. Here we describe an
+extended design that builds upon the current Tor network to provide an
+anonymizing
 network that also resists this blocking. Specifically,
 Section~\ref{sec:adversary} discusses our threat model---that is,
-the assumptions we make about our adversary; Section~\ref{sec:current-tor}
+the assumptions we make about our adversary. Section~\ref{sec:current-tor}
 describes the components of the current Tor design and how they can be
-leveraged for a new blocking-resistant design; Section~\ref{sec:related}
+leveraged for a new blocking-resistant design. Section~\ref{sec:related}
 explains the features and drawbacks of the currently deployed solutions;
 and ...
 
@@ -104,14 +106,18 @@ and ...
 \section{Adversary assumptions}
 \label{sec:adversary}
 
+To design an effective anticensorship tool, we need a good model for the
+goals and resources of the censors we are evading.  Otherwise, we risk
+spending our effort on keeping the adversaries from doing things they have no
+interest in doing and thwarting techniques they do not use.
 The history of blocking-resistance designs is littered with conflicting
 assumptions about what adversaries to expect and what problems are
-in the critical path to a solution. Here we try to enumerate our best
+in the critical path to a solution. Here we describe our best
 understanding of the current situation around the world.
 
-In the traditional security style, we aim to describe a strong
+In the traditional security style, we aim to defeat a strong
 attacker---if we can defend against this attacker, we inherit protection
-against weaker attackers as well. After all, we want a general design
+against weaker attackers as well.  After all, we want a general design
 that will work for citizens of China, Iran, Thailand, and other censored
 countries; for
 whistleblowers in firewalled corporate network; and for people in
@@ -120,46 +126,84 @@ a variety of adversaries in mind, we can take advantage of the fact that
 adversaries will be in different stages of the arms race at each location,
 so a server blocked in one locale can still be useful in others.
 
-We assume there are three main network attacks in use by censors
+We assume that the attackers' goals are somewhat complex.
+\begin{tightlist}
+\item The attacker would like to restrict the flow of certain kinds
+  information, particularly when this information is seen as embarrassing to
+  those in power (such as information about rights violations or corruption),
+  or when it enables or encourages others to oppose them effectively (such as
+  information about opposition movements or sites that are used to organize
+  protests).
+\item As a second-order effect, censors aim to chill citizens' behavior by
+  creating an impression that their online activities are monitored.
+\item Usually, censors make a token attempt to block a few sites for
+  obscenity, blasphemy, and so on, but their efforts here are mainly for
+  show.
+\item Complete blocking (where nobody at all can ever download) is not a
+  goal. Attackers typically recognize that perfect censorship is not only
+  impossible, but unnecessary: if ``undesirable'' information is known only
+  to a small few, resources can be focused elsewhere
+\item Similarly, the censors are not attempting to shut down or block {\it
+  every} anticensorship tool---merely the tools that are popular and
+  effective (because these tools impede the censors' information restriction
+  goals) and those tools that are highly visible (thus making the censors
+  look ineffectual to their citizens and their bosses).
+\item Reprisal against {\it most} passive consumers of {\it most} kinds of
+  blocked information is also not a goal, given the broadness of most
+  censorship regimes. This seems borne out by fact.\footnote{So far in places
+  like China, the authorities mainly go after people who publish materials
+  and coordinate organized movements~\cite{mackinnon}.  If they find that a
+  user happens to be reading a site that should be blocked, the typical
+  response is simply to block the site. Of course, even with an encrypted
+  connection, the adversary may be able to distinguish readers from
+  publishers by observing whether Alice is mostly downloading bytes or mostly
+  uploading them---we discuss this issue more in
+  Section~\ref{subsec:upload-padding}.}
+\item Producers and distributors of targeted information are in much
+  greater danger than consumers; the attacker would like to not only block
+  their work, but identify them for reprisal.
+\item The censors (or their governments) would like to have a working, useful
+  Internet. Otherwise, they could simply ``censor'' the Internet by outlawing
+  it entirely, or blocking access to all but a tiny list of sites.
+  Nevertheless, the censors {\it are} willing to block innocuous content
+  (like the bulk of a newspaper's reporting) in order to censor other content
+  distributed through the same channels (like that newspaper's coverage of
+  the censored country).
+\end{tightlist}
+
+We assume there are three main technical network attacks in use by censors
 currently~\cite{clayton:pet2006}:
 
 \begin{tightlist}
 \item Block a destination or type of traffic by automatically searching for
-  certain strings or patterns in TCP packets.
-\item Block a destination by manually listing its IP address at the
-firewall.
+  certain strings or patterns in TCP packets.  Offending packets can be
+  dropped, or can trigger a response like closing the
+  connection.
+\item Block a destination by listing its IP address at a
+  firewall or other routing control point.
 \item Intercept DNS requests and give bogus responses for certain
-destination hostnames.
+  destination hostnames.
 \end{tightlist}
 
 We assume the network firewall has limited CPU and memory per
-connection~\cite{clayton:pet2006}. Against an adversary who carefully
-examines the contents of every packet, we would need
-some stronger mechanism such as steganography, which introduces its
-own problems~\cite{active-wardens,tcpstego,bar}.
-
-More broadly, we assume that the authorities are more likely to
-block a given system as its popularity grows. That is, a system
-used by only a few users will probably never be blocked, whereas a
-well-publicized system with many users will receive much more scrutiny.
-
-We assume that readers of blocked content are not in as much danger
-as publishers. So far in places like China, the authorities mainly go
-after people who publish materials and coordinate organized
-movements~\cite{mackinnon}.
-If they find that a user happens
-to be reading a site that should be blocked, the typical response is
-simply to block the site. Of course, even with an encrypted connection,
-the adversary may be able to distinguish readers from publishers by
-observing whether Alice is mostly downloading bytes or mostly uploading
-them---we discuss this issue more in Section~\ref{subsec:upload-padding}.
+connection~\cite{clayton:pet2006}.  Against an adversary who could carefully
+examine the contents of every packet and correlate the packets in every
+stream on the network, we would need some stronger mechanism such as
+steganography, which introduces its own
+problems~\cite{active-wardens,tcpstego,bar}.  But we make a ``weak
+steganography'' assumption here: to remain unblocked, it is necessary to
+remain unobservable only by computational resources on par with a modern
+router, firewall, proxy, or IDS.
 
 We assume that while various different regimes can coordinate and share
-notes, there will be a time lag between one attacker learning
-how to overcome a facet of our design and other attackers picking it up.
-Similarly, we assume that in the early stages of deployment the insider
-threat isn't as high of a risk, because no attackers have put serious
-effort into breaking the system yet.
+notes, there will be a time lag between one attacker learning how to overcome
+a facet of our design and other attackers picking it up.  (The most common
+vector of transmission seems to be commercial providers of censorship tools:
+once a provider add a feature to meet one country's needs or requests, the
+feature is available to all of the provider's customers.)  Conversely, we
+assume that insider attacks become a higher risk only after the early stages
+of network development, once the system has reached a certain level of
+success and visibility.
 
 We do not assume that government-level attackers are always uniform across
 the country. For example, there is no single centralized place in China
@@ -174,14 +218,11 @@ a user who is entirely observed and controlled by the adversary. See
 Section~\ref{subsec:cafes-and-livecds} for more discussion of what little
 we can do about this issue.
 
-We assume that widespread access to the Internet is economically,
-politically, and/or
-socially valuable to the policymakers of each deployment country. After
-all, if censorship
-is more important than Internet access, the firewall administrators have
-an easy job: they should simply block everything. The corollary to this
-assumption is that we should design so that increased blocking of our
-system results in increased economic damage or public outcry.
+We assume that the attacker may be able to use political and economic
+resources to secure the cooperation of extraterritorial or multinational
+corporations and entities in investigating information sources.  For example,
+the censors can threaten the hosts of troublesome blogs with economic
+reprisals if they do not reveal the authors' identities.
 
 We assume that the user will be able to fetch a genuine
 version of Tor, rather than one supplied by the adversary; see
