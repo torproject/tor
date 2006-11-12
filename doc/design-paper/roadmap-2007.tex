@@ -150,7 +150,7 @@ served us well.  But in the long run, we need to {\bf design incentives for
 could try to build the network so that servers offered improved service for
 other servers, but we would need to do so without weakening anonymity and
 making it obvious which connections originate from users running servers.  We
-have some preliminary designs here~\cite{tor-challenges}~\cite{incentives-txt},
+have some preliminary designs~\cite{incentives-txt,tor-challenges},
 but need to perform
 some more research to make sure they would be safe and effective.\plan{Write
   a draft paper; 2 person-months.}
@@ -214,7 +214,8 @@ other means.  This will have anonymity implications too if we aren't careful.
   a measurement tool in 2007: 1 month.  See if we can interest a graduate
   student.}
 
-We should work on making Tor perform better on networks with low bandwidth
+We should work on making Tor's cell-based protocol  perform better on
+networks with low bandwidth
 and high packet loss.\plan{Do in 2007 if we're funded to do it; 4-6 weeks.}
 
 \subsection{Performance scenario: one Tor client, many users}
@@ -629,12 +630,8 @@ favorite, and merge in the useful features of the other.
 
 \subsection{Localization}
 Right now, most of our user-facing code is internationalized.  We need to
-internationalize the last few hold-outs (like the Tor installer), and get
+internationalize the last few hold-outs (like the Tor expert installer), and get
 more translations for the parts that are already internationalized.
-
-%[Do you mean the Vidalia bundle installer, or the Tor-installer-for-experts?
-%-RD]
-% The latter -NM
 
 Also, we should look into a {\bf unified translator's solution}.  Currently,
 since different tools have been internationalized using the
