@@ -274,7 +274,8 @@ location~\cite{google-geolocation}.
 The Tor design provides other features as well that are not typically
 present in manual or ad hoc circumvention techniques.
 
-First, the Tor directory authorities automatically aggregate, test,
+First, Tor has a fairly mature way to distribute information about servers.
+Tor directory authorities automatically aggregate, test,
 and publish signed summaries of the available Tor routers. Tor clients
 can fetch these summaries to learn which routers are available and
 which routers are suitable for their needs. Directory information is cached
@@ -283,8 +284,8 @@ need to interact with the authorities directly. (To tolerate a minority
 of compromised directory authorities, we use a threshold trust scheme---
 see Section~\ref{subsec:trust-chain} for details.)
 
-Second, Tor clients can be configured to use any directory authorities
-they want. They use the default authorities if no others are specified,
+Second, the list of directory authorities is not hard-wired.
+Clients use the default authorities if no others are specified,
 but it's easy to start a separate (or even overlapping) Tor network just
 by running a different set of authorities and convincing users to prefer
 a modified client. For example, we could launch a distinct Tor network
@@ -344,6 +345,17 @@ only achieve their security goals by blending together in the same
 network~\cite{econymics,usability:weis2006}. This user base also provides
 something else: hundreds of thousands of different and often-changing
 addresses that we can leverage for our blocking-resistance design.
+
+Finally and perhaps most importantly, Tor provides anonymity and prevents any
+single server from linking users to their communication partners.  Despite
+initial appearances, {\it distributed-trust anonymity is critical for
+anticensorship efforts}.  If any single server can expose dissident bloggers
+or compile a list of users' behavior, the censors can profitably compromise
+that server's operator applying economic pressure to their employers,
+breaking into their computer, pressuring their family (if they have relatives
+in the censored area), or so on.  Furthermore, in systems where any relay can
+expose its users, the censors can spread suspicion that they are running some
+of the relays and use this belief to chill use of the network.
 
 We discuss and adapt these components further in
 Section~\ref{sec:bridges}. But first we examine the strengths and
