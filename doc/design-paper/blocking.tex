@@ -1062,7 +1062,7 @@ if a bridge stops seeing use from a certain area, does that mean the
 bridge is blocked or does that mean those users are asleep?
 
 There are many more problems with the general concept of detecting whether
-bridges are blocked. First, different pieces of the Internet are blocked
+bridges are blocked. First, different zones of the Internet are blocked
 in different ways, and the actual firewall jurisdictions do not match
 country borders. Our bridge scheme could help us map out the topology
 of the censored Internet, but this is a huge task. More generally,
@@ -1073,11 +1073,13 @@ bridge database by signing up already-blocked bridges. In this case,
 if we're stingy giving out bridge addresses, users in that country won't
 learn working bridges.
 
-All of these issues are made more complex when we try to integrate either
-active or passive testing into our social network reputation system above.
+All of these issues are made more complex when we try to integrate this
+testing into our social network reputation system above.
 Since in that case we punish or reward users based on whether bridges
 get blocked, the adversary has new attacks to trick or bog down the
-reputation tracking.
+reputation tracking. Indeed, the bridge authority doesn't even know
+what zone the blocked user is in, so do we blame him for any possible
+censored zone, or what?
 
 Clearly more analysis is required. The eventual solution will probably
 involve a combination of passive measurement via GeoIP and active
@@ -1091,13 +1093,14 @@ let the general public track the progress of the project.
 
 \subsection{Advantages of deploying all solutions at once}
 
-For once we're not in the position of the defender: we don't have to
-defend against every possible filtering scheme, we just have to defend
-against at least one.
-
-adversary has to guess how to allocate his resources
-
-(nick, want to write this section?)
+For once, we're not in the position of the defender: we don't have to
+defend against every possible filtering scheme; we just have to defend
+against at least one. On the flip side, the attacker is forced to guess
+how to allocate his resources to defend against each of these discovery
+strategies. So by deploying all of our strategies at once, we not only
+increase our chances of finding one that the adversary has difficulty
+blocking, but we actually make \emph{all} of the strategies more robust
+in the face of an adversary with limited resources.
 
 %\subsection{Remaining unsorted notes}
 
@@ -1153,28 +1156,59 @@ adversary has to guess how to allocate his resources
 
 Many people speculate that installing and using a Tor client in areas with
 particularly extreme firewalls is a high risk---and the risk increases
-as the firewall gets more restrictive. This is probably true, but there's
+as the firewall gets more restrictive. This notion certain has merit, but
+there's
 a counter pressure as well: as the firewall gets more restrictive, more
-ordinary people use Tor for more mainstream activities, such as learning
+ordinary people behind it end up using Tor for more mainstream activities,
+such as learning
 about Wall Street prices or looking at pictures of women's ankles. So
-if the restrictive firewall pushes up the number of Tor users, then the
-``typical'' Tor user becomes more mainstream.
+as the restrictive firewall pushes up the number of Tor users, the
+``typical'' Tor user becomes more mainstream, and therefore mere
+use or possession of the Tor software is not so surprising.
 
-Hard to say which of these pressures will ultimately win out.
+It's hard to say which of these pressures will ultimately win out,
+but we should keep both sides of the issue in mind.
 
-Nick, want to rewrite/elaborate on this section?
+%Nick, want to rewrite/elaborate on this section?
 
 \subsection{Observers can tell who is publishing and who is reading}
 \label{subsec:upload-padding}
 
-Should bridge users sometimes send bursts of long-range drop cells?
+Tor encrypts traffic on the local network, and it obscures the eventual
+destination of the communication, but it doesn't do much to obscure the
+traffic volume. In particular, a user publishing a home video will have a
+different network signature than a user reading an online news article.
+Based on our assumption in Section~\ref{sec:assumptions} that users who
+publish material are in more danger, should we work to improve Tor's
+security in this situation?
+
+In the general case this is an extremely challenging task:
+effective \emph{end-to-end traffic confirmation attacks}
+are known where the adversary observes the origin and the
+destination of traffic and confirms that they are part of the
+same communication~\cite{danezis:pet2004,e2e-traffic}. Related are
+\emph{website fingerprinting attacks}, where the adversary downloads
+a few hundred popular websites, makes a set of "signatures" for each
+site, and then observes the target Tor client's traffic to look for
+a match~\cite{pet05-bissias,defensive-dropping}. But can we do better
+against a limited adversary who just does coarse-grained sweeps looking
+for unusually prolific publishers?
+
+One answer is for bridge users to automatically send bursts of padding
+traffic periodically. (This traffic can be implemented in terms of
+long-range drop cells, which are already part of the Tor specification.)
+Of course, convincingly simulating an actual human publishing interesting
+content is a difficult arms race, but it may be worthwhile to at least
+start the race. More research remains.
 
 \subsection{Anonymity effects from acting as a bridge relay}
 
-Against some attacks, relaying traffic for others can improve anonymity. The
-simplest example is an attacker who owns a small number of Tor servers. He
-will see a connection from the bridge, but he won't be able to know
-whether the connection originated there or was relayed from somebody else.
+Against some attacks, relaying traffic for others can improve
+anonymity. The simplest example is an attacker who owns a small number
+of Tor servers. He will see a connection from the bridge, but he won't
+be able to know whether the connection originated there or was relayed
+from somebody else. More generally, the mere uncertainty of whether the
+traffic originated from that user may be helpful.
 
 There are some cases where it doesn't seem to help: if an attacker can
 watch all of the bridge's incoming and outgoing traffic, then it's easy
@@ -1186,7 +1220,7 @@ an ordinary client.)
 There are also some potential downsides to running a bridge. First, while
 we try to make it hard to enumerate all bridges, it's still possible to
 learn about some of them, and for some people just the fact that they're
-running one might signal to an attacker that they place a high value
+running one might signal to an attacker that they place a higher value
 on their anonymity. Second, there are some more esoteric attacks on Tor
 relays that are not as well-understood or well-tested---for example, an
 attacker may be able to ``observe'' whether the bridge is sending traffic
@@ -1194,17 +1228,25 @@ even if he can't actually watch its network, by relaying traffic through
 it and noticing changes in traffic timing~\cite{attack-tor-oak05}. On
 the other hand, it may be that limiting the bandwidth the bridge is
 willing to relay will allow this sort of attacker to determine if it's
-being used as a bridge but not whether it is adding traffic of its own.
+being used as a bridge but not easily learn whether it is adding traffic
+of its own.
 
-It is an open research question whether the benefits outweigh the risks. A
-lot of the decision rests on which attacks the users are most worried
-about. For most users, we don't think running a bridge relay will be
-that damaging.
+We also need to examine how entry guards fit in. Entry guards
+(a small set of nodes that are always used for the first
+step in a circuit) help protect against certain attacks
+where the attacker runs a few Tor servers and waits for
+the user to choose these servers as the beginning and end of her
+circuit\footnote{http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ\#EntryGuards}.
+If the blocked user doesn't use the bridge's entry guards, then the bridge
+doesn't gain as much cover benefit. On the other hand, what design changes
+are needed for the blocked user to use the bridge's entry guards without
+learning what they are (this seems hard), and even if we solve that,
+do they then need to use the guards' guards and so on down the line?
 
-Need to examine how entry guards fit in. If the blocked user doesn't use
-the bridge's entry guards, then the bridge doesn't gain as much cover
-benefit. If he does, first how does that actually work, and second is
-it turtles all the way down (need to use the guard's guards, ...)?
+It is an open research question whether the benefits of running a bridge
+outweigh the risks. A lot of the decision rests on which attacks the
+users are most worried about. For most users, we don't think running a
+bridge relay will be that damaging, and it could help quite a bit.
 
 \subsection{Trusting local hardware: Internet cafes and LiveCDs}
 \label{subsec:cafes-and-livecds}
@@ -1215,19 +1257,22 @@ always reasonable.
 For Internet cafe Windows computers that let you attach your own USB key,
 a USB-based Tor image would be smart. There's Torpark, and hopefully
 there will be more thoroughly analyzed options down the road. Worries
-about hardware or
+remain about hardware or
 software keyloggers and other spyware---and physical surveillance.
 
 If the system lets you boot from a CD or from a USB key, you can gain
-a bit more security by bringing a privacy LiveCD with you. Hardware
-keyloggers and physical surveillance still a worry. LiveCDs also useful
-if it's your own hardware, since it's easier to avoid leaving breadcrumbs
-everywhere.
+a bit more security by bringing a privacy LiveCD with you. (This
+approach isn't foolproof of course, since hardware
+keyloggers and physical surveillance are still a worry).
 
-\subsection{Forward compatibility and retiring bridge authorities}
+In fact, LiveCDs are also useful if it's your own hardware, since it's
+easier to avoid leaving private data and logs scattered around the
+system.
 
-Eventually we'll want to change the identity key and/or location
-of a bridge authority. How do we do this mostly cleanly?
+%\subsection{Forward compatibility and retiring bridge authorities}
+%
+%Eventually we'll want to change the identity key and/or location
+%of a bridge authority. How do we do this mostly cleanly?
 
 \subsection{The trust chain}
 \label{subsec:trust-chain}
@@ -1250,7 +1295,12 @@ Tor network. And last, the source code and other packages are signed
 with the GPG keys of the Tor developers, so users can confirm that they
 did in fact download a genuine version of Tor.
 
-But how can a user in an oppressed country know that he has the correct
+In the case of blocked users contacting bridges and bridge directory
+authorities, the same logic applies in parallel: the blocked users fetch
+information from both the bridge authorities and the directory authorities
+for the `main' Tor network, and they combine this information locally.
+
+How can a user in an oppressed country know that he has the correct
 key fingerprints for the developers? As with other security systems, it
 ultimately comes down to human interaction. The keys are signed by dozens
 of people around the world, and we have to hope that our users have met
@@ -1260,13 +1310,11 @@ that they can learn
 the correct keys. For users that aren't connected to the global security
 community, though, this question remains a critical weakness.
 
-% XXX make clearer the trust chain step for bridge directory authorities
+%\subsection{Security through obscurity: publishing our design}
 
-\subsection{Security through obscurity: publishing our design}
-
-Many other schemes like dynaweb use the typical arms race strategy of
-not publishing their plans. Our goal here is to produce a design---a
-framework---that can be public and still secure. Where's the tradeoff?
+%Many other schemes like dynaweb use the typical arms race strategy of
+%not publishing their plans. Our goal here is to produce a design---a
+%framework---that can be public and still secure. Where's the tradeoff?
 
 \section{Performance improvements}
 \label{sec:performance}
@@ -1370,30 +1418,30 @@ servers.)
 % Also consider everybody-a-server. Many of the scalability questions
 % are easier when you're talking about making everybody a bridge.
 
-\subsection{What if the clients can't install software?}
+%\subsection{What if the clients can't install software?}
 
-[this section should probably move to the related work section,
-or just disappear entirely.]
+%[this section should probably move to the related work section,
+%or just disappear entirely.]
 
-Bridge users without Tor software
+%Bridge users without Tor software
 
-Bridge relays could always open their socks proxy. This is bad though,
-first
-because bridges learn the bridge users' destinations, and second because
-we've learned that open socks proxies tend to attract abusive users who
-have no idea they're using Tor.
+%Bridge relays could always open their socks proxy. This is bad though,
+%first
+%because bridges learn the bridge users' destinations, and second because
+%we've learned that open socks proxies tend to attract abusive users who
+%have no idea they're using Tor.
 
-Bridges could require passwords in the socks handshake (not supported
-by most software including Firefox). Or they could run web proxies
-that require authentication and then pass the requests into Tor. This
-approach is probably a good way to help bootstrap the Psiphon network,
-if one of its barriers to deployment is a lack of volunteers willing
-to exit directly to websites. But it clearly drops some of the nice
-anonymity and security features Tor provides.
+%Bridges could require passwords in the socks handshake (not supported
+%by most software including Firefox). Or they could run web proxies
+%that require authentication and then pass the requests into Tor. This
+%approach is probably a good way to help bootstrap the Psiphon network,
+%if one of its barriers to deployment is a lack of volunteers willing
+%to exit directly to websites. But it clearly drops some of the nice
+%anonymity and security features Tor provides.
 
-A hybrid approach where the user gets his anonymity from Tor but his
-software-less use from a web proxy running on a trusted machine on the
-free side.
+%A hybrid approach where the user gets his anonymity from Tor but his
+%software-less use from a web proxy running on a trusted machine on the
+%free side.
 
 \subsection{Publicity attracts attention}
 \label{subsec:publicity}
@@ -1415,7 +1463,16 @@ advantage?
 
 \subsection{The Tor website: how to get the software}
 
-
+One of the first censoring attacks against a system like ours is to
+block the website and make the software itself hard to find. After
+all, our system works well once the user is running an authentic
+copy of Tor and has found a working bridge, but up until that point
+we need to rely on their individual skills and ingenuity.
+Right now, most countries that block access to Tor block only the main
+website and leave mirrors and the network itself untouched.
+Falling back on word-of-mouth is always a good last resort, but we should
+also take steps to make sure it's relatively easy for users to get a copy.
+See Section~\ref{subsec:first-bridge} for more discussion.
 
 \section{Future designs}
 
@@ -1426,7 +1483,8 @@ operation, can we have some bridge relays inside the blocked area too,
 and more established users can use them as relays so they don't need to
 communicate over the firewall directly at all? A simple example here is
 to make new blocked users into internal bridges also---so they sign up
-on the BDA as part of doing their query, and we give out their addresses
+on the bridge authority as part of doing their query, and we give out
+their addresses
 rather than (or along with) the external bridge addresses. This design
 is a lot trickier because it brings in the complexity of whether the
 internal bridges will remain available, can maintain reachability with
@@ -1441,14 +1499,14 @@ firewall is *socially* very successful, even if technologies exist to
 get around it.
 
 but having a strong technical solution is still useful as a piece of the
-puzzle.
+puzzle. and tor provides a great set of building blocks to start from.
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
-\appendix
+%\appendix
 
-\section{Counting Tor users by country}
-\label{app:geoip}
+%\section{Counting Tor users by country}
+%\label{app:geoip}
 
 \end{document}
 

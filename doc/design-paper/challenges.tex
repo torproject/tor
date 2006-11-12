@@ -211,7 +211,7 @@ the literature.  In particular, because we
 support interactive communications without impractically expensive padding,
 we fall prey to a variety
 of intra-network~\cite{back01,attack-tor-oak05,flow-correlation04} and
-end-to-end~\cite{danezis-pet2004,SS03} anonymity-breaking attacks.
+end-to-end~\cite{danezis:pet2004,SS03} anonymity-breaking attacks.
 
 Tor does not attempt to defend against a global observer.  In general, an
 attacker who can measure both ends of a connection through the Tor network
@@ -463,7 +463,7 @@ Mixminion, where the threat model is based on mixing messages with each
 other, there's an arms race between end-to-end statistical attacks and
 counter-strategies~\cite{statistical-disclosure,minion-design,e2e-traffic,trickle02}.
 But for low-latency systems like Tor, end-to-end \emph{traffic
-correlation} attacks~\cite{danezis-pet2004,defensive-dropping,SS03}
+correlation} attacks~\cite{danezis:pet2004,defensive-dropping,SS03}
 allow an attacker who can observe both ends of a communication
 to correlate packet timing and volume, quickly linking
 the initiator to her destination.
@@ -1393,7 +1393,7 @@ routing problems.
 %overhead associated with directories, discovery, and so on.
 
 We can address these points by reducing the network's connectivity.
-Danezis~\cite{danezis-pets03} considers
+Danezis~\cite{danezis:pet2003} considers
 the anonymity implications of restricting routes on mix networks and
 recommends an approach based on expander graphs (where any subgraph is likely
 to have many neighbors).  It is not immediately clear that this approach will
