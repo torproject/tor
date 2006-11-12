@@ -694,7 +694,8 @@ Last, what if the adversary starts observing the network traffic even
 more closely? Even if our TLS handshake looks innocent, our traffic timing
 and volume still look different than a user making a secure web connection
 to his bank. The same techniques used in the growing trend to build tools
-to recognize encrypted Bittorrent traffic~\cite{bt-traffic-shaping}
+to recognize encrypted Bittorrent traffic
+%~\cite{bt-traffic-shaping}
 could be used to identify Tor communication and recognize bridge
 relays. Rather than trying to look like encrypted web traffic, we may be
 better off trying to blend with some other encrypted network protocol. The
@@ -898,15 +899,15 @@ time slots, we can make it harder for the attacker to guess when to check
 back. We expect these bridges will be the first to be blocked, but they'll
 help the system bootstrap until they \emph{do} get blocked. Further,
 remember that we're dealing with different blocking regimes around the
-world that will progress at different rates---so this bucket will still
+world that will progress at different rates---so this pool will still
 be useful to some users even as the arms races progress.
 
 The second distribution strategy publishes bridge addresses based on the IP
 address of the requesting user. Specifically, the bridge authority will
-divide the available bridges in the bucket into a bunch of partitions
+divide the available bridges in the pool into a bunch of partitions
 (as in the first distribution scheme), hash the requestor's IP address
 with a secret of its own (as in the above allocation scheme for creating
-buckets), and give the requestor a random bridge from the appropriate
+pools), and give the requestor a random bridge from the appropriate
 partition. To raise the bar, we should discard the last octet of the
 IP address before inputting it to the hash function, so an attacker
 who only controls a single ``/24'' network only counts as one user. A
@@ -935,7 +936,9 @@ The fifth strategy provides an alternative approach to a mailing list:
 users provide an email address and receive an automated response
 listing an available bridge address. We could limit one response per
 email address. To further rate limit queries, we could require a CAPTCHA
-solution~\cite{captcha} in each case too. In fact, we wouldn't need to
+solution
+%~\cite{captcha}
+in each case too. In fact, we wouldn't need to
 implement the CAPTCHA on our side: if we only deliver bridge addresses
 to Yahoo or GMail addresses, we can leverage the rate-limiting schemes
 that other parties already impose for account creation.
@@ -944,15 +947,20 @@ The sixth strategy ties in the social network design with public
 bridges and a reputation system. We pick some seeds---trusted people in
 blocked areas---and give them each a few dozen bridge addresses and a few
 \emph{delegation tokens}. We run a website next to the bridge authority,
-where the seeds can log in (they can log in via Tor, and they don't need
-to provide actual identities, just persistent pseudonyms). The seeds can
-delegate trust to other people they know by giving them a token. The
-tokens can be exchanged for new accounts on the website. Accounts in
-``good standing'' then accrue new bridge addresses and new tokens.
-As usual, reputation schemes bring in a host of new complexities
-(for example, how do we decide that an account is in good
-standing?), so we put off deeper discussion of the social network
-reputation strategy for Section\ref{sec:accounts}.
+where users can log in (they connect via Tor, and they don't need to
+provide actual identities, just persistent pseudonyms). Users can delegate
+trust to other people they know by giving them a token, which can be
+exchanged for a new account on the website. Accounts in ``good standing''
+then accrue new bridge addresses and new tokens. As usual, reputation
+schemes bring in a host of new complexities~\cite{rep-anon}: how do we
+decide that an account is in good standing? We could tie reputation
+to whether the bridges they're told about have been blocked---see
+Section~\ref{subsec:geoip} below for initial thoughts on how to discover
+whether bridges have been blocked. We could track reputation between
+accounts (if you delegate to somebody who screws up, it impacts you too),
+or we could use blinded delegation tokens~\cite{chaum-blind} to prevent
+the website from mapping the seeds' social network. We put off deeper
+discussion of the social network reputation strategy for future work.
 
 Pools seven and eight are held in reserve, in case our currently deployed
 tricks all fail at once and the adversary blocks all those bridges---so
@@ -966,17 +974,120 @@ if Tor users are bridges by default, nobody will mind not being used yet.
 See also Section~\ref{subsec:incentives}.)
 
 %Is it useful to load balance which bridges are handed out? The above
-%bucket concept makes some bridges wildly popular and others less so.
+%pool concept makes some bridges wildly popular and others less so.
 %But I guess that's the point.
 
 \subsection{Public bridges with coordinated discovery}
 
 We presented the above discovery strategies in the context of a single
-bridge directory authority, but in practice we will want to distribute
-the operations over several bridge authorities---a single point of
-failure or attack is a bad move.
+bridge directory authority, but in practice we will want to distribute the
+operations over several bridge authorities---a single point of failure
+or attack is a bad move. The first answer is to run several independent
+bridge directory authorities, and bridges gravitate to one based on
+their identity key. The better answer would be some federation of bridge
+authorities that work together to provide redundancy but don't introduce
+new security issues. We could even imagine designs where the bridge
+authorities have encrypted versions of the bridge's server descriptors,
+and the users learn a decryption key that they keep private when they
+first hear about the bridge---this way the bridge authorities would not
+be able to learn the IP address of the bridges.
 
-...
+We leave this design question for future work.
+
+\subsection{Assessing whether bridges are useful}
+
+Learning whether a bridge is useful is important in the bridge authority's
+decision to include it in responses to blocked users. For example, if
+we end up with a list of thousands of bridges and only a few dozen of
+them are reachable right now, most blocked users will not end up knowing
+about working bridges.
+
+There are three components for assessing how useful a bridge is. First,
+is it reachable from the public Internet? Second, what proportion of
+the time is it available? Third, is it blocked in certain jurisdictions?
+
+The first component can be tested just as we test reachability of
+ordinary Tor servers. Specifically, the bridges do a self-test---connect
+to themselves via the Tor network---before they are willing to
+publish their descriptor, to make sure they're not obviously broken or
+misconfigured. Once the bridges publish, the bridge authority also tests
+reachability to make sure they're not confused or outright lying.
+
+The second component can be measured and tracked by the bridge authority.
+By doing periodic reachability tests, we can get a sense of how often the
+bridge is available. More complex tests will involve bandwidth-intensive
+checks to force the bridge to commit resources in order to be counted as
+available. We need to evaluate how the relationship of uptime percentage
+should weigh into our choice of which bridges to advertise. We leave
+this to future work.
+
+The third component is perhaps the trickiest: with many different
+adversaries out there, how do we keep track of which adversaries have
+blocked which bridges, and how do we learn about new blocks as they
+occur? We examine this problem next.
+
+\subsection{How do we know if a bridge relay has been blocked?}
+\label{subsec:geoip}
+
+There are two main mechanisms for testing whether bridges are reachable
+from inside each blocked area: active testing via users, and passive
+testing via bridges.
+
+In the case of active testing, certain users inside each area
+sign up as testing relays. The bridge authorities can then use a
+Blossom-like~\cite{blossom-thesis} system to build circuits through them
+to each bridge and see if it can establish the connection. But how do
+we pick the users? If we ask random users to do the testing (or if we
+solicit volunteers from the users), the adversary should sign up so he
+can enumerate the bridges we test. Indeed, even if we hand-select our
+testers, the adversary might still discover their location and monitor
+their network activity to learn bridge addresses.
+
+Another answer is not to measure directly, but rather let the bridges
+report whether they're being used.
+%If they periodically report to their
+%bridge directory authority how much use they're seeing, perhaps the
+%authority can make smart decisions from there.
+Specifically, bridges should install a GeoIP database such as the public
+IP-To-Country list~\cite{ip-to-country}, and then periodically report to the
+bridge authorities which countries they're seeing use from. This data
+would help us track which countries are making use of the bridge design,
+and can also let us learn about new steps the adversary has taken in
+the arms race. (The compressed GeoIP database is only several hundred
+kilobytes, and we could even automate the update process by serving it
+from the bridge authorities.)
+More analysis of this passive reachability
+testing design is needed to resolve its many edge cases: for example,
+if a bridge stops seeing use from a certain area, does that mean the
+bridge is blocked or does that mean those users are asleep?
+
+There are many more problems with the general concept of detecting whether
+bridges are blocked. First, different pieces of the Internet are blocked
+in different ways, and the actual firewall jurisdictions do not match
+country borders. Our bridge scheme could help us map out the topology
+of the censored Internet, but this is a huge task. More generally,
+if a bridge relay isn't reachable, is that because of a network block
+somewhere, because of a problem at the bridge relay, or just a temporary
+outage somewhere in between? And last, an attacker could poison our
+bridge database by signing up already-blocked bridges. In this case,
+if we're stingy giving out bridge addresses, users in that country won't
+learn working bridges.
+
+All of these issues are made more complex when we try to integrate either
+active or passive testing into our social network reputation system above.
+Since in that case we punish or reward users based on whether bridges
+get blocked, the adversary has new attacks to trick or bog down the
+reputation tracking.
+
+Clearly more analysis is required. The eventual solution will probably
+involve a combination of passive measurement via GeoIP and active
+measurement from trusted testers.  More generally, we can use the passive
+feedback mechanism to track usage of the bridge network as a whole---which
+would let us respond to attacks and adapt the design, and it would also
+let the general public track the progress of the project.
+
+%Worry: the adversary could choose not to block bridges but just record
+%connections to them. So be it, I guess.
 
 \subsection{Advantages of deploying all solutions at once}
 
@@ -1000,92 +1111,40 @@ adversary has to guess how to allocate his resources
 %for how users can bootstrap into learning their first bridge.
 
 %\section{The account / reputation system}
-\section{Social networks with directory-side support}
-\label{sec:accounts}
+%\section{Social networks with directory-side support}
+%\label{sec:accounts}
 
-One answer is to measure based on whether the bridge addresses
-we give it end up blocked. But how do we decide if they get blocked?
+%One answer is to measure based on whether the bridge addresses
+%we give it end up blocked. But how do we decide if they get blocked?
 
-Perhaps each bridge should be known by a single bridge directory
-authority. This makes it easier to trace which users have learned about
-it, so easier to blame or reward. It also makes things more brittle,
-since loss of that authority means its bridges aren't advertised until
-they switch, and means its bridge users are sad too.
-(Need a slick hash algorithm that will map our identity key to a
-bridge authority, in a way that's sticky even when we add bridge
-directory authorities, but isn't sticky when our authority goes
-away. Does this exist?)
+%Perhaps each bridge should be known by a single bridge directory
+%authority. This makes it easier to trace which users have learned about
+%it, so easier to blame or reward. It also makes things more brittle,
+%since loss of that authority means its bridges aren't advertised until
+%they switch, and means its bridge users are sad too.
+%(Need a slick hash algorithm that will map our identity key to a
+%bridge authority, in a way that's sticky even when we add bridge
+%directory authorities, but isn't sticky when our authority goes
+%away. Does this exist?)
 
-\subsection{Discovery based on social networks}
+%\subsection{Discovery based on social networks}
 
-A token that can be exchanged at the bridge authority (assuming you
-can reach it) for a new bridge address.
+%A token that can be exchanged at the bridge authority (assuming you
+%can reach it) for a new bridge address.
 
-The account server runs as a Tor controller for the bridge authority.
+%The account server runs as a Tor controller for the bridge authority.
 
-Users can establish reputations, perhaps based on social network
-connectivity, perhaps based on not getting their bridge relays blocked,
+%Users can establish reputations, perhaps based on social network
+%connectivity, perhaps based on not getting their bridge relays blocked,
 
-Probably the most critical lesson learned in past work on reputation
-systems in privacy-oriented environments~\cite{rep-anon} is the need for
-verifiable transactions. That is, the entity computing and advertising
-reputations for participants needs to actually learn in a convincing
-way that a given transaction was successful or unsuccessful.
+%Probably the most critical lesson learned in past work on reputation
+%systems in privacy-oriented environments~\cite{rep-anon} is the need for
+%verifiable transactions. That is, the entity computing and advertising
+%reputations for participants needs to actually learn in a convincing
+%way that a given transaction was successful or unsuccessful.
 
-(Lesson from designing reputation systems~\cite{rep-anon}: easy to
-reward good behavior, hard to punish bad behavior.
-
-\subsection{How do we know if a bridge relay has been blocked?}
-
-We need some mechanism for testing reachability from inside the
-blocked area.
-
-The easiest answer is for certain users inside the area to sign up as
-testing relays, and then we can route through them and see if it works.
-
-First problem is that different network areas block different net masks,
-and it will likely be hard to know which users are in which areas. So
-if a bridge relay isn't reachable, is that because of a network block
-somewhere, because of a problem at the bridge relay, or just a temporary
-outage?
-
-Second problem is that if we pick random users to test random relays, the
-adversary should sign up users on the inside, and enumerate the relays
-we test. But it seems dangerous to just let people come forward and
-declare that things are blocked for them, since they could be tricking
-us. (This matters even moreso if our reputation system above relies on
-whether things get blocked to punish or reward.)
-
-Another answer is not to measure directly, but rather let the bridges
-report whether they're being used. If they periodically report to their
-bridge directory authority how much use they're seeing, the authority
-can make smart decisions from there.
-
-If they install a geoip database, they can periodically report to their
-bridge directory authority which countries they're seeing use from. This
-might help us to track which countries are making use of Ramp, and can
-also let us learn about new steps the adversary has taken in the arms
-race. (If the bridges don't want to install a whole geoip subsystem, they
-can report samples of the /24 network for their users, and the authorities
-can do the geoip work. This tradeoff has clear downsides though.)
-
-Worry: adversary signs up a bunch of already-blocked bridges. If we're
-stingy giving out bridges, users in that country won't get useful ones.
-(Worse, we'll blame the users when the bridges report they're not
-being used?)
-
-Worry: the adversary could choose not to block bridges but just record
-connections to them. So be it, I guess.
-
-\subsection{How to learn how well the whole idea is working}
-
-We need some feedback mechanism to learn how much use the bridge network
-as a whole is actually seeing. Part of the reason for this is so we can
-respond and adapt the design; part is because the funders expect to see
-progress reports.
-
-The above geoip-based approach to detecting blocked bridges gives us a
-solution though.
+%(Lesson from designing reputation systems~\cite{rep-anon}: easy to
+%reward good behavior, hard to punish bad behavior.
 
 \section{Security considerations}
 \label{sec:security}
@@ -1195,7 +1254,9 @@ But how can a user in an oppressed country know that he has the correct
 key fingerprints for the developers? As with other security systems, it
 ultimately comes down to human interaction. The keys are signed by dozens
 of people around the world, and we have to hope that our users have met
-enough people in the PGP web of trust~\cite{pgp-wot} that they can learn
+enough people in the PGP web of trust
+%~\cite{pgp-wot}
+that they can learn
 the correct keys. For users that aren't connected to the global security
 community, though, this question remains a critical weakness.
 
