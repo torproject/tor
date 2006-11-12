@@ -49,7 +49,7 @@ by government-level attackers.
 
 Anonymizing networks like Tor~\cite{tor-design} bounce traffic around a
 network of encrypting relays.  Unlike encryption, which hides only {\it what}
-is said, these network also aim to hide who is communicating with whom, which
+is said, these networks also aim to hide who is communicating with whom, which
 users are using which websites, and similar relations.  These systems have a
 broad range of users, including ordinary citizens who want to avoid being
 profiled for targeted advertisements, corporations who don't want to reveal
@@ -71,8 +71,9 @@ less for its anonymity properties than for its censorship
 resistance properties---if they use Tor to access Internet sites like
 Wikipedia
 and Blogspot, they are no longer affected by local censorship
-and firewall rules. In fact, an informal user study (described in
-Appendix~\ref{app:geoip}) showed China as the third largest user base
+and firewall rules. In fact, an informal user study
+%(described in Appendix~\ref{app:geoip})
+showed China as the third largest user base
 for Tor clients, with perhaps ten thousand people accessing the Tor
 network from China each day.
 
@@ -112,7 +113,7 @@ security implications; ..... %write the rest.
 To design an effective anticensorship tool, we need a good model for the
 goals and resources of the censors we are evading.  Otherwise, we risk
 spending our effort on keeping the adversaries from doing things they have no
-interest in doing and thwarting techniques they do not use.
+interest in doing, and thwarting techniques they do not use.
 The history of blocking-resistance designs is littered with conflicting
 assumptions about what adversaries to expect and what problems are
 in the critical path to a solution. Here we describe our best
@@ -123,7 +124,7 @@ attacker---if we can defend against this attacker, we inherit protection
 against weaker attackers as well.  After all, we want a general design
 that will work for citizens of China, Iran, Thailand, and other censored
 countries; for
-whistleblowers in firewalled corporate network; and for people in
+whistleblowers in firewalled corporate networks; and for people in
 unanticipated oppressive situations. In fact, by designing with
 a variety of adversaries in mind, we can take advantage of the fact that
 adversaries will be in different stages of the arms race at each location,
@@ -131,7 +132,7 @@ so a server blocked in one locale can still be useful in others.
 
 We assume that the attackers' goals are somewhat complex.
 \begin{tightlist}
-\item The attacker would like to restrict the flow of certain kinds
+\item The attacker would like to restrict the flow of certain kinds of
   information, particularly when this information is seen as embarrassing to
   those in power (such as information about rights violations or corruption),
   or when it enables or encourages others to oppose them effectively (such as
@@ -142,10 +143,11 @@ We assume that the attackers' goals are somewhat complex.
 \item Usually, censors make a token attempt to block a few sites for
   obscenity, blasphemy, and so on, but their efforts here are mainly for
   show.
-\item Complete blocking (where nobody at all can ever download) is not a
+\item Complete blocking (where nobody at all can ever download censored
+  content) is not a
   goal. Attackers typically recognize that perfect censorship is not only
   impossible, but unnecessary: if ``undesirable'' information is known only
-  to a small few, resources can be focused elsewhere
+  to a small few, further censoring efforts can be focused elsewhere.
 \item Similarly, the censors are not attempting to shut down or block {\it
   every} anticensorship tool---merely the tools that are popular and
   effective (because these tools impede the censors' information restriction
@@ -167,8 +169,9 @@ We assume that the attackers' goals are somewhat complex.
   greater danger than consumers; the attacker would like to not only block
   their work, but identify them for reprisal.
 \item The censors (or their governments) would like to have a working, useful
-  Internet. Otherwise, they could simply ``censor'' the Internet by outlawing
-  it entirely, or blocking access to all but a tiny list of sites.
+  Internet. There are economic, political, and social factors that prevent
+  them from ``censoring'' the Internet by outlawing it entirely, or by
+  blocking access to all but a tiny list of sites.
   Nevertheless, the censors {\it are} willing to block innocuous content
   (like the bulk of a newspaper's reporting) in order to censor other content
   distributed through the same channels (like that newspaper's coverage of
@@ -194,7 +197,7 @@ connection~\cite{clayton:pet2006}.  Against an adversary who could carefully
 examine the contents of every packet and correlate the packets in every
 stream on the network, we would need some stronger mechanism such as
 steganography, which introduces its own
-problems~\cite{active-wardens,tcpstego,bar}.  But we make a ``weak
+problems~\cite{active-wardens,tcpstego}.  But we make a ``weak
 steganography'' assumption here: to remain unblocked, it is necessary to
 remain unobservable only by computational resources on par with a modern
 router, firewall, proxy, or IDS.
@@ -203,7 +206,7 @@ We assume that while various different regimes can coordinate and share
 notes, there will be a time lag between one attacker learning how to overcome
 a facet of our design and other attackers picking it up.  (The most common
 vector of transmission seems to be commercial providers of censorship tools:
-once a provider add a feature to meet one country's needs or requests, the
+once a provider adds a feature to meet one country's needs or requests, the
 feature is available to all of the provider's customers.)  Conversely, we
 assume that insider attacks become a higher risk only after the early stages
 of network development, once the system has reached a certain level of
@@ -225,7 +228,8 @@ we can do about this issue.
 We assume that the attacker may be able to use political and economic
 resources to secure the cooperation of extraterritorial or multinational
 corporations and entities in investigating information sources.  For example,
-the censors can threaten the hosts of troublesome blogs with economic
+the censors can threaten the service providers of troublesome blogs
+with economic
 reprisals if they do not reveal the authors' identities.
 
 We assume that the user will be able to fetch a genuine
@@ -266,15 +270,17 @@ from volunteering a relay in order to learn that Alice is reading
 or posting to certain websites. The third property helps keep users safe from
 collaborating websites: consider websites and other Internet services 
 that have been pressured
-recently into revealing the identity of bloggers~\cite{arrested-bloggers}
+recently into revealing the identity of bloggers
+%~\cite{arrested-bloggers}
 or treating clients differently depending on their network
-location~\cite{google-geolocation}.
-% and cite{goodell-syverson06} once it's finalized.
+location~\cite{goodell-syverson06}.
+%~\cite{google-geolocation}.
 
 The Tor design provides other features as well that are not typically
 present in manual or ad hoc circumvention techniques.
 
-First, Tor has a fairly mature way to distribute information about servers.
+First, Tor has a well-analyzed and well-understood way to distribute
+information about servers.
 Tor directory authorities automatically aggregate, test,
 and publish signed summaries of the available Tor routers. Tor clients
 can fetch these summaries to learn which routers are available and
@@ -340,7 +346,8 @@ Sixth, Tor has an established user base of hundreds of
 thousands of people from around the world. This diversity of
 users contributes to sustainability as above: Tor is used by
 ordinary citizens, activists, corporations, law enforcement, and
-even government and military users~\cite{tor-use-cases}, and they can
+even government and military users\footnote{http://tor.eff.org/overview},
+and they can
 only achieve their security goals by blending together in the same
 network~\cite{econymics,usability:weis2006}. This user base also provides
 something else: hundreds of thousands of different and often-changing
@@ -351,9 +358,10 @@ single server from linking users to their communication partners.  Despite
 initial appearances, {\it distributed-trust anonymity is critical for
 anticensorship efforts}.  If any single server can expose dissident bloggers
 or compile a list of users' behavior, the censors can profitably compromise
-that server's operator applying economic pressure to their employers,
+that server's operator, perhaps by  applying economic pressure to their
+employers,
 breaking into their computer, pressuring their family (if they have relatives
-in the censored area), or so on.  Furthermore, in systems where any relay can
+in the censored area), or so on.  Furthermore, in designs where any relay can
 expose its users, the censors can spread suspicion that they are running some
 of the relays and use this belief to chill use of the network.
 
@@ -497,10 +505,12 @@ first introduction into the Tor network.
 
 \subsection{Blocking resistance and JAP}
 
-K\"{o}psell's Blocking Resistance design~\cite{koepsell:wpes2004} is probably
+K\"{o}psell and Hilling's Blocking Resistance
+design~\cite{koepsell:wpes2004} is probably
 the closest related work, and is the starting point for the design in this
-paper.  In this design, the JAP anonymity system is used as a base instead of
-Tor.  Volunteers operate a large number of access points to the core JAP
+paper.  In this design, the JAP anonymity system~\cite{web-mix} is used
+as a base instead of Tor.  Volunteers operate a large number of access
+points that relay traffic to the core JAP
 network, which in turn anonymizes users' traffic.  The software to run these
 relays is, as in our design, included in the JAP client software and enabled
 only when the user decides to enable it.  Discovery is handled with a
@@ -539,17 +549,20 @@ about relays also allows the censor to do so, he can trivially discover and
 block their addresses, even if the steganography would prevent mere traffic
 observation from revealing the relays' addresses.
 
-\subsection{RST-evasion}
+\subsection{RST-evasion and other packet-level tricks}
+
 In their analysis of China's firewall's content-based blocking, Clayton,
 Murdoch and Watson discovered that rather than blocking all packets in a TCP
 streams once a forbidden word was noticed, the firewall was simply forging
 RST packets to make the communicating parties believe that the connection was
-closed~\cite{clayton:pet2006}.  Two mechanisms were proposed: altering
-operating systems to ignore forged RST packets, and ensuring that sensitive
-words are split across multiple TCP packets so that the censors' firewalls
-can't notice them without performing expensive stream reconstruction.  The
-later technique relies on the same insight as our weak steganography
-assumption.
+closed~\cite{clayton:pet2006}. They proposed altering operating systems
+to ignore forged RST packets.
+
+Other packet-level responses to filtering include splitting
+sensitive words across multiple TCP packets, so that the censors'
+firewalls can't notice them without performing expensive stream
+reconstruction~\cite{ptacek98insertion}. This technique relies on the
+same insight as our weak steganography assumption.
 
 \subsection{Internal caching networks}
 
@@ -557,15 +570,16 @@ Freenet~\cite{freenet-pets00} is an anonymous peer-to-peer data store.
 Analyzing Freenet's security can be difficult, as its design is in flux as
 new discovery and routing mechanisms are proposed, and no complete
 specification has (to our knowledge) been written.  Freenet servers relay
-requests for specific content (indexed by a digest of the content) to the
-server that hosts it, and then caches the content as it works its way back to
+requests for specific content (indexed by a digest of the content)
+``toward'' the server that hosts it, and then cache the content as it
+follows the same path back to
 the requesting user.  If Freenet's routing mechanism is successful in
 allowing nodes to learn about each other and route correctly even as some
 node-to-node links are blocked by firewalls, then users inside censored areas
 can ask a local Freenet server for a piece of content, and get an answer
 without having to connect out of the country at all.  Of course, operators of
 servers inside the censored area can still be targeted, and the addresses of
-external serves can still be blocked.
+external servers can still be blocked.
 
 \subsection{Skype}
 
@@ -573,10 +587,10 @@ The popular Skype voice-over-IP software uses multiple techniques to tolerate
 restrictive networks, some of which allow it to continue operating in the
 presence of censorship.  By switching ports and using encryption, Skype
 attempts to resist trivial blocking and content filtering.  Even if no
-encryption were used, it would still be quite expensive to scan all voice
+encryption were used, it would still be expensive to scan all voice
 traffic for sensitive words.  Also, most current keyloggers are unable to
 store voice traffic.  Nevertheless, Skype can still be blocked, especially at
-it central directory service.
+its central directory service.
 
 \subsection{Tor itself}
 
@@ -1295,7 +1309,7 @@ Tor encrypts traffic on the local network, and it obscures the eventual
 destination of the communication, but it doesn't do much to obscure the
 traffic volume. In particular, a user publishing a home video will have a
 different network signature than a user reading an online news article.
-Based on our assumption in Section~\ref{sec:assumptions} that users who
+Based on our assumption in Section~\ref{sec:adversary} that users who
 publish material are in more danger, should we work to improve Tor's
 security in this situation?
 
@@ -1510,7 +1524,7 @@ If it's trivial to verify that a given address is operating as a bridge,
 and most bridges run on a predictable port, then it's conceivable our
 attacker could scan the whole Internet looking for bridges. (In fact, he
 can just concentrate on scanning likely networks like cablemodem and DSL
-services---see Section~\ref{block-cable} above for related attacks.) It
+services---see Section~\ref{subsec:block-cable} above for related attacks.) It
 would be nice to slow down this attack. It would be even nicer to make
 it hard to learn whether we're a bridge without first knowing some
 secret. We call this general property \emph{scanning resistance}.
