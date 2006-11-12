@@ -438,28 +438,88 @@ relays is clearly a useful idea for a discovery component. For example,
 users might be able to make use of these proxies to bootstrap their
 first introduction into the Tor network.
 
-\subsection{JAP}
+\subsection{Blocking resistance and JAP}
 
-Stefan's WPES paper~\cite{koepsell:wpes2004} is probably the closest
-related work, and is
-the starting point for the design in this paper.
+K\"{o}psell's Blocking Resistance design~\cite{koepsell:wpes2004} is probably
+the closest related work, and is the starting point for the design in this
+paper.  In this design, the JAP anonymity system is used as a base instead of
+Tor.  Volunteers operate a large number of access points to the core JAP
+network, which in turn anonymizes users' traffic.  The software to run these
+relays is, as in our design, included in the JAP client software and enabled
+only when the user decides to enable it.  Discovery is handled with a
+CAPTCHA-based mechanism; users prove that they aren't an automated process,
+and are given the address of an access point.  (The problem of a determined
+attacker with enough manpower to launch many requests and enumerate all the
+access points is not considered in depth.)  There is also some suggestion
+that information about access points could spread through existing social
+networks.
 
-\subsection{steganography}
+\subsection{Infranet}
 
-infranet
+The Infranet design~\cite{infranet} uses one-hop relays to deliver web
+content, but disguises its communications as ordinary HTTP traffic.  Requests
+are split into multiple requests for URLs on the relay, which then encodes
+its responses in the content it returns.  The relay needs to be an actual
+website with plausible content and a number of URLs which the user might want
+to access---if the Infranet software produced its own cover content, it would
+be far easier for censors to identify.  To keep the censors from noticing
+that cover content changes depending on what data is embedded, Infranet needs
+the cover content to have an innocuous reason for changing frequently: the
+paper recommends watermarked images and webcams.
 
-\subsection{break your sensitive strings into multiple tcp packets;
-ignore RSTs}
+The attacker and relay operators in Infranet's threat model are significantly
+different than in ours.  Unlike our attacker, Infranet's censor can't be
+bypassed with encrypted traffic (presumably because the censor blocks
+encrypted traffic, or at least considers it suspicious), and has more
+computational resources to devote to each connection than ours (so it can
+notice subtle patterns over time).  Unlike our bridge operators, Infranet's
+operators (and users) have more bandwidth to spare; the overhead in typical
+steganography schemes is far higher than Tor's.
+
+The Infranet design does not include a discovery element.  Discovery,
+however, is a critical point: if whatever mechanism allows users to learn
+about relays also allows the censor to do so, he can trivially discover and
+block their addresses, even if the steganography would prevent mere traffic
+observation from revealing the relays' addresses.
+
+\subsection{RST-evasion}
+In their analysis of China's firewall's content-based blocking, Clayton,
+Murdoch and Watson discovered that rather than blocking all packets in a TCP
+streams once a forbidden word was noticed, the firewall was simply forging
+RST packets to make the communicating parties believe that the connection was
+closed~\cite{clayton:pet2006}.  Two mechanisms were proposed: altering
+operating systems to ignore forged RST packets, and ensuring that sensitive
+words are split across multiple TCP packets so that the censors' firewalls
+can't notice them without performing expensive stream reconstruction.  The
+later technique relies on the same insight as our weak steganography
+assumption.
 
 \subsection{Internal caching networks}
 
-Freenet is deployed inside China and caches outside content.
+Freenet~\cite{freenet-pets00} is an anonymous peer-to-peer data store.
+Analyzing Freenet's security can be difficult, as its design is in flux as
+new discovery and routing mechanisms are proposed, and no complete
+specification has (to our knowledge) been written.  Freenet servers relay
+requests for specific content (indexed by a digest of the content) to the
+server that hosts it, and then caches the content as it works its way back to
+the requesting user.  If Freenet's routing mechanism is successful in
+allowing nodes to learn about each other and route correctly even as some
+node-to-node links are blocked by firewalls, then users inside censored areas
+can ask a local Freenet server for a piece of content, and get an answer
+without having to connect out of the country at all.  Of course, operators of
+servers inside the censored area can still be targeted, and the addresses of
+external serves can still be blocked.
 
 \subsection{Skype}
 
-port-hopping. encryption. voice communications not so susceptible to
-keystroke loggers (even graphical ones).
-
+The popular Skype voice-over-IP software uses multiple techniques to tolerate
+restrictive networks, some of which allow it to continue operating in the
+presence of censorship.  By switching ports and using encryption, Skype
+attempts to resist trivial blocking and content filtering.  Even if no
+encryption were used, it would still be quite expensive to scan all voice
+traffic for sensitive words.  Also, most current keyloggers are unable to
+store voice traffic.  Nevertheless, Skype can still be blocked, especially at
+it central directory service.
 
 \subsection{Tor itself}
 
