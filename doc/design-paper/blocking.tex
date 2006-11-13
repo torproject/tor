@@ -143,9 +143,9 @@ We assume that the attackers' goals are somewhat complex.
   protests).
 \item As a second-order effect, censors aim to chill citizens' behavior by
   creating an impression that their online activities are monitored.
-\item Usually, censors make a token attempt to block a few sites for
+\item In some cases, censors make a token attempt to block a few sites for
   obscenity, blasphemy, and so on, but their efforts here are mainly for
-  show.
+  show. In other cases, they really do try hard to block such content.
 \item Complete blocking (where nobody at all can ever download censored
   content) is not a
   goal. Attackers typically recognize that perfect censorship is not only
@@ -215,9 +215,18 @@ assume that insider attacks become a higher risk only after the early stages
 of network development, once the system has reached a certain level of
 success and visibility.
 
-We do not assume that government-level attackers are always uniform across
-the country. For example, there is no single centralized place in China
-that coordinates its specific censorship decisions and steps.
+We do not assume that government-level attackers are always uniform
+across the country. For example, users of different ISPs in China
+experience different censorship policies and mechanisms.
+%there is no single centralized place in China
+%that coordinates its specific censorship decisions and steps.
+
+We assume that the attacker may be able to use political and economic
+resources to secure the cooperation of extraterritorial or multinational
+corporations and entities in investigating information sources.
+For example, the censors can threaten the service providers of
+troublesome blogs with economic reprisals if they do not reveal the
+authors' identities.
 
 We assume that our users have control over their hardware and
 software---they don't have any spyware installed, there are no
@@ -228,14 +237,7 @@ a user who is entirely observed and controlled by the adversary. See
 Section~\ref{subsec:cafes-and-livecds} for more discussion of what little
 we can do about this issue.
 
-We assume that the attacker may be able to use political and economic
-resources to secure the cooperation of extraterritorial or multinational
-corporations and entities in investigating information sources.  For example,
-the censors can threaten the service providers of troublesome blogs
-with economic
-reprisals if they do not reveal the authors' identities.
-
-We assume that the user will be able to fetch a genuine
+Similarly, we assume that the user will be able to fetch a genuine
 version of Tor, rather than one supplied by the adversary; see
 Section~\ref{subsec:trust-chain} for discussion on helping the user
 confirm that he has a genuine version and that he can connect to the
@@ -244,10 +246,10 @@ real Tor network.
 \section{Adapting the current Tor design to anti-censorship}
 \label{sec:current-tor}
 
-Tor is popular and sees a lot of use. It's the largest anonymity
-network of its kind.
-Tor has attracted more than 800 volunteer-operated routers from around the
-world.  Tor protects users by routing their traffic through a multiply
+Tor is popular and sees a lot of use---it's the largest anonymity
+network of its kind, and has
+attracted more than 800 volunteer-operated routers from around the
+world.  Tor protects each user by routing their traffic through a multiply
 encrypted ``circuit'' built of a few randomly selected servers, each of which
 can remove only a single layer of encryption.  Each server sees only the step
 before it and the step after it in the circuit, and so no single server can
@@ -350,7 +352,7 @@ thousands of people from around the world. This diversity of
 users contributes to sustainability as above: Tor is used by
 ordinary citizens, activists, corporations, law enforcement, and
 even government and military users,
-%\footnote{http://tor.eff.org/overview}
+%\footnote{\url{http://tor.eff.org/overview}}
 and they can
 only achieve their security goals by blending together in the same
 network~\cite{econymics,usability:weis2006}. This user base also provides
@@ -594,7 +596,15 @@ attempts to resist trivial blocking and content filtering.  Even if no
 encryption were used, it would still be expensive to scan all voice
 traffic for sensitive words.  Also, most current keyloggers are unable to
 store voice traffic.  Nevertheless, Skype can still be blocked, especially at
-its central directory service.
+its central login server.
+%*sjmurdoch* "we consider the login server to be the only central component in
+%the Skype p2p network."
+%*sjmurdoch* http://www1.cs.columbia.edu/~salman/publications/skype1_4.pdf
+%-> *sjmurdoch* ok. what is the login server's role?
+%-> *sjmurdoch* and do you need to reach it directly to use skype?
+%*sjmurdoch* It checks the username and password
+%*sjmurdoch* It is necessary in the current implementation, but I don't know if
+%it is a fundemental limitation of the architecture
 
 \subsection{Tor itself}
 
@@ -1372,7 +1382,7 @@ We also need to examine how entry guards fit in. Entry guards
 step in a circuit) help protect against certain attacks
 where the attacker runs a few Tor servers and waits for
 the user to choose these servers as the beginning and end of her
-circuit\footnote{http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ\#EntryGuards}.
+circuit\footnote{\url{http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ\#EntryGuards}}.
 If the blocked user doesn't use the bridge's entry guards, then the bridge
 doesn't gain as much cover benefit. On the other hand, what design changes
 are needed for the blocked user to use the bridge's entry guards without
@@ -1587,7 +1597,8 @@ Eventually, we may be able to make all Tor users become bridges if they
 pass their self-reachability tests---the software and installers need
 more work on usability first, but we're making progress.
 
-In the mean time, we can make a snazzy network graph with Vidalia that
+In the mean time, we can make a snazzy network graph with
+Vidalia\footnote{\url{http://vidalia-project.net/}} that
 emphasizes the connections the bridge user is currently relaying.
 %(Minor
 %anonymity implications, but hey.) (In many cases there won't be much
