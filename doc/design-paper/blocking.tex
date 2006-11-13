@@ -91,8 +91,11 @@ leveraged for a new blocking-resistant design. Section~\ref{sec:related}
 explains the features and drawbacks of the currently deployed solutions.
 In sections~\ref{sec:bridges} through~\ref{sec:discovery}, we explore the
 components of our designs in detail.  Section~\ref{sec:security} considers
-security implications; ..... %write the rest.
-
+security implications and Section~\ref{sec:reachability} presents other
+issues with maintaining connectivity and sustainability for the design.
+Section~\ref{sec:future} speculates about future more complex designs,
+and finally Section~\ref{sec:conclusion} summarizes our next steps and
+recommendations.
 
 % The other motivation is for places where we're concerned they will
 % try to enumerate a list of Tor users. So even if they're not blocking
@@ -110,7 +113,7 @@ security implications; ..... %write the rest.
 \section{Adversary assumptions}
 \label{sec:adversary}
 
-To design an effective anticensorship tool, we need a good model for the
+To design an effective anti-censorship tool, we need a good model for the
 goals and resources of the censors we are evading.  Otherwise, we risk
 spending our effort on keeping the adversaries from doing things they have no
 interest in doing, and thwarting techniques they do not use.
@@ -149,7 +152,7 @@ We assume that the attackers' goals are somewhat complex.
   impossible, but unnecessary: if ``undesirable'' information is known only
   to a small few, further censoring efforts can be focused elsewhere.
 \item Similarly, the censors are not attempting to shut down or block {\it
-  every} anticensorship tool---merely the tools that are popular and
+  every} anti-censorship tool---merely the tools that are popular and
   effective (because these tools impede the censors' information restriction
   goals) and those tools that are highly visible (thus making the censors
   look ineffectual to their citizens and their bosses).
@@ -238,7 +241,7 @@ Section~\ref{subsec:trust-chain} for discussion on helping the user
 confirm that he has a genuine version and that he can connect to the
 real Tor network.
 
-\section{Adapting the current Tor design to anticensorship}
+\section{Adapting the current Tor design to anti-censorship}
 \label{sec:current-tor}
 
 Tor is popular and sees a lot of use. It's the largest anonymity
@@ -325,8 +328,8 @@ user has for her first hop, and the more options she has for her last hop,
 the less likely it is that a given attacker will be watching both ends
 of her circuit~\cite{tor-design}. As a bonus, because our design attracts
 more internal relays that want to help out but don't want to deal with
-being an exit relay, we end up with more options for the first hop---the
-one most critical to being able to reach the Tor network.
+being an exit relay, we end up providing more options for the first
+hop---the one most critical to being able to reach the Tor network.
 
 Fifth, Tor is sustainable. Zero-Knowledge Systems offered the commercial
 but now defunct Freedom Network~\cite{freedom21-security}, a design with
@@ -346,7 +349,8 @@ Sixth, Tor has an established user base of hundreds of
 thousands of people from around the world. This diversity of
 users contributes to sustainability as above: Tor is used by
 ordinary citizens, activists, corporations, law enforcement, and
-even government and military users\footnote{http://tor.eff.org/overview},
+even government and military users,
+%\footnote{http://tor.eff.org/overview}
 and they can
 only achieve their security goals by blending together in the same
 network~\cite{econymics,usability:weis2006}. This user base also provides
@@ -356,7 +360,7 @@ addresses that we can leverage for our blocking-resistance design.
 Finally and perhaps most importantly, Tor provides anonymity and prevents any
 single server from linking users to their communication partners.  Despite
 initial appearances, {\it distributed-trust anonymity is critical for
-anticensorship efforts}.  If any single server can expose dissident bloggers
+anti-censorship efforts}.  If any single server can expose dissident bloggers
 or compile a list of users' behavior, the censors can profitably compromise
 that server's operator, perhaps by  applying economic pressure to their
 employers,
@@ -609,7 +613,7 @@ this idea when we consider whether and how to publicize a Tor variant
 that improves blocking-resistance---see Section~\ref{subsec:publicity}
 for more discussion.)
 
-The broader explanation is that the maintainance of most government-level
+The broader explanation is that the maintenance of most government-level
 filters is aimed at stopping widespread information flow and appearing to be
 in control, not by the impossible goal of blocking all possible ways to bypass
 censorship. Censors realize that there will always
@@ -647,7 +651,7 @@ have such a set: the Tor users.
 
 Hundreds of thousands of people around the world use Tor. We can leverage
 our already self-selected user base to produce a list of thousands of
-often-changing IP addresses. Specifically, we can give them a little
+frequently-changing IP addresses. Specifically, we can give them a little
 button in the GUI that says ``Tor for Freedom'', and users who click
 the button will turn into \emph{bridge relays} (or just \emph{bridges}
 for short). They can rate limit relayed connections to 10 KB/s (almost
@@ -847,6 +851,7 @@ differently from, say, instant messaging.
 % learn that these are related problems, but it's not obvious to me. -RD
 
 \subsection{Identity keys as part of addressing information}
+\label{subsec:id-address}
 
 We have described a way for the blocked user to bootstrap into the
 network once he knows the IP address and ORPort of a bridge. What about
@@ -1020,7 +1025,7 @@ The first distribution strategy (used for the first pool) publishes bridge
 addresses in a time-release fashion. The bridge authority divides the
 available bridges into partitions, and each partition is deterministically
 available only in certain time windows. That is, over the course of a
-given time slot (say, an hour), each requestor is given a random bridge
+given time slot (say, an hour), each requester is given a random bridge
 from within that partition. When the next time slot arrives, a new set
 of bridges from the pool are available for discovery. Thus some bridge
 address is always available when a new
@@ -1036,9 +1041,9 @@ be useful to some users even as the arms races progress.
 The second distribution strategy publishes bridge addresses based on the IP
 address of the requesting user. Specifically, the bridge authority will
 divide the available bridges in the pool into a bunch of partitions
-(as in the first distribution scheme), hash the requestor's IP address
+(as in the first distribution scheme), hash the requester's IP address
 with a secret of its own (as in the above allocation scheme for creating
-pools), and give the requestor a random bridge from the appropriate
+pools), and give the requester a random bridge from the appropriate
 partition. To raise the bar, we should discard the last octet of the
 IP address before inputting it to the hash function, so an attacker
 who only controls a single ``/24'' network only counts as one user. A
@@ -1387,13 +1392,13 @@ always reasonable.
 
 For Internet cafe Windows computers that let you attach your own USB key,
 a USB-based Tor image would be smart. There's Torpark, and hopefully
-there will be more thoroughly analyzed options down the road. Worries
-remain about hardware or
-software keyloggers and other spyware---and physical surveillance.
+there will be more thoroughly analyzed and trustworthy options down the
+road. Worries remain about hardware or software keyloggers and other
+spyware, as well as and physical surveillance.
 
 If the system lets you boot from a CD or from a USB key, you can gain
 a bit more security by bringing a privacy LiveCD with you. (This
-approach isn't foolproof of course, since hardware
+approach isn't foolproof either of course, since hardware
 keyloggers and physical surveillance are still a worry).
 
 In fact, LiveCDs are also useful if it's your own hardware, since it's
@@ -1460,6 +1465,7 @@ community, though, this question remains a critical weakness.
 %issues?
 
 \section{Maintaining reachability}
+\label{sec:reachability}
 
 \subsection{How many bridge relays should you know about?}
 
@@ -1522,37 +1528,50 @@ running bridges?
 
 If it's trivial to verify that a given address is operating as a bridge,
 and most bridges run on a predictable port, then it's conceivable our
-attacker could scan the whole Internet looking for bridges. (In fact, he
-can just concentrate on scanning likely networks like cablemodem and DSL
-services---see Section~\ref{subsec:block-cable} above for related attacks.) It
-would be nice to slow down this attack. It would be even nicer to make
-it hard to learn whether we're a bridge without first knowing some
-secret. We call this general property \emph{scanning resistance}.
+attacker could scan the whole Internet looking for bridges. (In fact,
+he can just concentrate on scanning likely networks like cablemodem
+and DSL services---see Section~\ref{subsec:block-cable} above for
+related attacks.) It would be nice to slow down this attack. It would
+be even nicer to make it hard to learn whether we're a bridge without
+first knowing some secret. We call this general property \emph{scanning
+resistance}, and it goes along with normalizing Tor's TLS handshake and
+network signature.
 
-Password protecting the bridges.
-Could provide a password to the bridge user. He provides a nonced hash of
-it or something when he connects. We'd need to give him an ID key for the
-bridge too, and wait to present the password until we've TLSed, else the
-adversary can pretend to be the bridge and MITM him to learn the password.
+We could provide a password to the blocked user, and she (or her Tor
+client) provides a nonced hash of this password when she connects. We'd
+need to give her an ID key for the bridge too (in addition to the IP
+address and port---see Section~\ref{subsec:id-address}), and wait to
+present the password until we've finished the TLS handshake, else it
+would look unusual. If Alice can authenticate the bridge before she
+tries to send her password, we can resist an adversary who pretends
+to be the bridge and launches a man-in-the-middle attack to learn the
+password. But even if she can't, we resist against widespread scanning.
 
-We could use some kind of ID-based knocking protocol, or we could act like an
-unconfigured HTTPS server if treated like one.
+Another approach would be some kind of ID-based knocking protocol,
+where the bridge only answers after some predefined set of connections
+or interactions. The bridge could even act like an unconfigured HTTPS
+server (``welcome to the default Apache page'') if accessed without the
+correct authorization.
 
-We can assume that the attacker can easily recognize https connections
-to unknown servers. It can then attempt to connect to them and block
-connections to servers that seem suspicious. It may be that password
-protected web sites will not be suspicious in general, in which case
-that may be the easiest way to give controlled access to the bridge.
-If such sites that have no other overt features are automatically
-blocked when detected, then we may need to be more subtle.
-Possibilities include serving an innocuous web page if a TLS encrypted
-request is received without the authorization needed to access the Tor
-network and only responding to a requested access to the Tor network
-of proper authentication is given. If an unauthenticated request to
-access the Tor network is sent, the bridge should respond as if
-it has received a message it does not understand (as would be the
-case were it not a bridge).
+We might assume that the attacker can recognize HTTPS connections that
+use self-signed certificates. (This process would be resource-intensive
+but not out of the realm of possibility.) But even in this case, many
+popular websites around the Internet use self-signed or just plain broken
+SSL certificates.
 
+%to unknown servers. It can then attempt to connect to them and block
+%connections to servers that seem suspicious. It may be that password
+%protected web sites will not be suspicious in general, in which case
+%that may be the easiest way to give controlled access to the bridge.
+%If such sites that have no other overt features are automatically
+%blocked when detected, then we may need to be more subtle.
+%Possibilities include serving an innocuous web page if a TLS encrypted
+%request is received without the authorization needed to access the Tor
+%network and only responding to a requested access to the Tor network
+%of proper authentication is given. If an unauthenticated request to
+%access the Tor network is sent, the bridge should respond as if
+%it has received a message it does not understand (as would be the
+%case were it not a bridge).
 
 \subsection{How to motivate people to run bridge relays}
 \label{subsec:incentives}
@@ -1564,14 +1583,16 @@ will be pleased to run it. We take a similar approach here, by leveraging
 the fact that these users are already interested in protecting their
 own Internet traffic, so they will install and run the software.
 
-Make all Tor users become bridges if they're reachable---needs more work
-on usability first, but we're making progress.
+Eventually, we may be able to make all Tor users become bridges if they
+pass their self-reachability tests---the software and installers need
+more work on usability first, but we're making progress.
 
-Also, we can make a snazzy network graph with Vidalia that emphasizes
-the connections the bridge user is currently relaying. (Minor anonymity
-implications, but hey.) (In many cases there won't be much activity,
-so this may backfire. Or it may be better suited to full-fledged Tor
-servers.)
+In the mean time, we can make a snazzy network graph with Vidalia that
+emphasizes the connections the bridge user is currently relaying.
+%(Minor
+%anonymity implications, but hey.) (In many cases there won't be much
+%activity, so this may backfire. Or it may be better suited to full-fledged
+%Tor servers.)
 
 % Also consider everybody-a-server. Many of the scalability questions
 % are easier when you're talking about making everybody a bridge.
@@ -1608,16 +1629,17 @@ Many people working on this field want to publicize the existence
 and extent of censorship concurrently with the deployment of their
 circumvention software. The easy reason for this two-pronged push is
 to attract volunteers for running proxies in their systems; but in many
-cases their main goal is not to build the software, but rather to educate
-the world about the censorship. The media also tries to do its part by
-broadcasting the existence of each new circumvention system.
+cases their main goal is not to focus on actually allowing individuals
+to circumvent the firewall, but rather to educate the world about the
+censorship. The media also tries to do its part by broadcasting the
+existence of each new circumvention system.
 
 But at the same time, this publicity attracts the attention of the
 censors. We can slow down the arms race by not attracting as much
 attention, and just spreading by word of mouth. If our goal is to
 establish a solid social network of bridges and bridge users before
-the adversary gets involved, does this attention tradeoff work to our
-advantage?
+the adversary gets involved, does this extra attention work to our
+disadvantage?
 
 \subsection{The Tor website: how to get the software}
 
@@ -1636,6 +1658,7 @@ other media.
 See Section~\ref{subsec:first-bridge} for more discussion.
 
 \section{Future designs}
+\label{sec:future}
 
 \subsection{Bridges inside the blocked network too}
 
@@ -1651,16 +1674,30 @@ is a lot trickier because it brings in the complexity of whether the
 internal bridges will remain available, can maintain reachability with
 the outside world, etc.
 
-Hidden services as bridges. Hidden services as bridge directory authorities.
+More complex future designs involve operating a separate Tor network
+inside the blocked area, and using \emph{hidden service bridges}---bridges
+that can be accessed by users of the internal Tor network but whose
+addresses are not published or findable, even by these users---to get
+from inside the firewall to the rest of the Internet. But this design
+requires directory authorities to run inside the blocked area too,
+and they would be a fine target to take down the network.
 
-\section{Conclusion}
+% Hidden services as bridge directory authorities.
 
-a technical solution won't solve the whole problem. after all, china's
-firewall is *socially* very successful, even if technologies exist to
-get around it.
+\section{Next Steps}
+\label{sec:conclusion}
 
-but having a strong technical solution is still useful as a piece of the
-puzzle. and tor provides a great set of building blocks to start from.
+Technical solutions won't solve the whole censorship problem. After all,
+the firewalls in places like China and Iran are \emph{socially} very
+successful, even if technologies and tricks exist to get around them.
+However, having a strong technical solution is still necessary as one
+important piece of the puzzle.
+
+In this paper, we have shown that Tor provides a great set of building
+blocks to start from. The next steps are to deploy prototype bridges and
+bridge authorities, implement some of the proposed discovery strategies,
+and then observe the system in operation and get more intuition about
+the actual requirements and adversaries we're up against.
 
 \bibliographystyle{plain} \bibliography{tor-design}
 
