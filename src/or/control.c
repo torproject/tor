@@ -1583,8 +1583,7 @@ handle_getinfo_helper(control_connection_t *control_conn,
       origin_circuit_t *origin_circ = NULL;
       if (conns[i]->type != CONN_TYPE_AP ||
           conns[i]->marked_for_close ||
-          conns[i]->state == AP_CONN_STATE_SOCKS_WAIT ||
-          conns[i]->state == AP_CONN_STATE_ORIGDST_WAIT)
+          conns[i]->state == AP_CONN_STATE_SOCKS_WAIT)
         continue;
       conn = TO_EDGE_CONN(conns[i]);
       switch (conn->_base.state)

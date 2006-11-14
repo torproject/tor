@@ -96,7 +96,6 @@ conn_state_to_string(int type, int state)
       break;
     case CONN_TYPE_AP:
       switch (state) {
-        case AP_CONN_STATE_ORIGDST_WAIT:
         case AP_CONN_STATE_SOCKS_WAIT: return "waiting for dest info";
         case AP_CONN_STATE_RENDDESC_WAIT: return "waiting for rendezvous desc";
         case AP_CONN_STATE_CONTROLLER_WAIT: return "waiting for controller";
@@ -808,6 +807,8 @@ connection_handle_listener_read(connection_t *conn, int new_type)
 
 /** Initialize states for newly accepted connection <b>conn</b>.
  * If conn is an OR, start the tls handshake.
+ * If conn is a transparent AP, get its original destination
+ * and place it in circuit_wait.
  */
 static int
 connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
@@ -824,8 +825,8 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
           break;
         case CONN_TYPE_AP_TRANS_LISTENER:
-          conn->state = AP_CONN_STATE_ORIGDST_WAIT;
-          break;
+          conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
+          return connection_ap_process_transparent(TO_EDGE_CONN(conn));
       }
       break;
     case CONN_TYPE_DIR:

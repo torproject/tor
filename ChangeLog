@@ -2,6 +2,12 @@ Changes in version 0.1.2.4-alpha - 2006-11-??
   o Minor features
     - Add breakdown of public key operations to dumped statistics.
 
+  o Major bugfixes
+    - Handle TransPort connections even when the server sends data before
+      the client sends data.  Previously, the connection would just hang
+      until the client sent data. (Patch from tup based on patch from
+      Zajcev Evgeny.)
+
   o Minor bugfixes
     - Don't log spurious warnings when we see a circuit close reason we
       don't recognize; it's probably just from a newer version of Tor.

@@ -294,10 +294,7 @@ typedef enum {
 #define AP_CONN_STATE_RESOLVE_WAIT 10
 /** State for a SOCKS connection: ready to send and receive. */
 #define AP_CONN_STATE_OPEN 11
-/** State for a transparent proxy connection: waiting for original
- * destination. */
-#define AP_CONN_STATE_ORIGDST_WAIT 12
-#define _AP_CONN_STATE_MAX 12
+#define _AP_CONN_STATE_MAX 11
 
 #define _DIR_CONN_STATE_MIN 1
 /** State for connection to directory server: waiting for connect(). */
@@ -1993,6 +1990,7 @@ void circuit_discard_optional_exit_enclaves(extend_info_t *info);
 int connection_ap_detach_retriable(edge_connection_t *conn,
                                    origin_circuit_t *circ,
                                    int reason);
+int connection_ap_process_transparent(edge_connection_t *conn);
 
 void addressmap_init(void);
 void addressmap_clean(time_t now);

@@ -28,7 +28,6 @@ const char connection_edge_c_id[] =
 static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
-static int connection_ap_process_transparent(edge_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exit_conn);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
@@ -106,12 +105,6 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
   switch (conn->_base.state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if (connection_ap_handshake_process_socks(conn) < 0) {
-        /* already marked */
-        return -1;
-      }
-      return 0;
-    case AP_CONN_STATE_ORIGDST_WAIT:
-      if (connection_ap_process_transparent(conn) < 0) {
         /* already marked */
         return -1;
       }
@@ -254,7 +247,6 @@ connection_edge_finished_flushing(edge_connection_t *conn)
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
-    case AP_CONN_STATE_ORIGDST_WAIT:
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
@@ -1452,14 +1444,14 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
   return connection_ap_handshake_rewrite_and_attach(conn, NULL);
 }
 
-/** connection_edge_process_inbuf() found a conn in state
- * origdst_wait. Get the original destination and
- * send it to connection_ap_handshake_rewrite_and_attach().
+/** connection_init_accepted_conn() found a new trans AP conn.
+ * Get the original destination and send it to
+ * connection_ap_handshake_rewrite_and_attach().
  *
  * Return -1 if an unexpected error with conn (and it should be marked
  * for close), else return 0.
  */
-static int
+int
 connection_ap_process_transparent(edge_connection_t *conn)
 {
   socks_request_t *socks;
@@ -1467,7 +1459,6 @@ connection_ap_process_transparent(edge_connection_t *conn)
 
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_AP);
-  tor_assert(conn->_base.state == AP_CONN_STATE_ORIGDST_WAIT);
   tor_assert(conn->socks_request);
   socks = conn->socks_request;
 
