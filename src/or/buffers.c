@@ -187,7 +187,7 @@ buf_resize(buf_t *buf, size_t new_capacity)
        * to move the start portion back by that many bytes.
        */
       memmove(buf->cur-(buf->len-new_capacity), buf->cur,
-              buf->len-offset);
+              (size_t)(buf->len-offset));
       offset -= (buf->len-new_capacity);
     } else {
       /* The data doesn't wrap around, but it does extend beyond the new
@@ -232,7 +232,7 @@ buf_resize(buf_t *buf, size_t new_capacity)
      * end portion forward by that many bytes.
      */
     memmove(buf->cur+(new_capacity-buf->len), buf->cur,
-            buf->len-offset);
+            (size_t)(buf->len-offset));
     buf->cur += new_capacity-buf->len;
   }
   buf->memsize = buf->len = new_capacity;

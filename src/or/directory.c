@@ -907,6 +907,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                 "we are %d seconds skewed.  (That's okay.)", delta);
     }
   }
+  (void) skewed; /* skewed isn't used yet. */
 
   if (status_code == 503) {
     log_info(LD_DIR,"Received http status code %d (%s) from server "
@@ -1576,6 +1577,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
       return 0;
     }
     // note_request(request_type,dlen);
+    (void) request_type;
     write_http_response_header(conn, -1,
                  deflated?"application/octet_stream":"text/plain",
                  deflated?"deflate":NULL,
@@ -1622,6 +1624,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     } else {
       request_type = "/tor/server/?";
     }
+    (void) request_type; /* usable for note_request. */
     if (!strcmpstart(url, "/tor/server/d/"))
       conn->dir_spool_src = DIR_SPOOL_SERVER_BY_DIGEST;
     else
