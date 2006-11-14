@@ -1550,7 +1550,8 @@ connection_ap_process_natd(edge_connection_t *conn)
   /* pretend that a socks handshake completed so we don't try to
    * send a socks reply down a natd conn */
   strlcpy(socks->address, daddr, sizeof(socks->address));
-  socks->port = (uint16_t) tor_parse_long(tbuf, 10, 1, 65535, &port_ok, NULL);
+  socks->port = (uint16_t)
+    tor_parse_long(tbuf, 10, 1, 65535, &port_ok, &daddr);
   if (!port_ok) {
     log_warn(LD_APP,"Natd handshake failed; port '%s' is ill-formed or out "
              "of range.", escaped(tbuf));
