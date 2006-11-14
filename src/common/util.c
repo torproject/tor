@@ -1324,7 +1324,7 @@ read_file_to_str(const char *filename, int bin, size_t *size_out)
     return NULL;
   }
 
-  if (statbuf.st_size+1 > SIZE_T_MAX)
+  if ((uint64_t)(statbuf.st_size)+1 > SIZE_T_MAX)
     return NULL;
 
   string = tor_malloc((size_t)(statbuf.st_size+1));
