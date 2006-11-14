@@ -703,7 +703,8 @@ void dump_distinct_digests_xx(int severity);
 static digestmap_t *verified_digests_tmp = NULL; // XXXX0124 remove me.
 // remove me too.
 void
-dump_distinct_digests_xx(int severity) {
+dump_distinct_digests_xx(int severity)
+{
   if (!verified_digests_tmp)
     verified_digests_tmp = digestmap_new();
   log(severity, LD_GENERAL, "%d *distinct* router digests verified",

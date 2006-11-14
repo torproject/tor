@@ -1333,7 +1333,8 @@ extern uint64_t buf_total_used;
 extern uint64_t buf_total_alloc;
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
-void dump_distinct_digests_xx(int severity); // xxxx0124 remove
+// xxxx0124 remove
+void dump_distinct_digests_xx(int severity);
 
 /**
  * Write current memory usage information to the log.

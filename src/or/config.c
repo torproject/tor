@@ -2100,18 +2100,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
     int is_socks = i==0;
     int is_trans = i==1;
     config_line_t *line, *opt, *old;
-    const char *tp = is_socks ? "SOCKS proxy" :
-                     is_trans ? "transparent proxy"
-                              : "natd proxy";
+    const char *tp;
     if (is_socks) {
       opt = options->SocksListenAddress;
       old = old_options ? old_options->SocksListenAddress : NULL;
+      tp = "SOCKS proxy";
     } else if (is_trans) {
       opt = options->TransListenAddress;
       old = old_options ? old_options->TransListenAddress : NULL;
+      tp = "transparent proxy";
     } else {
       opt = options->NatdListenAddress;
       old = old_options ? old_options->NatdListenAddress : NULL;
+      tp = "natd proxy";
     }
 
     for (line = opt; line; line = line->next) {

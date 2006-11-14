@@ -1479,7 +1479,8 @@ connection_ap_process_transparent(edge_connection_t *conn)
 
   if (connection_ap_get_original_destination(conn, socks) < 0) {
     log_warn(LD_APP,"Fetching original destination failed. Closing.");
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_FETCH_ORIG_DEST);
+    connection_mark_unattached_ap(conn,
+                               END_STREAM_REASON_CANT_FETCH_ORIG_DEST);
     return -1;
   }
   /* we have the original destination */
@@ -1509,7 +1510,7 @@ connection_ap_process_natd(edge_connection_t *conn)
 {
   char tmp_buf[36], *tbuf, *daddr;
   size_t tlen = 30;
-  int err;
+  int err, port_ok;
   socks_request_t *socks;
   or_options_t *options = get_options();
 
@@ -1532,26 +1533,33 @@ connection_ap_process_natd(edge_connection_t *conn)
     return -1;
   }
 
-  if (strncmp(tmp_buf, "[DEST ", 6)) {
-    log_warn(LD_APP,"Natd handshake failed. Closing. tmp_buf = '%s'", tmp_buf);
+  if (strcmpstart(tmp_buf, "[DEST ")) {
+    log_warn(LD_APP,"Natd handshake was ill-formed; closing. The client "
+             "said: '%s'",
+             escaped(tmp_buf));
     connection_mark_unattached_ap(conn, END_STREAM_REASON_INVALID_NATD_DEST);
     return -1;
   }
 
-  tbuf = &tmp_buf[0] + 6;
-  daddr = tbuf;
-  while (tbuf[0] != '\0' && tbuf[0] != ' ')
+  daddr = tbuf = &tmp_buf[0] + 6; /* after end of "[DEST " */
+  while (*tbuf != '\0' && *tbuf != ' ')
     tbuf++;
-  tbuf[0] = '\0';
+  *tbuf = '\0';
   tbuf++;
 
   /* pretend that a socks handshake completed so we don't try to
    * send a socks reply down a natd conn */
+  strlcpy(socks->address, daddr, sizeof(socks->address));
+  socks->port = (uint16_t) tor_parse_long(tbuf, 10, 1, 65535, &port_ok, NULL);
+  if (!port_ok) {
+    log_warn(LD_APP,"Natd handshake failed; port '%s' is ill-formed or out "
+             "of range.", escaped(tbuf));
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_INVALID_NATD_DEST);
+    return -1;
+  }
+
   socks->command = SOCKS_COMMAND_CONNECT;
   socks->has_finished = 1;
-
-  strlcpy(socks->address, daddr, sizeof(socks->address));
-  socks->port = atoi(tbuf);
 
   control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
 
