@@ -195,6 +195,8 @@ static config_var_t _option_vars[] = {
   VAR("MyFamily",            STRING,   MyFamily,             NULL),
   VAR("NewCircuitPeriod",    INTERVAL, NewCircuitPeriod,     "30 seconds"),
   VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
+  VAR("NatdListenAddress",   LINELIST, NatdListenAddress,    NULL),
+  VAR("NatdPort",            UINT,     NatdPort,             "0"),
   VAR("Nickname",            STRING,   Nickname,             NULL),
   VAR("NoPublish",           BOOL,     NoPublish,            "0"),
   VAR("NodeFamily",          LINELIST, NodeFamilies,         NULL),
@@ -2086,21 +2088,30 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->TransPort == 0 && options->TransListenAddress != NULL)
     REJECT("TransPort must be defined if TransListenAddress is defined.");
 
+  if (options->NatdPort == 0 && options->NatdListenAddress != NULL)
+    REJECT("NatdPort must be defined if NatdListenAddress is defined.");
+
 #if 0 /* don't complain, since a standard configuration does this! */
   if (options->SocksPort == 0 && options->SocksListenAddress != NULL)
     REJECT("SocksPort must be defined if SocksListenAddress is defined.");
 #endif
 
-  for (i = 0; i < 2; ++i) {
+  for (i = 0; i < 3; ++i) {
     int is_socks = i==0;
+    int is_trans = i==1;
     config_line_t *line, *opt, *old;
-    const char *tp = is_socks ? "SOCKS proxy" : "transparent proxy";
+    const char *tp = is_socks ? "SOCKS proxy" :
+                     is_trans ? "transparent proxy"
+                              : "natd proxy";
     if (is_socks) {
       opt = options->SocksListenAddress;
       old = old_options ? old_options->SocksListenAddress : NULL;
-    } else {
+    } else if (is_trans) {
       opt = options->TransListenAddress;
       old = old_options ? old_options->TransListenAddress : NULL;
+    } else {
+      opt = options->NatdListenAddress;
+      old = old_options ? old_options->NatdListenAddress : NULL;
     }
 
     for (line = opt; line; line = line->next) {
@@ -2184,9 +2195,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->TransPort < 0 || options->TransPort > 65535)
     REJECT("TransPort option out of bounds.");
 
+  if (options->NatdPort < 0 || options->NatdPort > 65535)
+    REJECT("NatdPort option out of bounds.");
+
   if (options->SocksPort == 0 && options->TransPort == 0 &&
-      options->ORPort == 0)
-    REJECT("SocksPort, TransPort, and ORPort are all undefined? Quitting.");
+      options->NatdPort == 0 && options->ORPort == 0)
+    REJECT("SocksPort, TransPort, NatdPort, and ORPort are all undefined? "
+           "Quitting.");
 
   if (options->ControlPort < 0 || options->ControlPort > 65535)
     REJECT("ControlPort option out of bounds.");

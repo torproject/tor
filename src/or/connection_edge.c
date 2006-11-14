@@ -28,6 +28,7 @@ const char connection_edge_c_id[] =
 static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
+static int connection_ap_process_natd(edge_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exit_conn);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
@@ -105,6 +106,12 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
   switch (conn->_base.state) {
     case AP_CONN_STATE_SOCKS_WAIT:
       if (connection_ap_handshake_process_socks(conn) < 0) {
+        /* already marked */
+        return -1;
+      }
+      return 0;
+    case AP_CONN_STATE_NATD_WAIT:
+      if (connection_ap_process_natd(conn) < 0) {
         /* already marked */
         return -1;
       }
@@ -247,6 +254,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
+    case AP_CONN_STATE_NATD_WAIT:
     case AP_CONN_STATE_RENDDESC_WAIT:
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
@@ -1471,7 +1479,7 @@ connection_ap_process_transparent(edge_connection_t *conn)
 
   if (connection_ap_get_original_destination(conn, socks) < 0) {
     log_warn(LD_APP,"Fetching original destination failed. Closing.");
-    connection_mark_unattached_ap(conn, 0);
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_FETCH_ORIG_DEST);
     return -1;
   }
   /* we have the original destination */
@@ -1482,6 +1490,77 @@ connection_ap_process_transparent(edge_connection_t *conn)
     conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
     return 0;
   }
+  return connection_ap_handshake_rewrite_and_attach(conn, NULL);
+}
+
+/** connection_edge_process_inbuf() found a conn in state
+ * natd_wait. See if conn->inbuf has the right bytes to proceed.
+ * See libalias(3) and ProxyEncodeTcpStream() in alias_proxy.c for
+ * the encoding form of the original destination.
+ *
+ * If the original destination is complete, send it to
+ * connection_ap_handshake_rewrite_and_attach().
+ *
+ * Return -1 if an unexpected error with conn (and it should be marked
+ * for close), else return 0.
+ */
+static int
+connection_ap_process_natd(edge_connection_t *conn)
+{
+  char tmp_buf[36], *tbuf, *daddr;
+  size_t tlen = 30;
+  int err;
+  socks_request_t *socks;
+  or_options_t *options = get_options();
+
+  tor_assert(conn);
+  tor_assert(conn->_base.type == CONN_TYPE_AP);
+  tor_assert(conn->_base.state == AP_CONN_STATE_NATD_WAIT);
+  tor_assert(conn->socks_request);
+  socks = conn->socks_request;
+
+  log_debug(LD_APP,"entered.");
+
+  /* look for LF-terminated "[DEST ip_addr port]"
+   * where ip_addr is a dotted-quad and port is in string form */
+  err = fetch_from_buf_line_lf(conn->_base.inbuf, tmp_buf, &tlen);
+  if (err == 0)
+    return 0;
+  if (err < 0) {
+    log_warn(LD_APP,"Natd handshake failed (DEST too long). Closing");
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_INVALID_NATD_DEST);
+    return -1;
+  }
+
+  if (strncmp(tmp_buf, "[DEST ", 6)) {
+    log_warn(LD_APP,"Natd handshake failed. Closing. tmp_buf = '%s'", tmp_buf);
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_INVALID_NATD_DEST);
+    return -1;
+  }
+
+  tbuf = &tmp_buf[0] + 6;
+  daddr = tbuf;
+  while (tbuf[0] != '\0' && tbuf[0] != ' ')
+    tbuf++;
+  tbuf[0] = '\0';
+  tbuf++;
+
+  /* pretend that a socks handshake completed so we don't try to
+   * send a socks reply down a natd conn */
+  socks->command = SOCKS_COMMAND_CONNECT;
+  socks->has_finished = 1;
+
+  strlcpy(socks->address, daddr, sizeof(socks->address));
+  socks->port = atoi(tbuf);
+
+  control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
+
+  if (options->LeaveStreamsUnattached) {
+    conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
+    return 0;
+  }
+  conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
+
   return connection_ap_handshake_rewrite_and_attach(conn, NULL);
 }
 

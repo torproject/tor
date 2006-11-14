@@ -45,7 +45,9 @@ conn_type_to_string(int type)
     case CONN_TYPE_OR: return "OR";
     case CONN_TYPE_EXIT: return "Exit";
     case CONN_TYPE_AP_LISTENER: return "Socks listener";
-    case CONN_TYPE_AP_TRANS_LISTENER: return "Transparent listener";
+    case CONN_TYPE_AP_TRANS_LISTENER:
+      return "Transparent pf/netfilter listener";
+    case CONN_TYPE_AP_NATD_LISTENER: return "Transparent natd listener";
     case CONN_TYPE_AP: return "Socks";
     case CONN_TYPE_DIR_LISTENER: return "Directory listener";
     case CONN_TYPE_DIR: return "Directory";
@@ -72,6 +74,7 @@ conn_state_to_string(int type, int state)
     case CONN_TYPE_OR_LISTENER:
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_AP_TRANS_LISTENER:
+    case CONN_TYPE_AP_NATD_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
     case CONN_TYPE_CONTROL_LISTENER:
       if (state == LISTENER_STATE_READY)
@@ -97,6 +100,7 @@ conn_state_to_string(int type, int state)
     case CONN_TYPE_AP:
       switch (state) {
         case AP_CONN_STATE_SOCKS_WAIT: return "waiting for dest info";
+        case AP_CONN_STATE_NATD_WAIT: return "waiting for natd dest info";
         case AP_CONN_STATE_RENDDESC_WAIT: return "waiting for rendezvous desc";
         case AP_CONN_STATE_CONTROLLER_WAIT: return "waiting for controller";
         case AP_CONN_STATE_CIRCUIT_WAIT: return "waiting for safe circuit";
@@ -827,6 +831,9 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
         case CONN_TYPE_AP_TRANS_LISTENER:
           conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
           return connection_ap_process_transparent(TO_EDGE_CONN(conn));
+        case CONN_TYPE_AP_NATD_LISTENER:
+          conn->state = AP_CONN_STATE_NATD_WAIT;
+          break;
       }
       break;
     case CONN_TYPE_DIR:
@@ -1071,6 +1078,10 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
                       options->TransPort, "127.0.0.1", force,
                       replaced_conns, new_conns, 0)<0)
     return -1;
+  if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NatdListenAddress,
+                      options->NatdPort, "127.0.0.1", force,
+                      replaced_conns, new_conns, 0)<0)
+    return -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1", force,
@@ -1286,6 +1297,7 @@ connection_handle_read(connection_t *conn)
       return connection_handle_listener_read(conn, CONN_TYPE_OR);
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_AP_TRANS_LISTENER:
+    case CONN_TYPE_AP_NATD_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_AP);
     case CONN_TYPE_DIR_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_DIR);
@@ -1922,6 +1934,7 @@ connection_is_listener(connection_t *conn)
   if (conn->type == CONN_TYPE_OR_LISTENER ||
       conn->type == CONN_TYPE_AP_LISTENER ||
       conn->type == CONN_TYPE_AP_TRANS_LISTENER ||
+      conn->type == CONN_TYPE_AP_NATD_LISTENER ||
       conn->type == CONN_TYPE_DIR_LISTENER ||
       conn->type == CONN_TYPE_CONTROL_LISTENER)
     return 1;
@@ -2280,6 +2293,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_OR_LISTENER:
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_AP_TRANS_LISTENER:
+    case CONN_TYPE_AP_NATD_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
     case CONN_TYPE_CONTROL_LISTENER:
       tor_assert(conn->state == LISTENER_STATE_READY);

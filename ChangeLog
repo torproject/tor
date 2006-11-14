@@ -1,4 +1,9 @@
 Changes in version 0.1.2.4-alpha - 2006-11-??
+  o Major features
+    - Add support for using natd; this allows FreeBSDs earlier than 5.1.2 to
+      have ipfw send connections through Tor without using SOCKS. (Patch from
+      Zajcev Evgeny with tweaks from tup.)
+
   o Minor features
     - Add breakdown of public key operations to dumped statistics.
 

@@ -713,6 +713,7 @@ hibernate_begin(int new_state, time_t now)
   while ((conn = connection_get_by_type(CONN_TYPE_OR_LISTENER)) ||
          (conn = connection_get_by_type(CONN_TYPE_AP_LISTENER)) ||
          (conn = connection_get_by_type(CONN_TYPE_AP_TRANS_LISTENER)) ||
+         (conn = connection_get_by_type(CONN_TYPE_AP_NATD_LISTENER)) ||
          (conn = connection_get_by_type(CONN_TYPE_DIR_LISTENER))) {
     log_info(LD_NET,"Closing listener type %d", conn->type);
     connection_mark_for_close(conn);

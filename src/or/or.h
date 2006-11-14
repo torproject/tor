@@ -224,9 +224,13 @@ typedef enum {
 #define CONN_TYPE_CONTROL_LISTENER 12
 /** Type for connections from user interface process. */
 #define CONN_TYPE_CONTROL 13
-/** Type for sockets listening for transparent proxy connections. */
+/** Type for sockets listening for transparent connections redirected by pf or
+ * netfilter. */
 #define CONN_TYPE_AP_TRANS_LISTENER 14
-#define _CONN_TYPE_MAX 14
+/** Type for sockets listening for transparent connections redirected by
+ * natd. */
+#define CONN_TYPE_AP_NATD_LISTENER 15
+#define _CONN_TYPE_MAX 15
 
 #define CONN_IS_EDGE(x) \
   ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
@@ -294,7 +298,10 @@ typedef enum {
 #define AP_CONN_STATE_RESOLVE_WAIT 10
 /** State for a SOCKS connection: ready to send and receive. */
 #define AP_CONN_STATE_OPEN 11
-#define _AP_CONN_STATE_MAX 11
+/** State for a transparent natd connection: waiting for original
+ * destination. */
+#define AP_CONN_STATE_NATD_WAIT 12
+#define _AP_CONN_STATE_MAX 12
 
 #define _DIR_CONN_STATE_MIN 1
 /** State for connection to directory server: waiting for connect(). */
@@ -489,6 +496,8 @@ typedef enum {
 #define END_STREAM_REASON_CANT_ATTACH 257
 #define END_STREAM_REASON_NET_UNREACHABLE 258
 #define END_STREAM_REASON_SOCKSPROTOCOL 259
+#define END_STREAM_REASON_CANT_FETCH_ORIG_DEST 260
+#define END_STREAM_REASON_INVALID_NATD_DEST 261
 
 /* OR this with the argument to control_event_stream_status to indicate that
  * the reason came from an END cell. */
@@ -1450,8 +1459,11 @@ typedef struct {
   config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Addresses to bind for listening for SOCKS connections. */
   config_line_t *SocksListenAddress;
-  /** Addresses to bind for listening for transparent connections. */
+  /** Addresses to bind for listening for transparent pf/nefilter
+   * connections. */
   config_line_t *TransListenAddress;
+  /** Addresses to bind for listening for transparent natd connections */
+  config_line_t *NatdListenAddress;
   /** Addresses to bind for listening for OR connections. */
   config_line_t *ORListenAddress;
   /** Addresses to bind for listening for directory connections. */
@@ -1473,7 +1485,9 @@ typedef struct {
                              * length (alpha in geometric distribution). */
   int ORPort; /**< Port to listen on for OR connections. */
   int SocksPort; /**< Port to listen on for SOCKS connections. */
-  int TransPort; /**< Port to listen on for transparent connections. */
+  /** Port to listen on for transparent pf/netfilter connections. */
+  int TransPort;
+  int NatdPort; /**< Port to listen on for transparent natd connections. */
   int ControlPort; /**< Port to listen on for control connections. */
   int DirPort; /**< Port to listen on for directory connections. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
@@ -1715,6 +1729,7 @@ int fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 int fetch_from_buf_control0(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
                             char **body_out, int check_for_v1);
 int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
+int fetch_from_buf_line_lf(buf_t *buf, char *data_out, size_t *data_len);
 
 void assert_buf_ok(buf_t *buf);
 
