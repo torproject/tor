@@ -1324,9 +1324,12 @@ read_file_to_str(const char *filename, int bin, size_t *size_out)
     return NULL;
   }
 
-  string = tor_malloc(statbuf.st_size+1);
+  if (statbuf.st_size+1 > SIZE_T_MAX)
+    return NULL;
 
-  r = read_all(fd,string,statbuf.st_size,0);
+  string = tor_malloc((size_t)(statbuf.st_size+1));
+
+  r = read_all(fd,string,(size_t)statbuf.st_size,0);
   if (r<0) {
     log_warn(LD_FS,"Error reading from file \"%s\": %s", filename,
              strerror(errno));

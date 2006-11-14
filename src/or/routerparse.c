@@ -147,7 +147,7 @@ static struct {
   { "client-versions",     K_CLIENT_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
   { "server-versions",     K_SERVER_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
   { "eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ, RTR },
-  { NULL, -1, NO_ARGS, NO_OBJ, ANY }
+  { NULL, _NIL, NO_ARGS, NO_OBJ, ANY }
 };
 
 /* static function prototypes */

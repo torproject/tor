@@ -1953,7 +1953,8 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 static int
 connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
 {
-  int bytes, remaining;
+  ssize_t bytes;
+  int64_t remaining;
 
   bytes = DIRSERV_BUFFER_MIN - buf_datalen(conn->_base.outbuf);
   tor_assert(bytes > 0);
@@ -1962,7 +1963,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
     bytes = 8192;
   remaining = conn->cached_dir->dir_z_len - conn->cached_dir_offset;
   if (bytes > remaining)
-    bytes = remaining;
+    bytes = (ssize_t) remaining;
 
   if (conn->zlib_state) {
     connection_write_to_buf_zlib(conn,

@@ -3688,7 +3688,7 @@ static const struct {
   { "1.1a", LE_11A },
   { "1.1b", LE_11B },
   { "1.2",  LE_12 },
-  { NULL, 0 }
+  { NULL, LE_OTHER }
 };
 
 static le_version_t

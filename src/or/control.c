@@ -1152,7 +1152,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       used_quoted_string = 1;
     }
   }
-  if (options->CookieAuthentication) {
+  if (options->CookieAuthentication && authentication_cookie_is_set) {
     if (password_len != AUTHENTICATION_COOKIE_LEN) {
       log_warn(LD_CONTROL, "Got authentication cookie with wrong length (%d)",
                (int)password_len);
@@ -1685,12 +1685,16 @@ handle_getinfo_helper(control_connection_t *control_conn,
   } else if (!strcmpstart(question, "dir/server/")) {
     size_t answer_len = 0, url_len = strlen(question)+2;
     char *url = tor_malloc(url_len);
-    int res;
     smartlist_t *descs = smartlist_create();
     const char *msg;
+    int res;
     char *cp;
     tor_snprintf(url, url_len, "/tor/%s", question+4);
     res = dirserv_get_routerdescs(descs, url, &msg);
+    if (res) {
+      log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
+      return -1;
+    }
     SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
                       answer_len += sd->signed_descriptor_len);
     cp = *answer = tor_malloc(answer_len+1);

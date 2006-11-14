@@ -134,7 +134,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
    * to avoid buffer overflows? */
   r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, payload+DIGEST_LEN,
                                       tmp,
-                                      dh_offset+DH_KEY_LEN,
+                                      (int)(dh_offset+DH_KEY_LEN),
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_warn(LD_BUG,"Internal error: hybrid pk encrypt failed.");

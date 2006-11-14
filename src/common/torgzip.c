@@ -121,7 +121,12 @@ tor_gzip_compress(char **out, size_t *out_len,
         out_size *= 2;
         *out = tor_realloc(*out, out_size);
         stream->next_out = (unsigned char*)(*out + offset);
-        stream->avail_out = out_size - offset;
+        if (out_size - offset > UINT_MAX) {
+          log_warn(LD_BUG,  "Ran over unsigned int limit of zlib while "
+                   "uncompressing.");
+          goto err;
+        }
+        stream->avail_out = (unsigned int)(out_size - offset);
         break;
       default:
         log_warn(LD_GENERAL, "Gzip compression didn't finish: %s",
@@ -238,7 +243,12 @@ tor_gzip_uncompress(char **out, size_t *out_len,
         out_size *= 2;
         *out = tor_realloc(*out, out_size);
         stream->next_out = (unsigned char*)(*out + offset);
-        stream->avail_out = out_size - offset;
+        if (out_size - offset > UINT_MAX) {
+          log_warn(LD_BUG,  "Ran over unsigned int limit of zlib while "
+                   "uncompressing.");
+          goto err;
+        }
+        stream->avail_out = (unsigned int)(out_size - offset);
         break;
       default:
         log_warn(LD_GENERAL, "Gzip decompression returned an error: %s",

@@ -287,6 +287,16 @@ typedef uint32_t uintptr_t;
 #endif /* time_t_is_signed */
 #endif /* ifndef(TIME_MAX) */
 
+#ifndef SIZE_T_MAX
+#if (SIZEOF_SIZE_T == 4)
+#define SIZE_T_MAX 0xfffffffful
+#elif (SIZEOF_SIZE_T == 8)
+#define SIZE_T_MAX 0xfffffffffffffffful
+#else
+#error "Can't define SIZE_T_MAX"
+#endif
+#endif
+
 /* Any size_t larger than this amount is likely to be an underflow. */
 #define SIZE_T_CEILING (sizeof(char)<<(sizeof(size_t)*8 - 1))
 

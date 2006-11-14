@@ -135,7 +135,7 @@ tor_mmap_file(const char *filename)
     return NULL;
   }
 
-  size = filesize = lseek(fd, 0, SEEK_END);
+  size = filesize = (size_t) lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
   /* ensure page alignment */
   page_size = getpagesize();

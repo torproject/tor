@@ -887,6 +887,8 @@ reply_parse(u8 *packet, int length) {
 	GET16(answers);
 	GET16(authority);
 	GET16(additional);
+	(void) authority;
+	(void) additional;
 
 	req = request_find_from_trans_id(trans_id);
 	if (!req) return -1;
@@ -1224,7 +1226,7 @@ evdns_request_data_build(const char *const name, const int name_len, const u16 t
 	APPEND16(class);
 #undef APPEND16
 
-	return j;
+	return (int)j;
 }
 
 // this is a libevent callback function which is called when a request
@@ -1792,6 +1794,7 @@ search_make_new(const struct search_state *const state, int n, const char *const
 
 	// we ran off the end of the list and still didn't find the requested string
 	abort();
+	return NULL; /* unreachable. */
 }
 
 static int
@@ -2005,10 +2008,12 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	}
 	if (st.st_size > 65535) { err = 3; goto out1; }	 // no resolv.conf should be any bigger
 
-	resolv = (u8 *) malloc(st.st_size + 1);
+	resolv = (u8 *) malloc((size_t)st.st_size + 1);
 	if (!resolv) { err = 4; goto out1; }
 
-	if (read(fd, resolv, st.st_size) != st.st_size) { err = 5; goto out2; }
+	if (read(fd, resolv, (size_t)st.st_size) != st.st_size) {
+		err = 5; goto out2;
+	}
 	resolv[st.st_size] = 0;	 // we malloced an extra byte
 
 	start = (char *) resolv;
