@@ -186,7 +186,7 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
   saved_LDFLAGS="$LDFLAGS"
   saved_CPPFLAGS="$CPPFLAGS"
   le_found=no
-  for ledir in $trylibeventdir "" $prefix /usr/local ; do
+  for ledir in $trylibeventdir "" $prefix /usr/local /usr/pkg ; do
     LDFLAGS="$saved_LDFLAGS"
 
     if test $bwin32 = true; then
