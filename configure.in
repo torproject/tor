@@ -260,7 +260,7 @@ AC_CACHE_CHECK([whether we need extra options to link libevent],
     saved_LDFLAGS="$LDFLAGS"
     le_runs=no
     linked_with=nothing
-    for le_extra in "" "-Wl,-R$le_libdir" "-R$le_libdir" ; do
+    for le_extra in "" "-Wl,-R$le_libdir" "-R$le_libdir" "-Wl,-rpath,$le_libdir" ; do
       LDFLAGS="$le_extra $saved_LDFLAGS"
       AC_TRY_RUN([void *event_init(void);
                 int main(int c, char **v) {
