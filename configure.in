@@ -157,6 +157,21 @@ if test $bwin32 = true; then
 AC_DEFINE(MS_WINDOWS, 1, [Define to 1 if we are building for Windows.])
 fi
 
+dnl Enable C99 when compiling with MIPSpro
+AC_MSG_CHECKING([for MIPSpro compiler])
+AC_TRY_COMPILE([], [
+#if (defined(__sgi) && defined(_COMPILER_VERSION))
+#error
+  return x(y);
+#endif
+],
+bmipspro=false; AC_MSG_RESULT([no]),
+bmipspro=true; AC_MSG_RESULT([yes]))
+
+if test $bmipspro = true; then
+  CFLAGS="$CFLAGS -c99"
+fi
+
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
