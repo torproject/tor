@@ -86,8 +86,7 @@ const char control_c_id[] =
 #define EVENT_STATUS_CLIENT    0x0010
 #define EVENT_STATUS_SERVER    0x0011
 #define EVENT_STATUS_GENERAL   0x0012
-#define EVENT_TESTSTREAM       0x0013
-#define _EVENT_MAX             0x0013
+#define _EVENT_MAX             0x0012
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Array mapping from message type codes to human-readable message
@@ -1064,8 +1063,6 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
           event_code = EVENT_STATUS_CLIENT;
         else if (!strcasecmp(ev, "STATUS_SERVER"))
           event_code = EVENT_STATUS_SERVER;
-        else if (!strcasecmp(ev, "TESTSTREAM"))
-          event_code = EVENT_TESTSTREAM;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
@@ -3545,17 +3542,6 @@ control_event_server_status(int severity, const char *format, ...)
   r = control_event_status(EVENT_STATUS_SERVER, severity, format, ap);
   va_end(ap);
   return r;
-}
-
-/** Called when a request is made for a hostname ending in .test
- */
-int
-control_event_teststream(edge_connection_t *conn)
-{
-  send_control1_event(EVENT_TESTSTREAM, ALL_NAMES|ALL_FORMATS,
-                      "650 TESTSTREAM %s\r\n",
-                      conn->socks_request->address);
-  return 0;
 }
 
 /** Choose a random authentication cookie and write it to disk.

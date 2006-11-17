@@ -7,6 +7,12 @@ Changes in version 0.1.2.4-alpha - 2006-11-??
   o Minor features
     - Add breakdown of public key operations to dumped statistics.
 
+  o Minor features, controller
+    - Make all connections to addresses of the form .noconnect immediately
+      get closed.  This is more useful than you'd think, since it lets
+      application/controller combos successfully tell when they're talking to
+      the same Tor by watching for STREAM events.
+
   o Major bugfixes
     - Handle TransPort connections even when the server sends data before
       the client sends data.  Previously, the connection would just hang

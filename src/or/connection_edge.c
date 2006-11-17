@@ -30,6 +30,7 @@ static smartlist_t *redirect_exit_list = NULL;
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
 static int connection_ap_process_natd(edge_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exit_conn);
+static int hostname_is_noconnect_address(const char *address);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -1395,8 +1396,8 @@ connection_ap_get_original_destination(edge_connection_t *conn,
  * If the handshake is complete, send it to
  * connection_ap_handshake_rewrite_and_attach().
  *
- * Return -1 if an unexpected error with conn (and it should be marked
- * for close), else return 0.
+ * Return -1 if an unexpected error with conn ocurrs (and mark it for close),
+ * else return 0.
  */
 static int
 connection_ap_handshake_process_socks(edge_connection_t *conn)
@@ -1440,10 +1441,11 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
     return -1;
   } /* else socks handshake is done, continue processing */
 
-  if (hostname_is_a_test_address(socks->address))
+  if (hostname_is_noconnect_address(socks->address))
   {
-    control_event_teststream(conn);
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+    control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
+    control_event_stream_status(conn, STREAM_EVENT_CLOSED, 0);
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_DONE);
     return -1;
   }
 
@@ -2457,16 +2459,11 @@ failed:
     return BAD_HOSTNAME;
 }
 
-/** Check if the address is of the form "y.test"
+/** Check if the address is of the form "y.noconnect"
  */
-int
-hostname_is_a_test_address(char *address)
+static int
+hostname_is_noconnect_address(const char *address)
 {
-  char *s;
-  s = strrchr(address,'.');
-  if (!s)
-    return 0;
-  if (!strcmp(s+1,"test"))
-    return 1;
-  return 0;
+  return ! strcasecmpend(address, ".noconnect");
 }
+

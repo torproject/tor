@@ -57,6 +57,8 @@ N . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     - Use for something, so we can be sure it works.
     - Test and debug
 
+N - Document .noconnect addresses... but where?
+
   o Send back RELAY_END cells on malformed RELAY_BEGIN.
 
   o Change the circuit end reason display a little for reasons from
