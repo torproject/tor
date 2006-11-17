@@ -1,0 +1,278 @@
+$Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z nickm  $
+
+                     Voting on the Tor Directory System
+
+0. Scope and preliminaries
+
+  This document describes a consensus voting scheme for Tor directories.
+  Once it's accepted, it should be merged with dir-spec.txt.  Some
+  preliminaries for authority and caching support should be done during
+  the 0.1.2.x series; the main deployment should come during the 0.1.3.x
+  series.
+
+0.1. Goals and motivation: voting.
+
+  The current directory system relies on clients downloading separate
+  network status statements from the caches signed by each directory.
+  Clients download a new statement every 30 minutes or so, choosing to
+  replace the oldest statement they currently have.
+
+  This creates a partitioning problem: different clients have different
+  "most recent" networkstatus sources, and different versions of each
+  (since authorities change their statements often).  Also, it is very
+  redundant: most of the downloaded networkstatus are probably quite
+  similar.
+
+  So if we have clients only download a single multiply signed consensus
+  network status statement, we can:
+       - Save bandwidth.
+       - Reduce client partitioning
+       - Reduce client-side and cache-side storage
+       - Simplify client-side voting code (by moving voting away from the
+         client)
+
+  We should try to do this without:
+       - Assuming that client-side or cache-side clocks are more correct
+         than we assume now.
+       - Assuming that authority clocks are perfectly correct.
+       - Degrading badly if an authority dies or is offline for a bit.
+
+  We do not have to perform well if:
+      - No clique of more than half the authorities can agree about who
+        the authorities are.
+
+1. The idea.
+
+  Instead of publishing a network status whenever something changes,
+  each authority instead publishes a fresh network status only once per
+  "period" (say, 60 minutes).  Authorities either upload this network
+  status (or "vote") to every other authority, or download every other
+  authority's "vote" (see 3.1 below for discussion on push vs pull).
+
+  After an authority has (or has become convinced that it won't be able to
+  get) every other authority's vote, it deterministically computes a
+  consensus networkstatus, and signs it.  Authorities download (or are
+  uploaded; see 3.1) one another's signatures, and form a multiply signed
+  consensus.  This multiply-signed consensus is what caches cache and what
+  clients download.
+
+  If an authority is down, authorities vote based on what they *can*
+  download/get uploaded.
+
+  If an authority is "a little" down and only some authorities can reach
+  it, authorities try to get its info from other authorities.
+
+  If an authority computes the vote wrong, its signature isn't included on
+  the consensus.
+
+  Clients use a consensus if it is signed by more than half the
+  authorities they recognize.  If they can't find any such consensus,
+  clients either use an older version, or beg the user to adapt the list
+  of authorities.
+
+2. Details.
+
+2.1. Vote specifications
+
+  Votes in v2.1 are just like v2 network status documents.  We add these
+  fields to the preamble:
+
+     "vote-status" -- the word "vote".
+
+     "valid-until" -- the time when this authority expects to publish its
+        next vote.
+
+     "known-flags" -- a space-separated list of flags that will sometimes
+        be included on "s" lines later in the vote.
+
+     "dir-source" -- as before, except the "hostname" part MUST be the
+        authority's nickname, which MUST be unique among authorities, and
+        MUST match the nickname in the "directory-signature" entry.
+
+  Authorities SHOULD cache their most recently generated votes so they
+  can persist them across restarts.  Authorities SHOULD NOT generate
+  another document until valid-until has passed.
+
+  Router entries in the vote MUST be sorted in ascending order by router
+  identity digest.  The flags in "s" lines MUST appear in alphabetical
+  order.
+
+  Votes SHOULD be synchronized to half-hour publication intervals (one
+  hour? XXX say more; be more precise.)
+
+  XXXX some way to request older networkstatus docs?
+
+
+2.2. Consensus directory specifications
+
+  Consensuses are like v2.1 votes, except for the following fields:
+
+     "vote-status" -- the word "consensus".
+
+     "published" is the latest of all the published times on the votes.
+
+     "valid-until" is the earliest of all the valid-until times on the
+       votes.
+
+     "dir-source" and "fingerprint" and "dir-signing-key" and "contact"
+       are included for each authority that contributed to the vote.
+
+     "vote-digest" for each authority that contributed to the vote,
+       calculated as for the digest in the signature on the vote. [XXX
+       re-English this sentence]
+
+     "client-versions" and "server-versions" are sorted in ascending
+       order.
+
+     "dir-options" and "known-flags" are not included.
+
+  The fields MUST occur in the following order:
+     "network-status-version"
+     "vote-status"
+     "published"
+     "valid-until"
+     For each authority, sorted in ascending order of nickname, case-
+     insensitively:
+         "dir-source", "fingerprint", "contact", "dir-signing-key",
+         "vote-digest".
+     "client-versions"
+     "server-versions"
+
+  The signatures at the end of the document appear as multiple instances
+  directory-signature, sorted in ascending order by nickname,
+  case-insensitively.
+
+  A router entry should be included in the result if it is included by
+  more than half of the authorities (total authorities, not just those
+  whose votes we have).  A router entry has a flag set if it is included
+  by more than half of the authorities who care about that flag.  [XXXX
+  this creates a DOS incentive.  Can we remember what flags people set the
+  last time we saw them?]
+
+  [What does the signature hash cover ? XXX]
+
+2.3. Agreement and timeline
+
+  [XXXX publish signed vote summaries.]
+  [XXXX URL list: vote, other people's votes, directory.]
+  [XXXX in-progress URL vs done URL]
+  [XXXX Store votes to disk.]
+
+2.4. Distributing routerdescs between authorities
+
+  Consensus will be more meaningful if authorities take steps to make sure
+  that they all have the same set of descriptors _before_ the voting
+  starts.  This is safe, since all descriptors are self-certified and
+  timestamped: it's always okay to replace a signed descriptor with a more
+  recent one signed by the same identity.
+
+  In the long run, we might want some kind of sophisticated process here.
+  For now, since authorities already download one another's networkstatus
+  documents and use them to determine what descriptors to download from one
+  another, we can rely on this existing mechanism to keep authorities up to
+  date.
+
+3. Questions and concerns
+
+3.1. Push or pull?
+
+  [XXXX]
+
+3.2. Dropping "opt".
+
+  The "opt" keyword in Tor's directory formats was originally intended to
+  mean, "it is okay to ignore this entry if you don't understand it"; the
+  default behavior has been "discard a routerdesc if it contains entries you
+  don't recognize."
+
+  But so far, every new flag we have added has been marked 'opt'.  It would
+  probably make sense to change the default behavior to "ignore unrecognized
+  fields", and add the statement that clients SHOULD ignore fields they don't
+  recognize.  As a meta-principle, we should say that clients and servers
+  MUST NOT have to understand new fields in order to use directory documents
+  correctly.
+
+  Of course, this will make it impossible to say, "The format has changed a
+  lot; discard this quietly if you don't understand it." We could do that by
+  adding a version field.
+
+3.3. Multilevel keys.
+
+  Replacing a directory authority's identity key in the event of a compromise
+  would be tremendously annoying.  We'd need to tell every client to switch
+  their configuration, or update to a new version with an uploaded list.  So
+  long as some weren't upgraded, they'd be at risk from whoever had
+  compromised the key.
+
+  With this in mind, it's a shame that our current protocol forces us to
+  store identity keys unencrypted in RAM.  We need some kind of signing key
+  stored unencrypted, since we need to generate new descriptors/directories
+  and rotate link and onion keys regularly.  (And since, of course, we can't
+  ask server operators to be on-hand to enter a passphrase every time we
+  want to rotate keys or sign a descriptor.)
+
+  The obvious solution seems to be to have a signing-only key that lives
+  indefinitely (months or longer) and signs descriptors and link keys, and a
+  separate identity key that's used to sign the signing key.  Tor servers
+  could run in one of several modes:
+    1. Identity key stored encrypted.  You need to pick a passphrase when
+       you enable this mode, and re-enter this passphrase every time you
+       rotate the signing key.
+    1'. Identity key stored separate.  You save your identity key to a
+       floppy, and use the floppy when you need to rotate the signing key.
+    2. All keys stored unencrypted.  In this case, we might not want to even
+       *have* a separate signing key.  (We'll need to support no-separate-
+       signing-key mode anyway to keep old servers working.)
+    3. All keys stored encrypted. You need to enter a passphrase to start
+       Tor.
+  (Of course, we might not want to implement all of these.)
+
+  Case 1 is probably most usable and secure, if we assume that people don't
+  forget their passphrases or lose their floppies.  We could mitigate this a
+  bit by encouraging people to PGP-encrypt their passphrases to themselves,
+  or keep a cleartext copy of their secret key secret-split into a few
+  pieces, or something like that.
+
+  Migration presents another difficulty, especially with the authorities.  If
+  we use the current set of identity keys as the new identity keys, we're in
+  the position of having sensitive keys that have been stored on
+  media-of-dubious-encryption up to now.  Also, we need to keep old clients
+  (who will expect descriptors to be signed by the identity keys they know
+  and love, and who will not understand signing keys) happy.
+
+  I'd enumerate designs here, but I'm hoping that somebody will come up with
+  a better one, so I'll try not to prejudice them with more ideas yet.
+
+  Oh, and of course, we'll want to make sure that the keys are
+  cross-certified. :)
+
+  Ideas? -NM
+
+3.4. Long and short descriptors
+
+  Some of the costliest fields in the current directory protocol are ones
+  that no client actually uses.  In particular, the "read-history" and
+  "write-history" fields are used only by the authorities for monitoring the
+  status of the network.  If we took them out, the size of a compressed list
+  of all the routers would fall by about 60%.  (No other disposable field
+  would save more than 2%.)
+
+  One possible solution here is that routers should generate and upload a
+  short-form and long-form descriptor.  Only the short-form descriptor should
+  ever be used by anybody for routing.  The long-form descriptor should be
+  used only for analytics and other tools.  (If we allowed people to route with
+  long descriptors, we'd have to ensure that they stayed in sync with the
+  short ones somehow.)
+
+  Another possible solution would be to drop these fields from descriptors,
+  and have them uploaded as a part of a separate "bandwidth report" to the
+  authorities.  This could help prevent the mistake of using long descriptors
+  in the place of short ones.
+
+  Thoughts? -NM
+
+4. Migration
+
+  For directory voting, ...
+
+caches need to start caching consensuses and accepting multisigned documents.
