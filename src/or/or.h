@@ -2034,6 +2034,7 @@ typedef enum hostname_type_t {
   NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME, BAD_HOSTNAME
 } hostname_type_t;
 hostname_type_t parse_extended_hostname(char *address);
+int hostname_is_a_test_address(char *address);
 
 /********************************* connection_or.c ***************************/
 
@@ -2141,6 +2142,7 @@ int control_event_client_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_server_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
+int control_event_teststream(edge_connection_t *conn);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);

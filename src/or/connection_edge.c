@@ -1440,6 +1440,13 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
     return -1;
   } /* else socks handshake is done, continue processing */
 
+  if (hostname_is_a_test_address(socks->address))
+  {
+    control_event_teststream(conn);
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+    return -1;
+  }
+
   if (socks->command == SOCKS_COMMAND_CONNECT)
     control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
   else
@@ -2450,3 +2457,16 @@ failed:
     return BAD_HOSTNAME;
 }
 
+/** Check if the address is of the form "y.test"
+ */
+int
+hostname_is_a_test_address(char *address)
+{
+  char *s;
+  s = strrchr(address,'.');
+  if (!s)
+    return 0;
+  if (!strcmp(s+1,"test"))
+    return 1;
+  return 0;
+}
