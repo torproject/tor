@@ -91,17 +91,19 @@ add_fingerprint_to_dir(const char *nickname, const char *fp,
   tor_assert(fp);
   tor_assert(list);
 
-  fingerprint = tor_strdup(fp);
+  fingeprint = tor_strdup(fp);
   tor_strstrip(fingerprint, " ");
   if (base16_decode(d, DIGEST_LEN, fingerprint, strlen(fingerprint))) {
     log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
              escaped(fp));
+    tor_free(fingerprint);
     return 0;
   }
 
   if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME)) {
     log_warn(LD_DIRSERV, "Tried to add a mapping for reserved nickname %s",
              UNNAMED_ROUTER_NICKNAME);
+    tor_free(fingerprint);
     return 0;
   }
 
