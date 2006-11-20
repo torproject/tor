@@ -18,6 +18,7 @@ Changes in version 0.1.2.4-alpha - 2006-11-??
       the client sends data.  Previously, the connection would just hang
       until the client sent data. (Patch from tup based on patch from
       Zajcev Evgeny.)
+    - Fix a memory leak when we fail to pick an exit node.
 
   o Minor bugfixes
     - Don't log spurious warnings when we see a circuit close reason we

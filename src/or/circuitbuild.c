@@ -1252,8 +1252,12 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
                  "to list of all routers.",
                  need_capacity?", fast":"",
                  need_uptime?", stable":"");
-        return choose_good_exit_server_general(dir, 0, 0);
+        return choose_good_exit_server_general(dir, 0, 0);//!!!!
       }
+      smartlist_free(preferredexits);
+      smartlist_free(excludedexits);
+      smartlist_free(sl);
+      tor_free(n_supported);
       log_notice(LD_CIRC, "All routers are down or won't exit -- choosing a "
                  "doomed exit at random.");
     }
