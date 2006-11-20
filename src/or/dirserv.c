@@ -124,6 +124,7 @@ add_fingerprint_to_dir(const char *nickname, const char *fp,
     status->status |= FP_NAMED;
     strlcpy(status->nickname, nickname, sizeof(status->nickname));
   } else {
+    tor_free(fingerprint);
     if (!strcasecmp(nickname, "!reject")) {
       status->status |= FP_REJECT;
     } else if (!strcasecmp(nickname, "!invalid")) {
