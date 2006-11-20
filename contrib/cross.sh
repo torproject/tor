@@ -15,7 +15,7 @@
 #
 #  A number of environment variables must be set in order for this
 #  script to work:
-#        $PREFIX, $CROSSPATH, $ARCH_PREFIX, $HOST,
+#        $PREFIX, $CROSSPATH, $HOST_TRIPLET, $HOST,
 #        and (optionally) $BUILD
 #  Please run the script for a description of each one.  If automated
 #  builds are desired, the above variables can be exported at the top
@@ -53,11 +53,21 @@ export CROSS_COMPILE=yes
 # for error conditions
 EXITVAL=0
 
-if [ ! -f configure ]
+if [ ! -f autogen.sh ]
 then
   echo "Please run this script from the root of the Tor distribution"
-  echo "and ensure that autogen.sh has been run."
-  EXITVAL=-1
+  exit -1
+fi
+
+if [ ! -f configure ]
+then
+  if [ -z $GEN_BUILD ]
+  then
+    echo "To automatically generate the build environment, set \$GEN_BUILD"
+    echo "to yes; for example,"
+    echo "	export GEN_BUILD=yes"
+    EXITVAL=-1
+  fi
 fi
 
 if [ -z $PREFIX ]
@@ -76,12 +86,12 @@ then
   EXITVAL=-1
 fi
 
-if [ -z $ARCH_PREFIX ]
+if [ -z $HOST_TRIPLET ]
 then
-  echo "You must define \$ARCH_PREFIX to continue.  For example,"
+  echo "You must define \$HOST_TRIPLET to continue.  For example,"
   echo "if you normally cross-compile applications using"
-  echo "mipsel-linux-uclibc-gcc, you would set \$ARCH_PREFIX like so:"
-  echo "	export ARCH_PREFIX=mipsel-linux-uclibc-"
+  echo "mipsel-linux-uclibc-gcc, you would set \$HOST_TRIPLET like so:"
+  echo "	export HOST_TRIPLET=mipsel-linux-uclibc-"
   EXITVAL=-1
 fi
 
@@ -101,10 +111,23 @@ then
   EXITVAL=-1
 fi
 
+if [ ! -x $CROSSPATH/$HOST_TRIPLETgcc ]
+then
+  echo "The specified toolchain does not contain an executable C compiler."
+  echo "Please double-check your settings and rerun cross.sh."
+  EXITVAL=-1
+fi
+
 if [ $EXITVAL -ne 0 ]
 then
   echo "Remember, you can hard-code these values in cross.sh if needed."
   exit $EXITVAL
+fi
+
+if [ ! -z $GEN_BUILD -a ! -f configure ]
+then
+  export NOCONF=yes
+  ./autogen.sh
 fi
 
 # clean up any existing object files
@@ -115,8 +138,8 @@ fi
 
 # Set up the build environment and try to run configure
 export PATH=$PATH:$CROSSPATH
-export RANLIB=${ARCH_PREFIX}ranlib
-export CC=${ARCH_PREFIX}gcc
+export RANLIB=${HOST_TRIPLET}ranlib
+export CC=${HOST_TRIPLET}gcc
 
 if [ $BUILD == "auto" ]
 then
@@ -161,7 +184,7 @@ fi
 # if $STRIP has length (i.e. STRIP=yes), strip the binaries
 if [ ! -z $STRIP ]
 then
-${ARCH_PREFIX}strip \
+${HOST_TRIPLET}strip \
 	src/or/tor \
 	src/or/test \
 	src/tools/tor-resolve
