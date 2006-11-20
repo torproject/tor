@@ -5,7 +5,7 @@
 \usepackage{epsfig}
 
 \setlength{\textwidth}{6.0in}
-\setlength{\textheight}{8.4in}
+\setlength{\textheight}{8.5in}
 \setlength{\topmargin}{.5cm}
 \setlength{\oddsidemargin}{1cm}
 \setlength{\evensidemargin}{1cm}
@@ -80,7 +80,7 @@ network from China each day.
 The current Tor design is easy to block if the attacker controls Alice's
 connection to the Tor network---by blocking the directory authorities,
 by blocking all the server IP addresses in the directory, or by filtering
-based on the signature of the Tor TLS handshake. Here we describe an
+based on the fingerprint of the Tor TLS handshake. Here we describe an
 extended design that builds upon the current Tor network to provide an
 anonymizing
 network that resists censorship as well as anonymity-breaking attacks.
@@ -125,7 +125,7 @@ understanding of the current situation around the world.
 In the traditional security style, we aim to defeat a strong
 attacker---if we can defend against this attacker, we inherit protection
 against weaker attackers as well.  After all, we want a general design
-that will work for citizens of China, Iran, Thailand, and other censored
+that will work for citizens of China, Thailand, and other censored
 countries; for
 whistleblowers in firewalled corporate networks; and for people in
 unanticipated oppressive situations. In fact, by designing with
@@ -498,7 +498,9 @@ these proxies is questionable: it's widely believed that most of them
 don't realize what they're offering, and probably wouldn't allow it if
 they realized. Third, in many cases the connection to the proxy is
 unencrypted, so firewalls that filter based on keywords in IP packets
-will not be hindered. And last, many users are suspicious that some
+will not be hindered. Fourth, in many countries (including China), the
+firewall authorities hunt for open proxies as well, to preemptively
+block them. And last, many users are suspicious that some
 open proxies are a little \emph{too} convenient: are they run by the
 adversary, in which case they get to monitor all the user's requests
 just as single-hop proxies can?
@@ -562,7 +564,9 @@ Murdoch and Watson discovered that rather than blocking all packets in a TCP
 streams once a forbidden word was noticed, the firewall was simply forging
 RST packets to make the communicating parties believe that the connection was
 closed~\cite{clayton:pet2006}. They proposed altering operating systems
-to ignore forged RST packets.
+to ignore forged RST packets. This approach might work in some cases, but
+in practice it appears that many firewalls start filtering by IP address
+once a sufficient number of RST packets have been sent.
 
 Other packet-level responses to filtering include splitting
 sensitive words across multiple TCP packets, so that the censors'
@@ -646,7 +650,7 @@ to get more relay addresses, and to distribute them to users differently.
 %We need to address three problems:
 %- adapting the relay component of Tor so it resists blocking better.
 %- Discovery.
-%- Tor's network signature.
+%- Tor's network fingerprint.
 
 %Here we describe the new pieces we need to add to the current Tor design.
 
@@ -770,8 +774,8 @@ out too much.
 
 
 
-\section{Hiding Tor's network signatures}
-\label{sec:network-signature}
+\section{Hiding Tor's network fingerprint}
+\label{sec:network-fingerprint}
 \label{subsec:enclave-dirs}
 
 Currently, Tor uses two protocols for its network communications. The
@@ -789,7 +793,8 @@ directory cache for an up-to-date copy of its server descriptor, and
 learn its current circuit keys, its ORPort, and so on.
 
 However, connecting directly to the directory cache involves a plaintext
-HTTP request. A censor could create a network signature for the request
+HTTP request. A censor could create a network fingerprint (known as a
+\emph{signature} in the intrusion detection field) for the request
 and/or its response, thus preventing these connections. To resolve this
 vulnerability, we've modified the Tor protocol so that users can connect
 to the directory cache via the main Tor port---they establish a TLS
@@ -856,7 +861,7 @@ differently from, say, instant messaging.
 % by Marc Liberatore and Brian Neil Levine (CCS 2006)
 % They substantially flesh out the numbers for the  web fingerprinting
 % attack. -PS
-% Yes, but I meant detecting the signature of Tor traffic itself, not
+% Yes, but I meant detecting the fingerprint of Tor traffic itself, not
 % learning what websites we're going to. I wouldn't be surprised to
 % learn that these are related problems, but it's not obvious to me. -RD
 
@@ -1323,7 +1328,7 @@ but we should keep both sides of the issue in mind.
 Tor encrypts traffic on the local network, and it obscures the eventual
 destination of the communication, but it doesn't do much to obscure the
 traffic volume. In particular, a user publishing a home video will have a
-different network signature than a user reading an online news article.
+different network fingerprint than a user reading an online news article.
 Based on our assumption in Section~\ref{sec:adversary} that users who
 publish material are in more danger, should we work to improve Tor's
 security in this situation?
@@ -1334,7 +1339,7 @@ are known where the adversary observes the origin and the
 destination of traffic and confirms that they are part of the
 same communication~\cite{danezis:pet2004,e2e-traffic}. Related are
 \emph{website fingerprinting attacks}, where the adversary downloads
-a few hundred popular websites, makes a set of "signatures" for each
+a few hundred popular websites, makes a set of "fingerprints" for each
 site, and then observes the target Tor client's traffic to look for
 a match~\cite{pet05-bissias,defensive-dropping}. But can we do better
 against a limited adversary who just does coarse-grained sweeps looking
@@ -1545,7 +1550,7 @@ related attacks.) It would be nice to slow down this attack. It would
 be even nicer to make it hard to learn whether we're a bridge without
 first knowing some secret. We call this general property \emph{scanning
 resistance}, and it goes along with normalizing Tor's TLS handshake and
-network signature.
+network fingerprint.
 
 We could provide a password to the blocked user, and she (or her Tor
 client) provides a nonced hash of this password when she connects. We'd
@@ -1555,13 +1560,13 @@ present the password until we've finished the TLS handshake, else it
 would look unusual. If Alice can authenticate the bridge before she
 tries to send her password, we can resist an adversary who pretends
 to be the bridge and launches a man-in-the-middle attack to learn the
-password. But even if she can't, we resist against widespread scanning.
+password. But even if she can't, we still resist against widespread
+scanning.
 
-Another approach would be some kind of ID-based knocking protocol,
-where the bridge only answers after some predefined set of connections
-or interactions. The bridge could even act like an unconfigured HTTPS
-server (``welcome to the default Apache page'') if accessed without the
-correct authorization.
+How should the bridge behave if accessed without the correct
+authorization? Perhaps it should act like an unconfigured HTTPS server
+(``welcome to the default Apache page''), or maybe it should mirror
+and act like common websites, or websites randomly chosen from Google.
 
 We might assume that the attacker can recognize HTTPS connections that
 use self-signed certificates. (This process would be resource-intensive
@@ -1665,7 +1670,9 @@ website and leave mirrors and the network itself untouched.
 Falling back on word-of-mouth is always a good last resort, but we should
 also take steps to make sure it's relatively easy for users to get a copy,
 such as publicizing the mirrors more and making copies available through
-other media.
+other media. We might also mirror the latest version of the software on
+each bridge, so users who hear about an honest bridge can get a good
+copy.
 See Section~\ref{subsec:first-bridge} for more discussion.
 
 \section{Future designs}
@@ -1699,7 +1706,7 @@ and they would be a fine target to take down the network.
 \label{sec:conclusion}
 
 Technical solutions won't solve the whole censorship problem. After all,
-the firewalls in places like China and Iran are \emph{socially} very
+the firewalls in places like China are \emph{socially} very
 successful, even if technologies and tricks exist to get around them.
 However, having a strong technical solution is still necessary as one
 important piece of the puzzle.
