@@ -91,7 +91,7 @@ add_fingerprint_to_dir(const char *nickname, const char *fp,
   tor_assert(fp);
   tor_assert(list);
 
-  fingeprint = tor_strdup(fp);
+  fingerprint = tor_strdup(fp);
   tor_strstrip(fingerprint, " ");
   if (base16_decode(d, DIGEST_LEN, fingerprint, strlen(fingerprint))) {
     log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
