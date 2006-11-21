@@ -471,7 +471,7 @@ set_socket_nonblocking(int socket)
  * even close, depending on OS-specific timeouts).
  *
  * Returns 0 on success and -errno on failure; do not rely on the value
- * of errno or WSAGetLastSocketError().
+ * of errno or WSAGetLastError().
  **/
 /* It would be nicer just to set errno, but that won't work for windows. */
 int
