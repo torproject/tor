@@ -281,8 +281,8 @@ AC_CACHE_CHECK([whether we need extra options to link libevent],
                 int main(int c, char **v) {
                    event_init(); return 0;
                 }],
-                libevent_runs=yes, libevent_runs=no)
-      if test $libevent_runs = yes ; then
+                libevent_runs=yes, libevent_runs=no, libevent_runs=cross)
+      if test $libevent_runs != no ; then
         if test -z "$le_extra" ; then
           ac_cv_libevent_linker_option='(none)'
         else
@@ -402,8 +402,8 @@ int main(void)
         return(RAND_status() <= 0);
 }
                         ],
-                openssl_runs=yes, openssl_runs=no)
-      if test $openssl_runs = yes ; then
+                openssl_runs=yes, openssl_runs=no, openssl_runs=cross)
+      if test $openssl_runs != no ; then
         if test "$linked_with" = nothing; then
            linked_with="$ssl_extra"
         fi

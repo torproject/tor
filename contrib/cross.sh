@@ -124,7 +124,7 @@ then
   exit $EXITVAL
 fi
 
-if [ ! -z $GEN_BUILD -a ! -f configure ]
+if [ ! -z "$GEN_BUILD" -a ! -f configure ]
 then
   export NOCONF=yes
   ./autogen.sh
