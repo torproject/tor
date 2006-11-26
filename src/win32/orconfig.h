@@ -209,6 +209,9 @@
 /* The size of a `__int64', as computed by sizeof. */
 #define SIZEOF___INT64 8
 
+/* The sizeof a size_t, as computed by sizeof. */
+#define SIZEOF_SIZE_T 4
+
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS
 
