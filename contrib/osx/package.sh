@@ -18,7 +18,7 @@
 
 # Where have we put the zip file containing Privoxy?  Edit this if your
 # privoxy lives somewhere else.
-PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.3.zip
+PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.6.zip
 
 ###
 # Helpful info on OS X packaging:

@@ -7,8 +7,9 @@ OSX builds of tor
 Summary:
 1) Compile and install a static version of the latest release of
 libevent.
-2) Acquire privoxyosx_setup_3.0.3.zip.  Remember where you put this
-file.
+2) Acquire privoxyosx_setup_3.0.6.zip.  
+http://downloads.sourceforge.net/ijbswa/privoxyosx_setup_3.0.6.zip?modtime=1164104652&big_mirror=0
+  Remember where you put this file.
 3) Acquire and install your preferred version of tor via "make
 dist-osx"
 
@@ -32,11 +33,11 @@ files so the linker doesn't get suckered into using them.
 ### Acquiring privoxy
 
 1) Download osx privoxy source from
-http://prdownloads.sourceforge.net/ijbswa/privoxyosx_setup_3.0.3.zip?download
+http://downloads.sourceforge.net/ijbswa/privoxyosx_setup_3.0.6.zip?modtime=1164104652&big_mirror=0
 
 2) Edit /path/to/tor/contrib/osx/package.sh and confirm
 PRIVOXY_PKG_ZIP= is set to the correct path to find the
-file privoxyosx_setup_3.0.3.zip
+file privoxyosx_setup_3.0.6.zip
 
 
 ## Compiling Tor
