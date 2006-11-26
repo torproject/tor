@@ -33,6 +33,8 @@ Changes in version 0.1.2.4-alpha - 2006-11-??
       correctly in the Windows installer.
     - Avoid assert failure when our cached-routers file is empty on
       startup.
+    - Don't corrupt last_guesssed_ip in router_new_address_suggestion() when
+      we're running as a client.
 
 
 Changes in version 0.1.2.3-alpha - 2006-10-29

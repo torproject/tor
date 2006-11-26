@@ -1009,7 +1009,7 @@ static uint32_t last_guessed_ip = 0;
 void
 router_new_address_suggestion(const char *suggestion)
 {
-  uint32_t addr, cur;
+  uint32_t addr, cur = 0;
   struct in_addr in;
   or_options_t *options = get_options();
 
@@ -1022,8 +1022,10 @@ router_new_address_suggestion(const char *suggestion)
 
   log_debug(LD_DIR, "Got X-Your-Address-Is: %s.", suggestion);
 
-  if (!server_mode(options) ||
-      resolve_my_address(LOG_INFO, options, &cur, NULL) >= 0) {
+  if (!server_mode(options))
+    return;
+
+  if (resolve_my_address(LOG_INFO, options, &cur, NULL) >= 0) {
     /* We're all set -- we already know our address. Great. */
     last_guessed_ip = cur; /* store it in case we need it later */
     return;
