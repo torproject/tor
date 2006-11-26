@@ -1022,14 +1022,16 @@ router_new_address_suggestion(const char *suggestion)
 
   log_debug(LD_DIR, "Got X-Your-Address-Is: %s.", suggestion);
 
+  if (!server_mode(options)) {
+    last_guessed_ip = addr; /* store it in case we need it later */
+    return;
+  }
+
   if (resolve_my_address(LOG_INFO, options, &cur, NULL) >= 0) {
     /* We're all set -- we already know our address. Great. */
     last_guessed_ip = cur; /* store it in case we need it later */
     return;
   }
-
-  if (!server_mode(options))
-    return;
 
   if (last_guessed_ip != addr) {
     log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr);
