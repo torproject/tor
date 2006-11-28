@@ -364,7 +364,6 @@ $Id$
              circuits.
           "Fast" if the router is suitable for high-bandwidth circuits.
           "Guard" if the router is suitable for use as an entry guard.
-             (Currently, this means 'fast' and 'stable'.)
           "Named" if the router's identity-nickname mapping is canonical,
              and this authority binds names.
           "Stable" if the router is suitable for long-lived circuits.
@@ -372,9 +371,10 @@ $Id$
           "Valid" if the router has been 'validated'.
           "V2Dir" if the router implements this protocol.
 
-      The "r" entry for each router must appear first and is required.  The
-      "s" entry is optional.  Unrecognized flags on the "s" line and extra
-      elements on the "r" line must be ignored.
+      The "r" entry for each router must appear first and is required. The
+      "s" entry is optional (see Section 3.1 below for how the flags are
+      decided). Unrecognized flags on the "s" line and extra elements
+      on the "r" line must be ignored.
 
    The signature section contains:
 
@@ -410,7 +410,7 @@ $Id$
 
    "Stable" -- A router is 'Stable' if its uptime is above median for known
    running, valid routers, and it's running a version of Tor not known to
-   drop circuits stupidly.  (0.1.1.10-alpha throught 0.1.1.16-rc are stupid
+   drop circuits stupidly.  (0.1.1.10-alpha through 0.1.1.16-rc are stupid
    this way.)
 
    "Fast" -- A router is 'Fast' if its bandwidth is in the top 7/8ths for
