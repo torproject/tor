@@ -699,16 +699,25 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
   return 0;
 }
 
-void dump_distinct_digests_xx(int severity);
-static digestmap_t *verified_digests_tmp = NULL; // XXXX0124 remove me.
-// remove me too.
+/* For debugging: define to count every descriptor digest we've seen so we
+ * know if we need to try harder to avoid duplicate verifies. */
+#undef COUNT_DISTINCT_DIGESTS
+
+#ifdef COUNT_DISTINCT_DIGESTS
+static digestmap_t *verified_digests = NULL;
+#endif
+
 void
-dump_distinct_digests_xx(int severity)
+dump_distinct_digest_count(int severity)
 {
-  if (!verified_digests_tmp)
-    verified_digests_tmp = digestmap_new();
+#ifdef COUNT_DISTINCT_DIGESTS
+  if (!verified_digests)
+    verified_digests = digestmap_new();
   log(severity, LD_GENERAL, "%d *distinct* router digests verified",
-      digestmap_size(verified_digests_tmp));
+      digestmap_size(verified_digests));
+#else
+  (void)severity; /* suppress "unused parameter" warning */
+#endif
 }
 
 /** Helper function: reads a single router entry from *<b>s</b> ...
@@ -925,9 +934,11 @@ router_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
   note_crypto_pk_op(VERIFY_RTR);
-  if (!verified_digests_tmp)
-    verified_digests_tmp = digestmap_new();
-  digestmap_set(verified_digests_tmp, signed_digest, (void*)(uintptr_t)1);
+#ifdef COUNT_DISTINCT_DIGESTS
+  if (!verified_digests)
+    verified_digests = digestmap_new();
+  digestmap_set(verified_digests, signed_digest, (void*)(uintptr_t)1);
+#endif
   if ((t=crypto_pk_public_checksig(router->identity_pkey, signed_digest,
                                    tok->object_body, 128)) != 20) {
     log_warn(LD_DIR, "Invalid signature %d",t);

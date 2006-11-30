@@ -2783,6 +2783,7 @@ int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
 void sort_version_list(smartlist_t *lst, int remove_duplicates);
 void assert_addr_policy_ok(addr_policy_t *t);
+void dump_distinct_digest_count(int severity);
 
 networkstatus_t *networkstatus_parse_from_string(const char *s);
 
