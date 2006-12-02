@@ -1396,7 +1396,7 @@ connection_ap_get_original_destination(edge_connection_t *conn,
  * If the handshake is complete, send it to
  * connection_ap_handshake_rewrite_and_attach().
  *
- * Return -1 if an unexpected error with conn ocurrs (and mark it for close),
+ * Return -1 if an unexpected error with conn occurs (and mark it for close),
  * else return 0.
  */
 static int

@@ -319,7 +319,7 @@ connection_stop_reading(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->read_event);
 
-  log_debug(LD_NET,"connection_stop_reading() called.");
+  log_debug(LD_NET,"entering.");
   if (event_del(conn->read_event))
     log_warn(LD_NET, "Error from libevent setting read event state for %d "
              "to unwatched: %s",

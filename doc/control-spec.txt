@@ -460,6 +460,9 @@ $Id$
       A space-separated list of all the events supported by this version of
       Tor's USEFEATURE.
 
+    "next-circuit/IP:port"
+      XXX todo.
+
     "dir/status/authority"
     "dir/status/fp/<F>"
     "dir/status/fp/<F1>+<F2>+<F3>"

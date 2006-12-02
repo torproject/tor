@@ -142,8 +142,8 @@ tor_mmap_file(const char *filename)
   size += (size%page_size) ? page_size-(size%page_size) : 0;
 
   if (!size) {
-    /* zero-length file. if we call mmap on it, we'll end up setting
-     * data to NULL below, and bad things will happen. So just fail. */
+    /* Zero-length file. If we call mmap on it, it will succeed but
+     * return NULL, and bad things will happen. So just fail. */
     log_notice(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
     return NULL;
   }

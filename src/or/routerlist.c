@@ -4108,7 +4108,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
     return 0;
 
   /* Did uptime fail to increase by approximately the amount we would think,
-   * give or take 4 hours? */
+   * give or take some slop? */
   r1pub = r1->cache_info.published_on;
   r2pub = r2->cache_info.published_on;
   time_difference = abs(r2->uptime - (r1->uptime + (r2pub - r1pub)));

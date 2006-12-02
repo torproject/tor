@@ -1166,7 +1166,7 @@ connection_read_bucket_decrement(connection_t *conn, int num_read)
   }
 }
 
-/** If we have exhaused our global read bucket, or the read bucket for conn,
+/** If we have exhausted our global read bucket, or the read bucket for conn,
  * stop reading. */
 static void
 connection_consider_empty_buckets(connection_t *conn)

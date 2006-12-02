@@ -1,28 +1,31 @@
-Changes in version 0.1.2.4-alpha - 2006-11-??
-  o Major features
-    - Add support for using natd; this allows FreeBSDs earlier than 5.1.2 to
-      have ipfw send connections through Tor without using SOCKS. (Patch from
-      Zajcev Evgeny with tweaks from tup.)
+Changes in version 0.1.2.4-alpha - 2006-12-02
+  o Major features:
+    - Add support for using natd; this allows FreeBSDs earlier than
+      5.1.2 to have ipfw send connections through Tor without using
+      SOCKS. (Patch from Zajcev Evgeny with tweaks from tup.)
 
-  o Minor features
-    - Add breakdown of public key operations to dumped statistics.
-    - Make cross.sh cross-compilation script work even when autogen.sh hasn't
-      been run. (Patch from Michael Mohr.)
+  o Minor features:
+    - Make all connections to addresses of the form ".noconnect"
+      immediately get closed. This lets application/controller combos
+      successfully test whether they're talking to the same Tor by
+      watching for STREAM events.
+    - Make cross.sh cross-compilation script work even when autogen.sh
+      hasn't been run. (Patch from Michael Mohr.)
+    - Statistics dumped by -USR2 now include a breakdown of public key
+      operations, for profiling.
 
-  o Minor features, controller
-    - Make all connections to addresses of the form .noconnect immediately
-      get closed.  This is more useful than you'd think, since it lets
-      application/controller combos successfully tell when they're talking to
-      the same Tor by watching for STREAM events.
-
-  o Major bugfixes
+  o Major bugfixes:
+    - Fix a major leak when directory authorities parse their
+      approved-routers list, a minor memory leak when we fail to pick
+      an exit node, and a few rare leaks on errors.
     - Handle TransPort connections even when the server sends data before
-      the client sends data.  Previously, the connection would just hang
+      the client sends data. Previously, the connection would just hang
       until the client sent data. (Patch from tup based on patch from
       Zajcev Evgeny.)
-    - Fix a memory leak when we fail to pick an exit node.
+    - Avoid assert failure when our cached-routers file is empty on
+      startup.
 
-  o Minor bugfixes
+  o Minor bugfixes:
     - Don't log spurious warnings when we see a circuit close reason we
       don't recognize; it's probably just from a newer version of Tor.
     - Have directory authorities allow larger amounts of drift in uptime
@@ -31,10 +34,12 @@ Changes in version 0.1.2.4-alpha - 2006-11-??
       per day.
     - Start linking to the Tor specification and Tor reference manual
       correctly in the Windows installer.
-    - Avoid assert failure when our cached-routers file is empty on
-      startup.
-    - Don't corrupt last_guesssed_ip in router_new_address_suggestion() when
-      we're running as a client.
+    - Add Vidalia to the OS X uninstaller script, so when we uninstall
+      Tor/Privoxy we also uninstall Vidalia.
+    - Resume building on Irix64, and fix a lot of warnings from its
+      MIPSpro C compiler.
+    - Don't corrupt last_guessed_ip in router_new_address_suggestion()
+      when we're running as a client.
 
 
 Changes in version 0.1.2.3-alpha - 2006-10-29
