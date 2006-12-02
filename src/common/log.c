@@ -13,6 +13,7 @@ const char log_c_id[] = "$Id$";
 #include "orconfig.h"
 #include <stdarg.h>
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef HAVE_SYS_TIME_H
