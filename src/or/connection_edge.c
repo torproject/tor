@@ -1310,6 +1310,7 @@ get_pf_socket(void)
   }
 
   pf_socket = pf;
+  return pf_socket;
 }
 #endif
 

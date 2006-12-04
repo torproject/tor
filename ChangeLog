@@ -1,3 +1,8 @@
+Changes in version 0.1.2.5-xxxx - 200?-??-??
+  o Minor bugfixes;
+    - Fix a bug when a PF socket is first used.  (Patch from Fabian
+      Keil)
+
 Changes in version 0.1.2.4-alpha - 2006-12-03
   o Major features:
     - Add support for using natd; this allows FreeBSDs earlier than
