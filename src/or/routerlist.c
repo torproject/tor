@@ -1533,7 +1533,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   if (authdir) {
     if (authdir_wants_to_reject_router(router, msg,
                                        !from_cache && !from_fetch)) {
-      tor_assert(*msg);
+      if (!*msg)
+        *msg = "no message";
       routerinfo_free(router);
       return -2;
     }

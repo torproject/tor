@@ -1,3 +1,10 @@
+Changes in version 0.1.1.26 - 200?-??-??
+  o Minor bugfixes:
+    - Fix an assert failure when a directory authority sets
+      AuthDirRejectUnlisted and then receives a descriptor from an
+      unlisted router (reported by seeess).
+
+
 Changes in version 0.1.1.25 - 2006-11-04
   o Major bugfixes:
     - When a client asks us to resolve (rather than connect to)
