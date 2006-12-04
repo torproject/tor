@@ -1,11 +1,14 @@
 Changes in version 0.1.2.5-xxxx - 200?-??-??
   o Minor bugfixes;
     - Fix a bug when a PF socket is first used.  (Patch from Fabian
-      Keil)
+      Keil.)
+    - Fix an assert failure when the directory authority sets
+      AuthDirRejectUnlisted and then receives a descriptor from an
+      unlisted router (reported by seeess).
 
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug
-      reported by Mike Perry)
+      reported by Mike Perry.)
 
 
 Changes in version 0.1.2.4-alpha - 2006-12-03

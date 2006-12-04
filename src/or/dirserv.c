@@ -270,6 +270,8 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 
   if (crypto_pk_get_digest(router->identity_pkey, d)) {
     log_warn(LD_BUG,"Error computing fingerprint");
+    if (msg)
+      *msg = "Bug: Error computing fingerprint";
     return FP_REJECT;
   }
 
@@ -384,8 +386,11 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
                  nickname, address);
       result |= FP_INVALID;
     }
-    if (reject_unlisted)
+    if (reject_unlisted) {
+      if (msg)
+        *msg = "Authdir rejects unknown routers.";
       return FP_REJECT;
+    }
     /* 0.1.0.2-rc was the first version that did enough self-testing that
      * we're willing to take its word about whether it's running. */
     if (platform && !tor_version_as_new_as(platform,"0.1.0.2-rc"))
