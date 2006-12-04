@@ -208,7 +208,6 @@ connection_remove(connection_t *conn)
 static void
 connection_unlink(connection_t *conn, int remove)
 {
-  circuit_about_to_close_connection(conn);
   connection_about_to_close_connection(conn);
   if (remove) {
     connection_remove(conn);

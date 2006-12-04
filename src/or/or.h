@@ -673,7 +673,8 @@ typedef struct connection_t {
                                      * conn? */
   unsigned edge_has_sent_end:1; /**< For debugging; only used on edge
                          * connections.  Set once we've set the stream end,
-                         * and check in circuit_about_to_close_connection(). */
+                         * and check in connection_about_to_close_connection().
+                         */
   /** Used for OR conns that shouldn't get any new circs attached to them. */
   unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
@@ -1835,7 +1836,6 @@ int circuit_stream_is_being_handled(edge_connection_t *conn, uint16_t port,
                                     int min);
 void circuit_build_needed_circs(time_t now);
 void circuit_detach_stream(circuit_t *circ, edge_connection_t *conn);
-void circuit_about_to_close_connection(connection_t *conn);
 
 void reset_bandwidth_test(void);
 int circuit_enough_testing_circs(void);

@@ -518,50 +518,6 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
   tor_assert(0); /* should never get here */
 }
 
-/** Notify the global circuit list that <b>conn</b> is about to be
- * removed and then freed.
- *
- * If it's an OR conn, then mark-for-close all the circuits that use
- * that conn.
- *
- * If it's an edge conn, then detach it from its circ, so we don't
- * try to reference it later.
- */
-void
-circuit_about_to_close_connection(connection_t *conn)
-{
-  /* currently, we assume it's too late to flush conn's buf here.
-   * down the road, maybe we'll consider that eof doesn't mean can't-write
-   */
-  switch (conn->type) {
-    case CONN_TYPE_OR: {
-      if (!connection_state_is_open(conn)) {
-        /* Inform any pending (not attached) circs that they should
-         * give up. */
-        circuit_n_conn_done(TO_OR_CONN(conn), 0);
-      }
-      /* Now close all the attached circuits on it. */
-      circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
-                                      END_CIRC_REASON_OR_CONN_CLOSED);
-      return;
-    }
-    case CONN_TYPE_AP:
-    case CONN_TYPE_EXIT: {
-      circuit_t *circ;
-      /* It's an edge conn. Need to remove it from the linked list of
-       * conn's for this circuit. Confirm that 'end' relay command has
-       * been sent. But don't kill the circuit.
-       */
-
-      circ = circuit_get_by_edge_conn(TO_EDGE_CONN(conn));
-      if (!circ)
-        return;
-
-      circuit_detach_stream(circ, TO_EDGE_CONN(conn));
-    }
-  } /* end switch */
-}
-
 /** Find each circuit that has been unused for too long, or dirty
  * for too long and has no streax=ms on it: mark it for close.
  */

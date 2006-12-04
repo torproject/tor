@@ -393,6 +393,7 @@ connection_free_all(void)
  *   - Exit conns need to call connection_dns_remove() if necessary.
  *   - AP and Exit conns need to send an end cell if they can.
  *   - DNS conns need to fail any resolves that are pending on them.
+ *   - OR and edge connections need to be unlinked from circuits.
  */
 void
 connection_about_to_close_connection(connection_t *conn)
@@ -436,6 +437,9 @@ connection_about_to_close_connection(connection_t *conn)
           router_set_status(or_conn->identity_digest, 0);
           control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED);
         }
+        /* Inform any pending (not attached) circs that they should
+         * give up. */
+        circuit_n_conn_done(TO_OR_CONN(conn), 0);
       } else if (conn->hold_open_until_flushed) {
         /* XXXX009 We used to have an arg that told us whether we closed the
          * connection on purpose or not.  Can we use hold_open_until_flushed
@@ -452,6 +456,9 @@ connection_about_to_close_connection(connection_t *conn)
         rep_hist_note_connection_died(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED);
       }
+      /* Now close all the attached circuits on it. */
+      circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
+                                      END_CIRC_REASON_OR_CONN_CLOSED);
       break;
     case CONN_TYPE_AP:
       edge_conn = TO_EDGE_CONN(conn);
@@ -463,20 +470,23 @@ connection_about_to_close_connection(connection_t *conn)
                  conn->marked_for_close_file, conn->marked_for_close);
       }
       if (!edge_conn->end_reason) {
-        // XXXX Disable this before 0.1.2.x-final ships.
+        // XXXX012 Disable this before 0.1.2.x-final ships.
         log_warn(LD_BUG,"Bug: Closing stream (marked at %s:%d) without having"
                  " set end_reason. Please tell Nick.",
                  conn->marked_for_close_file, conn->marked_for_close);
       }
       control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED,
                                   edge_conn->end_reason);
+      circ = circuit_get_by_edge_conn(edge_conn);
+      if (circ)
+        circuit_detach_stream(circ, edge_conn);
       break;
     case CONN_TYPE_EXIT:
       edge_conn = TO_EDGE_CONN(conn);
+      circ = circuit_get_by_edge_conn(edge_conn);
+      if (circ)
+        circuit_detach_stream(circ, edge_conn);
       if (conn->state == EXIT_CONN_STATE_RESOLVING) {
-        circ = circuit_get_by_edge_conn(edge_conn);
-        if (circ)
-          circuit_detach_stream(circ, edge_conn);
         connection_dns_remove(edge_conn);
       }
       break;

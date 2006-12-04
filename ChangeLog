@@ -3,6 +3,11 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Fix a bug when a PF socket is first used.  (Patch from Fabian
       Keil)
 
+  o Controller bugfixes:
+    - Report the circuit number correctly in STREAM CLOSED events. (Bug
+      reported by Mike Perry)
+
+
 Changes in version 0.1.2.4-alpha - 2006-12-03
   o Major features:
     - Add support for using natd; this allows FreeBSDs earlier than
