@@ -907,7 +907,7 @@ The tor process stores keys and other data here.
 The most recently downloaded network status document for each authority.  Each file holds one such document; the filenames are the hexadecimal identity key fingerprints of the directory authorities.
 .LP
 .TP
-.B \fIDataDirectory\fP/cached-routers/cached-routers.new
+.B \fIDataDirectory\fB/cached-routers\fR and \fBcached-routers.new\fR
 These files hold downloaded router statuses.  Some routers may appear more than once; if so, the most recently published descriptor is used.  The ".new" file is an append-only journal; when it gets too large, all entries are merged into a new cached-routers file.
 .LP
 .TP
@@ -940,19 +940,15 @@ Only used by servers.  Holds identity keys and onion keys.
 Only used by servers.  Holds the fingerprint of the server's identity key.
 .LP
 .TP
-.B \fIDataDirectory\fP/router.desc
-Only used by servers. Holds the most recently generate router descriptor.
-.LP
-.TP
 .B \fIDataDirectory\fP/approved-routers
-Only for naming authoritative directory servers (see \fBNamingAuthoritativeDirectory\fP).  This file lists nickname to identity bindings.  Each line lists a nickname and a fingerprint seperated by whitespace.  See your \fBfingerprint\fP file in the \fIDataDirectory\fP for an example line.  If the nickname is \fB!reject\fP then descriptors from the given identity (fingerprint) are rejected by the authoritative directory server. If it is \fB!invalid\fP then descriptors are accepted but marked in the directory as not valid, that is, not recommended.
+Only for naming authoritative directory servers (see \fBNamingAuthoritativeDirectory\fP).  This file lists nickname to identity bindings.  Each line lists a nickname and a fingerprint separated by whitespace.  See your \fBfingerprint\fP file in the \fIDataDirectory\fP for an example line.  If the nickname is \fB!reject\fP then descriptors from the given identity (fingerprint) are rejected by this server. If it is \fB!invalid\fP then descriptors are accepted but marked in the directory as not valid, that is, not recommended.
 .LP
 .TP
 .B \fIHiddenServiceDirectory\fP/hostname 
 The <base32-encoded-fingerprint>.onion domain name for this hidden service.
 .LP
 .TP
-.B \fIHiddenServiceDirecotyr\fP/private_key 
+.B \fIHiddenServiceDirectory\fP/private_key 
 The private key for this hidden service.
 .SH SEE ALSO
 .BR privoxy (1),
