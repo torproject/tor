@@ -530,6 +530,7 @@ accounting_set_wakeup_time(void)
   }
 }
 
+#define ROUND_UP(x) (((x) + 0x3ff) & ~0x3ff)
 #define BW_ACCOUNTING_VERSION 1
 /** Save all our bandwidth tracking information to disk. Return 0 on
  * success, -1 on failure. */
@@ -561,8 +562,8 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
                BW_ACCOUNTING_VERSION,
                time1,
                time2,
-               U64_PRINTF_ARG(n_bytes_read_in_interval),
-               U64_PRINTF_ARG(n_bytes_written_in_interval),
+               U64_PRINTF_ARG(ROUND_UP(n_bytes_read_in_interval)),
+               U64_PRINTF_ARG(ROUND_UP(n_bytes_written_in_interval)),
                (unsigned long)n_seconds_active_in_interval,
                (unsigned long)expected_bandwidth_usage);
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
@@ -571,14 +572,16 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
 
   /* Now update the state */
   state->AccountingIntervalStart = interval_start_time;
-  state->AccountingBytesReadInInterval = n_bytes_read_in_interval;
-  state->AccountingBytesWrittenInInterval = n_bytes_written_in_interval;
+  state->AccountingBytesReadInInterval = ROUND_UP(n_bytes_read_in_interval);
+  state->AccountingBytesWrittenInInterval =
+    ROUND_UP(n_bytes_written_in_interval);
   state->AccountingSecondsActive = n_seconds_active_in_interval;
   state->AccountingExpectedUsage = expected_bandwidth_usage;
   or_state_mark_dirty(state, 60);
 
   return r;
 }
+#undef ROUND_UP
 
 /** Read stored accounting information from disk. Return 0 on success;
  * return -1 and change nothing on failure. */

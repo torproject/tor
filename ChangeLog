@@ -23,6 +23,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Clients do not store bandwidth history in their state files. (This
       shouldn't be an exploitable security issue, but it's better to be
       safe.)
+    - When generating bandwidth history, round down to the nearest 1k. When
+      storing accounting data, round up to the nearest 1k.
 
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug

@@ -596,13 +596,14 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
   }
 
   for (n=0; n<b->num_maxes_set; ++n,++i) {
+    uint64_t total;
     while (i >= NUM_TOTALS) i -= NUM_TOTALS;
+    /* Round the bandwidth used down to the nearest 1k. */
+    total = b->totals[i] & ~0x3ff;
     if (n==(b->num_maxes_set-1))
-      tor_snprintf(cp, len-(cp-buf), U64_FORMAT,
-                   U64_PRINTF_ARG(b->totals[i]));
+      tor_snprintf(cp, len-(cp-buf), U64_FORMAT, U64_PRINTF_ARG(total));
     else
-      tor_snprintf(cp, len-(cp-buf), U64_FORMAT",",
-                   U64_PRINTF_ARG(b->totals[i]));
+      tor_snprintf(cp, len-(cp-buf), U64_FORMAT",", U64_PRINTF_ARG(total));
     cp += strlen(cp);
   }
   return cp-buf;
