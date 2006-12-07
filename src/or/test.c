@@ -1295,10 +1295,14 @@ test_mmap(void)
   test_assert(mapping);
   test_eq(mapping->size, strlen("Short file."));
   test_streq(mapping->data, "Short file.");
+#ifdef MS_WINDOWS
+  tor_munmap_file(mapping);
+  test_assert(unlink(fname1) == 0);
+#else
   /* make sure we can unlink. */
   test_assert(unlink(fname1) == 0);
   test_streq(mapping->data, "Short file.");
-  tor_munmap_file(mapping);
+#endif
 
   /* Make sure that we fail to map a no-longer-existent file. */
   mapping = tor_mmap_file(fname1);
@@ -1316,6 +1320,7 @@ test_mmap(void)
   test_assert(mapping);
   test_eq(mapping->size, 16384);
   test_memeq(mapping->data, buf, 16384);
+  tor_munmap_file(mapping);
 
   /* fname1 got unlinked above */
   unlink(fname2);
