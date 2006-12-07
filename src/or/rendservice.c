@@ -305,8 +305,8 @@ rend_service_update_descriptor(rend_service_t *service)
   for (i=0; i < n; ++i) {
     router = router_get_by_nickname(smartlist_get(service->intro_nodes, i),1);
     if (!router) {
-      log_info(LD_REND,"Router '%s' not found. Skipping.",
-               (char*)smartlist_get(service->intro_nodes, i));
+      log_info(LD_REND,"Router '%s' not found for intro point %d. Skipping.",
+               safe_str((char*)smartlist_get(service->intro_nodes, i)), i);
       continue;
     }
     circ = find_intro_circuit(router, service->pk_digest);
@@ -540,7 +540,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     router = router_get_by_nickname(rp_nickname, 0);
     if (!router) {
       log_info(LD_REND, "Couldn't find router %s named in rendezvous cell.",
-               escaped(rp_nickname));
+               escaped_safe_str(rp_nickname));
       /* XXXX Add a no-such-router reason? */
       reason = END_CIRC_REASON_TORPROTOCOL;
       goto err;
@@ -591,7 +591,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   if (!launched) { /* give up */
     log_warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
              "point '%s' for service %s.",
-             extend_info->nickname, serviceid);
+             escaped_safe_str(extend_info->nickname), serviceid);
     reason = END_CIRC_REASON_CONNECTFAILED;
     goto err;
   }
@@ -1110,7 +1110,8 @@ rend_service_dump_stats(int severity)
   int i,j;
   routerinfo_t *router;
   rend_service_t *service;
-  char *nickname;
+  const char *nickname, *safe_name;
+  char nn_buf[MAX_VERBOSE_NICKNAME_LEN];
   origin_circuit_t *circ;
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
@@ -1119,19 +1120,26 @@ rend_service_dump_stats(int severity)
         service->directory);
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       nickname = smartlist_get(service->intro_nodes, j);
-      router = router_get_by_nickname(smartlist_get(service->intro_nodes,j),1);
+      router = router_get_by_nickname(nickname,1);
+      if (router) {
+        router_get_verbose_nickname(nn_buf, router);
+        nickname = nn_buf;
+      }
+      safe_name = safe_str(nickname);
+
       if (!router) {
-        log(severity, LD_GENERAL, "  Intro point at %s: unrecognized router",
-            nickname);
+        log(severity, LD_GENERAL, "  Intro point %d at %s: unrecognized router",
+            j, safe_name);
         continue;
       }
       circ = find_intro_circuit(router, service->pk_digest);
       if (!circ) {
-        log(severity, LD_GENERAL, "  Intro point at %s: no circuit",nickname);
+        log(severity, LD_GENERAL, "  Intro point %d at %s: no circuit",
+            j, safe_name);
         continue;
       }
-      log(severity, LD_GENERAL, "  Intro point at %s: circuit is %s",nickname,
-          circuit_state_to_string(circ->_base.state));
+      log(severity, LD_GENERAL, "  Intro point %d at %s: circuit is %s",
+          j, safe_name, circuit_state_to_string(circ->_base.state));
     }
   }
 }

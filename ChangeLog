@@ -9,6 +9,10 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       would prevent the cached-routers file from ever loading. (reported by
       John Kimble.)
 
+  o Security bugfixes:
+    - Do not log introduction points for hidden services if SafeLogging
+      is set.
+
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug
       reported by Mike Perry.)
