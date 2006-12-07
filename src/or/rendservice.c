@@ -1128,8 +1128,8 @@ rend_service_dump_stats(int severity)
       safe_name = safe_str(nickname);
 
       if (!router) {
-        log(severity, LD_GENERAL, "  Intro point %d at %s: unrecognized router",
-            j, safe_name);
+        log(severity, LD_GENERAL,
+            "  Intro point %d at %s: unrecognized router", j, safe_name);
         continue;
       }
       circ = find_intro_circuit(router, service->pk_digest);
