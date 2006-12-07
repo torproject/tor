@@ -5,6 +5,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Fix an assert failure when the directory authority sets
       AuthDirRejectUnlisted and then receives a descriptor from an
       unlisted router (reported by seeess).
+    - Fix a bug on the Windows implementation of tor_mmap_file that
+      would prevent the cached-routers file from ever loading. (reported by
+      John Kimble.)
 
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug
