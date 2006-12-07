@@ -183,7 +183,8 @@ tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
   win_mmap_t *res = tor_malloc_zero(sizeof(win_mmap_t));
-  res->mmap_handle = res->file_handle = INVALID_HANDLE_VALUE;
+  res->file_handle = INVALID_HANDLE_VALUE;
+  res->mmap_handle = NULL;
 
   res->file_handle = CreateFile(filename,
                                 GENERIC_READ,
@@ -207,7 +208,7 @@ tor_mmap_file(const char *filename)
 #endif
                                        (res->base.size & 0xfffffffful),
                                        NULL);
-  if (res->mmap_handle != INVALID_HANDLE_VALUE)
+  if (res->mmap_handle == NULL)
     goto err;
   res->base.data = (char*) MapViewOfFile(res->mmap_handle,
                                          FILE_MAP_READ,
@@ -226,12 +227,11 @@ tor_munmap_file(tor_mmap_t *handle)
   win_mmap_t *h = (win_mmap_t*)
     (((char*)handle) - STRUCT_OFFSET(win_mmap_t, base));
   if (handle->data)
-
-  /*this is an ugly cast, but without it, "data" in struct tor_mmap_t would
-    have to be redefined as const*/
+    /* This is an ugly cast, but without it, "data" in struct tor_mmap_t would
+       have to be redefined as non-const. */
     UnmapViewOfFile( (LPVOID) handle->data);
 
-  if (h->mmap_handle != INVALID_HANDLE_VALUE)
+  if (h->mmap_handle != NULL)
     CloseHandle(h->mmap_handle);
   if (h->file_handle != INVALID_HANDLE_VALUE)
     CloseHandle(h->file_handle);
