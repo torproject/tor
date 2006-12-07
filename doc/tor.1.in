@@ -903,16 +903,49 @@ The configuration file, which contains "option value" pairs.
 The tor process stores keys and other data here.
 .LP
 .TP
+.B \fIDataDirectory\fP/cached-status/*
+The most recently downloaded network status document for each authority.  Each file holds one such document; the filenames are the hexadecimal identity key fingerprints of the directory authorities.
+.LP
+.TP
+.B \fIDataDirectory\fP/cached-routers/cached-routers.new
+These files hold downloaded router statuses.  Some routers may appear more than once; if so, the most recently published descriptor is used.  The ".new" file is an append-only journal; when it gets too large, all entries are merged into a new cached-routers file.
+.LP
+.TP
+.B \fIDataDirectory\fP/state
+A set of persistent key-value mappings.  These are documented in the file.  These include:
+.PD 0
+.RS 5
+.IP "- The current entry guards and their status."
+.IP "- The current bandwidth accounting values (unused so far; see below)."
+.IP "- When the file was last written"
+.IP "- What version of Tor generated the state file"
+.IP "- A short history of bandwidth usage, as produced in the router descriptors."
+.RE
+.PD
+.LP
+.TP
+.B \fIDataDirectory\fP/bw_accounting
+Used to track bandwidth accounting values (when the current period starts and ends; how much has been read and written so far this period).  Soon to be obsoleted by state.  Only used when bandwidth accounting is enabled.
+.LP
+.TP
+.B \fIDataDirectory\fP/control_auth_cookie
+Used for cookie authentication with the controller. Regenerated on startup.  See control-spec.txt for details.  Only used when cookie authentication is enabled.
+.LP
+.TP
+.B \fIDataDirectory\fP/keys/*
+Only used by servers.  Holds identity keys and onion keys.
+.LP
+.TP
+.B \fIDataDirectory\fP/fingerprint
+Only used by servers.  Holds the fingerprint of the server's identity key.
+.LP
+.TP
+.B \fIDataDirectory\fP/router.desc
+Only used by servers. Holds the most recently generate router descriptor.
+.LP
+.TP
 .B \fIDataDirectory\fP/approved-routers
-Only for naming authoritative directory servers
-(see \fBNamingAuthoritativeDirectory\fP).
-This file lists nickname to identity bindings.  Each line lists a
-nickname and a fingerprint seperated by whitespace.  See your
-\fBfingerprint\fP file in the \fIDataDirectory\fP for an example line.
-If the nickname is \fB!reject\fP then descriptors from the given
-identity (fingerprint) are rejected by the authoritative directory
-server. If it is \fB!invalid\fP then descriptors are accepted but marked
-in the directory as not valid, that is, not recommended.
+Only for naming authoritative directory servers (see \fBNamingAuthoritativeDirectory\fP).  This file lists nickname to identity bindings.  Each line lists a nickname and a fingerprint seperated by whitespace.  See your \fBfingerprint\fP file in the \fIDataDirectory\fP for an example line.  If the nickname is \fB!reject\fP then descriptors from the given identity (fingerprint) are rejected by the authoritative directory server. If it is \fB!invalid\fP then descriptors are accepted but marked in the directory as not valid, that is, not recommended.
 .SH SEE ALSO
 .BR privoxy (1),
 .BR tsocks (1),
