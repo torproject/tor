@@ -89,6 +89,9 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
         authority's nickname, which MUST be unique among authorities, and
         MUST match the nickname in the "directory-signature" entry.
 
+     "directory-signature" -- [XXXX this should be tagged with the nickname
+        or identity somehow.]
+
   Authorities SHOULD cache their most recently generated votes so they
   can persist them across restarts.  Authorities SHOULD NOT generate
   another document until valid-until has passed.
@@ -101,7 +104,6 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
   hour? XXX say more; be more precise.)
 
   XXXX some way to request older networkstatus docs?
-
 
 2.2. Consensus directory specifications
 
@@ -142,21 +144,74 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
   directory-signature, sorted in ascending order by nickname,
   case-insensitively.
 
-  A router entry should be included in the result if it is included by
-  more than half of the authorities (total authorities, not just those
-  whose votes we have).  A router entry has a flag set if it is included
-  by more than half of the authorities who care about that flag.  [XXXX
-  this creates a DOS incentive.  Can we remember what flags people set the
-  last time we saw them?]
+  A router entry should be included in the result if it is included by more
+  than half of the authorities (total authorities, not just those whose votes
+  we have).  A router entry has a flag set if it is included by more than
+  half of the authorities who care about that flag.  [XXXX this creates an
+  incentive for attackers to DOS authorities whose votes they don't like.
+  Can we remember what flags people set the last time we saw them?]
 
-  [What does the signature hash cover ? XXX]
+  The signature hash covers from the "network-status-version" line through
+  the characters "directory-signature" in the first "directory-signature"
+  line.
 
-2.3. Agreement and timeline
+  Consensus directories SHOULD be rejected if they are not signed by more
+  than half of the known authorities.
 
-  [XXXX publish signed vote summaries.]
-  [XXXX URL list: vote, other people's votes, directory.]
-  [XXXX in-progress URL vs done URL]
+2.2.1. Detached signatures
+
+  Assuming full connectivity, every authority should compute and sign the
+  same consensus directory in each period.  Therefore, it isn't necessary to
+  download the consensus computed by each authority; instead, the authorities
+  only push/fetch each others' signatures.  A "detached signature" document
+  contains a single "consensus-digest" entry and one or more
+  directory-signature entries. [XXXX specify more.]
+
+2.3. URLs and timelines
+
+2.3.1. URLs and timeline used for agreement
+
+  A router SHOULD publish its vote immediately at the start of each voting
+  period.  It does this by making it available at
+     http://<hostname>/tor/status-vote/current/authority.z
+  and posting it to each other authority at the URL
+     http://<hostname>/tor/post/vote
+
+  If, N minutes after the voting period has begun, an authority does not have
+  a current statement from another authority, the first authority retrieves
+  the other's statement.
+
+  Once an authority has a vote from another authority, it makes it available
+  at
+      http://<hostname>/tor/status-vote/current/<fp>.z
+  where <fp> is the fingerprint of the other authority's identity key.
+
+  The consensus network status, along with as many signatures as the server
+  currently knows, should be available at
+      http://<hostname>/tor/status-vote/current/consensus.z
+  All of the detached signatures it knows for consensus status should be
+  available at:
+      http://<hostname>/tor/status-vote/current/consensus-signatures.z
+
+  Once an authority has computed and signed a consensus network status, it
+  should send its detached signature to each other authority at the URL
+      http://<hostname>/tor/post/consensus-signature
+
+
   [XXXX Store votes to disk.]
+
+2.3.2. Serving a consensus directory
+
+  Once the authority is done getting signatures on the consensus directory,
+  it should serve it from:
+      http://<hostname>/tor/status/consensus.z
+
+  Caches SHOULD download consensus directories from an authority and serve
+  them from the same URL.
+
+2.3.3. Timeline and synchronization
+
+  [XXXX]
 
 2.4. Distributing routerdescs between authorities
 
@@ -273,6 +328,16 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
 
 4. Migration
 
-  For directory voting, ...
+  For directory voting:
+     * It would be cool if caches could get ready to download these, verify
+       enough signatures, and serve them now.  That way once stuff works all
+       we need to do is upgrade the authorities.  Caches don't need to verify
+       the correctness of the format so long as it's signed.
 
-caches need to start caching consensuses and accepting multisigned documents.
+  For dropping the "opt" requirement:
+     * stop requiring it as of 0.1.2.x.  Stop generating it once earlier
+       formats are obsolete.
+
+  For multilevel keys:
+     * no idea
+
