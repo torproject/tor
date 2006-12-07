@@ -1302,6 +1302,7 @@ test_mmap(void)
   /* make sure we can unlink. */
   test_assert(unlink(fname1) == 0);
   test_streq(mapping->data, "Short file.");
+  tor_munmap_file(mapping);
 #endif
 
   /* Make sure that we fail to map a no-longer-existent file. */
