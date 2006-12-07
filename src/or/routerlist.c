@@ -237,7 +237,7 @@ router_rebuild_store(int force)
   or_options_t *options;
   size_t fname_len;
   smartlist_t *chunk_list = NULL;
-  char *fname = NULL;
+  char *fname = NULL, *fname_tmp = NULL;
   int r = -1, i;
   off_t offset = 0;
   smartlist_t *old_routers, *routers;
@@ -255,7 +255,11 @@ router_rebuild_store(int force)
   options = get_options();
   fname_len = strlen(options->DataDirectory)+32;
   fname = tor_malloc(fname_len);
+  fname_tmp = tor_malloc(fname_len);
   tor_snprintf(fname, fname_len, "%s/cached-routers", options->DataDirectory);
+  tor_snprintf(fname_tmp, fname_len, "%s/cached-routers.tmp",
+               options->DataDirectory);
+
   chunk_list = smartlist_create();
 
   old_routers = smartlist_create();
@@ -284,17 +288,22 @@ router_rebuild_store(int force)
       smartlist_add(chunk_list, c);
     });
   }
-  if (write_chunks_to_file(fname, chunk_list, 1)<0) {
+  if (write_chunks_to_file(fname_tmp, chunk_list, 1)<0) {
     log_warn(LD_FS, "Error writing router store to disk.");
     goto done;
   }
   /* Our mmap is now invalid. */
   if (routerlist->mmap_descriptors) {
     tor_munmap_file(routerlist->mmap_descriptors);
-    routerlist->mmap_descriptors = tor_mmap_file(fname);
-    if (! routerlist->mmap_descriptors)
-      log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
   }
+  if (replace_file(fname_tmp, fname)<0) {
+    log_warn(LD_FS, "Error replacing old router store.");
+    goto done;
+  }
+
+  routerlist->mmap_descriptors = tor_mmap_file(fname);
+  if (! routerlist->mmap_descriptors)
+    log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
 
   offset = 0;
   for (i = 0; i < 2; ++i) {
