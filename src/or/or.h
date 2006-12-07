@@ -1655,19 +1655,30 @@ typedef struct {
 /** Persistent state for an onion router, as saved to disk. */
 typedef struct {
   uint32_t _magic;
-  /** True iff this state has been changed since it was last read/written
-   * to the disk. */
-  int dirty;
+  /** The time at which we next plan to write the state to the disk.  Equal to
+   * TIME_MAX if there are no saveable changes, 0 if there are changes that
+   * should be saved right away. */
+  time_t next_write;
 
+  /** When was the state last written to disk? */
   time_t LastWritten;
+
+  /** Fields for */
   time_t AccountingIntervalStart;
   uint64_t AccountingBytesReadInInterval;
   uint64_t AccountingBytesWrittenInInterval;
   int AccountingSecondsActive;
   uint64_t AccountingExpectedUsage;
 
+  /** A list of Entry Guard-related configuration lines. */
   config_line_t *EntryGuards;
 
+  /** These fields hold information on the history of bandwidth usage for
+   * servers.  The "Ends" fields hold the time when we last updated the
+   * bandwidth usage. The "Interval" fields hold the granularity, in seconds,
+   * of the entries of Values.  The "Values" lists hold decimal string
+   * representations of the number of bytes read or written in each
+   * interval. */
   time_t      BWHistoryReadEnds;
   int         BWHistoryReadInterval;
   smartlist_t *BWHistoryReadValues;
@@ -1675,10 +1686,23 @@ typedef struct {
   int         BWHistoryWriteInterval;
   smartlist_t *BWHistoryWriteValues;
 
+  /** What version of Tor write this state file? */
   char *TorVersion;
 
+  /** holds any unrecognized values we found in the state file, in the order
+   * in which we found them. */
   config_line_t *ExtraLines;
 } or_state_t;
+
+static void or_state_mark_dirty(or_state_t *state, time_t when);
+/** Change the next_write time of <b>state</b> to <b>when</b>, unless the
+ * state is already scheduled to be written to disk earlier than <b>when</b>.
+ */
+static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
+{
+  if (state->next_write > when)
+    state->next_write = when;
+}
 
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
@@ -1897,7 +1921,7 @@ const char *get_torrc_fname(void);
 
 or_state_t *get_or_state(void);
 int or_state_load(void);
-int or_state_save(void);
+int or_state_save(time_t now);
 
 int config_getinfo_helper(const char *question, char **answer);
 

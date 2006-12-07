@@ -3934,8 +3934,8 @@ or_state_load(void)
   or_state_set(new_state);
   new_state = NULL;
   if (!contents) {
-    global_state->dirty = 1;
-    or_state_save();
+    global_state->next_write = 0;
+    or_state_save(time(NULL));
   }
   r = 0;
 
@@ -3950,7 +3950,7 @@ or_state_load(void)
 
 /** Write the persistent state to disk. Return 0 for success, <0 on failure. */
 int
-or_state_save(void)
+or_state_save(time_t now)
 {
   char *state, *contents;
   char tbuf[ISO_TIME_LEN+1];
@@ -3959,11 +3959,14 @@ or_state_save(void)
 
   tor_assert(global_state);
 
+  if (global_state->next_write > now)
+    return 0;
+
+  /* Call everything else that might dirty the state even more, in order
+   * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
-
-  if (!global_state->dirty)
-    return 0;
+  accounting_run_housekeeping(now);
 
   global_state->LastWritten = time(NULL);
   tor_free(global_state->TorVersion);
@@ -3988,7 +3991,7 @@ or_state_save(void)
   tor_free(fname);
   tor_free(contents);
 
-  global_state->dirty = 0;
+  global_state->next_write = TIME_MAX;
   return 0;
 }
 

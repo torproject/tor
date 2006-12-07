@@ -666,6 +666,8 @@ rep_hist_update_state(or_state_t *state)
     if (! server_mode(get_options())) {
       /* Clients don't need to store bandwidth history persistently;
        * force these values to the defaults. */
+      if (*s_begins != 0 || *s_interval != 900)
+        or_state_mark_dirty(get_or_state(), time(NULL)+600);
       *s_begins = 0;
       *s_interval = 900;
       *s_values = smartlist_create();
@@ -682,7 +684,8 @@ rep_hist_update_state(or_state_t *state)
       smartlist_split_string(*s_values, buf, ",", SPLIT_SKIP_SPACE, 0);
   }
   tor_free(buf);
-  state->dirty = 1;
+  if (server_mode(get_options()))
+    or_state_mark_dirty(get_or_state(), time(NULL)+(2*3600));
 }
 
 /** Set bandwidth history from our saved state. */

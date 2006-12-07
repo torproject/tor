@@ -830,9 +830,6 @@ run_scheduled_events(time_t now)
      * and the rend cache. */
     rep_history_clean(now - options->RephistTrackTime);
     rend_cache_clean();
-    /* And while we are at it, save the state with bandwidth history
-     * and more. */
-    or_state_save();
  }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
@@ -934,6 +931,10 @@ run_scheduled_events(time_t now)
    * we'll pass it to poll/select and bad things will happen.
    */
   close_closeable_connections();
+
+  /** 8b. And if anything in our state is ready to get flushed to disk, we
+   * flush it. */
+  or_state_save(now);
 
   /** 9. and if we're a server, check whether our DNS is telling stories to
    * us. */
@@ -1595,7 +1596,8 @@ tor_cleanup(void)
       unlink(options->PidFile);
     if (accounting_is_enabled(options))
       accounting_record_bandwidth_usage(time(NULL), get_or_state());
-    or_state_save();
+    or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */
+    or_state_save(time(NULL));
   }
   tor_free_all(0); /* move tor_free_all back into the ifdef below later. XXX*/
   crypto_global_cleanup();

@@ -391,8 +391,8 @@ reset_accounting(time_t now)
 static INLINE int
 time_to_record_bandwidth_usage(time_t now)
 {
-  /* Note every 60 sec */
-#define NOTE_INTERVAL (60)
+  /* Note every 600 sec */
+#define NOTE_INTERVAL (600)
   /* Or every 20 megabytes */
 #define NOTE_BYTES 20*(1024*1024)
   static uint64_t last_read_bytes_noted = 0;
@@ -575,7 +575,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
   state->AccountingBytesWrittenInInterval = n_bytes_written_in_interval;
   state->AccountingSecondsActive = n_seconds_active_in_interval;
   state->AccountingExpectedUsage = expected_bandwidth_usage;
-  state->dirty = 1;
+  or_state_mark_dirty(state, 60);
 
   return r;
 }
@@ -760,6 +760,7 @@ hibernate_begin(int new_state, time_t now)
 
   hibernate_state = new_state;
   accounting_record_bandwidth_usage(now, get_or_state());
+  or_state_mark_dirty(get_or_state(), 0);
 }
 
 /** Called when we've been hibernating and our timeout is reached. */
@@ -827,6 +828,7 @@ hibernate_go_dormant(time_t now)
   }
 
   accounting_record_bandwidth_usage(now, get_or_state());
+  or_state_mark_dirty(get_or_state(), 0);
 }
 
 /** Called when hibernate_end_time has arrived. */

@@ -2376,13 +2376,16 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
 }
 
 /** Our list of entry guards has changed, or some element of one
- * of our entry guards has changed. Write the changes to disk. */
+ * of our entry guards has changed. Write the changes to disk within
+ * the next 5 minutes.
+ */
 static void
 entry_guards_changed(void)
 {
   entry_guards_dirty = 1;
 
-  or_state_save();
+  /* or_state_save() will call entry_guards_update_state(). */
+  or_state_mark_dirty(get_or_state(), time(NULL)+600);
 }
 
 /** If the entry guard info has not changed, do nothing and return.
@@ -2433,7 +2436,7 @@ entry_guards_update_state(or_state_t *state)
         next = &(line->next);
       }
     });
-  state->dirty = 1;
+  or_state_mark_dirty(get_or_state(), 0);
   entry_guards_dirty = 0;
 }
 
