@@ -305,8 +305,8 @@ rend_service_update_descriptor(rend_service_t *service)
   for (i=0; i < n; ++i) {
     router = router_get_by_nickname(smartlist_get(service->intro_nodes, i),1);
     if (!router) {
-      log_info(LD_REND,"Router '%s' not found. Skipping.",
-               (char*)smartlist_get(service->intro_nodes, i));
+      log_info(LD_REND,"Router '%s' not found for intro point %d. Skipping.",
+               safe_str((char*)smartlist_get(service->intro_nodes, i)), i);
       continue;
     }
     circ = find_intro_circuit(router, service->pk_digest);
@@ -534,7 +534,7 @@ rend_service_introduce(circuit_t *circuit, const char *request,
     router = router_get_by_nickname(rp_nickname, 0);
     if (!router) {
       log_info(LD_REND, "Couldn't find router %s named in rendezvous cell.",
-               escaped(rp_nickname));
+               escaped_safe_str(rp_nickname));
       goto err;
     }
 
@@ -579,14 +579,14 @@ rend_service_introduce(circuit_t *circuit, const char *request,
   }
   if (!launched) { /* give up */
     log_warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
-             "point '%s' for service %s.",
-             extend_info->nickname, serviceid);
+             "point %s for service %s.",
+             escaped_safe_str(extend_info->nickname), serviceid);
     goto err;
   }
   log_info(LD_REND,
-           "Accepted intro; launching circuit to '%s' "
+           "Accepted intro; launching circuit to %s "
            "(cookie %s) for service %s.",
-           extend_info->nickname, hexcookie, serviceid);
+           escaped_safe_str(extend_info->nickname), hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
   memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
@@ -1085,7 +1085,7 @@ rend_service_dump_stats(int severity)
   int i,j;
   routerinfo_t *router;
   rend_service_t *service;
-  char *nickname;
+  const char *nickname;
   circuit_t *circ;
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
@@ -1094,7 +1094,8 @@ rend_service_dump_stats(int severity)
         service->directory);
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       nickname = smartlist_get(service->intro_nodes, j);
-      router = router_get_by_nickname(smartlist_get(service->intro_nodes,j),1);
+      router = router_get_by_nickname(nickname, 1);
+      nickname = safe_str(nickname);
       if (!router) {
         log(severity, LD_GENERAL, "  Intro point at %s: unrecognized router",
             nickname);

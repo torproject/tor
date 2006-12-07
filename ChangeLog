@@ -1,4 +1,8 @@
 Changes in version 0.1.1.26 - 200?-??-??
+  o Security bugfixes:
+    - Do not log introduction points for hidden services if SafeLogging
+      is set.
+
   o Minor bugfixes:
     - Fix an assert failure when a directory authority sets
       AuthDirRejectUnlisted and then receives a descriptor from an
