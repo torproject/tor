@@ -590,15 +590,15 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   }
   if (!launched) { /* give up */
     log_warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
-             "point '%s' for service %s.",
+             "point %s for service %s.",
              escaped_safe_str(extend_info->nickname), serviceid);
     reason = END_CIRC_REASON_CONNECTFAILED;
     goto err;
   }
   log_info(LD_REND,
-           "Accepted intro; launching circuit to '%s' "
+           "Accepted intro; launching circuit to %s "
            "(cookie %s) for service %s.",
-           extend_info->nickname, hexcookie, serviceid);
+           escaped_safe_str(extend_info->nickname), hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
   memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
@@ -693,7 +693,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
 
   log_info(LD_REND,
            "Launching circuit to introduction point %s for service %s",
-           nickname, service->service_id);
+           escaped_safe_str(nickname), service->service_id);
 
   rep_hist_note_used_internal(time(NULL), 1, 0);
 
@@ -702,8 +702,8 @@ rend_service_launch_establish_intro(rend_service_t *service,
                                         nickname, 1, 0, 1);
   if (!launched) {
     log_info(LD_REND,
-             "Can't launch circuit to establish introduction at '%s'.",
-             nickname);
+             "Can't launch circuit to establish introduction at %s.",
+             escaped_safe_str(nickname));
     return -1;
   }
   strlcpy(launched->rend_query, service->service_id,
