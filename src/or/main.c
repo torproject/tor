@@ -1066,7 +1066,7 @@ do_hup(void)
 
   log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
   if (accounting_is_enabled(options))
-    accounting_record_bandwidth_usage(time(NULL));
+    accounting_record_bandwidth_usage(time(NULL), get_or_state());
 
   router_reset_warnings();
   routerlist_reset_warnings();
@@ -1594,7 +1594,7 @@ tor_cleanup(void)
     if (options->PidFile)
       unlink(options->PidFile);
     if (accounting_is_enabled(options))
-      accounting_record_bandwidth_usage(time(NULL));
+      accounting_record_bandwidth_usage(time(NULL), get_or_state());
     or_state_save();
   }
   tor_free_all(0); /* move tor_free_all back into the ifdef below later. XXX*/

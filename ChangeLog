@@ -1,4 +1,9 @@
 Changes in version 0.1.2.5-xxxx - 200?-??-??
+  o Minor features
+    - Start using the state file to store bandwidth accounting data:
+      the bw_accounting file is now obsolete.  We'll keep generating it
+      for a while for people who are still using 0.1.2.4-alpha.
+
   o Minor bugfixes;
     - Fix a bug when a PF socket is first used.  (Patch from Fabian
       Keil.)

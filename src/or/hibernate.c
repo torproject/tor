@@ -420,12 +420,8 @@ accounting_run_housekeeping(time_t now)
     configure_accounting(now);
   }
   if (time_to_record_bandwidth_usage(now)) {
-    if (accounting_record_bandwidth_usage(now)) {
-      log_err(LD_FS, "Couldn't record bandwidth usage to disk; exiting.");
-      /* This can fail when we're out of fd's, causing a crash.
-       * The current answer is to reserve 32 more than we need, in
-       * set_max_file_descriptors(). */
-      exit(1);
+    if (accounting_record_bandwidth_usage(now, get_or_state())) {
+      log_warn(LD_FS, "Couldn't record bandwidth usage to disk.");
     }
   }
 }
@@ -538,7 +534,7 @@ accounting_set_wakeup_time(void)
 /** Save all our bandwidth tracking information to disk. Return 0 on
  * success, -1 on failure. */
 int
-accounting_record_bandwidth_usage(time_t now)
+accounting_record_bandwidth_usage(time_t now, or_state_t *state)
 {
   char buf[128];
   char fname[512];
@@ -546,8 +542,11 @@ accounting_record_bandwidth_usage(time_t now)
   char time2[ISO_TIME_LEN+1];
   char *cp = buf;
   time_t tmp;
-  /* Format is:
-     Version\nTime\nTime\nRead\nWrite\nSeconds\nExpected-Rate\n */
+  int r;
+
+  /* First, update bw_accounting. Until 0.1.2.5-x, this was the only place
+   * we stored this information. The format is:
+   * Version\nTime\nTime\nRead\nWrite\nSeconds\nExpected-Rate\n */
 
   format_iso_time(time1, interval_start_time);
   format_iso_time(time2, now);
@@ -568,8 +567,17 @@ accounting_record_bandwidth_usage(time_t now)
                (unsigned long)expected_bandwidth_usage);
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
                get_options()->DataDirectory);
+  r = write_str_to_file(fname, buf, 0);
 
-  return write_str_to_file(fname, buf, 0);
+  /* Now update the state */
+  state->AccountingIntervalStart = interval_start_time;
+  state->AccountingBytesReadInInterval = n_bytes_read_in_interval;
+  state->AccountingBytesWrittenInInterval = n_bytes_written_in_interval;
+  state->AccountingSecondsActive = n_seconds_active_in_interval;
+  state->AccountingExpectedUsage = expected_bandwidth_usage;
+  state->dirty = 1;
+
+  return r;
 }
 
 /** Read stored accounting information from disk. Return 0 on success;
@@ -582,60 +590,80 @@ read_bandwidth_usage(void)
   time_t t1, t2;
   uint64_t n_read, n_written;
   uint32_t expected_bw, n_seconds;
-  smartlist_t *elts;
-  int ok;
+  smartlist_t *elts = NULL;
+  int ok, use_state=0, r=-1;
+  or_state_t *state = get_or_state();
 
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
                get_options()->DataDirectory);
-  if (!(s = read_file_to_str(fname, 0, NULL))) {
-    return 0;
-  }
   elts = smartlist_create();
-  smartlist_split_string(elts, s, "\n", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
-  tor_free(s);
-
-  if (smartlist_len(elts)<1 ||
-      atoi(smartlist_get(elts,0)) != BW_ACCOUNTING_VERSION) {
-    log_warn(LD_ACCT, "Unrecognized bw_accounting file version: %s",
-             (const char*)smartlist_get(elts,0));
-    goto err;
+  if ((s = read_file_to_str(fname, 0, NULL)) == NULL) {
+    /* We have an old-format bw_accounting file. */
+    use_state = 1;
   }
-  if (smartlist_len(elts) < 7) {
+  if (!use_state) {
+    smartlist_split_string(elts, s, "\n",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
+    tor_free(s);
+
+    if (smartlist_len(elts)<1 ||
+        atoi(smartlist_get(elts,0)) != BW_ACCOUNTING_VERSION) {
+      log_warn(LD_ACCT, "Unrecognized bw_accounting file version: %s",
+               (const char*)smartlist_get(elts,0));
+      use_state = 1;
+    }
+  }
+  if (!use_state && smartlist_len(elts) < 7) {
     log_warn(LD_ACCT, "Corrupted bw_accounting file: %d lines",
              smartlist_len(elts));
-    goto err;
+    use_state = 1;
   }
+  if (!use_state && parse_iso_time(smartlist_get(elts,2), &t2)) {
+    log_warn(LD_ACCT, "Error parsing bandwidth usage last-written time");
+    use_state = 1;
+  }
+  if (use_state || t2 <= state->LastWritten) {
+    /* Okay; it looks like the state file is more up-to-date than the
+     * bw_accounting file, or the bw_accounting file is nonexistant,
+     * or the bw_accounting file is corrupt.
+     */
+    log_info(LD_ACCT, "Reading bandwdith accounting data from state file");
+    n_bytes_read_in_interval = state->AccountingBytesReadInInterval;
+    n_bytes_written_in_interval = state->AccountingBytesWrittenInInterval;
+    n_seconds_active_in_interval = state->AccountingSecondsActive;
+    interval_start_time = state->AccountingIntervalStart;
+    expected_bandwidth_usage = state->AccountingExpectedUsage;
+    r = 0;
+    goto done;
+  }
+
   if (parse_iso_time(smartlist_get(elts,1), &t1)) {
     log_warn(LD_ACCT, "Error parsing bandwidth usage start time.");
-    goto err;
-  }
-  if (parse_iso_time(smartlist_get(elts,2), &t2)) {
-    log_warn(LD_ACCT, "Error parsing bandwidth usage last-written time");
-    goto err;
+    goto done;
   }
   n_read = tor_parse_uint64(smartlist_get(elts,3), 10, 0, UINT64_MAX,
                             &ok, NULL);
   if (!ok) {
     log_warn(LD_ACCT, "Error parsing number of bytes read");
-    goto err;
+    goto done;
   }
   n_written = tor_parse_uint64(smartlist_get(elts,4), 10, 0, UINT64_MAX,
                                &ok, NULL);
   if (!ok) {
     log_warn(LD_ACCT, "Error parsing number of bytes written");
-    goto err;
+    goto done;
   }
   n_seconds = (uint32_t)tor_parse_ulong(smartlist_get(elts,5), 10,0,ULONG_MAX,
                                         &ok, NULL);
   if (!ok) {
     log_warn(LD_ACCT, "Error parsing number of seconds live");
-    goto err;
+    goto done;
   }
   expected_bw =(uint32_t)tor_parse_ulong(smartlist_get(elts,6), 10,0,ULONG_MAX,
                                         &ok, NULL);
   if (!ok) {
     log_warn(LD_ACCT, "Error parsing expected bandwidth");
-    goto err;
+    goto done;
   }
 
   n_bytes_read_in_interval = n_read;
@@ -656,14 +684,14 @@ read_bandwidth_usage(void)
        (unsigned long)((uint64_t)expected_bandwidth_usage*1024/60),
        U64_PRINTF_ARG(n_bytes_read_in_interval),
        U64_PRINTF_ARG(n_bytes_written_in_interval));
-  SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
-  smartlist_free(elts);
 
-  return 0;
- err:
-  SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
-  smartlist_free(elts);
-  return -1;
+  r = 0;
+ done:
+  if (elts) {
+    SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
+    smartlist_free(elts);
+  }
+  return r;
 }
 
 /** Return true iff we have sent/received all the bytes we are willing
@@ -731,7 +759,7 @@ hibernate_begin(int new_state, time_t now)
   }
 
   hibernate_state = new_state;
-  accounting_record_bandwidth_usage(now);
+  accounting_record_bandwidth_usage(now, get_or_state());
 }
 
 /** Called when we've been hibernating and our timeout is reached. */
@@ -798,7 +826,7 @@ hibernate_go_dormant(time_t now)
       connection_mark_for_close(conn);
   }
 
-  accounting_record_bandwidth_usage(now);
+  accounting_record_bandwidth_usage(now, get_or_state());
 }
 
 /** Called when hibernate_end_time has arrived. */
