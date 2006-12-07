@@ -12,6 +12,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
   o Security bugfixes:
     - Do not log introduction points for hidden services if SafeLogging
       is set.
+    - Clients do not store bandwidth history in their state files. (This
+      shouldn't be an exploitable security issue, but it's better to be
+      safe.)
 
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug

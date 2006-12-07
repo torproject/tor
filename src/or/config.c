@@ -274,11 +274,11 @@ static config_var_t _state_vars[] = {
   VAR("EntryGuards",             LINELIST_V,  EntryGuards,             NULL),
 
   VAR("BWHistoryReadEnds",       ISOTIME,     BWHistoryReadEnds,      NULL),
-  VAR("BWHistoryReadInterval",   UINT,        BWHistoryReadInterval,  NULL),
-  VAR("BWHistoryReadValues",     CSV,         BWHistoryReadValues,    NULL),
+  VAR("BWHistoryReadInterval",   UINT,        BWHistoryReadInterval,  "900"),
+  VAR("BWHistoryReadValues",     CSV,         BWHistoryReadValues,    ""),
   VAR("BWHistoryWriteEnds",      ISOTIME,     BWHistoryWriteEnds,     NULL),
-  VAR("BWHistoryWriteInterval",  UINT,        BWHistoryWriteInterval, NULL),
-  VAR("BWHistoryWriteValues",    CSV,         BWHistoryWriteValues,   NULL),
+  VAR("BWHistoryWriteInterval",  UINT,        BWHistoryWriteInterval, "900"),
+  VAR("BWHistoryWriteValues",    CSV,         BWHistoryWriteValues,   ""),
 
   VAR("TorVersion",              STRING,      TorVersion,             NULL),
 
@@ -3968,7 +3968,7 @@ or_state_save(void)
   global_state->LastWritten = time(NULL);
   tor_free(global_state->TorVersion);
   global_state->TorVersion = tor_strdup("Tor " VERSION);
-  state = config_dump(&state_format, global_state, 0);
+  state = config_dump(&state_format, global_state, 1);
   len = strlen(state)+128;
   contents = tor_malloc(len);
   format_local_iso_time(tbuf, time(NULL));

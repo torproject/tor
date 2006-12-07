@@ -659,12 +659,20 @@ rep_hist_update_state(or_state_t *state)
     s_interval= r?&state->BWHistoryReadInterval:&state->BWHistoryWriteInterval;
     s_values  = r?&state->BWHistoryReadValues  :&state->BWHistoryWriteValues;
 
-    *s_begins = b->next_period;
-    *s_interval = NUM_SECS_BW_SUM_INTERVAL;
     if (*s_values) {
       SMARTLIST_FOREACH(*s_values, char *, cp, tor_free(cp));
       smartlist_free(*s_values);
     }
+    if (! server_mode(get_options())) {
+      /* Clients don't need to store bandwidth history persistently;
+       * force these values to the defaults. */
+      *s_begins = 0;
+      *s_interval = 900;
+      *s_values = smartlist_create();
+      continue;
+    }
+    *s_begins = b->next_period;
+    *s_interval = NUM_SECS_BW_SUM_INTERVAL;
     cp = buf;
     cp += rep_hist_fill_bandwidth_history(cp, len, b);
     tor_snprintf(cp, len-(cp-buf), cp == buf ? U64_FORMAT : ","U64_FORMAT,
