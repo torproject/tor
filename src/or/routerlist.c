@@ -4187,9 +4187,11 @@ networkstatus_getinfo_helper_single(routerstatus_t *rs)
  * newly-allocated string containing networkstatus lines for the appropriate
  * ORs.  Return 0 on success, -1 on unrecognized question format. */
 int
-networkstatus_getinfo_helper(const char *question, char **answer)
+getinfo_helper_networkstatus(control_connection_t *conn,
+                             const char *question, char **answer)
 {
   local_routerstatus_t *status;
+  (void) conn;
 
   if (!routerstatus_list) {
     *answer = tor_strdup("");

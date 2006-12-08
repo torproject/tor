@@ -658,13 +658,12 @@ policy_is_reject_star(addr_policy_t *p)
 }
 
 int
-policies_getinfo_helper(const char *question, char **answer)
+getinfo_helper_policies(control_connection_t *conn,
+                        const char *question, char **answer)
 {
+  (void) conn;
   if (!strcmp(question, "exit-policy/default")) {
     *answer = tor_strdup(DEFAULT_EXIT_POLICY);
-//  } else if (!strcmp(question, "exit-policy/prepend")) {
-  } else {
-    *answer = NULL;
   }
   return 0;
 }

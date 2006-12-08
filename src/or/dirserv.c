@@ -629,14 +629,21 @@ directory_remove_invalid(void)
  * string and return it. Used by dirserv operators to keep track of
  * fast nodes that haven't registered.
  */
-char *
-dirserver_getinfo_unregistered(const char *question)
+int
+getinfo_helper_dirserv_unregistered(control_connection_t *control_conn,
+                                    const char *question, char **answer_out)
 {
   smartlist_t *answerlist;
   char buf[1024];
   char *answer;
   int min_bw = atoi(question);
   routerlist_t *rl = router_get_routerlist();
+
+  (void) control_conn;
+
+  if (strcmpstart(question, "unregistered-servers-"))
+    return 0;
+  question += strlen("unregistered-servers-");
 
   answerlist = smartlist_create();
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ent, {
@@ -654,7 +661,8 @@ dirserver_getinfo_unregistered(const char *question)
   answer = smartlist_join_strings(answerlist, "\r\n", 0, NULL);
   SMARTLIST_FOREACH(answerlist, char *, cp, tor_free(cp));
   smartlist_free(answerlist);
-  return answer;
+  *answer_out = answer;
+  return 0;
 }
 
 /** Mark the directory as <b>dirty</b> -- when we're next asked for a

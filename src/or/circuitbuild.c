@@ -2447,8 +2447,11 @@ entry_guards_update_state(or_state_t *state)
  * For backward compatibility, we also handle the string "helper-nodes".
  * */
 int
-entry_guards_getinfo(int use_long_names, const char *question, char **answer)
+getinfo_helper_entry_guards(control_connection_t *conn,
+                            const char *question, char **answer)
 {
+  int use_long_names = conn->use_long_names;
+
   if (!strcmp(question,"entry-guards") ||
       !strcmp(question,"helper-nodes")) {
     smartlist_t *sl = smartlist_create();

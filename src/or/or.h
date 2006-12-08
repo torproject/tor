@@ -1808,8 +1808,8 @@ void entry_nodes_should_be_added(void);
 void entry_guards_prepend_from_config(void);
 void entry_guards_update_state(or_state_t *state);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
-int entry_guards_getinfo(int use_long_names,
-                         const char *question, char **answer);
+int getinfo_helper_entry_guards(control_connection_t *conn,
+                                const char *question, char **answer);
 void entry_guards_free_all(void);
 
 /********************************* circuitlist.c ***********************/
@@ -1923,7 +1923,8 @@ or_state_t *get_or_state(void);
 int or_state_load(void);
 int or_state_save(time_t now);
 
-int config_getinfo_helper(const char *question, char **answer);
+int getinfo_helper_config(control_connection_t *conn,
+                          const char *question, char **answer);
 
 /********************************* connection.c ***************************/
 
@@ -2227,7 +2228,8 @@ int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_descriptor(const char *desc, const char **msg);
-char *dirserver_getinfo_unregistered(const char *question);
+int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
+                                        const char *question, char **answer);
 void dirserv_free_descriptors(void);
 int dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
                                                    time_t now);
@@ -2290,7 +2292,8 @@ int accounting_record_bandwidth_usage(time_t now, or_state_t *state);
 void hibernate_begin_shutdown(void);
 int we_are_hibernating(void);
 void consider_hibernation(time_t now);
-int accounting_getinfo_helper(const char *question, char **answer);
+int getinfo_helper_accounting(control_connection_t *conn,
+                              const char *question, char **answer);
 void accounting_set_bandwidth_usage_from_state(or_state_t *state);
 
 /********************************* main.c ***************************/
@@ -2387,7 +2390,8 @@ int policies_parse_exit_policy(config_line_t *cfg,
                                int rejectprivate);
 int exit_policy_is_general_exit(addr_policy_t *policy);
 int policy_is_reject_star(addr_policy_t *policy);
-int policies_getinfo_helper(const char *question, char **answer);
+int getinfo_helper_policies(control_connection_t *conn,
+                            const char *question, char **answer);
 
 void addr_policy_free(addr_policy_t *p);
 void policies_free_all(void);
@@ -2749,7 +2753,8 @@ int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
 const char *esc_router_info(routerinfo_t *router);
 
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
-int networkstatus_getinfo_helper(const char *question, char **answer);
+int getinfo_helper_networkstatus(control_connection_t *conn,
+                                 const char *question, char **answer);
 
 /********************************* routerparse.c ************************/
 

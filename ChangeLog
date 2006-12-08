@@ -28,6 +28,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
 
   o Controller features
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.
+    - Reimplement GETINFO so that info/names stays in sync with the
+      actual keys.
 
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug

@@ -196,6 +196,7 @@ static int handle_control_signal(control_connection_t *conn, uint32_t len,
                                  const char *body);
 static int handle_control_mapaddress(control_connection_t *conn, uint32_t len,
                                      const char *body);
+static char *list_getinfo_options(void);
 static int handle_control_getinfo(control_connection_t *conn, uint32_t len,
                                   const char *body);
 static int handle_control_extendcircuit(control_connection_t *conn,
@@ -1424,71 +1425,15 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** Return a newly allocated string listing all valid GETINFO fields as
- * required by GETINFO info/names. */
-static char *
-list_getinfo_options(void)
-{
-  return tor_strdup(
-    "accounting/bytes Number of bytes read/written so far in interval.\n"
-    "accounting/bytes-left Number of bytes left to read/write in interval.\n"
-    "accounting/enabled Is accounting currently enabled?\n"
-    "accounting/hibernating Are we hibernating or awake?\n"
-    "accounting/interval-end Time when interval ends.\n"
-    "accounting/interval-start Time when interval starts.\n"
-    "accounting/interval-wake Time to wake up in this interval.\n"
-    "addr-mappings/all All current remapped addresses.\n"
-    "addr-mappings/cache Addresses remapped by DNS cache.\n"
-    "addr-mappings/configl Addresses remapped from configuration options.\n"
-    "addr-mappings/control Addresses remapped by a controller.\n"
-    "address The best guess at our external IP address.\n"
-    "circuit-status Status of each current circuit.\n"
-    "config-file Current location of the \"torrc\" file.\n"
-    "config/names List of configuration options, types, and documentation.\n"
-    "desc/id/* Server descriptor by hex ID.\n"
-    "desc/name/* Server descriptor by nickname.\n"
-    "desc/all-recent Latest server descriptor for every router.\n"
-    "dir/server/* Fetch server descriptors -- see dir-spec.txt.\n"
-    "dir/status/* Fetch networkstatus documents -- see dir-spec.txt.\n"
-    "entry-guards Which nodes will we use as entry guards?\n"
-    "events/names What events the controller can ask for.\n"
-    "exit-policy/default Default lines appended to config->ExitPolicy.\n"
-    "features/names What arguments can USEFEATURE take?\n"
-    "info/names List of GETINFO options, types, and documentation.\n"
-    "network-status List of hex IDs, nicknames, server statuses.\n"
-    "orconn-status Status of each current OR connection.\n"
-    "stream-status Status of each current application stream.\n"
-    "version The current version of Tor.\n");
-  // XXXX Uptodate!
-  /* This has been hard to keep up to date. Is it worth making
-  * a table with names, descriptions, whether to match with
-  * strsmpstart, and functions to call, so there's only one
-  * place to maintain? -RD */
-}
-
-/** Lookup the 'getinfo' entry <b>question</b>, and return
- * the answer in <b>*answer</b> (or NULL if key not recognized).
- * Return 0 if success or unrecognized, or -1 if recognized but
- * internal error. */
 static int
-handle_getinfo_helper(control_connection_t *control_conn,
-                      const char *question, char **answer)
+getinfo_helper_misc(control_connection_t *conn, const char *question,
+                    char **answer)
 {
-  *answer = NULL; /* unrecognized key by default */
+  (void) conn;
   if (!strcmp(question, "version")) {
     *answer = tor_strdup(VERSION);
   } else if (!strcmp(question, "config-file")) {
     *answer = tor_strdup(get_torrc_fname());
-  } else if (!strcmpstart(question, "accounting/")) {
-    return accounting_getinfo_helper(question, answer);
-  } else if (!strcmpstart(question, "helper-nodes")) { /* deprecated */
-    return entry_guards_getinfo(control_conn->use_long_names,
-                                question, answer);
-  } else if (!strcmpstart(question, "entry-guards")) {
-    return entry_guards_getinfo(control_conn->use_long_names,
-                                question, answer);
-  } else if (!strcmpstart(question, "config/")) {
-    return config_getinfo_helper(question, answer);
   } else if (!strcmp(question, "info/names")) {
     *answer = list_getinfo_options();
   } else if (!strcmp(question, "events/names")) {
@@ -1497,7 +1442,22 @@ handle_getinfo_helper(control_connection_t *control_conn,
                          "NS STATUS_GENERAL STATUS_CLIENT STATUS_SERVER");
   } else if (!strcmp(question, "features/names")) {
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
-  } else if (!strcmpstart(question, "desc/id/")) {
+  } else if (!strcmp(question, "address")) {
+    uint32_t addr;
+    if (router_pick_published_address(get_options(), &addr) < 0)
+      return -1;
+    *answer = tor_dup_addr(addr);
+  } else if (!strcmp(question, "dir-usage")) {
+    *answer = directory_dump_request_log();
+  }
+  return 0;
+}
+
+static int
+getinfo_helper_dir(control_connection_t *control_conn,
+                   const char *question, char **answer)
+{
+  if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
@@ -1526,11 +1486,70 @@ handle_getinfo_helper(control_connection_t *control_conn,
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
-  } else if (!strcmpstart(question, "ns/")) {
-    return networkstatus_getinfo_helper(question, answer);
-  } else if (!strcmpstart(question, "unregistered-servers-")) {
-    *answer = dirserver_getinfo_unregistered(question +
-                                             strlen("unregistered-servers-"));
+  } else if (!strcmpstart(question, "dir/server/")) {
+    size_t answer_len = 0, url_len = strlen(question)+2;
+    char *url = tor_malloc(url_len);
+    smartlist_t *descs = smartlist_create();
+    const char *msg;
+    int res;
+    char *cp;
+    tor_snprintf(url, url_len, "/tor/%s", question+4);
+    res = dirserv_get_routerdescs(descs, url, &msg);
+    if (res) {
+      log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
+      return -1;
+    }
+    SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
+                      answer_len += sd->signed_descriptor_len);
+    cp = *answer = tor_malloc(answer_len+1);
+    SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
+                      {
+                        memcpy(cp, signed_descriptor_get_body(sd),
+                               sd->signed_descriptor_len);
+                        cp += sd->signed_descriptor_len;
+                      });
+    *cp = '\0';
+    tor_free(url);
+    smartlist_free(descs);
+  } else if (!strcmpstart(question, "dir/status/")) {
+    size_t len;
+    char *cp;
+    if (get_options()->DirPort) {
+      smartlist_t *status_list = smartlist_create();
+      dirserv_get_networkstatus_v2(status_list,
+                                   question+strlen("dir/status/"));
+      SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
+      len = 0;
+      cp = *answer = tor_malloc(len+1);
+      SMARTLIST_FOREACH(status_list, cached_dir_t *, d, {
+          memcpy(cp, d->dir, d->dir_len);
+          cp += d->dir_len;
+        });
+      *cp = '\0';
+      smartlist_free(status_list);
+    } else {
+      smartlist_t *fp_list = smartlist_create();
+      smartlist_t *status_list = smartlist_create();
+      size_t fn_len = strlen(get_options()->DataDirectory)+HEX_DIGEST_LEN+32;
+      char *fn = tor_malloc(fn_len+1);
+      char hex_id[HEX_DIGEST_LEN+1];
+      dirserv_get_networkstatus_v2_fingerprints(
+                             fp_list, question+strlen("dir/status/"));
+      SMARTLIST_FOREACH(fp_list, const char *, fp, {
+          char *s;
+          base16_encode(hex_id, sizeof(hex_id), fp, DIGEST_LEN);
+          tor_snprintf(fn, fn_len, "%s/cached-status/%s",
+                       get_options()->DataDirectory, hex_id);
+          s = read_file_to_str(fn, 0, NULL);
+          if (s)
+            smartlist_add(status_list, s);
+        });
+      SMARTLIST_FOREACH(fp_list, char *, fp, tor_free(fp));
+      smartlist_free(fp_list);
+      *answer = smartlist_join_strings(status_list, "", 0, NULL);
+      SMARTLIST_FOREACH(status_list, char *, s, tor_free(s));
+      smartlist_free(status_list);
+    }
   } else if (!strcmp(question, "network-status")) {
     routerlist_t *routerlist = router_get_routerlist();
     int verbose = control_conn->use_long_names;
@@ -1538,7 +1557,15 @@ handle_getinfo_helper(control_connection_t *control_conn,
         list_server_status(routerlist->routers, answer, verbose ? 2 : 1) < 0) {
       return -1;
     }
-  } else if (!strcmp(question, "circuit-status")) {
+  }
+  return 0;
+}
+
+static int
+getinfo_helper_events(control_connection_t *control_conn,
+                      const char *question, char **answer)
+{
+  if (!strcmp(question, "circuit-status")) {
     circuit_t *circ;
     smartlist_t *status = smartlist_create();
     for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
@@ -1676,80 +1703,131 @@ handle_getinfo_helper(control_connection_t *control_conn,
     *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
-  } else if (!strcmp(question, "address")) {
-    uint32_t addr;
-    if (router_pick_published_address(get_options(), &addr) < 0)
-      return -1;
-    *answer = tor_dup_addr(addr);
-  } else if (!strcmp(question, "dir-usage")) {
-    *answer = directory_dump_request_log();
-  } else if (!strcmpstart(question, "dir/server/")) {
-    size_t answer_len = 0, url_len = strlen(question)+2;
-    char *url = tor_malloc(url_len);
-    smartlist_t *descs = smartlist_create();
-    const char *msg;
-    int res;
-    char *cp;
-    tor_snprintf(url, url_len, "/tor/%s", question+4);
-    res = dirserv_get_routerdescs(descs, url, &msg);
-    if (res) {
-      log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
-      return -1;
-    }
-    SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
-                      answer_len += sd->signed_descriptor_len);
-    cp = *answer = tor_malloc(answer_len+1);
-    SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
-                      {
-                        memcpy(cp, signed_descriptor_get_body(sd),
-                               sd->signed_descriptor_len);
-                        cp += sd->signed_descriptor_len;
-                      });
-    *cp = '\0';
-    tor_free(url);
-    smartlist_free(descs);
-  } else if (!strcmpstart(question, "dir/status/")) {
-    size_t len;
-    char *cp;
-    if (get_options()->DirPort) {
-      smartlist_t *status_list = smartlist_create();
-      dirserv_get_networkstatus_v2(status_list,
-                                   question+strlen("dir/status/"));
-      SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
-      len = 0;
-      cp = *answer = tor_malloc(len+1);
-      SMARTLIST_FOREACH(status_list, cached_dir_t *, d, {
-          memcpy(cp, d->dir, d->dir_len);
-          cp += d->dir_len;
-        });
-      *cp = '\0';
-      smartlist_free(status_list);
-    } else {
-      smartlist_t *fp_list = smartlist_create();
-      smartlist_t *status_list = smartlist_create();
-      size_t fn_len = strlen(get_options()->DataDirectory)+HEX_DIGEST_LEN+32;
-      char *fn = tor_malloc(fn_len+1);
-      char hex_id[HEX_DIGEST_LEN+1];
-      dirserv_get_networkstatus_v2_fingerprints(
-                             fp_list, question+strlen("dir/status/"));
-      SMARTLIST_FOREACH(fp_list, const char *, fp, {
-          char *s;
-          base16_encode(hex_id, sizeof(hex_id), fp, DIGEST_LEN);
-          tor_snprintf(fn, fn_len, "%s/cached-status/%s",
-                       get_options()->DataDirectory, hex_id);
-          s = read_file_to_str(fn, 0, NULL);
-          if (s)
-            smartlist_add(status_list, s);
-        });
-      SMARTLIST_FOREACH(fp_list, char *, fp, tor_free(fp));
-      smartlist_free(fp_list);
-      *answer = smartlist_join_strings(status_list, "", 0, NULL);
-      SMARTLIST_FOREACH(status_list, char *, s, tor_free(s));
-      smartlist_free(status_list);
-    }
-  } else if (!strcmpstart(question, "exit-policy/")) {
-    return policies_getinfo_helper(question, answer);
   }
+  return 0;
+}
+
+typedef int (*getinfo_helper_t)(control_connection_t *,
+                                const char *q, char **a);
+
+typedef struct getinfo_item_t {
+  const char *varname;
+  getinfo_helper_t fn;
+  const char *desc;
+  int is_prefix;
+} getinfo_item_t;
+
+#define ITEM(name, fn, desc) { name, getinfo_helper_##fn, desc, 0 }
+#define PREFIX(name, fn, desc) { name, getinfo_helper_##fn, desc, 1 }
+#define DOC(name, desc) { name, NULL, desc, 0 }
+
+static const getinfo_item_t getinfo_items[] = {
+  ITEM("version", misc, "The current version of Tor."),
+  ITEM("config-file", misc, "Current location of the \"torrc\" file."),
+  ITEM("accounting/bytes", accounting,
+       "Number of bytes read/written so far in the accounting interval."),
+  ITEM("accounting/bytes-left", accounting,
+      "Number of bytes left to write/read so far in the accounting interval."),
+  ITEM("accounting/enabled", accounting, "Is accounting currently enabled?"),
+  ITEM("accounting/hibernating", accounting, "Are we hibernating or awake?"),
+  ITEM("accounting/interval-start", accounting,
+       "Time when the accounting period starts."),
+  ITEM("accounting/interval-end", accounting,
+       "Time when the accounting period ends."),
+  ITEM("accounting/interval-warke", accounting,
+       "Time to wake up in this accounting period."),
+  /* deprecated */
+  ITEM("helper-nodes", entry_guards, NULL),
+  ITEM("entry-nodes", entry_guards,
+       "Which nodes are we using as entry guards?"),
+  PREFIX("config/", config, "Current configuration values."),
+  DOC("config/names",
+      "List of configuration options, types, and documentation."),
+  ITEM("info/names", misc,
+       "List of GETINFO options, types, and documentation."),
+  ITEM("events/names", misc,
+       "Events that the controller can ask for with SETEVENTS."),
+  ITEM("features/names", misc, "What arguments can USEFEATURE take?"),
+  PREFIX("desc/id/", dir, "Router descriptors by ID."),
+  PREFIX("desc/name/", dir, "Router descriptors by nickname."),
+  ITEM("desc/all-recent", dir,
+       "All non-expired, non-superseded router descriptors."),
+  PREFIX("ns/id/", networkstatus,
+         "Brief summary of router status by ID (v2 directory format)."),
+  PREFIX("ns/name/", networkstatus,
+         "Brief summary of router status by nickname (v2 directory format)."),
+
+  PREFIX("unregisterd-servers-", dirserv_unregistered, NULL),
+  ITEM("network-status", dir,
+       "Brief summary of router status (v1 directory format)"),
+  ITEM("circuit-status", events, "List of current circuits originating here."),
+  ITEM("stream-status", events,"List of current streams."),
+  ITEM("orconn-status", events, "A list of current OR connections."),
+  PREFIX("addr-mappings/", events, NULL),
+  DOC("addr-mappings/all", "Current address mappings."),
+  DOC("addr-mappings/cache", "Current cached DNS replies."),
+  DOC("addr-mappings/config", "Current address mappings from configuration."),
+  DOC("addr-mappings/control", "Current address mappings from controller."),
+
+  ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
+  ITEM("dir-usage", misc, "Breakdown of bytes transferred over DirPort."),
+  PREFIX("dir/server/", dir,"Router descriptors as retrieved from a DirPort."),
+  PREFIX("dir/status/", dir,"Networkstatus docs as retrieved from a DirPort."),
+  PREFIX("exit-policy/default", policies,
+         "The default value appended to the configured exit policy."),
+
+  { NULL, NULL, NULL, 0 }
+};
+
+static char *
+list_getinfo_options(void)
+{
+  int i;
+  char buf[300];
+  smartlist_t *lines = smartlist_create();
+  char *ans;
+  for (i = 0; getinfo_items[i].varname; ++i) {
+    if (!getinfo_items[i].desc)
+      continue;
+
+    tor_snprintf(buf, sizeof(buf), "%s%s -- %s\n",
+                 getinfo_items[i].varname,
+                 getinfo_items[i].is_prefix ? "*" : "",
+                 getinfo_items[i].desc);
+    smartlist_add(lines, tor_strdup(buf));
+  }
+  smartlist_sort_strings(lines);
+
+  ans = smartlist_join_strings(lines, "", 0, NULL);
+  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+  smartlist_free(lines);
+
+  return ans;
+}
+
+/** Lookup the 'getinfo' entry <b>question</b>, and return
+ * the answer in <b>*answer</b> (or NULL if key not recognized).
+ * Return 0 if success or unrecognized, or -1 if recognized but
+ * internal error. */
+static int
+handle_getinfo_helper(control_connection_t *control_conn,
+                      const char *question, char **answer)
+{
+  int i;
+  *answer = NULL; /* unrecognized key by default */
+
+  for (i = 0; getinfo_items[i].varname; ++i) {
+    int match;
+    if (getinfo_items[i].is_prefix)
+      match = !strcmpstart(question, getinfo_items[i].varname);
+    else
+      match = !strcmp(question, getinfo_items[i].varname);
+    if (match) {
+      tor_assert(getinfo_items[i].fn);
+      return getinfo_items[i].fn(control_conn, question, answer);
+    }
+  }
+
   return 0; /* unrecognized */
 }
 

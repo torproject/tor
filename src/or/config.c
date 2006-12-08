@@ -4000,8 +4000,10 @@ or_state_save(time_t now)
  * new string describing the supported configuration variables and their
  * types. */
 int
-config_getinfo_helper(const char *question, char **answer)
+getinfo_helper_config(control_connection_t *conn,
+                      const char *question, char **answer)
 {
+  (void) conn;
   if (!strcmp(question, "config/names")) {
     smartlist_t *sl = smartlist_create();
     int i;

@@ -928,8 +928,10 @@ consider_hibernation(time_t now)
 
 /** DOCDOC */
 int
-accounting_getinfo_helper(const char *question, char **answer)
+getinfo_helper_accounting(control_connection_t *conn,
+                          const char *question, char **answer)
 {
+  (void) conn;
   if (!strcmp(question, "accounting/enabled")) {
     *answer = tor_strdup(get_options()->AccountingMax ? "1" : "0");
   } else if (!strcmp(question, "accounting/hibernating")) {
