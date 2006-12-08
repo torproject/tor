@@ -1578,6 +1578,7 @@ generate_v2_networkstatus(void)
 }
 
 /* DOCDOC */
+/* XXXX This can be replace a lot of dirserv_get_networkstatus_v2(). */
 void
 dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
                                           const char *key)
@@ -1598,14 +1599,20 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
                       tor_memdup(me->cache_info.identity_digest, DIGEST_LEN));
     }
   } else if (!strcmp(key, "all")) {
-    digestmap_iter_t *iter;
-    iter = digestmap_iter_init(cached_v2_networkstatus);
-    while (!digestmap_iter_done(iter)) {
-      const char *ident;
-      void *val;
-      digestmap_iter_get(iter, &ident, &val);
-      smartlist_add(result, tor_memdup(ident, DIGEST_LEN));
-      iter = digestmap_iter_next(cached_v2_networkstatus, iter);
+    if (digestmap_size(cached_v2_networkstatus)) {
+      digestmap_iter_t *iter;
+      iter = digestmap_iter_init(cached_v2_networkstatus);
+      while (!digestmap_iter_done(iter)) {
+        const char *ident;
+        void *val;
+        digestmap_iter_get(iter, &ident, &val);
+        smartlist_add(result, tor_memdup(ident, DIGEST_LEN));
+        iter = digestmap_iter_next(cached_v2_networkstatus, iter);
+      }
+    } else {
+      SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                  trusted_dir_server_t *, ds,
+                  smartlist_add(result, tor_memdup(ds->digest, DIGEST_LEN)));
     }
     smartlist_sort_digests(result);
     if (smartlist_len(result) == 0)

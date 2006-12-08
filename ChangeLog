@@ -26,6 +26,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - When generating bandwidth history, round down to the nearest 1k. When
       storing accounting data, round up to the nearest 1k.
 
+  o Controller features
+    - Have GETINFO dir/status/* work on hosts with DirPort disabled.
+
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug
       reported by Mike Perry.)

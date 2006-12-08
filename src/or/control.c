@@ -1449,6 +1449,7 @@ list_getinfo_options(void)
     "desc/name/* Server descriptor by nickname.\n"
     "desc/all-recent Latest server descriptor for every router.\n"
     "dir/server/* Fetch server descriptors -- see dir-spec.txt.\n"
+    "dir/status/* Fetch networkstatus documents -- see dir-spec.txt.\n"
     "entry-guards Which nodes will we use as entry guards?\n"
     "events/names What events the controller can ask for.\n"
     "exit-policy/default Default lines appended to config->ExitPolicy.\n"
@@ -1708,24 +1709,44 @@ handle_getinfo_helper(control_connection_t *control_conn,
     tor_free(url);
     smartlist_free(descs);
   } else if (!strcmpstart(question, "dir/status/")) {
-    smartlist_t *status_list;
     size_t len;
     char *cp;
-    if (!get_options()->DirPort) {
-      log_warn(LD_CONTROL, "getinfo dir/status/ requires an open dirport.");
-      return -1;
+    if (get_options()->DirPort) {
+      smartlist_t *status_list = smartlist_create();
+      dirserv_get_networkstatus_v2(status_list,
+                                   question+strlen("dir/status/"));
+      SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
+      len = 0;
+      cp = *answer = tor_malloc(len+1);
+      SMARTLIST_FOREACH(status_list, cached_dir_t *, d, {
+          memcpy(cp, d->dir, d->dir_len);
+          cp += d->dir_len;
+        });
+      *cp = '\0';
+      smartlist_free(status_list);
+    } else {
+      smartlist_t *fp_list = smartlist_create();
+      smartlist_t *status_list = smartlist_create();
+      size_t fn_len = strlen(get_options()->DataDirectory)+HEX_DIGEST_LEN+32;
+      char *fn = tor_malloc(fn_len+1);
+      char hex_id[HEX_DIGEST_LEN+1];
+      dirserv_get_networkstatus_v2_fingerprints(
+                             fp_list, question+strlen("dir/status/"));
+      SMARTLIST_FOREACH(fp_list, const char *, fp, {
+          char *s;
+          base16_encode(hex_id, sizeof(hex_id), fp, DIGEST_LEN);
+          tor_snprintf(fn, fn_len, "%s/cached-status/%s",
+                       get_options()->DataDirectory, hex_id);
+          s = read_file_to_str(fn, 0, NULL);
+          if (s)
+            smartlist_add(status_list, s);
+        });
+      SMARTLIST_FOREACH(fp_list, char *, fp, tor_free(fp));
+      smartlist_free(fp_list);
+      *answer = smartlist_join_strings(status_list, "", 0, NULL);
+      SMARTLIST_FOREACH(status_list, char *, s, tor_free(s));
+      smartlist_free(status_list);
     }
-    status_list = smartlist_create();
-    dirserv_get_networkstatus_v2(status_list,
-                                 question+strlen("dir/status/"));
-    len = 0;
-    SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
-    cp = *answer = tor_malloc(len+1);
-    SMARTLIST_FOREACH(status_list, cached_dir_t *, d, {
-      memcpy(cp, d->dir, d->dir_len);
-      cp += d->dir_len;
-      });
-    *cp = '\0';
   } else if (!strcmpstart(question, "exit-policy/")) {
     return policies_getinfo_helper(question, answer);
   }
