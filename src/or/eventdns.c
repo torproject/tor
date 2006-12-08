@@ -394,7 +394,7 @@ static int global_requests_waiting = 0;
 
 static int global_max_requests_inflight = 64;
 
-static struct timeval global_timeout = {3, 0};	// 3 seconds
+static struct timeval global_timeout = {5, 0};	// 5 seconds
 static int global_max_reissues = 1;	// a reissue occurs when we get some errors from the server
 static int global_max_retransmits = 3;  // number of times we'll retransmit a request which timed out
 // number of timeouts in a row before we consider this server to be down
@@ -628,6 +628,7 @@ nameserver_up(struct nameserver *const ns) {
 	evtimer_del(&ns->timeout_event);
 	ns->state = 1;
 	ns->failed_times = 0;
+	ns->timedout = 0;
 	global_good_nameservers++;
 }
 
@@ -1080,6 +1081,7 @@ nameserver_read(struct nameserver *ns) {
 			nameserver_failed(ns, strerror(err));
 			return;
 		}
+		ns->timedout = 0;
 		reply_parse(packet, r);
 	}
 }
@@ -1241,6 +1243,7 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 
 	req->ns->timedout++;
 	if (req->ns->timedout > global_max_nameserver_timeout) {
+        req->ns->timedout = 0;
 		nameserver_failed(req->ns, "request timed out.");
 	}
 

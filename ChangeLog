@@ -1,5 +1,5 @@
 Changes in version 0.1.2.5-xxxx - 200?-??-??
-  o Minor features
+  o Minor features:
     - Start using the state file to store bandwidth accounting data:
       the bw_accounting file is now obsolete.  We'll keep generating it
       for a while for people who are still using 0.1.2.4-alpha.
@@ -7,7 +7,14 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       as possible while still storing important things in a timely
       fashion.
 
-  o Minor bugfixes;
+  o Major bugfixes:
+    - Fix a longstanding bug in eventdns that prevented the count of
+      timed-out resolves from ever being reset.   This bug caused us
+      to give up on a nameserver the third time it timed out, and try it 10
+      seconds later... and to give up on it every time it timed out after
+      that. (May fix bug 326.)
+
+  o Minor bugfixes:
     - Fix a bug when a PF socket is first used.  (Patch from Fabian
       Keil.)
     - Fix an assert failure when the directory authority sets
@@ -26,7 +33,7 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - When generating bandwidth history, round down to the nearest 1k. When
       storing accounting data, round up to the nearest 1k.
 
-  o Controller features
+  o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.
     - Reimplement GETINFO so that info/names stays in sync with the
       actual keys.
