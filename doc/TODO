@@ -30,8 +30,6 @@ N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.
 N - Stop recommending exits as guards?
-  o Clients stop dumping old descriptors if the network-statuses
-    claim they're still valid.
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
 
@@ -59,13 +57,6 @@ N . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
 
 N - Document .noconnect addresses... but where?
 
-  o Send back RELAY_END cells on malformed RELAY_BEGIN.
-
-  o Change the circuit end reason display a little for reasons from
-    destroyed/truncated circuits.  We want to indicate both that we're
-    closing because somebody told us to, and why they told us they wanted to
-    close.
-
 x - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
     and diversity for bootstrapping clients.
@@ -77,9 +68,6 @@ N - Simplify authority operation
     being a client.
     . Reduce resource load
 d     - Tolerate clock skew on bridge relays.
-      o A way to examine router flags from controller.
-        o Specify: GETINFO ns/id/x, ns/name/x, ns/all.
-        o Implement
       o A way to alert controller when router flags change.
         o Specify: SETEVENTS NS
         o Implement
@@ -111,15 +99,6 @@ d     - Add option to use /etc/hosts?
 d     - Special-case localhost?
       - Verify that it works on windows
     . Make reverse DNS work.
-      o Specify
-      X Implement with dnsworkers
-        (There's no point doing this, since we will throw away dnsworkers once
-        eventdns is confirmed to work everywhere.)
-      o Implement in eventdns
-      o Connect to resolve cells, server-side.
-      o Add element to routerinfo to note routers that aren't using eventdns,
-        so we can avoid sending them reverse DNS etc.
-      o Fix the bug with server-side caching, whatever is causing it.
       . Add client-side interface
         o SOCKS interface: specify
         o SOCKS interface: implement
@@ -143,10 +122,6 @@ x   - Better estimates in the directory of whether servers have good uptime
 x     - spec
 d     - implement
 
-  o Changes towards a more efficient dir protocol.
-    o Later, servers will stop generating new descriptors simply
-      because 18 hours have passed: we must start tolerating this now.
-
   - Critical but minor bugs, backport candidates.
 d   - Failed rend desc fetches sometimes don't get retried. True/false?
 R   - support dir 503s better
@@ -159,17 +134,6 @@ N     - split "router is down" from "dirport shouldn't be tried for a while"?
       - authorities should *never* 503 a cache, but *should* 503 clients
         when they feel like it.
       - update dir-spec with what we decided for each of these
-
-    o provide no-cache no-index headers from the dirport?
-      o Specify
-        o cacheing
-          o Single network-statuses, single descriptors, "all", "authority",
-            and v1 directory stuff are all cacheable for a short time.
-          o Multiple network-statuses or descriptors are not cacheable.
-          o Be sure to be correct wrt HTTP/1.0
-        o indexing
-          o robots.txt (oh, it was already there.)
-      o Implement
 
   - Windows server usability
     - Solve the ENOBUFS problem.
