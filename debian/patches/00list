@@ -1,4 +1,4 @@
-02_add_debian_files_in_manpage.dpatch
+# 02_add_debian_files_in_manpage.dpatch
 03_tor_manpage_in_section_8.dpatch
 06_add_compile_time_defaults.dpatch
 07_log_to_file_by_default.dpatch
