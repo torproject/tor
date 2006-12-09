@@ -3966,7 +3966,8 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
-  accounting_run_housekeeping(now);
+  if (accounting_is_enabled(get_options()))
+    accounting_run_housekeeping(now);
 
   global_state->LastWritten = time(NULL);
   tor_free(global_state->TorVersion);
