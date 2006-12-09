@@ -667,6 +667,8 @@ rep_hist_update_state(or_state_t *state)
     if (! server_mode(get_options())) {
       /* Clients don't need to store bandwidth history persistently;
        * force these values to the defaults. */
+      /* FFFF we should pull the default out of config.c's state table,
+       * so we don't have two defaults. */
       if (*s_begins != 0 || *s_interval != 900)
         or_state_mark_dirty(get_or_state(), time(NULL)+600);
       *s_begins = 0;

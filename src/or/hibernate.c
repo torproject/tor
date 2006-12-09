@@ -577,7 +577,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
     ROUND_UP(n_bytes_written_in_interval);
   state->AccountingSecondsActive = n_seconds_active_in_interval;
   state->AccountingExpectedUsage = expected_bandwidth_usage;
-  or_state_mark_dirty(state, 60);
+  or_state_mark_dirty(state, now+60);
 
   return r;
 }

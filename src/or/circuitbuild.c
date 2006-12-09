@@ -2377,7 +2377,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
 
 /** Our list of entry guards has changed, or some element of one
  * of our entry guards has changed. Write the changes to disk within
- * the next 5 minutes.
+ * the next few minutes.
  */
 static void
 entry_guards_changed(void)

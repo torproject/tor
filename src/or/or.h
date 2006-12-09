@@ -1663,7 +1663,7 @@ typedef struct {
   /** When was the state last written to disk? */
   time_t LastWritten;
 
-  /** Fields for */
+  /** Fields for accounting bandwidth use. */
   time_t AccountingIntervalStart;
   uint64_t AccountingBytesReadInInterval;
   uint64_t AccountingBytesWrittenInInterval;
@@ -1686,15 +1686,14 @@ typedef struct {
   int         BWHistoryWriteInterval;
   smartlist_t *BWHistoryWriteValues;
 
-  /** What version of Tor write this state file? */
+  /** What version of Tor wrote this state file? */
   char *TorVersion;
 
-  /** holds any unrecognized values we found in the state file, in the order
+  /** Holds any unrecognized values we found in the state file, in the order
    * in which we found them. */
   config_line_t *ExtraLines;
 } or_state_t;
 
-static void or_state_mark_dirty(or_state_t *state, time_t when);
 /** Change the next_write time of <b>state</b> to <b>when</b>, unless the
  * state is already scheduled to be written to disk earlier than <b>when</b>.
  */
