@@ -1737,7 +1737,7 @@ static const getinfo_item_t getinfo_items[] = {
        "Time to wake up in this accounting period."),
   /* deprecated */
   ITEM("helper-nodes", entry_guards, NULL),
-  ITEM("entry-nodes", entry_guards,
+  ITEM("entry-guards", entry_guards,
        "Which nodes are we using as entry guards?"),
   PREFIX("config/", config, "Current configuration values."),
   DOC("config/names",
