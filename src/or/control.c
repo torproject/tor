@@ -1512,14 +1512,13 @@ getinfo_helper_dir(control_connection_t *control_conn,
     tor_free(url);
     smartlist_free(descs);
   } else if (!strcmpstart(question, "dir/status/")) {
-    size_t len;
-    char *cp;
     if (get_options()->DirPort) {
+      size_t len=0;
+      char *cp;
       smartlist_t *status_list = smartlist_create();
       dirserv_get_networkstatus_v2(status_list,
                                    question+strlen("dir/status/"));
       SMARTLIST_FOREACH(status_list, cached_dir_t *, d, len += d->dir_len);
-      len = 0;
       cp = *answer = tor_malloc(len+1);
       SMARTLIST_FOREACH(status_list, cached_dir_t *, d, {
           memcpy(cp, d->dir, d->dir_len);
