@@ -1733,7 +1733,7 @@ static const getinfo_item_t getinfo_items[] = {
        "Time when the accounting period starts."),
   ITEM("accounting/interval-end", accounting,
        "Time when the accounting period ends."),
-  ITEM("accounting/interval-warke", accounting,
+  ITEM("accounting/interval-wake", accounting,
        "Time to wake up in this accounting period."),
   /* deprecated */
   ITEM("helper-nodes", entry_guards, NULL),

@@ -430,8 +430,8 @@ connection_ap_expire_beginning(void)
   } /* end for */
 }
 
-/** Tell any AP streams that are waiting for a new circuit that one is
- * available.
+/** Tell any AP streams that are waiting for a new circuit to try again,
+ * either attaching to an available circ or launching a new one.
  */
 void
 connection_ap_attach_pending(void)
@@ -493,7 +493,7 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
 
 /** The AP connection <b>conn</b> has just failed while attaching or
  * sending a BEGIN or resolving on <b>circ</b>, but another circuit
- * might work.  Detach the circuit, and either reattach it, launch a
+ * might work. Detach the circuit, and either reattach it, launch a
  * new circuit, tell the controller, or give up as a appropriate.
  *
  * Returns -1 on err, 1 on success, 0 on not-yet-sure.
@@ -1078,7 +1078,7 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
  * figure it out ourselves.
  *
  * First, parse whether it's a .exit address, remap it, and so on. Then
- * it's for a general circuit, try to attach it to a circuit (or launch
+ * if it's for a general circuit, try to attach it to a circuit (or launch
  * one as needed), else if it's for a rendezvous circuit, fetch a
  * rendezvous descriptor first (or attach/launch a circuit if the
  * rendezvous descriptor is already here and fresh enough).
@@ -1505,9 +1505,10 @@ connection_ap_process_transparent(edge_connection_t *conn)
 }
 
 /** connection_edge_process_inbuf() found a conn in state
- * natd_wait. See if conn->inbuf has the right bytes to proceed.
+ * natd_wait. See if conn-\>inbuf has the right bytes to proceed.
  * See libalias(3) and ProxyEncodeTcpStream() in alias_proxy.c for
  * the encoding form of the original destination.
+ * XXX what is "alias_proxy.c"? -RD
  *
  * If the original destination is complete, send it to
  * connection_ap_handshake_rewrite_and_attach().

@@ -168,8 +168,6 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
              purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
   for (circ=global_circuitlist;circ;circ = circ->next) {
-    if (!CIRCUIT_IS_ORIGIN(circ))
-      continue;
     if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,
                                need_uptime,need_internal,now))
       continue;
@@ -281,7 +279,8 @@ circuit_remove_handled_ports(smartlist_t *needed_ports)
   for (i = 0; i < smartlist_len(needed_ports); ++i) {
     port = smartlist_get(needed_ports, i);
     tor_assert(*port);
-    if (circuit_stream_is_being_handled(NULL, *port, 2)) {
+    if (circuit_stream_is_being_handled(NULL, *port,
+                                        MIN_CIRCUITS_HANDLING_STREAM)) {
 //      log_debug(LD_CIRC,"Port %d is already being handled; removing.", port);
       smartlist_del(needed_ports, i--);
       tor_free(port);

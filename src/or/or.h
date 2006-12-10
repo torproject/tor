@@ -445,6 +445,10 @@ typedef enum {
 #define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
 #define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
 
+/** How many circuits do we want simultaneously in-progress to handle
+ * a given stream? */
+#define MIN_CIRCUITS_HANDLING_STREAM 2
+
 #define RELAY_COMMAND_BEGIN 1
 #define RELAY_COMMAND_DATA 2
 #define RELAY_COMMAND_END 3

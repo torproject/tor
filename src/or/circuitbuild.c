@@ -1097,11 +1097,6 @@ router_handles_some_port(routerinfo_t *router, smartlist_t *needed_ports)
   return 0;
 }
 
-/** How many circuits do we want simultaneously in-progress to handle
- * a given stream?
- */
-#define MIN_CIRCUITS_HANDLING_STREAM 2
-
 static int
 ap_stream_wants_exit_attention(connection_t *conn)
 {

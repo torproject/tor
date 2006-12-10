@@ -530,6 +530,7 @@ accounting_set_wakeup_time(void)
   }
 }
 
+/* This rounds 0 up to 1000, but that's actually a feature. */
 #define ROUND_UP(x) (((x) + 0x3ff) & ~0x3ff)
 #define BW_ACCOUNTING_VERSION 1
 /** Save all our bandwidth tracking information to disk. Return 0 on
