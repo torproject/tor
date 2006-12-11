@@ -131,7 +131,7 @@ tor_mmap_file(const char *filename)
 
   fd = open(filename, O_RDONLY, 0);
   if (fd<0) {
-    log_warn(LD_FS,"Could not open \"%s\" for mmap().",filename);
+    log_info(LD_FS,"Could not open \"%s\" for mmap().",filename);
     return NULL;
   }
 
@@ -144,7 +144,7 @@ tor_mmap_file(const char *filename)
   if (!size) {
     /* Zero-length file. If we call mmap on it, it will succeed but
      * return NULL, and bad things will happen. So just fail. */
-    log_notice(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
+    log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
     return NULL;
   }
 
