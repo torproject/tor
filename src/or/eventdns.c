@@ -385,7 +385,7 @@ struct nameserver {
 								// when we next probe this server.
 								// Valid if state == 0
 	char state;	 // zero if we think that this server is down
-	char choaked;  // true if we have an EAGAIN from this server's socket
+	char choked;  // true if we have an EAGAIN from this server's socket
 	char write_waiting;	 // true if we are waiting for EV_WRITE events
 };
 
@@ -397,7 +397,7 @@ static struct nameserver *server_head = NULL;
 struct evdns_server_port {
 	int socket; // socket we use to read queries and write replies.
 	int refcnt; // reference count.
-	char choaked; // Are we currently blocked from writing?
+	char choked; // Are we currently blocked from writing?
 	char closing; // Are we trying to close this port, pending writes?
 	evdns_request_callback_fn_type user_callback; // Fn to handle requests
 	void *user_data; // Opaque pointer passed to user_callback
@@ -1352,7 +1352,7 @@ nameserver_ready_callback(int fd, short events, void *arg) {
 	(void)fd;
 
 	if (events & EV_WRITE) {
-		ns->choaked = 0;
+		ns->choked = 0;
 		if (!evdns_transmit()) {
 			nameserver_write_waiting(ns, 0);
 		}
@@ -1370,7 +1370,7 @@ server_port_ready_callback(int fd, short events, void *arg) {
 	(void) fd;
 
 	if (events & EV_WRITE) {
-		port->choaked = 0;
+		port->choked = 0;
 		server_port_flush(port);
 	}
 	if (events & EV_READ) {
@@ -1567,7 +1567,7 @@ evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb,
 	assert(!is_tcp); // TCP sockets not yet implemented
 	port->socket = socket;
 	port->refcnt = 1;
-	port->choaked = 0;
+	port->choked = 0;
 	port->closing = 0;
 	port->user_callback = cb;
 	port->user_data = user_data;
@@ -1830,7 +1830,7 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 		} else {
 			req->prev_pending = req->next_pending = req;
 			port->pending_replies = req;
-			port->choaked = 1;
+			port->choked = 1;
 
 			(void) event_del(&port->event);
 			event_set(&port->event, port->socket, (port->closing?0:EV_READ) | EV_WRITE | EV_PERSIST, server_port_ready_callback, port);
@@ -2007,7 +2007,7 @@ evdns_request_transmit(struct request *req) {
 	req->transmit_me = 1;
 	if (req->trans_id == 0xffff) abort();
 
-	if (req->ns->choaked) {
+	if (req->ns->choked) {
 		// don't bother trying to write to a socket
 		// which we have had EAGAIN from
 		return 1;
@@ -2017,7 +2017,7 @@ evdns_request_transmit(struct request *req) {
 	switch (r) {
 	case 1:
 		// temp failure
-		req->ns->choaked = 1;
+		req->ns->choked = 1;
 		nameserver_write_waiting(req->ns, 1);
 		return 1;
 	case 2:
