@@ -383,19 +383,25 @@ struct nameserver {
 static struct request *req_head = NULL, *req_waiting_head = NULL;
 static struct nameserver *server_head = NULL;
 
-struct server_port {
+struct evdns_server_port {
 	int socket;
 	int refcnt;
 	char choaked;
-	evdns_request_callback_type user_callback;
+	evdns_request_callback_fn_type user_callback;
 	void *user_data;
+	struct event event;
 	struct server_request *pending_replies;
 };
 
-struct server_request_section {
-	int n_items;
-	int j;
-	u8 buf[512];
+struct server_request_item {
+	struct server_request_item *next;
+	char *name;
+	unsigned int type : 16;
+	unsigned int class : 16;
+	int ttl;
+	unsigned is_name : 1;
+	int datalen : 31;
+	void *data;
 };
 
 struct server_request {
@@ -403,15 +409,22 @@ struct server_request {
 	struct server_request *prev_pending;
 
     u16 trans_id;
-	struct server_port *port;
+	struct evdns_server_port *port;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 
-	struct server_request_section *answer;
-	struct server_request_section *authority;
-	struct server_request_section *additional;
+	int n_answer;
+	int n_authority;
+	int n_additional;
 
-    struct evdns_request base;
+	struct server_request_item *answer;
+	struct server_request_item *authority;
+	struct server_request_item *additional;
+
+	char *response;
+	size_t response_len;
+
+    struct evdns_server_request base;
 };
 #define OFFSET_OF(st, member) ((off_t) (((char*)&((st*)0)->member)-(char*)0))
 
@@ -419,7 +432,8 @@ struct server_request {
 	((struct server_request*)											\
 	 (((char*)(base_ptr) - OFFSET_OF(struct server_request, base))))
 
-static void evdns_request_free(struct evdns_request *_req);
+static void evdns_server_request_free(struct server_request *req);
+static void evdns_server_request_free_answers(struct server_request *req);
 
 // The number of good nameservers that we have
 static int global_good_nameservers = 0;
@@ -449,6 +463,7 @@ const char *const evdns_error_strings[] = {"no error", "The name server was unab
 static struct nameserver *nameserver_pick(void);
 static void evdns_request_insert(struct request *req, struct request **head);
 static void nameserver_ready_callback(int fd, short events, void *arg);
+static void server_port_ready_callback(int fd, short events, void *arg);
 static int evdns_transmit(void);
 static int evdns_request_transmit(struct request *req);
 static void nameserver_send_probe(struct nameserver *const ns);
@@ -907,7 +922,7 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 	return 0;
 }
 
-// parses a raw request from the wire
+// parses a raw request from a nameserver.
 static int
 reply_parse(u8 *packet, int length)
 {
@@ -1029,7 +1044,7 @@ reply_parse(u8 *packet, int length)
 #undef GET8
 
 static int
-request_parse(u8 *packet, int length, struct server_port *port, struct sockaddr *addr, socklen_t addrlen)
+request_parse(u8 *packet, int length, struct evdns_server_port *port, struct sockaddr *addr, socklen_t addrlen)
 {
 	int j = 0;	// index into packet
 	u16 _t;	 // used by the macros
@@ -1061,20 +1076,20 @@ request_parse(u8 *packet, int length, struct server_port *port, struct sockaddr 
 
 	server_req->base.flags = flags;
 	server_req->base.nquestions = 0;
-	server_req->base.questions = malloc(sizeof(struct evdns_question *) * questions);
+	server_req->base.questions = malloc(sizeof(struct evdns_server_question *) * questions);
 	if (server_req->base.questions == NULL)
 		goto err;
 
 	for (i = 0; i < questions; ++i) {
 		u16 type, class;
-		struct evdns_question *q;
+		struct evdns_server_question *q;
 		int namelen;
 		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0)
 			goto err;
 		GET16(type);
 		GET16(class);
 		namelen = strlen(tmp_name);
-		q = malloc(sizeof(struct evdns_question) + namelen);
+		q = malloc(sizeof(struct evdns_server_question) + namelen);
 		if (!q)
 			goto err;
 		q->type = type;
@@ -1205,7 +1220,7 @@ nameserver_read(struct nameserver *ns) {
 }
 
 static void
-server_port_read(struct server_port *s) {
+server_port_read(struct evdns_server_port *s) {
 	u8 packet[1500];
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -1223,6 +1238,13 @@ server_port_read(struct server_port *s) {
 		}
 		request_parse(packet, r, s, (struct sockaddr*) &addr, addrlen);
 	}
+}
+
+static void
+server_port_flush(struct evdns_server_port *port)
+{
+	// XXXX Writeme.
+	(void)port;
 }
 
 // set if we are waiting for the ability to write to this server.
@@ -1258,6 +1280,22 @@ nameserver_ready_callback(int fd, short events, void *arg) {
 	}
 	if (events & EV_READ) {
 		nameserver_read(ns);
+	}
+}
+
+// a callback function. Called by libevent when the kernel says that
+// a server socket is ready for writing or reading.
+static void
+server_port_ready_callback(int fd, short events, void *arg) {
+	struct evdns_server_port *port = (struct evdns_server_port *) arg;
+	(void) fd;
+
+	if (events & EV_WRITE) {
+		port->choaked = 0;
+		server_port_flush(port);
+	}
+	if (events & EV_READ) {
+		server_port_read(port);
 	}
 }
 
@@ -1432,83 +1470,214 @@ evdns_request_data_build(const char *const name, const int name_len, const u16 t
 }
 
 // exported function
+struct evdns_server_port *
+evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb, void *user_data)
+{
+	struct evdns_server_port *port;
+	if (!(port = malloc(sizeof(struct evdns_server_port))))
+		return NULL;
+
+	assert(!is_tcp); // TCP sockets not yet implemented
+	port->socket = socket;
+	port->refcnt = 1;
+	port->choaked = 0;
+	port->user_callback = cb;
+	port->user_data = user_data;
+	port->pending_replies = NULL;
+	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
+			  server_port_ready_callback, port);
+	event_add(&port->event, NULL); // check return.
+	return port;
+}
+
+// exported function
 int
-evdns_request_add_reply(struct evdns_request *_req, int section, const char *name, int type, int class, int ttl, int datalen, const char *data)
+evdns_request_add_reply(struct evdns_server_request *_req, int section, const char *name, int type, int class, int ttl, int datalen, int is_name, const char *data)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
-	struct server_request_section **secp;
-	int j;
-	u8 *buf;
-	int buf_len;
-	u16 _t;	 // used by the macros
-	u32 _t32; // used by the macros
+	struct server_request_item **itemp, *item;
+	int *countp;
+
+	if (req->response) /* have we already answered? */
+		return -1;
 
 	switch (section) {
 	case EVDNS_ANSWER_SECTION:
-		secp = &req->answer;
+		itemp = &req->answer;
+		countp = &req->n_answer;
 		break;
 	case EVDNS_AUTHORITY_SECTION:
-		secp = &req->authority;
+		itemp = &req->authority;
+		countp = &req->n_authority;
 		break;
 	case EVDNS_ADDITIONAL_SECTION:
-		secp = &req->additional;
+		itemp = &req->additional;
+		countp = &req->n_additional;
 		break;
 	default:
 		return -1;
 	}
-	if (!*secp) {
-		if (!(*secp = malloc(sizeof(struct server_request_section))))
-			return -1;
-		memset(*secp, 0, sizeof(struct server_request_section));
+	while (*itemp) {
+		itemp = &((*itemp)->next);
 	}
-	buf = (*secp)->buf;
-	buf_len = sizeof((*secp)->buf);
-	j = (*secp)->j;
-
-	// format is <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
-
-	j = dnsname_to_labels(buf, buf_len, j, name, strlen(name), NULL);
-	if (j < 0) {
-		return j;
-	}
-
-	APPEND16(type);
-	APPEND16(class);
-	APPEND32(ttl);
-	APPEND16(datalen);
-	if ((size_t)(j + datalen) > buf_len)
+	item = malloc(sizeof(struct server_request_item));
+	if (!item)
 		return -1;
-	memcpy(buf + j, data, datalen);
-	j += datalen;
+	item->next = NULL;
+	if (!(item->name = strdup(name))) {
+		free(item);
+		return -1;
+	}
+	item->type = type;
+	item->class = class;
+	item->ttl = ttl;
+	item->is_name = is_name != 0;
+	item->datalen = 0;
+	item->data = NULL;
+	if (data) {
+		if (item->is_name) {
+			if (!(item->data = strdup(data))) {
+				free(item->name);
+				free(item);
+				return -1;
+			}
+			item->datalen = -1;
+		} else {
+			if (!(item->data = malloc(datalen))) {
+				free(item->name);
+				free(item);
+				return -1;
+			}
+			item->datalen = datalen;
+			memcpy(item->data, data, datalen);
+		}
+	}
 
-	(*secp)->j = j;
-	(*secp)->n_items++;
-
+	*itemp = item;
+	++(*countp);
 	return 0;
 }
 
 // exported function
 int
-evdns_request_add_a_reply(struct evdns_request *req, const char *name, int n, void *addrs, int ttl)
+evdns_request_add_a_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
 {
 	return evdns_request_add_reply(
 		  req, EVDNS_ANSWER_SECTION, name, TYPE_A, CLASS_INET,
-		  ttl, n*4, addrs);
+		  ttl, n*4, 0, addrs);
+}
+
+int
+evdns_request_add_aaaa_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
+{
+	return evdns_request_add_reply(
+		  req, EVDNS_ANSWER_SECTION, name, TYPE_AAAA, CLASS_INET,
+		  ttl, n*16, 0, addrs);
+}
+
+int
+evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *name, int ttl)
+{
+	u32 a;
+	char buf[32];
+	assert(in);
+	a = ntohl(in->s_addr);
+	sprintf(buf, "%d.%d.%d.%d.in-addr.arpa",
+			(int)(u8)((a	)&0xff),
+			(int)(u8)((a>>8 )&0xff),
+			(int)(u8)((a>>16)&0xff),
+			(int)(u8)((a>>24)&0xff));
+	return evdns_request_add_reply(
+		  req, EVDNS_ANSWER_SECTION, buf, TYPE_PTR, CLASS_INET,
+		  ttl, -1, 1, name);
+}
+
+int
+evdns_request_add_cname_reply(struct evdns_server_request *req, const char *name, const char *cname, int ttl)
+{
+	return evdns_request_add_reply(
+		  req, EVDNS_ANSWER_SECTION, name, TYPE_A, CLASS_INET,
+		  ttl, -1, 1, cname);
+}
+
+static int
+evdns_request_response_format(struct server_request *req, int flags)
+{
+	unsigned char buf[1500];
+	size_t buf_len = sizeof(buf);
+	off_t j = 0;
+	u16 _t;
+	u32 _t32;
+	int i;
+	struct dnslabel_table table;
+
+	dnslabel_table_init(&table); // XXXX need to call dnslable_table_clear.
+	APPEND16(req->trans_id);
+	APPEND16(flags);
+	APPEND16(0); /* questions */
+	APPEND16(req->n_answer);
+	APPEND16(req->n_authority);
+	APPEND16(req->n_additional);
+
+	/* Add questions : none. */
+	for (i=0; i<3; ++i) {
+		struct server_request_item *item;
+		if (i==0)
+			item = req->answer;
+		else if (i==1)
+			item = req->authority;
+		else
+			item = req->additional;
+		while (item) {
+			j = dnsname_to_labels(buf, buf_len, j, item->name, strlen(item->name), &table);
+			if (j < 0)
+				return (int) j;
+
+			APPEND16(item->type);
+			APPEND16(item->class);
+			APPEND32(item->ttl);
+			if (item->is_name) {
+				off_t len_idx = j, name_start;
+				j += 2;
+				name_start = j;
+				j = dnsname_to_labels(buf, buf_len, j, item->data, strlen(item->data), &table);
+				if (j < 0)
+					return (int) j;
+				_t = htons( (j-name_start) );
+				memcpy(buf+len_idx, &_t, 2);
+			} else {
+				APPEND16(item->datalen);
+				if (j+item->datalen > (off_t)buf_len)
+					return -1;
+				memcpy(buf+j, item->data, item->datalen);
+				j += item->datalen;
+			}
+			item = item->next;
+		}
+	}
+
+	req->response_len = j;
+	if (!(req->response = malloc(req->response_len)))
+		return -1;
+	memcpy(req->response, buf, req->response_len);
+
+	evdns_server_request_free_answers(req);
+	dnslabel_clear(&table);
+	return 0;
 }
 
 // exported function
 int
-eventdns_request_respond(struct evdns_request *_req, int err, int flags)
+evdns_request_respond(struct evdns_server_request *_req, int flags)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
 	int r;
-	char response[1500];
-	size_t responselen = 10;
+	if (!req->response) {
+		if ((r = evdns_request_response_format(req, flags))<0)
+			return r;
+	}
 
-	// XXXX make a response and store it somewhere.  Where? Oops; structs
-	//      may be wrong.
-
-	r = sendto(req->port->socket, response, responselen, 0,
+	r = sendto(req->port->socket, req->response, req->response_len, 0,
 			   (struct sockaddr*) &req->addr, req->addrlen);
 	if (r<0) {
 		int err = last_error(req->port->socket);
@@ -1529,26 +1698,43 @@ eventdns_request_respond(struct evdns_request *_req, int err, int flags)
 	}
 	// XXXX process pending replies.
 
-	evdns_request_free(_req);
+	evdns_server_request_free(req);
 	return 0;
 }
 
 static void
-evdns_request_free(struct evdns_request *_req)
+evdns_server_request_free_answers(struct server_request *req)
 {
-	struct server_request *req = TO_SERVER_REQUEST(_req);
+	struct server_request_item *victim, *next, **list;
+	int i;
+	for (i = 0; i < 3; ++i) {
+		if (i==0)
+			list = &req->answer;
+		else if (i==1)
+			list = &req->authority;
+		else
+			list = &req->additional;
+
+		victim = *list;
+		while (victim) {
+			next = victim->next;
+			free(victim->name);
+			if (victim->data)
+				free(victim->data);
+			victim = next;
+		}
+		*list = NULL;
+	}
+}
+
+static void
+evdns_server_request_free(struct server_request *req)
+{
 	int i;
 	if (req->base.questions) {
 		for (i = 0; i < req->base.nquestions; ++i)
 			free(req->base.questions[i]);
 	}
-
-	if (req->answer)
-		free(req->answer);
-	if (req->answer)
-		free(req->authority);
-	if (req->answer)
-		free(req->additional);
 
 	if (req->port) {
 		if (req->port->pending_replies == req) {
@@ -1560,6 +1746,11 @@ evdns_request_free(struct evdns_request *_req)
 		--req->port->refcnt; /* release? XXXX NM*/
 	}
 
+	if (req->response)
+		free(req->response);
+
+	evdns_server_request_free_answers(req);
+
 	if (req->next_pending && req->next_pending != req) {
 		req->next_pending->prev_pending = req->prev_pending;
 		req->prev_pending->next_pending = req->next_pending;
@@ -1568,9 +1759,17 @@ evdns_request_free(struct evdns_request *_req)
 	free(req);
 }
 
+// exported function
+int
+evdns_request_drop(struct evdns_server_request *_req)
+{
+	struct server_request *req = TO_SERVER_REQUEST(_req);
+	evdns_server_request_free(req);
+	return 0;
+}
+
 #undef APPEND16
 #undef APPEND32
-
 
 // this is a libevent callback function which is called when a request
 // has timed out.

@@ -92,20 +92,21 @@ N - DNS improvements
     . Asynchronous DNS
       o Document and rename SearchDomains, ResolvConf options
       D Make API closer to getaddrinfo()
-      - Teach it to be able to listen for requests to be processed.
+      - Teach evdns to be able to listen for requests to be processed.
         . Design interface.
           - Rename stuff; current names suck.
         . Design backend.
         - Implement
           . Listen for questions
           o Parse questions, tell user code
-          . Let user code tell us the answer
-          - Generate responses
+          o Let user code tell us the answer
+          o Generate responses
           o Send responses to client
           o Queue responses when we see EAGAIN
           - Retry responses after a while
-          - Be efficient about labels.
-          - Be more memory-efficient
+          o Be efficient about labels.
+          - Test
+d         - Be more memory-efficient
       - Add some kind of general question/response API so libevent can be
         flexible here.
 d     - Add option to use /etc/hosts?

@@ -75,25 +75,30 @@ void evdns_set_log_fn(evdns_debug_log_fn_type fn);
 
 #define DNS_NO_SEARCH 1
 
-struct evdns_request {
+struct evdns_server_request {
 	int flags;
 	int nquestions;
-	struct evdns_question **questions;
+	struct evdns_server_question **questions;
 };
-struct evdns_question {
+struct evdns_server_question {
 	int type;
 	int class;
 	char name[1];
 };
-typedef void (*evdns_request_callback_type)(struct evdns_request *, void *);
+typedef void (*evdns_request_callback_fn_type)(struct evdns_server_request *, void *);
 #define EVDNS_ANSWER_SECTION 0
 #define EVDNS_AUTHORITY_SECTION 1
 #define EVDNS_ADDITIONAL_SECTION 2
-int evdns_request_add_reply(struct evdns_request *req, int section, const char *name, int type, int class, int ttl, int datalen, const char *data);
-int evdns_request_add_a_reply(struct evdns_request *req, const char *name, int n, void *addrs, int ttl);
-int evdns_request_add_ptr_reply(struct evdns_request *req, struct in_addr *in, const char *name, int ttl);
-int evdns_request_add_cname_reply(struct evdns_request *req, const char *name, const char *cname, int ttl);
-int evdns_request_respond(struct evdns_request *req, int err, int flags);
-int evdns_request_drop(struct evdns_request *req);
+struct evdns_server_port *evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type callback, void *user_data);
+void evdns_close_server_port(struct evdns_server_port *port);
+
+int evdns_request_add_reply(struct evdns_server_request *req, int section, const char *name, int type, int class, int ttl, int datalen, int is_name, const char *data);
+int evdns_request_add_a_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl);
+int evdns_request_add_aaaa_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl);
+int evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *name, int ttl);
+int evdns_request_add_cname_reply(struct evdns_server_request *req, const char *name, const char *cname, int ttl);
+
+int evdns_request_respond(struct evdns_server_request *req, int flags);
+int evdns_request_drop(struct evdns_server_request *req);
 
 #endif  // !EVENTDNS_H
