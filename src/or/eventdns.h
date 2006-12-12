@@ -75,6 +75,8 @@ void evdns_set_log_fn(evdns_debug_log_fn_type fn);
 
 #define DNS_NO_SEARCH 1
 
+/* Structures and functions used to implement a DNS server. */
+
 struct evdns_server_request {
 	int flags;
 	int nquestions;

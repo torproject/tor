@@ -382,52 +382,68 @@ struct nameserver {
 static struct request *req_head = NULL, *req_waiting_head = NULL;
 static struct nameserver *server_head = NULL;
 
+// Represents a local port where we're listening for DNS requests. Right now,
+// only UDP is supported.
 struct evdns_server_port {
-	int socket;
-	int refcnt;
-	char choaked;
-	char closing;
-	evdns_request_callback_fn_type user_callback;
-	void *user_data;
-	struct event event;
+	int socket; // socket we use to read queries and write replies.
+	int refcnt; // reference count.
+	char choaked; // Are we currently blocked from writing?
+	char closing; // Are we trying to close this port, pending writes?
+	evdns_request_callback_fn_type user_callback; // Fn to handle requests
+	void *user_data; // Opaque pointer passed to user_callback
+	struct event event; // Read/write event
+    // circular list of replies that we want to write.
 	struct server_request *pending_replies;
 };
 
-struct server_request_item {
-	struct server_request_item *next;
-	char *name;
-	unsigned int type : 16;
-	unsigned int class : 16;
-	int ttl;
-	unsigned is_name : 1;
-	int datalen : 31;
-	void *data;
+// Represents part of a reply being built.  (That is, a single RR.)
+struct server_reply_item {
+	struct server_reply_item *next; // next item in sequence.
+	char *name; // name part of the RR
+	u16 type : 16; // The RR type
+	u16 class : 16; // The RR class (usually CLASS_INET)
+	u32 ttl; // The RR TTL
+    char is_name; // True iff data is a label
+    u16 datalen; // Length of data; -1 if data is a label
+	void *data; // The contents of the RR
 };
 
+// Represents a request that we've received as a DNS server, and holds
+// the components of the reply as we're constructing it.
 struct server_request {
+    // Pointers to the next and previous entries on the list of replies
+    // that we're waiting to write.  Only set if we have tried to respond
+    // and gotten EAGAIN.
 	struct server_request *next_pending;
 	struct server_request *prev_pending;
 
-	u16 trans_id;
-	struct evdns_server_port *port;
-	struct sockaddr_storage addr;
-	socklen_t addrlen;
+	u16 trans_id; // Transaction id.
+	struct evdns_server_port *port; // Which port received this request on?
+	struct sockaddr_storage addr; // Where to send the response
+	socklen_t addrlen; // length of addr
 
-	int n_answer;
-	int n_authority;
-	int n_additional;
+	int n_answer; // how many answer RRs have been set?
+	int n_authority; // how many authority RRs have been set?
+	int n_additional; // how many additional RRs have been set?
 
-	struct server_request_item *answer;
-	struct server_request_item *authority;
-	struct server_request_item *additional;
+	struct server_reply_item *answer; // linked list of answer RRs
+	struct server_reply_item *authority; // linked list of authority RRs
+	struct server_reply_item *additional; // linked list of additional RRs
 
+    // Constructed response.  Only set once we're ready to send a reply.
+    // Once this is set, the RR fields are cleared, and no more should be set.
 	char *response;
 	size_t response_len;
 
+    // Caller-visible fields: flags, questions.
 	struct evdns_server_request base;
 };
+
+// helper macro
 #define OFFSET_OF(st, member) ((off_t) (((char*)&((st*)0)->member)-(char*)0))
 
+// Given a pointer to an evdns_server_request, get the corresponding
+// server_request.
 #define TO_SERVER_REQUEST(base_ptr)										\
 	((struct server_request*)											\
 	 (((char*)(base_ptr) - OFFSET_OF(struct server_request, base))))
@@ -1044,6 +1060,9 @@ reply_parse(u8 *packet, int length)
 #undef GET16
 #undef GET8
 
+// Parse a raw request (packet,length) sent to a nameserver port (port) from
+// a DNS client (addr,addrlen), and if it's well-formed, call the corresponding
+// callback.
 static int
 request_parse(u8 *packet, int length, struct evdns_server_port *port, struct sockaddr *addr, socklen_t addrlen)
 {
@@ -1058,6 +1077,7 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 	u16 trans_id, flags, questions, answers, authority, additional;
 	struct server_request *server_req = NULL;
 
+    // Get the header fields
 	GET16(trans_id);
 	GET16(flags);
 	GET16(questions);
@@ -1101,7 +1121,7 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 		server_req->base.questions[server_req->base.nquestions++] = q;
 	}
 
-	// Do nothing with rest of packet -- safe?
+	// Ignore answers, authority, and additional.
 
 	server_req->port = port;
 	port->refcnt++;
@@ -1121,7 +1141,6 @@ err:
 }
 #undef GET16
 #undef GET8
-
 
 // Try to choose a strong transaction id which isn't already in flight
 static u16
@@ -1222,6 +1241,8 @@ nameserver_read(struct nameserver *ns) {
 	}
 }
 
+// Read a packet from a DNS client on a server port s, parse it, and
+// act accordingly.
 static void
 server_port_read(struct evdns_server_port *s) {
 	u8 packet[1500];
@@ -1244,6 +1265,7 @@ server_port_read(struct evdns_server_port *s) {
 	}
 }
 
+// Try to write all pending replies on a given DNS server port.
 static void
 server_port_flush(struct evdns_server_port *port)
 {
@@ -1257,10 +1279,13 @@ server_port_flush(struct evdns_server_port *port)
 				return;
 			log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", strerror(err), err);
 		}
-		if (server_request_free(req))
+		if (server_request_free(req)) {
+            // we released the last reference to req->port.
 			return;
+        }
 	}
 
+    // We have no more pending requests; stop listening for 'writeable' events.
 	(void) event_del(&port->event);
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
@@ -1323,20 +1348,24 @@ server_port_ready_callback(int fd, short events, void *arg) {
 }
 
 /* This is an inefficient representation; only use it via the dnslabel_table_*
- * functions. */
+ * functions, so that is can be safely replaced with something smarter later. */
 #define MAX_LABELS 128
+// Structures used to implement name compression
 struct dnslabel_entry { char *v; int pos; };
 struct dnslabel_table {
-	int n_labels;
+	int n_labels; // number of current entries
+    // map from name to position in message
 	struct dnslabel_entry labels[MAX_LABELS];
 };
 
+// Initialize dnslabel_table.
 static void
 dnslabel_table_init(struct dnslabel_table *table)
 {
 	table->n_labels = 0;
 }
 
+// Free all storage held by table, but not the table itself.
 static void
 dnslabel_clear(struct dnslabel_table *table)
 {
@@ -1346,6 +1375,8 @@ dnslabel_clear(struct dnslabel_table *table)
 	table->n_labels = 0;
 }
 
+// return the position of the label in the current message, or -1 if the label
+// hasn't been used yet.
 static int
 dnslabel_table_get_pos(const struct dnslabel_table *table, const char *label)
 {
@@ -1357,6 +1388,7 @@ dnslabel_table_get_pos(const struct dnslabel_table *table, const char *label)
 	return -1;
 }
 
+// remember that we've used the label at position pos
 static int
 dnslabel_table_add(struct dnslabel_table *table, const char *label, int pos)
 {
@@ -1530,11 +1562,11 @@ int
 evdns_server_request_add_reply(struct evdns_server_request *_req, int section, const char *name, int type, int class, int ttl, int datalen, int is_name, const char *data)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
-	struct server_request_item **itemp, *item;
+	struct server_reply_item **itemp, *item;
 	int *countp;
 
 	if (req->response) /* have we already answered? */
-		return -1;
+		return (-1);
 
 	switch (section) {
 	case EVDNS_ANSWER_SECTION:
@@ -1550,12 +1582,12 @@ evdns_server_request_add_reply(struct evdns_server_request *_req, int section, c
 		countp = &req->n_additional;
 		break;
 	default:
-		return -1;
+		return (-1);
 	}
 	while (*itemp) {
 		itemp = &((*itemp)->next);
 	}
-	item = malloc(sizeof(struct server_request_item));
+	item = malloc(sizeof(struct server_reply_item));
 	if (!item)
 		return -1;
 	item->next = NULL;
@@ -1684,7 +1716,7 @@ evdns_server_request_format_response(struct server_request *req, int err)
 
 	/* Add answer, authority, and additional sections. */
 	for (i=0; i<3; ++i) {
-		struct server_request_item *item;
+		struct server_reply_item *item;
 		if (i==0)
 			item = req->answer;
 		else if (i==1)
@@ -1789,10 +1821,11 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 	return 0;
 }
 
+// Free all storage held by RRs in req.
 static void
 server_request_free_answers(struct server_request *req)
 {
-	struct server_request_item *victim, *next, **list;
+	struct server_reply_item *victim, *next, **list;
 	int i;
 	for (i = 0; i < 3; ++i) {
 		if (i==0)
@@ -1814,6 +1847,7 @@ server_request_free_answers(struct server_request *req)
 	}
 }
 
+// Free all storage held by req, and remove links to it.
 // return true iff we just wound up freeing the server_port.
 static int
 server_request_free(struct server_request *req)
@@ -1853,6 +1887,7 @@ server_request_free(struct server_request *req)
 	return (0);
 }
 
+// Free all storage held by an evdns_server_port.  Only called when 
 static void
 server_port_free(struct evdns_server_port *port)
 {
@@ -2986,7 +3021,8 @@ evdns_server_callback(struct evdns_server_request *req, void *data)
 {
 	int i, r;
 	(void)data;
-	/* dummy; give 192.168.11.11 as an answer for all A questions. */
+	/* dummy; give 192.168.11.11 as an answer for all A questions,
+     *  give foo.bar.example.com as an answer for all PTR questions. */
 	for (i = 0; i < req->nquestions; ++i) {
 		u32 ans = htonl(0xc0a80b0bUL);
 		if (req->questions[i]->type == EVDNS_TYPE_A &&

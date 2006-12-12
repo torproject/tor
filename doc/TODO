@@ -95,8 +95,8 @@ N - DNS improvements
       - Teach evdns about ipv6.
       - Make evdns use windows strerror equivalents.
       - Teach evdns to be able to listen for requests to be processed.
-        . Design interface.
-          - Rename stuff; current names suck.
+        o Design interface.
+          o Rename stuff; current names suck.
         o Design backend.
         . Implement
           o Listen for questions
