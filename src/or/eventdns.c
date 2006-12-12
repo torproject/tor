@@ -1422,7 +1422,7 @@ evdns_request_data_build(const char *const name, const int name_len, const u16 t
 
 	j = dnsname_to_labels(buf, buf_len, j, name, name_len, NULL);
 	if (j < 0) {
-		return j;
+		return (int)j;
 	}
 
 	APPEND16(type);
