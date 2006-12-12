@@ -41,6 +41,7 @@
 
 #define DNS_IPv4_A 1
 #define DNS_PTR 2
+#define DNS_IPv4_AAAA 3
 
 #define DNS_QUERY_NO_SEARCH 1
 
@@ -60,8 +61,11 @@ int evdns_clear_nameservers_and_suspend(void);
 int evdns_resume(void);
 int evdns_nameserver_ip_add(const char *ip_as_string);
 int evdns_resolve_ipv4(const char *name, int flags, evdns_callback_type callback, void *ptr);
+int evdns_resolve_ipv6(const char *name, int flags, evdns_callback_type callback, void *ptr);
 struct in_addr;
+struct in6_addr;
 int evdns_resolve_reverse(struct in_addr *addr, int flags, evdns_callback_type callback, void *ptr);
+int evdns_resolve_reverse_ipv6(struct in6_addr *addr, int flags, evdns_callback_type callback, void *ptr);
 int evdns_resolv_conf_parse(int flags, const char *);
 #ifdef MS_WINDOWS
 int evdns_config_windows_nameservers(void);

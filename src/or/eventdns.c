@@ -349,6 +349,12 @@ struct request {
 	char transmit_me;  // needs to be transmitted
 };
 
+#ifndef HAVE_STRUCT_IN6_ADDR
+struct in6_addr {
+    u8 s6_addr[16];
+};
+#endif
+
 struct reply {
 	unsigned int type;
 	unsigned int have_answer;
@@ -357,6 +363,10 @@ struct reply {
 			u32 addrcount;
 			u32 addresses[MAX_ADDRS];
 		} a;
+		struct {
+			u32 addrcount;
+			struct in6_addr addresses[MAX_ADDRS];
+		} aaaa;
 		struct {
 			char name[HOST_NAME_MAX];
 		} ptr;
@@ -811,7 +821,7 @@ reply_callback(struct request *const req, u32 ttl, u32 err, struct reply *reply)
 		if (reply)
 			req->user_callback(DNS_ERR_NONE, DNS_IPv4_A,
 							   reply->data.a.addrcount, ttl,
-						 reply->data.a.addresses,
+							   reply->data.a.addresses,
 							   req->user_pointer);
 		else
 			req->user_callback(err, 0, 0, 0, NULL, req->user_pointer);
@@ -826,6 +836,14 @@ reply_callback(struct request *const req, u32 ttl, u32 err, struct reply *reply)
 							   req->user_pointer);
 		}
 		return;
+	case TYPE_AAAA:
+		if (reply)
+			req->user_callback(DNS_ERR_NONE, DNS_IPv4_AAAA,
+							   reply->data.aaaa.addrcount, ttl,
+							   reply->data.aaaa.addresses,
+							   req->user_pointer);
+		else
+			req->user_callback(err, 0, 0, 0, NULL, req->user_pointer);
 	}
 	assert(0);
 }
@@ -1015,11 +1033,11 @@ reply_parse(u8 *packet, int length)
 
 		if (type == TYPE_A && class == CLASS_INET) {
 			int addrcount, addrtocopy;
-			if (req->request_type != TYPE_A) {
+			if (req->request_type != type) {
 				j += datalength; continue;
 			}
-			// XXXX do something sane with malformed A answers.
-			addrcount = datalength >> 2;  // each IP address is 4 bytes
+			// XXXX do something sane with malformed answers.
+			addrcount = datalength >> 2;  // each address is 4 bytes long
 			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, (unsigned)addrcount);
 			ttl_r = MIN(ttl_r, ttl);
 
@@ -1027,8 +1045,8 @@ reply_parse(u8 *packet, int length)
 			if (j + 4*addrtocopy > length) return -1;
 			memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
 				   packet + j, 4*addrtocopy);
-			j += 4*addrtocopy;
 			reply.data.a.addrcount += addrtocopy;
+			j += 4*addrtocopy;
 			reply.have_answer = 1;
 			if (reply.data.a.addrcount == MAX_ADDRS) break;
 		} else if (type == TYPE_PTR && class == CLASS_INET) {
@@ -1040,12 +1058,24 @@ reply_parse(u8 *packet, int length)
 				return -1;
 			reply.have_answer = 1;
 			break;
-		} else if (type == TYPE_AAAA && class == CLASS_INET) {
-			if (req->request_type != TYPE_AAAA) {
+        } else if (type == TYPE_AAAA && class == CLASS_INET) {
+			int addrcount, addrtocopy;
+			if (req->request_type != type) {
 				j += datalength; continue;
 			}
-			// XXXX Implement me. -NM
-			j += datalength;
+			// XXXX do something sane with malformed answers.
+			addrcount = datalength >> 4;  // each address is 16 bytes long
+			addrtocopy = MIN(MAX_ADDRS - reply.data.aaaa.addrcount, (unsigned)addrcount);
+			ttl_r = MIN(ttl_r, ttl);
+
+			// we only bother with the first four addresses.
+			if (j + 16*addrtocopy > length) return -1;
+			memcpy(&reply.data.aaaa.addresses[reply.data.aaaa.addrcount],
+				   packet + j, 16*addrtocopy);
+			reply.data.aaaa.addrcount += addrtocopy;
+			j += 16*addrtocopy;
+			reply.have_answer = 1;
+			if (reply.data.a.addrcount == MAX_ADDRS) break;
 		} else {
 			// skip over any other type of resource
 			j += datalength;
@@ -2309,6 +2339,22 @@ int evdns_resolve_ipv4(const char *name, int flags,
 	}
 }
 
+// exported function
+int evdns_resolve_ipv6(const char *name, int flags,
+                       evdns_callback_type callback, void *ptr) {
+	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
+	if (flags & DNS_QUERY_NO_SEARCH) {
+		struct request *const req =
+            request_new(TYPE_AAAA, name, flags, callback, ptr);
+		if (req == NULL)
+            return 1;
+		request_submit(req);
+		return 0;
+	} else {
+		return search_request_new(TYPE_AAAA, name, flags, callback, ptr);
+	}
+}
+
 int evdns_resolve_reverse(struct in_addr *in, int flags, evdns_callback_type callback, void *ptr) {
 	char buf[32];
 	struct request *req;
@@ -2320,6 +2366,30 @@ int evdns_resolve_reverse(struct in_addr *in, int flags, evdns_callback_type cal
 			(int)(u8)((a>>8 )&0xff),
 			(int)(u8)((a>>16)&0xff),
 			(int)(u8)((a>>24)&0xff));
+	log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
+	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
+	if (!req) return 1;
+	request_submit(req);
+	return 0;
+}
+
+int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_type callback, void *ptr) {
+	char buf[64];
+    char *cp;
+	struct request *req;
+    int i;
+	assert(in);
+
+    cp = buf;
+    for (i=0; i < 16; ++i) {
+        u8 byte = in->s6_addr[i];
+        *cp++ = "0123456789abcdef"[byte >> 4];
+        *cp++ = '.';
+		*cp++ = "0123456789abcdef"[byte & 0x0f];
+        *cp++ = '.';
+    }
+    assert(cp + strlen(".ip6.arpa") < buf+sizeof(buf));
+    strcpy(cp, ".ip6.arpa");
 	log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
 	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
 	if (!req) return 1;

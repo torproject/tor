@@ -554,6 +554,10 @@ AC_CHECK_SIZEOF(size_t)
 
 AC_CHECK_TYPES([uint, u_char])
 
+AC_CHECK_TYPES([struct in6_addr, struct sockaddr_storage], , ,
+[#include <netinet/in.h>
+#include <sys/socket.h>])
+
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
 AC_TRY_RUN([

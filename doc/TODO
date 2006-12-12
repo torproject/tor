@@ -92,7 +92,7 @@ N - DNS improvements
     . Asynchronous DNS
       o Document and rename SearchDomains, ResolvConf options
       D Make API closer to getaddrinfo()
-      - Teach evdns about ipv6.
+      o Teach evdns about ipv6.
       - Make evdns use windows strerror equivalents.
       - Teach evdns to be able to listen for requests to be processed.
         o Design interface.
