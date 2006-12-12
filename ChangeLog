@@ -25,6 +25,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Fix a bug on the Windows implementation of tor_mmap_file that
       would prevent the cached-routers file from ever loading. (reported by
       John Kimble.)
+    - Fix a bug in 0.1.2.2-alpha that prevented clients from asking
+      to resolve an address at a given exit node even when they ask for
+      it by name.
 
   o Security bugfixes:
     - Do not log introduction points for hidden services if SafeLogging

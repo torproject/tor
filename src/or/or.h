@@ -1712,6 +1712,10 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 #define SOCKS_COMMAND_CONNECT 0x01
 #define SOCKS_COMMAND_RESOLVE 0xF0
 #define SOCKS_COMMAND_RESOLVE_PTR 0xF1
+
+#define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
+                                     (c)==SOCKS_COMMAND_RESOLVE_PTR)
+
 /** State of a SOCKS request from a user to an OP */
 struct socks_request_t {
   char socks_version; /**< Which version of SOCKS did the client use? */
