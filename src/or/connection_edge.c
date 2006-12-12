@@ -2404,7 +2404,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
       return 0;
 
     /* Don't send DNS requests to non-exit servers by default. */
-    if (policy_is_reject_star(exit->exit_policy))
+    if (!conn->chosen_exit_name && policy_is_reject_star(exit->exit_policy))
       return 0;
   }
   return 1;

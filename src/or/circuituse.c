@@ -1182,8 +1182,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
         }
         return -1;
       }
-      if (!SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command) &&
-          !connection_ap_can_use_exit(conn, router)) {
+      if (!connection_ap_can_use_exit(conn, router)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
