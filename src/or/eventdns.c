@@ -1476,7 +1476,7 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 		if (!name) {
 			const unsigned int label_len = end - start;
 			if (label_len > 63) return -1;
-			if (j+label_len+1 > buf_len) return -2;
+			if ((size_t)(j+label_len+1) > buf_len) return -2;
 			if (table) dnslabel_table_add(table, start, j);
 			buf[j++] = label_len;
 
@@ -1487,7 +1487,7 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 			// append length of the label.
 			const unsigned int label_len = name - start;
 			if (label_len > 63) return -1;
-			if (j+label_len+1 > buf_len) return -2;
+			if ((size_t)(j+label_len+1) > buf_len) return -2;
 			if (table) dnslabel_table_add(table, start, j);
 			buf[j++] = label_len;
 
