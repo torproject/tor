@@ -92,6 +92,7 @@ N - DNS improvements
     . Asynchronous DNS
       o Document and rename SearchDomains, ResolvConf options
       D Make API closer to getaddrinfo()
+      - Teach evdns about ipv6.
       - Teach evdns to be able to listen for requests to be processed.
         . Design interface.
           - Rename stuff; current names suck.
@@ -105,6 +106,8 @@ N - DNS improvements
           o Queue responses when we see EAGAIN
           o Retry responses after a while
           o Be efficient about labels.
+          o Fix the interface for flags and flag handling.
+          o Generate truncated responses correctly.
           - Comment everything.
           - Clean up XXXX items
           - Test

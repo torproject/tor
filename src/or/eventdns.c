@@ -407,7 +407,7 @@ struct server_request {
 	struct server_request *next_pending;
 	struct server_request *prev_pending;
 
-    u16 trans_id;
+	u16 trans_id;
 	struct evdns_server_port *port;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -423,7 +423,7 @@ struct server_request {
 	char *response;
 	size_t response_len;
 
-    struct evdns_server_request base;
+	struct evdns_server_request base;
 };
 #define OFFSET_OF(st, member) ((off_t) (((char*)&((st*)0)->member)-(char*)0))
 
@@ -970,14 +970,14 @@ reply_parse(u8 *packet, int length)
 
 	reply.type = req->request_type;
 
-    // skip over each question in the reply
+	// skip over each question in the reply
 	for (i = 0; i < questions; ++i) {
 		// the question looks like
 		//	 <label:name><u16:type><u16:class>
 		SKIP_NAME;
 		j += 4;
 		if (j >= length) return -1;
-    }
+	}
 
 	// now we have the answer section which looks like
 	// <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
@@ -995,7 +995,7 @@ reply_parse(u8 *packet, int length)
 
 		// log("@%d, Name %s, type %d, class %d, j=%d", pre, tmp_name, (int)type, (int)class, j);
 
-        if (type == TYPE_A && class == CLASS_INET) {
+		if (type == TYPE_A && class == CLASS_INET) {
 			int addrcount, addrtocopy;
 			if (req->request_type != TYPE_A) {
 				j += datalength; continue;
@@ -1064,6 +1064,8 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 	GET16(additional);
 
 	if (flags & 0x8000) return -1; // Must not be an answer.
+	if (flags & 0x7800) return -1; // only standard queries are supported
+	flags &= 0x0300; // Only TC and RD get preserved.
 
 	server_req = malloc(sizeof(struct server_request));
 	if (server_req == NULL) return -1;
@@ -1384,7 +1386,7 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 
 #define APPEND16(x) do {                           \
         if (j + 2 > (off_t)buf_len)				   \
-            return (-2);                           \
+            goto overflow;                         \
         _t = htons(x);                             \
         memcpy(buf + j, &_t, 2);                   \
         j += 2;                                    \
@@ -1429,6 +1431,8 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 	// in which case the zero is already there
 	if (!j || buf[j-1]) buf[j++] = 0;
 	return j;
+ overflow:
+	return (-2);
 }
 
 // Finds the length of a dns request for a DNS name of the given
@@ -1454,12 +1458,11 @@ evdns_request_data_build(const char *const name, const int name_len, const u16 t
 
 #define APPEND32(x) do {                           \
         if (j + 4 > (off_t)buf_len)                \
-            return (-1);                           \
+            goto overflow;                         \
         _t32 = htonl(x);                           \
         memcpy(buf + j, &_t32, 4);                 \
         j += 4;                                    \
     } while (0)
-
 
 	APPEND16(trans_id);
 	APPEND16(0x0100);  // standard query, recusion needed
@@ -1477,6 +1480,8 @@ evdns_request_data_build(const char *const name, const int name_len, const u16 t
 	APPEND16(class);
 
 	return (int)j;
+ overflow:
+	return (-1);
 }
 
 // exported function
@@ -1615,15 +1620,23 @@ evdns_request_add_cname_reply(struct evdns_server_request *req, const char *name
 }
 
 static int
-evdns_request_response_format(struct server_request *req, int flags)
+evdns_request_response_format(struct server_request *req, int err)
 {
 	unsigned char buf[1500];
 	size_t buf_len = sizeof(buf);
-	off_t j = 0;
+	off_t j = 0, r;
 	u16 _t;
 	u32 _t32;
 	int i;
+	u16 flags;
 	struct dnslabel_table table;
+
+    if (err < 0 || err > 15) return -1;
+
+	/* Set response bit and error code; copy OPCODE and RD fields from
+	 * question; copy RA and AA if set by caller. */
+	flags = req->base.flags;
+	flags |= (0x8000 | err);
 
 	dnslabel_table_init(&table); // XXXX need to call dnslable_table_clear.
 	APPEND16(req->trans_id);
@@ -1643,7 +1656,7 @@ evdns_request_response_format(struct server_request *req, int flags)
 		APPEND16(req->base.questions[i]->class);
 	}
 
-	/* Add answer-like sections. */
+	/* Add answer, authority, and additional sections. */
 	for (i=0; i<3; ++i) {
 		struct server_request_item *item;
 		if (i==0)
@@ -1653,9 +1666,10 @@ evdns_request_response_format(struct server_request *req, int flags)
 		else
 			item = req->additional;
 		while (item) {
-			j = dnsname_to_labels(buf, buf_len, j, item->name, strlen(item->name), &table);
-			if (j < 0)
-				return (int) j;
+			r = dnsname_to_labels(buf, buf_len, j, item->name, strlen(item->name), &table);
+			if (r < 0)
+				goto overflow;
+			j = r;
 
 			APPEND16(item->type);
 			APPEND16(item->class);
@@ -1664,15 +1678,16 @@ evdns_request_response_format(struct server_request *req, int flags)
 				off_t len_idx = j, name_start;
 				j += 2;
 				name_start = j;
-				j = dnsname_to_labels(buf, buf_len, j, item->data, strlen(item->data), &table);
-				if (j < 0)
-					return (int) j;
+				r = dnsname_to_labels(buf, buf_len, j, item->data, strlen(item->data), &table);
+				if (r < 0)
+					goto overflow;
+				j = r;
 				_t = htons( (j-name_start) );
 				memcpy(buf+len_idx, &_t, 2);
 			} else {
 				APPEND16(item->datalen);
 				if (j+item->datalen > (off_t)buf_len)
-					return -1;
+					goto overflow;
 				memcpy(buf+j, item->data, item->datalen);
 				j += item->datalen;
 			}
@@ -1680,11 +1695,20 @@ evdns_request_response_format(struct server_request *req, int flags)
 		}
 	}
 
-	req->response_len = j;
-	if (!(req->response = malloc(req->response_len)))
-		return -1;
-	memcpy(req->response, buf, req->response_len);
+	if (j > 512) {
+overflow:
+		j = 512;
+		buf[3] |= 0x02; /* set the truncated bit. */
+	}
 
+	req->response_len = j;
+
+	if (!(req->response = malloc(req->response_len))) {
+		evdns_server_request_free_answers(req);
+		dnslabel_clear(&table);
+		return -1;
+	}
+	memcpy(req->response, buf, req->response_len);
 	evdns_server_request_free_answers(req);
 	dnslabel_clear(&table);
 	return 0;
@@ -1692,13 +1716,13 @@ evdns_request_response_format(struct server_request *req, int flags)
 
 // exported function
 int
-evdns_request_respond(struct evdns_server_request *_req, int flags)
+evdns_request_respond(struct evdns_server_request *_req, int err)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
 	struct evdns_server_port *port = req->port;
 	int r;
 	if (!req->response) {
-		if ((r = evdns_request_response_format(req, flags))<0)
+		if ((r = evdns_request_response_format(req, err))<0)
 			return r;
 	}
 
@@ -1816,7 +1840,7 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 
 	req->ns->timedout++;
 	if (req->ns->timedout > global_max_nameserver_timeout) {
-        req->ns->timedout = 0;
+		req->ns->timedout = 0;
 		nameserver_failed(req->ns, "request timed out.");
 	}
 
@@ -2149,12 +2173,12 @@ request_new(int type, const char *name, int flags, evdns_callback_type callback,
 
 	// request data lives just after the header
 	req->request = ((u8 *) req) + sizeof(struct request);
-    // denotes that the request data shouldn't be free()ed
+	// denotes that the request data shouldn't be free()ed
 	req->request_appended = 1;
 	rlen = evdns_request_data_build(name, name_len, trans_id,
-                           type, CLASS_INET, req->request, request_max_len);
+							type, CLASS_INET, req->request, request_max_len);
 	if (rlen < 0)
-        goto err1;
+		goto err1;
 	req->request_len = rlen;
 	req->trans_id = trans_id;
 	req->tx_count = 0;
@@ -2933,7 +2957,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data)
 		}
 	}
 
-	r = evdns_request_respond(req, 0x8000);
+	r = evdns_request_respond(req, 0);
 	if (r<0)
 		printf("eeek, couldn't send reply.\n");
 }

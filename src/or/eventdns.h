@@ -113,7 +113,7 @@ int evdns_request_add_aaaa_reply(struct evdns_server_request *req, const char *n
 int evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *inaddr_name, const char *hostname, int ttl);
 int evdns_request_add_cname_reply(struct evdns_server_request *req, const char *name, const char *cname, int ttl);
 
-int evdns_request_respond(struct evdns_server_request *req, int flags);
+int evdns_request_respond(struct evdns_server_request *req, int err);
 int evdns_request_drop(struct evdns_server_request *req);
 
 #endif  // !EVENTDNS_H
