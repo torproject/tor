@@ -436,6 +436,7 @@ NR- write a spec appendix for 'being nice with tor'
   - tor-in-the-media page
   - Remove need for HACKING file.
   - Figure out licenses for website material.
+  - Specify the keys and key rotation schedules and stuff
 
 Website:
   - and remove home and make the "Tor" picture be the link to home.

@@ -282,7 +282,7 @@ TODO:
    are able and willing to support.  Parties can only communicate if they
    have some connection protocol version in common.
 
-   Version 0.1.2.0-alpha and earlier don't understand VERSIONS cells,
+   Version 0.1.x.y-alpha and earlier don't understand VERSIONS cells,
    and therefore don't support version negotiation.  Thus, waiting until
    the other side has sent a VERSIONS cell won't work for these servers:
    if they send no cells back, it is impossible to tell whether they

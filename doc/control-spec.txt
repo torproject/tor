@@ -930,6 +930,11 @@ $Id$
      "650" SP "ADDRMAP" SP Address SP Address SP Expiry
      Expiry = DQOUTE ISOTime DQUOTE / "NEVER"
 
+  [XXX We should rename this to ADDRESSMAP. -RD]
+
+  [FFF We should add a SOURCE=%s argument for extended events,
+   which specifies what exit node told us this addressmap. -RD]
+
 4.1.8. Descriptors uploaded to us in our role as authoritative dirserver
 
   Syntax:
@@ -966,10 +971,10 @@ $Id$
      CLOCK_JUMPED
      "time=NUM"
        Tor spent enough time without CPU cycles that it has closed all
-       its circuits and will establishing them anew. This typically
+       its circuits and will establish them anew. This typically
        happens when a laptop goes to sleep and then wakes up again. It
        also happens when the system is swapping so heavily that Tor is
-       starving. The "time" argument includes the number of seconds Tor
+       starving. The "time" argument specifies the number of seconds Tor
        thinks it was unconscious for.
        This status event is sent as NOTICE severity normally, but WARN
        severity if Tor is acting as a server currently.

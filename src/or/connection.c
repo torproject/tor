@@ -1994,7 +1994,7 @@ connection_state_is_connecting(connection_t *conn)
   return 0;
 }
 
-/** Alloocates a base64'ed authenticator for use in http or https
+/** Allocates a base64'ed authenticator for use in http or https
  * auth, based on the input string <b>authenticator</b>. Returns it
  * if success, else returns NULL. */
 char *
