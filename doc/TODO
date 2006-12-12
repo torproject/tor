@@ -104,6 +104,8 @@ N - DNS improvements
           o Send responses to client
           o Queue responses when we see EAGAIN
           - Retry responses after a while
+          - Be efficient about labels.
+          - Be more memory-efficient
       - Add some kind of general question/response API so libevent can be
         flexible here.
 d     - Add option to use /etc/hosts?
