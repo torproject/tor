@@ -92,9 +92,20 @@ N - DNS improvements
     . Asynchronous DNS
       o Document and rename SearchDomains, ResolvConf options
       D Make API closer to getaddrinfo()
-      - Teach it to be able to listen for A and PTR requests to be processed.
-        Interface should be set_request_listener(sock, cb); [ cb(request) ]
-        send_reply(request, answer);
+      - Teach it to be able to listen for requests to be processed.
+        . Design interface.
+          - Rename stuff; current names suck.
+        . Design backend.
+        - Implement
+          . Listen for questions
+          o Parse questions, tell user code
+          . Let user code tell us the answer
+          - Generate responses
+          o Send responses to client
+          o Queue responses when we see EAGAIN
+          - Retry responses after a while
+      - Add some kind of general question/response API so libevent can be
+        flexible here.
 d     - Add option to use /etc/hosts?
 d     - Special-case localhost?
       - Verify that it works on windows
