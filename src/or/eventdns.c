@@ -1243,8 +1243,19 @@ server_port_read(struct evdns_server_port *s) {
 static void
 server_port_flush(struct evdns_server_port *port)
 {
-	// XXXX Writeme.
-	(void)port;
+	while (port->pending_replies) {
+		struct server_request *req = port->pending_replies;
+		int r = sendto(port->socket, req->response, req->response_len, 0,
+			   (struct sockaddr*) &req->addr, req->addrlen);
+		if (r < 0) // handle errror XXXX
+			return;
+		evdns_server_request_free(req);
+	}
+
+	(void) event_del(&port->event);
+	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
+			  server_port_ready_callback, port);
+	event_add(&port->event, NULL); // handle error. XXXX
 }
 
 // set if we are waiting for the ability to write to this server.
@@ -1671,34 +1682,43 @@ int
 evdns_request_respond(struct evdns_server_request *_req, int flags)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
+	struct evdns_server_port *port = req->port;
 	int r;
 	if (!req->response) {
 		if ((r = evdns_request_response_format(req, flags))<0)
 			return r;
 	}
 
-	r = sendto(req->port->socket, req->response, req->response_len, 0,
+	r = sendto(port->socket, req->response, req->response_len, 0,
 			   (struct sockaddr*) &req->addr, req->addrlen);
 	if (r<0) {
-		int err = last_error(req->port->socket);
+		int err = last_error(port->socket);
 		if (! error_is_eagain(err))
 			return -1;
 
-		if (req->port->pending_replies) {
-			req->prev_pending = req->port->pending_replies->prev_pending;
-			req->next_pending = req->port->pending_replies;
+		if (port->pending_replies) {
+			req->prev_pending = port->pending_replies->prev_pending;
+			req->next_pending = port->pending_replies;
 			req->prev_pending->next_pending =
 				req->next_pending->prev_pending = req;
 		} else {
 			req->prev_pending = req->next_pending = req;
-			req->port->pending_replies = req;
-			req->port->choaked = 1;
-		}
-		return 0;
-	}
-	// XXXX process pending replies.
+			port->pending_replies = req;
+			port->choaked = 1;
 
+			(void) event_del(&port->event);
+			event_set(&port->event, port->socket, EV_READ | EV_WRITE | EV_PERSIST, server_port_ready_callback, port);
+
+			event_add(&port->event, NULL); // handle error. XXXX
+		}
+
+		return 1;
+	}
 	evdns_server_request_free(req);
+
+	if (req->port->pending_replies)
+		server_port_flush(port);
+
 	return 0;
 }
 
