@@ -93,6 +93,7 @@ N - DNS improvements
       o Document and rename SearchDomains, ResolvConf options
       D Make API closer to getaddrinfo()
       - Teach evdns about ipv6.
+      - Make evdns use windows strerror equivalents.
       - Teach evdns to be able to listen for requests to be processed.
         . Design interface.
           - Rename stuff; current names suck.
@@ -110,7 +111,7 @@ N - DNS improvements
           o Generate truncated responses correctly.
           - Comment everything.
           - Clean up XXXX items
-          - Test
+          . Test
 d         - Be more memory-efficient
       - Add some kind of general question/response API so libevent can be
         flexible here.

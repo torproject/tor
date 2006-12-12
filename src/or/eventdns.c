@@ -386,6 +386,7 @@ struct evdns_server_port {
 	int socket;
 	int refcnt;
 	char choaked;
+	char closing;
 	evdns_request_callback_fn_type user_callback;
 	void *user_data;
 	struct event event;
@@ -431,8 +432,9 @@ struct server_request {
 	((struct server_request*)											\
 	 (((char*)(base_ptr) - OFFSET_OF(struct server_request, base))))
 
-static void evdns_server_request_free(struct server_request *req);
+static int evdns_server_request_free(struct server_request *req);
 static void evdns_server_request_free_answers(struct server_request *req);
+static void evdns_server_port_free(struct evdns_server_port *port);
 
 // The number of good nameservers that we have
 static int global_good_nameservers = 0;
@@ -1234,7 +1236,8 @@ server_port_read(struct evdns_server_port *s) {
 		if (r < 0) {
 			int err = last_error(s->socket);
 			if (error_is_eagain(err)) return;
-			// XXXX log error; not much else to do. -NM
+			log(EVDNS_LOG_WARN, "Error %s (%d) while reading request.",
+				strerror(err), err);
 			return;
 		}
 		request_parse(packet, r, s, (struct sockaddr*) &addr, addrlen);
@@ -1248,15 +1251,23 @@ server_port_flush(struct evdns_server_port *port)
 		struct server_request *req = port->pending_replies;
 		int r = sendto(port->socket, req->response, req->response_len, 0,
 			   (struct sockaddr*) &req->addr, req->addrlen);
-		if (r < 0) // handle errror XXXX
+		if (r < 0) {
+			int err = last_error(port->socket);
+			if (error_is_eagain(err))
+				return;
+			log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", strerror(err), err);
+		}
+		if (evdns_server_request_free(req))
 			return;
-		evdns_server_request_free(req);
 	}
 
 	(void) event_del(&port->event);
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
-	event_add(&port->event, NULL); // handle error. XXXX
+	if (event_add(&port->event, NULL) < 0) {
+        log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server.");
+        // ???? Do more?
+    }
 }
 
 // set if we are waiting for the ability to write to this server.
@@ -1363,19 +1374,17 @@ dnslabel_table_add(struct dnslabel_table *table, const char *label, int pos)
 	return (0);
 }
 
-
-// Converts a string to a length-prefixed set of DNS labels.
-// @buf must be strlen(name)+2 or longer. name and buf must
-// not overlap. name_len should be the length of name
+// Converts a string to a length-prefixed set of DNS labels, starting
+// at buf[j]. name and buf must not overlap. name_len should be the length
+// of name.  table is optional, and is used for compression.
 //
 // Input: abc.def
 // Output: <3>abc<3>def<0>
 //
-// Returns the length of the data. negative on error
+// Returns the first index after the encoded name, or negative on error.
 //	 -1	 label was > 63 bytes
 //	 -2	 name too long to fit in buffer.
 //
-// XXXX Changed interface.
 static off_t
 dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 				  const char *name, const int name_len,
@@ -1496,13 +1505,24 @@ evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb,
 	port->socket = socket;
 	port->refcnt = 1;
 	port->choaked = 0;
+	port->closing = 0;
 	port->user_callback = cb;
 	port->user_data = user_data;
 	port->pending_replies = NULL;
+
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
 	event_add(&port->event, NULL); // check return.
 	return port;
+}
+
+// exported function
+void
+evdns_close_server_port(struct evdns_server_port *port)
+{
+	if (--port->refcnt == 0)
+		evdns_server_port_free(port);
+	
 }
 
 // exported function
@@ -1638,7 +1658,7 @@ evdns_request_response_format(struct server_request *req, int err)
 	flags = req->base.flags;
 	flags |= (0x8000 | err);
 
-	dnslabel_table_init(&table); // XXXX need to call dnslable_table_clear.
+	dnslabel_table_init(&table);
 	APPEND16(req->trans_id);
 	APPEND16(flags);
 	APPEND16(req->base.nquestions);
@@ -1650,8 +1670,10 @@ evdns_request_response_format(struct server_request *req, int err)
 	for (i=0; i < req->base.nquestions; ++i) {
 		const char *s = req->base.questions[i]->name;
 		j = dnsname_to_labels(buf, buf_len, j, s, strlen(s), &table);
-		if (j < 0)
+		if (j < 0) {
+			dnslabel_clear(&table);
 			return (int) j;
+        }
 		APPEND16(req->base.questions[i]->type);
 		APPEND16(req->base.questions[i]->class);
 	}
@@ -1706,12 +1728,12 @@ overflow:
 	if (!(req->response = malloc(req->response_len))) {
 		evdns_server_request_free_answers(req);
 		dnslabel_clear(&table);
-		return -1;
+		return (-1);
 	}
 	memcpy(req->response, buf, req->response_len);
 	evdns_server_request_free_answers(req);
 	dnslabel_clear(&table);
-	return 0;
+	return (0);
 }
 
 // exported function
@@ -1744,14 +1766,18 @@ evdns_request_respond(struct evdns_server_request *_req, int err)
 			port->choaked = 1;
 
 			(void) event_del(&port->event);
-			event_set(&port->event, port->socket, EV_READ | EV_WRITE | EV_PERSIST, server_port_ready_callback, port);
+			event_set(&port->event, port->socket, (port->closing?0:EV_READ) | EV_WRITE | EV_PERSIST, server_port_ready_callback, port);
 
-			event_add(&port->event, NULL); // handle error. XXXX
+			if (event_add(&port->event, NULL) < 0) {
+                log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server");
+            }
+
 		}
 
 		return 1;
 	}
-	evdns_server_request_free(req);
+	if (evdns_server_request_free(req))
+		return 0;
 
 	if (req->port->pending_replies)
 		server_port_flush(port);
@@ -1784,10 +1810,11 @@ evdns_server_request_free_answers(struct server_request *req)
 	}
 }
 
-static void
+// return true iff we just wound up freeing the server_port.
+static int
 evdns_server_request_free(struct server_request *req)
 {
-	int i;
+	int i, rc=1;
 	if (req->base.questions) {
 		for (i = 0; i < req->base.nquestions; ++i)
 			free(req->base.questions[i]);
@@ -1800,7 +1827,7 @@ evdns_server_request_free(struct server_request *req)
 			else
 				req->port->pending_replies = NULL;
 		}
-		--req->port->refcnt; /* release? XXXX NM*/
+		rc = --req->port->refcnt;
 	}
 
 	if (req->response)
@@ -1813,7 +1840,26 @@ evdns_server_request_free(struct server_request *req)
 		req->prev_pending->next_pending = req->next_pending;
 	}
 
+	if (rc == 0) {
+		evdns_server_port_free(req->port);
+		free(req);
+		return (1);
+	}
 	free(req);
+	return (0);
+}
+
+static void
+evdns_server_port_free(struct evdns_server_port *port)
+{
+	assert(port);
+	assert(!port->refcnt);
+	assert(!port->pending_replies);
+	if (port->socket > 0) {
+		CLOSE_SOCKET(port->socket);
+		port->socket = -1;
+	}
+	(void) event_del(&port->event);
 }
 
 // exported function
