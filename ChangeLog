@@ -6,6 +6,7 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Try to batch changes to the state so that we do as few disk writes
       as possible while still storing important things in a timely
       fashion.
+    - Ongoing work on eventdns infrastructure
 
   o Major bugfixes:
     - Fix a longstanding bug in eventdns that prevented the count of
