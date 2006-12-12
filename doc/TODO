@@ -110,9 +110,8 @@ N - DNS improvements
           o Fix the interface for flags and flag handling.
           o Generate truncated responses correctly.
           - Comment everything.
-          - Clean up XXXX items
+          o Clean up XXXX items
           . Test
-d         - Be more memory-efficient
       - Add some kind of general question/response API so libevent can be
         flexible here.
 d     - Add option to use /etc/hosts?

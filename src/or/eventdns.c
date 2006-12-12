@@ -432,10 +432,6 @@ struct server_request {
 	((struct server_request*)											\
 	 (((char*)(base_ptr) - OFFSET_OF(struct server_request, base))))
 
-static int evdns_server_request_free(struct server_request *req);
-static void evdns_server_request_free_answers(struct server_request *req);
-static void evdns_server_port_free(struct evdns_server_port *port);
-
 // The number of good nameservers that we have
 static int global_good_nameservers = 0;
 
@@ -464,7 +460,6 @@ const char *const evdns_error_strings[] = {"no error", "The name server was unab
 static struct nameserver *nameserver_pick(void);
 static void evdns_request_insert(struct request *req, struct request **head);
 static void nameserver_ready_callback(int fd, short events, void *arg);
-static void server_port_ready_callback(int fd, short events, void *arg);
 static int evdns_transmit(void);
 static int evdns_request_transmit(struct request *req);
 static void nameserver_send_probe(struct nameserver *const ns);
@@ -475,6 +470,11 @@ static void evdns_requests_pump_waiting_queue(void);
 static u16 transaction_id_pick(void);
 static struct request *request_new(int type, const char *name, int flags, evdns_callback_type callback, void *ptr);
 static void request_submit(struct request *req);
+
+static int server_request_free(struct server_request *req);
+static void server_request_free_answers(struct server_request *req);
+static void server_port_free(struct evdns_server_port *port);
+static void server_port_ready_callback(int fd, short events, void *arg);
 
 #ifdef MS_WINDOWS
 static int
@@ -1257,7 +1257,7 @@ server_port_flush(struct evdns_server_port *port)
 				return;
 			log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", strerror(err), err);
 		}
-		if (evdns_server_request_free(req))
+		if (server_request_free(req))
 			return;
 	}
 
@@ -1521,13 +1521,13 @@ void
 evdns_close_server_port(struct evdns_server_port *port)
 {
 	if (--port->refcnt == 0)
-		evdns_server_port_free(port);
-	
+		server_port_free(port);
+    port->closing = 1;
 }
 
 // exported function
 int
-evdns_request_add_reply(struct evdns_server_request *_req, int section, const char *name, int type, int class, int ttl, int datalen, int is_name, const char *data)
+evdns_server_request_add_reply(struct evdns_server_request *_req, int section, const char *name, int type, int class, int ttl, int datalen, int is_name, const char *data)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
 	struct server_request_item **itemp, *item;
@@ -1595,23 +1595,25 @@ evdns_request_add_reply(struct evdns_server_request *_req, int section, const ch
 
 // exported function
 int
-evdns_request_add_a_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
+evdns_server_request_add_a_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
 {
-	return evdns_request_add_reply(
+	return evdns_server_request_add_reply(
 		  req, EVDNS_ANSWER_SECTION, name, TYPE_A, CLASS_INET,
 		  ttl, n*4, 0, addrs);
 }
 
+// exported function
 int
-evdns_request_add_aaaa_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
+evdns_server_request_add_aaaa_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
 {
-	return evdns_request_add_reply(
+	return evdns_server_request_add_reply(
 		  req, EVDNS_ANSWER_SECTION, name, TYPE_AAAA, CLASS_INET,
 		  ttl, n*16, 0, addrs);
 }
 
+// exported function
 int
-evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *inaddr_name, const char *hostname, int ttl)
+evdns_server_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *inaddr_name, const char *hostname, int ttl)
 {
 	u32 a;
 	char buf[32];
@@ -1626,21 +1628,23 @@ evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in
 				(int)(u8)((a>>24)&0xff));
 		inaddr_name = buf;
 	}
-	return evdns_request_add_reply(
+	return evdns_server_request_add_reply(
 		  req, EVDNS_ANSWER_SECTION, inaddr_name, TYPE_PTR, CLASS_INET,
 		  ttl, -1, 1, hostname);
 }
 
+// exported function
 int
-evdns_request_add_cname_reply(struct evdns_server_request *req, const char *name, const char *cname, int ttl)
+evdns_server_request_add_cname_reply(struct evdns_server_request *req, const char *name, const char *cname, int ttl)
 {
-	return evdns_request_add_reply(
+	return evdns_server_request_add_reply(
 		  req, EVDNS_ANSWER_SECTION, name, TYPE_A, CLASS_INET,
 		  ttl, -1, 1, cname);
 }
 
+
 static int
-evdns_request_response_format(struct server_request *req, int err)
+evdns_server_request_format_response(struct server_request *req, int err)
 {
 	unsigned char buf[1500];
 	size_t buf_len = sizeof(buf);
@@ -1726,25 +1730,25 @@ overflow:
 	req->response_len = j;
 
 	if (!(req->response = malloc(req->response_len))) {
-		evdns_server_request_free_answers(req);
+		server_request_free_answers(req);
 		dnslabel_clear(&table);
 		return (-1);
 	}
 	memcpy(req->response, buf, req->response_len);
-	evdns_server_request_free_answers(req);
+	server_request_free_answers(req);
 	dnslabel_clear(&table);
 	return (0);
 }
 
 // exported function
 int
-evdns_request_respond(struct evdns_server_request *_req, int err)
+evdns_server_request_respond(struct evdns_server_request *_req, int err)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
 	struct evdns_server_port *port = req->port;
 	int r;
 	if (!req->response) {
-		if ((r = evdns_request_response_format(req, err))<0)
+		if ((r = evdns_server_request_format_response(req, err))<0)
 			return r;
 	}
 
@@ -1776,7 +1780,7 @@ evdns_request_respond(struct evdns_server_request *_req, int err)
 
 		return 1;
 	}
-	if (evdns_server_request_free(req))
+	if (server_request_free(req))
 		return 0;
 
 	if (req->port->pending_replies)
@@ -1786,7 +1790,7 @@ evdns_request_respond(struct evdns_server_request *_req, int err)
 }
 
 static void
-evdns_server_request_free_answers(struct server_request *req)
+server_request_free_answers(struct server_request *req)
 {
 	struct server_request_item *victim, *next, **list;
 	int i;
@@ -1812,7 +1816,7 @@ evdns_server_request_free_answers(struct server_request *req)
 
 // return true iff we just wound up freeing the server_port.
 static int
-evdns_server_request_free(struct server_request *req)
+server_request_free(struct server_request *req)
 {
 	int i, rc=1;
 	if (req->base.questions) {
@@ -1833,7 +1837,7 @@ evdns_server_request_free(struct server_request *req)
 	if (req->response)
 		free(req->response);
 
-	evdns_server_request_free_answers(req);
+	server_request_free_answers(req);
 
 	if (req->next_pending && req->next_pending != req) {
 		req->next_pending->prev_pending = req->prev_pending;
@@ -1841,7 +1845,7 @@ evdns_server_request_free(struct server_request *req)
 	}
 
 	if (rc == 0) {
-		evdns_server_port_free(req->port);
+		server_port_free(req->port);
 		free(req);
 		return (1);
 	}
@@ -1850,7 +1854,7 @@ evdns_server_request_free(struct server_request *req)
 }
 
 static void
-evdns_server_port_free(struct evdns_server_port *port)
+server_port_free(struct evdns_server_port *port)
 {
 	assert(port);
 	assert(!port->refcnt);
@@ -1864,10 +1868,10 @@ evdns_server_port_free(struct evdns_server_port *port)
 
 // exported function
 int
-evdns_request_drop(struct evdns_server_request *_req)
+evdns_server_request_drop(struct evdns_server_request *_req)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
-	evdns_server_request_free(req);
+	server_request_free(req);
 	return 0;
 }
 
@@ -2988,14 +2992,14 @@ evdns_server_callback(struct evdns_server_request *req, void *data)
 		if (req->questions[i]->type == EVDNS_TYPE_A &&
 			req->questions[i]->class == EVDNS_CLASS_INET) {
 			printf(" -- replying for %s (A)\n", req->questions[i]->name);
-			r = evdns_request_add_a_reply(req, req->questions[i]->name,
+			r = evdns_server_request_add_a_reply(req, req->questions[i]->name,
 										  1, &ans, 10);
 			if (r<0)
 				printf("eeep, didn't work.\n");
 		} else if (req->questions[i]->type == EVDNS_TYPE_PTR &&
 				   req->questions[i]->class == EVDNS_CLASS_INET) {
 			printf(" -- replying for %s (PTR)\n", req->questions[i]->name);
-			r = evdns_request_add_ptr_reply(req, NULL, req->questions[i]->name,
+			r = evdns_server_request_add_ptr_reply(req, NULL, req->questions[i]->name,
 											"foo.bar.example.com", 10);
 		} else {
 			printf(" -- skipping %s [%d %d]\n", req->questions[i]->name,
