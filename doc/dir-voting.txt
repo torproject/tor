@@ -21,7 +21,7 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
   "most recent" networkstatus sources, and different versions of each
   (since authorities change their statements often).  Also, it is very
   redundant: most of the downloaded networkstatus are probably quite
-  similar.
+  similar.  Worse, the overhead grows as we add more authorities.
 
   So if we have clients only download a single multiply signed consensus
   network status statement, we can:
@@ -35,7 +35,7 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
        - Assuming that client-side or cache-side clocks are more correct
          than we assume now.
        - Assuming that authority clocks are perfectly correct.
-       - Degrading badly if an authority dies or is offline for a bit.
+       - Degrading badly if a few authorities die or are offline for a bit.
 
   We do not have to perform well if:
       - No clique of more than half the authorities can agree about who
@@ -90,7 +90,10 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
         MUST match the nickname in the "directory-signature" entry.
 
      "directory-signature" -- [XXXX this should be tagged with the nickname
-        or identity somehow.]
+        or identity somehow. -NM] [The bottom of
+        http://belegost.mit.edu/tor/status/authority already puts the
+        nickname next to it. So we can just fix the spec to require
+        this? -RD]
 
   Authorities SHOULD cache their most recently generated votes so they
   can persist them across restarts.  Authorities SHOULD NOT generate
@@ -124,9 +127,13 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
        re-English this sentence]
 
      "client-versions" and "server-versions" are sorted in ascending
-       order.
+       order based on version-spec.txt.
 
      "dir-options" and "known-flags" are not included.
+[XXX really? why not list the ones that are used in the consensus?
+For example, right now BadExit is in use, but no servers would be
+labelled BadExit, and it's still worth knowing that it was considered
+by the authorities. -RD]
 
   The fields MUST occur in the following order:
      "network-status-version"
@@ -141,7 +148,7 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
      "server-versions"
 
   The signatures at the end of the document appear as multiple instances
-  directory-signature, sorted in ascending order by nickname,
+  of directory-signature, sorted in ascending order by nickname,
   case-insensitively.
 
   A router entry should be included in the result if it is included by more
@@ -149,7 +156,12 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
   we have).  A router entry has a flag set if it is included by more than
   half of the authorities who care about that flag.  [XXXX this creates an
   incentive for attackers to DOS authorities whose votes they don't like.
-  Can we remember what flags people set the last time we saw them?]
+  Can we remember what flags people set the last time we saw them? -NM]
+  [Which 'we' are we talking here? The end-users never learn which
+  authority sets which flags. So you're thinking the authorities
+  should record the last vote they saw from each authority and if it's
+  within a week or so, count all the flags that it advertised as 'no'
+  votes? Plausible. -RD]
 
   The signature hash covers from the "network-status-version" line through
   the characters "directory-signature" in the first "directory-signature"
@@ -226,6 +238,11 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
   documents and use them to determine what descriptors to download from one
   another, we can rely on this existing mechanism to keep authorities up to
   date.
+
+  [We should do a thorough read-through of dir-spec again to make sure
+  that the authorities converge on which descriptor to "prefer" for
+  each router. Right now the decision happens at the client, which is
+  no longer the right place for it. -RD]
 
 3. Questions and concerns
 
