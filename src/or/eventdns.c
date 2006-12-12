@@ -317,12 +317,11 @@ typedef unsigned int uint;
 #define MAX_ADDRS 4	 // maximum number of addresses from a single packet
 // which we bother recording
 
-#define TYPE_A		   1
-#define TYPE_CNAME	   5
-#define TYPE_PTR	  12
-#define TYPE_AAAA	  28
+#define TYPE_A		EVDNS_TYPE_A
+#define TYPE_PTR	EVDNS_TYPE_PTR
+#define TYPE_AAAA	EVDNS_TYPE_AAAA
 
-#define CLASS_INET 1
+#define CLASS_INET	EVDNS_CLASS_INET
 
 struct request {
 	u8 *request;  // the dns packet data
@@ -2916,15 +2915,15 @@ evdns_server_callback(struct evdns_server_request *req, void *data)
 	/* dummy; give 192.168.11.11 as an answer for all A questions. */
 	for (i = 0; i < req->nquestions; ++i) {
 		u32 ans = htonl(0xc0a80b0bUL);
-		if (req->questions[i]->type == TYPE_A &&
-			req->questions[i]->class == CLASS_INET) {
+		if (req->questions[i]->type == EVDNS_TYPE_A &&
+			req->questions[i]->class == EVDNS_CLASS_INET) {
 			printf(" -- replying for %s (A)\n", req->questions[i]->name);
 			r = evdns_request_add_a_reply(req, req->questions[i]->name,
 										  1, &ans, 10);
 			if (r<0)
 				printf("eeep, didn't work.\n");
-		} else if (req->questions[i]->type == TYPE_PTR &&
-				   req->questions[i]->class == CLASS_INET) {
+		} else if (req->questions[i]->type == EVDNS_TYPE_PTR &&
+				   req->questions[i]->class == EVDNS_CLASS_INET) {
 			printf(" -- replying for %s (PTR)\n", req->questions[i]->name);
 			r = evdns_request_add_ptr_reply(req, NULL, req->questions[i]->name,
 											"foo.bar.example.com", 10);

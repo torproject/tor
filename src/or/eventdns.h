@@ -89,6 +89,21 @@ typedef void (*evdns_request_callback_fn_type)(struct evdns_server_request *, vo
 #define EVDNS_ANSWER_SECTION 0
 #define EVDNS_AUTHORITY_SECTION 1
 #define EVDNS_ADDITIONAL_SECTION 2
+
+#define EVDNS_TYPE_A	   1
+#define EVDNS_TYPE_NS	   2
+#define EVDNS_TYPE_CNAME   5
+#define EVDNS_TYPE_SOA     6
+#define EVDNS_TYPE_PTR	  12
+#define EVDNS_TYPE_MX	  15
+#define EVDNS_TYPE_TXT	  16
+#define EVDNS_TYPE_AAAA	  28
+
+#define EVDNS_QTYPE_AXFR 252
+#define EVDNS_QTYPE_ALL  255
+
+#define EVDNS_CLASS_INET   1
+
 struct evdns_server_port *evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type callback, void *user_data);
 void evdns_close_server_port(struct evdns_server_port *port);
 
