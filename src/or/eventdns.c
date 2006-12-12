@@ -1483,6 +1483,7 @@ evdns_request_add_reply(struct evdns_request *_req, int section, const char *nam
 
 	(*secp)->j = j;
 	(*secp)->n_items++;
+
 	return 0;
 }
 
