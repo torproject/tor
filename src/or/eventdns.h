@@ -41,7 +41,7 @@
 
 #define DNS_IPv4_A 1
 #define DNS_PTR 2
-#define DNS_IPv4_AAAA 3
+#define DNS_IPv6_AAAA 3
 
 #define DNS_QUERY_NO_SEARCH 1
 
@@ -50,11 +50,18 @@
 #define DNS_OPTION_MISC 4
 #define DNS_OPTIONS_ALL 7
 
+/*
+ * The callback that contains the results from a lookup.
+ * - type is either DNS_IPv4_A or DNS_IPv6_AAAA or DNS_PTR
+ * - count contains the number of addresses of form type
+ * - ttl is the number of seconds the resolution may be cached for.
+ * - addresses needs to be cast according to type
+ */
 typedef void (*evdns_callback_type) (int result, char type, int count, int ttl, void *addresses, void *arg);
 
 int evdns_init(void);
 void evdns_shutdown(int fail_requests);
-const char * evdns_err_to_string(int err);
+const char *evdns_err_to_string(int err);
 int evdns_nameserver_add(unsigned long int address);
 int evdns_count_nameservers(void);
 int evdns_clear_nameservers_and_suspend(void);
@@ -64,8 +71,8 @@ int evdns_resolve_ipv4(const char *name, int flags, evdns_callback_type callback
 int evdns_resolve_ipv6(const char *name, int flags, evdns_callback_type callback, void *ptr);
 struct in_addr;
 struct in6_addr;
-int evdns_resolve_reverse(struct in_addr *addr, int flags, evdns_callback_type callback, void *ptr);
-int evdns_resolve_reverse_ipv6(struct in6_addr *addr, int flags, evdns_callback_type callback, void *ptr);
+int evdns_resolve_reverse(struct in_addr *in, int flags, evdns_callback_type callback, void *ptr);
+int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_type callback, void *ptr);
 int evdns_resolv_conf_parse(int flags, const char *);
 #ifdef MS_WINDOWS
 int evdns_config_windows_nameservers(void);
@@ -74,7 +81,7 @@ void evdns_search_clear(void);
 void evdns_search_add(const char *domain);
 void evdns_search_ndots_set(const int ndots);
 
-typedef void (*evdns_debug_log_fn_type)(int warn, const char *msg);
+typedef void (*evdns_debug_log_fn_type)(int is_warning, const char *msg);
 void evdns_set_log_fn(evdns_debug_log_fn_type fn);
 
 #define DNS_NO_SEARCH 1

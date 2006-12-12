@@ -502,7 +502,7 @@ static void server_request_free_answers(struct server_request *req);
 static void server_port_free(struct evdns_server_port *port);
 static void server_port_ready_callback(int fd, short events, void *arg);
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) || defined(WIN32)
 static int
 last_error(int sock)
 {
@@ -578,13 +578,14 @@ evdns_set_log_fn(evdns_debug_log_fn_type fn)
 
 static void _evdns_log(int warn, const char *fmt, ...) EVDNS_LOG_CHECK;
 static void
-_evdns_log(int warn, const char *fmt, ...) {
+_evdns_log(int warn, const char *fmt, ...)
+{
 	va_list args;
 	static char buf[512];
 	if (!evdns_log_fn)
 		return;
 	va_start(args,fmt);
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) || defined(WIN32)
 	_vsnprintf(buf, sizeof(buf), fmt, args);
 #else
 	vsnprintf(buf, sizeof(buf), fmt, args);
@@ -838,7 +839,7 @@ reply_callback(struct request *const req, u32 ttl, u32 err, struct reply *reply)
 		return;
 	case TYPE_AAAA:
 		if (reply)
-			req->user_callback(DNS_ERR_NONE, DNS_IPv4_AAAA,
+			req->user_callback(DNS_ERR_NONE, DNS_IPv6_AAAA,
 							   reply->data.aaaa.addrcount, ttl,
 							   reply->data.aaaa.addresses,
 							   req->user_pointer);
@@ -850,8 +851,7 @@ reply_callback(struct request *const req, u32 ttl, u32 err, struct reply *reply)
 
 // this processes a parsed reply packet
 static void
-reply_handle(struct request *const req,
-		 u16 flags, u32 ttl, struct reply *reply) {
+reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply) {
 	int error;
 	static const int error_codes[] = {DNS_ERR_FORMAT, DNS_ERR_SERVERFAILED, DNS_ERR_NOTEXIST, DNS_ERR_NOTIMPL, DNS_ERR_REFUSED};
 
@@ -959,8 +959,7 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 
 // parses a raw request from a nameserver.
 static int
-reply_parse(u8 *packet, int length)
-{
+reply_parse(u8 *packet, int length) {
 	int j = 0;	// index into packet
 	u16 _t;	 // used by the macros
 	u32 _t32;  // used by the macros
@@ -990,9 +989,7 @@ reply_parse(u8 *packet, int length)
 
 	req = request_find_from_trans_id(trans_id);
 	if (!req) return -1;
-
 	// XXXX should the other return points also call reply_handle? -NM
-	// log("reqparse: trans was %d\n", (int)trans_id);
 
 	memset(&reply, 0, sizeof(reply));
 
@@ -1029,24 +1026,22 @@ reply_parse(u8 *packet, int length)
 		GET32(ttl);
 		GET16(datalength);
 
-		// log("@%d, Name %s, type %d, class %d, j=%d", pre, tmp_name, (int)type, (int)class, j);
-
 		if (type == TYPE_A && class == CLASS_INET) {
 			int addrcount, addrtocopy;
-			if (req->request_type != type) {
+			if (req->request_type != TYPE_A) {
 				j += datalength; continue;
 			}
-			// XXXX do something sane with malformed answers.
-			addrcount = datalength >> 2;  // each address is 4 bytes long
+			// XXXX do something sane with malformed A answers.
+			addrcount = datalength >> 2;
 			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, (unsigned)addrcount);
-			ttl_r = MIN(ttl_r, ttl);
 
+			ttl_r = MIN(ttl_r, ttl);
 			// we only bother with the first four addresses.
 			if (j + 4*addrtocopy > length) return -1;
 			memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
 				   packet + j, 4*addrtocopy);
-			reply.data.a.addrcount += addrtocopy;
 			j += 4*addrtocopy;
+			reply.data.a.addrcount += addrtocopy;
 			reply.have_answer = 1;
 			if (reply.data.a.addrcount == MAX_ADDRS) break;
 		} else if (type == TYPE_PTR && class == CLASS_INET) {
@@ -1060,10 +1055,10 @@ reply_parse(u8 *packet, int length)
 			break;
         } else if (type == TYPE_AAAA && class == CLASS_INET) {
 			int addrcount, addrtocopy;
-			if (req->request_type != type) {
+			if (req->request_type != TYPE_AAAA) {
 				j += datalength; continue;
 			}
-			// XXXX do something sane with malformed answers.
+			// XXXX do something sane with malformed AAAA answers.
 			addrcount = datalength >> 4;  // each address is 16 bytes long
 			addrtocopy = MIN(MAX_ADDRS - reply.data.aaaa.addrcount, (unsigned)addrcount);
 			ttl_r = MIN(ttl_r, ttl);
@@ -1179,15 +1174,21 @@ transaction_id_pick(void) {
 		const struct request *req = req_head, *started_at;
 #ifdef DNS_USE_CPU_CLOCK_FOR_ID
 		struct timespec ts;
-		const u16 trans_id = ts.tv_nsec & 0xffff;
-		if (clock_gettime(CLOCK_MONOTONIC, &ts))
-			abort();
+		u16 trans_id;
+#ifdef CLOCK_MONOTONIC
+		if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1)
+#else
+		if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+#endif
+			event_err(1, "clock_gettime");
+		trans_id = ts.tv_nsec & 0xffff;
 #endif
 
 #ifdef DNS_USE_GETTIMEOFDAY_FOR_ID
 		struct timeval tv;
-		const u16 trans_id = tv.tv_usec & 0xffff;
+		u16 trans_id;
 		gettimeofday(&tv, NULL);
+		trans_id = tv.tv_usec & 0xffff;
 #endif
 
 #ifdef DNS_USE_OPENSSL_FOR_ID
@@ -2095,7 +2096,8 @@ evdns_transmit(void) {
 
 // exported function
 int
-evdns_count_nameservers(void) {
+evdns_count_nameservers(void)
+{
 	const struct nameserver *server = server_head;
 	int n = 0;
 	if (!server)
@@ -2109,7 +2111,8 @@ evdns_count_nameservers(void) {
 
 // exported function
 int
-evdns_clear_nameservers_and_suspend(void) {
+evdns_clear_nameservers_and_suspend(void)
+{
 	struct nameserver *server = server_head, *started_at = server_head;
 	struct request *req = req_head, *req_started_at = req_head;
 
@@ -2158,7 +2161,8 @@ evdns_clear_nameservers_and_suspend(void) {
 
 // exported function
 int
-evdns_resume(void) {
+evdns_resume(void)
+{
 	evdns_requests_pump_waiting_queue();
 	return 0;
 }
@@ -2186,7 +2190,7 @@ evdns_nameserver_add(unsigned long int address) {
 
 	ns->socket = socket(PF_INET, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) || defined(WIN32)
 	{
 		u_long nonblocking = 1;
 		ioctlsocket(ns->socket, FIONBIO, &nonblocking);
@@ -2229,12 +2233,11 @@ evdns_nameserver_add(unsigned long int address) {
 
 	return 0;
 
- out2:
+out2:
 	CLOSE_SOCKET(ns->socket);
- out1:
+out1:
 	free(ns);
-	log(EVDNS_LOG_WARN, "Unable to add nameserver %s: error %d",
-		debug_ntoa(address), err);
+	log(EVDNS_LOG_WARN, "Unable to add nameserver %s: error %d", debug_ntoa(address), err);
 	return err;
 }
 
@@ -2242,7 +2245,8 @@ evdns_nameserver_add(unsigned long int address) {
 int
 evdns_nameserver_ip_add(const char *ip_as_string) {
 	struct in_addr ina;
-	if (!inet_aton(ip_as_string, &ina)) return 4;
+	if (!inet_aton(ip_as_string, &ina))
+		return 4;
 	return evdns_nameserver_add(ina.s_addr);
 }
 
@@ -2272,14 +2276,17 @@ string_num_dots(const char *s) {
 }
 
 static struct request *
-request_new(int type, const char *name, int flags, evdns_callback_type callback, void *user_ptr) {
-	const char issuing_now = (global_requests_inflight < global_max_requests_inflight) ? 1 : 0;
+request_new(int type, const char *name, int flags,
+	evdns_callback_type callback, void *user_ptr) {
+	const char issuing_now =
+		(global_requests_inflight < global_max_requests_inflight) ? 1 : 0;
 
 	const int name_len = strlen(name);
 	const int request_max_len = evdns_request_len(name_len);
 	const u16 trans_id = issuing_now ? transaction_id_pick() : 0xffff;
 	// the request data is alloced in a single block with the header
-	struct request *const req = (struct request *) malloc(sizeof(struct request) + request_max_len);
+	struct request *const req =
+		(struct request *) malloc(sizeof(struct request) + request_max_len);
 	int rlen;
 	(void) flags;
 
@@ -2304,7 +2311,7 @@ request_new(int type, const char *name, int flags, evdns_callback_type callback,
 	req->next = req->prev = NULL;
 
 	return req;
- err1:
+err1:
 	free(req);
 	return NULL;
 }
@@ -2331,9 +2338,9 @@ int evdns_resolve_ipv4(const char *name, int flags,
 		struct request *const req =
             request_new(TYPE_A, name, flags, callback, ptr);
 		if (req == NULL)
-            return 1;
+            return (1);
 		request_submit(req);
-		return 0;
+		return (0);
 	} else {
 		return search_request_new(TYPE_A, name, flags, callback, ptr);
 	}
@@ -2347,9 +2354,9 @@ int evdns_resolve_ipv6(const char *name, int flags,
 		struct request *const req =
             request_new(TYPE_AAAA, name, flags, callback, ptr);
 		if (req == NULL)
-            return 1;
+            return (1);
 		request_submit(req);
-		return 0;
+		return (0);
 	} else {
 		return search_request_new(TYPE_AAAA, name, flags, callback, ptr);
 	}
@@ -2752,7 +2759,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	fd = open(filename, O_RDONLY);
 	if (fd < 0) {
 		evdns_resolv_set_defaults(flags);
-		return 0;
+		return 1;
 	}
 
 	if (fstat(fd, &st)) { err = 2; goto out1; }
@@ -2799,7 +2806,7 @@ out1:
 	return err;
 }
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) || defined(WIN32)
 // Add multiple nameservers from a space-or-comma-separated list.
 static int
 evdns_nameserver_ip_add_line(const char *ips) {
@@ -2828,7 +2835,8 @@ typedef DWORD(WINAPI *GetNetworkParams_fn_t)(FIXED_INFO *, DWORD*);
 // Use the windows GetNetworkParams interface in iphlpapi.dll to
 // figure out what our nameservers are.
 static int
-load_nameservers_with_getnetworkparams(void) {
+load_nameservers_with_getnetworkparams(void)
+{
 	// Based on MSDN examples and inspection of	 c-ares code.
 	FIXED_INFO *fixed;
 	HMODULE handle = 0;
@@ -2844,7 +2852,6 @@ load_nameservers_with_getnetworkparams(void) {
 		status = -1;
 		goto done;
 	}
-
 	if (!(fn = (GetNetworkParams_fn_t) GetProcAddress(handle, "GetNetworkParams"))) {
 		log(EVDNS_LOG_WARN, "Could not get address of function.");
 		//same as above
@@ -2853,9 +2860,7 @@ load_nameservers_with_getnetworkparams(void) {
 	}
 
 	buf = malloc(size);
-	if (!buf) {
-		status = 4;
-		goto done;
+	if (!buf) { status = 4; goto done; }
 	}
 	fixed = buf;
 	r = fn(fixed, &size);
@@ -2909,7 +2914,8 @@ load_nameservers_with_getnetworkparams(void) {
 }
 
 static int
-config_nameserver_from_reg_key(HKEY key, const char *subkey) {
+config_nameserver_from_reg_key(HKEY key, const char *subkey)
+{
 	char *buf;
 	DWORD bufsz = 0, type = 0;
 	int status = 0;
@@ -2934,7 +2940,8 @@ config_nameserver_from_reg_key(HKEY key, const char *subkey) {
 #define WIN_NS_NT_KEY  SERVICES_KEY "Tcpip\\Parameters"
 
 static int
-load_nameservers_from_registry(void) {
+load_nameservers_from_registry(void)
+{
 	int found = 0;
 	int r;
 #define TRY(k, name)													\
@@ -2987,10 +2994,10 @@ load_nameservers_from_registry(void) {
 }
 
 int
-evdns_config_windows_nameservers(void) {
+evdns_config_windows_nameservers(void)
+{
 	if (load_nameservers_with_getnetworkparams() == 0)
 		return 0;
-
 	return load_nameservers_from_registry();
 }
 #endif
@@ -2999,7 +3006,7 @@ int
 evdns_init(void)
 {
         int res = 0;
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) || defined(WIN32)
         evdns_config_windows_nameservers();
 #else
         res = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");
