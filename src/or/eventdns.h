@@ -95,7 +95,7 @@ void evdns_close_server_port(struct evdns_server_port *port);
 int evdns_request_add_reply(struct evdns_server_request *req, int section, const char *name, int type, int class, int ttl, int datalen, int is_name, const char *data);
 int evdns_request_add_a_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl);
 int evdns_request_add_aaaa_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl);
-int evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *name, int ttl);
+int evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *inaddr_name, const char *hostname, int ttl);
 int evdns_request_add_cname_reply(struct evdns_server_request *req, const char *name, const char *cname, int ttl);
 
 int evdns_request_respond(struct evdns_server_request *req, int flags);

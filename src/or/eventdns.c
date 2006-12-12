@@ -1587,20 +1587,24 @@ evdns_request_add_aaaa_reply(struct evdns_server_request *req, const char *name,
 }
 
 int
-evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *name, int ttl)
+evdns_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *inaddr_name, const char *hostname, int ttl)
 {
 	u32 a;
 	char buf[32];
-	assert(in);
-	a = ntohl(in->s_addr);
-	sprintf(buf, "%d.%d.%d.%d.in-addr.arpa",
-			(int)(u8)((a	)&0xff),
-			(int)(u8)((a>>8 )&0xff),
-			(int)(u8)((a>>16)&0xff),
-			(int)(u8)((a>>24)&0xff));
+	assert(in || inaddr_name);
+	assert(!(in && inaddr_name));
+	if (in) {
+		a = ntohl(in->s_addr);
+		sprintf(buf, "%d.%d.%d.%d.in-addr.arpa",
+				(int)(u8)((a	)&0xff),
+				(int)(u8)((a>>8 )&0xff),
+				(int)(u8)((a>>16)&0xff),
+				(int)(u8)((a>>24)&0xff));
+		inaddr_name = buf;
+	}
 	return evdns_request_add_reply(
-		  req, EVDNS_ANSWER_SECTION, buf, TYPE_PTR, CLASS_INET,
-		  ttl, -1, 1, name);
+		  req, EVDNS_ANSWER_SECTION, inaddr_name, TYPE_PTR, CLASS_INET,
+		  ttl, -1, 1, hostname);
 }
 
 int
@@ -1625,12 +1629,22 @@ evdns_request_response_format(struct server_request *req, int flags)
 	dnslabel_table_init(&table); // XXXX need to call dnslable_table_clear.
 	APPEND16(req->trans_id);
 	APPEND16(flags);
-	APPEND16(0); /* questions */
+	APPEND16(req->base.nquestions);
 	APPEND16(req->n_answer);
 	APPEND16(req->n_authority);
 	APPEND16(req->n_additional);
 
-	/* Add questions : none. */
+	/* Add questions. */
+	for (i=0; i < req->base.nquestions; ++i) {
+		const char *s = req->base.questions[i]->name;
+		j = dnsname_to_labels(buf, buf_len, j, s, strlen(s), &table);
+		if (j < 0)
+			return (int) j;
+		APPEND16(req->base.questions[i]->type);
+		APPEND16(req->base.questions[i]->class);
+	}
+
+	/* Add answer-like sections. */
 	for (i=0; i<3; ++i) {
 		struct server_request_item *item;
 		if (i==0)
@@ -2894,17 +2908,49 @@ main_callback(int result, char type, int count, int ttl,
 	}
 	fflush(stdout);
 }
+void
+evdns_server_callback(struct evdns_server_request *req, void *data)
+{
+	int i, r;
+	(void)data;
+	/* dummy; give 192.168.11.11 as an answer for all A questions. */
+	for (i = 0; i < req->nquestions; ++i) {
+		u32 ans = htonl(0xc0a80b0bUL);
+		if (req->questions[i]->type == TYPE_A &&
+			req->questions[i]->class == CLASS_INET) {
+			printf(" -- replying for %s (A)\n", req->questions[i]->name);
+			r = evdns_request_add_a_reply(req, req->questions[i]->name,
+										  1, &ans, 10);
+			if (r<0)
+				printf("eeep, didn't work.\n");
+		} else if (req->questions[i]->type == TYPE_PTR &&
+				   req->questions[i]->class == CLASS_INET) {
+			printf(" -- replying for %s (PTR)\n", req->questions[i]->name);
+			r = evdns_request_add_ptr_reply(req, NULL, req->questions[i]->name,
+											"foo.bar.example.com", 10);
+		} else {
+			printf(" -- skipping %s [%d %d]\n", req->questions[i]->name,
+				   req->questions[i]->type, req->questions[i]->class);
+		}
+	}
+
+	r = evdns_request_respond(req, 0x8000);
+	if (r<0)
+		printf("eeek, couldn't send reply.\n");
+}
 
 void
-logfn(const char *msg) {
-  fprintf(stderr, "%s\n", msg);
+logfn(int is_warn, const char *msg) {
+	(void) is_warn;
+	fprintf(stderr, "%s\n", msg);
 }
 int
 main(int c, char **v) {
 	int idx;
-	int reverse = 0, verbose = 1;
+	int reverse = 0, verbose = 1, servertest = 0;
 	if (c<2) {
 		fprintf(stderr, "syntax: %s [-x] [-v] hostname\n", v[0]);
+		fprintf(stderr, "syntax: %s [-servertest]\n", v[0]);
 		return 1;
 	}
 	idx = 1;
@@ -2913,6 +2959,8 @@ main(int c, char **v) {
 			reverse = 1;
 		else if (!strcmp(v[idx], "-v"))
 			verbose = 1;
+		else if (!strcmp(v[idx], "-servertest"))
+			servertest = 1;
 		else
 			fprintf(stderr, "Unknown option %s\n", v[idx]);
 		++idx;
@@ -2921,6 +2969,20 @@ main(int c, char **v) {
 	if (verbose)
 		evdns_set_log_fn(logfn);
 	evdns_resolv_conf_parse(DNS_OPTION_NAMESERVERS, "/etc/resolv.conf");
+	if (servertest) {
+		int sock;
+		struct sockaddr_in my_addr;
+		sock = socket(PF_INET, SOCK_DGRAM, 0);
+		fcntl(sock, F_SETFL, O_NONBLOCK);
+		my_addr.sin_family = AF_INET;
+		my_addr.sin_port = htons(10053);
+		my_addr.sin_addr.s_addr = INADDR_ANY;
+		if (bind(sock, (struct sockaddr*)&my_addr, sizeof(my_addr))<0) {
+			perror("bind");
+			exit(1);
+		}
+		evdns_add_server_port(sock, 0, evdns_server_callback, NULL);
+	}
 	for (; idx < c; ++idx) {
 		if (reverse) {
 			struct in_addr addr;
