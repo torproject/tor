@@ -48,12 +48,13 @@ R   - Actually list all the events (notice and warn log messages are a good
 R   - Specify general event system
 R   - Specify actual events.
 
-  o Have (and document) a BEGIN_DIR relay cell that means "Connect to your
+  . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     directory port."
     o Specify
     o Implement
     o Use for something, so we can be sure it works.
     o Test and debug
+    - be able to connect without having a server descriptor, to bootstrap
 
 N - Document .noconnect addresses... but where?
 
