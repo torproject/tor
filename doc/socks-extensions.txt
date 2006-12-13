@@ -53,7 +53,15 @@ Tor's extensions to the SOCKS protocol
   address" portion of the reply.
   (This command was not supported before Tor 0.1.2.2-alpha.)
 
-3. HTTP-resistance
+3. Other command extensions.
+
+  Tor 0.1.2.4-alpha added a new command value: "CONNECT_DIR" [F2].
+  In this case, Tor will open an encrypted direct TCP connection to the
+  directory port of the Tor server specified by address:port (the port
+  specified should be the ORPort of the server). It uses a one-hop tunnel
+  and a "BEGIN_DIR" relay cell to accomplish this secure connection.
+
+4. HTTP-resistance
 
   Tor checks the first byte of each SOCKS request to see whether it looks
   more like an HTTP request (that is, it starts with a "G", "H", or "P").  If

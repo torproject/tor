@@ -1185,7 +1185,9 @@ typedef struct {
   int need_capacity;
   /** Whether the last hop was picked with exiting in mind. */
   int is_internal;
-  /** Did we pick this as a one-hop tunnel (not safe for other conns)? */
+  /** Did we pick this as a one-hop tunnel (not safe for other conns)?
+   * These are for encrypted connections that exit to this router, not
+   * for arbitrary exits from the circuit. */
   int onehop_tunnel;
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
   crypt_path_t *pending_final_cpath;
@@ -1710,10 +1712,16 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
 
-#define SOCKS_COMMAND_CONNECT 0x01
-#define SOCKS_COMMAND_CONNECT_DIR 0xE0
-#define SOCKS_COMMAND_RESOLVE 0xF0
-#define SOCKS_COMMAND_RESOLVE_PTR 0xF1
+/** Please open a TCP connection to this addr:port. */
+#define SOCKS_COMMAND_CONNECT       0x01
+/** Please turn this FQDN into an IP address, privately. */
+#define SOCKS_COMMAND_RESOLVE       0xF0
+/** Please turn this IP address into an FQDN, privately. */
+#define SOCKS_COMMAND_RESOLVE_PTR   0xF1
+/** Please open an encrypted direct TCP connection to the directory port
+ * of the Tor server specified by address:port. (In this case address:port
+ * specifies the ORPort of the server.) */
+#define SOCKS_COMMAND_CONNECT_DIR   0xF2
 
 #define SOCKS_COMMAND_IS_CONNECT(c) ((c)==SOCKS_COMMAND_CONNECT || \
                                      (c)==SOCKS_COMMAND_CONNECT_DIR)
@@ -1722,8 +1730,11 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 
 /** State of a SOCKS request from a user to an OP */
 struct socks_request_t {
-  char socks_version; /**< Which version of SOCKS did the client use? */
-  int command; /**< What has the user requested? One from the above list. */
+  /** Which version of SOCKS did the client use? One of "0, 4, 5" -- where
+   * 0 means that no socks handshake ever took place, and this is just a
+   * stub connection (e.g. see connection_ap_make_bridge()). */
+  char socks_version;
+  int command; /**< What is this stream's goal? One from the above list. */
   size_t replylen; /**< Length of <b>reply</b>. */
   char reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
                                     * we want to specify our own socks reply,

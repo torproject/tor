@@ -733,6 +733,9 @@ TODO:
    If the Tor server is not running a directory service, it should respond
    with a REASON_NOTDIRECTORY RELAY_END cell.
 
+   Clients MUST generate an all-zero payload for RELAY_BEGIN_DIR cells,
+   and servers MUST ignore the payload.
+
    [RELAY_BEGIN_DIR was not supported before Tor 0.1.2.2-alpha; clients
    SHOULD NOT send it to routers running earlier versions of Tor.]
 

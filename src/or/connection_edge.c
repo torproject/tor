@@ -1651,8 +1651,9 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
     tor_assert(circ->build_state->onehop_tunnel == 0);
   }
 
-  if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ),
-                                   begin_type, payload, payload_len,
+  if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ), begin_type,
+                  begin_type == RELAY_COMMAND_BEGIN ? payload : NULL,
+                  begin_type == RELAY_COMMAND_BEGIN ? payload_len : 0,
                                    ap_conn->cpath_layer) < 0)
     return -1; /* circuit is closed, don't continue */
 
