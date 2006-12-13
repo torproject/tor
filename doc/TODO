@@ -216,9 +216,12 @@ Deferred from 0.1.2.x:
   - Improvements to bandwidth counting
 R   - look into "uncounting" bytes spent on local connections, so
       we can bandwidthrate but still have fast downloads.
-R   - "bandwidth classes", for incoming vs initiated-here conns.
-d   - Write limiting; separate token bucket for write
-      - Write-limit directory responses (need to research)
+R   - "bandwidth classes", for incoming vs initiated-here conns,
+      and to give dir conns lower priority.
+    . Write limiting; separate token bucket for write
+      - preemptively give a 503 to some dir requests
+      - per-conn write buckets
+      - separate config options for read vs write limiting
   - Directory guards
   - RAM use in directory authorities.
   - Memory use improvements:

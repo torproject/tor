@@ -994,7 +994,7 @@ second_elapsed_callback(int fd, short event, void *args)
     accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
   control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
 
-  connection_bucket_refill(&now);
+  connection_bucket_refill(seconds_elapsed);
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 

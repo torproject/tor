@@ -723,12 +723,12 @@ typedef struct or_connection_t {
 
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
-  /* bandwidth* and receiver_bucket only used by ORs in OPEN state: */
+  /* bandwidth* and read_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
   int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
-  int receiver_bucket; /**< When this hits 0, stop receiving. Every second we
-                        * add 'bandwidthrate' to this, capping it at
-                        * bandwidthburst. (OPEN ORs only) */
+  int read_bucket; /**< When this hits 0, stop receiving. Every second we
+                    * add 'bandwidthrate' to this, capping it at
+                    * bandwidthburst. (OPEN ORs only) */
   circ_id_type_t circ_id_type; /**< When we send CREATE cells along this
                                 * connection, which half of the space should
                                 * we use? */
@@ -1968,7 +1968,7 @@ int retry_all_listeners(int force, smartlist_t *replaced_conns,
 int connection_bucket_write_limit(connection_t *conn);
 int global_write_bucket_empty(void);
 void connection_bucket_init(void);
-void connection_bucket_refill(struct timeval *now);
+void connection_bucket_refill(int seconds_elapsed);
 
 int connection_handle_read(connection_t *conn);
 

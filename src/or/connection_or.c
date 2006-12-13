@@ -315,7 +315,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
   or_options_t *options = get_options();
   routerinfo_t *r = router_get_by_digest(id_digest);
   conn->bandwidthrate = (int)options->BandwidthRate;
-  conn->receiver_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
+  conn->read_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
   connection_or_set_identity_digest(conn, id_digest);
   conn->_base.addr = addr;
   conn->_base.port = port;
