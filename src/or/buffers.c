@@ -661,7 +661,7 @@ flush_buf_tls_impl(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
   size_t forced;
 
   forced = tor_tls_get_forced_write_size(tls);
-  if (forced < sz)
+  if (forced > sz)
     sz = forced;
   r = tor_tls_write(tls, buf->cur, sz);
   if (r < 0) {
