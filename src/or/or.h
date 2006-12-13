@@ -473,10 +473,6 @@ typedef enum {
 #define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
 #define RELAY_COMMAND_INTRODUCE_ACK 40
 
-/* XXXX Placeholder: remove me as soon as we have correct reasons sent
- * everywhere. */
-#define END_STREAM_REASON_FIXME_XXXX 0
-
 /* Reasons why we (or a remote OR) might close a stream. See tor-spec.txt for
  * documentation of these. */
 #define END_STREAM_REASON_MISC 1
