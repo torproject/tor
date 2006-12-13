@@ -1015,7 +1015,8 @@ router_new_address_suggestion(const char *suggestion)
 
   /* first, learn what the IP address actually is */
   if (!tor_inet_aton(suggestion, &in)) {
-    log_debug(LD_DIR, "Malformed X-Your-Address-Is header. Ignoring.");
+    log_debug(LD_DIR, "Malformed X-Your-Address-Is header %s. Ignoring.",
+              escaped(suggestion));
     return;
   }
   addr = ntohl(in.s_addr);

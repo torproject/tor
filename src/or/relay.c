@@ -900,8 +900,7 @@ connection_edge_process_relay_cell_not_open(
              "not in state resolve_wait. Dropping.");
       return 0;
     }
-    tor_assert(conn->socks_request->command == SOCKS_COMMAND_RESOLVE ||
-               conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR);
+    tor_assert(SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command));
     answer_len = cell->payload[RELAY_HEADER_SIZE+1];
     if (rh->length < 2 || answer_len+2>rh->length) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,

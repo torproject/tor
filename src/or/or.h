@@ -1648,8 +1648,10 @@ typedef struct {
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
                      * resolver from the file here rather than from
                      * /etc/resolv.conf (Unix) or the registry (Windows). */
-  int EnforceDistinctSubnets; /** If true, don't allow multiple routers in the
+  int EnforceDistinctSubnets; /**< If true, don't allow multiple routers in the
                                * same network zone in the same circuit. */
+  int TunnelDirConns; /**< If true, use BEGIN_DIR rather than BEGIN when
+                       * possible. */
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -1705,17 +1707,21 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
+
 #define SOCKS_COMMAND_CONNECT 0x01
+#define SOCKS_COMMAND_CONNECT_DIR 0xE0
 #define SOCKS_COMMAND_RESOLVE 0xF0
 #define SOCKS_COMMAND_RESOLVE_PTR 0xF1
 
+#define SOCKS_COMMAND_IS_CONNECT(c) ((c)==SOCKS_COMMAND_CONNECT || \
+                                     (c)==SOCKS_COMMAND_CONNECT_DIR)
 #define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
                                      (c)==SOCKS_COMMAND_RESOLVE_PTR)
 
 /** State of a SOCKS request from a user to an OP */
 struct socks_request_t {
   char socks_version; /**< Which version of SOCKS did the client use? */
-  int command; /**< What has the user requested? One of CONNECT or RESOLVE. */
+  int command; /**< What has the user requested? One from the above list. */
   size_t replylen; /**< Length of <b>reply</b>. */
   char reply[MAX_SOCKS_REPLY_LEN]; /**< Write an entry into this string if
                                     * we want to specify our own socks reply,
@@ -2017,7 +2023,8 @@ int connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
 int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
                                          origin_circuit_t *circ);
 
-int connection_ap_make_bridge(char *address, uint16_t port);
+int connection_ap_make_bridge(char *address, uint16_t port,
+                              const char *digest, int command);
 void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
                                          size_t replylen,
                                          int endreason);

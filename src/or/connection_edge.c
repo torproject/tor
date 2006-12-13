@@ -55,7 +55,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
                "Bug: stream (marked at %s:%d) sending two socks replies?",
                file, line);
 
-    if (conn->socks_request->command == SOCKS_COMMAND_CONNECT)
+    if (SOCKS_COMMAND_IS_CONNECT(conn->socks_request->command))
       connection_ap_handshake_socks_reply(conn, NULL, 0, endreason);
     else
       connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
@@ -1213,6 +1213,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       // XXXX NM Do anything here?
 
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
+    } else if (socks->command == SOCKS_COMMAND_CONNECT_DIR) {
+      ; /* nothing */
     } else {
       tor_fragile_assert();
     }
@@ -1230,7 +1232,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     rend_cache_entry_t *entry;
     int r;
 
-    if (socks->command != SOCKS_COMMAND_CONNECT) {
+    if (!SOCKS_COMMAND_IS_CONNECT(socks->command)) {
       /* if it's a resolve request, fail it right now, rather than
        * building all the circuits and then realizing it won't work. */
       log_warn(LD_APP,
@@ -1450,7 +1452,7 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
     return -1;
   }
 
-  if (socks->command == SOCKS_COMMAND_CONNECT)
+  if (SOCKS_COMMAND_IS_CONNECT(socks->command))
     control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
   else
     control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE, 0);
@@ -1546,7 +1548,7 @@ connection_ap_process_natd(edge_connection_t *conn)
 
   if (strcmpstart(tmp_buf, "[DEST ")) {
     log_warn(LD_APP,"Natd handshake was ill-formed; closing. The client "
-             "said: '%s'",
+             "said: %s",
              escaped(tmp_buf));
     connection_mark_unattached_ap(conn, END_STREAM_REASON_INVALID_NATD_DEST);
     return -1;
@@ -1564,7 +1566,7 @@ connection_ap_process_natd(edge_connection_t *conn)
   socks->port = (uint16_t)
     tor_parse_long(tbuf, 10, 1, 65535, &port_ok, &daddr);
   if (!port_ok) {
-    log_warn(LD_APP,"Natd handshake failed; port '%s' is ill-formed or out "
+    log_warn(LD_APP,"Natd handshake failed; port %s is ill-formed or out "
              "of range.", escaped(tbuf));
     connection_mark_unattached_ap(conn, END_STREAM_REASON_INVALID_NATD_DEST);
     return -1;
@@ -1620,10 +1622,12 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
+  int begin_type;
 
   tor_assert(ap_conn->_base.type == CONN_TYPE_AP);
   tor_assert(ap_conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(ap_conn->socks_request);
+  tor_assert(SOCKS_COMMAND_IS_CONNECT(ap_conn->socks_request->command));
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
@@ -1641,9 +1645,11 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
   log_debug(LD_APP,
             "Sending relay cell to begin stream %d.", ap_conn->stream_id);
 
+  begin_type = ap_conn->socks_request->command == SOCKS_COMMAND_CONNECT ?
+                 RELAY_COMMAND_BEGIN : RELAY_COMMAND_BEGIN_DIR;
+
   if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ),
-                                   RELAY_COMMAND_BEGIN,
-                                   payload, payload_len,
+                                   begin_type, payload, payload_len,
                                    ap_conn->cpath_layer) < 0)
     return -1; /* circuit is closed, don't continue */
 
@@ -1669,14 +1675,13 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
   const char *string_addr;
   char inaddr_buf[32];
 
-  command = ap_conn->socks_request->command;
-
   tor_assert(ap_conn->_base.type == CONN_TYPE_AP);
   tor_assert(ap_conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(ap_conn->socks_request);
-  tor_assert(command == SOCKS_COMMAND_RESOLVE ||
-             command == SOCKS_COMMAND_RESOLVE_PTR);
   tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL);
+
+  command = ap_conn->socks_request->command;
+  tor_assert(SOCKS_COMMAND_IS_RESOLVE(command));
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
@@ -1729,7 +1734,8 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
  * Return the other end of the socketpair, or -1 if error.
  */
 int
-connection_ap_make_bridge(char *address, uint16_t port)
+connection_ap_make_bridge(char *address, uint16_t port,
+                          const char *digest, int command)
 {
   int fd[2];
   edge_connection_t *conn;
@@ -1761,7 +1767,13 @@ connection_ap_make_bridge(char *address, uint16_t port)
   strlcpy(conn->socks_request->address, address,
           sizeof(conn->socks_request->address));
   conn->socks_request->port = port;
-  conn->socks_request->command = SOCKS_COMMAND_CONNECT;
+  conn->socks_request->command = command;
+  if (command == SOCKS_COMMAND_CONNECT_DIR) {
+    conn->chosen_exit_name = tor_malloc(HEX_DIGEST_LEN+2);
+    conn->chosen_exit_name[0] = '$';
+    base16_encode(conn->chosen_exit_name+1,HEX_DIGEST_LEN+1,
+                  digest, DIGEST_LEN);
+  }
 
   conn->_base.address = tor_strdup("(local bridge)");
   conn->_base.addr = 0;
@@ -2396,8 +2408,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
                                     exit->exit_policy);
     if (r == ADDR_POLICY_REJECTED || r == ADDR_POLICY_PROBABLY_REJECTED)
       return 0;
-  } else { /* Some kind of a resolve. */
-
+  } else if (SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)) {
     /* Can't support reverse lookups without eventdns. */
     if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR &&
         exit->has_old_dnsworkers)

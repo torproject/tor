@@ -1821,6 +1821,8 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
   char *s, *start;
   char tmp[128];
 
+  tor_assert(platform);
+
   if (tor_version_parse(cutoff, &cutoff_version)<0) {
     log_warn(LD_DIR,"Bug: cutoff version '%s' unparseable.",cutoff);
     return 0;

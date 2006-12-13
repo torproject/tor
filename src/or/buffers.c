@@ -974,6 +974,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         return 0; /* not yet */
       req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
+          req->command != SOCKS_COMMAND_CONNECT_DIR &&
           req->command != SOCKS_COMMAND_RESOLVE &&
           req->command != SOCKS_COMMAND_RESOLVE_PTR) {
         /* not a connect or resolve or a resolve_ptr? we don't support it. */
@@ -1065,6 +1066,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
       req->command = (unsigned char) *(buf->cur+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
+          req->command != SOCKS_COMMAND_CONNECT_DIR &&
           req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. (No resolve_ptr with
          * socks4.) */

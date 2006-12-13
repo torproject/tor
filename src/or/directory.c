@@ -39,7 +39,7 @@ directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
 
 static void
 directory_send_command(dir_connection_t *conn, const char *platform,
-                       int purpose, const char *resource,
+                       int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
@@ -370,11 +370,17 @@ directory_initiate_command(const char *address, uint32_t addr,
                            const char *payload, size_t payload_len)
 {
   dir_connection_t *conn;
+  or_options_t *options = get_options();
+  int want_to_tunnel = options->TunnelDirConns && platform &&
+                       tor_version_as_new_as(platform, "0.1.2.2-alpha");
 
   tor_assert(address);
   tor_assert(addr);
   tor_assert(dir_port);
   tor_assert(digest);
+
+  log_debug(LD_DIR, "private %d, want_to_tunnel %d.",
+            private_connection, want_to_tunnel);
 
   switch (purpose) {
     case DIR_PURPOSE_FETCH_DIR:
@@ -415,14 +421,14 @@ directory_initiate_command(const char *address, uint32_t addr,
 
   /* give it an initial state */
   conn->_base.state = DIR_CONN_STATE_CONNECTING;
-  conn->dirconn_direct = (private_connection == 0);
 
-  if (!private_connection) {
+  if (!private_connection && !want_to_tunnel) {
     /* then we want to connect directly */
 
-    if (get_options()->HttpProxy) {
-      addr = get_options()->HttpProxyAddr;
-      dir_port = get_options()->HttpProxyPort;
+    conn->dirconn_direct = 1;
+    if (options->HttpProxy) {
+      addr = options->HttpProxyAddr;
+      dir_port = options->HttpProxyPort;
     }
 
     switch (connection_connect(TO_CONN(conn), conn->_base.address, addr,
@@ -437,7 +443,7 @@ directory_initiate_command(const char *address, uint32_t addr,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, platform, purpose, resource,
+        directory_send_command(conn, platform, purpose, 1, resource,
                                payload, payload_len);
         connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
         /* writable indicates finish, readable indicates broken link,
@@ -448,8 +454,13 @@ directory_initiate_command(const char *address, uint32_t addr,
      * populate it and add it at the right state
      * socketpair and hook up both sides
      */
-    conn->_base.s = connection_ap_make_bridge(conn->_base.address,
-                                              conn->_base.port);
+    conn->dirconn_direct = 0;
+    conn->_base.s =
+      connection_ap_make_bridge(conn->_base.address, conn->_base.port,
+                                digest,
+                                private_connection ?
+                                  SOCKS_COMMAND_CONNECT :
+                                  SOCKS_COMMAND_CONNECT_DIR);
     if (conn->_base.s < 0) {
       log_warn(LD_NET,"Making AP bridge to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));
@@ -463,7 +474,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     }
     conn->_base.state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
-    directory_send_command(conn, platform, purpose, resource,
+    directory_send_command(conn, platform, purpose, 0, resource,
                            payload, payload_len);
     connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
   }
@@ -474,7 +485,7 @@ directory_initiate_command(const char *address, uint32_t addr,
  */
 static void
 directory_send_command(dir_connection_t *conn, const char *platform,
-                       int purpose, const char *resource,
+                       int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len)
 {
   char proxystring[256];
@@ -501,7 +512,7 @@ directory_send_command(dir_connection_t *conn, const char *platform,
   }
 
   /* come up with some proxy lines, if we're using one. */
-  if (get_options()->HttpProxy) {
+  if (direct && get_options()->HttpProxy) {
     char *base64_authenticator=NULL;
     const char *authenticator = get_options()->HttpProxyAuthenticator;
 

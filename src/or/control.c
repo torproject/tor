@@ -1619,8 +1619,7 @@ getinfo_helper_events(control_connection_t *control_conn,
         case AP_CONN_STATE_CONTROLLER_WAIT:
         case AP_CONN_STATE_CIRCUIT_WAIT:
           if (conn->socks_request &&
-              (conn->socks_request->command == SOCKS_COMMAND_RESOLVE ||
-               conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR))
+              SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command))
             state = "NEWRESOLVE";
           else
             state = "NEW";

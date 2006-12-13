@@ -902,16 +902,18 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
                                 origin_circuit_t **circp)
 {
   origin_circuit_t *circ;
-  int is_resolve;
+  int check_exit_policy;
   int need_uptime, need_internal;
 
   tor_assert(conn);
   tor_assert(circp);
   tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
-  is_resolve = (conn->socks_request->command == SOCKS_COMMAND_RESOLVE ||
-                conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR);
+  check_exit_policy =
+      (conn->socks_request->command == SOCKS_COMMAND_CONNECT) &&
+      !connection_edge_is_rendezvous_stream(conn);
 
-  need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
+  need_uptime = (conn->socks_request->command == SOCKS_COMMAND_CONNECT) &&
+                smartlist_string_num_isin(get_options()->LongLivedPorts,
                                           conn->socks_request->port);
   need_internal = desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL;
 
@@ -941,7 +943,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   }
 
   /* Do we need to check exit policy? */
-  if (!is_resolve && !connection_edge_is_rendezvous_stream(conn)) {
+  if (check_exit_policy) {
     struct in_addr in;
     uint32_t addr = 0;
     if (tor_inet_aton(conn->socks_request->address, &in))
@@ -1125,13 +1127,17 @@ connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
 
   link_apconn_to_circ(conn, circ);
   tor_assert(conn->socks_request);
-  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
-    consider_recording_trackhost(conn, circ);
-    if (connection_ap_handshake_send_begin(conn, circ)<0)
-      return -1;
-  } else {
-    if (connection_ap_handshake_send_resolve(conn, circ)<0)
-      return -1;
+  switch (conn->socks_request->command) {
+    case SOCKS_COMMAND_CONNECT:
+      consider_recording_trackhost(conn, circ);
+      /* fall through */
+    case SOCKS_COMMAND_CONNECT_DIR:
+      if (connection_ap_handshake_send_begin(conn, circ)<0)
+        return -1;
+      break;
+    default:
+      if (connection_ap_handshake_send_resolve(conn, circ)<0)
+        return -1;
   }
 
   return 1;
