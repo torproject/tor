@@ -850,7 +850,14 @@ tor_tls_get_pending_bytes(tor_tls_t *tls)
     return 0;
 #endif
   return SSL_pending(tls->ssl);
+}
 
+/** If <b>tls</b> requires that the next write be of a particular size,
+ * return that size.  Otherwise, return 0. */
+size_t
+tor_tls_get_forced_write_size(tor_tls_t *tls)
+{
+  return tls->wantwrite_n;
 }
 
 /** Return the number of bytes read across the underlying socket. */

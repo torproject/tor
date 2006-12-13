@@ -648,16 +648,21 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
   return flushed;
 }
 
-/** Helper for flush_buf_tls(): try to write <b>sz</b> bytes from buffer
- * <b>buf</b> onto TLS object <b>tls</b>.  On success, deduct the bytes
- * written from *<b>buf_flushlen</b>.
- * Return the number of bytes written on success, -1 on failure.
+/** Helper for flush_buf_tls(): try to write <b>sz</b> bytes (or more if
+ * required by a previous write) from buffer <b>buf</b> onto TLS object
+ * <b>tls</b>.  On success, deduct the bytes written from
+ * *<b>buf_flushlen</b>.  Return the number of bytes written on success, -1 on
+ * failure.
  */
 static INLINE int
 flush_buf_tls_impl(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   int r;
+  size_t forced;
 
+  forced = tor_tls_get_forced_write_size(tls);
+  if (forced < sz)
+    sz = forced;
   r = tor_tls_write(tls, buf->cur, sz);
   if (r < 0) {
     return r;
