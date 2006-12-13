@@ -2045,7 +2045,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   if (zero_circ) {
     /* start a new circuit */
-    circ = origin_circuit_init(intended_purpose, 0, 0, 0);
+    circ = origin_circuit_init(intended_purpose, 0, 0, 0, 0);
   }
 
   /* now circ refers to something that is ready to be extended */

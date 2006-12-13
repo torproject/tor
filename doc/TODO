@@ -48,12 +48,12 @@ R   - Actually list all the events (notice and warn log messages are a good
 R   - Specify general event system
 R   - Specify actual events.
 
-N . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
+  o Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     directory port."
     o Specify
     o Implement
-    - Use for something, so we can be sure it works.
-    - Test and debug
+    o Use for something, so we can be sure it works.
+    o Test and debug
 
 N - Document .noconnect addresses... but where?
 
@@ -445,4 +445,6 @@ Website:
 R - make a page with the hidden service diagrams.
 
   - ask Jan to be the translation coordinator? add to volunteer page.
+
+  - add a page for localizing all tor's components.
 

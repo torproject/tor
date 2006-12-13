@@ -1647,6 +1647,9 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
 
   begin_type = ap_conn->socks_request->command == SOCKS_COMMAND_CONNECT ?
                  RELAY_COMMAND_BEGIN : RELAY_COMMAND_BEGIN_DIR;
+  if (begin_type == RELAY_COMMAND_BEGIN) {
+    tor_assert(circ->build_state->onehop_tunnel == 0);
+  }
 
   if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ),
                                    begin_type, payload, payload_len,

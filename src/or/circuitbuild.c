@@ -273,13 +273,14 @@ again:
 /** Create and return a new origin circuit. Initialize its purpose and
  * build-state based on our arguments. */
 origin_circuit_t *
-origin_circuit_init(uint8_t purpose, int need_uptime, int need_capacity,
-                    int internal)
+origin_circuit_init(uint8_t purpose, int onehop_tunnel,
+                    int need_uptime, int need_capacity, int internal)
 {
   /* sets circ->p_circ_id and circ->p_conn */
   origin_circuit_t *circ = origin_circuit_new();
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OR_WAIT);
   circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
+  circ->build_state->onehop_tunnel = onehop_tunnel;
   circ->build_state->need_uptime = need_uptime;
   circ->build_state->need_capacity = need_capacity;
   circ->build_state->is_internal = internal;
@@ -295,13 +296,15 @@ origin_circuit_init(uint8_t purpose, int need_uptime, int need_capacity,
  * it's not open already.
  */
 origin_circuit_t *
-circuit_establish_circuit(uint8_t purpose, extend_info_t *info,
+circuit_establish_circuit(uint8_t purpose, int onehop_tunnel,
+                          extend_info_t *info,
                           int need_uptime, int need_capacity, int internal)
 {
   origin_circuit_t *circ;
   int err_reason = 0;
 
-  circ = origin_circuit_init(purpose, need_uptime, need_capacity, internal);
+  circ = origin_circuit_init(purpose, onehop_tunnel,
+                             need_uptime, need_capacity, internal);
 
   if (onion_pick_cpath_exit(circ, info) < 0 ||
       onion_populate_cpath(circ) < 0) {
@@ -601,7 +604,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
-      if (!has_completed_circuit) {
+      if (!has_completed_circuit && !circ->build_state->onehop_tunnel) {
         or_options_t *options = get_options();
         has_completed_circuit=1;
         /* FFFF Log a count of known routers here */
@@ -1340,13 +1343,17 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
 {
   cpath_build_state_t *state = circ->build_state;
   routerlist_t *rl = router_get_routerlist();
-  int r;
 
-  r = new_route_len(get_options()->PathlenCoinWeight, circ->_base.purpose,
-                    exit, rl->routers);
-  if (r < 1) /* must be at least 1 */
-    return -1;
-  state->desired_path_len = r;
+  if (state->onehop_tunnel) {
+    log_debug(LD_CIRC, "Launching a one-hop circuit for dir tunnel.");
+    state->desired_path_len = 1;
+  } else {
+    int r = new_route_len(get_options()->PathlenCoinWeight,
+                          circ->_base.purpose, exit, rl->routers);
+    if (r < 1) /* must be at least 1 */
+      return -1;
+    state->desired_path_len = r;
+  }
 
   if (exit) { /* the circuit-builder pre-requested one */
     log_info(LD_CIRC,"Using requested exit node '%s'", exit->nickname);

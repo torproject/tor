@@ -582,7 +582,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
    */
   for (i=0;i<MAX_REND_FAILURES;i++) {
     launched = circuit_launch_by_extend_info(
-          CIRCUIT_PURPOSE_S_CONNECT_REND, extend_info,
+          CIRCUIT_PURPOSE_S_CONNECT_REND, 0, extend_info,
           circ_needs_uptime, 1, 1);
 
     if (launched)
@@ -661,7 +661,7 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   log_info(LD_REND,"Reattempting rendezvous circuit to '%s'",
            oldstate->chosen_exit->nickname);
 
-  newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
+  newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND, 0,
                                oldstate->chosen_exit, 0, 1, 1);
   if (!newcirc) {
     log_warn(LD_REND,"Couldn't relaunch rendezvous circuit to '%s'.",
@@ -698,7 +698,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
   rep_hist_note_used_internal(time(NULL), 1, 0);
 
   ++service->n_intro_circuits_launched;
-  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
+  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, 0,
                                         nickname, 1, 0, 1);
   if (!launched) {
     log_info(LD_REND,

@@ -1185,6 +1185,8 @@ typedef struct {
   int need_capacity;
   /** Whether the last hop was picked with exiting in mind. */
   int is_internal;
+  /** Did we pick this as a one-hop tunnel (not safe for other conns)? */
+  int onehop_tunnel;
   /** The crypt_path_t to append after rendezvous: used for rendezvous. */
   crypt_path_t *pending_final_cpath;
   /** How many times has building a circuit for this task failed? */
@@ -1779,10 +1781,11 @@ char *circuit_list_path_for_controller(origin_circuit_t *circ);
 void circuit_log_path(int severity, unsigned int domain,
                       origin_circuit_t *circ);
 void circuit_rep_hist_note_result(origin_circuit_t *circ);
-origin_circuit_t *origin_circuit_init(uint8_t purpose, int need_uptime,
+origin_circuit_t *origin_circuit_init(uint8_t purpose, int onehop_tunnel,
+                                      int need_uptime,
                                       int need_capacity, int internal);
 origin_circuit_t *circuit_establish_circuit(uint8_t purpose,
-                                     extend_info_t *exit,
+                                     int onehop_tunnel, extend_info_t *exit,
                                      int need_uptime, int need_capacity,
                                      int internal);
 int circuit_handle_first_hop(origin_circuit_t *circ);
@@ -1877,14 +1880,18 @@ int circuit_enough_testing_circs(void);
 void circuit_has_opened(origin_circuit_t *circ);
 void circuit_build_failed(origin_circuit_t *circ);
 origin_circuit_t *circuit_launch_by_nickname(uint8_t purpose,
+                                      int onehop_tunnel,
                                       const char *exit_nickname,
                                       int need_uptime, int need_capacity,
                                       int is_internal);
 origin_circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
+                                         int onehop_tunnel,
                                          extend_info_t *info,
                                          int need_uptime, int need_capacity,
                                          int is_internal);
-origin_circuit_t *circuit_launch_by_router(uint8_t purpose, routerinfo_t *exit,
+origin_circuit_t *circuit_launch_by_router(uint8_t purpose,
+                                    int onehop_tunnel,
+                                    routerinfo_t *exit,
                                     int need_uptime, int need_capacity,
                                     int is_internal);
 void circuit_reset_failure_count(int timeout);
