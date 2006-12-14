@@ -2006,7 +2006,7 @@ remove_dead_entries(void)
       base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
       format_local_iso_time(tbuf, entry->bad_since);
       log_info(LD_CIRC, "Entry guard '%s' (%s) has been down or unlisted "
-               "since %s; removing.",
+               "since %s local time; removing.",
                entry->nickname, dbuf, tbuf);
       tor_free(entry);
       smartlist_del_keeporder(entry_guards, i);

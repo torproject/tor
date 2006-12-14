@@ -3974,11 +3974,12 @@ or_state_save(time_t now)
   tor_free(global_state->TorVersion);
   global_state->TorVersion = tor_strdup("Tor " VERSION);
   state = config_dump(&state_format, global_state, 1);
-  len = strlen(state)+128;
+  len = strlen(state)+256;
   contents = tor_malloc(len);
   format_local_iso_time(tbuf, time(NULL));
   tor_snprintf(contents, len,
-               "# Tor state file last generated on %s\n"
+               "# Tor state file last generated on %s local time\n"
+               "# Other times below are in GMT\n"
                "# You *do not* need to edit this file.\n\n%s",
                tbuf, state);
   tor_free(state);

@@ -930,6 +930,8 @@ $Id$
      "650" SP "ADDRMAP" SP Address SP Address SP Expiry
      Expiry = DQOUTE ISOTime DQUOTE / "NEVER"
 
+  Expiry is expressed as the local time (rather than GMT).
+
   [XXX We should rename this to ADDRESSMAP. -RD]
 
   [FFF We should add a SOURCE=%s argument for extended events,
