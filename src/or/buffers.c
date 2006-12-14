@@ -694,6 +694,10 @@ flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
 
   flushlen0 = sz;
   _split_range(buf, buf->cur, &flushlen0, &flushlen1);
+  if (flushlen1) {
+    size_t forced = tor_tls_get_forced_write_size(tls);
+    tor_assert(forced <= flushlen0);
+  }
 
   r = flush_buf_tls_impl(tls, buf, flushlen0, buf_flushlen);
   check();
