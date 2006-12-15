@@ -15,6 +15,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Ongoing work on eventdns infrastructure: add dns server and ipv6
       support.
     - Make PIDFile work on Windows (untested).
+    - Add internal descriptions for a bunch of configuration options:
+      accessible via controller interface and in comments in saved
+      options files.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

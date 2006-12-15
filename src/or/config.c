@@ -300,8 +300,168 @@ typedef struct config_var_description_t {
 } config_var_description_t;
 
 static config_var_description_t options_description[] = {
+  /* ==== general options */
+  /* AvoidDiskWrites */
+  { "BandwidthRate", "A token bucket limits the average incoming bandwidth on "
+    "this node to the specified number of bytes per second." },
+  { "BandwidthBurst", "Limit the maximum token buffer size (also known as "
+    "burst) to the given number of bytes." },
+  { "ConnLimit", "Maximum number of simultaneous sockets allowed." },
+  /*  ControlListenAddress */
+  { "ControlPort", "If set, Tor will accept connections from the same machine "
+    "(localhost only) on this port, and allow those connections to control "
+    "the Tor process using the Tor Control Protocol (described in"
+    "control-spec.txt).", },
+  { "CookieAuthentication", "If this option is set to 1, don't allow any "
+    "connections to the control port except when the connecting process "
+    "can read a file that Tor creates in its data directory. " },
+  { "DataDirectory", "Store working data, state, keys, and caches here." },
+  { "DirServer", "Tor only trusts directories signed with one of these "
+    "servers' keys.  Used to override the standard list of directory "
+    "authorities." },
+  /* { "FastFirstHopPK", "" }, */
+  /* FetchServerDescriptors, FetchHidServDescriptors,
+   * FetchUselessDescriptors */
+  { "Group", "On startup, setgid to this group." },
+  { "HardwareAccel", "If set, Tor tries to use hardware crypto accelerators "
+    "when it can." },
+  /* HashedControlPassword */
+  { "HTTPProxy", "Force Tor to make all HTTP directory requests through this "
+    "host:port (or host:80 if port is not set)." },
+  { "HTTPProxyAuthenticator", "A username:password pair to be used with "
+    "HTTPProxy." },
+  { "HTTPSProxy", "Force Tor to make all TLS (SSL) connectinos through this "
+    "host:port (or host:80 if port is not set)." },
+  { "HTTPSProxyAuthenticator", "A username:password pair to be used with "
+    "HTTPSProxy." },
+  { "KeepalivePeriod", "Send a padding cell every N seconds to keep firewalls "
+    "from closing our connections while Tor is not in use." },
+  { "Log", "Where to send logging messages.  Format is "
+    "minSeverity[-maxSeverity] (stderr|stdout|syslog|file FILENAME)." },
+  { "OutboundBindAddress", "Make all outbound connections originate from the "
+    "provided IP address (only usefol for multiple network interfaces)." },
+  { "PIDFile", "On startup, write our PID to this file. On clean shutdown, "
+    "remove the file." },
+  /* ProtocolWarnings */
+  /* RephistTrackTime */
+  { "RunAsDaemon", "If set, Tor forks and daemonizes to the background when "
+    "started.  Unix only." },
+  { "SafeLogging", "If set to 0, Tor logs potentially sensitive strings "
+    "rather than replacing them with the string [scrubbed]." },
+  /* TunnelDirConns */
+  { "User", "On startup, setuid to this user" },
+
+  /* ==== client options */
+  { "AllowInvalidNodes", "Where on our circuits should Tor allow servers "
+    "that the directory authorities haven't called \"valid\"?" },
+  /*  CircuitBuildTimeout, CircuitIdleTimeout */
+  { "ClientOnly", "If set to 1, Tor will under no circumstances run as a "
+    "server, even if ORPort is as configued." },
+  { "EntryNodes", "A list of preferred entry nodes to use for the first hop "
+    "in circuits, if possible." },
+  /* { "EnforceDistinctSubnets" , "" }, */
+  { "ExitNodes", "A list of preferred nodes to use for the last hop in "
+    "circuits, when possible." },
+  { "ExcludeNodes", "A list of nodes never to use when building a circuit." },
+  { "FascistFirewall", "If set, Tor will only create outgoing connections to "
+    "ORs running on the ports listed in FirewallPorts." },
+  { "FirewallPorts", "A list of ports that we cann connect to.  Only used "
+    "when FascistFirewall is set." },
+  { "LongLivedPorts", "A list of ports for services that tend to require "
+    "long-lived connections." },
+  { "MapAddress", "Force Tor to treat all requests for one address as if "
+    "they were for another." },
+  { "NewCircuitPeriod", "Force Tor to consider whether to build a new circuit "
+    "every NUM sections." },
+  { "MaxCircuitDirtiness", "Do not attach new streams to a circuit that has "
+    "been used up to this many seconds ago." },
+  /* NatdPort, NatdListenAddress */
+  { "NodeFamily", "A list of servers that constitute a 'family' and should "
+    "never be used in the same circuit." },
+  { "NumEntryGuards", "How many entry guards should we keep at a time?" },
+  /* PathlenCoinWeight */
+  { "ReachableAddresses", "Addresses we can connect to, as IP/bits:port-port. "
+    "By default, we assume all addresses are reachable." },
+  /* reachablediraddresses, reachableoraddresses. */
+  { "RendNodes", "A list of preferred nodes to use for a rendezvous point, "
+    "if possible." },
+  { "RendExcludenodes", "A list of nodes never to use as rendezvous points." },
+  /* SafeSOCKS */
+  { "SOCKSPort", "The port where we listen for SOCKS connections from "
+    "applications." },
+  { "SOCKSListenAddress", "Bind to this address to listen to connections from "
+    "SOCKS-speaking applications." },
+  { "SOCKSPolicy", "Set an entry policy to limit which addresses can connect "
+    "to the SOCKSPort." },
+  /* SocksTimeout */
+  { "StrictExitNodes", "If set, Tor will fail to operate when none of the "
+    "configured ExitNodes can be used." },
+  { "StrictEntryNodes", "If set, Tor will fail to operate when none of the "
+    "configured EntryNodes can be used." },
+  /* TestSocks */
+  { "TrackHostsExit", "Hosts and domains which should, if possible, be "
+    "acccessed from the same exit node each time we connect to them." },
+  { "TrackHostsExitExpire", "Time after which we forget which exit we were "
+    "using to connect to hosts in TrackHostsExit." },
+  /* "TransPort", "TransListenAddress */
+  { "UseEntryGuards", "Set to 0 if we want to pick from the whole set of "
+    "entry nodes for each server, rather than picking a set of 'Guards' to "
+    "prevent profiling attacks." },
+
+  /* === server options */
   { "Address", "The advertised (external) address we should use." },
-  // { "AccountingStart", ""},
+  /* Accounting* options. */
+  /* AssumeReachable */
+  { "ContactInfo", "Administrative contact information to advertise for this "
+    "server." },
+  { "ExitPolicy", "Address/port ranges for which to accept or reject outgoing "
+    "connections on behalf of Tor users." },
+  /*  { "ExitPolicyRejectPrivate, "" }, */
+  { "MaxAdvertisedBandwidth", "If set, we will not advertise more than this "
+    "amount of bandwidth for our bandwidth rate, regardless of how much "
+    "bandwidth we actually detect." },
+  { "MaxOnionsPending", "Reject new attempts to extend circuits when we "
+    "already have this many pending." },
+  { "MyFamily", "Declare a list of other servers as belonging to the same "
+    "family as this one, so that clients will not use two from the same "
+    "family in the same circuit." },
+  { "Nickname", "Set the server nickname." },
+  { "NoPublish", "Set to 1 in order to keep the server from uploading info "
+    "to the directory authorities.  This prevents clients from using your "
+    "server." },
+  { "NumCPUs", "How many processes to use at once for public-key crypto." },
+  { "ORPort", "Advertise this port to listen for connections from Tor clients "
+    "and servers." },
+  { "ORListenAddress", "Bind to this address to listen for connections from "
+    "clients and servers, instead of the default 0.0.0.0:ORPort." },
+  /* PublishServerDescriptor */
+  /*{ "RedirectExit", "When an outgoing connection tries to connect to a "
+   *"given address, redirect it to another address instead." },
+   */
+  /* ServerDNS: DetectHijacking, ResolvConfFile, SearchDomains */
+  { "ShutdownWaitLength", "Wait this long for clients to finish when "
+    "shutting down because of a SIGINT." },
+  /* { "TestVia", } */
+
+  /* === directory cache optoins */
+  { "DirPort", "Serve directory information from this port, and act as a "
+    "directory cache." },
+  { "DirListenAddress", "Bind to this address to listen for connnections from "
+    "clients and servers, instead of the default 0.0.0.0:DirPort." },
+  { "DirPolicy", "Set a policy to limit who can connect to the directory "
+    "port" },
+
+  /*  Authority options: AuthDirBadExit, AuthDirInvalid, AuthDirReject,
+   * AuthDirRejectUnlisted, AuthDirListBadExits, AuthoritativeDirectory,
+   * DirAllowPrivateAddresses, HSAuthoritativeDir,
+   * NamingAuthoritativeDirectory, RecommendedVersions,
+   * RecommendedClientVersions, RecommendedServerVersions, RendPostPeriod,
+   * RunTesting, V1AuthoritativeDirectory, VersioningAuthoritativeDirectory, */
+
+  /* Hidden service options: HiddenService: dir,excludenodes, nodes,
+   * options, port.  PublishHidServDescriptor */
+
+  /* Nonpersistent options: __LeaveStreamsUnattached, __AllDirActionsPrivate */
   { NULL, NULL },
 };
 
@@ -327,6 +487,9 @@ static config_var_description_t state_description[] = {
     "The last entry guard has been unreachable since this time." },
   { "EntryGuardUnlistedSince",
     "The last entry guard has been unusable since this time." },
+  { "LastRotatedOnionKey",
+    "The last time at which we changed the medium-term private key used for "
+    "building circuits." },
   { "LastWritten", "When was this state file last regenerated?" },
 
   { "TorVersion", "Which version of Tor generated this state file?" },
@@ -1915,9 +2078,12 @@ config_init(config_format_t *fmt, void *options)
 }
 
 /* Allocate and return a new string holding the written-out values of the vars
- * in 'options' If 'minimal', do not write out any default-valued vars. */
+ * in 'options'.  If 'minimal', do not write out any default-valued vars.
+ * Else, if comment_defaults, write default values as comments.
+ */
 static char *
-config_dump(config_format_t *fmt, void *options, int minimal)
+config_dump(config_format_t *fmt, void *options, int minimal,
+            int comment_defaults)
 {
   smartlist_t *elements;
   or_options_t *defaults;
@@ -1939,6 +2105,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
 
   elements = smartlist_create();
   for (i=0; fmt->vars[i].name; ++i) {
+    int comment_option = 0;
     if (fmt->vars[i].type == CONFIG_TYPE_OBSOLETE ||
         fmt->vars[i].type == CONFIG_TYPE_LINELIST_S)
       continue;
@@ -1947,23 +2114,25 @@ config_dump(config_format_t *fmt, void *options, int minimal)
       continue;
     if (minimal && option_is_same(fmt, options, defaults, fmt->vars[i].name))
       continue;
+    else if (comment_defaults &&
+             option_is_same(fmt, options, defaults, fmt->vars[i].name))
+      comment_option = 1;
 
     desc = config_find_description(fmt, fmt->vars[i].name);
     line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name);
 
     if (line && desc) {
       /* Only dump the description if there's something to describe. */
-      size_t len = strlen(desc)+8;
-      char *tmp = tor_malloc(len);
-      tor_snprintf(tmp, len, "# %s\n",desc);
-      smartlist_add(elements, tmp);
+      wrap_string(elements, desc, 78, "# ", "# ");
     }
 
     for (; line; line = line->next) {
-      size_t len = strlen(line->key) + strlen(line->value) + 3;
+      size_t len = strlen(line->key) + strlen(line->value) + 5;
       char *tmp;
       tmp = tor_malloc(len);
-      if (tor_snprintf(tmp, len, "%s %s\n", line->key, line->value)<0) {
+      if (tor_snprintf(tmp, len, "%s%s %s\n",
+                       comment_option ? "# " : "",
+                       line->key, line->value)<0) {
         log_err(LD_BUG,"Internal error writing option value");
         tor_assert(0);
       }
@@ -2000,7 +2169,7 @@ config_dump(config_format_t *fmt, void *options, int minimal)
 char *
 options_dump(or_options_t *options, int minimal)
 {
-  return config_dump(&options_format, options, minimal);
+  return config_dump(&options_format, options, minimal, 0);
 }
 
 /* Return 0 if every element of sl is a string holding a decimal
@@ -2033,8 +2202,7 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (5*60)
 
-/** Highest allowable value for DirFetchPeriod, StatusFetchPeriod, and
- * RendPostPeriod. */
+/** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
 
 /** Return 0 if every setting in <b>options</b> is reasonable, and a
@@ -3974,7 +4142,7 @@ or_state_save(time_t now)
   global_state->LastWritten = time(NULL);
   tor_free(global_state->TorVersion);
   global_state->TorVersion = tor_strdup("Tor " VERSION);
-  state = config_dump(&state_format, global_state, 1);
+  state = config_dump(&state_format, global_state, 1, 0);
   len = strlen(state)+256;
   contents = tor_malloc(len);
   format_local_iso_time(tbuf, time(NULL));
