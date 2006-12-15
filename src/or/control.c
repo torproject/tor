@@ -1449,6 +1449,15 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = tor_dup_addr(addr);
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
+  } else if (!strcmp(question, "fingerprint")) {
+    routerinfo_t *me = router_get_my_routerinfo();
+    if (!me) {
+      *answer = tor_strdup("");
+    } else {
+      *answer = tor_malloc(HEX_DIGEST_LEN+1);
+      base16_encode(*answer, HEX_DIGEST_LEN+1, me->cache_info.identity_digest,
+                    DIGEST_LEN);
+    }
   }
   return 0;
 }
@@ -1734,10 +1743,10 @@ static const getinfo_item_t getinfo_items[] = {
        "Time when the accounting period ends."),
   ITEM("accounting/interval-wake", accounting,
        "Time to wake up in this accounting period."),
-  /* deprecated */
-  ITEM("helper-nodes", entry_guards, NULL),
+  ITEM("helper-nodes", entry_guards, NULL), /* deprecated */
   ITEM("entry-guards", entry_guards,
        "Which nodes are we using as entry guards?"),
+  ITEM("fingerprint", misc, NULL),
   PREFIX("config/", config, "Current configuration values."),
   DOC("config/names",
       "List of configuration options, types, and documentation."),
