@@ -39,7 +39,7 @@ directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
 
 static void
 directory_send_command(connection_t *conn, const char *platform,
-                       int purpose, const char *resource,
+                       int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
@@ -403,7 +403,7 @@ directory_initiate_command(const char *address, uint32_t addr,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, platform, purpose, resource,
+        directory_send_command(conn, platform, purpose, 1, resource,
                                payload, payload_len);
         connection_watch_events(conn, EV_READ | EV_WRITE);
         /* writable indicates finish, readable indicates broken link,
@@ -428,7 +428,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     }
     conn->state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
-    directory_send_command(conn, platform, purpose, resource,
+    directory_send_command(conn, platform, purpose, 0, resource,
                            payload, payload_len);
     connection_watch_events(conn, EV_READ | EV_WRITE);
   }
@@ -439,7 +439,7 @@ directory_initiate_command(const char *address, uint32_t addr,
  */
 static void
 directory_send_command(connection_t *conn, const char *platform,
-                       int purpose, const char *resource,
+                       int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len)
 {
   char proxystring[256];
@@ -466,7 +466,7 @@ directory_send_command(connection_t *conn, const char *platform,
   }
 
   /* come up with some proxy lines, if we're using one. */
-  if (get_options()->HttpProxy) {
+  if (direct && get_options()->HttpProxy) {
     char *base64_authenticator=NULL;
     const char *authenticator = get_options()->HttpProxyAuthenticator;
 
