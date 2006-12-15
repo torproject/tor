@@ -949,10 +949,14 @@ getinfo_helper_accounting(control_connection_t *conn,
                  U64_PRINTF_ARG(n_bytes_written_in_interval));
   } else if (!strcmp(question, "accounting/bytes-left")) {
     uint64_t limit = get_options()->AccountingMax;
-    *answer = tor_malloc(32);
-    tor_snprintf(*answer, 32, U64_FORMAT" "U64_FORMAT,
-                 U64_PRINTF_ARG(limit - n_bytes_read_in_interval),
-                 U64_PRINTF_ARG(limit - n_bytes_written_in_interval));
+    uint64_t read_left = 0, write_left = 0;
+    if (n_bytes_read_in_interval < limit)
+      read_left = limit - n_bytes_read_in_interval;
+    if (n_bytes_written_in_interval < limit)
+      write_left = limit - n_bytes_written_in_interval;
+    *answer = tor_malloc(64);
+    tor_snprintf(*answer, 64, U64_FORMAT" "U64_FORMAT,
+                 U64_PRINTF_ARG(read_left), U64_PRINTF_ARG(write_left));
   } else if (!strcmp(question, "accounting/interval-start")) {
     *answer = tor_malloc(ISO_TIME_LEN+1);
     format_iso_time(*answer, interval_start_time);

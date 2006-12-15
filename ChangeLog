@@ -51,6 +51,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug
       reported by Mike Perry.)
+    - Do not report bizarre values for results of accounting GETINFOs
+      when the last second's write or read exceeds the alloted bandwidth.
+      (Bug 329.)
 
 
 Changes in version 0.1.2.4-alpha - 2006-12-03
