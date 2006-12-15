@@ -154,7 +154,7 @@ rotate_onion_key(void)
   state->LastRotatedOnionKey = onionkey_set_at = now;
   tor_mutex_release(key_lock);
   mark_my_descriptor_dirty();
-  or_state_mark_dirty(state, now+600);
+  or_state_mark_dirty(state, 0);
   return;
  error:
   log_warn(LD_GENERAL, "Couldn't rotate onion key.");

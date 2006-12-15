@@ -205,7 +205,7 @@ $Id$
     "onion-key" NL a public key in PEM format
 
        This key is used to encrypt EXTEND cells for this OR.  The key MUST be
-       accepted for at least XXXX hours after any new key is published in a
+       accepted for at least 1 week after any new key is published in a
        subsequent descriptor.
 
     "signing-key" NL a public key in PEM format
@@ -257,7 +257,7 @@ $Id$
     "eventdns" bool NL
 
         Declare whether this version of Tor is using the newer enhanced
-        dns logic.  Versions of Tor without eventdns SHOULD not be used for
+        dns logic.  Versions of Tor without eventdns SHOULD NOT be used for
         reverse hostname lookups.
 
         [All versions of Tor before 0.1.2.2-alpha should be assumed to have
@@ -431,8 +431,7 @@ $Id$
    blacklisted, and elect not to include them in their network-status lists.
 
    Thus, the network-status list includes all non-blacklisted,
-   non-expired, non-superseded descriptors for ORs that the directory has
-   observed at least once to be running.
+   non-expired, non-superseded descriptors.
 
 4. Directory server operation
 
@@ -506,8 +505,8 @@ $Id$
    router. Servers must not discard any descriptor listed by any current
    network-status document from any authority.  If there is enough space to
    store additional descriptors, servers SHOULD try to hold those which
-   clients are likely download the most.  (Currently, this is judged based on
-   the interval for which each descriptor seemed newest.)
+   clients are likely to download the most.  (Currently, this is judged
+   based on the interval for which each descriptor seemed newest.)
 
    Authorities SHOULD NOT download descriptors for routers that they would
    immediately reject for reasons listed in 3.1.
