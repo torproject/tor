@@ -2,7 +2,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
   o Major features:
     - Enable "BEGIN_DIR" cells: prefer to connect to the directory
       server via TLS so we do encrypted directory requests rather than
-      plaintext. Only used if you enable the TunnelDirConns config option.
+      plaintext. On by default; disable via the TunnelDirConns config
+      option if you like.
 
   o Minor features:
     - Start using the state file to store bandwidth accounting data:

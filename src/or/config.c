@@ -247,7 +247,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("TrafficShaping"),
   VAR("TransListenAddress",  LINELIST, TransListenAddress,   NULL),
   VAR("TransPort",           UINT,     TransPort,            "0"),
-  VAR("TunnelDirConns",      BOOL,     TunnelDirConns,       "0"),
+  VAR("TunnelDirConns",      BOOL,     TunnelDirConns,       "1"),
   VAR("UseEntryGuards",      BOOL,     UseEntryGuards,       "1"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
