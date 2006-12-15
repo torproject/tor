@@ -13,6 +13,7 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       a timely fashion.
     - Ongoing work on eventdns infrastructure: add dns server and ipv6
       support.
+    - Make PIDFile work on Windows (untested).
 
   o Major bugfixes:
     - Fix a longstanding bug in eventdns that prevented the count of

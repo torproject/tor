@@ -24,6 +24,7 @@ const char util_c_id[] = "$Id$";
 #ifdef MS_WINDOWS
 #include <io.h>
 #include <direct.h>
+#include <process.h>
 #else
 #include <dirent.h>
 #include <pwd.h>
@@ -2015,16 +2016,18 @@ finish_daemon(const char *cp)
 void
 write_pidfile(char *filename)
 {
-#ifndef MS_WINDOWS
   FILE *pidfile;
 
   if ((pidfile = fopen(filename, "w")) == NULL) {
     log_warn(LD_FS, "Unable to open \"%s\" for writing: %s", filename,
              strerror(errno));
   } else {
+#ifdef MS_WINDOWS
+    fprintf(pidfile, "%d\n", (int)_getpid());
+#else
     fprintf(pidfile, "%d\n", (int)getpid());
+#endif
     fclose(pidfile);
   }
-#endif
 }
 
