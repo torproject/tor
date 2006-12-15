@@ -306,7 +306,7 @@ init_keys(void)
      * start the clock ticking now so that we will eventually rotate it even
      * if we don't stay up for a full MIN_ONION_KEY_LIFETIME. */
     state->LastRotatedOnionKey = time(NULL);
-    or_state_mark_dirty(state, time(NULL)+600);
+    or_state_mark_dirty(state, 0);
   }
 
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key.old",datadir);
