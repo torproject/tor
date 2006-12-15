@@ -597,6 +597,10 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
   char *cp = buf;
   int i, n;
 
+  if (!server_mode(get_options())) {
+    return 0;
+  }
+
   if (b->num_maxes_set <= b->next_max_idx) {
     /* We haven't been through the circular array yet; time starts at i=0.*/
     i = 0;
