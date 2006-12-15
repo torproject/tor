@@ -1797,6 +1797,7 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
              e->nickname, buf, reason);
 
     e->bad_since = now;
+    control_event_guard(e->nickname, e->identity, "BAD");
     changed = 1;
   } else if (!reason && e->bad_since) {
     /* There's nothing wrong with the router any more. */
@@ -1805,6 +1806,7 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
              "marking as ok.", e->nickname, buf);
 
     e->bad_since = 0;
+    control_event_guard(e->nickname, e->identity, "GOOD");
     changed = 1;
   }
 
@@ -1916,6 +1918,27 @@ log_entry_guards(int severity)
   tor_free(s);
 }
 
+/** DOCDOC */
+static void
+control_event_guard_deferred(void)
+{
+#if 0
+  int n = 0;
+  or_options_t *options = get_options();
+  if (!entry_guards)
+    return;
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+    {
+      if (entry_is_live(entry, 0, 1, 0)) {
+        if (n++ == options->NumEntryGuards) {
+          control_event_guard(entry->nickname, entry->identity, "DEFERRED");
+          return;
+        }
+      }
+    });
+#endif
+}
+
 #define NUM_ENTRY_PICK_TRIES 100
 
 /** Add a new (preferably stable and fast) router to our
@@ -1948,6 +1971,8 @@ add_an_entry_guard(routerinfo_t *chosen)
     smartlist_insert(entry_guards, 0, entry);
   else /* append */
     smartlist_add(entry_guards, entry);
+  control_event_guard(entry->nickname, entry->identity, "NEW");
+  control_event_guard_deferred();
   log_entry_guards(LOG_INFO);
   return router;
 }
@@ -2008,6 +2033,7 @@ remove_dead_entries(void)
       log_info(LD_CIRC, "Entry guard '%s' (%s) has been down or unlisted "
                "since %s local time; removing.",
                entry->nickname, dbuf, tbuf);
+      control_event_guard(entry->nickname, entry->identity, "DROPPED");
       tor_free(entry);
       smartlist_del_keeporder(entry_guards, i);
       log_entry_guards(LOG_INFO);
@@ -2103,6 +2129,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
                entry->nickname, buf);
       entry->unreachable_since = 0;
       entry->last_attempted = now;
+      control_event_guard(entry->nickname, entry->identity, "UP");
       changed = 1;
     }
     if (!entry->made_contact) {
@@ -2125,6 +2152,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
       log_info(LD_CIRC, "Unable to connect to entry guard '%s' (%s). "
                "Marking as unreachable.", entry->nickname, buf);
       entry->unreachable_since = entry->last_attempted = now;
+      control_event_guard(entry->nickname, entry->identity, "DOWN");
       changed = 1;
     } else {
       char tbuf[ISO_TIME_LEN+1];

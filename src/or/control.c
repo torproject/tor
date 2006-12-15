@@ -86,7 +86,8 @@ const char control_c_id[] =
 #define EVENT_STATUS_CLIENT    0x0010
 #define EVENT_STATUS_SERVER    0x0011
 #define EVENT_STATUS_GENERAL   0x0012
-#define _EVENT_MAX             0x0012
+#define EVENT_GUARD            0x0013
+#define _EVENT_MAX             0x0013
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Array mapping from message type codes to human-readable message
@@ -1064,6 +1065,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
           event_code = EVENT_STATUS_CLIENT;
         else if (!strcasecmp(ev, "STATUS_SERVER"))
           event_code = EVENT_STATUS_SERVER;
+        else if (!strcasecmp(ev, "GUARD"))
+          event_code = EVENT_GUARD;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
@@ -3648,6 +3651,34 @@ control_event_server_status(int severity, const char *format, ...)
   r = control_event_status(EVENT_STATUS_SERVER, severity, format, ap);
   va_end(ap);
   return r;
+}
+
+/** DOCDOC */
+int
+control_event_guard(const char *nickname, const char *digest,
+                    const char *status)
+{
+  char hbuf[HEX_DIGEST_LEN+1];
+  base16_encode(hbuf, sizeof(hbuf), digest, DIGEST_LEN);
+  if (!EVENT_IS_INTERESTING1(EVENT_GUARD))
+    return 0;
+
+  if (EVENT_IS_INTERESTING1L(EVENT_GUARD)) {
+    char buf[MAX_VERBOSE_NICKNAME_LEN+1];
+    routerinfo_t *ri = router_get_by_digest(digest);
+    if (ri) {
+      router_get_verbose_nickname(buf, ri);
+    } else {
+      tor_snprintf(buf, sizeof(buf), "$%s~%s", hbuf, nickname);
+    }
+    send_control1_event(EVENT_GUARD, LONG_NAMES,
+                        "650 GUARD ENTRY %s %s\r\n", buf, status);
+  }
+  if (EVENT_IS_INTERESTING1S(EVENT_GUARD)) {
+    send_control1_event(EVENT_GUARD, SHORT_NAMES,
+                        "650 GUARD ENTRY $%s %s\r\n", hbuf, status);
+  }
+  return 0;
 }
 
 /** Choose a random authentication cookie and write it to disk.

@@ -1134,10 +1134,12 @@ I    DIR_ALL_UNREACHABLE
 4.1.11. Our set of guard nodes has changed
 
   Syntax:
-     "650" SP "GUARDS" SP Type SP ...
+     "650" SP "GUARDS" SP Type SP Name SP Status ... CRLF
      Type = "ENTRY"
-     ...
-  [needs to be fleshed out; not implemented yet]
+     Name = The (possibly verbose) nickname of the guard effected.
+     Status = "NEW" | "UP" | "DOWN" | "BAD" | "GOOD" | "DROPPED"
+
+  [explain states. XXX]
 
 4.1.12. Network status has changed
 

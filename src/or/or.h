@@ -2202,6 +2202,8 @@ int control_event_client_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_server_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
+int control_event_guard(const char *nickname, const char *digest,
+                        const char *status);
 
 int init_cookie_authentication(int enabled);
 int decode_hashed_password(char *buf, const char *hashed);

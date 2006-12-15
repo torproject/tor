@@ -62,6 +62,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Reimplement GETINFO so that info/names stays in sync with the
       actual keys.
     - Implement "GETINFO fingerprint".
+    - Implement "SETEVENTS GUARD" so controllers can get updates on
+      entry guard status as it changes.
 
   o Controller bugfixes:
     - Report the circuit number correctly in STREAM CLOSED events. (Bug
