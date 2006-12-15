@@ -43,6 +43,13 @@ tor (0.1.2.1-alpha-1) experimental; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Tue, 29 Aug 2006 22:38:29 +0200
 
+tor (0.1.1.26-1) unstable; urgency=high
+
+  * New upstream version (Stop sending the HttpProxyAuthenticator string to
+    directory servers when directory connections are tunnelled through Tor).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 15 Dec 2006 20:24:07 +0100
+
 tor (0.1.1.25-1) unstable; urgency=low
 
   * New upstream version.
