@@ -15,6 +15,18 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       support.
     - Make PIDFile work on Windows (untested).
 
+  o Security bugfixes:
+    - Stop sending the HttpProxyAuthenticator string to directory
+      servers when directory connections are tunnelled through Tor.
+    - Clients no longer store bandwidth history in the state file.
+    - Do not log introduction points for hidden services if SafeLogging
+      is set.
+    - When generating bandwidth history, round down to the nearest
+      1k. When storing accounting data, round up to the nearest 1k.
+    - When we're running as a server, remember when we last rotated onion
+      keys, so that we will rotate keys once they're a week old even if
+      we never stay up for a week ourselves.
+
   o Major bugfixes:
     - Fix a longstanding bug in eventdns that prevented the count of
       timed-out resolves from ever being reset. This bug caused us to
@@ -35,18 +47,6 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       to resolve an address at a given exit node even when they ask for
       it by name.
 
-  o Security bugfixes:
-    - Do not log introduction points for hidden services if SafeLogging
-      is set.
-    - Clients do not store bandwidth history in their state files. (This
-      shouldn't be an exploitable security issue, but it's better to be
-      safe.)
-    - When generating bandwidth history, round down to the nearest
-      1k. When storing accounting data, round up to the nearest 1k.
-    - When we're running as a server, remember when we last rotated onion
-      keys, so that we will rotate keys once they're a week old even if we
-      never stay up for a week ourselves.  (Bug 368.)
-
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.
     - Reimplement GETINFO so that info/names stays in sync with the
@@ -57,7 +57,6 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       reported by Mike Perry.)
     - Do not report bizarre values for results of accounting GETINFOs
       when the last second's write or read exceeds the alloted bandwidth.
-      (Bug 329.)
 
 
 Changes in version 0.1.2.4-alpha - 2006-12-03
@@ -488,6 +487,20 @@ Changes in version 0.1.2.1-alpha - 2006-08-27
       throw out everything waiting on the buffer in between socks
       handshake phases, since they can't possibly (so the theory
       goes) have predicted what we plan to respond to them.
+
+
+Changes in version 0.1.1.26 - 2006-12-14
+  o Security bugfixes:
+    - Stop sending the HttpProxyAuthenticator string to directory
+      servers when directory connections are tunnelled through Tor.
+    - Clients no longer store bandwidth history in the state file.
+    - Do not log introduction points for hidden services if SafeLogging
+      is set.
+
+  o Minor bugfixes:
+    - Fix an assert failure when a directory authority sets
+      AuthDirRejectUnlisted and then receives a descriptor from an
+      unlisted router (reported by seeess).
 
 
 Changes in version 0.1.1.25 - 2006-11-04
