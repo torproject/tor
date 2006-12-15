@@ -882,6 +882,9 @@ router_rebuild_descriptor(int force)
          }
          smartlist_add(ri->declared_family, name);
          name = NULL;
+       } else if (router_is_me(member)) {
+         /* Don't list ourself in our own family; that's redundant */
+         continue;
        } else {
          char *fp = tor_malloc(HEX_DIGEST_LEN+2);
          fp[0] = '$';

@@ -247,7 +247,7 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
       - What do we do about the fact that people can't read zlib-
         compressed files manually?
 
-  - Add IPv6 support to eventdns.c
+  o Add IPv6 support to eventdns.c
 
   - Refactor DNS resolve implementation
     - Refactor exit side of resolve: do we need a connection_t?
@@ -284,15 +284,15 @@ Minor items for 0.1.2.x as time permits:
   o Some way for the authorities to set BadExit for some nodes manually.
   - When we export something from foo.c file for testing purposes only,
     make a foo_test.h file for test.c to include.
-  - "getinfo fingerprint" controller command
-  - "setevent guards" controller command
+  o "getinfo fingerprint" controller command
+  o "setevent guards" controller command
   - The Debian package now uses --verify-config when (re)starting,
     to distinguish configuration errors from other errors. Perhaps
     the RPM and other startup scripts should too?
   - add a "default.action" file to the tor/vidalia bundle so we can fix the
     https thing in the default configuration:
     http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#PrivoxyWeirdSSLPort
-  - even if your torrc lists yourself in your myfamily line, don't list it in
+  o even if your torrc lists yourself in your myfamily line, don't list it in
     the descriptor.
   - Flesh out options_description array in src/or/config.c
   - Don't let 'newnym' be triggered more often than every n seconds.

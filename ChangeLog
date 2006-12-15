@@ -47,6 +47,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Fix a bug in 0.1.2.2-alpha that prevented clients from asking
       to resolve an address at a given exit node even when they ask for
       it by name.
+    - Routers no longer ever list themselves in their "family" line,
+      even if configured to do so.  This makes it easier to configure
+      family lists efficiently.
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.
