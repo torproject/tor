@@ -778,6 +778,30 @@ test_util(void)
   test_streq("\"abcd\"", escaped("abcd"));
   test_streq("\"\\\\\\n\\r\\t\\\"\\'\"", escaped("\\\n\r\t\"\'"));
   test_streq("\"z\\001abc\\277d\"", escaped("z\001abc\277d"));
+
+  /* Test wrap_string */
+  {
+    smartlist_t *sl = smartlist_create();
+    wrap_string(sl, "This is a test of string wrapping functionality: woot.",
+                10, "", "");
+    cp = smartlist_join_strings(sl, "", 0, NULL);
+    test_streq(cp,
+            "This is a\ntest of\nstring\nwrapping\nfunctional\nity: woot.\n");
+    tor_free(cp);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
+
+    wrap_string(sl, "This is a test of string wrapping functionality: woot.",
+                16, "### ", "# ");
+    cp = smartlist_join_strings(sl, "", 0, NULL);
+    test_streq(cp,
+             "### This is a\n# test of string\n# wrapping\n# functionality:\n"
+             "# woot.\n");
+
+    tor_free(cp);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
+  }
 }
 
 static void

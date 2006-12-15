@@ -138,6 +138,9 @@ int tor_mem_is_zero(const char *mem, size_t len) ATTR_PURE;
 int tor_digest_is_zero(const char *digest) ATTR_PURE;
 char *esc_for_log(const char *string) ATTR_MALLOC;
 const char *escaped(const char *string);
+struct smartlist_t;
+void wrap_string(struct smartlist_t *out, const char *string, size_t width,
+                 const char *prefix0, const char *prefixRest);
 
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
@@ -174,7 +177,6 @@ typedef struct sized_chunk_t {
   const char *bytes;
   size_t len;
 } sized_chunk_t;
-struct smartlist_t;
 int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
                          int bin);
 int append_bytes_to_file(const char *fname, const char *str, size_t len,
