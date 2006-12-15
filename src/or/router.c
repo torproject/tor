@@ -426,15 +426,12 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
     return 0;
   if (!check_whether_dirport_reachable())
     return 0;
-  if (router->bandwidthcapacity >= router->bandwidthrate) {
-    /* check if we might potentially hibernate. */
-    if (options->AccountingMax != 0)
-      return 0;
-    /* also check if we're advertising a small amount, and have
-       a "boring" DirPort. */
-    if (router->bandwidthrate < 50000 && router->dir_port > 1024)
-      return 0;
-  }
+  /* check if we might potentially hibernate. */
+  if (accounting_is_enabled(options))
+    return 0;
+  /* also check if we're advertising a small amount */
+  if (router->bandwidthrate <= 51200)
+    return 0;
 
   /* Sounds like a great idea. Let's publish it. */
   return router->dir_port;

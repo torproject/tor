@@ -4,6 +4,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       server via TLS so we do encrypted directory requests rather than
       plaintext. On by default; disable via the TunnelDirConns config
       option if you like.
+    - Enable write limiting as well as read limiting. Now we sacrifice
+      capacity if we're pushing out lots of directory traffic, rather
+      than overrunning the user's intended bandwidth limits.
 
   o Minor features:
     - Start using the state file to store bandwidth accounting data:
