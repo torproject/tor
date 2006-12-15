@@ -12,7 +12,7 @@
  *
  * I ask and expect, but do not require, that all derivative works contain an
  * attribution similar to:
- * 	Parts developed by Adam Langley <agl@imperialviolet.org>
+ *	Parts developed by Adam Langley <agl@imperialviolet.org>
  *
  * You may wish to replace the word "Parts" with something else depending on
  * the amount of original code.
@@ -124,8 +124,8 @@
  *	 Returns non-zero on error
  *
  * int evdns_resolve(const char *name, int flags,
- *            evdns_callback_type callback,
- *            void *ptr)
+ *	      evdns_callback_type callback,
+ *	      void *ptr)
  *	 Resolve a name. The name parameter should be a DNS name.
  *	 The flags parameter should be 0, or DNS_QUERY_NO_SEARCH
  *	 which disables searching for this query. (see defn of
@@ -301,14 +301,14 @@ typedef void (*evdns_request_callback_fn_type)(struct evdns_server_request *, vo
 #define EVDNS_TYPE_A	   1
 #define EVDNS_TYPE_NS	   2
 #define EVDNS_TYPE_CNAME   5
-#define EVDNS_TYPE_SOA     6
+#define EVDNS_TYPE_SOA	   6
 #define EVDNS_TYPE_PTR	  12
 #define EVDNS_TYPE_MX	  15
 #define EVDNS_TYPE_TXT	  16
 #define EVDNS_TYPE_AAAA	  28
 
 #define EVDNS_QTYPE_AXFR 252
-#define EVDNS_QTYPE_ALL  255
+#define EVDNS_QTYPE_ALL	 255
 
 #define EVDNS_CLASS_INET   1
 
@@ -324,4 +324,4 @@ int evdns_server_request_add_cname_reply(struct evdns_server_request *req, const
 int evdns_server_request_respond(struct evdns_server_request *req, int err);
 int evdns_server_request_drop(struct evdns_server_request *req);
 
-#endif  // !EVENTDNS_H
+#endif	// !EVENTDNS_H

@@ -7,8 +7,8 @@
  * reformat the whitespace, add Tor dependencies, or so on.
  *
  * TODO:
- *   - Replace all externally visible magic numbers with #defined constants.
- *   - Write documentation for APIs of all external functions.
+ *	 - Replace all externally visible magic numbers with #defined constants.
+ *	 - Write documentation for APIs of all external functions.
  */
 
 /* Async DNS Library
@@ -22,7 +22,7 @@
  *
  * I ask and expect, but do not require, that all derivative works contain an
  * attribution similar to:
- *  Parts developed by Adam Langley <agl@imperialviolet.org>
+ *	Parts developed by Adam Langley <agl@imperialviolet.org>
  *
  * You may wish to replace the word "Parts" with something else depending on
  * the amount of original code.
@@ -162,7 +162,7 @@ struct request {
 
 #ifndef HAVE_STRUCT_IN6_ADDR
 struct in6_addr {
-    u8 s6_addr[16];
+	u8 s6_addr[16];
 };
 #endif
 
@@ -213,28 +213,28 @@ struct evdns_server_port {
 	evdns_request_callback_fn_type user_callback; // Fn to handle requests
 	void *user_data; // Opaque pointer passed to user_callback
 	struct event event; // Read/write event
-    // circular list of replies that we want to write.
+	// circular list of replies that we want to write.
 	struct server_request *pending_replies;
 };
 
-// Represents part of a reply being built.  (That is, a single RR.)
+// Represents part of a reply being built.	(That is, a single RR.)
 struct server_reply_item {
 	struct server_reply_item *next; // next item in sequence.
 	char *name; // name part of the RR
 	u16 type : 16; // The RR type
 	u16 class : 16; // The RR class (usually CLASS_INET)
 	u32 ttl; // The RR TTL
-    char is_name; // True iff data is a label
-    u16 datalen; // Length of data; -1 if data is a label
+	char is_name; // True iff data is a label
+	u16 datalen; // Length of data; -1 if data is a label
 	void *data; // The contents of the RR
 };
 
 // Represents a request that we've received as a DNS server, and holds
 // the components of the reply as we're constructing it.
 struct server_request {
-    // Pointers to the next and previous entries on the list of replies
-    // that we're waiting to write.  Only set if we have tried to respond
-    // and gotten EAGAIN.
+	// Pointers to the next and previous entries on the list of replies
+	// that we're waiting to write.	 Only set if we have tried to respond
+	// and gotten EAGAIN.
 	struct server_request *next_pending;
 	struct server_request *prev_pending;
 
@@ -251,12 +251,12 @@ struct server_request {
 	struct server_reply_item *authority; // linked list of authority RRs
 	struct server_reply_item *additional; // linked list of additional RRs
 
-    // Constructed response.  Only set once we're ready to send a reply.
-    // Once this is set, the RR fields are cleared, and no more should be set.
+	// Constructed response.  Only set once we're ready to send a reply.
+	// Once this is set, the RR fields are cleared, and no more should be set.
 	char *response;
 	size_t response_len;
 
-    // Caller-visible fields: flags, questions.
+	// Caller-visible fields: flags, questions.
 	struct evdns_server_request base;
 };
 
@@ -283,7 +283,7 @@ static int global_max_requests_inflight = 64;
 
 static struct timeval global_timeout = {5, 0};	// 5 seconds
 static int global_max_reissues = 1;	// a reissue occurs when we get some errors from the server
-static int global_max_retransmits = 3;  // number of times we'll retransmit a request which timed out
+static int global_max_retransmits = 3;	// number of times we'll retransmit a request which timed out
 // number of timeouts in a row before we consider this server to be down
 static int global_max_nameserver_timeout = 3;
 
@@ -866,7 +866,7 @@ reply_parse(u8 *packet, int length) {
 				return -1;
 			reply.have_answer = 1;
 			break;
-        } else if (type == TYPE_AAAA && class == CLASS_INET) {
+		} else if (type == TYPE_AAAA && class == CLASS_INET) {
 			int addrcount, addrtocopy;
 			if (req->request_type != TYPE_AAAA) {
 				j += datalength; continue;
@@ -910,7 +910,7 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 	u16 trans_id, flags, questions, answers, authority, additional;
 	struct server_request *server_req = NULL;
 
-    // Get the header fields
+	// Get the header fields
 	GET16(trans_id);
 	GET16(flags);
 	GET16(questions);
@@ -1122,19 +1122,19 @@ server_port_flush(struct evdns_server_port *port)
 			log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", strerror(err), err);
 		}
 		if (server_request_free(req)) {
-            // we released the last reference to req->port.
+			// we released the last reference to req->port.
 			return;
-        }
+		}
 	}
 
-    // We have no more pending requests; stop listening for 'writeable' events.
+	// We have no more pending requests; stop listening for 'writeable' events.
 	(void) event_del(&port->event);
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
 	if (event_add(&port->event, NULL) < 0) {
-        log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server.");
-        // ???? Do more?
-    }
+		log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server.");
+		// ???? Do more?
+	}
 }
 
 // set if we are waiting for the ability to write to this server.
@@ -1196,7 +1196,7 @@ server_port_ready_callback(int fd, short events, void *arg) {
 struct dnslabel_entry { char *v; int pos; };
 struct dnslabel_table {
 	int n_labels; // number of current entries
-    // map from name to position in message
+	// map from name to position in message
 	struct dnslabel_entry labels[MAX_LABELS];
 };
 
@@ -1250,7 +1250,7 @@ dnslabel_table_add(struct dnslabel_table *table, const char *label, int pos)
 
 // Converts a string to a length-prefixed set of DNS labels, starting
 // at buf[j]. name and buf must not overlap. name_len should be the length
-// of name.  table is optional, and is used for compression.
+// of name.	 table is optional, and is used for compression.
 //
 // Input: abc.def
 // Output: <3>abc<3>def<0>
@@ -1267,20 +1267,20 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 	int ref = 0;
 	u16 _t;
 
-#define APPEND16(x) do {                           \
-        if (j + 2 > (off_t)buf_len)				   \
-            goto overflow;                         \
-        _t = htons(x);                             \
-        memcpy(buf + j, &_t, 2);                   \
-        j += 2;                                    \
-    } while (0)
-#define APPEND32(x) do {                           \
-        if (j + 4 > (off_t)buf_len)                \
-            goto overflow;                         \
-        _t32 = htonl(x);                           \
-        memcpy(buf + j, &_t32, 4);                 \
-        j += 4;                                    \
-    } while (0)
+#define APPEND16(x) do {						   \
+		if (j + 2 > (off_t)buf_len)				   \
+			goto overflow;						   \
+		_t = htons(x);							   \
+		memcpy(buf + j, &_t, 2);				   \
+		j += 2;									   \
+	} while (0)
+#define APPEND32(x) do {						   \
+		if (j + 4 > (off_t)buf_len)				   \
+			goto overflow;						   \
+		_t32 = htonl(x);						   \
+		memcpy(buf + j, &_t32, 4);				   \
+		j += 4;									   \
+	} while (0)
 
 	if (name_len > 255) return -2;
 
@@ -1395,7 +1395,7 @@ evdns_close_server_port(struct evdns_server_port *port)
 {
 	if (--port->refcnt == 0)
 		server_port_free(port);
-    port->closing = 1;
+	port->closing = 1;
 }
 
 // exported function
@@ -1528,7 +1528,7 @@ evdns_server_request_format_response(struct server_request *req, int err)
 	u16 flags;
 	struct dnslabel_table table;
 
-    if (err < 0 || err > 15) return -1;
+	if (err < 0 || err > 15) return -1;
 
 	/* Set response bit and error code; copy OPCODE and RD fields from
 	 * question; copy RA and AA if set by caller. */
@@ -1550,7 +1550,7 @@ evdns_server_request_format_response(struct server_request *req, int err)
 		if (j < 0) {
 			dnslabel_clear(&table);
 			return (int) j;
-        }
+		}
 		APPEND16(req->base.questions[i]->type);
 		APPEND16(req->base.questions[i]->class);
 	}
@@ -1646,8 +1646,8 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 			event_set(&port->event, port->socket, (port->closing?0:EV_READ) | EV_WRITE | EV_PERSIST, server_port_ready_callback, port);
 
 			if (event_add(&port->event, NULL) < 0) {
-                log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server");
-            }
+				log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server");
+			}
 
 		}
 
@@ -2143,13 +2143,13 @@ request_submit(struct request *const req) {
 
 // exported function
 int evdns_resolve_ipv4(const char *name, int flags,
-                       evdns_callback_type callback, void *ptr) {
+					   evdns_callback_type callback, void *ptr) {
 	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
 	if (flags & DNS_QUERY_NO_SEARCH) {
 		struct request *const req =
-            request_new(TYPE_A, name, flags, callback, ptr);
+			request_new(TYPE_A, name, flags, callback, ptr);
 		if (req == NULL)
-            return (1);
+			return (1);
 		request_submit(req);
 		return (0);
 	} else {
@@ -2159,13 +2159,13 @@ int evdns_resolve_ipv4(const char *name, int flags,
 
 // exported function
 int evdns_resolve_ipv6(const char *name, int flags,
-                       evdns_callback_type callback, void *ptr) {
+					   evdns_callback_type callback, void *ptr) {
 	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
 	if (flags & DNS_QUERY_NO_SEARCH) {
 		struct request *const req =
-            request_new(TYPE_AAAA, name, flags, callback, ptr);
+			request_new(TYPE_AAAA, name, flags, callback, ptr);
 		if (req == NULL)
-            return (1);
+			return (1);
 		request_submit(req);
 		return (0);
 	} else {
@@ -2193,20 +2193,20 @@ int evdns_resolve_reverse(struct in_addr *in, int flags, evdns_callback_type cal
 
 int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_type callback, void *ptr) {
 	char buf[64];
-    char *cp;
+	char *cp;
 	struct request *req;
-    int i;
+	int i;
 	assert(in);
-    cp = buf;
-    for (i=0; i < 16; ++i) {
-        u8 byte = in->s6_addr[i];
-        *cp++ = "0123456789abcdef"[byte >> 4];
-        *cp++ = '.';
+	cp = buf;
+	for (i=0; i < 16; ++i) {
+		u8 byte = in->s6_addr[i];
+		*cp++ = "0123456789abcdef"[byte >> 4];
+		*cp++ = '.';
 		*cp++ = "0123456789abcdef"[byte & 0x0f];
-        *cp++ = '.';
-    }
-    assert(cp + strlen(".ip6.arpa") < buf+sizeof(buf));
-    strcpy(cp, ".ip6.arpa");
+		*cp++ = '.';
+	}
+	assert(cp + strlen(".ip6.arpa") < buf+sizeof(buf));
+	strcpy(cp, ".ip6.arpa");
 	log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
 	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
 	if (!req) return 1;
@@ -2755,11 +2755,11 @@ load_nameservers_from_registry(void)
 	int r;
 #define TRY(k, name)													\
 	if (!found && config_nameserver_from_reg_key(k,name) == 0) {		\
-		log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);      \
+		log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);		\
 		found = 1;														\
-	} else if (!found) {                                                \
-        log(EVDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",         \
-            #k,#name);                                                  \
+	} else if (!found) {												\
+		log(EVDNS_LOG_DEBUG,"Didn't find nameservers in %s/%s",			\
+			#k,#name);													\
 	}
 
 	if (((int)GetVersion()) > 0) { /* NT */
@@ -2814,20 +2814,20 @@ evdns_config_windows_nameservers(void)
 int
 evdns_init(void)
 {
-        int res = 0;
+		int res = 0;
 #ifdef WIN32
-        evdns_config_windows_nameservers();
+		evdns_config_windows_nameservers();
 #else
-        res = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");
+		res = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");
 #endif
 
-        return (res);
+		return (res);
 }
 
 const char *
 evdns_err_to_string(int err)
 {
-    switch (err) {
+	switch (err) {
 	case DNS_ERR_NONE: return "no error";
 	case DNS_ERR_FORMAT: return "misformatted query";
 	case DNS_ERR_SERVERFAILED: return "server failed";
@@ -2908,7 +2908,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data)
 	int i, r;
 	(void)data;
 	/* dummy; give 192.168.11.11 as an answer for all A questions,
-     *  give foo.bar.example.com as an answer for all PTR questions. */
+	 *	give foo.bar.example.com as an answer for all PTR questions. */
 	for (i = 0; i < req->nquestions; ++i) {
 		u32 ans = htonl(0xc0a80b0bUL);
 		if (req->questions[i]->type == EVDNS_TYPE_A &&
