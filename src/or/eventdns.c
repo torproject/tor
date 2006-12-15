@@ -13,7 +13,6 @@
 
 /* Async DNS Library
  * Adam Langley <agl@imperialviolet.org>
- * http://www.imperialviolet.org/eventdns.html
  * Public Domain code
  *
  * This software is Public Domain. To view a copy of the public domain dedication,
