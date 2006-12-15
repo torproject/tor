@@ -134,6 +134,12 @@ d     - Special-case localhost?
       - address_is_invalid_destination() is the right thing to call here
         (and feel free to make that function smarter)
 
+d - Eventdns improvements
+    - Have a way to query for AAAA and A records simultaneously.
+    - Improve request API: At the very least, add the ability to construct
+      a more-or-less arbitrary request and get a response.
+    - (Can we suppress cnames? Should we?)
+
   - Performance improvements
 
 x   - Better estimates in the directory of whether servers have good uptime

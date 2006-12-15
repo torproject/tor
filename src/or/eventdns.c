@@ -7,16 +7,13 @@
  * reformat the whitespace, add Tor dependencies, or so on.
  *
  * TODO:
- *   - Have a way to query for AAAA and A records simultaneously.
- *   - Improve request API: At the very least, add the ability to construct
- *     a more-or-less arbitrary request and get a response.
- *   - (Can we suppress cnames? Should we?)
  *   - Replace all externally visible magic numbers with #defined constants.
  *   - Write documentation for APIs of all external functions.
  */
 
 /* Async DNS Library
  * Adam Langley <agl@imperialviolet.org>
+ * http://www.imperialviolet.org/eventdns.html
  * Public Domain code
  *
  * This software is Public Domain. To view a copy of the public domain dedication,
@@ -34,195 +31,9 @@
  * the source verbatim in their source distributions)
  *
  * Version: 0.1b
- *
- *
- * Welcome, gentle reader
- *
- * Async DNS lookups are really a whole lot harder than they should be,
- * mostly stemming from the fact that the libc resolver has never been
- * very good at them. Before you use this library you should see if libc
- * can do the job for you with the modern async call getaddrinfo_a
- * (see http://www.imperialviolet.org/page25.html#e498). Otherwise,
- * please continue.
- *
- * This code is based on libevent and you must call event_init before
- * any of the APIs in this file. You must also seed the OpenSSL random
- * source if you are using OpenSSL for ids (see below).
- *
- * This library is designed to be included and shipped with your source
- * code. You statically link with it. You should also test for the
- * existence of strtok_r and define HAVE_STRTOK_R if you have it.
- *
- * The DNS protocol requires a good source of id numbers and these
- * numbers should be unpredictable for spoofing reasons. There are
- * three methods for generating them here and you must define exactly
- * one of them. In increasing order of preference:
- *
- * DNS_USE_GETTIMEOFDAY_FOR_ID:
- *   Using the bottom 16 bits of the usec result from gettimeofday. This
- *   is a pretty poor solution but should work anywhere.
- * DNS_USE_CPU_CLOCK_FOR_ID:
- *  Using the bottom 16 bits of the nsec result from the CPU's time
- *  counter. This is better, but may not work everywhere. Requires
- *  POSIX realtime support and you'll need to link against -lrt on
- *  glibc systems at least.
- * DNS_USE_OPENSSL_FOR_ID:
- *  Uses the OpenSSL RAND_bytes call to generate the data. You must
- *  have seeded the pool before making any calls to this library.
- *
- * The library keeps track of the state of nameservers and will avoid
- * them when they go down. Otherwise it will round robin between them.
- *
- * Quick start guide:
- *	 #include "eventdns.h"
- *	 void callback(int result, char type, int count, int ttl,
- *     void *addresses, void *arg);
- *	 evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");
- *	 evdns_resolve("www.hostname.com", 0, callback, NULL);
- *
- * When the lookup is complete the callback function is called. The
- * first argument will be one of the DNS_ERR_* defines in eventdns.h.
- * Hopefully it will be DNS_ERR_NONE, in which case type will be
- * DNS_IPv4_A, count will be the number of IP addresses, ttl is the time
- * which the data can be cached for (in seconds), addresses will point
- * to an array of uint32_t's and arg will be whatever you passed to
- * evdns_resolve.
- *
- * Searching:
- *
- * In order for this library to be a good replacement for glibc's resolver it
- * supports searching. This involves setting a list of default domains, in
- * which names will be queried for. The number of dots in the query name
- * determines the order in which this list is used.
- *
- * Searching appears to be a single lookup from the point of view of the API,
- * although many DNS queries may be generated from a single call to
- * evdns_resolve. Searching can also drastically slow down the resolution
- * of names.
- *
- * To disable searching:
- *	 1. Never set it up. If you never call evdns_resolv_conf_parse or
- *   evdns_search_add then no searching will occur.
- *
- *	 2. If you do call evdns_resolv_conf_parse then don't pass
- *   DNS_OPTION_SEARCH (or DNS_OPTIONS_ALL, which implies it).
- *
- *	 3. When calling evdns_resolve, pass the DNS_QUERY_NO_SEARCH flag.
- *
- * The order of searches depends on the number of dots in the name. If the
- * number is greater than the ndots setting then the names is first tried
- * globally. Otherwise each search domain is appended in turn.
- *
- * The ndots setting can either be set from a resolv.conf, or by calling
- * evdns_search_ndots_set.
- *
- * For example, with ndots set to 1 (the default) and a search domain list of
- * ["myhome.net"]:
- *	Query: www
- *	Order: www.myhome.net, www.
- *
- *	Query: www.abc
- *	Order: www.abc., www.abc.myhome.net
- *
- * API reference:
- *
- * int evdns_nameserver_add(unsigned long int address)
- *	 Add a nameserver. The address should be an IP address in
- *	 network byte order. The type of address is chosen so that
- *	 it matches in_addr.s_addr.
- *	 Returns non-zero on error.
- *
- * int evdns_nameserver_ip_add(const char *ip_as_string)
- *	 This wraps the above function by parsing a string as an IP
- *	 address and adds it as a nameserver.
- *	 Returns non-zero on error
- *
- * int evdns_resolve(const char *name, int flags,
- *            evdns_callback_type callback,
- *            void *ptr)
- *	 Resolve a name. The name parameter should be a DNS name.
- *	 The flags parameter should be 0, or DNS_QUERY_NO_SEARCH
- *	 which disables searching for this query. (see defn of
- *	 searching above).
- *
- *	 The callback argument is a function which is called when
- *	 this query completes and ptr is an argument which is passed
- *	 to that callback function.
- *
- *	 Returns non-zero on error
- *
- * void evdns_search_clear()
- *	 Clears the list of search domains
- *
- * void evdns_search_add(const char *domain)
- *	 Add a domain to the list of search domains
- *
- * void evdns_search_ndots_set(int ndots)
- *	 Set the number of dots which, when found in a name, causes
- *	 the first query to be without any search domain.
- *
- * int evdns_count_nameservers(void)
- *	 Return the number of configured nameservers (not necessarily the
- *	 number of running nameservers).  This is useful for double-checking
- *	 whether our calls to the various nameserver configuration functions
- *	 have been successful.
- *
- * int evdns_clear_nameservers_and_suspend(void)
- *	 Remove all currently configured nameservers, and suspend all pending
- *	 resolves.	Resolves will not necessarily be re-attempted until
- *	 evdns_resume() is called.
- *
- * int evdns_resume(void)
- *	 Re-attempt resolves left in limbo after an earlier call to
- *	 evdns_clear_nameservers_and_suspend().
- *
- * int evdns_config_windows_nameservers(void)
- *	 Attempt to configure a set of nameservers based on platform settings on
- *	 a win32 host.	Preferentially tries to use GetNetworkParams; if that fails,
- *	 looks in the registry.	 Returns 0 on success, nonzero on failure.
- *
- * int evdns_resolv_conf_parse(int flags, const char *filename)
- *	 Parse a resolv.conf like file from the given filename.
- *
- *	 See the man page for resolv.conf for the format of this file.
- *	 The flags argument determines what information is parsed from
- *	 this file:
- *	   DNS_OPTION_SEARCH - domain, search and ndots options
- *	   DNS_OPTION_NAMESERVERS - nameserver lines
- *	   DNS_OPTION_MISC - timeout and attempts options
- *	   DNS_OPTIONS_ALL - all of the above
- *	 The following directives are not parsed from the file:
- *	   sortlist, rotate, no-check-names, inet6, debug
- *
- *	 Returns non-zero on error:
- *	  0 no errors
- *	  1 failed to open file
- *	  2 failed to stat file
- *	  3 file too large
- *	  4 out of memory
- *	  5 short read from file
- *
- * Internals:
- *
- * Requests are kept in two queues. The first is the inflight queue. In
- * this queue requests have an allocated transaction id and nameserver.
- * They will soon be transmitted if they haven't already been.
- *
- * The second is the waiting queue. The size of the inflight ring is
- * limited and all other requests wait in waiting queue for space. This
- * bounds the number of concurrent requests so that we don't flood the
- * nameserver. Several algorithms require a full walk of the inflight
- * queue and so bounding its size keeps thing going nicely under huge
- * (many thousands of requests) loads.
- *
- * If a nameserver loses too many requests it is considered down and we
- * try not to use it. After a while we send a probe to that nameserver
- * (a lookup for google.com) and, if it replies, we consider it working
- * again. If the nameserver fails a probe we wait longer to try again
- * with the next probe.
  */
 
-#include "eventdns.h"
+#include <sys/types.h>
 #include "eventdns_tor.h"
 //#define NDEBUG
 #include "../common/torint.h"
@@ -259,10 +70,11 @@
 #define _FORTIFY_SOURCE 3
 
 #include <string.h>
-#include <sys/types.h>
 #include <fcntl.h>
 #include <sys/time.h>
-// #include <stdint.h>
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -274,6 +86,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "eventdns.h"
 #ifdef WIN32
 #include <windows.h>
 #include <winsock2.h>
@@ -311,8 +124,6 @@ typedef unsigned int uint;
 #define u32 uint32_t
 #define u16 uint16_t
 #define u8	uint8_t
-
-#include "eventdns.h"
 
 #define MAX_ADDRS 4	 // maximum number of addresses from a single packet
 // which we bother recording
@@ -502,7 +313,7 @@ static void server_request_free_answers(struct server_request *req);
 static void server_port_free(struct evdns_server_port *port);
 static void server_port_ready_callback(int fd, short events, void *arg);
 
-#if defined(MS_WINDOWS) || defined(WIN32)
+#ifdef WIN32
 static int
 last_error(int sock)
 {
@@ -585,7 +396,7 @@ _evdns_log(int warn, const char *fmt, ...)
 	if (!evdns_log_fn)
 		return;
 	va_start(args,fmt);
-#if defined(MS_WINDOWS) || defined(WIN32)
+#ifdef WIN32
 	_vsnprintf(buf, sizeof(buf), fmt, args);
 #else
 	vsnprintf(buf, sizeof(buf), fmt, args);
@@ -912,9 +723,9 @@ static inline int
 name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 	int name_end = -1;
 	int j = *idx;
-#define GET32(x) do { if (j + 4 > length) return -1; memcpy(&_t32, packet + j, 4); j += 4; x = ntohl(_t32); } while(0);
-#define GET16(x) do { if (j + 2 > length) return -1; memcpy(&_t, packet + j, 2); j += 2; x = ntohs(_t); } while(0);
-#define GET8(x) do { if (j >= length) return -1; x = packet[j++]; } while(0);
+#define GET32(x) do { if (j + 4 > length) goto err; memcpy(&_t32, packet + j, 4); j += 4; x = ntohl(_t32); } while(0);
+#define GET16(x) do { if (j + 2 > length) goto err; memcpy(&_t, packet + j, 2); j += 2; x = ntohs(_t); } while(0);
+#define GET8(x) do { if (j >= length) goto err; x = packet[j++]; } while(0);
 
 	char *cp = name_out;
 	const char *const end = name_out + name_out_len;
@@ -955,6 +766,8 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 	else
 		*idx = name_end;
 	return 0;
+ err:
+	return -1;
 }
 
 // parses a raw request from a nameserver.
@@ -968,7 +781,7 @@ reply_parse(u8 *packet, int length) {
 	u16 trans_id, flags, questions, answers, authority, additional, datalength;
 	u32 ttl, ttl_r = 0xffffffff;
 	struct reply reply;
-	struct request *req = NULL;
+	struct request *req;
 	unsigned int i;
 
 	GET16(trans_id);
@@ -977,15 +790,8 @@ reply_parse(u8 *packet, int length) {
 	GET16(answers);
 	GET16(authority);
 	GET16(additional);
-	(void) authority;
-	(void) additional;
-
-	// This macro skips a name in the DNS reply.
-#define SKIP_NAME														\
-	do { tmp_name[0] = '\0';											\
-		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0) \
-			return -1;													\
-	} while(0);
+	(void) authority; /* suppress "unused variable" warnings. */
+	(void) additional; /* suppress "unused variable" warnings. */
 
 	req = request_find_from_trans_id(trans_id);
 	if (!req) return -1;
@@ -1000,6 +806,13 @@ reply_parse(u8 *packet, int length) {
 		return -1;
 	}
 	// if (!answers) return;  // must have an answer of some form
+
+	// This macro skips a name in the DNS reply.
+#define SKIP_NAME														\
+	do { tmp_name[0] = '\0';											\
+		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0) \
+			goto err;													\
+	} while(0);
 
 	reply.type = req->request_type;
 
@@ -1079,11 +892,9 @@ reply_parse(u8 *packet, int length) {
 
 	reply_handle(req, flags, ttl_r, &reply);
 	return 0;
+ err:
+	return -1;
 }
-#undef SKIP_NAME
-#undef GET32
-#undef GET16
-#undef GET8
 
 // Parse a raw request (packet,length) sent to a nameserver port (port) from
 // a DNS client (addr,addrlen), and if it's well-formed, call the corresponding
@@ -1094,9 +905,6 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 	int j = 0;	// index into packet
 	u16 _t;	 // used by the macros
 	char tmp_name[256]; // used by the macros
-
-#define GET16(x) do { if (j + 2 > length) goto err; memcpy(&_t, packet + j, 2); j += 2; x = ntohs(_t); } while(0);
-#define GET8(x) do { if (j >= length) goto err; x = packet[j++]; } while(0);
 
 	int i;
 	u16 trans_id, flags, questions, answers, authority, additional;
@@ -1163,9 +971,12 @@ err:
 		free(server_req);
 	}
 	return -1;
-}
+
+#undef SKIP_NAME
+#undef GET32
 #undef GET16
 #undef GET8
+}
 
 // Try to choose a strong transaction id which isn't already in flight
 static u16
@@ -1463,6 +1274,13 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
         memcpy(buf + j, &_t, 2);                   \
         j += 2;                                    \
     } while (0)
+#define APPEND32(x) do {                           \
+        if (j + 4 > (off_t)buf_len)                \
+            goto overflow;                         \
+        _t32 = htonl(x);                           \
+        memcpy(buf + j, &_t32, 4);                 \
+        j += 4;                                    \
+    } while (0)
 
 	if (name_len > 255) return -2;
 
@@ -1522,19 +1340,11 @@ evdns_request_len(const int name_len) {
 //
 // Returns the amount of space used. Negative on error.
 static int
-evdns_request_data_build(const char *const name, const int name_len, const u16 trans_id,
-							const u16 type, const u16 class,
+evdns_request_data_build(const char *const name, const int name_len,
+						 const u16 trans_id, const u16 type, const u16 class,
 						 u8 *const buf, size_t buf_len) {
 	off_t j = 0;	// current offset into buf
 	u16 _t;	 // used by the macros
-
-#define APPEND32(x) do {                           \
-        if (j + 4 > (off_t)buf_len)                \
-            goto overflow;                         \
-        _t32 = htonl(x);                           \
-        memcpy(buf + j, &_t32, 4);                 \
-        j += 4;                                    \
-    } while (0)
 
 	APPEND16(trans_id);
 	APPEND16(0x0100);  // standard query, recusion needed
@@ -2031,8 +1841,8 @@ evdns_request_transmit(struct request *req) {
 		evtimer_set(&req->timeout_event, evdns_request_timeout_callback, req);
 		if (evtimer_add(&req->timeout_event, &global_timeout) < 0) {
 			log(EVDNS_LOG_WARN,
-				"Error from libevent when adding timer for "
-				"request %lx", (unsigned long) req);
+				"Error from libevent when adding timer for request %lx",
+				(unsigned long) req);
 			// ???? Do more?
 		}
 		req->tx_count++;
@@ -2159,6 +1969,7 @@ evdns_clear_nameservers_and_suspend(void)
 	return 0;
 }
 
+
 // exported function
 int
 evdns_resume(void)
@@ -2190,7 +2001,7 @@ evdns_nameserver_add(unsigned long int address) {
 
 	ns->socket = socket(PF_INET, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
-#if defined(MS_WINDOWS) || defined(WIN32)
+#ifdef WIN32
 	{
 		u_long nonblocking = 1;
 		ioctlsocket(ns->socket, FIONBIO, &nonblocking);
@@ -2342,7 +2153,7 @@ int evdns_resolve_ipv4(const char *name, int flags,
 		request_submit(req);
 		return (0);
 	} else {
-		return search_request_new(TYPE_A, name, flags, callback, ptr);
+		return (search_request_new(TYPE_A, name, flags, callback, ptr));
 	}
 }
 
@@ -2358,7 +2169,7 @@ int evdns_resolve_ipv6(const char *name, int flags,
 		request_submit(req);
 		return (0);
 	} else {
-		return search_request_new(TYPE_AAAA, name, flags, callback, ptr);
+		return (search_request_new(TYPE_AAAA, name, flags, callback, ptr));
 	}
 }
 
@@ -2386,7 +2197,6 @@ int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_ty
 	struct request *req;
     int i;
 	assert(in);
-
     cp = buf;
     for (i=0; i < 16; ++i) {
         u8 byte = in->s6_addr[i];
@@ -2403,6 +2213,7 @@ int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_ty
 	request_submit(req);
 	return 0;
 }
+
 
 /////////////////////////////////////////////////////////////////////
 // Search support
@@ -2556,7 +2367,7 @@ search_make_new(const struct search_state *const state, int n, const char *const
 
 	// we ran off the end of the list and still didn't find the requested string
 	abort();
-	return NULL; /* unreachable. */
+	return NULL; /* unreachable; stops warnings in some compilers. */
 }
 
 static int
@@ -2806,7 +2617,7 @@ out1:
 	return err;
 }
 
-#if defined(MS_WINDOWS) || defined(WIN32)
+#ifdef WIN32
 // Add multiple nameservers from a space-or-comma-separated list.
 static int
 evdns_nameserver_ip_add_line(const char *ips) {
@@ -2861,7 +2672,6 @@ load_nameservers_with_getnetworkparams(void)
 
 	buf = malloc(size);
 	if (!buf) { status = 4; goto done; }
-	}
 	fixed = buf;
 	r = fn(fixed, &size);
 	if (r != ERROR_SUCCESS && r != ERROR_BUFFER_OVERFLOW) {
@@ -2900,7 +2710,6 @@ load_nameservers_with_getnetworkparams(void)
 	}
 
 	if (!added_any) {
-		//should we ever get here? - mikec
 		log(EVDNS_LOG_DEBUG, "No nameservers added.");
 		status = -1;
 	}
@@ -3006,7 +2815,7 @@ int
 evdns_init(void)
 {
         int res = 0;
-#if defined(MS_WINDOWS) || defined(WIN32)
+#ifdef WIN32
         evdns_config_windows_nameservers();
 #else
         res = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, "/etc/resolv.conf");

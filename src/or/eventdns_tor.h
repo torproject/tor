@@ -10,4 +10,10 @@ typedef unsigned char u_char;
 #ifdef MS_WINDOWS
 #define inline __inline
 #endif
+#include "../common/torint.h"
+
+#if defined(MS_WINDOWS) && !defined(WIN32)
+/* How did _this_ happen? */
+#define WIN32
+#endif
 
