@@ -283,6 +283,7 @@ static config_var_t _state_vars[] = {
 
   VAR("TorVersion",              STRING,      TorVersion,             NULL),
 
+  VAR("LastRotatedOnionKey",     ISOTIME,     LastRotatedOnionKey,    NULL),
   VAR("LastWritten",             ISOTIME,     LastWritten,            NULL),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }

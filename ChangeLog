@@ -43,6 +43,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       safe.)
     - When generating bandwidth history, round down to the nearest
       1k. When storing accounting data, round up to the nearest 1k.
+    - When we're running as a server, remember when we last rotated onion
+      keys, so that we will rotate keys once they're a week old even if we
+      never stay up for a week ourselves.  (Bug 368.)
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.

@@ -1698,6 +1698,9 @@ typedef struct {
   /** Holds any unrecognized values we found in the state file, in the order
    * in which we found them. */
   config_line_t *ExtraLines;
+
+  /** When did we last rotate our onion key?  "0" for 'no idea'. */
+  time_t LastRotatedOnionKey;
 } or_state_t;
 
 /** Change the next_write time of <b>state</b> to <b>when</b>, unless the
@@ -2602,7 +2605,6 @@ int rend_mid_rendezvous(or_circuit_t *circ, const char *request,
 
 /********************************* router.c ***************************/
 
-void set_onion_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_onion_key(void);
 time_t get_onion_key_set_at(void);
 void set_identity_key(crypto_pk_env_t *k);

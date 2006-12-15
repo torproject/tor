@@ -35,7 +35,7 @@ static crypto_pk_env_t *identitykey=NULL;
 /** Replace the current onion key with <b>k</b>.  Does not affect lastonionkey;
  * to update onionkey correctly, call rotate_onion_key().
  */
-void
+static void
 set_onion_key(crypto_pk_env_t *k)
 {
   tor_mutex_acquire(key_lock);
@@ -122,6 +122,8 @@ rotate_onion_key(void)
   char fname[512];
   char fname_prev[512];
   crypto_pk_env_t *prkey;
+  or_state_t *state = get_or_state();
+  time_t now;
   tor_snprintf(fname,sizeof(fname),
            "%s/keys/secret_onion_key",get_options()->DataDirectory);
   tor_snprintf(fname_prev,sizeof(fname_prev),
@@ -148,9 +150,11 @@ rotate_onion_key(void)
     crypto_free_pk_env(lastonionkey);
   lastonionkey = onionkey;
   onionkey = prkey;
-  onionkey_set_at = time(NULL);
+  now = time(NULL);
+  state->LastRotatedOnionKey = onionkey_set_at = now;
   tor_mutex_release(key_lock);
   mark_my_descriptor_dirty();
+  or_state_mark_dirty(state, now+600);
   return;
  error:
   log_warn(LD_GENERAL, "Couldn't rotate onion key.");
@@ -247,6 +251,7 @@ init_keys(void)
   crypto_pk_env_t *prkey;
   char digest[20];
   or_options_t *options = get_options();
+  or_state_t *state = get_or_state();
 
   if (!key_lock)
     key_lock = tor_mutex_new();
@@ -293,6 +298,17 @@ init_keys(void)
   prkey = init_key_from_file_name_changed(keydir,keydir2);
   if (!prkey) return -1;
   set_onion_key(prkey);
+  if (state->LastRotatedOnionKey > 100) { /* allow for some parsing slop. */
+    onionkey_set_at = state->LastRotatedOnionKey;
+  } else {
+    /* We have no LastRotatedOnionKey set; either we just created the key
+     * or it's a holdover from 0.1.2.4-alpha-dev or earlier.  In either case,
+     * start the clock ticking now so that we will eventually rotate it even
+     * if we don't stay up for a full MIN_ONION_KEY_LIFETIME. */
+    state->LastRotatedOnionKey = time(NULL);
+    or_state_mark_dirty(state, time(NULL)+600);
+  }
+
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key.old",datadir);
   if (file_status(keydir) == FN_FILE) {
     prkey = init_key_from_file(keydir);
