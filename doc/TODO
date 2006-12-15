@@ -56,10 +56,13 @@ R   - Specify actual events.
     o Test and debug
     - turn the received socks addr:port into a digest for setting .exit
     - be able to connect without having a server descriptor, to bootstrap.
-      - handle connect-dir streams that don't have a chosen_exit_name set.
-      - include ORPort in DirServers lines so we can know where to connect.
+R     - handle connect-dir streams that don't have a chosen_exit_name set.
+N     - include ORPort in DirServers lines so we can know where to connect.
 
 N - Document .noconnect addresses... but where?
+    How about a new file 'tor-addresses.txt' or 'address-spec.txt'
+    that describes .exit, .onion, .noconnect, etc? Or section 2.2.2
+    of path-spec.txt? -RD
 
 x - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
@@ -276,7 +279,8 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
       - Implement
 
 Minor items for 0.1.2.x as time permits:
-  - don't do dns hijacking tests if we're reject *:* exit policy?
+  D don't do dns hijacking tests if we're reject *:* exit policy?
+    (deferred until 0.1.1.x is less common)
   o Some way for the authorities to set BadExit for some nodes manually.
   - When we export something from foo.c file for testing purposes only,
     make a foo_test.h file for test.c to include.
@@ -293,8 +297,6 @@ Minor items for 0.1.2.x as time permits:
   - Flesh out options_description array in src/or/config.c
   - Don't let 'newnym' be triggered more often than every n seconds.
   o change log_fn() to log() on notice/warn/err logs where we can.
-  - the deb now uses --verify-config to distinguish between configuration
-    errors and other errors. Should the rpm, the ports, etc do this too?
   X If we try to publish as a nickname that's already claimed, should
     we append a number (or increment the number) and try again? This
     way people who read their logs can fix it as before, but people
