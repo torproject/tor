@@ -863,11 +863,9 @@ router_rebuild_descriptor(int force)
     SMARTLIST_FOREACH(family, char *, name,
      {
        routerinfo_t *member;
-       if (!strcasecmp(name, options->Nickname)) {
-         /* Don't list ourself in our own family; that's redundant */
-         tor_free(name);
-         continue;
-       } else
+       if (!strcasecmp(name, options->Nickname))
+         member = ri;
+       else
          member = router_get_by_nickname(name, 1);
        if (!member) {
          if (!smartlist_string_isin(warned_nonexistent_family, name) &&
@@ -880,6 +878,8 @@ router_rebuild_descriptor(int force)
          }
          smartlist_add(ri->declared_family, name);
          name = NULL;
+       } else if (router_is_me(member)) {
+         /* Don't list ourself in our own family; that's redundant */
        } else {
          char *fp = tor_malloc(HEX_DIGEST_LEN+2);
          fp[0] = '$';
