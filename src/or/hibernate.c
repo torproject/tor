@@ -934,7 +934,7 @@ getinfo_helper_accounting(control_connection_t *conn,
 {
   (void) conn;
   if (!strcmp(question, "accounting/enabled")) {
-    *answer = tor_strdup(get_options()->AccountingMax ? "1" : "0");
+    *answer = tor_strdup(accounting_is_enabled(get_options()) ? "1" : "0");
   } else if (!strcmp(question, "accounting/hibernating")) {
     if (hibernate_state == HIBERNATE_STATE_DORMANT)
       *answer = tor_strdup("hard");

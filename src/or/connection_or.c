@@ -543,7 +543,7 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
  * return -1 if he is lying, broken, or otherwise something is wrong.
  *
  * Make sure he sent a correctly formed certificate. If it has a
- * recognized (approved) nickname, make sure his identity key matches
+ * recognized ("named") nickname, make sure his identity key matches
  * it. If I initiated the connection, make sure it's the right guy.
  *
  * If we return 0, write a hash of the identity key into digest_rcvd,
@@ -666,19 +666,6 @@ connection_tls_finish_handshake(or_connection_t *conn)
   if (!started_here) {
     connection_or_init_conn_from_address(conn,conn->_base.addr,
                                          conn->_base.port, digest_rcvd, 0);
-
-    /* Annotate that we received a TLS connection.
-     * (Todo: only actually consider ourselves reachable if there
-     * exists a testing circuit using conn.)
-     *
-     * We already consider ourselves reachable if we can ever process
-     * a create cell -- see onionskin_answer() in circuitbuild.c.
-     *
-     * The reason this bandaid is here is because there's a bug in
-     * Tor 0.1.1.x where middle hops don't always send their create
-     * cell; so some servers rarely find themselves reachable. */
-//    if (!is_local_IP(conn->_base.addr))
-//      router_orport_found_reachable();
   }
 
   directory_set_dirty();
@@ -734,11 +721,8 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
                  "Bug: unhandled error on write for OR conn (fd %d); removing",
                  conn->_base.s);
         tor_fragile_assert();
-        // XXX This was supposed to be edge-only!
-        // conn->has_sent_end = 1; /* don't cry wolf about duplicate close */
-
-        /* XXX do we need a close-immediate here, so we don't try to flush? */
-        connection_mark_for_close(TO_CONN(conn));
+        /* do a close-immediate here, so we don't try to flush */
+        connection_close_immediate(TO_CONN(conn));
       }
       return;
     }
