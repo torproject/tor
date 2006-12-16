@@ -31,6 +31,7 @@ static time_t onionkey_set_at=0; /* When was onionkey last changed? */
 static crypto_pk_env_t *onionkey=NULL;
 static crypto_pk_env_t *lastonionkey=NULL;
 static crypto_pk_env_t *identitykey=NULL;
+static char identitykey_digest[DIGEST_LEN];
 
 /** Replace the current onion key with <b>k</b>.  Does not affect lastonionkey;
  * to update onionkey correctly, call rotate_onion_key().
@@ -90,6 +91,7 @@ set_identity_key(crypto_pk_env_t *k)
   if (identitykey)
     crypto_free_pk_env(identitykey);
   identitykey = k;
+  crypto_pk_get_digest(identitykey, identitykey_digest);
 }
 
 /** Returns the current identity key; requires that the identity key has been
@@ -717,10 +719,7 @@ router_compare_to_my_exit_policy(edge_connection_t *conn)
 int
 router_digest_is_me(const char *digest)
 {
-  routerinfo_t *me = router_get_my_routerinfo();
-  if (!me || memcmp(me->cache_info.identity_digest, digest, DIGEST_LEN))
-    return 0;
-  return 1;
+  return identitykey && !memcmp(identitykey_digest, digest, DIGEST_LEN);
 }
 
 /** A wrapper around router_digest_is_me(). */
