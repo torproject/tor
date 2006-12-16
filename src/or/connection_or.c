@@ -714,6 +714,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
       conn->_base.outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
     int extra = conn->_base.outbuf_flushlen - MIN_TLS_FLUSHLEN;
     conn->_base.outbuf_flushlen = MIN_TLS_FLUSHLEN;
+    connection_start_writing(TO_CONN(conn));
     if (connection_handle_write(TO_CONN(conn)) < 0) {
       if (!conn->_base.marked_for_close) {
         /* this connection is broken. remove it. */
