@@ -82,7 +82,7 @@ static time_t interval_end_time = 0;
 static time_t interval_wakeup_time = 0;
 /** How much bandwidth do we 'expect' to use per minute?  (0 if we have no
  * info from the last period.) */
-static uint32_t expected_bandwidth_usage = 0;
+static uint64_t expected_bandwidth_usage = 0;
 /** What unit are we using for our accounting? */
 static time_unit_t cfg_unit = UNIT_MONTH;
 /** How many days,hours,minutes into each unit does our accounting interval
@@ -366,9 +366,7 @@ update_expected_bandwidth(void)
     if (expected > max_configured)
       expected = max_configured;
   }
-  if (expected > UINT32_MAX)
-    expected = UINT32_MAX;
-  expected_bandwidth_usage = (uint32_t) expected;
+  expected_bandwidth_usage = expected;
 }
 
 /** Called at the start of a new accounting interval: reset our
@@ -545,6 +543,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
   char *cp = buf;
   time_t tmp;
   int r;
+  uint64_t expected;
 
   /* First, update bw_accounting. Until 0.1.2.5-x, this was the only place
    * we stored this information. The format is:
@@ -558,6 +557,10 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
     log_warn(LD_ACCT, "Created a time that we refused to parse.");
     return -1;
   }
+  expected = expected_bandwidth_usage;
+  /* Cap this value, since older versions won't parse a uint64_t here. */
+  if (expected > UINT32_MAX)
+    expected = UINT32_MAX;
   tor_snprintf(cp, sizeof(buf),
                "%d\n%s\n%s\n"U64_FORMAT"\n"U64_FORMAT"\n%lu\n%lu\n",
                BW_ACCOUNTING_VERSION,
@@ -566,7 +569,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
                U64_PRINTF_ARG(ROUND_UP(n_bytes_read_in_interval)),
                U64_PRINTF_ARG(ROUND_UP(n_bytes_written_in_interval)),
                (unsigned long)n_seconds_active_in_interval,
-               (unsigned long)expected_bandwidth_usage);
+               (unsigned long)expected);
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
                get_options()->DataDirectory);
   r = write_str_to_file(fname, buf, 0);
@@ -685,7 +688,7 @@ read_bandwidth_usage(void)
        (char*)smartlist_get(elts,2),
        (char*)smartlist_get(elts,1),
        (unsigned long)n_seconds_active_in_interval,
-       (unsigned long)((uint64_t)expected_bandwidth_usage*1024/60),
+       (unsigned long)(expected_bandwidth_usage*1024/60),
        U64_PRINTF_ARG(n_bytes_read_in_interval),
        U64_PRINTF_ARG(n_bytes_written_in_interval));
 
