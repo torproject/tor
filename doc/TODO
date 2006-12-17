@@ -25,13 +25,14 @@ x - When we've been idle a long time, we stop fetching server
 x - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
 
-N - Bug 326: make eventdns thrash less.
 N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.
 N - Stop recommending exits as guards?
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
+
+R - Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
 
 Items for 0.1.2.x:
   - Now that we're avoiding exits when picking non-exit positions,
@@ -83,9 +84,14 @@ N       - Hunt for places that change networkstatus info that I might have
 d     - A way to adjust router flags from the controller
 d     - a way to pick entries based wholly on extend_info equivalent;
         a way to export extend_info equivalent.
-R     - option to dl directory info via tor
-        - Make an option like __AllDirActionsPrivate that falls back to
-          non-Tor DL when not enough info present.
+R     . option to dl directory info via tor
+        o Make an option like __AllDirActionsPrivate that falls back to
+          non-Tor DL when not enough info present.  (TunnelDirCons).
+        - Set default to 0 before release candidate.
+        - Think harder about whether TunnelDirConns should be on
+          by default.
+        - Handle case where we have no descriptors and so don't know who can
+          handle BEGIN_DIR.
       D Count TLS bandwidth more accurately
 
 N - DNS improvements
@@ -101,11 +107,11 @@ N - DNS improvements
       D Make API closer to getaddrinfo()
       o Teach evdns about ipv6.
       - Make evdns use windows strerror equivalents.
-      - Teach evdns to be able to listen for requests to be processed.
+      o Teach evdns to be able to listen for requests to be processed.
         o Design interface.
           o Rename stuff; current names suck.
         o Design backend.
-        . Implement
+        o Implement
           o Listen for questions
           o Parse questions, tell user code
           o Let user code tell us the answer
@@ -116,14 +122,14 @@ N - DNS improvements
           o Be efficient about labels.
           o Fix the interface for flags and flag handling.
           o Generate truncated responses correctly.
-          - Comment everything.
+          o Comment everything.
           o Clean up XXXX items
-          . Test
-      - Add some kind of general question/response API so libevent can be
+          o Test
+      D Add some kind of general question/response API so libevent can be
         flexible here.
-d     - Add option to use /etc/hosts?
-d     - Special-case localhost?
-      - Verify that it works on windows
+      X Add option to use /etc/hosts?
+      X Special-case localhost?
+      - Verify that it works well on windows
     . Make reverse DNS work.
       . Add client-side interface
         o SOCKS interface: specify
@@ -136,12 +142,20 @@ d     - Special-case localhost?
       server, and bad software that tries to do DNS lookups on whole URLs.)
       - address_is_invalid_destination() is the right thing to call here
         (and feel free to make that function smarter)
-
-d - Eventdns improvements
-    - Have a way to query for AAAA and A records simultaneously.
-    - Improve request API: At the very least, add the ability to construct
-      a more-or-less arbitrary request and get a response.
-    - (Can we suppress cnames? Should we?)
+    - Bug 364: notice when all the DNS requests we get back (including a few
+      well-known sites) are all going to the same place.
+    - Bug 363: Warn and die if we can't find a nameserver and we're running a
+      server; don't fall back to 127.0.0.1.
+    - Bug 326: Give fewer error messages from nameservers. 
+      - Only warn when _all_ nameservers are down; otherwise info.
+      - Increase timeout; what's industry standard?
+        - Alternatively, raise timeout when nameserver dies but comes back
+          quickly?
+      - Don't believe that our sole nameserver is dead?  or, not until more
+        failures than it would take to think one of several nameservers was
+        dead?
+      - Possibly, don't warn until second retry of a nameserver gets no
+        answer?
 
   - Performance improvements
 
@@ -278,6 +292,12 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
       . Figure out v0 compatibility.
       - Implement
 
+  - Eventdns improvements
+    - Have a way to query for AAAA and A records simultaneously.
+    - Improve request API: At the very least, add the ability to construct
+      a more-or-less arbitrary request and get a response.
+    - (Can we suppress cnames? Should we?)
+
 Minor items for 0.1.2.x as time permits:
   D don't do dns hijacking tests if we're reject *:* exit policy?
     (deferred until 0.1.1.x is less common)
@@ -301,14 +321,19 @@ Minor items for 0.1.2.x as time permits:
     we append a number (or increment the number) and try again? This
     way people who read their logs can fix it as before, but people
     who don't read their logs will still offer Tor servers.
-?   - Fall back to unnamed; warn user; send controller event.
+    - Fall back to unnamed; warn user; send controller event.  ("When we
+      notice a 'Rejected: There is already a named server with this nickname'
+      message... or maybe instead when we see in the networkstatuses that
+      somebody else is Named with the name we want: warn the user, send a
+      STATUS_SERVER message, and fall back to unnamed.")
 ! - Tor should bind its ports before dropping privs, so users don't
     have to do the ipchains dance.
   - Rate limit exit connections to a given destination -- this helps
     us play nice with websites when Tor users want to crawl them; it
     also introduces DoS opportunities.
   o The bw_accounting file should get merged into the state file.
-? - Streamline how we pick entry nodes.
+  - Streamline how we pick entry nodes: Make choose_random_entry() have
+    less magic and less control logic.
   o Better installers and build processes.
     X Commit edmanm's win32 makefile to tor contrib, or write a new one.
       (Abandoned for now; mingw is now our official windows build
