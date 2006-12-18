@@ -13,9 +13,9 @@ P       - phobos claims
         D Deferred
         X Abandoned
 
-X   . <nickm> "Let's try to find a way to make it run and make the version
+    X <nickm> "Let's try to find a way to make it run and make the version
        match, but if not, let's just make it run."
-X   - <arma> "should we detect if we have a --with-ssl-dir and try the -R
+    X <arma> "should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?"
 
 Items for 0.1.2.x, real soon now:
@@ -24,8 +24,6 @@ Items for 0.1.2.x, real soon now:
     descriptors. When we then get a socks request, we build circuits
     immediately using whatever descriptors we have, rather than waiting
     until we've fetched correct ones.
-D - If the client's clock is too far in the past, it will drop (or
-    just not try to get) descriptors, so it'll never build circuits.
 
 N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
@@ -37,12 +35,6 @@ N - Stop recommending exits as guards?
 R - Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
 
 Items for 0.1.2.x:
-D - Now that we're avoiding exits when picking non-exit positions,
-    we need to consider how to pick nodes for internal circuits. If
-    we avoid exits for all positions, we skew the load balancing. If
-    we accept exits for all positions, we leak whether it's an internal
-    circuit at every step. If we accept exits only at the last hop, we
-    reintroduce Lasse's attacks from the Oakland paper.
   - enumerate events of important things that occur in tor, so vidalia can
     react.
     o Backend implementation
@@ -72,26 +64,15 @@ N - Document .noconnect addresses...
     A new file 'address-spec.txt' that describes .exit, .onion,
     .noconnect, etc?
 
-D - We should ship with a list of stable dir mirrors -- they're not
-    trusted like the authorities, but they'll provide more robustness
-    and diversity for bootstrapping clients.
-
-D - Simplify authority operation
-    - Follow weasel's proposal, crossed with mixminion dir config format
 
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
     . Reduce resource load
-D     - Tolerate clock skew on bridge relays.
       o A way to alert controller when router flags change.
         o Specify: SETEVENTS NS
         o Implement
 R       - Hunt for places that change networkstatus info that I might have
           missed.
-D     - A way to adjust router flags from the controller
-        how do we prevent the authority from clobbering them soon after?
-D     - a way to pick entry guards based wholly on extend_info equivalent;
-        a way to export extend_info equivalent.
 R     . option to dl directory info via tor
         o Make an option like __AllDirActionsPrivate that falls back to
           non-Tor DL when not enough info present.  (TunnelDirConns).
@@ -100,52 +81,21 @@ R     . option to dl directory info via tor
           by default.
         - Handle case where we have no descriptors and so don't know who can
           handle BEGIN_DIR.
-      D Count TLS bandwidth more accurately
 
 N - DNS improvements
-    o Option to deal with broken DNS of the "ggoogle.com? Ah, you meant
-      ads.me.com!" variety.
-      o Autodetect whether DNS is broken in this way.
-      X Additional fix: allow clients to have some addresses that mean,
-        notfound.  Yes, this blacklists IPs for having ever been used by
-        DNS hijackers.
     o Don't ask reject *:* nodes for DNS unless client wants you to.
     . Asynchronous DNS
-      o Document and rename SearchDomains, ResolvConf options
-      D Make API closer to getaddrinfo()
-      o Teach evdns about ipv6.
       - Make evdns use windows strerror equivalents.
-      o Teach evdns to be able to listen for requests to be processed.
-        o Design interface.
-          o Rename stuff; current names suck.
-        o Design backend.
-        o Implement
-          o Listen for questions
-          o Parse questions, tell user code
-          o Let user code tell us the answer
-          o Generate responses
-          o Send responses to client
-          o Queue responses when we see EAGAIN
-          o Retry responses after a while
-          o Be efficient about labels.
-          o Fix the interface for flags and flag handling.
-          o Generate truncated responses correctly.
-          o Comment everything.
-          o Clean up XXXX items
-          o Test
-      D Add some kind of general question/response API so libevent can be
-        flexible here.
-      X Add option to use /etc/hosts?
-      X Special-case localhost?
+      - Make sure patches get into libevent.
       - Verify that it works well on windows
     . Make reverse DNS work.
       . Add client-side interface
         o SOCKS interface: specify
         o SOCKS interface: implement
-D?      - Cache answers client-side
+d       - Cache answers client-side
         o Add to Tor-resolve.py
         - Add to tor-resolve
-D?  - Be a DNS proxy.
+d   - Be a DNS proxy.
     - Check for invalid characters in hostnames before trying to resolve
       them.  (This will help catch attempts do to mean things to our DNS
       server, and bad software that tries to do DNS lookups on whole URLs.)
@@ -174,17 +124,7 @@ R - Take out the '5 second' timeout from the socks detach schedule.
 
   - Performance improvements
 
-D   - Better estimates in the directory of whether servers have good uptime
-      (high expected time to failure) or good guard qualities (high
-      fractional uptime).
-      - AKA Track uptime as %-of-time-up, as well as time-since-last-down
-
-D   - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
-      - spec
-      - implement
-
   - Critical but minor bugs, backport candidates.
-D   - Failed rend desc fetches sometimes don't get retried. True/false?
     - support dir 503s better
       o clients don't log as loudly when they receive them
 N     - they don't count toward the 3-strikes rule
@@ -197,17 +137,6 @@ N     - split "router is down" from "dirport shouldn't be tried for a while"?
         when they feel like it.
       - update dir-spec with what we decided for each of these
 
-D - Windows server usability
-    - Solve the ENOBUFS problem.
-      - make tor's use of openssl operate on buffers rather than sockets,
-        so we can make use of libevent's buffer paradigm once it has one.
-      - make tor's use of libevent tolerate either the socket or the
-        buffer paradigm; includes unifying the functions in connect.c.
-    - We need a getrlimit equivalent on Windows so we can reserve some
-      file descriptors for saving files, etc. Otherwise we'll trigger
-      asserts when we're out of file descriptors and crash.
-M   - rewrite how libevent does select() on win32 so it's not so very slow.
-      - Add overlapped IO
 
 Nd- Have a mode that doesn't write to disk much, so we can run Tor on
     flash memory (e.g. Linksys routers or USB keys).
@@ -216,8 +145,6 @@ Nd- Have a mode that doesn't write to disk much, so we can run Tor on
       - crank up the numbers if avoiddiskwrites is on.
       - some things may not want to get written at all.
     - stop writing identity key / fingerprint / etc every restart
-    D stop caching directory stuff -- and disable mmap?
-      - an option to DontCacheDirectoryStuff
     - more?
 
 NR. Write path-spec.txt
@@ -285,11 +212,13 @@ P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
       - What do we do about the fact that people can't read zlib-
         compressed files manually?
 
-  o Add IPv6 support to eventdns.c
-
   - Refactor DNS resolve implementation
     - Refactor exit side of resolve: do we need a connection_t?
     - Refactor entry side of resolve: do we need a connection_t?
+
+  - If the client's clock is too far in the past, it will drop (or
+    just not try to get) descriptors, so it'll never build circuits.
+  - Tolerate clock skew on bridge relays.
 
   - A more efficient dir protocol.
     - Authorities should fetch the network-statuses amongst each
@@ -322,17 +251,60 @@ P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
       a more-or-less arbitrary request and get a response.
     - (Can we suppress cnames? Should we?)
 
+  - Now that we're avoiding exits when picking non-exit positions,
+    we need to consider how to pick nodes for internal circuits. If
+    we avoid exits for all positions, we skew the load balancing. If
+    we accept exits for all positions, we leak whether it's an internal
+    circuit at every step. If we accept exits only at the last hop, we
+    reintroduce Lasse's attacks from the Oakland paper.
+
+  - We should ship with a list of stable dir mirrors -- they're not
+    trusted like the authorities, but they'll provide more robustness
+    and diversity for bootstrapping clients.
+
+  - Simplify authority operation
+    - Follow weasel's proposal, crossed with mixminion dir config format
+
+  - A way to adjust router flags from the controller.
+    (How do we prevent the authority from clobbering them soon after?)
+  - a way to pick entry guards based wholly on extend_info equivalent;
+    a way to export extend_info equivalent.
+
+  - Count TLS bandwidth more accurately
+
+  - Better estimates in the directory of whether servers have good uptime
+    (high expected time to failure) or good guard qualities (high
+    fractional uptime).
+    - AKA Track uptime as %-of-time-up, as well as time-since-last-down
+
+  - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
+    - spec
+    - implement
+
+  - Failed rend desc fetches sometimes don't get retried. True/false?
+
+  - Windows server usability
+    - Solve the ENOBUFS problem.
+      - make tor's use of openssl operate on buffers rather than sockets,
+        so we can make use of libevent's buffer paradigm once it has one.
+      - make tor's use of libevent tolerate either the socket or the
+        buffer paradigm; includes unifying the functions in connect.c.
+    - We need a getrlimit equivalent on Windows so we can reserve some
+      file descriptors for saving files, etc. Otherwise we'll trigger
+      asserts when we're out of file descriptors and crash.
+M   - rewrite how libevent does select() on win32 so it's not so very slow.
+      - Add overlapped IO
+
+  - Add an option (related to AvoidDiskWrites) to disable directory caching.
+
 Minor items for 0.1.2.x as time permits:
 R - add d64 and fp64 along-side d and fp so people can paste status
     entries into a url. since + is a valid base64 char, only allow one
     at a time. spec and then do.
   D don't do dns hijacking tests if we're reject *:* exit policy?
     (deferred until 0.1.1.x is less common)
-  o Some way for the authorities to set BadExit for some nodes manually.
   - When we export something from foo.c file for testing purposes only,
     make a foo_test.h file for test.c to include.
-  o "getinfo fingerprint" controller command
-  o "setevent guards" controller command
   - The Debian package now uses --verify-config when (re)starting,
     to distinguish configuration errors from other errors. Perhaps
     the RPM and other startup scripts should too?
@@ -361,10 +333,6 @@ R - add d64 and fp64 along-side d and fp so people can paste status
   o The bw_accounting file should get merged into the state file.
   - Streamline how we pick entry nodes: Make choose_random_entry() have
     less magic and less control logic.
-  o Better installers and build processes.
-    X Commit edmanm's win32 makefile to tor contrib, or write a new one.
-      (Abandoned for now; mingw is now our official windows build
-       enviroment.)
   - Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
