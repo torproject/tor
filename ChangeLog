@@ -21,6 +21,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Add internal descriptions for a bunch of configuration options:
       accessible via controller interface and in comments in saved
       options files.
+    - Reject *:563 (NTTPS) in the default exit policy. We already reject
+      NNTP by default, so this seems like a sensible addition.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

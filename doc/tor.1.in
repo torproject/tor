@@ -542,6 +542,7 @@ either a reject *:* or an accept *:*. Otherwise, you're _augmenting_
 .IP "reject *:135-139"
 .IP "reject *:445"
 .IP "reject *:465"
+.IP "reject *:563"
 .IP "reject *:587"
 .IP "reject *:1214"
 .IP "reject *:4661-4666"

@@ -589,7 +589,8 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
 
 #define DEFAULT_EXIT_POLICY                                         \
   "reject *:25,reject *:119,reject *:135-139,reject *:445,"         \
-  "reject *:465,reject *:587,reject *:1214,reject *:4661-4666,"     \
+  "reject *:465,reject *:563,reject *:587,"                         \
+  "reject *:1214,reject *:4661-4666,"                               \
   "reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
 /** Parse the exit policy <b>cfg</b> into the linked list *<b>dest</b>. If
