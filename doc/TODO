@@ -9,33 +9,35 @@ P       - phobos claims
         * Top priority
         . Partially done
         o Done
+        d Deferrable
         D Deferred
         X Abandoned
 
-    . <nickm> "Let's try to find a way to make it run and make the version
+X   . <nickm> "Let's try to find a way to make it run and make the version
        match, but if not, let's just make it run."
-    - <arma> "should we detect if we have a --with-ssl-dir and try the -R
+X   - <arma> "should we detect if we have a --with-ssl-dir and try the -R
       by default, if it works?"
 
 Items for 0.1.2.x, real soon now:
-x - When we've been idle a long time, we stop fetching server
+? - Bug: combination of things:
+    When we've been idle a long time, we stop fetching server
     descriptors. When we then get a socks request, we build circuits
     immediately using whatever descriptors we have, rather than waiting
     until we've fetched correct ones.
-x - If the client's clock is too far in the past, it will drop (or
+D - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
 
 N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.
 N - Stop recommending exits as guards?
-P - Figure out why dll's compiled in mingw don't work right in WinXP.
-P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
+    look at the overall fraction of exits in the network. if the
+    fraction is too small, none of them get to be guards.
 
 R - Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
 
 Items for 0.1.2.x:
-  - Now that we're avoiding exits when picking non-exit positions,
+D - Now that we're avoiding exits when picking non-exit positions,
     we need to consider how to pick nodes for internal circuits. If
     we avoid exits for all positions, we skew the load balancing. If
     we accept exits for all positions, we leak whether it's an internal
@@ -48,6 +50,7 @@ R   - Actually list all the events (notice and warn log messages are a good
       place to look.)  Divide messages into categories, perhaps.
 R   - Specify general event system
 R   - Specify actual events.
+R   - and implement the rest
 
   . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     directory port."
@@ -55,38 +58,43 @@ R   - Specify actual events.
     o Implement
     o Use for something, so we can be sure it works.
     o Test and debug
-    - turn the received socks addr:port into a digest for setting .exit
+R   - turn the received socks addr:port into a digest for setting .exit
     - be able to connect without having a server descriptor, to bootstrap.
 R     - handle connect-dir streams that don't have a chosen_exit_name set.
 N     - include ORPort in DirServers lines so we can know where to connect.
+        list the orport as 0 if it can't handle begin_dir.
+N     - list versions in status page
+        a new line in the status entry. "Tor 0.1.2.2-alpha". If it's
+        a version, treat it like one. If it's something else, assume
+        it's at least 0.1.2.x.
 
-N - Document .noconnect addresses... but where?
-    How about a new file 'tor-addresses.txt' or 'address-spec.txt'
-    that describes .exit, .onion, .noconnect, etc? Or section 2.2.2
-    of path-spec.txt? -RD
+N - Document .noconnect addresses...
+    A new file 'address-spec.txt' that describes .exit, .onion,
+    .noconnect, etc?
 
-x - We should ship with a list of stable dir mirrors -- they're not
+D - We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
     and diversity for bootstrapping clients.
 
-N - Simplify authority operation
+D - Simplify authority operation
     - Follow weasel's proposal, crossed with mixminion dir config format
 
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
     . Reduce resource load
-d     - Tolerate clock skew on bridge relays.
+D     - Tolerate clock skew on bridge relays.
       o A way to alert controller when router flags change.
         o Specify: SETEVENTS NS
         o Implement
-N       - Hunt for places that change networkstatus info that I might have
+R       - Hunt for places that change networkstatus info that I might have
           missed.
-d     - A way to adjust router flags from the controller
-d     - a way to pick entries based wholly on extend_info equivalent;
+D     - A way to adjust router flags from the controller
+        how do we prevent the authority from clobbering them soon after?
+D     - a way to pick entry guards based wholly on extend_info equivalent;
         a way to export extend_info equivalent.
 R     . option to dl directory info via tor
         o Make an option like __AllDirActionsPrivate that falls back to
-          non-Tor DL when not enough info present.  (TunnelDirCons).
+          non-Tor DL when not enough info present.  (TunnelDirConns).
         - Set default to 0 before release candidate.
         - Think harder about whether TunnelDirConns should be on
           by default.
@@ -98,7 +106,7 @@ N - DNS improvements
     o Option to deal with broken DNS of the "ggoogle.com? Ah, you meant
       ads.me.com!" variety.
       o Autodetect whether DNS is broken in this way.
-      - Additional fix: allow clients to have some addresses that mean,
+      X Additional fix: allow clients to have some addresses that mean,
         notfound.  Yes, this blacklists IPs for having ever been used by
         DNS hijackers.
     o Don't ask reject *:* nodes for DNS unless client wants you to.
@@ -134,18 +142,22 @@ N - DNS improvements
       . Add client-side interface
         o SOCKS interface: specify
         o SOCKS interface: implement
-        - Cache answers client-side
+D?      - Cache answers client-side
         o Add to Tor-resolve.py
         - Add to tor-resolve
+D?  - Be a DNS proxy.
     - Check for invalid characters in hostnames before trying to resolve
       them.  (This will help catch attempts do to mean things to our DNS
       server, and bad software that tries to do DNS lookups on whole URLs.)
       - address_is_invalid_destination() is the right thing to call here
         (and feel free to make that function smarter)
+      - add a config option to turn it off.
     - Bug 364: notice when all the DNS requests we get back (including a few
       well-known sites) are all going to the same place.
     - Bug 363: Warn and die if we can't find a nameserver and we're running a
       server; don't fall back to 127.0.0.1.
+?   - maybe re-check dns when we change IP addresses, rather than
+      every 12 hours?
     - Bug 326: Give fewer error messages from nameservers. 
       - Only warn when _all_ nameservers are down; otherwise info.
       - Increase timeout; what's industry standard?
@@ -156,32 +168,36 @@ N - DNS improvements
         dead?
       - Possibly, don't warn until second retry of a nameserver gets no
         answer?
+      - warn if all of your nameservers go down and stay down for like
+        5 minutes.
+R - Take out the '5 second' timeout from the socks detach schedule.
 
   - Performance improvements
 
-x   - Better estimates in the directory of whether servers have good uptime
+D   - Better estimates in the directory of whether servers have good uptime
       (high expected time to failure) or good guard qualities (high
       fractional uptime).
       - AKA Track uptime as %-of-time-up, as well as time-since-last-down
 
-    - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
-x     - spec
-d     - implement
+D   - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
+      - spec
+      - implement
 
   - Critical but minor bugs, backport candidates.
-d   - Failed rend desc fetches sometimes don't get retried. True/false?
-R   - support dir 503s better
+D   - Failed rend desc fetches sometimes don't get retried. True/false?
+    - support dir 503s better
       o clients don't log as loudly when they receive them
-      - they don't count toward the 3-strikes rule
+N     - they don't count toward the 3-strikes rule
         - should there be some threshold of 503's after which we give up?
-        - Delay when we get a lot of 503s.
+        - Delay when we get a lot of 503s?
 N     - split "router is down" from "dirport shouldn't be tried for a while"?
-        Just a separate bit.
-      - authorities should *never* 503 a cache, but *should* 503 clients
+        want a time_t field for got_503_at.
+      - authorities should *never* 503 a cache, and should never 503
+        network status requests. They can 503 client descriptor requests
         when they feel like it.
       - update dir-spec with what we decided for each of these
 
-  - Windows server usability
+D - Windows server usability
     - Solve the ENOBUFS problem.
       - make tor's use of openssl operate on buffers rather than sockets,
         so we can make use of libevent's buffer paradigm once it has one.
@@ -196,9 +212,12 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
 Nd- Have a mode that doesn't write to disk much, so we can run Tor on
     flash memory (e.g. Linksys routers or USB keys).
     o Add AvoidDiskWrites config option.
-    - only write state file when it's "changed"
+    . only write state file when it's "changed"
+      - crank up the numbers if avoiddiskwrites is on.
+      - some things may not want to get written at all.
     - stop writing identity key / fingerprint / etc every restart
-    - stop caching directory stuff -- and disable mmap?
+    D stop caching directory stuff -- and disable mmap?
+      - an option to DontCacheDirectoryStuff
     - more?
 
 NR. Write path-spec.txt
@@ -207,12 +226,14 @@ NR. Write path-spec.txt
     - Tell people about OSX Uninstaller
     - Quietly document NT Service options
     - Switch canonical win32 compiler to mingw.
-NR  - Get some kind of "meta signing key" to be used solely to sign
+NR  D Get some kind of "meta signing key" to be used solely to sign
       releases/to certify releases when signed by the right people/
       to certify sign the right people's keys?  Also use this to cert the SSL
       key, etc.
     - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
+N   - script to look at config.c, torrc.sample, tor.1.in, to tell us
+      what's missing in which and notice which descriptions are missing.
 
   - Docs
     - More prominently, we should have a recommended apps list.
@@ -220,6 +241,16 @@ NR  - Get some kind of "meta signing key" to be used solely to sign
       - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
     - we should add a preamble to tor-design saying it's out of date.
+
+  - Improvements to bandwidth counting
+R   - look into "uncounting" bytes spent on local connections, so
+      we can bandwidthrate but still have fast downloads.
+R   - "bandwidth classes", for incoming vs initiated-here conns,
+      and to give dir conns lower priority.
+    . Write limiting; separate token bucket for write
+      - preemptively give a 503 to some dir requests
+      - per-conn write buckets
+      - separate config options for read vs write limiting
 
 Topics to think about during 0.1.2.x development:
   * Figure out incentives.
@@ -235,19 +266,12 @@ For blocking-resistance scheme:
   o allow ordinary-looking ssl for dir connections. need a new dirport
     for this, or can we handle both ssl and non-ssl, or should we
     entirely switch to ssl in certain cases?
-d - need to figure out how to fetch status of a few servers from the BDA
+  D need to figure out how to fetch status of a few servers from the BDA
     without fetching all statuses. A new URL to fetch I presume?
 
 Deferred from 0.1.2.x:
-  - Improvements to bandwidth counting
-R   - look into "uncounting" bytes spent on local connections, so
-      we can bandwidthrate but still have fast downloads.
-R   - "bandwidth classes", for incoming vs initiated-here conns,
-      and to give dir conns lower priority.
-    . Write limiting; separate token bucket for write
-      - preemptively give a 503 to some dir requests
-      - per-conn write buckets
-      - separate config options for read vs write limiting
+P - Figure out why dll's compiled in mingw don't work right in WinXP.
+P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
   - Directory guards
   - RAM use in directory authorities.
   - Memory use improvements:
