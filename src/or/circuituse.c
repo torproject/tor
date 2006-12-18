@@ -778,8 +778,9 @@ static int did_circs_fail_last_period = 0;
 /** Launch a new circuit; see circuit_launch_by_extend_info() for
  * details on arguments. */
 origin_circuit_t *
-circuit_launch_by_router(uint8_t purpose, int onehop_tunnel, routerinfo_t *exit,
-                         int need_uptime, int need_capacity, int internal)
+circuit_launch_by_router(uint8_t purpose, int onehop_tunnel,
+                         routerinfo_t *exit, int need_uptime,
+                         int need_capacity, int internal)
 {
   origin_circuit_t *circ;
   extend_info_t *info = NULL;

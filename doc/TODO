@@ -299,6 +299,9 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
     - (Can we suppress cnames? Should we?)
 
 Minor items for 0.1.2.x as time permits:
+R - add d64 and fp64 along-side d and fp so people can paste status
+    entries into a url. since + is a valid base64 char, only allow one
+    at a time. spec and then do.
   D don't do dns hijacking tests if we're reject *:* exit policy?
     (deferred until 0.1.1.x is less common)
   o Some way for the authorities to set BadExit for some nodes manually.
