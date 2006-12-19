@@ -60,7 +60,7 @@ N     - list versions in status page
         a version, treat it like one. If it's something else, assume
         it's at least 0.1.2.x.
 
-N - Document .noconnect addresses...
+  o Document .noconnect addresses...
     A new file 'address-spec.txt' that describes .exit, .onion,
     .noconnect, etc?
 

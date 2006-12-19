@@ -1,7 +1,7 @@
 
 EXTRA_DIST = tor-spec.txt rend-spec.txt control-spec.txt     \
              dir-spec.txt socks-extensions.txt path-spec.txt \
-             version-spec.txt                                \
+             version-spec.txt address-spec.txt               \
              website img HACKING                             \
              tor-resolve.1                                   \
              tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
