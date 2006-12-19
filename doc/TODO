@@ -96,12 +96,12 @@ d       - Cache answers client-side
         o Add to Tor-resolve.py
         - Add to tor-resolve
 d   - Be a DNS proxy.
-    - Check for invalid characters in hostnames before trying to resolve
+    o Check for invalid characters in hostnames before trying to resolve
       them.  (This will help catch attempts do to mean things to our DNS
       server, and bad software that tries to do DNS lookups on whole URLs.)
-      - address_is_invalid_destination() is the right thing to call here
+      o address_is_invalid_destination() is the right thing to call here
         (and feel free to make that function smarter)
-      - add a config option to turn it off.
+      o add a config option to turn it off.
     - Bug 364: notice when all the DNS requests we get back (including a few
       well-known sites) are all going to the same place.
     - Bug 363: Warn and die if we can't find a nameserver and we're running a

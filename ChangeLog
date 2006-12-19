@@ -25,6 +25,10 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       NNTP by default, so this seems like a sensible addition.
     - Authorities do not recommend exits as guards if this would shift excess
       load to the exit nodes.
+    - Avoid some inadvertent info leaks by making clients reject hostnames
+      with invalid characters.  Add an option to disable this behavior,
+      in case somebody is running a private network with hosts called @, !,
+      and #.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

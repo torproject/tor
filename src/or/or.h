@@ -1656,6 +1656,8 @@ typedef struct {
                                * same network zone in the same circuit. */
   int TunnelDirConns; /**< If true, use BEGIN_DIR rather than BEGIN when
                        * possible. */
+  int AllowNonRFC953Hostnames;  /**< If true, we allow connections to hostnames
+                                 * with weird characters. */
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

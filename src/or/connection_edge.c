@@ -1030,9 +1030,19 @@ addressmap_register_virtual_address(int type, char *new_address)
 static int
 address_is_invalid_destination(const char *address)
 {
-  /* FFFF should flesh this out */
-  if (strchr(address,':'))
-    return 1;
+  if (get_options()->AllowNonRFC953Hostnames)
+    return 0;
+
+  while (*address) {
+    if (TOR_ISALNUM(*address) ||
+        *address == '-' ||
+        *address == '.' ||
+        *address == '_') /* Underscore is not allowed, but Windows does it
+                          * sometimes, just to thumb its nose at the IETF. */
+      ++address;
+    else
+      return 1;
+  }
   return 0;
 }
 

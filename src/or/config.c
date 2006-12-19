@@ -127,6 +127,7 @@ static config_var_t _option_vars[] = {
   VAR("__AllDirActionsPrivate",BOOL,   AllDirActionsPrivate, "0"),
   VAR("AllowInvalidNodes",   CSV,      AllowInvalidNodes,
                                                         "middle,rendezvous"),
+  VAR("AllowNonRFC953Hostnames", BOOL, AllowNonRFC953Hostnames, "0"),
   VAR("AssumeReachable",     BOOL,     AssumeReachable,      "0"),
   VAR("AuthDirBadExit",      LINELIST, AuthDirBadExit,       NULL),
   VAR("AuthDirInvalid",      LINELIST, AuthDirInvalid,       NULL),
@@ -354,6 +355,8 @@ static config_var_description_t options_description[] = {
   /* ==== client options */
   { "AllowInvalidNodes", "Where on our circuits should Tor allow servers "
     "that the directory authorities haven't called \"valid\"?" },
+  { "AllowNonRFC953Hostnames", "If set to 1, we don't automatically reject "
+    "hostnames for having invalid characters." },
   /*  CircuitBuildTimeout, CircuitIdleTimeout */
   { "ClientOnly", "If set to 1, Tor will under no circumstances run as a "
     "server, even if ORPort is as configued." },
