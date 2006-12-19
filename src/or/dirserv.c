@@ -1293,6 +1293,8 @@ should_generate_v2_networkstatus(void)
 static uint32_t stable_uptime = 0; /* start at a safe value */
 static uint32_t fast_bandwidth = 0;
 static uint32_t guard_bandwidth = 0;
+static uint64_t total_bandwidth = 0;
+static uint64_t total_exit_bandwidth = 0;
 
 static INLINE int
 real_uptime(routerinfo_t *router, time_t now)
@@ -1331,14 +1333,19 @@ _compare_uint32(const void **a, const void **b)
   return 0;
 }
 
-/** Look through the routerlist, and assign the median uptime
- * of running valid servers to stable_uptime, and the relative bandwidth
- * capacities to fast_bandwidth and guard_bandwidth. */
+/** Look through the routerlist, and assign the median uptime of running valid
+ * servers to stable_uptime, and the relative bandwidth capacities to
+ * fast_bandwidth and guard_bandwidth.  Set total_bandwidth to the total
+ * capacity of all running valid servers and total_exit_bandwidth to the
+ * capacity of all running valid exits. */
 static void
 dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
   smartlist_t *uptimes, *bandwidths;
   time_t now = time(NULL);
+
+  total_bandwidth = 0;
+  total_exit_bandwidth = 0;
 
   uptimes = smartlist_create();
   bandwidths = smartlist_create();
@@ -1350,6 +1357,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       *up = (uint32_t) real_uptime(ri, now);
       smartlist_add(uptimes, up);
       *bw = router_get_advertised_bandwidth(ri);
+      total_bandwidth += *bw;
+      total_exit_bandwidth += *bw;
       smartlist_add(bandwidths, bw);
     }
   });
@@ -1417,6 +1426,7 @@ generate_v2_networkstatus(void)
   int naming = options->NamingAuthoritativeDir;
   int versioning = options->VersioningAuthoritativeDir;
   int listbadexits = options->AuthDirListBadExits;
+  int exits_can_be_guards;
   const char *contact;
 
   if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
@@ -1485,6 +1495,8 @@ generate_v2_networkstatus(void)
 
   dirserv_compute_performance_thresholds(rl);
 
+  exits_can_be_guards = total_exit_bandwidth > (total_bandwidth / 3);
+
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
       int f_exit = exit_policy_is_general_exit(ri->exit_policy);
@@ -1504,7 +1516,8 @@ generate_v2_networkstatus(void)
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_valid;
       int f_guard = f_fast && f_stable &&
-        router_get_advertised_bandwidth(ri) > guard_bandwidth;
+        router_get_advertised_bandwidth(ri) > guard_bandwidth &&
+        (!f_exit || exits_can_be_guards);
       int f_bad_exit = listbadexits && ri->is_bad_exit;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */

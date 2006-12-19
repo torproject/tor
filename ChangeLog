@@ -23,6 +23,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       options files.
     - Reject *:563 (NTTPS) in the default exit policy. We already reject
       NNTP by default, so this seems like a sensible addition.
+    - Authorities do not recommend exits as guards if this would shift excess
+      load to the exit nodes.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
