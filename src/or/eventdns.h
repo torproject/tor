@@ -187,6 +187,7 @@
  *	  3 file too large
  *	  4 out of memory
  *	  5 short read from file
+ *        6 no nameservers in file
  *
  * Internals:
  *

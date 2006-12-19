@@ -1465,8 +1465,11 @@ configure_nameservers(int force)
       evdns_clear_nameservers_and_suspend();
     }
     log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
-    if (evdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))
+    if (evdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname)) {
+      log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers in '%s'",
+               conf_fname, conf_fname);
       return -1;
+    }
     if (evdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.", conf_fname);
       return -1;

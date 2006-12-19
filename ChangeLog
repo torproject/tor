@@ -67,6 +67,10 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Remove an artificial (but quite high) restriction on expected
       bandwidth, so that accounting won't break once we all have gigabit
       connections to our homes.
+    - When running as a server, don't fall back to 127.0.0.1 when
+      no nameservers are configured in /etc/resolv.conf; instead, make
+      the user fix resolv.conf or specify nameservers explicitly. (Resolves
+      Bug 363.)
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.

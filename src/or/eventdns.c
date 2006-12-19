@@ -2499,7 +2499,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 	char *const first_token = strtok_r(start, delims, &strtok_state);
 	if (!first_token) return;
 
-	if (!strcmp(first_token, "nameserver")) {
+	if (!strcmp(first_token, "nameserver") && (flags & DNS_OPTION_NAMESERVERS)) {
 		const char *const nameserver = NEXT_TOKEN;
 		struct in_addr ina;
 
@@ -2579,7 +2579,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	if (fstat(fd, &st)) { err = 2; goto out1; }
 	if (!st.st_size) {
 		evdns_resolv_set_defaults(flags);
-		err = 0;
+		err = (flags & DNS_OPTION_NAMESERVERS) ? 6 : 0;
 		goto out1;
 	}
 	if (st.st_size > 65535) { err = 3; goto out1; }	 // no resolv.conf should be any bigger
@@ -2608,6 +2608,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	if (!server_head && (flags & DNS_OPTION_NAMESERVERS)) {
 		// no nameservers were configured.
 		evdns_nameserver_ip_add("127.0.0.1");
+        err = 6;
 	}
 	if (flags & DNS_OPTION_SEARCH && (!global_search_state || global_search_state->num_domains == 0)) {
 		search_set_from_hostname();
