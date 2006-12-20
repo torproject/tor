@@ -31,6 +31,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       network with hosts called @, !, and #.
     - Add a new address-spec.txt document to describe our special-case
       addresses: .exit, .onion, and .noconnnect.
+    - Add a maintainer script to tell us which options are missing
+      documentation.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

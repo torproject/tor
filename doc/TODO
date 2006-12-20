@@ -135,7 +135,11 @@ N     - they don't count toward the 3-strikes rule
         - should there be some threshold of 503's after which we give up?
         - Delay when we get a lot of 503s?
 N     - split "router is down" from "dirport shouldn't be tried for a while"?
-        want a time_t field for got_503_at.
+        We want a field to hold "when did we last get a 503 from this
+        directory server."  Probably, it should go in local_routerstatus_t,
+        not in routerinfo_t, since we can try to use servers as directories
+        before we have their descriptors.  Possibly, it should also go in
+        trusted_dir_server_t.
       - authorities should *never* 503 a cache, and should never 503
         network status requests. They can 503 client descriptor requests
         when they feel like it.
@@ -163,7 +167,7 @@ NR  D Get some kind of "meta signing key" to be used solely to sign
       key, etc.
     - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
-N   - script to look at config.c, torrc.sample, tor.1.in, to tell us
+    o script to look at config.c, torrc.sample, tor.1.in, to tell us
       what's missing in which and notice which descriptions are missing.
 
   - Docs

@@ -1757,6 +1757,31 @@ print_usage(void)
 "See man page for options, or http://tor.eff.org/ for documentation.\n");
 }
 
+/** Print all non-obsolete torrc options. */
+static void
+list_torrc_options(void)
+{
+  int i;
+  smartlist_t *lines = smartlist_create();
+  for (i = 0; _option_vars[i].name; ++i) {
+    config_var_t *var = &_option_vars[i];
+    const char *desc;
+    if (var->type == CONFIG_TYPE_OBSOLETE ||
+        var->type == CONFIG_TYPE_LINELIST_V)
+      continue;
+    desc = config_find_description(&options_format, var->name);
+    printf("%s\n", var->name);
+    if (desc) {
+      wrap_string(lines, desc, 76, "    ", "    ");
+      SMARTLIST_FOREACH(lines, char *, cp, {
+          printf("%s", cp);
+          tor_free(cp);
+        });
+      smartlist_clear(lines);
+    }
+  }
+}
+
 /** Last value actually set by resolve_my_address. */
 static uint32_t last_resolved_addr = 0;
 /**
@@ -2926,6 +2951,11 @@ options_init_from_torrc(int argc, char **argv)
   }
   if (argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
     print_usage();
+    exit(0);
+  }
+  if (argc > 1 && !strcmp(argv[1], "--list-torrc-options")) {
+    /* For documenting validating whether we've documented everything. */
+    list_torrc_options();
     exit(0);
   }
 

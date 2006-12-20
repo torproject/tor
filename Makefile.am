@@ -66,6 +66,9 @@ check-spaces:
 		src/common/[^as]*.c                   \
 		src/or/[^et]*.[ch] src/or/t*.c src/or/eventdns_tor.h
 
+check-docs:
+	./contrib/checkOptionDocs.pl
+
 check-logs:
 	./contrib/checkLogs.pl                        \
 		src/*/*.[ch] | sort -n
