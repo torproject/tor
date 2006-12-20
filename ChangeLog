@@ -50,6 +50,10 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       give up on a nameserver the third time it timed out, and try it
       10 seconds later... and to give up on it every time it timed out
       after that. (May fix bug 326.)
+    - Take out the '5 second' timeout from the connection retry
+      schedule. Now the first connect attempt will wait a full 10
+      seconds before switching to a new circuit. Perhaps this will help
+      a lot. Based on observations from Mike Perry.
 
   o Minor bugfixes:
     - Fix a bug when a PF socket is first used. (Patch from Fabian Keil.)

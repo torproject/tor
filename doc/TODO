@@ -124,7 +124,7 @@ d   - Be a DNS proxy.
         answer?
       - warn if all of your nameservers go down and stay down for like
         5 minutes.
-R - Take out the '5 second' timeout from the socks detach schedule.
+R o Take out the '5 second' timeout from the socks detach schedule.
 
   - Performance improvements
 
