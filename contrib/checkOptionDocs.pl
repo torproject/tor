@@ -12,12 +12,16 @@ my %manPageOptions = ();
 my $mostRecentOption;
 open(F, "./src/or/tor --list-torrc-options |") or die;
 while (<F>) {
-    next if m!/\[notice\] Tor v0\.!;
+    next if m!\[notice\] Tor v0\.!;
     if (m!^([A-Za-z0-9_]+)!) {
         $mostRecentOption = lc $1;
         $options{$mostRecentOption} = 1;
     } elsif (m!^    !) {
         $descOptions{$mostRecentOption} = 1;
+        if (m!\{DEPRECATED\}!) {
+            delete $descOptions{$mostRecentOption};
+            delete $options{$mostRecentOption};
+        }
     } else {
         print "Unrecognized output> ";
         print;

@@ -140,7 +140,7 @@ script to enumerate Tor nodes that exit to certain addresses.
 .LP
 .TP
 \fBGroup \fR\fIGID\fP
-On startup, setgid to this user.
+On startup, setgid to this group.
 .LP
 .TP
 \fBHttpProxy\fR \fIhost\fR[:\fIport\fR]\fP
@@ -231,6 +231,18 @@ On startup, setuid to this user.
 \fBHardwareAccel \fR\fB0\fR|\fB1\fP
 If non-zero, try to use crypto hardware acceleration when
 available. This is untested and probably buggy. (Default: 0)
+.LP
+.TP
+\fBAvoidDiskWrites \fR\fB0|\fR\fB1\fP
+If non-zero, try to write to disk less frequently than we would otherwise.
+This is useful when running on flash memory or other media that support only
+a limited number of writes.  (Default: 0)
+.LP
+.TP
+\fBTunnelDirConns \fR\fB0|\fR\fB1\fP
+If non-zero, try to have all directory info downloaded with encrypted
+connections.  (Default: 1)
+
 
 .SH CLIENT OPTIONS
 .PP

@@ -302,7 +302,8 @@ typedef struct config_var_description_t {
 
 static config_var_description_t options_description[] = {
   /* ==== general options */
-  /* AvoidDiskWrites */
+  { "AvoidDiskWrites", "If non-zero, try to write to disk less frequently than"
+    " we would otherwise." },
   { "BandwidthRate", "A token bucket limits the average incoming bandwidth on "
     "this node to the specified number of bytes per second." },
   { "BandwidthBurst", "Limit the maximum token buffer size (also known as "
@@ -317,6 +318,7 @@ static config_var_description_t options_description[] = {
     "connections to the control port except when the connecting process "
     "can read a file that Tor creates in its data directory. " },
   { "DataDirectory", "Store working data, state, keys, and caches here." },
+  { "DebugLogFile", "{DEPRECATED}" },
   { "DirServer", "Tor only trusts directories signed with one of these "
     "servers' keys.  Used to override the standard list of directory "
     "authorities." },
@@ -339,6 +341,8 @@ static config_var_description_t options_description[] = {
     "from closing our connections while Tor is not in use." },
   { "Log", "Where to send logging messages.  Format is "
     "minSeverity[-maxSeverity] (stderr|stdout|syslog|file FILENAME)." },
+  { "LogLevel", "{DEPRECATED} " },
+  { "LogFile", "{DEPRECATED} " },
   { "OutboundBindAddress", "Make all outbound connections originate from the "
     "provided IP address (only usefol for multiple network interfaces)." },
   { "PIDFile", "On startup, write our PID to this file. On clean shutdown, "
@@ -349,7 +353,9 @@ static config_var_description_t options_description[] = {
     "started.  Unix only." },
   { "SafeLogging", "If set to 0, Tor logs potentially sensitive strings "
     "rather than replacing them with the string [scrubbed]." },
-  /* TunnelDirConns */
+  { "SysLog", "{DEPRECATED}" },
+  { "TunnelDirConns", "If non-zero, try to have all directory info downloaded "
+    "via encrypted connections." },
   { "User", "On startup, setuid to this user" },
 
   /* ==== client options */
@@ -413,6 +419,7 @@ static config_var_description_t options_description[] = {
 
   /* === server options */
   { "Address", "The advertised (external) address we should use." },
+  { "AccountingMaxKB", "{DEPRECATED}" },
   /* Accounting* options. */
   /* AssumeReachable */
   { "ContactInfo", "Administrative contact information to advertise for this "
@@ -429,15 +436,15 @@ static config_var_description_t options_description[] = {
     "family as this one, so that clients will not use two from the same "
     "family in the same circuit." },
   { "Nickname", "Set the server nickname." },
-  { "NoPublish", "Set to 1 in order to keep the server from uploading info "
-    "to the directory authorities.  This prevents clients from using your "
-    "server." },
+  { "NoPublish", "{DEPRECATED}" },
   { "NumCPUs", "How many processes to use at once for public-key crypto." },
   { "ORPort", "Advertise this port to listen for connections from Tor clients "
     "and servers." },
   { "ORListenAddress", "Bind to this address to listen for connections from "
     "clients and servers, instead of the default 0.0.0.0:ORPort." },
-  /* PublishServerDescriptor */
+  { "PublishServerDescriptors", "Set to 0 in order to keep the server from "
+    "uploading info to the directory authorities.  This prevents clients "
+    "from using your server." },
   /*{ "RedirectExit", "When an outgoing connection tries to connect to a "
    *"given address, redirect it to another address instead." },
    */
