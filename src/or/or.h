@@ -1432,9 +1432,6 @@ typedef struct {
   } command;
   const char *command_arg; /**< Argument for command-line option. */
 
-  config_line_t *OldLogOptions; /**< List of configuration lines
-                                 * for logfiles, old style. */
-
   config_line_t *Logs; /**< New-style list of configuration lines
                         * for logs */
 
@@ -1608,9 +1605,6 @@ typedef struct {
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting
                            * interval before hibernation?  0 for "never
                            * hibernate." */
-  int _AccountingMaxKB; /**< How many KB do we allow per accounting
-                         * interval before hibernation?  0 for "never
-                         * hibernate."  (Based on a deprecated option)*/
 
   char *HashedControlPassword; /**< Base64-encoded hash of a password for
                                 * the control system. */

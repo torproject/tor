@@ -120,8 +120,8 @@ typedef struct config_var_t {
  * be chosen first.
  */
 static config_var_t _option_vars[] = {
+  OBSOLETE("AccountingMaxKB"),
   VAR("AccountingMax",       MEMUNIT,  AccountingMax,        "0 bytes"),
-  VAR("AccountingMaxKB",     UINT,     _AccountingMaxKB,     "0"),
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("Address",             STRING,   Address,              NULL),
   VAR("__AllDirActionsPrivate",BOOL,   AllDirActionsPrivate, "0"),
@@ -147,7 +147,7 @@ static config_var_t _option_vars[] = {
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
   VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
-  VAR("DebugLogFile",        STRING,   DebugLogFile,         NULL),
+  OBSOLETE("DebugLogFile"),
   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
   VAR("DirListenAddress",    LINELIST, DirListenAddress,     NULL),
   OBSOLETE("DirFetchPeriod"),
@@ -184,8 +184,8 @@ static config_var_t _option_vars[] = {
   VAR("KeepalivePeriod",     INTERVAL, KeepalivePeriod,      "5 minutes"),
   VAR("Log",                 LINELIST, Logs,                 NULL),
   OBSOLETE("LinkPadding"),
-  VAR("LogFile",             LINELIST_S, OldLogOptions,      NULL),
-  VAR("LogLevel",            LINELIST_S, OldLogOptions,      NULL),
+  OBSOLETE("LogLevel"),
+  OBSOLETE("LogFile"),
   VAR("LongLivedPorts",      CSV,      LongLivedPorts,
                          "21,22,706,1863,5050,5190,5222,5223,6667,6697,8300"),
   VAR("MapAddress",          LINELIST, AddressMap,           NULL),
@@ -240,7 +240,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("StatusFetchPeriod"),
   VAR("StrictEntryNodes",    BOOL,     StrictEntryNodes,     "0"),
   VAR("StrictExitNodes",     BOOL,     StrictExitNodes,      "0"),
-  VAR("SysLog",              LINELIST_S, OldLogOptions,      NULL),
+  OBSOLETE("SysLog"),
   VAR("TestSocks",           BOOL,     TestSocks,            "0"),
   VAR("TestVia",             STRING,   TestVia,              NULL),
   VAR("TrackHostExits",      CSV,      TrackHostExits,       NULL),
@@ -318,7 +318,6 @@ static config_var_description_t options_description[] = {
     "connections to the control port except when the connecting process "
     "can read a file that Tor creates in its data directory. " },
   { "DataDirectory", "Store working data, state, keys, and caches here." },
-  { "DebugLogFile", "{DEPRECATED}" },
   { "DirServer", "Tor only trusts directories signed with one of these "
     "servers' keys.  Used to override the standard list of directory "
     "authorities." },
@@ -341,8 +340,6 @@ static config_var_description_t options_description[] = {
     "from closing our connections while Tor is not in use." },
   { "Log", "Where to send logging messages.  Format is "
     "minSeverity[-maxSeverity] (stderr|stdout|syslog|file FILENAME)." },
-  { "LogLevel", "{DEPRECATED} " },
-  { "LogFile", "{DEPRECATED} " },
   { "OutboundBindAddress", "Make all outbound connections originate from the "
     "provided IP address (only usefol for multiple network interfaces)." },
   { "PIDFile", "On startup, write our PID to this file. On clean shutdown, "
@@ -353,7 +350,6 @@ static config_var_description_t options_description[] = {
     "started.  Unix only." },
   { "SafeLogging", "If set to 0, Tor logs potentially sensitive strings "
     "rather than replacing them with the string [scrubbed]." },
-  { "SysLog", "{DEPRECATED}" },
   { "TunnelDirConns", "If non-zero, try to have all directory info downloaded "
     "via encrypted connections." },
   { "User", "On startup, setuid to this user" },
@@ -419,7 +415,6 @@ static config_var_description_t options_description[] = {
 
   /* === server options */
   { "Address", "The advertised (external) address we should use." },
-  { "AccountingMaxKB", "{DEPRECATED}" },
   /* Accounting* options. */
   /* AssumeReachable */
   { "ContactInfo", "Administrative contact information to advertise for this "
@@ -559,13 +554,6 @@ static int parse_redirect_line(smartlist_t *result,
                                config_line_t *line, char **msg);
 static int parse_log_severity_range(const char *range, int *min_out,
                                     int *max_out);
-static int convert_log_option(or_options_t *options,
-                              config_line_t *level_opt,
-                              config_line_t *file_opt, int isDaemon);
-static int add_single_log_option(or_options_t *options, int minSeverity,
-                                 int maxSeverity,
-                                 const char *type, const char *fname);
-static int normalize_log_options(or_options_t *options);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
 static config_line_t *get_assigned_option(config_format_t *fmt,
@@ -2367,9 +2355,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "Please consider setting it, so we can contact you if your server is "
         "misconfigured or something else goes wrong.");
 
-  if (normalize_log_options(options))
-    REJECT("Failed to normalize old Log options. See logs for details.");
-
   /* Special case on first boot if no Log options are given. */
   if (!options->Logs && !options->RunAsDaemon && !from_setconf)
     config_line_append(&options->Logs, "Log", "notice stdout");
@@ -2471,13 +2456,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
         options->ConnLimit);
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
-  }
-
-  if (options->_AccountingMaxKB) {
-    log(LOG_WARN, LD_CONFIG, "AccountingMaxKB is deprecated.  "
-        "Say 'AccountingMax %d KB' instead.", options->_AccountingMaxKB);
-    options->AccountingMax = U64_LITERAL(1024)*options->_AccountingMaxKB;
-    options->_AccountingMaxKB = 0;
   }
 
   if (validate_ports_csv(options->FirewallPorts, "FirewallPorts", msg) < 0)
@@ -3184,44 +3162,6 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
   return 0;
 }
 
-/** Try to convert a pair of old-style logging options [LogLevel, and
- * (LogFile/Syslog)] to a new-style option, and add the new option to
- * options->Logs. */
-static int
-convert_log_option(or_options_t *options, config_line_t *level_opt,
-                   config_line_t *file_opt, int isDaemon)
-{
-  int levelMin = -1, levelMax = -1;
-
-  if (level_opt) {
-    if (parse_log_severity_range(level_opt->value, &levelMin, &levelMax))
-      return -1;
-  }
-  if (levelMin < 0 && levelMax < 0) {
-    levelMin = LOG_NOTICE;
-    levelMax = LOG_ERR;
-  } else if (levelMin < 0) {
-    levelMin = levelMax;
-  } else {
-    levelMax = LOG_ERR;
-  }
-
-  if (file_opt && !strcasecmp(file_opt->key, "LogFile")) {
-    if (add_single_log_option(options, levelMin, levelMax, "file",
-                              file_opt->value) < 0) {
-      log_warn(LD_FS, "Cannot write to LogFile \"%s\": %s.", file_opt->value,
-               strerror(errno));
-      return -1;
-    }
-  } else if (file_opt && !strcasecmp(file_opt->key, "SysLog")) {
-    if (add_single_log_option(options, levelMin, levelMax, "syslog", NULL) < 0)
-      return -1;
-  } else if (!isDaemon) {
-    add_single_log_option(options, levelMin, levelMax, "stdout", NULL);
-  }
-  return 0;
-}
-
 /**
  * Initialize the logs based on the configuration file.
  */
@@ -3323,95 +3263,6 @@ options_init_logs(or_options_t *options, int validate_only)
   smartlist_free(elts);
 
   return ok?0:-1;
-}
-
-/** Add a single option of the form Log min-max \<type\> [fname] to options. */
-static int
-add_single_log_option(or_options_t *options, int minSeverity, int maxSeverity,
-                      const char *type, const char *fname)
-{
-  char *buf;
-  size_t len;
-
-  len = 256 + fname?strlen(fname):0;
-  buf = tor_malloc(len);
-
-  if (tor_snprintf(buf, len, "%s%s%s %s%s%s",
-                log_level_to_string(minSeverity),
-                maxSeverity == LOG_ERR ? "" : "-",
-                maxSeverity == LOG_ERR ? "" : log_level_to_string(maxSeverity),
-                type, fname?" ":"", fname?fname:"")<0) {
-    log_warn(LD_BUG, "Normalized log option too long.");
-    tor_free(buf);
-    return -1;
-  }
-
-  log(LOG_WARN, LD_CONFIG, "The old LogLevel/LogFile/DebugLogFile/SysLog "
-      "options are deprecated, and will go away soon.  Your new torrc line "
-      "should be: 'Log %s'", buf);
-  config_line_append(&options->Logs, "Log", buf);
-  tor_free(buf);
-  return 0;
-}
-
-/** Convert all old-style logging options to new-style Log options. Return 0
- * on success, -1 on failure. */
-static int
-normalize_log_options(or_options_t *options)
-{
-  /* The order of options is:  Level? (File Level?)+
-   */
-  config_line_t *opt = options->OldLogOptions;
-
-  /* Special case for if first option is LogLevel. */
-  if (opt && !strcasecmp(opt->key, "LogLevel")) {
-    if (opt->next && (!strcasecmp(opt->next->key, "LogFile") ||
-                      !strcasecmp(opt->next->key, "SysLog"))) {
-      if (convert_log_option(options, opt, opt->next, options->RunAsDaemon)< 0)
-        return -1;
-      opt = opt->next->next;
-    } else if (!opt->next) {
-      if (convert_log_option(options, opt, NULL, options->RunAsDaemon) < 0)
-        return -1;
-      opt = opt->next;
-    } else {
-      ; /* give warning below */
-    }
-  }
-
-  while (opt) {
-    if (!strcasecmp(opt->key, "LogLevel")) {
-      log_warn(LD_CONFIG, "Two LogLevel options in a row without "
-               "intervening LogFile or SysLog");
-      opt = opt->next;
-    } else {
-      tor_assert(!strcasecmp(opt->key, "LogFile") ||
-                 !strcasecmp(opt->key, "SysLog"));
-      if (opt->next && !strcasecmp(opt->next->key, "LogLevel")) {
-        /* LogFile/SysLog followed by LogLevel */
-        if (convert_log_option(options,opt->next,opt, options->RunAsDaemon) <0)
-          return -1;
-        opt = opt->next->next;
-      } else {
-        /* LogFile/SysLog followed by LogFile/SysLog or end of list. */
-        if (convert_log_option(options,NULL, opt, options->RunAsDaemon) < 0)
-          return -1;
-        opt = opt->next;
-      }
-    }
-  }
-
-  if (options->DebugLogFile) {
-    if (add_single_log_option(options, LOG_DEBUG, LOG_ERR, "file",
-                              options->DebugLogFile) < 0)
-      return -1;
-  }
-
-  tor_free(options->DebugLogFile);
-  config_free_lines(options->OldLogOptions);
-  options->OldLogOptions = NULL;
-
-  return 0;
 }
 
 /** Parse a single RedirectExit line's contents from <b>line</b>.  If

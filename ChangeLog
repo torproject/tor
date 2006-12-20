@@ -33,6 +33,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       addresses: .exit, .onion, and .noconnnect.
     - Add a maintainer script to tell us which options are missing
       documentation.
+    - Remove some options that have been deprecated since at least 0.1.0.x:
+      AccountingMaxKB, LogFile, DebugLogFile, LogLevel, and SysLog.  Use
+      AccountingMax instead of AccountingMaxKB; use Log to set log options.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
