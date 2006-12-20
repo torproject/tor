@@ -795,7 +795,7 @@ client_dns_set_addressmap(const char *address, uint32_t val,
   struct in_addr in;
   /* <address>.<hex or nickname>.exit\0  or just  <address>\0 */
   char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
-  /* 123.123.123.123.<hex or nickname>.exit\0   or just  123.123.123.123\0 */
+  /* 123.123.123.123.<hex or nickname>.exit\0  or just  123.123.123.123\0 */
   char extendedval[INET_NTOA_BUF_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
   char valbuf[INET_NTOA_BUF_LEN];
 

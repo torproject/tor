@@ -59,11 +59,14 @@ N     - list versions in status page
         a new line in the status entry. "Tor 0.1.2.2-alpha". If it's
         a version, treat it like one. If it's something else, assume
         it's at least 0.1.2.x.
+        maybe we could have it be a new 'v' line in the status, with
+        key=value syntax. so we could have a 'tor' version, but we
+        could also have a 'conn' version, a 'dir' version, etc down
+        the road. and one day maybe the 'tor' key would be deprecated.
 
   o Document .noconnect addresses...
     A new file 'address-spec.txt' that describes .exit, .onion,
     .noconnect, etc?
-
 
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
@@ -102,6 +105,7 @@ d   - Be a DNS proxy.
       o address_is_invalid_destination() is the right thing to call here
         (and feel free to make that function smarter)
       o add a config option to turn it off.
+      - and a man page for that option
     - Bug 364: notice when all the DNS requests we get back (including a few
       well-known sites) are all going to the same place.
     o Bug 363: Warn and die if we can't find a nameserver and we're running a
