@@ -1745,40 +1745,47 @@ int
 parse_port_range(const char *port, uint16_t *port_min_out,
                  uint16_t *port_max_out)
 {
+  int port_min, port_max, ok;
   tor_assert(port_min_out);
   tor_assert(port_max_out);
 
   if (!port || *port == '\0' || strcmp(port, "*") == 0) {
-    *port_min_out = 1;
-    *port_max_out = 65535;
+    port_min = 1;
+    port_max = 65535;
   } else {
     char *endptr = NULL;
-    *port_min_out = (uint16_t) tor_parse_long(port, 10, 1, 65535,
-                                              NULL, &endptr);
-    if (*endptr == '-' && *port_min_out) {
+    port_min = tor_parse_long(port, 10, 0, 65535, &ok, &endptr);
+    if (!ok) {
+      log_warn(LD_GENERAL,
+               "Malformed port %s on address range; rejecting.",
+               escaped(port));
+      return -1;
+    } else if (endptr && *endptr == '-') {
       port = endptr+1;
       endptr = NULL;
-      *port_max_out = (uint16_t) tor_parse_long(port, 10, 1, 65535, NULL,
-                                                &endptr);
-      if (*endptr || !*port_max_out) {
+      port_max = tor_parse_long(port, 10, 1, 65536, &ok, &endptr);
+      if (!ok) {
         log_warn(LD_GENERAL,
                  "Malformed port %s on address range; rejecting.",
                  escaped(port));
         return -1;
       }
-    } else if (*endptr || !*port_min_out) {
-      log_warn(LD_GENERAL,
-               "Malformed port %s on address range; rejecting.",
-               escaped(port));
-      return -1;
     } else {
-      *port_max_out = *port_min_out;
+      port_max = port_min;
     }
-    if (*port_min_out > *port_max_out) {
+    if (port_min > port_max) {
       log_warn(LD_GENERAL, "Insane port range on address policy; rejecting.");
       return -1;
     }
   }
+
+  if (port_min < 1)
+    port_min = 1;
+  if (port_max > 65535)
+    port_max = 65535;
+
+  *port_min_out = (uint16_t) port_min;
+  *port_max_out = (uint16_t) port_max;
 
   return 0;
 }
