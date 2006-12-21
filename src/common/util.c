@@ -1755,15 +1755,16 @@ parse_port_range(const char *port, uint16_t *port_min_out,
     char *endptr = NULL;
     *port_min_out = (uint16_t) tor_parse_long(port, 10, 1, 65535,
                                               NULL, &endptr);
-    if (*endptr == '-') {
+    if (*endptr == '-' && *port_min_out) {
       port = endptr+1;
       endptr = NULL;
       *port_max_out = (uint16_t) tor_parse_long(port, 10, 1, 65535, NULL,
                                                 &endptr);
       if (*endptr || !*port_max_out) {
         log_warn(LD_GENERAL,
-                 "Malformed port %s on address range rejecting.",
+                 "Malformed port %s on address range; rejecting.",
                  escaped(port));
+        return -1;
       }
     } else if (*endptr || !*port_min_out) {
       log_warn(LD_GENERAL,

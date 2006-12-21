@@ -78,6 +78,7 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       nameservers are configured in /etc/resolv.conf; instead, make the
       user fix resolv.conf or specify nameservers explicitly. (Resolves
       bug 363.)
+    - Stop accepting certain malformed ports in configured exit policies.
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.
