@@ -100,7 +100,7 @@ TODO:
    For a hash function, we use SHA-1.
 
    KEY_LEN=16.
-   DH_LEN=128; DH_GROUP_LEN=40.
+   DH_LEN=128; DH_SEC_LEN=40.
    PK_ENC_LEN=128; PK_PAD_LEN=42.
    HASH_LEN=20.
 
