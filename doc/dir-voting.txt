@@ -183,10 +183,10 @@ by the authorities. -RD]
 
 2.3.1. URLs and timeline used for agreement
 
-  A router SHOULD publish its vote immediately at the start of each voting
+  An authority SHOULD publish its vote immediately at the start of each voting
   period.  It does this by making it available at
      http://<hostname>/tor/status-vote/current/authority.z
-  and posting it to each other authority at the URL
+  and sending it in an HTTP POST request to each other authority at the URL
      http://<hostname>/tor/post/vote
 
   If, N minutes after the voting period has begun, an authority does not have
@@ -206,7 +206,8 @@ by the authorities. -RD]
       http://<hostname>/tor/status-vote/current/consensus-signatures.z
 
   Once an authority has computed and signed a consensus network status, it
-  should send its detached signature to each other authority at the URL
+  should send its detached signature to each other authority in an HTTP POST
+  request to the URL:
       http://<hostname>/tor/post/consensus-signature
 
 
@@ -248,7 +249,11 @@ by the authorities. -RD]
 
 3.1. Push or pull?
 
-  [XXXX]
+  The URLs above define a push mechanism for publishing votes and consensus
+  signatures via HTTP POST requests, and a pull mechanism for downloading
+  these documents via HTTP GET requests.  As specified, every authority will
+  post to every other.  The "download if no copy has been received" mechanism
+  exists only as a fallback.
 
 3.2. Dropping "opt".
 
