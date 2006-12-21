@@ -217,7 +217,9 @@ $Id$
 
        These lines, in order, describe the rules that an OR follows when
        deciding whether to allow a new stream to a given address.  The
-       'exitpattern' syntax is described below.
+       'exitpattern' syntax is described below.  The rules are considered in
+       order; if no rule matches, the address will be accept.  For clarity,
+       the last such entry SHOULD be accept *:* or reject *:*.
 
     "router-signature" NL Signature NL
 
@@ -234,9 +236,10 @@ $Id$
 
     "family" names NL
 
-        'Names' is a whitespace-separated list of server nicknames. If two
-        ORs list one another in their "family" entries, then OPs should treat
-        them as a single OR for the purpose of path selection.
+        'Names' is a space-separated list of server nicknames or
+        hexdigests. If two ORs list one another in their "family" entries,
+        then OPs should treat them as a single OR for the purpose of path
+        selection.
 
         For example, if node A's descriptor contains "family B", and node B's
         descriptor contains "family A", then node A and node B should never
@@ -272,10 +275,15 @@ $Id$
 2.1. Nonterminals in router descriptors
 
    nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
+   hexdigest ::= a '$', followed by 20 hexadecimal characters.
+      [Represents a server by the digest of its identity key.]
 
    exitpattern ::= addrspec ":" portspec
    portspec ::= "*" | port | port "-" port
    port ::= an integer between 1 and 65535, inclusive.
+      [Some implementations incorrectly generate ports with value 0.
+       Implementations SHOULD accept this, and SHOULD NOT generate it.]
+
    addrspec ::= "*" | ip4spec | ip6spec
    ipv4spec ::= ip4 | ip4 "/" num_ip4_bits | ip4 "/" ip4mask
    ip4 ::= an IPv4 address in dotted-quad format
