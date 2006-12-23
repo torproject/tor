@@ -215,10 +215,10 @@ $Id$
     "accept" exitpattern
     "reject" exitpattern
 
-       These lines, in order, describe the rules that an OR follows when
+       These lines describe the rules that an OR follows when
        deciding whether to allow a new stream to a given address.  The
        'exitpattern' syntax is described below.  The rules are considered in
-       order; if no rule matches, the address will be accept.  For clarity,
+       order; if no rule matches, the address will be accepted.  For clarity,
        the last such entry SHOULD be accept *:* or reject *:*.
 
     "router-signature" NL Signature NL

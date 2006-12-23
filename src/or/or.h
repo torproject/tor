@@ -1976,7 +1976,7 @@ int retry_all_listeners(int force, smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
 int connection_bucket_write_limit(connection_t *conn);
-int global_write_bucket_empty(void);
+int global_write_bucket_low(size_t attempt, int priority);
 void connection_bucket_init(void);
 void connection_bucket_refill(int seconds_elapsed);
 

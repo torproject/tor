@@ -1510,7 +1510,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     }
     dlen = deflated ? d->dir_z_len : d->dir_len;
 
-    if (global_write_bucket_empty()) {
+    if (global_write_bucket_low(dlen, 1)) {
       log_info(LD_DIRSERV,
                "Client asked for the mirrored directory, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1544,16 +1544,24 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
       !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
     int deflated = !strcmp(url,"/tor/running-routers.z");
     dlen = dirserv_get_runningrouters(&cp, deflated);
-    note_request(url, dlen);
-    tor_free(url);
     if (!dlen) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
       if (!already_fetching_directory(DIR_PURPOSE_FETCH_RUNNING_LIST))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
+      tor_free(url);
       return 0;
     }
-
+    if (global_write_bucket_low(dlen, 1)) {
+      log_info(LD_DIRSERV,
+               "Client asked for running-routers, but we've been "
+               "writing too many bytes lately. Sending 503 Dir busy.");
+      write_http_status_line(conn, 503, "Directory busy, try again later");
+      tor_free(url);
+      return 0;
+    }
+    note_request(url, dlen);
+    tor_free(url);
     write_http_response_header(conn, dlen,
                  deflated?"application/octet-stream":"text/plain",
                  deflated?"deflate":"identity",
@@ -1561,6 +1569,10 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     connection_write_to_buf(cp, strlen(cp), TO_CONN(conn));
     return 0;
   }
+
+  /* FFFF for status/ and server/ requests, we don't have a good
+   * guess of the length we're going to be writing out, so it's hard
+   * to call global_write_bucket_low(). How to proceed? */
 
   if (!strcmpstart(url,"/tor/status/")) {
     /* v2 network status fetch. */

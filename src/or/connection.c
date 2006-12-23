@@ -1104,19 +1104,22 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
 extern int global_read_bucket, global_write_bucket;
 
 static int
-connection_bucket_round_robin(int base, int global_bucket, int conn_bucket)
+connection_bucket_round_robin(int base, int priority,
+                              int global_bucket, int conn_bucket)
 {
   int at_most;
+  int num_bytes_high = (priority ? 32 : 16) * base;
+  int num_bytes_low = (priority ? 4 : 2) * base;
 
   /* Do a rudimentary round-robin so one circuit can't hog a connection.
    * Pick at most 32 cells, at least 4 cells if possible, and if we're in
    * the middle pick 1/8 of the available bandwidth. */
   at_most = global_bucket / 8;
   at_most -= (at_most % base); /* round down */
-  if (at_most > 32*base) /* 16 KB */
-    at_most = 32*base;
-  else if (at_most < 4*base) /* 2 KB */
-    at_most = 4*base;
+  if (at_most > num_bytes_high) /* 16 KB, or 8 KB for low-priority */
+    at_most = num_bytes_high;
+  else if (at_most < num_bytes_low) /* 2 KB, or 1 KB for low-priority */
+    at_most = num_bytes_low;
 
   if (at_most > global_bucket)
     at_most = global_bucket;
@@ -1135,12 +1138,14 @@ connection_bucket_read_limit(connection_t *conn)
 {
   int base = connection_speaks_cells(conn) ?
                CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
+  int priority = conn->type != CONN_TYPE_DIR;
   int conn_bucket = -1;
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
     conn_bucket = or_conn->read_bucket;
   }
-  return connection_bucket_round_robin(base, global_read_bucket, conn_bucket);
+  return connection_bucket_round_robin(base, priority,
+                                       global_read_bucket, conn_bucket);
 }
 
 /** How many bytes at most can we write onto this connection? */
@@ -1149,17 +1154,44 @@ connection_bucket_write_limit(connection_t *conn)
 {
   int base = connection_speaks_cells(conn) ?
                CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
+  int priority = conn->type != CONN_TYPE_DIR;
 
-  return connection_bucket_round_robin(base, global_write_bucket,
+  return connection_bucket_round_robin(base, priority, global_write_bucket,
                                        conn->outbuf_flushlen);
 }
 
-/** Return 1 if the global write bucket has no bytes in it,
- * or return 0 if it does. */
+/** Return 1 if the global write bucket is low enough that we shouldn't
+ * send <b>attempt</b> bytes of low-priority directory stuff out.
+ * Else return 0.
+
+ * Priority is 1 for v1 requests (directories and running-routers),
+ * and 2 for v2 requests (statuses and descriptors). But see FFFF in
+ * directory_handle_command_get() for why we don't use priority 2 yet.
+ *
+ * There are a lot of parameters we could use here:
+ * - global_write_bucket. Low is bad.
+ * - bandwidthrate. Low is bad.
+ * - bandwidthburst. Not a big factor?
+ * - attempt. High is bad.
+ * - total bytes queued on outbufs. High is bad. But I'm wary of
+ *   using this, since a few slow-flushing queues will pump up the
+ *   number without meaning what we meant to mean. What we really
+ *   mean is "total directory bytes added to outbufs recently", but
+ *   that's harder to quantify and harder to keep track of.
+ */
 int
-global_write_bucket_empty(void)
+global_write_bucket_low(size_t attempt, int priority)
 {
-  return global_write_bucket <= 0;
+  if (global_write_bucket < (int)attempt) /* not enough space no matter what */
+    return 1;
+
+  if (priority == 1) { /* old-style v1 query */
+    if (global_write_bucket-attempt < 2*get_options()->BandwidthRate)
+      return 1;
+  } else { /* v2 query */
+    /* no further constraints yet */
+  }
+  return 0;
 }
 
 /** We just read num_read onto conn. Decrement buckets appropriately. */

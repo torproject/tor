@@ -183,7 +183,8 @@ R   - look into "uncounting" bytes spent on local connections, so
 R   - "bandwidth classes", for incoming vs initiated-here conns,
       and to give dir conns lower priority.
     . Write limiting; separate token bucket for write
-      - preemptively give a 503 to some dir requests
+      o preemptively give a 503 to some v1 dir requests
+      - preemptively give a 503 to some v2 dir requests
       - per-conn write buckets
       - separate config options for read vs write limiting
 

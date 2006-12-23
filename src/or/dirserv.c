@@ -1101,7 +1101,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
 /** Helper: If we're an authority for the right directory version (the
  * directory version is determined by <b>is_v1_object</b>), try to regenerate
  * auth_src as appropriate and return it, falling back to cache_src on
- * failure.  If we're a cache, return cach_src.
+ * failure.  If we're a cache, return cache_src.
  */
 static cached_dir_t *
 dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
