@@ -43,7 +43,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       dirserver has given us a 503, we try not to use it until an hour
       has gone by, or until we have no dirservers that haven't given us
       a 503.
-    - The state file gets saved less often when AvoidDiskWrites is set.
+    - The state file and the bw_accounting file get saved less often when
+      AvoidDiskWrites is set.
     - We no longer look for identity and onion keys in "identity.key" and
       "onion.key" -- these were replaced by secret_id_key and
       secret_onion_key in 0.0.8pre1.
@@ -90,6 +91,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       user fix resolv.conf or specify nameservers explicitly. (Resolves
       bug 363.)
     - Stop accepting certain malformed ports in configured exit policies.
+    - Don't re-write the fingerprint file every restart, unless it has
+      changed.
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.

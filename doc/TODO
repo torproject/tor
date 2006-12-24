@@ -150,14 +150,14 @@ N     - they don't count toward the 3-strikes rule
       - update dir-spec with what we decided for each of these
 
 
-Nd- Have a mode that doesn't write to disk much, so we can run Tor on
+  o Have a mode that doesn't write to disk much, so we can run Tor on
     flash memory (e.g. Linksys routers or USB keys).
     o Add AvoidDiskWrites config option.
-    . only write state file when it's "changed"
+    o only write state file when it's "changed"
       o crank up the numbers if avoiddiskwrites is on.
-      - some things may not want to get written at all.
-    - stop writing identity key / fingerprint / etc every restart
-    - more?
+      D some things may not want to get written at all.
+    o stop writing fingerprint every restart
+    D more?
 
 NR. Write path-spec.txt
 

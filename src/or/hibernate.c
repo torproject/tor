@@ -544,6 +544,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
   time_t tmp;
   int r;
   uint64_t expected;
+  static time_t last_recorded;
 
   /* First, update bw_accounting. Until 0.1.2.5-x, this was the only place
    * we stored this information. The format is:
@@ -572,7 +573,10 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
                (unsigned long)expected);
   tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
                get_options()->DataDirectory);
-  r = write_str_to_file(fname, buf, 0);
+  if (!get_options()->AvoidDiskWrites || (last_recorded + 3600 < now)) {
+    r = write_str_to_file(fname, buf, 0);
+    last_recorded = now;
+  }
 
   /* Now update the state */
   state->AccountingIntervalStart = interval_start_time;

@@ -231,6 +231,7 @@ init_keys(void)
   const char *mydesc, *datadir;
   crypto_pk_env_t *prkey;
   char digest[20];
+  char *cp;
   or_options_t *options = get_options();
   or_state_t *state = get_or_state();
 
@@ -335,10 +336,17 @@ init_keys(void)
     log_err(LD_GENERAL,"Error writing fingerprint line");
     return -1;
   }
-  if (write_str_to_file(keydir, fingerprint_line, 0)) {
-    log_err(LD_FS, "Error writing fingerprint line to file");
-    return -1;
+  /* Check whether we need to write the fingerprint file. */
+  cp = NULL;
+  if (file_status(keydir) == FN_FILE)
+    cp = read_str_to_file(keydir, 0, NULL);
+  if (!cp && strcmp(cp, fingerprint_line)) {
+    if (write_str_to_file(keydir, fingerprint_line, 0)) {
+      log_err(LD_FS, "Error writing fingerprint line to file");
+      return -1;
+    }
   }
+  tor_free(cp);
 
   log(LOG_NOTICE, LD_GENERAL,
       "Your Tor server's identity key fingerprint is '%s %s'",
