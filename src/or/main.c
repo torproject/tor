@@ -78,7 +78,6 @@ int has_completed_circuit=0;
 // Cheating: using the pre-defined error codes, tricks Windows into displaying
 //           a semi-related human-readable error message if startup fails as
 //           opposed to simply scaring people with Error: 0xffffffff
-#define NT_SERVICE_ERROR_NO_TORRC ERROR_FILE_NOT_FOUND
 #define NT_SERVICE_ERROR_TORINIT_FAILED ERROR_EXCEPTION_IN_SERVICE
 
 SERVICE_STATUS service_status;
@@ -1723,6 +1722,8 @@ struct service_fns {
                   NULL, NULL, NULL, NULL, NULL, NULL,
                   NULL, NULL, NULL, NULL, NULL, NULL };
 
+/** Loads functions used by NT services. Returns 0 on success, or -1 on
+ * error. */
 static int
 nt_service_loadlibrary(void)
 {
@@ -1767,49 +1768,6 @@ nt_service_loadlibrary(void)
   return 0;
 }
 
-/** Checks if torrc is present in the same directory
- *  as the service executable.
- *  Return 1 if it is, 0 if it is not present. */
-static int
-nt_torrc_is_present()
-{
-  HANDLE hFile;
-  TCHAR szPath[_MAX_PATH];
-  TCHAR szDrive[_MAX_DRIVE];
-  TCHAR szDir[_MAX_DIR];
-  char torrc[] = "torrc";
-  char *path_to_torrc;
-  int len = 0;
-
-  /* Get the service executable path */
-  if (0 == GetModuleFileName(NULL, szPath, MAX_PATH))
-    return 0;
-  _tsplitpath(szPath, szDrive, szDir, NULL, NULL);
-
-  /* Build the path to the torrc file */
-  len = _MAX_PATH + _MAX_DRIVE + _MAX_DIR + strlen(torrc) + 1;
-  path_to_torrc = tor_malloc(len);
-  if (tor_snprintf(path_to_torrc, len, "%s%s%s", szDrive,  szDir, torrc)<0) {
-    printf("Failed: tor_snprinf()\n");
-    tor_free(path_to_torrc);
-    return 0;
-  }
-
-  /* See if torrc is present */
-  hFile = CreateFile(TEXT(path_to_torrc),
-                     GENERIC_READ, FILE_SHARE_READ, NULL,
-                     OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
-                     NULL);
-
-  tor_free(path_to_torrc);
-
-  if (hFile == INVALID_HANDLE_VALUE) {
-    return 0;
-  }
-  CloseHandle(hFile);
-  return 1;
-}
-
 /** If we're compiled to run as an NT service, and the service has been
  * shut down, then change our current status and return 1.  Else
  * return 0.
@@ -1831,7 +1789,8 @@ nt_service_is_stopped(void)
   return 0;
 }
 
-/** DOCDOC */
+/** Handles service control requests, such as stopping or starting the
+ * Tor service. */
 void
 nt_service_control(DWORD request)
 {
@@ -1854,7 +1813,10 @@ nt_service_control(DWORD request)
   service_fns.SetServiceStatus_fn(hStatus, &service_status);
 }
 
-/** DOCDOC */
+/** Called when the service is started via the system's service control
+ * manager. This calls tor_init() and starts the main event loop. If
+ * tor_init() fails, the service will be stopped and exit code set to
+ * NT_SERVICE_ERROR_TORINIT_FAILED. */
 void
 nt_service_body(int argc, char **argv)
 {
@@ -1873,40 +1835,31 @@ nt_service_body(int argc, char **argv)
                                    (LPHANDLER_FUNCTION) nt_service_control);
 
   if (hStatus == 0) {
-    // failed;
+    /* Failed to register the service control handler function */
     return;
   }
 
-  // check for torrc
-  if (nt_torrc_is_present()) {
-    r = tor_init(backup_argc, backup_argv);
-    // refactor this part out of tor_main and do_main_loop
-    if (r) {
-      r = NT_SERVICE_ERROR_TORINIT_FAILED;
-    }
-  }
-  else {
-    log_err(LD_CONFIG, "torrc is not in the current working directory. "
-            "The Tor service will not start.");
-    r = NT_SERVICE_ERROR_NO_TORRC;
-  }
-
+  r = tor_init(backup_argc, backup_argv);
   if (r) {
-    // failed.
+    /* Failed to start the Tor service */
+    r = NT_SERVICE_ERROR_TORINIT_FAILED;
     service_status.dwCurrentState = SERVICE_STOPPED;
     service_status.dwWin32ExitCode = r;
     service_status.dwServiceSpecificExitCode = r;
     service_fns.SetServiceStatus_fn(hStatus, &service_status);
     return;
   }
+
+  /* Set the service's status to SERVICE_RUNNING and start the main
+   * event loop */
   service_status.dwCurrentState = SERVICE_RUNNING;
   service_fns.SetServiceStatus_fn(hStatus, &service_status);
   do_main_loop();
   tor_cleanup();
-  return;
 }
 
-/** DOCDOC */
+/** Main service entry point. Starts the service control dispatcher and waits
+ * until the service status is set to SERVICE_STOPPED. */
 void
 nt_service_main(void)
 {
@@ -1950,12 +1903,14 @@ nt_service_main(void)
   }
 }
 
-/** DOCDOC */
+/** Return a handle to the service control manager on success, or NULL on
+ * failure. */
 SC_HANDLE
 nt_service_open_scm(void)
 {
   SC_HANDLE hSCManager;
   char *errmsg = NULL;
+
   if (nt_service_loadlibrary()<0)
     return 0;
   if ((hSCManager = service_fns.OpenSCManagerA_fn(
@@ -1967,7 +1922,8 @@ nt_service_open_scm(void)
   return hSCManager;
 }
 
-/** DOCDOC */
+/** Open a handle to the Tor service using <b>hSCManager</b>. Return NULL
+ * on failure. */
 SC_HANDLE
 nt_service_open(SC_HANDLE hSCManager)
 {
@@ -1985,7 +1941,8 @@ nt_service_open(SC_HANDLE hSCManager)
   return hService;
 }
 
-/** DOCDOC */
+/** Start the Tor service. Return 0 if the service is started or was
+ * previously running. Return -1 on error. */
 int
 nt_service_start(SC_HANDLE hService)
 {
@@ -1997,7 +1954,7 @@ nt_service_start(SC_HANDLE hService)
   service_fns.QueryServiceStatus_fn(hService, &service_status);
   if (service_status.dwCurrentState == SERVICE_RUNNING) {
     printf("Service is already running\n");
-    return 1;
+    return 0;
   }
 
   if (service_fns.StartServiceA_fn(hService, 0, NULL)) {
@@ -2010,7 +1967,7 @@ nt_service_start(SC_HANDLE hService)
     /* Check if it started successfully or not */
     if (service_status.dwCurrentState == SERVICE_RUNNING) {
       printf("Service started successfully\n");
-      return 1;
+      return 0;
     } else {
       errmsg = nt_strerror(service_status.dwWin32ExitCode);
       printf("Service failed to start : %s\n", errmsg);
@@ -2021,10 +1978,11 @@ nt_service_start(SC_HANDLE hService)
     printf("StartService() failed : %s\n", errmsg);
     LocalFree(errmsg);
   }
-  return 0;
+  return -1;
 }
 
-/** DOCDOC */
+/** Stop the Tor service. Return 0 if the service is stopped or was not
+ * previously running. Return -1 on error. */
 int
 nt_service_stop(SC_HANDLE hService)
 {
@@ -2038,7 +1996,7 @@ nt_service_stop(SC_HANDLE hService)
   service_fns.QueryServiceStatus_fn(hService, &service_status);
   if (service_status.dwCurrentState == SERVICE_STOPPED) {
     printf("Service is already stopped\n");
-    return 1;
+    return 0;
   }
 
   if (service_fns.ControlService_fn(hService, SERVICE_CONTROL_STOP,
@@ -2052,7 +2010,7 @@ nt_service_stop(SC_HANDLE hService)
     }
     if (service_status.dwCurrentState == SERVICE_STOPPED) {
       printf("Service stopped successfully\n");
-      return 1;
+      return 0;
     } else if (wait_time == MAX_SERVICE_WAIT_TIME) {
       printf("Service did not stop within %d seconds.\n", wait_time);
     } else {
@@ -2060,32 +2018,71 @@ nt_service_stop(SC_HANDLE hService)
       printf("QueryServiceStatus() failed : %s\n",errmsg);
       LocalFree(errmsg);
     }
-  }
-  else {
+  } else {
     errmsg = nt_strerror(GetLastError());
     printf("ControlService() failed : %s\n", errmsg);
     LocalFree(errmsg);
   }
-  return 0;
+  return -1;
 }
 
-/** DOCDOC */
+/** Build a formatted command line used for the NT service. Return a
+ * pointer to the formatted string on success, or NULL on failure. */
+char *
+nt_service_command_line(void)
+{
+  TCHAR tor_exe[MAX_PATH+1];
+  char *command, *options;
+  const char *torrc;
+  smartlist_t *sl;
+  int i, cmdlen;
+  int use_default_torrc = 1;
+
+  /* Get the location of tor.exe */
+  if (0 == GetModuleFileName(NULL, tor_exe, MAX_PATH))
+    return NULL;
+
+  /* Get the service arguments */
+  sl = smartlist_create();
+  torrc = get_torrc_fname();
+  for (i = 1; i < backup_argc; ++i) {
+    if (!strcmp(backup_argv[i], "--options") ||
+        !strcmp(backup_argv[i], "-options")) {
+      while (++i < backup_argc)
+        if (!strcmp(backup_argv[i], "-f"))
+          use_default_torrc = 0;
+        smartlist_add(sl, backup_argv[i]);
+    }
+  }
+  if (use_default_torrc) {
+    smartlist_add(sl, "-f");
+    smartlist_add(sl, torrc);
+  }
+  tor_assert(smartlist_len(sl));
+  options = smartlist_join_strings(sl,"\" \"",0,NULL);
+  smartlist_free(sl);
+
+  /* Allocate a string for the NT service command line */
+  cmdlen = strlen(tor_exe)+ strlen(" --nt-service -f ")
+    + strlen(options) + 32;
+  command = tor_malloc(cmdlen);
+
+  /* Format the service command */
+  if (tor_snprintf(command, cmdlen, "\"%s\" --nt-service \"%s\"",
+                   tor_exe, options)<0) {
+    tor_free(command); /* sets command to NULL. */
+  }
+  tor_free(options);
+  return command;
+}
+
+/** Creates a Tor NT service, set to start on boot. The service will be
+ * started if installation succeeds. Returns 0 on success, or -1 on
+ * failure. */
 int
 nt_service_install(void)
 {
-  /* XXXX Problems with NT services:
-   * 1. The configuration file needs to be in the same directory as the .exe
-   *
-   * 2. The exe and the configuration file can't be on any directory path
-   *    that contains a space.
-   *    mje - you can quote the string (i.e., "c:\program files")
-   *
-   * 3. Ideally, there should be one EXE that can either run as a
-   *    separate process (as now) or that can install and run itself
-   *    as an NT service.  I have no idea how hard this is.
-   *    mje - should be done. It can install and run itself as a service
-   *
-   * Notes about developing NT services:
+  /* Notes about developing NT services:
    *
    * 1. Don't count on your CWD. If an absolute path is not given, the
    *    fopen() function goes wrong.
@@ -2096,47 +2093,24 @@ nt_service_install(void)
   SC_HANDLE hSCManager = NULL;
   SC_HANDLE hService = NULL;
   SERVICE_DESCRIPTION sdBuff;
-  TCHAR szPath[_MAX_PATH];
-  TCHAR szDrive[_MAX_DRIVE];
-  TCHAR szDir[_MAX_DIR];
-  char cmd1[] = " -f ";
-  char cmd2[] = "\\torrc";
   char *command;
   char *errmsg;
   int len = 0;
 
   if (nt_service_loadlibrary()<0)
     return -1;
-  if (0 == GetModuleFileName(NULL, szPath, MAX_PATH))
-    return 0;
 
-  _tsplitpath(szPath, szDrive, szDir, NULL, NULL);
-
-  /* Account for the extra quotes */
-  //len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2);
-  len = _MAX_PATH + strlen(cmd1) + _MAX_DRIVE + _MAX_DIR + strlen(cmd2) + 64;
-  command = tor_malloc(len);
-
-  /* Create a quoted command line, like "c:\with spaces\tor.exe" -f
-   * "c:\with spaces\tor.exe"
-   */
-  if (tor_snprintf(command, len, "\"%s\" --nt-service -f \"%s%storrc\"",
-                   szPath,  szDrive, szDir)<0) {
-    printf("Failed: tor_snprinf()\n");
-    tor_free(command);
-    return 0;
+  /* Open the service control manager so we can create a new service */
+  if ((hSCManager = nt_service_open_scm()) == NULL)
+    return -1;
+  /* Build the command line used for the service */
+  if ((command = nt_service_command_line()) == NULL) {
+    printf("Unable to build service command line.\n");
+    service_fns.CloseServiceHandle_fn(hSCManager);
+    return -1;
   }
 
-  if ((hSCManager = nt_service_open_scm()) == NULL) {
-    tor_free(command);
-    return 0;
-  }
-
-  /* 1/26/2005 mje
-   * - changed the service start type to auto
-   * - and changed the lpPassword param to "" instead of NULL as per an
-   *   MSDN article.
-   */
+  /* Create the Tor service, set to auto-start on boot */
   if ((hService = service_fns.CreateServiceA_fn(hSCManager, GENSRV_SERVICENAME,
                                 GENSRV_DISPLAYNAME,
                                 SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
@@ -2148,7 +2122,7 @@ nt_service_install(void)
     service_fns.CloseServiceHandle_fn(hSCManager);
     LocalFree(errmsg);
     tor_free(command);
-    return 0;
+    return -1;
   }
 
   /* Set the service's description */
@@ -2167,7 +2141,8 @@ nt_service_install(void)
   return 0;
 }
 
-/** DOCDOC */
+/** Removes the Tor NT service. Returns 0 if the service was successfully
+ * removed, or -1 on error. */
 int
 nt_service_remove(void)
 {
@@ -2177,37 +2152,31 @@ nt_service_remove(void)
 
   if (nt_service_loadlibrary()<0)
     return -1;
-
-  if ((hSCManager = nt_service_open_scm()) == NULL) {
-    return 0;
-  }
-
+  if ((hSCManager = nt_service_open_scm()) == NULL)
+    return -1;
   if ((hService = nt_service_open(hSCManager)) == NULL) {
     service_fns.CloseServiceHandle_fn(hSCManager);
-    return 0;
+    return -1;
   }
 
-  if (nt_service_stop(hService)) {
-    if (service_fns.DeleteService_fn(hService)) {
-      printf("Removed service successfully\n");
-    }
-    else {
-      errmsg = nt_strerror(GetLastError());
-      printf("DeleteService() failed : %s\n", errmsg);
-      LocalFree(errmsg);
-    }
-  }
-  else {
-    printf("Service could not be removed\n");
+  nt_service_stop(hService);
+  if (service_fns.DeleteService_fn(hService) == FALSE) {
+    errmsg = nt_strerror(GetLastError());
+    printf("DeleteService() failed : %s\n", errmsg);
+    LocalFree(errmsg);
+    service_fns.CloseServiceHandle_fn(hService);
+    service_fns.CloseServiceHandle_fn(hSCManager);
+    return -1;
   }
 
   service_fns.CloseServiceHandle_fn(hService);
   service_fns.CloseServiceHandle_fn(hSCManager);
+  printf("Service removed successfully\n");
 
   return 0;
 }
 
-/** DOCDOC */
+/** Starts the Tor service. Returns 0 on success, or -1 on error. */
 int
 nt_service_cmd_start(void)
 {
@@ -2218,18 +2187,18 @@ nt_service_cmd_start(void)
   if ((hSCManager = nt_service_open_scm()) == NULL)
     return -1;
   if ((hService = nt_service_open(hSCManager)) == NULL) {
-    CloseHandle(hSCManager);
+    service_fns.CloseServiceHandle_fn(hSCManager);
     return -1;
   }
 
   start = nt_service_start(hService);
-  CloseHandle(hService);
-  CloseHandle(hSCManager);
+  service_fns.CloseServiceHandle_fn(hService);
+  service_fns.CloseServiceHandle_fn(hSCManager);
 
   return start;
 }
 
-/** DOCDOC */
+/** Stops the Tor service. Returns 0 on success, or -1 on error. */
 int
 nt_service_cmd_stop(void)
 {
@@ -2240,13 +2209,13 @@ nt_service_cmd_stop(void)
   if ((hSCManager = nt_service_open_scm()) == NULL)
     return -1;
   if ((hService = nt_service_open(hSCManager)) == NULL) {
-    CloseHandle(hSCManager);
+    service_fns.CloseServiceHandle_fn(hSCManager);
     return -1;
   }
 
   stop = nt_service_stop(hService);
-  CloseHandle(hService);
-  CloseHandle(hSCManager);
+  service_fns.CloseServiceHandle_fn(hService);
+  service_fns.CloseServiceHandle_fn(hSCManager);
 
   return stop;
 }

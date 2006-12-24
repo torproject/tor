@@ -1221,7 +1221,7 @@ typedef uint16_t circid_t;
  * OR connections multiplex many circuits at once, and stay standing even
  * when there are no circuits running over them.
  *
- * A circuit_t structure cann fill one of two roles.  First, a or_circuit_t
+ * A circuit_t structure can fill one of two roles.  First, a or_circuit_t
  * links two connections together: either an edge connection and an OR
  * connection, or two OR connections.  (When joined to an OR connection, a
  * circuit_t affects only cells sent to a particular circID on that

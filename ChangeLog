@@ -12,6 +12,10 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       clients to tell which servers support BEGIN_DIR and which don't.
       The implementation is forward-compatible with a proposed future
       protocol version scheme not tied to Tor versions.
+    - Support running the Tor service with a torrc not in the
+      same directory as tor.exe (Bug #356) and default to using the torrc
+      located in the %appdata%\Tor\ of the user who installed the service.
+      Patch from Matt Edman.
 
   o Minor features:
     - Start using the state file to store bandwidth accounting data:
@@ -100,6 +104,10 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Stop accepting certain malformed ports in configured exit policies.
     - Don't re-write the fingerprint file every restart, unless it has
       changed.
+    - Cleaned-up code and documentation in NT services. Patch from Matt
+      Edman.
+    - Removed the supposedly misleading error message mentioned in Bug #294.
+      Patch from Matt Edman.
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.
