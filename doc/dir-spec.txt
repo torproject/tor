@@ -403,9 +403,11 @@ $Id$
 
    The signature section contains:
 
-      "directory-signature". A signature of the rest of the document
+      "directory-signature" nickname-of-dirserver NL Signature
+
+      Signature is a signature of this network-status document
       (the document up until the signature, including the line
-      "directory-signature <nick>\n") using the directory authority's
+      "directory-signature <nick>\n"), using the directory authority's
       signing key.
 
    We compress the network status list with zlib before transmitting it.

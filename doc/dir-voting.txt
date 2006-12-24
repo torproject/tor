@@ -19,9 +19,11 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
 
   This creates a partitioning problem: different clients have different
   "most recent" networkstatus sources, and different versions of each
-  (since authorities change their statements often).  Also, it is very
-  redundant: most of the downloaded networkstatus are probably quite
-  similar.  Worse, the overhead grows as we add more authorities.
+  (since authorities change their statements often).
+
+  It also creates a scaling problem: most of the downloaded networkstatus
+  are probably quite similar, and the redundancy grows as we add more
+  authorities.
 
   So if we have clients only download a single multiply signed consensus
   network status statement, we can:
@@ -65,10 +67,12 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
   If an authority computes the vote wrong, its signature isn't included on
   the consensus.
 
-  Clients use a consensus if it is signed by more than half the
-  authorities they recognize.  If they can't find any such consensus,
-  clients either use an older version, or beg the user to adapt the list
-  of authorities.
+  Clients use a consensus if it is "trusted": signed by more than half the
+  authorities they recognize. If clients can't find any such consensus,
+  they use the most recent trusted consensus they have. If they don't
+  have any trusted consensus, they warn the user and refuse to operate
+  (and if DirServers is not the default, beg the user to adapt the list
+  of authorities).
 
 2. Details.
 
@@ -88,12 +92,6 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
      "dir-source" -- as before, except the "hostname" part MUST be the
         authority's nickname, which MUST be unique among authorities, and
         MUST match the nickname in the "directory-signature" entry.
-
-     "directory-signature" -- [XXXX this should be tagged with the nickname
-        or identity somehow. -NM] [The bottom of
-        http://belegost.mit.edu/tor/status/authority already puts the
-        nickname next to it. So we can just fix the spec to require
-        this? -RD]
 
   Authorities SHOULD cache their most recently generated votes so they
   can persist them across restarts.  Authorities SHOULD NOT generate
