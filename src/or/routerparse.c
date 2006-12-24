@@ -467,11 +467,6 @@ router_parse_runningrouters(const char *str)
   if (tokenize_string(str,str+strlen(str),tokens,DIR)) {
     log_warn(LD_DIR, "Error tokenizing running-routers"); goto err;
   }
-  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_warn(LD_DIR, "Unrecognized keyword %s; can't parse running-routers",
-             escaped(tok->args[0]));
-    goto err;
-  }
   tok = smartlist_get(tokens,0);
   if (tok->tp != K_NETWORK_STATUS) {
     log_warn(LD_DIR, "Network-status starts with wrong token");
@@ -759,13 +754,6 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR, "Impossibly short router descriptor.");
     goto err;
   }
-  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_warn(LD_DIR,
-             "Unrecognized critical keyword %s; skipping descriptor. "
-             "(It may be from another version of Tor.)",
-             escaped(tok->args[0]));
-    goto err;
-  }
 
   tok = smartlist_get(tokens,0);
   if (tok->tp != K_ROUTER) {
@@ -1018,11 +1006,6 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
     log_warn(LD_DIR, "Impossibly short router status");
     goto err;
   }
-  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_warn(LD_DIR, "Unrecognized keyword %s in router status; skipping.",
-             escaped(tok->args[0]));
-    goto err;
-  }
   if (!(tok = find_first_by_keyword(tokens, K_R))) {
     log_warn(LD_DIR, "Missing 'r' keywork in router status; skipping.");
     goto err;
@@ -1154,11 +1137,6 @@ networkstatus_parse_from_string(const char *s)
   eos = find_start_of_next_routerstatus(s);
   if (tokenize_string(s, eos, tokens, NETSTATUS)) {
     log_warn(LD_DIR, "Error tokenizing network-status header.");
-    goto err;
-  }
-  if ((tok = find_first_by_keyword(tokens, _UNRECOGNIZED))) {
-    log_warn(LD_DIR, "Unrecognized keyword %s; can't parse network-status",
-             escaped(tok->args[0]));
     goto err;
   }
   ns = tor_malloc_zero(sizeof(networkstatus_t));
@@ -1629,29 +1607,16 @@ get_next_token(const char **s, where_syntax where)
     }
   }
   if (tok->tp == _ERR) {
-    if (is_opt) {
-      tok->tp = K_OPT;
-      *s = eat_whitespace_no_nl(next);
-      next = strchr(*s,'\n');
-      if (!next)
-        RET_ERR("Unexpected EOF");
-      tok->args = tor_malloc(sizeof(char*));
-      tok->args[0] = tor_strndup(*s,next-*s);
-      tok->n_args = 1;
-      *s = eat_whitespace_no_nl(next+1);
-      o_syn = OBJ_OK;
-    } else {
-      tok->tp = _UNRECOGNIZED;
-      next = strchr(*s, '\n');
-      if (!next) {
-        RET_ERR("Unexpected EOF");
-      }
-      tok->args = tor_malloc(sizeof(char*));
-      tok->args[0] = tor_strndup(*s,next-*s);
-      tok->n_args = 1;
-      *s = next+1;
-      o_syn = OBJ_OK;
-    }
+    tok->tp = K_OPT;
+    *s = eat_whitespace_no_nl(next);
+    next = strchr(*s,'\n');
+    if (!next)
+      RET_ERR("Unexpected EOF");
+    tok->args = tor_malloc(sizeof(char*));
+    tok->args[0] = tor_strndup(*s,next-*s);
+    tok->n_args = 1;
+    *s = eat_whitespace_no_nl(next+1);
+    o_syn = OBJ_OK;
   }
   *s = eat_whitespace(*s);
   if (strcmpstart(*s, "-----BEGIN ")) {

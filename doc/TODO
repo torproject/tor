@@ -196,7 +196,11 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
     - Stop requiring "opt" to ignore options in descriptors, networkstatuses,
       and so on.
     - Caches should start trying to cache consensus docs?
-    - Start uploading short and long descriptors?
+    - Start uploading short and long descriptors; authorities should support
+      URLs to retrieve long descriptors, and should discard short descriptors
+      for now.  Later, once tools use the "long descriptor" URLs, authorities
+      will serve the short descriptors every time they're asked for
+      a descriptor.
 
 Topics to think about during 0.1.2.x development:
   * Figure out incentives.

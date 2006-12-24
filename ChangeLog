@@ -48,6 +48,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - We no longer look for identity and onion keys in "identity.key" and
       "onion.key" -- these were replaced by secret_id_key and
       secret_onion_key in 0.0.8pre1.
+    - We no longer require unrecognized directory entries to be preceded by
+      "opt".
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
