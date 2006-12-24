@@ -3362,7 +3362,7 @@ parse_dir_server_line(const char *line, int validate_only)
     } else if (!strcasecmpstart(flag, "orport=")) {
       int ok;
       flag += strlen("orport=");
-      or_port = tor_parse_long(flag, 10, 1, 65535, &ok, NULL);
+      or_port = (uint16_t) tor_parse_long(flag, 10, 1, 65535, &ok, NULL);
       if (!ok)
         log_warn(LD_CONFIG, "Invalid orport '%s' on DirServer line.", flag);
     } else {
