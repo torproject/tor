@@ -2819,7 +2819,8 @@ router_exit_policy_rejects_all(routerinfo_t *router)
  * <b>address</b> is NULL, add ourself. */
 void
 add_trusted_dir_server(const char *nickname, const char *address,
-                       uint16_t port, const char *digest, int is_v1_authority,
+                       uint16_t dir_port, uint16_t or_port,
+                       const char *digest, int is_v1_authority,
                        int is_v2_authority, int is_hidserv_authority)
 {
   trusted_dir_server_t *ent;
@@ -2851,7 +2852,8 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->nickname = nickname ? tor_strdup(nickname) : NULL;
   ent->address = hostname;
   ent->addr = a;
-  ent->dir_port = port;
+  ent->dir_port = dir_port;
+  ent->or_port = or_port;
   ent->is_running = 1;
   ent->is_v1_authority = is_v1_authority;
   ent->is_v2_authority = is_v2_authority;
@@ -2862,10 +2864,10 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->description = tor_malloc(dlen);
   if (nickname)
     tor_snprintf(ent->description, dlen, "directory server \"%s\" at %s:%d",
-                 nickname, hostname, (int)port);
+                 nickname, hostname, (int)dir_port);
   else
     tor_snprintf(ent->description, dlen, "directory server at %s:%d",
-                 hostname, (int)port);
+                 hostname, (int)dir_port);
 
   ent->fake_status.addr = ent->addr;
   memcpy(ent->fake_status.identity_digest, digest, DIGEST_LEN);
@@ -2875,6 +2877,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   else
     ent->fake_status.nickname[0] = '\0';
   ent->fake_status.dir_port = ent->dir_port;
+  ent->fake_status.or_port = ent->or_port;
 
   smartlist_add(trusted_dir_servers, ent);
   router_dir_info_changed();

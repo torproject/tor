@@ -36,6 +36,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Remove some options that have been deprecated since at least 0.1.0.x:
       AccountingMaxKB, LogFile, DebugLogFile, LogLevel, and SysLog.  Use
       AccountingMax instead of AccountingMaxKB; use Log to set log options.
+    - DirServer configuration lines now have an orport option so clients can
+      open encrypted tunnels to the authorities without having downloaded
+      their descriptors yet.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

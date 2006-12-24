@@ -108,7 +108,9 @@ for current ("v2")-style directories, unless the "no-v2" flag is given.  If the 
 authority for old-style (v1) directories as well.  (Only directory mirrors
 care about this.)  Tor will use this server as an authority for hidden
 service information if the "hs" flag is set, or if the "v1" flag is set and
-the "no-hs" flag is \fBnot\fP set.
+the "no-hs" flag is \fBnot\fP set.  If a flag "orport=\fBport\fR" is given,
+Tor will consider use the given port to open encrypted tunnels to the
+dirserver.
 If no \fBdirserver\fP line is given, Tor will use the default
 directory servers.  NOTE: this option is intended
 for setting up a private Tor network with its own directory authorities.  If

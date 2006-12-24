@@ -3329,7 +3329,7 @@ parse_dir_server_line(const char *line, int validate_only)
   smartlist_t *items = NULL;
   int r;
   char *addrport=NULL, *address=NULL, *nickname=NULL, *fingerprint=NULL;
-  uint16_t port;
+  uint16_t dir_port = 0, or_port = 0;
   char digest[DIGEST_LEN];
   int is_v1_authority = 0, is_hidserv_authority = 0,
     is_not_hidserv_authority = 0, is_v2_authority = 1;
@@ -3359,6 +3359,12 @@ parse_dir_server_line(const char *line, int validate_only)
       is_not_hidserv_authority = 1;
     } else if (!strcasecmp(flag, "no-v2")) {
       is_v2_authority = 0;
+    } else if (!strcasecmpstart(flag, "orport=")) {
+      int ok;
+      flag += strlen("orport=");
+      or_port = tor_parse_long(flag, 10, 1, 65535, &ok, NULL);
+      if (!ok)
+        log_warn(LD_CONFIG, "Invalid orport '%s' on DirServer line.", flag);
     } else {
       log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirServer line",
                flag);
@@ -3375,11 +3381,11 @@ parse_dir_server_line(const char *line, int validate_only)
     goto err;
   }
   addrport = smartlist_get(items, 0);
-  if (parse_addr_port(LOG_WARN, addrport, &address, NULL, &port)<0) {
+  if (parse_addr_port(LOG_WARN, addrport, &address, NULL, &dir_port)<0) {
     log_warn(LD_CONFIG, "Error parsing DirServer address '%s'", addrport);
     goto err;
   }
-  if (!port) {
+  if (!dir_port) {
     log_warn(LD_CONFIG, "Missing port in DirServer address '%s'",addrport);
     goto err;
   }
@@ -3396,9 +3402,11 @@ parse_dir_server_line(const char *line, int validate_only)
   }
 
   if (!validate_only) {
-    log_debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address, (int)port,
+    log_debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address,
+              (int)dir_port,
               (char*)smartlist_get(items,1));
-    add_trusted_dir_server(nickname, address, port, digest, is_v1_authority,
+    add_trusted_dir_server(nickname, address, dir_port, or_port, digest,
+                           is_v1_authority,
                            is_v2_authority, is_hidserv_authority);
 
   }

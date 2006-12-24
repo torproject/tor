@@ -2661,6 +2661,7 @@ typedef struct trusted_dir_server_t {
   char *address; /**< Hostname */
   uint32_t addr; /**< IPv4 address */
   uint16_t dir_port; /**< Directory port */
+  uint16_t or_port; /**< OR port: Used for tunneling connections */
   char digest[DIGEST_LEN]; /**< Digest of identity key */
   unsigned int is_running:1; /**< True iff we think this server is running. */
   /** True iff this server is an authority for the older ("v1") directory
@@ -2759,8 +2760,8 @@ int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
 int router_exit_policy_rejects_all(routerinfo_t *router);
 
-void add_trusted_dir_server(const char *nickname,
-                            const char *address, uint16_t port,
+void add_trusted_dir_server(const char *nickname, const char *address,
+                            uint16_t dir_port, uint16_t or_port,
                             const char *digest, int is_v1_authority,
                             int is_v2_authority, int is_hidserv_authority);
 void clear_trusted_dir_servers(void);
