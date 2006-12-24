@@ -108,13 +108,21 @@ $Id$
 
     The BeginLine and EndLine of an Object must use the same keyword.
 
-  When interpreting a Document, software MUST reject any document containing a
-  KeywordLine that starts with a keyword it doesn't recognize.
+  When interpreting a Document, software MUST ignore any KeywordLine that
+  starts with a keyword it doesn't recognize; future implementations MUST NOT
+  require current clients to understand any KeywordLine not currently
+  described.
 
-  The "opt" keyword is reserved for non-critical future extensions.  All
-  implementations MUST ignore any item of the form "opt keyword ....." when
-  they would not recognize "keyword ....."; and MUST treat "opt keyword ....."
-  as synonymous with "keyword ......" when keyword is recognized.
+  The "opt" keyword was used until Tor 0.1.2.5-alpha for non-critical future
+  extensions.  All implementations MUST ignore any item of the form "opt
+  keyword ....." when they would not recognize "keyword ....."; and MUST
+  treat "opt keyword ....."  as synonymous with "keyword ......" when keyword
+  is recognized.
+
+  Implementations before 0.1.2.5-alpha rejected any document with a
+  KeywordLine that started with a keyword that they didn't recognize.
+  Implementations MUST prefix items not recognized by older versions of Tor
+  with an "opt" until those versions of Tor are obsolete.
 
 2. Router operation
 
@@ -378,11 +386,20 @@ $Id$
           "Running" if the router is currently usable.
           "Valid" if the router has been 'validated'.
           "V2Dir" if the router implements this protocol.
+      "v" -- The version of the Tor protocol that this server is running.  If
+          the value begins with "Tor" SP, the rest of the string is a Tor
+          version number, and the protocol is "The Tor protocol as supported
+          by the given version of Tor."  Otherwise, if the value begins with
+          some other string, Tor has upgraded to a more sophisticated
+          protocol versioning system, and the protocol is "a version of the
+          Tor protocol more recent than any we recognize."
 
       The "r" entry for each router must appear first and is required. The
       "s" entry is optional (see Section 3.1 below for how the flags are
       decided). Unrecognized flags on the "s" line and extra elements
-      on the "r" line must be ignored.
+      on the "r" line must be ignored.  The "v" line is optional; it was not
+      supported until 0.1.2.5-alpha, and it must be preceded with an "opt"
+      until all earlier versions of Tor are obsolete.
 
    The signature section contains:
 
