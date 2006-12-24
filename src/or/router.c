@@ -339,7 +339,7 @@ init_keys(void)
   /* Check whether we need to write the fingerprint file. */
   cp = NULL;
   if (file_status(keydir) == FN_FILE)
-    cp = read_str_to_file(keydir, 0, NULL);
+    cp = read_file_to_str(keydir, 0, NULL);
   if (!cp && strcmp(cp, fingerprint_line)) {
     if (write_str_to_file(keydir, fingerprint_line, 0)) {
       log_err(LD_FS, "Error writing fingerprint line to file");
