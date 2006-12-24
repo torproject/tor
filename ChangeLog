@@ -43,6 +43,7 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       dirserver has given us a 503, we try not to use it until an hour
       has gone by, or until we have no dirservers that haven't given us
       a 503.
+    - The state file gets saved less often when AvoidDiskWrites is set.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

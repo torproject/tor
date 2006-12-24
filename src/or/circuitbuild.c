@@ -2412,10 +2412,12 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
 static void
 entry_guards_changed(void)
 {
+  time_t when;
   entry_guards_dirty = 1;
 
   /* or_state_save() will call entry_guards_update_state(). */
-  or_state_mark_dirty(get_or_state(), time(NULL)+600);
+  when = get_options()->AvoidDiskWrites ? time(NULL) + 3600 : time(NULL)+600;
+  or_state_mark_dirty(get_or_state(), when);
 }
 
 /** If the entry guard info has not changed, do nothing and return.
@@ -2466,7 +2468,8 @@ entry_guards_update_state(or_state_t *state)
         next = &(line->next);
       }
     });
-  or_state_mark_dirty(get_or_state(), 0);
+  if (!get_options()->AvoidDiskWrites)
+    or_state_mark_dirty(get_or_state(), 0);
   entry_guards_dirty = 0;
 }
 

@@ -156,7 +156,7 @@ rotate_onion_key(void)
   state->LastRotatedOnionKey = onionkey_set_at = now;
   tor_mutex_release(key_lock);
   mark_my_descriptor_dirty();
-  or_state_mark_dirty(state, 0);
+  or_state_mark_dirty(state, get_options()->AvoidDiskWrites ? now+3600 : 0);
   return;
  error:
   log_warn(LD_GENERAL, "Couldn't rotate onion key.");
@@ -308,7 +308,7 @@ init_keys(void)
      * start the clock ticking now so that we will eventually rotate it even
      * if we don't stay up for a full MIN_ONION_KEY_LIFETIME. */
     state->LastRotatedOnionKey = time(NULL);
-    or_state_mark_dirty(state, 0);
+    or_state_mark_dirty(state, options->AvoidDiskWrites ? time(NULL)+3600 : 0);
   }
 
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key.old",datadir);

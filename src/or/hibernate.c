@@ -581,7 +581,9 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
     ROUND_UP(n_bytes_written_in_interval);
   state->AccountingSecondsActive = n_seconds_active_in_interval;
   state->AccountingExpectedUsage = expected_bandwidth_usage;
-  or_state_mark_dirty(state, now+60);
+
+  or_state_mark_dirty(state,
+                      now+(get_options()->AvoidDiskWrites ? 7200 : 60));
 
   return r;
 }
@@ -767,7 +769,9 @@ hibernate_begin(int new_state, time_t now)
 
   hibernate_state = new_state;
   accounting_record_bandwidth_usage(now, get_or_state());
-  or_state_mark_dirty(get_or_state(), 0);
+
+  or_state_mark_dirty(get_or_state(),
+                      get_options()->AvoidDiskWrites ? now+600 : 0);
 }
 
 /** Called when we've been hibernating and our timeout is reached. */
@@ -835,7 +839,9 @@ hibernate_go_dormant(time_t now)
   }
 
   accounting_record_bandwidth_usage(now, get_or_state());
-  or_state_mark_dirty(get_or_state(), 0);
+
+  or_state_mark_dirty(get_or_state(),
+                      get_options()->AvoidDiskWrites ? now+600 : 0);
 }
 
 /** Called when hibernate_end_time has arrived. */

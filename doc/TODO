@@ -154,7 +154,7 @@ Nd- Have a mode that doesn't write to disk much, so we can run Tor on
     flash memory (e.g. Linksys routers or USB keys).
     o Add AvoidDiskWrites config option.
     . only write state file when it's "changed"
-      - crank up the numbers if avoiddiskwrites is on.
+      o crank up the numbers if avoiddiskwrites is on.
       - some things may not want to get written at all.
     - stop writing identity key / fingerprint / etc every restart
     - more?

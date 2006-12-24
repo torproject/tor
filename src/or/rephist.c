@@ -669,8 +669,11 @@ rep_hist_update_state(or_state_t *state)
        * force these values to the defaults. */
       /* FFFF we should pull the default out of config.c's state table,
        * so we don't have two defaults. */
-      if (*s_begins != 0 || *s_interval != 900)
-        or_state_mark_dirty(get_or_state(), time(NULL)+600);
+      if (*s_begins != 0 || *s_interval != 900) {
+        time_t now = time(NULL);
+        time_t save_at = get_options()->AvoidDiskWrites ? now+3600 : now+600;
+        or_state_mark_dirty(state, save_at);
+      }
       *s_begins = 0;
       *s_interval = 900;
       *s_values = smartlist_create();
@@ -687,8 +690,9 @@ rep_hist_update_state(or_state_t *state)
       smartlist_split_string(*s_values, buf, ",", SPLIT_SKIP_SPACE, 0);
   }
   tor_free(buf);
-  if (server_mode(get_options()))
+  if (server_mode(get_options())) {
     or_state_mark_dirty(get_or_state(), time(NULL)+(2*3600));
+  }
 }
 
 /** Set bandwidth history from our saved state. */
