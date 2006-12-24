@@ -44,6 +44,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       has gone by, or until we have no dirservers that haven't given us
       a 503.
     - The state file gets saved less often when AvoidDiskWrites is set.
+    - We no longer look for identity and onion keys in "identity.key" and
+      "onion.key" -- these were replaced by secret_id_key and
+      secret_onion_key in 0.0.8pre1.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

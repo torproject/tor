@@ -162,26 +162,6 @@ rotate_onion_key(void)
   log_warn(LD_GENERAL, "Couldn't rotate onion key.");
 }
 
-/* Read an RSA secret key key from a file that was once named fname_old,
- * but is now named fname_new.  Rename the file from old to new as needed.
- */
-static crypto_pk_env_t *
-init_key_from_file_name_changed(const char *fname_old,
-                                const char *fname_new)
-{
-  if (file_status(fname_new) == FN_FILE || file_status(fname_old) != FN_FILE)
-    /* The new filename is there, or both are, or neither is. */
-    return init_key_from_file(fname_new);
-
-  /* The old filename exists, and the new one doesn't.  Rename and load. */
-  if (rename(fname_old, fname_new) < 0) {
-    log_warn(LD_FS, "Couldn't rename key file \"%s\" to \"%s\": %s",
-             fname_old, fname_new, strerror(errno));
-    return NULL;
-  }
-  return init_key_from_file(fname_new);
-}
-
 /** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist,
  * create a new RSA key and save it in <b>fname</b>.  Return the read/created
  * key, or NULL on error.
@@ -245,7 +225,6 @@ int
 init_keys(void)
 {
   char keydir[512];
-  char keydir2[512];
   char fingerprint[FINGERPRINT_LEN+1];
   /*nickname<space>fp\n\0 */
   char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
@@ -287,17 +266,15 @@ init_keys(void)
   }
 
   /* 1. Read identity key. Make it if none is found. */
-  tor_snprintf(keydir,sizeof(keydir),"%s/keys/identity.key",datadir);
-  tor_snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_id_key",datadir);
-  log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir2);
-  prkey = init_key_from_file_name_changed(keydir,keydir2);
+  tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_id_key",datadir);
+  log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir);
+  prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_identity_key(prkey);
   /* 2. Read onion key.  Make it if none is found. */
-  tor_snprintf(keydir,sizeof(keydir),"%s/keys/onion.key",datadir);
-  tor_snprintf(keydir2,sizeof(keydir2),"%s/keys/secret_onion_key",datadir);
-  log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir2);
-  prkey = init_key_from_file_name_changed(keydir,keydir2);
+  tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key",datadir);
+  log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir);
+  prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_onion_key(prkey);
   if (state->LastRotatedOnionKey > 100) { /* allow for some parsing slop. */
