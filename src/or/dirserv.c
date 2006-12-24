@@ -1561,6 +1561,17 @@ generate_v2_networkstatus(void)
         goto done;
       }
       outp += strlen(outp);
+      if (ri->platform && !strcmpstart(ri->platform, "Tor ")) {
+        const char *eos = find_whitespace(ri->platform+4);
+        char *platform = tor_strndup(ri->platform+4, eos-(ri->platform+4));
+        if (tor_snprintf(outp, endp-outp,
+                         "opt v %s\n", platform)) {
+          log_warn(LD_BUG, "Unable to print router version.");
+          goto done;
+        }
+        tor_free(platform);
+        outp += strlen(outp);
+      }
     }
   });
 

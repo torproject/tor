@@ -55,14 +55,14 @@ R   - turn the received socks addr:port into a digest for setting .exit
 R     - handle connect-dir streams that don't have a chosen_exit_name set.
       o include ORPort in DirServers lines so we can know where to connect.
         list the orport as 0 if it can't handle begin_dir.
-N     - list versions in status page
-        a new line in the status entry. "Tor 0.1.2.2-alpha". If it's
-        a version, treat it like one. If it's something else, assume
-        it's at least 0.1.2.x.
-        maybe we could have it be a new 'v' line in the status, with
-        key=value syntax. so we could have a 'tor' version, but we
-        could also have a 'conn' version, a 'dir' version, etc down
-        the road. and one day maybe the 'tor' key would be deprecated.
+      o List versions in status page
+        o A new line in the status entry. "Tor 0.1.2.2-alpha". If it's
+          a version, treat it like one. If it's something else, assume
+          it's at least 0.1.2.x.
+        D maybe we could have it be a new 'v' line in the status, with
+          key=value syntax. so we could have a 'tor' version, but we
+          could also have a 'conn' version, a 'dir' version, etc down
+          the road. and one day maybe the 'tor' key would be deprecated.
 
   o Document .noconnect addresses...
     A new file 'address-spec.txt' that describes .exit, .onion,
@@ -193,7 +193,7 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
       - separate config options for read vs write limiting
 
   - Forward compatibility fixes
-    - Stop requiring "opt" to ignore options in descriptors, networkstatuses,
+    o Stop requiring "opt" to ignore options in descriptors, networkstatuses,
       and so on.
     - Caches should start trying to cache consensus docs?
     - Start uploading short and long descriptors; authorities should support

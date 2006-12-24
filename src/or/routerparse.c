@@ -54,6 +54,7 @@ typedef enum {
   K_SERVER_VERSIONS,
   K_R,
   K_S,
+  K_V,
   K_EVENTDNS,
   _UNRECOGNIZED,
   _ERR,
@@ -117,6 +118,7 @@ static struct {
                                                            DIR|NETSTATUS},
   { "r",                   K_R,                   ARGS,    NO_OBJ, RTRSTATUS },
   { "s",                   K_S,                   ARGS,    NO_OBJ, RTRSTATUS },
+  { "v",                   K_V,               CONCAT_ARGS, NO_OBJ, RTRSTATUS },
   { "reject",              K_REJECT,              ARGS,    NO_OBJ,  RTR },
   { "router",              K_ROUTER,              ARGS,    NO_OBJ,  RTR },
   { "recommended-software",K_RECOMMENDED_SOFTWARE,ARGS,    NO_OBJ,  DIR },
@@ -1075,7 +1077,15 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
         rs->is_possible_guard = 1;
       else if (!strcmp(tok->args[i], "BadExit"))
         rs->is_bad_exit = 1;
-
+    }
+  }
+  if ((tok = find_first_by_keyword(tokens, K_V))) {
+    rs->version_known = 1;
+    if (strcmpstart(tok->args[0], "Tor ")) {
+      rs->version_supports_begindir = 1;
+    } else {
+      rs->version_supports_begindir =
+        tor_version_as_new_as(tok->args[0], "0.1.2.2-alpha");
     }
   }
 

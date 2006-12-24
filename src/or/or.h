@@ -1013,6 +1013,13 @@ typedef struct routerstatus_t {
   unsigned int is_bad_exit:1; /**< True iff this node is a bad choice for
                                * an exit node. */
 
+  /** True iff we know version info for this router. (i.e., a "v" entry was
+   * included.)  We'll replace all these with a big tor_vesion_t or a char[]
+   * if the number of traits we care about ever becomes incredibly big. */
+  unsigned int version_known:1;
+  /** True iff this router is a version that supports BEGIN_DIR cells. */
+  unsigned int version_supports_begindir:1;
+
   /** True if we, as a directory mirror, want to download the corresponding
    * routerinfo from the authority who gave us this routerstatus.  (That is,
    * if we don't have the routerinfo, and if we haven't already tried to get it

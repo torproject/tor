@@ -3345,6 +3345,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
   while (1) {
     int n_running=0, n_named=0, n_valid=0, n_listing=0;
     int n_v2_dir=0, n_fast=0, n_stable=0, n_exit=0, n_guard=0, n_bad_exit=0;
+    int n_version_known=0, n_supports_begindir=0;
     int n_desc_digests=0, highest_count=0;
     const char *the_name = NULL;
     local_routerstatus_t *rs_out, *rs_old;
@@ -3432,6 +3433,10 @@ routerstatus_list_update_from_networkstatus(time_t now)
         ++n_v2_dir;
       if (rs->is_bad_exit)
         ++n_bad_exit;
+      if (rs->version_known)
+        ++n_version_known;
+      if (rs->version_supports_begindir)
+        ++n_supports_begindir;
     }
     /* Go over the descriptor digests and figure out which descriptor we
      * want. */
@@ -3482,6 +3487,9 @@ routerstatus_list_update_from_networkstatus(time_t now)
     rs_out->status.is_stable = n_stable > n_statuses/2;
     rs_out->status.is_v2_dir = n_v2_dir > n_statuses/2;
     rs_out->status.is_bad_exit = n_bad_exit > n_listing_bad_exits/2;
+    rs_out->status.version_known = n_version_known > 0;
+    rs_out->status.version_supports_begindir =
+      n_supports_begindir > n_version_known/2;
     if (!rs_old || memcmp(rs_old, rs_out, sizeof(local_routerstatus_t)))
       smartlist_add(changed_list, rs_out);
   }
