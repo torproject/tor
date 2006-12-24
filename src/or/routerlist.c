@@ -499,6 +499,9 @@ router_pick_trusteddirserver(authority_type_t type,
                                            requireother, fascistfirewall);
 }
 
+/** How long do we avoid using a directory server after it's given us a 503? */
+#define DIR_503_TIMEOUT (60*60)
+
 /** Pick a random running valid directory server/mirror from our
  * routerlist.  Don't pick an authority if any non-authorities are viable.
  * If <b>fascistfirewall</b>,
@@ -513,13 +516,16 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
 {
   routerstatus_t *result;
   smartlist_t *sl;
+  smartlist_t *overloaded;
   smartlist_t *trusted;
+  time_t now = time(NULL);
 
   if (!routerstatus_list)
     return NULL;
 
   /* Find all the running dirservers we know about. */
   sl = smartlist_create();
+  overloaded = smartlist_create();
   trusted = smartlist_create();
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, _local_status,
   {
@@ -536,14 +542,23 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
     if (for_v2_directory && !(status->is_v2_dir || is_trusted))
       continue;
-    smartlist_add(is_trusted ? trusted : sl, status);
+    if (is_trusted) {
+      smartlist_add(trusted, status);
+    } else if (_local_status->last_dir_503_at + DIR_503_TIMEOUT > now) {
+      smartlist_add(overloaded, status);
+    } else {
+      smartlist_add(sl, status);
+    }
   });
 
   if (smartlist_len(sl))
     result = smartlist_choose(sl);
+  else if (smartlist_len(overloaded))
+    result = smartlist_choose(overloaded);
   else
     result = smartlist_choose(trusted);
   smartlist_free(sl);
+  smartlist_free(overloaded);
   smartlist_free(trusted);
   return result;
 }
@@ -559,9 +574,12 @@ router_pick_trusteddirserver_impl(authority_type_t type,
                                   int requireother, int fascistfirewall)
 {
   smartlist_t *sl;
+  smartlist_t *overloaded;
   routerinfo_t *me;
   routerstatus_t *rs;
+  time_t now = time(NULL);
   sl = smartlist_create();
+  overloaded = smartlist_create();
   me = router_get_my_routerinfo();
 
   if (!trusted_dir_servers)
@@ -582,11 +600,18 @@ router_pick_trusteddirserver_impl(authority_type_t type,
         if (!fascist_firewall_allows_address_dir(d->addr, d->dir_port))
           continue;
       }
-      smartlist_add(sl, &d->fake_status);
+      if (d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now)
+        smartlist_add(overloaded, &d->fake_status.status);
+      else
+        smartlist_add(sl, &d->fake_status.status);
     });
 
-  rs = smartlist_choose(sl);
+  if (smartlist_len(sl))
+    rs = smartlist_choose(sl);
+  else
+    rs = smartlist_choose(overloaded);
   smartlist_free(sl);
+  smartlist_free(overloaded);
   return rs;
 }
 
@@ -607,9 +632,11 @@ mark_all_trusteddirservers_up(void)
       local_routerstatus_t *rs;
       dir->is_running = 1;
       dir->n_networkstatus_failures = 0;
+      dir->fake_status.last_dir_503_at = 0;
       rs = router_get_combined_status_by_digest(dir->digest);
       if (rs && !rs->status.is_running) {
         rs->status.is_running = 1;
+        rs->last_dir_503_at = 0;
         control_event_networkstatus_changed_single(rs);
       }
     });
@@ -2637,7 +2664,7 @@ update_networkstatus_cache_downloads(time_t now)
          base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
          strlcat(resource, ".z", sizeof(resource));
          directory_initiate_command_routerstatus(
-               &ds->fake_status, DIR_PURPOSE_FETCH_NETWORKSTATUS,
+               &ds->fake_status.status, DIR_PURPOSE_FETCH_NETWORKSTATUS,
                0, /* Not private */
                resource,
                NULL, 0 /* No payload. */);
@@ -2869,15 +2896,15 @@ add_trusted_dir_server(const char *nickname, const char *address,
     tor_snprintf(ent->description, dlen, "directory server at %s:%d",
                  hostname, (int)dir_port);
 
-  ent->fake_status.addr = ent->addr;
-  memcpy(ent->fake_status.identity_digest, digest, DIGEST_LEN);
+  ent->fake_status.status.addr = ent->addr;
+  memcpy(ent->fake_status.status.identity_digest, digest, DIGEST_LEN);
   if (nickname)
-    strlcpy(ent->fake_status.nickname, nickname,
-            sizeof(ent->fake_status.nickname));
+    strlcpy(ent->fake_status.status.nickname, nickname,
+            sizeof(ent->fake_status.status.nickname));
   else
-    ent->fake_status.nickname[0] = '\0';
-  ent->fake_status.dir_port = ent->dir_port;
-  ent->fake_status.or_port = ent->or_port;
+    ent->fake_status.status.nickname[0] = '\0';
+  ent->fake_status.status.dir_port = ent->dir_port;
+  ent->fake_status.status.or_port = ent->or_port;
 
   smartlist_add(trusted_dir_servers, ent);
   router_dir_info_changed();
@@ -3427,6 +3454,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
         rs_out->next_attempt_at = rs_old->next_attempt_at;
       }
       rs_out->name_lookup_warned = rs_old->name_lookup_warned;
+      rs_out->last_dir_503_at = rs_old->last_dir_503_at;
     }
     smartlist_add(result, rs_out);
     log_debug(LD_DIR, "Router '%s' is listed by %d/%d directories, "
@@ -3900,7 +3928,7 @@ update_router_descriptor_cache_downloads(time_t now)
     log_info(LD_DIR, "Requesting %d descriptors from authority \"%s\"",
              smartlist_len(dl), ds->nickname);
     for (j=0; j < smartlist_len(dl); j += MAX_DL_PER_REQUEST) {
-      initiate_descriptor_downloads(&(ds->fake_status), dl, j,
+      initiate_descriptor_downloads(&(ds->fake_status.status), dl, j,
                                     j+MAX_DL_PER_REQUEST);
     }
   }

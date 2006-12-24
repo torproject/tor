@@ -39,6 +39,10 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - DirServer configuration lines now have an orport option so clients can
       open encrypted tunnels to the authorities without having downloaded
       their descriptors yet.
+    - Clients track responses with status 503 from dirservers.  After a
+      dirserver has given us a 503, we try not to use it until an hour
+      has gone by, or until we have no dirservers that haven't given us
+      a 503.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

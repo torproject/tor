@@ -109,7 +109,7 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
    */
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
-      routerstatus_t *rs = &(ds->fake_status);
+      routerstatus_t *rs = &(ds->fake_status.status);
       if (post_to_hidserv_only && !ds->is_hidserv_authority)
         continue;
       if (!post_to_hidserv_only &&
@@ -921,10 +921,18 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   (void) skewed; /* skewed isn't used yet. */
 
   if (status_code == 503) {
+    local_routerstatus_t *rs;
+    trusted_dir_server_t *ds;
+    time_t now = time(NULL);
     log_info(LD_DIR,"Received http status code %d (%s) from server "
              "'%s:%d'. I'll try again soon.",
              status_code, escaped(reason), conn->_base.address,
              conn->_base.port);
+    if ((rs = router_get_combined_status_by_digest(conn->identity_digest)))
+      rs->last_dir_503_at = now;
+    if ((ds = router_get_trusteddirserver_by_digest(conn->identity_digest)))
+      ds->fake_status.last_dir_503_at = now;
+
     tor_free(body); tor_free(headers); tor_free(reason);
     return -1;
   }

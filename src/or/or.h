@@ -1028,7 +1028,10 @@ typedef struct local_routerstatus_t {
    * descriptor_digest represents the descriptor we would most like to use for
    * this router. */
   routerstatus_t status;
-  time_t next_attempt_at; /**< When should we try this descriptor again? */
+  time_t next_attempt_at; /**< When should we try downloading this descriptor
+                           * again? */
+  time_t last_dir_503_at; /**< When did this router last tell us that it
+                           * was too busy to serve directory info? */
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
   unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
@@ -2675,7 +2678,7 @@ typedef struct trusted_dir_server_t {
 
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
-  routerstatus_t fake_status; /**< Used when we need to pass this trusted
+  local_routerstatus_t fake_status; /**< Used when we need to pass this trusted
                                * dir_server_t to directory_initiate_command_*
                                * as a routerstatus_t.  Not updated by the
                                * router-status management code!

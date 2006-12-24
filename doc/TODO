@@ -134,12 +134,16 @@ R o Take out the '5 second' timeout from the socks detach schedule.
 N     - they don't count toward the 3-strikes rule
         - should there be some threshold of 503's after which we give up?
         - Delay when we get a lot of 503s?
-N     - split "router is down" from "dirport shouldn't be tried for a while"?
+      o split "router is down" from "dirport shouldn't be tried for a while"?
         We want a field to hold "when did we last get a 503 from this
         directory server."  Probably, it should go in local_routerstatus_t,
         not in routerinfo_t, since we can try to use servers as directories
         before we have their descriptors.  Possibly, it should also go in
         trusted_dir_server_t.
+        o Add a last_dir_503_at field.
+        o Have it get updated correctly.
+        o Prefer to use directories that haven't given us a 503 for the last
+          60 minutes.
       - authorities should *never* 503 a cache, and should never 503
         network status requests. They can 503 client descriptor requests
         when they feel like it.
