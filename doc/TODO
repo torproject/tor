@@ -192,6 +192,12 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
       - per-conn write buckets
       - separate config options for read vs write limiting
 
+  - Forward compatibility fixes
+    - Stop requiring "opt" to ignore options in descriptors, networkstatuses,
+      and so on.
+    - Caches should start trying to cache consensus docs?
+    - Start uploading short and long descriptors?
+
 Topics to think about during 0.1.2.x development:
   * Figure out incentives.
     - (How can we make this tolerant of a bad v0?)
