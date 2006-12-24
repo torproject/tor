@@ -2048,15 +2048,16 @@ nt_service_command_line(void)
   for (i = 1; i < backup_argc; ++i) {
     if (!strcmp(backup_argv[i], "--options") ||
         !strcmp(backup_argv[i], "-options")) {
-      while (++i < backup_argc)
+      while (++i < backup_argc) {
         if (!strcmp(backup_argv[i], "-f"))
           use_default_torrc = 0;
         smartlist_add(sl, backup_argv[i]);
+      }
     }
   }
   if (use_default_torrc) {
     smartlist_add(sl, "-f");
-    smartlist_add(sl, torrc);
+    smartlist_add(sl, (char*)torrc);
   }
   tor_assert(smartlist_len(sl));
   options = smartlist_join_strings(sl,"\" \"",0,NULL);
