@@ -828,6 +828,21 @@ $Id$
 
    ...
 
+6.4. Router protocol versions
+
+   A client should believe that a router supports a given feature if that
+   feature is supported by the router or protocol versions in more than half
+   of the live networkstatus's "v" entries for that router.  In other words,
+   if the "v" entries for some router are:
+       v Tor 0.0.8pre1
+       v Tor 0.1.2.11
+       v FutureProtocolDescription 99
+   then the client should believe that the router supports any feature
+   supported by 0.1.2.11.
+
+   This is currently equivalent to believing the median declared version for
+   a router in all live networkstatuses.
+
 7. Standards compliance
 
    All clients and servers MUST support HTTP 1.0.
