@@ -542,7 +542,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
   char time2[ISO_TIME_LEN+1];
   char *cp = buf;
   time_t tmp;
-  int r;
+  int r = 0;
   uint64_t expected;
   static time_t last_recorded;
 
