@@ -59,6 +59,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       secret_onion_key in 0.0.8pre1.
     - We no longer require unrecognized directory entries to be preceded by
       "opt".
+    - When we get a 503 from a directory, and we're not a server, we don't
+      count the failure against the total number of failures allowed for the
+      thing we're trying to download.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

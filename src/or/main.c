@@ -2064,8 +2064,7 @@ nt_service_command_line(void)
   smartlist_free(sl);
 
   /* Allocate a string for the NT service command line */
-  cmdlen = strlen(tor_exe)+ strlen(" --nt-service -f ")
-    + strlen(options) + 32;
+  cmdlen = strlen(tor_exe) + strlen(options) + 32;
   command = tor_malloc(cmdlen);
 
   /* Format the service command */

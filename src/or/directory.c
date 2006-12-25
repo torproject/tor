@@ -47,10 +47,11 @@ static int purpose_is_private(uint8_t purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(
-                                                      dir_connection_t *conn);
+                                      dir_connection_t *conn, int status);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
-static void dir_networkstatus_download_failed(smartlist_t *failed);
-static void dir_routerdesc_download_failed(smartlist_t *failed);
+static void dir_networkstatus_download_failed(smartlist_t *failed, int status);
+static void dir_routerdesc_download_failed(smartlist_t *failed,
+                                           int status_code);
 static void note_request(const char *key, size_t bytes);
 
 /********* START VARIABLES **********/
@@ -284,8 +285,9 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                              payload, payload_len);
 }
 
-/** Called when we are unable to complete the client's request to a
- * directory server: Mark the router as down and try again if possible.
+/** Called when we are unable to complete the client's request to a directory
+ * server due to a network error: Mark the router as down and try again if
+ * possible.
  */
 void
 connection_dir_request_failed(dir_connection_t *conn)
@@ -302,7 +304,7 @@ connection_dir_request_failed(dir_connection_t *conn)
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
-    connection_dir_download_networkstatus_failed(conn);
+    connection_dir_download_networkstatus_failed(conn, -1);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
@@ -315,7 +317,8 @@ connection_dir_request_failed(dir_connection_t *conn)
  * retry the fetch now, later, or never.
  */
 static void
-connection_dir_download_networkstatus_failed(dir_connection_t *conn)
+connection_dir_download_networkstatus_failed(dir_connection_t *conn,
+                                             int status)
 {
   if (!conn->requested_resource) {
     /* We never reached directory_send_command, which means that we never
@@ -324,7 +327,9 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn)
     return;
   }
   if (!strcmpstart(conn->requested_resource, "all")) {
-    /* We're a non-authoritative directory cache; try again. */
+    /* We're a non-authoritative directory cache; try again. Ignore status
+     * code, since we don't want to keep trying forever in a tight loop
+     * if all the authorities are shutting us out. */
     smartlist_t *trusted_dirs = router_get_trusted_dir_servers();
     SMARTLIST_FOREACH(trusted_dirs, trusted_dir_server_t *, ds,
                       ++ds->n_networkstatus_failures);
@@ -337,7 +342,7 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn)
     dir_split_resource_into_fingerprints(conn->requested_resource+3,
                                          failed, NULL, 0, 0);
     if (smartlist_len(failed)) {
-      dir_networkstatus_download_failed(failed);
+      dir_networkstatus_download_failed(failed, status);
       SMARTLIST_FOREACH(failed, char *, cp, tor_free(cp));
     }
     smartlist_free(failed);
@@ -1050,7 +1055,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
            status_code, escaped(reason), conn->_base.address,
            conn->_base.port, conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
-      connection_dir_download_networkstatus_failed(conn);
+      connection_dir_download_networkstatus_failed(conn, status_code);
       return -1;
     }
     note_request(was_compressed?"dl/status.z":"dl/status", orig_len);
@@ -1096,7 +1101,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     directory_info_has_arrived(time(NULL), 0);
     if (which) {
       if (smartlist_len(which)) {
-        dir_networkstatus_download_failed(which);
+        dir_networkstatus_download_failed(which, status_code);
       }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
@@ -1129,7 +1134,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       if (!which) {
         connection_dir_download_routerdesc_failed(conn);
       } else {
-        dir_routerdesc_download_failed(which);
+        dir_routerdesc_download_failed(which, status_code);
         SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
         smartlist_free(which);
       }
@@ -1152,7 +1157,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                n_asked_for-smartlist_len(which), n_asked_for,
                conn->_base.address, (int)conn->_base.port);
       if (smartlist_len(which)) {
-        dir_routerdesc_download_failed(which);
+        dir_routerdesc_download_failed(which, status_code);
       }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
@@ -1930,10 +1935,12 @@ connection_dir_finished_connecting(dir_connection_t *conn)
 
 /** Called when one or more networkstatus fetches have failed (with uppercase
  * fingerprints listed in <b>failed</>).  Mark those fingerprints as having
- * failed once. */
+ * failed once, unless they failed with status code 503. */
 static void
-dir_networkstatus_download_failed(smartlist_t *failed)
+dir_networkstatus_download_failed(smartlist_t *failed, int status)
 {
+  if (status == 503)
+    return;
   SMARTLIST_FOREACH(failed, const char *, fp,
   {
     char digest[DIGEST_LEN];
@@ -1949,7 +1956,7 @@ dir_networkstatus_download_failed(smartlist_t *failed)
 /** Called when one or more routerdesc fetches have failed (with uppercase
  * fingerprints listed in <b>failed</b>). */
 static void
-dir_routerdesc_download_failed(smartlist_t *failed)
+dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
 {
   char digest[DIGEST_LEN];
   local_routerstatus_t *rs;
@@ -1961,9 +1968,11 @@ dir_routerdesc_download_failed(smartlist_t *failed)
     rs = router_get_combined_status_by_digest(digest);
     if (!rs || rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;
-    ++rs->n_download_failures;
+    if (status_code != 503 || server)
+      ++rs->n_download_failures;
     if (server) {
       switch (rs->n_download_failures) {
+        case 0: rs->next_attempt_at = 0; break;
         case 1: rs->next_attempt_at = 0; break;
         case 2: rs->next_attempt_at = 0; break;
         case 3: rs->next_attempt_at = now+60; break;
@@ -1975,6 +1984,7 @@ dir_routerdesc_download_failed(smartlist_t *failed)
       }
     } else {
       switch (rs->n_download_failures) {
+        case 0: rs->next_attempt_at = 0; break;
         case 1: rs->next_attempt_at = 0; break;
         case 2: rs->next_attempt_at = now+60; break;
         case 3: rs->next_attempt_at = now+60*5; break;
