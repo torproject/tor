@@ -1353,10 +1353,15 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
   format_rfc1123_time(date, now);
   cp = tmp;
   tor_snprintf(cp, sizeof(tmp),
-               "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n"
-               X_ADDRESS_HEADER "%s\r\n",
-               date, type, conn->_base.address);
+               "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n",
+               date, type);
   cp += strlen(tmp);
+  if (!is_internal_IP(conn->_base.addr, 0)) {
+    /* Don't report the source address for a localhost/private connection. */
+    tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
+                 X_ADDRESS_HEADER "%s\r\n", conn->_base.address);
+    cp += strlen(cp);
+  }
   if (encoding) {
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
                  "Content-Encoding: %s\r\n", encoding);

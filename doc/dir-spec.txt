@@ -854,6 +854,10 @@ $Id$
 
   Servers MAY include an X-Your-Address-Is: header, whose value is the
   apparent IP address of the client connecting to them (as a dotted quad).
+  For directory connections tunneled over a BEGIN_DIR stream, servers SHOULD
+  report the IP from which the circuit carrying the BEGIN_DIR stream reached
+  them.  [Servers before version 0.1.2.5-alpha reported 127.0.0.1 for all
+  BEGIN_DIR-tunneled connections.]
 
   Servers SHOULD disable caching of multiple network statuses or multiple
   router descriptors.  Servers MAY enable caching of single descriptors,

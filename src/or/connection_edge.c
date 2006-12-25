@@ -1963,8 +1963,11 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   char *address=NULL;
   uint16_t port;
   char end_payload[1];
+  or_circuit_t *or_circ = NULL;
 
   assert_circuit_ok(circ);
+  if (!CIRCUIT_IS_ORIGIN(circ))
+    or_circ = TO_OR_CIRCUIT(circ);
 
   relay_header_unpack(&rh, cell->payload);
 
@@ -2022,7 +2025,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       return 0;
     }
 #endif
-    if (!CIRCUIT_IS_ORIGIN(circ) && TO_OR_CIRCUIT(circ)->is_first_hop) {
+    if (or_circ && or_circ->is_first_hop) {
       /* Don't let clients use us as a single-hop proxy; it attracts attackers
        * and users who'd be better off with, well, single-hop proxies.
        */
@@ -2043,7 +2046,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
                                    end_payload, 1, NULL);
       return 0;
     }
-    address = tor_strdup("127.0.0.1");
+    if (or_circ && or_circ->p_conn && or_circ->p_conn->_base.address)
+      address = tor_strdup(or_circ->p_conn->_base.address);
+    else
+      address = tor_strdup("127.0.0.1");
   } else {
     log_warn(LD_BUG, "Got an unexpected command %d", (int)rh.command);
     end_payload[0] = END_STREAM_REASON_INTERNAL;
@@ -2112,6 +2118,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   log_debug(LD_EXIT,"about to start the dns_resolve().");
 
   if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
+    if (or_circ && or_circ->p_conn && or_circ->p_conn->_base.addr)
+      n_stream->_base.addr = or_circ->p_conn->_base.addr;
     n_stream->next_stream = TO_OR_CIRCUIT(circ)->n_streams;
     n_stream->on_circuit = circ;
     TO_OR_CIRCUIT(circ)->n_streams = n_stream;

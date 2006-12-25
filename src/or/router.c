@@ -1034,7 +1034,14 @@ router_new_address_suggestion(const char *suggestion)
     last_guessed_ip = cur; /* store it in case we need it later */
     return;
   }
+  if (is_internal_IP(addr, 0)) {
+    /* Don't believe anybody who says our IP is, say, 127.0.0.1. */
+    return;
+  }
 
+  /* Okay.  We can't resolve our own address, and X-Your-Address-Is is giving
+   * us an answer different from what we had the last time we managed to
+   * resolve it. */
   if (last_guessed_ip != addr) {
     log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr);
     server_has_changed_ip();

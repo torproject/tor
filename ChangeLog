@@ -62,6 +62,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - When we get a 503 from a directory, and we're not a server, we don't
       count the failure against the total number of failures allowed for the
       thing we're trying to download.
+    - Report X-Your-Address-Is correctly from tunneled directory connections;
+      don't report X-Your-Address-Is is when it's an internal address; and
+      never believe reported remote addresses when they're internal.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

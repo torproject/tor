@@ -63,6 +63,8 @@ R     - handle connect-dir streams that don't have a chosen_exit_name set.
           key=value syntax. so we could have a 'tor' version, but we
           could also have a 'conn' version, a 'dir' version, etc down
           the road. and one day maybe the 'tor' key would be deprecated.
+    o Give the right answer for X-Your-Address-Is on tunneled directory
+      connections.
 
   o Document .noconnect addresses...
     A new file 'address-spec.txt' that describes .exit, .onion,
