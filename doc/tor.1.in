@@ -493,6 +493,22 @@ leaking DNS requests.
 When a controller asks for a virtual (unused) address with the
 'MAPADDRESS' command, Tor picks an unassigned address from this range.
 (Default: 127.192.0.0/10)
+.LP
+.TP
+\fBAllowNonRFC953Hostnames \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled, Tor blocks hostnames containing illegal
+characters (like @ and :) rather than sending them to an exit node to be
+resolved.  This helps trap accidental attempts to resolve URLs and so on.
+(Default: 1)
+.LP
+.TP
+\fBFastFirstHopPK \fR\fB0\fR|fB1\fR\fP
+When this option is enabled and we aren't running as a server, Tor
+skips the public key step for the first hop of creating circuits.  This is
+safe since we have already used TLS to authenticate the server and to
+establish forward-secure keys.  Turning this option off makes circuit
+building slower.
+(Default: 1)
 
 .SH SERVER OPTIONS
 .PP

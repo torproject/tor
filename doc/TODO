@@ -183,6 +183,7 @@ NR  D Get some kind of "meta signing key" to be used solely to sign
       - unrecommend IE because of ftp:// bug.
     - torrc.complete.in needs attention?
     - we should add a preamble to tor-design saying it's out of date.
+    - Document transport and natdport
 
   - Improvements to bandwidth counting
 R   - look into "uncounting" bytes spent on local connections, so
