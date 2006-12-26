@@ -664,6 +664,7 @@ addressmap_rewrite(char *address, size_t maxlen)
 {
   addressmap_entry_t *ent;
   int rewrites;
+  char *cp;
 
   for (rewrites = 0; rewrites < 16; rewrites++) {
     ent = strmap_get(addressmap, address);
@@ -671,14 +672,38 @@ addressmap_rewrite(char *address, size_t maxlen)
     if (!ent || !ent->new_address)
       return; /* done, no rewrite needed */
 
+    cp = tor_strdup(escaped_safe_str(ent->new_address));
     log_info(LD_APP, "Addressmap: rewriting '%s' to '%s'",
-             safe_str(address), safe_str(ent->new_address));
+             escaped_safe_str(address), cp);
+    tor_free(cp);
     strlcpy(address, ent->new_address, maxlen);
   }
   log_warn(LD_CONFIG,
            "Loop detected: we've rewritten '%s' 16 times! Using it as-is.",
            safe_str(address));
   /* it's fine to rewrite a rewrite, but don't loop forever */
+}
+
+/* DOCDOC */
+static int
+addressmap_rewrite_reverse(char *address, size_t maxlen)
+{
+  size_t len = maxlen + 16;
+  char *s = tor_malloc(len), *cp;
+  addressmap_entry_t *ent;
+  int r = 0;
+  tor_snprintf(s, len, "REVERSE[%s]", address);
+  ent = strmap_get(addressmap, s);
+  if (ent) {
+    cp = tor_strdup(escaped_safe_str(ent->new_address));
+    log_info(LD_APP, "Rewrote reverse lookup '%s' -> '%s'",
+             escaped_safe_str(s), cp);
+    tor_free(cp);
+    strlcpy(address, ent->new_address, maxlen);
+    r = 1;
+  }
+  tor_free(s);
+  return r;
 }
 
 /** Return 1 if <b>address</b> is already registered, else return 0 */
@@ -775,6 +800,52 @@ client_dns_clear_failures(const char *address)
     ent->num_resolve_failures = 0;
 }
 
+/** Record the fact that <b>address</b> resolved to <b>name</b>.
+ * We can now use this in subsequent streams via addressmap_rewrite()
+ * so we can more correctly choose an exit that will allow <b>address</b>.
+ *
+ * If <b>exitname</b> is defined, then append the addresses with
+ * ".exitname.exit" before registering the mapping.
+ *
+ * If <b>ttl</b> is nonnegative, the mapping will be valid for
+ * <b>ttl</b>seconds; otherwise, we use the default.
+ */
+static void
+client_dns_set_addressmap_impl(const char *address, const char *name,
+                               const char *exitname,
+                               int ttl)
+{
+  /* <address>.<hex or nickname>.exit\0  or just  <address>\0 */
+  char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
+  /* 123.123.123.123.<hex or nickname>.exit\0  or just  123.123.123.123\0 */
+  char extendedval[INET_NTOA_BUF_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
+
+  tor_assert(address);
+  tor_assert(name);
+
+  if (ttl<0)
+    ttl = DEFAULT_DNS_TTL;
+  else
+    ttl = dns_clip_ttl(ttl);
+
+  if (exitname) {
+    /* XXXX fails to ever get attempts to get an exit address of
+     * google.com.digest[=~]nickname.exit; we need a syntax for this that
+     * won't make strict RFC952-compliant applications (like us) barf. */
+    tor_snprintf(extendedaddress, sizeof(extendedaddress),
+                 "%s.%s.exit", address, exitname);
+    tor_snprintf(extendedval, sizeof(extendedval),
+                 "%s.%s.exit", name, exitname);
+  } else {
+    tor_snprintf(extendedaddress, sizeof(extendedaddress),
+                 "%s", address);
+    tor_snprintf(extendedval, sizeof(extendedval),
+                 "%s", name);
+  }
+  addressmap_register(extendedaddress, tor_strdup(extendedval),
+                      time(NULL) + ttl);
+}
+
 /** Record the fact that <b>address</b> resolved to <b>val</b>.
  * We can now use this in subsequent streams via addressmap_rewrite()
  * so we can more correctly choose an exit that will allow <b>address</b>.
@@ -791,40 +862,29 @@ client_dns_set_addressmap(const char *address, uint32_t val,
                           int ttl)
 {
   struct in_addr in;
-  /* <address>.<hex or nickname>.exit\0  or just  <address>\0 */
-  char extendedaddress[MAX_SOCKS_ADDR_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
-  /* 123.123.123.123.<hex or nickname>.exit\0  or just  123.123.123.123\0 */
-  char extendedval[INET_NTOA_BUF_LEN+MAX_VERBOSE_NICKNAME_LEN+10];
   char valbuf[INET_NTOA_BUF_LEN];
 
   tor_assert(address);
-  tor_assert(val);
-
-  if (ttl<0)
-    ttl = DEFAULT_DNS_TTL;
-  else
-    ttl = dns_clip_ttl(ttl);
 
   if (tor_inet_aton(address, &in))
     return; /* If address was an IP address already, don't add a mapping. */
   in.s_addr = htonl(val);
   tor_inet_ntoa(&in,valbuf,sizeof(valbuf));
-  if (exitname) {
-    /* XXXX fails to ever get attempts to get an exit address of
-     * google.com.digest[=~]nickname.exit; we need a syntax for this that
-     * won't make strict RFC952-compliant applications (like us) barf. */
-    tor_snprintf(extendedaddress, sizeof(extendedaddress),
-                 "%s.%s.exit", address, exitname);
-    tor_snprintf(extendedval, sizeof(extendedval),
-                 "%s.%s.exit", valbuf, exitname);
-  } else {
-    tor_snprintf(extendedaddress, sizeof(extendedaddress),
-                 "%s", address);
-    tor_snprintf(extendedval, sizeof(extendedval),
-                 "%s", valbuf);
-  }
-  addressmap_register(extendedaddress, tor_strdup(extendedval),
-                      time(NULL) + ttl);
+
+  client_dns_set_addressmap_impl(address, valbuf, exitname, ttl);
+}
+
+/** DOCDOC */
+static void
+client_dns_set_reverse_addressmap(const char *address, const char *v,
+                                  const char *exitname,
+                                  int ttl)
+{
+  size_t len = strlen(address) + 16;
+  char *s = tor_malloc(len);
+  tor_snprintf(s, len, "REVERSE[%s]", address);
+  client_dns_set_addressmap_impl(s, v, exitname, ttl);
+  tor_free(s);
 }
 
 /* By default, we hand out 127.192.0.1 through 127.254.254.254.
@@ -1103,8 +1163,19 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
             safe_str(socks->address),
             socks->port);
 
-  /* For address map controls, remap the address */
-  addressmap_rewrite(socks->address, sizeof(socks->address));
+  if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
+    if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address))) {
+      connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_HOSTNAME,
+                                             strlen(socks->address),
+                                             socks->address, -1);
+      connection_mark_unattached_ap(conn,
+                                    END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+      return 0;
+    }
+  } else {
+    /* For address map controls, remap the address */
+    addressmap_rewrite(socks->address, sizeof(socks->address));
+  }
 
   if (address_is_in_virtual_range(socks->address)) {
     /* This address was probably handed out by client_dns_get_unmapped_address,
@@ -1826,11 +1897,19 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
   char buf[384];
   size_t replylen;
 
-  if (answer_type == RESOLVED_TYPE_IPV4) {
-    uint32_t a = ntohl(get_uint32(answer));
-    if (a)
-      client_dns_set_addressmap(conn->socks_request->address, a,
-                                conn->chosen_exit_name, ttl);
+  if (ttl >= 0) {
+    if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
+      uint32_t a = ntohl(get_uint32(answer));
+      if (a)
+        client_dns_set_addressmap(conn->socks_request->address, a,
+                                  conn->chosen_exit_name, ttl);
+    } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len < 256) {
+      char *cp = tor_strndup(answer, answer_len);
+      client_dns_set_reverse_addressmap(conn->socks_request->address,
+                                        cp,
+                                        conn->chosen_exit_name, ttl);
+      tor_free(cp);
+    }
   }
 
   if (conn->socks_request->socks_version == 4) {

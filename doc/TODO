@@ -97,7 +97,7 @@ N - DNS improvements
       . Add client-side interface
         o SOCKS interface: specify
         o SOCKS interface: implement
-d       - Cache answers client-side
+        o Cache answers client-side
         o Add to Tor-resolve.py
         - Add to tor-resolve
 d   - Be a DNS proxy.

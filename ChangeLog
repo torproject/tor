@@ -65,6 +65,7 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Report X-Your-Address-Is correctly from tunneled directory connections;
       don't report X-Your-Address-Is is when it's an internal address; and
       never believe reported remote addresses when they're internal.
+    - Add client-side caching for reverse DNS lookups.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
