@@ -5,15 +5,34 @@
 tor-resolve \- resolve a hostname to an IP address via tor
 
 .SH SYNOPSIS
-\fBtor-resolve\fP\ [-4|-5] \fIhostname\fP\ [\fIsockshost\fP[:\fIsocksport]\fP]
+\fBtor-resolve\fP\ [-4|-5] [-v] [-x] \fIhostname\fP\ [\fIsockshost\fP[:\fIsocksport]\fP]
 
 .SH DESCRIPTION
 \fBtor-resolve\fR is a simple script to connect to a SOCKS proxy that
 knows about the SOCKS RESOLVE command, hand it a hostname, and return
 an IP address.
-
-See doc/socks-extensions.txt in the Tor package for protocol details.
+.SH OPTIONS
+\fB-v \fP
+Display verbose output.
+.LP
+.TP
+\fB-x\fP
+Perform a reverse lookup: get the PTR record for an IPv4 address.
+.LP
+.TP
+\fB-5\fP
+Use the SOCKS5 protocol. (Default)
+.LP
+.TP
+\fB-4\fP
+Use the SOCKS4a protocol rather than the default SOCKS5 protocol.  Doesn't
+support reverse DNS.
 
 .SH SEE ALSO
 .BR tor (1),
 .BR torify (1).
+.PP
+See doc/socks-extensions.txt in the Tor package for protocol details.
+
+.SH AUTHORS
+Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.

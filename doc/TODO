@@ -93,13 +93,13 @@ N - DNS improvements
       - Make evdns use windows strerror equivalents.
       - Make sure patches get into libevent.
       - Verify that it works well on windows
-    . Make reverse DNS work.
-      . Add client-side interface
+    o Make reverse DNS work.
+      o Add client-side interface
         o SOCKS interface: specify
         o SOCKS interface: implement
         o Cache answers client-side
         o Add to Tor-resolve.py
-        - Add to tor-resolve
+        o Add to tor-resolve
 d   - Be a DNS proxy.
     o Check for invalid characters in hostnames before trying to resolve
       them.  (This will help catch attempts do to mean things to our DNS

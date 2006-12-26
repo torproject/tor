@@ -66,6 +66,7 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       don't report X-Your-Address-Is is when it's an internal address; and
       never believe reported remote addresses when they're internal.
     - Add client-side caching for reverse DNS lookups.
+    - Add support to tor-resolve for reverse lookups and SOCKS5.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
