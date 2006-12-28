@@ -381,6 +381,13 @@ static int can_reach_or_port = 0;
 /** Whether we can reach our DirPort from the outside. */
 static int can_reach_dir_port = 0;
 
+/** DOCDOC */
+void
+router_reset_reachability(void)
+{
+  can_reach_or_port = can_reach_dir_port = 0;
+}
+
 /** Return 1 if ORPort is known reachable; else return 0. */
 int
 check_whether_orport_reachable(void)
@@ -486,20 +493,6 @@ router_dirport_found_reachable(void)
     can_reach_dir_port = 1;
     mark_my_descriptor_dirty();
   }
-}
-
-#define UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST (6*60*60)
-
-/** Our router has just moved to a new IP. Reset stats. */
-void
-server_has_changed_ip(void)
-{
-  if (stats_n_seconds_working > UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST)
-    reset_bandwidth_test();
-  stats_n_seconds_working = 0;
-  can_reach_or_port = 0;
-  can_reach_dir_port = 0;
-  mark_my_descriptor_dirty();
 }
 
 /** We have enough testing circuits open. Send a bunch of "drop"
@@ -996,9 +989,7 @@ check_descriptor_ipaddress_changed(time_t now)
 
   if (prev != cur) {
     log_addr_has_changed(LOG_INFO, prev, cur);
-    mark_my_descriptor_dirty();
-    /* the above call is probably redundant, since resolve_my_address()
-     * probably already noticed and marked it dirty. */
+    ip_address_changed(0);
   }
 }
 
@@ -1044,7 +1035,7 @@ router_new_address_suggestion(const char *suggestion)
    * resolve it. */
   if (last_guessed_ip != addr) {
     log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr);
-    server_has_changed_ip();
+    ip_address_changed(0);
     last_guessed_ip = addr; /* router_rebuild_descriptor() will fetch it */
   }
 }

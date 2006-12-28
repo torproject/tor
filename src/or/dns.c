@@ -1399,6 +1399,11 @@ dns_seems_to_be_broken(void)
 {
   return 0;
 }
+
+void
+dns_reset_correctness_checks(void)
+{
+}
 #else /* !USE_EVENTDNS */
 
 /** Eventdns helper: return true iff the eventdns result <b>err</b> is
@@ -1513,6 +1518,8 @@ configure_nameservers(int force)
     resolv_conf_mtime = 0;
   }
 #endif
+
+  dns_servers_relaunch_checks();
 
   nameservers_configured = 1;
   return 0;
@@ -1853,6 +1860,28 @@ int
 dns_seems_to_be_broken(void)
 {
   return dns_is_completely_invalid;
+}
+
+void
+dns_reset_correctness_checks(void)
+{
+  if (dns_wildcard_response_count) {
+    strmap_free(dns_wildcard_response_count, _tor_free);
+    dns_wildcard_response_count = NULL;
+  }
+  n_wildcard_requests = 0;
+
+  if (dns_wildcard_list) {
+    SMARTLIST_FOREACH(dns_wildcard_list, char *, cp, tor_free(cp));
+    smartlist_clear(dns_wildcard_list);
+  }
+  if (dns_wildcarded_test_address_list) {
+    SMARTLIST_FOREACH(dns_wildcarded_test_address_list, char *, cp,
+                      tor_free(cp));
+    smartlist_clear(dns_wildcarded_test_address_list);
+  }
+  dns_wildcard_one_notice_given = dns_wildcard_notice_given =
+    dns_wildcarded_test_address_notice_given = dns_is_completely_invalid = 0;
 }
 
 /** Return true iff we have noticed that the dotted-quad <b>ip</b> has been

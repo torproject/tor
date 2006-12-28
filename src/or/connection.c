@@ -2128,7 +2128,7 @@ client_check_address_changed(int sock)
     smartlist_clear(outgoing_addrs);
     smartlist_add(outgoing_addrs, ip);
     /* Okay, now change our keys. */
-    init_keys(); /* XXXX NM return value-- safe to ignore? */
+    ip_address_changed(1);
   }
 }
 

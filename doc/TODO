@@ -112,8 +112,7 @@ d   - Be a DNS proxy.
       well-known sites) are all going to the same place.
     o Bug 363: Warn and die if we can't find a nameserver and we're running a
       server; don't fall back to 127.0.0.1.
-?   - maybe re-check dns when we change IP addresses, rather than
-      every 12 hours?
+    o Re-check dns when we change IP addresses, rather than every 12 hours
     - Bug 326: Give fewer error messages from nameservers. 
       - Only warn when _all_ nameservers are down; otherwise info.
       - Increase timeout; what's industry standard?

@@ -976,7 +976,7 @@ options_act(or_options_t *old_options)
           log_err(LD_BUG,"Error initializing keys; exiting");
           return -1;
         }
-        server_has_changed_ip();
+        ip_address_changed(0);
         if (has_completed_circuit || !any_predicted_circuits(time(NULL)))
           inform_testing_reachability();
       }
@@ -1908,7 +1908,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
     /* Leave this as a notice, regardless of the requested severity,
      * at least until dynamic IP address support becomes bulletproof. */
     log_notice(LD_NET, "Your IP address seems to have changed. Updating.");
-    server_has_changed_ip();
+    ip_address_changed(0);
   }
   last_resolved_addr = *addr_out;
   if (hostname_out)

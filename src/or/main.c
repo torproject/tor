@@ -52,6 +52,8 @@ long stats_n_seconds_working = 0;
 static time_t time_to_fetch_directory = 0;
 /** When do we next download a running-routers summary? */
 static time_t time_to_fetch_running_routers = 0;
+/** When do we next launch DNS wildcarding checks? */
+static time_t time_to_check_for_correct_dns = 0;
 
 /** Array of all open connections.  The first n_conns elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS+1] =
@@ -729,7 +731,6 @@ run_scheduled_events(time_t now)
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
-  static time_t time_to_check_for_correct_dns = 0;
   or_options_t *options = get_options();
   int i;
   int have_dir_info;
@@ -1056,6 +1057,44 @@ got_libevent_error(void)
   return 0;
 }
 #endif
+
+#define UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST (6*60*60)
+
+/** Called when our IP address seems to have changed. <b>at_interface</b>
+ * should be true if we detected a change in our interface, and false if we
+ * detected a change in our published address. */
+void
+ip_address_changed(int at_interface)
+{
+  int server = server_mode(get_options());
+
+  if (at_interface) {
+    if (! server) {
+      /* Okay, change our keys. */
+      init_keys();
+    }
+  } else {
+    if (server) {
+      if (stats_n_seconds_working > UPTIME_CUTOFF_FOR_NEW_BANDWIDTH_TEST)
+        reset_bandwidth_test();
+      stats_n_seconds_working = 0;
+      router_reset_reachability();
+      mark_my_descriptor_dirty();
+    }
+  }
+
+  dns_servers_relaunch_checks();
+}
+
+/* DOCDOC */
+void
+dns_servers_relaunch_checks(void)
+{
+  if (server_mode(get_options())) {
+    dns_reset_correctness_checks();
+    time_to_check_for_correct_dns = 0;
+  }
+}
 
 /** Called when we get a SIGHUP: reload configuration files and keys,
  * retry all connections, re-upload all descriptors, and so on. */

@@ -2323,6 +2323,7 @@ void dns_cancel_pending_resolve(const char *question);
 int dns_resolve(edge_connection_t *exitconn, or_circuit_t *circ);
 void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
+void dns_reset_correctness_checks(void);
 
 /********************************* hibernate.c **********************/
 
@@ -2362,6 +2363,9 @@ void connection_start_writing(connection_t *conn);
 
 void directory_all_unreachable(time_t now);
 void directory_info_has_arrived(time_t now, int from_cache);
+
+void ip_address_changed(int at_interface);
+void dns_servers_relaunch_checks(void);
 
 void control_signal_act(int the_signal);
 void handle_signals(int is_parent);
@@ -2632,7 +2636,6 @@ int check_whether_dirport_reachable(void);
 void consider_testing_reachability(int test_or, int test_dir);
 void router_orport_found_reachable(void);
 void router_dirport_found_reachable(void);
-void server_has_changed_ip(void);
 void router_perform_bandwidth_test(int num_circs, time_t now);
 
 int authdir_mode(or_options_t *options);
@@ -2664,6 +2667,7 @@ int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);
 void router_get_verbose_nickname(char *buf, routerinfo_t *router);
 void router_reset_warnings(void);
+void router_reset_reachability(void);
 void router_free_all(void);
 
 /********************************* routerlist.c ***************************/

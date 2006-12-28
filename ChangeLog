@@ -70,6 +70,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - We now check for the case when common DNS requests are going to
       wildcarded addresses, and change our exit policy to reject *:* if
       it's happening.  (Bug #364)
+    - When we change nameservers or IP addresses, reset and re-launch
+      our tests for DNS hijacking.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
