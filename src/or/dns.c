@@ -178,6 +178,12 @@ evdns_log_cb(int warn, const char *msg)
   } else if (!strcmpstart(msg, "Search: ")) {
     return;
   }
+  if (!strcmpstart(msg, "Nameserver ") && strstr(msg, " has failed: ")) {
+    /* Don't warn about a single failed nameserver; we'll warn with 'all
+     * nameservers have failed' if we're completely out of nameservers;
+     * otherwise, the situation is tolerable. */
+    warn = 0;
+  }
   log(warn?LOG_WARN:LOG_INFO, LD_EXIT, "eventdns: %s", msg);
 }
 #endif

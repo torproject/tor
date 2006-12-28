@@ -100,7 +100,7 @@ N - DNS improvements
         o Cache answers client-side
         o Add to Tor-resolve.py
         o Add to tor-resolve
-d   - Be a DNS proxy.
+    D Be a DNS proxy.
     o Check for invalid characters in hostnames before trying to resolve
       them.  (This will help catch attempts do to mean things to our DNS
       server, and bad software that tries to do DNS lookups on whole URLs.)
@@ -113,15 +113,16 @@ d   - Be a DNS proxy.
     o Bug 363: Warn and die if we can't find a nameserver and we're running a
       server; don't fall back to 127.0.0.1.
     o Re-check dns when we change IP addresses, rather than every 12 hours
-    - Bug 326: Give fewer error messages from nameservers. 
-      - Only warn when _all_ nameservers are down; otherwise info.
+    . Bug 326: Give fewer error messages from nameservers.
+      o Only warn when _all_ nameservers are down; otherwise info.
       - Increase timeout; what's industry standard?
         - Alternatively, raise timeout when nameserver dies but comes back
           quickly?
       - Don't believe that our sole nameserver is dead?  or, not until more
         failures than it would take to think one of several nameservers was
         dead?
-      - Possibly, don't warn until second retry of a nameserver gets no
+        - easy: adjust global_max_nameserver_timeout / global_timeout.
+      X Possibly, don't warn until second retry of a nameserver gets no
         answer?
       - warn if all of your nameservers go down and stay down for like
         5 minutes.
@@ -410,14 +411,18 @@ R - add d64 and fp64 along-side d and fp so people can paste status
       - Allow EXTENDCIRCUIT to unknown server.
       - We need some way to adjust server status, and to tell tor not to
         download directories/network-status, and a way to force a download.
-      - It would be nice to request address lookups from the controller
-        without using SOCKS.
       - Make everything work with hidden services
   - Directory system improvements
     - config option to publish what ports you listen on, beyond
       ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
       - Parse this.
       - Relay this in networkstatus.
+
+  - Be a DNS proxy.
+    - Need a way to request address lookups (and allocate a stream ID for
+      them) without having a corresponding client socket.
+      - Once this is done, it would be nice to have a way to request address
+        lookups from the controller without using SOCKS.
 
 Future version:
   - Configuration format really wants sections.
