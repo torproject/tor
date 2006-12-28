@@ -729,7 +729,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
-  static time_t time_to_check_for_wildcarded_dns = 0;
+  static time_t time_to_check_for_correct_dns = 0;
   or_options_t *options = get_options();
   int i;
   int have_dir_info;
@@ -937,12 +937,12 @@ run_scheduled_events(time_t now)
 
   /** 9. and if we're a server, check whether our DNS is telling stories to
    * us. */
-  if (server_mode(options) && time_to_check_for_wildcarded_dns < now) {
-    if (!time_to_check_for_wildcarded_dns) {
-      time_to_check_for_wildcarded_dns = now + 60 + crypto_rand_int(120);
+  if (server_mode(options) && time_to_check_for_correct_dns < now) {
+    if (!time_to_check_for_correct_dns) {
+      time_to_check_for_correct_dns = now + 60 + crypto_rand_int(120);
     } else {
-      dns_launch_wildcard_checks();
-      time_to_check_for_wildcarded_dns = now + 12*3600 +
+      dns_launch_correctness_checks();
+      time_to_check_for_correct_dns = now + 12*3600 +
         crypto_rand_int(12*3600);
     }
   }

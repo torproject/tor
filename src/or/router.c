@@ -1204,7 +1204,14 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   /* Write the exit policy to the end of 's'. */
-  for (tmpe=router->exit_policy; tmpe; tmpe=tmpe->next) {
+  tmpe = router->exit_policy;
+  if (dns_seems_to_be_broken()) {
+    /* DNS is screwed up; don't claim to be an exit. */
+    strlcat(s+written, "reject *:*\n", maxlen-written);
+    written += strlen("reject *:*\n");
+    tmpe = NULL;
+  }
+  for ( ; tmpe; tmpe=tmpe->next) {
     /* Write: "accept 1.2.3.4" */
     in.s_addr = htonl(tmpe->addr);
     tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));

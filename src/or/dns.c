@@ -122,6 +122,7 @@ static void dnsworker_main(void *data);
 static int spawn_dnsworker(void);
 static int spawn_enough_dnsworkers(void);
 #else
+static void add_wildcarded_test_address(const char *address);
 static int configure_nameservers(int force);
 static int answer_is_wildcarded(const char *ip);
 #endif
@@ -902,8 +903,12 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
 
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (!resolve) {
-    log_info(LD_EXIT,"Resolved unasked address %s; caching anyway.",
-             escaped_safe_str(address));
+    or_options_t *options = get_options();
+    int is_test_address = options->ServerDNSTestAddresses &&
+      smartlist_string_isin_case(options->ServerDNSTestAddresses, address);
+    if (!is_test_address)
+      log_info(LD_EXIT,"Resolved unasked address %s; caching anyway.",
+               escaped_safe_str(address));
     add_answer_to_cache(address, is_reverse, addr, hostname, outcome, ttl);
     return;
   }
@@ -1385,8 +1390,14 @@ spawn_enough_dnsworkers(void)
 }
 
 void
-dns_launch_wildcard_checks(void)
+dns_launch_correctness_checks(void)
 {
+}
+
+int
+dns_seems_to_be_broken(void)
+{
+  return 0;
 }
 #else /* !USE_EVENTDNS */
 
@@ -1512,13 +1523,14 @@ configure_nameservers(int force)
  */
 static void
 evdns_callback(int result, char type, int count, int ttl, void *addresses,
-                  void *arg)
+               void *arg)
 {
   char *string_address = arg;
   int is_reverse = 0;
   int status = DNS_RESOLVE_FAILED_PERMANENT;
   uint32_t addr = 0;
   const char *hostname = NULL;
+  int was_wildcarded = 0;
 
   if (result == DNS_ERR_NONE) {
     if (type == DNS_IPv4_A && count) {
@@ -1537,6 +1549,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
                   "address %s; treating as a failure.",
                   safe_str(escaped_address),
                   escaped_safe_str(answer_buf));
+        was_wildcarded = 1;
         addr = 0;
         status = DNS_RESOLVE_FAILED_PERMANENT;
       } else {
@@ -1565,6 +1578,17 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
   } else {
     if (evdns_err_is_transient(result))
       status = DNS_RESOLVE_FAILED_TRANSIENT;
+  }
+  if (was_wildcarded) {
+    or_options_t *options = get_options();
+    int is_test_address = options->ServerDNSTestAddresses &&
+      smartlist_string_isin_case(options->ServerDNSTestAddresses, hostname);
+
+    if (is_test_address) {
+      /* Ick.  We're getting redirected on known-good addresses.  Our DNS
+       * server must really hate us.  */
+      add_wildcarded_test_address(hostname);
+    }
   }
   if (result != DNS_ERR_SHUTDOWN)
     dns_found_answer(string_address, is_reverse, addr, hostname, status, ttl);
@@ -1634,6 +1658,13 @@ static strmap_t *dns_wildcard_response_count = NULL;
  * nameserver wants to return in response to requests for nonexistent domains.
  */
 static smartlist_t *dns_wildcard_list = NULL;
+static int dns_wildcard_one_notice_given = 0;
+static int dns_wildcard_notice_given = 0;
+
+/** DOCDOC */
+static smartlist_t *dns_wildcarded_test_address_list = NULL;
+static int dns_wildcarded_test_address_notice_given = 0;
+static int dns_is_completely_invalid = 0;
 
 /** Called when we see <b>id</b> (a dotted quad) in response to a request for
  * a hopefully bogus address. */
@@ -1641,7 +1672,6 @@ static void
 wildcard_increment_answer(const char *id)
 {
   int *ip;
-  static int notice_given = 0;
   if (!dns_wildcard_response_count)
     dns_wildcard_response_count = strmap_new();
 
@@ -1655,14 +1685,40 @@ wildcard_increment_answer(const char *id)
   if (*ip > 5 && n_wildcard_requests > 10) {
     if (!dns_wildcard_list) dns_wildcard_list = smartlist_create();
     if (!smartlist_string_isin(dns_wildcard_list, id)) {
-    log(notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
+    log(dns_wildcard_notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider has given \"%s\" as an answer for %d different "
         "invalid addresses. Apparently they are hijacking DNS failures. "
         "I'll try to correct for this by treating future occurrences of "
         "\"%s\" as 'not found'.", id, *ip, id);
       smartlist_add(dns_wildcard_list, tor_strdup(id));
     }
-    notice_given = 1;
+    dns_wildcard_notice_given = 1;
+  }
+}
+
+static void
+add_wildcarded_test_address(const char *address)
+{
+  int n;
+  if (!dns_wildcarded_test_address_list)
+    dns_wildcarded_test_address_list = smartlist_create();
+
+  if (smartlist_string_isin_case(dns_wildcarded_test_address_list, address))
+    return;
+
+  smartlist_add(dns_wildcarded_test_address_list, tor_strdup(address));
+  n = smartlist_len(dns_wildcarded_test_address_list);
+  if (n > smartlist_len(get_options()->ServerDNSTestAddresses)/2) {
+    log(dns_wildcarded_test_address_notice_given ? LOG_INFO : LOG_NOTICE,
+        LD_EXIT, "Your DNS provider tried to redirect \"%s\" to a junk "
+        "address.  It has done this with %d test addresses so far.  I'm "
+        "going to stop being an exit node for now, since our DNS seems so "
+        "broken.", address, n);
+    if (!dns_is_completely_invalid) {
+      dns_is_completely_invalid = 1;
+      mark_my_descriptor_dirty();
+    }
+    dns_wildcarded_test_address_notice_given = 1;
   }
 }
 
@@ -1670,9 +1726,8 @@ wildcard_increment_answer(const char *id)
  * for a (hopefully) nonexistent domain. */
 static void
 evdns_wildcard_check_callback(int result, char type, int count, int ttl,
-                                 void *addresses, void *arg)
+                              void *addresses, void *arg)
 {
-  static int notice_given = 0;
   (void)ttl;
   ++n_wildcard_requests;
   if (result == DNS_ERR_NONE && type == DNS_IPv4_A && count) {
@@ -1686,13 +1741,13 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
       tor_inet_ntoa(&in, answer_buf, sizeof(answer_buf));
       wildcard_increment_answer(answer_buf);
     }
-    log(notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
+    log(dns_wildcard_one_notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider gave an answer for \"%s\", which "
         "is not supposed to exist.  Apparently they are hijacking "
         "DNS failures. Trying to correct for this.  We've noticed %d possibly "
         "bad addresses so far.",
         string_address, strmap_size(dns_wildcard_response_count));
-    notice_given = 1;
+    dns_wildcard_one_notice_given = 1;
   }
   tor_free(arg);
 }
@@ -1721,18 +1776,38 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
     tor_free(addr);
 }
 
+static void
+launch_test_addresses(int fd, short event, void *args)
+{
+  or_options_t *options = get_options();
+  (void)fd;
+  (void)event;
+  (void)args;
+
+  log_info(LD_EXIT, "Launching checks to see whether our nameservers like to "
+           "hijack *everything*.");
+  /* This situation is worse than the failure-hijacking situation.  When this
+   * happens, we're no good for DNS requests at all, and we shouldn't really
+   * be an exit server.*/
+  if (!options->ServerDNSTestAddresses)
+    return;
+  SMARTLIST_FOREACH(options->ServerDNSTestAddresses, const char *, address,
+    {
+      evdns_resolve_ipv4(address, DNS_QUERY_NO_SEARCH, evdns_callback,
+                         tor_strdup(address));
+    });
+}
+
 #define N_WILDCARD_CHECKS 2
 
-/** Launch DNS requests for a few nonexistent hostnames, and see if we can
- * catch our nameserver trying to hijack them and map them to a stupid "I
- * couldn't find ggoogle.com but maybe you'd like to buy these lovely
- * encyclopedias" page. */
-void
+/** Launch DNS requests for a few nonexistent hostnames and a few well-known
+ * hostnames, and see if we can catch our nameserver trying to hijack them and
+ * map them to a stupid "I couldn't find ggoogle.com but maybe you'd like to
+ * buy these lovely encyclopedias" page. */
+static void
 dns_launch_wildcard_checks(void)
 {
   int i;
-  if (!get_options()->ServerDNSDetectHijacking)
-    return;
   log_info(LD_EXIT, "Launching checks to see whether our nameservers like "
            "to hijack DNS failures.");
   for (i = 0; i < N_WILDCARD_CHECKS; ++i) {
@@ -1754,6 +1829,30 @@ dns_launch_wildcard_checks(void)
     launch_wildcard_check(8, 16, ".org");
     launch_wildcard_check(8, 16, ".net");
   }
+}
+
+/* DOCDOC */
+void
+dns_launch_correctness_checks(void)
+{
+  static struct event launch_event;
+  struct timeval timeout;
+  if (!get_options()->ServerDNSDetectHijacking)
+    return;
+  dns_launch_wildcard_checks();
+
+  /* Wait a while before launching requests for test addresses, so we can
+   * get the results from checking for wildcarding. */
+  evtimer_set(&launch_event, launch_test_addresses, NULL);
+  timeout.tv_sec = 30;
+  timeout.tv_usec = 0;
+  evtimer_add(&launch_event, &timeout);
+}
+
+int
+dns_seems_to_be_broken(void)
+{
+  return dns_is_completely_invalid;
 }
 
 /** Return true iff we have noticed that the dotted-quad <b>ip</b> has been

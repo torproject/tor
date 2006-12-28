@@ -232,6 +232,8 @@ static config_var_t _option_vars[] = {
   VAR("ServerDNSDetectHijacking",BOOL,   ServerDNSDetectHijacking,"1"),
   VAR("ServerDNSResolvConfFile", STRING, ServerDNSResolvConfFile, NULL),
   VAR("ServerDNSSearchDomains",  BOOL,   ServerDNSSearchDomains,  "0"),
+  VAR("ServerDNSTestAddresses",  CSV,    ServerDNSTestAddresses,
+      "www.google.com,www.mit.edu,www.yahoo.com,www.slashdot.org"),
   VAR("ShutdownWaitLength",  INTERVAL, ShutdownWaitLength,   "30 seconds"),
   VAR("SocksListenAddress",  LINELIST, SocksListenAddress,   NULL),
   VAR("SocksPolicy",         LINELIST, SocksPolicy,          NULL),

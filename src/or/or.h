@@ -1656,6 +1656,9 @@ typedef struct {
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
                      * resolver from the file here rather than from
                      * /etc/resolv.conf (Unix) or the registry (Windows). */
+  smartlist_t *ServerDNSTestAddresses; /**< A list of addresses that definitely
+                                        * should be resolveable. Used for
+                                        * testing our DNS server. */
   int EnforceDistinctSubnets; /**< If true, don't allow multiple routers in the
                                * same network zone in the same circuit. */
   int TunnelDirConns; /**< If true, use BEGIN_DIR rather than BEGIN when
@@ -2318,7 +2321,8 @@ void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);
 void dns_cancel_pending_resolve(const char *question);
 int dns_resolve(edge_connection_t *exitconn, or_circuit_t *circ);
-void dns_launch_wildcard_checks(void);
+void dns_launch_correctness_checks(void);
+int dns_seems_to_be_broken(void);
 
 /********************************* hibernate.c **********************/
 

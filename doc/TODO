@@ -107,8 +107,8 @@ d   - Be a DNS proxy.
       o address_is_invalid_destination() is the right thing to call here
         (and feel free to make that function smarter)
       o add a config option to turn it off.
-      - and a man page for that option
-    - Bug 364: notice when all the DNS requests we get back (including a few
+      o and a man page for that option
+    o Bug 364: notice when all the DNS requests we get back (including a few
       well-known sites) are all going to the same place.
     o Bug 363: Warn and die if we can't find a nameserver and we're running a
       server; don't fall back to 127.0.0.1.

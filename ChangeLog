@@ -67,6 +67,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       never believe reported remote addresses when they're internal.
     - Add client-side caching for reverse DNS lookups.
     - Add support to tor-resolve for reverse lookups and SOCKS5.
+    - We now check for the case when common DNS requests are going to
+      wildcarded addresses, and change our exit policy to reject *:* if
+      it's happening.  (Bug #364)
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

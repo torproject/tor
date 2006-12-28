@@ -704,6 +704,14 @@ our local nameservers have been configured to hijack failing DNS requests
 this.  This option only affects name lookup for addresses requested by
 clients; and only takes effect if Tor was built with eventdns support.
 (Defaults to "1".)
+.LP
+.TP
+\fBServerDNSTestAddresses \fR\fIaddress\fR,\fIaddress\fR,\fI...\fP
+When we're detecting DNS hijacking, make sure that these \fIvalid\fP
+addresses aren't getting redirected.  If they are, then our DNS is
+completely useless, and we'll reset our exit policy to "reject *:*".
+(Defaults to "www.google.com, www.mit.edu, www.yahoo.com,
+www.slashdot.org".)
 
 .SH DIRECTORY SERVER OPTIONS
 .PP
