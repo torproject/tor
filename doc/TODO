@@ -113,18 +113,17 @@ N - DNS improvements
     o Bug 363: Warn and die if we can't find a nameserver and we're running a
       server; don't fall back to 127.0.0.1.
     o Re-check dns when we change IP addresses, rather than every 12 hours
-    . Bug 326: Give fewer error messages from nameservers.
+    o Bug 326: Give fewer error messages from nameservers.
       o Only warn when _all_ nameservers are down; otherwise info.
-      - Increase timeout; what's industry standard?
-        - Alternatively, raise timeout when nameserver dies but comes back
+      D Increase timeout; what's industry standard?
+        D Alternatively, raise timeout when nameserver dies but comes back
           quickly?
-      - Don't believe that our sole nameserver is dead?  or, not until more
+      o Don't believe that our sole nameserver is dead?  or, not until more
         failures than it would take to think one of several nameservers was
         dead?
-        - easy: adjust global_max_nameserver_timeout / global_timeout.
       X Possibly, don't warn until second retry of a nameserver gets no
         answer?
-      - warn if all of your nameservers go down and stay down for like
+      X warn if all of your nameservers go down and stay down for like
         5 minutes.
 R o Take out the '5 second' timeout from the socks detach schedule.
 

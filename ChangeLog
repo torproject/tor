@@ -122,7 +122,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
     - Removed the supposedly misleading error message mentioned in Bug #294.
       Patch from Matt Edman.
     - Stop warning when a single nameserver fails: only warn when _all_ of
-      our nameservers have failed.  (Part of a solution to bug #326.)
+      our nameservers have failed.  (Bug #326.)
+    - When we only have one nameserver, raise the threshold for deciding that
+      the nameserver is dead. (Also bug #326)
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.

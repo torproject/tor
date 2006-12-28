@@ -216,7 +216,7 @@ dns_reset(void)
     resolv_conf_mtime = 0;
   } else {
     if (configure_nameservers(0) < 0)
-      /* XXXX */
+      /* XXXX012 */
       return;
   }
 #else
@@ -651,7 +651,7 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
                   exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
-        /*  XXXX send back indication of failure for connect case? -NM*/
+        /*  XXXX012 send back indication of failure for connect case? -NM*/
         if (is_resolve)
           send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
@@ -853,7 +853,7 @@ add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
   if (outcome == DNS_RESOLVE_FAILED_TRANSIENT)
     return;
 
-  /* XXX This is dumb, but it seems to workaround a bug I can't find.  We
+  /* XXXX012 This is dumb, but it seems to workaround a bug I can't find.  We
    * should nail this so we can cache reverse DNS answers. -NM */
   if (is_reverse)
     return;
@@ -1524,6 +1524,14 @@ configure_nameservers(int force)
     resolv_conf_mtime = 0;
   }
 #endif
+
+  if (evdns_count_nameservers() == 1) {
+    evdns_set_option("max-timeouts:", "16", DNS_OPTIONS_ALL);
+    evdns_set_option("timeout:", "10", DNS_OPTIONS_ALL);
+  } else {
+    evdns_set_option("max-timeouts:", "3", DNS_OPTIONS_ALL);
+    evdns_set_option("timeout:", "5", DNS_OPTIONS_ALL);
+  }
 
   dns_servers_relaunch_checks();
 
