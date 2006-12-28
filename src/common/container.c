@@ -197,6 +197,20 @@ smartlist_string_isin(const smartlist_t *sl, const char *element)
   return 0;
 }
 
+/** Return true iff <b>sl</b> has some element E such that
+ * !strcasecmp(E,<b>element</b>)
+ */
+int
+smartlist_string_isin_case(const smartlist_t *sl, const char *element)
+{
+  int i;
+  if (!sl) return 0;
+  for (i=0; i < sl->num_used; i++)
+    if (strcasecmp((const char*)sl->list[i],element)==0)
+      return 1;
+  return 0;
+}
+
 /** Return true iff <b>sl</b> has some element E such that E is equal
  * to the decimal encoding of <b>num</b>.
  */
