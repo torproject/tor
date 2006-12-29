@@ -440,7 +440,7 @@ conn_write_callback(int fd, short events, void *_conn)
 
   assert_connection_ok(conn, time(NULL));
 
-  if (connection_handle_write(conn) < 0) {
+  if (connection_handle_write(conn, 0) < 0) {
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it. */
       log_fn(LOG_WARN,LD_BUG,

@@ -619,7 +619,7 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
       if (control_conn->event_mask & (1<<event)) {
         send_control0_message(control_conn, CONTROL0_CMD_EVENT, buflen, buf);
         if (event == EVENT_ERR_MSG)
-          _connection_controller_force_write(control_conn);
+          connection_handle_write(TO_CONN(control_conn), 1);
       }
     }
   }
@@ -663,7 +663,7 @@ send_control1_event_string(uint16_t event, event_format_t which,
       if (control_conn->event_mask & (1<<event)) {
         connection_write_to_buf(msg, strlen(msg), TO_CONN(control_conn));
         if (event == EVENT_ERR_MSG)
-          _connection_controller_force_write(control_conn);
+          connection_handle_write(TO_CONN(control_conn), 1);
       }
     }
   }

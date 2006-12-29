@@ -1575,11 +1575,15 @@ connection_outbuf_too_full(connection_t *conn)
  * more bytes on conn->outbuf, then call connection_finished_flushing
  * on it too.
  *
+ * If <b>force</b>, then write as many bytes as possible, ignoring bandwidth
+ * limits.  (Used for flushing messages to controller connections on fatal
+ * errors.)
+ *
  * Mark the connection and return -1 if you want to close it, else
  * return 0.
  */
 int
-connection_handle_write(connection_t *conn)
+connection_handle_write(connection_t *conn, int force)
 {
   int e;
   socklen_t len=sizeof(e);
@@ -1590,7 +1594,7 @@ connection_handle_write(connection_t *conn)
 
   tor_assert(!connection_is_listener(conn));
 
-  if (conn->marked_for_close)
+  if (conn->marked_for_close || conn->s < 0)
     return 0; /* do nothing */
 
   conn->timestamp_lastwritten = now;
@@ -1631,7 +1635,8 @@ connection_handle_write(connection_t *conn)
       return -1;
   }
 
-  max_to_write = connection_bucket_write_limit(conn);
+  max_to_write = force ? (int)conn->outbuf_flushlen
+    : connection_bucket_write_limit(conn);
 
   if (connection_speaks_cells(conn) &&
       conn->state > OR_CONN_STATE_PROXY_READING) {
@@ -1736,49 +1741,6 @@ connection_handle_write(connection_t *conn)
     connection_consider_empty_read_buckets(conn);
 
   return 0;
-}
-
-/* A controller event has just happened with such urgency that we
- * need to write it onto controller <b>conn</b> immediately. */
-void
-_connection_controller_force_write(control_connection_t *control_conn)
-{
-  /* XXXX012 This is hideous code duplication, but raising it seems a little
-   * tricky for now.  Think more about this one.   We only call it for
-   * EVENT_ERR_MSG, so messing with buckets a little isn't such a big problem.
-   */
-  int result;
-  connection_t *conn;
-  tor_assert(control_conn);
-  conn = TO_CONN(control_conn);
-
-  if (conn->marked_for_close || conn->s < 0)
-    return;
-
-  CONN_LOG_PROTECT(conn,
-      result = flush_buf(conn->s, conn->outbuf,
-                         conn->outbuf_flushlen, &conn->outbuf_flushlen));
-  if (result < 0) {
-    connection_close_immediate(conn); /* Don't flush; connection is dead. */
-    connection_mark_for_close(conn);
-    return;
-  }
-
-  if (result > 0) {
-    if (!is_internal_IP(conn->addr, 0)) { /* remember it */
-      rep_hist_note_bytes_written(result, time(NULL));
-      global_write_bucket -= result;
-    }
-    if (connection_flushed_some(conn) < 0)
-      connection_mark_for_close(conn);
-  }
-
-  if (!connection_wants_to_flush(conn)) { /* it's done flushing */
-    if (connection_finished_flushing(conn) < 0) {
-      /* already marked */
-      return;
-    }
-  }
 }
 
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
