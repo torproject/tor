@@ -1370,10 +1370,8 @@ static addr_policy_t *
 router_parse_addr_policy(directory_token_t *tok)
 {
   addr_policy_t *newe;
-//  struct in_addr in;
   char *arg;
-//  char *address;
-//  char buf[INET_NTOA_BUF_LEN];
+  char buf[POLICY_BUF_LEN];
 
   tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
 
@@ -1386,10 +1384,6 @@ router_parse_addr_policy(directory_token_t *tok)
 
   newe = tor_malloc_zero(sizeof(addr_policy_t));
 
-  newe->string = tor_malloc(8+strlen(arg));
-  /* XXXX012 eventually, use the code from router.c:727 to generate this */
-  tor_snprintf(newe->string, 8+strlen(arg), "%s %s",
-               (tok->tp == K_REJECT) ? "reject" : "accept", arg);
   newe->policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
     : ADDR_POLICY_ACCEPT;
 
@@ -1397,21 +1391,14 @@ router_parse_addr_policy(directory_token_t *tok)
                                 &newe->prt_min, &newe->prt_max))
     goto policy_read_failed;
 
-//  in.s_addr = htonl(newe->addr);
-//  tor_inet_ntoa(&in, buf, sizeof(buf));
-//  address = tor_strdup(buf);
-//  in.s_addr = htonl(newe->msk);
-//  log_fn(LOG_DEBUG,"%s %s/%s:%d-%d",
-//         newe->policy_type == ADDR_POLICY_REJECT ? "reject" : "accept",
-//         address, inet_ntoa(in), newe->prt_min, newe->prt_max);
-//  tor_free(address);
+  if (policy_write_item(buf, sizeof(buf), newe) < 0)
+    goto policy_read_failed;
 
+  newe->string = tor_strdup(buf);
   return newe;
 
 policy_read_failed:
-  tor_assert(newe->string);
-  log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(newe->string));
-  tor_free(newe->string);
+  log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
   tor_free(newe);
   return NULL;
 }

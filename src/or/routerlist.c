@@ -1859,61 +1859,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
-#if 0
-  /* XXXX This block is slow, and could be smarter.  All it does is ensure
-   * that if we have a named server called "Foo", we will never have another
-   * server called "Foo."  router_get_by_nickname() already knows to prefer
-   * named routers, so the problem only arises when there is a named router
-   * called 'foo', but we don't have it.  If, instead, we kept a
-   * name-to-identity-key mapping for each named router in the networkstatus
-   * list, we could eliminate this block.
-   *
-   * Hm. perhaps we should; I don't see how this code is non-broken wrt named
-   * routers. -NM
-   */
-  /* XXXX012 The above is indeed implemented; remove this block. */
-
-  /* If the identity key has changed, and one of the
-   * routers is named, drop the unnamed ones. (If more than one are named,
-   * drop the old ones.)
-   */
-  for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
-    routerinfo_t *old_router = smartlist_get(routerlist->routers, i);
-    if (!memcmp(router->cache_info.identity_digest,
-                old_router->cache_info.identity_digest, DIGEST_LEN)) {
-
-    } else if (!strcasecmp(router->nickname, old_router->nickname)) {
-      /* nicknames match, keys don't. */
-      if (router->is_named) {
-        /* The new named router replaces the old one; remove the
-         * old one.  And carry on to the end of the list, in case
-         * there are more old unnamed routers with this nickname.
-         */
-        /* mark-for-close connections using the old key, so we can
-         * make new ones with the new key.
-         */
-        or_connection_t *conn;
-        while ((conn = connection_or_get_by_identity_digest(
-                      old_router->cache_info.identity_digest))) {
-          log_info(LD_DIR,"Closing conn to router '%s'; there is now a named "
-                   "router with that name.",
-                   old_router->nickname);
-          connection_mark_for_close(TO_CONN(conn));
-        }
-        routerlist_remove(routerlist, old_router, i--, 0);
-      } else if (old_router->is_named) {
-        /* Can't replace a named router with an unnamed one. */
-        log_debug(LD_DIR, "Skipping unnamed entry for named router '%s'",
-                  router->nickname);
-        routerinfo_free(router);
-        *msg =
-          "Already have named router with same nickname and different key.";
-        return -2;
-      }
-    }
-  }
-#endif
-
   /* We haven't seen a router with this name before.  Add it to the end of
    * the list. */
   routerlist_insert(routerlist, router);

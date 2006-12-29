@@ -1086,8 +1086,6 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   char digest[DIGEST_LEN];
   char published[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
-  struct in_addr in;
-  char addrbuf[INET_NTOA_BUF_LEN];
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
   int result=0;
@@ -1203,51 +1201,14 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     tmpe = NULL;
   }
   for ( ; tmpe; tmpe=tmpe->next) {
-    /* XXXX012 Can this move into policies.c ? */
-    /* Write: "accept 1.2.3.4" */
-    in.s_addr = htonl(tmpe->addr);
-    tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
-    result = tor_snprintf(s+written, maxlen-written, "%s %s",
-        tmpe->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
-        tmpe->msk == 0 ? "*" : addrbuf);
+    result = policy_write_item(s+written, maxlen-written, tmpe);
     if (result < 0)
       return -1;
     written += result;
-    if (tmpe->msk != 0xFFFFFFFFu && tmpe->msk != 0) {
-      int n_bits = addr_mask_get_bits(tmpe->msk);
-      if (n_bits >= 0) {
-        if (tor_snprintf(s+written, maxlen-written, "/%d", n_bits)<0)
-          return -1;
-      } else {
-        /* Write "/255.255.0.0" */
-        in.s_addr = htonl(tmpe->msk);
-        tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
-        if (tor_snprintf(s+written, maxlen-written, "/%s", addrbuf)<0)
-          return -1;
-      }
-      written += strlen(s+written);
-    }
-    if (tmpe->prt_min <= 1 && tmpe->prt_max == 65535) {
-      /* There is no port set; write ":*" */
-      if (written+4 > maxlen)
-        return -1;
-      strlcat(s+written, ":*\n", maxlen-written);
-      written += 3;
-    } else if (tmpe->prt_min == tmpe->prt_max) {
-      /* There is only one port; write ":80". */
-      result = tor_snprintf(s+written, maxlen-written, ":%d\n", tmpe->prt_min);
-      if (result<0)
-        return -1;
-      written += result;
-    } else {
-      /* There is a range of ports; write ":79-80". */
-      result = tor_snprintf(s+written, maxlen-written, ":%d-%d\n",
-                            tmpe->prt_min, tmpe->prt_max);
-      if (result<0)
-        return -1;
-      written += result;
-    }
-  } /* end for */
+    if (written < maxlen+2)
+      return -1;
+    s[written++] = '\n';
+  }
 
   if (written+256 > maxlen) /* Not enough room for signature. */
     return -1;

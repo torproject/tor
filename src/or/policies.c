@@ -658,6 +658,69 @@ policy_is_reject_star(addr_policy_t *p)
   return 1;
 }
 
+/** Write a single address policy to the buf_len byte buffer at buf.  Return
+ * the number of characters written, or -1 on failure. */
+int
+policy_write_item(char *buf, size_t buflen, addr_policy_t *policy)
+{
+  struct in_addr in;
+  size_t written = 0;
+  char addrbuf[INET_NTOA_BUF_LEN];
+  int result;
+
+  in.s_addr = htonl(policy->addr);
+  tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
+  /* write accept/reject 1.2.3.4 */
+  result = tor_snprintf(buf, buflen, "%s %s",
+            policy->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
+            policy->msk == 0 ? "*" : addrbuf);
+  if (result < 0)
+    return -1;
+  written += strlen(buf);
+  /* If the mask is 0xffffffff, we don't need to give it.  If the mask is 0,
+   * we already wrote "*". */
+  if (policy->msk != 0xFFFFFFFFu && policy->msk != 0) {
+    int n_bits = addr_mask_get_bits(policy->msk);
+    if (n_bits >= 0) {
+      if (tor_snprintf(buf+written, buflen-written, "/%d", n_bits)<0)
+        return -1;
+    } else {
+      /* Write "/255.255.0.0" */
+      in.s_addr = htonl(policy->msk);
+      tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
+      if (tor_snprintf(buf+written, buflen-written, "/%s", addrbuf)<0)
+        return -1;
+    }
+    written += strlen(buf+written);
+  }
+  if (policy->prt_min <= 1 && policy->prt_max == 65535) {
+    /* There is no port set; write ":*" */
+    if (written+4 > buflen)
+      return -1;
+    strlcat(buf+written, ":*", buflen-written);
+    written += 3;
+  } else if (policy->prt_min == policy->prt_max) {
+    /* There is only one port; write ":80". */
+    result = tor_snprintf(buf+written, buflen-written, ":%d", policy->prt_min);
+    if (result<0)
+      return -1;
+    written += result;
+  } else {
+    /* There is a range of ports; write ":79-80". */
+    result = tor_snprintf(buf+written, buflen-written, ":%d-%d",
+                          policy->prt_min, policy->prt_max);
+    if (result<0)
+      return -1;
+    written += result;
+  }
+  if (written < buflen)
+    buf[written] = '\0';
+  else
+    return -1;
+
+  return (int)written;
+}
+
 int
 getinfo_helper_policies(control_connection_t *conn,
                         const char *question, char **answer)

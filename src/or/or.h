@@ -2410,6 +2410,11 @@ void clear_pending_onions(void);
 
 /********************************* policies.c ************************/
 
+/* (length of "accept 255.255.255.255/255.255.255.255:65535-65535\n" plus a
+ * nul.)
+ */
+#define POLICY_BUF_LEN 52
+
 typedef enum {
   ADDR_POLICY_ACCEPTED=0,
   ADDR_POLICY_REJECTED=-1,
@@ -2439,6 +2444,7 @@ int exit_policy_is_general_exit(addr_policy_t *policy);
 int policy_is_reject_star(addr_policy_t *policy);
 int getinfo_helper_policies(control_connection_t *conn,
                             const char *question, char **answer);
+int policy_write_item(char *buf, size_t buflen, addr_policy_t *policy);
 
 void addr_policy_free(addr_policy_t *p);
 void policies_free_all(void);
