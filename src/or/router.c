@@ -1205,7 +1205,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     if (result < 0)
       return -1;
     written += result;
-    if (written < maxlen+2)
+    if (written+2 > maxlen)
       return -1;
     s[written++] = '\n';
   }
