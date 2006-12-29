@@ -2088,6 +2088,8 @@ int connection_ap_detach_retriable(edge_connection_t *conn,
                                    int reason);
 int connection_ap_process_transparent(edge_connection_t *conn);
 
+int address_is_invalid_destination(const char *address);
+
 void addressmap_init(void);
 void addressmap_clean(time_t now);
 void addressmap_clear_configured(void);

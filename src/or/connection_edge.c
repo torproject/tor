@@ -1085,7 +1085,7 @@ addressmap_register_virtual_address(int type, char *new_address)
 /** Return 1 if <b>address</b> has funny characters in it like
  * colons. Return 0 if it's fine.
  */
-static int
+int
 address_is_invalid_destination(const char *address)
 {
   if (get_options()->AllowNonRFC953Hostnames)
@@ -2091,18 +2091,6 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       tor_free(address);
       return 0;
     }
-#if 0
-    if (!tor_strisprint(address)) {
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Non-printing characters in address %s in relay "
-             "begin cell. Closing.", escaped(address));
-      end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
-      relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, NULL);
-      tor_free(address);
-      return 0;
-    }
-#endif
     if (or_circ && or_circ->is_first_hop) {
       /* Don't let clients use us as a single-hop proxy; it attracts attackers
        * and users who'd be better off with, well, single-hop proxies.
@@ -2477,12 +2465,6 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
   tor_assert(conn->_base.type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
   tor_assert(exit);
-
-#if 0
-  log_fn(LOG_DEBUG,"considering nickname %s, for address %s / port %d:",
-         exit->nickname, safe_str(conn->socks_request->address),
-         conn->socks_request->port);
-#endif
 
   /* If a particular exit node has been requested for the new connection,
    * make sure the exit node of the existing circuit matches exactly.

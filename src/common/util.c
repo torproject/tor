@@ -1899,27 +1899,6 @@ tor_dup_addr(uint32_t addr)
   return tor_strdup(buf);
 }
 
-/* Return true iff <b>name</b> looks like it might be a hostname,
- * nickname, key, or IP address of some kind, suitable for the
- * controller's "mapaddress" command. */
-int
-is_plausible_address(const char *name)
-{
-//  const char *cp;
-  tor_assert(name);
-  /* We could check better here. */
-  if (!*name)
-    return 0;
-#if 0
-  for (cp=name; *cp; cp++) {
-    if (*cp != '.' && *cp != '-' && !TOR_ISALNUM(*cp))
-      return 0;
-  }
-#endif
-
-  return 1;
-}
-
 /**
  * Set *<b>addr</b> to the host-order IPv4 address (if any) of whatever
  * interface connects to the internet.  This address should only be used in

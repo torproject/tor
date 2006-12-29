@@ -2286,10 +2286,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->NatdPort == 0 && options->NatdListenAddress != NULL)
     REJECT("NatdPort must be defined if NatdListenAddress is defined.");
 
-#if 0 /* don't complain, since a standard configuration does this! */
-  if (options->SocksPort == 0 && options->SocksListenAddress != NULL)
-    REJECT("SocksPort must be defined if SocksListenAddress is defined.");
-#endif
+  /* Don't gripe about SocksPort 0 with SocksListenAddress set; a standard
+   * configuration does this. */
 
   for (i = 0; i < 3; ++i) {
     int is_socks = i==0;
@@ -3090,10 +3088,7 @@ config_register_addressmaps(or_options_t *options)
     if (smartlist_len(elts) >= 2) {
       from = smartlist_get(elts,0);
       to = smartlist_get(elts,1);
-      if (!is_plausible_address(from)) {
-        log_warn(LD_CONFIG,
-                 "Skipping invalid argument '%s' to MapAddress", from);
-      } else if (!is_plausible_address(to)) {
+      if (address_is_invalid_destination(to)) {
         log_warn(LD_CONFIG,
                  "Skipping invalid argument '%s' to MapAddress", to);
       } else {

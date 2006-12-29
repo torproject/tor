@@ -1340,17 +1340,7 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
       const char *to = smartlist_get(elts,1);
       size_t anslen = strlen(line)+512;
       char *ans = tor_malloc(anslen);
-      if (!is_plausible_address(from)) {
-        if (!v0) {
-          tor_snprintf(ans, anslen,
-            "512-syntax error: invalid address '%s'", from);
-          smartlist_add(reply, ans);
-        } else
-          tor_free(ans); /* don't respond if v0 */
-        log_warn(LD_CONTROL,
-                 "Skipping invalid argument '%s' in MapAddress msg",
-             from);
-      } else if (!is_plausible_address(to)) {
+      if (address_is_invalid_destination(to)) {
         if (!v0) {
           tor_snprintf(ans, anslen,
             "512-syntax error: invalid address '%s'", to);

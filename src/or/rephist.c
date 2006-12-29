@@ -882,14 +882,6 @@ rep_hist_note_used_resolve(time_t now)
   rep_hist_note_used_port(80, now);
 }
 
-#if 0
-int
-rep_hist_get_predicted_resolve(time_t now)
-{
-  return 0;
-}
-#endif
-
 /** The last time at which we needed an internal circ. */
 static time_t predicted_internal_time = 0;
 /** The last time we needed an internal circ with good uptime. */

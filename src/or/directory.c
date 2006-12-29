@@ -1836,12 +1836,6 @@ directory_handle_command_post(dir_connection_t *conn, char *headers,
       log_fn(LOG_PROTOCOL_WARN, LD_DIRSERV,
              "Rejected rend descriptor (length %d) from %s.",
              (int)body_len, conn->_base.address);
-#if 0
-      if (body_len <= 1024) {
-        base16_encode(tmp, sizeof(tmp), body, body_len);
-        log_notice(LD_DIRSERV,"Body was: %s", escaped(tmp));
-      }
-#endif
       write_http_status_line(conn, 400, "Invalid service descriptor rejected");
     } else {
       write_http_status_line(conn, 200, "Service descriptor stored");
