@@ -783,19 +783,13 @@ $Id$
       least three live network-status documents, the client maps the name to
       ID.
 
-   If a client encounters a name it has mapped before:
-
-      It uses the last-mapped identity value, unless all of the "Naming"
-      network status documents that list the name bind it to some other
-      identity.
-
    When a user tries to refer to a router with a name that does not have a
    mapping under the above rules, the implementation SHOULD warn the user.
    After giving the warning, the implementation MAY use a router that at
    least one Naming authority maps the name to, so long as no other naming
-   authority maps that name to a different router.
-
-   (XXXX The last-bound thing above isn't implemented)
+   authority maps that name to a different router.  If no Naming authority
+   maps the name to a router, the implementation MAY use any router that
+   advertises the name.
 
    Not every router needs a nickname.  When a router doesn't configure a
    nickname, it publishes with the default nickname "Unnamed".  Authorities
