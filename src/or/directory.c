@@ -1283,6 +1283,12 @@ connection_dir_reached_eof(dir_connection_t *conn)
   return retval;
 }
 
+/** If any directory object is arriving, and it's over 10MB large, we're
+ * getting DoS'd.  (As of 0.1.2.x, raw directories are about 1MB, and we never
+ * ask for more than 96 router descriptors at a time.)
+ */
+#define MAX_DIRECTORY_OBJECT_SIZE (10*(1<<20))
+
 /** Read handler for directory connections.  (That's connections <em>to</em>
  * directory servers and connections <em>at</em> directory servers.)
  */
@@ -1307,7 +1313,12 @@ connection_dir_process_inbuf(dir_connection_t *conn)
     return 0;
   }
 
-  /* XXXX012 for READ states, might want to make sure inbuf isn't too big */
+  if (buf_datalen(conn->_base.inbuf) > MAX_DIRECTORY_OBJECT_SIZE) {
+    log_warn(LD_HTTP, "Too much data received from directory connection; "
+             "DOS attempt or protocol shift.");
+    connection_mark_for_close(TO_CONN(conn));
+    return -1;
+  }
 
   if (!conn->_base.inbuf_reached_eof)
     log_debug(LD_HTTP,"Got data, not eof. Leaving on inbuf.");

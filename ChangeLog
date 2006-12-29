@@ -75,6 +75,7 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       it's happening.  (Bug #364)
     - When we change nameservers or IP addresses, reset and re-launch
       our tests for DNS hijacking.
+    - Block an obscure DoS attack from directory caches.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
