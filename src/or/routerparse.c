@@ -155,8 +155,8 @@ static struct {
 /* static function prototypes */
 static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok);
 static addr_policy_t *router_parse_addr_policy(directory_token_t *tok);
-static addr_policy_t *router_parse_private_addr_policy_private(
-                                               directory_token_t *tok);
+static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
+
 static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str, const char *end_str);
 static void token_free(directory_token_t *tok);
@@ -1380,7 +1380,7 @@ router_parse_addr_policy(directory_token_t *tok)
   arg = tok->args[0];
 
   if (!strcmpstart(arg,"private"))
-    return router_parse_private_addr_policy_private(tok);
+    return router_parse_addr_policy_private(tok);
 
   newe = tor_malloc_zero(sizeof(addr_policy_t));
 
@@ -1408,9 +1408,8 @@ policy_read_failed:
  * router descriptors until earlier versions are obsolete.
  */
 static addr_policy_t *
-router_parse_private_addr_policy_private(directory_token_t *tok)
+router_parse_addr_policy_private(directory_token_t *tok)
 {
-  /* XXXX012 duplicated from config.c */
   static const char *private_nets[] = {
     "0.0.0.0/8", "169.254.0.0/16",
     "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",NULL };

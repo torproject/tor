@@ -12,8 +12,6 @@ const char policies_c_id[] = \
 
 #include "or.h"
 
-static int expand_exit_policy_aliases(smartlist_t *entries, int assume_action);
-
 static addr_policy_t *socks_policy = NULL;
 static addr_policy_t *dir_policy = NULL;
 static addr_policy_t *authdir_reject_policy = NULL;
@@ -52,10 +50,6 @@ parse_addr_policy(config_line_t *cfg, addr_policy_t **dest,
   for (; cfg; cfg = cfg->next) {
     smartlist_split_string(entries, cfg->value, ",",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    if (expand_exit_policy_aliases(entries,assume_action)<0) {
-      r = -1;
-      continue;
-    }
     SMARTLIST_FOREACH(entries, const char *, ent,
     {
       log_debug(LD_CONFIG,"Adding new entry '%s'",ent);
@@ -450,65 +444,6 @@ append_exit_policy_string(addr_policy_t **policy, const char *more)
   parse_addr_policy(&tmp, policy, -1);
 }
 
-static int
-expand_exit_policy_aliases(smartlist_t *entries, int assume_action)
-{
-  static const char *prefixes[] = {
-    "0.0.0.0/8", "169.254.0.0/16",
-    "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",NULL };
-  int i;
-  char *pre=NULL, *post=NULL;
-  int expanded_any = 0;
-  pre = smartlist_join_strings(entries,",",0,NULL);
-  for (i = 0; i < smartlist_len(entries); ++i) {
-    char *v = smartlist_get(entries, i);
-    const char *cp, *ports;
-    const char *action;
-    int prefix_idx;
-    if (!strcasecmpstart(v, "accept")) {
-      action = "accept ";
-      cp = v+strlen("accept");
-    } else if (!strcasecmpstart(v, "reject")) {
-      action = "reject ";
-      cp = v+strlen("reject");
-    } else if (assume_action >= 0) {
-      action = "";
-      cp = v;
-    } else {
-      log_warn(LD_CONFIG,"Policy '%s' didn't start with accept or reject.", v);
-      tor_free(pre);
-      return -1;
-    }
-    cp = eat_whitespace(cp);
-    if (strcmpstart(cp, "private"))
-      continue; /* No need to expand. */
-    cp += strlen("private");
-    cp = eat_whitespace(cp);
-    if (*cp && *cp != ':')
-      continue; /* It wasn't "private" after all. */
-    ports = cp;
-    /* Okay. We're going to replace entries[i] with a bunch of new entries,
-     * in order. */
-    smartlist_del_keeporder(entries, i);
-    for (prefix_idx = 0; prefixes[prefix_idx]; ++prefix_idx) {
-      size_t replacement_len = 16+strlen(prefixes[prefix_idx])+strlen(ports);
-      char *replacement = tor_malloc(replacement_len);
-      tor_snprintf(replacement, replacement_len, "%s%s%s",
-                   action, prefixes[prefix_idx], ports);
-      smartlist_insert(entries, i++, replacement);
-    }
-    tor_free(v);
-    expanded_any = 1;
-    --i;
-  }
-  post = smartlist_join_strings(entries,",",0,NULL);
-  if (expanded_any)
-    log_info(LD_CONFIG, "Expanded '%s' to '%s'", pre, post);
-  tor_free(pre);
-  tor_free(post);
-  return expanded_any;
-}
-
 /** Detect and excise "dead code" from the policy *<b>dest</b>. */
 static void
 exit_policy_remove_redundancies(addr_policy_t **dest)
@@ -598,7 +533,6 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
  * policy afterwards. If <b>rejectprivate</b> is true, prepend
  * "reject private:*" to the policy. Return -1 if we can't parse cfg,
  * else return 0.
- *
  */
 int
 policies_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
