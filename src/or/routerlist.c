@@ -1031,7 +1031,7 @@ router_choose_random_node(const char *preferred,
       smartlist_subtract(sl,excludedsmartlist);
     routerlist_sl_remove_unreliable_routers(sl, need_uptime,
                                             need_capacity, need_guard);
-    if (need_capacity) /* XXXX012 Is this documented in path spec. -NM */
+    if (need_capacity)
       choice = routerlist_sl_choose_by_bandwidth(sl, weight_for_exit);
     else
       choice = smartlist_choose(sl);
@@ -4208,10 +4208,6 @@ getinfo_helper_networkstatus(control_connection_t *conn,
 
   if (status) {
     *answer = networkstatus_getinfo_helper_single(&status->status);
-  } else {
-    *answer = tor_strdup("");
-    /* XXXX012 this should return a 552, not a 250; but handle_getinfo_helper()
-     * isn't set up to handle that. That should be fixed too. :) -RD */
   }
   return 0;
 }

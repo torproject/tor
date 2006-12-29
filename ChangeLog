@@ -143,6 +143,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       reported by Mike Perry.)
     - Do not report bizarre values for results of accounting GETINFOs
       when the last second's write or read exceeds the alloted bandwidth.
+    - Report "unrecognized key" rather than an empty string when the
+      controller tries to fetch a networkstatus that doesn't exist.
 
 
 Changes in version 0.1.2.4-alpha - 2006-12-03
