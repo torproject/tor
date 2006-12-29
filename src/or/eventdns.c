@@ -798,7 +798,7 @@ reply_parse(u8 *packet, int length) {
 
 	req = request_find_from_trans_id(trans_id);
 	if (!req) return -1;
-	// XXXX should the other return points also call reply_handle? -NM
+	// XXXX012 should the other return points also call reply_handle? -NM
 
 	memset(&reply, 0, sizeof(reply));
 

@@ -1610,7 +1610,7 @@ generate_v2_networkstatus(void)
 }
 
 /* DOCDOC */
-/* XXXX This can be replace a lot of dirserv_get_networkstatus_v2(). */
+/* XXXX012 This can be replace a lot of dirserv_get_networkstatus_v2(). */
 void
 dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
                                           const char *key)
@@ -1858,7 +1858,7 @@ dirserv_orconn_tls_done(const char *address,
   tor_assert(address);
   tor_assert(digest_rcvd);
   tor_assert(nickname_rcvd);
-  (void) as_advertised; // XXXX This should really be implemented. -NM
+  (void) as_advertised; // XXXX012 This should really be implemented. -NM
 
   // XXXXNM We should really have a better solution here than dropping
   // XXXXNM whole routers; otherwise, they come back way too easily.
@@ -1867,7 +1867,8 @@ dirserv_orconn_tls_done(const char *address,
     int drop = 0;
     if (strcasecmp(address, ri->address) || or_port != ri->or_port)
       continue;
-    /* XXX For 0.1.2.x, we should do something smarter here than !is_valid. */
+    /* XXX012 For 0.1.2.x, we should do something smarter here than !is_valid.
+     */
     if (!ri->is_valid) {
       /* We have a router at the same address! */
       if (strcasecmp(ri->nickname, nickname_rcvd)) {

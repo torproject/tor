@@ -195,7 +195,8 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
     cell->circ_id = TO_OR_CIRCUIT(circ)->p_circ_id; /* switch it */
     or_conn = TO_OR_CIRCUIT(circ)->p_conn;
   } else {
-    // XXXX NM WARN.
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Dropping unrecognized inbound cell on origin circuit.");
     return 0;
   }
 
@@ -1395,12 +1396,6 @@ circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
             layer_hint->package_window);
   if (layer_hint->package_window <= 0) {
     log_debug(domain,"yes, at-origin. stopped.");
-#if 0
-    // XXXX NM DEAD CODE.
-    for (conn = circ->n_streams; conn; conn=conn->next_stream)
-      if (conn->cpath_layer == layer_hint)
-        connection_stop_reading(conn);
-#endif
     for (conn = TO_ORIGIN_CIRCUIT(circ)->p_streams; conn;
          conn=conn->next_stream)
       if (conn->cpath_layer == layer_hint)

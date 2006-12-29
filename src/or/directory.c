@@ -359,7 +359,7 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
    * it's not their fault.*/
   /* update_router_descriptor_downloads(time(NULL)); */
   (void) conn;
-  /* XXXX Why did the above get commented out? -NM */
+  /* XXXX012 Why did the above get commented out? -NM */
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
@@ -1307,7 +1307,7 @@ connection_dir_process_inbuf(dir_connection_t *conn)
     return 0;
   }
 
-  /* XXX for READ states, might want to make sure inbuf isn't too big */
+  /* XXXX012 for READ states, might want to make sure inbuf isn't too big */
 
   if (!conn->_base.inbuf_reached_eof)
     log_debug(LD_HTTP,"Got data, not eof. Leaving on inbuf.");

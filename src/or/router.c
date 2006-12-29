@@ -1203,6 +1203,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     tmpe = NULL;
   }
   for ( ; tmpe; tmpe=tmpe->next) {
+    /* XXXX012 Can this move into policies.c ? */
     /* Write: "accept 1.2.3.4" */
     in.s_addr = htonl(tmpe->addr);
     tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));

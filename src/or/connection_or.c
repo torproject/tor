@@ -104,11 +104,13 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
   tmp = digestmap_set(orconn_identity_map, digest, conn);
   conn->next_with_same_id = tmp;
 
-  /* Checking code; remove once I'm sure this works. XXXX*/
+#if 0
+  /* Testing code to check for bugs in representation. */
   for (; tmp; tmp = tmp->next_with_same_id) {
     tor_assert(!memcmp(tmp->identity_digest, digest, DIGEST_LEN));
     tor_assert(tmp != conn);
   }
+#endif
 }
 
 /** Pack the cell_t host-order structure <b>src</b> into network-order

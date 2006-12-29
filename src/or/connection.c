@@ -441,15 +441,8 @@ connection_about_to_close_connection(connection_t *conn)
          * give up. */
         circuit_n_conn_done(TO_OR_CONN(conn), 0);
       } else if (conn->hold_open_until_flushed) {
-        /* XXXX009 We used to have an arg that told us whether we closed the
-         * connection on purpose or not.  Can we use hold_open_until_flushed
-         * instead?  We only set it when we are intentionally closing a
-         * connection. -NM
-         *
-         * (Of course, now things we set to close which expire rather than
-         * flushing still get noted as dead, not disconnected.  But this is an
-         * improvement. -NM
-         */
+        /* We only set hold_open_until_flushed when we're intentionally
+         * closing a connection. */
         rep_hist_note_disconnect(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED);
       } else if (or_conn->identity_digest) {
@@ -1482,7 +1475,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     }
     pending = tor_tls_get_pending_bytes(or_conn->tls);
     if (pending) {
-      /* XXXX If we have any pending bytes, read them now.  This *can*
+      /* XXXX012 If we have any pending bytes, read them now.  This *can*
        * take us over our read allotment, but really we shouldn't be
        * believing that SSL bytes are the same as TCP bytes anyway. */
       int r2 = read_to_buf_tls(or_conn->tls, pending, conn->inbuf);
@@ -1715,7 +1708,7 @@ connection_handle_write(connection_t *conn)
 void
 _connection_controller_force_write(control_connection_t *control_conn)
 {
-  /* XXX This is hideous code duplication, but raising it seems a little
+  /* XXXX012 This is hideous code duplication, but raising it seems a little
    * tricky for now.  Think more about this one.   We only call it for
    * EVENT_ERR_MSG, so messing with buckets a little isn't such a big problem.
    */
@@ -2296,7 +2289,7 @@ assert_connection_ok(connection_t *conn, time_t now)
   if (conn->hold_open_until_flushed)
     tor_assert(conn->marked_for_close);
 
-  /* XXX check: wants_to_read, wants_to_write, s, conn_array_index,
+  /* XXXX012 check: wants_to_read, wants_to_write, s, conn_array_index,
    * marked_for_close. */
 
   /* buffers */
@@ -2305,7 +2298,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     assert_buf_ok(conn->outbuf);
   }
 
-  /* XXX Fix this; no longer so.*/
+  /* XXXX012 Fix this; no longer so.*/
 #if 0
   if (conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
     tor_assert(!conn->pkey);

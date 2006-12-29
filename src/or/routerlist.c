@@ -679,7 +679,7 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   or_options_t *options = get_options();
 
   /* First, add any routers with similar network addresses.
-   * XXX It's possible this will be really expensive; we'll see. */
+   * XXXX012 It's possible this will be really expensive; we'll see. */
   if (options->EnforceDistinctSubnets)
     routerlist_add_network_family(sl, router);
 
@@ -1031,7 +1031,7 @@ router_choose_random_node(const char *preferred,
       smartlist_subtract(sl,excludedsmartlist);
     routerlist_sl_remove_unreliable_routers(sl, need_uptime,
                                             need_capacity, need_guard);
-    if (need_capacity) /* XXXX Is this documented in path spec. -NM */
+    if (need_capacity) /* XXXX012 Is this documented in path spec. -NM */
       choice = routerlist_sl_choose_by_bandwidth(sl, weight_for_exit);
     else
       choice = smartlist_choose(sl);
@@ -1871,6 +1871,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
    * Hm. perhaps we should; I don't see how this code is non-broken wrt named
    * routers. -NM
    */
+  /* XXXX012 The above is indeed implemented; remove this block. */
 
   /* If the identity key has changed, and one of the
    * routers is named, drop the unnamed ones. (If more than one are named,
@@ -4264,7 +4265,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
     *answer = networkstatus_getinfo_helper_single(&status->status);
   } else {
     *answer = tor_strdup("");
-    /* XXX this should return a 552, not a 250; but handle_getinfo_helper()
+    /* XXXX012 this should return a 552, not a 250; but handle_getinfo_helper()
      * isn't set up to handle that. That should be fixed too. :) -RD */
   }
   return 0;

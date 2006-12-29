@@ -1387,7 +1387,7 @@ router_parse_addr_policy(directory_token_t *tok)
   newe = tor_malloc_zero(sizeof(addr_policy_t));
 
   newe->string = tor_malloc(8+strlen(arg));
-  /* XXX eventually, use the code from router.c:727 to generate this */
+  /* XXXX012 eventually, use the code from router.c:727 to generate this */
   tor_snprintf(newe->string, 8+strlen(arg), "%s %s",
                (tok->tp == K_REJECT) ? "reject" : "accept", arg);
   newe->policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
@@ -1423,7 +1423,7 @@ policy_read_failed:
 static addr_policy_t *
 router_parse_private_addr_policy_private(directory_token_t *tok)
 {
-  /* XXXX duplicated from config.c */
+  /* XXXX012 duplicated from config.c */
   static const char *private_nets[] = {
     "0.0.0.0/8", "169.254.0.0/16",
     "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",NULL };

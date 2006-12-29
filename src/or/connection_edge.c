@@ -1289,7 +1289,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       /* help predict this next time */
       rep_hist_note_used_port(socks->port, time(NULL));
     } else if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
-      // XXXX NM Do anything here?
+      // XXXX012 NM Do anything here?
 
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
     } else if (socks->command == SOCKS_COMMAND_CONNECT_DIR) {
@@ -1585,11 +1585,10 @@ connection_ap_process_transparent(edge_connection_t *conn)
   return connection_ap_handshake_rewrite_and_attach(conn, NULL);
 }
 
-/** connection_edge_process_inbuf() found a conn in state
- * natd_wait. See if conn-\>inbuf has the right bytes to proceed.
- * See libalias(3) and ProxyEncodeTcpStream() in alias_proxy.c for
- * the encoding form of the original destination.
- * XXX what is "alias_proxy.c"? -RD
+/** connection_edge_process_inbuf() found a conn in state natd_wait. See if
+ * conn-\>inbuf has the right bytes to proceed.  See FreeBSD's libalias(3) and
+ * ProxyEncodeTcpStream() in src/lib/libalias/alias_proxy.c for the encoding
+ * form of the original destination.
  *
  * If the original destination is complete, send it to
  * connection_ap_handshake_rewrite_and_attach().
