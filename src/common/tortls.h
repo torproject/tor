@@ -43,8 +43,8 @@ int tor_tls_shutdown(tor_tls_t *tls);
 int tor_tls_get_pending_bytes(tor_tls_t *tls);
 size_t tor_tls_get_forced_write_size(tor_tls_t *tls);
 
-unsigned long tor_tls_get_n_bytes_read(tor_tls_t *tls);
-unsigned long tor_tls_get_n_bytes_written(tor_tls_t *tls);
+void tor_tls_get_n_raw_bytes(tor_tls_t *tls,
+                             size_t *n_read, size_t *n_written);
 
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */

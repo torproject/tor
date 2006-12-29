@@ -53,9 +53,11 @@ struct tor_tls_t {
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED
   } state; /**< The current SSL state, depending on which operations have
             * completed successfully. */
-  int isServer;
+  int isServer; /**< True iff this is a server-side connection */
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
+  unsigned long last_write_count;
+  unsigned long last_read_count;
 };
 
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
@@ -339,7 +341,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
     goto error;
   }
 
-  result = tor_malloc(sizeof(tor_tls_context_t));
+  result = tor_malloc_zero(sizeof(tor_tls_context_t));
 #ifdef EVERYONE_HAS_AES
   /* Tell OpenSSL to only use TLS1 */
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
@@ -415,7 +417,7 @@ tor_tls_t *
 tor_tls_new(int sock, int isServer)
 {
   BIO *bio = NULL;
-  tor_tls_t *result = tor_malloc(sizeof(tor_tls_t));
+  tor_tls_t *result = tor_malloc_zero(sizeof(tor_tls_t));
 
   tor_assert(global_tls_context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(global_tls_context->ctx))) {
@@ -860,19 +862,23 @@ tor_tls_get_forced_write_size(tor_tls_t *tls)
   return tls->wantwrite_n;
 }
 
-/** Return the number of bytes read across the underlying socket. */
-unsigned long
-tor_tls_get_n_bytes_read(tor_tls_t *tls)
+/** Sets n_read and n_written to the number of bytes read and written,
+ * respectivey, on the raw socket used by <b>tls</b> since the last time this
+ * function was called on <b>tls</b>. */
+void
+tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
 {
-  tor_assert(tls);
-  return BIO_number_read(SSL_get_rbio(tls->ssl));
-}
-/** Return the number of bytes written across the underlying socket. */
-unsigned long
-tor_tls_get_n_bytes_written(tor_tls_t *tls)
-{
-  tor_assert(tls);
-  return BIO_number_written(SSL_get_wbio(tls->ssl));
+  unsigned long r, w;
+  r = BIO_number_read(SSL_get_rbio(tls->ssl));
+  w = BIO_number_written(SSL_get_wbio(tls->ssl));
+  /* If we wrapped around, this should still give us the right answer, unless
+   * we wrapped around by more than ULONG_MAX since the last time we called
+   * this function.
+   */
+  *n_read = (size_t)(r - tls->last_read_count);
+  *n_written = (size_t)(w - tls->last_write_count);
+  tls->last_read_count = r;
+  tls->last_write_count = w;
 }
 
 /** Implement check_no_tls_errors: If there are any pending OpenSSL

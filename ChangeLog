@@ -16,6 +16,9 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       same directory as tor.exe (Bug #356) and default to using the torrc
       located in the %appdata%\Tor\ of the user who installed the service.
       Patch from Matt Edman.
+    - Include TLS overhead when counting bandwidth usage; previously, we
+      would count only the bytes sent over TLS, but not the bytes used to
+      send them.
 
   o Minor features:
     - Start using the state file to store bandwidth accounting data:

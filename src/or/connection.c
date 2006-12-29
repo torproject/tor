@@ -1418,6 +1418,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
 {
   int result, at_most = *max_to_read;
   size_t bytes_in_buf, more_to_read;
+  size_t n_read = 0, n_written = 0;
 
   if (at_most == -1) { /* we need to initialize it */
     /* how many bytes are we allowed to read? */
@@ -1475,7 +1476,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     }
     pending = tor_tls_get_pending_bytes(or_conn->tls);
     if (pending) {
-      /* XXXX012 If we have any pending bytes, read them now.  This *can*
+      /* If we have any pending bytes, we read them now.  This *can*
        * take us over our read allotment, but really we shouldn't be
        * believing that SSL bytes are the same as TCP bytes anyway. */
       int r2 = read_to_buf_tls(or_conn->tls, pending, conn->inbuf);
@@ -1487,6 +1488,9 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
       }
     }
 
+    tor_tls_get_n_raw_bytes(or_conn->tls, &n_read, &n_written);
+    log_debug(LD_GENERAL, "After TLS read of %d: %ld read, %ld written",
+              result, (long)n_read, (long)n_written);
   } else {
     int reached_eof = 0;
     CONN_LOG_PROTECT(conn,
@@ -1498,15 +1502,24 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
 
     if (result < 0)
       return -1;
+    n_read = (size_t) result;
   }
 
-  if (result > 0) { /* change *max_to_read */
-    *max_to_read = at_most - result;
+  if (n_read > 0) { /* change *max_to_read */
+    *max_to_read = at_most - n_read;
   }
 
-  if (result > 0 && !is_internal_IP(conn->addr, 0)) { /* remember it */
-    rep_hist_note_bytes_read(result, time(NULL));
-    connection_read_bucket_decrement(conn, result);
+  if (!is_internal_IP(conn->addr, 0)) {
+    /* For non-local IPs, remember if we flushed any bytes over the wire. */
+    time_t now = time(NULL);
+    if (n_read > 0) {
+      rep_hist_note_bytes_read(n_read, now);
+      connection_read_bucket_decrement(conn, n_read);
+    }
+    if (n_written > 0) {
+      rep_hist_note_bytes_written(n_written, now);
+      global_write_bucket -= n_written;
+    }
   }
 
   if (more_to_read && result == at_most) {
@@ -1520,6 +1533,8 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
    * have reached 0 on a different conn, and this guy needs to
    * know to stop reading. */
   connection_consider_empty_read_buckets(conn);
+  if (n_written > 0)
+    connection_consider_empty_write_buckets(conn);
 
   return 0;
 }
@@ -1571,6 +1586,7 @@ connection_handle_write(connection_t *conn)
   int result;
   int max_to_write;
   time_t now = time(NULL);
+  size_t n_read = 0, n_written = 0;
 
   tor_assert(!connection_is_listener(conn));
 
@@ -1664,6 +1680,10 @@ connection_handle_write(connection_t *conn)
        * is empty, so we can stop writing.
        */
     }
+
+    tor_tls_get_n_raw_bytes(or_conn->tls, &n_read, &n_written);
+    log_debug(LD_GENERAL, "After TLS write of %d: %ld read, %ld written",
+              result, (long)n_read, (long)n_written);
   } else {
     CONN_LOG_PROTECT(conn,
              result = flush_buf(conn->s, conn->outbuf,
@@ -1677,13 +1697,25 @@ connection_handle_write(connection_t *conn)
       connection_mark_for_close(conn);
       return -1;
     }
+    n_written = (size_t) result;
+  }
+
+  if (!is_internal_IP(conn->addr, 0)) {
+    /* For non-local IPs, remember if we flushed any bytes over the wire. */
+    time_t now = time(NULL);
+    if (n_written > 0) {
+      rep_hist_note_bytes_written(n_written, now);
+      global_write_bucket -= n_written;
+    }
+    if (n_read > 0) {
+      rep_hist_note_bytes_read(n_read, now);
+      global_read_bucket -= n_read;
+    }
   }
 
   if (result > 0) {
-    if (!is_internal_IP(conn->addr, 0)) { /* remember it */
-      rep_hist_note_bytes_written(result, time(NULL));
-      global_write_bucket -= result;
-    }
+    /* If we wrote any bytes from our buffer, then call the appropriate
+     * functions. */
     if (connection_flushed_some(conn) < 0)
       connection_mark_for_close(conn);
   }
@@ -1700,6 +1732,9 @@ connection_handle_write(connection_t *conn)
    * have reached 0 on a different conn, and this guy needs to
    * know to stop writing. */
   connection_consider_empty_write_buckets(conn);
+  if (n_read > 0)
+    connection_consider_empty_read_buckets(conn);
+
   return 0;
 }
 

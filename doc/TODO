@@ -296,7 +296,7 @@ P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
   - a way to pick entry guards based wholly on extend_info equivalent;
     a way to export extend_info equivalent.
 
-  - Count TLS bandwidth more accurately
+  o Count TLS bandwidth more accurately
 
   - Better estimates in the directory of whether servers have good uptime
     (high expected time to failure) or good guard qualities (high
