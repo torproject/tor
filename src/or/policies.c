@@ -698,7 +698,7 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy)
     if (written+4 > buflen)
       return -1;
     strlcat(buf+written, ":*", buflen-written);
-    written += 3;
+    written += 2;
   } else if (policy->prt_min == policy->prt_max) {
     /* There is only one port; write ":80". */
     result = tor_snprintf(buf+written, buflen-written, ":%d", policy->prt_min);
