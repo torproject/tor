@@ -1204,6 +1204,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     result = policy_write_item(s+written, maxlen-written, tmpe);
     if (result < 0)
       return -1;
+    tor_assert(result == (int)strlen(s+written));
     written += result;
     if (written+2 > maxlen)
       return -1;
@@ -1214,7 +1215,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     return -1;
 
   /* Sign the directory */
-  strlcat(s+written, "router-signature\n", maxlen-written);
+  strlcpy(s+written, "router-signature\n", maxlen-written);
   written += strlen(s+written);
   s[written] = '\0';
   if (router_get_router_hash(s, digest) < 0)
