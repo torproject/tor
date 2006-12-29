@@ -2000,11 +2000,23 @@ int connection_fetch_from_buf(char *string, size_t len, connection_t *conn);
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
 int connection_handle_write(connection_t *conn, int force);
-void connection_write_to_buf(const char *string, size_t len,
-                             connection_t *conn);
-void connection_write_to_buf_zlib(dir_connection_t *conn,
-                                  const char *data, size_t data_len,
-                                  int done);
+void _connection_write_to_buf_impl(const char *string, size_t len,
+                                   connection_t *conn, int zlib);
+static void connection_write_to_buf(const char *string, size_t len,
+                                    connection_t *conn);
+static void connection_write_to_buf_zlib(const char *string, size_t len,
+                                         dir_connection_t *conn, int done);
+static INLINE void
+connection_write_to_buf(const char *string, size_t len, connection_t *conn)
+{
+  _connection_write_to_buf_impl(string, len, conn, 0);
+}
+static INLINE void
+connection_write_to_buf_zlib(const char *string, size_t len,
+                             dir_connection_t *conn, int done)
+{
+  _connection_write_to_buf_impl(string, len, TO_CONN(conn), done ? -1 : 1);
+}
 
 or_connection_t *connection_or_exact_get_by_addr_port(uint32_t addr,
                                                    uint16_t port);

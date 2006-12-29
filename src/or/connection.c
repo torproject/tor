@@ -1745,18 +1745,35 @@ connection_handle_write(connection_t *conn, int force)
 
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
  * outbuf, and ask it to start writing.
+ *
+ * If <b>zlib</b> is nonzero, this is a directory connection that should get
+ * its contents compressed or decompressed as they're written.  If zlib is
+ * negative, this is the last data to be compressed, and the connection's zlib
+ * state should be flushed.
  */
 void
-connection_write_to_buf(const char *string, size_t len, connection_t *conn)
+_connection_write_to_buf_impl(const char *string, size_t len,
+                              connection_t *conn, int zlib)
 {
   int r;
+  size_t old_datalen;
   if (!len)
     return;
   /* if it's marked for close, only allow write if we mean to flush it */
   if (conn->marked_for_close && !conn->hold_open_until_flushed)
     return;
 
-  CONN_LOG_PROTECT(conn, r = write_to_buf(string, len, conn->outbuf));
+  old_datalen = buf_datalen(conn->outbuf);
+  if (zlib) {
+    dir_connection_t *dir_conn = TO_DIR_CONN(conn);
+    int done = zlib < 0;
+    if (!dir_conn) return;
+    CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(conn->outbuf,
+                                                 dir_conn->zlib_state,
+                                                 string, len, done));
+  } else {
+    CONN_LOG_PROTECT(conn, r = write_to_buf(string, len, conn->outbuf));
+  }
   if (r < 0) {
     if (CONN_IS_EDGE(conn)) {
       /* if it failed, it means we have our package/delivery windows set
@@ -1774,38 +1791,10 @@ connection_write_to_buf(const char *string, size_t len, connection_t *conn)
   }
 
   connection_start_writing(conn);
-  conn->outbuf_flushlen += len;
-}
-
-void
-connection_write_to_buf_zlib(dir_connection_t *dir_conn,
-                             const char *data, size_t data_len,
-                             int done)
-{
-  int r;
-  size_t old_datalen;
-  connection_t *conn;
-  if (!data_len)
-    return;
-  conn = TO_CONN(dir_conn);
-  /* if it's marked for close, only allow write if we mean to flush it */
-  if (conn->marked_for_close && !conn->hold_open_until_flushed)
-    return;
-
-  old_datalen = buf_datalen(conn->outbuf);
-  /* XXXX TOO much duplicate code! XXXX012NM */
-  CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(
-                                conn->outbuf, dir_conn->zlib_state,
-                                data, data_len, done));
-  if (r < 0) {
-    log_warn(LD_NET,
-             "write_to_buf failed. Closing connection (fd %d).", conn->s);
-    connection_mark_for_close(conn);
-    return;
-  }
-
-  connection_start_writing(conn);
-  conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
+  if (zlib)
+    conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
+  else
+    conn->outbuf_flushlen += len;
 }
 
 /** Return the conn to addr/port that has the most recent
