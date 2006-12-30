@@ -1609,8 +1609,9 @@ generate_v2_networkstatus(void)
   return r;
 }
 
-/* DOCDOC */
-/* XXXX012 This can be replace a lot of dirserv_get_networkstatus_v2(). */
+/** Given the portion of a networkstatus request URL after "tor/status/" in
+ * <b>key</b>, append to <b>result</b> the digests of the identity keys of the
+ * networkstatus objects that the client has requested. */
 void
 dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
                                           const char *key)
@@ -1664,61 +1665,30 @@ void
 dirserv_get_networkstatus_v2(smartlist_t *result,
                              const char *key)
 {
+  cached_dir_t *cached;
+  smartlist_t *fingerprints = smartlist_create();
   tor_assert(result);
 
   if (!cached_v2_networkstatus)
     cached_v2_networkstatus = digestmap_new();
 
-  if (!strcmp(key,"authority")) {
-    if (get_options()->AuthoritativeDir) {
-      cached_dir_t *d =
-        dirserv_pick_cached_dir_obj(NULL,
-                                    the_v2_networkstatus,
-                                    the_v2_networkstatus_is_dirty,
-                                    generate_v2_networkstatus,
-                                    "network status list", 0);
-      if (d)
-        smartlist_add(result, d);
-      else
-        log_warn(LD_BUG,
-                 "Unable to generate an authoritative network status.");
-    }
-  } else if (!strcmp(key, "all")) {
-    digestmap_iter_t *iter;
-    if (should_generate_v2_networkstatus())
-      generate_v2_networkstatus();
-    iter = digestmap_iter_init(cached_v2_networkstatus);
-    while (!digestmap_iter_done(iter)) {
-      const char *ident;
-      void *val;
-      digestmap_iter_get(iter, &ident, &val);
-      smartlist_add(result, val);
-      iter = digestmap_iter_next(cached_v2_networkstatus, iter);
-    }
-    if (smartlist_len(result) == 0)
-      log_warn(LD_DIRSERV,
-               "Client requested 'all' network status objects; we have none.");
-  } else if (!strcmpstart(key, "fp/")) {
-    smartlist_t *digests = smartlist_create();
-    dir_split_resource_into_fingerprints(key+3, digests, NULL, 1, 1);
-    SMARTLIST_FOREACH(digests, char *, cp,
-        {
-          cached_dir_t *cached;
-          if (router_digest_is_me(cp) && should_generate_v2_networkstatus())
-            generate_v2_networkstatus();
-          cached = digestmap_get(cached_v2_networkstatus, cp);
-          if (cached) {
-            smartlist_add(result, cached);
-          } else {
-            char hexbuf[HEX_DIGEST_LEN+1];
-            base16_encode(hexbuf, sizeof(hexbuf), cp, DIGEST_LEN);
-            log_info(LD_DIRSERV, "Don't know about any network status with "
-                     "fingerprint '%s'", hexbuf);
-          }
-          tor_free(cp);
-        });
-    smartlist_free(digests);
-  }
+  dirserv_get_networkstatus_v2_fingerprints(fingerprints, key);
+  SMARTLIST_FOREACH(fingerprints, const char *, fp,
+    {
+      if (router_digest_is_me(fp) && should_generate_v2_networkstatus())
+          generate_v2_networkstatus();
+      cached = digestmap_get(cached_v2_networkstatus, fp);
+      if (cached) {
+        smartlist_add(result, cached);
+      } else {
+        char hexbuf[HEX_DIGEST_LEN+1];
+        base16_encode(hexbuf, sizeof(hexbuf), fp, DIGEST_LEN);
+        log_info(LD_DIRSERV, "Don't know about any network status with "
+                 "fingerprint '%s'", hexbuf);
+      }
+    });
+  SMARTLIST_FOREACH(fingerprints, char *, cp, tor_free(cp));
+  smartlist_free(fingerprints);
 }
 
 /** As dirserv_get_routerdescs(), but instead of getting signed_descriptor_t
