@@ -346,6 +346,11 @@ by the authorities. -RD]
 
   Thoughts? -NM
 
+3.5. Compression
+
+  Gzip would be easier to work with than zlib; bzip2 would result in smaller
+  data lengths.
+
 4. Migration
 
   For directory voting:

@@ -17,7 +17,7 @@ This specification is not a design document; most design criteria
 are not examined.  For more information on why Tor acts as it does,
 see tor-design.pdf.
 
-TODO for v1 revision:
+TODO for v2 revision:
       - Fix onionskin handshake scheme to be more mainstream, less nutty.
         Can we just do
             E(HMAC(g^x), g^x) rather than just E(g^x) ?
@@ -27,6 +27,10 @@ TODO for v1 revision:
       - Versioned CREATE and friends
       - Length on CREATE and friends
       - Versioning on circuits
+      - Versioning on create cells
+      - SHA1 is showing its age
+      - Not being able to upgrade ciphersuites or increase key lengths is
+        lame.
 
 TODO:
       - REASON_CONNECTFAILED should include an IP.
