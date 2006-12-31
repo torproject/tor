@@ -5,9 +5,37 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-Note: This document specifies Tor as currently implemented in versions
-0.1.2.1-alpha and earlier.  Current protocol designs are described in
-tor-spec.txt.
+Note: This document aims to specify Tor as implemented in 0.1.2.1-alpha-dev
+and later.  Future versions of Tor will implement improved protocols, and
+compatibility is not guaranteed.
+
+THIS DOCUMENT IS UNSTABLE.  Right now, we're revising the protocol to remove
+a few long-standing limitations.  For the most stable current version of the
+protocol, see tor-spec-v0.txt; current versions of Tor are backward-compatible.
+
+This specification is not a design document; most design criteria
+are not examined.  For more information on why Tor acts as it does,
+see tor-design.pdf.
+
+TODO for v2 revision:
+      - Fix onionskin handshake scheme to be more mainstream, less nutty.
+        Can we just do
+            E(HMAC(g^x), g^x) rather than just E(g^x) ?
+        No, that has the same flaws as before. We should send
+            E(g^x, C) with random C and expect g^y, HMAC_C(K=g^xy).
+        Better ask Ian; probably Stephen too.
+      - Versioned CREATE and friends
+      - Length on CREATE and friends
+      - Versioning on circuits
+      - Versioning on create cells
+      - SHA1 is showing its age
+      - Not being able to upgrade ciphersuites or increase key lengths is
+        lame.
+
+TODO:
+      - REASON_CONNECTFAILED should include an IP.
+      - Copy prose from tor-design to make everything more readable.
+      - Spec when we should rotate which keys (tls, link, etc)?
 
 0. Preliminaries
 
@@ -44,6 +72,8 @@ tor-spec.txt.
 
    HASH_LEN -- the length of the hash function's output, in bytes.
 
+   PAYLOAD_LEN -- The longest allowable cell payload, in bytes. (509)
+
    CELL_LEN -- The length of a Tor cell, in bytes.
 
 0.3. Ciphers
@@ -57,7 +87,7 @@ tor-spec.txt.
    ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
 
    For Diffie-Hellman, we use a generator (g) of 2.  For the modulus (p), we
-   use the 1024-bit safe prime from rfc2409, (section 6.2) whose hex
+   use the 1024-bit safe prime from rfc2409 section 6.2 whose hex
    representation is:
 
      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
@@ -69,11 +99,15 @@ tor-spec.txt.
    As an optimization, implementations SHOULD choose DH private keys (x) of
    320 bits.  Implementations that do this MUST never use any DH key more
    than once.
+   [May other implementations reuse their DH keys?? -RD]
+   [Probably not. Conceivably, you could get away with changing DH keys once
+   per second, but there are too many oddball attacks for me to be
+   comfortable that this is safe. -NM]
 
    For a hash function, we use SHA-1.
 
    KEY_LEN=16.
-   DH_LEN=128; DH_GROUP_LEN=40.
+   DH_LEN=128; DH_SEC_LEN=40.
    PK_ENC_LEN=128; PK_PAD_LEN=42.
    HASH_LEN=20.
 
@@ -112,12 +146,22 @@ tor-spec.txt.
    ``cells'', which are unwrapped by a symmetric key at each node (like
    the layers of an onion) and relayed downstream.
 
-2. Connections
+1.1. Protocol Versioning
 
-   There are two ways to connect to an onion router (OR). The first is
-   as an onion proxy (OP), which allows the OP to authenticate the OR
-   without authenticating itself.  The second is as another OR, which
-   allows mutual authentication.
+   The node-to-node TLS-based "OR connection" protocol and the multi-hop
+   "circuit" protocol are versioned quasi-independently.  (Certain versions
+   of the circuit protocol may require a minimum version of the connection
+   protocol to be used.)
+
+   Version numbers are incremented for backward-incompatible protocol changes
+   only.  Backward-compatible changes are generally implemented by adding
+   additional fields to existing structures; implementations MUST ignore
+   fields they do not expect.
+
+   Parties negotiate OR connection versions as described below in sections
+   4.1 and 4.2.
+
+2. Connections
 
    Tor uses TLS for link encryption.  All implementations MUST support
    the TLS ciphersuite "TLS_EDH_RSA_WITH_DES_192_CBC3_SHA", and SHOULD
@@ -126,12 +170,24 @@ tor-spec.txt.
    support any suite without ephemeral keys, symmetric keys of at
    least KEY_LEN bits, and digests of at least HASH_LEN bits.
 
-   An OP or OR always sends a two-certificate chain, consisting of a
+   Even though the connection protocol is identical, we think of the
+   initiator as either an onion router (OR) if it is willing to relay
+   traffic for other Tor users, or an onion proxy (OP) if it only handles
+   local requests. Onion proxies SHOULD NOT provide long-term-trackable
+   identifiers in their handshakes.
+
+   The connection initiator always sends a two-certificate chain,
+   consisting of a
    certificate using a short-term connection key and a second, self-
    signed certificate containing the OR's identity key. The commonName of the
    first certificate is the OR's nickname, and the commonName of the second
    certificate is the OR's nickname, followed by a space and the string
    "<identity>".
+
+   Implementations running Protocol 1 and earlier use an
+   organizationName of "Tor" or "TOR".  Future implementations (which
+   support the version negotiation protocol in section 4.1) MUST NOT
+   have either of these values for their organizationName.
 
    All parties receiving certificates must confirm that the identity key is
    as expected.  (When initiating a connection, the expected identity key is
@@ -150,10 +206,9 @@ tor-spec.txt.
    of TLS records MUST NOT leak information about the type or contents
    of the cells.
 
-   TLS connections are not permanent. An OP or an OR may close a
-   connection to an OR if there are no circuits running over the
-   connection, and an amount of time (KeepalivePeriod, defaults to 5
-   minutes) has passed.
+   TLS connections are not permanent. Either side may close a connection
+   if there are no circuits running over it and an amount of time
+   (KeepalivePeriod, defaults to 5 minutes) has passed.
 
    (As an exception, directory servers may try to stay connected to all of
    the ORs -- though this will be phased out for the Tor 0.1.2.x release.)
@@ -161,26 +216,34 @@ tor-spec.txt.
 3. Cell Packet format
 
    The basic unit of communication for onion routers and onion
-   proxies is a fixed-width "cell".  Each cell contains the following
+   proxies is a fixed-width "cell".
+
+   On a version 1 connection, each cell contains the following
    fields:
 
         CircID                                [2 bytes]
         Command                               [1 byte]
-        Payload (padded with 0 bytes)         [CELL_LEN-3 bytes]
-                                         [Total size: CELL_LEN bytes]
+        Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
+
+   On a version 2 connection, each cell contains the following fields:
+
+        CircID                                [3 bytes]
+        Command                               [1 byte]
+        Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
 
    The CircID field determines which circuit, if any, the cell is
    associated with.
 
    The 'Command' field holds one of the following values:
-         0 -- PADDING     (Padding)                 (See Sec 6.2)
-         1 -- CREATE      (Create a circuit)        (See Sec 4.1)
-         2 -- CREATED     (Acknowledge create)      (See Sec 4.1)
-         3 -- RELAY       (End-to-end data)         (See Sec 4.5 and 5)
-         4 -- DESTROY     (Stop using a circuit)    (See Sec 4.4)
-         5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 4.1)
-         6 -- CREATED_FAST (Circuit created, no PK) (See Sec 4.1)
-         7 -- HELLO       (Introduce the OR)        (See Sec 7.1)
+         0 -- PADDING     (Padding)                 (See Sec 7.2)
+         1 -- CREATE      (Create a circuit)        (See Sec 5.1)
+         2 -- CREATED     (Acknowledge create)      (See Sec 5.1)
+         3 -- RELAY       (End-to-end data)         (See Sec 5.5 and 6)
+         4 -- DESTROY     (Stop using a circuit)    (See Sec 5.4)
+         5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 5.1)
+         6 -- CREATED_FAST (Circuit created, no PK) (See Sec 5.1)
+         7 -- VERSIONS    (Negotiate versions)      (See Sec 4.1)
+         8 -- NETINFO     (Time and MITM-prevention) (See Sec 4.2)
 
    The interpretation of 'Payload' depends on the type of the cell.
       PADDING: Payload is unused.
@@ -188,9 +251,10 @@ tor-spec.txt.
       CREATED: Payload contains the handshake response.
       RELAY:   Payload contains the relay header and relay body.
       DESTROY: Payload contains a reason for closing the circuit.
-               (see 4.4)
+               (see 5.4)
    Upon receiving any other value for the command field, an OR must
-   drop the cell.
+   drop the cell.  [XXXX Versions prior to 0.1.0.?? logged a warning
+   when dropping the cell; this is bad behavior. -NM]
 
    The payload is padded with 0 bytes.
 
@@ -204,18 +268,81 @@ tor-spec.txt.
    RELAY cells are used to send commands and data along a circuit; see
    section 5 below.
 
-   HELLO cells are used to introduce parameters and characteristics of
+   VERSIONS cells are used to introduce parameters and characteristics of
    Tor clients and servers when connections are established.
 
-4. Circuit management
+4, Connection management
 
-4.1. CREATE and CREATED cells
+   Upon establishing a TLS connection, both parties immediately begin
+   negotiating a connection protocol version and other connection parameters.
+
+4.1. VERSIONS cells
+
+   When a Tor connection is established, both parties normally send a
+   VERSIONS cell before sending any other cells.  (But see below.)
+
+         NumVersions            [1 byte]
+         Versions               [NumVersions bytes]
+
+   "Versions" is a sequence of NumVersions link connection protocol versions,
+   each one byte long.  Parties should list all of the versions which they
+   are able and willing to support.  Parties can only communicate if they
+   have some connection protocol version in common.
+
+   Version 0.1.x.y-alpha and earlier don't understand VERSIONS cells,
+   and therefore don't support version negotiation.  Thus, waiting until
+   the other side has sent a VERSIONS cell won't work for these servers:
+   if they send no cells back, it is impossible to tell whether they
+   have sent a VERSIONS cell that has been stalled, or whether they have
+   dropped our own VERSIONS cell as unrecognized.  Thus, immediately after
+   a TLS connection has been established, the parties check whether the
+   other side has an obsolete certificate (organizationName equal to "Tor"
+   or "TOR").  If the other party presented an obsolete certificate,
+   we assume a v0 connection.  Otherwise, both parties send VERSIONS
+   cells listing all their supported versions.  Upon receiving the
+   other party's VERSIONS cell, the implementation begins using the
+   highest-valued version common to both cells.  If the first cell from
+   the other party is _not_ a VERSIONS cell, we assume a v0 protocol.
+
+   Implementations MUST discard cells that are not the first cells sent on a
+   connection.
+
+4.2. MITM-prevention and time checking
+
+   If we negotiate a v1 connection or higher, the first cell we send SHOULD
+   be a NETINFO cell.  Implementations SHOULD NOT send NETINFO cells at other
+   times.
+
+   A NETINFO cell contains:
+         Timestamp              [4 bytes]
+         This OR's address      [variable]
+         Other OR's address     [variable]
+
+   Timestamp is the OR's current Unix time, in seconds since the epoch.  If
+   an implementation receives time values from many validated ORs that
+   indicate that its clock is skewed, it SHOULD try to warn the
+   administrator.
+
+   Each address contains Type/Length/Value as used in Section 6.4.  The first
+   address is the address of the interface the party sending the VERSIONS cell
+   used to connect to or accept connections from the other -- we include it
+   to block a man-in-the-middle attack on TLS that lets an attacker bounce
+   traffic through his own computers to enable timing and packet-counting
+   attacks.
+
+   The second address is the one that the party sending the VERSIONS cell
+   believes the other has -- it can be used to learn what your IP address
+   is if you have no other hints.
+
+5. Circuit management
+
+5.1. CREATE and CREATED cells
 
    Users set up circuits incrementally, one hop at a time. To create a
    new circuit, OPs send a CREATE cell to the first node, with the
    first half of the DH handshake; that node responds with a CREATED
    cell with the second half of the DH handshake plus the first 20 bytes
-   of derivative key data (see section 4.2). To extend a circuit past
+   of derivative key data (see section 5.2). To extend a circuit past
    the first hop, the OP sends an EXTEND relay cell (see section 5)
    which instructs the last node in the circuit to send a CREATE cell
    to extend the circuit.
@@ -248,7 +375,7 @@ tor-spec.txt.
    The payload for a CREATED cell, or the relay payload for an
    EXTENDED cell, contains:
          DH data (g^y)                 [DH_LEN bytes]
-         Derivative key data (KH)      [HASH_LEN bytes]   <see 4.2 below>
+         Derivative key data (KH)      [HASH_LEN bytes]   <see 5.2 below>
 
    The CircID for a CREATE cell is an arbitrarily chosen 2-byte integer,
    selected by the node (OP or OR) that sends the CREATE cell.  To prevent
@@ -261,7 +388,12 @@ tor-spec.txt.
 
    As usual with DH, x and y MUST be generated randomly.
 
-4.1.1. CREATE_FAST/CREATED_FAST cells
+[
+   To implement backward-compatible version negotiation, parties MUST
+   drop CREATE cells with all-[00] onion-skins.
+]
+
+5.1.1. CREATE_FAST/CREATED_FAST cells
 
    When initializing the first hop of a circuit, the OP has already
    established the OR's identity and negotiated a secret key using TLS.
@@ -278,14 +410,19 @@ tor-spec.txt.
    A CREATED_FAST cell contains:
 
        Key material (Y)    [HASH_LEN bytes]
-       Derivative key data [HASH_LEN bytes] (See 4.2 below)
+       Derivative key data [HASH_LEN bytes] (See 5.2 below)
 
    The values of X and Y must be generated randomly.
 
    [Versions of Tor before 0.1.0.6-rc did not support these cell types;
     clients should not send CREATE_FAST cells to older Tor servers.]
 
-4.2. Setting circuit keys
+   If an OR sees a circuit created with CREATE_FAST, the OR is sure to be the
+   first hop of a circuit.  ORs SHOULD reject attempts to create streams with
+   RELAY_BEGIN exiting the circuit at the first hop: letting Tor be used as a
+   single hop proxy makes exit nodes a more attractive target for compromise.
+
+5.2. Setting circuit keys
 
    Once the handshake between the OP and an OR is completed, both can
    now calculate g^xy with ordinary DH.  Before computing g^xy, both client
@@ -328,7 +465,7 @@ tor-spec.txt.
    is used to encrypt the stream of data going from the OP to the OR, and
    Kb is used to encrypt the stream of data going from the OR to the OP.
 
-4.3. Creating circuits
+5.3. Creating circuits
 
    When creating a circuit through the network, the circuit creator
    (OP) performs the following steps:
@@ -369,7 +506,7 @@ tor-spec.txt.
    cell to the next onion router, with the enclosed onion skin as its
    payload.  The initiating onion router chooses some circID not yet
    used on the connection between the two onion routers.  (But see
-   section 4.1. above, concerning choosing circIDs based on
+   section 5.1. above, concerning choosing circIDs based on
    lexicographic order of nicknames.)
 
    When an onion router receives a CREATE cell, if it already has a
@@ -384,7 +521,7 @@ tor-spec.txt.
    until a break in traffic allows time to do so without harming
    network latency too greatly.)
 
-4.4. Tearing down circuits
+5.4. Tearing down circuits
 
    Circuits are torn down when an unrecoverable error occurs along
    the circuit, or when all streams on a circuit are closed and the
@@ -399,7 +536,7 @@ tor-spec.txt.
    associated with the corresponding circuit. If it's not the end of
    the circuit, it sends a DESTROY cell for that circuit to the next OR
    in the circuit. If the node is the end of the circuit, then it tears
-   down any associated edge connections (see section 5.1).
+   down any associated edge connections (see section 6.1).
 
    After a DESTROY cell has been processed, an OR ignores all data or
    destroy cells for the corresponding circuit.
@@ -433,11 +570,15 @@ tor-spec.txt.
                            as expected.)
      8 -- OR_CONN_CLOSED  (The OR connection that was carrying this circuit
                            died.)
+     9 -- FINISHED        (The circuit has expired for being dirty or old.)
+    10 -- TIMEOUT         (Circuit construction took too long)
+    11 -- DESTROYED       (The circuit was destroyed w/o client TRUNCATE)
+    12 -- NOSUCHSERVICE   (Request for unknown hidden service)
 
    [Versions of Tor prior to 0.1.0.11 didn't send reasons; implementations
    MUST accept empty TRUNCATED and DESTROY cells.]
 
-4.5. Routing relay cells
+5.5. Routing relay cells
 
    When an OR receives a RELAY cell, it checks the cell's circID and
    determines whether it has a corresponding circuit along that
@@ -453,7 +594,7 @@ tor-spec.txt.
    Note that in counter mode, decrypt and encrypt are the same operation.
 
    The OR then decides whether it recognizes the relay cell, by
-   inspecting the payload as described in section 5.1 below.  If the OR
+   inspecting the payload as described in section 6.1 below.  If the OR
    recognizes the cell, it processes the contents of the relay cell.
    Otherwise, it passes the decrypted relay cell along the circuit if
    the circuit continues.  If the OR at the end of the circuit
@@ -465,13 +606,13 @@ tor-spec.txt.
          OP receives data cell:
             For I=N...1,
                 Decrypt with Kb_I.  If the payload is recognized (see
-                section 5.1), then stop and process the payload.
+                section 6..1), then stop and process the payload.
 
-   For more information, see section 5 below.
+   For more information, see section 6 below.
 
-5. Application connections and stream management
+6. Application connections and stream management
 
-5.1. Relay cells
+6.1. Relay cells
 
    Within a circuit, the OP and the exit node use the contents of
    RELAY packets to tunnel end-to-end commands and TCP connections
@@ -491,14 +632,15 @@ tor-spec.txt.
          2 -- RELAY_DATA      [forward or backward]
          3 -- RELAY_END       [forward or backward]
          4 -- RELAY_CONNECTED [backward]
-         5 -- RELAY_SENDME    [forward or backward]
-         6 -- RELAY_EXTEND    [forward]
-         7 -- RELAY_EXTENDED  [backward]
-         8 -- RELAY_TRUNCATE  [forward]
-         9 -- RELAY_TRUNCATED [backward]
-        10 -- RELAY_DROP      [forward or backward]
+         5 -- RELAY_SENDME    [forward or backward] [sometimes control]
+         6 -- RELAY_EXTEND    [forward]             [control]
+         7 -- RELAY_EXTENDED  [backward]            [control]
+         8 -- RELAY_TRUNCATE  [forward]             [control]
+         9 -- RELAY_TRUNCATED [backward]            [control]
+        10 -- RELAY_DROP      [forward or backward] [control]
         11 -- RELAY_RESOLVE   [forward]
         12 -- RELAY_RESOLVED  [backward]
+        13 -- RELAY_BEGIN_DIR [forward]
 
    Commands labelled as "forward" must only be sent by the originator
    of the circuit. Commands labelled as "backward" must only be sent by
@@ -509,13 +651,13 @@ tor-spec.txt.
    to zero; the 'digest' field is computed as the first four bytes of
    the running digest of all the bytes that have been destined for
    this hop of the circuit or originated from this hop of the circuit,
-   seeded from Df or Db respectively (obtained in section 4.2 above),
+   seeded from Df or Db respectively (obtained in section 5.2 above),
    and including this RELAY cell's entire payload (taken with the digest
    field set to zero).
 
    When the 'recognized' field of a RELAY cell is zero, and the digest
    is correct, the cell is considered "recognized" for the purposes of
-   decryption (see section 4.5 above).
+   decryption (see section 5.5 above).
 
    (The digest does not include any bytes from relay cells that do
    not start or end at this hop of the circuit. That is, it does not
@@ -526,7 +668,10 @@ tor-spec.txt.
    All RELAY cells pertaining to the same tunneled stream have the
    same stream ID.  StreamIDs are chosen arbitrarily by the OP.  RELAY
    cells that affect the entire circuit rather than a particular
-   stream use a StreamID of zero.
+   stream use a StreamID of zero -- they are marked in the table above
+   as "[control]" style cells. (Sendme cells are marked as "sometimes
+   control" because they can take include a StreamID or not depending
+   on their purpose -- see Section 7.)
 
    The 'Length' field of a relay cell contains the number of bytes in
    the relay payload which contain real payload data. The remainder of
@@ -538,7 +683,7 @@ tor-spec.txt.
    0.1.1.10, Tor closed circuits when it received an unknown relay
    command. Perhaps this will be more forward-compatible. -RD]
 
-5.2. Opening streams and transferring data
+6.2. Opening streams and transferring data
 
    To open a new anonymized TCP connection, the OP chooses an open
    circuit to an exit that may be able to connect to the destination
@@ -558,7 +703,7 @@ tor-spec.txt.
    Upon receiving this cell, the exit node resolves the address as
    necessary, and opens a new TCP connection to the target port.  If the
    address cannot be resolved, or a connection can't be established, the
-   exit node replies with a RELAY_END cell.  (See 5.4 below.)
+   exit node replies with a RELAY_END cell.  (See 6.4 below.)
    Otherwise, the exit node replies with a RELAY_CONNECTED cell, whose
    payload is in one of the following formats:
        The IPv4 address to which the connection was made [4 octets]
@@ -585,7 +730,23 @@ tor-spec.txt.
    Relay RELAY_DROP cells are long-range dummies; upon receiving such
    a cell, the OR or OP must drop it.
 
-5.3. Closing streams
+6.2.1. Opening a directory stream
+
+   If a Tor server is a directory server, it should respond to a
+   RELAY_BEGIN_DIR cell as if it had received a BEGIN cell requesting a
+   connection to its directory port.  RELAY_BEGIN_DIR cells ignore exit
+   policy, since the stream is local to the Tor process.
+
+   If the Tor server is not running a directory service, it should respond
+   with a REASON_NOTDIRECTORY RELAY_END cell.
+
+   Clients MUST generate an all-zero payload for RELAY_BEGIN_DIR cells,
+   and servers MUST ignore the payload.
+
+   [RELAY_BEGIN_DIR was not supported before Tor 0.1.2.2-alpha; clients
+   SHOULD NOT send it to routers running earlier versions of Tor.]
+
+6.3. Closing streams
 
    When an anonymized TCP connection is closed, or an edge node
    encounters error on any stream, it sends a 'RELAY_END' cell along the
@@ -613,6 +774,8 @@ tor-spec.txt.
       12 -- REASON_CONNRESET      (Connection was unexpectedly reset)
       13 -- REASON_TORPROTOCOL    (Sent when closing connection because of
                                    Tor protocol violations.)
+      14 -- REASON_NOTDIRECTORY   (Client sent RELAY_BEGIN_DIR to a
+                                   non-directory server.)
 
    (With REASON_EXITPOLICY, the 4-byte IPv4 address or 16-byte IPv6 address
    forms the optional data; no other reason currently has extra data.
@@ -653,7 +816,7 @@ tor-spec.txt.
    If an edge node encounters an error on any stream, it sends a
    'RELAY_END' cell (if possible) and closes the stream immediately.
 
-5.4. Remote hostname lookup
+6.4. Remote hostname lookup
 
    To find the address associated with a hostname, the OP sends a
    RELAY_RESOLVE cell containing the hostname to be resolved.  (For a reverse
@@ -678,9 +841,9 @@ tor-spec.txt.
     corresponding RELAY_RESOLVED cell must use the same streamID.  No stream
     is actually created by the OR when resolving the name.
 
-6. Flow control
+7. Flow control
 
-6.1. Link throttling
+7.1. Link throttling
 
    Each node should do appropriate bandwidth throttling to keep its
    user happy.
@@ -688,7 +851,11 @@ tor-spec.txt.
    Communicants rely on TCP's default flow control to push back when they
    stop reading.
 
-6.2. Link padding
+7.2. Link padding
+
+   Link padding can be created by sending PADDING cells along the
+   connection; relay cells of type "DROP" can be used for long-range
+   padding.
 
    Currently nodes are not required to do any sort of link padding or
    dummy traffic. Because strong attacks exist even with link padding,
@@ -696,7 +863,7 @@ tor-spec.txt.
    for running a node, we plan to leave out link padding until this
    tradeoff is better understood.
 
-6.3. Circuit-level flow control
+7.3. Circuit-level flow control
 
    To control a circuit's bandwidth usage, each OR keeps track of
    two 'windows', consisting of how many RELAY_DATA cells it is
@@ -722,7 +889,7 @@ tor-spec.txt.
    sends no more RELAY_DATA cells until receiving a RELAY_SENDME cell.
 [this stuff is badly worded; copy in the tor-design section -RD]
 
-6.4. Stream-level flow control
+7.4. Stream-level flow control
 
    Edge nodes use RELAY_SENDME cells to implement end-to-end flow
    control for individual connections across circuits. Similarly to
@@ -731,4 +898,45 @@ tor-spec.txt.
    upon receiving a RELAY_SENDME cell. Edge nodes initiate RELAY_SENDME
    cells when both a) the window is <= 450, and b) there are less than
    ten cell payloads remaining to be flushed at that edge.
+
+
+A.1. Differences between spec and implementation
+
+- The current specification requires all ORs to have IPv4 addresses, but
+  allows servers to exit and resolve to IPv6 addresses, and to declare IPv6
+  addresses in their exit policies.  The current codebase has no IPv6
+  support at all.
+
+B. Things that should change in a later version of the Tor protocol
+
+B.1. ... but which will require backward-incompatible change
+
+  - Circuit IDs should be longer.
+  - IPv6 everywhere.
+  - Maybe, keys should be longer.
+    - Maybe, key-length should be adjustable.  How to do this without
+      making anonymity suck?
+  - Drop backward compatibility.
+  - We should use a 128-bit subgroup of our DH prime.
+  - Handshake should use HMAC.
+  - Multiple cell lengths.
+  - Ability to split circuits across paths (If this is useful.)
+  - SENDME windows should be dynamic.
+
+  - Directory
+     - Stop ever mentioning socks ports
+
+B.1. ... and that will require no changes
+
+   - Mention multiple addr/port combos
+   - Advertised outbound IP?
+   - Migrate streams across circuits.
+
+B.2. ... and that we have no idea how to do.
+
+   - UDP (as transport)
+   - UDP (as content)
+   - Use a better AES mode that has built-in integrity checking,
+     doesn't grow with the number of hops, is not patented, and
+     is implemented and maintained by smart people.
 

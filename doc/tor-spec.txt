@@ -5,37 +5,13 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-Note: This document aims to specify Tor as implemented in 0.1.2.1-alpha-dev
-and later.  Future versions of Tor will implement improved protocols, and
+Note: This document aims to specify Tor as implemented in 0.1.2.x
+and earlier.  Future versions of Tor may implement improved protocols, and
 compatibility is not guaranteed.
-
-THIS DOCUMENT IS UNSTABLE.  Right now, we're revising the protocol to remove
-a few long-standing limitations.  For the most stable current version of the
-protocol, see tor-spec-v0.txt; current versions of Tor are backward-compatible.
 
 This specification is not a design document; most design criteria
 are not examined.  For more information on why Tor acts as it does,
 see tor-design.pdf.
-
-TODO for v2 revision:
-      - Fix onionskin handshake scheme to be more mainstream, less nutty.
-        Can we just do
-            E(HMAC(g^x), g^x) rather than just E(g^x) ?
-        No, that has the same flaws as before. We should send
-            E(g^x, C) with random C and expect g^y, HMAC_C(K=g^xy).
-        Better ask Ian; probably Stephen too.
-      - Versioned CREATE and friends
-      - Length on CREATE and friends
-      - Versioning on circuits
-      - Versioning on create cells
-      - SHA1 is showing its age
-      - Not being able to upgrade ciphersuites or increase key lengths is
-        lame.
-
-TODO:
-      - REASON_CONNECTFAILED should include an IP.
-      - Copy prose from tor-design to make everything more readable.
-      - Spec when we should rotate which keys (tls, link, etc)?
 
 0. Preliminaries
 
@@ -82,9 +58,9 @@ TODO:
    0 bytes.
 
    For a public-key cipher, we use RSA with 1024-bit keys and a fixed
-   exponent of 65537.  We use OAEP padding, with SHA-1 as its digest
-   function.   (For OAEP padding, see
-   ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
+   exponent of 65537.  We use OAEP-MGF1 padding, with SHA-1 as its digest
+   function.  We leave optional the "Label" parameter unset. (For OAEP
+   padding, see ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
 
    For Diffie-Hellman, we use a generator (g) of 2.  For the modulus (p), we
    use the 1024-bit safe prime from rfc2409 section 6.2 whose hex
@@ -100,6 +76,9 @@ TODO:
    320 bits.  Implementations that do this MUST never use any DH key more
    than once.
    [May other implementations reuse their DH keys?? -RD]
+   [Probably not. Conceivably, you could get away with changing DH keys once
+   per second, but there are too many oddball attacks for me to be
+   comfortable that this is safe. -NM]
 
    For a hash function, we use SHA-1.
 
@@ -143,21 +122,6 @@ TODO:
    ``cells'', which are unwrapped by a symmetric key at each node (like
    the layers of an onion) and relayed downstream.
 
-1.1. Protocol Versioning
-
-   The node-to-node TLS-based "OR connection" protocol and the multi-hop
-   "circuit" protocol are versioned quasi-independently.  (Certain versions
-   of the circuit protocol may require a minimum version of the connection
-   protocol to be used.)
-
-   Version numbers are incremented for backward-incompatible protocol changes
-   only.  Backward-compatible changes are generally implemented by adding
-   additional fields to existing structures; implementations MUST ignore
-   fields they do not expect.
-
-   Parties negotiate OR connection versions as described below in sections
-   4.1 and 4.2.
-
 2. Connections
 
    Tor uses TLS for link encryption.  All implementations MUST support
@@ -181,8 +145,8 @@ TODO:
    certificate is the OR's nickname, followed by a space and the string
    "<identity>".
 
-   Implementations running 0.2.1.0-alpha-dev and earlier used an
-   organizationName of "Tor" or "TOR".  Current implementations (which
+   Implementations running Protocol 1 and earlier use an
+   organizationName of "Tor" or "TOR".  Future implementations (which
    support the version negotiation protocol in section 4.1) MUST NOT
    have either of these values for their organizationName.
 
@@ -215,16 +179,10 @@ TODO:
    The basic unit of communication for onion routers and onion
    proxies is a fixed-width "cell".
 
-   On a version 0 connection, each cell contains the following
+   On a version 1 connection, each cell contains the following
    fields:
 
         CircID                                [2 bytes]
-        Command                               [1 byte]
-        Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
-
-   On a version 1 connection, each cell contains the following fields:
-
-        CircID                                [3 bytes]
         Command                               [1 byte]
         Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
 
@@ -239,8 +197,6 @@ TODO:
          4 -- DESTROY     (Stop using a circuit)    (See Sec 5.4)
          5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 5.1)
          6 -- CREATED_FAST (Circuit created, no PK) (See Sec 5.1)
-         7 -- VERSIONS    (Negotiate versions)      (See Sec 4.1)
-         8 -- NETINFO     (Time and MITM-prevention) (See Sec 4.2)
 
    The interpretation of 'Payload' depends on the type of the cell.
       PADDING: Payload is unused.
@@ -265,71 +221,7 @@ TODO:
    RELAY cells are used to send commands and data along a circuit; see
    section 5 below.
 
-   VERSIONS cells are used to introduce parameters and characteristics of
-   Tor clients and servers when connections are established.
-
-4, Connection management
-
-   Upon establishing a TLS connection, both parties immediately begin
-   negotiating a connection protocol version and other connection parameters.
-
-4.1. VERSIONS cells
-
-   When a Tor connection is established, both parties normally send a
-   VERSIONS cell before sending any other cells.  (But see below.)
-
-         NumVersions            [1 byte]
-         Versions               [NumVersions bytes]
-
-   "Versions" is a sequence of NumVersions link connection protocol versions,
-   each one byte long.  Parties should list all of the versions which they
-   are able and willing to support.  Parties can only communicate if they
-   have some connection protocol version in common.
-
-   Version 0.1.x.y-alpha and earlier don't understand VERSIONS cells,
-   and therefore don't support version negotiation.  Thus, waiting until
-   the other side has sent a VERSIONS cell won't work for these servers:
-   if they send no cells back, it is impossible to tell whether they
-   have sent a VERSIONS cell that has been stalled, or whether they have
-   dropped our own VERSIONS cell as unrecognized.  Thus, immediately after
-   a TLS connection has been established, the parties check whether the
-   other side has an obsolete certificate (organizationName equal to "Tor"
-   or "TOR").  If the other party presented an obsolete certificate,
-   we assume a v0 connection.  Otherwise, both parties send VERSIONS
-   cells listing all their supported versions.  Upon receiving the
-   other party's VERSIONS cell, the implementation begins using the
-   highest-valued version common to both cells.  If the first cell from
-   the other party is _not_ a VERSIONS cell, we assume a v0 protocol.
-
-   Implementations MUST discard cells that are not the first cells sent on a
-   connection.
-
-4.2. MITM-prevention and time checking
-
-   If we negotiate a v1 connection or higher, the first cell we send SHOULD
-   be a NETINFO cell.  Implementations SHOULD NOT send NETINFO cells at other
-   times.
-
-   A NETINFO cell contains:
-         Timestamp              [4 bytes]
-         This OR's address      [variable]
-         Other OR's address     [variable]
-
-   Timestamp is the OR's current Unix time, in seconds since the epoch.  If
-   an implementation receives time values from many validated ORs that
-   indicate that its clock is skewed, it SHOULD try to warn the
-   administrator.
-
-   Each address contains Type/Length/Value as used in Section 6.4.  The first
-   address is the address of the interface the party sending the VERSIONS cell
-   used to connect to or accept connections from the other -- we include it
-   to block a man-in-the-middle attack on TLS that lets an attacker bounce
-   traffic through his own computers to enable timing and packet-counting
-   attacks.
-
-   The second address is the one that the party sending the VERSIONS cell
-   believes the other has -- it can be used to learn what your IP address
-   is if you have no other hints.
+4. [This section deliberately left blank.]
 
 5. Circuit management
 
@@ -903,37 +795,4 @@ A.1. Differences between spec and implementation
   allows servers to exit and resolve to IPv6 addresses, and to declare IPv6
   addresses in their exit policies.  The current codebase has no IPv6
   support at all.
-
-B. Things that should change in a later version of the Tor protocol
-
-B.1. ... but which will require backward-incompatible change
-
-  - Circuit IDs should be longer.
-  - IPv6 everywhere.
-  - Maybe, keys should be longer.
-    - Maybe, key-length should be adjustable.  How to do this without
-      making anonymity suck?
-  - Drop backward compatibility.
-  - We should use a 128-bit subgroup of our DH prime.
-  - Handshake should use HMAC.
-  - Multiple cell lengths.
-  - Ability to split circuits across paths (If this is useful.)
-  - SENDME windows should be dynamic.
-
-  - Directory
-     - Stop ever mentioning socks ports
-
-B.1. ... and that will require no changes
-
-   - Mention multiple addr/port combos
-   - Advertised outbound IP?
-   - Migrate streams across circuits.
-
-B.2. ... and that we have no idea how to do.
-
-   - UDP (as transport)
-   - UDP (as content)
-   - Use a better AES mode that has built-in integrity checking,
-     doesn't grow with the number of hops, is not patented, and
-     is implemented and maintained by smart people.
 
