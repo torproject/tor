@@ -1289,8 +1289,6 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       /* help predict this next time */
       rep_hist_note_used_port(socks->port, time(NULL));
     } else if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
-      // XXXX012 NM Do anything here?
-
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
     } else if (socks->command == SOCKS_COMMAND_CONNECT_DIR) {
       ; /* nothing */
