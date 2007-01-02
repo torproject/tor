@@ -956,6 +956,9 @@ static int n_libevent_errors = 0;
 static void
 second_elapsed_callback(int fd, short event, void *args)
 {
+  /* XXXX This could be sensibly refactored into multiple callbacks, and we
+   * could use libevent's timers for this rather than checking the current
+   * time against a bunch of timeouts every second. */
   static struct timeval one_second;
   static long current_second = 0;
   struct timeval now;
