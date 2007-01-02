@@ -337,7 +337,8 @@ by the authorities. -RD]
   ever be used by anybody for routing.  The long-form descriptor should be
   used only for analytics and other tools.  (If we allowed people to route with
   long descriptors, we'd have to ensure that they stayed in sync with the
-  short ones somehow.)
+  short ones somehow.)  We can ensure that the short descriptors are used by
+  only recommending those in the network statuses.
 
   Another possible solution would be to drop these fields from descriptors,
   and have them uploaded as a part of a separate "bandwidth report" to the
@@ -349,20 +350,39 @@ by the authorities. -RD]
 3.5. Compression
 
   Gzip would be easier to work with than zlib; bzip2 would result in smaller
-  data lengths.
+  data lengths.  [Concretely, we're looking at about 10-15% space savings at
+  the expense of 3-5x longer compression time for using bzip2.]  Doing
+  on-the-fly gzip requires zlib 1.2 or later; doing bzip2 requires bzlib.
+  Pre-compressing status documents in multiple formats would force us to use
+  more memory to hold them.
 
 4. Migration
 
   For directory voting:
-     * It would be cool if caches could get ready to download these, verify
-       enough signatures, and serve them now.  That way once stuff works all
-       we need to do is upgrade the authorities.  Caches don't need to verify
-       the correctness of the format so long as it's signed.
+     * It would be cool if caches could get ready to download consensus
+       status docs, verify enough signatures, and serve them now.  That way
+       once stuff works all we need to do is upgrade the authorities.  Caches
+       don't need to verify the correctness of the format so long as it's
+       signed (or maybe multisigned?).  We need to make sure that caches back
+       off very quickly from downloading consensus docs until they're
+       actually implemented.
 
   For dropping the "opt" requirement:
-     * stop requiring it as of 0.1.2.x.  Stop generating it once earlier
-       formats are obsolete.
+     * stopped requiring it as of 0.1.2.5-alpha.  Stop generating it once
+       earlier formats are obsolete.
 
   For multilevel keys:
      * no idea
+
+  For long/short descriptors:
+     * In 0.1.2.x:
+       * Authorities should accept both, now, and silently drop short
+         descriptors.
+       * Routers should upload both once authorities accept them.
+       * There should be a "long descriptor" url and the current "normal" URL.
+         Authorities should serve long descriptors from both URLs.
+     * Once tools that want long descriptors support fetching them from the
+       "long descriptor" URL:
+       * Have authorities remember short descriptors, and serve them from the
+         'normal' URL.
 

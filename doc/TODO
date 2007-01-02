@@ -75,7 +75,6 @@ N - DNS improvements
       - Verify that it works well on windows
     - Debug and re-enable server-side reverse DNS caching
 
-
   - Critical but minor bugs, backport candidates.
     - support dir 503s better
       o clients don't log as loudly when they receive them
@@ -118,9 +117,12 @@ NR  D Get some kind of "meta signing key" to be used solely to sign
     - More prominently, we should have a recommended apps list.
       - recommend gaim.
       - unrecommend IE because of ftp:// bug.
-    - torrc.complete.in needs attention?
-    - we should add a preamble to tor-design saying it's out of date.
-    - Document transport and natdport
+N   - torrc.complete.in needs attention?
+N   - we should add a preamble to tor-design saying it's out of date.
+N   - Document transport and natdport
+N   - Look into generating torrc.{complete|sample}.in, tor.1.in,
+      the HTML manual, and the online config documentation from a single
+      source.
 
   - Improvements to bandwidth counting
 R   - look into "uncounting" bytes spent on local connections, so
@@ -135,11 +137,15 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
 
   - Forward compatibility fixes
     - Caches should start trying to cache consensus docs?
+NR    - Design
+N     - Implement, if we think it's smart.
     - Start uploading short and long descriptors; authorities should support
       URLs to retrieve long descriptors, and should discard short descriptors
       for now.  Later, once tools use the "long descriptor" URLs, authorities
       will serve the short descriptors every time they're asked for
       a descriptor.
+NR    - Design
+N     - Implement, if we think it's smart.
 
 Topics to think about during 0.1.2.x development:
   * Figure out incentives.
@@ -166,10 +172,6 @@ P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
         need to keep multiple files?)
       - What do we do about the fact that people can't read zlib-
         compressed files manually?
-
-  - Refactor DNS resolve implementation
-    - Refactor exit side of resolve: do we need a connection_t?
-    - Refactor entry side of resolve: do we need a connection_t?
 
   - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
@@ -345,6 +347,10 @@ R - add d64 and fp64 along-side d and fp so people can paste status
       them) without having a corresponding client socket.
       - Once this is done, it would be nice to have a way to request address
         lookups from the controller without using SOCKS.
+    - Refactor exit/entry side of DNS resolve: we don't need a connection_t;
+      we can have an edge_connection_t and (say) dns_request_t both extend an
+      edge_stream_t, and have p_streams and n_streams both be linked lists
+      of edge_stream_t.
 
 Future version:
   - Configuration format really wants sections.
