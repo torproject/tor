@@ -1811,9 +1811,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
 /** Called when a TLS handshake has completed successfully with a
  * router listening at <b>address</b>:<b>or_port</b>, and has yielded
  * a certificate with digest <b>digest_rcvd</b> and nickname
- * <b>nickname_rcvd</b>.  When this happens, it's clear that any other
- * descriptors for that address/port combination must be unusable:
- * delete them if they are not valid.
+ * <b>nickname_rcvd</b>.
  *
  * Also, if as_advertised is 1, then inform the reachability checker
  * that we could get to this guy.
@@ -1825,49 +1823,25 @@ dirserv_orconn_tls_done(const char *address,
                         const char *nickname_rcvd,
                         int as_advertised)
 {
-  int i;
   routerlist_t *rl = router_get_routerlist();
   tor_assert(address);
   tor_assert(digest_rcvd);
   tor_assert(nickname_rcvd);
-  (void) as_advertised; // XXXX012 This should really be implemented. -NM
 
-  // XXXXNM We should really have a better solution here than dropping
-  // XXXXNM whole routers; otherwise, they come back way too easily.
-  for (i = 0; i < smartlist_len(rl->routers); ++i) {
-    routerinfo_t *ri = smartlist_get(rl->routers, i);
-    int drop = 0;
-    if (strcasecmp(address, ri->address) || or_port != ri->or_port)
-      continue;
-    /* XXX012 For 0.1.2.x, we should do something smarter here than !is_valid.
-     */
-    if (!ri->is_valid) {
-      /* We have a router at the same address! */
-      if (strcasecmp(ri->nickname, nickname_rcvd)) {
-        log_notice(LD_DIRSERV,
-                   "Dropping old invalid descriptor: nickname '%s' does "
-                   "not match nickname '%s' in new cert from %s:%d",
-                   ri->nickname, nickname_rcvd, address, or_port);
-        drop = 1;
-      } else if (memcmp(ri->cache_info.identity_digest, digest_rcvd,
-                        DIGEST_LEN)) {
-        log_notice(LD_DIRSERV,
-                   "Dropping old invalid descriptor for nickname '%s': "
-                   "identity key does not match key in new cert from %s:%d",
-                   ri->nickname, address, or_port);
-        drop = 1;
-      }
-    }
-    if (drop) {
-      routerlist_remove(rl, ri, i--, 0);
-      directory_set_dirty();
-    } else { /* correct nickname and digest. mark this router reachable! */
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+    if (!strcasecmp(address, ri->address) && or_port == ri->or_port &&
+        !memcmp(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN) &&
+        as_advertised) {
+      /* correct nickname and digest. mark this router reachable! */
       log_info(LD_DIRSERV, "Found router %s to be reachable. Yay.",
                ri->nickname);
       ri->last_reachable = time(NULL);
       ri->num_unreachable_notifications = 0;
     }
-  }
+  });
+  /* FFFF Maybe we should reinstate the code that dumps routers with the same
+   * addr/port but with nonmatching keys, but instead of dumping, we should
+   * skip testing. */
 }
 
 /** Auth dir server only: if <b>try_all</b> is 1, launch connections to

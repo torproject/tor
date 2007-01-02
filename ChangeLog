@@ -129,6 +129,8 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       our nameservers have failed.  (Bug #326.)
     - When we only have one nameserver, raise the threshold for deciding that
       the nameserver is dead. (Also bug #326)
+    - Directory authorities now only decide that routers are reachable
+      if their identity keys are as expected.
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.
