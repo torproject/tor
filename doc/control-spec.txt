@@ -984,6 +984,11 @@ $Id$
        [Recommendation for controller: ignore it, since we don't really
        know what the user should do anyway. Hm.]
 
+[the basic idea for the rest is to do it like the CLOCK_JUMPED entry
+above: specify a Type, describe what it is and its arguments, and
+describe what Severities to expect and what we suggest the controller
+do for each. -RD]
+
      DIR_REACHABLE
      [not implemented yet]
 
@@ -1021,10 +1026,12 @@ $Id$
 
   Actions for STATUS_GENERAL severity ERR events can be as follows:
 
-U    BAD_PROXY
+[unimplemented]
+     BAD_PROXY
      // bad http or https proxy?
 
-I    DIR_ALL_UNREACHABLE
+[implemented]
+     DIR_ALL_UNREACHABLE
        Tor believes that none of the known directory servers are
        reachable -- this is most likely because the local network is
        down or otherwise not working, and might help to explain for the
