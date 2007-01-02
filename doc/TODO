@@ -80,8 +80,9 @@ N - DNS improvements
       o clients don't log as loudly when they receive them
       o they don't count toward the 3-strikes rule
         D But eventually, we give up after getting a lot of 503s.
-N       - Delay when we get a lot of 503s, rather than punting onto the
+        D Delay when we get a lot of 503s, rather than punting onto the
           servers that have given us 503s?
+N       - Add a 'BadDirectory' flag to statuses.
       - authorities should *never* 503 a cache, and should never 503
         network status requests. They can 503 client descriptor requests
         when they feel like it.
