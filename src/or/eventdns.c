@@ -126,7 +126,7 @@ typedef unsigned int uint;
 #define u64 uint64_t
 #define u32 uint32_t
 #define u16 uint16_t
-#define u8	uint8_t
+#define u8  uint8_t
 
 #define MAX_ADDRS 4	 // maximum number of addresses from a single packet
 // which we bother recording
