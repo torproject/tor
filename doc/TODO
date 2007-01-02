@@ -32,14 +32,15 @@ N - Test guard unreachable logic; make sure that we actually attempt to
 R - Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
 
 Items for 0.1.2.x:
-  - enumerate events of important things that occur in tor, so vidalia can
+N - enumerate events of important things that occur in tor, so vidalia can
     react.
     o Backend implementation
-R   - Actually list all the events (notice and warn log messages are a good
+R   - Clean up the spec a bit.
+    - Actually list all the events (notice and warn log messages are a good
       place to look.)  Divide messages into categories, perhaps.
-R   - Specify general event system
-R   - Specify actual events.
-R   - and implement the rest
+    - Specify general event system
+    - Specify actual events.
+    - and implement the rest
 
   . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     directory port."
@@ -133,8 +134,13 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
     . Write limiting; separate token bucket for write
       o preemptively give a 503 to some v1 dir requests
       - preemptively give a 503 to some v2 dir requests
-      - per-conn write buckets
-      - separate config options for read vs write limiting
+        - Write function to estimate bytes needed for N descriptors
+          statuses
+      D per-conn write buckets
+      D separate config options for read vs write limiting
+        (It's hard to support read > write, since we need better
+         congestion control to avoid overfull buffers there.  So,
+         defer the whole thing.)
 
   - Forward compatibility fixes
     - Caches should start trying to cache consensus docs?
