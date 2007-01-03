@@ -362,6 +362,17 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
   /* XXXX012 Why did the above get commented out? -NM */
 }
 
+/** Return 1 if platform can handle a BEGIN_DIR cell, and if
+ * we're willing to send one. Else return 0. */
+/* XXX we should refactor directory.c to hand status->or_port around,
+ * so we can check it here rather than platform. */
+static int
+connection_dir_supports_tunnels(or_options_t *options, const char *platform)
+{
+  return options->TunnelDirConns && platform &&
+         tor_version_as_new_as(platform, "0.1.2.2-alpha");
+}
+
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
  * command to a server whose address is <b>address</b>, whose IP is
  * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version is
@@ -376,8 +387,7 @@ directory_initiate_command(const char *address, uint32_t addr,
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
-  int want_to_tunnel = options->TunnelDirConns && platform &&
-                       tor_version_as_new_as(platform, "0.1.2.2-alpha");
+  int want_to_tunnel = connection_dir_supports_tunnels(options, platform);
 
   tor_assert(address);
   tor_assert(addr);

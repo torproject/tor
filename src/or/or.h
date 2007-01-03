@@ -1663,6 +1663,8 @@ typedef struct {
                                * same network zone in the same circuit. */
   int TunnelDirConns; /**< If true, use BEGIN_DIR rather than BEGIN when
                        * possible. */
+  int PreferTunneledDirConns; /**< If true, avoid dirservers that don't
+                               * support BEGIN_DIR, when possible. */
   int AllowNonRFC953Hostnames; /**< If true, we allow connections to hostnames
                                 * with weird characters. */
 } or_options_t;
@@ -2267,6 +2269,8 @@ int connection_dir_reached_eof(dir_connection_t *conn);
 int connection_dir_process_inbuf(dir_connection_t *conn);
 int connection_dir_finished_flushing(dir_connection_t *conn);
 int connection_dir_finished_connecting(dir_connection_t *conn);
+int connection_dir_supports_tunnels(or_options_t *options,
+                                    const char *platform);
 void connection_dir_request_failed(dir_connection_t *conn);
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,

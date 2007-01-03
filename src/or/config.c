@@ -208,6 +208,7 @@ static config_var_t _option_vars[] = {
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
   VAR("PidFile",             STRING,   PidFile,              NULL),
+  VAR("PreferTunneledDirConns", BOOL,  PreferTunneledDirConns, "1"),
   VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
   VAR("PublishServerDescriptor",BOOL,  PublishServerDescriptor,"1"),
   VAR("PublishHidServDescriptors",BOOL,PublishHidServDescriptors, "1"),
@@ -346,6 +347,7 @@ static config_var_description_t options_description[] = {
     "provided IP address (only usefol for multiple network interfaces)." },
   { "PIDFile", "On startup, write our PID to this file. On clean shutdown, "
     "remove the file." },
+  /* PreferTunneledDirConns */
   /* ProtocolWarnings */
   /* RephistTrackTime */
   { "RunAsDaemon", "If set, Tor forks and daemonizes to the background when "
@@ -2706,6 +2708,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (parse_virtual_addr_network(options->VirtualAddrNetwork, 1, NULL)<0)
     return -1;
+
+  if (options->PreferTunneledDirConns && !options->TunnelDirConns)
+    REJECT("Must set TunnelDirConns if PreferTunneledDirConns is set.");
 
   return 0;
 #undef REJECT

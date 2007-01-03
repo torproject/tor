@@ -20,9 +20,11 @@ const char routerlist_c_id[] =
 /* static function prototypes */
 static routerstatus_t *router_pick_directory_server_impl(int requireother,
                                                          int fascistfirewall,
+                                                         int prefer_tunnel,
                                                          int for_v2_directory);
 static routerstatus_t *router_pick_trusteddirserver_impl(
-                 authority_type_t type, int requireother, int fascistfirewall);
+                 authority_type_t type, int requireother,
+                 int fascistfirewall, int prefer_tunnel);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void routerstatus_list_update_from_networkstatus(time_t now);
@@ -423,12 +425,13 @@ router_pick_directory_server(int requireother,
                              int retry_if_no_servers)
 {
   routerstatus_t *choice;
+  int prefer_tunnel = get_options()->PreferTunneledDirConns;
 
   if (!routerlist)
     return NULL;
 
   choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             for_v2_directory);
+                                             prefer_tunnel, for_v2_directory);
   if (choice || !retry_if_no_servers)
     return choice;
 
@@ -439,7 +442,7 @@ router_pick_directory_server(int requireother,
   mark_all_trusteddirservers_up();
   /* try again */
   choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             for_v2_directory);
+                                             prefer_tunnel, for_v2_directory);
   if (choice)
     return choice;
 
@@ -450,7 +453,7 @@ router_pick_directory_server(int requireother,
   }
   /* give it one last try */
   choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             for_v2_directory);
+                                             prefer_tunnel, for_v2_directory);
   return choice;
 }
 
@@ -486,17 +489,18 @@ router_pick_trusteddirserver(authority_type_t type,
                              int retry_if_no_servers)
 {
   routerstatus_t *choice;
+  int prefer_tunnel = get_options()->PreferTunneledDirConns;
 
-  choice = router_pick_trusteddirserver_impl(type,
-                                             requireother, fascistfirewall);
+  choice = router_pick_trusteddirserver_impl(type, requireother,
+                                fascistfirewall, prefer_tunnel);
   if (choice || !retry_if_no_servers)
     return choice;
 
   log_info(LD_DIR,
            "No trusted dirservers are reachable. Trying them all again.");
   mark_all_trusteddirservers_up();
-  return router_pick_trusteddirserver_impl(type,
-                                           requireother, fascistfirewall);
+  return router_pick_trusteddirserver_impl(type, requireother,
+                              fascistfirewall, prefer_tunnel);
 }
 
 /** How long do we avoid using a directory server after it's given us a 503? */
@@ -506,60 +510,81 @@ router_pick_trusteddirserver(authority_type_t type,
  * routerlist.  Don't pick an authority if any non-authorities are viable.
  * If <b>fascistfirewall</b>,
  * make sure the router we pick is allowed by our firewall options.
- * If <b>requireother</b>, it cannot be us.  If <b>for_v2_directory</b>,
+ * If <b>requireother</b>, it cannot be us. If <b>for_v2_directory</b>,
  * choose a directory server new enough to support the v2 directory
  * functionality.
+ * If <b>prefer_tunnel</b>, choose a directory server that is reachable
+ * and supports BEGIN_DIR cells, if possible.
+ * Try to avoid using servers that are overloaded (have returned 503
+ * recently).
  */
 static routerstatus_t *
 router_pick_directory_server_impl(int requireother, int fascistfirewall,
-                                  int for_v2_directory)
+                                  int prefer_tunnel, int for_v2_directory)
 {
   routerstatus_t *result;
-  smartlist_t *sl;
-  smartlist_t *overloaded;
-  smartlist_t *trusted;
+  smartlist_t *direct, *tunnel;
+  smartlist_t *trusted_direct, *trusted_tunnel;
+  smartlist_t *overloaded_direct, *overloaded_tunnel;
   time_t now = time(NULL);
 
   if (!routerstatus_list)
     return NULL;
 
+  direct = smartlist_create();
+  tunnel = smartlist_create();
+  trusted_direct = smartlist_create();
+  trusted_tunnel = smartlist_create();
+  overloaded_direct = smartlist_create();
+  overloaded_tunnel = smartlist_create();
+
   /* Find all the running dirservers we know about. */
-  sl = smartlist_create();
-  overloaded = smartlist_create();
-  trusted = smartlist_create();
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, _local_status,
   {
     routerstatus_t *status = &(_local_status->status);
     int is_trusted;
+    int is_overloaded = _local_status->last_dir_503_at + DIR_503_TIMEOUT > now;
     if (!status->is_running || !status->dir_port || !status->is_valid)
       continue;
     if (requireother && router_digest_is_me(status->identity_digest))
       continue;
-    if (fascistfirewall) {
-      if (!fascist_firewall_allows_address_dir(status->addr, status->dir_port))
-        continue;
-    }
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
     if (for_v2_directory && !(status->is_v2_dir || is_trusted))
       continue;
-    if (is_trusted) {
-      smartlist_add(trusted, status);
-    } else if (_local_status->last_dir_503_at + DIR_503_TIMEOUT > now) {
-      smartlist_add(overloaded, status);
-    } else {
-      smartlist_add(sl, status);
-    }
+    if (fascistfirewall &&
+        prefer_tunnel &&
+        status->version_supports_begindir &&
+        fascist_firewall_allows_address_or(status->addr, status->or_port))
+      smartlist_add(is_trusted ? trusted_tunnel :
+                      is_overloaded ? overloaded_tunnel : tunnel, status);
+    else if (!fascistfirewall || (fascistfirewall &&
+             fascist_firewall_allows_address_dir(status->addr,
+                                                 status->dir_port)))
+      smartlist_add(is_trusted ? trusted_direct :
+                      is_overloaded ? overloaded_direct : direct, status);
   });
 
-  if (smartlist_len(sl))
-    result = smartlist_choose(sl);
-  else if (smartlist_len(overloaded))
-    result = smartlist_choose(overloaded);
-  else
-    result = smartlist_choose(trusted);
-  smartlist_free(sl);
-  smartlist_free(overloaded);
-  smartlist_free(trusted);
+  if (smartlist_len(tunnel)) {
+    result = smartlist_choose(tunnel);
+  } else if (smartlist_len(overloaded_tunnel)) {
+    result = smartlist_choose(overloaded_tunnel);
+  } else if (trusted_tunnel) {
+    /* FFFF We don't distinguish between trusteds and overloaded trusteds
+     * yet. Maybe one day we should. */
+    result = smartlist_choose(trusted_tunnel);
+  } else if (smartlist_len(direct)) {
+    result = smartlist_choose(direct);
+  } else if (smartlist_len(overloaded_direct)) {
+    result = smartlist_choose(overloaded_direct);
+  } else {
+    result = smartlist_choose(trusted_direct);
+  }
+  smartlist_free(direct);
+  smartlist_free(tunnel);
+  smartlist_free(trusted_direct);
+  smartlist_free(trusted_tunnel);
+  smartlist_free(overloaded_direct);
+  smartlist_free(overloaded_tunnel);
   return result;
 }
 
@@ -571,22 +596,27 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
  */
 static routerstatus_t *
 router_pick_trusteddirserver_impl(authority_type_t type,
-                                  int requireother, int fascistfirewall)
+                                  int requireother, int fascistfirewall,
+                                  int prefer_tunnel)
 {
-  smartlist_t *sl;
-  smartlist_t *overloaded;
-  routerinfo_t *me;
-  routerstatus_t *rs;
+  smartlist_t *direct, *tunnel;
+  smartlist_t *overloaded_direct, *overloaded_tunnel;
+  routerinfo_t *me = router_get_my_routerinfo();
+  routerstatus_t *result;
   time_t now = time(NULL);
-  sl = smartlist_create();
-  overloaded = smartlist_create();
-  me = router_get_my_routerinfo();
+
+  direct = smartlist_create();
+  tunnel = smartlist_create();
+  overloaded_direct = smartlist_create();
+  overloaded_tunnel = smartlist_create();
 
   if (!trusted_dir_servers)
     return NULL;
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
     {
+      int is_overloaded =
+          d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now;
       if (!d->is_running) continue;
       if (type == V1_AUTHORITY && !d->is_v1_authority)
         continue;
@@ -596,23 +626,35 @@ router_pick_trusteddirserver_impl(authority_type_t type,
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
-      if (fascistfirewall) {
-        if (!fascist_firewall_allows_address_dir(d->addr, d->dir_port))
-          continue;
-      }
-      if (d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now)
-        smartlist_add(overloaded, &d->fake_status.status);
-      else
-        smartlist_add(sl, &d->fake_status.status);
+
+      if (fascistfirewall &&
+          prefer_tunnel &&
+          d->or_port &&
+          fascist_firewall_allows_address_or(d->addr, d->or_port))
+        smartlist_add(is_overloaded ? overloaded_tunnel : tunnel,
+                      &d->fake_status.status);
+      else if (!fascistfirewall || (fascistfirewall &&
+               fascist_firewall_allows_address_dir(d->addr,
+                                                   d->dir_port)))
+        smartlist_add(is_overloaded ? overloaded_direct : direct,
+                      &d->fake_status.status);
     });
 
-  if (smartlist_len(sl))
-    rs = smartlist_choose(sl);
-  else
-    rs = smartlist_choose(overloaded);
-  smartlist_free(sl);
-  smartlist_free(overloaded);
-  return rs;
+  if (smartlist_len(tunnel)) {
+    result = smartlist_choose(tunnel);
+  } else if (smartlist_len(overloaded_tunnel)) {
+    result = smartlist_choose(overloaded_tunnel);
+  } else if (smartlist_len(direct)) {
+    result = smartlist_choose(direct);
+  } else {
+    result = smartlist_choose(overloaded_direct);
+  }
+
+  smartlist_free(direct);
+  smartlist_free(tunnel);
+  smartlist_free(overloaded_direct);
+  smartlist_free(overloaded_tunnel);
+  return result;
 }
 
 /** Go through and mark the authoritative dirservers as up. */
