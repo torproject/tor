@@ -1077,6 +1077,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
         rs->is_possible_guard = 1;
       else if (!strcmp(tok->args[i], "BadExit"))
         rs->is_bad_exit = 1;
+      else if (!strcmp(tok->args[i], "BadDirectory"))
+        rs->is_bad_directory = 1;
     }
   }
   if ((tok = find_first_by_keyword(tokens, K_V))) {
@@ -1224,6 +1226,8 @@ networkstatus_parse_from_string(const char *s)
         ns->recommends_versions = 1;
       if (!strcmp(tok->args[i], "BadExits"))
         ns->lists_bad_exits = 1;
+      if (!strcmp(tok->args[i], "BadDirectories"))
+        ns->lists_bad_directories = 1;
     }
   }
 

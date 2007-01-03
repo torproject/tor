@@ -86,7 +86,7 @@ N - DNS improvements
         D But eventually, we give up after getting a lot of 503s.
         D Delay when we get a lot of 503s, rather than punting onto the
           servers that have given us 503s?
-N       - Add a 'BadDirectory' flag to statuses.
+        o Add a 'BadDirectory' flag to statuses.
       - authorities should *never* 503 a cache, and should never 503
         network status requests. They can 503 client descriptor requests
         when they feel like it.
@@ -136,8 +136,8 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
       and to give dir conns lower priority.
     . Write limiting; separate token bucket for write
       o preemptively give a 503 to some v1 dir requests
-      - preemptively give a 503 to some v2 dir requests
-        - Write function to estimate bytes needed for N descriptors
+R     - preemptively give a 503 to some v2 dir requests
+        o Write function to estimate bytes needed for N descriptors
           statuses
       D per-conn write buckets
       D separate config options for read vs write limiting

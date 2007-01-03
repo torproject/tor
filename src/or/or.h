@@ -1012,6 +1012,8 @@ typedef struct routerstatus_t {
                                      * choice as an entry guard. */
   unsigned int is_bad_exit:1; /**< True iff this node is a bad choice for
                                * an exit node. */
+  unsigned int is_bad_directory:1; /**< Do we think this directory is junky,
+                                    * underpowered, or otherwise useless? */
 
   /** True iff we know version info for this router. (i.e., a "v" entry was
    * included.)  We'll replace all these with a big tor_version_t or a char[]
@@ -1081,9 +1083,11 @@ typedef struct networkstatus_t {
   unsigned int recommends_versions:1; /**< True iff this directory server
                                        * recommends client and server software
                                        * versions. */
-  unsigned int lists_bad_exits:1; /** True iff this directory server marks
+  unsigned int lists_bad_exits:1; /**< True iff this directory server marks
                                    * malfunctioning exits as bad. */
-
+  /** True iff this directory server marks malfunctioning directories as
+   * bad. */
+  unsigned int lists_bad_directories:1;
   smartlist_t *entries; /**< List of routerstatus_t*.   This list is kept
                          * sorted by identity_digest. */
 } networkstatus_t;
@@ -2319,6 +2323,8 @@ void dirserv_test_reachability(int try_all);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain);
 int dirserv_would_reject_router(routerstatus_t *rs);
+size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
+                                  int compressed);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 

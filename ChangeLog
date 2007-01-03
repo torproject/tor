@@ -76,6 +76,8 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
     - When we change nameservers or IP addresses, reset and re-launch
       our tests for DNS hijacking.
     - Block an obscure DoS attack from directory caches.
+    - Add a BadDirectory flag to network status docs so that authorities
+      can (eventually) tell clients about caches they believe to be broken.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory

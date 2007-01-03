@@ -1882,6 +1882,35 @@ dirserv_test_reachability(int try_all)
     ctr = (ctr + 1) % 128;
 }
 
+/** Return an approximate estimate of the number of bytes that will be needed
+ * to transmit the server descriptors (if is_serverdescs) or networkstatus
+ * objects (if !is_serverdescs) listed in <b>fps</b>.  If <b>compressed</b> is
+ * set, we guess how large the data will be after compression.
+ *
+ * The return value is an estimate; it might be larger or smaller.
+ **/
+size_t
+dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
+                           int compressed)
+{
+  size_t result;
+  if (is_serverdescs) {
+    int n = smartlist_len(fps);
+    routerinfo_t *me = router_get_my_routerinfo();
+    result = (me?me->cache_info.signed_descriptor_len:2048) * n;
+    if (compressed)
+      result /= 2; /* observed compressability is between 35 and 55%. */
+  } else {
+    result = 0;
+    SMARTLIST_FOREACH(fps, const char *, d, {
+        cached_dir_t *dir = digestmap_get(cached_v2_networkstatus, d);
+        if (dir)
+          result += compressed ? dir->dir_z_len : dir->dir_len;
+      });
+  }
+  return result;
+}
+
 /** When we're spooling data onto our outbuf, add more whenever we dip
  * below this threshold. */
 #define DIRSERV_BUFFER_MIN 16384

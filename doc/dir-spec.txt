@@ -347,6 +347,8 @@ $Id$
           "Versions" if this directory authority recommends software versions.
           "BadExits" if the directory authority flags nodes that it believes
               are performing incorrectly as exit nodes.
+          "BadDirectories" if the directory authority flags nodes that it
+              believes are performing incorrectly as directory caches.
 
    The dir-options entry is optional.  The "-versions" entries are required if
    the "Versions" flag is present.  The other entries are required and must
@@ -376,6 +378,10 @@ $Id$
           "BadExit" if the router is believed to be useless as an exit node
              (because its ISP censors it, because it is behind a restrictive
              proxy, or for some similar reason).
+          "BadDirectory" if the router is believed to be useless as a
+             directory cache (because its directory port isn't working;
+             because its bandwidth is always throttled, or for some
+             similar reason).
           "Exit" if the router is useful for building general-purpose exit
              circuits.
           "Fast" if the router is suitable for high-bandwidth circuits.

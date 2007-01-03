@@ -546,6 +546,8 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     int is_overloaded = _local_status->last_dir_503_at + DIR_503_TIMEOUT > now;
     if (!status->is_running || !status->dir_port || !status->is_valid)
       continue;
+    if (status->is_bad_directory)
+      continue;
     if (requireother && router_digest_is_me(status->identity_digest))
       continue;
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
@@ -3212,7 +3214,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
 {
   or_options_t *options = get_options();
   int n_trusted, n_statuses, n_recent = 0, n_naming = 0;
-  int n_listing_bad_exits = 0;
+  int n_listing_bad_exits = 0, n_listing_bad_directories = 0;
   int i, j, warned;
   int *index, *size;
   networkstatus_t **networkstatus;
@@ -3262,6 +3264,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
       ++n_recent;
     if (networkstatus[i]->lists_bad_exits)
       ++n_listing_bad_exits;
+    if (networkstatus[i]->lists_bad_directories)
+      ++n_listing_bad_directories;
   }
 
   /** Iterate over all entries in all networkstatuses, and build
@@ -3333,6 +3337,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
   while (1) {
     int n_running=0, n_named=0, n_valid=0, n_listing=0;
     int n_v2_dir=0, n_fast=0, n_stable=0, n_exit=0, n_guard=0, n_bad_exit=0;
+    int n_bad_directory=0;
     int n_version_known=0, n_supports_begindir=0;
     int n_desc_digests=0, highest_count=0;
     const char *the_name = NULL;
@@ -3421,6 +3426,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
         ++n_v2_dir;
       if (rs->is_bad_exit)
         ++n_bad_exit;
+      if (rs->is_bad_directory)
+        ++n_bad_directory;
       if (rs->version_known)
         ++n_version_known;
       if (rs->version_supports_begindir)
@@ -3475,6 +3482,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
     rs_out->status.is_stable = n_stable > n_statuses/2;
     rs_out->status.is_v2_dir = n_v2_dir > n_statuses/2;
     rs_out->status.is_bad_exit = n_bad_exit > n_listing_bad_exits/2;
+    rs_out->status.is_bad_directory =
+      n_bad_directory > n_listing_bad_directories/2;
     rs_out->status.version_known = n_version_known > 0;
     rs_out->status.version_supports_begindir =
       n_supports_begindir > n_version_known/2;
