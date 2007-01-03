@@ -2269,8 +2269,6 @@ int connection_dir_reached_eof(dir_connection_t *conn);
 int connection_dir_process_inbuf(dir_connection_t *conn);
 int connection_dir_finished_flushing(dir_connection_t *conn);
 int connection_dir_finished_connecting(dir_connection_t *conn);
-int connection_dir_supports_tunnels(or_options_t *options,
-                                    const char *platform);
 void connection_dir_request_failed(dir_connection_t *conn);
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,
