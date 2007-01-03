@@ -122,9 +122,27 @@ see tor-design.pdf.
    ``cells'', which are unwrapped by a symmetric key at each node (like
    the layers of an onion) and relayed downstream.
 
+1.1. Keys and names
+
+   Every Tor server has multiple public/private keypairs:
+
+    - A long-term signing-only "Identity key" used to sign documents and
+      certificates, and used to establish server identity.
+    - A medium-term "Onion key" used to decrypt onion skins when accepting
+      circuit extend attempts.  (See 5.1.)  Old keys MUST be accepted for at
+      least one week after they are no longer advertised.  Because of this,
+      servers MUST retain old keys for a while after they're rotated.
+    - A short-term "Connection key" used to negotiate TLS connections.
+      Tor implementations MAY rotate this key as often as they like, and
+      SHOULD rotate this key at least once a day.
+
+   Tor servers are also identified by "nicknames"; these are specified in
+   dir-spec.txt.
+
 2. Connections
 
-   Tor uses TLS for link encryption.  All implementations MUST support
+   Tor uses TLS for link authentication and encryption.  All implementations
+   MUST support
    the TLS ciphersuite "TLS_EDH_RSA_WITH_DES_192_CBC3_SHA", and SHOULD
    support "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" if it is available.
    Implementations MAY support other ciphersuites, but MUST NOT
@@ -137,13 +155,13 @@ see tor-design.pdf.
    local requests. Onion proxies SHOULD NOT provide long-term-trackable
    identifiers in their handshakes.
 
-   The connection initiator always sends a two-certificate chain,
-   consisting of a
-   certificate using a short-term connection key and a second, self-
-   signed certificate containing the OR's identity key. The commonName of the
-   first certificate is the OR's nickname, and the commonName of the second
+   During the TLS handshake, the connection initiator always sends a
+   two-certificate chain, consisting of an X.509 certificate using a
+   short-term connection public key and a second, self- signed X.509
+   certificate containing its identity key. The commonName of the first
+   certificate is the OR's nickname, and the commonName of the second
    certificate is the OR's nickname, followed by a space and the string
-   "<identity>".
+   "<identity>".  The other party sends a similar certificate chain.
 
    Implementations running Protocol 1 and earlier use an
    organizationName of "Tor" or "TOR".  Future implementations (which
@@ -238,7 +256,7 @@ see tor-design.pdf.
 
    The payload for a CREATE cell is an 'onion skin', which consists
    of the first step of the DH handshake data (also known as g^x).
-   This value is hybrid-encrypted (see 0.3) to Bob's public key, giving
+   This value is hybrid-encrypted (see 0.3) to Bob's onion key, giving
    an onion-skin of:
        PK-encrypted:
          Padding padding               [PK_PAD_LEN bytes]
@@ -383,7 +401,7 @@ see tor-design.pdf.
    To extend the circuit by a single onion router R_M, the OP performs
    these steps:
 
-      1. Create an onion skin, encrypted to R_M's public key.
+      1. Create an onion skin, encrypted to R_M's public onion key.
 
       2. Send the onion skin in a relay EXTEND cell along
          the circuit (see section 5).
