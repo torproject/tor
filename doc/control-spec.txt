@@ -1143,7 +1143,7 @@ do for each. -RD]
   Syntax:
      "650" SP "GUARDS" SP Type SP Name SP Status ... CRLF
      Type = "ENTRY"
-     Name = The (possibly verbose) nickname of the guard effected.
+     Name = The (possibly verbose) nickname of the guard affected.
      Status = "NEW" | "UP" | "DOWN" | "BAD" | "GOOD" | "DROPPED"
 
   [explain states. XXX]

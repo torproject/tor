@@ -1014,7 +1014,7 @@ typedef struct routerstatus_t {
                                * an exit node. */
 
   /** True iff we know version info for this router. (i.e., a "v" entry was
-   * included.)  We'll replace all these with a big tor_vesion_t or a char[]
+   * included.)  We'll replace all these with a big tor_version_t or a char[]
    * if the number of traits we care about ever becomes incredibly big. */
   unsigned int version_known:1;
   /** True iff this router is a version that supports BEGIN_DIR cells. */
@@ -2699,11 +2699,11 @@ void router_free_all(void);
 typedef struct trusted_dir_server_t {
   char *description;
   char *nickname;
-  char *address; /**< Hostname */
-  uint32_t addr; /**< IPv4 address */
-  uint16_t dir_port; /**< Directory port */
-  uint16_t or_port; /**< OR port: Used for tunneling connections */
-  char digest[DIGEST_LEN]; /**< Digest of identity key */
+  char *address; /**< Hostname. */
+  uint32_t addr; /**< IPv4 address. */
+  uint16_t dir_port; /**< Directory port. */
+  uint16_t or_port; /**< OR port: Used for tunneling connections. */
+  char digest[DIGEST_LEN]; /**< Digest of identity key. */
   unsigned int is_running:1; /**< True iff we think this server is running. */
   /** True iff this server is an authority for the older ("v1") directory
    * protocol. */

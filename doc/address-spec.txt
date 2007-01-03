@@ -28,7 +28,10 @@ $Id$
   the exit node.  If no "hostname" component is given, Tor defaults to the
   published IPv4 address of the exit node.
 
-  It is valid to try to resolve hostnames 
+  It is valid to try to resolve hostnames, and in fact upon success Tor
+  will cache an internal mapaddress of the form
+  "www.google.com.foo.exit=64.233.161.99.foo.exit" to speed subsequent
+  lookups.
 
   EXAMPLES:
      www.example.com.exampletornode.exit
@@ -42,7 +45,7 @@ $Id$
 
 3. .onion
 
-  SYNTAX [digest].onion
+  SYNTAX:  [digest].onion
 
   The digest is the first eighty bits of a SHA1 hash of the identity key for
   a hidden service, encoded in base32.
@@ -52,7 +55,7 @@ $Id$
 
 4. .noconnect
 
-  SYNTAX: [string].noconnect
+  SYNTAX:  [string].noconnect
 
   When Tor sees an address in this format, it immediately closes the
   connection without attaching it to any circuit.  This is useful for

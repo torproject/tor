@@ -208,7 +208,7 @@ static config_var_t _option_vars[] = {
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
   VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
   VAR("PidFile",             STRING,   PidFile,              NULL),
-  VAR("PreferTunneledDirConns", BOOL,  PreferTunneledDirConns, "1"),
+  VAR("PreferTunneledDirConns", BOOL,  PreferTunneledDirConns, "0"),
   VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
   VAR("PublishServerDescriptor",BOOL,  PublishServerDescriptor,"1"),
   VAR("PublishHidServDescriptors",BOOL,PublishHidServDescriptors, "1"),
@@ -251,7 +251,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("TrafficShaping"),
   VAR("TransListenAddress",  LINELIST, TransListenAddress,   NULL),
   VAR("TransPort",           UINT,     TransPort,            "0"),
-  VAR("TunnelDirConns",      BOOL,     TunnelDirConns,       "1"),
+  VAR("TunnelDirConns",      BOOL,     TunnelDirConns,       "0"),
   VAR("UseEntryGuards",      BOOL,     UseEntryGuards,       "1"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
@@ -319,7 +319,7 @@ static config_var_description_t options_description[] = {
     "control-spec.txt).", },
   { "CookieAuthentication", "If this option is set to 1, don't allow any "
     "connections to the control port except when the connecting process "
-    "can read a file that Tor creates in its data directory. " },
+    "can read a file that Tor creates in its data directory." },
   { "DataDirectory", "Store working data, state, keys, and caches here." },
   { "DirServer", "Tor only trusts directories signed with one of these "
     "servers' keys.  Used to override the standard list of directory "
@@ -344,7 +344,7 @@ static config_var_description_t options_description[] = {
   { "Log", "Where to send logging messages.  Format is "
     "minSeverity[-maxSeverity] (stderr|stdout|syslog|file FILENAME)." },
   { "OutboundBindAddress", "Make all outbound connections originate from the "
-    "provided IP address (only usefol for multiple network interfaces)." },
+    "provided IP address (only useful for multiple network interfaces)." },
   { "PIDFile", "On startup, write our PID to this file. On clean shutdown, "
     "remove the file." },
   /* PreferTunneledDirConns */
@@ -365,25 +365,25 @@ static config_var_description_t options_description[] = {
     "hostnames for having invalid characters." },
   /*  CircuitBuildTimeout, CircuitIdleTimeout */
   { "ClientOnly", "If set to 1, Tor will under no circumstances run as a "
-    "server, even if ORPort is as configued." },
+    "server, even if ORPort is enabled." },
   { "EntryNodes", "A list of preferred entry nodes to use for the first hop "
-    "in circuits, if possible." },
+    "in circuits, when possible." },
   /* { "EnforceDistinctSubnets" , "" }, */
   { "ExitNodes", "A list of preferred nodes to use for the last hop in "
     "circuits, when possible." },
   { "ExcludeNodes", "A list of nodes never to use when building a circuit." },
   { "FascistFirewall", "If set, Tor will only create outgoing connections to "
-    "ORs running on the ports listed in FirewallPorts." },
-  { "FirewallPorts", "A list of ports that we cann connect to.  Only used "
+    "servers running on the ports listed in FirewallPorts." },
+  { "FirewallPorts", "A list of ports that we can connect to.  Only used "
     "when FascistFirewall is set." },
   { "LongLivedPorts", "A list of ports for services that tend to require "
-    "long-lived connections." },
+    "high-uptime connections." },
   { "MapAddress", "Force Tor to treat all requests for one address as if "
     "they were for another." },
   { "NewCircuitPeriod", "Force Tor to consider whether to build a new circuit "
-    "every NUM sections." },
+    "every NUM seconds." },
   { "MaxCircuitDirtiness", "Do not attach new streams to a circuit that has "
-    "been used up to this many seconds ago." },
+    "been used more than this many seconds ago." },
   /* NatdPort, NatdListenAddress */
   { "NodeFamily", "A list of servers that constitute a 'family' and should "
     "never be used in the same circuit." },
@@ -393,7 +393,7 @@ static config_var_description_t options_description[] = {
     "By default, we assume all addresses are reachable." },
   /* reachablediraddresses, reachableoraddresses. */
   { "RendNodes", "A list of preferred nodes to use for a rendezvous point, "
-    "if possible." },
+    "when possible." },
   { "RendExcludenodes", "A list of nodes never to use as rendezvous points." },
   /* SafeSOCKS */
   { "SOCKSPort", "The port where we listen for SOCKS connections from "
@@ -409,13 +409,13 @@ static config_var_description_t options_description[] = {
     "configured EntryNodes can be used." },
   /* TestSocks */
   { "TrackHostsExit", "Hosts and domains which should, if possible, be "
-    "acccessed from the same exit node each time we connect to them." },
+    "accessed from the same exit node each time we connect to them." },
   { "TrackHostsExitExpire", "Time after which we forget which exit we were "
     "using to connect to hosts in TrackHostsExit." },
   /* "TransPort", "TransListenAddress */
   { "UseEntryGuards", "Set to 0 if we want to pick from the whole set of "
-    "entry nodes for each server, rather than picking a set of 'Guards' to "
-    "prevent profiling attacks." },
+    "servers for the first position in each circuit, rather than picking a "
+    "set of 'Guards' to prevent profiling attacks." },
 
   /* === server options */
   { "Address", "The advertised (external) address we should use." },
@@ -442,8 +442,7 @@ static config_var_description_t options_description[] = {
   { "ORListenAddress", "Bind to this address to listen for connections from "
     "clients and servers, instead of the default 0.0.0.0:ORPort." },
   { "PublishServerDescriptors", "Set to 0 in order to keep the server from "
-    "uploading info to the directory authorities.  This prevents clients "
-    "from using your server." },
+    "uploading info to the directory authorities." },
   /*{ "RedirectExit", "When an outgoing connection tries to connect to a "
    *"given address, redirect it to another address instead." },
    */
@@ -452,10 +451,10 @@ static config_var_description_t options_description[] = {
     "shutting down because of a SIGINT." },
   /* { "TestVia", } */
 
-  /* === directory cache optoins */
+  /* === directory cache options */
   { "DirPort", "Serve directory information from this port, and act as a "
     "directory cache." },
-  { "DirListenAddress", "Bind to this address to listen for connnections from "
+  { "DirListenAddress", "Bind to this address to listen for connections from "
     "clients and servers, instead of the default 0.0.0.0:DirPort." },
   { "DirPolicy", "Set a policy to limit who can connect to the directory "
     "port" },
@@ -2250,7 +2249,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 {
   int i, r;
   config_line_t *cl;
-  const char *uname;
+  const char *uname = get_uname();
   char buf[1024];
 #define REJECT(arg) \
   do { *msg = tor_strdup(arg); return -1; } while (0)
@@ -2262,7 +2261,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->ORPort < 0 || options->ORPort > 65535)
     REJECT("ORPort option out of bounds.");
 
-  uname = get_uname();
   if (server_mode(options) &&
       (!strcmpstart(uname, "Windows 95") ||
        !strcmpstart(uname, "Windows 98") ||
@@ -2270,7 +2268,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log(LOG_WARN, LD_CONFIG, "Tor is running as a server, but you are "
         "running %s; this probably won't work. See "
         "http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerOS "
-        "for details.", get_uname());
+        "for details.", uname);
   }
 
   if (options->ORPort == 0 && options->ORListenAddress != NULL)

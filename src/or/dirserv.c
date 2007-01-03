@@ -1359,6 +1359,11 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       *bw = router_get_advertised_bandwidth(ri);
       total_bandwidth += *bw;
       total_exit_bandwidth += *bw;
+      /* XXX012 The above line doesn't actually count exit bandwidth. */
+      /* While we're at it, we might want to avoid BadExit nodes when
+       * counting exit bandwidth. */
+      /* Also, we might want to document the one-third behavior in
+       * dir-spec.txt. */
       smartlist_add(bandwidths, bw);
     }
   });
@@ -1495,7 +1500,7 @@ generate_v2_networkstatus(void)
 
   dirserv_compute_performance_thresholds(rl);
 
-  exits_can_be_guards = total_exit_bandwidth > (total_bandwidth / 3);
+  exits_can_be_guards = total_exit_bandwidth >= (total_bandwidth / 3);
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
@@ -1516,7 +1521,7 @@ generate_v2_networkstatus(void)
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_valid;
       int f_guard = f_fast && f_stable &&
-        router_get_advertised_bandwidth(ri) > guard_bandwidth &&
+        router_get_advertised_bandwidth(ri) >= guard_bandwidth &&
         (!f_exit || exits_can_be_guards);
       int f_bad_exit = listbadexits && ri->is_bad_exit;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
