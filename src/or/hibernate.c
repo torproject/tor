@@ -546,7 +546,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
   uint64_t expected;
   static time_t last_recorded;
 
-  /* First, update bw_accounting. Until 0.1.2.5-x, this was the only place
+  /* First, update bw_accounting. Until 0.1.2.5-alpha, this was the only place
    * we stored this information. The format is:
    * Version\nTime\nTime\nRead\nWrite\nSeconds\nExpected-Rate\n */
 

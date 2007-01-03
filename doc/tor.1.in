@@ -109,7 +109,7 @@ authority for old-style (v1) directories as well.  (Only directory mirrors
 care about this.)  Tor will use this server as an authority for hidden
 service information if the "hs" flag is set, or if the "v1" flag is set and
 the "no-hs" flag is \fBnot\fP set.  If a flag "orport=\fBport\fR" is given,
-Tor will consider use the given port to open encrypted tunnels to the
+Tor will use the given port when opening encrypted tunnels to the
 dirserver.
 If no \fBdirserver\fP line is given, Tor will use the default
 directory servers.  NOTE: this option is intended
@@ -964,7 +964,7 @@ A set of persistent key-value mappings.  These are documented in the file.  Thes
 .LP
 .TP
 .B \fIDataDirectory\fP/bw_accounting
-Used to track bandwidth accounting values (when the current period starts and ends; how much has been read and written so far this period).  Soon to be obsoleted by state.  Only used when bandwidth accounting is enabled.
+Used to track bandwidth accounting values (when the current period starts and ends; how much has been read and written so far this period).  This file is obsolete, and the data is now stored in the 'state' file as well.  Only used when bandwidth accounting is enabled.
 .LP
 .TP
 .B \fIDataDirectory\fP/control_auth_cookie

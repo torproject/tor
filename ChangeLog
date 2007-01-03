@@ -1,4 +1,4 @@
-Changes in version 0.1.2.5-xxxx - 200?-??-??
+Changes in version 0.1.2.5-alpha - 2007-01-03
   o Major features:
     - Enable "BEGIN_DIR" cells: prefer to connect to the directory
       server via TLS so we do encrypted directory requests rather than
@@ -99,15 +99,16 @@ Changes in version 0.1.2.5-xxxx - 200?-??-??
       schedule. Now the first connect attempt will wait a full 10
       seconds before switching to a new circuit. Perhaps this will help
       a lot. Based on observations from Mike Perry.
+    - Fix a bug on the Windows implementation of tor_mmap_file() that
+      would prevent the cached-routers file from ever loading (reported
+      by John Kimble).
 
   o Minor bugfixes:
-    - Fix a bug when a PF socket is first used. (Patch from Fabian Keil.)
+    - Fix a bug when a BSD-style PF socket is first used. (Patch from
+      Fabian Keil.)
     - Fix an assert failure when a directory authority sets
       AuthDirRejectUnlisted and then receives a descriptor from an
       unlisted router (reported by seeess).
-    - Fix a bug on the Windows implementation of tor_mmap_file that
-      would prevent the cached-routers file from ever loading (reported
-      by John Kimble).
     - Fix a bug in 0.1.2.2-alpha that prevented clients from asking
       to resolve an address at a given exit node even when they ask for
       it by name.

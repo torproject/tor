@@ -5,13 +5,13 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-Note: This document aims to specify Tor as implemented in 0.1.2.1-alpha-dev
+Note: This document aims to specify Tor as implemented in 0.2.1.0-alpha-dev
 and later.  Future versions of Tor will implement improved protocols, and
 compatibility is not guaranteed.
 
 THIS DOCUMENT IS UNSTABLE.  Right now, we're revising the protocol to remove
 a few long-standing limitations.  For the most stable current version of the
-protocol, see tor-spec-v0.txt; current versions of Tor are backward-compatible.
+protocol, see tor-spec.txt; current versions of Tor are backward-compatible.
 
 This specification is not a design document; most design criteria
 are not examined.  For more information on why Tor acts as it does,
@@ -271,7 +271,7 @@ TODO:
    VERSIONS cells are used to introduce parameters and characteristics of
    Tor clients and servers when connections are established.
 
-4, Connection management
+4. Connection management
 
    Upon establishing a TLS connection, both parties immediately begin
    negotiating a connection protocol version and other connection parameters.
@@ -298,18 +298,18 @@ TODO:
    a TLS connection has been established, the parties check whether the
    other side has an obsolete certificate (organizationName equal to "Tor"
    or "TOR").  If the other party presented an obsolete certificate,
-   we assume a v0 connection.  Otherwise, both parties send VERSIONS
+   we assume a v1 connection.  Otherwise, both parties send VERSIONS
    cells listing all their supported versions.  Upon receiving the
    other party's VERSIONS cell, the implementation begins using the
    highest-valued version common to both cells.  If the first cell from
-   the other party is _not_ a VERSIONS cell, we assume a v0 protocol.
+   the other party is _not_ a VERSIONS cell, we assume a v1 protocol.
 
    Implementations MUST discard cells that are not the first cells sent on a
    connection.
 
 4.2. MITM-prevention and time checking
 
-   If we negotiate a v1 connection or higher, the first cell we send SHOULD
+   If we negotiate a v2 connection or higher, the first cell we send SHOULD
    be a NETINFO cell.  Implementations SHOULD NOT send NETINFO cells at other
    times.
 

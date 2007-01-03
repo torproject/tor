@@ -78,7 +78,7 @@ $Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z ni
 
 2.1. Vote specifications
 
-  Votes in v2.1 are just like v2 network status documents.  We add these
+  Votes in v2.1 are similar to v2 network status documents.  We add these
   fields to the preamble:
 
      "vote-status" -- the word "vote".
