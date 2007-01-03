@@ -132,6 +132,8 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       the nameserver is dead. (Also bug #326)
     - Directory authorities now only decide that routers are reachable
       if their identity keys are as expected.
+    - When the user uses bad syntax in the Log config line, stop
+      suggesting other bad syntax as a replacement.
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.

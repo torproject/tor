@@ -3248,7 +3248,8 @@ options_init_logs(or_options_t *options, int validate_only)
                (const char*)smartlist_get(elts,1));
       if (strchr(smartlist_get(elts,1), '/') ||
           strchr(smartlist_get(elts,1), '\\')) {
-        log_warn(LD_CONFIG, "Did you mean to say 'Log file %s' ?",
+        log_warn(LD_CONFIG, "Did you mean to say 'Log %s file %s' ?",
+                 (const char *)smartlist_get(elts,0),
                  (const char *)smartlist_get(elts,1));
       }
       ok = 0; goto cleanup;
