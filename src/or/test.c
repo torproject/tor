@@ -1550,9 +1550,7 @@ test_dir_format(void)
   strcat(buf2, pk1_str);
   strcat(buf2, "signing-key\n");
   strcat(buf2, pk2_str);
-#ifdef USE_EVENTDNS
-  strcat(buf2, "opt eventdns 1\n");
-#else
+#ifndef USE_EVENTDNS
   strcat(buf2, "opt eventdns 0\n");
 #endif
   strcat(buf2, bw_lines);
