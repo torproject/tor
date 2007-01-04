@@ -59,18 +59,13 @@ R     - handle connect-dir streams that don't have a chosen_exit_name set.
         o Implement
 R       - Hunt for places that change networkstatus info that I might have
           missed.
-R     . option to dl directory info via tor
-        o Make an option like __AllDirActionsPrivate that falls back to
-          non-Tor DL when not enough info present.  (TunnelDirConns).
-        - Set default to 0 before release candidate.
-        o Think harder about whether TunnelDirConns should be on
-          by default. No, they shouldn't, until we have much more of
-          blocking.pdf implemented.
-        o Handle case where we have no descriptors and so don't know who can
-          handle BEGIN_DIR.
-        - actually cause the directory.c functions to know about or_port
-          and use it when we're supposed to.
-        - man page items for TunnelDirConns and PreferTunneledDirConns
+
+  . option to dl directory info via tor:
+    TunnelDirConns and PreferTunneledDirConns
+R   - actually cause the directory.c functions to know about or_port
+      and use it when we're supposed to.
+N   - for tunneled edge conns, stop reading to the bridge connection
+      when the or_conn we're writing to has a full outbuf.
 
 N - DNS improvements
     . Asynchronous DNS

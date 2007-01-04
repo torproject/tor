@@ -35,8 +35,6 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       options files.
     - Reject *:563 (NTTPS) in the default exit policy. We already reject
       NNTP by default, so this seems like a sensible addition.
-    - Authorities do not recommend exits as guards if this would shift
-      excess load to the exit nodes.
     - Avoid some inadvertent info leaks by making clients reject hostnames
       with invalid characters. Add an option "AllowNonRFC953Hostnames"
       to disable this behavior, in case somebody is running a private
@@ -44,7 +42,7 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
     - Add a new address-spec.txt document to describe our special-case
       addresses: .exit, .onion, and .noconnnect.
     - Add a maintainer script to tell us which options are missing
-      documentation.
+      documentation: "make check-docs".
     - Remove some options that have been deprecated since at least 0.1.0.x:
       AccountingMaxKB, LogFile, DebugLogFile, LogLevel, and SysLog.  Use
       AccountingMax instead of AccountingMaxKB; use Log to set log options.

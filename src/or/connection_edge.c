@@ -322,7 +322,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
 /** Define a schedule for how long to wait between retrying
  * application connections. Rather than waiting a fixed amount of
  * time between each retry, we wait 10 seconds each for the first
- *  two tries, and 15 seconds for each retry after
+ * two tries, and 15 seconds for each retry after
  * that. Hopefully this will improve the expected user experience. */
 static int
 compute_socks_timeout(edge_connection_t *conn)

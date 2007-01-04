@@ -1364,6 +1364,10 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
        * counting exit bandwidth. */
       /* Also, we might want to document the one-third behavior in
        * dir-spec.txt. */
+/* ChangeLog line when we reenable it:
+    - Authorities do not recommend exits as guards if this would shift
+      excess load to the exit nodes.
+*/
       smartlist_add(bandwidths, bw);
     }
   });

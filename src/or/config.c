@@ -347,6 +347,8 @@ static config_var_description_t options_description[] = {
     "provided IP address (only useful for multiple network interfaces)." },
   { "PIDFile", "On startup, write our PID to this file. On clean shutdown, "
     "remove the file." },
+  { "PreferTunneledDirConns", "If non-zero, avoid directory servers that "
+    "don't support tunneled conncetions." },
   /* PreferTunneledDirConns */
   /* ProtocolWarnings */
   /* RephistTrackTime */
@@ -354,8 +356,9 @@ static config_var_description_t options_description[] = {
     "started.  Unix only." },
   { "SafeLogging", "If set to 0, Tor logs potentially sensitive strings "
     "rather than replacing them with the string [scrubbed]." },
-  { "TunnelDirConns", "If non-zero, try to have all directory info downloaded "
-    "via encrypted connections." },
+  { "TunnelDirConns", "If non-zero, when a directory server we contact "
+    "supports it, we will build a one-hop circuit and make an encrypted "
+    "connection via its ORPort." },
   { "User", "On startup, setuid to this user" },
 
   /* ==== client options */
