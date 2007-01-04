@@ -544,7 +544,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
   time_t tmp;
   int r = 0;
   uint64_t expected;
-  static time_t last_recorded;
+  static time_t last_recorded = 0;
 
   /* First, update bw_accounting. Until 0.1.2.5-alpha, this was the only place
    * we stored this information. The format is:

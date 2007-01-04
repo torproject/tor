@@ -17,8 +17,8 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       located in the %appdata%\Tor\ of the user who installed the service.
       Patch from Matt Edman.
     - Include TLS overhead when counting bandwidth usage; previously, we
-      would count only the bytes sent over TLS, but not the bytes used to
-      send them.
+      would count only the bytes sent over TLS, but not the bytes used
+      to send them.
 
   o Minor features:
     - Start using the state file to store bandwidth accounting data:
@@ -27,6 +27,8 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
     - Try to batch changes to the state file so that we do as few
       disk writes as possible while still storing important things in
       a timely fashion.
+    - The state file and the bw_accounting file get saved less often when
+      AvoidDiskWrites is set.
     - Ongoing work on eventdns infrastructure: add dns server and ipv6
       support.
     - Make PIDFile work on Windows (untested).
@@ -43,39 +45,40 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       addresses: .exit, .onion, and .noconnnect.
     - Add a maintainer script to tell us which options are missing
       documentation: "make check-docs".
-    - Remove some options that have been deprecated since at least 0.1.0.x:
-      AccountingMaxKB, LogFile, DebugLogFile, LogLevel, and SysLog.  Use
-      AccountingMax instead of AccountingMaxKB; use Log to set log options.
-    - DirServer configuration lines now have an orport option so clients can
-      open encrypted tunnels to the authorities without having downloaded
-      their descriptors yet.
-    - Clients track responses with status 503 from dirservers.  After a
-      dirserver has given us a 503, we try not to use it until an hour
-      has gone by, or until we have no dirservers that haven't given us
-      a 503.
-    - The state file and the bw_accounting file get saved less often when
-      AvoidDiskWrites is set.
+    - Remove some options that have been deprecated since at least
+      0.1.0.x: AccountingMaxKB, LogFile, DebugLogFile, LogLevel, and
+      SysLog. Use AccountingMax instead of AccountingMaxKB, and use Log
+      to set log options.
     - We no longer look for identity and onion keys in "identity.key" and
       "onion.key" -- these were replaced by secret_id_key and
       secret_onion_key in 0.0.8pre1.
-    - We no longer require unrecognized directory entries to be preceded by
-      "opt".
+    - We no longer require unrecognized directory entries to be
+      preceded by "opt".
+    - DirServer configuration lines now have an orport option so
+      clients can open encrypted tunnels to the authorities without
+      having downloaded their descriptors yet. Enabled for moria1,
+      moria2, tor26, and lefkada now in the default configuration.
+    - Clients track responses with status 503 from dirservers.  After a
+      dirserver has given us a 503, we try not to use it until an hour has
+      gone by, or until we have no dirservers that haven't given us a 503.
     - When we get a 503 from a directory, and we're not a server, we don't
-      count the failure against the total number of failures allowed for the
-      thing we're trying to download.
-    - Report X-Your-Address-Is correctly from tunneled directory connections;
-      don't report X-Your-Address-Is is when it's an internal address; and
-      never believe reported remote addresses when they're internal.
+      count the failure against the total number of failures allowed
+      for the thing we're trying to download.
+    - Report X-Your-Address-Is correctly from tunneled directory
+      connections; don't report X-Your-Address-Is is when it's an internal
+      address; and never believe reported remote addresses when they're
+      internal.
     - Add client-side caching for reverse DNS lookups.
     - Add support to tor-resolve for reverse lookups and SOCKS5.
     - We now check for the case when common DNS requests are going to
-      wildcarded addresses, and change our exit policy to reject *:* if
-      it's happening.  (Bug #364)
+      wildcarded addresses, and change our exit policy to reject *:*
+      if it's happening.  (Bug #364)
     - When we change nameservers or IP addresses, reset and re-launch
       our tests for DNS hijacking.
     - Block an obscure DoS attack from directory caches.
     - Add a BadDirectory flag to network status docs so that authorities
-      can (eventually) tell clients about caches they believe to be broken.
+      can (eventually) tell clients about caches they believe to be
+      broken.
 
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
@@ -124,12 +127,12 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       changed.
     - Cleaned-up code and documentation in NT services. Patch from Matt
       Edman.
-    - Removed the supposedly misleading error message mentioned in Bug #294.
-      Patch from Matt Edman.
+    - Removed the supposedly misleading error message mentioned in
+      Bug #294. Patch from Matt Edman.
     - Stop warning when a single nameserver fails: only warn when _all_ of
       our nameservers have failed.  (Bug #326.)
-    - When we only have one nameserver, raise the threshold for deciding that
-      the nameserver is dead. (Also bug #326)
+    - When we only have one nameserver, raise the threshold for deciding
+      that the nameserver is dead. (Also bug #326)
     - Directory authorities now only decide that routers are reachable
       if their identity keys are as expected.
     - When the user uses bad syntax in the Log config line, stop

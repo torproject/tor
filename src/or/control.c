@@ -1752,6 +1752,8 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("desc/name/", dir, "Router descriptors by nickname."),
   ITEM("desc/all-recent", dir,
        "All non-expired, non-superseded router descriptors."),
+  ITEM("ns/all", networkstatus,
+       "Brief summary of router status (v2 directory format)"),
   PREFIX("ns/id/", networkstatus,
          "Brief summary of router status by ID (v2 directory format)."),
   PREFIX("ns/name/", networkstatus,
