@@ -673,14 +673,14 @@ addressmap_rewrite(char *address, size_t maxlen)
       return; /* done, no rewrite needed */
 
     cp = tor_strdup(escaped_safe_str(ent->new_address));
-    log_info(LD_APP, "Addressmap: rewriting '%s' to '%s'",
+    log_info(LD_APP, "Addressmap: rewriting %s to %s",
              escaped_safe_str(address), cp);
     tor_free(cp);
     strlcpy(address, ent->new_address, maxlen);
   }
   log_warn(LD_CONFIG,
-           "Loop detected: we've rewritten '%s' 16 times! Using it as-is.",
-           safe_str(address));
+           "Loop detected: we've rewritten %s 16 times! Using it as-is.",
+           escaped_safe_str(address));
   /* it's fine to rewrite a rewrite, but don't loop forever */
 }
 
@@ -696,7 +696,7 @@ addressmap_rewrite_reverse(char *address, size_t maxlen)
   ent = strmap_get(addressmap, s);
   if (ent) {
     cp = tor_strdup(escaped_safe_str(ent->new_address));
-    log_info(LD_APP, "Rewrote reverse lookup '%s' -> '%s'",
+    log_info(LD_APP, "Rewrote reverse lookup %s -> %s",
              escaped_safe_str(s), cp);
     tor_free(cp);
     strlcpy(address, ent->new_address, maxlen);

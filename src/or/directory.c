@@ -47,9 +47,10 @@ static int purpose_is_private(uint8_t purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(
-                                      dir_connection_t *conn, int status);
+                               dir_connection_t *conn, int status_code);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
-static void dir_networkstatus_download_failed(smartlist_t *failed, int status);
+static void dir_networkstatus_download_failed(smartlist_t *failed,
+                                              int status_code);
 static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int status_code);
 static void note_request(const char *key, size_t bytes);
@@ -318,7 +319,7 @@ connection_dir_request_failed(dir_connection_t *conn)
  */
 static void
 connection_dir_download_networkstatus_failed(dir_connection_t *conn,
-                                             int status)
+                                             int status_code)
 {
   if (!conn->requested_resource) {
     /* We never reached directory_send_command, which means that we never
@@ -342,7 +343,7 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
     dir_split_resource_into_fingerprints(conn->requested_resource+3,
                                          failed, NULL, 0, 0);
     if (smartlist_len(failed)) {
-      dir_networkstatus_download_failed(failed, status);
+      dir_networkstatus_download_failed(failed, status_code);
       SMARTLIST_FOREACH(failed, char *, cp, tor_free(cp));
     }
     smartlist_free(failed);
@@ -1957,9 +1958,9 @@ connection_dir_finished_connecting(dir_connection_t *conn)
  * fingerprints listed in <b>failed</>).  Mark those fingerprints as having
  * failed once, unless they failed with status code 503. */
 static void
-dir_networkstatus_download_failed(smartlist_t *failed, int status)
+dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
 {
-  if (status == 503)
+  if (status_code == 503)
     return;
   SMARTLIST_FOREACH(failed, const char *, fp,
   {

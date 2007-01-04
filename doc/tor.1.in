@@ -504,7 +504,7 @@ When a controller asks for a virtual (unused) address with the
 When this option is enabled, Tor blocks hostnames containing illegal
 characters (like @ and :) rather than sending them to an exit node to be
 resolved.  This helps trap accidental attempts to resolve URLs and so on.
-(Default: 1)
+(Default: 0)
 .LP
 .TP
 \fBFastFirstHopPK \fR\fB0\fR|fB1\fR\fP

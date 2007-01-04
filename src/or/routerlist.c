@@ -570,7 +570,7 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     result = smartlist_choose(tunnel);
   } else if (smartlist_len(overloaded_tunnel)) {
     result = smartlist_choose(overloaded_tunnel);
-  } else if (trusted_tunnel) {
+  } else if (smartlist_len(trusted_tunnel)) {
     /* FFFF We don't distinguish between trusteds and overloaded trusteds
      * yet. Maybe one day we should. */
     result = smartlist_choose(trusted_tunnel);

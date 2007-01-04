@@ -65,7 +65,7 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       count the failure against the total number of failures allowed
       for the thing we're trying to download.
     - Report X-Your-Address-Is correctly from tunneled directory
-      connections; don't report X-Your-Address-Is is when it's an internal
+      connections; don't report X-Your-Address-Is when it's an internal
       address; and never believe reported remote addresses when they're
       internal.
     - Add client-side caching for reverse DNS lookups.
