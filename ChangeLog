@@ -137,6 +137,7 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       if their identity keys are as expected.
     - When the user uses bad syntax in the Log config line, stop
       suggesting other bad syntax as a replacement.
+    - Avoid a double-free when parsing malformed DirServer lines.
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.

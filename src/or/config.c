@@ -3385,6 +3385,7 @@ parse_dir_server_line(const char *line, int validate_only)
     goto err;
   }
   addrport = smartlist_get(items, 0);
+  smartlist_del_keeporder(items, 0);
   if (parse_addr_port(LOG_WARN, addrport, &address, NULL, &dir_port)<0) {
     log_warn(LD_CONFIG, "Error parsing DirServer address '%s'", addrport);
     goto err;
@@ -3393,7 +3394,6 @@ parse_dir_server_line(const char *line, int validate_only)
     log_warn(LD_CONFIG, "Missing port in DirServer address '%s'",addrport);
     goto err;
   }
-  smartlist_del_keeporder(items, 0);
 
   fingerprint = smartlist_join_strings(items, "", 0, NULL);
   if (strlen(fingerprint) != HEX_DIGEST_LEN) {
