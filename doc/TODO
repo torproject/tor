@@ -82,9 +82,11 @@ N - DNS improvements
         D Delay when we get a lot of 503s, rather than punting onto the
           servers that have given us 503s?
         o Add a 'BadDirectory' flag to statuses.
-      - authorities should *never* 503 a cache, and should never 503
-        network status requests. They can 503 client descriptor requests
-        when they feel like it.
+      o authorities should *never* 503 a cache, and should never 503
+        network status requests.
+      D They can 503 client descriptor requests when they feel like it.
+        How can they distinguish? Not implemented for now, maybe
+        should abandon.
       - update dir-spec with what we decided for each of these
 
   o Have a mode that doesn't write to disk much, so we can run Tor on
@@ -131,7 +133,7 @@ R   - "bandwidth classes", for incoming vs initiated-here conns,
       and to give dir conns lower priority.
     . Write limiting; separate token bucket for write
       o preemptively give a 503 to some v1 dir requests
-R     - preemptively give a 503 to some v2 dir requests
+      o preemptively give a 503 to some v2 dir requests
         o Write function to estimate bytes needed for N descriptors
           statuses
       D per-conn write buckets
@@ -258,6 +260,8 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
   - Add an option (related to AvoidDiskWrites) to disable directory caching.
 
 Minor items for 0.1.2.x as time permits:
+  - a way to generate the website diagrams from source, so we can
+    translate them as utf-8 text rather than with gimp.
 R - add d64 and fp64 along-side d and fp so people can paste status
     entries into a url. since + is a valid base64 char, only allow one
     at a time. spec and then do.

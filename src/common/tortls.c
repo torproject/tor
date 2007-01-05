@@ -875,6 +875,8 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
    * we wrapped around by more than ULONG_MAX since the last time we called
    * this function.
    */
+  tor_assert(r >= tls->last_read_count);
+  tor_assert(w >= tls->last_write_count);
   *n_read = (size_t)(r - tls->last_read_count);
   *n_written = (size_t)(w - tls->last_write_count);
   tls->last_read_count = r;

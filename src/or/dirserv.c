@@ -1687,7 +1687,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
   SMARTLIST_FOREACH(fingerprints, const char *, fp,
     {
       if (router_digest_is_me(fp) && should_generate_v2_networkstatus())
-          generate_v2_networkstatus();
+        generate_v2_networkstatus();
       cached = digestmap_get(cached_v2_networkstatus, fp);
       if (cached) {
         smartlist_add(result, cached);
@@ -1839,8 +1839,9 @@ dirserv_orconn_tls_done(const char *address,
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (!strcasecmp(address, ri->address) && or_port == ri->or_port &&
+        as_advertised &&
         !memcmp(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN) &&
-        as_advertised) {
+        !strcasecmp(nickname_rcvd, ri->nickname)) {
       /* correct nickname and digest. mark this router reachable! */
       log_info(LD_DIRSERV, "Found router %s to be reachable. Yay.",
                ri->nickname);
@@ -1886,10 +1887,11 @@ dirserv_test_reachability(int try_all)
     ctr = (ctr + 1) % 128;
 }
 
-/** Return an approximate estimate of the number of bytes that will be needed
- * to transmit the server descriptors (if is_serverdescs) or networkstatus
- * objects (if !is_serverdescs) listed in <b>fps</b>.  If <b>compressed</b> is
- * set, we guess how large the data will be after compression.
+/** Return an approximate estimate of the number of bytes that will
+ * be needed to transmit the server descriptors (if is_serverdescs --
+ * they can be either d/ or fp/ queries) or networkstatus objects (if
+ * !is_serverdescs) listed in <b>fps</b>.  If <b>compressed</b> is set,
+ * we guess how large the data will be after compression.
  *
  * The return value is an estimate; it might be larger or smaller.
  **/

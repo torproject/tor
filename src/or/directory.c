@@ -1325,8 +1325,8 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   }
 
   if (buf_datalen(conn->_base.inbuf) > MAX_DIRECTORY_OBJECT_SIZE) {
-    log_warn(LD_HTTP, "Too much data received from directory connection; "
-             "DOS attempt or protocol shift.");
+    log_warn(LD_HTTP, "Too much data received from directory connection: "
+             "denial of service attempt, or you need to upgrade?");
     connection_mark_for_close(TO_CONN(conn));
     return -1;
   }
@@ -1639,6 +1639,16 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
       smartlist_free(dir_fps);
       return 0;
     }
+    dlen = dirserv_estimate_data_size(conn->fingerprint_stack,
+                                      0, deflated);
+    if (global_write_bucket_low(dlen, 2)) {
+      log_info(LD_DIRSERV,
+               "Client asked for server descriptors, but we've been "
+               "writing too many bytes lately. Sending 503 Dir busy.");
+      write_http_status_line(conn, 503, "Directory busy, try again later");
+      return 0;
+    }
+
     // note_request(request_type,dlen);
     (void) request_type;
     write_http_response_header(conn, -1,
@@ -1696,6 +1706,15 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     if (res < 0)
       write_http_status_line(conn, 404, msg);
     else {
+      dlen = dirserv_estimate_data_size(conn->fingerprint_stack,
+                                        1, deflated);
+      if (global_write_bucket_low(dlen, 2)) {
+        log_info(LD_DIRSERV,
+                 "Client asked for server descriptors, but we've been "
+                 "writing too many bytes lately. Sending 503 Dir busy.");
+        write_http_status_line(conn, 503, "Directory busy, try again later");
+        return 0;
+      }
       write_http_response_header(conn, -1,
                      deflated?"application/octet_stream":"text/plain",
                      deflated?"deflate":NULL, cache_lifetime);

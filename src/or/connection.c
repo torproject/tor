@@ -1175,8 +1175,11 @@ connection_bucket_write_limit(connection_t *conn)
 int
 global_write_bucket_low(size_t attempt, int priority)
 {
-  if (global_write_bucket < (int)attempt) /* not enough space no matter what */
-    return 1;
+  if (authdir_mode(get_options()) && priority>1)
+    return 0; /* there's always room to answer v2 if we're an auth dir */
+
+  if (global_write_bucket < (int)attempt)
+    return 1; /* not enough space no matter the priority */
 
   if (priority == 1) { /* old-style v1 query */
     if (global_write_bucket-attempt < 2*get_options()->BandwidthRate)
@@ -1533,7 +1536,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
    * have reached 0 on a different conn, and this guy needs to
    * know to stop reading. */
   connection_consider_empty_read_buckets(conn);
-  if (n_written > 0)
+  if (n_written > 0 && connection_is_writing(conn))
     connection_consider_empty_write_buckets(conn);
 
   return 0;
@@ -1714,7 +1717,7 @@ connection_handle_write(connection_t *conn, int force)
     }
     if (n_read > 0) {
       rep_hist_note_bytes_read(n_read, now);
-      global_read_bucket -= n_read;
+      connection_read_bucket_decrement(conn, n_read);
     }
   }
 
@@ -1737,7 +1740,7 @@ connection_handle_write(connection_t *conn, int force)
    * have reached 0 on a different conn, and this guy needs to
    * know to stop writing. */
   connection_consider_empty_write_buckets(conn);
-  if (n_read > 0)
+  if (n_read > 0 && connection_is_reading(conn))
     connection_consider_empty_read_buckets(conn);
 
   return 0;

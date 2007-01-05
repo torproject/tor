@@ -379,9 +379,9 @@ $Id$
              (because its ISP censors it, because it is behind a restrictive
              proxy, or for some similar reason).
           "BadDirectory" if the router is believed to be useless as a
-             directory cache (because its directory port isn't working;
-             because its bandwidth is always throttled, or for some
-             similar reason).
+             directory cache (because its directory port isn't working,
+             its bandwidth is always throttled, or for some similar
+             reason).
           "Exit" if the router is useful for building general-purpose exit
              circuits.
           "Fast" if the router is suitable for high-bandwidth circuits.
