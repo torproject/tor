@@ -472,7 +472,7 @@ AC_CHECK_HEADERS(zlib.h, , AC_MSG_ERROR(Zlib header (zlib.h) not found. Tor requ
 
 dnl These headers are not essential
 
-AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h limits.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h inttypes.h utime.h sys/utime.h sys/mman.h)
+AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h limits.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h inttypes.h utime.h sys/utime.h sys/mman.h netintet/in.h netinet/in6.h)
 
 AC_CHECK_HEADERS(net/if.h, [net_if_found=1], [net_if_found=0],
 [#ifdef HAVE_SYS_TYPES_H
@@ -555,8 +555,15 @@ AC_CHECK_SIZEOF(size_t)
 AC_CHECK_TYPES([uint, u_char])
 
 AC_CHECK_TYPES([struct in6_addr, struct sockaddr_storage], , ,
-[#include <netinet/in.h>
-#include <sys/socket.h>])
+[#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_NETINET_IN6_H
+#include <netinet/in6.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif])
 
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [

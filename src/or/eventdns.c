@@ -96,6 +96,10 @@
 #include <arpa/inet.h>
 #endif
 
+#ifdef HAVE_NETINET_IN6_H
+#include <netinet/in6.h>
+#endif
+
 #ifdef WIN32
 typedef int socklen_t;
 #endif

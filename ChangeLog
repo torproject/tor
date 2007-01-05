@@ -138,6 +138,7 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
     - When the user uses bad syntax in the Log config line, stop
       suggesting other bad syntax as a replacement.
     - Avoid a double-free when parsing malformed DirServer lines.
+    - Correctly detect ipv6 DNS capability on OpenBSD.
 
   o Controller features:
     - Have GETINFO dir/status/* work on hosts with DirPort disabled.
