@@ -493,7 +493,10 @@ AC_CHECK_HEADERS(net/pfvar.h, [net_pfvar_found=1], [net_pfvar_found=0],
 #endif])
 AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
         [linux_netfilter_ipv4=1], [linux_netfilter_ipv4=0],
-[#ifdef HAVE_SYS_SOCKET_H
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif])
 
@@ -555,7 +558,10 @@ AC_CHECK_SIZEOF(size_t)
 AC_CHECK_TYPES([uint, u_char])
 
 AC_CHECK_TYPES([struct in6_addr, struct sockaddr_storage], , ,
-[#ifdef HAVE_NETINET_IN_H
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
 #ifdef HAVE_NETINET_IN6_H
@@ -568,6 +574,15 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_storage], , ,
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
 AC_TRY_RUN([
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
 int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }],
   tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes)
 ])
