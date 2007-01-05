@@ -1610,10 +1610,6 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     return 0;
   }
 
-  /* FFFF for status/ and server/ requests, we don't have a good
-   * guess of the length we're going to be writing out, so it's hard
-   * to call global_write_bucket_low(). How to proceed? */
-
   if (!strcmpstart(url,"/tor/status/")) {
     /* v2 network status fetch. */
     size_t url_len = strlen(url);
