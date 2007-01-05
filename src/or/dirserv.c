@@ -1900,6 +1900,7 @@ dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                            int compressed)
 {
   size_t result;
+  tor_assert(fps);
   if (is_serverdescs) {
     int n = smartlist_len(fps);
     routerinfo_t *me = router_get_my_routerinfo();

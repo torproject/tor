@@ -1639,8 +1639,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
       smartlist_free(dir_fps);
       return 0;
     }
-    dlen = dirserv_estimate_data_size(conn->fingerprint_stack,
-                                      0, deflated);
+    dlen = dirserv_estimate_data_size(dir_fps, 0, deflated);
     if (global_write_bucket_low(dlen, 2)) {
       log_info(LD_DIRSERV,
                "Client asked for server descriptors, but we've been "

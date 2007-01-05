@@ -923,8 +923,9 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
   if (resolve->state != CACHE_STATE_PENDING) {
     /* XXXX Maybe update addr? or check addr for consistency? Or let
      * VALID replace FAILED? */
-    log_notice(LD_EXIT, "Resolved %s which was already resolved; ignoring",
-               escaped_safe_str(address));
+    log_info(LD_EXIT, "Resolved %s which was already resolved; ignoring",
+             escaped_safe_str(address));
+    /* XXXX012 this triggers in ordinary life. nick says it's a bug. */
     tor_assert(resolve->pending_connections == NULL);
     return;
   }
