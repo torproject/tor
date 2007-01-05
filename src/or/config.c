@@ -3365,10 +3365,11 @@ parse_dir_server_line(const char *line, int validate_only)
       is_v2_authority = 0;
     } else if (!strcasecmpstart(flag, "orport=")) {
       int ok;
-      flag += strlen("orport=");
-      or_port = (uint16_t) tor_parse_long(flag, 10, 1, 65535, &ok, NULL);
+      char *portstring = flag + strlen("orport=");
+      or_port = (uint16_t) tor_parse_long(portstring, 10, 1, 65535, &ok, NULL);
       if (!ok)
-        log_warn(LD_CONFIG, "Invalid orport '%s' on DirServer line.", flag);
+        log_warn(LD_CONFIG, "Invalid orport '%s' on DirServer line.",
+                 portstring);
     } else {
       log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirServer line",
                flag);
