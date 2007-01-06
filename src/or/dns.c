@@ -171,6 +171,7 @@ init_cache_map(void)
 static void
 evdns_log_cb(int warn, const char *msg)
 {
+  const char *cp;
   if (!strcmpstart(msg, "Resolve requested for") &&
       get_options()->SafeLogging) {
     log(LOG_INFO, LD_EXIT, "eventdns: Resolve requested.");
@@ -178,11 +179,25 @@ evdns_log_cb(int warn, const char *msg)
   } else if (!strcmpstart(msg, "Search: ")) {
     return;
   }
-  if (!strcmpstart(msg, "Nameserver ") && strstr(msg, " has failed: ")) {
+  if (!strcmpstart(msg, "Nameserver ") && (cp=strstr(msg, " has failed: "))) {
+    char *ns = tor_strndup(msg+11, cp-(msg+11));
+    const char *err = strchr(cp, ':'+2);
     /* Don't warn about a single failed nameserver; we'll warn with 'all
      * nameservers have failed' if we're completely out of nameservers;
      * otherwise, the situation is tolerable. */
     warn = 0;
+    control_event_server_status(LOG_WARN,
+                                "NAMESERVER_STATUS NS=%s STATUS=DOWN ERR=%s",
+                                ns, escaped(err));
+    tor_free(ns);
+  } else if (!strcmpstart(msg, "Nameserver ") &&
+             (cp=strstr(msg, " is back up"))) {
+    char *ns = tor_strndup(msg+11, cp-(msg+11));
+    control_event_server_status(LOG_NOTICE,
+                                "NAMESERVER_STATUS NS=%s STATUS=UP", ns);
+    tor_free(ns);
+  } else if (!strcmp(msg, "All nameservers have failed")) {
+    control_event_server_status(LOG_WARN, "NAMESERVER_ALL_DOWN");
   }
   log(warn?LOG_WARN:LOG_INFO, LD_EXIT, "eventdns: %s", msg);
 }
@@ -1720,6 +1735,8 @@ wildcard_increment_answer(const char *id)
         "\"%s\" as 'not found'.", id, *ip, id);
       smartlist_add(dns_wildcard_list, tor_strdup(id));
     }
+    if (!dns_wildcard_notice_given)
+      control_event_server_status(LOG_NOTICE, "DNS_HIJACKED");
     dns_wildcard_notice_given = 1;
   }
 }
@@ -1746,6 +1763,8 @@ add_wildcarded_test_address(const char *address)
       dns_is_completely_invalid = 1;
       mark_my_descriptor_dirty();
     }
+    if (!dns_wildcarded_test_address_notice_given)
+      control_event_server_status(LOG_WARN, "DNS_USELESS");
     dns_wildcarded_test_address_notice_given = 1;
   }
 }

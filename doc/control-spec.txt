@@ -1152,14 +1152,28 @@ do for each. -RD]
      // from resolve_my_address() in config.c
      [unimplemented]
 
-     // sketchy libevent, sketchy OS, sketchy threading
+     // sketchy OS, sketchy threading
      [unimplemented]
 
      // too many onions queued. threading problem or slow cpu?
      [unimplemented]
 
-     // eventdns statements. like, hijacked dns.
-     [unimplemented]
+     NAMESERVER_STATUS
+     "NS=addr"
+     "STATUS=" "UP" / "DOWN"
+     "ERR=" message
+        One of our nameservers has changed status.
+
+     NAMESERVER_ALL_DOWN
+        All of our nameservers have gone down.
+
+     DNS_HIJACKED
+        Our DNS provider is providing an address when it should be saying
+        "NOTFOUND"; Tor will treat the address as a synonym for "NOTFOUND".
+
+     DNS_USELESS
+        Our DNS provider is giving a hijacked address instead of well-known
+        websites; Tor will not try to be an exit node.
 
      BAD_SERVER_DESCRIPTOR
      "DIRAUTH=addr:port"
