@@ -1183,9 +1183,9 @@ global_write_bucket_low(size_t attempt, int priority)
 
   if (priority == 1) { /* old-style v1 query */
     /* Could we handle *two* of these requests within the next two seconds? */
-    /* XXX012 make this robust against overflows */
-    if (global_write_bucket + 2*(int)(get_options()->BandwidthRate) <
-        2*(int)attempt)
+    int64_t can_write = (int64_t)global_write_bucket
+      + 2*get_options()->BandwidthRate;
+    if (can_write < 2*(int64_t)attempt)
       return 1;
   } else { /* v2 query */
     /* no further constraints yet */

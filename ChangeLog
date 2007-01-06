@@ -27,6 +27,9 @@ Changes in version 0.1.2.6-alpha - 2007-??-??
   o Minor bugfixes:
     - Restore a warning message if we accidentally resolve an address that
       we weren't planning to resolve.
+    - Prevent an (unlikely) bug on 32-bit architectures that could make
+      directories send 503s incorrectly when BandwidthBurst plus 2 times
+      BandwidthRate was over to 2 GB.
 
 
 Changes in version 0.1.2.5-alpha - 2007-01-06
