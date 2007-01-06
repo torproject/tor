@@ -450,7 +450,10 @@ $Id$
    known running, valid routers.
 
    "Guard" -- A router is a possible 'Guard' if it is 'Stable' and its
-   bandwidth is above median for known running, valid routers.
+   bandwidth is above median for known running, valid routers.  If the total
+   bandwidth of Running Valid non-BadExit Exit servers is less than one third
+   of the total bandwidth of all Running Valid servers, no Exit is listed as
+   a Guard.
 
    "Authority" -- A router is called an 'Authority' if the authority
    generating the network-status document believes it is an authority.

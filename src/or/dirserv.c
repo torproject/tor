@@ -1362,7 +1362,6 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       total_bandwidth += *bw;
       if (ri->is_exit && !ri->is_bad_exit)
         total_exit_bandwidth += *bw;
-      /* XXXX012 Document the one-third behavior in dir-spec.txt. */
       smartlist_add(bandwidths, bw);
     }
   });
