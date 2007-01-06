@@ -19,6 +19,9 @@ Changes in version 0.1.2.6-alpha - 2007-??-??
     - Implement CHECKING_REACHABILITY and REACHABILITY_{SUCCEEDED|FAILED}
       server status events so controllers can learn about Tor's progress in
       deciding whether it's reachable from the outside.
+    - Implement BAD_LIBEVENT general status event so controllers can learn
+      when we have a version/method combination in libevent that needs to
+      be changed.
 
   o Minor features (directory):
     - Authorities do not recommend exits as guards if this would shift
@@ -30,6 +33,8 @@ Changes in version 0.1.2.6-alpha - 2007-??-??
     - Prevent an (unlikely) bug on 32-bit architectures that could make
       directories send 503s incorrectly when BandwidthBurst plus 2 times
       BandwidthRate was over to 2 GB.
+    - Warn that using select() on any libevent version before 1.1 will be
+      unnecessarily slow (even for select()).
 
 
 Changes in version 0.1.2.5-alpha - 2007-01-06

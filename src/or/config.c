@@ -577,7 +577,8 @@ static int opt_streq(const char *s1, const char *s2);
 typedef enum {
   /* Note: we compare these, so it's important that "old" precede everything,
    * and that "other" come last. */
-  LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_OTHER
+  LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_12A,
+  LE_OTHER
 } le_version_t;
 static le_version_t decode_libevent_version(void);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
@@ -3783,6 +3784,7 @@ static const struct {
   { "1.1a", LE_11A },
   { "1.1b", LE_11B },
   { "1.2",  LE_12 },
+  { "1.2a", LE_12A },
   { NULL, LE_OTHER }
 };
 
@@ -3810,6 +3812,7 @@ check_libevent_version(const char *m, int server)
   int buggy = 0, iffy = 0, slow = 0;
   le_version_t version;
   const char *v = event_get_version();
+  const char *badness = NULL;
 
   version = decode_libevent_version();
 
@@ -3817,6 +3820,12 @@ check_libevent_version(const char *m, int server)
    * are buggy, rather than just warning about them and then proceeding
    * to use them? If so, we should probably not wrap this whole thing
    * in HAVE_EVENT_GET_VERSION and HAVE_EVENT_GET_METHOD. -RD */
+  /* XXXX The problem is that it's not trivial to get libevent to change it's
+   * method once it's initialized, and it's not trivial to tell what method it
+   * will use without initializing it.  I guess we could preemptively disable
+   * buggy libevent modes based on the version _before_ initializing it,
+   * though, but then there's no good way (afaict) to warn "I would have used
+   * kqueue, but instead I'm using select." -NM */
   if (!strcmp(m, "kqueue")) {
     if (version < LE_11B)
       buggy = 1;
@@ -3828,7 +3837,7 @@ check_libevent_version(const char *m, int server)
       buggy = 1;
     else if (version < LE_11)
       slow = 1;
-  } else if (!strcmp(m, "poll")) {
+  } else if (!strcmp(m, "select")) {
     if (version < LE_11)
       slow = 1;
   } else if (!strcmp(m, "win32")) {
@@ -3840,15 +3849,23 @@ check_libevent_version(const char *m, int server)
     log(LOG_WARN, LD_GENERAL,
         "There are known bugs in using %s with libevent %s. "
         "Please use the latest version of libevent.", m, v);
+    badness = "BROKEN";
   } else if (iffy) {
     log(LOG_WARN, LD_GENERAL,
         "There are minor bugs in using %s with libevent %s. "
         "You may want to use the latest version of libevent.", m, v);
+    badness = "BUGGY";
   } else if (slow && server) {
     log(LOG_WARN, LD_GENERAL,
         "libevent %s can be very slow with %s. "
         "When running a server, please use the latest version of libevent.",
         v,m);
+    badness = "SLOW";
+  }
+  if (badness) {
+    control_event_general_status(LOG_WARN,
+        "BAD_LIBEVENT VERSION=%s METHOD=%s BADNESS=%s RECOVERED=NO",
+                                 v, m, badness);
   }
 
 }

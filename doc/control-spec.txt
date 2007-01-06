@@ -1030,6 +1030,17 @@ do for each. -RD]
          a NETWORKSTATUS, we decided we're skewed because we got a
          networkstatus from far in the future.
 
+     BAD_LIBEVENT
+     "METHOD=" libevent method
+     "VERSION=" libevent version
+     "BADNESS=" "BROKEN" / "BUGGY" / "SLOW"
+     "RECOVERED=" "NO" / "YES"
+        Tor knows about bugs in using the configured event method in this
+        version of libevent.  "BROKEN" libevents won't work at all;
+        "BUGGY" libevents might work okay; "SLOW" libevents will work
+        fine, but not quickly.  If "RECOVERED" is YES, Tor managed to
+        switch to a more reliable (but probably slower!) libevent method.
+
   Actions for STATUS_GENERAL severity ERR events can be as follows:
 
      BAD_PROXY
