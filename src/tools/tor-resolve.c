@@ -85,7 +85,7 @@ build_socks_resolve_request(char **out,
     (*out)[2] = 0; /* reserved. */
     (*out)[3] = is_ip_address ? 1 : 3;
     if (is_ip_address) {
-      set_uint32((*out)+4, htonl(in.s_addr));
+      set_uint32((*out)+4, in.s_addr);
     } else {
       (*out)[4] = (char)(uint8_t)(addrlen - 1);
       memcpy((*out)+5, hostname, addrlen - 1);
