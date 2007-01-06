@@ -1,26 +1,24 @@
-Changes in version 0.1.2.5-alpha - 2007-01-03
+Changes in version 0.1.2.5-alpha - 2007-01-06
   o Major features:
-    - Enable "BEGIN_DIR" cells: prefer to connect to the directory
-      server via TLS so we do encrypted directory requests rather than
-      plaintext. On by default; disable via the TunnelDirConns config
-      option if you like.
     - Enable write limiting as well as read limiting. Now we sacrifice
       capacity if we're pushing out lots of directory traffic, rather
       than overrunning the user's intended bandwidth limits.
-    - Authorities now include server versions in networkstatus. This adds
-      about 2% to the side of compressed networkstatus docs, and allows
-      clients to tell which servers support BEGIN_DIR and which don't.
-      The implementation is forward-compatible with a proposed future
-      protocol version scheme not tied to Tor versions.
-    - Support running the Tor service with a torrc not in the
-      same directory as tor.exe (Bug #356) and default to using the torrc
-      located in the %appdata%\Tor\ of the user who installed the service.
-      Patch from Matt Edman.
     - Include TLS overhead when counting bandwidth usage; previously, we
       would count only the bytes sent over TLS, but not the bytes used
       to send them.
+    - Support running the Tor service with a torrc not in the same
+      directory as tor.exe and default to using the torrc located in
+      the %appdata%\Tor\ of the user who installed the service. Patch
+      from Matt Edman.
+    - Servers now check for the case when common DNS requests are going to
+      wildcarded addresses (i.e. all getting the same answer), and change
+      their exit policy to reject *:* if it's happening.
+    - Implement BEGIN_DIR cells, so we can connect to the directory
+      server via TLS to do encrypted directory requests rather than
+      plaintext. Enable via the TunnelDirConns and PreferTunneledDirConns
+      config options if you like.
 
-  o Minor features:
+  o Minor features (config and docs):
     - Start using the state file to store bandwidth accounting data:
       the bw_accounting file is now obsolete. We'll keep generating it
       for a while for people who are still using 0.1.2.4-alpha.
@@ -28,37 +26,44 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       disk writes as possible while still storing important things in
       a timely fashion.
     - The state file and the bw_accounting file get saved less often when
-      AvoidDiskWrites is set.
-    - Ongoing work on eventdns infrastructure: add dns server and ipv6
-      support.
+      the AvoidDiskWrites config option is set.
     - Make PIDFile work on Windows (untested).
     - Add internal descriptions for a bunch of configuration options:
       accessible via controller interface and in comments in saved
       options files.
-    - Reject *:563 (NTTPS) in the default exit policy. We already reject
+    - Reject *:563 (NNTPS) in the default exit policy. We already reject
       NNTP by default, so this seems like a sensible addition.
-    - Avoid some inadvertent info leaks by making clients reject hostnames
-      with invalid characters. Add an option "AllowNonRFC953Hostnames"
-      to disable this behavior, in case somebody is running a private
-      network with hosts called @, !, and #.
-    - Add a new address-spec.txt document to describe our special-case
-      addresses: .exit, .onion, and .noconnnect.
+    - Clients now reject hostnames with invalid characters. This should
+      avoid some inadvertent info leaks. Add an option
+      AllowNonRFC953Hostnames to disable this behavior, in case somebody
+      is running a private network with hosts called @, !, and #.
     - Add a maintainer script to tell us which options are missing
       documentation: "make check-docs".
-    - Remove some options that have been deprecated since at least
-      0.1.0.x: AccountingMaxKB, LogFile, DebugLogFile, LogLevel, and
-      SysLog. Use AccountingMax instead of AccountingMaxKB, and use Log
-      to set log options.
-    - We no longer look for identity and onion keys in "identity.key" and
-      "onion.key" -- these were replaced by secret_id_key and
-      secret_onion_key in 0.0.8pre1.
-    - We no longer require unrecognized directory entries to be
-      preceded by "opt".
-    - DirServer configuration lines now have an orport option so
+    - Add a new address-spec.txt document to describe our special-case
+      addresses: .exit, .onion, and .noconnnect.
+
+  o Minor features (DNS):
+    - Ongoing work on eventdns infrastructure: now it has dns server
+      and ipv6 support. One day Tor will make use of it.
+    - Add client-side caching for reverse DNS lookups.
+    - Add support to tor-resolve tool for reverse lookups and SOCKS5.
+    - When we change nameservers or IP addresses, reset and re-launch
+      our tests for DNS hijacking.
+
+  o Minor features (directory):
+    - Authorities now specify server versions in networkstatus. This adds
+      about 2% to the side of compressed networkstatus docs, and allows
+      clients to tell which servers support BEGIN_DIR and which don't.
+      The implementation is forward-compatible with a proposed future
+      protocol version scheme not tied to Tor versions.
+    - DirServer configuration lines now have an orport= option so
       clients can open encrypted tunnels to the authorities without
       having downloaded their descriptors yet. Enabled for moria1,
       moria2, tor26, and lefkada now in the default configuration.
-    - Clients track responses with status 503 from dirservers.  After a
+    - Directory servers are more willing to send a 503 "busy" if they
+      are near their write limit, especially for v1 directory requests.
+      Now they can use their limited bandwidth for actual Tor traffic.
+    - Clients track responses with status 503 from dirservers. After a
       dirserver has given us a 503, we try not to use it until an hour has
       gone by, or until we have no dirservers that haven't given us a 503.
     - When we get a 503 from a directory, and we're not a server, we don't
@@ -68,19 +73,31 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       connections; don't report X-Your-Address-Is when it's an internal
       address; and never believe reported remote addresses when they're
       internal.
-    - Add client-side caching for reverse DNS lookups.
-    - Add support to tor-resolve for reverse lookups and SOCKS5.
-    - We now check for the case when common DNS requests are going to
-      wildcarded addresses, and change our exit policy to reject *:*
-      if it's happening.  (Bug #364)
-    - When we change nameservers or IP addresses, reset and re-launch
-      our tests for DNS hijacking.
-    - Block an obscure DoS attack from directory caches.
+    - Protect against an unlikely DoS attack on directory servers.
     - Add a BadDirectory flag to network status docs so that authorities
       can (eventually) tell clients about caches they believe to be
       broken.
 
-  o Security bugfixes:
+  o Minor features (controller):
+    - Have GETINFO dir/status/* work on hosts with DirPort disabled.
+    - Reimplement GETINFO so that info/names stays in sync with the
+      actual keys.
+    - Implement "GETINFO fingerprint".
+    - Implement "SETEVENTS GUARD" so controllers can get updates on
+      entry guard status as it changes.
+
+  o Minor features (clean up obsolete pieces):
+    - Remove some options that have been deprecated since at least
+      0.1.0.x: AccountingMaxKB, LogFile, DebugLogFile, LogLevel, and
+      SysLog. Use AccountingMax instead of AccountingMaxKB, and use Log
+      to set log options.
+    - We no longer look for identity and onion keys in "identity.key" and
+      "onion.key" -- these were replaced by secret_id_key and
+      secret_onion_key in 0.0.8pre1.
+    - We no longer require unrecognized directory entries to be
+      preceded by "opt".
+
+  o Major bugfixes (security):
     - Stop sending the HttpProxyAuthenticator string to directory
       servers when directory connections are tunnelled through Tor.
     - Clients no longer store bandwidth history in the state file.
@@ -92,32 +109,33 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
       keys, so that we will rotate keys once they're a week old even if
       we never stay up for a week ourselves.
 
-  o Major bugfixes:
+  o Major bugfixes (other):
     - Fix a longstanding bug in eventdns that prevented the count of
       timed-out resolves from ever being reset. This bug caused us to
       give up on a nameserver the third time it timed out, and try it
       10 seconds later... and to give up on it every time it timed out
-      after that. (May fix bug 326.)
+      after that.
     - Take out the '5 second' timeout from the connection retry
       schedule. Now the first connect attempt will wait a full 10
       seconds before switching to a new circuit. Perhaps this will help
       a lot. Based on observations from Mike Perry.
     - Fix a bug on the Windows implementation of tor_mmap_file() that
-      would prevent the cached-routers file from ever loading (reported
-      by John Kimble).
+      would prevent the cached-routers file from ever loading. Reported
+      by John Kimble.
 
   o Minor bugfixes:
-    - Fix a bug when a BSD-style PF socket is first used. (Patch from
-      Fabian Keil.)
     - Fix an assert failure when a directory authority sets
       AuthDirRejectUnlisted and then receives a descriptor from an
-      unlisted router (reported by seeess).
+      unlisted router. Reported by seeess.
+    - Avoid a double-free when parsing malformed DirServer lines.
+    - Fix a bug when a BSD-style PF socket is first used. Patch from
+      Fabian Keil.
     - Fix a bug in 0.1.2.2-alpha that prevented clients from asking
       to resolve an address at a given exit node even when they ask for
       it by name.
-    - Routers no longer ever list themselves in their "family" line,
-      even if configured to do so.  This makes it easier to configure
-      family lists efficiently.
+    - Servers no longer ever list themselves in their "family" line,
+      even if configured to do so. This makes it easier to configure
+      family lists conveniently.
     - When running as a server, don't fall back to 127.0.0.1 when no
       nameservers are configured in /etc/resolv.conf; instead, make the
       user fix resolv.conf or specify nameservers explicitly. (Resolves
@@ -125,34 +143,20 @@ Changes in version 0.1.2.5-alpha - 2007-01-03
     - Stop accepting certain malformed ports in configured exit policies.
     - Don't re-write the fingerprint file every restart, unless it has
       changed.
-    - Cleaned-up code and documentation in NT services. Patch from Matt
-      Edman.
-    - Removed the supposedly misleading error message mentioned in
-      Bug #294. Patch from Matt Edman.
     - Stop warning when a single nameserver fails: only warn when _all_ of
-      our nameservers have failed.  (Bug #326.)
-    - When we only have one nameserver, raise the threshold for deciding
-      that the nameserver is dead. (Also bug #326)
+      our nameservers have failed. Also, when we only have one nameserver,
+      raise the threshold for deciding that the nameserver is dead.
     - Directory authorities now only decide that routers are reachable
       if their identity keys are as expected.
     - When the user uses bad syntax in the Log config line, stop
       suggesting other bad syntax as a replacement.
-    - Avoid a double-free when parsing malformed DirServer lines.
     - Correctly detect ipv6 DNS capability on OpenBSD.
 
-  o Controller features:
-    - Have GETINFO dir/status/* work on hosts with DirPort disabled.
-    - Reimplement GETINFO so that info/names stays in sync with the
-      actual keys.
-    - Implement "GETINFO fingerprint".
-    - Implement "SETEVENTS GUARD" so controllers can get updates on
-      entry guard status as it changes.
-
-  o Controller bugfixes:
-    - Report the circuit number correctly in STREAM CLOSED events. (Bug
-      reported by Mike Perry.)
+  o Minor bugfixes (controller):
+    - Report the circuit number correctly in STREAM CLOSED events. Bug
+      reported by Mike Perry.
     - Do not report bizarre values for results of accounting GETINFOs
-      when the last second's write or read exceeds the alloted bandwidth.
+      when the last second's write or read exceeds the allotted bandwidth.
     - Report "unrecognized key" rather than an empty string when the
       controller tries to fetch a networkstatus that doesn't exist.
 
