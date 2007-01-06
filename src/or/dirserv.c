@@ -1337,7 +1337,8 @@ _compare_uint32(const void **a, const void **b)
  * servers to stable_uptime, and the relative bandwidth capacities to
  * fast_bandwidth and guard_bandwidth.  Set total_bandwidth to the total
  * capacity of all running valid servers and total_exit_bandwidth to the
- * capacity of all running valid exits. */
+ * capacity of all running valid exits.  Set the is_exit flag of each router
+ * appropriately. */
 static void
 dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
@@ -1354,20 +1355,14 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     if (ri->is_running && ri->is_valid) {
       uint32_t *up = tor_malloc(sizeof(uint32_t));
       uint32_t *bw = tor_malloc(sizeof(uint32_t));
+      ri->is_exit = exit_policy_is_general_exit(ri->exit_policy);
       *up = (uint32_t) real_uptime(ri, now);
       smartlist_add(uptimes, up);
       *bw = router_get_advertised_bandwidth(ri);
       total_bandwidth += *bw;
-      total_exit_bandwidth += *bw;
-      /* XXX012 The above line doesn't actually count exit bandwidth. */
-      /* While we're at it, we might want to avoid BadExit nodes when
-       * counting exit bandwidth. */
-      /* Also, we might want to document the one-third behavior in
-       * dir-spec.txt. */
-/* ChangeLog line when we reenable it:
-    - Authorities do not recommend exits as guards if this would shift
-      excess load to the exit nodes.
-*/
+      if (ri->is_exit && !ri->is_bad_exit)
+        total_exit_bandwidth += *bw;
+      /* XXXX012 Document the one-third behavior in dir-spec.txt. */
       smartlist_add(bandwidths, bw);
     }
   });
@@ -1508,7 +1503,8 @@ generate_v2_networkstatus(void)
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
-      int f_exit = exit_policy_is_general_exit(ri->exit_policy);
+      /* Already set by compute_performance_thresholds. */
+      int f_exit = ri->is_exit;
       /* These versions dump connections with idle live circuits
          sometimes. D'oh!*/
       int unstable_version =
