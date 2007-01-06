@@ -886,6 +886,14 @@ add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
   set_expiry(resolve, time(NULL) + dns_get_expiry_ttl(ttl));
 }
 
+static INLINE int
+is_test_address(const char *address)
+{
+  or_options_t *options = get_options();
+  return options->ServerDNSTestAddresses &&
+    smartlist_string_isin_case(options->ServerDNSTestAddresses, address);
+}
+
 /** Called on the OR side when a DNS worker or the eventdns library tells us
  * the outcome of a DNS resolve: tell all pending connections about the result
  * of the lookup, and cache the value.  (<b>address</b> is a NUL-terminated
@@ -909,10 +917,8 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
 
   resolve = HT_FIND(cache_map, &cache_root, &search);
   if (!resolve) {
-    or_options_t *options = get_options();
-    int is_test_address = options->ServerDNSTestAddresses &&
-      smartlist_string_isin_case(options->ServerDNSTestAddresses, address);
-    if (!is_test_address)
+    int is_test_addr = is_test_address(address);
+    if (!is_test_addr)
       log_info(LD_EXIT,"Resolved unasked address %s; caching anyway.",
                escaped_safe_str(address));
     add_answer_to_cache(address, is_reverse, addr, hostname, outcome, ttl);
@@ -923,9 +929,11 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
   if (resolve->state != CACHE_STATE_PENDING) {
     /* XXXX Maybe update addr? or check addr for consistency? Or let
      * VALID replace FAILED? */
-    log_info(LD_EXIT, "Resolved %s which was already resolved; ignoring",
-             escaped_safe_str(address));
-    /* XXXX012 this triggers in ordinary life. nick says it's a bug. */
+    int is_test_addr = is_test_address(address);
+    if (!is_test_addr)
+      log_notice(LD_EXIT,
+                 "Resolved %s which was already resolved; ignoring",
+                 escaped_safe_str(address));
     tor_assert(resolve->pending_connections == NULL);
     return;
   }
@@ -1602,11 +1610,9 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
       status = DNS_RESOLVE_FAILED_TRANSIENT;
   }
   if (was_wildcarded) {
-    or_options_t *options = get_options();
-    int is_test_address = options->ServerDNSTestAddresses &&
-      smartlist_string_isin_case(options->ServerDNSTestAddresses, hostname);
+    int is_test_addr = is_test_address(hostname);
 
-    if (is_test_address) {
+    if (is_test_addr) {
       /* Ick.  We're getting redirected on known-good addresses.  Our DNS
        * server must really hate us.  */
       add_wildcarded_test_address(hostname);

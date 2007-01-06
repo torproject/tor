@@ -20,6 +20,10 @@ Changes in version 0.1.2.6-alpha - 2007-??-??
       server status events so controllers can learn about Tor's progress in
       deciding whether it's reachable from the outside.
 
+  o Minor bugfixes:
+    - Restore a warning message if we accidentally resolve an address that
+      we weren't planning to resolve.
+
 
 Changes in version 0.1.2.5-alpha - 2007-01-06
   o Major features:
