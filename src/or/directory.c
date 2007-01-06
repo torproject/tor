@@ -117,6 +117,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
       if (!post_to_hidserv_only &&
           !(ds->is_v1_authority || ds->is_v2_authority))
         continue;
+      if (purpose == DIR_PURPOSE_UPLOAD_DIR)
+        ds->has_accepted_serverdesc = 0;
       post_via_tor = purpose_is_private(purpose) ||
               !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
       directory_initiate_command_routerstatus(rs, purpose, post_via_tor,
@@ -286,6 +288,22 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                              payload, payload_len);
 }
 
+/** DOCDOC */
+static int
+directory_conn_is_self_reachability_test(dir_connection_t *conn)
+{
+  if (conn->requested_resource &&
+      !strcmpstart(conn->requested_resource,"authority")) {
+    routerinfo_t *me = router_get_my_routerinfo();
+    if (me &&
+        router_digest_is_me(conn->identity_digest) &&
+        me->addr == conn->_base.addr &&
+        me->dir_port == conn->_base.port)
+      return 1;
+  }
+  return 0;
+}
+
 /** Called when we are unable to complete the client's request to a directory
  * server due to a network error: Mark the router as down and try again if
  * possible.
@@ -302,6 +320,14 @@ connection_dir_request_failed(dir_connection_t *conn)
              conn->_base.address, conn->_base.port);
     directory_get_from_dirserver(conn->_base.purpose, NULL,
                                  0 /* don't retry_if_no_servers */);
+
+    if (directory_conn_is_self_reachability_test(conn)) {
+      routerinfo_t *me = router_get_my_routerinfo();
+      if (me)
+        control_event_server_status(LOG_WARN,
+                                    "REACHABILITY_FAILED DIRADDRESS=%s:%d",
+                                    me->address, me->dir_port);
+    }
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
@@ -920,8 +946,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     now = time(NULL);
     delta = now-date_header;
     if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
-      log_fn(router_digest_is_trusted_dir(conn->identity_digest) ?
-                                                        LOG_WARN : LOG_INFO,
+      int trusted = router_digest_is_trusted_dir(conn->identity_digest);
+      log_fn(trusted ? LOG_WARN : LOG_INFO,
              LD_HTTP,
              "Received directory with skewed time (server '%s:%d'): "
              "we are %d minutes %s, or the directory is %d minutes %s.",
@@ -929,6 +955,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              abs(delta)/60, delta>0 ? "ahead" : "behind",
              abs(delta)/60, delta>0 ? "behind" : "ahead");
       skewed = 1; /* don't check the recommended-versions line */
+      control_event_general_status(trusted ? LOG_WARN : LOG_NOTICE,
+                               "CLOCK_SKEW SKEW=%d SOURCE=DIRSERV:%s:%d",
+                               delta, conn->_base.address, conn->_base.port);
     } else {
       log_debug(LD_HTTP, "Time on received directory is within tolerance; "
                 "we are %d seconds skewed.  (That's okay.)", delta);
@@ -1173,28 +1202,43 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
     }
-    if (conn->requested_resource &&
-        !strcmpstart(conn->requested_resource,"authority")) {
-      /* this might have been a dirport reachability test. see if it is. */
-      routerinfo_t *me = router_get_my_routerinfo();
-      if (me &&
-          router_digest_is_me(conn->identity_digest) &&
-          me->addr == conn->_base.addr &&
-          me->dir_port == conn->_base.port)
-        router_dirport_found_reachable();
-    }
+    if (directory_conn_is_self_reachability_test(conn))
+      router_dirport_found_reachable();
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_DIR) {
     switch (status_code) {
-      case 200:
-        log_info(LD_GENERAL,"eof (status 200) after uploading server "
-                 "descriptor: finished.");
+      case 200: {
+          int all_done = 1;
+          trusted_dir_server_t *ds =
+            router_get_trusteddirserver_by_digest(conn->identity_digest);
+          smartlist_t *servers;
+          log_info(LD_GENERAL,"eof (status 200) after uploading server "
+                   "descriptor: finished.");
+          control_event_server_status(
+                      LOG_NOTICE, "ACCEPTED_SERVER_DESCRIPTOR DIRAUTH=%s:%d",
+                      conn->_base.address, conn->_base.port);
+
+          ds->has_accepted_serverdesc = 1;
+          servers = router_get_trusted_dir_servers();
+          SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
+              if ((d->is_v1_authority || d->is_v2_authority) &&
+                  !d->has_accepted_serverdesc) {
+                all_done = 0;
+                break;
+              }
+            });
+          if (all_done)
+            control_event_server_status(LOG_NOTICE, "GOOD_SERVER_DESCRIPTOR");
+        }
         break;
       case 400:
         log_warn(LD_GENERAL,"http status 400 (%s) response from "
                  "dirserver '%s:%d'. Please correct.",
                  escaped(reason), conn->_base.address, conn->_base.port);
+        control_event_server_status(LOG_WARN,
+                      "BAD_SERVER_DESCRIPTOR DIRAUTH=%s:%d REASON=\"%s\"",
+                      conn->_base.address, conn->_base.port, escaped(reason));
         break;
       case 403:
         log_warn(LD_GENERAL,
@@ -1204,6 +1248,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              "private IP address? See http://tor.eff.org/doc/"
              "tor-doc-server.html",escaped(reason), conn->_base.address,
              conn->_base.port);
+        control_event_server_status(LOG_WARN,
+                      "BAD_SERVER_DESCRIPTOR DIRAUTH=%s:%d REASON=\"%s\"",
+                      conn->_base.address, conn->_base.port, escaped(reason));
         break;
       default:
         log_warn(LD_GENERAL,

@@ -314,7 +314,8 @@ control_adjust_event_log_severity(void)
       break;
     }
   }
-  if (EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE)) {
+  if (EVENT_IS_INTERESTING(EVENT_LOG_OBSOLETE) ||
+      EVENT_IS_INTERESTING(EVENT_STATUS_GENERAL)) {
     if (min_log_event > EVENT_NOTICE_MSG)
       min_log_event = EVENT_NOTICE_MSG;
     if (max_log_event < EVENT_ERR_MSG)
@@ -661,8 +662,17 @@ send_control1_event_string(uint16_t event, event_format_t which,
           continue;
       }
       if (control_conn->event_mask & (1<<event)) {
+        int is_err = 0;
         connection_write_to_buf(msg, strlen(msg), TO_CONN(control_conn));
         if (event == EVENT_ERR_MSG)
+          is_err = 1;
+        else if (event == EVENT_STATUS_GENERAL)
+          is_err = !strcmpstart(msg, "STATUS_GENERAL ERR ");
+        else if (event == EVENT_STATUS_CLIENT)
+          is_err = !strcmpstart(msg, "STATUS_CLIENT ERR ");
+        else if (event == EVENT_STATUS_SERVER)
+          is_err = !strcmpstart(msg, "STATUS_SERVER ERR ");
+        if (is_err)
           connection_handle_write(TO_CONN(control_conn), 1);
       }
     }
@@ -3326,13 +3336,21 @@ enable_control_logging(void)
 
 /** We got a log message: tell any interested control connections. */
 void
-control_event_logmsg(int severity, unsigned int domain, const char *msg)
+control_event_logmsg(int severity, uint32_t domain, const char *msg)
 {
   int oldlog, event;
-  (void) domain;
 
   if (disable_log_messages)
     return;
+
+  if (domain == LD_BUG && EVENT_IS_INTERESTING(EVENT_STATUS_GENERAL) &&
+      severity <= LOG_NOTICE) {
+    char *esc = esc_for_log(msg);
+    ++disable_log_messages;
+    control_event_general_status(severity, "BUG REASON=\"%s\"", esc);
+    --disable_log_messages;
+    tor_free(esc);
+  }
 
   oldlog = EVENT_IS_INTERESTING0(EVENT_LOG_OBSOLETE) &&
     (severity == LOG_NOTICE || severity == LOG_WARN || severity == LOG_ERR);

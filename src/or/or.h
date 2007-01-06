@@ -2717,6 +2717,9 @@ typedef struct trusted_dir_server_t {
   unsigned int is_v2_authority:1;
   /** True iff this server is an authority for hidden services. */
   unsigned int is_hidserv_authority:1;
+  /** True iff this server has accepted the most recent server descriptor
+   * we tried to upload to it. */
+  unsigned int has_accepted_serverdesc:1;
 
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */

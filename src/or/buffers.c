@@ -1022,6 +1022,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                 "TorFAQ#SOCKSAndDNS.%s", req->port,
                 safe_socks ? " Rejecting." : "");
 //            have_warned_about_unsafe_socks = 1; // (for now, warn every time)
+            control_event_client_status(LOG_WARN,
+                          "DANGEROUS_SOCKS PROTOCOL=SOCKS5 ADDRESS=%s:%d",
+                          req->address, req->port);
             if (safe_socks)
               return -1;
           }
@@ -1125,6 +1128,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                  "TorFAQ#SOCKSAndDNS.%s", req->port,
                  safe_socks ? " Rejecting." : "");
 //      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
+        control_event_client_status(LOG_WARN,
+                        "DANGEROUS_SOCKS PROTOCOL=SOCKS4 ADDRESS=%s:%d",
+                        tmpbuf, req->port);
         if (safe_socks)
           return -1;
       }
@@ -1200,6 +1206,13 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       log_warn(LD_APP,
                "Socks version %d not recognized. (Tor is not an http proxy.)",
                *(buf->cur));
+      {
+        char *tmp = tor_strndup(buf->cur, 8);
+        control_event_client_status(LOG_WARN,
+                                    "SOCKS_UNKNOWN_PROTOCOL DATA=\"%s\"",
+                                    escaped(tmp));
+        tor_free(tmp);
+      }
       return -1;
   }
 }

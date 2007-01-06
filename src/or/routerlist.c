@@ -2346,6 +2346,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
              "(%s GMT). Somebody is skewed here: check your clock. "
              "Not caching.",
              source_desc, published);
+    control_event_general_status(LOG_WARN,
+                                 "CLOCK_SKEW SOURCE=NETWORKSTATUS:%s:%d",
+                                 ns->source_address, ns->source_dirport);
     skewed = 1;
   }
 

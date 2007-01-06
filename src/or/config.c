@@ -1801,6 +1801,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   char hostname[256];
   int explicit_ip=1;
   int explicit_hostname=1;
+  int from_interface=0;
   char tmpbuf[INET_NTOA_BUF_LEN];
   const char *address = options->Address;
   int notice_severity = warn_severity <= LOG_NOTICE ?
@@ -1843,6 +1844,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
                "Could not get local interface IP address. Failing.");
         return -1;
       }
+      from_interface = 1;
       in.s_addr = htonl(interface_ip);
       tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
       log_fn(notice_severity, LD_CONFIG, "Learned IP address '%s' for "
@@ -1872,6 +1874,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
                  "Interface IP address '%s' is a private address too. "
                  "Ignoring.", tmpbuf);
         } else {
+          from_interface = 1;
           in.s_addr = htonl(interface_ip);
           tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
           log_fn(notice_severity, LD_CONFIG,
@@ -1913,6 +1916,24 @@ resolve_my_address(int warn_severity, or_options_t *options,
      * at least until dynamic IP address support becomes bulletproof. */
     log_notice(LD_NET, "Your IP address seems to have changed. Updating.");
     ip_address_changed(0);
+  }
+  if (last_resolved_addr != *addr_out) {
+    const char *method;
+    const char *h = hostname;
+    if (explicit_ip) {
+      method = "CONFIGURED";
+      h = NULL;
+    } else if (explicit_hostname) {
+      method = "RESOLVED";
+    } else if (from_interface) {
+      method = "INTERFACE";
+      h = NULL;
+    } else {
+      method = "GETHOSTNAME";
+    }
+    control_event_server_status(LOG_NOTICE,
+                                "EXTERNAL_ADDRESS ADDRESS=%s METHOD=%s %s%s",
+                                tmpbuf, method, h?"HOSTNAME=":"", h);
   }
   last_resolved_addr = *addr_out;
   if (hostname_out)

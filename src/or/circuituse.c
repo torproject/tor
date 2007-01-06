@@ -622,12 +622,17 @@ circuit_testing_opened(origin_circuit_t *circ)
 static void
 circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 {
+  routerinfo_t *me = router_get_my_routerinfo();
   if (server_mode(get_options()) && check_whether_orport_reachable())
+    return;
+  if (!me)
     return;
 
   log_info(LD_GENERAL,
            "Our testing circuit (to see if your ORPort is reachable) "
            "has failed. I'll try again later.");
+  control_event_server_status(LOG_WARN, "REACHABILITY_FAILED ORADDRESS=%s:%d",
+                             me->address, me->or_port);
 
   /* These aren't used yet. */
   (void)circ;

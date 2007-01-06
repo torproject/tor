@@ -457,6 +457,9 @@ consider_testing_reachability(int test_or, int test_dir)
              !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, 0, me, 0, 1, 1);
+    control_event_server_status(LOG_NOTICE,
+                                "CHECKING_REACHABILITY ORADDRESS=%s:%d",
+                                me->address, me->or_port);
   }
 
   if (test_dir && !check_whether_dirport_reachable() &&
@@ -466,6 +469,9 @@ consider_testing_reachability(int test_or, int test_dir)
     /* ask myself, via tor, for my server descriptor. */
     directory_initiate_command_router(me, DIR_PURPOSE_FETCH_SERVERDESC,
                                       1, "authority", NULL, 0);
+    control_event_server_status(LOG_NOTICE,
+                                "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
+                                me->address, me->dir_port);
   }
 }
 
@@ -474,12 +480,18 @@ void
 router_orport_found_reachable(void)
 {
   if (!can_reach_or_port) {
+    routerinfo_t *me = router_get_my_routerinfo();
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                get_options()->PublishServerDescriptor ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
+    if (!me)
+      return;
+    control_event_server_status(LOG_NOTICE,
+                                "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
+                                me->address, me->dir_port);
   }
 }
 
@@ -488,10 +500,16 @@ void
 router_dirport_found_reachable(void)
 {
   if (!can_reach_dir_port) {
+    routerinfo_t *me = router_get_my_routerinfo();
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
     mark_my_descriptor_dirty();
+    if (!me)
+      return;
+    control_event_server_status(LOG_NOTICE,
+                                "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
+                                me->address, me->dir_port);
   }
 }
 
@@ -1034,6 +1052,9 @@ router_new_address_suggestion(const char *suggestion)
    * us an answer different from what we had the last time we managed to
    * resolve it. */
   if (last_guessed_ip != addr) {
+    control_event_server_status(LOG_NOTICE,
+                                "EXTERNAL_ADDRESS ADDRESS=%s METHOD=DIRSERV",
+                                suggestion);
     log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr);
     ip_address_changed(0);
     last_guessed_ip = addr; /* router_rebuild_descriptor() will fetch it */

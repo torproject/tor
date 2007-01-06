@@ -962,7 +962,8 @@ $Id$
      Severity = "NOTICE" / "WARN" / "ERR"
 
      Action is a string, and Arguments is a series of keyword=value
-     pairs on the same line.
+     pairs on the same line.  Values may be space-terminated strings,
+     or quoted strings.
 
      These events are always produced with EXTENDED_EVENTS and
      VERBOSE_NAMES; see the explanations in the USEFEATURE section
@@ -971,7 +972,7 @@ $Id$
   Actions for STATUS_GENERAL events can be as follows:
 
      CLOCK_JUMPED
-     "time=NUM"
+     "TIME=NUM"
        Tor spent enough time without CPU cycles that it has closed all
        its circuits and will establish them anew. This typically
        happens when a laptop goes to sleep and then wakes up again. It
@@ -995,20 +996,19 @@ do for each. -RD]
   typically severity WARN events:
 
      DANGEROUS_VERSION
-     "current=version"
-     "reason=new/old/unrecommended"
-     "recommended=\"version, version, ...\""
+     "CURRENT=version"
+     "REASON=NEW/OLD/UNRECOMMENDED"
+     "RECOMMENDED=\"version, version, ...\""
 
      TOO_MANY_CONNECTIONS
-     "current=NUM"
+     "CURRENT=NUM"
        Tor has reached its ulimit -n or whatever the native limit is on
        file descriptors or sockets. The user should really do something
        about this. The "current" argument shows the number of connections
        currently open.
 
-   [rest not implemented yet]
      BUG
-     "reason=STRING"
+     "REASON=STRING"
        Tor has encountered a situation that its developers never expected,
        and the developers would like to learn that it happened. Perhaps
        the controller can explain this to the user and encourage her to
@@ -1018,19 +1018,24 @@ do for each. -RD]
      not DIR_ALL_UNREACHABLE, else as ERRs:]
 
      BAD_DIR_RESPONSE
+     [unimplemented]
      // unexpected dir response. behind a hotel/airport firewall?
 
      CLOCK_SKEWED
-     // (either from talking to a dir authority, or from perusing a
-     //  network-status timestamp)
+       SKEW="+" / "-" SECONDS
+       SOURCE="DIRSERV:IP:Port" / "NETWORKSTATUS:IP:PORT"
+         If "SKEW" is present, it's an estimate of how far we are from the
+         time declared in the source.  If the source is a DIRSERV, we got
+         the current time from a connection to a dirserver.  If the source is
+         a NETWORKSTATUS, we decided we're skewed because we got a
+         networkstatus from far in the future.
 
   Actions for STATUS_GENERAL severity ERR events can be as follows:
 
-[unimplemented]
      BAD_PROXY
+     [unimplemented]
      // bad http or https proxy?
 
-[implemented]
      DIR_ALL_UNREACHABLE
        Tor believes that none of the known directory servers are
        reachable -- this is most likely because the local network is
@@ -1038,7 +1043,6 @@ do for each. -RD]
        user why Tor appears to be broken.
 
   Actions for STATUS_CLIENT severity NOTICE events can be as follows:
-  [all implemented]
 
      ENOUGH_DIR_INFO
        Tor now knows enough network-status documents and enough server
@@ -1063,7 +1067,7 @@ do for each. -RD]
        if it can identify the problem.]
 
      CIRCUIT_NOT_ESTABLISHED
-     "reason=" "EXTERNAL_ADDRESS" / "DIR_ALL_UNREACHABLE" / "CLOCK_JUMPED"
+     "REASON=" "EXTERNAL_ADDRESS" / "DIR_ALL_UNREACHABLE" / "CLOCK_JUMPED"
        We are no longer confident that we can build circuits. The "reason"
        keyword provides an explanation: which other status event type caused
        our lack of confidence.
@@ -1072,19 +1076,23 @@ do for each. -RD]
        [Note: only REASON=CLOCK_JUMPED is implemented currently.]
 
   Actions for STATUS_CLIENT severity WARN events can be as follows:
-  [none implemented yet]
 
      DANGEROUS_SOCKS
-     "protocol=socks4/socks4a/socks5"
-     "address=IP:port"
+     "PROTOCOL=SOCKS4/SOCKS4a/SOCKS5"
+     "ADDRESS=IP:port"
+       A connection was made to Tor's SOCKS port that used a raw IP
+       address.  If the client application got this address from
+       gethostbyname(), it's leaking target addresses via DNS.
 
      SOCKS_UNKNOWN_PROTOCOL
+       "DATA=string"
        A connection was made to Tor's SOCKS port that tried to use it
        for something other than the SOCKS protocol. Perhaps the user is
-       using Tor as an HTTP proxy?
+       using Tor as an HTTP proxy?   The DATA is the first few characters
+       sent to Tor on the SOCKS port.
 
      BAD_HOSTNAME
-
+     [unimplemented]
      // a nickname we asked for is unavailable. no need for this
      // quite yet, since no end-user controllers let you configure that.
 
@@ -1093,47 +1101,73 @@ do for each. -RD]
      [none yet]
 
   Actions for STATUS_SERVER severity NOTICE events can be as follows:
-  [none implemented yet]
 
      EXTERNAL_ADDRESS
-     "address=IP"
-     "method=guessed/resolved/..."
+     "ADDRESS=IP"
+     "HOSTNAME=NAME"
+     "METHOD=CONFIGURED/DIRSERV/RESOLVED/INTERFACE/GETHOSTNAME"
+       Our best idea for our externally visible IP has changed to 'IP'.
+       If 'NAME' is present, we got the new IP by resolving 'NAME'.  If the
+       method is 'CONFIGURED', the IP was given verbatim as a configuration
+       option.  If the method is 'RESOLVED', we resolved the Address
+       configuration option to get the IP.  If the method is 'GETHOSTNAME',
+       we resolved our hostname to get the IP.  If the method is 'INTERFACE',
+       we got the address of one of our network interfaces to get the IP.  If
+       the method is 'DIRSERV', a directory server told us a guess for what
+       our IP might be.
 
      // hibernating
 
      CHECKING_REACHABILITY
-     "oraddress=IP:port"
-     "diraddress=IP:port"
-     "timeout=NUM"
+     "ORADDRESS=IP:port"
+     "DIRADDRESS=IP:port"
+     "TIMEOUT=NUM"     [timeout unimplemented]
+       We're going to start testing the reachability of our external OR port
+       or directory port.
+
+     REACHABILITY_SUCCEEDED
+     "ORADDRESS=IP:port"
+     "DIRADDRESS=IP:port"
+       We successfully verified the reachability of our external OR port or
+       directory port.
 
      GOOD_SERVER_DESCRIPTOR
        We successfully uploaded our server descriptor to each of the
        directory authorities, with no complaints.
 
   Actions for STATUS_SERVER severity WARN events can be as follows:
-  [not implemented yet]
 
      // something about failing to parse our address?
      // from resolve_my_address() in config.c
+     [unimplemented]
 
      // sketchy libevent, sketchy OS, sketchy threading
+     [unimplemented]
 
      // too many onions queued. threading problem or slow cpu?
+     [unimplemented]
 
      // eventdns statements. like, hijacked dns.
+     [unimplemented]
 
      BAD_SERVER_DESCRIPTOR
-     "dirauth=nickname"
-     "reason=string"
-     // dir authorities didn't like my descriptor, e.g. because they
-     // think it's malformed, you're invalid, or wrong key.
+     "DIRAUTH=addr:port"
+     "REASON=string"
+        A directory authority rejected our descriptor.  Possible reasons
+        include malformed descriptors, incorrect keys, highly skewed clocks,
+        and so on.
+
+     ACCEPTED_SERVER_DESCRIPTOR
+     "DIRAUTH=addr:port"
+        A single directory authority accepted our descriptor.
 
   Actions for STATUS_SERVER severity ERR events can be as follows:
-  [not implemented yet]
 
      REACHABILITY_FAILED
-     "oraddress=IP:port"
-     "diraddress=IP:port"
+     "ORADDRESS=IP:port"
+     "DIRADDRESS=IP:port"
+       We failed to connect to our external OR port or directory port
+       successfully.
 
   Controllers must tolerate hearing about actions that they don't
   recognize.
