@@ -22,6 +22,9 @@ Changes in version 0.1.2.6-alpha - 2007-??-??
     - Implement BAD_LIBEVENT general status event so controllers can learn
       when we have a version/method combination in libevent that needs to
       be changed.
+    - Implement NAMESERVER_STATUS, NAMESERVER_ALL_DOWN, DNS_HIJACKED,
+      and DNS_USELESS server status events so controllers can learn
+      about changes to DNS server status.
 
   o Minor features (directory):
     - Authorities do not recommend exits as guards if this would shift
