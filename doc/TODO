@@ -260,6 +260,10 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
   - Add an option (related to AvoidDiskWrites) to disable directory caching.
 
 Minor items for 0.1.2.x as time permits:
+  - when reporting clock skew (both to logs and to controller), if it's
+    taken 126 seconds to read from the directory, our clock skew estimate
+    is 126 seconds wrong. use conn->timestamp_create or _lastwritten
+    for a closer estimate?
   - a way to generate the website diagrams from source, so we can
     translate them as utf-8 text rather than with gimp.
 R - add d64 and fp64 along-side d and fp so people can paste status
