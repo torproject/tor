@@ -186,7 +186,7 @@ evdns_log_cb(int warn, const char *msg)
      * nameservers have failed' if we're completely out of nameservers;
      * otherwise, the situation is tolerable. */
     warn = 0;
-    control_event_server_status(LOG_WARN,
+    control_event_server_status(LOG_NOTICE,
                                 "NAMESERVER_STATUS NS=%s STATUS=DOWN ERR=%s",
                                 ns, escaped(err));
     tor_free(ns);

@@ -1089,11 +1089,12 @@ do for each. -RD]
   Actions for STATUS_CLIENT severity WARN events can be as follows:
 
      DANGEROUS_SOCKS
-     "PROTOCOL=SOCKS4/SOCKS4a/SOCKS5"
+     "PROTOCOL=SOCKS4/SOCKS5"
      "ADDRESS=IP:port"
-       A connection was made to Tor's SOCKS port that used a raw IP
-       address.  If the client application got this address from
-       gethostbyname(), it's leaking target addresses via DNS.
+       A connection was made to Tor's SOCKS port using one of the SOCKS
+       approaches that doesn't support hostnames -- only raw IP addresses.
+       If the client application got this address from gethostbyname(),
+       it may be leaking target addresses via DNS.
 
      SOCKS_UNKNOWN_PROTOCOL
        "DATA=string"
@@ -1102,7 +1103,13 @@ do for each. -RD]
        using Tor as an HTTP proxy?   The DATA is the first few characters
        sent to Tor on the SOCKS port.
 
-     BAD_HOSTNAME
+     SOCKS_BAD_HOSTNAME
+     [unimplemented]
+     // Some application gave us a funny-looking hostname. Perhaps
+     // it is broken? In any case it won't work with Tor and the user
+     // should know.
+
+     UNRECOGNIZED_ROUTER
      [unimplemented]
      // a nickname we asked for is unavailable. no need for this
      // quite yet, since no end-user controllers let you configure that.
@@ -1118,7 +1125,7 @@ do for each. -RD]
      "HOSTNAME=NAME"
      "METHOD=CONFIGURED/DIRSERV/RESOLVED/INTERFACE/GETHOSTNAME"
        Our best idea for our externally visible IP has changed to 'IP'.
-       If 'NAME' is present, we got the new IP by resolving 'NAME'.  If the
+       If 'HOSTNAME' is present, we got the new IP by resolving 'NAME'.  If the
        method is 'CONFIGURED', the IP was given verbatim as a configuration
        option.  If the method is 'RESOLVED', we resolved the Address
        configuration option to get the IP.  If the method is 'GETHOSTNAME',
@@ -1163,6 +1170,7 @@ do for each. -RD]
      "STATUS=" "UP" / "DOWN"
      "ERR=" message
         One of our nameservers has changed status.
+        // actually notice
 
      NAMESERVER_ALL_DOWN
         All of our nameservers have gone down.
@@ -1185,6 +1193,7 @@ do for each. -RD]
      ACCEPTED_SERVER_DESCRIPTOR
      "DIRAUTH=addr:port"
         A single directory authority accepted our descriptor.
+        // actually notice
 
   Actions for STATUS_SERVER severity ERR events can be as follows:
 

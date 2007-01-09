@@ -1,5 +1,21 @@
-Changes in version 0.1.2.6-alpha - 2007-??-??
-  o Minor features (controller):
+Changes in version 0.1.2.6-alpha - 2007-01-09
+  o Major bugfixes:
+    - Fix an assert error introduced in 0.1.2.5-alpha: if a single TLS
+      connection handles more than 4 gigs in either direction, we assert.
+    - Fix an assert error introduced in 0.1.2.5-alpha: if you're an
+      advertised exit node, somebody might try to exit from you when
+      you're bootstrapping and before you've built your descriptor yet.
+
+  o Minor bugfixes:
+    - Warn if we (as a server) find that we've resolved an address that we
+      weren't planning to resolve.
+    - Warn that using select() on any libevent version before 1.1 will be
+      unnecessarily slow (even for select()).
+    - Flush ERR-level controller status events just like we currently
+      flush ERR-level log events, so that a Tor shutdown doesn't prevent
+      the controller from learning about current events.
+
+  o Minor features (more controller status events):
     - Implement EXTERNAL_ADDRESS server status event so controllers can
       learn when our address changes.
     - Implement BAD_SERVER_DESCRIPTOR server status event so controllers
@@ -27,27 +43,8 @@ Changes in version 0.1.2.6-alpha - 2007-??-??
       about changes to DNS server status.
 
   o Minor features (directory):
-    - Authorities do not recommend exits as guards if this would shift
-      excess load to the exit nodes.
-
-  o Major bugfixes:
-    - Fix an assert error introduced in 0.1.2.5-alpha: if a single TLS
-      connection handles more than 4 gigs in either direction, we assert.
-    - Fix an assert error introduced in 0.1.2.5-alpha: if you're an
-      advertised exit node, somebody might try to exit from you when
-      you're bootstrapping and before you've built your descriptor yet.
-
-  o Minor bugfixes:
-    - Restore a warning message if we accidentally resolve an address that
-      we weren't planning to resolve.
-    - Prevent an (unlikely) bug on 32-bit architectures that could make
-      directories send 503s incorrectly when BandwidthBurst plus 2 times
-      BandwidthRate was over to 2 GB.
-    - Warn that using select() on any libevent version before 1.1 will be
-      unnecessarily slow (even for select()).
-    - Flush ERR-level status events just like we currently flush ERR-level
-      log events, so that a Tor shutdown doesn't prevent the controller from
-      learning about current events.
+    - Authorities no longer recommend exits as guards if this would shift
+      too much load to the exit nodes.
 
 
 Changes in version 0.1.2.5-alpha - 2007-01-06
