@@ -31,6 +31,8 @@ Changes in version 0.1.2.6-alpha - 2007-??-??
       excess load to the exit nodes.
 
   o Major bugfixes:
+    - Fix an assert error introduced in 0.1.2.5-alpha: if a single TLS
+      connection handles more than 4 gigs in either direction, we assert.
     - Fix an assert error introduced in 0.1.2.5-alpha: if you're an
       advertised exit node, somebody might try to exit from you when
       you're bootstrapping and before you've built your descriptor yet.
