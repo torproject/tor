@@ -701,7 +701,8 @@ router_upload_dir_desc_to_dirservers(int force)
 int
 router_compare_to_my_exit_policy(edge_connection_t *conn)
 {
-  tor_assert(desc_routerinfo);
+  if (!router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
+    return -1;
 
   /* make sure it's resolved to something. this way we can't get a
      'maybe' below. */
