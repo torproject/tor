@@ -1,10 +1,11 @@
 Changes in version 0.1.2.6-alpha - 2007-01-09
   o Major bugfixes:
     - Fix an assert error introduced in 0.1.2.5-alpha: if a single TLS
-      connection handles more than 4 gigs in either direction, we assert.
-    - Fix an assert error introduced in 0.1.2.5-alpha: if you're an
-      advertised exit node, somebody might try to exit from you when
-      you're bootstrapping and before you've built your descriptor yet.
+      connection handles more than 4 gigs in either direction, we crash.
+    - Fix an assert error introduced in 0.1.2.5-alpha: if we're an
+      advertised exit node, somebody might try to exit from us when
+      we're bootstrapping and before we've built your descriptor yet.
+      Refuse the connection rather than crashing.
 
   o Minor bugfixes:
     - Warn if we (as a server) find that we've resolved an address that we
