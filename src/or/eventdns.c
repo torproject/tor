@@ -130,7 +130,7 @@ typedef unsigned int uint;
 #define u64 uint64_t
 #define u32 uint32_t
 #define u16 uint16_t
-#define u8  uint8_t
+#define u8	uint8_t
 
 #define MAX_ADDRS 4	 // maximum number of addresses from a single packet
 // which we bother recording
@@ -140,6 +140,8 @@ typedef unsigned int uint;
 #define TYPE_AAAA	EVDNS_TYPE_AAAA
 
 #define CLASS_INET	EVDNS_CLASS_INET
+
+#define CLEAR(x) do { memset((x), 0, sizeof(*(x))); } while(0)
 
 struct request {
 	u8 *request;  // the dns packet data
@@ -450,6 +452,7 @@ static void
 nameserver_probe_failed(struct nameserver *const ns) {
 	const struct timeval * timeout;
 	(void) evtimer_del(&ns->timeout_event);
+	CLEAR(&ns->timeout_event);
 	if (ns->state == 1) {
 		// This can happen if the nameserver acts in a way which makes us mark
 		// it as bad and then starts sending good replies.
@@ -526,6 +529,7 @@ nameserver_up(struct nameserver *const ns) {
 	log(EVDNS_LOG_WARN, "Nameserver %s is back up",
 		debug_ntoa(ns->address));
 	evtimer_del(&ns->timeout_event);
+	CLEAR(&ns->timeout_event);
 	ns->state = 1;
 	ns->failed_times = 0;
 	ns->timedout = 0;
@@ -557,6 +561,7 @@ request_finished(struct request *const req, struct request **head) {
 	log(EVDNS_LOG_DEBUG, "Removing timeout for request %lx",
 		(unsigned long) req);
 	evtimer_del(&req->timeout_event);
+	CLEAR(&req->timeout_event);
 
 	search_request_finished(req);
 	global_requests_inflight--;
@@ -569,6 +574,7 @@ request_finished(struct request *const req, struct request **head) {
 		// so everything gets free()ed when we:
 	}
 
+	CLEAR(req);
 	free(req);
 
 	evdns_requests_pump_waiting_queue();
@@ -975,6 +981,7 @@ err:
 				free(server_req->base.questions[i]);
 			free(server_req->base.questions);
 		}
+		CLEAR(server_req);
 		free(server_req);
 	}
 	return -1;
@@ -1136,6 +1143,7 @@ server_port_flush(struct evdns_server_port *port)
 
 	// We have no more pending requests; stop listening for 'writeable' events.
 	(void) event_del(&port->event);
+	CLEAR(&port->event);
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
 	if (event_add(&port->event, NULL) < 0) {
@@ -1153,6 +1161,7 @@ nameserver_write_waiting(struct nameserver *ns, char waiting) {
 
 	ns->write_waiting = waiting;
 	(void) event_del(&ns->event);
+	CLEAR(&ns->event);
 	event_set(&ns->event, ns->socket, EV_READ | (waiting ? EV_WRITE : 0) | EV_PERSIST,
 			  nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
@@ -1380,6 +1389,7 @@ evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb,
 	struct evdns_server_port *port;
 	if (!(port = malloc(sizeof(struct evdns_server_port))))
 		return NULL;
+	memset(port, 0, sizeof(struct evdns_server_port));
 
 	assert(!is_tcp); // TCP sockets not yet implemented
 	port->socket = socket;
@@ -1438,8 +1448,10 @@ evdns_server_request_add_reply(struct evdns_server_request *_req, int section, c
 	item = malloc(sizeof(struct server_reply_item));
 	if (!item)
 		return -1;
+	CLEAR(item);
 	item->next = NULL;
 	if (!(item->name = strdup(name))) {
+		CLEAR(item);
 		free(item);
 		return -1;
 	}
@@ -1453,6 +1465,7 @@ evdns_server_request_add_reply(struct evdns_server_request *_req, int section, c
 		if (item->is_name) {
 			if (!(item->data = strdup(data))) {
 				free(item->name);
+				CLEAR(item);
 				free(item);
 				return -1;
 			}
@@ -1460,6 +1473,7 @@ evdns_server_request_add_reply(struct evdns_server_request *_req, int section, c
 		} else {
 			if (!(item->data = malloc(datalen))) {
 				free(item->name);
+				CLEAR(item);
 				free(item);
 				return -1;
 			}
@@ -1650,6 +1664,7 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 			port->choked = 1;
 
 			(void) event_del(&port->event);
+			CLEAR(&port->event);
 			event_set(&port->event, port->socket, (port->closing?0:EV_READ) | EV_WRITE | EV_PERSIST, server_port_ready_callback, port);
 
 			if (event_add(&port->event, NULL) < 0) {
@@ -1689,6 +1704,7 @@ server_request_free_answers(struct server_request *req)
 			free(victim->name);
 			if (victim->data)
 				free(victim->data);
+			/* XXXX free(victim?) -NM */
 			victim = next;
 		}
 		*list = NULL;
@@ -1716,8 +1732,9 @@ server_request_free(struct server_request *req)
 		rc = --req->port->refcnt;
 	}
 
-	if (req->response)
+	if (req->response) {
 		free(req->response);
+	}
 
 	server_request_free_answers(req);
 
@@ -1728,9 +1745,11 @@ server_request_free(struct server_request *req)
 
 	if (rc == 0) {
 		server_port_free(req->port);
+		CLEAR(req);
 		free(req);
 		return (1);
 	}
+	CLEAR(req);
 	free(req);
 	return (0);
 }
@@ -1747,6 +1766,8 @@ server_port_free(struct evdns_server_port *port)
 		port->socket = -1;
 	}
 	(void) event_del(&port->event);
+	CLEAR(&port->event);
+	// XXXX actually free the port? -NM
 }
 
 // exported function
@@ -1778,6 +1799,7 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 	}
 
 	(void) evtimer_del(&req->timeout_event);
+	CLEAR(&req->timeout_event);
 	if (req->tx_count >= global_max_retransmits) {
 		// this request has failed
 		reply_callback(req, 0, DNS_ERR_TIMEOUT, NULL);
@@ -1938,9 +1960,12 @@ evdns_clear_nameservers_and_suspend(void)
 	while (1) {
 		struct nameserver *next = server->next;
 		(void) event_del(&server->event);
+		CLEAR(&server->event);
 		(void) evtimer_del(&server->timeout_event);
+		CLEAR(&server->timeout_event);
 		if (server->socket >= 0)
 			CLOSE_SOCKET(server->socket);
+		CLEAR(server);
 		free(server);
 		if (next == started_at)
 			break;
@@ -1955,6 +1980,7 @@ evdns_clear_nameservers_and_suspend(void)
 		req->ns = NULL;
 		// ???? What to do about searches?
 		(void) evtimer_del(&req->timeout_event);
+		CLEAR(&req->timeout_event);
 		req->trans_id = 0;
 		req->transmit_me = 0;
 
@@ -2054,6 +2080,7 @@ evdns_nameserver_add(unsigned long int address) {
 out2:
 	CLOSE_SOCKET(ns->socket);
 out1:
+	CLEAR(ns);
 	free(ns);
 	log(EVDNS_LOG_WARN, "Unable to add nameserver %s: error %d", debug_ntoa(address), err);
 	return err;
@@ -2130,6 +2157,7 @@ request_new(int type, const char *name, int flags,
 
 	return req;
 err1:
+	CLEAR(req);
 	free(req);
 	return NULL;
 }
@@ -2258,8 +2286,10 @@ search_state_decref(struct search_state *const state) {
 		struct search_domain *next, *dom;
 		for (dom = state->head; dom; dom = next) {
 			next = dom->next;
+			CLEAR(dom);
 			free(dom);
 		}
+		CLEAR(state);
 		free(state);
 	}
 }
@@ -2363,7 +2393,7 @@ search_make_new(const struct search_state *const state, int n, const char *const
 			const u8 *const postfix = ((u8 *) dom) + sizeof(struct search_domain);
 			const int postfix_len = dom->len;
 			char *const newname = (char *) malloc(base_len + need_to_append_dot + postfix_len + 1);
-						if (!newname) return NULL;
+			if (!newname) return NULL;
 			memcpy(newname, base_name, base_len);
 			if (need_to_append_dot) newname[base_len] = '.';
 			memcpy(newname + base_len + need_to_append_dot, postfix, postfix_len);
@@ -2587,7 +2617,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 		const char *option;
 		while ((option = NEXT_TOKEN)) {
 			const char *val = strchr(option, ':');
-            evdns_set_option(option, val ? val+1 : "", flags);
+			evdns_set_option(option, val ? val+1 : "", flags);
 		}
 	}
 #undef NEXT_TOKEN
@@ -2649,7 +2679,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	if (!server_head && (flags & DNS_OPTION_NAMESERVERS)) {
 		// no nameservers were configured.
 		evdns_nameserver_ip_add("127.0.0.1");
-        err = 6;
+		err = 6;
 	}
 	if (flags & DNS_OPTION_SEARCH && (!global_search_state || global_search_state->num_domains == 0)) {
 		search_set_from_hostname();
@@ -2911,6 +2941,7 @@ evdns_shutdown(int fail_requests)
 		if (server->socket >= 0)
 			CLOSE_SOCKET(server->socket);
 		(void) event_del(&server->event);
+		CLEAR(server);
 		free(server);
 		if (server_next == server_head)
 			break;
@@ -2921,8 +2952,10 @@ evdns_shutdown(int fail_requests)
 	if (global_search_state) {
 		for (dom = global_search_state->head; dom; dom = dom_next) {
 			dom_next = dom->next;
+			CLEAR(dom);
 			free(dom);
 		}
+		CLEAR(global_search_state);
 		free(global_search_state);
 		global_search_state = NULL;
 	}
