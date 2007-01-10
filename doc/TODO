@@ -68,6 +68,43 @@ R   - actually cause the directory.c functions to know about or_port
       and use it when we're supposed to.
 N   - for tunneled edge conns, stop reading to the bridge connection
       when the or_conn we're writing to has a full outbuf.
+      - This is iffy.  Really, it would've been better to stop writing
+        on the dir conn when the edge conn's inbuf is getting full.
+        But the issue there is that we package from edge
+        connections aggressively until we hit their package windows or the
+        circuit package windows, even if the buffer on the corresponding OR
+        connection is pretty damn big.  This sucks from a RAM usage POV.
+        Now, we could try to stop reading on the edges (or just the edges
+        connected to a local bridge) when an or_conn's outbuf is full.  But
+        if we're a server, and we stop reading on some exit conns when OR
+        conns are full, soon OR conns will contain only traffic from other OR
+        conns, and the exit data in question  will never get written.
+
+      - The right solution in the long run (0.2.0) is probably as follows:
+        - Remove socketpair-based bridges: use shared (or connected) buffers
+          for communication, rather than sockets.
+        - When relaying cells from an OR conn to an OR conn, have them wait
+          in a queue on the or_circuit_t object; don't move them onto the
+          target conn until there is space in the target conn's outbuf.
+          Also, only package data from exitconns when there is space in the
+          target conn's outbuf.
+          - As an added advantage, this would let us kill stalled _circuits_
+            when their buffers get too full, rather than killing entire OR
+            conns.  But we must think about anonymity implications of that.
+        - We'll probably want to do some kind of big refactoring of our
+          dataflow when we do these changes; stuff is hairy enough already,
+          and it will only get harrier with this stuff.
+
+      - For the short run, our options seem to be:
+        - Disable BEGIN_DIR support at the server-side unless it's
+          explicitly turned on.
+        - Go ahead and make directory bridge data not get produced when the
+          corresponding or_conn is full, and accept the sometimes directory
+          data will just never get written.
+        - Rate-limit directory bridge data somehow when the corresponding
+          or_conn is full.  Possibly based on the flush rate of the or_conn?
+        - Reject BEGIN_DIR requests that we think will be insanely big.
+
 
 N - DNS improvements
     . Asynchronous DNS
