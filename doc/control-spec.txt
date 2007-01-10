@@ -489,16 +489,11 @@ $Id$
 
     "status/client"
     "status/server"
-      These two special cases of internal Tor values return a (possibly
-      empty) list of status events from Section 4.1.10 that Tor believes
-      are still accurate. Controllers can use them to get a summary of
-      any current problems with Tor's operation.
-      [The answers should include notice events, not just warns and
-      errs, for example so Tor can learn whether any circuits have been
-      established yet.-RD]
-        [notice, warn, and errs need to be separated here, though.
-        Otherwise, when we add a new status event type in the future,
-        controllers won't know whether it's good or bad. -NM]
+    "status/general"
+      These provide a (possibly empty) newline-separated list of status
+      events from Section 4.1.10 that Tor believes are still
+      accurate. Controllers can use them to get a summary of any current
+      problems with Tor's operation.
 
       [Does this mean that Tor must keep state on its side of all the
       statuses it's sent, and recognize when they're cancelled out,
@@ -794,8 +789,8 @@ $Id$
      S: 650 CIRC 1000 EXTENDED moria1,moria2
      S: 250 ORPORT=0
 
-  Clients SHOULD tolerate more arguments in an asynchonous reply than
-  expected, and SHOULD tolerate more lines in an asynchronous reply than
+  Clients MUST tolerate more arguments in an asynchonous reply than
+  expected, and MUST tolerate more lines in an asynchronous reply than
   expected.  For instance, a client that expects a CIRC message like:
       650 CIRC 1000 EXTENDED moria1,moria2
   should tolerate:
@@ -954,12 +949,25 @@ $Id$
 
 4.1.10. Status events
 
+  Status events (STATUS_GENERAL, STATUS_CLIENT, and STATUS_SERVER) are sent
+  based on occurrences in the Tor process pertaining to the general state of
+  the program.  Generally, they correspond to log messages of severity Notice
+  or higher.  They differ from log messages in that their format is a
+  specified interface.
+
   [Don't rely on any of these until we work out more of the details. -RD]
 
   Syntax:
-     "650" SP Type SP Severity SP Action SP Arguments
-     Type = "STATUS_GENERAL" / "STATUS_CLIENT" / "STATUS_SERVER"
-     Severity = "NOTICE" / "WARN" / "ERR"
+     "650" SP StatusType SP StatusSeverity SP StatusAction
+                                         [SP StatusArguments] CRLF
+
+     StatusType = "STATUS_GENERAL" / "STATUS_CLIENT" / "STATUS_SERVER"
+     StatusSeverity = "NOTICE" / "WARN" / "ERR"
+     StatusAction = 1*ALPHA
+     StatusArguments = StatusArgument *(SP StatusArgument)
+     StatusArgument = StatusKeyword '=' StatusValue
+     StatusKeyword = 1*(ALNUM / "_")
+     StatusValue = 1*(ALNUM / '_')  / QuotedString
 
      Action is a string, and Arguments is a series of keyword=value
      pairs on the same line.  Values may be space-terminated strings,
@@ -968,6 +976,10 @@ $Id$
      These events are always produced with EXTENDED_EVENTS and
      VERBOSE_NAMES; see the explanations in the USEFEATURE section
      for details.
+
+     Controllers MUST tolerate unrecognized actions and arguments, MUST
+     tolerate missing arguments, and MUST tolerate arguments that arrive
+     in any order.
 
   Actions for STATUS_GENERAL events can be as follows:
 
@@ -999,6 +1011,13 @@ do for each. -RD]
      "CURRENT=version"
      "REASON=NEW/OLD/UNRECOMMENDED"
      "RECOMMENDED=\"version, version, ...\""
+       Tor has found that directory servers don't recommend its version of
+       the Tor software.  RECOMMENDED is a comma-and-space-separated string
+       of Tor versions that are recommended.  REASON is NEW if this version
+       of Tor is newer than any recommended version, OLD if this version of
+       Tor is older than any recommended version, and UNRECOMMENDED if
+       some recommended versions of Tor are newer and some are old than this
+       version.
 
      TOO_MANY_CONNECTIONS
      "CURRENT=NUM"

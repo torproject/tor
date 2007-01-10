@@ -6,7 +6,8 @@ $Id$
 
 THIS PROTOCOL IS DEPRECATED.  It is still documented here because Tor
 0.1.1.x happens to support much of it; but the support for v0 is not
-maintained, so you should expect it to rot in unpredictable ways.
+maintained, so you should expect it to rot in unpredictable ways.  Support
+for v0 will be removed some time after Tor 0.1.2.
 
 0. Scope
 
