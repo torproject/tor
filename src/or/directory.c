@@ -894,7 +894,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   char *reason = NULL;
   size_t body_len=0, orig_len=0;
   int status_code;
-  time_t now, date_header=0;
+  time_t date_header=0;
   int delta;
   compress_method_t compression;
   int plausible;
@@ -943,8 +943,12 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (date_header > 0) {
-    now = time(NULL);
-    delta = now-date_header;
+    /* The date header was written very soon after we sent our request,
+     * so compute the skew as the difference between sending the request
+     * and the date header.  (We used to check now-date_header, but that's
+     * inaccurate if we spend a lot of time downloading.)
+     */
+    delta = conn->_base.timestamp_lastwritten - date_header;
     if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
       int trusted = router_digest_is_trusted_dir(conn->identity_digest);
       log_fn(trusted ? LOG_WARN : LOG_INFO,

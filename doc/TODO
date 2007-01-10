@@ -35,11 +35,13 @@ Items for 0.1.2.x:
 N - enumerate events of important things that occur in tor, so vidalia can
     react.
     o Backend implementation
-    - Actually list all the events (notice and warn log messages are a good
+    o Actually list all the events (notice and warn log messages are a good
       place to look.)  Divide messages into categories, perhaps.
-    - Specify general event system
-    - Specify actual events.
-    - and implement the rest
+    o Specify general event system
+    o Specify actual events.
+    - Implement or defer remaining events
+    - Implement or defer GETINFO list of current status events.
+    - Clean up relevant bits of control-spec.txt
 
   . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     directory port."
@@ -122,9 +124,6 @@ NR  D Get some kind of "meta signing key" to be used solely to sign
 N   - torrc.complete.in needs attention?
 N   - we should add a preamble to tor-design saying it's out of date.
 N   - Document transport and natdport
-N   - Look into generating torrc.{complete|sample}.in, tor.1.in,
-      the HTML manual, and the online config documentation from a single
-      source.
 
   - Improvements to bandwidth counting
 R   - look into "uncounting" bytes spent on local connections, so
@@ -260,7 +259,7 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
   - Add an option (related to AvoidDiskWrites) to disable directory caching.
 
 Minor items for 0.1.2.x as time permits:
-  - when reporting clock skew (both to logs and to controller), if it's
+  o when reporting clock skew (both to logs and to controller), if it's
     taken 126 seconds to read from the directory, our clock skew estimate
     is 126 seconds wrong. use conn->timestamp_create or _lastwritten
     for a closer estimate?
@@ -364,6 +363,10 @@ R - add d64 and fp64 along-side d and fp so people can paste status
       we can have an edge_connection_t and (say) dns_request_t both extend an
       edge_stream_t, and have p_streams and n_streams both be linked lists
       of edge_stream_t.
+
+  - Look into generating torrc.{complete|sample}.in, tor.1.in,
+    the HTML manual, and the online config documentation from a single
+    source.
 
 Future version:
   - Configuration format really wants sections.
