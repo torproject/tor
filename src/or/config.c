@@ -904,15 +904,15 @@ options_act(or_options_t *old_options)
     tor_free(fn);
   }
 
-  /* Bail out at this point if we're not going to be a client or server:
-   * we want to not fork, and to log stuff to stderr. */
-  if (options->command != CMD_RUN_TOR)
-    return 0;
-
   /* Load state */
   if (! global_state)
     if (or_state_load())
       return -1;
+
+  /* Bail out at this point if we're not going to be a client or server:
+   * we want to not fork, and to log stuff to stderr. */
+  if (options->command != CMD_RUN_TOR)
+    return 0;
 
   {
     smartlist_t *sl = smartlist_create();
@@ -3881,6 +3881,7 @@ decode_libevent_version(void)
 or_state_t *
 get_or_state(void)
 {
+  tor_assert(global_state);
   return global_state;
 }
 

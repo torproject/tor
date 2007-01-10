@@ -585,7 +585,7 @@ circuit_get_by_edge_conn(edge_connection_t *conn)
   return circ;
 }
 
-/** For each circuits that have <b>conn</b> as n_conn or p_conn, unlink the
+/** For each circuit that has <b>conn</b> as n_conn or p_conn, unlink the
  * circuit from the orconn,circid map, and mark it for close if it hasn't
  * been marked already.
  */
