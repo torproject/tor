@@ -2307,6 +2307,7 @@ void dirserv_set_cached_directory(const char *directory, time_t when,
 void dirserv_set_cached_networkstatus_v2(const char *directory,
                                          const char *identity,
                                          time_t published);
+void dirserv_clear_old_networkstatuses(time_t cutoff);
 void dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
 void dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
                                                const char *key);
@@ -2803,6 +2804,7 @@ typedef enum {
 int router_set_networkstatus(const char *s, time_t arrived_at,
                              networkstatus_source_t source,
                              smartlist_t *requested_fingerprints);
+char *networkstatus_get_cache_filename(const char *identity_digest);
 
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);

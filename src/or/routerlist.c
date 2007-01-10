@@ -2226,15 +2226,15 @@ router_load_routers_from_string(const char *s, saved_location_t saved_location,
 }
 
 /** Helper: return a newly allocated string containing the name of the filename
- * where we plan to cache <b>ns</b>. */
-static char *
-networkstatus_get_cache_filename(const networkstatus_t *ns)
+ * where we plan to cache the network status with the given identity digest. */
+char *
+networkstatus_get_cache_filename(const char *identity_digest)
 {
   const char *datadir = get_options()->DataDirectory;
   size_t len = strlen(datadir)+64;
   char fp[HEX_DIGEST_LEN+1];
   char *fn = tor_malloc(len+1);
-  base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
+  base16_encode(fp, HEX_DIGEST_LEN+1, identity_digest, DIGEST_LEN);
   tor_snprintf(fn, len, "%s/cached-status/%s",datadir,fp);
   return fn;
 }
@@ -2262,7 +2262,7 @@ add_networkstatus_to_cache(const char *s,
                            networkstatus_t *ns)
 {
   if (source != NS_FROM_CACHE) {
-    char *fn = networkstatus_get_cache_filename(ns);
+    char *fn = networkstatus_get_cache_filename(ns->identity_digest);
     if (write_str_to_file(fn, s, 0)<0) {
       log_notice(LD_FS, "Couldn't write cached network status to \"%s\"", fn);
     }
@@ -2411,7 +2411,8 @@ router_set_networkstatus(const char *s, time_t arrived_at,
                  trusted_dir->description, published);
         if (old_ns->received_on < arrived_at) {
           if (source != NS_FROM_CACHE) {
-            char *fn = networkstatus_get_cache_filename(old_ns);
+            char *fn;
+            fn = networkstatus_get_cache_filename(old_ns->identity_digest);
             /* We use mtime to tell when it arrived, so update that. */
             touch_file(fn);
             tor_free(fn);
@@ -2479,13 +2480,13 @@ networkstatus_list_clean(time_t now)
 
   for (i = 0; i < smartlist_len(networkstatus_list); ++i) {
     networkstatus_t *ns = smartlist_get(networkstatus_list, i);
-    char *fname = NULL;;
+    char *fname = NULL;
     if (ns->published_on + MAX_NETWORKSTATUS_AGE > now)
       continue;
     /* Okay, this one is too old.  Remove it from the list, and delete it
      * from the cache. */
     smartlist_del(networkstatus_list, i--);
-    fname = networkstatus_get_cache_filename(ns);
+    fname = networkstatus_get_cache_filename(ns->identity_digest);
     if (file_status(fname) == FN_FILE) {
       log_info(LD_DIR, "Removing too-old networkstatus in %s", fname);
       unlink(fname);
@@ -2497,6 +2498,10 @@ networkstatus_list_clean(time_t now)
     networkstatus_free(ns);
     router_dir_info_changed();
   }
+
+  /* And now go through the directory cache for any cached untrusted
+   * networkstatuses. */
+  dirserv_clear_old_networkstatuses(now - MAX_NETWORKSTATUS_AGE);
 }
 
 /** Helper for bsearching a list of routerstatus_t pointers.*/

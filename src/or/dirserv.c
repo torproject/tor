@@ -1098,6 +1098,39 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
   }
 }
 
+/** Remove any networkstatus from the directory cache that was published
+ * before <b>cutoff</b>. */
+void
+dirserv_clear_old_networkstatuses(time_t cutoff)
+{
+  digestmap_iter_t *iter;
+
+  for (iter = digestmap_iter_init(cached_v2_networkstatus);
+       !digestmap_iter_done(iter); ) {
+    const char *ident;
+    void *val;
+    cached_dir_t *dir;
+    digestmap_iter_get(iter, &ident, &val);
+    dir = val;
+    if (dir->published < cutoff) {
+      char *fname;
+      iter = digestmap_iter_next_rmv(cached_v2_networkstatus, iter);
+      fname = networkstatus_get_cache_filename(ident);
+      if (file_status(fname) == FN_FILE) {
+        log_info(LD_DIR, "Removing too-old untrusted networkstatus in %s",
+                 fname);
+        unlink(fname);
+      }
+      tor_free(fname);
+      cached_dir_decref(dir);
+    } else {
+      iter = digestmap_iter_next(cached_v2_networkstatus, iter);
+    }
+  }
+
+}
+
+
 /** Helper: If we're an authority for the right directory version (the
  * directory version is determined by <b>is_v1_object</b>), try to regenerate
  * auth_src as appropriate and return it, falling back to cache_src on
