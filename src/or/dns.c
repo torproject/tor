@@ -1625,12 +1625,10 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
       status = DNS_RESOLVE_FAILED_TRANSIENT;
   }
   if (was_wildcarded) {
-    int is_test_addr = is_test_address(hostname);
-
-    if (is_test_addr) {
+    if (is_test_address(string_address)) {
       /* Ick.  We're getting redirected on known-good addresses.  Our DNS
        * server must really hate us.  */
-      add_wildcarded_test_address(hostname);
+      add_wildcarded_test_address(string_address);
     }
   }
   if (result != DNS_ERR_SHUTDOWN)
@@ -1744,16 +1742,19 @@ wildcard_increment_answer(const char *id)
 static void
 add_wildcarded_test_address(const char *address)
 {
-  int n;
+  int n, n_test_addrs;
   if (!dns_wildcarded_test_address_list)
     dns_wildcarded_test_address_list = smartlist_create();
 
   if (smartlist_string_isin_case(dns_wildcarded_test_address_list, address))
     return;
 
+  n_test_addrs = get_options()->ServerDNSTestAddresses ?
+    smartlist_len(get_options()->ServerDNSTestAddresses) : 0;
+
   smartlist_add(dns_wildcarded_test_address_list, tor_strdup(address));
   n = smartlist_len(dns_wildcarded_test_address_list);
-  if (n > smartlist_len(get_options()->ServerDNSTestAddresses)/2) {
+  if (n > n_test_addrs/2) {
     log(dns_wildcarded_test_address_notice_given ? LOG_INFO : LOG_NOTICE,
         LD_EXIT, "Your DNS provider tried to redirect \"%s\" to a junk "
         "address.  It has done this with %d test addresses so far.  I'm "

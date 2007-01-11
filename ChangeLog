@@ -1,4 +1,8 @@
 Changes in version 0.1.2.7-alpha - 2007-??-??
+ o Major bugfixes:
+    - Fix a crash bug in the presence of DNS hijacking  (reported by Andrew
+      Del Vecchio).
+
  o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what
       time it was when we finished asking for the directory, not what time it
