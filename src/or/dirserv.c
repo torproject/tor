@@ -1105,6 +1105,9 @@ dirserv_clear_old_networkstatuses(time_t cutoff)
 {
   digestmap_iter_t *iter;
 
+  if (!cached_v2_networkstatus)
+    return;
+
   for (iter = digestmap_iter_init(cached_v2_networkstatus);
        !digestmap_iter_done(iter); ) {
     const char *ident;
