@@ -1350,7 +1350,7 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
       const char *to = smartlist_get(elts,1);
       size_t anslen = strlen(line)+512;
       char *ans = tor_malloc(anslen);
-      if (address_is_invalid_destination(to)) {
+      if (address_is_invalid_destination(to, 1)) {
         if (!v0) {
           tor_snprintf(ans, anslen,
             "512-syntax error: invalid address '%s'", to);

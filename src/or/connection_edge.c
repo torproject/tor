@@ -1082,14 +1082,21 @@ addressmap_register_virtual_address(int type, char *new_address)
   return *addrp;
 }
 
-/** Return 1 if <b>address</b> has funny characters in it like
- * colons. Return 0 if it's fine.
+/** Return 1 if <b>address</b> has funny characters in it like colons. Return
+ * 0 if it's fine, or if we're configured to allow it anyway.  <b>client</b>
+ * should be true if we're using this address as a client; false if we're
+ * using it as a server.
  */
 int
-address_is_invalid_destination(const char *address)
+address_is_invalid_destination(const char *address, int client)
 {
-  if (get_options()->AllowNonRFC953Hostnames)
-    return 0;
+  if (client) {
+    if (get_options()->AllowNonRFC953Hostnames)
+      return 0;
+  } else {
+    if (get_options()->ServerDNSAllowNonRFC953Hostnames)
+      return 0;
+  }
 
   while (*address) {
     if (TOR_ISALNUM(*address) ||
@@ -1234,7 +1241,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   if (addresstype != ONION_HOSTNAME) {
     /* not a hidden-service request (i.e. normal or .exit) */
 
-    if (address_is_invalid_destination(socks->address)) {
+    if (address_is_invalid_destination(socks->address, 1)) {
       log_warn(LD_APP,
                "Destination '%s' seems to be an invalid hostname. Failing.",
                safe_str(socks->address));

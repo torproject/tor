@@ -1671,6 +1671,8 @@ typedef struct {
                                * support BEGIN_DIR, when possible. */
   int AllowNonRFC953Hostnames; /**< If true, we allow connections to hostnames
                                 * with weird characters. */
+ /** If true, we try resolving hostnames with weird characters. */
+  int ServerDNSAllowNonRFC953Hostnames;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -2094,7 +2096,7 @@ int connection_ap_detach_retriable(edge_connection_t *conn,
                                    int reason);
 int connection_ap_process_transparent(edge_connection_t *conn);
 
-int address_is_invalid_destination(const char *address);
+int address_is_invalid_destination(const char *address, int client);
 
 void addressmap_init(void);
 void addressmap_clean(time_t now);

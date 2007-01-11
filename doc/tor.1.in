@@ -501,7 +501,7 @@ When a controller asks for a virtual (unused) address with the
 .LP
 .TP
 \fBAllowNonRFC953Hostnames \fR\fB0\fR|\fB1\fR\fP
-When this option is enabled, Tor blocks hostnames containing illegal
+When this option is disabled, Tor blocks hostnames containing illegal
 characters (like @ and :) rather than sending them to an exit node to be
 resolved.  This helps trap accidental attempts to resolve URLs and so on.
 (Default: 0)
@@ -717,6 +717,12 @@ addresses aren't getting redirected.  If they are, then our DNS is
 completely useless, and we'll reset our exit policy to "reject *:*".
 (Defaults to "www.google.com, www.mit.edu, www.yahoo.com,
 www.slashdot.org".)
+\fBServerDNSAllowNonRFC953Hostnames \fR\fB0\fR|\fB1\fR\fP
+When this option is disabled, Tor does not try to resolve hostnames
+containing illegal characters (like @ and :) rather than sending them to an
+exit node to be resolved.  This helps trap accidental attempts to resolve
+URLs and so on.
+(Default: 0)
 
 .SH DIRECTORY SERVER OPTIONS
 .PP

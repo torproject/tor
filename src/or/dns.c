@@ -584,6 +584,20 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
       send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_IPV4);
     return 1;
   }
+  if (address_is_invalid_destination(exitconn->_base.address, 0)) {
+    log(LOG_PROTOCOL_WARN, LD_EXIT,
+        "Rejecting invalid destination address %s",
+        escaped_safe_str(exitconn->_base.address));
+    if (is_resolve)
+      send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
+    /* XXXX012 send error in connect case? -NM */
+    circ = circuit_get_by_edge_conn(exitconn);
+    if (circ)
+      circuit_detach_stream(circ, exitconn);
+    if (!exitconn->_base.marked_for_close)
+      connection_free(TO_CONN(exitconn));
+    return -1;
+  }
 
   /* then take this opportunity to see if there are any expired
    * resolves in the hash table. */
