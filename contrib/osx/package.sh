@@ -110,7 +110,7 @@ cp ChangeLog $DOC/Advanced/ChangeLog.txt
 
 find $BUILD_DIR/tor_packageroot -print0 |sudo xargs -0 chown root:wheel
 
-$PACKAGEMAKER -build -v           \
+$PACKAGEMAKER -build              \
     -p $BUILD_DIR/output/Tor.pkg  \
     -f $BUILD_DIR/tor_packageroot \
     -r $BUILD_DIR/tor_resources   \
@@ -123,7 +123,7 @@ cp contrib/osx/privoxy.config $BUILD_DIR/privoxyconf_packageroot/Library/Privoxy
 
 find $BUILD_DIR/privoxyconf_packageroot -print0 |sudo xargs -0 chown root:wheel
 
-$PACKAGEMAKER -build -v                   \
+$PACKAGEMAKER -build                      \
     -p $BUILD_DIR/output/privoxyconf.pkg  \
     -f $BUILD_DIR/privoxyconf_packageroot \
     -i contrib/osx/PrivoxyConfInfo.plist  \
@@ -136,7 +136,7 @@ $PACKAGEMAKER -build -v                   \
    $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 
   find $BUILD_DIR/torstartup_packageroot -print0 | sudo xargs -0 chown root:wheel
-  $PACKAGEMAKER -build -v                  \
+  $PACKAGEMAKER -build                     \
       -p $BUILD_DIR/output/torstartup.pkg  \
       -f $BUILD_DIR/torstartup_packageroot \
       -i contrib/osx/TorStartupInfo.plist  \
