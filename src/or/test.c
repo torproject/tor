@@ -1918,6 +1918,7 @@ main(int c, char**v)
   (void) c;
   (void) v;
   options->command = CMD_RUN_UNITTESTS;
+  rep_hist_init();
   network_init();
   setup_directory();
   options_init(options);
@@ -1935,7 +1936,6 @@ main(int c, char**v)
     return 0;
   }
 
-  rep_hist_init();
   atexit(remove_directory);
 
   printf("Running Tor unit tests on %s\n", get_uname());
