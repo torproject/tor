@@ -296,6 +296,13 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
   - Add an option (related to AvoidDiskWrites) to disable directory caching.
 
 Minor items for 0.1.2.x as time permits:
+  - Unify autoconf search code for libevent and openssl.  Make code
+    suggest platform-appropriate "devel" / "dev" / whatever packages
+    if we can link but we can't find the headers.
+  - Recommend polipo? Please?
+  - Make documentation realize that location of system configuration file
+    will depend on location of system defaults, and isn't always /etc/torrc.
+  - Review torrc.sample to make it more discursive.
   o when reporting clock skew (both to logs and to controller), if it's
     taken 126 seconds to read from the directory, our clock skew estimate
     is 126 seconds wrong. use conn->timestamp_create or _lastwritten
