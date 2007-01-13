@@ -38,8 +38,10 @@ Generate your keys and output your nickname and fingerprint.
 Verify the configuration file is valid.
 .LP
 .TP
-\fB--nt-servce\fP
-Create a service of Tor under Win32 operating systems.
+\fB--nt-service\fP
+Create a service of Tor under Win32 operating systems.  Current
+instructions can be found at 
+http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#WinNTService
 .LP
 .TP
 \fB--list-torrc-options\fP
