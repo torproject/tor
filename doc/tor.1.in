@@ -26,6 +26,30 @@ Display a short help message and exit.
 FILE contains further "option value" pairs. (Default: @CONFDIR@/torrc)
 .LP
 .TP
+\fB--hash-password\fP
+Generates a hashed password for control port access.
+.LP
+.TP
+\fB--list-fingerprint\fP
+Generate your keys and output your nickname and fingerprint.
+.LP
+.TP
+\fB--verify-config\fP
+Verify the configuration file is valid.
+.LP
+.TP
+\fB--nt-servce\fP
+Create a service of Tor under Win32 operating systems.
+.LP
+.TP
+\fB--list-torrc-options\fP
+List all valid options.
+.LP
+.TP
+\fB--version\fP
+Display Tor version.
+.LP
+.TP
 Other options can be specified either on the command-line (\fI--option
 value\fR), or in the configuration file (\fIoption value\fR).
 Options are case-insensitive.
