@@ -1,9 +1,10 @@
 Changes in version 0.1.2.7-alpha - 2007-??-??
-
  o Minor features:
     - Check for addresses with invalid characters at the exit as well as at
       the client, and warn less verbosely when they fail.  You can override
       this by setting ServerDNSAllowNonRFC953Addresses to 1.
+    - Adapt a patch from goodell to let the contrib/exitlist script
+      take arguments rather than require direct editing.
 
  o Major bugfixes:
     - Fix a crash bug in the presence of DNS hijacking  (reported by Andrew

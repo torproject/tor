@@ -10,11 +10,11 @@
 
  example usage (Tor 0.1.0.x and earlier):
 
-    python exitlist < ~/.tor/cached-directory
+    python exitlist 18.244.0.188:80 < ~/.tor/cached-directory
 
  example usage (Tor 0.1.1.10-alpha and later):
 
-    cat ~/.tor/cached-routers* | python exitlist
+    cat ~/.tor/cached-routers* | python exitlist 18.244.0.188:80
 
  If you're using Tor 0.1.1.18-rc or later, you should look at
  the "FetchUselessDescriptors" config option in the man page.
@@ -41,10 +41,11 @@ INVERSE = False
 #
 # Change this list to contain all of the target services you are interested
 # in.  It must contain one entry per line, each consisting of an IPv4 address,
-# a colon, and a port number.
+# a colon, and a port number. This default is only used if we don't learn
+# about any addresses from the command-line.
 #
 ADDRESSES_OF_INTEREST = """
-    192.168.0.1:80
+    1.2.3.4:80
 """
 
 
@@ -208,6 +209,29 @@ def uniq_sort(lst):
     return lst
 
 def run():
+    global VERBOSE
+    global INVERSE
+    global ADDRESSES_OF_INTEREST
+
+    if len(sys.argv) > 1:
+        try:
+            opts, pargs = getopt.getopt(sys.argv[1:], "vx")
+        except getopt.GetoptError, e:
+            print """
+usage: %s [-v] [-x] [host:port [host:port [...]]]
+    -v  verbose output
+    -x  invert results
+""" % sys.argv[0]
+            sys.exit(0)
+
+        for o, a in opts:
+            if o == "-v":
+                VERBOSE = True
+            if o == "-x":
+                INVERSE = True
+        if len(pargs):
+            ADDRESSES_OF_INTEREST = "\n".join(pargs)
+
     servers = []
     policy = []
     name = ip = None
