@@ -507,3 +507,8 @@ R - make a page with the hidden service diagrams.
 
   - add a page for localizing all tor's components.
 
+  - It would be neat if we had a single place that described _all_ the
+    tor-related tools you can use, and what they give you, and how well they
+    work.  Right now, we don't give a lot of guidance wrt
+    torbutton/foxproxy/privoxy/polipo in any consistent place.
+

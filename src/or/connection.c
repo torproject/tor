@@ -1462,6 +1462,8 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     result = read_to_buf_tls(or_conn->tls, at_most, conn->inbuf);
     if (TOR_TLS_IS_ERROR(result) || result == TOR_TLS_CLOSE)
       or_conn->tls_error = result;
+    else
+      or_conn->tls_error = 0;
 
     switch (result) {
       case TOR_TLS_CLOSE:
