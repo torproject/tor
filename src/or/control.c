@@ -3247,13 +3247,65 @@ orconn_target_get_name(int long_names,
   }
 }
 
+int
+control_tls_error_to_reason(int e) {
+  switch(e) {
+    case TOR_TLS_ERROR_IO:
+      return END_OR_CONN_REASON_TLS_IO_ERROR;
+    case TOR_TLS_ERROR_CONNREFUSED:
+      return END_OR_CONN_REASON_TCP_REFUSED;
+    case TOR_TLS_ERROR_CONNRESET:
+      return END_OR_CONN_REASON_TLS_CONNRESET;
+    case TOR_TLS_ERROR_NO_ROUTE:
+      return END_OR_CONN_REASON_TLS_NO_ROUTE;
+    case TOR_TLS_ERROR_TIMEOUT:
+      return END_OR_CONN_REASON_TLS_TIMEOUT;
+    case TOR_TLS_WANTREAD:
+    case TOR_TLS_WANTWRITE:
+    case TOR_TLS_CLOSE:
+    case TOR_TLS_DONE:
+      return END_OR_CONN_REASON_DONE;
+    default:
+      return END_OR_CONN_REASON_TLS_MISC;
+  }
+}
+
+const char *
+or_conn_end_reason_to_string(int r) {
+  switch(r) {
+    case END_OR_CONN_REASON_DONE:
+      return "REASON=DONE";
+    case END_OR_CONN_REASON_TCP_REFUSED:
+      return "REASON=CONNECTREFUSED";
+    case END_OR_CONN_REASON_OR_IDENTITY:
+      return "REASON=IDENTITY";
+    case END_OR_CONN_REASON_TLS_CONNRESET:
+      return "REASON=CONNECTRESET";
+    case END_OR_CONN_REASON_TLS_TIMEOUT:
+      return "REASON=TIMEOUT";
+    case END_OR_CONN_REASON_TLS_NO_ROUTE:
+      return "REASON=NOROUTE";
+    case END_OR_CONN_REASON_TLS_IO_ERROR:
+      return "REASON=IOERROR";
+    case END_OR_CONN_REASON_TLS_MISC:
+      return "REASON=MISC";
+    case 0:
+      return "";
+    default:
+      log_warn(LD_BUG, "Unrecognized or_conn reason code %d", r);
+      return "REASON=BOGUS";
+  }
+}
+
 /** Something has happened to the OR connection <b>conn</b>: tell any
  * interested control connections. */
 int
-control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
+control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp, 
+        int reason)
 {
   char buf[HEX_DIGEST_LEN+3]; /* status, dollar, identity, NUL */
   size_t len;
+  int ncircs = 0;
 
   if (!EVENT_IS_INTERESTING(EVENT_OR_CONN_STATUS))
     return 0;
@@ -3267,6 +3319,7 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
   if (EVENT_IS_INTERESTING1(EVENT_OR_CONN_STATUS)) {
     const char *status;
     char name[128];
+    char ncircs_buf[32] = {0}; /* > 8 + log10(2^32)=10 + 2 */
     switch (tp)
       {
       case OR_CONN_EVENT_LAUNCHED: status = "LAUNCHED"; break;
@@ -3278,17 +3331,26 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp)
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
+    ncircs = connection_or_count_pending_circs(conn);
+    ncircs += conn->n_circuits;
+    if(ncircs && (tp == OR_CONN_EVENT_FAILED || tp == OR_CONN_EVENT_CLOSED)) {
+        tor_snprintf(ncircs_buf, sizeof(ncircs_buf), "%sNCIRCS=%d", 
+                reason ? " " : "", ncircs);
+    }
+
     if (EVENT_IS_INTERESTING1S(EVENT_OR_CONN_STATUS)) {
       orconn_target_get_name(0, name, sizeof(name), conn);
-      send_control1_event(EVENT_OR_CONN_STATUS, SHORT_NAMES,
-                          "650 ORCONN %s %s\r\n",
-                          name, status);
+      send_control1_event_extended(EVENT_OR_CONN_STATUS, SHORT_NAMES,
+                          "650 ORCONN %s %s@%s%s\r\n",
+                          name, status,
+                          or_conn_end_reason_to_string(reason), ncircs_buf);
     }
     if (EVENT_IS_INTERESTING1L(EVENT_OR_CONN_STATUS)) {
       orconn_target_get_name(1, name, sizeof(name), conn);
-      send_control1_event(EVENT_OR_CONN_STATUS, LONG_NAMES,
-                          "650 ORCONN %s %s\r\n",
-                          name, status);
+      send_control1_event_extended(EVENT_OR_CONN_STATUS, LONG_NAMES,
+                          "650 ORCONN %s %s@%s%s\r\n",
+                          name, status,
+                          or_conn_end_reason_to_string(reason), ncircs_buf);
     }
   }
   return 0;

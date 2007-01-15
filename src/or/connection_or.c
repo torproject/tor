@@ -435,7 +435,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
   /* set up conn so it's got all the data we need to remember */
   connection_or_init_conn_from_address(conn, addr, port, id_digest, 1);
   conn->_base.state = OR_CONN_STATE_CONNECTING;
-  control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED);
+  control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
   if (options->HttpsProxy) {
     /* we shouldn't connect directly. use the https proxy instead. */
@@ -453,7 +453,8 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
                                             time(NULL));
         router_set_status(conn->identity_digest, 0);
       }
-      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
+      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED, 
+              END_OR_CONN_REASON_TCP_REFUSED);
       connection_free(TO_CONN(conn));
       return NULL;
     case 0:
@@ -508,7 +509,12 @@ connection_tls_continue_handshake(or_connection_t *conn)
 {
   check_no_tls_errors();
   switch (tor_tls_handshake(conn->tls)) {
-    case TOR_TLS_ERROR:
+    case TOR_TLS_ERROR_IO:
+    case TOR_TLS_ERROR_CONNREFUSED:
+    case TOR_TLS_ERROR_CONNRESET:
+    case TOR_TLS_ERROR_NO_ROUTE:
+    case TOR_TLS_ERROR_TIMEOUT:
+    case TOR_TLS_ERROR_MISC:
     case TOR_TLS_CLOSE:
       log_info(LD_OR,"tls error. breaking connection.");
       return -1;
@@ -628,7 +634,8 @@ connection_or_check_valid_handshake(or_connection_t *conn, char *digest_rcvd)
              conn->_base.address, conn->_base.port, expected, seen);
       entry_guard_register_connect_status(conn->identity_digest,0,time(NULL));
       router_set_status(conn->identity_digest, 0);
-      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED);
+      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
+              END_OR_CONN_REASON_OR_IDENTITY);
       as_advertised = 0;
     }
     if (authdir_mode(options)) {
@@ -672,7 +679,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
 
   directory_set_dirty();
   conn->_base.state = OR_CONN_STATE_OPEN;
-  control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED);
+  control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED, 0);
   if (started_here) {
     rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
     if (entry_guard_register_connect_status(conn->identity_digest, 1,
@@ -790,4 +797,32 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   connection_or_write_cell_to_buf(&cell, conn);
   return 0;
 }
+
+/** Count number of pending circs on an or_conn */
+int 
+connection_or_count_pending_circs(or_connection_t *or_conn)
+{
+  extern smartlist_t *circuits_pending_or_conns;
+  int cnt = 0;
+
+  if (!circuits_pending_or_conns)
+    return 0;
+
+  SMARTLIST_FOREACH(circuits_pending_or_conns, circuit_t *, circ,
+  {
+    if (circ->marked_for_close)
+      continue;
+    tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
+    if (!circ->n_conn &&
+        !memcmp(or_conn->identity_digest, circ->n_conn_id_digest,
+                DIGEST_LEN)) {
+      cnt++;
+    }
+  });
+
+  log_debug(LD_CIRC,"or_conn to %s, %d pending circs",
+            or_conn->nickname ? or_conn->nickname : "NULL", cnt);
+  return cnt;
+}
+
 

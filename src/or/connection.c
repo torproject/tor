@@ -435,7 +435,8 @@ connection_about_to_close_connection(connection_t *conn)
           rep_hist_note_connect_failed(or_conn->identity_digest, now);
           entry_guard_register_connect_status(or_conn->identity_digest,0,now);
           router_set_status(or_conn->identity_digest, 0);
-          control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED);
+          control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED, 
+                  control_tls_error_to_reason(or_conn->tls_error));
         }
         /* Inform any pending (not attached) circs that they should
          * give up. */
@@ -444,10 +445,12 @@ connection_about_to_close_connection(connection_t *conn)
         /* We only set hold_open_until_flushed when we're intentionally
          * closing a connection. */
         rep_hist_note_disconnect(or_conn->identity_digest, now);
-        control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED);
+        control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
+                control_tls_error_to_reason(or_conn->tls_error));
       } else if (or_conn->identity_digest) {
         rep_hist_note_connection_died(or_conn->identity_digest, now);
-        control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED);
+        control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
+                control_tls_error_to_reason(or_conn->tls_error));
       }
       /* Now close all the attached circuits on it. */
       circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
@@ -824,7 +827,7 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
 
   switch (conn->type) {
     case CONN_TYPE_OR:
-      control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW);
+      control_event_or_conn_status(TO_OR_CONN(conn), OR_CONN_EVENT_NEW, 0);
       return connection_tls_start_handshake(TO_OR_CONN(conn), 1);
     case CONN_TYPE_AP:
       switch (listener_type) {
@@ -1457,6 +1460,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
 
     /* else open, or closing */
     result = read_to_buf_tls(or_conn->tls, at_most, conn->inbuf);
+    or_conn->tls_error = result;
 
     switch (result) {
       case TOR_TLS_CLOSE:
@@ -1464,12 +1468,17 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
                  "(Nickname %s, address %s",
                  or_conn->nickname ? or_conn->nickname : "not set",
                  conn->address);
-        return -1;
-      case TOR_TLS_ERROR:
+        return result;
+      case TOR_TLS_ERROR_IO:
+      case TOR_TLS_ERROR_CONNREFUSED:
+      case TOR_TLS_ERROR_CONNRESET:
+      case TOR_TLS_ERROR_NO_ROUTE:
+      case TOR_TLS_ERROR_TIMEOUT:
+      case TOR_TLS_ERROR_MISC:
         log_info(LD_NET,"tls error. breaking (nickname %s, address %s).",
                  or_conn->nickname ? or_conn->nickname : "not set",
                  conn->address);
-        return -1;
+        return result;
       case TOR_TLS_WANTWRITE:
         connection_start_writing(conn);
         return 0;
@@ -1662,9 +1671,14 @@ connection_handle_write(connection_t *conn, int force)
     result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
     switch (result) {
-      case TOR_TLS_ERROR:
+      case TOR_TLS_ERROR_IO:
+      case TOR_TLS_ERROR_CONNREFUSED:
+      case TOR_TLS_ERROR_CONNRESET:
+      case TOR_TLS_ERROR_NO_ROUTE:
+      case TOR_TLS_ERROR_TIMEOUT:
+      case TOR_TLS_ERROR_MISC:
       case TOR_TLS_CLOSE:
-        log_info(LD_NET,result==TOR_TLS_ERROR?
+        log_info(LD_NET,result!=TOR_TLS_CLOSE?
                  "tls error. breaking.":"TLS connection closed on flush");
         /* Don't flush; connection is dead. */
         connection_close_immediate(conn);

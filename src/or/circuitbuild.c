@@ -897,7 +897,8 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer)
    *     means that a connection broke or an extend failed. For now,
    *     just give up.
    */
-  circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_OR_CONN_CLOSED);
+  circuit_mark_for_close(TO_CIRCUIT(circ), 
+          END_CIRC_REASON_FLAG_REMOTE|END_CIRC_REASON_OR_CONN_CLOSED);
   return 0;
 
 #if 0

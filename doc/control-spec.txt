@@ -885,7 +885,8 @@ $Id$
 4.1.3. OR Connection status changed
 
   The syntax is:
-    "650" SP "ORCONN" SP (ServerID / Target) SP ORStatus
+    "650" SP "ORCONN" SP (ServerID / Target) SP ORStatus [ SP "REASON=" 
+             Reason ] [ SP "NCIRCS=" NumCircuits ]
 
     ORStatus = "NEW" / "LAUNCHED" / "CONNECTED" / "FAILED" / "CLOSED"
 
@@ -897,6 +898,17 @@ $Id$
 
   A ServerID is specified unless it's a NEW connection, in which
   case we don't know what server it is yet, so we use Address:Port.
+
+  If extended events are enabled (see 3.19), optional reason and
+  circuit counting information is provided for CLOSED and FAILED
+  events. 
+
+      Reason = "MISC" / "DONE" / "CONNECTREFUSED" /
+               "IDENTITY" / "CONNECTRESET" / "TIMEOUT" / "NOROUTE" /
+               "IOERROR" 
+
+  NumCircuits counts both established and pending circuits.
+
 
 4.1.4. Bandwidth used in the last second
 

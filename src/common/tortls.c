@@ -73,8 +73,8 @@ static tor_tls_context_t *global_tls_context = NULL;
 static int tls_library_is_initialized = 0;
 
 /* Module-internal error codes. */
-#define _TOR_TLS_SYSCALL    -6
-#define _TOR_TLS_ZERORETURN -5
+#define _TOR_TLS_SYSCALL    -10
+#define _TOR_TLS_ZERORETURN -9
 
 /* These functions are declared in crypto.c but not exported. */
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
@@ -103,6 +103,39 @@ tls_log_errors(int severity, const char *doing)
   }
 }
 
+static int
+tor_errno_to_tls_error(int e) {
+#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
+  switch(e) {
+    case WSAECONNRESET: // most common
+      return TOR_TLS_ERROR_CONNRESET;
+    case WSAETIMEDOUT:
+      return TOR_TLS_ERROR_TIMEOUT;
+    case WSAENETUNREACH:
+    case WSAEHOSTUNREACH:
+      return TOR_TLS_ERROR_NO_ROUTE;
+    case WSAECONNREFUSED:
+      return TOR_TLS_ERROR_CONNREFUSED; // least common
+    default:
+      return TOR_TLS_ERROR_MISC;
+  }
+#else 
+  switch(e) {
+    case ECONNRESET: // most common
+      return TOR_TLS_ERROR_CONNRESET;
+    case ETIMEDOUT:
+      return TOR_TLS_ERROR_TIMEOUT;
+    case EHOSTUNREACH:
+    case ENETUNREACH:
+      return TOR_TLS_ERROR_NO_ROUTE;
+    case ECONNREFUSED:
+      return TOR_TLS_ERROR_CONNREFUSED; // least common
+    default:
+      return TOR_TLS_ERROR_MISC;
+  }
+#endif
+}
+
 #define CATCH_SYSCALL 1
 #define CATCH_ZERO    2
 
@@ -121,6 +154,7 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
                   const char *doing, int severity)
 {
   int err = SSL_get_error(tls->ssl, r);
+  int tor_error = TOR_TLS_ERROR_MISC;
   switch (err) {
     case SSL_ERROR_NONE:
       return TOR_TLS_DONE;
@@ -131,25 +165,27 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
     case SSL_ERROR_SYSCALL:
       if (extra&CATCH_SYSCALL)
         return _TOR_TLS_SYSCALL;
-      if (r == 0)
+      if (r == 0) {
         log(severity, LD_NET, "TLS error: unexpected close while %s", doing);
-      else {
+        tor_error = TOR_TLS_ERROR_IO;
+      } else {
         int e = tor_socket_errno(tls->socket);
         log(severity, LD_NET,
             "TLS error: <syscall error while %s> (errno=%d: %s)",
             doing, e, tor_socket_strerror(e));
+        tor_error = tor_errno_to_tls_error(e);
       }
       tls_log_errors(severity, doing);
-      return TOR_TLS_ERROR;
+      return tor_error;
     case SSL_ERROR_ZERO_RETURN:
       if (extra&CATCH_ZERO)
         return _TOR_TLS_ZERORETURN;
       log(severity, LD_NET, "TLS error: Zero return");
       tls_log_errors(severity, doing);
-      return TOR_TLS_ERROR;
+      return TOR_TLS_ERROR_MISC;
     default:
       tls_log_errors(severity, doing);
-      return TOR_TLS_ERROR;
+      return TOR_TLS_ERROR_MISC;
   }
 }
 
@@ -547,7 +583,7 @@ tor_tls_handshake(tor_tls_t *tls)
   if (ERR_peek_error() != 0) {
     tls_log_errors(tls->isServer ? LOG_INFO : LOG_WARN,
                    "handshaking");
-    return TOR_TLS_ERROR;
+    return TOR_TLS_ERROR_MISC;
   }
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN;
@@ -607,7 +643,7 @@ tor_tls_shutdown(tor_tls_t *tls)
          tls->state == TOR_TLS_ST_SENTCLOSE) {
         log(LOG_WARN, LD_NET,
             "TLS returned \"half-closed\" value while already half-closed");
-        return TOR_TLS_ERROR;
+        return TOR_TLS_ERROR_MISC;
       }
       tls->state = TOR_TLS_ST_SENTCLOSE;
       /* fall through ... */

@@ -476,6 +476,16 @@ typedef enum {
 #define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
 #define RELAY_COMMAND_INTRODUCE_ACK 40
 
+/* Reasons why an OR connection is closed */
+#define END_OR_CONN_REASON_DONE 1
+#define END_OR_CONN_REASON_TCP_REFUSED  2
+#define END_OR_CONN_REASON_OR_IDENTITY  3
+#define END_OR_CONN_REASON_TLS_CONNRESET 4 /* tls connection reset by peer */
+#define END_OR_CONN_REASON_TLS_TIMEOUT  5
+#define END_OR_CONN_REASON_TLS_NO_ROUTE  6 /* no route to host/net */
+#define END_OR_CONN_REASON_TLS_IO_ERROR  7 /* tls read/write error */
+#define END_OR_CONN_REASON_TLS_MISC  8
+
 /* Reasons why we (or a remote OR) might close a stream. See tor-spec.txt for
  * documentation of these. */
 #define END_STREAM_REASON_MISC 1
@@ -723,6 +733,7 @@ typedef struct or_connection_t {
   char *nickname; /**< Nickname of OR on other side (if any). */
 
   tor_tls_t *tls; /**< TLS connection state */
+  int tls_error; /**< Last tor_tls error code */
 
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
@@ -837,7 +848,7 @@ typedef struct control_connection_t {
 } control_connection_t;
 
 /** Cast a connection_t subtype pointer to a connection_t **/
-#define TO_CONN(c) &(((c)->_base))
+#define TO_CONN(c) (&(((c)->_base)))
 /** Helper macro: Given a pointer to to._base, of type from*, return &to. */
 #define DOWNCAST(to, ptr) \
   (to*) (((char*)(ptr)) - STRUCT_OFFSET(to, _base))
@@ -2150,6 +2161,7 @@ void connection_or_write_cell_to_buf(const cell_t *cell,
                                      or_connection_t *conn);
 int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
+int connection_or_count_pending_circs(or_connection_t *or_conn);
 
 /********************************* control.c ***************************/
 
@@ -2216,8 +2228,9 @@ int control_event_circuit_status(origin_circuit_t *circ,
 int control_event_stream_status(edge_connection_t *conn,
                                 stream_status_event_t e,
                                 int reason);
+int control_tls_error_to_reason(int e);
 int control_event_or_conn_status(or_connection_t *conn,
-                                 or_conn_status_event_t e);
+                                 or_conn_status_event_t e, int reason);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
 void control_event_logmsg(int severity, unsigned int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);

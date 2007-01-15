@@ -19,11 +19,16 @@
 typedef struct tor_tls_t tor_tls_t;
 
 /* Possible return values for most tor_tls_* functions. */
-#define TOR_TLS_ERROR       -4
-#define TOR_TLS_CLOSE       -3
-#define TOR_TLS_WANTREAD    -2
-#define TOR_TLS_WANTWRITE   -1
-#define TOR_TLS_DONE         0
+#define TOR_TLS_ERROR_MISC         -9
+#define TOR_TLS_ERROR_IO           -8
+#define TOR_TLS_ERROR_CONNREFUSED  -7
+#define TOR_TLS_ERROR_CONNRESET    -6
+#define TOR_TLS_ERROR_NO_ROUTE     -5
+#define TOR_TLS_ERROR_TIMEOUT      -4
+#define TOR_TLS_CLOSE              -3
+#define TOR_TLS_WANTREAD           -2
+#define TOR_TLS_WANTWRITE          -1
+#define TOR_TLS_DONE                0
 
 void tor_tls_free_all(void);
 int tor_tls_context_new(crypto_pk_env_t *rsa,

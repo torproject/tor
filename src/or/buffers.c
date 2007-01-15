@@ -543,7 +543,7 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
             (int)at_most);
 
   if (buf_ensure_capacity(buf, at_most+buf->datalen))
-    return TOR_TLS_ERROR;
+    return TOR_TLS_ERROR_MISC;
 
   if (at_most + buf->datalen > buf->len)
     at_most = buf->len - buf->datalen;
