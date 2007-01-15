@@ -294,7 +294,7 @@ typedef enum {
 #define AP_CONN_STATE_CIRCUIT_WAIT 8
 /** State for a SOCKS connection: sent BEGIN, waiting for CONNECTED. */
 #define AP_CONN_STATE_CONNECT_WAIT 9
-/** State for a SOCKS connection: send RESOLVE, waiting for RESOLVED. */
+/** State for a SOCKS connection: sent RESOLVE, waiting for RESOLVED. */
 #define AP_CONN_STATE_RESOLVE_WAIT 10
 /** State for a SOCKS connection: ready to send and receive. */
 #define AP_CONN_STATE_OPEN 11
@@ -302,6 +302,9 @@ typedef enum {
  * destination. */
 #define AP_CONN_STATE_NATD_WAIT 12
 #define _AP_CONN_STATE_MAX 12
+
+#define AP_CONN_STATE_IS_UNATTACHED(s) \
+  ((s) <= AP_CONN_STATE_CIRCUIT_WAIT || (s) == AP_CONN_STATE_NATD_WAIT)
 
 #define _DIR_CONN_STATE_MIN 1
 /** State for connection to directory server: waiting for connect(). */
@@ -501,8 +504,8 @@ typedef enum {
 #define END_STREAM_REASON_CANT_FETCH_ORIG_DEST 260
 #define END_STREAM_REASON_INVALID_NATD_DEST 261
 
-/* OR this with the argument to control_event_stream_status to indicate that
- * the reason came from an END cell. */
+/** Bitwise-or this with the argument to control_event_stream_status
+ * to indicate that the reason came from an END cell. */
 #define END_STREAM_REASON_FLAG_REMOTE     512
 
 #define RESOLVED_TYPE_HOSTNAME 0

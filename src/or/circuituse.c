@@ -532,7 +532,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
 }
 
 /** Find each circuit that has been unused for too long, or dirty
- * for too long and has no streax=ms on it: mark it for close.
+ * for too long and has no streams on it: mark it for close.
  */
 static void
 circuit_expire_old_circuits(time_t now)
@@ -1180,21 +1180,12 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
 {
   int retval;
   int conn_age;
-  int severity;
 
   tor_assert(conn);
   tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(conn->socks_request);
 
   conn_age = time(NULL) - conn->_base.timestamp_created;
-  severity = (!conn->_base.addr && !conn->_base.port) ? LOG_INFO : LOG_NOTICE;
-  if (conn_age > get_options()->SocksTimeout) {
-    log_fn(severity, LD_APP,
-           "Tried for %d seconds to get a connection to %s:%d. Giving up.",
-           conn_age, safe_str(conn->socks_request->address),
-           conn->socks_request->port);
-    return -1;
-  }
 
   if (!connection_edge_is_rendezvous_stream(conn)) { /* we're a general conn */
     origin_circuit_t *circ=NULL;

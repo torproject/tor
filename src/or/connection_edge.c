@@ -353,6 +353,7 @@ connection_ap_expire_beginning(void)
   or_options_t *options = get_options();
   int severity;
   int cutoff;
+  int seconds_idle;
 
   get_connection_array(&carray, &n);
 
@@ -363,19 +364,28 @@ connection_ap_expire_beginning(void)
     /* if it's an internal bridge connection, don't yell its status. */
     severity = (!conn->_base.addr && !conn->_base.port)
       ? LOG_INFO : LOG_NOTICE;
-    if (conn->_base.state == AP_CONN_STATE_CONTROLLER_WAIT) {
-      if (now - conn->_base.timestamp_lastread >= options->SocksTimeout) {
-        log_fn(severity, LD_APP, "Closing unattached stream.");
+    seconds_idle = now - conn->_base.timestamp_lastread;
+
+    if (AP_CONN_STATE_IS_UNATTACHED(conn->_base.state)) {
+      if (seconds_idle >= options->SocksTimeout) {
+        if (conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT) {
+          log_fn(severity, LD_APP,
+            "Tried for %d seconds to get a connection to %s:%d. Giving up.",
+            seconds_idle, safe_str(conn->socks_request->address),
+            conn->socks_request->port);
+        } else {
+          log_fn(severity, LD_APP, "Closing unattached stream.");
+        }
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
       continue;
     }
 
-    if (conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT &&
-        conn->_base.state != AP_CONN_STATE_CONNECT_WAIT)
+    if (conn->_base.state == AP_CONN_STATE_OPEN)
       continue;
+
     cutoff = compute_socks_timeout(conn);
-    if (now - conn->_base.timestamp_lastread < cutoff)
+    if (seconds_idle < cutoff)
       continue;
     circ = circuit_get_by_edge_conn(conn);
     if (!circ) { /* it's vanished? */
@@ -385,11 +395,11 @@ connection_ap_expire_beginning(void)
       continue;
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
-      if (now - conn->_base.timestamp_lastread > options->SocksTimeout) {
+      if (seconds_idle > options->SocksTimeout) {
         log_fn(severity, LD_REND,
                "Rend stream is %d seconds late. Giving up on address"
                " '%s.onion'.",
-               (int)(now - conn->_base.timestamp_lastread),
+               seconds_idle,
                safe_str(conn->socks_request->address));
         connection_edge_end(conn, END_STREAM_REASON_TIMEOUT,
                             conn->cpath_layer);
@@ -403,8 +413,7 @@ connection_ap_expire_beginning(void)
     log_fn(cutoff < 15 ? LOG_INFO : severity, LD_APP,
            "We tried for %d seconds to connect to '%s' using exit '%s'."
            " Retrying on a new circuit.",
-           (int)(now - conn->_base.timestamp_lastread),
-           safe_str(conn->socks_request->address),
+           seconds_idle, safe_str(conn->socks_request->address),
            nickname ? nickname : "*unnamed*");
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);

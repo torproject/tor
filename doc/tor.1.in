@@ -461,7 +461,8 @@ The policies have the same form as exit policies below.
 .LP
 .TP
 \fBSocksTimeout \fR\fINUM\fP
-Let a socks connection wait NUM seconds unattached before we fail it.
+Let a socks connection wait NUM seconds handshaking, and NUM seconds
+unattached waiting for an appropriate circuit, before we fail it.
 (Default: 2 minutes.)
 .LP
 .TP
