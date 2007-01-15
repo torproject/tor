@@ -1066,7 +1066,8 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
                !strcmp(argv[i],"--verify-config")) {
       i += 1; /* command-line option. ignore it. */
       continue;
-    } else if (!strcmp(argv[i],"--nt-service")) {
+    } else if (!strcmp(argv[i],"--nt-service") ||
+               !strcmp(argv[i],"-nt-service")) {
       i += 1;
       continue;
     }
