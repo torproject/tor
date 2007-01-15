@@ -453,7 +453,7 @@ test_crypto(void)
                                         PK_PKCS1_OAEP_PADDING,1));
 
   /* Now try signing. */
-  strcpy(data1, "Ossifrage");
+  strlcpy(data1, "Ossifrage", 1024);
   test_eq(128, crypto_pk_private_sign(pk1, data2, data1, 10));
   test_eq(10, crypto_pk_public_checksig(pk1, data3, data2, 128));
   test_streq(data3, "Ossifrage");
@@ -493,8 +493,8 @@ test_crypto(void)
   crypto_free_pk_env(pk2);
 
   /* Base64 tests */
-  strcpy(data1, "Test string that contains 35 chars.");
-  strcat(data1, " 2nd string that contains 35 chars.");
+  strlcpy(data1, "Test string that contains 35 chars.", 1024);
+  strlcat(data1, " 2nd string that contains 35 chars.", 1024);
 
   i = base64_encode(data2, 1024, data1, 71);
   j = base64_decode(data3, 1024, data2, i);
@@ -513,7 +513,7 @@ test_crypto(void)
   test_eq(99, data3[DIGEST_LEN+1]);
 
   /* Base32 tests */
-  strcpy(data1, "5chrs");
+  strlcpy(data1, "5chrs", 1024);
   /* bit pattern is:  [35 63 68 72 73] ->
    *        [00110101 01100011 01101000 01110010 01110011]
    * By 5s: [00110 10101 10001 10110 10000 11100 10011 10011]
@@ -521,16 +521,16 @@ test_crypto(void)
   base32_encode(data2, 9, data1, 5);
   test_streq(data2, "gvrwq4tt");
 
-  strcpy(data1, "\xFF\xF5\x6D\x44\xAE\x0D\x5C\xC9\x62\xC4");
+  strlcpy(data1, "\xFF\xF5\x6D\x44\xAE\x0D\x5C\xC9\x62\xC4", 1024);
   base32_encode(data2, 30, data1, 10);
   test_streq(data2, "772w2rfobvomsywe");
 
   /* Base16 tests */
-  strcpy(data1, "6chrs\xff");
+  strlcpy(data1, "6chrs\xff", 1024);
   base16_encode(data2, 13, data1, 6);
   test_streq(data2, "3663687273FF");
 
-  strcpy(data1, "f0d678affc000100");
+  strlcpy(data1, "f0d678affc000100", 1024);
   i = base16_decode(data2, 8, data1, 16);
   test_eq(i,0);
   test_memeq(data2, "\xf0\xd6\x78\xaf\xfc\x00\x01\x00",8);
@@ -646,10 +646,10 @@ test_util(void)
   test_eq(t_res, (time_t)1091580502UL);
 
   /* Test tor_strstrip() */
-  strcpy(buf, "Testing 1 2 3");
+  strlcpy(buf, "Testing 1 2 3", sizeof(buf));
   test_eq(0, tor_strstrip(buf, ",!"));
   test_streq(buf, "Testing 1 2 3");
-  strcpy(buf, "!Testing 1 2 3?");
+  strlcpy(buf, "!Testing 1 2 3?", sizeof(buf));
   test_eq(5, tor_strstrip(buf, "!? "));
   test_streq(buf, "Testing123");
 
@@ -1533,28 +1533,28 @@ test_dir_format(void)
   memset(buf, 0, 2048);
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
 
-  strcpy(buf2, "router Magri 18.244.0.1 9000 0 0\n"
-         "platform Tor "VERSION" on ");
-  strcat(buf2, get_uname());
-  strcat(buf2, "\n"
-         "published 1970-01-01 00:00:00\n"
-         "opt fingerprint ");
+  strlcpy(buf2, "router Magri 18.244.0.1 9000 0 0\n"
+          "platform Tor "VERSION" on ", sizeof(buf2));
+  strlcat(buf2, get_uname(), sizeof(buf2));
+  strlcat(buf2, "\n"
+          "published 1970-01-01 00:00:00\n"
+          "opt fingerprint ", sizeof(buf2));
   test_assert(!crypto_pk_get_fingerprint(pk2, fingerprint, 1));
-  strcat(buf2, fingerprint);
-  strcat(buf2, "\nuptime 0\n"
+  strlcat(buf2, fingerprint, sizeof(buf2));
+  strlcat(buf2, "\nuptime 0\n"
   /* XXX the "0" above is hardcoded, but even if we made it reflect
    * uptime, that still wouldn't make it right, because the two
    * descriptors might be made on different seconds... hm. */
          "bandwidth 1000 5000 10000\n"
-         "onion-key\n");
-  strcat(buf2, pk1_str);
-  strcat(buf2, "signing-key\n");
-  strcat(buf2, pk2_str);
+          "onion-key\n", sizeof(buf2));
+  strlcat(buf2, pk1_str, sizeof(buf2));
+  strlcat(buf2, "signing-key\n", sizeof(buf2));
+  strlcat(buf2, pk2_str, sizeof(buf2));
 #ifndef USE_EVENTDNS
-  strcat(buf2, "opt eventdns 0\n");
+  strlcat(buf2, "opt eventdns 0\n", sizeof(buf2));
 #endif
-  strcat(buf2, bw_lines);
-  strcat(buf2, "router-signature\n");
+  strlcat(buf2, bw_lines, sizeof(buf2));
+  strlcat(buf2, "router-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
 
@@ -1577,11 +1577,11 @@ test_dir_format(void)
 
 #if 0
   /* XXX Once we have exit policies, test this again. XXX */
-  strcpy(buf2, "router tor.tor.tor 9005 0 0 3000\n");
-  strcat(buf2, pk2_str);
-  strcat(buf2, "signing-key\n");
-  strcat(buf2, pk1_str);
-  strcat(buf2, "accept *:80\nreject 18.*:24\n\n");
+  strlcpy(buf2, "router tor.tor.tor 9005 0 0 3000\n", sizeof(buf2));
+  strlcat(buf2, pk2_str, sizeof(buf2));
+  strlcat(buf2, "signing-key\n", sizeof(buf2));
+  strlcat(buf2, pk1_str, sizeof(buf2));
+  strlcat(buf2, "accept *:80\nreject 18.*:24\n\n", sizeof(buf2));
   test_assert(router_dump_router_to_string(buf, 2048, &r2, pk2)>0);
   test_streq(buf, buf2);
 
@@ -1832,14 +1832,14 @@ test_rend_fns(void)
   d1->intro_points[0] = tor_strdup("tom");
   d1->intro_points[1] = tor_strdup("crow");
   d1->intro_point_extend_info[0] = tor_malloc_zero(sizeof(extend_info_t));
-  strcpy(d1->intro_point_extend_info[0]->nickname, "tom");
+  strlcpy(d1->intro_point_extend_info[0]->nickname, "tom", 4);
   d1->intro_point_extend_info[0]->addr = 1234;
   d1->intro_point_extend_info[0]->port = 4567;
   d1->intro_point_extend_info[0]->onion_key = crypto_pk_dup_key(pk1);
   memset(d1->intro_point_extend_info[0]->identity_digest, 'a', DIGEST_LEN);
 
   d1->intro_point_extend_info[1] = tor_malloc_zero(sizeof(extend_info_t));
-  strcpy(d1->intro_point_extend_info[1]->nickname, "crow");
+  strlcpy(d1->intro_point_extend_info[1]->nickname, "crow", 5);
   d1->intro_point_extend_info[1]->addr = 6060842;
   d1->intro_point_extend_info[1]->port = 8000;
   d1->intro_point_extend_info[1]->onion_key = crypto_pk_dup_key(pk2);

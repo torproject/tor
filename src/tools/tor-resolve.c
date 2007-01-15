@@ -66,8 +66,8 @@ build_socks_resolve_request(char **out,
     (*out)[1] = '\xF0'; /* Command: resolve. */
     set_uint16((*out)+2, htons(0)); /* port: 0. */
     set_uint32((*out)+4, htonl(0x00000001u)); /* addr: 0.0.0.1 */
-    strcpy((*out)+8, username);
-    strcpy((*out)+8+strlen(username)+1, hostname);
+    memcpy((*out)+8, username, strlen(username)+1);
+    memcpy((*out)+8+strlen(username)+1, hostname, strlen(hostname)+1);
   } else if (version == 5) {
     int is_ip_address;
     struct in_addr in;

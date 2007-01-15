@@ -27,6 +27,7 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - Expire socks connections if they spend too long waiting for the
       handshake to finish. Previously we would let them sit around for
       days, if the connecting application didn't close them either.
+    - Stop using C functions that OpenBSD's linker doesn't like.
 
 
 Changes in version 0.1.2.6-alpha - 2007-01-09

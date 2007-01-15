@@ -373,7 +373,7 @@ debug_ntoa(u32 address)
 {
 	static char buf[32];
 	u32 a = ntohl(address);
-	sprintf(buf, "%d.%d.%d.%d",
+	snprintf(buf, sizeof(buf), "%d.%d.%d.%d",
 			(int)(u8)((a>>24)&0xff),
 			(int)(u8)((a>>16)&0xff),
 			(int)(u8)((a>>8 )&0xff),
@@ -1515,7 +1515,7 @@ evdns_server_request_add_ptr_reply(struct evdns_server_request *req, struct in_a
 	assert(!(in && inaddr_name));
 	if (in) {
 		a = ntohl(in->s_addr);
-		sprintf(buf, "%d.%d.%d.%d.in-addr.arpa",
+		snprintf(buf, sizeof(buf), "%d.%d.%d.%d.in-addr.arpa",
 				(int)(u8)((a	)&0xff),
 				(int)(u8)((a>>8 )&0xff),
 				(int)(u8)((a>>16)&0xff),
@@ -2214,7 +2214,7 @@ int evdns_resolve_reverse(struct in_addr *in, int flags, evdns_callback_type cal
 	u32 a;
 	assert(in);
 	a = ntohl(in->s_addr);
-	sprintf(buf, "%d.%d.%d.%d.in-addr.arpa",
+	snprintf(buf, sizeof(buf), "%d.%d.%d.%d.in-addr.arpa",
 			(int)(u8)((a	)&0xff),
 			(int)(u8)((a>>8 )&0xff),
 			(int)(u8)((a>>16)&0xff),
@@ -2241,7 +2241,7 @@ int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_ty
 		*cp++ = '.';
 	}
 	assert(cp + strlen(".ip6.arpa") < buf+sizeof(buf));
-	strcpy(cp, ".ip6.arpa");
+	memcpy(cp, ".ip6.arpa", strlen(".ip6.arpa")+1);
 	log(EVDNS_LOG_DEBUG, "Resolve requested for %s (reverse)", buf);
 	req = request_new(TYPE_PTR, buf, flags, callback, ptr);
 	if (!req) return 1;
