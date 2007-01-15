@@ -3248,8 +3248,9 @@ orconn_target_get_name(int long_names,
 }
 
 int
-control_tls_error_to_reason(int e) {
-  switch(e) {
+control_tls_error_to_reason(int e)
+{
+  switch (e) {
     case TOR_TLS_ERROR_IO:
       return END_OR_CONN_REASON_TLS_IO_ERROR;
     case TOR_TLS_ERROR_CONNREFUSED:
@@ -3270,9 +3271,10 @@ control_tls_error_to_reason(int e) {
   }
 }
 
-const char *
-or_conn_end_reason_to_string(int r) {
-  switch(r) {
+static const char *
+or_conn_end_reason_to_string(int r)
+{
+  switch (r) {
     case END_OR_CONN_REASON_DONE:
       return "REASON=DONE";
     case END_OR_CONN_REASON_TCP_REFUSED:
@@ -3297,10 +3299,8 @@ or_conn_end_reason_to_string(int r) {
   }
 }
 
-/** Something has happened to the OR connection <b>conn</b>: tell any
- * interested control connections. */
 int
-control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp, 
+control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp,
         int reason)
 {
   char buf[HEX_DIGEST_LEN+3]; /* status, dollar, identity, NUL */
@@ -3333,8 +3333,8 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp,
       }
     ncircs = connection_or_count_pending_circs(conn);
     ncircs += conn->n_circuits;
-    if(ncircs && (tp == OR_CONN_EVENT_FAILED || tp == OR_CONN_EVENT_CLOSED)) {
-        tor_snprintf(ncircs_buf, sizeof(ncircs_buf), "%sNCIRCS=%d", 
+    if (ncircs && (tp == OR_CONN_EVENT_FAILED || tp == OR_CONN_EVENT_CLOSED)) {
+        tor_snprintf(ncircs_buf, sizeof(ncircs_buf), "%sNCIRCS=%d",
                 reason ? " " : "", ncircs);
     }
 

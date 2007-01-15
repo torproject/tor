@@ -453,7 +453,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
                                             time(NULL));
         router_set_status(conn->identity_digest, 0);
       }
-      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED, 
+      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
               END_OR_CONN_REASON_TCP_REFUSED);
       connection_free(TO_CONN(conn));
       return NULL;
@@ -509,17 +509,11 @@ connection_tls_continue_handshake(or_connection_t *conn)
 {
   check_no_tls_errors();
   switch (tor_tls_handshake(conn->tls)) {
-    case TOR_TLS_ERROR_IO:
-    case TOR_TLS_ERROR_CONNREFUSED:
-    case TOR_TLS_ERROR_CONNRESET:
-    case TOR_TLS_ERROR_NO_ROUTE:
-    case TOR_TLS_ERROR_TIMEOUT:
-    case TOR_TLS_ERROR_MISC:
-    case TOR_TLS_CLOSE:
+    CASE_TOR_TLS_ERROR_ANY:
       log_info(LD_OR,"tls error. breaking connection.");
       return -1;
     case TOR_TLS_DONE:
-     return connection_tls_finish_handshake(conn);
+      return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
       connection_start_writing(TO_CONN(conn));
       log_debug(LD_OR,"wanted write");
@@ -527,6 +521,9 @@ connection_tls_continue_handshake(or_connection_t *conn)
     case TOR_TLS_WANTREAD: /* handshaking conns are *always* reading */
       log_debug(LD_OR,"wanted read");
       return 0;
+    case TOR_TLS_CLOSE:
+      log_info(LD_OR,"tls closed. breaking connection.");
+      return -1;
   }
   return 0;
 }
@@ -798,15 +795,19 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   return 0;
 }
 
+/* XXXX012 This global is getting _too_ global. -NM */
+extern smartlist_t *circuits_pending_or_conns;
+
 /** Count number of pending circs on an or_conn */
-int 
+int
 connection_or_count_pending_circs(or_connection_t *or_conn)
 {
-  extern smartlist_t *circuits_pending_or_conns;
   int cnt = 0;
 
   if (!circuits_pending_or_conns)
     return 0;
+
+  tor_assert(or_conn);
 
   SMARTLIST_FOREACH(circuits_pending_or_conns, circuit_t *, circ,
   {

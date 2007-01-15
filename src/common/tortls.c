@@ -73,8 +73,8 @@ static tor_tls_context_t *global_tls_context = NULL;
 static int tls_library_is_initialized = 0;
 
 /* Module-internal error codes. */
-#define _TOR_TLS_SYSCALL    -10
-#define _TOR_TLS_ZERORETURN -9
+#define _TOR_TLS_SYSCALL    (_MIN_TOR_TLS_ERROR_VAL - 2)
+#define _TOR_TLS_ZERORETURN (_MIN_TOR_TLS_ERROR_VAL - 1)
 
 /* These functions are declared in crypto.c but not exported. */
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
@@ -104,9 +104,10 @@ tls_log_errors(int severity, const char *doing)
 }
 
 static int
-tor_errno_to_tls_error(int e) {
+tor_errno_to_tls_error(int e)
+{
 #if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
-  switch(e) {
+  switch (e) {
     case WSAECONNRESET: // most common
       return TOR_TLS_ERROR_CONNRESET;
     case WSAETIMEDOUT:
@@ -119,8 +120,8 @@ tor_errno_to_tls_error(int e) {
     default:
       return TOR_TLS_ERROR_MISC;
   }
-#else 
-  switch(e) {
+#else
+  switch (e) {
     case ECONNRESET: // most common
       return TOR_TLS_ERROR_CONNRESET;
     case ETIMEDOUT:
@@ -182,6 +183,8 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
         return _TOR_TLS_ZERORETURN;
       log(severity, LD_NET, "TLS error: Zero return");
       tls_log_errors(severity, doing);
+      /* XXXX Actually, a 'zero return' error has a pretty specific meaning:
+       * the connection has been closed cleanly.  */
       return TOR_TLS_ERROR_MISC;
     default:
       tls_log_errors(severity, doing);

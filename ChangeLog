@@ -6,6 +6,10 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - Adapt a patch from goodell to let the contrib/exitlist script
       take arguments rather than require direct editing.
 
+ o Minor features (controller):
+    - Track reasons for OR connection failure; make these reasons available
+      via the controller interface.  (Patch from Mike Perry.)
+
  o Major bugfixes:
     - Fix a crash bug in the presence of DNS hijacking  (reported by Andrew
       Del Vecchio).

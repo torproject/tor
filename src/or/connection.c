@@ -435,7 +435,7 @@ connection_about_to_close_connection(connection_t *conn)
           rep_hist_note_connect_failed(or_conn->identity_digest, now);
           entry_guard_register_connect_status(or_conn->identity_digest,0,now);
           router_set_status(or_conn->identity_digest, 0);
-          control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED, 
+          control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
                   control_tls_error_to_reason(or_conn->tls_error));
         }
         /* Inform any pending (not attached) circs that they should
@@ -1460,7 +1460,8 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
 
     /* else open, or closing */
     result = read_to_buf_tls(or_conn->tls, at_most, conn->inbuf);
-    or_conn->tls_error = result;
+    if (TOR_TLS_IS_ERROR(result) || result == TOR_TLS_CLOSE)
+      or_conn->tls_error = result;
 
     switch (result) {
       case TOR_TLS_CLOSE:
@@ -1469,12 +1470,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
                  or_conn->nickname ? or_conn->nickname : "not set",
                  conn->address);
         return result;
-      case TOR_TLS_ERROR_IO:
-      case TOR_TLS_ERROR_CONNREFUSED:
-      case TOR_TLS_ERROR_CONNRESET:
-      case TOR_TLS_ERROR_NO_ROUTE:
-      case TOR_TLS_ERROR_TIMEOUT:
-      case TOR_TLS_ERROR_MISC:
+      CASE_TOR_TLS_ERROR_ANY:
         log_info(LD_NET,"tls error. breaking (nickname %s, address %s).",
                  or_conn->nickname ? or_conn->nickname : "not set",
                  conn->address);
@@ -1671,12 +1667,7 @@ connection_handle_write(connection_t *conn, int force)
     result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
     switch (result) {
-      case TOR_TLS_ERROR_IO:
-      case TOR_TLS_ERROR_CONNREFUSED:
-      case TOR_TLS_ERROR_CONNRESET:
-      case TOR_TLS_ERROR_NO_ROUTE:
-      case TOR_TLS_ERROR_TIMEOUT:
-      case TOR_TLS_ERROR_MISC:
+      CASE_TOR_TLS_ERROR_ANY:
       case TOR_TLS_CLOSE:
         log_info(LD_NET,result!=TOR_TLS_CLOSE?
                  "tls error. breaking.":"TLS connection closed on flush");

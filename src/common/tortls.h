@@ -19,6 +19,7 @@
 typedef struct tor_tls_t tor_tls_t;
 
 /* Possible return values for most tor_tls_* functions. */
+#define _MIN_TOR_TLS_ERROR_VAL     -9
 #define TOR_TLS_ERROR_MISC         -9
 #define TOR_TLS_ERROR_IO           -8
 #define TOR_TLS_ERROR_CONNREFUSED  -7
@@ -29,6 +30,18 @@ typedef struct tor_tls_t tor_tls_t;
 #define TOR_TLS_WANTREAD           -2
 #define TOR_TLS_WANTWRITE          -1
 #define TOR_TLS_DONE                0
+
+/* Use this macro in a switch statement to catch _any_ TLS error.  That way,
+ * if more errors are added, your switches will still work. */
+#define CASE_TOR_TLS_ERROR_ANY                  \
+  case TOR_TLS_ERROR_MISC:                      \
+  case TOR_TLS_ERROR_IO:                        \
+  case TOR_TLS_ERROR_CONNREFUSED:               \
+  case TOR_TLS_ERROR_CONNRESET:                 \
+  case TOR_TLS_ERROR_NO_ROUTE:                  \
+  case TOR_TLS_ERROR_TIMEOUT
+
+#define TOR_TLS_IS_ERROR(rv) ((rv) < TOR_TLS_CLOSE)
 
 void tor_tls_free_all(void);
 int tor_tls_context_new(crypto_pk_env_t *rsa,
