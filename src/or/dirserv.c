@@ -1133,7 +1133,6 @@ dirserv_clear_old_networkstatuses(time_t cutoff)
 
 }
 
-
 /** Helper: If we're an authority for the right directory version (the
  * directory version is determined by <b>is_v1_object</b>), try to regenerate
  * auth_src as appropriate and return it, falling back to cache_src on
