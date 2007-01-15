@@ -296,6 +296,9 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
   - Add an option (related to AvoidDiskWrites) to disable directory caching.
 
 Minor items for 0.1.2.x as time permits:
+  - getinfo ns/name/moria2 doesn't include a "v" line, even when some
+    network-statuses I have show it. I suppose the fix should go in
+    networkstatus_getinfo_helper_single() in routerlist.c.
   - Unify autoconf search code for libevent and openssl.  Make code
     suggest platform-appropriate "devel" / "dev" / whatever packages
     if we can link but we can't find the headers.
