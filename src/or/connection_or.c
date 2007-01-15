@@ -826,4 +826,3 @@ connection_or_count_pending_circs(or_connection_t *or_conn)
   return cnt;
 }
 
-
