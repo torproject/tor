@@ -193,6 +193,9 @@ evdns_log_cb(int warn, const char *msg)
   } else if (!strcmpstart(msg, "Nameserver ") &&
              (cp=strstr(msg, " is back up"))) {
     char *ns = tor_strndup(msg+11, cp-(msg+11));
+    /* XXX012 we should set warn=0 if some nameservers were
+     * already up -- so we only shout when we actually change
+     * a meaningful state. */
     control_event_server_status(LOG_NOTICE,
                                 "NAMESERVER_STATUS NS=%s STATUS=UP", ns);
     tor_free(ns);
@@ -1686,6 +1689,9 @@ launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);
+    /* XXX012 the above warning triggers sometimes on my exit
+     * node, with "error 1". Is there anything the user can do to
+     * resolve this? -RD */
     if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE) {
       if (evdns_err_is_transient(r))
         send_resolved_cell(exitconn, circ, RESOLVED_TYPE_ERROR_TRANSIENT);
