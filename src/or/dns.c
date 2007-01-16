@@ -172,6 +172,8 @@ static void
 evdns_log_cb(int warn, const char *msg)
 {
   const char *cp;
+  static int all_down = 0;
+  int severity = warn ? LOG_WARN : LOG_INFO;
   if (!strcmpstart(msg, "Resolve requested for") &&
       get_options()->SafeLogging) {
     log(LOG_INFO, LD_EXIT, "eventdns: Resolve requested.");
@@ -185,7 +187,7 @@ evdns_log_cb(int warn, const char *msg)
     /* Don't warn about a single failed nameserver; we'll warn with 'all
      * nameservers have failed' if we're completely out of nameservers;
      * otherwise, the situation is tolerable. */
-    warn = 0;
+    severity = LOG_INFO;
     control_event_server_status(LOG_NOTICE,
                                 "NAMESERVER_STATUS NS=%s STATUS=DOWN ERR=%s",
                                 ns, escaped(err));
@@ -193,14 +195,16 @@ evdns_log_cb(int warn, const char *msg)
   } else if (!strcmpstart(msg, "Nameserver ") &&
              (cp=strstr(msg, " is back up"))) {
     char *ns = tor_strndup(msg+11, cp-(msg+11));
-    warn = 0; /* It's never a warning when a nameserver comes back up. */
+    severity = all_down ? LOG_NOTICE : LOG_INFO;
+    all_down = 0;
     control_event_server_status(LOG_NOTICE,
                                 "NAMESERVER_STATUS NS=%s STATUS=UP", ns);
     tor_free(ns);
   } else if (!strcmp(msg, "All nameservers have failed")) {
     control_event_server_status(LOG_WARN, "NAMESERVER_ALL_DOWN");
+    all_down = 1;
   }
-  log(warn?LOG_WARN:LOG_INFO, LD_EXIT, "eventdns: %s", msg);
+  log(severity, LD_EXIT, "eventdns: %s", msg);
 }
 #endif
 
