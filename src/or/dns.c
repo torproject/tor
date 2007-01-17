@@ -195,7 +195,7 @@ evdns_log_cb(int warn, const char *msg)
   } else if (!strcmpstart(msg, "Nameserver ") &&
              (cp=strstr(msg, " is back up"))) {
     char *ns = tor_strndup(msg+11, cp-(msg+11));
-    severity = all_down ? LOG_NOTICE : LOG_INFO;
+    severity = (all_down && warn) ? LOG_NOTICE : LOG_INFO;
     all_down = 0;
     control_event_server_status(LOG_NOTICE,
                                 "NAMESERVER_STATUS NS=%s STATUS=UP", ns);
