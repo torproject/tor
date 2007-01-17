@@ -1099,6 +1099,8 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
 
 extern int global_read_bucket, global_write_bucket;
 
+static int global_write_bucket_empty_last_second = 0;
+
 static int
 connection_bucket_round_robin(int base, int priority,
                               int global_bucket, int conn_bucket)
@@ -1183,6 +1185,9 @@ global_write_bucket_low(size_t attempt, int priority)
 
   if (global_write_bucket < (int)attempt)
     return 1; /* not enough space no matter the priority */
+
+  if (global_write_bucket_empty_last_second)
+    return 1; /* we're already hitting our limits, no more please */
 
   if (priority == 1) { /* old-style v1 query */
     /* Could we handle *two* of these requests within the next two seconds? */
@@ -1279,6 +1284,7 @@ connection_bucket_refill(int seconds_elapsed)
     log(LOG_DEBUG, LD_NET,"global_read_bucket now %d.", global_read_bucket);
   }
   if (global_write_bucket < (int)options->BandwidthBurst) {
+    global_write_bucket_empty_last_second = global_write_bucket == 0;
     global_write_bucket += (int)options->BandwidthRate*seconds_elapsed;
     if (global_write_bucket > (int)options->BandwidthBurst)
       global_write_bucket = (int)options->BandwidthBurst;
