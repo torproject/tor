@@ -1150,9 +1150,9 @@ connection_bucket_read_limit(connection_t *conn)
     or_connection_t *or_conn = TO_OR_CONN(conn);
     conn_bucket = or_conn->read_bucket;
   }
-  if (conn_is_internal(conn->addr, 0)) {
+  if (is_internal_IP(conn->addr, 0)) {
     /* be willing to read on local conns even if our buckets are empty */
-    return conn_bucket>=0 ? conn_bucket : 2**14;
+    return conn_bucket>=0 ? conn_bucket : 1<<14;
   }
   return connection_bucket_round_robin(base, priority,
                                        global_read_bucket, conn_bucket);
@@ -1166,7 +1166,7 @@ connection_bucket_write_limit(connection_t *conn)
                CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
 
-  if (conn_is_internal(conn->addr, 0)) {
+  if (is_internal_IP(conn->addr, 0)) {
     /* be willing to write to local conns even if our buckets are empty */
     return conn->outbuf_flushlen;
   }
