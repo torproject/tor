@@ -284,13 +284,13 @@ tor_strpartition(char *dest, size_t dest_len,
     remaining -= n;
     if (remaining < 0) {
       if (rule == ALWAYS_TERMINATE)
-        strcpy(destp+n+remaining,insert);
+        strncpy(destp+n+remaining,insert,len_ins+1);
       break;
     } else if (remaining == 0 && rule == NEVER_TERMINATE) {
       *(destp+n) = '\0';
       break;
     }
-    strcpy(destp+n, insert);
+    strncpy(destp+n, insert, len_ins+1);
     s += n;
     destp += n+len_ins;
   }
