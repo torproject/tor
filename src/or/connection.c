@@ -1099,8 +1099,16 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
 
 extern int global_read_bucket, global_write_bucket;
 
+/** Did our global write bucket run dry last second? If so, we are
+ * likely to run dry again this second, so be stingy with the tokens
+ * we just put in. */
 static int global_write_bucket_empty_last_second = 0;
 
+/** Helper function to decide how many bytes out of <b>global_bucket</b>
+ * we're willing to use for this transaction. <b>base</b> is the size
+ * of a cell on the network; <b>priority</b> says whether we should
+ * write many of them or just a few; and <b>conn_bucket</b> (if
+ * non-negative) provides an upper limit for our answer. */
 static int
 connection_bucket_round_robin(int base, int priority,
                               int global_bucket, int conn_bucket)
@@ -1142,6 +1150,10 @@ connection_bucket_read_limit(connection_t *conn)
     or_connection_t *or_conn = TO_OR_CONN(conn);
     conn_bucket = or_conn->read_bucket;
   }
+  if (conn_is_internal(conn->addr, 0)) {
+    /* be willing to read on local conns even if our buckets are empty */
+    return conn_bucket>=0 ? conn_bucket : 2**14;
+  }
   return connection_bucket_round_robin(base, priority,
                                        global_read_bucket, conn_bucket);
 }
@@ -1154,6 +1166,10 @@ connection_bucket_write_limit(connection_t *conn)
                CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
 
+  if (conn_is_internal(conn->addr, 0)) {
+    /* be willing to write to local conns even if our buckets are empty */
+    return conn->outbuf_flushlen;
+  }
   return connection_bucket_round_robin(base, priority, global_write_bucket,
                                        conn->outbuf_flushlen);
 }
@@ -1590,7 +1606,7 @@ connection_outbuf_too_full(connection_t *conn)
  * from connection_write_to_buf() when an entire TLS record is ready.
  *
  * Update conn-\>timestamp_lastwritten to now, and call flush_buf
- * or flush_buf_tls appropriately. If it succeeds and there no more
+ * or flush_buf_tls appropriately. If it succeeds and there are no more
  * more bytes on conn->outbuf, then call connection_finished_flushing
  * on it too.
  *

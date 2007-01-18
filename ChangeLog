@@ -19,6 +19,8 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - Servers decline directory requests much more aggressively when
       they're low on bandwidth. Otherwise they end up queueing more and
       more directory responses, which can't be good for latency.
+    - Be willing to read or write on local connections (e.g. controller
+      connections) even when the global rate limiting buckets are empty.
 
   o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what
