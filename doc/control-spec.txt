@@ -487,25 +487,6 @@ $Id$
       status events are available as getinfo's currently. Let us know if
       you want more exposed.)
 
-    "status/client"
-    "status/server"
-    "status/general"
-      These provide a (possibly empty) newline-separated list of status
-      events from Section 4.1.10 that Tor believes are still
-      accurate. Controllers can use them to get a summary of any current
-      problems with Tor's operation.
-
-      [Does this mean that Tor must keep state on its side of all the
-      statuses it's sent, and recognize when they're cancelled out,
-      and so on? It's a shame that Tor needs to do this and also Vidalia
-      needs to do this. -RD]
-        [Is there a good alternative? If we want controllers who connect
-        to a running Tor to see its status, I think we need to do this. -NM]
-
-      [What is the format of this list? Is it space-separated,
-      newline-separated?  Does it include keywords, arguments, etc?  Also,
-      what about STATUS_GENERAL? -NM]
-
   Examples:
      C: GETINFO version desc/name/moria1
      S: 250+desc/name/moria=
@@ -967,8 +948,6 @@ $Id$
   or higher.  They differ from log messages in that their format is a
   specified interface.
 
-  [Don't rely on any of these until we work out more of the details. -RD]
-
   Syntax:
      "650" SP StatusType SP StatusSeverity SP StatusAction
                                          [SP StatusArguments] CRLF
@@ -989,9 +968,13 @@ $Id$
      VERBOSE_NAMES; see the explanations in the USEFEATURE section
      for details.
 
-     Controllers MUST tolerate unrecognized actions and arguments, MUST
-     tolerate missing arguments, and MUST tolerate arguments that arrive
-     in any order.
+     Controllers MUST tolerate unrecognized actions, MUST tolerate
+     unrecognized arguments, MUST tolerate missing arguments, and MUST
+     tolerate arguments that arrive in any order.
+
+     Each event description below is accompanied by a recommendation for
+     controllers.  These recommendations are suggestions only; no controller
+     is required to implement them.
 
   Actions for STATUS_GENERAL events can be as follows:
 
@@ -1003,21 +986,12 @@ $Id$
        also happens when the system is swapping so heavily that Tor is
        starving. The "time" argument specifies the number of seconds Tor
        thinks it was unconscious for.
+
        This status event is sent as NOTICE severity normally, but WARN
        severity if Tor is acting as a server currently.
 
-       [Recommendation for controller: ignore it, since we don't really
-       know what the user should do anyway. Hm.]
-
-[the basic idea for the rest is to do it like the CLOCK_JUMPED entry
-above: specify a Type, describe what it is and its arguments, and
-describe what Severities to expect and what we suggest the controller
-do for each. -RD]
-
-     DIR_REACHABLE
-     [not implemented yet]
-
-  typically severity WARN events:
+       {Recommendation for controller: ignore it, since we don't really
+       know what the user should do anyway. Hm.}
 
      DANGEROUS_VERSION
      "CURRENT=version"
@@ -1031,12 +1005,21 @@ do for each. -RD]
        some recommended versions of Tor are newer and some are old than this
        version.
 
+       {Controllers may want to suggest that the user upgrade OLD or
+       UNRECOMMENDED versions.  NEW versions may be known-insecure, or may
+       simply be development versions.}
+
      TOO_MANY_CONNECTIONS
      "CURRENT=NUM"
-       Tor has reached its ulimit -n or whatever the native limit is on
-       file descriptors or sockets. The user should really do something
-       about this. The "current" argument shows the number of connections
-       currently open.
+       Tor has reached its ulimit -n or whatever the native limit is on file
+       descriptors or sockets.  CURRENT is the number of sockets Tor
+       currently has open.  The user should really do something about
+       this. The "current" argument shows the number of connections currently
+       open.
+
+       {Controllers may recommend that the user increase the limit, or
+       increase it for them.  Recommendations should be phrased in an
+       OS-appropriate way and automated when possible.}
 
      BUG
      "REASON=STRING"
@@ -1045,12 +1028,8 @@ do for each. -RD]
        the controller can explain this to the user and encourage her to
        file a bug report?
 
-     [The following two are sent as WARNs if CIRCUIT_ESTABLISHED and
-     not DIR_ALL_UNREACHABLE, else as ERRs:]
-
-     BAD_DIR_RESPONSE
-     [unimplemented]
-     // unexpected dir response. behind a hotel/airport firewall?
+       {Controllers should log bugs, but shouldn't annoy the user in case a
+       bug appears frequently.}
 
      CLOCK_SKEWED
        SKEW="+" / "-" SECONDS
@@ -1060,6 +1039,11 @@ do for each. -RD]
          the current time from a connection to a dirserver.  If the source is
          a NETWORKSTATUS, we decided we're skewed because we got a
          networkstatus from far in the future.
+
+         {Controllers may want to warn the user if the skew is high, or if
+         multiple skew messages appear at severity WARN.  Controllers
+         shouldn't blindly adjust the clock, since the more accurate source
+         of skew info (DIRSERV) is currently unauthenticated.}
 
      BAD_LIBEVENT
      "METHOD=" libevent method
@@ -1072,11 +1056,10 @@ do for each. -RD]
         fine, but not quickly.  If "RECOVERED" is YES, Tor managed to
         switch to a more reliable (but probably slower!) libevent method.
 
-  Actions for STATUS_GENERAL severity ERR events can be as follows:
-
-     BAD_PROXY
-     [unimplemented]
-     // bad http or https proxy?
+        {Controllers may want to warn the user if this event occurs, though
+        generally it's the fault of whoever built the Tor binary and there's
+        not much the user can do besides upgrade libevent or upgrade the
+        binary.}
 
      DIR_ALL_UNREACHABLE
        Tor believes that none of the known directory servers are
@@ -1084,16 +1067,27 @@ do for each. -RD]
        down or otherwise not working, and might help to explain for the
        user why Tor appears to be broken.
 
-  Actions for STATUS_CLIENT severity NOTICE events can be as follows:
+       {Controllers may want to warn the user if this event occurs; further
+       action is generally not possible.}
+
+  Actions for STATUS_CLIENT events can be as follows:
 
      ENOUGH_DIR_INFO
        Tor now knows enough network-status documents and enough server
        descriptors that it's going to start trying to build circuits now.
 
+       {Controllers may want to use this event to decide when to indicate
+       progress to their users, but should not interrupt the user's browsing
+       to tell them so.}
+
      NOT_ENOUGH_DIR_INFO
        We discarded expired statuses and router descriptors to fall
        below the desired threshold of directory information. We won't
        try to build any circuits until ENOUGH_DIR_INFO occurs again.
+
+       {Controllers may want to use this event to decide when to indicate
+       progress to their users, but should not interrupt the user's browsing
+       to tell them so.}
 
      CIRCUIT_ESTABLISHED
        Tor is able to establish circuits for client use. This event will
@@ -1101,12 +1095,12 @@ do for each. -RD]
        that is, prior to this event we didn't know whether we could
        establish circuits.
 
-       Suggested use: controllers can notify their users that Tor is
+       {Suggested use: controllers can notify their users that Tor is
        ready for use as a client once they see this status event. [Perhaps
        controllers should also have a timeout if too much time passes and
        this event hasn't arrived, to give tips on how to troubleshoot.
        On the other hand, hopefully Tor will send further status events
-       if it can identify the problem.]
+       if it can identify the problem.]}
 
      CIRCUIT_NOT_ESTABLISHED
      "REASON=" "EXTERNAL_ADDRESS" / "DIR_ALL_UNREACHABLE" / "CLOCK_JUMPED"
@@ -1114,10 +1108,10 @@ do for each. -RD]
        keyword provides an explanation: which other status event type caused
        our lack of confidence.
 
-       Suggested use: Vidalia can turn its onion yellow again.
+       {Controllers may want to use this event to decide when to indicate
+       progress to their users, but should not interrupt the user's browsing
+       to do so.}
        [Note: only REASON=CLOCK_JUMPED is implemented currently.]
-
-  Actions for STATUS_CLIENT severity WARN events can be as follows:
 
      DANGEROUS_SOCKS
      "PROTOCOL=SOCKS4/SOCKS5"
@@ -1127,6 +1121,10 @@ do for each. -RD]
        If the client application got this address from gethostbyname(),
        it may be leaking target addresses via DNS.
 
+       {Controllers should warn their users when this occurs, unless they
+       happen to know that the application using Tor is in fact doing so
+       correctly (e.g., because it is part of a distributed bundle).}
+
      SOCKS_UNKNOWN_PROTOCOL
        "DATA=string"
        A connection was made to Tor's SOCKS port that tried to use it
@@ -1134,22 +1132,19 @@ do for each. -RD]
        using Tor as an HTTP proxy?   The DATA is the first few characters
        sent to Tor on the SOCKS port.
 
+       {Controllers may want to warn their users when this occurs: it
+       indicates a misconfigured application.}
+
      SOCKS_BAD_HOSTNAME
-     [unimplemented]
-     // Some application gave us a funny-looking hostname. Perhaps
-     // it is broken? In any case it won't work with Tor and the user
-     // should know.
+      "HOSTNAME=QuotedString"
+       Some application gave us a funny-looking hostname. Perhaps
+       it is broken? In any case it won't work with Tor and the user
+       should know.
 
-     UNRECOGNIZED_ROUTER
-     [unimplemented]
-     // a nickname we asked for is unavailable. no need for this
-     // quite yet, since no end-user controllers let you configure that.
+       {Controllers may want to warn their users when this occurs: it
+       usually indicates a misconfigured application.}
 
-  Actions for STATUS_CLIENT severity ERR events can be as follows:
-
-     [none yet]
-
-  Actions for STATUS_SERVER severity NOTICE events can be as follows:
+  Actions for STATUS_SERVER can be as follows:
 
      EXTERNAL_ADDRESS
      "ADDRESS=IP"
@@ -1165,14 +1160,16 @@ do for each. -RD]
        the method is 'DIRSERV', a directory server told us a guess for what
        our IP might be.
 
-     // hibernating
+       {Controllers may want to record this info and display it to the user.}
 
      CHECKING_REACHABILITY
      "ORADDRESS=IP:port"
      "DIRADDRESS=IP:port"
-     "TIMEOUT=NUM"     [timeout unimplemented]
        We're going to start testing the reachability of our external OR port
        or directory port.
+
+       {This event could effect the controller's idea of server status, but
+       the controller should not interrupt the user to tell them so.}
 
      REACHABILITY_SUCCEEDED
      "ORADDRESS=IP:port"
@@ -1180,21 +1177,15 @@ do for each. -RD]
        We successfully verified the reachability of our external OR port or
        directory port.
 
+       {This event could effect the controller's idea of server status, but
+       the controller should not interrupt the user to tell them so.}
+
      GOOD_SERVER_DESCRIPTOR
        We successfully uploaded our server descriptor to each of the
        directory authorities, with no complaints.
 
-  Actions for STATUS_SERVER severity WARN events can be as follows:
-
-     // something about failing to parse our address?
-     // from resolve_my_address() in config.c
-     [unimplemented]
-
-     // sketchy OS, sketchy threading
-     [unimplemented]
-
-     // too many onions queued. threading problem or slow cpu?
-     [unimplemented]
+       {This event could effect the controller's idea of server status, but
+       the controller should not interrupt the user to tell them so.}
 
      NAMESERVER_STATUS
      "NS=addr"
@@ -1203,16 +1194,31 @@ do for each. -RD]
         One of our nameservers has changed status.
         // actually notice
 
+       {This event could effect the controller's idea of server status, but
+       the controller should not interrupt the user to tell them so.}
+
      NAMESERVER_ALL_DOWN
         All of our nameservers have gone down.
+
+        {This is a problem; if it happens often without the nameservers
+        coming up again, the user needs to configure more or better
+        nameservers.}
 
      DNS_HIJACKED
         Our DNS provider is providing an address when it should be saying
         "NOTFOUND"; Tor will treat the address as a synonym for "NOTFOUND".
 
+        {This is an annoyance; controllers may want to tell admins that their
+        DNS provider is not to be trusted.}
+
      DNS_USELESS
         Our DNS provider is giving a hijacked address instead of well-known
         websites; Tor will not try to be an exit node.
+
+        {Controllers could warn the admin if the server is running as an
+        exit server: the admin needs to configure a good DNS server.
+        Alternatively, this happens a lot in some restrictive environments
+        (hotels, universities, coffeeshops) when the user hasn't registered.}
 
      BAD_SERVER_DESCRIPTOR
      "DIRAUTH=addr:port"
@@ -1221,12 +1227,15 @@ do for each. -RD]
         include malformed descriptors, incorrect keys, highly skewed clocks,
         and so on.
 
+        {Controllers should warn the admin, and try to cope if they can.}
+
      ACCEPTED_SERVER_DESCRIPTOR
      "DIRAUTH=addr:port"
         A single directory authority accepted our descriptor.
         // actually notice
 
-  Actions for STATUS_SERVER severity ERR events can be as follows:
+       {This event could effect the controller's idea of server status, but
+       the controller should not interrupt the user to tell them so.}
 
      REACHABILITY_FAILED
      "ORADDRESS=IP:port"
@@ -1234,8 +1243,8 @@ do for each. -RD]
        We failed to connect to our external OR port or directory port
        successfully.
 
-  Controllers must tolerate hearing about actions that they don't
-  recognize.
+       {This event could effect the controller's idea of server status.  The
+       controller should warn the admin and suggest reasonable steps to take.}
 
 4.1.11. Our set of guard nodes has changed
 

@@ -652,8 +652,9 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 /** Allocate and return a new string representing the contents of <b>s</b>,
  * surrounded by quotes and using standard C escapes.
  *
- * Generally, we use this for logging values that come in over the network
- * to keep them from tricking users.
+ * Generally, we use this for logging values that come in over the network to
+ * keep them from tricking users, and for sending certain values to the
+ * controller.
  *
  * We trust values from the resolver, OS, configuration file, and command line
  * to not be maliciously ill-formed.  We validate incoming routerdescs and

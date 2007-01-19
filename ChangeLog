@@ -9,6 +9,9 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
   o Minor features (controller):
     - Track reasons for OR connection failure; make these reasons available
       via the controller interface.  (Patch from Mike Perry.)
+    - Add a SOCKS_BAD_HOSTNAME client status event so controllers can learn
+      when clients are sending malformed hostnames to Tor.
+    - Clean up documentation for controller status events.
 
   o Major bugfixes:
     - Fix a crash bug in the presence of DNS hijacking (reported by Andrew

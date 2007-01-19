@@ -32,16 +32,16 @@ N - Test guard unreachable logic; make sure that we actually attempt to
 R - Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
 
 Items for 0.1.2.x:
-N - enumerate events of important things that occur in tor, so vidalia can
+  o enumerate events of important things that occur in tor, so vidalia can
     react.
     o Backend implementation
     o Actually list all the events (notice and warn log messages are a good
       place to look.)  Divide messages into categories, perhaps.
     o Specify general event system
     o Specify actual events.
-    - Implement or defer remaining events
-    - Implement or defer GETINFO list of current status events.
-    - Clean up relevant bits of control-spec.txt
+    o Implement or defer remaining events
+    D Implement or defer GETINFO list of current status events.
+    o Clean up relevant bits of control-spec.txt
 
   . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     directory port."
@@ -294,6 +294,25 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
       - Add overlapped IO
 
   - Add an option (related to AvoidDiskWrites) to disable directory caching.
+
+  - More status event features:
+    - Missing events:
+      - DIR_REACHABLE
+      - BAD_DIR_RESPONSE (Unexpected directory response; maybe we're behind
+        a firewall.)
+      - BAD_PROXY (Bad http or https proxy)
+      - UNRECOGNIZED_ROUTER (a nickname we asked for is unavailable)
+      - Status events related to hibernation
+      - something about failing to parse our address?
+        from resolve_my_address() in config.c
+      - sketchy OS, sketchy threading
+      - too many onions queued: threading problems or slow CPU?
+    - Missing fields:
+      - TIMEOUT on CHECKING_REACHABILITY
+    - GETINFO status/client, status/server, status/general: There should be
+      some way to learn which status events are currently "in effect."
+      We should specify which these are, what format they appear in, and so
+      on.
 
 Minor items for 0.1.2.x as time permits:
   - getinfo ns/name/moria2 doesn't include a "v" line, even when some

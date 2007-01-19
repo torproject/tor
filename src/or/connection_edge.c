@@ -1212,6 +1212,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
   if (addresstype == BAD_HOSTNAME) {
     log_warn(LD_APP, "Invalid hostname %s; rejecting", socks->address);
+    control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
+                                escaped(socks->address));
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
     return -1;
   }
@@ -1227,6 +1229,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       } else {
         log_warn(LD_APP,"Malformed exit address '%s.exit'. Refusing.",
                  safe_str(socks->address));
+        control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
+                                    escaped(socks->address));
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
@@ -1249,8 +1253,9 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
   if (addresstype != ONION_HOSTNAME) {
     /* not a hidden-service request (i.e. normal or .exit) */
-
     if (address_is_invalid_destination(socks->address, 1)) {
+      control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
+                                  escaped(socks->address));
       log_warn(LD_APP,
                "Destination '%s' seems to be an invalid hostname. Failing.",
                safe_str(socks->address));
@@ -1264,6 +1269,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       /* Reply to resolves immediately if we can. */
       if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
         log_warn(LD_APP,"Address to be resolved is too large. Failing.");
+        control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
+                                    escaped(socks->address));
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,
                                                0,NULL,-1);
         connection_mark_unattached_ap(conn,
