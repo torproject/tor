@@ -1027,7 +1027,7 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out, int add_space)
                          NEVER_TERMINATE)<0)
       return -1;
   } else {
-    strcpy(fp_out, hexdigest);
+    strncpy(fp_out, hexdigest, HEX_DIGEST_LEN+1);
   }
   return 0;
 }
