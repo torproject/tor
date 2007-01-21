@@ -27,6 +27,8 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - If our system clock jumps back in time, don't publish a negative
       uptime in the descriptor. Also, don't let the global rate limiting
       buckets go absurdly negative.
+    - Detect and reject malformed DNS responses containing circular
+      pointer loops.
 
   o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what
