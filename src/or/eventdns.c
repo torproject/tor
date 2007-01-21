@@ -862,7 +862,8 @@ reply_parse(u8 *packet, int length) {
 			if (req->request_type != TYPE_A) {
 				j += datalength; continue;
 			}
-			// XXXX do something sane with malformed A answers.
+			if ((datalength & 3) != 0) /* not an even number of As. */
+				return -1;
 			addrcount = datalength >> 2;
 			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, (unsigned)addrcount);
 
@@ -889,7 +890,8 @@ reply_parse(u8 *packet, int length) {
 			if (req->request_type != TYPE_AAAA) {
 				j += datalength; continue;
 			}
-			// XXXX do something sane with malformed AAAA answers.
+			if ((datalength & 15) != 0) /* not an even number of AAAAs. */
+				return -1;
 			addrcount = datalength >> 4;  // each address is 16 bytes long
 			addrtocopy = MIN(MAX_ADDRS - reply.data.aaaa.addrcount, (unsigned)addrcount);
 			ttl_r = MIN(ttl_r, ttl);
@@ -901,7 +903,7 @@ reply_parse(u8 *packet, int length) {
 			reply.data.aaaa.addrcount += addrtocopy;
 			j += 16*addrtocopy;
 			reply.have_answer = 1;
-			if (reply.data.a.addrcount == MAX_ADDRS) break;
+			if (reply.data.aaaa.addrcount == MAX_ADDRS) break;
 		} else {
 			// skip over any other type of resource
 			j += datalength;
@@ -2238,11 +2240,11 @@ int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_ty
 	int i;
 	assert(in);
 	cp = buf;
-	for (i=0; i < 16; ++i) {
+	for (i=15; i >= 0; --i) {
 		u8 byte = in->s6_addr[i];
-		*cp++ = "0123456789abcdef"[byte >> 4];
-		*cp++ = '.';
 		*cp++ = "0123456789abcdef"[byte & 0x0f];
+		*cp++ = '.';
+		*cp++ = "0123456789abcdef"[byte >> 4];
 		*cp++ = '.';
 	}
 	assert(cp + strlen(".ip6.arpa") < buf+sizeof(buf));
