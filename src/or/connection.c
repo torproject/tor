@@ -1292,6 +1292,8 @@ connection_bucket_refill(int seconds_elapsed)
   connection_t **carray;
   or_options_t *options = get_options();
 
+  tor_assert(seconds_elapsed >= 0);
+
   /* refill the global buckets */
   if (global_read_bucket < (int)options->BandwidthBurst) {
     global_read_bucket += (int)options->BandwidthRate*seconds_elapsed;

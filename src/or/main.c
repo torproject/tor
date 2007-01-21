@@ -984,25 +984,21 @@ second_elapsed_callback(int fd, short event, void *args)
   /* the second has rolled over. check more stuff. */
   bytes_written = stats_prev_global_write_bucket - global_write_bucket;
   bytes_read = stats_prev_global_read_bucket - global_read_bucket;
-  /* XXX below we get suspicious if time jumps forward more than 10
-   * seconds, but we never notice if it jumps *back* more than 10 seconds.
-   * This could be useful for detecting that we just NTP'ed to three
-   * weeks ago and it will be 3 weeks and 15 minutes until any of our
-   * events trigger.
-   */
   seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
   stats_n_bytes_read += bytes_read;
   stats_n_bytes_written += bytes_written;
-  if (accounting_is_enabled(options))
+  if (accounting_is_enabled(options) && seconds_elapsed >= 0)
     accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
   control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
 
-  connection_bucket_refill(seconds_elapsed);
+  if (seconds_elapsed > 0)
+    connection_bucket_refill(seconds_elapsed);
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 
   if (server_mode(options) &&
       !we_are_hibernating() &&
+      seconds_elapsed > 0 &&
       stats_n_seconds_working / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
       (stats_n_seconds_working+seconds_elapsed) /
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
@@ -1024,10 +1020,13 @@ second_elapsed_callback(int fd, short event, void *args)
 /** If more than this many seconds have elapsed, probably the clock
  * jumped: doesn't count. */
 #define NUM_JUMPED_SECONDS_BEFORE_WARN 100
-  if (seconds_elapsed < NUM_JUMPED_SECONDS_BEFORE_WARN)
-    stats_n_seconds_working += seconds_elapsed;
-  else
+  if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN ||
+      seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
     circuit_note_clock_jumped(seconds_elapsed);
+    /* XXX if the time jumps *back* many months, do our events in
+     * run_scheduled_events() recover? I don't think they do. -RD */
+  } else if (seconds_elapsed > 0)
+    stats_n_seconds_working += seconds_elapsed;
 
   run_scheduled_events(now.tv_sec);
 

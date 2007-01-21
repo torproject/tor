@@ -24,6 +24,9 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       more directory responses, which can't be good for latency.
     - Be willing to read or write on local connections (e.g. controller
       connections) even when the global rate limiting buckets are empty.
+    - If our system clock jumps back in time, don't publish a negative
+      uptime in the descriptor. Also, don't let the global rate limiting
+      buckets go absurdly negative.
 
   o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what
