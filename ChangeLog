@@ -29,6 +29,8 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       buckets go absurdly negative.
     - Detect and reject malformed DNS responses containing circular
       pointer loops.
+    - Fix a memory leak when sending a 503 response for a networkstatus
+      request.
 
   o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what
