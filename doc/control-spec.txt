@@ -774,14 +774,13 @@ $Id$
   expected, and MUST tolerate more lines in an asynchronous reply than
   expected.  For instance, a client that expects a CIRC message like:
       650 CIRC 1000 EXTENDED moria1,moria2
-  should tolerate:
+  must tolerate:
       650-CIRC 1000 EXTENDED moria1,moria2 0xBEEF
       650-EXTRAMAGIC=99
       650 ANONYMITY=high
 
   If clients ask for extended events, then each event line as specified below
-  will be followed by additional extensions.  Clients that do so MUST
-  tolerate additional arguments and lines.  Additional lines will be of the
+  will be followed by additional extensions. Additional lines will be of the
   form
       "650" ("-"/" ") KEYWORD ["=" ARGUMENTS] CRLF
   Additional arguments will be of the form
@@ -866,7 +865,7 @@ $Id$
 4.1.3. OR Connection status changed
 
   The syntax is:
-    "650" SP "ORCONN" SP (ServerID / Target) SP ORStatus [ SP "REASON=" 
+    "650" SP "ORCONN" SP (ServerID / Target) SP ORStatus [ SP "REASON="
              Reason ] [ SP "NCIRCS=" NumCircuits ]
 
     ORStatus = "NEW" / "LAUNCHED" / "CONNECTED" / "FAILED" / "CLOSED"
@@ -894,9 +893,15 @@ $Id$
 4.1.4. Bandwidth used in the last second
 
   The syntax is:
-     "650" SP "BW" SP BytesRead SP BytesWritten
+     "650" SP "BW" SP BytesRead SP BytesWritten *(SP Type "=" Num)
      BytesRead = 1*DIGIT
      BytesWritten = 1*DIGIT
+     Type = "DIR" / "OR" / "EXIT" / "APP" / ...
+     Num = 1*DIGIT
+
+  BytesRead and BytesWritten are the totals. In Tor 0.1.x.y-alpha
+  and later, we also include a breakdown of the connection types
+  that used bandwidth this second (not implemented yet).
 
 4.1.5. Log messages
 
@@ -916,7 +921,7 @@ $Id$
 
   Syntax:
      "650" SP "ADDRMAP" SP Address SP Address SP Expiry
-     Expiry = DQOUTE ISOTime DQUOTE / "NEVER"
+     Expiry = DQUOTE ISOTime DQUOTE / "NEVER"
 
   Expiry is expressed as the local time (rather than GMT).
 
