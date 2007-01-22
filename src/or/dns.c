@@ -318,6 +318,21 @@ void
 dns_free_all(void)
 {
   cached_resolve_t **ptr, **next, *item;
+  if (cached_resolve_pqueue) {
+    SMARTLIST_FOREACH(cached_resolve_pqueue, cached_resolve_t *, res,
+      {
+        /* XXXX012 The hach lookups here could be quite slow; remove them
+         * once we're happy. */
+        if (res->state == CACHE_STATE_DONE) {
+          cached_resolve_t *removed = HT_REMOVE(cache_map, &cache_root, res);
+          tor_assert(!removed);
+          _free_cached_resolve(res);
+        } else {
+          cached_resolve_t *found = HT_FIND(cache_map, &cache_root, res);
+          tor_assert(found);
+        }
+      });
+  }
   for (ptr = HT_START(cache_map, &cache_root); ptr != NULL; ptr = next) {
     item = *ptr;
     next = HT_NEXT_RMV(cache_map, &cache_root, ptr);
