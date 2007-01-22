@@ -693,9 +693,6 @@ connection_tls_finish_handshake(or_connection_t *conn)
 
 /** Pack <b>cell</b> into wire-format, and write it onto <b>conn</b>'s
  * outbuf.
- *
- * If it's an OR conn, and an entire TLS record is
- * ready, then try to flush the record now.
  */
 void
 connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
@@ -709,35 +706,6 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   cell_pack(n, cell);
 
   connection_write_to_buf(n, CELL_NETWORK_SIZE, TO_CONN(conn));
-
-#define MIN_TLS_FLUSHLEN 15872
-/* openssl tls record size is 16383, this is close. The goal here is to
- * push data out as soon as we know there's enough for a tls record, so
- * during periods of high load we won't read the entire megabyte from
- * input before pushing any data out. It also has the feature of not
- * growing huge outbufs unless something is slow. */
-  if (conn->_base.outbuf_flushlen-CELL_NETWORK_SIZE < MIN_TLS_FLUSHLEN &&
-      conn->_base.outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
-    int extra = conn->_base.outbuf_flushlen - MIN_TLS_FLUSHLEN;
-    conn->_base.outbuf_flushlen = MIN_TLS_FLUSHLEN;
-    connection_start_writing(TO_CONN(conn));
-    if (connection_handle_write(TO_CONN(conn), 0) < 0) {
-      if (!conn->_base.marked_for_close) {
-        /* this connection is broken. remove it. */
-        log_warn(LD_BUG,
-                 "Bug: unhandled error on write for OR conn (fd %d); removing",
-                 conn->_base.s);
-        tor_fragile_assert();
-        /* do a close-immediate here, so we don't try to flush */
-        connection_close_immediate(TO_CONN(conn));
-      }
-      return;
-    }
-    if (extra) {
-      conn->_base.outbuf_flushlen += extra;
-      connection_start_writing(TO_CONN(conn));
-    }
-  }
 }
 
 /** Process cells from <b>conn</b>'s inbuf.

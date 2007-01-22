@@ -31,6 +31,9 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       pointer loops.
     - Fix a memory leak when sending a 503 response for a networkstatus
       request.
+    - Flush local controller connection buffers periodically as we're
+      writing to them, so we avoid queueing 4+ megabytes of data before
+      trying to flush.
 
   o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what

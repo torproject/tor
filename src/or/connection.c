@@ -1780,6 +1780,13 @@ connection_handle_write(connection_t *conn, int force)
   return 0;
 }
 
+/** Openssl TLS record size is 16383; this is close. The goal here is to
+ * push data out as soon as we know there's enough for a TLS record, so
+ * during periods of high load we won't read entire megabytes from
+ * input before pushing any data out. It also has the feature of not
+ * growing huge outbufs unless something is slow. */
+#define MIN_TLS_FLUSHLEN 15872
+
 /** Append <b>len</b> bytes of <b>string</b> onto <b>conn</b>'s
  * outbuf, and ask it to start writing.
  *
@@ -1787,6 +1794,11 @@ connection_handle_write(connection_t *conn, int force)
  * its contents compressed or decompressed as they're written.  If zlib is
  * negative, this is the last data to be compressed, and the connection's zlib
  * state should be flushed.
+ *
+ * If it's an OR conn and an entire TLS record is ready, then try to
+ * flush the record now. Similarly, if it's a local control connection
+ * and a 64k chunk is ready, try to flush it all, so we don't end up with
+ * many megabytes of controller info queued at once.
  */
 void
 _connection_write_to_buf_impl(const char *string, size_t len,
@@ -1804,7 +1816,7 @@ _connection_write_to_buf_impl(const char *string, size_t len,
   if (zlib) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     int done = zlib < 0;
-    if (!dir_conn) return;
+    if (!dir_conn) return; /* <-- XXX012 This line is pointless, yes? */
     CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(conn->outbuf,
                                                  dir_conn->zlib_state,
                                                  string, len, done));
@@ -1828,10 +1840,42 @@ _connection_write_to_buf_impl(const char *string, size_t len,
   }
 
   connection_start_writing(conn);
-  if (zlib)
+  if (zlib) {
     conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
-  else
+  } else {
+    int extra = 0;
     conn->outbuf_flushlen += len;
+
+    if (conn->type == CONN_TYPE_OR &&
+        conn->outbuf_flushlen-len < MIN_TLS_FLUSHLEN &&
+        conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
+      extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
+      conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
+    } else if (conn->type == CONN_TYPE_CONTROL &&
+               is_internal_IP(conn->addr, 0) &&
+               conn->outbuf_flushlen-len < 1<<16 &&
+               conn->outbuf_flushlen >= 1<<16) {
+      /* just try to flush all of it */
+    } else
+      return; /* no need to try flushing */
+
+    if (connection_handle_write(conn, 0) < 0) {
+      if (!conn->marked_for_close) {
+        /* this connection is broken. remove it. */
+        log_warn(LD_BUG, "Bug: unhandled error on write for "
+                 "conn (type %d, fd %d); removing",
+                 conn->type, conn->s);
+        tor_fragile_assert();
+        /* do a close-immediate here, so we don't try to flush */
+        connection_close_immediate(conn);
+      }
+      return;
+    }
+    if (extra) {
+      conn->outbuf_flushlen += extra;
+      connection_start_writing(conn);
+    }
+  }
 }
 
 /** Return the conn to addr/port that has the most recent
@@ -1881,7 +1925,7 @@ connection_get_by_type_addr_port_purpose(int type,
   return NULL;
 }
 
-/** Return the connection with id <b>id</b> if it is not already marked for
+/** Return the stream with id <b>id</b> if it is not already marked for
  * close.
  */
 edge_connection_t *
