@@ -186,7 +186,7 @@ router_should_rebuild_store(void)
 }
 
 /** Add the <b>len</b>-type router descriptor in <b>s</b> to the router
- * journal; change its saved_locatino to SAVED_IN_JOURNAL and set its
+ * journal; change its saved_location to SAVED_IN_JOURNAL and set its
  * offset appropriately. */
 static int
 router_append_to_journal(signed_descriptor_t *desc)
@@ -1319,7 +1319,7 @@ router_get_by_descriptor_digest(const char *digest)
 
 /** Return a pointer to the signed textual representation of a descriptor.
  * The returned string is not guaranteed to be NUL-terminated: the string's
- * length will be in desc->signed_descriptor_len. */
+ * length will be in desc-\>signed_descriptor_len. */
 const char *
 signed_descriptor_get_body(signed_descriptor_t *desc)
 {
@@ -3719,6 +3719,9 @@ router_list_client_downloadable(void)
  * a directory for "all descriptors."
  * Otherwise, we ask for all descriptors that we think are different
  * from what we have.
+ *
+ * DOCDOC The above comment doesn't match the behavior of the function.
+ * I guess one of them is wrong, and I guess it's the comment. -RD
  */
 static void
 update_router_descriptor_client_downloads(time_t now)

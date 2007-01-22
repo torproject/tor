@@ -32,6 +32,9 @@ N - Test guard unreachable logic; make sure that we actually attempt to
 R - Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
 
 Items for 0.1.2.x:
+  - weight dir requests by advertised bandwidth? with maybe a lower cutoff
+    than for tor traffic. perhaps also weighted by the expected size of
+    the response.
   o enumerate events of important things that occur in tor, so vidalia can
     react.
     o Backend implementation
@@ -315,6 +318,7 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
       on.
 
 Minor items for 0.1.2.x as time permits:
+  - include bandwidth breakdown by conn->type in BW events.
   - getinfo ns/name/moria2 doesn't include a "v" line, even when some
     network-statuses I have show it. I suppose the fix should go in
     networkstatus_getinfo_helper_single() in routerlist.c.

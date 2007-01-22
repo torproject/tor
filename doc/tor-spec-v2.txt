@@ -940,3 +940,6 @@ B.2. ... and that we have no idea how to do.
      doesn't grow with the number of hops, is not patented, and
      is implemented and maintained by smart people.
 
+Let onion keys be not just RSA but maybe DH too. for the reply onion
+design.
+

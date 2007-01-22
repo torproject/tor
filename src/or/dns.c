@@ -321,7 +321,7 @@ dns_free_all(void)
   if (cached_resolve_pqueue) {
     SMARTLIST_FOREACH(cached_resolve_pqueue, cached_resolve_t *, res,
       {
-        /* XXXX012 The hach lookups here could be quite slow; remove them
+        /* XXXX012 The hash lookups here could be quite slow; remove them
          * once we're happy. */
         if (res->state == CACHE_STATE_DONE) {
           cached_resolve_t *removed = HT_REMOVE(cache_map, &cache_root, res);

@@ -649,15 +649,17 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
   return 0;
 }
 
-/** Our clock just jumped forward by <b>seconds_elapsed</b>. Assume
+/** Our clock just jumped by <b>seconds_elapsed</b>. Assume
  * something has also gone wrong with our network: notify the user,
  * and abandon all not-yet-used circuits. */
 void
 circuit_note_clock_jumped(int seconds_elapsed)
 {
   int severity = server_mode(get_options()) ? LOG_WARN : LOG_NOTICE;
-  log(severity, LD_GENERAL, "Your clock just jumped %d seconds forward; "
-      "assuming established circuits no longer work.", seconds_elapsed);
+  log(severity, LD_GENERAL, "Your clock just jumped %d seconds %s; "
+      "assuming established circuits no longer work.",
+      seconds_elapsed >=0 ? seconds_elapsed : -seconds_elapsed,
+      seconds_elapsed >=0 ? "forward" : "backward");
   control_event_general_status(LOG_WARN, "CLOCK_JUMPED TIME=%d",
                                seconds_elapsed);
   has_completed_circuit=0; /* so it'll log when it works again */

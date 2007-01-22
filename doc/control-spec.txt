@@ -990,7 +990,8 @@ $Id$
        happens when a laptop goes to sleep and then wakes up again. It
        also happens when the system is swapping so heavily that Tor is
        starving. The "time" argument specifies the number of seconds Tor
-       thinks it was unconscious for.
+       thinks it was unconscious for (or alternatively, the number of
+       seconds it went back in time).
 
        This status event is sent as NOTICE severity normally, but WARN
        severity if Tor is acting as a server currently.
