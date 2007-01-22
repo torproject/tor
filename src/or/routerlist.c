@@ -3765,7 +3765,7 @@ update_router_descriptor_client_downloads(time_t now)
       smartlist_len(networkstatus_list) <= get_n_v2_authorities()/2) {
     log_info(LD_DIR,
              "Not enough networkstatus documents to launch requests.");
-    /* XXX012 should we return here or something? */
+    return;
   }
 
   downloadable = router_list_client_downloadable();
