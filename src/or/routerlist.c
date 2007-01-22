@@ -508,8 +508,8 @@ router_pick_trusteddirserver(authority_type_t type,
 
 /** Pick a random running valid directory server/mirror from our
  * routerlist.  Don't pick an authority if any non-authorities are viable.
- * If <b>fascistfirewall</b>,
- * make sure the router we pick is allowed by our firewall options.
+ * If <b>fascistfirewall</b>, make sure the router we pick is allowed
+ * by our firewall options.
  * If <b>requireother</b>, it cannot be us. If <b>for_v2_directory</b>,
  * choose a directory server new enough to support the v2 directory
  * functionality.
@@ -836,8 +836,8 @@ router_nickname_is_in_list(routerinfo_t *router, const char *list)
   return v;
 }
 
-/** Add every router from our routerlist that is currently running to
- * <b>sl</b>, so that we can pick a node for a circuit.
+/** Add every suitable router from our routerlist to <b>sl</b>, so that
+ * we can pick a node for a circuit.
  */
 static void
 router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_invalid,
@@ -851,14 +851,11 @@ router_add_running_routers_to_smartlist(smartlist_t *sl, int allow_invalid,
   {
     if (router->is_running &&
         router->purpose == ROUTER_PURPOSE_GENERAL &&
-        (router->is_valid ||
-/* XXX this next part is wrong and should be fixed one day -RD */
-        (allow_invalid &&
-         !router_is_unreliable(router, need_uptime,
-                               need_capacity, need_guard)))) {
-      /* If it's running, and either it's valid or we're ok picking
-       * invalid routers and this one is suitable.
-       */
+        (router->is_valid || allow_invalid) &&
+        !router_is_unreliable(router, need_uptime,
+                              need_capacity, need_guard)) {
+      /* If it's running, and it's suitable according to the
+       * other flags we had in mind */
       smartlist_add(sl, router);
     }
   });
@@ -923,26 +920,6 @@ router_is_unreliable(routerinfo_t *router, int need_uptime,
   return 0;
 }
 
-/** Remove from routerlist <b>sl</b> all routers that are not
- * sufficiently stable. */
-static void
-routerlist_sl_remove_unreliable_routers(smartlist_t *sl, int need_uptime,
-                                        int need_capacity, int need_guard)
-{
-  int i;
-  routerinfo_t *router;
-
-  for (i = 0; i < smartlist_len(sl); ++i) {
-    router = smartlist_get(sl, i);
-    if (router_is_unreliable(router, need_uptime,
-                             need_capacity, need_guard)) {
-//      log(LOG_DEBUG, "Router '%s' has insufficient uptime; deleting.",
- //         router->nickname);
-      smartlist_del(sl, i--);
-    }
-  }
-}
-
 /** Return the smaller of the router's configured BandwidthRate
  * and its advertised capacity. */
 uint32_t
@@ -969,7 +946,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
   uint64_t rand_bw, tmp;
   double exit_weight;
 
-  /* First count the total bandwidth weight, and make a smartlist
+  /* First count the total bandwidth weight, and make a list
    * of each value. */
   bandwidths = tor_malloc(sizeof(uint32_t)*smartlist_len(sl));
   for (i = 0; i < smartlist_len(sl); ++i) {
@@ -1036,6 +1013,8 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
  * a minimum uptime, return one of those.
  * If <b>need_capacity</b> is non-zero, weight your choice by the
  * advertised capacity of each router.
+ *
+ * DOCDOC allow_invalid, need_guard, weight_for_exit
  */
 routerinfo_t *
 router_choose_random_node(const char *preferred,
@@ -1073,12 +1052,12 @@ router_choose_random_node(const char *preferred,
     smartlist_subtract(sl,excludednodes);
     if (excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
-    routerlist_sl_remove_unreliable_routers(sl, need_uptime,
-                                            need_capacity, need_guard);
+
     if (need_capacity)
       choice = routerlist_sl_choose_by_bandwidth(sl, weight_for_exit);
     else
       choice = smartlist_choose(sl);
+
     smartlist_free(sl);
     if (!choice && (need_uptime || need_capacity || need_guard)) {
       /* try once more -- recurse but with fewer restrictions. */
@@ -3780,6 +3759,7 @@ update_router_descriptor_client_downloads(time_t now)
       smartlist_len(networkstatus_list) <= get_n_v2_authorities()/2) {
     log_info(LD_DIR,
              "Not enough networkstatus documents to launch requests.");
+    /* XXX012 should we return here or something? */
   }
 
   downloadable = router_list_client_downloadable();
@@ -3832,7 +3812,7 @@ update_router_descriptor_client_downloads(time_t now)
 
 /** Launch downloads for router status as needed, using the strategy used by
  * authorities and caches: download every descriptor we don't have but would
- * serve from a random authoritiy that lists it. */
+ * serve, from a random authority that lists it. */
 static void
 update_router_descriptor_cache_downloads(time_t now)
 {
