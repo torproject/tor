@@ -940,7 +940,11 @@ consider_hibernation(time_t now)
   }
 }
 
-/** DOCDOC */
+/** Helper function: called when we get a GETINFO request for an
+ * accounting-related key on the control connection <b>conn</b>.  If we can
+ * answer the request for <b>question</b>, then set *<b>answer</b> to a newly
+ * allocated string holding the result.  Otherwise, set *<b>answer</b> to
+ * NULL. */
 int
 getinfo_helper_accounting(control_connection_t *conn,
                           const char *question, char **answer)

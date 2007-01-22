@@ -1088,7 +1088,8 @@ ip_address_changed(int at_interface)
   dns_servers_relaunch_checks();
 }
 
-/* DOCDOC */
+/** Forget what we've learned about the correctness of our DNS servers, and
+ * start learning again. */
 void
 dns_servers_relaunch_checks(void)
 {
@@ -2285,7 +2286,9 @@ _tor_dmalloc_free(void *p)
 }
 #endif
 
-/** DOCDOC */
+/** Main entry point for the Tor process.  Called from main(). */
+/* This function is distinct from main() only so we can link main.c into
+ * the unittest binary without conflicting with the unittests' main. */
 int
 tor_main(int argc, char *argv[])
 {

@@ -381,7 +381,7 @@ static int can_reach_or_port = 0;
 /** Whether we can reach our DirPort from the outside. */
 static int can_reach_dir_port = 0;
 
-/** DOCDOC */
+/** Forget what we have learned about our reachability status. */
 void
 router_reset_reachability(void)
 {
@@ -769,7 +769,8 @@ router_get_my_descriptor(void)
   return body;
 }
 
-/*DOCDOC*/
+/** A list of nicknames that we've warned about including in our family
+ * declaration verbatim rather than as digests. */
 static smartlist_t *warned_nonexistent_family = NULL;
 
 static int router_guess_address_from_dir_headers(uint32_t *guess);
@@ -1315,7 +1316,13 @@ is_legal_hexdigest(const char *s)
           strspn(s,HEX_CHARACTERS)==HEX_DIGEST_LEN);
 }
 
-/** DOCDOC buf must have MAX_VERBOSE_NICKNAME_LEN+1 bytes. */
+/** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the
+ * verbose representation of the identity of <b>router</b>.  The format is:
+ *  A dollar sign.
+ *  The upper-case hexadecimal encoding of the SHA1 hash of router's identity.
+ *  A "=" if the router is named; a "~" if it is not.
+ *  The router's nickname.
+ **/
 void
 router_get_verbose_nickname(char *buf, routerinfo_t *router)
 {

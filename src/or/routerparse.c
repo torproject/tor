@@ -632,8 +632,13 @@ check_directory_signature(const char *digest,
  * descriptors, parses them and stores the result in <b>dest</b>.  All routers
  * are marked running and valid.  Advances *s to a point immediately
  * following the last router entry.  Ignore any trailing router entries that
- * are not complete. Returns 0 on success and -1 on failure.
- * DOCDOC saved_location
+ * are not complete.
+ *
+ * If <b>saved_location</b> isn't SAVED_IN_CACHE, make a local copy of each
+ * descriptor in the signed_descriptor_body field of each routerinfo_t.  If it
+ * isn't SAVED_NOWHERE, remember the offset of each descriptor.
+ *
+ * Returns 0 on success and -1 on failure.
  */
 int
 router_parse_list_from_string(const char **s, smartlist_t *dest,
@@ -719,8 +724,9 @@ dump_distinct_digest_count(int severity)
 
 /** Helper function: reads a single router entry from *<b>s</b> ...
  * *<b>end</b>.  Mallocs a new router and returns it if all goes well, else
- * returns NULL.
- * DOCDOC cache_copy
+ * returns NULL.  If <b>cache_copy</b> is true, duplicate the contents of
+ * s through end into the signed_descriptor_body of the resulting
+ * routerinfo_t.
  */
 routerinfo_t *
 router_parse_entry_from_string(const char *s, const char *end,

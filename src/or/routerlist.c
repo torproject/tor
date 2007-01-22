@@ -186,7 +186,8 @@ router_should_rebuild_store(void)
 }
 
 /** Add the <b>len</b>-type router descriptor in <b>s</b> to the router
- * journal. */
+ * journal; change its saved_locatino to SAVED_IN_JOURNAL and set its
+ * offset appropriately. */
 static int
 router_append_to_journal(signed_descriptor_t *desc)
 {
@@ -1316,7 +1317,9 @@ router_get_by_descriptor_digest(const char *digest)
   return digestmap_get(routerlist->desc_digest_map, digest);
 }
 
-/* DOCDOC Not always nul-terminated. */
+/** Return a pointer to the signed textual representation of a descriptor.
+ * The returned string is not guaranteed to be NUL-terminated: the string's
+ * length will be in desc->signed_descriptor_len. */
 const char *
 signed_descriptor_get_body(signed_descriptor_t *desc)
 {
@@ -2146,14 +2149,14 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
 }
 
 /** Given a string <b>s</b> containing some routerdescs, parse it and put the
- * routers into our directory.  If <b>from_cache</b> is false, the routers
- * are in response to a query to the network: cache them.
+ * routers into our directory.  If saved_location is SAVED_NOWHERE, the routers
+ * are in response to a query to the network: cache them by adding them to
+ * the journal.
  *
  * If <b>requested_fingerprints</b> is provided, it must contain a list of
  * uppercased identity fingerprints.  Do not update any router whose
  * fingerprint is not on the list; after updating a router, remove its
  * fingerprint from the list.
- * DOCDOC saved_location
  */
 void
 router_load_routers_from_string(const char *s, saved_location_t saved_location,
@@ -3975,9 +3978,9 @@ router_have_minimum_dir_info(void)
   return have_min_dir_info;
 }
 
-/** DOCDOC
- * Must change when authorities change, networkstatuses change, or list of
- * routerdescs changes, or number of running routers changes.
+/** Called when our internal view of the directory has changed.  This can be
+ * when the authorities change, networkstatuses change, the list of routerdescs
+ * changes, or number of running routers changes.
  */
 static void
 router_dir_info_changed(void)
@@ -3985,7 +3988,9 @@ router_dir_info_changed(void)
   need_to_update_have_min_dir_info = 1;
 }
 
-/** DOCDOC */
+/** Change the value of have_min_dir_info, setting it true iff we have enough
+ * network and router information to build circuits.  Clear the value of
+ * need_to_update_have_min_dir_info. */
 static void
 update_router_have_minimum_dir_info(void)
 {
@@ -4251,7 +4256,8 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   return 0;
 }
 
-/*DOCDOC*/
+/** Assert that the internal representation of <b>rl</b> is
+ * self-consistent. */
 static void
 routerlist_assert_ok(routerlist_t *rl)
 {
