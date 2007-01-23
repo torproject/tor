@@ -288,7 +288,9 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                              payload, payload_len);
 }
 
-/** DOCDOC */
+/** Return true iff <b>conn</b> is the client side of a directory connection
+ * we launched to ourself in order to determine the reachability of our
+ * dir_port. */
 static int
 directory_conn_is_self_reachability_test(dir_connection_t *conn)
 {

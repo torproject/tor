@@ -524,9 +524,11 @@ typedef enum {
 #define RESOLVED_TYPE_ERROR_TRANSIENT 0xF0
 #define RESOLVED_TYPE_ERROR 0xF1
 
-/* DOCDOC We should document the meaning of these. */
-/* Negative reasons are internal */
+/* Negative reasons are internal: we never send them in a DESTROY or TRUNCATE
+ * call; they only go to the controller for tracking  */
+/** We couldn't build a path for this circuit. */
 #define END_CIRC_REASON_NOPATH          -2
+/** Catch-all "other" reason for closing origin circuits. */
 #define END_CIRC_AT_ORIGIN              -1
 
 /* Reasons why we (or a remote OR) might close a circuit. See tor-spec.txt for
@@ -811,13 +813,18 @@ typedef struct dir_connection_t {
   /* Used only for server sides of some dir connections, to implement
    * "spooling" of directory material to the outbuf.  Otherwise, we'd have
    * to append everything to the outbuf in one enormous chunk. */
+  /** What exactly are we spooling right now? */
   enum {
     DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
     DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS
   } dir_spool_src;
+  /** List of fingerprints for networkstatuses or desriptors to be spooled. */
   smartlist_t *fingerprint_stack;
+  /** A cached_dir_t object that we're currently spooling out */
   struct cached_dir_t *cached_dir;
+  /** The current offset into cached_dir. */
   off_t cached_dir_offset;
+  /** The zlib object doing on-the-fly compression for spooled data. */
   tor_zlib_state_t *zlib_state;
 
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
@@ -937,12 +944,21 @@ typedef enum {
 
 /** Information need to cache an onion router's descriptor. */
 typedef struct signed_descriptor_t {
+  /** Pointer to the raw server descriptor.  Not necessarily NUL-terminated.
+   * If saved_location is SAVED_IN_CACHE, this pointer is null.  */
   char *signed_descriptor_body;
+  /** Length of the server descriptor. */
   size_t signed_descriptor_len;
+  /** Digest of the server descriptor, computed as specified in dir-spec.txt */
   char signed_descriptor_digest[DIGEST_LEN];
+  /** Identity digest of the router. */
   char identity_digest[DIGEST_LEN];
+  /** Declared publication time of the descriptor */
   time_t published_on;
+  /** Where is the descriptor saved? */
   saved_location_t saved_location;
+  /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
+   * this descriptor in the corresponding file. */
   off_t saved_offset;
 } signed_descriptor_t;
 
@@ -2632,10 +2648,10 @@ int rend_get_service_id(crypto_pk_env_t *pk, char *out);
 
 /** A cached rendezvous descriptor. */
 typedef struct rend_cache_entry_t {
-  size_t len; /** Length of <b>desc</b> */
-  time_t received; /** When was the descriptor received? */
-  char *desc; /** Service descriptor */
-  rend_service_descriptor_t *parsed; /* Parsed value of 'desc' */
+  size_t len; /**< Length of <b>desc</b> */
+  time_t received; /**< When was the descriptor received? */
+  char *desc; /**< Service descriptor */
+  rend_service_descriptor_t *parsed; /**< Parsed value of 'desc' */
 } rend_cache_entry_t;
 
 void rend_cache_init(void);

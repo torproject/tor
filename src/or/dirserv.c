@@ -977,7 +977,8 @@ set_cached_dir(cached_dir_t *d, char *directory, time_t when)
   }
 }
 
-/** DOCDOC */
+/** Decrement the reference count on <b>d</b>, and free it if it no longer has
+ * any references. */
 void
 cached_dir_decref(cached_dir_t *d)
 {
@@ -987,7 +988,8 @@ cached_dir_decref(cached_dir_t *d)
   tor_free(d);
 }
 
-/** DOCDOC */
+/** Allocate and return a new cached_dir_t containing the string <b>s</b>,
+ * published at <b>published</b>. */
 static cached_dir_t *
 new_cached_dir(char *s, time_t published)
 {
@@ -1325,12 +1327,17 @@ should_generate_v2_networkstatus(void)
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }
 
+/* Thresholds for server performance: set by
+ * dirserv_compute_performance_thresholds, and used by
+ * generate_v2_networkstatus */
 static uint32_t stable_uptime = 0; /* start at a safe value */
 static uint32_t fast_bandwidth = 0;
 static uint32_t guard_bandwidth = 0;
 static uint64_t total_bandwidth = 0;
 static uint64_t total_exit_bandwidth = 0;
 
+/** Helper: estimate the uptime of a router given its stated uptime and the
+ * amount of time since it last stated its stated uptime. */
 static INLINE int
 real_uptime(routerinfo_t *router, time_t now)
 {
@@ -1359,6 +1366,8 @@ dirserv_thinks_router_is_unreliable(time_t now,
   return 0;
 }
 
+/** Helper: returns a tristate based on comparing **(uint32_t**)a to
+* **(uint32_t**)b. */
 static int
 _compare_uint32(const void **a, const void **b)
 {
@@ -1952,6 +1961,9 @@ dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
  * below this threshold. */
 #define DIRSERV_BUFFER_MIN 16384
 
+/** Spooling helper: called when we have no more data to spool to <b>conn</b>.
+ * Flushes any remaining data to be (un)compressed, and changes the spool
+ * source to NONE.  Returns 0 on success, negative on failure. */
 static int
 connection_dirserv_finish_spooling(dir_connection_t *conn)
 {
@@ -1964,7 +1976,12 @@ connection_dirserv_finish_spooling(dir_connection_t *conn)
   return 0;
 }
 
-/** DOCDOC */
+/** Spooling helper: called when we're sending a bunch of server descriptors,
+ * and the outbuf has become too empty. Pulls some entries from
+ * fingerprint_stack, and writes the corresponding servers onto outbuf.  If we
+ * run out of entries, flushes the zlib state and sets the spool source to
+ * NONE.  Returns 0 on success, negative on failure.
+ */
 static int
 connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 {
@@ -2014,7 +2031,12 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
   return 0;
 }
 
-/** DOCDOC */
+/** Spooling helper: Called when we're sending a directory or networkstatus,
+ * and the outbuf has become too empty.  Pulls some bytes from
+ * <b>conn</b>-\>cached_dir-\>dir_z, uncompresses them if appropriate, and
+ * puts them on the outbuf.  If we run out of entries, flushes the zlib state
+ * and sets the spool source to NONE.  Returns 0 on success, negative on
+ * failure. */
 static int
 connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
 {
@@ -2048,7 +2070,13 @@ connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
   return 0;
 }
 
-/* DOCDOC */
+/* Spooling helper: Called when we're spooling networkstatus objects on
+ * <b>conn</b>, and the outbuf has become too empty.  If the current
+ * networkstatus object (in <b>conn</b>-\>cached_dir) has more data, pull data
+ * from there.  Otherwise, pop the next fingerprint from fingerprint_stack,
+ * and start spooling the next networkstatus.  If we run out of entries,
+ * flushes the zlib state and sets the spool source to NONE.  Returns 0 on
+ * success, negative on failure. */
 static int
 connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
 {
