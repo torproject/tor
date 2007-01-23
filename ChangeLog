@@ -43,6 +43,8 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       from at least half of the authorities.  This delays the first download
       slightly under pathological circumstances, but can prevent us from
       downloading a bunch of descriptors we don't need.
+    - Do not log IPs with TLS failures for incoming TLS connections.  (Fixes
+      bug 382.)
 
   o Minor features:
     - Check for addresses with invalid characters at the exit as well as at

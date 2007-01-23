@@ -569,29 +569,33 @@ connection_or_check_valid_handshake(or_connection_t *conn, char *digest_rcvd)
   char nickname[MAX_NICKNAME_LEN+1];
   or_options_t *options = get_options();
   int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
+  int started_here = connection_or_nonopen_was_started_here(conn);
+  const char *safe_address =
+    started_here ? conn->_base.address : safe_str(conn->_base.address);
+  const char *peer_type = started_here ? "Router" : "Client or router";
 
   check_no_tls_errors();
   if (! tor_tls_peer_has_cert(conn->tls)) {
-    log_info(LD_PROTOCOL,"Peer (%s:%d) didn't send a cert! Closing.",
-             conn->_base.address, conn->_base.port);
+    log_info(LD_PROTOCOL,"%s (%s:%d) didn't send a cert! Closing.",
+             peer_type, safe_address, conn->_base.port);
     return -1;
   }
   check_no_tls_errors();
   if (tor_tls_get_peer_cert_nickname(severity, conn->tls, nickname,
                                      sizeof(nickname))) {
-    log_fn(severity,LD_PROTOCOL,"Other side (%s:%d) has a cert without a "
+    log_fn(severity,LD_PROTOCOL,"%s (%s:%d) has a cert without a "
            "valid nickname. Closing.",
-           conn->_base.address, conn->_base.port);
+           peer_type, safe_address, conn->_base.port);
     return -1;
   }
   check_no_tls_errors();
-  log_debug(LD_OR, "Other side (%s:%d) claims to be router '%s'",
-            conn->_base.address, conn->_base.port, nickname);
+  log_debug(LD_OR, "%s (%s:%d) claims to be router '%s'",
+            peer_type, safe_address, conn->_base.port, nickname);
 
   if (tor_tls_verify(severity, conn->tls, &identity_rcvd) < 0) {
-    log_fn(severity,LD_OR,"Other side, which claims to be router '%s' (%s:%d),"
+    log_fn(severity,LD_OR,"%s which claims to be router '%s' (%s:%d),"
            " has a cert but it's invalid. Closing.",
-           nickname, conn->_base.address, conn->_base.port);
+           peer_type, nickname, safe_address, conn->_base.port);
     return -1;
   }
   check_no_tls_errors();
@@ -610,13 +614,13 @@ connection_or_check_valid_handshake(or_connection_t *conn, char *digest_rcvd)
       router->is_named && /* make sure it's the right guy */
       memcmp(digest_rcvd, router->cache_info.identity_digest,DIGEST_LEN) !=0) {
     log_fn(severity, LD_OR,
-           "Identity key not as expected for router claiming to be "
+           "Identity key not as expected for peer claiming to be "
            "'%s' (%s:%d)",
-           nickname, conn->_base.address, conn->_base.port);
+           nickname, safe_address, conn->_base.port);
     return -1;
   }
 
-  if (connection_or_nonopen_was_started_here(conn)) {
+  if (started_here) {
     int as_advertised = 1;
     if (memcmp(digest_rcvd, conn->identity_digest, DIGEST_LEN)) {
       /* I was aiming for a particular digest. I didn't get it! */
@@ -656,7 +660,7 @@ connection_or_check_valid_handshake(or_connection_t *conn, char *digest_rcvd)
  * then initialize conn from the information in router.
  *
  * If all is successful, call circuit_n_conn_done() to handle events
- * that have been pending on the tls handshake completion. Also set the
+ * that have been pending on the <tls handshake completion. Also set the
  * directory to be dirty (only matters if I'm an authdirserver).
  */
 static int
