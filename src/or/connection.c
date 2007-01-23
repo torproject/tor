@@ -1816,7 +1816,6 @@ _connection_write_to_buf_impl(const char *string, size_t len,
   if (zlib) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     int done = zlib < 0;
-    if (!dir_conn) return; /* <-- XXX012 This line is pointless, yes? */
     CONN_LOG_PROTECT(conn, r = write_to_buf_zlib(conn->outbuf,
                                                  dir_conn->zlib_state,
                                                  string, len, done));
