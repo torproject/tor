@@ -935,6 +935,8 @@ add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
   set_expiry(resolve, time(NULL) + dns_get_expiry_ttl(ttl));
 }
 
+/** Return true iff <b>address</b> is one of the addresses we use to verify
+ * that well-known sites aren't being hijacked by our DNS servers. */
 static INLINE int
 is_test_address(const char *address)
 {
@@ -1739,12 +1741,19 @@ static strmap_t *dns_wildcard_response_count = NULL;
  * nameserver wants to return in response to requests for nonexistent domains.
  */
 static smartlist_t *dns_wildcard_list = NULL;
+/** True iff we've logged about a single address getting wildcarded.
+ * Subsequent warnings will be less severe.  */
 static int dns_wildcard_one_notice_given = 0;
+/** True iff we've warned that our DNS server is wildcarding too many failures.
+ */
 static int dns_wildcard_notice_given = 0;
 
-/** DOCDOC */
+/** List of supposedly good addresses that are getting wildcarded to the
+ * same addresses as nonexistent addresses. */
 static smartlist_t *dns_wildcarded_test_address_list = NULL;
+/** True iff we've warned about a test address getting wildcarded */
 static int dns_wildcarded_test_address_notice_given = 0;
+/** True iff all addresses seem to be getting wildcarded. */
 static int dns_is_completely_invalid = 0;
 
 /** Called when we see <b>id</b> (a dotted quad) in response to a request for
@@ -1779,6 +1788,8 @@ wildcard_increment_answer(const char *id)
   }
 }
 
+/** Note that a single test address (one believed to be good) seems to be
+ * getting redirected to the same IP as failures are. */
 static void
 add_wildcarded_test_address(const char *address)
 {
@@ -1864,6 +1875,8 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
     tor_free(addr);
 }
 
+/** Launch attempts to resolve a bunch of known-good addresses (configured in
+ * ServerDNSTestAddresses).  [Callback for a libevent timer] */
 static void
 launch_test_addresses(int fd, short event, void *args)
 {
@@ -1919,7 +1932,8 @@ dns_launch_wildcard_checks(void)
   }
 }
 
-/* DOCDOC */
+/** If appropriate, start testing whether our DNS servers tend to lie to
+ * us. */
 void
 dns_launch_correctness_checks(void)
 {
@@ -1937,12 +1951,14 @@ dns_launch_correctness_checks(void)
   evtimer_add(&launch_event, &timeout);
 }
 
+/** Return true iff our DNS servers lie to us too much to be trustd. */
 int
 dns_seems_to_be_broken(void)
 {
   return dns_is_completely_invalid;
 }
 
+/** Forget what we've previously learned about our DNS servers' correctness. */
 void
 dns_reset_correctness_checks(void)
 {
