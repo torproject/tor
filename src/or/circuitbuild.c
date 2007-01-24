@@ -622,8 +622,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       return 0;
     }
 
-    *(uint32_t*)payload = htonl(hop->extend_info->addr);
-    *(uint16_t*)(payload+4) = htons(hop->extend_info->port);
+    set_uint32(payload, htonl(hop->extend_info->addr));
+    set_uint16(payload+4, htons(hop->extend_info->port));
 
     onionskin = payload+2+4;
     memcpy(payload+2+4+ONIONSKIN_CHALLENGE_LEN,
