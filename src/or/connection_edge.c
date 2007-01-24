@@ -374,7 +374,8 @@ connection_ap_expire_beginning(void)
             seconds_idle, safe_str(conn->socks_request->address),
             conn->socks_request->port);
         } else {
-          log_fn(severity, LD_APP, "Closing unattached stream.");
+          log_fn(severity, LD_APP, "Closing unattached stream (state %d).",
+                 conn->_base.state);
         }
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
