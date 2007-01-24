@@ -715,8 +715,9 @@ next day.  All times are local, and given in 24-hour time.  (Defaults to
 \fBServerDNSResolvConfFile \fR\fIfilename\fP
 Overrides the default DNS configuration with the configuration in
 \fIfilename\fP.  The file format is the same as the standard Unix
-"\fBresolv.conf\fP" file (7).  This option only affects name lookup for
-addresses requested by clients; and only takes effect if Tor was built with
+"\fBresolv.conf\fP" file (7).  This option, like all other
+ServerDNS options, only affects name lookup that your server does on
+behalf of clients.  Also, it only takes effect if Tor was built with
 eventdns support.  (Defaults to use the system DNS configuration.)
 .LP
 .TP
@@ -725,7 +726,9 @@ If set to \fB1\fP, then we will search for addresses in the local search
 domain.  For example, if this system is configured to believe it is in
 "example.com", and a client tries to connect to "www", the client will be
 connected to "www.example.com".
-This option only affects name lookup for addresses requested by clients.
+This option only affects name lookup that your server does on
+behalf of clients, and only takes effect if Tor was build with
+eventdns support.
 (Defaults to "0".)
 .LP
 .TP
@@ -733,8 +736,10 @@ This option only affects name lookup for addresses requested by clients.
 When this option is set to 1, we will test periodically to determine whether
 our local nameservers have been configured to hijack failing DNS requests
 (usually to an advertising site).  If they are, we will attempt to correct
-this.  This option only affects name lookup for addresses requested by
-clients; and only takes effect if Tor was built with eventdns support.
+this.
+This option only affects name lookup that your server does on
+behalf of clients, and only takes effect if Tor was build with
+eventdns support.
 (Defaults to "1".)
 .LP
 .TP
@@ -742,13 +747,21 @@ clients; and only takes effect if Tor was built with eventdns support.
 When we're detecting DNS hijacking, make sure that these \fIvalid\fP
 addresses aren't getting redirected.  If they are, then our DNS is
 completely useless, and we'll reset our exit policy to "reject *:*".
+This option only affects name lookup that your server does on
+behalf of clients, and only takes effect if Tor was build with
+eventdns support.
 (Defaults to "www.google.com, www.mit.edu, www.yahoo.com,
 www.slashdot.org".)
+.LP
+.TP
 \fBServerDNSAllowNonRFC953Hostnames \fR\fB0\fR|\fB1\fR\fP
 When this option is disabled, Tor does not try to resolve hostnames
 containing illegal characters (like @ and :) rather than sending them to an
 exit node to be resolved.  This helps trap accidental attempts to resolve
 URLs and so on.
+This option only affects name lookup that your server does on
+behalf of clients, and only takes effect if Tor was build with
+eventdns support.
 (Default: 0)
 
 .SH DIRECTORY SERVER OPTIONS
