@@ -244,7 +244,8 @@ circuit_state_to_string(int state)
   }
 }
 
-/* DOCDOC */
+/** Initialize the common elements in a circuit_t, and add it to the global
+ * list. */
 static void
 init_circuit_base(circuit_t *circ)
 {
