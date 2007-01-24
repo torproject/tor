@@ -1921,10 +1921,18 @@ log_entry_guards(int severity)
   tor_free(s);
 }
 
-/** DOCDOC */
+/** Called when one or more guards that we would previously have used for some
+ * purpose are no longer in use because a higher-priority guard has become
+ * useable again. */
 static void
 control_event_guard_deferred(void)
 {
+  /* XXXX We don't actually have a good way to figure out _how many_ entries
+   * are live for some purpose.  We need an entry_is_even_slightly_live()
+   * function for this to work right.  NumEntryGuards isn't reliable: if we
+   * need guards with weird properties, we can have more than that number
+   * live.
+   **/
 #if 0
   int n = 0;
   or_options_t *options = get_options();
