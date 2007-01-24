@@ -376,6 +376,19 @@ connection_ap_expire_beginning(void)
         } else {
           log_fn(severity, LD_APP, "Closing unattached stream (state %d).",
                  conn->_base.state);
+          /* XXX012 remove the below clause before stable release -RD */
+          if (conn->_base.state == AP_CONN_STATE_SOCKS_WAIT) {
+            /* extra debugging */
+            log_fn(severity, LD_APP,
+                   "Hints: inbuf len %d, socks: version %d, command %d, "
+                   "has_finished %d, address %s, port %d.",
+                   buf_datalen(conn->_base.inbuf),
+                   conn->socks_request->socks_version,
+                   conn->socks_request->command,
+                   conn->socks_request->has_finished,
+                   conn->socks_request->address,
+                   conn->socks_request->port);
+          }
         }
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
