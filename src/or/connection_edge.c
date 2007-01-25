@@ -380,14 +380,14 @@ connection_ap_expire_beginning(void)
           if (conn->_base.state == AP_CONN_STATE_SOCKS_WAIT) {
             /* extra debugging */
             log_fn(severity, LD_APP,
-                   "Hints: inbuf len %d, socks: version %d, command %d, "
+                   "Hints: inbuf len %lu, socks: version %d, command %d, "
                    "has_finished %d, address %s, port %d.",
-                   buf_datalen(conn->_base.inbuf),
-                   conn->socks_request->socks_version,
+                   (unsigned long)buf_datalen(conn->_base.inbuf),
+                   (int)conn->socks_request->socks_version,
                    conn->socks_request->command,
                    conn->socks_request->has_finished,
                    conn->socks_request->address,
-                   conn->socks_request->port);
+                   (int)conn->socks_request->port);
           }
         }
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
