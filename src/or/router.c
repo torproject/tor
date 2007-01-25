@@ -410,10 +410,22 @@ check_whether_dirport_reachable(void)
 
 /** Look at a variety of factors, and return 0 if we don't want to
  * advertise the fact that we have a DirPort open. Else return the
- * DirPort we want to advertise. */
+ * DirPort we want to advertise.
+ *
+ * Log a helpful message if we change our mind about whether to publish
+ * a DirPort.
+ */
 static int
 decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
 {
+  static int advertising=1; /* start out assuming we will advertise */
+  int new_choice=1;
+  const char *reason = NULL;
+
+  /* Section one: reasons to publish or not publish that aren't
+   * worth mentioning to the user, either because they're obvious
+   * or because they're normal behavior. */
+
   if (!router->dir_port) /* short circuit the rest of the function */
     return 0;
   if (authdir_mode(options)) /* always publish */
@@ -422,15 +434,32 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
     return 0;
   if (!check_whether_dirport_reachable())
     return 0;
-  /* check if we might potentially hibernate. */
-  if (accounting_is_enabled(options))
-    return 0;
-  /* also check if we're advertising a small amount */
-  if (router->bandwidthrate <= 51200)
-    return 0;
 
-  /* Sounds like a great idea. Let's publish it. */
-  return router->dir_port;
+  /* Section two: reasons to publish or not publish that the user
+   * might find surprising. These are generally config options that
+   * make us choose not to publish. */
+
+  if (accounting_is_enabled(options)) {
+    /* if we might potentially hibernate */
+    new_choice = 0;
+    reason = "AccountingMax enabled";
+  } else if (router->bandwidthrate <= 51200) {
+    /* if we're advertising a small amount */
+    new_choice = 0;
+    reason = "BandwidthRate under 50KB";
+  }
+
+  if (advertising != new_choice) {
+    if (new_choice == 1) {
+      log(LOG_NOTICE, LD_DIR, "Advertising DirPort as %d", router->dir_port);
+    } else {
+      tor_assert(reason);
+      log(LOG_NOTICE, LD_DIR, "Not advertising DirPort (Reason: %s)", reason);
+    }
+    advertising = new_choice;
+  }
+
+  return advertising ? router->dir_port : 0;
 }
 
 /** Some time has passed, or we just got new directory information.
