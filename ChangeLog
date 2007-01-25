@@ -2478,6 +2478,35 @@ Changes in version 0.0.7.1 - 2004-07-04
 
 
 Changes in version 0.0.7 - 2004-06-07
+  o Updated the man page to reflect the new features.
+
+
+Changes in version 0.0.7rc2 - 2004-06-06
+  o Changes from 0.0.7rc1:
+    - Make it build on Win32 again.
+  o Changes from 0.0.6.2:
+    - Rotate dnsworkers and cpuworkers on SIGHUP, so they get new config
+      settings too.
+
+
+Changes in version 0.0.7rc1 - 2004-06-02
+  o Bugfixes:
+    - On sighup, we were adding another log without removing the first
+      one. So log messages would get duplicated n times for n sighups.
+    - Several cases of using a connection after we'd freed it. The
+      problem was that connections that are pending resolve are in both
+      the pending_resolve tree, and also the circuit's resolving_streams
+      list. When you want to remove one, you must remove it from both.
+    - Fix a double-mark-for-close where an end cell arrived for a
+      resolving stream, and then the resolve failed.
+    - Check directory signatures based on name of signer, not on whom
+      we got the directory from. This will let us cache directories more
+      easily.
+  o Features:
+    - Crank up some of our constants to handle more users.
+
+
+Changes in version 0.0.7pre1 - 2004-06-02
   o Fixes for crashes and other obnoxious bugs:
     - Fix an epipe bug: sometimes when directory connections failed
       to connect, we would give them a chance to flush before closing
@@ -2511,11 +2540,6 @@ Changes in version 0.0.7 - 2004-06-07
     - Allow backslash in Win32 filenames.
     - Made Tor build complain-free on FreeBSD, hopefully without
       breaking other BSD builds. We'll see.
-    - Check directory signatures based on name of signer, not on whom
-      we got the directory from. This will let us cache directories more
-      easily.
-    - Rotate dnsworkers and cpuworkers on SIGHUP, so they get new config
-      settings too.
   o Features:
     - Doxygen markup on all functions and global variables.
     - Make directory functions update routerlist, not replace it. So
@@ -2530,7 +2554,6 @@ Changes in version 0.0.7 - 2004-06-07
       Now we don't need that huge line with all the commas in it.
     - Enable accept/reject policies on SOCKS connections, so you can bind
       to 0.0.0.0 but still control who can use your OP.
-    - Updated the man page to reflect these features.
 
 
 Changes in version 0.0.6.2 - 2004-05-16
