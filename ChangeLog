@@ -2333,30 +2333,138 @@ Changes in version 0.0.8.1 - 2004-10-13
 
 
 Changes in version 0.0.8 - 2004-08-25
+  o Port it to SunOS 5.9 / Athena
+
+
+Changes in version 0.0.8rc2 - 2004-08-20
+  o Make it compile on cygwin again.
+  o When picking unverified routers, skip those with low uptime and/or
+    low bandwidth, depending on what properties you care about.
+
+
+Changes in version 0.0.8rc1 - 2004-08-18
+  o Changes from 0.0.7.3:
+    - Bugfixes:
+      - Fix assert triggers: if the other side returns an address 0.0.0.0,
+        don't put it into the client dns cache.
+      - If a begin failed due to exit policy, but we believe the IP address
+        should have been allowed, switch that router to exitpolicy reject *:*
+        until we get our next directory.
+    - Features:
+      - Clients choose nodes proportional to advertised bandwidth.
+      - Avoid using nodes with low uptime as introduction points.
+      - Handle servers with dynamic IP addresses: don't replace
+        options->Address with the resolved one at startup, and
+        detect our address right before we make a routerinfo each time.
+      - 'FascistFirewall' option to pick dirservers and ORs on specific
+        ports; plus 'FirewallPorts' config option to tell FascistFirewall
+        which ports are open. (Defaults to 80,443)
+      - Be more aggressive about trying to make circuits when the network
+        has changed (e.g. when you unsuspend your laptop).
+      - Check for time skew on http headers; report date in response to
+        "GET /".
+      - If the entrynode config line has only one node, don't pick it as
+        an exitnode.
+      - Add strict{entry|exit}nodes config options. If set to 1, then
+        we refuse to build circuits that don't include the specified entry
+        or exit nodes.
+      - OutboundBindAddress config option, to bind to a specific
+        IP address for outgoing connect()s.
+      - End truncated log entries (e.g. directories) with "[truncated]".
+
+  o Patches to 0.0.8preX:
+    - Bugfixes:
+      - Patches to compile and run on win32 again (maybe)?
+      - Fix crash when looking for ~/.torrc with no $HOME set.
+      - Fix a race bug in the unit tests.
+      - Handle verified/unverified name collisions better when new
+        routerinfo's arrive in a directory.
+      - Sometimes routers were getting entered into the stats before
+        we'd assigned their identity_digest. Oops.
+      - Only pick and establish intro points after we've gotten a
+        directory.
+    - Features:
+      - AllowUnverifiedNodes config option to let circuits choose no-name
+        routers in entry,middle,exit,introduction,rendezvous positions.
+        Allow middle and rendezvous positions by default.
+      - Add a man page for tor-resolve.
+
+
+Changes in version 0.0.7.3 - 2004-08-12
+  o Stop dnsworkers from triggering an assert failure when you
+    ask them to resolve the host "".
+
+
+Changes in version 0.0.8pre3 - 2004-08-09
+  o Changes from 0.0.7.2:
+    - Allow multiple ORs with same nickname in routerlist -- now when
+      people give us one identity key for a nickname, then later
+      another, we don't constantly complain until the first expires.
+    - Remember used bandwidth (both in and out), and publish 15-minute
+      snapshots for the past day into our descriptor.
+    - You can now fetch $DIRURL/running-routers to get just the
+      running-routers line, not the whole descriptor list. (But
+      clients don't use this yet.)
+    - When people mistakenly use Tor as an http proxy, point them
+      at the tor-doc.html rather than the INSTALL.
+    - Remove our mostly unused -- and broken -- hex_encode()
+      function. Use base16_encode() instead. (Thanks to Timo Lindfors
+      for pointing out this bug.)
+    - Rotate onion keys every 12 hours, not every 2 hours, so we have
+      fewer problems with people using the wrong key.
+    - Change the default exit policy to reject the default edonkey,
+      kazaa, gnutella ports.
+    - Add replace_file() to util.[ch] to handle win32's rename().
+
+  o Changes from 0.0.8preX:
+    - Fix two bugs in saving onion keys to disk when rotating, so
+      hopefully we'll get fewer people using old onion keys.
+    - Fix an assert error that was making SocksPolicy not work.
+    - Be willing to expire routers that have an open dirport -- it's
+      just the authoritative dirservers we want to not forget.
+    - Reject tor-resolve requests for .onion addresses early, so we
+      don't build a whole rendezvous circuit and then fail.
+    - When you're warning a server that he's unverified, don't cry
+      wolf unpredictably.
+    - Fix a race condition: don't try to extend onto a connection
+      that's still handshaking.
+    - For servers in clique mode, require the conn to be open before
+      you'll choose it for your path.
+    - Fix some cosmetic bugs about duplicate mark-for-close, lack of
+      end relay cell, etc.
+    - Measure bandwidth capacity over the last 24 hours, not just 12
+    - Bugfix: authoritative dirservers were making and signing a new
+      directory for each client, rather than reusing the cached one.
+
+
+Changes in version 0.0.8pre2 - 2004-08-04
+  o Changes from 0.0.7.2:
+    - Security fixes:
+      - Check directory signature _before_ you decide whether you're
+        you're running an obsolete version and should exit.
+      - Check directory signature _before_ you parse the running-routers
+        list to decide who's running or verified.
+    - Bugfixes and features:
+      - Check return value of fclose while writing to disk, so we don't
+        end up with broken files when servers run out of disk space.
+      - Log a warning if the user uses an unsafe socks variant, so people
+        are more likely to learn about privoxy or socat.
+      - Dirservers now include RFC1123-style dates in the HTTP headers,
+        which one day we will use to better detect clock skew.
+
+  o Changes from 0.0.8pre1:
+    - Make it compile without warnings again on win32.
+    - Log a warning if you're running an unverified server, to let you
+      know you might want to get it verified.
+    - Only pick a default nickname if you plan to be a server.
+
+
+Changes in version 0.0.8pre1 - 2004-07-23
   o Bugfixes:
     - Made our unit tests compile again on OpenBSD 3.5, and tor
       itself compile again on OpenBSD on a sparc64.
     - We were neglecting milliseconds when logging on win32, so
       everything appeared to happen at the beginning of each second.
-    - Check directory signature _before_ you decide whether you're
-      you're running an obsolete version and should exit.
-    - Check directory signature _before_ you parse the running-routers
-      list to decide who's running.
-    - Check return value of fclose while writing to disk, so we don't
-      end up with broken files when servers run out of disk space.
-    - Port it to SunOS 5.9 / Athena
-    - Fix two bugs in saving onion keys to disk when rotating, so
-      hopefully we'll get fewer people using old onion keys.
-    - Remove our mostly unused -- and broken -- hex_encode()
-      function. Use base16_encode() instead. (Thanks to Timo Lindfors
-      for pointing out this bug.)
-    - Only pick and establish intro points after we've gotten a
-      directory.
-    - Fix assert triggers: if the other side returns an address 0.0.0.0,
-      don't put it into the client dns cache.
-    - If a begin failed due to exit policy, but we believe the IP
-      address should have been allowed, switch that router to exitpolicy
-      reject *:* until we get our next directory.
 
   o Protocol changes:
     - 'Extend' relay cell payloads now include the digest of the
@@ -2373,11 +2481,9 @@ Changes in version 0.0.8 - 2004-08-25
         list; unverified routers are listed as "$<fingerprint>".
       - We now use hash-of-identity-key in most places rather than
         nickname or addr:port, for improved security/flexibility.
-      - AllowUnverifiedNodes config option to let circuits choose no-name
-        routers in entry,middle,exit,introduction,rendezvous positions.
-        Allow middle and rendezvous positions by default.
-      - When picking unverified routers, skip those with low uptime and/or
-        low bandwidth, depending on what properties you care about.
+      - To avoid Sybil attacks, paths still use only verified servers.
+        But now we have a chance to play around with hybrid approaches.
+      - Nodes track bandwidth usage to estimate capacity (not used yet).
       - ClientOnly option for nodes that never want to become servers.
     - Directory caching.
       - "AuthoritativeDir 1" option for the official dirservers.
@@ -2393,19 +2499,6 @@ Changes in version 0.0.8 - 2004-08-25
         by hash-of-key).
       - Allow dirservers to serve running-router list separately.
         This isn't used yet.
-      - You can now fetch $DIRURL/running-routers to get just the
-        running-routers line, not the whole descriptor list. (But
-        clients don't use this yet.)
-    - Clients choose nodes proportional to advertised bandwidth.
-    - Clients avoid using nodes with low uptime as introduction points.
-    - Handle servers with dynamic IP addresses: don't just replace
-      options->Address with the resolved one at startup, and
-      detect our address right before we make a routerinfo each time.
-    - 'FascistFirewall' option to pick dirservers and ORs on specific
-      ports; plus 'FirewallPorts' config option to tell FascistFirewall
-      which ports are open. (Defaults to 80,443)
-    - Try other dirservers immediately if the one you try is down. This
-      should tolerate down dirservers better now.
     - ORs connect-on-demand to other ORs
       - If you get an extend cell to an OR you're not connected to,
         connect, handshake, and forward the create cell.
@@ -2426,6 +2519,8 @@ Changes in version 0.0.8 - 2004-08-25
     - Refuse to build a circuit before the directory has arrived --
       it won't work anyway, since you won't know the right onion keys
       to use.
+    - Try other dirservers immediately if the one you try is down. This
+      should tolerate down dirservers better now.
     - Parse tor version numbers so we can do an is-newer-than check
       rather than an is-in-the-list check.
     - New socks command 'resolve', to let us shim gethostbyname()
@@ -2434,37 +2529,11 @@ Changes in version 0.0.8 - 2004-08-25
       - A new socks-extensions.txt doc file to describe our
         interpretation and extensions to the socks protocols.
     - Add a ContactInfo option, which gets published in descriptor.
+    - Publish OR uptime in descriptor (and thus in directory) too.
     - Write tor version at the top of each log file
     - New docs in the tarball:
       - tor-doc.html.
       - Document that you should proxy your SSL traffic too.
-    - Log a warning if the user uses an unsafe socks variant, so people
-      are more likely to learn about privoxy or socat.
-    - Log a warning if you're running an unverified server, to let you
-      know you might want to get it verified.
-    - Change the default exit policy to reject the default edonkey,
-      kazaa, gnutella ports.
-    - Add replace_file() to util.[ch] to handle win32's rename().
-    - Publish OR uptime in descriptor (and thus in directory) too.
-    - Remember used bandwidth (both in and out), and publish 15-minute
-      snapshots for the past day into our descriptor.
-    - Be more aggressive about trying to make circuits when the network
-      has changed (e.g. when you unsuspend your laptop).
-    - Check for time skew on http headers; report date in response to
-      "GET /".
-    - If the entrynode config line has only one node, don't pick it as
-      an exitnode.
-    - Add strict{entry|exit}nodes config options. If set to 1, then
-      we refuse to build circuits that don't include the specified entry
-      or exit nodes.
-    - OutboundBindAddress config option, to bind to a specific
-      IP address for outgoing connect()s.
-    - End truncated log entries (e.g. directories) with "[truncated]".
-
-
-Changes in version 0.0.7.3 - 2004-08-12
-  o Stop dnsworkers from triggering an assert failure when you
-    ask them to resolve the host "".
 
 
 Changes in version 0.0.7.2 - 2004-07-07
