@@ -2550,62 +2550,143 @@ Changes in version 0.0.6.1 - 2004-05-06
 
 
 Changes in version 0.0.6 - 2004-05-02
+  [version bump only]
+
+
+Changes in version 0.0.6rc4 - 2004-05-01
+  o Update the built-in dirservers list to use the new directory format
+  o Fix a rare seg fault: if a node offering a hidden service attempts
+    to build a circuit to Alice's rendezvous point and fails before it
+    reaches the last hop, it retries with a different circuit, but
+    then dies.
+  o Handle windows socket errors correctly.
+
+
+Changes in version 0.0.6rc3 - 2004-04-28
+  o Don't expire non-general excess circuits (if we had enough
+    circuits open, we were expiring rendezvous circuits -- even
+    when they had a stream attached. oops.)
+  o Fetch randomness from /dev/urandom better (not via fopen/fread)
+  o Better debugging for tls errors
+  o Some versions of openssl have an SSL_pending function that erroneously
+    returns bytes when there is a non-application record pending.
+  o Set Content-Type on the directory and hidserv descriptor.
+  o Remove IVs from cipher code, since AES-ctr has none.
+  o Win32 fixes. Tor now compiles on win32 with no warnings/errors.
+    o We were using an array of length zero in a few places.
+    o win32's gethostbyname can't resolve an IP to an IP.
+    o win32's close can't close a socket.
+
+
+Changes in version 0.0.6rc2 - 2004-04-26
+  o Fix a bug where we were closing tls connections intermittently.
+    It turns out openssl keeps its errors around -- so if an error
+    happens, and you don't ask about it, and then another openssl
+    operation happens and succeeds, and you ask if there was an error,
+    it tells you about the first error. Fun fun.
+  o Fix a bug that's been lurking since 27 may 03 (!)
+    When passing back a destroy cell, we would use the wrong circ id.
+    'Mostly harmless', but still worth fixing.
+  o Since we don't support truncateds much, don't bother sending them;
+    just close the circ.
+  o check for <machine/limits.h> so we build on NetBSD again (I hope).
+  o don't crash if a conn that sent a begin has suddenly lost its circuit
+    (this was quite rare).
+
+
+Changes in version 0.0.6rc1 - 2004-04-25
+  o We now rotate link (tls context) keys and onion keys.
+  o CREATE cells now include oaep padding, so you can tell
+    if you decrypted them correctly.
+  o Add bandwidthburst to server descriptor.
+  o Directories now say which dirserver signed them.
+  o Use a tor_assert macro that logs failed assertions too.
+
+
+Changes in version 0.0.6pre5 - 2004-04-18
+  o changes from 0.0.6pre4:
+    - make tor build on broken freebsd 5.2 installs
+    - fix a failed assert when you try an intro point, get a nack, and try
+      a second one and it works.
+    - when alice uses a port that the hidden service doesn't accept,
+      it now sends back an end cell (denied by exit policy). otherwise
+      alice would just have to wait to time out.
+    - fix another rare bug: when we had tried all the intro
+      points for a hidden service, we fetched the descriptor
+      again, but we left our introcirc thinking it had already
+      sent an intro, so it kept waiting for a response...
+    - bugfix: when you sleep your hidden-service laptop, as soon
+      as it wakes up it tries to upload a service descriptor, but
+      socketpair fails for some reason (localhost not up yet?).
+      now we simply give up on that upload, and we'll try again later.
+      i'd still like to find the bug though.
+    - if an intro circ waiting for an ack dies before getting one, then
+      count it as a nack
+    - we were reusing stale service descriptors and refetching usable
+      ones. oops.
+
+
+Changes in version 0.0.6pre4 - 2004-04-14
+  o changes from 0.0.6pre3:
+    - when bob fails to connect to the rendezvous point, and his
+      circ didn't fail because of the rendezvous point itself, then
+      he retries a couple of times
+    - we expire introduction and rendezvous circs more thoroughly
+      (sometimes they were hanging around forever)
+    - we expire unattached rendezvous streams that have been around
+      too long (they were sticking around forever).
+    - fix a measly fencepost error that was crashing everybody with
+      a strict glibc.
+
+
+Changes in version 0.0.6pre3 - 2004-04-14
+  o changes from 0.0.6pre2:
+    - make hup work again
+    - fix some memory leaks for dirservers
+    - allow more skew in rendezvous descriptor timestamps, to help
+      handle people like blanu who don't know what time it is
+    - normal circs are 3 hops, but some rend/intro circs are 4, if
+      the initiator doesn't get to choose the last hop
+    - send acks for introductions, so alice can know whether to try
+      again
+    - bob publishes intro points more correctly
+  o changes from 0.0.5:
+    - fix an assert trigger that's been plaguing us since the days
+      of 0.0.2prexx (thanks weasel!)
+    - retry stream correctly when we fail to connect because of
+      exit-policy-reject (should try another) or can't-resolve-address
+      (also should try another, because dns on random internet servers
+      is flaky).
+    - when we hup a dirserver and we've *removed* a server from the
+      approved-routers list, now we remove that server from the
+      in-memory directories too
+
+
+Changes in version 0.0.6pre2 - 2004-04-08
+  o We fixed our base32 implementation. Now it works on all architectures.
+
+
+Changes in version 0.0.6pre1 - 2004-04-08
   o Features:
     - Hidden services and rendezvous points are implemented. Go to
       http://6sxoyfb3h2nvok2d.onion/ for an index of currently available
       hidden services. (This only works via a socks4a proxy such as
       Privoxy, and currently it's quite slow.)
-    - We now rotate link (tls context) keys and onion keys.
-    - CREATE cells now include oaep padding, so you can tell
-      if you decrypted them correctly.
-    - Retry stream correctly when we fail to connect because of
-      exit-policy-reject (should try another) or can't-resolve-address.
-    - When we hup a dirserver and we've *removed* a server from the
-      approved-routers list, now we remove that server from the
-      in-memory directories too.
-    - Add bandwidthburst to server descriptor.
-    - Directories now say which dirserver signed them.
-    - Use a tor_assert macro that logs failed assertions too.
-    - Since we don't support truncateds much, don't bother sending them;
-      just close the circ.
-    - Fetch randomness from /dev/urandom better (not via fopen/fread)
-    - Better debugging for tls errors
-    - Set Content-Type on the directory and hidserv descriptor.
-    - Remove IVs from cipher code, since AES-ctr has none.
-  o Bugfixes:
-    - Fix an assert trigger for exit nodes that's been plaguing us since
-      the days of 0.0.2prexx (thanks weasel!)
-    - Fix a bug where we were closing tls connections intermittently.
-      It turns out openssl keeps its errors around -- so if an error
-      happens, and you don't ask about it, and then another openssl
-      operation happens and succeeds, and you ask if there was an error,
-      it tells you about the first error.
-    - Fix a bug that's been lurking since 27 may 03 (!)
-      When passing back a destroy cell, we would use the wrong circ id.
-    - Don't crash if a conn that sent a begin has suddenly lost its circuit.
-    - Some versions of openssl have an SSL_pending function that erroneously
-      returns bytes when there is a non-application record pending.
-    - Win32 fixes. Tor now compiles on win32 with no warnings/errors.
-      o We were using an array of length zero in a few places.
-      o Win32's gethostbyname can't resolve an IP to an IP.
-      o Win32's close can't close a socket.
-      o Handle windows socket errors correctly.
-  o Portability:
-    - check for <sys/limits.h> so we build on FreeBSD again, and
-      <machine/limits.h> for NetBSD.
 
 
 Changes in version 0.0.5 - 2004-03-30
+  [version bump only]
+
+
+Changes in version 0.0.5rc3 - 2004-03-29
   o Install torrc as torrc.sample -- we no longer clobber your
     torrc. (Woo!)
-  o Fix mangled-state bug in directory fetching (was causing sigpipes).
-  o Only build circuits after we've fetched the directory: clients were
-    using only the directory servers before they'd fetched a directory.
-    This also means longer startup time; so it goes.
-  o Fix an assert trigger where an OP would fail to handshake, and we'd
-    expect it to have a nickname.
-  o Work around a tsocks bug: do a socks reject when AP connection dies
-    early, else tsocks goes into an infinite loop.
+  o Re-enable recommendedversion checking (we broke it in rc2, oops)
+  o Add in a 'notice' log level for things the operator should hear
+    but that aren't warnings
+
+
+Changes in version 0.0.5rc2 - 2004-03-29
   o Hold socks connection open until reply is flushed (if possible)
   o Make exit nodes resolve IPs to IPs immediately, rather than asking
     the dns farm to do it.
@@ -2615,8 +2696,17 @@ Changes in version 0.0.5 - 2004-03-30
   o Give socks 'reject' replies their whole 15s to attempt to flush,
     rather than seeing the 60s timeout and assuming the flush had failed.
   o Clean automake droppings from the cvs repository
-  o Add in a 'notice' log level for things the operator should hear
-    but that aren't warnings
+
+
+Changes in version 0.0.5rc1 - 2004-03-28
+  o Fix mangled-state bug in directory fetching (was causing sigpipes).
+  o Only build circuits after we've fetched the directory: clients were
+    using only the directory servers before they'd fetched a directory.
+    This also means longer startup time; so it goes.
+  o Fix an assert trigger where an OP would fail to handshake, and we'd
+    expect it to have a nickname.
+  o Work around a tsocks bug: do a socks reject when AP connection dies
+    early, else tsocks goes into an infinite loop.
 
 
 Changes in version 0.0.4 - 2004-03-26
