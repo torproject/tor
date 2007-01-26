@@ -8,7 +8,7 @@ man_MANS = tor.1 tor-resolve.1
 
 SUBDIRS = design-paper spec
 
-DIST_SUBDIRS = design-paper
+DIST_SUBDIRS = design-paper spec
 
 website: ../../website/docs/
 	rm -rf website
