@@ -1,10 +1,5 @@
-Changes in version 0.1.2.7-alpha - 2007-??-??
-  o Major bugfixes:
-    - Fix a crash bug in the presence of DNS hijacking (reported by Andrew
-      Del Vecchio).
-    - Previously, we would cache up to 16 old networkstatus documents
-      indefinitely, if they came from nontrusted authorities.  Now we
-      discard them if they are more than 10 days old.
+Changes in version 0.1.2.7-alpha - 2007-01-26
+  o Major bugfixes (rate limiting):
     - Servers decline directory requests much more aggressively when
       they're low on bandwidth. Otherwise they end up queueing more and
       more directory responses, which can't be good for latency.
@@ -13,13 +8,20 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - If our system clock jumps back in time, don't publish a negative
       uptime in the descriptor. Also, don't let the global rate limiting
       buckets go absurdly negative.
+    - Flush local controller connection buffers periodically as we're
+      writing to them, so we avoid queueing 4+ megabytes of data before
+      trying to flush.
+
+  o Major bugfixes (other):
+    - Fix a crash bug in the presence of DNS hijacking (reported by Andrew
+      Del Vecchio).
+    - Previously, we would cache up to 16 old networkstatus documents
+      indefinitely, if they came from nontrusted authorities. Now we
+      discard them if they are more than 10 days old.
     - Detect and reject malformed DNS responses containing circular
       pointer loops.
     - Fix a memory leak when sending a 503 response for a networkstatus
       request.
-    - Flush local controller connection buffers periodically as we're
-      writing to them, so we avoid queueing 4+ megabytes of data before
-      trying to flush.
 
   o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what
@@ -33,23 +35,23 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       days, if the connecting application didn't close them either.
     - Stop using C functions that OpenBSD's linker doesn't like.
     - Detect and reject DNS replies containing IPv4 or IPv6 records with
-      an incorrect number of bytes. (Previously, we would ignore the extra
-      bytes.)
-    - Fix as-yet-unused reverse IPv6 lookup code so it sends nybbles in the
-      correct order.
+      an incorrect number of bytes. (Previously, we would ignore the
+      extra bytes.)
+    - Fix as-yet-unused reverse IPv6 lookup code so it sends nybbles
+      in the correct order.
     - Free memory held in recently-completed DNS lookup attempts on exit.
       This was not a memory leak, but may have been hiding memory leaks.
     - Don't launch requests for descriptors unless we have networkstatuses
-      from at least half of the authorities.  This delays the first download
-      slightly under pathological circumstances, but can prevent us from
-      downloading a bunch of descriptors we don't need.
-    - Do not log IPs with TLS failures for incoming TLS connections.  (Fixes
-      bug 382.)
+      from at least half of the authorities.  This delays the first
+      download slightly under pathological circumstances, but can prevent
+      us from downloading a bunch of descriptors we don't need.
+    - Do not log IPs with TLS failures for incoming TLS
+      connections. (Fixes bug 382.)
 
   o Minor features:
-    - Check for addresses with invalid characters at the exit as well as at
-      the client, and warn less verbosely when they fail.  You can override
-      this by setting ServerDNSAllowNonRFC953Addresses to 1.
+    - Check for addresses with invalid characters at the exit as well
+      as at the client, and warn less verbosely when they fail. You can
+      override this by setting ServerDNSAllowNonRFC953Addresses to 1.
     - Adapt a patch from goodell to let the contrib/exitlist script
       take arguments rather than require direct editing.
     - Inform the server operator when we decide not to advertise a
@@ -57,10 +59,10 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       was confusing Zax, so now we're hopefully more helpful.
 
   o Minor features (controller):
-    - Track reasons for OR connection failure; make these reasons available
-      via the controller interface.  (Patch from Mike Perry.)
-    - Add a SOCKS_BAD_HOSTNAME client status event so controllers can learn
-      when clients are sending malformed hostnames to Tor.
+    - Track reasons for OR connection failure; make these reasons
+      available via the controller interface. (Patch from Mike Perry.)
+    - Add a SOCKS_BAD_HOSTNAME client status event so controllers
+      can learn when clients are sending malformed hostnames to Tor.
     - Clean up documentation for controller status events.
 
 
