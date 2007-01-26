@@ -1,15 +1,12 @@
 
-EXTRA_DIST = tor-spec.txt rend-spec.txt control-spec.txt     \
-             dir-spec.txt socks-extensions.txt path-spec.txt \
-             version-spec.txt address-spec.txt               \
-             website img HACKING                             \
+EXTRA_DIST = website img HACKING                             \
              tor-resolve.1                                   \
              tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
              tor-win32-mingw-creation.txt
 
 man_MANS = tor.1 tor-resolve.1
 
-SUBDIRS = design-paper
+SUBDIRS = design-paper spec
 
 DIST_SUBDIRS = design-paper
 
