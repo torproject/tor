@@ -29,22 +29,10 @@ N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.
 
-  o Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
-
 Items for 0.1.2.x:
-  - weight dir requests by advertised bandwidth? with maybe a lower cutoff
+R - weight dir requests by advertised bandwidth? with maybe a lower cutoff
     than for tor traffic. perhaps also weighted by the expected size of
     the response.
-  o enumerate events of important things that occur in tor, so vidalia can
-    react.
-    o Backend implementation
-    o Actually list all the events (notice and warn log messages are a good
-      place to look.)  Divide messages into categories, perhaps.
-    o Specify general event system
-    o Specify actual events.
-    o Implement or defer remaining events
-    D Implement or defer GETINFO list of current status events.
-    o Clean up relevant bits of control-spec.txt
 
   . Have (and document) a BEGIN_DIR relay cell that means "Connect to your
     directory port."
@@ -54,7 +42,7 @@ R   - turn the received socks addr:port into a digest for setting .exit
 R     - handle connect-dir streams that don't have a chosen_exit_name set.
       o include ORPort in DirServers lines so we can know where to connect.
         list the orport as 0 if it can't handle begin_dir.
-        - List orports of actual dirservers..
+        o List orports of actual dirservers..
 
   - Servers are easy to setup and run: being a relay is about as easy as
     being a client.
@@ -131,15 +119,6 @@ N - DNS improvements
         should abandon.
       - update dir-spec with what we decided for each of these
 
-  o Have a mode that doesn't write to disk much, so we can run Tor on
-    flash memory (e.g. Linksys routers or USB keys).
-    o Add AvoidDiskWrites config option.
-    o only write state file when it's "changed"
-      o crank up the numbers if avoiddiskwrites is on.
-      D some things may not want to get written at all.
-    o stop writing fingerprint every restart
-    D more?
-
 NR. Write path-spec.txt
 
   - Polishing
@@ -150,10 +129,6 @@ NR. Write path-spec.txt
     - Tell people about OSX Uninstaller
     - Quietly document NT Service options
     - Switch canonical win32 compiler to mingw.
-NR  D Get some kind of "meta signing key" to be used solely to sign
-      releases/to certify releases when signed by the right people/
-      to certify sign the right people's keys?  Also use this to cert the SSL
-      key, etc.
     - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
 
@@ -170,16 +145,6 @@ R   - look into "uncounting" bytes spent on local connections, so
       we can bandwidthrate but still have fast downloads.
 R   - "bandwidth classes", for incoming vs initiated-here conns,
       and to give dir conns lower priority.
-    . Write limiting; separate token bucket for write
-      o preemptively give a 503 to some v1 dir requests
-      o preemptively give a 503 to some v2 dir requests
-        o Write function to estimate bytes needed for N descriptors
-          statuses
-      D per-conn write buckets
-      D separate config options for read vs write limiting
-        (It's hard to support read > write, since we need better
-         congestion control to avoid overfull buffers there.  So,
-         defer the whole thing.)
 
   - Forward compatibility fixes
     - Caches should start trying to cache consensus docs?
@@ -204,8 +169,21 @@ Topics to think about during 0.1.2.x development:
   - Design next-version protocol for connections
 
 Deferred from 0.1.2.x:
+  - finish status event implementation and accompanying getinfos
+  - More work on AvoidDiskWrites?
+NR- Get some kind of "meta signing key" to be used solely to sign
+    releases/to certify releases when signed by the right people/
+    to certify sign the right people's keys?  Also use this to cert the SSL
+    key, etc.
+  - per-conn write buckets
+  - separate config options for read vs write limiting
+    (It's hard to support read > write, since we need better
+     congestion control to avoid overfull buffers there.  So,
+     defer the whole thing.)
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
+  - don't do dns hijacking tests if we're reject *:* exit policy?
+    (deferred until 0.1.1.x is less common)
   - Directory guards
   - RAM use in directory authorities.
   - Memory use improvements:
@@ -338,8 +316,6 @@ Minor items for 0.1.2.x as time permits:
 R - add d64 and fp64 along-side d and fp so people can paste status
     entries into a url. since + is a valid base64 char, only allow one
     at a time. spec and then do.
-  D don't do dns hijacking tests if we're reject *:* exit policy?
-    (deferred until 0.1.1.x is less common)
   - When we export something from foo.c file for testing purposes only,
     make a foo_test.h file for test.c to include.
   - The Debian package now uses --verify-config when (re)starting,
