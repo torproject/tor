@@ -3,6 +3,7 @@ Changes in version 0.1.2.7-alpha - 2007-01-26
     - Servers decline directory requests much more aggressively when
       they're low on bandwidth. Otherwise they end up queueing more and
       more directory responses, which can't be good for latency.
+    - But never refuse directory requests from local addresses.
     - Be willing to read or write on local connections (e.g. controller
       connections) even when the global rate limiting buckets are empty.
     - If our system clock jumps back in time, don't publish a negative

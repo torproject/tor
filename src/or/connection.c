@@ -1175,8 +1175,8 @@ connection_bucket_write_limit(connection_t *conn)
 }
 
 /** Return 1 if the global write bucket is low enough that we shouldn't
- * send <b>attempt</b> bytes of low-priority directory stuff out.
- * Else return 0.
+ * send <b>attempt</b> bytes of low-priority directory stuff out to
+ * <b>conn</b>. Else return 0.
 
  * Priority is 1 for v1 requests (directories and running-routers),
  * and 2 for v2 requests (statuses and descriptors). But see FFFF in
@@ -1194,10 +1194,13 @@ connection_bucket_write_limit(connection_t *conn)
  *   that's harder to quantify and harder to keep track of.
  */
 int
-global_write_bucket_low(size_t attempt, int priority)
+global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
 {
   if (authdir_mode(get_options()) && priority>1)
     return 0; /* there's always room to answer v2 if we're an auth dir */
+
+  if (is_internal_IP(conn->addr, 0))
+    return 0; /* local conns don't get limited */
 
   if (global_write_bucket < (int)attempt)
     return 1; /* not enough space no matter the priority */

@@ -1603,7 +1603,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     }
     dlen = deflated ? d->dir_z_len : d->dir_len;
 
-    if (global_write_bucket_low(dlen, 1)) {
+    if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
       log_info(LD_DIRSERV,
                "Client asked for the mirrored directory, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1645,7 +1645,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
       tor_free(url);
       return 0;
     }
-    if (global_write_bucket_low(dlen, 1)) {
+    if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
       log_info(LD_DIRSERV,
                "Client asked for running-routers, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1689,7 +1689,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
       return 0;
     }
     dlen = dirserv_estimate_data_size(dir_fps, 0, deflated);
-    if (global_write_bucket_low(dlen, 2)) {
+    if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
       log_info(LD_DIRSERV,
                "Client asked for network status lists, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
@@ -1758,7 +1758,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
     else {
       dlen = dirserv_estimate_data_size(conn->fingerprint_stack,
                                         1, deflated);
-      if (global_write_bucket_low(dlen, 2)) {
+      if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
         log_info(LD_DIRSERV,
                  "Client asked for server descriptors, but we've been "
                  "writing too many bytes lately. Sending 503 Dir busy.");
