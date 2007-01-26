@@ -1097,6 +1097,15 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
   return 0;
 }
 
+/** Return 1 if we should apply rate limiting to <b>conn</b>,
+ * and 0 otherwise. Right now this just checks if it's an internal
+ * IP address. */
+static int
+connection_is_rate_limited(connection_t *conn)
+{
+  return !is_internal_IP(conn->addr, 0);
+}
+
 extern int global_read_bucket, global_write_bucket;
 
 /** Did our global write bucket run dry last second? If so, we are
@@ -1150,7 +1159,7 @@ connection_bucket_read_limit(connection_t *conn)
     or_connection_t *or_conn = TO_OR_CONN(conn);
     conn_bucket = or_conn->read_bucket;
   }
-  if (is_internal_IP(conn->addr, 0)) {
+  if (!connection_is_rate_limited(conn)) {
     /* be willing to read on local conns even if our buckets are empty */
     return conn_bucket>=0 ? conn_bucket : 1<<14;
   }
@@ -1166,7 +1175,7 @@ connection_bucket_write_limit(connection_t *conn)
                CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
 
-  if (is_internal_IP(conn->addr, 0)) {
+  if (!connection_is_rate_limited(conn)) {
     /* be willing to write to local conns even if our buckets are empty */
     return conn->outbuf_flushlen;
   }
@@ -1199,7 +1208,7 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   if (authdir_mode(get_options()) && priority>1)
     return 0; /* there's always room to answer v2 if we're an auth dir */
 
-  if (is_internal_IP(conn->addr, 0))
+  if (!connection_is_rate_limited(conn))
     return 0; /* local conns don't get limited */
 
   if (global_write_bucket < (int)attempt)
@@ -1549,7 +1558,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     *max_to_read = at_most - n_read;
   }
 
-  if (!is_internal_IP(conn->addr, 0)) {
+  if (connection_is_rate_limited(conn)) {
     /* For non-local IPs, remember if we flushed any bytes over the wire. */
     time_t now = time(NULL);
     if (n_read > 0) {
@@ -1745,7 +1754,7 @@ connection_handle_write(connection_t *conn, int force)
     n_written = (size_t) result;
   }
 
-  if (!is_internal_IP(conn->addr, 0)) {
+  if (connection_is_rate_limited(conn)) {
     /* For non-local IPs, remember if we flushed any bytes over the wire. */
     time_t now = time(NULL);
     if (n_written > 0) {
@@ -1854,7 +1863,7 @@ _connection_write_to_buf_impl(const char *string, size_t len,
       extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
       conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
     } else if (conn->type == CONN_TYPE_CONTROL &&
-               is_internal_IP(conn->addr, 0) &&
+               !connection_is_rate_limited(conn) &&
                conn->outbuf_flushlen-len < 1<<16 &&
                conn->outbuf_flushlen >= 1<<16) {
       /* just try to flush all of it */
