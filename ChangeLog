@@ -277,6 +277,20 @@ Changes in version 0.1.2.5-alpha - 2007-01-06
       controller tries to fetch a networkstatus that doesn't exist.
 
 
+Changes in version 0.1.1.26 - 2006-12-14
+  o Security bugfixes:
+    - Stop sending the HttpProxyAuthenticator string to directory
+      servers when directory connections are tunnelled through Tor.
+    - Clients no longer store bandwidth history in the state file.
+    - Do not log introduction points for hidden services if SafeLogging
+      is set.
+
+  o Minor bugfixes:
+    - Fix an assert failure when a directory authority sets
+      AuthDirRejectUnlisted and then receives a descriptor from an
+      unlisted router (reported by seeess).
+
+
 Changes in version 0.1.2.4-alpha - 2006-12-03
   o Major features:
     - Add support for using natd; this allows FreeBSDs earlier than
@@ -319,6 +333,39 @@ Changes in version 0.1.2.4-alpha - 2006-12-03
       MIPSpro C compiler.
     - Don't corrupt last_guessed_ip in router_new_address_suggestion()
       when we're running as a client.
+
+
+Changes in version 0.1.1.25 - 2006-11-04
+  o Major bugfixes:
+    - When a client asks us to resolve (rather than connect to)
+      an address, and we have a cached answer, give them the cached
+      answer. Previously, we would give them no answer at all.
+    - We were building exactly the wrong circuits when we predict
+      hidden service requirements, meaning Tor would have to build all
+      its circuits on demand.
+    - If none of our live entry guards have a high uptime, but we
+      require a guard with a high uptime, try adding a new guard before
+      we give up on the requirement. This patch should make long-lived
+      connections more stable on average.
+    - When testing reachability of our DirPort, don't launch new
+      tests when there's already one in progress -- unreachable
+      servers were stacking up dozens of testing streams.
+
+  o Security bugfixes:
+    - When the user sends a NEWNYM signal, clear the client-side DNS
+      cache too. Otherwise we continue to act on previous information.
+
+  o Minor bugfixes:
+    - Avoid a memory corruption bug when creating a hash table for
+      the first time.
+    - Avoid possibility of controller-triggered crash when misusing
+      certain commands from a v0 controller on platforms that do not
+      handle printf("%s",NULL) gracefully.
+    - Avoid infinite loop on unexpected controller input.
+    - Don't log spurious warnings when we see a circuit close reason we
+      don't recognize; it's probably just from a newer version of Tor.
+    - Add Vidalia to the OS X uninstaller script, so when we uninstall
+      Tor/Privoxy we also uninstall Vidalia.
 
 
 Changes in version 0.1.2.3-alpha - 2006-10-29
@@ -585,6 +632,40 @@ Changes in version 0.1.2.2-alpha - 2006-10-07
       multiple times.
 
 
+Changes in version 0.1.1.24 - 2006-09-29
+  o Major bugfixes:
+    - Allow really slow clients to not hang up five minutes into their
+      directory downloads (suggested by Adam J. Richter).
+    - Fix major performance regression from 0.1.0.x: instead of checking
+      whether we have enough directory information every time we want to
+      do something, only check when the directory information has changed.
+      This should improve client CPU usage by 25-50%.
+    - Don't crash if, after a server has been running for a while,
+      it can't resolve its hostname.
+    - When a client asks us to resolve (not connect to) an address,
+      and we have a cached answer, give them the cached answer.
+      Previously, we would give them no answer at all.
+
+  o Minor bugfixes:
+    - Allow Tor to start when RunAsDaemon is set but no logs are set.
+    - Don't crash when the controller receives a third argument to an
+      "extendcircuit" request.
+    - Controller protocol fixes: fix encoding in "getinfo addr-mappings"
+      response; fix error code when "getinfo dir/status/" fails.
+    - Fix configure.in to not produce broken configure files with
+      more recent versions of autoconf. Thanks to Clint for his auto*
+      voodoo.
+    - Fix security bug on NetBSD that could allow someone to force
+      uninitialized RAM to be sent to a server's DNS resolver. This
+      only affects NetBSD and other platforms that do not bounds-check
+      tolower().
+    - Warn user when using libevent 1.1a or earlier with win32 or kqueue
+      methods: these are known to be buggy.
+    - If we're a directory mirror and we ask for "all" network status
+      documents, we would discard status documents from authorities
+      we don't recognize.
+
+
 Changes in version 0.1.2.1-alpha - 2006-08-27
   o Major features:
     - Add "eventdns" async dns library from Adam Langley, tweaked to
@@ -705,87 +786,6 @@ Changes in version 0.1.2.1-alpha - 2006-08-27
       throw out everything waiting on the buffer in between socks
       handshake phases, since they can't possibly (so the theory
       goes) have predicted what we plan to respond to them.
-
-
-Changes in version 0.1.1.26 - 2006-12-14
-  o Security bugfixes:
-    - Stop sending the HttpProxyAuthenticator string to directory
-      servers when directory connections are tunnelled through Tor.
-    - Clients no longer store bandwidth history in the state file.
-    - Do not log introduction points for hidden services if SafeLogging
-      is set.
-
-  o Minor bugfixes:
-    - Fix an assert failure when a directory authority sets
-      AuthDirRejectUnlisted and then receives a descriptor from an
-      unlisted router (reported by seeess).
-
-
-Changes in version 0.1.1.25 - 2006-11-04
-  o Major bugfixes:
-    - When a client asks us to resolve (rather than connect to)
-      an address, and we have a cached answer, give them the cached
-      answer. Previously, we would give them no answer at all.
-    - We were building exactly the wrong circuits when we predict
-      hidden service requirements, meaning Tor would have to build all
-      its circuits on demand.
-    - If none of our live entry guards have a high uptime, but we
-      require a guard with a high uptime, try adding a new guard before
-      we give up on the requirement. This patch should make long-lived
-      connections more stable on average.
-    - When testing reachability of our DirPort, don't launch new
-      tests when there's already one in progress -- unreachable
-      servers were stacking up dozens of testing streams.
-
-  o Security bugfixes:
-    - When the user sends a NEWNYM signal, clear the client-side DNS
-      cache too. Otherwise we continue to act on previous information.
-
-  o Minor bugfixes:
-    - Avoid a memory corruption bug when creating a hash table for
-      the first time.
-    - Avoid possibility of controller-triggered crash when misusing
-      certain commands from a v0 controller on platforms that do not
-      handle printf("%s",NULL) gracefully.
-    - Avoid infinite loop on unexpected controller input.
-    - Don't log spurious warnings when we see a circuit close reason we
-      don't recognize; it's probably just from a newer version of Tor.
-    - Add Vidalia to the OS X uninstaller script, so when we uninstall
-      Tor/Privoxy we also uninstall Vidalia.
-
-
-Changes in version 0.1.1.24 - 2006-09-29
-  o Major bugfixes:
-    - Allow really slow clients to not hang up five minutes into their
-      directory downloads (suggested by Adam J. Richter).
-    - Fix major performance regression from 0.1.0.x: instead of checking
-      whether we have enough directory information every time we want to
-      do something, only check when the directory information has changed.
-      This should improve client CPU usage by 25-50%.
-    - Don't crash if, after a server has been running for a while,
-      it can't resolve its hostname.
-    - When a client asks us to resolve (not connect to) an address,
-      and we have a cached answer, give them the cached answer.
-      Previously, we would give them no answer at all.
-
-  o Minor bugfixes:
-    - Allow Tor to start when RunAsDaemon is set but no logs are set.
-    - Don't crash when the controller receives a third argument to an
-      "extendcircuit" request.
-    - Controller protocol fixes: fix encoding in "getinfo addr-mappings"
-      response; fix error code when "getinfo dir/status/" fails.
-    - Fix configure.in to not produce broken configure files with
-      more recent versions of autoconf. Thanks to Clint for his auto*
-      voodoo.
-    - Fix security bug on NetBSD that could allow someone to force
-      uninitialized RAM to be sent to a server's DNS resolver. This
-      only affects NetBSD and other platforms that do not bounds-check
-      tolower().
-    - Warn user when using libevent 1.1a or earlier with win32 or kqueue
-      methods: these are known to be buggy.
-    - If we're a directory mirror and we ask for "all" network status
-      documents, we would discard status documents from authorities
-      we don't recognize.
 
 
 Changes in version 0.1.1.23 - 2006-07-30
