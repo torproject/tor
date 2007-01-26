@@ -2054,7 +2054,7 @@ Changes in version 0.0.9.2 - 2005-01-04
       now that we're shipping binary distributions more regularly.
 
 
-Changes in version 0.0.9.1 - 2004-12-15
+Changes in version 0.0.9.1 - 2004-12-16
   o Bugfixes on 0.0.9:
     - Make hibernation actually work.
     - Make HashedControlPassword config option work.
@@ -2063,30 +2063,44 @@ Changes in version 0.0.9.1 - 2004-12-15
 
 
 Changes in version 0.0.9 - 2004-12-12
-  o Bugfixes on 0.0.8.1 (Crashes and asserts):
-    - Catch and ignore SIGXFSZ signals when log files exceed 2GB; our
-      write() call will fail and we handle it there.
-    - When we run out of disk space, or other log writing error, don't
-      crash. Just stop logging to that log and continue.
+  o Cleanups:
+    - Clean up manpage and torrc.sample file.
+    - Clean up severities and text of log warnings.
+  o Mistakes:
+    - Make servers trigger an assert when they enter hibernation.
+
+
+Changes in version 0.0.9rc7 - 2004-12-08
+  o Bugfixes on 0.0.9rc:
+    - Fix a stack-trashing crash when an exit node begins hibernating.
+    - Avoid looking at unallocated memory while considering which
+      ports we need to build circuits to cover.
+    - Stop a sigpipe: when an 'end' cell races with eof from the app,
+      we shouldn't hold-open-until-flush if the eof arrived first.
+    - Fix a bug with init_cookie_authentication() in the controller.
+    - When recommending new-format log lines, if the upper bound is
+      LOG_ERR, leave it implicit.
+
+  o Bugfixes on 0.0.8.1:
+    - Fix a whole slew of memory leaks.
     - Fix isspace() and friends so they still make Solaris happy
       but also so they don't trigger asserts on win32.
-    - Fix assert failure on malformed socks4a requests.
-    - Fix an assert bug where a hidden service provider would fail if
-      the first hop of his rendezvous circuit was down.
-    - Better handling of size_t vs int, so we're more robust on 64
-      bit platforms.
-
-  o Bugfixes on 0.0.8.1 (Win32):
-    - Make windows sockets actually non-blocking (oops), and handle
-      win32 socket errors better.
     - Fix parse_iso_time on platforms without strptime (eg win32).
+    - win32: tolerate extra "readable" events better.
     - win32: when being multithreaded, leave parent fdarray open.
-    - Better handling of winsock includes on non-MSV win32 compilers.
-    - Change our file IO stuff (especially wrt OpenSSL) so win32 is
-      happier.
     - Make unit tests work on win32.
 
-  o Bugfixes on 0.0.8.1 (Path selection and streams):
+
+Changes in version 0.0.9rc6 - 2004-12-06
+  o Bugfixes on 0.0.9pre:
+    - Clean up some more integer underflow opportunities (not exploitable
+      we think).
+    - While hibernating, hup should not regrow our listeners.
+    - Send an end to the streams we close when we hibernate, rather
+      than just chopping them off.
+    - React to eof immediately on non-open edge connections.
+
+  o Bugfixes on 0.0.8.1:
     - Calculate timeout for waiting for a connected cell from the time
       we sent the begin cell, not from the time the stream started. If
       it took a long time to establish the circuit, we would time out
@@ -2094,75 +2108,8 @@ Changes in version 0.0.9 - 2004-12-12
     - Fix router_compare_addr_to_addr_policy: it was not treating a port
       of * as always matching, so we were picking reject *:* nodes as
       exit nodes too. Oops.
-    - When read() failed on a stream, we would close it without sending
-      back an end. So 'connection refused' would simply be ignored and
-      the user would get no response.
-    - Stop a sigpipe: when an 'end' cell races with eof from the app,
-      we shouldn't hold-open-until-flush if the eof arrived first.
-    - Let resolve conns retry/expire also, rather than sticking around
-      forever.
-    - Fix more dns related bugs: send back resolve_failed and end cells
-      more reliably when the resolve fails, rather than closing the
-      circuit and then trying to send the cell. Also attach dummy resolve
-      connections to a circuit *before* calling dns_resolve(), to fix
-      a bug where cached answers would never be sent in RESOLVED cells.
 
-  o Bugfixes on 0.0.8.1 (Circuits):
-    - Finally fix a bug that's been plaguing us for a year:
-      With high load, circuit package window was reaching 0. Whenever
-      we got a circuit-level sendme, we were reading a lot on each
-      socket, but only writing out a bit. So we would eventually reach
-      eof. This would be noticed and acted on even when there were still
-      bytes sitting in the inbuf.
-    - Use identity comparison, not nickname comparison, to choose which
-      half of circuit-ID-space each side gets to use. This is needed
-      because sometimes we think of a router as a nickname, and sometimes
-      as a hex ID, and we can't predict what the other side will do.
-
-  o Bugfixes on 0.0.8.1 (Other):
-    - Fix a whole slew of memory leaks.
-    - Disallow NDEBUG. We don't ever want anybody to turn off debug.
-    - If we are using select, make sure we stay within FD_SETSIZE.
-    - When poll() is interrupted, we shouldn't believe the revents values.
-    - Add a FAST_SMARTLIST define to optionally inline smartlist_get
-      and smartlist_len, which are two major profiling offenders.
-    - If do_hup fails, actually notice.
-    - Flush the log file descriptor after we print "Tor opening log file",
-      so we don't see those messages days later.
-    - Hidden service operators now correctly handle version 1 style
-      INTRODUCE1 cells (nobody generates them still, so not a critical
-      bug).
-    - Handle more errnos from accept() without closing the listener.
-      Some OpenBSD machines were closing their listeners because
-      they ran out of file descriptors.
-    - Some people had wrapped their tor client/server in a script
-      that would restart it whenever it died. This did not play well
-      with our "shut down if your version is obsolete" code. Now people
-      don't fetch a new directory if their local cached version is
-      recent enough.
-    - Make our autogen.sh work on ksh as well as bash.
-    - Better torrc example lines for dirbindaddress and orbindaddress.
-    - Improved bounds checking on parsed ints (e.g. config options and
-      the ones we find in directories.)
-    - Stop using separate defaults for no-config-file and
-      empty-config-file. Now you have to explicitly turn off SocksPort,
-      if you don't want it open.
-    - We were starting to daemonize before we opened our logs, so if
-      there were any problems opening logs, we would complain to stderr,
-      which wouldn't work, and then mysteriously exit.
-    - If a verified OR connects to us before he's uploaded his descriptor,
-      or we verify him and hup but he still has the original TLS
-      connection, then conn->nickname is still set like he's unverified.
-
-  o Code security improvements, inspired by Ilja:
-    - tor_snprintf wrapper over snprintf with consistent (though not C99)
-      overflow behavior.
-    - Replace sprintf with tor_snprintf. (I think they were all safe, but
-      hey.)
-    - Replace strcpy/strncpy with strlcpy in more places.
-    - Avoid strcat; use tor_snprintf or strlcat instead.
-
-  o Features (circuits and streams):
+  o Features:
     - New circuit building strategy: keep a list of ports that we've
       used in the past 6 hours, and always try to have 2 circuits open
       or on the way that will handle each such port. Seed us with port
@@ -2173,26 +2120,84 @@ Changes in version 0.0.9 - 2004-12-12
     - If you haven't used a clean circuit in an hour, throw it away,
       just to be on the safe side. (This means after 6 hours a totally
       unused Tor client will have no circuits open.)
+
+
+Changes in version 0.0.9rc5 - 2004-12-01
+  o Bugfixes on 0.0.8.1:
+    - Disallow NDEBUG. We don't ever want anybody to turn off debug.
+    - Let resolve conns retry/expire also, rather than sticking around
+      forever.
+    - If we are using select, make sure we stay within FD_SETSIZE.
+
+  o Bugfixes on 0.0.9pre:
+    - Fix integer underflow in tor_vsnprintf() that may be exploitable,
+      but doesn't seem to be currently; thanks to Ilja van Sprundel for
+      finding it.
+    - If anybody set DirFetchPostPeriod, give them StatusFetchPeriod
+      instead.  Impose minima and maxima for all *Period options; impose
+      even tighter maxima for fetching if we are a caching dirserver.
+      Clip rather than rejecting.
+    - Fetch cached running-routers from servers that serve it (that is,
+      authdirservers and servers running 0.0.9rc5-cvs or later.)
+
+  o Features:
+    - Accept *:706 (silc) in default exit policy.
+    - Implement new versioning format for post 0.1.
     - Support "foo.nickname.exit" addresses, to let Alice request the
       address "foo" as viewed by exit node "nickname". Based on a patch
-      from Geoff Goodell.
-    - If your requested entry or exit node has advertised bandwidth 0,
-      pick it anyway.
-    - Be more greedy about filling up relay cells -- we try reading again
-      once we've processed the stuff we read, in case enough has arrived
-      to fill the last cell completely.
-    - Refuse application socks connections to port 0.
-    - Use only 0.0.9pre1 and later servers for resolve cells.
+      by Geoff Goodell.
+    - Make tor --version --version dump the cvs Id of every file.
 
-  o Features (bandwidth):
-    - Hibernation: New config option "AccountingMax" lets you
-      set how many bytes per month (in each direction) you want to
-      allow your server to consume. Rather than spreading those
-      bytes out evenly over the month, we instead hibernate for some
-      of the month and pop up at a deterministic time, work until
-      the bytes are consumed, then hibernate again. Config option
-      "MonthlyAccountingStart" lets you specify which day of the month
-      your billing cycle starts on.
+
+Changes in version 0.0.9rc4 - 2004-11-28
+  o Bugfixes on 0.0.8.1:
+    - Make windows sockets actually non-blocking (oops), and handle
+      win32 socket errors better.
+
+  o Bugfixes on 0.0.9rc1:
+    - Actually catch the -USR2 signal.
+
+
+Changes in version 0.0.9rc3 - 2004-11-25
+  o Bugfixes on 0.0.8.1:
+    - Flush the log file descriptor after we print "Tor opening log file",
+      so we don't see those messages days later.
+
+  o Bugfixes on 0.0.9rc1:
+    - Make tor-resolve work again.
+    - Avoid infinite loop in tor-resolve if tor hangs up on it.
+    - Fix an assert trigger for clients/servers handling resolves.
+
+
+Changes in version 0.0.9rc2 - 2004-11-24
+  o Bugfixes on 0.0.9rc1:
+    - I broke socks5 support while fixing the eof bug.
+    - Allow unitless bandwidths and intervals; they default to bytes
+      and seconds.
+    - New servers don't start out hibernating; they are active until
+      they run out of bytes, so they have a better estimate of how
+      long it takes, and so their operators can know they're working.
+
+
+Changes in version 0.0.9rc1 - 2004-11-23
+  o Bugfixes on 0.0.8.1:
+    - Finally fix a bug that's been plaguing us for a year:
+      With high load, circuit package window was reaching 0. Whenever
+      we got a circuit-level sendme, we were reading a lot on each
+      socket, but only writing out a bit. So we would eventually reach
+      eof. This would be noticed and acted on even when there were still
+      bytes sitting in the inbuf.
+    - When poll() is interrupted, we shouldn't believe the revents values.
+
+  o Bugfixes on 0.0.9pre6:
+    - Fix hibernate bug that caused pre6 to be broken.
+    - Don't keep rephist info for routers that haven't had activity for
+      24 hours. (This matters now that clients have keys, since we track
+      them too.)
+    - Never call close_temp_logs while validating log options.
+    - Fix backslash-escaping on tor.sh.in and torctl.in.
+
+  o Features:
     - Implement weekly/monthly/daily accounting: now you specify your
       hibernation properties by
       AccountingMax N bytes|KB|MB|GB|TB
@@ -2200,19 +2205,203 @@ Changes in version 0.0.9 - 2004-12-12
         Defaults to "month 1 0:00".
     - Let bandwidth and interval config options be specified as 5 bytes,
       kb, kilobytes, etc; and as seconds, minutes, hours, days, weeks.
+    - kill -USR2 now moves all logs to loglevel debug (kill -HUP to
+      get back to normal.)
+    - If your requested entry or exit node has advertised bandwidth 0,
+      pick it anyway.
+    - Be more greedy about filling up relay cells -- we try reading again
+      once we've processed the stuff we read, in case enough has arrived
+      to fill the last cell completely.
+    - Apply NT service patch from Osamu Fujino. Still needs more work.
 
-  o Features (directories):
+
+Changes in version 0.0.9pre6 - 2004-11-15
+  o Bugfixes on 0.0.8.1:
+    - Fix assert failure on malformed socks4a requests.
+    - Use identity comparison, not nickname comparison, to choose which
+      half of circuit-ID-space each side gets to use. This is needed
+      because sometimes we think of a router as a nickname, and sometimes
+      as a hex ID, and we can't predict what the other side will do.
+    - Catch and ignore SIGXFSZ signals when log files exceed 2GB; our
+      write() call will fail and we handle it there.
+    - Add a FAST_SMARTLIST define to optionally inline smartlist_get
+      and smartlist_len, which are two major profiling offenders.
+
+  o Bugfixes on 0.0.9pre5:
+    - Fix a bug in read_all that was corrupting config files on windows.
+    - When we're raising the max number of open file descriptors to
+      'unlimited', don't log that we just raised it to '-1'.
+    - Include event code with events, as required by control-spec.txt.
+    - Don't give a fingerprint when clients do --list-fingerprint:
+      it's misleading, because it will never be the same again.
+    - Stop using strlcpy in tor_strndup, since it was slowing us
+      down a lot.
+    - Remove warn on startup about missing cached-directory file.
+    - Make kill -USR1 work again.
+    - Hibernate if we start tor during the "wait for wakeup-time" phase
+      of an accounting interval. Log our hibernation plans better.
+    - Authoritative dirservers now also cache their directory, so they
+      have it on start-up.
+
+  o Features:
+    - Fetch running-routers; cache running-routers; compress
+      running-routers; serve compressed running-routers.z
+    - Add NSI installer script contributed by J Doe.
+    - Commit VC6 and VC7 workspace/project files.
+    - Commit a tor.spec for making RPM files, with help from jbash.
+    - Add contrib/torctl.in contributed by Glenn Fink.
+    - Implement the control-spec's SAVECONF command, to write your
+      configuration to torrc.
+    - Get cookie authentication for the controller closer to working.
+    - Include control-spec.txt in the tarball.
+    - When set_conf changes our server descriptor, upload a new copy.
+      But don't upload it too often if there are frequent changes.
+    - Document authentication config in man page, and document signals
+      we catch.
+    - Clean up confusing parts of man page and torrc.sample.
+    - Make expand_filename handle ~ and ~username.
+    - Use autoconf to enable largefile support where necessary. Use
+      ftello where available, since ftell can fail at 2GB.
+    - Distinguish between TOR_TLS_CLOSE and TOR_TLS_ERROR, so we can
+      log more informatively.
+    - Give a slightly more useful output for "tor -h".
+    - Refuse application socks connections to port 0.
+    - Check clock skew for verified servers, but allow unverified
+      servers and clients to have any clock skew.
+    - Break DirFetchPostPeriod into:
+      - DirFetchPeriod for fetching full directory,
+      - StatusFetchPeriod for fetching running-routers,
+      - DirPostPeriod for posting server descriptor,
+      - RendPostPeriod for posting hidden service descriptors.
+    - Make sure the hidden service descriptors are at a random offset
+      from each other, to hinder linkability.
+
+
+Changes in version 0.0.9pre5 - 2004-11-09
+  o Bugfixes on 0.0.9pre4:
+    - Fix a seg fault in unit tests (doesn't affect main program).
+    - Fix an assert bug where a hidden service provider would fail if
+      the first hop of his rendezvous circuit was down.
+    - Hidden service operators now correctly handle version 1 style
+      INTRODUCE1 cells (nobody generates them still, so not a critical
+      bug).
+    - If do_hup fails, actually notice.
+    - Handle more errnos from accept() without closing the listener.
+      Some OpenBSD machines were closing their listeners because
+      they ran out of file descriptors.
+    - Send resolve cells to exit routers that are running a new
+      enough version of the resolve code to work right.
+    - Better handling of winsock includes on non-MSV win32 compilers.
+    - Some people had wrapped their tor client/server in a script
+      that would restart it whenever it died. This did not play well
+      with our "shut down if your version is obsolete" code. Now people
+      don't fetch a new directory if their local cached version is
+      recent enough.
+    - Make our autogen.sh work on ksh as well as bash.
+
+  o Major Features:
+    - Hibernation: New config option "AccountingMaxKB" lets you
+      set how many KBytes per month you want to allow your server to
+      consume. Rather than spreading those bytes out evenly over the
+      month, we instead hibernate for some of the month and pop up
+      at a deterministic time, work until the bytes are consumed, then
+      hibernate again. Config option "MonthlyAccountingStart" lets you
+      specify which day of the month your billing cycle starts on.
+    - Control interface: a separate program can now talk to your
+      client/server over a socket, and get/set config options, receive
+      notifications of circuits and streams starting/finishing/dying,
+      bandwidth used, etc. The next step is to get some GUIs working.
+      Let us know if you want to help out. See doc/control-spec.txt .
+    - Ship a contrib/tor-control.py as an example script to interact
+      with the control port.
+    - "tor --hash-password zzyxz" will output a salted password for
+      use in authenticating to the control interface.
+    - New log format in config:
+      "Log minsev[-maxsev] stdout|stderr|syslog" or
+      "Log minsev[-maxsev] file /var/foo"
+
+  o Minor Features:
+    - DirPolicy config option, to let people reject incoming addresses
+      from their dirserver.
+    - "tor --list-fingerprint" will list your identity key fingerprint
+      and then exit.
+    - Add "pass" target for RedirectExit, to make it easier to break
+      out of a sequence of RedirectExit rules.
+    - Clients now generate a TLS cert too, in preparation for having
+      them act more like real nodes.
+    - Ship src/win32/ in the tarball, so people can use it to build.
+    - Make old win32 fall back to CWD if SHGetSpecialFolderLocation
+      is broken.
     - New "router-status" line in directory, to better bind each verified
       nickname to its identity key.
-    - Clients can ask dirservers for /dir.z to get a compressed version
-      of the directory. Only works for servers running 0.0.9, of course.
-    - Make clients cache directories and use them to seed their router
-      lists at startup. This means clients have a datadir again.
-    - Respond to content-encoding headers by trying to uncompress as
-      appropriate.
-    - Clients and servers now fetch running-routers; cache
-      running-routers; compress running-routers; serve compressed
-      running-routers.z
+    - Deprecate unofficial config option abbreviations, and abbreviations
+      not on the command line.
+    - Add a pure-C tor-resolve implementation.
+    - Use getrlimit and friends to ensure we can reach MaxConn (currently
+      1024) file descriptors.
+
+  o Code security improvements, inspired by Ilja:
+    - Replace sprintf with snprintf. (I think they were all safe, but
+      hey.)
+    - Replace strcpy/strncpy with strlcpy in more places.
+    - Avoid strcat; use snprintf or strlcat instead.
+    - snprintf wrapper with consistent (though not C99) overflow behavior.
+
+
+Changes in version 0.0.9pre4 - 2004-10-17
+  o Bugfixes on 0.0.9pre3:
+    - If the server doesn't specify an exit policy, use the real default
+      exit policy, not reject *:*.
+    - Ignore fascistfirewall when uploading/downloading hidden service
+      descriptors, since we go through Tor for those; and when using
+      an HttpProxy, since we assume it can reach them all.
+    - When looking for an authoritative dirserver, use only the ones
+      configured at boot. Don't bother looking in the directory.
+    - The rest of the fix for get_default_conf_file() on older win32.
+    - Make 'Routerfile' config option obsolete.
+
+  o Features:
+    - New 'MyFamily nick1,...' config option for a server to
+      specify other servers that shouldn't be used in the same circuit
+      with it. Only believed if nick1 also specifies us.
+    - New 'NodeFamily nick1,nick2,...' config option for a client to
+      specify nodes that it doesn't want to use in the same circuit.
+    - New 'Redirectexit pattern address:port' config option for a
+      server to redirect exit connections, e.g. to a local squid.
+
+
+Changes in version 0.0.9pre3 - 2004-10-13
+  o Bugfixes on 0.0.8.1:
+    - Better torrc example lines for dirbindaddress and orbindaddress.
+    - Improved bounds checking on parsed ints (e.g. config options and
+      the ones we find in directories.)
+    - Better handling of size_t vs int, so we're more robust on 64
+      bit platforms.
+    - Fix the rest of the bug where a newly started OR would appear
+      as unverified even after we've added his fingerprint and hupped
+      the dirserver.
+    - Fix a bug from 0.0.7: when read() failed on a stream, we would
+      close it without sending back an end. So 'connection refused'
+      would simply be ignored and the user would get no response.
+
+  o Bugfixes on 0.0.9pre2:
+    - Serving the cached-on-disk directory to people is bad. We now
+      provide no directory until we've fetched a fresh one.
+    - Workaround for bug on windows where cached-directories get crlf
+      corruption.
+    - Make get_default_conf_file() work on older windows too.
+    - If we write a *:* exit policy line in the descriptor, don't write
+      any more exit policy lines.
+
+  o Features:
+    - Use only 0.0.9pre1 and later servers for resolve cells.
+    - Make the dirservers file obsolete.
+      - Include a dir-signing-key token in directories to tell the
+        parsing entity which key is being used to sign.
+      - Remove the built-in bulky default dirservers string.
+      - New config option "Dirserver %s:%d [fingerprint]", which can be
+        repeated as many times as needed. If no dirservers specified,
+        default to moria1,moria2,tor26.
     - Make moria2 advertise a dirport of 80, so people behind firewalls
       will be able to get a directory.
     - Http proxy support
@@ -2223,94 +2412,6 @@ Changes in version 0.0.9 - 2004-12-12
         This way we can one day coexist peacefully with apache.
       - Clients specify a "Host: %s%d" http header, to be compatible
         with more proxies, and so running squid on an exit node can work.
-    - Protect dirservers from overzealous descriptor uploading -- wait
-      10 seconds after directory gets dirty, before regenerating.
-
-  o Features (packages and install):
-    - Add NSI installer contributed by J Doe.
-    - Apply NT service patch from Osamu Fujino. Still needs more work.
-    - Commit VC6 and VC7 workspace/project files.
-    - Commit a tor.spec for making RPM files, with help from jbash.
-    - Add contrib/torctl.in contributed by Glenn Fink.
-    - Make expand_filename handle ~ and ~username.
-    - Use autoconf to enable largefile support where necessary. Use
-      ftello where available, since ftell can fail at 2GB.
-    - Ship src/win32/ in the tarball, so people can use it to build.
-    - Make old win32 fall back to CWD if SHGetSpecialFolderLocation
-      is broken.
-
-  o Features (ui controller):
-    - Control interface: a separate program can now talk to your
-      client/server over a socket, and get/set config options, receive
-      notifications of circuits and streams starting/finishing/dying,
-      bandwidth used, etc. The next step is to get some GUIs working.
-      Let us know if you want to help out. See doc/control-spec.txt .
-    - Ship a contrib/tor-control.py as an example script to interact
-      with the control port.
-    - "tor --hash-password zzyxz" will output a salted password for
-      use in authenticating to the control interface.
-    - Implement the control-spec's SAVECONF command, to write your
-      configuration to torrc.
-    - Get cookie authentication for the controller closer to working.
-    - When set_conf changes our server descriptor, upload a new copy.
-      But don't upload it too often if there are frequent changes.
-
-  o Features (config and command-line):
-    - Deprecate unofficial config option abbreviations, and abbreviations
-      not on the command line.
-    - Configuration infrastructure support for warning on obsolete
-      options.
-    - Give a slightly more useful output for "tor -h".
-    - Break DirFetchPostPeriod into:
-      - DirFetchPeriod for fetching full directory,
-      - StatusFetchPeriod for fetching running-routers,
-      - DirPostPeriod for posting server descriptor,
-      - RendPostPeriod for posting hidden service descriptors.
-    - New log format in config:
-      "Log minsev[-maxsev] stdout|stderr|syslog" or
-      "Log minsev[-maxsev] file /var/foo"
-    - DirPolicy config option, to let people reject incoming addresses
-      from their dirserver.
-    - "tor --list-fingerprint" will list your identity key fingerprint
-      and then exit.
-    - Make tor --version --version dump the cvs Id of every file.
-    - New 'MyFamily nick1,...' config option for a server to
-      specify other servers that shouldn't be used in the same circuit
-      with it. Only believed if nick1 also specifies us.
-    - New 'NodeFamily nick1,nick2,...' config option for a client to
-      specify nodes that it doesn't want to use in the same circuit.
-    - New 'Redirectexit pattern address:port' config option for a
-      server to redirect exit connections, e.g. to a local squid.
-    - Add "pass" target for RedirectExit, to make it easier to break
-      out of a sequence of RedirectExit rules.
-    - Make the dirservers file obsolete.
-      - Include a dir-signing-key token in directories to tell the
-        parsing entity which key is being used to sign.
-      - Remove the built-in bulky default dirservers string.
-      - New config option "Dirserver %s:%d [fingerprint]", which can be
-        repeated as many times as needed. If no dirservers specified,
-        default to moria1,moria2,tor26.
-      - Make 'Routerfile' config option obsolete.
-    - Discourage people from setting their dirfetchpostperiod more often
-      than once per minute.
-
-  o Features (other):
-    - kill -USR2 now moves all logs to loglevel debug (kill -HUP to
-      get back to normal.)
-    - Accept *:706 (silc) in default exit policy.
-    - Implement new versioning format for post 0.1.
-    - Distinguish between TOR_TLS_CLOSE and TOR_TLS_ERROR, so we can
-      log more informatively.
-    - Check clock skew for verified servers, but allow unverified
-      servers and clients to have any clock skew.
-    - Make sure the hidden service descriptors are at a random offset
-      from each other, to hinder linkability.
-    - Clients now generate a TLS cert too, in preparation for having
-      them act more like real nodes.
-    - Add a pure-C tor-resolve implementation.
-    - Use getrlimit and friends to ensure we can reach MaxConn (currently
-      1024) file descriptors.
-    - Raise the max dns workers from 50 to 100.
 
 
 Changes in version 0.0.8.1 - 2004-10-13
@@ -2330,6 +2431,59 @@ Changes in version 0.0.8.1 - 2004-10-13
     - Fix an assert trigger: sometimes launching circuits can fail
       immediately, e.g. because too many circuits have failed recently.
     - Fix a compile warning on 64 bit platforms.
+
+
+Changes in version 0.0.9pre2 - 2004-10-03
+  o Bugfixes:
+    - Make fetching a cached directory work for 64-bit platforms too.
+    - Make zlib.h a required header, not an optional header.
+
+
+Changes in version 0.0.9pre1 - 2004-10-01
+  o Bugfixes:
+    - Stop using separate defaults for no-config-file and
+      empty-config-file. Now you have to explicitly turn off SocksPort,
+      if you don't want it open.
+    - Fix a bug in OutboundBindAddress so it (hopefully) works.
+    - Improve man page to mention more of the 0.0.8 features.
+    - Fix a rare seg fault for people running hidden services on
+      intermittent connections.
+    - Change our file IO stuff (especially wrt OpenSSL) so win32 is
+      happier.
+    - Fix more dns related bugs: send back resolve_failed and end cells
+      more reliably when the resolve fails, rather than closing the
+      circuit and then trying to send the cell. Also attach dummy resolve
+      connections to a circuit *before* calling dns_resolve(), to fix
+      a bug where cached answers would never be sent in RESOLVED cells.
+    - When we run out of disk space, or other log writing error, don't
+      crash. Just stop logging to that log and continue.
+    - We were starting to daemonize before we opened our logs, so if
+      there were any problems opening logs, we would complain to stderr,
+      which wouldn't work, and then mysteriously exit.
+    - Fix a rare bug where sometimes a verified OR would connect to us
+      before he'd uploaded his descriptor, which would cause us to
+      assign conn->nickname as though he's unverified. Now we look through
+      the fingerprint list to see if he's there.
+    - Fix a rare assert trigger, where routerinfos for entries in
+      our cpath would expire while we're building the path.
+
+  o Features:
+    - Clients can ask dirservers for /dir.z to get a compressed version
+      of the directory. Only works for servers running 0.0.9, of course.
+    - Make clients cache directories and use them to seed their router
+      lists at startup. This means clients have a datadir again.
+    - Configuration infrastructure support for warning on obsolete
+      options.
+    - Respond to content-encoding headers by trying to uncompress as
+      appropriate.
+    - Reply with a deflated directory when a client asks for "dir.z".
+      We could use allow-encodings instead, but allow-encodings isn't
+      specified in HTTP 1.0.
+    - Raise the max dns workers from 50 to 100.
+    - Discourage people from setting their dirfetchpostperiod more often
+      than once per minute.
+    - Protect dirservers from overzealous descriptor uploading -- wait
+      10 seconds after directory gets dirty, before regenerating.
 
 
 Changes in version 0.0.8 - 2004-08-25
