@@ -1332,7 +1332,8 @@ should_generate_v2_networkstatus(void)
  * generate_v2_networkstatus */
 static uint32_t stable_uptime = 0; /* start at a safe value */
 static uint32_t fast_bandwidth = 0;
-static uint32_t guard_bandwidth = 0;
+static uint32_t guard_bandwidth_including_exits = 0;
+static uint32_t guard_bandwidth_excluding_exits = 0;
 static uint64_t total_bandwidth = 0;
 static uint64_t total_exit_bandwidth = 0;
 
@@ -1386,14 +1387,21 @@ _compare_uint32(const void **a, const void **b)
 static void
 dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
-  smartlist_t *uptimes, *bandwidths;
+  smartlist_t *uptimes, *bandwidths, *bandwidths_excluding_exits;
   time_t now = time(NULL);
+
+  /* initialize these all here, in case there are no routers */
+  stable_uptime = 0;
+  fast_bandwidth = 0;
+  guard_bandwidth_including_exits = 0;
+  guard_bandwidth_excluding_exits = 0;
 
   total_bandwidth = 0;
   total_exit_bandwidth = 0;
 
   uptimes = smartlist_create();
   bandwidths = smartlist_create();
+  bandwidths_excluding_exits = smartlist_create();
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->is_running && ri->is_valid) {
@@ -1404,14 +1412,20 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       smartlist_add(uptimes, up);
       *bw = router_get_advertised_bandwidth(ri);
       total_bandwidth += *bw;
-      if (ri->is_exit && !ri->is_bad_exit)
+      if (ri->is_exit && !ri->is_bad_exit) {
         total_exit_bandwidth += *bw;
+      } else {
+        uint32_t *bw_not_exit = tor_malloc(sizeof(uint32_t));
+        *bw_not_exit = *bw;
+        smartlist_add(bandwidths_excluding_exits, bw_not_exit);
+      }
       smartlist_add(bandwidths, bw);
     }
   });
 
   smartlist_sort(uptimes, _compare_uint32);
   smartlist_sort(bandwidths, _compare_uint32);
+  smartlist_sort(bandwidths_excluding_exits, _compare_uint32);
 
   if (smartlist_len(uptimes))
     stable_uptime = *(uint32_t*)smartlist_get(uptimes,
@@ -1423,20 +1437,29 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH)
       fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
                                                  smartlist_len(bandwidths)/4);
-    guard_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
-                                                smartlist_len(bandwidths)/2);
+    guard_bandwidth_including_exits =
+      *(uint32_t*)smartlist_get(bandwidths, smartlist_len(bandwidths)/2);
+  }
+
+  if (smartlist_len(bandwidths_excluding_exits)) {
+    guard_bandwidth_excluding_exits =
+      *(uint32_t*)smartlist_get(bandwidths_excluding_exits,
+                                smartlist_len(bandwidths_excluding_exits)/2);
   }
 
   log(LOG_INFO, LD_DIRSERV,
-      "Cutoffs: %lus uptime, %lu b/s fast, %lu b/s guard.",
+      "Cutoffs: %lus uptime, %lu b/s fast, %lu or %lu b/s guard.",
       (unsigned long)stable_uptime,
       (unsigned long)fast_bandwidth,
-      (unsigned long)guard_bandwidth);
+      (unsigned long)guard_bandwidth_including_exits,
+      (unsigned long)guard_bandwidth_excluding_exits);
 
   SMARTLIST_FOREACH(uptimes, uint32_t *, up, tor_free(up));
   SMARTLIST_FOREACH(bandwidths, uint32_t *, bw, tor_free(bw));
+  SMARTLIST_FOREACH(bandwidths_excluding_exits, uint32_t *, bw, tor_free(bw));
   smartlist_free(uptimes);
   smartlist_free(bandwidths);
+  smartlist_free(bandwidths_excluding_exits);
 }
 
 /** For authoritative directories only: replace the contents of
@@ -1564,8 +1587,10 @@ generate_v2_networkstatus(void)
       int f_named = naming && ri->is_named;
       int f_valid = ri->is_valid;
       int f_guard = f_fast && f_stable &&
-        router_get_advertised_bandwidth(ri) >= guard_bandwidth &&
-        (!f_exit || exits_can_be_guards);
+        (!f_exit || exits_can_be_guards) &&
+        router_get_advertised_bandwidth(ri) >=
+          (exits_can_be_guards ? guard_bandwidth_including_exits :
+                                 guard_bandwidth_excluding_exits);
       int f_bad_exit = listbadexits && ri->is_bad_exit;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */

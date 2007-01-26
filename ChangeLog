@@ -23,6 +23,8 @@ Changes in version 0.1.2.7-alpha - 2007-01-26
       pointer loops.
     - Fix a memory leak when sending a 503 response for a networkstatus
       request.
+    - If we're not marking exits as guards, ignore exit bandwidth
+      when we're deciding the required bandwidth to become a guard.
 
   o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what
@@ -50,6 +52,9 @@ Changes in version 0.1.2.7-alpha - 2007-01-26
       connections. (Fixes bug 382.)
 
   o Minor features:
+    - Create a new file ReleaseNotes which was the old ChangeLog. The
+      new ChangeLog file now includes the summaries for even development
+      versions.
     - Check for addresses with invalid characters at the exit as well
       as at the client, and warn less verbosely when they fail. You can
       override this by setting ServerDNSAllowNonRFC953Addresses to 1.

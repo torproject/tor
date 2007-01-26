@@ -29,7 +29,7 @@ N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.
 
-R - Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
+  o Reconstruct ChangeLog; put rolled-up info in ReleaseNotes or something.
 
 Items for 0.1.2.x:
   - weight dir requests by advertised bandwidth? with maybe a lower cutoff
