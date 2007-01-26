@@ -1,3 +1,9 @@
+Filename: 100-tor-spec-udp.txt
+Title: Miscellaneous proposals
+Version: $Revision$
+Last-Modified: $Date$
+Author: Various
+Created:
 
                            Miscellaneous proposals
 
@@ -10,4 +16,7 @@
   on-the-fly gzip requires zlib 1.2 or later; doing bzip2 requires bzlib.
   Pre-compressing status documents in multiple formats would force us to use
   more memory to hold them.
+
+  -- Nick Mathewson
+
 

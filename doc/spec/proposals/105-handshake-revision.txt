@@ -1,5 +1,9 @@
-
-                  Version negotiation for the Tor protocol.
+Filename: 105-handshake-revision.txt
+Title: Version negotiation for the Tor protocol.
+Version: $Revision$
+Last-Modified: $Date$
+Author: Various
+Created:
 
 
 1.0. Version numbers

@@ -1,6 +1,9 @@
-
-           Splitting identity key from regularly-used signing key.
-
+Filename: 103-multilevel-keys.txt
+Title: Splitting identity key from regularly used signing key.
+Version: $Revision$
+Last-Modified: $Date$
+Author: Nick Mathewson
+Created:
 
 
   Replacing a directory authority's identity key in the event of a compromise

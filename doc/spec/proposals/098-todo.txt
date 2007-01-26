@@ -1,5 +1,9 @@
-
-                      Proposals that should be written
+Filename: 098-todo.txt
+Title: Proposals that should be written
+Version: $Revision$
+Last-Modified: $Date$
+Author: Nick Mathewson, Roger Dingledine
+Created:
 
 
 For protocol version 2:

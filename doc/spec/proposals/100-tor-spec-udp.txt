@@ -1,11 +1,12 @@
-[This proposed Tor extension has not been implemented yet. It is currently
-in request-for-comments state. -RD]
+Filename: 100-tor-spec-udp.txt
+Title: Tor Unreliable Datagram Extension Proposal
+Version: $Revision$
+Last-Modified: $Date$
+Author: Marc Liberatore
+Created:
 
-                  Tor Unreliable Datagram Extension Proposal
 
-                               Marc Liberatore
 
-Abstract
 
 Contents
 

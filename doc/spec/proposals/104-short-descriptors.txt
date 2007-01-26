@@ -1,6 +1,9 @@
-
-                      Long and Short Router Descriptors
-
+Filename: 104-short-descriptors.txt
+Title:  Long and Short Router Descriptors
+Version: $Revision$
+Last-Modified: $Date$
+Author: Nick Mathewson
+Created:
 
   Some of the costliest fields in the current directory protocol are ones
   that no client actually uses.  In particular, the "read-history" and

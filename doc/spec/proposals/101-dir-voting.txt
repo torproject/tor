@@ -1,6 +1,9 @@
-$Id: /tor/branches/eventdns/doc/dir-spec.txt 9469 2006-11-01T23:56:30.179423Z nickm  $
-
-                     Voting on the Tor Directory System
+Filename: 101-dir-voting.txt
+Title: Voting on the Tor Directory System
+Version: $Revision$
+Last-Modified: $Date$
+Author: Nick Mathewson
+Created:
 
 0. Scope and preliminaries
 

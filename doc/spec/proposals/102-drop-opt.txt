@@ -1,5 +1,10 @@
+Filename: 102-drop-opt.txt
+Title: Dropping "opt" from the directory format
+Version: $Revision$
+Last-Modified: $Date$
+Author: Nick Mathewson
+Created:
 
-                    Drop "opt" from the directory format.
 
   The "opt" keyword in Tor's directory formats was originally intended to
   mean, "it is okay to ignore this entry if you don't understand it"; the
