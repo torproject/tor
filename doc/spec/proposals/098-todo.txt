@@ -1,0 +1,62 @@
+
+                      Proposals that should be written
+
+
+For protocol version 2:
+
+  - Fix onionskin handshake scheme to be more mainstream, less nutty.
+    Can we just do
+        E(HMAC(g^x), g^x) rather than just E(g^x) ?
+    No, that has the same flaws as before. We should send
+        E(g^x, C) with random C and expect g^y, HMAC_C(K=g^xy).
+    Better ask Ian; probably Stephen too.
+  - Versioned CREATE and friends
+  - Length on CREATE and friends
+  - Versioning on circuits
+  - Versioning on create cells
+  - SHA1 is showing its age
+  - Not being able to upgrade ciphersuites or increase key lengths is
+    lame.
+
+Any time:
+
+  - REASON_CONNECTFAILED should include an IP.
+  - Spec should incorporate some prose from tor-design to be more readable.
+  - Spec when we should rotate which keys
+
+
+Things that should change...
+
+B.1. ... but which will require backward-incompatible change
+
+  - Circuit IDs should be longer.
+  - IPv6 everywhere.
+  - Maybe, keys should be longer.
+    - Maybe, key-length should be adjustable.  How to do this without
+      making anonymity suck?
+  - Drop backward compatibility.
+  - We should use a 128-bit subgroup of our DH prime.
+  - Handshake should use HMAC.
+  - Multiple cell lengths.
+  - Ability to split circuits across paths (If this is useful.)
+  - SENDME windows should be dynamic.
+
+  - Directory
+     - Stop ever mentioning socks ports
+
+B.1. ... and that will require no changes
+
+   - Mention multiple addr/port combos
+   - Advertised outbound IP?
+   - Migrate streams across circuits.
+
+B.2. ... and that we have no idea how to do.
+
+   - UDP (as transport)
+   - UDP (as content)
+   - Use a better AES mode that has built-in integrity checking,
+     doesn't grow with the number of hops, is not patented, and
+     is implemented and maintained by smart people.
+
+Let onion keys be not just RSA but maybe DH too. for the reply onion
+design.

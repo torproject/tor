@@ -1,0 +1,26 @@
+
+                    Drop "opt" from the directory format.
+
+  The "opt" keyword in Tor's directory formats was originally intended to
+  mean, "it is okay to ignore this entry if you don't understand it"; the
+  default behavior has been "discard a routerdesc if it contains entries you
+  don't recognize."
+
+  But so far, every new flag we have added has been marked 'opt'.  It would
+  probably make sense to change the default behavior to "ignore unrecognized
+  fields", and add the statement that clients SHOULD ignore fields they don't
+  recognize.  As a meta-principle, we should say that clients and servers
+  MUST NOT have to understand new fields in order to use directory documents
+  correctly.
+
+  Of course, this will make it impossible to say, "The format has changed a
+  lot; discard this quietly if you don't understand it." We could do that by
+  adding a version field.
+
+
+Status:
+
+     * We stopped requiring it as of 0.1.2.5-alpha.  We'll stop generating it
+       once earlier formats are obsolete.
+
+

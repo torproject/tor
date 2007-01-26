@@ -1,0 +1,74 @@
+
+                  Version negotiation for the Tor protocol.
+
+
+1.0. Version numbers
+
+   The node-to-node TLS-based "OR connection" protocol and the multi-hop
+   "circuit" protocol are versioned quasi-independently.  (Certain versions
+   of the circuit protocol may require a minimum version of the connection
+   protocol to be used.)
+
+   Version numbers are incremented for backward-incompatible protocol changes
+   only.  Backward-compatible changes are generally implemented by adding
+   additional fields to existing structures; implementations MUST ignore
+   fields they do not expect.
+
+
+2.1. VERSIONS cells
+
+   When a Tor connection is established, both parties normally send a
+   VERSIONS cell before sending any other cells.  (But see below.)
+
+         NumVersions            [1 byte]
+         Versions               [NumVersions bytes]
+
+   "Versions" is a sequence of NumVersions link connection protocol versions,
+   each one byte long.  Parties should list all of the versions which they
+   are able and willing to support.  Parties can only communicate if they
+   have some connection protocol version in common.
+
+   Version 0.1.x.y-alpha and earlier don't understand VERSIONS cells,
+   and therefore don't support version negotiation.  Thus, waiting until
+   the other side has sent a VERSIONS cell won't work for these servers:
+   if they send no cells back, it is impossible to tell whether they
+   have sent a VERSIONS cell that has been stalled, or whether they have
+   dropped our own VERSIONS cell as unrecognized.  Thus, immediately after
+   a TLS connection has been established, the parties check whether the
+   other side has an obsolete certificate (organizationName equal to "Tor"
+   or "TOR").  If the other party presented an obsolete certificate,
+   we assume a v1 connection.  Otherwise, both parties send VERSIONS
+   cells listing all their supported versions.  Upon receiving the
+   other party's VERSIONS cell, the implementation begins using the
+   highest-valued version common to both cells.  If the first cell from
+   the other party is _not_ a VERSIONS cell, we assume a v1 protocol.
+
+   Implementations MUST discard cells that are not the first cells sent on a
+   connection.
+
+2.2. MITM-prevention and time checking
+
+   If we negotiate a v2 connection or higher, the first cell we send SHOULD
+   be a NETINFO cell.  Implementations SHOULD NOT send NETINFO cells at other
+   times.
+
+   A NETINFO cell contains:
+         Timestamp              [4 bytes]
+         This OR's address      [variable]
+         Other OR's address     [variable]
+
+   Timestamp is the OR's current Unix time, in seconds since the epoch.  If
+   an implementation receives time values from many validated ORs that
+   indicate that its clock is skewed, it SHOULD try to warn the
+   administrator.
+
+   Each address contains Type/Length/Value as used in Section 6.4.  The first
+   address is the address of the interface the party sending the VERSIONS cell
+   used to connect to or accept connections from the other -- we include it
+   to block a man-in-the-middle attack on TLS that lets an attacker bounce
+   traffic through his own computers to enable timing and packet-counting
+   attacks.
+
+   The second address is the one that the party sending the VERSIONS cell
+   believes the other has -- it can be used to learn what your IP address
+   is if you have no other hints.

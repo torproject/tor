@@ -1,0 +1,54 @@
+
+           Splitting identity key from regularly-used signing key.
+
+
+
+  Replacing a directory authority's identity key in the event of a compromise
+  would be tremendously annoying.  We'd need to tell every client to switch
+  their configuration, or update to a new version with an uploaded list.  So
+  long as some weren't upgraded, they'd be at risk from whoever had
+  compromised the key.
+
+  With this in mind, it's a shame that our current protocol forces us to
+  store identity keys unencrypted in RAM.  We need some kind of signing key
+  stored unencrypted, since we need to generate new descriptors/directories
+  and rotate link and onion keys regularly.  (And since, of course, we can't
+  ask server operators to be on-hand to enter a passphrase every time we
+  want to rotate keys or sign a descriptor.)
+
+  The obvious solution seems to be to have a signing-only key that lives
+  indefinitely (months or longer) and signs descriptors and link keys, and a
+  separate identity key that's used to sign the signing key.  Tor servers
+  could run in one of several modes:
+    1. Identity key stored encrypted.  You need to pick a passphrase when
+       you enable this mode, and re-enter this passphrase every time you
+       rotate the signing key.
+    1'. Identity key stored separate.  You save your identity key to a
+       floppy, and use the floppy when you need to rotate the signing key.
+    2. All keys stored unencrypted.  In this case, we might not want to even
+       *have* a separate signing key.  (We'll need to support no-separate-
+       signing-key mode anyway to keep old servers working.)
+    3. All keys stored encrypted. You need to enter a passphrase to start
+       Tor.
+  (Of course, we might not want to implement all of these.)
+
+  Case 1 is probably most usable and secure, if we assume that people don't
+  forget their passphrases or lose their floppies.  We could mitigate this a
+  bit by encouraging people to PGP-encrypt their passphrases to themselves,
+  or keep a cleartext copy of their secret key secret-split into a few
+  pieces, or something like that.
+
+  Migration presents another difficulty, especially with the authorities.  If
+  we use the current set of identity keys as the new identity keys, we're in
+  the position of having sensitive keys that have been stored on
+  media-of-dubious-encryption up to now.  Also, we need to keep old clients
+  (who will expect descriptors to be signed by the identity keys they know
+  and love, and who will not understand signing keys) happy.
+
+  I'd enumerate designs here, but I'm hoping that somebody will come up with
+  a better one, so I'll try not to prejudice them with more ideas yet.
+
+  Oh, and of course, we'll want to make sure that the keys are
+  cross-certified. :)
+
+  Ideas? -NM

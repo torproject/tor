@@ -1,0 +1,13 @@
+
+                           Miscellaneous proposals
+
+
+1. Directory compression.
+
+  Gzip would be easier to work with than zlib; bzip2 would result in smaller
+  data lengths.  [Concretely, we're looking at about 10-15% space savings at
+  the expense of 3-5x longer compression time for using bzip2.]  Doing
+  on-the-fly gzip requires zlib 1.2 or later; doing bzip2 requires bzlib.
+  Pre-compressing status documents in multiple formats would force us to use
+  more memory to hold them.
+

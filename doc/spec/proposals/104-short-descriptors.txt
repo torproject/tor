@@ -1,0 +1,41 @@
+
+                      Long and Short Router Descriptors
+
+
+  Some of the costliest fields in the current directory protocol are ones
+  that no client actually uses.  In particular, the "read-history" and
+  "write-history" fields are used only by the authorities for monitoring the
+  status of the network.  If we took them out, the size of a compressed list
+  of all the routers would fall by about 60%.  (No other disposable field
+  would save more than 2%.)
+
+  One possible solution here is that routers should generate and upload a
+  short-form and long-form descriptor.  Only the short-form descriptor should
+  ever be used by anybody for routing.  The long-form descriptor should be
+  used only for analytics and other tools.  (If we allowed people to route with
+  long descriptors, we'd have to ensure that they stayed in sync with the
+  short ones somehow.)  We can ensure that the short descriptors are used by
+  only recommending those in the network statuses.
+
+  Another possible solution would be to drop these fields from descriptors,
+  and have them uploaded as a part of a separate "bandwidth report" to the
+  authorities.  This could help prevent the mistake of using long descriptors
+  in the place of short ones.
+
+  Thoughts? -NM
+
+Migration:
+
+  For long/short descriptors:
+     * In 0.1.2.x:
+       * Authorities should accept both, now, and silently drop short
+         descriptors.
+       * Routers should upload both once authorities accept them.
+       * There should be a "long descriptor" url and the current "normal" URL.
+         Authorities should serve long descriptors from both URLs.
+     * Once tools that want long descriptors support fetching them from the
+       "long descriptor" URL:
+       * Have authorities remember short descriptors, and serve them from the
+         'normal' URL.
+
+
