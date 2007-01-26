@@ -5,8 +5,13 @@ Last-Modified: $Date$
 Author: Various
 Created:
 
-                           Miscellaneous proposals
+Overview:
 
+   This document is for small proposal ideas that are about one paragraph in
+   length.  From here, ideas can be rejected outright, expanded into full
+   proposals, or specified and implemented as-is.
+
+Proposals
 
 1. Directory compression.
 
@@ -16,6 +21,8 @@ Created:
   on-the-fly gzip requires zlib 1.2 or later; doing bzip2 requires bzlib.
   Pre-compressing status documents in multiple formats would force us to use
   more memory to hold them.
+
+  Status: Open
 
   -- Nick Mathewson
 

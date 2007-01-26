@@ -5,6 +5,14 @@ Last-Modified: $Date$
 Author: Nick Mathewson
 Created:
 
+Overview:
+
+  This document proposes a change in the way identity keys are used, so that
+  highly sensitive keys can be password-protected and seldom loaded into RAM.
+
+  It presents options; it is not yet a complete proposal.
+
+Proposal:
 
   Replacing a directory authority's identity key in the event of a compromise
   would be tremendously annoying.  We'd need to tell every client to switch

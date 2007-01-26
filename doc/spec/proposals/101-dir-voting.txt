@@ -5,6 +5,16 @@ Last-Modified: $Date$
 Author: Nick Mathewson
 Created:
 
+Overview
+
+  This document describes a consensus voting scheme for Tor directories;
+  instead of publishing different network statuses, directories would vote on
+  and publish a single "consensus" network status document.
+
+  This is an open proposal.
+
+Proposal:
+
 0. Scope and preliminaries
 
   This document describes a consensus voting scheme for Tor directories.

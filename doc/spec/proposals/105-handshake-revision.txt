@@ -2,9 +2,19 @@ Filename: 105-handshake-revision.txt
 Title: Version negotiation for the Tor protocol.
 Version: $Revision$
 Last-Modified: $Date$
-Author: Various
+Author: Nick Mathewson, Roger Dingledine
 Created:
 
+Overview:
+
+  This document was extracted from a modified version of tor-spec.txt that we
+  had written before the proposal system went into place.  It adds two new
+  cells types to the Tor link connection setup handshake: one used for
+  version negotiation, and another to prevent MITM attacks.
+
+  This is an open proposal.
+
+Proposal:
 
 1.0. Version numbers
 

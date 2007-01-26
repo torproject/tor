@@ -5,6 +5,15 @@ Last-Modified: $Date$
 Author: Nick Mathewson
 Created:
 
+Overview:
+
+  This document proposes moving unused-by-clients information from regular
+  router descriptors into a special "long form" router descriptor.
+
+  It presents options; it is not yet a complete proposal.
+
+Proposal:
+
   Some of the costliest fields in the current directory protocol are ones
   that no client actually uses.  In particular, the "read-history" and
   "write-history" fields are used only by the authorities for monitoring the

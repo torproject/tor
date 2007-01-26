@@ -5,6 +5,16 @@ Last-Modified: $Date$
 Author: Nick Mathewson, Roger Dingledine
 Created:
 
+Overview:
+
+   This document lists ideas that various people have had for improving the
+   Tor protocol.  These should be implemented and specified if they're
+   trivial, or written up as proposals if they're not.
+
+   This is an active document, to be edited as proposals are written and as
+   we come up with new ideas for proposals.  We should take stuff out as it
+   seems irrelevant.
+
 
 For protocol version 2:
 

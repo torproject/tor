@@ -5,6 +5,14 @@ Last-Modified: $Date$
 Author: Nick Mathewson
 Created:
 
+Overview:
+
+  This document proposes a change in the format used to transmit router and
+  directory information.
+
+  This proposal has been accepted, implemented, and merged into dir-spec.txt.
+
+Proposal:
 
   The "opt" keyword in Tor's directory formats was originally intended to
   mean, "it is okay to ignore this entry if you don't understand it"; the
@@ -21,7 +29,6 @@ Created:
   Of course, this will make it impossible to say, "The format has changed a
   lot; discard this quietly if you don't understand it." We could do that by
   adding a version field.
-
 
 Status:
 

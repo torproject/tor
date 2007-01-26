@@ -5,7 +5,15 @@ Last-Modified: $Date$
 Author: Marc Liberatore
 Created:
 
+Overview:
 
+   This is a modified version of the Tor specification written by Marc
+   Liberatore to add UDP support to Tor.  For each TLS link, it adds a
+   corresponding DTLS link: control messages and TCP data flow over TLS, and
+   UDP data flows over DTLS.
+
+   This proposal is not likely to be accepted as-is; see comments at the end
+   of the document.
 
 
 Contents
