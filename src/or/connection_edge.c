@@ -380,8 +380,9 @@ connection_ap_expire_beginning(void)
           if (conn->_base.state == AP_CONN_STATE_SOCKS_WAIT) {
             /* extra debugging */
             log_fn(severity, LD_APP,
-                   "Hints: inbuf len %lu, socks: version %d, command %d, "
-                   "has_finished %d, address %s, port %d.",
+                   "Hints: is_reading %d, inbuf len %lu, socks: version %d, "
+                   "command %d, has_finished %d, address %s, port %d.",
+                   connection_is_reading(TO_CONN(conn)),
                    (unsigned long)buf_datalen(conn->_base.inbuf),
                    (int)conn->socks_request->socks_version,
                    conn->socks_request->command,
@@ -1958,7 +1959,7 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
       memset(buf+2, 0, 6);
       replylen = SOCKS4_NETWORK_LEN;
     }
-  } else {
+  } else if (conn->socks_request->socks_version == 5) {
     /* SOCKS5 */
     buf[0] = 0x05; /* version */
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
@@ -1988,6 +1989,9 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
       memset(buf+2, 0, 8);
       replylen = 10;
     }
+  } else {
+    /* no socks version info; don't send anything back */
+    return;
   }
   connection_ap_handshake_socks_reply(conn, buf, replylen,
           (answer_type == RESOLVED_TYPE_IPV4 ||

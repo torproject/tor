@@ -36,6 +36,8 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - Expire socks connections if they spend too long waiting for the
       handshake to finish. Previously we would let them sit around for
       days, if the connecting application didn't close them either.
+    - And if the socks handshake hasn't started, don't send a
+      "DNS resolve socks failed" handshake reply; just close it.
     - Stop using C functions that OpenBSD's linker doesn't like.
     - Detect and reject DNS replies containing IPv4 or IPv6 records with
       an incorrect number of bytes. (Previously, we would ignore the
