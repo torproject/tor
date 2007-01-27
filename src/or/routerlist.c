@@ -1053,7 +1053,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
 routerstatus_t *
 routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
 {
-  return smartlist_choose_by_bandwidth(sl, 1, 0);
+  return smartlist_choose_by_bandwidth(sl, 1, 1);
 }
 
 /** Return a random running router from the routerlist.  If any node
@@ -2628,6 +2628,25 @@ router_get_combined_status_by_nickname(const char *nickname,
   }
   smartlist_free(matches);
   return best;
+}
+
+/** Find a routerstatus_t that corresponds to <b>hexdigest</b>, if
+ * any. Prefer ones that belong to authorities. */
+routerstatus_t *
+routerstatus_get_by_hexdigest(const char *hexdigest)
+{
+  char digest[DIGEST_LEN];
+  local_routerstatus_t *rs;
+  trusted_dir_server_t *ds;
+
+  if (strlen(hexdigest) < HEX_DIGEST_LEN ||
+      base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN) < 0)
+    return NULL;
+  if ((ds = router_get_trusteddirserver_by_digest(digest)))
+    return &(ds->fake_status.status);
+  if ((rs = router_get_combined_status_by_digest(digest)))
+    return &(rs->status);
+  return NULL;
 }
 
 /** Return true iff any networkstatus includes a descriptor whose digest
