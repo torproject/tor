@@ -50,8 +50,11 @@ R     - handle connect-dir streams that don't have a chosen_exit_name set.
       o A way to alert controller when router flags change.
         o Specify: SETEVENTS NS
         o Implement
-R       - Hunt for places that change networkstatus info that I might have
+        - Hunt for places that change networkstatus info that I might have
           missed.
+        - "NS" appears to be used to notify of routerstatus updates.
+          Do we want an actual NS event, for when new networkstatuses
+          arrive, and then rename this one?
 
   . option to dl directory info via tor:
     TunnelDirConns and PreferTunneledDirConns
