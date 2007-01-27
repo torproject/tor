@@ -1,8 +1,9 @@
-tor (0.1.2.4-1.XXXXXXX) XXXXX; urgency=low
+tor (0.1.2.5-alpha-1) experimental; urgency=low
 
+  * New upstream version.
   * Disable 02_add_debian_files_in_manpage.dpatch for now.
 
- -- Peter Palfrader <weasel@debian.org>  Sat,  9 Dec 2006 17:23:13 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun,  7 Jan 2007 13:57:37 +0100
 
 tor (0.1.2.4-alpha-1) experimental; urgency=low
 
