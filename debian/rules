@@ -143,6 +143,11 @@ install: build
 
 	install -m 644 debian/tor.lintian-override $(CURDIR)/debian/tor/usr/share/lintian/overrides/tor
 
+	install -d -m 755 $(CURDIR)/debian/tor/usr/share/doc/tor/spec
+	for i in doc/spec/*txt; do \
+		install -m 644 $$i $(CURDIR)/debian/tor/usr/share/doc/tor/spec || exit 1; \
+	done
+
 	dh_link usr/share/man/man8/tor.8 usr/share/man/man5/torrc.5
 
 	rm -f $(CURDIR)/debian/tor/usr/bin/tor-control.py
