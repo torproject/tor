@@ -56,6 +56,11 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       has some room for it.  (This can lead to slowdowns in tunneled dir
       connectinos; a better solution will have to wait for 0.2.0.)
 
+  o Major features:
+    - Weight directory requests by advertised bandwidth. Now we can
+      let servers enable write limiting but still allow most clients to
+      succeed at their directory requests.
+
   o Minor features:
     - Create a new file ReleaseNotes which was the old ChangeLog. The
       new ChangeLog file now includes the summaries for even development

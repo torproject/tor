@@ -568,17 +568,19 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
   });
 
   if (smartlist_len(tunnel)) {
-    result = smartlist_choose(tunnel);
+    result = routerstatus_sl_choose_by_bandwidth(tunnel);
   } else if (smartlist_len(overloaded_tunnel)) {
-    result = smartlist_choose(overloaded_tunnel);
+    result = routerstatus_sl_choose_by_bandwidth(overloaded_tunnel);
   } else if (smartlist_len(trusted_tunnel)) {
     /* FFFF We don't distinguish between trusteds and overloaded trusteds
      * yet. Maybe one day we should. */
+    /* FFFF We also don't load balance over authorities yet. I think this
+     * is a feature, but it could easily be a bug. -RD */
     result = smartlist_choose(trusted_tunnel);
   } else if (smartlist_len(direct)) {
-    result = smartlist_choose(direct);
+    result = routerstatus_sl_choose_by_bandwidth(direct);
   } else if (smartlist_len(overloaded_direct)) {
-    result = smartlist_choose(overloaded_direct);
+    result = routerstatus_sl_choose_by_bandwidth(overloaded_direct);
   } else {
     result = smartlist_choose(trusted_direct);
   }
@@ -933,16 +935,23 @@ router_get_advertised_bandwidth(routerinfo_t *router)
 
 #define MAX_BELIEVABLE_BANDWIDTH 1500000 /* 1.5 MB/sec */
 
-/** Choose a random element of router list <b>sl</b>, weighted by
- * the advertised bandwidth of each router.
+/** Helper function:
+ * choose a random element of smartlist <b>sl</b>, weighted by
+ * the advertised bandwidth of each element.
+ *
+ * If <b>statuses</b> is zero, then <b>sl</b> is a list of
+ * routerinfo_t's. Otherwise it's a list of routerstatus_t's.
+ *
+ * DOCDOC for_exit
  */
-routerinfo_t *
-routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
+static void *
+smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
 {
   int i;
   routerinfo_t *router;
+  routerstatus_t *status;
   uint32_t *bandwidths;
-  uint32_t this_bw;
+  uint32_t this_bw, is_exit;
   uint64_t total_nonexit_bw = 0, total_exit_bw = 0, total_bw = 0;
   uint64_t rand_bw, tmp;
   double exit_weight;
@@ -951,13 +960,32 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
    * of each value. */
   bandwidths = tor_malloc(sizeof(uint32_t)*smartlist_len(sl));
   for (i = 0; i < smartlist_len(sl); ++i) {
-    router = smartlist_get(sl, i);
-    this_bw = router_get_advertised_bandwidth(router);
+    /* first, learn what bandwidth we think i has */
+    if (statuses) {
+      /* need to extract router info */
+      status = smartlist_get(sl, i);
+      router = router_get_by_digest(status->identity_digest);
+      is_exit = status->is_exit;
+      if (router) {
+        this_bw = router_get_advertised_bandwidth(router);
+      } else { /* guess */
+        uint64_t partial = for_exit ? total_exit_bw+total_nonexit_bw :
+                                      total_nonexit_bw;
+        if (!i) /* no hints; _really_ guess */
+          this_bw = status->is_fast ? 40000 : 20000;
+        else /* assume it'll be the average we've seen so far */
+          this_bw = partial/i;
+      }
+    } else {
+      router = smartlist_get(sl, i);
+      is_exit = router->is_exit;
+      this_bw = router_get_advertised_bandwidth(router);
+    }
     /* if they claim something huge, don't believe it */
     if (this_bw > MAX_BELIEVABLE_BANDWIDTH)
       this_bw = MAX_BELIEVABLE_BANDWIDTH;
     bandwidths[i] = this_bw;
-    if (router->is_exit)
+    if (is_exit)
       total_exit_bw += this_bw;
     else
       total_nonexit_bw += this_bw;
@@ -992,8 +1020,14 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
   for (i=0; i < smartlist_len(sl); i++) {
-    router = smartlist_get(sl, i);
-    if (router->is_exit)
+    if (statuses) {
+      status = smartlist_get(sl, i);
+      is_exit = status->is_exit;
+    } else {
+      router = smartlist_get(sl, i);
+      is_exit = router->is_exit;
+    }
+    if (is_exit)
       tmp += ((uint64_t)(bandwidths[i] * exit_weight));
     else
       tmp += bandwidths[i];
@@ -1001,7 +1035,25 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
       break;
   }
   tor_free(bandwidths);
-  return (routerinfo_t *)smartlist_get(sl, i);
+  return smartlist_get(sl, i);
+}
+
+/** Choose a random element of router list <b>sl</b>, weighted by
+ * the advertised bandwidth of each router.
+ */
+routerinfo_t *
+routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
+{
+  return smartlist_choose_by_bandwidth(sl, for_exit, 0);
+}
+
+/** Choose a random element of status list <b>sl</b>, weighted by
+ * the advertised bandwidth of each status.
+ */
+routerstatus_t *
+routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
+{
+  return smartlist_choose_by_bandwidth(sl, 1, 0);
 }
 
 /** Return a random running router from the routerlist.  If any node
@@ -3318,7 +3370,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
    *  - For 0 <= i < n_statuses: index[i] is an index into
    *    networkstatus[i]->entries, which has size[i] elements.
    *  - For i1, i2, j such that 0 <= i1 < n_statuses, 0 <= i2 < n_statues, 0 <=
-   *    j < index[i1], networkstatus[i1]->entries[j]->identity_digest <
+   *    j < index[i1]: networkstatus[i1]->entries[j]->identity_digest <
    *    networkstatus[i2]->entries[index[i2]]->identity_digest.
    *
    *    (That is, the indices are always advanced past lower digest before
