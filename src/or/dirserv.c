@@ -2274,7 +2274,6 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
   }
 }
 
-
 /** Release all storage used by the directory server. */
 void
 dirserv_free_all(void)

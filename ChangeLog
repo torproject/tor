@@ -52,11 +52,12 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       us from downloading a bunch of descriptors we don't need.
     - Do not log IPs with TLS failures for incoming TLS
       connections. (Fixes bug 382.)
-    - When we're handing a directory connection tunneled over Tor, don't fill
-      up internal memory buffers with the all data we want to tunnel;
-      instead, only add it the OR connection that will eventually receive it
-      has some room for it.  (This can lead to slowdowns in tunneled dir
-      connectinos; a better solution will have to wait for 0.2.0.)
+    - When we're handling a directory connection tunneled over Tor,
+      don't fill up internal memory buffers with all the data we want
+      to tunnel; instead, only add it if the OR connection that will
+      eventually receive it has some room for it. (This can lead to
+      slowdowns in tunneled dir connections; a better solution will have
+      to wait for 0.2.0.)
     - If the user asks to use invalid exit nodes, be willing to use the
       unstable ones.
 
