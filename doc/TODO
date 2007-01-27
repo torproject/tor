@@ -30,7 +30,7 @@ N - Test guard unreachable logic; make sure that we actually attempt to
     Make sure that we don't freak out when the network is down.
 
 Items for 0.1.2.x:
-R - weight dir requests by advertised bandwidth? with maybe a lower cutoff
+  o weight dir requests by advertised bandwidth? with maybe a lower cutoff
     than for tor traffic. perhaps also weighted by the expected size of
     the response.
 

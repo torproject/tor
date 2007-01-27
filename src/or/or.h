@@ -2836,6 +2836,7 @@ int router_is_unreliable(routerinfo_t *router, int need_uptime,
                          int need_capacity, int need_guard);
 uint32_t router_get_advertised_bandwidth(routerinfo_t *router);
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit);
+routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl);
 
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
