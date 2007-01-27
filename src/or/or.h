@@ -1176,9 +1176,10 @@ typedef struct {
   tor_mmap_t *mmap_descriptors;
 } routerlist_t;
 
-/** Information on router used when extending a circuit.  (We don't need a
+/** Information on router used when extending a circuit. We don't need a
  * full routerinfo_t to extend: we only need addr:port:keyid to build an OR
- * connection, and onion_key to create the onionskin.) */
+ * connection, and onion_key to create the onionskin. Note that for onehop
+ * general-purpose tunnels, the onion_key is NULL. */
 typedef struct extend_info_t {
   char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for
                                           * display. */
@@ -1905,6 +1906,7 @@ int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_from_router(routerinfo_t *r);
+extend_info_t *extend_info_from_routerstatus(routerstatus_t *s);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);
 routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
@@ -2894,6 +2896,7 @@ void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
 local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
+routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 void update_networkstatus_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);
 void routers_update_all_from_networkstatus(void);

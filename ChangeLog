@@ -75,6 +75,10 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - Inform the server operator when we decide not to advertise a
       DirPort due to AccountingMax enabled or a low BandwidthRate. It
       was confusing Zax, so now we're hopefully more helpful.
+    - Bring us one step closer to being able to establish an encrypted
+      directory tunnel without knowing a descriptor first. Still not
+      ready yet. As part of the change, now assume we can use a
+      create_fast cell if we don't know anything about a router.
 
   o Minor features (controller):
     - Track reasons for OR connection failure; make these reasons

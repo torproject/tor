@@ -1011,18 +1011,38 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       if (conn->chosen_exit_name) {
         routerinfo_t *r;
         int opt = conn->_base.chosen_exit_optional;
-        if (!(r = router_get_by_nickname(conn->chosen_exit_name, 1))) {
-          log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
-                 "Requested exit point '%s' is not known. %s.",
-                 conn->chosen_exit_name, opt ? "Trying others" : "Closing");
-          if (opt) {
-            conn->_base.chosen_exit_optional = 0;
-            tor_free(conn->chosen_exit_name);
-            return 0;
+        r = router_get_by_nickname(conn->chosen_exit_name, 1);
+        if (r) {
+          extend_info = extend_info_from_router(r);
+        } else {
+          if (want_onehop && conn->chosen_exit_name[0] == '$') {
+            /* We're asking for a one-hop circuit to a router that
+             * we don't have a routerinfo about. Hope we have a
+             * routerstatus or equivalent. */
+            routerstatus_t *s =
+              routerstatus_get_by_hexdigest(conn->chosen_exit_name+1);
+            if (s) {
+              extend_info = extend_info_from_routerstatus(s);
+            } else {
+              log_warn(LD_APP,
+                       "Requested router '%s' is not known. Closing.",
+                       conn->chosen_exit_name);
+              return -1;
+            }
+          } else {
+            /* We will need an onion key for the router, and we
+             * don't have one. Refuse or relax requirements. */
+            log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
+                   "Requested exit point '%s' is not known. %s.",
+                   conn->chosen_exit_name, opt ? "Trying others" : "Closing");
+            if (opt) {
+              conn->_base.chosen_exit_optional = 0;
+              tor_free(conn->chosen_exit_name);
+              return 0;
+            }
+            return -1;
           }
-          return -1;
         }
-        extend_info = extend_info_from_router(r);
       }
     }
 

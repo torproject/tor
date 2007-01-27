@@ -519,20 +519,28 @@ inform_testing_reachability(void)
 }
 
 /** Return true iff we should send a create_fast cell to build a circuit
- * starting at <b>router</b>.  (If <b>router</b> is NULL, we don't have
- * information on the router, so return false.) */
+ * starting at <b>router</b>. (If <b>router</b> is NULL, we don't have
+ * information on the router, so assume true.) */
 static INLINE int
-should_use_create_fast_for_router(routerinfo_t *router)
+should_use_create_fast_for_router(routerinfo_t *router,
+                                  origin_circuit_t *circ)
 {
   or_options_t *options = get_options();
 
-  if (!options->FastFirstHopPK || server_mode(options))
+  if (!options->FastFirstHopPK) /* create_fast is disabled */
     return 0;
-  else if (!router || !router->platform ||
-           !tor_version_as_new_as(router->platform, "0.1.0.6-rc"))
+  if (router && router->platform &&
+      !tor_version_as_new_as(router->platform, "0.1.0.6-rc")) {
+    /* known not to work */
     return 0;
-  else
-    return 1;
+  }
+  if (server_mode(options) && circ->cpath->extend_info->onion_key) {
+    /* We're a server, and we know an onion key. We can choose.
+     * Prefer to blend in. */
+    return 0;
+  }
+
+  return 1;
 }
 
 /** This is the backbone function for building circuits.
@@ -562,8 +570,13 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     log_debug(LD_CIRC,"First skin; sending create cell.");
 
     router = router_get_by_digest(circ->_base.n_conn->identity_digest);
-    fast = should_use_create_fast_for_router(router);
-    if (! fast) {
+    fast = should_use_create_fast_for_router(router, circ);
+    if (!fast && !circ->cpath->extend_info->onion_key) {
+      log_warn(LD_CIRC,
+               "Can't send create_fast, but have no onion key. Failing.");
+      return - END_CIRC_REASON_INTERNAL;
+    }
+    if (!fast) {
       /* We are an OR, or we are connecting to an old Tor: we should
        * send an old slow create cell.
        */
@@ -1722,12 +1735,29 @@ extend_info_from_router(routerinfo_t *r)
   return info;
 }
 
+/** Allocate and return a new extend_info_t that can be used to build a
+ * circuit to or through the router <b>r</b>. */
+extend_info_t *
+extend_info_from_routerstatus(routerstatus_t *s)
+{
+  extend_info_t *info;
+  tor_assert(s);
+  info = tor_malloc_zero(sizeof(extend_info_t));
+  strlcpy(info->nickname, s->nickname, sizeof(info->nickname));
+  memcpy(info->identity_digest, s->identity_digest, DIGEST_LEN);
+  info->onion_key = NULL; /* routerstatus doesn't include this! */
+  info->addr = s->addr;
+  info->port = s->or_port;
+  return info;
+}
+
 /** Release storage held by an extend_info_t struct. */
 void
 extend_info_free(extend_info_t *info)
 {
   tor_assert(info);
-  crypto_free_pk_env(info->onion_key);
+  if (info->onion_key)
+    crypto_free_pk_env(info->onion_key);
   tor_free(info);
 }
 
@@ -1740,7 +1770,10 @@ extend_info_dup(extend_info_t *info)
   tor_assert(info);
   newinfo = tor_malloc(sizeof(extend_info_t));
   memcpy(newinfo, info, sizeof(extend_info_t));
-  newinfo->onion_key = crypto_pk_dup_key(info->onion_key);
+  if (info->onion_key)
+    newinfo->onion_key = crypto_pk_dup_key(info->onion_key);
+  else
+    newinfo->onion_key = NULL;
   return newinfo;
 }
 
