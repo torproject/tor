@@ -1951,6 +1951,99 @@ dirserv_test_reachability(int try_all)
     ctr = (ctr + 1) % 128;
 }
 
+/** If <b>conn</b> is a dirserv connection tunneled over an or_connection,
+ * return that connection.  Otherwise, return NULL. */
+static INLINE or_connection_t *
+connection_dirserv_get_target_or_conn(dir_connection_t *conn)
+{
+  if (conn->bridge_conn &&
+      conn->bridge_conn->on_circuit &&
+      !CIRCUIT_IS_ORIGIN(conn->bridge_conn->on_circuit)) {
+    or_circuit_t *circ = TO_OR_CIRCUIT(conn->bridge_conn->on_circuit);
+    return circ->p_conn;
+  } else {
+    return NULL;
+  }
+}
+
+/** Remove <b>dir_conn</b> from the list of bridged dirserv connections
+ * blocking on <b>or_conn</b>, and set its status to nonblocked. */
+static INLINE void
+connection_dirserv_remove_from_blocked_list(or_connection_t *or_conn,
+                                            dir_connection_t *dir_conn)
+{
+  dir_connection_t **c;
+  for (c = &or_conn->blocked_dir_connections; *c;
+       c = &(*c)->next_blocked_on_same_or_conn) {
+    if (*c == dir_conn) {
+      tor_assert(dir_conn->is_blocked_on_or_conn == 1);
+      *c = dir_conn->next_blocked_on_same_or_conn;
+      dir_conn->next_blocked_on_same_or_conn = NULL;
+      dir_conn->is_blocked_on_or_conn = 0;
+      return;
+    }
+  }
+  tor_assert(!dir_conn->is_blocked_on_or_conn);
+}
+
+/* If <b>dir_conn</b> is a dirserv connection that's bridged over an edge_conn
+ * onto an or_conn, remove it from the blocked list (if it's blocked) and
+ * unlink it and the edge_conn from one another. */
+void
+connection_dirserv_unlink_from_bridge(dir_connection_t *dir_conn)
+{
+  edge_connection_t *edge_conn;
+  or_connection_t *or_conn;
+  tor_assert(dir_conn);
+  edge_conn = dir_conn->bridge_conn;
+  or_conn = connection_dirserv_get_target_or_conn(dir_conn);
+  if (or_conn) {
+    /* XXXX Really, this is only necessary if dir_conn->is_blocked_on_or_conn.
+     * But for now, let's leave it in, so the assert can catch  */
+    connection_dirserv_remove_from_blocked_list(or_conn, dir_conn);
+  }
+  dir_conn->is_blocked_on_or_conn = 0; /* Probably redundant. */
+  edge_conn->bridge_for_conn = NULL;
+  dir_conn->bridge_conn = NULL;
+}
+
+/** Stop writing on a bridged dir_conn, and remember that it's blocked because
+ * its or_conn was too full. */
+static void
+connection_dirserv_mark_as_blocked(dir_connection_t *dir_conn)
+{
+  or_connection_t *or_conn;
+  if (dir_conn->is_blocked_on_or_conn)
+    return;
+  tor_assert(! dir_conn->next_blocked_on_same_or_conn);
+  or_conn = connection_dirserv_get_target_or_conn(dir_conn);
+  if (!or_conn)
+    return;
+  dir_conn->next_blocked_on_same_or_conn = or_conn->blocked_dir_connections;
+  or_conn->blocked_dir_connections = dir_conn;
+  dir_conn->is_blocked_on_or_conn = 1;
+  connection_stop_writing(TO_CONN(dir_conn));
+}
+
+/** Tell all bridged dir_conns that were blocked because or_conn's outbuf was
+ * too full that they can write again. */
+void
+connection_dirserv_stop_blocking_all_on_or_conn(or_connection_t *or_conn)
+{
+  dir_connection_t *dir_conn, *next;
+
+  while (or_conn->blocked_dir_connections) {
+    dir_conn = or_conn->blocked_dir_connections;
+    next = dir_conn->next_blocked_on_same_or_conn;
+
+    dir_conn->is_blocked_on_or_conn = 0;
+    dir_conn->next_blocked_on_same_or_conn = NULL;
+    connection_start_writing(TO_CONN(dir_conn));
+    dir_conn = next;
+  }
+  or_conn->blocked_dir_connections = NULL;
+}
+
 /** Return an approximate estimate of the number of bytes that will
  * be needed to transmit the server descriptors (if is_serverdescs --
  * they can be either d/ or fp/ queries) or networkstatus objects (if
@@ -2155,10 +2248,17 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
 int
 connection_dirserv_flushed_some(dir_connection_t *conn)
 {
+  or_connection_t *or_conn;
   tor_assert(conn->_base.state == DIR_CONN_STATE_SERVER_WRITING);
 
   if (buf_datalen(conn->_base.outbuf) >= DIRSERV_BUFFER_MIN)
     return 0;
+
+  if ((or_conn = connection_dirserv_get_target_or_conn(conn)) &&
+      connection_or_too_full_for_dirserv_data(or_conn)) {
+    connection_dirserv_mark_as_blocked(conn);
+    return 0;
+  }
 
   switch (conn->dir_spool_src) {
     case DIR_SPOOL_SERVER_BY_DIGEST:
@@ -2173,6 +2273,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
       return 0;
   }
 }
+
 
 /** Release all storage used by the directory server. */
 void

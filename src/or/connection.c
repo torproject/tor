@@ -426,6 +426,10 @@ connection_about_to_close_connection(connection_t *conn)
       }
       if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC)
         rend_client_desc_here(dir_conn->rend_query); /* give it a try */
+      /* If this is from BEGIN_DIR, unlink it from the edge_conn and
+       * the or_conn. */
+      if (dir_conn->bridge_conn)
+        connection_dirserv_unlink_from_bridge(dir_conn);
       break;
     case CONN_TYPE_OR:
       or_conn = TO_OR_CONN(conn);
@@ -451,6 +455,13 @@ connection_about_to_close_connection(connection_t *conn)
         rep_hist_note_connection_died(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
                 control_tls_error_to_reason(or_conn->tls_error));
+      }
+      /* Remove any dir_conns that are blocked on this one.  Non-blocked
+       * ones will die when the circuits do. */
+      while (or_conn->blocked_dir_connections) {
+        dir_connection_t *dir_conn = or_conn->blocked_dir_connections;
+        connection_dirserv_unlink_from_bridge(dir_conn);
+        tor_assert(or_conn->blocked_dir_connections != dir_conn);
       }
       /* Now close all the attached circuits on it. */
       circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
@@ -485,6 +496,9 @@ connection_about_to_close_connection(connection_t *conn)
       if (conn->state == EXIT_CONN_STATE_RESOLVING) {
         connection_dns_remove(edge_conn);
       }
+      /* If we're relaying a dirserv connection, clean up any pointers */
+      if (edge_conn->bridge_for_conn)
+        connection_dirserv_unlink_from_bridge(edge_conn->bridge_for_conn);
       break;
     case CONN_TYPE_DNSWORKER:
       if (conn->state == DNSWORKER_STATE_BUSY) {
@@ -2243,6 +2257,8 @@ connection_flushed_some(connection_t *conn)
   if (conn->type == CONN_TYPE_DIR &&
       conn->state == DIR_CONN_STATE_SERVER_WRITING)
     return connection_dirserv_flushed_some(TO_DIR_CONN(conn));
+  else if (conn->type == CONN_TYPE_OR)
+    return connection_or_flushed_some(TO_OR_CONN(conn));
   else
     return 0;
 }
@@ -2425,7 +2441,35 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->purpose == EXIT_PURPOSE_CONNECT ||
                  conn->purpose == EXIT_PURPOSE_RESOLVE);
     }
-  } else if (conn->type != CONN_TYPE_DIR) {
+    if (edge_conn->bridge_for_conn) {
+      tor_assert(conn->type == CONN_TYPE_EXIT);
+      tor_assert(edge_conn->bridge_for_conn->bridge_conn == edge_conn);
+    }
+  } else if (conn->type == CONN_TYPE_DIR) {
+    dir_connection_t *dir_conn = TO_DIR_CONN(conn);
+
+    if (dir_conn->bridge_conn) {
+      tor_assert(DIR_CONN_IS_SERVER(conn));
+      tor_assert(dir_conn->bridge_conn->bridge_for_conn == dir_conn);
+      if (dir_conn->bridge_conn->on_circuit) {
+        dir_connection_t *d;
+        or_connection_t *or_conn;
+        tor_assert(!CIRCUIT_IS_ORIGIN(dir_conn->bridge_conn->on_circuit));
+        or_conn = TO_OR_CIRCUIT(dir_conn->bridge_conn->on_circuit)->p_conn;
+        if (dir_conn->is_blocked_on_or_conn)
+          tor_assert(or_conn);
+        for (d = or_conn->blocked_dir_connections; d;
+             d = d->next_blocked_on_same_or_conn) {
+          if (d == dir_conn) {
+            tor_assert(dir_conn->is_blocked_on_or_conn == 1);
+            break;
+          }
+        }
+        if (!d)
+          tor_assert(!dir_conn->is_blocked_on_or_conn);
+      }
+    }
+  } else {
     /* Purpose is only used for dir and exit types currently */
     tor_assert(!conn->purpose);
   }

@@ -57,9 +57,9 @@ R       - Hunt for places that change networkstatus info that I might have
     TunnelDirConns and PreferTunneledDirConns
 R   - actually cause the directory.c functions to know about or_port
       and use it when we're supposed to.
-N   o for tunneled edge conns, stop reading to the bridge connection
+    o for tunneled edge conns, stop reading to the bridge connection
       when the or_conn we're writing to has a full outbuf.
-      . make directory bridge data not get produced when the corresponding
+      o make directory bridge data not get produced when the corresponding
         or_conn is full, and accept the sometimes directory data will just
         never get written.
 

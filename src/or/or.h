@@ -752,6 +752,9 @@ typedef struct or_connection_t {
                    * n_conn ? */
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                            * identity digest as this one. */
+  /** Linked list of bridged dirserver connections that can't write until
+   * this connection's outbuf is less full. */
+  struct dir_connection_t *blocked_dir_connections;
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
                           * range 0..1<<15-1. */
@@ -791,6 +794,10 @@ typedef struct edge_connection_t {
   /* XXXX NM This can get re-used after 2**32 streams */
   uint32_t global_identifier;
 
+  /** Exit only: a dirserv connection that is tunneled over this connection
+   * using a socketpair. */
+  struct dir_connection_t *bridge_for_conn;
+
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
                                            * querying for? (AP only) */
 
@@ -809,6 +816,10 @@ typedef struct dir_connection_t {
   char *requested_resource; /**< Which 'resource' did we ask the directory
                              * for? */
   unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
+  /** True iff this is a dirserv conn, and it's tunneled over an or_conn,
+   * and we've stopped writing because the or_conn had too much pending
+   * data to write */
+  unsigned int is_blocked_on_or_conn : 1;
 
   /* Used only for server sides of some dir connections, to implement
    * "spooling" of directory material to the outbuf.  Otherwise, we'd have
@@ -817,7 +828,7 @@ typedef struct dir_connection_t {
   enum {
     DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
     DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS
-  } dir_spool_src;
+  } dir_spool_src : 3;
   /** List of fingerprints for networkstatuses or desriptors to be spooled. */
   smartlist_t *fingerprint_stack;
   /** A cached_dir_t object that we're currently spooling out */
@@ -832,6 +843,16 @@ typedef struct dir_connection_t {
 
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the directory server's signing key. */
+
+  /** If this is a dirserv conn created with a BEGIN_DIR (a "bridged" dirserv
+   * connection), a pointer to the edge_conn at the other end of its
+   * socketpair. */
+  edge_connection_t *bridge_conn;
+  /** Next connection in linked list of dirserv connections blocked until
+   * the or_conns over which they're bridged have enough space in their
+   * outbufs. */
+  struct dir_connection_t *next_blocked_on_same_or_conn;
+
 } dir_connection_t;
 
 /** Subtype of connection_t for an connection to a controller. */
@@ -2093,6 +2114,7 @@ char *alloc_http_authenticator(const char *authenticator);
 
 void assert_connection_ok(connection_t *conn, time_t now);
 int connection_or_nonopen_was_started_here(or_connection_t *conn);
+int connection_or_too_full_for_dirserv_data(or_connection_t *conn);
 
 /********************************* connection_edge.c *************************/
 
@@ -2179,6 +2201,7 @@ or_connection_t *connection_or_get_by_identity_digest(const char *digest);
 
 int connection_or_reached_eof(or_connection_t *conn);
 int connection_or_process_inbuf(or_connection_t *conn);
+int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
 
@@ -2333,6 +2356,9 @@ char *directory_dump_request_log(void);
 #define UNNAMED_ROUTER_NICKNAME "Unnamed"
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);
+void connection_dirserv_unlink_from_bridge(dir_connection_t *dir_conn);
+void connection_dirserv_stop_blocking_all_on_or_conn(or_connection_t *or_conn);
+
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);

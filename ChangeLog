@@ -1,4 +1,4 @@
-Changes in version 0.1.2.7-alpha - 2007-01-26
+Changes in version 0.1.2.7-alpha - 2007-??-??
   o Major bugfixes (rate limiting):
     - Servers decline directory requests much more aggressively when
       they're low on bandwidth. Otherwise they end up queueing more and
@@ -50,6 +50,11 @@ Changes in version 0.1.2.7-alpha - 2007-01-26
       us from downloading a bunch of descriptors we don't need.
     - Do not log IPs with TLS failures for incoming TLS
       connections. (Fixes bug 382.)
+    - When we're handing a directory connection tunneled over Tor, don't fill
+      up internal memory buffers with the all data we want to tunnel;
+      instead, only add it the OR connection that will eventually receive it
+      has some room for it.  (This can lead to slowdowns in tunneled dir
+      connectinos; a better solution will have to wait for 0.2.0.)
 
   o Minor features:
     - Create a new file ReleaseNotes which was the old ChangeLog. The

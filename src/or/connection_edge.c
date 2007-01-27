@@ -2461,6 +2461,9 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
     return 0;
   }
 
+  dir_conn->bridge_conn = exit_conn;
+  exit_conn->bridge_for_conn = dir_conn;
+
   connection_start_reading(TO_CONN(dir_conn));
   connection_start_reading(TO_CONN(exit_conn));
 

@@ -21,6 +21,7 @@ const char connection_or_c_id[] =
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
+static int connection_or_empty_enough_for_dirserv_data(or_connection_t *conn);
 
 /**************************************************************/
 
@@ -222,6 +223,17 @@ connection_or_process_inbuf(or_connection_t *conn)
     default:
       return 0; /* don't do anything */
   }
+}
+
+/** Called whenever we have flushed some data on an or_conn. */
+int
+connection_or_flushed_some(or_connection_t *conn)
+{
+  if (conn->blocked_dir_connections &&
+      connection_or_empty_enough_for_dirserv_data(conn)) {
+    connection_dirserv_stop_blocking_all_on_or_conn(conn);
+  }
+  return 0;
 }
 
 /** Connection <b>conn</b> has finished writing and has no bytes left on
@@ -796,5 +808,27 @@ connection_or_count_pending_circs(or_connection_t *or_conn)
   log_debug(LD_CIRC,"or_conn to %s, %d pending circs",
             or_conn->nickname ? or_conn->nickname : "NULL", cnt);
   return cnt;
+}
+
+#define BUF_FULLNESS_THRESHOLD (128*1024)
+#define BUF_EMPTINESS_THRESHOLD (96*1024)
+
+/** Return true iff there is so much data waiting to be flushed on <b>conn</b>
+ * that we should stop writing directory data to it. */
+int
+connection_or_too_full_for_dirserv_data(or_connection_t *conn)
+{
+  return buf_datalen(conn->_base.outbuf) > BUF_FULLNESS_THRESHOLD;
+}
+
+/** Return true iff there is no longer so much data waiting to be flushed on
+ * <b>conn</b> that we should not write directory data to it. */
+static int
+connection_or_empty_enough_for_dirserv_data(or_connection_t *conn)
+{
+  /* Note that the threshold to stop writing is a bit higher than the
+   * threshold to start again: this should (with any luck) keep us from
+   * flapping about indefinitely. */
+  return buf_datalen(conn->_base.outbuf) < BUF_EMPTINESS_THRESHOLD;
 }
 
