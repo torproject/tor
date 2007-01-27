@@ -496,7 +496,7 @@ consider_testing_reachability(int test_or, int test_dir)
                 CONN_TYPE_DIR, me->addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
     /* ask myself, via tor, for my server descriptor. */
-    directory_initiate_command_router(me, DIR_PURPOSE_FETCH_SERVERDESC,
+    directory_initiate_command_router(me, 0, DIR_PURPOSE_FETCH_SERVERDESC,
                                       1, "authority", NULL, 0);
     control_event_server_status(LOG_NOTICE,
                                 "CHECKING_REACHABILITY DIRADDRESS=%s:%d",

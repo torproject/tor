@@ -32,13 +32,13 @@ const char directory_c_id[] =
  */
 static void
 directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
-                           const char *platform,
+                           int supports_begindir,
                            const char *digest, uint8_t purpose,
                            int private_connection, const char *resource,
                            const char *payload, size_t payload_len);
 
 static void
-directory_send_command(dir_connection_t *conn, const char *platform,
+directory_send_command(dir_connection_t *conn,
                        int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(dir_connection_t *conn);
@@ -237,6 +237,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
  */
 void
 directory_initiate_command_router(routerinfo_t *router,
+                                  int supports_begindir,
                                   uint8_t purpose,
                                   int private_connection,
                                   const char *resource,
@@ -244,7 +245,7 @@ directory_initiate_command_router(routerinfo_t *router,
                                   size_t payload_len)
 {
   directory_initiate_command(router->address, router->addr, router->dir_port,
-                             router->platform,
+                             supports_begindir,
                              router->cache_info.identity_digest,
                              purpose, private_connection, resource,
                              payload, payload_len);
@@ -269,13 +270,11 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                                         const char *payload,
                                         size_t payload_len)
 {
-  const char *platform = NULL;
   routerinfo_t *router;
   char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
   const char *address;
   if ((router = router_get_by_digest(status->identity_digest))) {
-    platform = router->platform;
     address = router->address;
   } else {
     in.s_addr = htonl(status->addr);
@@ -283,7 +282,8 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
     address = address_buf;
   }
   directory_initiate_command(address, status->addr, status->dir_port,
-                             platform, status->identity_digest,
+                             status->version_supports_begindir,
+                             status->identity_digest,
                              purpose, private_connection, resource,
                              payload, payload_len);
 }
@@ -393,32 +393,21 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
   /* XXXX012 Why did the above get commented out? -NM */
 }
 
-/** Return 1 if platform can handle a BEGIN_DIR cell, and if
- * we're willing to send one. Else return 0. */
-/* XXX we should refactor directory.c to hand status->or_port around,
- * so we can check it here rather than platform. */
-static int
-connection_dir_supports_tunnels(or_options_t *options, const char *platform)
-{
-  return options->TunnelDirConns && platform &&
-         tor_version_as_new_as(platform, "0.1.2.2-alpha");
-}
-
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
  * command to a server whose address is <b>address</b>, whose IP is
- * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version is
- * <b>platform</b>, and whose identity key digest is <b>digest</b>. The
- * <b>platform</b> argument is optional; the others are required. */
+ * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version
+ * <b>supports_begindir</b>, and whose identity key digest is
+ * <b>digest</b>. */
 static void
 directory_initiate_command(const char *address, uint32_t addr,
-                           uint16_t dir_port, const char *platform,
+                           uint16_t dir_port, int supports_begindir,
                            const char *digest, uint8_t purpose,
                            int private_connection, const char *resource,
                            const char *payload, size_t payload_len)
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
-  int want_to_tunnel = connection_dir_supports_tunnels(options, platform);
+  int want_to_tunnel = options->TunnelDirConns && supports_begindir;
 
   tor_assert(address);
   tor_assert(addr);
@@ -489,7 +478,7 @@ directory_initiate_command(const char *address, uint32_t addr,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, platform, purpose, 1, resource,
+        directory_send_command(conn, purpose, 1, resource,
                                payload, payload_len);
         connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
         /* writable indicates finish, readable indicates broken link,
@@ -520,7 +509,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     }
     conn->_base.state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
-    directory_send_command(conn, platform, purpose, 0, resource,
+    directory_send_command(conn, purpose, 0, resource,
                            payload, payload_len);
     connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
   }
@@ -530,7 +519,7 @@ directory_initiate_command(const char *address, uint32_t addr,
  * are as in directory_initiate_command.
  */
 static void
-directory_send_command(dir_connection_t *conn, const char *platform,
+directory_send_command(dir_connection_t *conn,
                        int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len)
 {
@@ -585,9 +574,6 @@ directory_send_command(dir_connection_t *conn, const char *platform,
     case DIR_PURPOSE_FETCH_DIR:
       tor_assert(!resource);
       tor_assert(!payload);
-      log_debug(LD_DIR,
-                "Asking for compressed directory from server running %s",
-                platform?escaped(platform):"<unknown version>");
       httpcommand = "GET";
       url = tor_strdup("/tor/dir.z");
       break;

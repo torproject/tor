@@ -2328,7 +2328,9 @@ void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                   int retry_if_no_servers);
-void directory_initiate_command_router(routerinfo_t *router, uint8_t purpose,
+void directory_initiate_command_router(routerinfo_t *router,
+                                       int supports_begindir,
+                                       uint8_t purpose,
                                        int private_connection,
                                        const char *resource,
                                        const char *payload,
