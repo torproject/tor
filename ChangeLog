@@ -41,7 +41,7 @@ Changes in version 0.1.2.7-alpha - 2007-01-26
       an incorrect number of bytes. (Previously, we would ignore the
       extra bytes.)
     - Fix as-yet-unused reverse IPv6 lookup code so it sends nybbles
-      in the correct order.
+      in the correct order, and doesn't crash.
     - Free memory held in recently-completed DNS lookup attempts on exit.
       This was not a memory leak, but may have been hiding memory leaks.
     - Don't launch requests for descriptors unless we have networkstatuses
