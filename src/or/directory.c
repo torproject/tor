@@ -324,6 +324,8 @@ connection_dir_request_failed(dir_connection_t *conn)
                                  0 /* don't retry_if_no_servers */);
 
     if (directory_conn_is_self_reachability_test(conn)) {
+      /* XXX012 look at the 'if' at the top of this function. this
+       * code will never be reached. -RD */
       routerinfo_t *me = router_get_my_routerinfo();
       if (me)
         control_event_server_status(LOG_WARN,
@@ -385,7 +387,7 @@ static void
 connection_dir_download_routerdesc_failed(dir_connection_t *conn)
 {
   /* Try again. No need to increment the failure count for routerdescs, since
-   * it's not their fault.*/
+   * it's not their fault. */
   /* update_router_descriptor_downloads(time(NULL)); */
   (void) conn;
   /* XXXX012 Why did the above get commented out? -NM */
@@ -1828,7 +1830,7 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
   if (!strcmp(url,"/tor/dir-all-weaselhack") &&
       (conn->_base.addr == 0x7f000001ul) &&
       authdir_mode(options)) {
-    /* XXX until weasel rewrites his scripts  XXXX012 */
+    /* until weasel rewrites his scripts at noreply */
     char *new_directory=NULL;
 
     if (dirserv_dump_directory_to_string(&new_directory,
@@ -2094,6 +2096,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
                 cp, (int)rs->n_download_failures);
   });
 
+  /* XXX012 why did this get commented out too? */
   /* update_router_descriptor_downloads(time(NULL)); */
 }
 
