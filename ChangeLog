@@ -57,6 +57,8 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       instead, only add it the OR connection that will eventually receive it
       has some room for it.  (This can lead to slowdowns in tunneled dir
       connectinos; a better solution will have to wait for 0.2.0.)
+    - If the user asks to use invalid exit nodes, be willing to use the
+      unstable ones.
 
   o Major features:
     - Weight directory requests by advertised bandwidth. Now we can

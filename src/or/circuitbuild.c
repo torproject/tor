@@ -1187,10 +1187,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       n_supported[i] = -1;
       continue; /* skip routers that are not suitable */
     }
-    if (!router->is_valid &&
-        (!(options->_AllowInvalid & ALLOW_INVALID_EXIT) ||
-         router_is_unreliable(router, 1, 1, 0))) {
-      /* if it's invalid, and either we don't want it or it's unsuitable */
+    if (!(router->is_valid || options->_AllowInvalid & ALLOW_INVALID_EXIT)) {
+      /* if it's invalid and we don't want it */
       n_supported[i] = -1;
 //      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- invalid router.",
 //             router->nickname, i);
