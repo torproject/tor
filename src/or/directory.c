@@ -31,13 +31,6 @@ const char directory_c_id[] =
  *   connection_finished_connecting() in connection.c
  */
 static void
-directory_initiate_command(const char *address, uint32_t addr, uint16_t port,
-                           int supports_begindir,
-                           const char *digest, uint8_t purpose,
-                           int private_connection, const char *resource,
-                           const char *payload, size_t payload_len);
-
-static void
 directory_send_command(dir_connection_t *conn,
                        int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len);
@@ -224,33 +217,6 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   }
 }
 
-/** Launch a new connection to the directory server <b>router</b> to upload or
- * download a service or rendezvous descriptor. <b>purpose</b> determines what
- * kind of directory connection we're launching, and must be one of
- * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}.
- *
- * When uploading, <b>payload</b> and <b>payload_len</b> determine the content
- * of the HTTP post.  Otherwise, <b>payload</b> should be NULL.
- *
- * When fetching a rendezvous descriptor, <b>resource</b> is the service ID we
- * want to fetch.
- */
-void
-directory_initiate_command_router(routerinfo_t *router,
-                                  int supports_begindir,
-                                  uint8_t purpose,
-                                  int private_connection,
-                                  const char *resource,
-                                  const char *payload,
-                                  size_t payload_len)
-{
-  directory_initiate_command(router->address, router->addr, router->dir_port,
-                             supports_begindir,
-                             router->cache_info.identity_digest,
-                             purpose, private_connection, resource,
-                             payload, payload_len);
-}
-
 /** Launch a new connection to the directory server <b>status</b> to upload or
  * download a server or rendezvous descriptor. <b>purpose</b> determines what
  * kind of directory connection we're launching, and must be one of
@@ -398,7 +364,7 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
  * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version
  * <b>supports_begindir</b>, and whose identity key digest is
  * <b>digest</b>. */
-static void
+void
 directory_initiate_command(const char *address, uint32_t addr,
                            uint16_t dir_port, int supports_begindir,
                            const char *digest, uint8_t purpose,

@@ -2328,13 +2328,6 @@ void directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                   size_t payload_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                   int retry_if_no_servers);
-void directory_initiate_command_router(routerinfo_t *router,
-                                       int supports_begindir,
-                                       uint8_t purpose,
-                                       int private_connection,
-                                       const char *resource,
-                                       const char *payload,
-                                       size_t payload_len);
 void directory_initiate_command_routerstatus(routerstatus_t *status,
                                              uint8_t purpose,
                                              int private_connection,
@@ -2350,6 +2343,12 @@ int connection_dir_process_inbuf(dir_connection_t *conn);
 int connection_dir_finished_flushing(dir_connection_t *conn);
 int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_request_failed(dir_connection_t *conn);
+void directory_initiate_command(const char *address, uint32_t addr,
+                                uint16_t dir_port, int supports_begindir,
+                                const char *digest, uint8_t purpose,
+                                int private_connection, const char *resource,
+                                const char *payload, size_t payload_len);
+
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,
                                     int decode_hex, int sort_uniq);
