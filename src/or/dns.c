@@ -1713,7 +1713,8 @@ launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
      * resolve this? -RD */
     /* XXX012 Are you sure I didn't fix that in version r9336 with
      * ServerDNSAllowNonRFC953Addreesses? If it's still not working,
-     * let me know which addresses are breaking. -NM */
+     * let me know which addresses are breaking. If it _is_ working,
+     * please remove these comments. :) -NM */
     if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE) {
       if (evdns_err_is_transient(r))
         send_resolved_cell(exitconn, circ, RESOLVED_TYPE_ERROR_TRANSIENT);

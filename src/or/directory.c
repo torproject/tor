@@ -279,8 +279,14 @@ directory_conn_is_self_reachability_test(dir_connection_t *conn)
 void
 connection_dir_request_failed(dir_connection_t *conn)
 {
-  if (router_digest_is_me(conn->identity_digest))
+  if (directory_conn_is_self_reachability_test(conn)) {
+    routerinfo_t *me = router_get_my_routerinfo();
+    if (me)
+      control_event_server_status(LOG_WARN,
+                                  "REACHABILITY_FAILED DIRADDRESS=%s:%d",
+                                  me->address, me->dir_port);
     return; /* this was a test fetch. don't retry. */
+  }
   router_set_status(conn->identity_digest, 0); /* don't try him again */
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_DIR ||
       conn->_base.purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
@@ -288,16 +294,6 @@ connection_dir_request_failed(dir_connection_t *conn)
              conn->_base.address, conn->_base.port);
     directory_get_from_dirserver(conn->_base.purpose, NULL,
                                  0 /* don't retry_if_no_servers */);
-
-    if (directory_conn_is_self_reachability_test(conn)) {
-      /* XXX012 look at the 'if' at the top of this function. this
-       * code will never be reached. -RD */
-      routerinfo_t *me = router_get_my_routerinfo();
-      if (me)
-        control_event_server_status(LOG_WARN,
-                                    "REACHABILITY_FAILED DIRADDRESS=%s:%d",
-                                    me->address, me->dir_port);
-    }
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
@@ -2048,7 +2044,9 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
                 cp, (int)rs->n_download_failures);
   });
 
-  /* XXX012 why did this get commented out too? */
+  /* XXX012 why did this get commented out too? -RD */
+  /*        Because we already call update_router_descriptor_downloads()
+   *        every 10 seconds (DESCRIPTOR_RETRY_INTERVAL) in main.c -NM */
   /* update_router_descriptor_downloads(time(NULL)); */
 }
 
