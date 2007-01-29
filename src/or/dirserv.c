@@ -1565,6 +1565,8 @@ generate_v2_networkstatus(void)
 
   dirserv_compute_performance_thresholds(rl);
 
+  /* XXXX We should take steps to keep this from oscillating if
+   * total_exit_bandwidth is close to total_bandwidth/3. */
   exits_can_be_guards = total_exit_bandwidth >= (total_bandwidth / 3);
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
