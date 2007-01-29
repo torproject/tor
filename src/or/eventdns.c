@@ -322,6 +322,8 @@ static void server_request_free_answers(struct server_request *req);
 static void server_port_free(struct evdns_server_port *port);
 static void server_port_ready_callback(int fd, short events, void *arg);
 
+static int strtoint(const char *const str);
+
 #ifdef WIN32
 static int
 last_error(int sock)
@@ -884,6 +886,7 @@ reply_parse(u8 *packet, int length) {
 			if (name_parse(packet, length, &j, reply.data.ptr.name,
 						   sizeof(reply.data.ptr.name))<0)
 				return -1;
+			ttl_r = MIN(ttl_r, ttl);
 			reply.have_answer = 1;
 			break;
 		} else if (type == TYPE_AAAA && class == CLASS_INET) {
@@ -2019,9 +2022,8 @@ evdns_resume(void)
 	return 0;
 }
 
-// exported function
-int
-evdns_nameserver_add(unsigned long int address) {
+static int
+_evdns_nameserver_add_impl(unsigned long int address, int port) {
 	// first check to see if we already have this nameserver
 
 	const struct nameserver *server = server_head, *const started_at = server_head;
@@ -2051,7 +2053,7 @@ evdns_nameserver_add(unsigned long int address) {
 	fcntl(ns->socket, F_SETFL, O_NONBLOCK);
 #endif
 	sin.sin_addr.s_addr = address;
-	sin.sin_port = htons(53);
+	sin.sin_port = htons(port);
 	sin.sin_family = AF_INET;
 	if (connect(ns->socket, (struct sockaddr *) &sin, sizeof(sin)) != 0) {
 		err = 2;
@@ -2096,11 +2098,37 @@ out1:
 
 // exported function
 int
+evdns_nameserver_add(unsigned long int address) {
+	return _evdns_nameserver_add_impl(address, 53);
+}
+
+// exported function
+int
 evdns_nameserver_ip_add(const char *ip_as_string) {
 	struct in_addr ina;
-	if (!inet_aton(ip_as_string, &ina))
+	int port;
+	char buf[20];
+	const char *cp;
+	cp = strchr(ip_as_string, ':');
+	if (! cp) {
+		cp = ip_as_string;
+		port = 53;
+	} else {
+		port = strtoint(cp+1);
+		if (port < 0 || port > 65535) {
+			return 4;
+		}
+		if ((cp-ip_as_string) >= (int)sizeof(buf)) {
+			return 4;
+		}
+		memcpy(buf, ip_as_string, cp-ip_as_string);
+		buf[cp-ip_as_string] = '\0';
+		cp = buf;
+	}
+	if (!inet_aton(cp, &ina)) {
 		return 4;
-	return evdns_nameserver_add(ina.s_addr);
+	}
+	return _evdns_nameserver_add_impl(ina.s_addr, port);
 }
 
 // insert into the tail of the queue
@@ -2711,7 +2739,7 @@ evdns_nameserver_ip_add_line(const char *ips) {
 		while (ISSPACE(*ips) || *ips == ',' || *ips == '\t')
 			++ips;
 		addr = ips;
-		while (ISDIGIT(*ips) || *ips == '.')
+		while (ISDIGIT(*ips) || *ips == '.' || *ips == ':')
 			++ips;
 		buf = malloc(ips-addr+1);
 		if (!buf) return 4;

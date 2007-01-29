@@ -60,6 +60,7 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       to wait for 0.2.0.)
     - If the user asks to use invalid exit nodes, be willing to use the
       unstable ones.
+    - Handle TTL values correctly on reverse DNS lookups.
 
   o Major features:
     - Weight directory requests by advertised bandwidth. Now we can
@@ -82,6 +83,7 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       directory tunnel without knowing a descriptor first. Still not
       ready yet. As part of the change, now assume we can use a
       create_fast cell if we don't know anything about a router.
+    - Allow exit nodes to use nameservers running on ports other than 53.
 
   o Minor features (controller):
     - Track reasons for OR connection failure; make these reasons
