@@ -58,13 +58,14 @@ Options are case-insensitive.
 .LP
 .TP
 \fBBandwidthRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
-A token bucket limits the average incoming bandwidth on this node to
-the specified number of bytes per second. (Default: 3 MB)
+A token bucket limits the average bandwidth usage on this node to the
+specified number of bytes per second. (Default: 3 MB)
 .LP
 .TP
 \fBBandwidthBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 Limit the maximum token bucket size (also known as the burst) to the
-given number of bytes. (Default: 6 MB)
+given number of bytes. This value should be at least twice your
+BandwidthRate. (Default: 6 MB)
 .LP
 .TP
 \fBMaxAdvertisedBandwidth \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
