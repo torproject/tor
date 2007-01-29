@@ -196,7 +196,7 @@ fi
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
-AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
+AC_CACHE_CHECK([for libevent directory], tor_cv_libevent_dir, [
   saved_LIBS="$LIBS"
   saved_LDFLAGS="$LDFLAGS"
   saved_CPPFLAGS="$CPPFLAGS"
@@ -233,9 +233,9 @@ AC_CACHE_CHECK([for libevent directory], ac_cv_libevent_dir, [
        [ libevent_linked=yes ], [ libevent_linked=no ])
     if test $libevent_linked = yes; then
        if test ! -z "$ledir" ; then
-         ac_cv_libevent_dir=$ledir
+         tor_cv_libevent_dir=$ledir
        else
-         ac_cv_libevent_dir="(system)"
+         tor_cv_libevent_dir="(system)"
        fi
        le_found=yes
        break
@@ -254,24 +254,24 @@ LIBS="$LIBS -levent -lws2_32"
 else
 LIBS="$LIBS -levent"
 fi
-if test $ac_cv_libevent_dir != "(system)"; then
-  if test -d "$ac_cv_libevent_dir/lib" ; then
-    LDFLAGS="-L$ac_cv_libevent_dir/lib $LDFLAGS"
-    le_libdir="$ac_cv_libevent_dir/lib"
+if test $tor_cv_libevent_dir != "(system)"; then
+  if test -d "$tor_cv_libevent_dir/lib" ; then
+    LDFLAGS="-L$tor_cv_libevent_dir/lib $LDFLAGS"
+    le_libdir="$tor_cv_libevent_dir/lib"
   else
-    LDFLAGS="-L$ac_cv_libevent_dir $LDFLAGS"
-    le_libdir="$ac_cv_libevent_dir"
+    LDFLAGS="-L$tor_cv_libevent_dir $LDFLAGS"
+    le_libdir="$tor_cv_libevent_dir"
   fi
-  if test -d "$ac_cv_libevent_dir/include" ; then
-    CPPFLAGS="-I$ac_cv_libevent_dir/include $CPPFLAGS"
+  if test -d "$tor_cv_libevent_dir/include" ; then
+    CPPFLAGS="-I$tor_cv_libevent_dir/include $CPPFLAGS"
   else
-    CPPFLAGS="-I$ac_cv_libevent_dir $CPPFLAGS"
+    CPPFLAGS="-I$tor_cv_libevent_dir $CPPFLAGS"
   fi
 fi
 
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether we need extra options to link libevent],
-               ac_cv_libevent_linker_option, [
+               tor_cv_libevent_linker_option, [
     saved_LDFLAGS="$LDFLAGS"
     le_runs=no
     linked_with=nothing
@@ -284,22 +284,22 @@ AC_CACHE_CHECK([whether we need extra options to link libevent],
                 libevent_runs=yes, libevent_runs=no, libevent_runs=cross)
       if test $libevent_runs != no ; then
         if test -z "$le_extra" ; then
-          ac_cv_libevent_linker_option='(none)'
+          tor_cv_libevent_linker_option='(none)'
         else
-          ac_cv_libevent_linker_option=$le_extra
+          tor_cv_libevent_linker_option=$le_extra
         fi
         le_runs=yes
         break
       fi
     done
     if test $le_runs = no ; then
-      AC_MSG_ERROR([Found linkable libevent in $ac_cv_libevent_dir, but it doesn't run, even with -R.  Maybe specify another using --with-libevent-dir?])
+      AC_MSG_ERROR([Found linkable libevent in $tor_cv_libevent_dir, but it doesn't run, even with -R.  Maybe specify another using --with-libevent-dir?])
     fi
     LDFLAGS="$saved_LDFLAGS"
 ])
 
-if test $ac_cv_libevent_linker_option != '(none)' ; then
-   LDFLAGS="$ac_cv_libevent_linker_option $LDFLAGS"
+if test $tor_cv_libevent_linker_option != '(none)' ; then
+   LDFLAGS="$tor_cv_libevent_linker_option $LDFLAGS"
 fi
 fi
 
@@ -309,7 +309,7 @@ AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
 
-AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
+AC_CACHE_CHECK([for OpenSSL directory], tor_cv_openssl_dir, [
   saved_LIBS="$LIBS"
   saved_LDFLAGS="$LDFLAGS"
   saved_CPPFLAGS="$CPPFLAGS"
@@ -345,9 +345,9 @@ AC_CACHE_CHECK([for OpenSSL directory], ac_cv_openssl_dir, [
        [ openssl_linked=yes ], [ openssl_linked=no ])
     if test $openssl_linked = yes; then
        if test ! -z "$ssldir" ; then
-         ac_cv_openssl_dir=$ssldir
+         tor_cv_openssl_dir=$ssldir
        else
-         ac_cv_openssl_dir="(system)"
+         tor_cv_openssl_dir="(system)"
        fi
        ssl_found=yes
        break
@@ -367,25 +367,25 @@ else
 LIBS="$LIBS -lssl -lcrypto"
 fi
 
-if test "$ac_cv_openssl_dir" != "(system)"; then
-  if test -d "$ac_cv_openssl_dir/lib" ; then
-    LDFLAGS="-L$ac_cv_openssl_dir/lib $LDFLAGS"
-    ssl_libdir="$ac_cv_openssl_dir/lib"
+if test "$tor_cv_openssl_dir" != "(system)"; then
+  if test -d "$tor_cv_openssl_dir/lib" ; then
+    LDFLAGS="-L$tor_cv_openssl_dir/lib $LDFLAGS"
+    ssl_libdir="$tor_cv_openssl_dir/lib"
   else
-    LDFLAGS="-L$ac_cv_openssl_dir $LDFLAGS"
-    ssl_libdir="$ac_cv_openssl_dir"
+    LDFLAGS="-L$tor_cv_openssl_dir $LDFLAGS"
+    ssl_libdir="$tor_cv_openssl_dir"
   fi
-  if test -d "$ac_cv_openssl_dir/include" ; then
-    CPPFLAGS="-I$ac_cv_openssl_dir/include $CPPFLAGS"
+  if test -d "$tor_cv_openssl_dir/include" ; then
+    CPPFLAGS="-I$tor_cv_openssl_dir/include $CPPFLAGS"
   else
-    CPPFLAGS="-I$ac_cv_openssl_dir $CPPFLAGS"
+    CPPFLAGS="-I$tor_cv_openssl_dir $CPPFLAGS"
   fi
 fi
 
 if test -z "$CROSS_COMPILE"
 then
 AC_CACHE_CHECK([whether we need extra options to link OpenSSL],
-               ac_cv_openssl_linker_option, [
+               tor_cv_openssl_linker_option, [
     saved_LDFLAGS="$LDFLAGS"
     ssl_runs=no
     linked_with=nothing
@@ -416,9 +416,9 @@ return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
         right_version=yes, right_version=no)
         if test "$right_version" = yes; then
           if test -z "$ssl_extra" ; then
-            ac_cv_openssl_linker_option='(none)'
+            tor_cv_openssl_linker_option='(none)'
           else
-            ac_cv_openssl_linker_option=$ssl_extra
+            tor_cv_openssl_linker_option=$ssl_extra
           fi
           ssl_runs=yes
           break
@@ -427,12 +427,12 @@ return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
     done
     if test $ssl_runs = no ; then
       if test "$linked_with" = 'nothing' ; then
-        AC_MSG_ERROR([Found linkable OpenSSL in $ac_cv_openssl_dir, but it doesn't run, even with -R.  Maybe specify another using --with-ssl-dir?])
+        AC_MSG_ERROR([Found linkable OpenSSL in $tor_cv_openssl_dir, but it doesn't run, even with -R.  Maybe specify another using --with-ssl-dir?])
       else
         if test -z "$linked_with" ; then
-            ac_cv_openssl_linker_option='(none)'
+            tor_cv_openssl_linker_option='(none)'
         else
-            ac_cv_openssl_linker_option=$linked_with
+            tor_cv_openssl_linker_option=$linked_with
         fi
         AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it link against the same version I found header files for.])
       fi
@@ -440,8 +440,8 @@ return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
     LDFLAGS="$saved_LDFLAGS"
 ])
 
-if test "$ac_cv_openssl_linker_option" != '(none)' ; then
-   LDFLAGS="$ac_cv_openssl_linker_option $LDFLAGS"
+if test "$tor_cv_openssl_linker_option" != '(none)' ; then
+   LDFLAGS="$tor_cv_openssl_linker_option $LDFLAGS"
 fi
 fi
 
@@ -765,38 +765,38 @@ AC_CHECK_FUNC(gethostbyname_r, [
 ])
 
 AC_CACHE_CHECK([whether the C compiler supports __func__],
-  ac_cv_have_func_macro,
+  tor_cv_have_func_macro,
   AC_COMPILE_IFELSE([
 #include <stdio.h>
 int main(int c, char **v) { puts(__func__); }],
-  ac_cv_have_func_macro=yes,
-  ac_cv_have_func_macro=no))
+  tor_cv_have_func_macro=yes,
+  tor_cv_have_func_macro=no))
 
 AC_CACHE_CHECK([whether the C compiler supports __FUNC__],
-  ac_cv_have_FUNC_macro,
+  tor_cv_have_FUNC_macro,
   AC_COMPILE_IFELSE([
 #include <stdio.h>
 int main(int c, char **v) { puts(__FUNC__); }],
-  ac_cv_have_FUNC_macro=yes,
-  ac_cv_have_FUNC_macro=no))
+  tor_cv_have_FUNC_macro=yes,
+  tor_cv_have_FUNC_macro=no))
 
 AC_CACHE_CHECK([whether the C compiler supports __FUNCTION__],
-  ac_cv_have_FUNCTION_macro,
+  tor_cv_have_FUNCTION_macro,
   AC_COMPILE_IFELSE([
 #include <stdio.h>
 int main(int c, char **v) { puts(__FUNCTION__); }],
-  ac_cv_have_FUNCTION_macro=yes,
-  ac_cv_have_FUNCTION_macro=no))
+  tor_cv_have_FUNCTION_macro=yes,
+  tor_cv_have_FUNCTION_macro=no))
 
-if test $ac_cv_have_func_macro = 'yes'; then
+if test $tor_cv_have_func_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
 fi
 
-if test $ac_cv_have_FUNC_macro = 'yes'; then
+if test $tor_cv_have_FUNC_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNC__, 1, [Defined if the compiler supports __FUNC__])
 fi
 
-if test $ac_cv_have_FUNCTION_macro = 'yes'; then
+if test $tor_cv_have_FUNCTION_macro = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
            [Defined if the compiler supports __FUNCTION__])
 fi
