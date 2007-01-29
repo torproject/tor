@@ -219,7 +219,7 @@ static config_var_t _option_vars[] = {
   VAR("RecommendedVersions", LINELIST, RecommendedVersions,  NULL),
   VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),
   VAR("RecommendedServerVersions", LINELIST, RecommendedServerVersions,  NULL),
-  VAR("RedirectExit",        LINELIST, RedirectExit,         NULL)
+  VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
   /* XXXX012 These aren't implemented. Take them out for now? */
   VAR("RelayBandwidthBurst", MEMUNIT,  RelayBandwidthBurst,  "0"),
   VAR("RelayBandwidthRate",  MEMUNIT,  RelayBandwidthRate,   "0"),
