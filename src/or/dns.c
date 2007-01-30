@@ -324,8 +324,8 @@ dns_free_all(void)
         /* XXXX012 The hash lookups here could be quite slow; remove them
          * once we're happy. */
         if (res->state == CACHE_STATE_DONE) {
-          cached_resolve_t *removed = HT_REMOVE(cache_map, &cache_root, res);
-          tor_assert(!removed);
+          cached_resolve_t *found = HT_FIND(cache_map, &cache_root, res);
+          tor_assert(!found || found != res);
           _free_cached_resolve(res);
         } else {
           cached_resolve_t *found = HT_FIND(cache_map, &cache_root, res);
