@@ -69,7 +69,7 @@ R   - actually cause the directory.c functions to know about or_port
 N - DNS improvements
     . Asynchronous DNS
       - Make evdns use windows strerror equivalents.
-      - Make sure patches get into libevent.
+      . Make sure patches get into libevent.
       - Verify that it works well on windows
     - Debug and re-enable server-side reverse DNS caching
 
@@ -105,7 +105,6 @@ NR. Write path-spec.txt
     - More prominently, we should have a recommended apps list.
       - recommend gaim.
       - unrecommend IE because of ftp:// bug.
-N   - torrc.complete.in needs attention?
 N   - we should add a preamble to tor-design saying it's out of date.
 N   - Document transport and natdport
 
@@ -409,6 +408,7 @@ R - add d64 and fp64 along-side d and fp so people can paste status
   - Look into generating torrc.{complete|sample}.in, tor.1.in,
     the HTML manual, and the online config documentation from a single
     source.
+    - torrc.complete.in needs attention?
 
 Future version:
   - Configuration format really wants sections.

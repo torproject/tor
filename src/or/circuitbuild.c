@@ -1918,7 +1918,7 @@ num_live_entry_guards(void)
 /** Return 1 if <b>digest</b> matches the identity of any node
  * in the entry_guards list. Else return 0. */
 static INLINE int
-is_an_entry_guard(char *digest)
+is_an_entry_guard(const char *digest)
 {
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
                     if (!memcmp(digest, entry->identity, DIGEST_LEN))
@@ -2219,6 +2219,11 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
           r = entry_is_live(e, 0, 1, 1);
           if (r && !r->is_running) {
             refuse_conn = 1;
+            /* XXXX012 I think this might be broken; when picking entry nodes,
+             * we only look at unreachable_since and is_time_to_retry, and we
+             * pay no attention to is_running. If this is indeed the case, we
+             * can fix the bug by adding a retry_as_entry flag to
+             * routerinfo_t. -NM */
             r->is_running = 1;
           }
         }
