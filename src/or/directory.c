@@ -633,7 +633,7 @@ directory_send_command(dir_connection_t *conn,
  * Otherwise, return -1.
  */
 static int
-parse_http_url(char *headers, char **url)
+parse_http_url(const char *headers, char **url)
 {
   char *s, *start, *tmp;
 
@@ -1516,8 +1516,8 @@ directory_dump_request_log(void)
  * conn-\>outbuf.  If the request is unrecognized, send a 400.
  * Always return 0. */
 static int
-directory_handle_command_get(dir_connection_t *conn, char *headers,
-                             char *body, size_t body_len)
+directory_handle_command_get(dir_connection_t *conn, const char *headers,
+                             const char *body, size_t body_len)
 {
   size_t dlen;
   const char *cp;
@@ -1811,8 +1811,8 @@ directory_handle_command_get(dir_connection_t *conn, char *headers,
  * response into conn-\>outbuf.  If the request is unrecognized, send a
  * 400.  Always return 0. */
 static int
-directory_handle_command_post(dir_connection_t *conn, char *headers,
-                              char *body, size_t body_len)
+directory_handle_command_post(dir_connection_t *conn, const char *headers,
+                              const char *body, size_t body_len)
 {
   char *url = NULL;
   or_options_t *options = get_options();

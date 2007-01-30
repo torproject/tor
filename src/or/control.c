@@ -779,7 +779,8 @@ get_stream(const char *id)
 }
 
 /** Helper for setconf and resetconf. Acts like setconf, except
- * it passes <b>use_defaults</b> on to options_trial_assign().
+ * it passes <b>use_defaults</b> on to options_trial_assign().  Modifies the
+ * contents of body.
  */
 static int
 control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
@@ -885,7 +886,8 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
 }
 
 /** Called when we receive a SETCONF message: parse the body and try
- * to update our configuration.  Reply with a DONE or ERROR message. */
+ * to update our configuration.  Reply with a DONE or ERROR message.
+ * Modifies the contents of body.*/
 static int
 handle_control_setconf(control_connection_t *conn, uint32_t len, char *body)
 {
@@ -893,7 +895,8 @@ handle_control_setconf(control_connection_t *conn, uint32_t len, char *body)
 }
 
 /** Called when we receive a RESETCONF message: parse the body and try
- * to update our configuration.  Reply with a DONE or ERROR message. */
+ * to update our configuration.  Reply with a DONE or ERROR message.
+ * Modifies the contents of body. */
 static int
 handle_control_resetconf(control_connection_t *conn, uint32_t len, char *body)
 {
@@ -2583,7 +2586,7 @@ handle_control_usefeature(control_connection_t *conn,
  */
 static int
 handle_control_fragments(control_connection_t *conn, uint16_t command_type,
-                         uint32_t body_len, char *body)
+                         uint32_t body_len, const char *body)
 {
   if (command_type == CONTROL0_CMD_FRAGMENTHEADER) {
     if (conn->incoming_cmd) {

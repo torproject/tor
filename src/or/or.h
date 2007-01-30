@@ -1892,13 +1892,13 @@ int inform_testing_reachability(void);
 int circuit_send_next_onion_skin(origin_circuit_t *circ);
 void circuit_note_clock_jumped(int seconds_elapsed);
 int circuit_extend(cell_t *cell, circuit_t *circ);
-int circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data,
+int circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
                               int reverse);
 int circuit_finish_handshake(origin_circuit_t *circ, uint8_t cell_type,
-                             char *reply);
+                             const char *reply);
 int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer);
-int onionskin_answer(or_circuit_t *circ, uint8_t cell_type, char *payload,
-                     char *keys);
+int onionskin_answer(or_circuit_t *circ, uint8_t cell_type,
+                     const char *payload, const char *keys);
 int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
                                         int *need_capacity);
 
@@ -2059,7 +2059,7 @@ void _connection_mark_for_close(connection_t *conn,int line, const char *file);
 
 void connection_expire_held_open(void);
 
-int connection_connect(connection_t *conn, char *address, uint32_t addr,
+int connection_connect(connection_t *conn, const char *address, uint32_t addr,
                        uint16_t port);
 int retry_all_listeners(int force, smartlist_t *replaced_conns,
                         smartlist_t *new_conns);

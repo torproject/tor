@@ -55,7 +55,7 @@ int tor_tls_get_peer_cert_nickname(int severity, tor_tls_t *tls,
 int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity);
 int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);
 int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);
-int tor_tls_write(tor_tls_t *tls, char *cp, size_t n);
+int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
 int tor_tls_handshake(tor_tls_t *tls);
 int tor_tls_shutdown(tor_tls_t *tls);
 int tor_tls_get_pending_bytes(tor_tls_t *tls);

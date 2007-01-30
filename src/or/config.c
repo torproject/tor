@@ -1121,7 +1121,7 @@ config_line_append(config_line_t **lst,
 /** Helper: parse the config string and strdup into key/value
  * strings. Set *result to the list, or NULL if parsing the string
  * failed.  Return 0 on success, -1 on failure. Warn and ignore any
- * misformatted lines. */
+ * misformatted lines. Modifies the contents of <b>string</b>. */
 int
 config_get_lines(char *string, config_line_t **result)
 {

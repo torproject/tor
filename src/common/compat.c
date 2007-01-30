@@ -645,7 +645,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
  * success.  On failure, log and return -1.
  */
 int
-switch_id(char *user, char *group)
+switch_id(const char *user, const char *group)
 {
 #ifndef MS_WINDOWS
   struct passwd *pw = NULL;

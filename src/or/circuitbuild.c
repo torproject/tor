@@ -46,7 +46,7 @@ static int entry_guards_dirty = 0;
 /********* END VARIABLES ************/
 
 static int circuit_deliver_create_cell(circuit_t *circ,
-                                       uint8_t cell_type, char *payload);
+                                       uint8_t cell_type, const char *payload);
 static int onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit);
 static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
@@ -468,7 +468,7 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
  */
 static int
 circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
-                            char *payload)
+                            const char *payload)
 {
   cell_t cell;
   uint16_t id;
@@ -788,7 +788,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
  * (If 'reverse' is true, then f_XX and b_XX are swapped.)
  */
 int
-circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
+circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
+                          int reverse)
 {
   crypto_digest_env_t *tmp_digest;
   crypto_cipher_env_t *tmp_crypto;
@@ -838,7 +839,7 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, char *key_data, int reverse)
  */
 int
 circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
-                         char *reply)
+                         const char *reply)
 {
   char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
@@ -946,8 +947,8 @@ circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer)
  * cell back.
  */
 int
-onionskin_answer(or_circuit_t *circ, uint8_t cell_type, char *payload,
-                 char *keys)
+onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
+                 const char *keys)
 {
   cell_t cell;
   crypt_path_t *tmp_cpath;

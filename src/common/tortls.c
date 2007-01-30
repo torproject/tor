@@ -538,7 +538,7 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
  * TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
  */
 int
-tor_tls_write(tor_tls_t *tls, char *cp, size_t n)
+tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
 {
   int r, err;
   tor_assert(tls);

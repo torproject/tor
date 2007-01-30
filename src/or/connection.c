@@ -876,7 +876,7 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
  * On success, add conn to the list of polled connections.
  */
 int
-connection_connect(connection_t *conn, char *address,
+connection_connect(connection_t *conn, const char *address,
                    uint32_t addr, uint16_t port)
 {
   int s, inprogress = 0;
