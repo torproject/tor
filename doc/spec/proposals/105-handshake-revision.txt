@@ -4,6 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson, Roger Dingledine
 Created:
+Status: Open
 
 Overview:
 

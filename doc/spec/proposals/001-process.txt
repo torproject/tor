@@ -1,0 +1,102 @@
+Filename: 001-process.txt
+Title: The Tor Proposal Process
+Version: $Revision: 11537 $
+Last-Modified: $Date: 2007-01-26T19:04:29.998860Z $
+Author: Nick Mathewson
+Created: 30-Jan-2007
+Status: Meta
+
+Overview:
+
+   This document describes how to change the Tor specifications, how Tor
+   proposals work, and the relationship between Tor proposals and the
+   specifications.
+
+   This is an informational document.
+
+Motivation:
+
+   Previously, our process for updating the Tor specifications was maximally
+   informal: we'd patch the specification (sometimes forking first, and
+   sometimes not), then discuss the patches, reach consensus, and implement
+   the changes.
+
+   This had a few problems.
+
+   First, even at its most efficient, the old process would often have the
+   spec out of sync with the code.  The worst cases were those where
+   implementation was deferred: the spec and could stay out of sync for
+   versions at a time.
+
+   Second, it was hard to participate in discussion, since you had to know
+   which portions of the spec were a proposal, and which were already
+   implemented.
+
+   Third, it littered the specifications with too many inline comments.
+     [This was a real problem -NM]
+       [Especially when it went to multiple levels! -NM]
+         [XXXX especially when they weren't signed and talked about that
+          thing that you can't remember after a year]
+
+How to change the specs now:
+
+   First, somebody writes a proposal document.  It should describe the change
+   that should be made in detail, and give some idea of how to implement it.
+   Once it's fleshed out enough, it becomes a proposal.
+
+   Like an RFC, every proposal gets a number.  Unlike RFCs, proposals can
+   change over time and keep the same number.  The history for each proposal
+   will be stored in the Tor Subversion repository.
+
+   Once a proposal is in the repository, we should discuss and improve it
+   until we've reached consensus that it's a good idea, and that it's
+   detailed enough to implement.  When this happens, we implement the
+   proposal and incorporate it into the specifications.  Thus, the specs
+   remain the canonical documentation for the Tor protocol: no proposal is
+   ever the canonical documentation for an implemented feature.
+
+   {It's still okay to make mall changes to the spec if the code can be
+   written more or less immediately, or cosmetic changes if no code change is
+   required.  This document reflects the current developers' _intent_, not
+   a permanent promise to always use this process in the future: we reserve
+   the right to get really excited and run off and implement something in a
+   caffeine-and-m&m-fueled all-night hacking session.}
+
+Proposal status:
+
+   Open: A proposal under discussion.
+
+   Accepted: The proposal is complete, and we intend to implement it.
+
+   Finished: The proposal has been accepted and implemented.
+
+   Closed: The proposal has been accepted, implemented, and merged into the
+      main specification documents.
+
+   Rejected: We're not going to implement the feature as described here,
+      though we might do some other version.  See comments in the document
+      for details.
+
+   Needs-Revision: The idea for the proposal is a good one, but the proposal
+      as it stands has serious problems that keep it from being accepted.
+      See comments in the document for details.
+
+   Dead: The proposal hasn't been touched in a long time, and it doesn't look
+      like anybody is going to complete it soon.
+
+   Needs-Research: There are research problems that need to be solved before
+      it's clear whether the proposal is a good idea.
+
+   Meta: This is not a proposal, but a document about proposals.
+
+Proposal numbering:
+
+   Numbers 000-099 are reserved for special and meta-proposals.  100 and up
+   are used for actual proposals.  Numbers aren't recycled.
+
+What should go in a proposal:
+
+   WRITE MORE.
+
+   Before a proposal is "ACCEPTED", it should have about as much detail as
+   the specs would for the proposed feature.
