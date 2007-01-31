@@ -89,11 +89,11 @@ Windows since that platform lacks getrlimit(). (Default: 1000)
 .TP
 \fBControlPort \fR\fIPort\fP
 If set, Tor will accept connections on
-this port, and allow those connections to control the Tor process using the
+this port (Usually: 9051), and allow those connections to control the Tor process using the
 Tor Control Protocol (described in control-spec.txt).  Note: unless you also
 specify one of \fBHashedControlPassword\fP or \fBCookieAuthentication\fP,
 setting this option will cause Tor to allow any process on the local host to
-control it.
+control it. This option is required if you would like to use Tor with \fBdns-proxy-tor\fP.
 .LP
 .TP
 \fBControlListenAddress \fR\fIIP\fR[:\fIPORT\fR]\fP
@@ -526,6 +526,13 @@ leaking DNS requests.
 When a controller asks for a virtual (unused) address with the
 'MAPADDRESS' command, Tor picks an unassigned address from this range.
 (Default: 127.192.0.0/10)
+
+When using \fBdns-proxy-tor\fP to answer queries over a network you'll 
+want to change this address to "10.192.0.0/10" or "172.16.0.0/12".
+The default \fBVirtualAddrNetwork \fR\fIAddress\fB address range on a 
+properly configured machine will route to the loopback interface. 
+For local use \fBdns-proxy-tor\fP doesn't require a change to the 
+default \fBVirtualAddrNetwork \fR\fIAddress\fB setting.
 .LP
 .TP
 \fBAllowNonRFC953Hostnames \fR\fB0\fR|\fB1\fR\fP
@@ -542,7 +549,28 @@ safe since we have already used TLS to authenticate the server and to
 establish forward-secure keys.  Turning this option off makes circuit
 building slower.
 (Default: 1)
-
+.LP
+.TP
+\fBTransPort\fP \fR\fIPORT\fP
+Enable transparent proxy support on \fR\fIPORT\fP (Usually: 9040).
+This is required to enable support for \fBdns-proxy-tor\fP.
+ControlPort must be set when using \fBTransPort\fP. If you're planning 
+to use Tor as a transparent proxy for a network, you'll want to examine 
+and change VirtualAddrNetwork from the default setting. You'll also want
+to set the TransListenAddress option for the network you'd like to proxy.
+.LP
+.TP
+\fBTransListenAddress\fP \fR\fIAddress\fB/\fIbits\fP
+Optionally listen on \fR\fIAddress\fB/\fIbits\fP as a transparent proxy 
+server. This is useful for exporting a transparent proxy server 
+to an entire network.
+.LP
+.TP
+\fBNatdPort\fP \fR\fIPORT\fP
+This option allows users of ipfw (FreeBSD, etc) to send connections through tor in a manner
+similar to the TransPort. This option is only for people who cannot use TransPort.
+.LP
+.TP
 .SH SERVER OPTIONS
 .PP
 The following options are useful only for servers (that is, if \fBORPort\fP is non-zero):
