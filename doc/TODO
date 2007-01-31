@@ -71,7 +71,7 @@ N - DNS improvements
       - Make evdns use windows strerror equivalents.
       . Make sure patches get into libevent.
       - Verify that it works well on windows
-    - Debug and re-enable server-side reverse DNS caching
+    o Debug and re-enable server-side reverse DNS caching
 
   - Critical but minor bugs, backport candidates.
     - support dir 503s better

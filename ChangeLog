@@ -85,6 +85,7 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       ready yet. As part of the change, now assume we can use a
       create_fast cell if we don't know anything about a router.
     - Allow exit nodes to use nameservers running on ports other than 53.
+    - Servers now cache reverse DNS replies.
 
   o Minor features (controller):
     - Track reasons for OR connection failure; make these reasons

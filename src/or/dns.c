@@ -499,6 +499,7 @@ send_resolved_hostname_cell(edge_connection_t *conn, or_circuit_t *circ,
   size_t buflen;
   uint32_t ttl;
   size_t namelen = strlen(hostname);
+  tor_assert(hostname);
 
   tor_assert(namelen < 256);
   ttl = dns_clip_ttl(conn->address_ttl);
@@ -900,11 +901,6 @@ add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
 {
   cached_resolve_t *resolve;
   if (outcome == DNS_RESOLVE_FAILED_TRANSIENT)
-    return;
-
-  /* XXXX012 This is dumb, but it seems to workaround a bug I can't find.  We
-   * should nail this so we can cache reverse DNS answers. -NM */
-  if (is_reverse)
     return;
 
   //log_notice(LD_EXIT, "Adding to cache: %s -> %s (%lx, %s), %d",
