@@ -118,8 +118,8 @@ int
 router_reload_networkstatus(void)
 {
   char filename[512];
-  struct stat st;
   smartlist_t *entries;
+  struct stat st;
   char *s;
   tor_assert(get_options()->DataDirectory);
   if (!networkstatus_list)
@@ -138,9 +138,8 @@ router_reload_networkstatus(void)
       }
       tor_snprintf(filename,sizeof(filename),"%s/cached-status/%s",
                    get_options()->DataDirectory, fn);
-      s = read_file_to_str(filename, 0, NULL);
+      s = read_file_to_str(filename, 0, &st);
       if (s) {
-        stat(filename, &st);
         if (router_set_networkstatus(s, st.st_mtime, NS_FROM_CACHE, NULL)<0) {
           log_warn(LD_FS, "Couldn't load networkstatus from \"%s\"",filename);
         }
@@ -353,7 +352,6 @@ router_reload_router_list(void)
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
   char *fname = tor_malloc(fname_len), *contents;
-  struct stat st;
 
   if (!routerlist)
     router_get_routerlist(); /* mallocs and inits it in place */
@@ -376,7 +374,6 @@ router_reload_router_list(void)
                options->DataDirectory);
   contents = read_file_to_str(fname, 1, NULL);
   if (contents) {
-    stat(fname, &st);
     router_load_routers_from_string(contents,
                                     SAVED_IN_JOURNAL, NULL);
     tor_free(contents);

@@ -62,6 +62,7 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       unstable ones.
     - Handle TTL values correctly on reverse DNS lookups.
     - Stop using the reserved ac_cv namespace in our configure script.
+    - Call stat() slightly less often; use fstat() when possible.
 
   o Major features:
     - Weight directory requests by advertised bandwidth. Now we can

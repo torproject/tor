@@ -182,7 +182,8 @@ int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
 int append_bytes_to_file(const char *fname, const char *str, size_t len,
                          int bin);
 
-char *read_file_to_str(const char *filename, int bin, size_t *size_out)
+struct stat;
+char *read_file_to_str(const char *filename, int bin, struct stat *stat_out)
   ATTR_MALLOC;
 char *parse_line_from_str(char *line, char **key_out, char **value_out);
 char *expand_filename(const char *filename);

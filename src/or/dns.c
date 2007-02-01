@@ -1529,8 +1529,8 @@ configure_nameservers(int force)
   evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
     if (stat(conf_fname, &st)) {
-      log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s'",
-               conf_fname);
+      log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s': %s",
+               conf_fname, strerror(errno));
       return -1;
     }
     if (!force && resolv_conf_fname && !strcmp(conf_fname,resolv_conf_fname)

@@ -241,14 +241,14 @@ tor_munmap_file(tor_mmap_t *handle)
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
-  size_t size;
-  char *res = read_file_to_str(filename, 1, &size);
+  struct stat st;
+  char *res = read_file_to_str(filename, 1, &st);
   tor_mmap_t *handle;
   if (! res)
     return NULL;
   handle = tor_malloc_zero(sizeof(tor_mmap_t));
   handle->data = res;
-  handle->size = size;
+  handle->size = st.st_size;
   return handle;
 }
 void

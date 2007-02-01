@@ -1375,27 +1375,24 @@ append_bytes_to_file(const char *fname, const char *str, size_t len,
  * be truncated.
  */
 char *
-read_file_to_str(const char *filename, int bin, size_t *size_out)
+read_file_to_str(const char *filename, int bin, struct stat *stat_out)
 {
   int fd; /* router file */
   struct stat statbuf;
-  char *string, *f;
+  char *string;
   int r;
 
   tor_assert(filename);
 
-  f = tor_strdup(filename);
-  clean_name_for_stat(f);
-  r = stat(f, &statbuf);
-  tor_free(f);
-  if (r < 0) {
-    log_info(LD_FS,"Could not stat \"%s\".",filename);
-    return NULL;
-  }
-
   fd = open(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
   if (fd<0) {
     log_warn(LD_FS,"Could not open \"%s\".",filename);
+    return NULL;
+  }
+
+  if (fstat(fd, &statbuf)<0) {
+    close(fd);
+    log_info(LD_FS,"Could not fstat \"%s\".",filename);
     return NULL;
   }
 
@@ -1414,26 +1411,31 @@ read_file_to_str(const char *filename, int bin, size_t *size_out)
   }
   string[r] = '\0'; /* NUL-terminate the result. */
 
-  if (bin && r != statbuf.st_size) {
-    /* If we're in binary mode, then we'd better have an exact match for
-     * size.  Otherwise, win32 encoding may throw us off, and that's okay. */
-    log_warn(LD_FS,"Could read only %d of %ld bytes of file \"%s\".",
-             r, (long)statbuf.st_size,filename);
-    tor_free(string);
-    close(fd);
-    return NULL;
-  }
 #ifdef MS_WINDOWS
   if (!bin && strchr(string, '\r')) {
     log_debug(LD_FS, "We didn't convert CRLF to LF as well as we hoped "
               "when reading %s. Coping.",
               filename);
     tor_strstrip(string, "\r");
+    r = strlen(string);
   }
+  if (!bin) {
+    statbuf.st_size = (size_t) r;
+  } else
 #endif
+    if (r != statbuf.st_size) {
+      /* Unless we're using text mode on win32, we'd better have an exact
+       * match for size. */
+      log_warn(LD_FS,"Could read only %d of %ld bytes of file \"%s\".",
+               r, (long)statbuf.st_size,filename);
+      tor_free(string);
+      close(fd);
+      return NULL;
+    }
   close(fd);
-  if (size_out)
-    *size_out = (size_t) r;
+  if (stat_out) {
+    memcpy(stat_out, &statbuf, sizeof(struct stat));
+  }
 
   return string;
 }
