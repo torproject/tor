@@ -971,7 +971,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
         if (!i) /* no hints; _really_ guess */
           this_bw = status->is_fast ? 40000 : 20000;
         else /* assume it'll be the average we've seen so far */
-          this_bw = partial/i;
+          this_bw = (uint32_t)(partial/i);
       }
     } else {
       router = smartlist_get(sl, i);
