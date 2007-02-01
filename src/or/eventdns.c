@@ -2768,6 +2768,7 @@ load_nameservers_with_getnetworkparams(void)
 	IP_ADDR_STRING *ns;
 	GetNetworkParams_fn_t fn;
 
+	/* XXXX Possibly, we should hardcode the location of this DLL. */
 	if (!(handle = LoadLibrary("iphlpapi.dll"))) {
 		log(EVDNS_LOG_WARN, "Could not open iphlpapi.dll");
 		//right now status = 0, doesn't that mean "good" - mikec

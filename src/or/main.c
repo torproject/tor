@@ -1775,6 +1775,7 @@ nt_service_loadlibrary(void)
   if (service_fns.loaded)
     return 0;
 
+  /* XXXX Possibly, we should hardcode the location of this DLL. */
   if (!(library = LoadLibrary("advapi32.dll"))) {
     log_err(LD_GENERAL, "Couldn't open advapi32.dll.  Are you trying to use "
             "NT services on Windows 98? That doesn't work.");

@@ -231,6 +231,8 @@ logv(int severity, uint32_t domain, const char *funcname, const char *format,
     }
     if (lf->is_syslog) {
 #ifdef HAVE_SYSLOG_H
+      /* XXXX Some syslog implementations have scary limits on the length of
+       * what you can pass them.  Can/should we detect this? */
       syslog(severity, "%s", end_of_prefix);
 #endif
       lf = lf->next;
