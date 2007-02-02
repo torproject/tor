@@ -222,8 +222,9 @@ dns_init(void)
   return 0;
 }
 
-/** Called when DNS-related options change (or may have changed) */
-void
+/** Called when DNS-related options change (or may have changed).  Returns -1
+ * on failure, 0 on success. */
+int
 dns_reset(void)
 {
 #ifdef USE_EVENTDNS
@@ -236,8 +237,7 @@ dns_reset(void)
     resolv_conf_mtime = 0;
   } else {
     if (configure_nameservers(0) < 0)
-      /* XXXX012 */
-      return;
+      return -1;
   }
 #else
   dnsworkers_rotate();
@@ -322,7 +322,8 @@ dns_free_all(void)
     SMARTLIST_FOREACH(cached_resolve_pqueue, cached_resolve_t *, res,
       {
         /* XXXX012 The hash lookups here could be quite slow; remove them
-         * once we're happy. */
+         * once we're happy. (Leave them in for at least 0.1.2.7-alpha, so they
+         * get some testing.) -NM */
         if (res->state == CACHE_STATE_DONE) {
           cached_resolve_t *found = HT_FIND(cache_map, &cache_root, res);
           tor_assert(!found || found != res);

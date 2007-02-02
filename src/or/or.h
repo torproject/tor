@@ -2415,7 +2415,7 @@ uint32_t dns_clip_ttl(uint32_t ttl);
 int connection_dns_finished_flushing(connection_t *conn);
 int connection_dns_reached_eof(connection_t *conn);
 int connection_dns_process_inbuf(connection_t *conn);
-void dns_reset(void);
+int dns_reset(void);
 void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);

@@ -990,11 +990,13 @@ options_act(or_options_t *old_options)
           inform_testing_reachability();
       }
       cpuworkers_rotate();
-      dns_reset();
+      if (dns_reset())
+        return -1;
     }
 #ifdef USE_EVENTDNS
     else {
-      dns_reset();
+      if (dns_reset())
+        return -1;
     }
 #endif
   }
