@@ -906,6 +906,7 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
  * If <b>need_uptime</b> is non-zero, we require a minimum uptime.
  * If <b>need_capacity</b> is non-zero, we require a minimum advertised
  * bandwidth.
+ * If <b>need_guard</b>, we require that the router is a possible entry guard.
  */
 int
 router_is_unreliable(routerinfo_t *router, int need_uptime,
@@ -939,7 +940,10 @@ router_get_advertised_bandwidth(routerinfo_t *router)
  * If <b>statuses</b> is zero, then <b>sl</b> is a list of
  * routerinfo_t's. Otherwise it's a list of routerstatus_t's.
  *
- * DOCDOC for_exit
+ * If <b>for_exit</b>, we're picking an exit node: consider all nodes'
+ * bandwidth equally regardless of their Exit status.  If not <b>for_exit</b>,
+ * we're picking a non-exit node: weight exit-node's bandwidth downwards
+ * depending on the smallness of the fraction of Exit-to-total bandwidth.
  */
 static void *
 smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
@@ -972,6 +976,9 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
           this_bw = status->is_fast ? 40000 : 20000;
         else /* assume it'll be the average we've seen so far */
           this_bw = (uint32_t)(partial/i);
+        /*XXXX012 The above calculation is an awful hack, and makes our
+         * algorithm hard to describe sanely. Could we do better with a second
+         * pass through the list? -NM */
       }
     } else {
       router = smartlist_get(sl, i);
@@ -1063,8 +1070,11 @@ routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
  * a minimum uptime, return one of those.
  * If <b>need_capacity</b> is non-zero, weight your choice by the
  * advertised capacity of each router.
- *
- * DOCDOC allow_invalid, need_guard, weight_for_exit
+ * If ! <b>allow_invalid</b>, consider only Valid routers.
+ * If <b>need_guard</b>, consider only Guard routers.
+ * If <b>weight_for_exit</b>, we weight bandwidths as if picking an exit node,
+ * otherwise we weight bandwidths for picking a relay node (that is, possibly
+ * discounting exit nodes).
  */
 routerinfo_t *
 router_choose_random_node(const char *preferred,
@@ -3782,15 +3792,13 @@ router_list_client_downloadable(void)
 /** Initiate new router downloads as needed, using the strategy for
  * non-directory-servers.
  *
- * We only allow one router descriptor download at a time.
- * If we have less than two network-status documents, we ask
- * a directory for "all descriptors."
- * Otherwise, we ask for all descriptors that we think are different
- * from what we have.
+ * We don't launch any downloads if there are fewer than MAX_DL_TO_DELAY
+ * descriptors to get and less than MAX_CLIENT_INTERVAL_WITHOUT_REQUEST
+ * seconds have passed.
  *
- * DOCDOC The above comment doesn't match the behavior of the function.
- * I guess one of them is wrong, and I guess it's the comment. -RD
- */
+ * Otherwise, we ask for all descriptors that we think are different from what
+ * we have, and that we don't currently have an in-progress download attempt
+ * for. */
 static void
 update_router_descriptor_client_downloads(time_t now)
 {

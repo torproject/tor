@@ -632,7 +632,8 @@ addressmap_virtaddress_remove(const char *address, addressmap_entry_t *ent)
   }
 }
 
-/* DOCDOC */
+/** Remove <b>ent</b> (which must be mapped to by <b>address</b>) from the
+ * client address maps. */
 static void
 addressmap_ent_remove(const char *address, addressmap_entry_t *ent)
 {
@@ -708,7 +709,9 @@ addressmap_rewrite(char *address, size_t maxlen)
   /* it's fine to rewrite a rewrite, but don't loop forever */
 }
 
-/* DOCDOC */
+/** If we have a cached reverse DNS entry for the address stored in the
+ * <b>maxlen</b>-byte buffer <b>address</b> (typically, a dotted quad) with
+ * the cached value and return 1.  Otherwise return  0. */
 static int
 addressmap_rewrite_reverse(char *address, size_t maxlen)
 {
@@ -898,7 +901,15 @@ client_dns_set_addressmap(const char *address, uint32_t val,
   client_dns_set_addressmap_impl(address, valbuf, exitname, ttl);
 }
 
-/** DOCDOC */
+/** Add a cache entry noting that <b>address</b> (ordinarily a dotted quad)
+ * resolved via a RESOLVE_PTR request to the hostname <b>v</b>.
+ *
+ * If <b>exitname</b> is defined, then append the addresses with
+ * ".exitname.exit" before registering the mapping.
+ *
+ * If <b>ttl</b> is nonnegative, the mapping will be valid for
+ * <b>ttl</b>seconds; otherwise, we use the default.
+ */
 static void
 client_dns_set_reverse_addressmap(const char *address, const char *v,
                                   const char *exitname,
@@ -2003,11 +2014,10 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
  * socks version, etc, and mark <b>conn</b> as completed with SOCKS
  * handshaking.
  *
- * If <b>reply</b> is defined, then write <b>replylen</b> bytes of it
- * to conn and return, else reply based on <b>status</b>.
- *
- * If <b>reply</b> is undefined, <b>status</b> can't be 0.
- * DOCDOC endreason
+ * If <b>reply</b> is defined, then write <b>replylen</b> bytes of it to conn
+ * and return, else reply based on <b>endreason</b> (one of
+ * END_STREAM_REASON_*). If <b>reply</b> is undefined, <b>endreason</b> can't 0
+ * or REASON_DONE.  Send endreason to the controller, if appropriate.
  */
 void
 connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,

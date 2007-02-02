@@ -1444,10 +1444,13 @@ already_fetching_directory(int purpose)
 #undef INSTRUMENT_DOWNLOADS
 
 #ifdef INSTRUMENT_DOWNLOADS
-/** DOCDOC */
+/** Map used to keep track of how much data we've up/downloaded in what kind
+ * of request.  Maps from request type to pointer to uint64_t. */
 static strmap_t *request_bytes_map = NULL;
 
-/** DOCDOC */
+/** Called when we just transmitted or received <b>bytes</b> worth of data
+ * because of a request of type <b>key</b> (an arbitrary identifier): adds
+ * <b>bytes</b> to the total associated with key. */
 static void
 note_request(const char *key, size_t bytes)
 {
@@ -1463,7 +1466,8 @@ note_request(const char *key, size_t bytes)
   *n += bytes;
 }
 
-/** DOCDOC */
+/** Return a newly allocated string holding a summary of bytes used per
+ * request type. */
 char *
 directory_dump_request_log(void)
 {

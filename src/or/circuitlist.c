@@ -634,12 +634,10 @@ circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
   return NULL;
 }
 
-/** Return the first circuit in global_circuitlist after <b>start</b>
- * whose purpose is <b>purpose</b> is purpose, and (if set) whose
- * <b>digest</b> matches the rend_pk_digest field. Return NULL if no
- * circuit is found.
- * If <b>start</b> is NULL, begin at the start of the list.
- * DOCDOC origin.
+/** Return the first circuit originating here in global_circuitlist after
+ * <b>start</b> whose purpose is <b>purpose</b> is purpose, and where
+ * <b>digest</b> (if set) matches the rend_pk_digest field. Return NULL if no
+ * circuit is found.  If <b>start</b> is NULL, begin at the start of the list.
  */
 origin_circuit_t *
 circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
@@ -666,7 +664,9 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
   return NULL;
 }
 
-/* DOCDOC */
+/** Return the first OR circuit in the global list whose purpose is
+ * <b>purpose</b>, and whose rend_token is the <b>len</b>-byte
+ * <b>token</b>.  */
 static or_circuit_t *
 circuit_get_by_rend_token_and_purpose(uint8_t purpose, const char *token,
                                       size_t len)

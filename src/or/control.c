@@ -631,7 +631,13 @@ send_control0_event(uint16_t event, uint32_t len, const char *body)
 /* Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is given by <b>msg</b>.
  *
- * docdoc which, is_extended */
+ * If <b>which</b> & SHORT_NAMES, the event contains short-format names: send
+ * it to controllers that haven't enabled the VERBOSE_NAMES feature.  If
+ * <b>which</b> & LONG_NAMES, the event contains long-format names: sent it
+ * to contollers that <em>have</em> enabled VERBOSE_NAMES.
+ *
+ * The EXTENDED_FORMAT and NONEXTENDED_FORMAT flags behaves similarly with
+ * respect to the EXTENDED_EVENTS feature. */
 static void
 send_control1_event_string(uint16_t event, event_format_t which,
                            const char *msg)
@@ -3118,7 +3124,8 @@ write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
   return 0;
 }
 
-/* DOCDOC */
+/** Convert the reason for ending a stream <b>reason</b> into the format used
+ * in STREAM events. Return NULL if the reason is unrecognized.*/
 static const char *
 stream_end_reason_to_string(int reason)
 {
@@ -3585,7 +3592,8 @@ control_event_or_authdir_new_descriptor(const char *action,
   return 0;
 }
 
-/* DOCDOC takes a list of local_routerstatus_t */
+/** Called when the local_routerstatus_ts <b>statuses</b> have changed: sends
+ * an NS event to any controller that cares. */
 int
 control_event_networkstatus_changed(smartlist_t *statuses)
 {
@@ -3612,7 +3620,8 @@ control_event_networkstatus_changed(smartlist_t *statuses)
   return 0;
 }
 
-/* DOCDOC */
+/** Called when a single local_routerstatus_t has changed: Sends an NS event
+ * to any countroller that cares. */
 int
 control_event_networkstatus_changed_single(local_routerstatus_t *rs)
 {
@@ -3638,7 +3647,10 @@ control_event_my_descriptor_changed(void)
   return 0;
 }
 
-/* DOCDOC */
+/** Helper: sents a status event where <b>type</b> is one of
+ * EVENT_STATUS_{GENERAL,CLIENT,SERVER}, where <b>severity</b> is one of
+ * LOG_{NOTICE,WARN,ERR}, and where <b>format</b> is a print-style format
+ * string corresponding to <b>args</b>. */
 static int
 control_event_status(int type, int severity, const char *format, va_list args)
 {
@@ -3683,7 +3695,8 @@ control_event_status(int type, int severity, const char *format, va_list args)
   return 0;
 }
 
-/* DOCDOC */
+/** Format and send an EVENT_STATUS_GENERAL event whose main text is obtained
+ * by formatting the arguments using the printf-style <b>format</b> */
 int
 control_event_general_status(int severity, const char *format, ...)
 {
@@ -3698,7 +3711,8 @@ control_event_general_status(int severity, const char *format, ...)
   return r;
 }
 
-/* DOCDOC */
+/** Format and send an EVENT_STATUS_CLIENT event whose main text is obtained
+ * by formatting the arguments using the printf-style <b>format</b> */
 int
 control_event_client_status(int severity, const char *format, ...)
 {
@@ -3713,7 +3727,8 @@ control_event_client_status(int severity, const char *format, ...)
   return r;
 }
 
-/* DOCDOC */
+/** Format and send an EVENT_STATUS_SERVER event whose main text is obtained
+ * by formatting the arguments using the printf-style <b>format</b> */
 int
 control_event_server_status(int severity, const char *format, ...)
 {
@@ -3728,7 +3743,9 @@ control_event_server_status(int severity, const char *format, ...)
   return r;
 }
 
-/** DOCDOC */
+/** Called when the status of an entry guard with the given <b>nickname</b>
+ * and identity <b>digest</b> has changed to <b>status</b>: tells any
+ * controllers that care.  */
 int
 control_event_guard(const char *nickname, const char *digest,
                     const char *status)
