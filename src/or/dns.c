@@ -243,6 +243,7 @@ dns_reset(void)
 #else
   dnsworkers_rotate();
 #endif
+  return 0;
 }
 
 /** Helper: Given a TTL from a DNS response, determine what TTL to give the
