@@ -810,7 +810,9 @@ connection_or_count_pending_circs(or_connection_t *or_conn)
   return cnt;
 }
 
+/** DOCDOC */
 #define BUF_FULLNESS_THRESHOLD (128*1024)
+/** DOCDOC */
 #define BUF_EMPTINESS_THRESHOLD (96*1024)
 
 /** Return true iff there is so much data waiting to be flushed on <b>conn</b>

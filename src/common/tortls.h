@@ -31,7 +31,7 @@ typedef struct tor_tls_t tor_tls_t;
 #define TOR_TLS_WANTWRITE          -1
 #define TOR_TLS_DONE                0
 
-/* Use this macro in a switch statement to catch _any_ TLS error.  That way,
+/** Use this macro in a switch statement to catch _any_ TLS error.  That way,
  * if more errors are added, your switches will still work. */
 #define CASE_TOR_TLS_ERROR_ANY                  \
   case TOR_TLS_ERROR_MISC:                      \

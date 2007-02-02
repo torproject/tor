@@ -125,7 +125,7 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
   return result;
 }
 
-/* Allocate a chunk of <b>size</b> bytes of memory, fill the memory with
+/** Allocate a chunk of <b>size</b> bytes of memory, fill the memory with
  * zero bytes, and return a pointer to the result.  Log and terminate
  * the process on error.  (Same as calloc(size,1), but never returns NULL.)
  */
@@ -361,7 +361,7 @@ tor_strisnonupper(const char *s)
   return 1;
 }
 
-/* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
+/** Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
 int
@@ -371,7 +371,7 @@ strcmpstart(const char *s1, const char *s2)
   return strncmp(s1, s2, n);
 }
 
-/* Compares the first strlen(s2) characters of s1 with s2.  Returns as for
+/** Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcasecmp.
  */
 int
@@ -381,7 +381,7 @@ strcasecmpstart(const char *s1, const char *s2)
   return strncasecmp(s1, s2, n);
 }
 
-/* Compares the last strlen(s2) characters of s1 with s2.  Returns as for
+/** Compares the last strlen(s2) characters of s1 with s2.  Returns as for
  * strcmp.
  */
 int
@@ -394,7 +394,7 @@ strcmpend(const char *s1, const char *s2)
     return strncmp(s1+(n1-n2), s2, n2);
 }
 
-/* Compares the last strlen(s2) characters of s1 with s2.  Returns as for
+/** Compares the last strlen(s2) characters of s1 with s2.  Returns as for
  * strcasecmp.
  */
 int
@@ -624,7 +624,7 @@ hex_decode_digit(char c)
   }
 }
 
-/** Given a hexadecimal string of <b>srclen</b> bytes in <b>src/b>, decode it
+/** Given a hexadecimal string of <b>srclen</b> bytes in <b>src</b>, decode it
  * and store the result in the <b>destlen</b>-byte buffer at <b>dest</b>.
  * Return 0 on success, -1 on failure. */
 int
@@ -878,7 +878,9 @@ tv_addms(struct timeval *a, long ms)
   a->tv_usec %= 1000000;
 }
 
+/** DOCDOC */
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
+/** DOCDOC */
 static int
 n_leapdays(int y1, int y2)
 {
@@ -1263,7 +1265,7 @@ write_str_to_file(const char *fname, const char *str, int bin)
 }
 
 /** Helper: given a set of flags as passed to open(2), open the file
- * <b>fname</b> and write all the sized_chunk_t structs in <b>chunks</t> to
+ * <b>fname</b> and write all the sized_chunk_t structs in <b>chunks</b> to
  * the file.  Do so as atomically as possible e.g. by opening temp files and
  * renaming. */
 static int
@@ -1320,7 +1322,7 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
   return -1;
 }
 
-/* Given a smartlist of sized_chunk_t, write them atomically to a file
+/** Given a smartlist of sized_chunk_t, write them atomically to a file
  * <b>fname</b>, overwriting or creating the file as necessary. */
 int
 write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin)
@@ -1962,8 +1964,11 @@ get_interface_address(int severity, uint32_t *addr)
 
 #ifndef MS_WINDOWS
 /* Based on code contributed by christian grothoff */
+/** DOCDOC */
 static int start_daemon_called = 0;
+/** DOCDOC */
 static int finish_daemon_called = 0;
+/** DOCDOC */
 static int daemon_filedes[2];
 /** Start putting the process into daemon mode: fork and drop all resources
  * except standard fds.  The parent process never returns, but stays around

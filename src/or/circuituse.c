@@ -22,7 +22,7 @@ extern circuit_t *global_circuitlist; /* from circuitlist.c */
 static void circuit_expire_old_circuits(time_t now);
 static void circuit_increment_failure_count(void);
 
-/* Return 1 if <b>circ</b> could be returned by circuit_get_best().
+/** Return 1 if <b>circ</b> could be returned by circuit_get_best().
  * Else return 0.
  */
 static int
@@ -112,7 +112,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
   return 1;
 }
 
-/* Return 1 if circuit <b>a</b> is better than circuit <b>b</b> for
+/** Return 1 if circuit <b>a</b> is better than circuit <b>b</b> for
  * <b>purpose</b>, and return 0 otherwise. Used by circuit_get_best.
  */
 static int
@@ -566,8 +566,10 @@ circuit_expire_old_circuits(time_t now)
   }
 }
 
+/** DOCDOC */
 #define NUM_PARALLEL_TESTING_CIRCS 4
 
+/** DOCDOC */
 static int have_performed_bandwidth_test = 0;
 
 /** Reset have_performed_bandwidth_test, so we'll start building
@@ -774,6 +776,7 @@ circuit_build_failed(origin_circuit_t *circ)
  * circuit_launch_new and circuit_*_failure_count.
  */
 static int n_circuit_failures = 0;
+/** DOCDOC */
 static int did_circs_fail_last_period = 0;
 
 /** Don't retry launching a new circuit if we try this many times with no

@@ -160,12 +160,14 @@ void *smartlist_choose(const struct smartlist_t *sl);
 
 int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
+/** Characters that can appear (case-insensitively) in a base-32 encoding. */
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
 void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 int digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
 
+/** DOCDOC */
 #define S2K_SPECIFIER_LEN 9
 void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
                    size_t secret_len, const char *s2k_specifier);

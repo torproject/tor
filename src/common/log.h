@@ -90,6 +90,7 @@
 /** Bandwidth accounting. */
 #define LD_ACCT     (1u<<17)
 
+/** DOCDOC */
 typedef void (*log_callback)(int severity, uint32_t domain, const char *msg);
 
 int parse_log_level(const char *level);

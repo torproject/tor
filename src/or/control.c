@@ -11,8 +11,10 @@ const char control_c_id[] =
 
 #include "or.h"
 
+/** DOCDOC */
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN_V0 ||          \
                           (s) == CONTROL_CONN_STATE_OPEN_V1)
+/** DOCDOC */
 #define STATE_IS_V0(s) ((s) == CONTROL_CONN_STATE_NEEDAUTH_V0 ||        \
                         (s) == CONTROL_CONN_STATE_OPEN_V0)
 
@@ -685,6 +687,7 @@ send_control1_event_string(uint16_t event, event_format_t which,
   }
 }
 
+/** DOCDOC */
 static void
 send_control1_event_impl(uint16_t event, event_format_t which, int extended,
                          const char *format, va_list ap)
@@ -1437,6 +1440,7 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** DOCDOC */
 static int
 getinfo_helper_misc(control_connection_t *conn, const char *question,
                     char **answer)
@@ -1474,6 +1478,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   return 0;
 }
 
+/** DOCDOC */
 static int
 getinfo_helper_dir(control_connection_t *control_conn,
                    const char *question, char **answer)
@@ -1581,6 +1586,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
   return 0;
 }
 
+/** DOCDOC */
 static int
 getinfo_helper_events(control_connection_t *control_conn,
                       const char *question, char **answer)
@@ -1726,9 +1732,11 @@ getinfo_helper_events(control_connection_t *control_conn,
   return 0;
 }
 
+/** DOCDOC */
 typedef int (*getinfo_helper_t)(control_connection_t *,
                                 const char *q, char **a);
 
+/** DOCDOC */
 typedef struct getinfo_item_t {
   const char *varname;
   getinfo_helper_t fn;
@@ -1740,6 +1748,7 @@ typedef struct getinfo_item_t {
 #define PREFIX(name, fn, desc) { name, getinfo_helper_##fn, desc, 1 }
 #define DOC(name, desc) { name, NULL, desc, 0 }
 
+/** DOCDOC */
 static const getinfo_item_t getinfo_items[] = {
   ITEM("version", misc, "The current version of Tor."),
   ITEM("config-file", misc, "Current location of the \"torrc\" file."),
@@ -2537,6 +2546,7 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** DOCDOC */
 static int
 handle_control_usefeature(control_connection_t *conn,
                           uint32_t len,
@@ -2966,6 +2976,7 @@ connection_control_process_inbuf(control_connection_t *conn)
     return connection_control_process_inbuf_v1(conn);
 }
 
+/** DOCDOC */
 static const char *
 circuit_end_reason_to_string(int reason)
 {
@@ -3231,6 +3242,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   return 0;
 }
 
+/** DOCDOC */
 static void
 orconn_target_get_name(int long_names,
                        char *name, size_t len, or_connection_t *conn)
@@ -3257,6 +3269,7 @@ orconn_target_get_name(int long_names,
   }
 }
 
+/** DOCDOC */
 int
 control_tls_error_to_reason(int e)
 {
@@ -3281,6 +3294,7 @@ control_tls_error_to_reason(int e)
   }
 }
 
+/** DOCDOC */
 static const char *
 or_conn_end_reason_to_string(int r)
 {
@@ -3309,6 +3323,7 @@ or_conn_end_reason_to_string(int r)
   }
 }
 
+/** DOCDOC */
 int
 control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp,
         int reason)

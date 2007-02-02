@@ -107,17 +107,20 @@ const char compat_c_id[] =
 #include "strlcat.c"
 #endif
 
-/* used by inet_addr, not defined on solaris anywhere!? */
 #ifndef INADDR_NONE
+/* This is used by inet_addr, but apparently Solaris doesn't define it
+ * anyplace. */
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
 #ifdef HAVE_SYS_MMAN_H
+/** DOCDOC */
 typedef struct tor_mmap_impl_t {
   tor_mmap_t base;
   size_t mapping_size; /**< Size of the actual mapping. (This is this file
                         * size, rounded up to the nearest page.) */
 } tor_mmap_impl_t;
+/** DOCDOC */
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
@@ -165,6 +168,7 @@ tor_mmap_file(const char *filename)
 
   return &(res->base);
 }
+/** DOCDOC */
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
@@ -174,6 +178,7 @@ tor_munmap_file(tor_mmap_t *handle)
   tor_free(h);
 }
 #elif defined(MS_WINDOWS)
+/** DOCDOC */
 typedef struct win_mmap_t {
   tor_mmap_t base;
   HANDLE file_handle;
@@ -966,6 +971,7 @@ typedef struct tor_pthread_data_t {
   void (*func)(void *);
   void *data;
 } tor_pthread_data_t;
+/** DOCDOC */
 static void *
 tor_pthread_helper_fn(void *_data)
 {
@@ -1092,6 +1098,8 @@ tor_gettimeofday(struct timeval *timeval)
 }
 
 #if defined(TOR_IS_MULTITHREADED) && !defined(MS_WINDOWS)
+/** Defined iff we need to add locks when defining fake versions of reentrant
+ * versions of time-related functions. */
 #define TIME_FNS_NEED_LOCKS
 #endif
 
@@ -1206,6 +1214,7 @@ tor_get_thread_id(void)
 struct tor_mutex_t {
   pthread_mutex_t mutex;
 };
+/** DOCDOC */
 tor_mutex_t *
 tor_mutex_new(void)
 {
@@ -1213,18 +1222,21 @@ tor_mutex_new(void)
   pthread_mutex_init(&mutex->mutex, NULL);
   return mutex;
 }
+/** DOCDOC */
 void
 tor_mutex_acquire(tor_mutex_t *m)
 {
   tor_assert(m);
   pthread_mutex_lock(&m->mutex);
 }
+/** DOCDOC */
 void
 tor_mutex_release(tor_mutex_t *m)
 {
   tor_assert(m);
   pthread_mutex_unlock(&m->mutex);
 }
+/** DOCDOC */
 void
 tor_mutex_free(tor_mutex_t *m)
 {
@@ -1232,6 +1244,7 @@ tor_mutex_free(tor_mutex_t *m)
   pthread_mutex_destroy(&m->mutex);
   tor_free(m);
 }
+/** DOCDOC */
 unsigned long
 tor_get_thread_id(void)
 {

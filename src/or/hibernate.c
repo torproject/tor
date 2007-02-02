@@ -25,18 +25,24 @@ hibernating, phase 2:
 
 #include "or.h"
 
+/** DOCDOC */
 #define HIBERNATE_STATE_LIVE 1
+/** DOCDOC */
 #define HIBERNATE_STATE_EXITING 2
+/** DOCDOC */
 #define HIBERNATE_STATE_LOWBANDWIDTH 3
+/** DOCDOC */
 #define HIBERNATE_STATE_DORMANT 4
 
 extern long stats_n_seconds_working; /* published uptime */
 
+/** DOCDOC */
 static int hibernate_state = HIBERNATE_STATE_LIVE;
 /** If are hibernating, when do we plan to wake up? Set to 0 if we
  * aren't hibernating. */
 static time_t hibernate_end_time = 0;
 
+/** DOCDOC */
 typedef enum {
   UNIT_MONTH=1, UNIT_WEEK=2, UNIT_DAY=3,
 } time_unit_t;
@@ -69,8 +75,9 @@ typedef enum {
  * step one.
  */
 
-/** How many bytes have we read/written in this accounting interval? */
+/** How many bytes have we read in this accounting interval? */
 static uint64_t n_bytes_read_in_interval = 0;
+/** How many bytes have we written in this accounting interval? */
 static uint64_t n_bytes_written_in_interval = 0;
 /** How many seconds have we been running this interval? */
 static uint32_t n_seconds_active_in_interval = 0;

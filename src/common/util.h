@@ -39,10 +39,13 @@
 #error "Sorry; we don't support building with NDEBUG."
 #else
 #ifdef __GNUC__
+/** DOCDOC */
 #define PREDICT_FALSE(x) PREDICT((x) == ((typeof(x)) 0), 0)
 #else
 #define PREDICT_FALSE(x) !(x)
 #endif
+
+/** DOCDOC */
 #define tor_assert(expr) do {                                           \
     if (PREDICT_FALSE(expr)) {                                          \
       log(LOG_ERR, LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.", \
@@ -106,6 +109,8 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #endif
 
 /* String manipulation */
+
+/** DOCDOC */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s) ATTR_NONNULL((1));
 void tor_strupper(char *s) ATTR_NONNULL((1));
@@ -118,6 +123,7 @@ int strcmpend(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
 int strcasecmpend(const char *s1, const char *s2)
   ATTR_PURE ATTR_NONNULL((1,2));
 int tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
+/** DOCDOC */
 typedef enum {
   ALWAYS_TERMINATE, NEVER_TERMINATE, TERMINATE_IF_EVEN
 } part_finish_rule_t;
@@ -163,9 +169,11 @@ int parse_iso_time(const char *buf, time_t *t);
 int write_all(int fd, const char *buf, size_t count, int isSocket);
 int read_all(int fd, char *buf, size_t count, int isSocket);
 
+/** DOCDOC */
 typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR} file_status_t;
 file_status_t file_status(const char *filename);
 
+/** DOCDOC */
 typedef enum { CPD_NONE, CPD_CREATE, CPD_CHECK } cpd_check_t;
 int check_private_dir(const char *dirname, cpd_check_t check);
 int write_str_to_file(const char *fname, const char *str, int bin);

@@ -48,12 +48,14 @@ _orconn_circid_entries_eq(orconn_circid_circuit_map_t *a,
   return a->or_conn == b->or_conn && a->circ_id == b->circ_id;
 }
 
+/** DOCDOC */
 static INLINE unsigned int
 _orconn_circid_entry_hash(orconn_circid_circuit_map_t *a)
 {
   return (((unsigned)a->circ_id)<<16) ^ (unsigned)(uintptr_t)(a->or_conn);
 }
 
+/** DOCDOC */
 static HT_HEAD(orconn_circid_map, orconn_circid_circuit_map_t)
      orconn_circid_circuit_map = HT_INITIALIZER();
 HT_PROTOTYPE(orconn_circid_map, orconn_circid_circuit_map_t, node,
@@ -279,6 +281,7 @@ origin_circuit_new(void)
   return circ;
 }
 
+/** DOCDOC */
 or_circuit_t *
 or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn)
 {

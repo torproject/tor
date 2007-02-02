@@ -288,7 +288,7 @@ origin_circuit_init(uint8_t purpose, int onehop_tunnel,
   return circ;
 }
 
-/** Build a new circuit for <b>purpose</b>. If <b>info/b>
+/** Build a new circuit for <b>purpose</b>. If <b>info</b>
  * is defined, then use that as your exit router, else choose a suitable
  * exit node.
  *
@@ -1117,6 +1117,7 @@ router_handles_some_port(routerinfo_t *router, smartlist_t *needed_ports)
   return 0;
 }
 
+/* DOCDOC */
 static int
 ap_stream_wants_exit_attention(connection_t *conn)
 {
@@ -1982,6 +1983,7 @@ control_event_guard_deferred(void)
 #endif
 }
 
+/* DOCDOC */
 #define NUM_ENTRY_PICK_TRIES 100
 
 /** Add a new (preferably stable and fast) router to our

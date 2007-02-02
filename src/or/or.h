@@ -155,23 +155,27 @@
 #define cell_t tor_cell_t
 #endif
 
+/** DOCDOC */
 #define MAX_NICKNAME_LEN 19
-/* Hex digest plus dollar sign. */
+/** DOCDOC: Hex digest plus dollar sign. */
 #define MAX_HEX_NICKNAME_LEN (HEX_DIGEST_LEN+1)
-/* $Hexdigest=nickname */
+/** DOCDOC: $Hexdigest=nickname */
 #define MAX_VERBOSE_NICKNAME_LEN (1+HEX_DIGEST_LEN+1+MAX_NICKNAME_LEN)
 
 /** Maximum size, in bytes, for resized buffers. */
 #define MAX_BUF_SIZE ((1<<24)-1)
+/** DOCDOC */
 #define MAX_DIR_SIZE MAX_BUF_SIZE
 
-/* For http parsing */
+/** For http parsing DOCDOC */
 #define MAX_HEADERS_SIZE 50000
+/** DOCDOC */
 #define MAX_BODY_SIZE 500000
 
 /** How long do we keep DNS cache entries before purging them (regardless of
  * their TTL)? */
 #define MAX_DNS_ENTRY_AGE (30*60)
+/** DOCDOC */
 #define DEFAULT_DNS_TTL (30*60)
 /** How long can a TTL be before we stop believing it? */
 #define MAX_DNS_TTL (3*60*60)
@@ -194,6 +198,7 @@
 /** How old do we let a networkstatus get before ignoring it? */
 #define NETWORKSTATUS_MAX_AGE (60*60*24)
 
+/** DOCDOC */
 typedef enum {
   CIRC_ID_TYPE_LOWER=0,
   CIRC_ID_TYPE_HIGHER=1
@@ -303,6 +308,7 @@ typedef enum {
 #define AP_CONN_STATE_NATD_WAIT 12
 #define _AP_CONN_STATE_MAX 12
 
+/** DOCDOC */
 #define AP_CONN_STATE_IS_UNATTACHED(s) \
   ((s) <= AP_CONN_STATE_CIRCUIT_WAIT || (s) == AP_CONN_STATE_NATD_WAIT)
 
@@ -321,12 +327,17 @@ typedef enum {
 #define DIR_CONN_STATE_SERVER_WRITING 6
 #define _DIR_CONN_STATE_MAX 6
 
+/** DOCDOC */
 #define DIR_CONN_IS_SERVER(conn) ((conn)->purpose == DIR_PURPOSE_SERVER)
 
 #define _CONTROL_CONN_STATE_MIN 1
+/** DOCDOC */
 #define CONTROL_CONN_STATE_OPEN_V0 1
+/** DOCDOC */
 #define CONTROL_CONN_STATE_OPEN_V1 2
+/** DOCDOC */
 #define CONTROL_CONN_STATE_NEEDAUTH_V0 3
+/** DOCDOC */
 #define CONTROL_CONN_STATE_NEEDAUTH_V1 4
 #define _CONTROL_CONN_STATE_MAX 4
 
@@ -507,17 +518,24 @@ typedef enum {
  * and are not intended to be put in relay end cells. They are here
  * to be more informative when sending back socks replies to the
  * application. */
+/** DOCDOC */
 #define END_STREAM_REASON_ALREADY_SOCKS_REPLIED 256
+/** DOCDOC */
 #define END_STREAM_REASON_CANT_ATTACH 257
+/** DOCDOC */
 #define END_STREAM_REASON_NET_UNREACHABLE 258
+/** DOCDOC */
 #define END_STREAM_REASON_SOCKSPROTOCOL 259
+/** DOCDOC */
 #define END_STREAM_REASON_CANT_FETCH_ORIG_DEST 260
+/** DOCDOC */
 #define END_STREAM_REASON_INVALID_NATD_DEST 261
 
 /** Bitwise-or this with the argument to control_event_stream_status
  * to indicate that the reason came from an END cell. */
 #define END_STREAM_REASON_FLAG_REMOTE     512
 
+/* DOCDOC */
 #define RESOLVED_TYPE_HOSTNAME 0
 #define RESOLVED_TYPE_IPV4 4
 #define RESOLVED_TYPE_IPV6 6
@@ -566,9 +584,13 @@ typedef enum {
 #define STREAMWINDOW_START 5000
 #define STREAMWINDOW_INCREMENT 500
 #else
+/** DOCDOC */
 #define CIRCWINDOW_START 1000
+/** DOCDOC */
 #define CIRCWINDOW_INCREMENT 100
+/** DOCDOC */
 #define STREAMWINDOW_START 500
+/** DOCDOC */
 #define STREAMWINDOW_INCREMENT 50
 #endif
 
@@ -584,15 +606,17 @@ typedef enum {
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
 
-/* legal characters in a nickname */
+/** legal characters in a nickname */
 #define LEGAL_NICKNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 /** Name to use in client TLS certificates if no nickname is given.*/
 #define DEFAULT_CLIENT_NICKNAME "client"
 
+/** DOCDOC */
 #define SOCKS4_NETWORK_LEN 8
 
+/** DOCDOC */
 typedef enum {
   SOCKS5_SUCCEEDED                  = 0x00,
   SOCKS5_GENERAL_ERROR              = 0x01,
@@ -615,10 +639,14 @@ typedef enum {
  *         Relay payload           [498 bytes]
  */
 
+/** DOCDOC */
 #define CELL_PAYLOAD_SIZE 509
+/** DOCDOC */
 #define CELL_NETWORK_SIZE 512
 
+/** DOCDOC */
 #define RELAY_HEADER_SIZE (1+2+2+4+2)
+/** DOCDOC */
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
 /** Parsed onion routing cell.  All communication between nodes
@@ -642,10 +670,15 @@ typedef struct {
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
 
+/** DOCDOC */
 #define BASE_CONNECTION_MAGIC 0x7C3C304Eu
+/** DOCDOC */
 #define OR_CONNECTION_MAGIC 0x7D31FF03u
+/** DOCDOC */
 #define EDGE_CONNECTION_MAGIC 0xF0374013u
+/** DOCDOC */
 #define DIR_CONNECTION_MAGIC 0x9988ffeeu
+/** DOCDOC */
 #define CONTROL_CONNECTION_MAGIC 0x8abc765du
 
 /** Description of a connection to another host or process, and associated

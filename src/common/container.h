@@ -11,7 +11,12 @@
 #include "compat.h"
 #include "util.h"
 
-/** A resizeable list of pointers, with associated helpful functionality. */
+/** A resizeable list of pointers, with associated helpful functionality.
+ *
+ * The members of this struct are exposed only so that macros and inlines can
+ * use them; all access to smartlist internals should go throuch the functions
+ * and macros defined here.
+ **/
 typedef struct smartlist_t {
   /** <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
    * before it needs to be resized.  Only the first <b>num_used</b> (\<=

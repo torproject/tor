@@ -12,10 +12,15 @@ const char policies_c_id[] = \
 
 #include "or.h"
 
+/** DOCDOC */
 static addr_policy_t *socks_policy = NULL;
+/** DOCDOC */
 static addr_policy_t *dir_policy = NULL;
+/** DOCDOC */
 static addr_policy_t *authdir_reject_policy = NULL;
+/** DOCDOC */
 static addr_policy_t *authdir_invalid_policy = NULL;
+/** DOCDOC */
 static addr_policy_t *authdir_badexit_policy = NULL;
 
 /** Parsed addr_policy_t describing which addresses we believe we can start
@@ -209,6 +214,8 @@ authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 
 #define REJECT(arg) \
   do { *msg = tor_strdup(arg); goto err; } while (0)
+
+/** DOCDOC */
 int
 validate_addr_policies(or_options_t *options, char **msg)
 {
@@ -247,7 +254,7 @@ err:
 #undef REJECT
 }
 
-/* Parse <b>string</b> in the same way that the exit policy
+/** Parse <b>string</b> in the same way that the exit policy
  * is parsed, and put the processed version in *<b>policy</b>.
  * Ignore port specifiers.
  */
@@ -266,6 +273,7 @@ load_policy_from_option(config_line_t *config, addr_policy_t **policy,
   }
 }
 
+/** DOCDOC */
 void
 policies_parse_from_options(or_options_t *options)
 {
@@ -655,6 +663,7 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy)
   return (int)written;
 }
 
+/** DOCDOC */
 int
 getinfo_helper_policies(control_connection_t *conn,
                         const char *question, char **answer)
@@ -680,6 +689,7 @@ addr_policy_free(addr_policy_t *p)
   }
 }
 
+/** DOCDOC */
 void
 policies_free_all(void)
 {

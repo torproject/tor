@@ -214,6 +214,7 @@ router_append_to_journal(signed_descriptor_t *desc)
   return 0;
 }
 
+/** DOCDOC */
 static int
 _compare_old_routers_by_age(const void **_a, const void **_b)
 {
@@ -221,6 +222,7 @@ _compare_old_routers_by_age(const void **_a, const void **_b)
   return r1->published_on - r2->published_on;
 }
 
+/** DOCDOC */
 static int
 _compare_routers_by_age(const void **_a, const void **_b)
 {
@@ -343,7 +345,7 @@ router_rebuild_store(int force)
   return r;
 }
 
-/* Load all cached router descriptors from the store. Return 0 on success and
+/** Load all cached router descriptors from the store. Return 0 on success and
  * -1 on failure.
  */
 int
@@ -931,6 +933,7 @@ router_get_advertised_bandwidth(routerinfo_t *router)
   return router->bandwidthrate;
 }
 
+/** DOCDOC */
 #define MAX_BELIEVABLE_BANDWIDTH 1500000 /* 1.5 MB/sec */
 
 /** Helper function:
@@ -1953,6 +1956,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   return 0;
 }
 
+/** DOCDOC */
 static int
 _compare_old_routers_by_identity(const void **_a, const void **_b)
 {
@@ -1963,12 +1967,14 @@ _compare_old_routers_by_identity(const void **_a, const void **_b)
   return r1->published_on - r2->published_on;
 }
 
+/** DOCDOC */
 struct duration_idx_t {
   int duration;
   int idx;
   int old;
 };
 
+/** DOCDOC */
 static int
 _compare_duration_idx(const void *_d1, const void *_d2)
 {
@@ -2574,6 +2580,7 @@ router_get_combined_status_by_digest(const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
+/** DOCDOC */
 static local_routerstatus_t *
 router_get_combined_status_by_nickname(const char *nickname,
                                        int warn_if_unnamed)
@@ -2739,7 +2746,7 @@ update_networkstatus_cache_downloads(time_t now)
 /** How long (in seconds) does a client wait after getting a network status
  * before downloading the next in sequence? */
 #define NETWORKSTATUS_CLIENT_DL_INTERVAL (30*60)
-/* How many times do we allow a networkstatus download to fail before we
+/** How many times do we allow a networkstatus download to fail before we
  * assume that the authority isn't publishing? */
 #define NETWORKSTATUS_N_ALLOWABLE_FAILURES 3
 /** We are not a directory cache or authority.  Update our network-status list
@@ -3802,7 +3809,7 @@ router_list_client_downloadable(void)
 static void
 update_router_descriptor_client_downloads(time_t now)
 {
-  /* Max amount of hashes to download per request.
+  /** Max amount of hashes to download per request.
    * Since squid does not like URLs >= 4096 bytes we limit it to 96.
    *   4096 - strlen(http://255.255.255.255/tor/server/d/.z) == 4058
    *   4058/41 (40 for the hash and 1 for the + that separates them) => 98
@@ -4029,6 +4036,7 @@ update_router_descriptor_downloads(time_t now)
   }
 }
 
+/** DOCDOC */
 static int
 routerstatus_count_usable_entries(smartlist_t *entries)
 {
@@ -4040,7 +4048,9 @@ routerstatus_count_usable_entries(smartlist_t *entries)
   return count;
 }
 
+/** DOCDOC */
 static int have_min_dir_info = 0;
+/** DOCDOC */
 static int need_to_update_have_min_dir_info = 1;
 
 /** Return true iff we have enough networkstatus and router information to

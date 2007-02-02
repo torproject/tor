@@ -102,6 +102,7 @@ typedef struct config_var_t {
   const char *initvalue; /**< String (or null) describing initial value. */
 } config_var_t;
 
+/** DOCDOC */
 #define STRUCT_VAR_P(st, off) \
   ((void*) ( ((char*)st) + off ) )
 
@@ -511,6 +512,7 @@ static config_var_description_t state_description[] = {
   { NULL, NULL },
 };
 
+/** DOCDOC */
 typedef int (*validate_fn_t)(void*,void*,int,char**);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
@@ -529,6 +531,7 @@ typedef struct {
   config_var_t *extra;
 } config_format_t;
 
+/** DOCDOC */
 #define CHECK(fmt, cfg) do {                                            \
     tor_assert(fmt && cfg);                                             \
     tor_assert((fmt)->magic ==                                          \
@@ -591,8 +594,10 @@ static void check_libevent_version(const char *m, int server);
 
 /*static*/ or_options_t *options_new(void);
 
+/** DOCDOC */
 #define OR_OPTIONS_MAGIC 9090909
 
+/** DOCDOC */
 static config_format_t options_format = {
   sizeof(or_options_t),
   OR_OPTIONS_MAGIC,
@@ -604,12 +609,15 @@ static config_format_t options_format = {
   NULL
 };
 
+/** DOCDOC */
 #define OR_STATE_MAGIC 0x57A73f57
 
+/** DOCDOC */
 static config_var_t state_extra_var = {
   "__extra", CONFIG_TYPE_LINELIST, STRUCT_OFFSET(or_state_t, ExtraLines), NULL
 };
 
+/** DOCDOC */
 static config_format_t state_format = {
   sizeof(or_state_t),
   OR_STATE_MAGIC,
@@ -1443,6 +1451,7 @@ option_get_assignment(or_options_t *options, const char *key)
   return get_assigned_option(&options_format, options, key);
 }
 
+/** DOCDOC */
 static config_line_t *
 config_lines_dup(const config_line_t *inp)
 {
@@ -1459,6 +1468,7 @@ config_lines_dup(const config_line_t *inp)
   return result;
 }
 
+/** DOCDOC */
 static config_line_t *
 get_assigned_option(config_format_t *fmt, or_options_t *options,
                     const char *key)
@@ -2135,7 +2145,7 @@ config_init(config_format_t *fmt, void *options)
   }
 }
 
-/* Allocate and return a new string holding the written-out values of the vars
+/** Allocate and return a new string holding the written-out values of the vars
  * in 'options'.  If 'minimal', do not write out any default-valued vars.
  * Else, if comment_defaults, write default values as comments.
  */
@@ -2230,7 +2240,7 @@ options_dump(or_options_t *options, int minimal)
   return config_dump(&options_format, options, minimal, 0);
 }
 
-/* Return 0 if every element of sl is a string holding a decimal
+/** Return 0 if every element of sl is a string holding a decimal
  * representation of a port number, or if sl is NULL.
  * Otherwise set *msg and return -1. */
 static int
@@ -3795,6 +3805,7 @@ static const struct {
   { NULL, LE_OTHER }
 };
 
+/** DOCDOC */
 static le_version_t
 decode_libevent_version(void)
 {

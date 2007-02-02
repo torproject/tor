@@ -709,6 +709,7 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
 static digestmap_t *verified_digests = NULL;
 #endif
 
+/** DOCDOC */
 void
 dump_distinct_digest_count(int severity)
 {
@@ -1121,6 +1122,7 @@ _compare_routerstatus_entries(const void **_a, const void **_b)
   return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
 }
 
+/** DOCDOC */
 static void
 _free_duplicate_routerstatus_entry(void *e)
 {

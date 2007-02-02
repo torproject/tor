@@ -103,6 +103,7 @@ tls_log_errors(int severity, const char *doing)
   }
 }
 
+/** DOCDOC */
 static int
 tor_errno_to_tls_error(int e)
 {
@@ -205,6 +206,7 @@ tor_tls_init(void)
   }
 }
 
+/** DOCDOC */
 void
 tor_tls_free_all(void)
 {
@@ -720,6 +722,7 @@ tor_tls_get_peer_cert_nickname(int severity, tor_tls_t *tls,
   return r;
 }
 
+/** DOCDOC */
 static void
 log_cert_lifetime(X509 *cert, const char *problem)
 {

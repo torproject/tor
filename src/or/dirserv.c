@@ -52,6 +52,7 @@ static void clear_cached_dir(cached_dir_t *d);
 #define FP_REJECT  4  /**< We will not publish this router. */
 #define FP_BADEXIT 8 /**< We'll tell clients not to use this as an exit. */
 
+/** DOCDOC */
 typedef struct router_status_t {
   char nickname[MAX_NICKNAME_LEN+1];
   uint32_t status;
@@ -64,9 +65,10 @@ typedef struct authdir_config_t {
   digestmap_t *status_by_digest; /* Map from digest to FP_x mask */
 } authdir_config_t;
 
-/* Should be static; exposed for testing */
+/** Should be static; exposed for testing */
 authdir_config_t *fingerprint_list = NULL;
 
+/** DOCDOC */
 static authdir_config_t *
 authdir_config_new(void)
 {
@@ -574,6 +576,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   }
 }
 
+/** DOCDOC */
 static INLINE int
 bool_neq(int a, int b)
 {
@@ -790,7 +793,7 @@ list_server_status(smartlist_t *routers, char **router_status_out,
   return 0;
 }
 
-/* Given a (possibly empty) list of config_line_t, each line of which contains
+/** Given a (possibly empty) list of config_line_t, each line of which contains
  * a list of comma-separated version numbers surrounded by optional space,
  * allocate and return a new string containing the version numbers, in order,
  * separated by commas.  Used to generate Recommended(Client|Server)?Versions
@@ -942,7 +945,7 @@ static cached_dir_t *the_directory = NULL;
 static cached_dir_t *cached_directory = NULL;
 static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
 
-/* Used for other dirservers' v2 network statuses.  Map from hexdigest to
+/** Used for other dirservers' v2 network statuses.  Map from hexdigest to
  * cached_dir_t. */
 static digestmap_t *cached_v2_networkstatus = NULL;
 
@@ -1319,6 +1322,7 @@ dirserv_get_runningrouters(const char **rr, int compress)
 /** For authoritative directories: the current (v2) network status */
 static cached_dir_t *the_v2_networkstatus = NULL;
 
+/** DOCDOC */
 static int
 should_generate_v2_networkstatus(void)
 {
@@ -1468,8 +1472,11 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 static cached_dir_t *
 generate_v2_networkstatus(void)
 {
+/** DOCDOC */
 #define LONGEST_STATUS_FLAG_NAME_LEN 9
+/** DOCDOC */
 #define N_STATUS_FLAGS 9
+/** DOCDOC */
 #define RS_ENTRY_LEN                                                    \
   ( /* first line */                                                    \
    MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
@@ -1988,7 +1995,7 @@ connection_dirserv_remove_from_blocked_list(or_connection_t *or_conn,
   tor_assert(!dir_conn->is_blocked_on_or_conn);
 }
 
-/* If <b>dir_conn</b> is a dirserv connection that's bridged over an edge_conn
+/** If <b>dir_conn</b> is a dirserv connection that's bridged over an edge_conn
  * onto an or_conn, remove it from the blocked list (if it's blocked) and
  * unlink it and the edge_conn from one another. */
 void
@@ -2190,7 +2197,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
   return 0;
 }
 
-/* Spooling helper: Called when we're spooling networkstatus objects on
+/** Spooling helper: Called when we're spooling networkstatus objects on
  * <b>conn</b>, and the outbuf has become too empty.  If the current
  * networkstatus object (in <b>conn</b>-\>cached_dir) has more data, pull data
  * from there.  Otherwise, pop the next fingerprint from fingerprint_stack,

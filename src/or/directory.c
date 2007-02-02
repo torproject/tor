@@ -56,7 +56,8 @@ static void note_request(const char *key, size_t bytes);
 
 #define X_ADDRESS_HEADER "X-Your-Address-Is: "
 
-/* HTTP cache control: how long do we tell proxies they can cache things? */
+/** HTTP cache control: how long do we tell proxies they can cache each
+ * kind of document we serve? */
 #define FULL_DIR_CACHE_LIFETIME (60*60)
 #define RUNNINGROUTERS_CACHE_LIFETIME (20*60)
 #define NETWORKSTATUS_CACHE_LIFETIME (5*60)
@@ -1978,7 +1979,7 @@ connection_dir_finished_connecting(dir_connection_t *conn)
 }
 
 /** Called when one or more networkstatus fetches have failed (with uppercase
- * fingerprints listed in <b>failed</>).  Mark those fingerprints as having
+ * fingerprints listed in <b>failed</b>).  Mark those fingerprints as having
  * failed once, unless they failed with status code 503. */
 static void
 dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
@@ -2054,7 +2055,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
   /* update_router_descriptor_downloads(time(NULL)); */
 }
 
-/* Given a directory <b>resource</b> request, containing zero
+/** Given a directory <b>resource</b> request, containing zero
  * or more strings separated by plus signs, followed optionally by ".z", store
  * the strings, in order, into <b>fp_out</b>.  If <b>compressed_out</b> is
  * non-NULL, set it to 1 if the resource ends in ".z", else set it to 0.  If

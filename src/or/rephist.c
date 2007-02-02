@@ -956,6 +956,7 @@ static uint32_t n_rend_client_ops = 0;
 static uint32_t n_rend_mid_ops = 0;
 static uint32_t n_rend_server_ops = 0;
 
+/** DOCDOC */
 void
 note_crypto_pk_op(pk_op_t operation)
 {
@@ -999,6 +1000,7 @@ note_crypto_pk_op(pk_op_t operation)
   }
 }
 
+/** DOCDOC */
 void
 dump_pk_ops(int severity)
 {

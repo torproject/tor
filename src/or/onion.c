@@ -25,7 +25,7 @@ typedef struct onion_queue_t {
 /** 5 seconds on the onion queue til we just send back a destroy */
 #define ONIONQUEUE_WAIT_CUTOFF 5
 
-/** Global (within this file) variables used by the next few functions */
+/** DOCDOC */
 static onion_queue_t *ol_list=NULL;
 static onion_queue_t *ol_tail=NULL;
 /** Length of ol_list */
@@ -359,10 +359,10 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 
 /** Implement the server side of the CREATE_FAST abbreviated handshake.  The
  * client has provided DIGEST_LEN key bytes in <b>key_in</b> ("x").  We
- * generate a reply of DIGEST_LEN*2 bytes in <b>key_out/b>, consisting of a
+ * generate a reply of DIGEST_LEN*2 bytes in <b>key_out</b>, consisting of a
  * new random "y", followed by H(x|y) to check for correctness.  We set
  * <b>key_out_len</b> bytes of key material in <b>key_out</b>.
- * Return 0 on success, <0 on failure.
+ * Return 0 on success, &lt;0 on failure.
  **/
 int
 fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */

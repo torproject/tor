@@ -22,7 +22,7 @@ const char buffers_c_id[] =
 
 #ifdef SENTINELS
 /* If SENTINELS is defined, check for attempts to write beyond the
- * end/before the start of the buffer.
+ * end/before the start of the buffer. DOCDOC macros
  */
 #define START_MAGIC 0x70370370u
 #define END_MAGIC 0xA0B0C0D0u
@@ -49,6 +49,7 @@ const char buffers_c_id[] =
 #define INLINE
 #endif
 
+/* DOCDOC */
 #define BUFFER_MAGIC 0xB0FFF312u
 /** A resizeable buffer, optimized for reading and writing. */
 struct buf_t {

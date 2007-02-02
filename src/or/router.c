@@ -27,10 +27,14 @@ extern long stats_n_seconds_working;
 /** Private keys for this OR.  There is also an SSL key managed by tortls.c.
  */
 static tor_mutex_t *key_lock=NULL;
-static time_t onionkey_set_at=0; /* When was onionkey last changed? */
+static time_t onionkey_set_at=0; /**< When was onionkey last changed? */
+/** DOCDOC */
 static crypto_pk_env_t *onionkey=NULL;
+/** DOCDOC */
 static crypto_pk_env_t *lastonionkey=NULL;
+/** DOCDOC */
 static crypto_pk_env_t *identitykey=NULL;
+/** DOCDOC */
 static char identitykey_digest[DIGEST_LEN];
 
 /** Replace the current onion key with <b>k</b>.  Does not affect lastonionkey;
@@ -995,6 +999,7 @@ check_descriptor_bandwidth_changed(time_t now)
   }
 }
 
+/** DOCDOC */
 static void
 log_addr_has_changed(int severity, uint32_t prev, uint32_t cur)
 {
@@ -1045,6 +1050,7 @@ check_descriptor_ipaddress_changed(time_t now)
   }
 }
 
+/** DOCDOC */
 static uint32_t last_guessed_ip = 0;
 
 /** A directory authority told us our IP address is <b>suggestion</b>.

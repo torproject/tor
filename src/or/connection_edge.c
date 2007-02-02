@@ -24,7 +24,7 @@ const char connection_edge_c_id[] =
 #define TRANS_PF
 #endif
 
-/* List of exit_redirect_t */
+/** List of exit_redirect_t for every configured RedirectExit. */
 static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
@@ -927,7 +927,7 @@ client_dns_set_reverse_addressmap(const char *address, const char *v,
  * application accidentally tried to connect to them directly (not
  * via Tor), it wouldn't get too far astray.
  *
- * Eventually, we should probably make this configurable.
+ * These options are configured by parse_virtual_addr_network().
  */
 static uint32_t virtual_addr_network = 0x7fc00000u;
 static uint32_t virtual_addr_netmask = 0xffc00000u;
@@ -1182,7 +1182,7 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
    }
 }
 
-/* Connection <b>conn</b> just finished its socks handshake, or the
+/** Connection <b>conn</b> just finished its socks handshake, or the
  * controller asked us to take care of it. If <b>circ</b> is defined,
  * then that's where we'll want to attach it. Otherwise we have to
  * figure it out ourselves.
@@ -1394,6 +1394,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                safe_str(conn->rend_query));
       rend_client_refetch_renddesc(conn->rend_query);
     } else { /* r > 0 */
+/** DOCDOC */
 #define NUM_SECONDS_BEFORE_REFETCH (60*15)
       if (time(NULL) - entry->received < NUM_SECONDS_BEFORE_REFETCH) {
         conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
