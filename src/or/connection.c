@@ -2377,7 +2377,9 @@ assert_connection_ok(connection_t *conn, time_t now)
   }
 
   if (conn->outbuf_flushlen > 0) {
-    tor_assert(connection_is_writing(conn) || conn->wants_to_write);
+    tor_assert(connection_is_writing(conn) || conn->wants_to_write ||
+               (conn->type == CONN_TYPE_DIR &&
+                TO_DIR_CONN(conn)->is_blocked_on_or_conn));
   }
 
   if (conn->hold_open_until_flushed)
