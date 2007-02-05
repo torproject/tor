@@ -69,6 +69,7 @@ int has_completed_circuit=0;
 
 #ifdef MS_WINDOWS
 #define MS_WINDOWS_SERVICE
+#includ "Windows.h"
 #endif
 
 #ifdef MS_WINDOWS_SERVICE
@@ -2156,7 +2157,7 @@ nt_service_install(int argc, char **argv)
   char *errmsg;
   const char *user_acct = GENSRV_USERACCT;
   int i,r;
-  SID_NAMED_USE sidUse;
+  SID_NAME_USE sidUse;
 
   if (nt_service_loadlibrary()<0)
     return -1;
@@ -2170,7 +2171,7 @@ nt_service_install(int argc, char **argv)
     service_fns.CloseServiceHandle_fn(hSCManager);
     return -1;
   }
-  for (i=1; i < argc, ++i) {
+  for (i=1; i < argc; ++i) {
     if (!strcmp(i, "--user") && i+1<argc) {
       user_acct = argv[i+1];
       ++i;
