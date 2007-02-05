@@ -3206,6 +3206,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
       case STREAM_EVENT_NEW: status = "NEW"; break;
       case STREAM_EVENT_NEW_RESOLVE: status = "NEWRESOLVE"; break;
       case STREAM_EVENT_FAILED_RETRIABLE: status = "DETACHED"; break;
+      case STREAM_EVENT_REMAP: status = "REMAP"; break;
       default:
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;

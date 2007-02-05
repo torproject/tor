@@ -750,8 +750,10 @@ connection_edge_process_end_not_open(
             router_parse_addr_policy_from_string("reject *:*", -1);
         }
         /* rewrite it to an IP if we learned one. */
-        addressmap_rewrite(conn->socks_request->address,
-                           sizeof(conn->socks_request->address));
+        if (addressmap_rewrite(conn->socks_request->address,
+                               sizeof(conn->socks_request->address))) {
+          control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
+        }
         if (conn->_base.chosen_exit_optional) {
           /* stop wanting a specific exit */
           conn->_base.chosen_exit_optional = 0;

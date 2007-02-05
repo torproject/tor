@@ -832,6 +832,7 @@ $Id$
       StreamStatus =
                "NEW"          / ; New request to connect
                "NEWRESOLVE"   / ; New request to resolve an address
+               "REMAP"        / ; Address re-mapped to another
                "SENTCONNECT"  / ; Sent a connect cell along a circuit
                "SENTRESOLVE"  / ; Sent a resolve cell along a circuit
                "SUCCEEDED"    / ; Received a reply; stream established

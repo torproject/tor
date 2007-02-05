@@ -2208,7 +2208,7 @@ void addressmap_clean(time_t now);
 void addressmap_clear_configured(void);
 void addressmap_clear_transient(void);
 void addressmap_free_all(void);
-void addressmap_rewrite(char *address, size_t maxlen);
+int addressmap_rewrite(char *address, size_t maxlen);
 int addressmap_have_mapping(const char *address);
 void addressmap_register(const char *address, char *new_address,
                          time_t expires);
@@ -2272,7 +2272,8 @@ typedef enum stream_status_event_t {
   STREAM_EVENT_CLOSED       = 4,
   STREAM_EVENT_NEW          = 5,
   STREAM_EVENT_NEW_RESOLVE  = 6,
-  STREAM_EVENT_FAILED_RETRIABLE = 7
+  STREAM_EVENT_FAILED_RETRIABLE = 7,
+  STREAM_EVENT_REMAP        = 8
 } stream_status_event_t;
 
 typedef enum or_conn_status_event_t {

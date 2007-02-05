@@ -682,9 +682,10 @@ addressmap_free_all(void)
 
 /** Look at address, and rewrite it until it doesn't want any
  * more rewrites; but don't get into an infinite loop.
- * Don't write more than maxlen chars into address.
+ * Don't write more than maxlen chars into address.  Return true if the
+ * address changed; false otherwise.
  */
-void
+int
 addressmap_rewrite(char *address, size_t maxlen)
 {
   addressmap_entry_t *ent;
@@ -695,7 +696,7 @@ addressmap_rewrite(char *address, size_t maxlen)
     ent = strmap_get(addressmap, address);
 
     if (!ent || !ent->new_address)
-      return; /* done, no rewrite needed */
+      return (rewrites > 0); /* done, no rewrite needed */
 
     cp = tor_strdup(escaped_safe_str(ent->new_address));
     log_info(LD_APP, "Addressmap: rewriting %s to %s",
@@ -707,6 +708,7 @@ addressmap_rewrite(char *address, size_t maxlen)
            "Loop detected: we've rewritten %s 16 times! Using it as-is.",
            escaped_safe_str(address));
   /* it's fine to rewrite a rewrite, but don't loop forever */
+  return 1;
 }
 
 /** If we have a cached reverse DNS entry for the address stored in the
@@ -1216,7 +1218,9 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     }
   } else {
     /* For address map controls, remap the address */
-    addressmap_rewrite(socks->address, sizeof(socks->address));
+    if (addressmap_rewrite(socks->address, sizeof(socks->address))) {
+      control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
+    }
   }
 
   if (address_is_in_virtual_range(socks->address)) {

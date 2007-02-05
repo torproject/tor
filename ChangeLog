@@ -97,7 +97,8 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - Add a SOCKS_BAD_HOSTNAME client status event so controllers
       can learn when clients are sending malformed hostnames to Tor.
     - Clean up documentation for controller status events.
-
+    - Add a REMAP status to stream events to note that a stream's address has
+      changed because of a cached address or a MapAddress directive.
 
 Changes in version 0.1.2.6-alpha - 2007-01-09
   o Major bugfixes:
