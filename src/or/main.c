@@ -77,7 +77,7 @@ int has_completed_circuit=0;
 #define GENSRV_DISPLAYNAME  TEXT("Tor Win32 Service")
 #define GENSRV_DESCRIPTION  \
   TEXT("Provides an anonymous Internet communication system")
-#define GENSRV_USERACCT TEXT("NT AUTHORITY\\NetworkService")
+#define GENSRV_USERACCT TEXT("NT AUTHORITY\\LocalService")
 
 // Cheating: using the pre-defined error codes, tricks Windows into displaying
 //           a semi-related human-readable error message if startup fails as
@@ -1766,9 +1766,18 @@ struct service_fns {
                              DWORD dwNumServiceArgs,
                              LPCTSTR* lpServiceArgVectors);
 
+  BOOL (WINAPI *LookupAccountNameA_fn)(
+                             LPCTSTR lpSystemName,
+                             LPCTSTR lpAccountName,
+                             PSID Sid,
+                             LPDWORD cbSid,
+                             LPTSTR ReferencedDomainName,
+                             LPDWORD cchReferencedDomainName,
+                             PSID_NAME_USE peUse);
 } service_fns = { 0,
                   NULL, NULL, NULL, NULL, NULL, NULL,
-                  NULL, NULL, NULL, NULL, NULL, NULL };
+                  NULL, NULL, NULL, NULL, NULL, NULL,
+                  NULL};
 
 /** Loads functions used by NT services. Returns 0 on success, or -1 on
  * error. */
@@ -1811,6 +1820,7 @@ nt_service_loadlibrary(void)
   LOAD(SetServiceStatus);
   LOAD(StartServiceCtrlDispatcherA);
   LOAD(StartServiceA);
+  LOAD(LookupAccountNameA);
 
   service_fns.loaded = 1;
 
@@ -2145,7 +2155,8 @@ nt_service_install(int argc, char **argv)
   char *command;
   char *errmsg;
   const char *user_acct = GENSRV_USERACCT;
-  int i;
+  int i,r;
+  SID_NAMED_USE sidUse;
 
   if (nt_service_loadlibrary()<0)
     return -1;
@@ -2164,6 +2175,20 @@ nt_service_install(int argc, char **argv)
       user_acct = argv[i+1];
       ++i;
     }
+  }
+
+  if (service_fns.LookupAccountNameA_fn(NULL, // On this system
+                                        user_acct,
+                                        NULL, 0, // Don't care about the SID
+                                        NULL, 0, // Don't care about the domain
+                                        &sidUse) == 0) {
+    printf("User \"%s\" doesn't seem to exist.\n", user_acct);
+    if (user_acct != GENSRV_USERACCT)
+      return -1;
+    /* On Win2k, there is no LocalService account, so we actually need to
+     * check for it. Yay win2k. */
+    printf("Falling back to SYSTEM account.\n");
+    user_acct = NULL;
   }
 
   /* Create the Tor service, set to auto-start on boot */

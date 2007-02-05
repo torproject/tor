@@ -14,7 +14,7 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       trying to flush.
 
   o Major bugfixes (NT services):
-    - Install as NT_AUTHORITY\NetworkService rather than as SYSTEM; add a
+    - Install as NT_AUTHORITY\LocalService rather than as SYSTEM; add a
       command-line flag so that admins can override the default by saying
       "tor --service install --user "SomeUser"".  This will not effect
       existing installed services.
