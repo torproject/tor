@@ -654,17 +654,7 @@ test_util(void)
   test_streq(buf, "Testing123");
 
   /* Test tor_strpartition() */
-  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefg", "##", 3,
-                                 TERMINATE_IF_EVEN));
-  test_streq(buf, "abc##def##g");
-  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefg", "##", 3,
-                                 ALWAYS_TERMINATE));
-  test_streq(buf, "abc##def##g##");
-  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3,
-                                 TERMINATE_IF_EVEN));
-  test_streq(buf, "abc##def##ghi##");
-  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3,
-                                 NEVER_TERMINATE));
+  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3));
   test_streq(buf, "abc##def##ghi");
 
   /* Test parse_addr_port */

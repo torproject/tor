@@ -113,7 +113,12 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 /** Iterate over the items in a smartlist <b>sl</b>, in order.  For each item,
  * assign it to a new local variable of type <b>type</b> named <b>var</b>, and
  * execute the statement <b>cmd</b>.  Inside the loop, the loop index can
- * be accessed as <b>var</b>_sl_idx.
+ * be accessed as <b>var</b>_sl_idx and the length of the list can be accessed
+ * as <b>var</b>_sl_len.
+ *
+ * NOTE: Do not change the length of the list while the loop is in progress,
+ * unless you adjust the _sl_len variable correspondingly.  See second example
+ * below.
  *
  * Example use:
  * <pre>
@@ -123,7 +128,20 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
  *     printf("%d: %s\n", cp_sl_idx, cp);
  *     tor_free(cp);
  *   });
- *   smarlitst_free(list);
+ *   smartlist_free(list);
+ * </pre>
+ *
+ * Example use (advanced):
+ * <pre>
+ *   SMARTLIST_FOREACH(list, char *, cp,
+ *   {
+ *     if (!strcmp(cp, "junk")) {
+ *       smartlist_del(list, cp_sl_idx);
+ *       tor_free(cp);
+ *       --cp_sl_len; // decrement length of list so we don't run off the end
+ *       --cp_sl_idx; // decrement idx so we consider the item that moved here
+ *     }
+ *   });
  * </pre>
  */
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \

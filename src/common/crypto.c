@@ -1023,8 +1023,7 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out, int add_space)
   }
   base16_encode(hexdigest,sizeof(hexdigest),digest,DIGEST_LEN);
   if (add_space) {
-    if (tor_strpartition(fp_out, FINGERPRINT_LEN+1, hexdigest, " ", 4,
-                         NEVER_TERMINATE)<0)
+    if (tor_strpartition(fp_out, FINGERPRINT_LEN+1, hexdigest, " ", 4)<0)
       return -1;
   } else {
     strncpy(fp_out, hexdigest, HEX_DIGEST_LEN+1);

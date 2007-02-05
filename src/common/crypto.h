@@ -167,7 +167,8 @@ void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
 
-/** DOCDOC */
+/** Length of RFC2440-style S2K specifier: the first 8 bytes are a salt, the
+ * 9th describes how much iteration to do. */
 #define S2K_SPECIFIER_LEN 9
 void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
                    size_t secret_len, const char *s2k_specifier);

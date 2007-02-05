@@ -39,13 +39,15 @@
 #error "Sorry; we don't support building with NDEBUG."
 #else
 #ifdef __GNUC__
-/** DOCDOC */
+/** Macro: evaluate the expression x, which we expect to be false.
+ * Used to hint the compiler that a branch won't be taken. */
 #define PREDICT_FALSE(x) PREDICT((x) == ((typeof(x)) 0), 0)
 #else
 #define PREDICT_FALSE(x) !(x)
 #endif
 
-/** DOCDOC */
+/** Like assert(3), but send assertion failures to the log as well as to
+ * stderr. */
 #define tor_assert(expr) do {                                           \
     if (PREDICT_FALSE(expr)) {                                          \
       log(LOG_ERR, LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.", \
@@ -110,7 +112,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 
 /* String manipulation */
 
-/** DOCDOC */
+/** Allowable characters in a hexadecimal string. */
 #define HEX_CHARACTERS "0123456789ABCDEFabcdef"
 void tor_strlower(char *s) ATTR_NONNULL((1));
 void tor_strupper(char *s) ATTR_NONNULL((1));
@@ -123,13 +125,8 @@ int strcmpend(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
 int strcasecmpend(const char *s1, const char *s2)
   ATTR_PURE ATTR_NONNULL((1,2));
 int tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
-/** DOCDOC */
-typedef enum {
-  ALWAYS_TERMINATE, NEVER_TERMINATE, TERMINATE_IF_EVEN
-} part_finish_rule_t;
 int tor_strpartition(char *dest, size_t dest_len,
-                     const char *s, const char *insert, size_t n,
-                     part_finish_rule_t rule);
+                     const char *s, const char *insert, size_t n);
 long tor_parse_long(const char *s, int base, long min,
                     long max, int *ok, char **next);
 unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
@@ -169,11 +166,13 @@ int parse_iso_time(const char *buf, time_t *t);
 int write_all(int fd, const char *buf, size_t count, int isSocket);
 int read_all(int fd, char *buf, size_t count, int isSocket);
 
-/** DOCDOC */
-typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR} file_status_t;
+/** Return values from file_status(); see that function's documentation
+ * for details. */
+typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR } file_status_t;
 file_status_t file_status(const char *filename);
 
-/** DOCDOC */
+/** Possible behaviors for check_private_dir() on encountering a nonexistent
+ * directory; see that function's documentation for details. */
 typedef enum { CPD_NONE, CPD_CREATE, CPD_CHECK } cpd_check_t;
 int check_private_dir(const char *dirname, cpd_check_t check);
 int write_str_to_file(const char *fname, const char *str, int bin);
