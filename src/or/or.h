@@ -1989,6 +1989,9 @@ void circuit_expire_all_dirty_circs(void);
 void _circuit_mark_for_close(circuit_t *circ, int reason,
                              int line, const char *file);
 int circuit_get_cpath_len(origin_circuit_t *circ);
+void circuit_get_all_pending_on_or_conn(smartlist_t *out,
+                                        or_connection_t *or_conn);
+int circuit_count_pending_on_or_conn(or_connection_t *or_conn);
 
 #define circuit_mark_for_close(c, reason)                               \
   _circuit_mark_for_close((c), (reason), __LINE__, _SHORT_FILE_)
@@ -2250,7 +2253,6 @@ void connection_or_write_cell_to_buf(const cell_t *cell,
                                      or_connection_t *conn);
 int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
-int connection_or_count_pending_circs(or_connection_t *or_conn);
 
 /********************************* control.c ***************************/
 

@@ -779,37 +779,6 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   return 0;
 }
 
-/* XXXX012 This global is getting _too_ global. -NM */
-extern smartlist_t *circuits_pending_or_conns;
-
-/** Count number of pending circs on an or_conn */
-int
-connection_or_count_pending_circs(or_connection_t *or_conn)
-{
-  int cnt = 0;
-
-  if (!circuits_pending_or_conns)
-    return 0;
-
-  tor_assert(or_conn);
-
-  SMARTLIST_FOREACH(circuits_pending_or_conns, circuit_t *, circ,
-  {
-    if (circ->marked_for_close)
-      continue;
-    tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
-    if (!circ->n_conn &&
-        !memcmp(or_conn->identity_digest, circ->n_conn_id_digest,
-                DIGEST_LEN)) {
-      cnt++;
-    }
-  });
-
-  log_debug(LD_CIRC,"or_conn to %s, %d pending circs",
-            or_conn->nickname ? or_conn->nickname : "NULL", cnt);
-  return cnt;
-}
-
 /** DOCDOC */
 #define BUF_FULLNESS_THRESHOLD (128*1024)
 /** DOCDOC */

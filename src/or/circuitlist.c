@@ -21,7 +21,7 @@ const char circuitlist_c_id[] =
 circuit_t *global_circuitlist=NULL;
 
 /** A list of all the circuits in CIRCUIT_STATE_OR_WAIT. */
-smartlist_t *circuits_pending_or_conns=NULL;
+static smartlist_t *circuits_pending_or_conns=NULL;
 
 static void circuit_free(circuit_t *circ);
 static void circuit_free_cpath(crypt_path_t *cpath);
@@ -165,15 +165,14 @@ circuit_set_state(circuit_t *circ, int state)
   tor_assert(circ);
   if (state == circ->state)
     return;
+  if (!circuits_pending_or_conns)
+    circuits_pending_or_conns = smartlist_create();
   if (circ->state == CIRCUIT_STATE_OR_WAIT) {
     /* remove from waiting-circuit list. */
-    if (circuits_pending_or_conns)
-      smartlist_remove(circuits_pending_or_conns, circ);
+    smartlist_remove(circuits_pending_or_conns, circ);
   }
   if (state == CIRCUIT_STATE_OR_WAIT) {
     /* add to waiting-circuit list. */
-    if (!circuits_pending_or_conns)
-      circuits_pending_or_conns = smartlist_create();
     smartlist_add(circuits_pending_or_conns, circ);
   }
   circ->state = state;
@@ -192,6 +191,45 @@ circuit_add(circuit_t *circ)
     circ->next = global_circuitlist;
     global_circuitlist = circ;
   }
+}
+
+/** Append to <b>out</b> the number of circuits in state OR_WAIT, waiting for
+ * the given connection. */
+void
+circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
+{
+  tor_assert(out);
+  tor_assert(or_conn);
+
+  if (!circuits_pending_or_conns)
+    return;
+
+  SMARTLIST_FOREACH(circuits_pending_or_conns, circuit_t *, circ,
+  {
+    if (circ->marked_for_close)
+      continue;
+    tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
+    if (!circ->n_conn &&
+        !memcmp(or_conn->identity_digest, circ->n_conn_id_digest,
+                DIGEST_LEN)) {
+      smartlist_add(out, circ);
+    }
+  });
+}
+
+/** Return the number of circuits in state OR_WAIT, waiting for the given
+ * connection.  */
+int
+circuit_count_pending_on_or_conn(or_connection_t *or_conn)
+{
+  int cnt;
+  smartlist_t *sl = smartlist_create();
+  circuit_get_all_pending_on_or_conn(sl, or_conn);
+  cnt = smartlist_len(sl);
+  smartlist_free(sl);
+  log_debug(LD_CIRC,"or_conn to %s, %d pending circs",
+            or_conn->nickname ? or_conn->nickname : "NULL", cnt);
+  return cnt;
 }
 
 /** Detach from the global circuit list, and deallocate, all

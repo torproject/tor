@@ -3356,7 +3356,7 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp,
         log_warn(LD_BUG, "Unrecognized status code %d", (int)tp);
         return 0;
       }
-    ncircs = connection_or_count_pending_circs(conn);
+    ncircs = circuit_count_pending_on_or_conn(conn);
     ncircs += conn->n_circuits;
     if (ncircs && (tp == OR_CONN_EVENT_FAILED || tp == OR_CONN_EVENT_CLOSED)) {
         tor_snprintf(ncircs_buf, sizeof(ncircs_buf), "%sNCIRCS=%d",

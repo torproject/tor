@@ -388,8 +388,6 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   return 0;
 }
 
-extern smartlist_t *circuits_pending_or_conns;
-
 /** Find any circuits that are waiting on <b>or_conn</b> to become
  * open and get them to send their create cells forward.
  *
@@ -398,25 +396,24 @@ extern smartlist_t *circuits_pending_or_conns;
 void
 circuit_n_conn_done(or_connection_t *or_conn, int status)
 {
-  smartlist_t *changed_circs;
+  smartlist_t *pending_circs;
   int err_reason = 0;
 
   log_debug(LD_CIRC,"or_conn to %s, status=%d",
             or_conn->nickname ? or_conn->nickname : "NULL", status);
 
-  if (!circuits_pending_or_conns)
-    return;
+  pending_circs = smartlist_create();
+  circuit_get_all_pending_on_or_conn(pending_circs, or_conn);
 
-  changed_circs = smartlist_create();
-
-  SMARTLIST_FOREACH(circuits_pending_or_conns, circuit_t *, circ,
-  {
-    if (circ->marked_for_close)
-      continue;
-    tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
-    if (!circ->n_conn &&
-        !memcmp(or_conn->identity_digest, circ->n_conn_id_digest,
-                DIGEST_LEN)) {
+  SMARTLIST_FOREACH(pending_circs, circuit_t *, circ,
+    {
+      /* This check is redundant wrt get_all_pending_on_or_conn, but I'm
+       * leaving them in in case it's possible for the status of a circuit to
+       * change as we're going down the list. */
+      if (circ->marked_for_close || circ->n_conn ||
+          circ->state != CIRCUIT_STATE_OR_WAIT ||
+          memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN))
+        continue;
       if (!status) { /* or_conn failed; close circ */
         log_info(LD_CIRC,"or_conn failed. Closing circ.");
         circuit_mark_for_close(circ, END_CIRC_REASON_OR_CONN_CLOSED);
@@ -445,18 +442,11 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
           continue;
         }
         tor_free(circ->onionskin);
-        /* We don't want to change circ's state here, since the act
-         * of doing that modifies the circuits_pending_or_conns list
-         * that we're looping through right now. So collect a list of
-         * circs to change their state when we're done. */
-        smartlist_add(changed_circs, circ);
+        circuit_set_state(circ, CIRCUIT_STATE_OPEN);
       }
-    }
-  });
+    });
 
-  SMARTLIST_FOREACH(changed_circs, circuit_t *, circ,
-    circuit_set_state(circ, CIRCUIT_STATE_OPEN));
-  smartlist_free(changed_circs);
+  smartlist_free(pending_circs);
 }
 
 /** Find a new circid that isn't currently in use on the circ->n_conn
