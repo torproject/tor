@@ -69,7 +69,6 @@ int has_completed_circuit=0;
 
 #ifdef MS_WINDOWS
 #define MS_WINDOWS_SERVICE
-#includ "Windows.h"
 #endif
 
 #ifdef MS_WINDOWS_SERVICE
@@ -2156,7 +2155,7 @@ nt_service_install(int argc, char **argv)
   char *command;
   char *errmsg;
   const char *user_acct = GENSRV_USERACCT;
-  int i,r;
+  int i;
   SID_NAME_USE sidUse;
 
   if (nt_service_loadlibrary()<0)
@@ -2172,7 +2171,7 @@ nt_service_install(int argc, char **argv)
     return -1;
   }
   for (i=1; i < argc; ++i) {
-    if (!strcmp(i, "--user") && i+1<argc) {
+    if (!strcmp(argv[i], "--user") && i+1<argc) {
       user_acct = argv[i+1];
       ++i;
     }
@@ -2373,7 +2372,7 @@ tor_main(int argc, char *argv[])
       fprintf(stderr,
             "The %s option is deprecated; use \"--service install\" instead.",
             argv[1]);
-      return nt_service_install();
+      return nt_service_install(argc, argv);
     }
     if (!strcmp(argv[1], "-remove") || !strcmp(argv[1], "--remove")) {
       fprintf(stderr,
