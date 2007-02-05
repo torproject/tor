@@ -77,6 +77,7 @@ int has_completed_circuit=0;
 #define GENSRV_DISPLAYNAME  TEXT("Tor Win32 Service")
 #define GENSRV_DESCRIPTION  \
   TEXT("Provides an anonymous Internet communication system")
+#define GENSRV_USERACCT TEXT("NT AUTHORITY\\NetworkService")
 
 // Cheating: using the pre-defined error codes, tricks Windows into displaying
 //           a semi-related human-readable error message if startup fails as
@@ -2128,7 +2129,7 @@ nt_service_command_line(void)
  * started if installation succeeds. Returns 0 on success, or -1 on
  * failure. */
 int
-nt_service_install(void)
+nt_service_install(int argc, char **argv)
 {
   /* Notes about developing NT services:
    *
@@ -2143,7 +2144,8 @@ nt_service_install(void)
   SERVICE_DESCRIPTION sdBuff;
   char *command;
   char *errmsg;
-  int len = 0;
+  const char *user_acct = GENSRV_USERACCT;
+  int i;
 
   if (nt_service_loadlibrary()<0)
     return -1;
@@ -2157,6 +2159,12 @@ nt_service_install(void)
     service_fns.CloseServiceHandle_fn(hSCManager);
     return -1;
   }
+  for (i=1; i < argc, ++i) {
+    if (!strcmp(i, "--user") && i+1<argc) {
+      user_acct = argv[i+1];
+      ++i;
+    }
+  }
 
   /* Create the Tor service, set to auto-start on boot */
   if ((hService = service_fns.CreateServiceA_fn(hSCManager, GENSRV_SERVICENAME,
@@ -2164,7 +2172,7 @@ nt_service_install(void)
                                 SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
                                 SERVICE_AUTO_START, SERVICE_ERROR_IGNORE,
                                 command,
-                                NULL, NULL, NULL, NULL, "")) == NULL) {
+                                NULL, NULL, NULL, user_acct, "")) == NULL) {
     errmsg = nt_strerror(GetLastError());
     printf("CreateService() failed : %s\n", errmsg);
     service_fns.CloseServiceHandle_fn(hSCManager);
@@ -2314,7 +2322,7 @@ tor_main(int argc, char *argv[])
       return -1;
     }
     if (!strcmp(argv[2], "install"))
-      return nt_service_install();
+      return nt_service_install(argc, argv);
     if (!strcmp(argv[2], "remove"))
       return nt_service_remove();
     if (!strcmp(argv[2], "start"))
@@ -2324,19 +2332,28 @@ tor_main(int argc, char *argv[])
     printf("Unrecognized service command '%s'\n", argv[2]);
     return -1;
   }
-  // These are left so as not to confuse people who are used to these options
   if (argc >= 2) {
     if (nt_service_loadlibrary() < 0) {
       printf("Unable to load library support for NT services.\n");
       return -1;
     }
-    if (!strcmp(argv[1], "-install") || !strcmp(argv[1], "--install"))
-      return nt_service_install();
-    if (!strcmp(argv[1], "-remove") || !strcmp(argv[1], "--remove"))
-      return nt_service_remove();
     if (!strcmp(argv[1], "-nt-service") || !strcmp(argv[1], "--nt-service")) {
       nt_service_main();
       return 0;
+    }
+    // These values have been deprecated since 0.1.1.2-alpha; we've warned
+    // about them since 0.1.2.7-alpha.
+    if (!strcmp(argv[1], "-install") || !strcmp(argv[1], "--install")) {
+      fprintf(stderr,
+            "The %s option is deprecated; use \"--service install\" instead.",
+            argv[1]);
+      return nt_service_install();
+    }
+    if (!strcmp(argv[1], "-remove") || !strcmp(argv[1], "--remove")) {
+      fprintf(stderr,
+            "The %s option is deprecated; use \"--service remove\" instead.",
+            argv[1]);
+      return nt_service_remove();
     }
   }
 #endif

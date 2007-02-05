@@ -13,6 +13,12 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       writing to them, so we avoid queueing 4+ megabytes of data before
       trying to flush.
 
+  o Major bugfixes (NT services):
+    - Install as NT_AUTHORITY\NetworkService rather than as SYSTEM; add a
+      command-line flag so that admins can override the default by saying
+      "tor --service install --user "SomeUser"".  This will not effect
+      existing installed services.
+
   o Major bugfixes (other):
     - Fix a crash bug in the presence of DNS hijacking (reported by Andrew
       Del Vecchio).
