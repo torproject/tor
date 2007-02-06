@@ -2157,6 +2157,7 @@ nt_service_install(int argc, char **argv)
   const char *user_acct = GENSRV_USERACCT;
   int i;
   SID_NAME_USE sidUse;
+  DWORD zero = 0;
 
   if (nt_service_loadlibrary()<0)
     return -1;
@@ -2179,8 +2180,10 @@ nt_service_install(int argc, char **argv)
 
   if (service_fns.LookupAccountNameA_fn(NULL, // On this system
                                         user_acct,
-                                        NULL, 0, // Don't care about the SID
-                                        NULL, 0, // Don't care about the domain
+                                        NULL,
+                                        &zero, // Don't care about the SID
+                                        NULL,
+                                        &zero, // Don't care about the domain
                                         &sidUse) == 0) {
     printf("User \"%s\" doesn't seem to exist.\n", user_acct);
     if (user_acct != GENSRV_USERACCT)
