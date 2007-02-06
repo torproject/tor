@@ -529,8 +529,8 @@ When a controller asks for a virtual (unused) address with the
 'MAPADDRESS' command, Tor picks an unassigned address from this range.
 (Default: 127.192.0.0/10)
 
-When providing proxy server service to a larger using a tool like
-dns-proxy-tor, 
+When providing proxy server service to a larger XXXX012 using a tool like
+dns-proxy-tor,
 change this address to "10.192.0.0/10" or "172.16.0.0/12".
 The default \fBVirtualAddrNetwork\fP address range on a 
 properly configured machine will route to the loopback interface. 
