@@ -346,9 +346,9 @@ $Id$
         OR
           VER    Version byte: set to 3.           [1 octet]
           ATYPE  An address type (typically 4)     [1 octet]
-          ADDR   Introduction point's IP address  [4 or 16 octets]
-          PORT   Rendezvous point's OR port       [2 octets]
-          AUTHT  The auth type that is supported  [2 octets]
+          ADDR   Rendezvous point's IP address     [4 or 16 octets]
+          PORT   Rendezvous point's OR port        [2 octets]
+          AUTHT  The auth type that is supported   [2 octets]
           AUTHL  Length of auth data               [1 octet]
           AUTHD  Auth data                        [variable]
           ID     Rendezvous point identity ID    [20 octets]
