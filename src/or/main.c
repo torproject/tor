@@ -2156,8 +2156,10 @@ nt_service_install(int argc, char **argv)
   char *errmsg;
   const char *user_acct = GENSRV_USERACCT;
   int i;
+  OSVERSIONINFOEX info;
   SID_NAME_USE sidUse;
-  DWORD zero = 0;
+  DWORD sidLen = 0, domainLen = 0;
+  int is_win2k_or_worse = 0;
 
   if (nt_service_loadlibrary()<0)
     return -1;
@@ -2178,20 +2180,43 @@ nt_service_install(int argc, char **argv)
     }
   }
 
-  if (service_fns.LookupAccountNameA_fn(NULL, // On this system
-                                        user_acct,
-                                        NULL,
-                                        &zero, // Don't care about the SID
-                                        NULL,
-                                        &zero, // Don't care about the domain
-                                        &sidUse) == 0) {
+  /* Compute our version and see whether we're running win2k or earlier. */
+  memset(&info, 0, sizeof(info));
+  info.dwOSVersionInfoSize = sizeof(info);
+  if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
+    printf("Call to GetVersionEx failed.\n");
+    is_win2k_or_worse = 1;
+  } else {
+    if (info.dwMajorVersion < 5 ||
+        (info.dwMajorVersion == 5 && info.dwMinorVersion == 0))
+      is_win2k_or_worse = 1;
+  }
+
+  if (user_acct == GENSRV_USERACCT) {
+    if (is_win2k_or_worse) {
+      /* On Win2k, there is no LocalService account, so we actually need to
+       * fall back on NULL (the system account). */
+      printf("Running on Win2K or earlier, so the LocalService account "
+             "doesn't exist.  Falling back to SYSTEM account.\n");
+      user_acct = NULL;
+    } else {
+      /* Genericity is apparently _so_ last year in Redmond, where some
+       * accounts are accounts that you can look up, and some accounts
+       * are magic and undetectable via the security subsystem. See
+       * http://msdn2.microsoft.com/en-us/library/ms684188.aspx
+       */
+      printf("Running on a Post-Win2K OS, so we'll assume that the "
+             "LocalService account exists.\n");
+    }
+  } else if (service_fns.LookupAccountNameA_fn(NULL, // On this system
+                            user_acct,
+                            NULL, &sidLen, // Don't care about the SID
+                            NULL, &domainLen, // Don't care about the domain
+                            &sidUse) == 0) {
     printf("User \"%s\" doesn't seem to exist.\n", user_acct);
-    if (user_acct != GENSRV_USERACCT)
-      return -1;
-    /* On Win2k, there is no LocalService account, so we actually need to
-     * check for it. Yay win2k. */
-    printf("Falling back to SYSTEM account.\n");
-    user_acct = NULL;
+    return -1;
+  } else {
+    printf("Will try to install service as user \"%s\".\n", user_acct);
   }
 
   /* Create the Tor service, set to auto-start on boot */
