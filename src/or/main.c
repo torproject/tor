@@ -2096,8 +2096,7 @@ static char *
 nt_service_command_line(int *using_default_torrc)
 {
   TCHAR tor_exe[MAX_PATH+1];
-  char *command, *options;
-  const char *torrc;
+  char *command, *options=NULL;
   smartlist_t *sl;
   int i, cmdlen;
   *using_default_torrc = 1;
@@ -2108,7 +2107,6 @@ nt_service_command_line(int *using_default_torrc)
 
   /* Get the service arguments */
   sl = smartlist_create();
-  torrc = get_torrc_fname();
   for (i = 1; i < backup_argc; ++i) {
     if (!strcmp(backup_argv[i], "--options") ||
         !strcmp(backup_argv[i], "-options")) {
@@ -2119,8 +2117,8 @@ nt_service_command_line(int *using_default_torrc)
       }
     }
   }
-  tor_assert(smartlist_len(sl));
-  options = smartlist_join_strings(sl,"\" \"",0,NULL);
+  if (smartlist_len(sl))
+    options = smartlist_join_strings(sl,"\" \"",0,NULL);
   smartlist_free(sl);
 
   /* Allocate a string for the NT service command line */
@@ -2128,10 +2126,17 @@ nt_service_command_line(int *using_default_torrc)
   command = tor_malloc(cmdlen);
 
   /* Format the service command */
-  if (tor_snprintf(command, cmdlen, "\"%s\" --nt-service \"%s\"",
-                   tor_exe, options)<0) {
-    tor_free(command); /* sets command to NULL. */
+  if (options) {
+    if (tor_snprintf(command, cmdlen, "\"%s\" --nt-service \"%s\"",
+                     tor_exe, options)<0) {
+      tor_free(command); /* sets command to NULL. */
+    }
+  } else { /* ! options */
+    if (tor_snprintf(command, cmdlen, "\"%s\" --nt-service", tor_exe)<0) {
+      tor_free(command); /* sets command to NULL. */
+    }
   }
+
   tor_free(options);
   return command;
 }
