@@ -576,7 +576,7 @@ to an entire network.
 .LP
 .TP
 \fBNATDPort\fP \fR\fIPORT\fP
-Allow old versions of ipwf (as included in old versions of FreeBSD,
+Allow old versions of ipfw (as included in old versions of FreeBSD,
 etc.) to send connections through Tor using the NATD protocol.
 This option is only for people who cannot
 use TransPort.
