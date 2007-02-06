@@ -86,6 +86,8 @@ int has_completed_circuit=0;
 
 SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
+/* XXXX This 'backup argv' and 'backup argc' business is an ugly hack. This
+ * is a job for arguments, not globals. */
 static char **backup_argv;
 static int backup_argc;
 static int nt_service_is_stopped(void);
@@ -2086,16 +2088,19 @@ nt_service_stop(SC_HANDLE hService)
 }
 
 /** Build a formatted command line used for the NT service. Return a
- * pointer to the formatted string on success, or NULL on failure. */
-char *
-nt_service_command_line(void)
+ * pointer to the formatted string on success, or NULL on failure.  Set
+ * *<b>using_default_torrc</b> to true if we're going to use the default
+ * location to torrc, or 1 if an option was specified on the command line.
+ */
+static char *
+nt_service_command_line(int *using_default_torrc)
 {
   TCHAR tor_exe[MAX_PATH+1];
   char *command, *options;
   const char *torrc;
   smartlist_t *sl;
   int i, cmdlen;
-  int use_default_torrc = 1;
+  *using_default_torrc = 1;
 
   /* Get the location of tor.exe */
   if (0 == GetModuleFileName(NULL, tor_exe, MAX_PATH))
@@ -2109,14 +2114,10 @@ nt_service_command_line(void)
         !strcmp(backup_argv[i], "-options")) {
       while (++i < backup_argc) {
         if (!strcmp(backup_argv[i], "-f"))
-          use_default_torrc = 0;
+          *using_default_torrc = 0;
         smartlist_add(sl, backup_argv[i]);
       }
     }
-  }
-  if (use_default_torrc) {
-    smartlist_add(sl, "-f");
-    smartlist_add(sl, (char*)torrc);
   }
   tor_assert(smartlist_len(sl));
   options = smartlist_join_strings(sl,"\" \"",0,NULL);
@@ -2160,6 +2161,7 @@ nt_service_install(int argc, char **argv)
   SID_NAME_USE sidUse;
   DWORD sidLen = 0, domainLen = 0;
   int is_win2k_or_worse = 0;
+  int using_default_torrc = 0;
 
   if (nt_service_loadlibrary()<0)
     return -1;
@@ -2168,7 +2170,7 @@ nt_service_install(int argc, char **argv)
   if ((hSCManager = nt_service_open_scm()) == NULL)
     return -1;
   /* Build the command line used for the service */
-  if ((command = nt_service_command_line()) == NULL) {
+  if ((command = nt_service_command_line(&using_default_torrc)) == NULL) {
     printf("Unable to build service command line.\n");
     service_fns.CloseServiceHandle_fn(hSCManager);
     return -1;
@@ -2218,6 +2220,14 @@ nt_service_install(int argc, char **argv)
   } else {
     printf("Will try to install service as user \"%s\".\n", user_acct);
   }
+  /* XXXX This warning could be better about explaining how to resolve the
+   * situation. */
+  if (using_default_torrc)
+    printf("IMPORTANT NOTE:\n"
+        "    The Tor service will run under the account \"%s\".  This means\n"
+        "    that Tor will look for its configuration file under that\n"
+        "    account's Application Data directory, which is probably not\n"
+        "    the same as yours.\n", user_acct?user_acct:"<local system>");
 
   /* Create the Tor service, set to auto-start on boot */
   if ((hService = service_fns.CreateServiceA_fn(hSCManager, GENSRV_SERVICENAME,
