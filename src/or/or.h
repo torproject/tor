@@ -606,11 +606,11 @@ typedef enum {
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
 
-/** legal characters in a nickname */
+/** Legal characters in a nickname. */
 #define LEGAL_NICKNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-/** Name to use in client TLS certificates if no nickname is given.*/
+/** Name to use in client TLS certificates if no nickname is given. */
 #define DEFAULT_CLIENT_NICKNAME "client"
 
 /** DOCDOC */

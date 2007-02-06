@@ -712,8 +712,8 @@ addressmap_rewrite(char *address, size_t maxlen)
 }
 
 /** If we have a cached reverse DNS entry for the address stored in the
- * <b>maxlen</b>-byte buffer <b>address</b> (typically, a dotted quad) with
- * the cached value and return 1.  Otherwise return  0. */
+ * <b>maxlen</b>-byte buffer <b>address</b> (typically, a dotted quad) then
+ * rewrite to the cached value and return 1.  Otherwise return 0. */
 static int
 addressmap_rewrite_reverse(char *address, size_t maxlen)
 {
@@ -2021,8 +2021,8 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
  *
  * If <b>reply</b> is defined, then write <b>replylen</b> bytes of it to conn
  * and return, else reply based on <b>endreason</b> (one of
- * END_STREAM_REASON_*). If <b>reply</b> is undefined, <b>endreason</b> can't 0
- * or REASON_DONE.  Send endreason to the controller, if appropriate.
+ * END_STREAM_REASON_*). If <b>reply</b> is undefined, <b>endreason</b> can't
+ * be 0 or REASON_DONE.  Send endreason to the controller, if appropriate.
  */
 void
 connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,

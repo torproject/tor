@@ -981,7 +981,10 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
           this_bw = (uint32_t)(partial/i);
         /*XXXX012 The above calculation is an awful hack, and makes our
          * algorithm hard to describe sanely. Could we do better with a second
-         * pass through the list? -NM */
+         * pass through the list? -NM
+         * Sure, fine by me. I fear this thing becoming too intensive,
+         * but nobody has mentioned it in profiling yet. -RD
+         */
       }
     } else {
       router = smartlist_get(sl, i);

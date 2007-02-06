@@ -550,7 +550,7 @@ crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src,
   return 0;
 }
 
-/** Write the private key from 'env' into the file named by 'fname',
+/** Write the private key from <b>env</b> into the file named by <b>fname</b>,
  * PEM-encoded.  Return 0 on success, -1 on failure.
  */
 int

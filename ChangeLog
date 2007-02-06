@@ -1,8 +1,10 @@
-Changes in version 0.1.2.7-alpha - 2007-??-??
+Changes in version 0.1.2.7-alpha - 2007-02-06
   o Major bugfixes (rate limiting):
     - Servers decline directory requests much more aggressively when
       they're low on bandwidth. Otherwise they end up queueing more and
       more directory responses, which can't be good for latency.
+    - Fix a memory leak when sending a 503 response for a networkstatus
+      request.
     - But never refuse directory requests from local addresses.
     - Be willing to read or write on local connections (e.g. controller
       connections) even when the global rate limiting buckets are empty.
@@ -20,15 +22,13 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       existing installed services.
 
   o Major bugfixes (other):
-    - Fix a crash bug in the presence of DNS hijacking (reported by Andrew
-      Del Vecchio).
     - Previously, we would cache up to 16 old networkstatus documents
       indefinitely, if they came from nontrusted authorities. Now we
       discard them if they are more than 10 days old.
+    - Fix a crash bug in the presence of DNS hijacking (reported by Andrew
+      Del Vecchio).
     - Detect and reject malformed DNS responses containing circular
       pointer loops.
-    - Fix a memory leak when sending a 503 response for a networkstatus
-      request.
     - If exits are rare enough that we're not marking exits as guards,
       ignore exit bandwidth when we're deciding the required bandwidth
       to become a guard.
@@ -39,19 +39,9 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       slowdowns in tunneled dir connections; a better solution will have
       to wait for 0.2.0.)
 
-  o Minor bugfixes:
-    - When computing clock skew from directory HTTP headers, consider what
-      time it was when we finished asking for the directory, not what
-      time it is now.
+  o Minor bugfixes (dns):
     - Add some defensive programming to eventdns.c in an attempt to catch
       possible memory-stomping bugs.
-    - Fix crash with "tor --list-fingerprint" (reported by seeess).
-    - Expire socks connections if they spend too long waiting for the
-      handshake to finish. Previously we would let them sit around for
-      days, if the connecting application didn't close them either.
-    - And if the socks handshake hasn't started, don't send a
-      "DNS resolve socks failed" handshake reply; just close it.
-    - Stop using C functions that OpenBSD's linker doesn't like.
     - Detect and reject DNS replies containing IPv4 or IPv6 records with
       an incorrect number of bytes. (Previously, we would ignore the
       extra bytes.)
@@ -59,18 +49,30 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       in the correct order, and doesn't crash.
     - Free memory held in recently-completed DNS lookup attempts on exit.
       This was not a memory leak, but may have been hiding memory leaks.
+    - Handle TTL values correctly on reverse DNS lookups.
+    - Treat failure to parse resolv.conf as an error.
+
+  o Minor bugfixes (other):
+    - Fix crash with "tor --list-fingerprint" (reported by seeess).
+    - When computing clock skew from directory HTTP headers, consider what
+      time it was when we finished asking for the directory, not what
+      time it is now.
+    - Expire socks connections if they spend too long waiting for the
+      handshake to finish. Previously we would let them sit around for
+      days, if the connecting application didn't close them either.
+    - And if the socks handshake hasn't started, don't send a
+      "DNS resolve socks failed" handshake reply; just close it.
+    - Stop using C functions that OpenBSD's linker doesn't like.
     - Don't launch requests for descriptors unless we have networkstatuses
       from at least half of the authorities.  This delays the first
       download slightly under pathological circumstances, but can prevent
       us from downloading a bunch of descriptors we don't need.
     - Do not log IPs with TLS failures for incoming TLS
       connections. (Fixes bug 382.)
-    - If the user asks to use invalid exit nodes, be willing to use the
+    - If the user asks to use invalid exit nodes, be willing to use
       unstable ones.
-    - Handle TTL values correctly on reverse DNS lookups.
     - Stop using the reserved ac_cv namespace in our configure script.
     - Call stat() slightly less often; use fstat() when possible.
-    - Treat failure to parse resolv.conf as an error.
     - Refactor the way we handle pending circuits when an OR connection
       completes or fails, in an attempt to fix a rare crash bug.
 
@@ -105,8 +107,10 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
     - Add a SOCKS_BAD_HOSTNAME client status event so controllers
       can learn when clients are sending malformed hostnames to Tor.
     - Clean up documentation for controller status events.
-    - Add a REMAP status to stream events to note that a stream's address has
-      changed because of a cached address or a MapAddress directive.
+    - Add a REMAP status to stream events to note that a stream's
+      address has changed because of a cached address or a MapAddress
+      directive.
+
 
 Changes in version 0.1.2.6-alpha - 2007-01-09
   o Major bugfixes:

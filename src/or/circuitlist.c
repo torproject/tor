@@ -218,7 +218,7 @@ circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
 }
 
 /** Return the number of circuits in state OR_WAIT, waiting for the given
- * connection.  */
+ * connection. */
 int
 circuit_count_pending_on_or_conn(or_connection_t *or_conn)
 {
@@ -676,7 +676,7 @@ circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
 }
 
 /** Return the first circuit originating here in global_circuitlist after
- * <b>start</b> whose purpose is <b>purpose</b> is purpose, and where
+ * <b>start</b> whose purpose is <b>purpose</b>, and where
  * <b>digest</b> (if set) matches the rend_pk_digest field. Return NULL if no
  * circuit is found.  If <b>start</b> is NULL, begin at the start of the list.
  */
@@ -707,7 +707,7 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
 
 /** Return the first OR circuit in the global list whose purpose is
  * <b>purpose</b>, and whose rend_token is the <b>len</b>-byte
- * <b>token</b>.  */
+ * <b>token</b>. */
 static or_circuit_t *
 circuit_get_by_rend_token_and_purpose(uint8_t purpose, const char *token,
                                       size_t len)
