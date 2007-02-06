@@ -1075,7 +1075,8 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
       i += 2; /* command-line option with argument. ignore them. */
       continue;
     } else if (!strcmp(argv[i],"--list-fingerprint") ||
-               !strcmp(argv[i],"--verify-config")) {
+               !strcmp(argv[i],"--verify-config") ||
+               !strcmp(argv[i],"--ignore-missing-torrc")) {
       i += 1; /* command-line option. ignore it. */
       continue;
     } else if (!strcmp(argv[i],"--nt-service") ||
@@ -2967,6 +2968,7 @@ options_init_from_torrc(int argc, char **argv)
   char *cf=NULL, *fname=NULL, *errmsg=NULL;
   int i, retval;
   int using_default_torrc;
+  int ignore_missing_torrc;
   static char **backup_argv;
   static int backup_argc;
 
@@ -3004,6 +3006,7 @@ options_init_from_torrc(int argc, char **argv)
   /* learn config file name */
   fname = NULL;
   using_default_torrc = 1;
+  ignore_missing_torrc = 0;
   newoptions->command = CMD_RUN_TOR;
   for (i = 1; i < argc; ++i) {
     if (i < argc-1 && !strcmp(argv[i],"-f")) {
@@ -3014,6 +3017,8 @@ options_init_from_torrc(int argc, char **argv)
       fname = tor_strdup(argv[i+1]);
       using_default_torrc = 0;
       ++i;
+    } else if (!strcmp(argv[i],"--ignore-missing-torrc")) {
+      ignore_missing_torrc = 1;
     } else if (!strcmp(argv[i],"--list-fingerprint")) {
       newoptions->command = CMD_LIST_FINGERPRINT;
     } else if (!strcmp(argv[i],"--hash-password")) {
@@ -3053,7 +3058,7 @@ options_init_from_torrc(int argc, char **argv)
   /* get config lines, assign them */
   if (file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0,NULL))) {
-    if (using_default_torrc == 1) {
+    if (using_default_torrc == 1 || ignore_missing_torrc ) {
       log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
           "using reasonable defaults.", fname);
       tor_free(fname); /* sets fname to NULL */

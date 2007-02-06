@@ -100,6 +100,10 @@ Changes in version 0.1.2.7-alpha - 2007-02-06
       create_fast cell if we don't know anything about a router.
     - Allow exit nodes to use nameservers running on ports other than 53.
     - Servers now cache reverse DNS replies.
+    - Add an --ignore-missing-torrc command-line option so that we can
+      get the "use sensible defaults if the configuration file doesn't
+      exist" behavior even when specifying a torrc location on the command
+      line.
 
   o Minor features (controller):
     - Track reasons for OR connection failure; make these reasons
