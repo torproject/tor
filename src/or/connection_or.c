@@ -779,9 +779,14 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   return 0;
 }
 
-/** DOCDOC */
+/** A high waterlevel for whether to refill this OR connection
+ * with more directory information, if any is pending. */
 #define BUF_FULLNESS_THRESHOLD (128*1024)
-/** DOCDOC */
+/** A bottom waterlevel for whether to refill this OR connection
+ * with more directory information, if any is pending. We don't want
+ * to make this too low, since we already run the risk of starving
+ * the pending dir connections if the OR conn is frequently busy with
+ * other things. */
 #define BUF_EMPTINESS_THRESHOLD (96*1024)
 
 /** Return true iff there is so much data waiting to be flushed on <b>conn</b>

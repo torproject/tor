@@ -1735,7 +1735,7 @@ extend_info_from_routerstatus(routerstatus_t *s)
   info = tor_malloc_zero(sizeof(extend_info_t));
   strlcpy(info->nickname, s->nickname, sizeof(info->nickname));
   memcpy(info->identity_digest, s->identity_digest, DIGEST_LEN);
-  info->onion_key = NULL; /* routerstatus doesn't include this! */
+  info->onion_key = NULL; /* routerstatus doesn't know this */
   info->addr = s->addr;
   info->port = s->or_port;
   return info;

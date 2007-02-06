@@ -29,8 +29,15 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       pointer loops.
     - Fix a memory leak when sending a 503 response for a networkstatus
       request.
-    - If we're not marking exits as guards, ignore exit bandwidth
-      when we're deciding the required bandwidth to become a guard.
+    - If exits are rare enough that we're not marking exits as guards,
+      ignore exit bandwidth when we're deciding the required bandwidth
+      to become a guard.
+    - When we're handling a directory connection tunneled over Tor,
+      don't fill up internal memory buffers with all the data we want
+      to tunnel; instead, only add it if the OR connection that will
+      eventually receive it has some room for it. (This can lead to
+      slowdowns in tunneled dir connections; a better solution will have
+      to wait for 0.2.0.)
 
   o Minor bugfixes:
     - When computing clock skew from directory HTTP headers, consider what
@@ -58,12 +65,6 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
       us from downloading a bunch of descriptors we don't need.
     - Do not log IPs with TLS failures for incoming TLS
       connections. (Fixes bug 382.)
-    - When we're handling a directory connection tunneled over Tor,
-      don't fill up internal memory buffers with all the data we want
-      to tunnel; instead, only add it if the OR connection that will
-      eventually receive it has some room for it. (This can lead to
-      slowdowns in tunneled dir connections; a better solution will have
-      to wait for 0.2.0.)
     - If the user asks to use invalid exit nodes, be willing to use the
       unstable ones.
     - Handle TTL values correctly on reverse DNS lookups.
@@ -76,12 +77,13 @@ Changes in version 0.1.2.7-alpha - 2007-??-??
   o Major features:
     - Weight directory requests by advertised bandwidth. Now we can
       let servers enable write limiting but still allow most clients to
-      succeed at their directory requests.
+      succeed at their directory requests. (We still ignore weights when
+      choosing a directory authority; I hope this is a feature.)
 
   o Minor features:
     - Create a new file ReleaseNotes which was the old ChangeLog. The
-      new ChangeLog file now includes the summaries for even development
-      versions.
+      new ChangeLog file now includes the summaries for all development
+      versions too.
     - Check for addresses with invalid characters at the exit as well
       as at the client, and warn less verbosely when they fail. You can
       override this by setting ServerDNSAllowNonRFC953Addresses to 1.

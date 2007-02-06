@@ -270,7 +270,8 @@ of their choices.
 
   We use Guard nodes (also called "helper nodes" in the literature) to
   prevent certain profiling attacks.  Here's the risk: if we choose entry and
-  exit nodes at random, and an attacker controls C out of N servers, then the
+  exit nodes at random, and an attacker controls C out of N servers
+  (ignoring advertised bandwidth), then the
   attacker will control the entry and exit node of any given circuit with
   probability (C/N)^2.  But as we make many different circuits over time,
   then the probability that the attacker will see a sample of about (C/N)^2
@@ -298,13 +299,14 @@ of their choices.
   A guard is unusable for a particular circuit if any of the rules for path
   selection in 2.2 are not met.  In particular, if the circuit is "fast"
   and the guard is not Fast, or if the circuit is "stable" and the guard is
-  not Stable, Tor can't use the guard for that circuit.
+  not Stable, or if the guard has already been chosen as the exit node in
+  that circuit, Tor can't use it as a guard node for that circuit.
 
   If the guard is excluded because of its status in the networkstatuses for
   over 30 days, Tor removes it from the list entirely, preserving order.
 
   If Tor fails to connect to an otherwise usable guard, it retries
-  periodically: every hour for six hours, every for hours for 3 days, every
+  periodically: every hour for six hours, every 4 hours for 3 days, every
   18 hours for a week, and every 36 hours thereafter.  Additionally, Tor
   retries unreachable guards the first time it adds a new guard to the list,
   since it is possible that the old guards were only marked as unreachable
