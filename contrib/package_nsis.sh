@@ -4,6 +4,8 @@
 # you have already built Tor, that you are running cygwin, and that your
 # environment is basically exactly the same as Nick's.
 
+# This file is obsolete.
+
 rm -rf win_tmp
 mkdir win_tmp
 mkdir win_tmp/bin

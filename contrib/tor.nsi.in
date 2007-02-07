@@ -124,12 +124,12 @@ Section "Documents" Docs
    SetOutPath "$INSTDIR\Documents"
    ;File "..\doc\FAQ"
    File "..\doc\HACKING"
-   File "..\doc\control-spec.txt"
-   File "..\doc\dir-spec.txt"
-   File "..\doc\rend-spec.txt"
-   File "..\doc\socks-extensions.txt"
-   File "..\doc\tor-spec.txt"
-   File "..\doc\version-spec.txt"
+   File "..\doc\spec\control-spec.txt"
+   File "..\doc\spec\dir-spec.txt"
+   File "..\doc\spec\rend-spec.txt"
+   File "..\doc\spec\socks-extensions.txt"
+   File "..\doc\spec\tor-spec.txt"
+   File "..\doc\spec\version-spec.txt"
    ;
    ; WEBSITE-FILES-HERE
    ;
