@@ -953,6 +953,9 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
          * to send an end cell. */
         conn->_base.edge_has_sent_end = 1;
         conn->end_reason = END_STREAM_REASON_DESTROY;
+        conn->end_reason |= END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED;
+        control_event_stream_status(conn, STREAM_EVENT_CLOSED,
+                                    END_STREAM_REASON_DESTROY);
         connection_mark_for_close(TO_CONN(conn));
       }
       conn->on_circuit = NULL;

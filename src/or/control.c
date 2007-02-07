@@ -3140,7 +3140,7 @@ write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
 static const char *
 stream_end_reason_to_string(int reason)
 {
-  reason &= ~END_CIRC_REASON_FLAG_REMOTE;
+  reason &= END_STREAM_REASON_MASK;
   switch (reason) {
     case END_STREAM_REASON_MISC: return "MISC";
     case END_STREAM_REASON_RESOLVEFAILED: return "RESOLVEFAILED";
@@ -3177,6 +3177,10 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   tor_assert(conn->socks_request);
 
   if (!EVENT_IS_INTERESTING(EVENT_STREAM_STATUS))
+    return 0;
+
+  if (tp == STREAM_EVENT_CLOSED &&
+      (reason_code & END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED))
     return 0;
 
   write_stream_target_to_buf(conn, buf, sizeof(buf));

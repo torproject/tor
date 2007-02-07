@@ -531,9 +531,15 @@ typedef enum {
 /** DOCDOC */
 #define END_STREAM_REASON_INVALID_NATD_DEST 261
 
+/** Bitwise-and this value with endreason to mask out all flags. */
+#define END_STREAM_REASON_MASK 511
+
 /** Bitwise-or this with the argument to control_event_stream_status
  * to indicate that the reason came from an END cell. */
-#define END_STREAM_REASON_FLAG_REMOTE     512
+#define END_STREAM_REASON_FLAG_REMOTE 512
+/** Bitwise-or this with the argument to control_event_stream_status
+ * to indicate that we already sent a CLOSED stream event. */
+#define END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED 1024
 
 /* DOCDOC */
 #define RESOLVED_TYPE_HOSTNAME 0
