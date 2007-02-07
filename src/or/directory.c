@@ -708,8 +708,14 @@ http_set_address_origin(const char *headers, connection_t *conn)
   if (!fwd)
     fwd = http_get_header(headers, "X-Forwarded-For: ");
   if (fwd) {
+    struct in_addr in;
+    if (!tor_inet_aton(fwd, &in) || is_internal_IP(ntohl(in.s_addr), 0)) {
+      log_debug(LD_DIR, "Ignoring unrecognized or internal IP '%s'", fwd);
+      tor_free(fwd);
+      return;
+    }
     tor_free(conn->address);
-    conn->address = tor_strdup(escaped(fwd));
+    conn->address = tor_strdup(fwd);
     tor_free(fwd);
   }
 }

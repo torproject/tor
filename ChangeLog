@@ -79,6 +79,9 @@ Changes in version 0.1.2.7-alpha - 2007-02-06
     - Call stat() slightly less often; use fstat() when possible.
     - Refactor the way we handle pending circuits when an OR connection
       completes or fails, in an attempt to fix a rare crash bug.
+    - Only rewrite a conn's address based on X-Forwarded-For: headers
+      if it's a parseable public IP address; and stop adding extra quotes
+      to the resulting address.
 
   o Major features:
     - Weight directory requests by advertised bandwidth. Now we can
