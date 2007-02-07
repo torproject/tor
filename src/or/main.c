@@ -2122,7 +2122,7 @@ nt_service_command_line(int *using_default_torrc)
   smartlist_free(sl);
 
   /* Allocate a string for the NT service command line */
-  cmdlen = strlen(tor_exe) + strlen(options) + 32;
+  cmdlen = strlen(tor_exe) + (options?strlen(options):0) + 32;
   command = tor_malloc(cmdlen);
 
   /* Format the service command */
@@ -2161,6 +2161,7 @@ nt_service_install(int argc, char **argv)
   char *command;
   char *errmsg;
   const char *user_acct = GENSRV_USERACCT;
+  const char *password = "";
   int i;
   OSVERSIONINFOEX info;
   SID_NAME_USE sidUse;
@@ -2180,9 +2181,14 @@ nt_service_install(int argc, char **argv)
     service_fns.CloseServiceHandle_fn(hSCManager);
     return -1;
   }
+
   for (i=1; i < argc; ++i) {
     if (!strcmp(argv[i], "--user") && i+1<argc) {
       user_acct = argv[i+1];
+      ++i;
+    }
+    if (!strcmp(argv[i], "--password") && i+1<argc) {
+      password = argv[i+1];
       ++i;
     }
   }
@@ -2215,11 +2221,12 @@ nt_service_install(int argc, char **argv)
       printf("Running on a Post-Win2K OS, so we'll assume that the "
              "LocalService account exists.\n");
     }
-  } else if (service_fns.LookupAccountNameA_fn(NULL, // On this system
+  } else if (0 && service_fns.LookupAccountNameA_fn(NULL, // On this system
                             user_acct,
                             NULL, &sidLen, // Don't care about the SID
                             NULL, &domainLen, // Don't care about the domain
                             &sidUse) == 0) {
+    /* XXXX012 For some reason, the above test segfaults. Fix that. */
     printf("User \"%s\" doesn't seem to exist.\n", user_acct);
     return -1;
   } else {
@@ -2239,8 +2246,8 @@ nt_service_install(int argc, char **argv)
                                 GENSRV_DISPLAYNAME,
                                 SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS,
                                 SERVICE_AUTO_START, SERVICE_ERROR_IGNORE,
-                                command,
-                                NULL, NULL, NULL, user_acct, "")) == NULL) {
+                                command, NULL, NULL, NULL,
+                                user_acct, password)) == NULL) {
     errmsg = nt_strerror(GetLastError());
     printf("CreateService() failed : %s\n", errmsg);
     service_fns.CloseServiceHandle_fn(hSCManager);
@@ -2248,6 +2255,7 @@ nt_service_install(int argc, char **argv)
     tor_free(command);
     return -1;
   }
+  printf("Done with CreateService.\n");
 
   /* Set the service's description */
   sdBuff.lpDescription = GENSRV_DESCRIPTION;
