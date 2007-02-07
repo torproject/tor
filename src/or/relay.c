@@ -584,7 +584,7 @@ connection_edge_end_reason_str(int reason)
 socks5_reply_status_t
 connection_edge_end_reason_socks5_response(int reason)
 {
-  switch (reason) {
+  switch (reason & END_STREAM_REASON_MASK) {
     case 0:
       return SOCKS5_SUCCEEDED;
     case END_STREAM_REASON_MISC:
@@ -612,8 +612,6 @@ connection_edge_end_reason_socks5_response(int reason)
     case END_STREAM_REASON_TORPROTOCOL:
       return SOCKS5_GENERAL_ERROR;
 
-    case END_STREAM_REASON_ALREADY_SOCKS_REPLIED:
-      return SOCKS5_SUCCEEDED; /* never used */
     case END_STREAM_REASON_CANT_ATTACH:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_NET_UNREACHABLE:
@@ -922,7 +920,8 @@ connection_edge_process_relay_cell_not_open(
                    cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
                    ttl);
     connection_mark_unattached_ap(conn,
-                                  END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+                              END_STREAM_REASON_DONE |
+                              END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
     return 0;
   }
 

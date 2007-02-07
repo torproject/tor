@@ -50,7 +50,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
   }
 
   if (!conn->socks_request->has_finished) {
-    if (endreason == END_STREAM_REASON_ALREADY_SOCKS_REPLIED)
+    if (endreason & END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED)
       log_warn(LD_BUG,
                "Bug: stream (marked at %s:%d) sending two socks replies?",
                file, line);
@@ -1216,7 +1216,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                              strlen(socks->address),
                                              socks->address, -1);
       connection_mark_unattached_ap(conn,
-                                    END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+                                 END_STREAM_REASON_DONE |
+                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
       return 0;
     }
   } else {
@@ -1307,7 +1308,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,
                                                0,NULL,-1);
         connection_mark_unattached_ap(conn,
-                                      END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+                                END_STREAM_REASON_SOCKSPROTOCOL |
+                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
         return -1;
       }
       if (tor_inet_aton(socks->address, &in)) { /* see if it's an IP already */
@@ -1315,7 +1317,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                                (char*)&answer,-1);
         connection_mark_unattached_ap(conn,
-                                      END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+                                END_STREAM_REASON_DONE |
+                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
         return 0;
       }
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
@@ -1373,7 +1376,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,
                                              0,NULL,-1);
       connection_mark_unattached_ap(conn,
-                                    END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+                                END_STREAM_REASON_SOCKSPROTOCOL |
+                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
       return -1;
     }
 
@@ -1574,7 +1578,8 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
                                           END_STREAM_REASON_SOCKSPROTOCOL);
     }
     connection_mark_unattached_ap(conn,
-                                  END_STREAM_REASON_ALREADY_SOCKS_REPLIED);
+                              END_STREAM_REASON_SOCKSPROTOCOL |
+                              END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
     return -1;
   } /* else socks handshake is done, continue processing */
 

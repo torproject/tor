@@ -518,8 +518,7 @@ typedef enum {
  * and are not intended to be put in relay end cells. They are here
  * to be more informative when sending back socks replies to the
  * application. */
-/** DOCDOC */
-#define END_STREAM_REASON_ALREADY_SOCKS_REPLIED 256
+/* XXXX 256 is no longer used; feel free to reuse it. */
 /** DOCDOC */
 #define END_STREAM_REASON_CANT_ATTACH 257
 /** DOCDOC */
@@ -540,6 +539,10 @@ typedef enum {
 /** Bitwise-or this with the argument to control_event_stream_status
  * to indicate that we already sent a CLOSED stream event. */
 #define END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED 1024
+/** Bitwise-or this with endreason to indicate that we already sent
+ * a socks reply, and no further reply needs to be sent from
+ * connection_mark_unattached_ap(). */
+#define END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED 2048
 
 /* DOCDOC */
 #define RESOLVED_TYPE_HOSTNAME 0
