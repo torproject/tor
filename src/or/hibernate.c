@@ -25,22 +25,31 @@ hibernating, phase 2:
 
 #include "or.h"
 
-/** DOCDOC */
-#define HIBERNATE_STATE_LIVE 1
-/** DOCDOC */
-#define HIBERNATE_STATE_EXITING 2
-/** DOCDOC */
-#define HIBERNATE_STATE_LOWBANDWIDTH 3
-/** DOCDOC */
-#define HIBERNATE_STATE_DORMANT 4
+/** Possible values of hibernate_state */
+typedef enum {
+  /** We are running normally. */
+  HIBERNATE_STATE_LIVE=1,
+  /** We're trying to shut down cleanly, and we'll kill all active connections
+   * at shutdown_time. */
+  HIBERNATE_STATE_EXITING=2,
+  /** We're running low on allocated bandwidth for this period, so we won't
+   * accept any new connections. */
+  HIBERNATE_STATE_LOWBANDWIDTH=3,
+  /** We are hibernating, and we won't wake up till there's more bandwidth to
+   * use. */
+  HIBERNATE_STATE_DORMANT=4
+} hibernate_state_t;
 
 extern long stats_n_seconds_working; /* published uptime */
 
 /** DOCDOC */
-static int hibernate_state = HIBERNATE_STATE_LIVE;
+static hibernate_state_t hibernate_state = HIBERNATE_STATE_LIVE;
 /** If are hibernating, when do we plan to wake up? Set to 0 if we
  * aren't hibernating. */
 static time_t hibernate_end_time = 0;
+/** If we are shutting down, when do we plan finally exit? Set to 0 if
+ * we aren't shutting down. */
+static time_t shutdown_time = 0;
 
 /** DOCDOC */
 typedef enum {
@@ -49,9 +58,9 @@ typedef enum {
 
 /* Fields for accounting logic.  Accounting overview:
  *
- * Accounting is designed to ensure that no more than N bytes are sent
- * in either direction over a given interval (currently, one month,
- * starting at 0:00 GMT an arbitrary day within the month).  We could
+ * Accounting is designed to ensure that no more than N bytes are sent in
+ * either direction over a given interval (currently, one month, one week, or
+ * one day) We could
  * try to do this by choking our bandwidth to a trickle, but that
  * would make our streams useless.  Instead, we estimate what our
  * bandwidth usage will be, and guess how long we'll be able to
@@ -773,7 +782,7 @@ hibernate_begin(int new_state, time_t now)
   if (new_state == HIBERNATE_STATE_EXITING) {
     log_notice(LD_GENERAL,"Interrupt: will shut down in %d seconds. Interrupt "
                "again to exit now.", options->ShutdownWaitLength);
-    hibernate_end_time = time(NULL) + options->ShutdownWaitLength;
+    shutdown_time = time(NULL) + options->ShutdownWaitLength;
   } else { /* soft limit reached */
     hibernate_end_time = interval_end_time;
   }
@@ -849,6 +858,11 @@ hibernate_go_dormant(time_t now)
       connection_mark_for_close(conn);
   }
 
+  if (now < interval_wakeup_time)
+    hibernate_end_time = interval_wakeup_time;
+  else
+    hibernate_end_time = interval_end_time;
+
   accounting_record_bandwidth_usage(now, get_or_state());
 
   or_state_mark_dirty(get_or_state(),
@@ -898,8 +912,8 @@ consider_hibernation(time_t now)
   /* If we're in 'exiting' mode, then we just shut down after the interval
    * elapses. */
   if (hibernate_state == HIBERNATE_STATE_EXITING) {
-    tor_assert(hibernate_end_time);
-    if (hibernate_end_time <= now) {
+    tor_assert(shutdown_time);
+    if (shutdown_time <= now) {
       log_notice(LD_GENERAL, "Clean shutdown finished. Exiting.");
       tor_cleanup();
       exit(0);
