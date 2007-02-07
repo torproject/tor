@@ -948,14 +948,12 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
       conn = or_circ->resolving_streams;
       or_circ->resolving_streams = conn->next_stream;
       if (!conn->_base.marked_for_close) {
-        /* The other side will see a DESTROY, and infer that the connections
+        /* The client will see a DESTROY, and infer that the connections
          * are closing because the circuit is getting torn down.  No need
          * to send an end cell. */
         conn->_base.edge_has_sent_end = 1;
         conn->end_reason = END_STREAM_REASON_DESTROY;
         conn->end_reason |= END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED;
-        control_event_stream_status(conn, STREAM_EVENT_CLOSED,
-                                    END_STREAM_REASON_DESTROY);
         connection_mark_for_close(TO_CONN(conn));
       }
       conn->on_circuit = NULL;
