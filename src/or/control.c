@@ -59,7 +59,7 @@ const char control_c_id[] =
 #define ERR_UNRECOGNIZED_EVENT_CODE 0x0006
 #define ERR_UNAUTHORIZED            0x0007
 #define ERR_REJECTED_AUTHENTICATION 0x0008
-#define ERR_RESOURCE_EXHAUSETED     0x0009
+#define ERR_RESOURCE_EXHAUSTED      0x0009
 #define ERR_NO_STREAM               0x000A
 #define ERR_NO_CIRC                 0x000B
 #define ERR_NO_ROUTER               0x000C

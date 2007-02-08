@@ -14,11 +14,6 @@ const char connection_or_c_id[] =
 
 #include "or.h"
 
-/** How much clock skew do we tolerate when checking certificates for
- * known routers? (sec) */
-
-#define TIGHT_CERT_ALLOW_SKEW (90*60)
-
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
 static int connection_or_empty_enough_for_dirserv_data(or_connection_t *conn);

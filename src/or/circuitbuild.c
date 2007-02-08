@@ -1973,9 +1973,6 @@ control_event_guard_deferred(void)
 #endif
 }
 
-/* DOCDOC */
-#define NUM_ENTRY_PICK_TRIES 100
-
 /** Add a new (preferably stable and fast) router to our
  * entry_guards list. Return a pointer to the router if we succeed,
  * or NULL if we can't find any more suitable entries.
