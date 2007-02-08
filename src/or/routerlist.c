@@ -1008,6 +1008,8 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   if (n_unknown) {
     int32_t avg_fast, avg_slow;
     if (total_exit_bw+total_nonexit_bw) {
+      /* if there's some bandwidth, there's at least one known router,
+       * so no worries about div by 0 here */
       avg_fast = avg_slow =
         (total_exit_bw+total_nonexit_bw)/(smartlist_len(sl)-n_unknown);
     } else {
