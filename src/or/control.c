@@ -2822,6 +2822,7 @@ connection_control_process_inbuf_v0(control_connection_t *conn)
   uint32_t body_len;
   uint16_t command_type;
   char *body=NULL;
+  static int have_warned_about_v0_protocol = 0;
 
  again:
   /* Try to suck a control message from the buffer. */
@@ -2849,6 +2850,15 @@ connection_control_process_inbuf_v0(control_connection_t *conn)
     default:
       tor_assert(0);
     }
+
+  if (!have_warned_about_v0_protocol) {
+    log_warn(LD_CONTROL, "An application has connected to us using the "
+             "version 0 control prototol, which has been deprecated since "
+             "Tor 0.1.1.1-alpha.  This protocol will not be supported by "
+             "future versions of Tor; please use the v1 control protocol "
+             "instead.");
+    have_warned_about_v0_protocol = 1;
+  }
 
   /* We got a command.  If we need authentication, only authentication
    * commands will be considered. */

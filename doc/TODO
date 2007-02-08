@@ -66,13 +66,13 @@ R   - actually cause the directory.c functions to know about or_port
         or_conn is full, and accept the sometimes directory data will just
         never get written.
 
-N - When we get a connection using the v0 controller protocol, warn that the
+  o When we get a connection using the v0 controller protocol, warn that the
     next revision of Tor won't support it.
 
 N - DNS improvements
     . Asynchronous DNS
       - Make evdns use windows strerror equivalents.
-      . Make sure patches get into libevent.
+      o Make sure patches get into libevent.
       - Verify that it works well on windows
     o Debug and re-enable server-side reverse DNS caching
 
