@@ -44,17 +44,19 @@ R     - handle connect-dir streams that don't have a chosen_exit_name set.
         list the orport as 0 if it can't handle begin_dir.
         o List orports of actual dirservers..
 
-  - Servers are easy to setup and run: being a relay is about as easy as
+  o Servers are easy to setup and run: being a relay is about as easy as
     being a client.
-    . Reduce resource load
+    o Reduce resource load
       o A way to alert controller when router flags change.
         o Specify: SETEVENTS NS
         o Implement
-        - Hunt for places that change networkstatus info that I might have
+        o Hunt for places that change networkstatus info that I might have
           missed.
-        - "NS" appears to be used to notify of routerstatus updates.
+        D "NS" appears to be used to notify of routerstatus updates.
           Do we want an actual NS event, for when new networkstatuses
           arrive, and then rename this one?
+          (Renaming would be more trouble than it's worth, and a
+          'networkstatus arrived' event can wait till next series.
 
   . option to dl directory info via tor:
     TunnelDirConns and PreferTunneledDirConns
