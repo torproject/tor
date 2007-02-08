@@ -124,7 +124,8 @@ of their choices.
 
    Tor servers test reachability of their ORPort on start and whenever
    their IP address changes.
-   XXXX
+
+   [XXXX arma: write this.] 
 
 2.1.4. Hidden-service circuits
 

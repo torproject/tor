@@ -308,7 +308,7 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
   });
 
   /* We didn't find the listed version. Is it new or old? */
-  if (found_any_in_series && !found_newer_in_series) {
+  if (found_any_in_series && !found_newer_in_series && found_newer) {
     ret = VS_NEW_IN_SERIES;
   } else if (found_newer && !found_older) {
     ret = VS_OLD;

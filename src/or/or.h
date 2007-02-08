@@ -2984,7 +2984,8 @@ typedef enum version_status_t {
   VS_OLD=1, /**< This version is older than any recommended version. */
   VS_NEW=2, /**< This version is newer than any recommended version. */
   VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
-                       * in its series, and such recommended versions exist. */
+                       * in its series, but later recommended versions exist.
+                       */
   VS_UNRECOMMENDED=4 /**< This version is not recommended (general case) */
 } version_status_t;
 

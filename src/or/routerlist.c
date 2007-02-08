@@ -3029,27 +3029,48 @@ networkstatus_get_by_digest(const char *digest)
  * our server is broken, invalid, obsolete, etc. */
 #define SELF_OPINION_INTERVAL (90*60)
 
+/** Result of checking whether a version is recommended. */
+typedef struct combined_version_status_t {
+  /** How many networkstatuses claim to know about versions? */
+  int n_versioning;
+  /** What do the majority of networkstatuses believe about this version? */
+  version_status_t consensus;
+  /** How many networkstatuses constitute the majority? */
+  int n_concurring;
+} combined_version_status_t;
+
 /** Return a string naming the versions of Tor recommended by
  * more than half the versioning networkstatuses. */
 static char *
-compute_recommended_versions(time_t now, int client)
+compute_recommended_versions(time_t now, int client,
+                             const char *my_version,
+                             combined_version_status_t *status_out)
 {
   int n_seen;
   char *current;
   smartlist_t *combined, *recommended;
-  int n_versioning;
+  int n_versioning, n_recommending;
   char *result;
-  (void) now; /* right now, we consider *all* ors. */
+  /** holds the compromise status taken among all non-recommending
+   * authorities */
+  version_status_t consensus = VS_RECOMMENDED;
+  (void) now; /* right now, we consider *all* statuses, regardless of age. */
+
+  tor_assert(my_version);
+  tor_assert(status_out);
+
+  memset(status_out, 0, sizeof(combined_version_status_t));
 
   if (!networkstatus_list)
     return tor_strdup("<none>");
 
   combined = smartlist_create();
-  n_versioning = 0;
+  n_versioning = n_recommending = 0;
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
       const char *vers;
       smartlist_t *versions;
+      version_status_t status;
       if (! ns->recommends_versions)
         continue;
       n_versioning++;
@@ -3062,6 +3083,12 @@ compute_recommended_versions(time_t now, int client)
       sort_version_list(versions, 1);
       smartlist_add_all(combined, versions);
       smartlist_free(versions);
+
+      /* now, check _our_ version */
+      status = tor_version_is_obsolete(my_version, vers);
+      if (status == VS_RECOMMENDED)
+        n_recommending++;
+      consensus = version_status_join(status, consensus);
     });
 
   sort_version_list(combined, 0);
@@ -3074,13 +3101,13 @@ compute_recommended_versions(time_t now, int client)
       if (current && !strcmp(cp, current)) {
         ++n_seen;
       } else {
-        if (n_seen >= n_versioning/2 && current)
+        if (n_seen > n_versioning/2 && current)
           smartlist_add(recommended, current);
         n_seen = 0;
         current = cp;
       }
     });
-  if (n_seen >= n_versioning/2 && current)
+  if (n_seen > n_versioning/2 && current)
     smartlist_add(recommended, current);
 
   result = smartlist_join_strings(recommended, ", ", 0, NULL);
@@ -3088,6 +3115,15 @@ compute_recommended_versions(time_t now, int client)
   SMARTLIST_FOREACH(combined, char *, cp, tor_free(cp));
   smartlist_free(combined);
   smartlist_free(recommended);
+
+  status_out->n_versioning = n_versioning;
+  if (n_recommending > n_versioning/2) {
+    status_out->consensus = VS_RECOMMENDED;
+    status_out->n_concurring = n_recommending;
+  } else {
+    status_out->consensus = consensus;
+    status_out->n_concurring = n_versioning - n_recommending;
+  }
 
   return result;
 }
@@ -3154,64 +3190,50 @@ routers_update_all_from_networkstatus(void)
   entry_guards_compute_status();
 
   if (!have_warned_about_old_version &&
-      have_tried_downloading_all_statuses(4)) {
-    int n_versioning = 0;
-    int n_recommended = 0;
+      have_tried_downloading_all_statuses(4)) { /*XXXX012This 4 is too magic.*/
+    combined_version_status_t st;
     int is_server = server_mode(get_options());
-    version_status_t consensus = VS_RECOMMENDED;
-    SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
-    {
-      version_status_t vs;
-      if (!ns->recommends_versions)
-        continue;
-      vs = tor_version_is_obsolete(
-              VERSION, is_server ? ns->server_versions : ns->client_versions);
-      if (vs == VS_RECOMMENDED)
-        ++n_recommended;
-      if (n_versioning++ == 0) {
-        consensus = vs;
-      } else if (consensus != vs) {
-        consensus = version_status_join(consensus, vs);
-      }
-    });
-    if (n_versioning && n_recommended <= n_versioning/2) {
-      if (consensus == VS_NEW || consensus == VS_NEW_IN_SERIES) {
+    char *recommended;
+
+    recommended = compute_recommended_versions(now, !is_server, VERSION, &st);
+
+    if (st.n_versioning) {
+      if (st.consensus == VS_RECOMMENDED) {
+        log_info(LD_GENERAL, "%d/%d statements from version-listing "
+                 "directory authorities say my version is ok.",
+                 st.n_concurring, st.n_versioning);
+      } else if (st.consensus == VS_NEW || st.consensus == VS_NEW_IN_SERIES) {
         if (!have_warned_about_new_version) {
-          char *rec = compute_recommended_versions(now, !is_server);
           log_notice(LD_GENERAL, "This version of Tor (%s) is newer than any "
-                 "recommended version%s, according to %d/%d network "
-                 "statuses. Versions recommended by more than %d "
+                 "recommended version%s, according to %d/%d version-listing "
+                 "network statuses. Versions recommended by more than %d "
                  "authorit%s are: %s",
                  VERSION,
-                 consensus == VS_NEW_IN_SERIES ? " in its series" : "",
-                 n_versioning-n_recommended, n_versioning, n_versioning/2,
-                 n_versioning/2 > 1 ? "ies" : "y", rec);
+                 st.consensus == VS_NEW_IN_SERIES ? " in its series" : "",
+                 st.n_concurring, st.n_versioning, st.n_versioning/2,
+                 st.n_versioning/2 > 1 ? "ies" : "y", recommended);
           have_warned_about_new_version = 1;
           control_event_general_status(LOG_WARN, "DANGEROUS_VERSION "
                  "CURRENT=%s REASON=%s RECOMMENDED=\"%s\"",
-                 VERSION, "NEW", rec);
-          tor_free(rec);
+                 VERSION, "NEW", recommended);
         }
       } else {
-        char *rec = compute_recommended_versions(now, !is_server);
         log_warn(LD_GENERAL, "Please upgrade! "
-                 "This version of Tor (%s) is %s, according to "
-                 "%d/%d network statuses. Versions recommended by "
+                 "This version of Tor (%s) is %s, according to %d/%d version-"
+                 "listing network statuses. Versions recommended by "
                  "at least %d authorit%s are: %s",
-                 VERSION, consensus == VS_OLD ? "obsolete" : "not recommended",
-                 n_versioning-n_recommended, n_versioning, n_versioning/2,
-                 n_versioning/2 > 1 ? "ies" : "y", rec);
+                 VERSION,
+                 st.consensus == VS_OLD ? "obsolete" : "not recommended",
+                 st.n_concurring, st.n_versioning, st.n_versioning/2,
+                 st.n_versioning/2 > 1 ? "ies" : "y", recommended);
         have_warned_about_old_version = 1;
         control_event_general_status(LOG_WARN, "DANGEROUS_VERSION "
                  "CURRENT=%s REASON=%s RECOMMENDED=\"%s\"",
-                 VERSION, consensus == VS_OLD ? "OLD" : "UNRECOMMENDED", rec);
-        tor_free(rec);
+                 VERSION, st.consensus == VS_OLD ? "OLD" : "UNRECOMMENDED",
+                 recommended);
       }
-    } else {
-      log_info(LD_GENERAL, "%d/%d statements from "
-               "directory authorities say my version is ok.",
-               n_recommended, n_versioning);
     }
+    tor_free(recommended);
   }
 
   routerstatus_list_has_changed = 0;
