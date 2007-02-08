@@ -955,7 +955,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   routerinfo_t *router;
   routerstatus_t *status;
   int32_t *bandwidths;
-  uint32_t this_bw, is_exit;
+  int is_exit;
   uint64_t total_nonexit_bw = 0, total_exit_bw = 0, total_bw = 0;
   uint64_t rand_bw, tmp;
   double exit_weight;
@@ -972,6 +972,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     /* first, learn what bandwidth we think i has */
     int is_known = 1;
     int32_t flags = 0;
+    uint32_t this_bw = 0;
     if (statuses) {
       /* need to extract router info */
       status = smartlist_get(sl, i);
