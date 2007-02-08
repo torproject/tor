@@ -14,6 +14,10 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
   o Minor bugfixes (other):
     - Display correct results when reporting which versions are recommended,
       and how recommended they are.  (Resolves bug 383.)
+    - Improve our estimates for directory bandwidth to be less random: guess
+      that an unrecognized directory will have the average bandwidth from all
+      known directories, not that it will have the average bandwidth from
+      those directories earlier than it on the list.
 
   o Minor features:
     - Warn the user when an application uses the obsolete binary v0 control

@@ -954,17 +954,24 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   int i;
   routerinfo_t *router;
   routerstatus_t *status;
-  uint32_t *bandwidths;
+  int32_t *bandwidths;
   uint32_t this_bw, is_exit;
   uint64_t total_nonexit_bw = 0, total_exit_bw = 0, total_bw = 0;
   uint64_t rand_bw, tmp;
   double exit_weight;
+  int n_unknown = 0;
 
   /* First count the total bandwidth weight, and make a list
-   * of each value. */
-  bandwidths = tor_malloc(sizeof(uint32_t)*smartlist_len(sl));
+   * of each value.  <0 means "unknown; no routerinfo."  We use the
+   * bits of negative values to remember whether the router was fast (-x)&1
+   * and whether it was an exit (-x)&2.  Yes, it's a hack. */
+  bandwidths = tor_malloc(sizeof(int32_t)*smartlist_len(sl));
+
+  /* Iterate over all the routerinfo_t or routerstatus_t, and */
   for (i = 0; i < smartlist_len(sl); ++i) {
     /* first, learn what bandwidth we think i has */
+    int is_known = 1;
+    int32_t flags = 0;
     if (statuses) {
       /* need to extract router info */
       status = smartlist_get(sl, i);
@@ -973,18 +980,9 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       if (router) {
         this_bw = router_get_advertised_bandwidth(router);
       } else { /* guess */
-        uint64_t partial = for_exit ? total_exit_bw+total_nonexit_bw :
-                                      total_nonexit_bw;
-        if (!i) /* no hints; _really_ guess */
-          this_bw = status->is_fast ? 40000 : 20000;
-        else /* assume it'll be the average we've seen so far */
-          this_bw = (uint32_t)(partial/i);
-        /*XXXX012 The above calculation is an awful hack, and makes our
-         * algorithm hard to describe sanely. Could we do better with a second
-         * pass through the list? -NM
-         * Sure, fine by me. I fear this thing becoming too intensive,
-         * but nobody has mentioned it in profiling yet. -RD
-         */
+        is_known = 0;
+        flags = status->is_fast ? 1 : 0;
+        flags |= is_exit ? 2 : 0;
       }
     } else {
       router = smartlist_get(sl, i);
@@ -994,23 +992,60 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     /* if they claim something huge, don't believe it */
     if (this_bw > MAX_BELIEVABLE_BANDWIDTH)
       this_bw = MAX_BELIEVABLE_BANDWIDTH;
-    bandwidths[i] = this_bw;
-    if (is_exit)
-      total_exit_bw += this_bw;
-    else
-      total_nonexit_bw += this_bw;
+    if (is_known) {
+      bandwidths[i] = (int32_t) this_bw; // safe since MAX_BELIEVABLE<INT32_MAX
+      if (is_exit)
+        total_exit_bw += this_bw;
+      else
+        total_nonexit_bw += this_bw;
+    } else {
+      ++n_unknown;
+      bandwidths[i] = -flags;
+    }
   }
+
+  /* Now, fill in the unknown values. */
+  if (n_unknown) {
+    int32_t avg_fast, avg_slow;
+    if (total_exit_bw+total_nonexit_bw) {
+      avg_fast = avg_slow =
+        (total_exit_bw+total_nonexit_bw)/(smartlist_len(sl)-n_unknown);
+    } else {
+      avg_fast = 40000;
+      avg_slow = 20000;
+    }
+    for (i=0; i<smartlist_len(sl); ++i) {
+      int32_t bw = bandwidths[i];
+      if (bw>=0)
+        continue;
+      is_exit = ((-bw)&2);
+      bandwidths[i] = ((-bw)&1) ? avg_fast : avg_slow;
+      if (is_exit)
+        total_exit_bw += bandwidths[i];
+      else
+        total_nonexit_bw += bandwidths[i];
+    }
+  }
+
+  /* If there's no bandwidth at all, pick at random. */
   if (!(total_exit_bw+total_nonexit_bw)) {
     tor_free(bandwidths);
     return smartlist_choose(sl);
   }
+
+  /* Figure out how to weight exits. */
   if (for_exit) {
+    /* If we're choosing an exit node, exit bandwidth counts fully. */
     exit_weight = 1.0;
     total_bw = total_exit_bw + total_nonexit_bw;
   } else if (total_exit_bw < total_nonexit_bw / 2) {
+    /* If we're choosing a relay and exits are greatly outnumbered, ignore
+     * them. */
     exit_weight = 0.0;
     total_bw = total_nonexit_bw;
   } else {
+    /* If we're choosing a relay and exits aren't outnumbered use the formula
+     * from path-spec. */
     uint64_t leftover = (total_exit_bw - total_nonexit_bw / 2);
     exit_weight = U64_TO_DBL(leftover) /
       U64_TO_DBL(leftover + total_nonexit_bw);
@@ -1025,8 +1060,9 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
             U64_PRINTF_ARG(total_nonexit_bw), exit_weight, for_exit);
   */
 
-  /* Second, choose a random value from the bandwidth weights. */
+  /* Almost done: choose a random value from the bandwidth weights. */
   rand_bw = crypto_rand_uint64(total_bw);
+
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
   for (i=0; i < smartlist_len(sl); i++) {
@@ -3128,6 +3164,13 @@ compute_recommended_versions(time_t now, int client,
   return result;
 }
 
+/** How many times do we have to fail at getting a networkstatus we can't find
+ * before we're willing to believe it's okay to set up router statuses? */
+#define N_NS_ATTEMPTS_TO_SET_ROUTERS 4
+/** How many times do we have to fail at getting a networkstatus we can't find
+ * before we're willing to believe it's okay to check our version? */
+#define N_NS_ATTEMPTS_TO_CHECK_VERSION 4
+
 /** If the network-status list has changed since the last time we called this
  * function, update the status of every routerinfo from the network-status
  * list.
@@ -3151,7 +3194,7 @@ routers_update_all_from_networkstatus(void)
 
   me = router_get_my_routerinfo();
   if (me && !have_warned_about_invalid_status &&
-      have_tried_downloading_all_statuses(4)) {
+      have_tried_downloading_all_statuses(N_NS_ATTEMPTS_TO_SET_ROUTERS)) {
     int n_recent = 0, n_listing = 0, n_valid = 0, n_named = 0, n_naming = 0;
     routerstatus_t *rs;
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
@@ -3190,7 +3233,7 @@ routers_update_all_from_networkstatus(void)
   entry_guards_compute_status();
 
   if (!have_warned_about_old_version &&
-      have_tried_downloading_all_statuses(4)) { /*XXXX012This 4 is too magic.*/
+      have_tried_downloading_all_statuses(N_NS_ATTEMPTS_TO_CHECK_VERSION)) {
     combined_version_status_t st;
     int is_server = server_mode(get_options());
     char *recommended;
