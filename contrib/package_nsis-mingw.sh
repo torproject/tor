@@ -42,7 +42,7 @@ clean_localstatedir() {
     perl -pe 's/^\n$/\r\n/mg; s/([^\r])\n$/\1\r\n/mg; s{\@LOCALSTATEDIR\@/(lib|log)/tor/}{C:\\Documents and Settings\\Application Data\\Tor\\}' $1 >$2
 }
 
-for fn in socks-extensions.txt dir-spec.txt tor-spec.txt rend-spec.txt control-spec.txt version-spec.txt; do
+for fn in address-spec.txt control-spec.txt control-spec-v0.txt dir-spec.txt dir-spec-v1.txt path-spec.txt rend-spec.txt socks-extensions.txt tor-spec.txt version-spec.txt; do
     clean_newlines doc/spec/$fn win_tmp/doc/spec/$fn
 done
 
@@ -58,8 +58,8 @@ done
 
 clean_localstatedir src/config/torrc.sample.in win_tmp/src/config/torrc.sample
 
-cp contrib/tor-mingw.nsi win_tmp/contrib/
+cp contrib/tor-mingw.nsi.in win_tmp/contrib/
 
 cd win_tmp
-"C:\Program Files\NSIS\makensis.exe" contrib/tor-mingw.nsi
+"C:\Program Files\NSIS\makensis.exe" contrib/tor-mingw.nsi.in
 
