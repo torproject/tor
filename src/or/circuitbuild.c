@@ -998,14 +998,12 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
  * is feasible, except if it's less than 2, in which case return -1.
  */
 static int
-new_route_len(double cw, uint8_t purpose, extend_info_t *exit,
+new_route_len(uint8_t purpose, extend_info_t *exit,
               smartlist_t *routers)
 {
   int num_acceptable_routers;
   int routelen;
 
-  tor_assert(cw >= 0.);
-  tor_assert(cw < 1.);
   tor_assert(routers);
 
 #ifdef TOR_PERF
@@ -1354,8 +1352,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
     log_debug(LD_CIRC, "Launching a one-hop circuit for dir tunnel.");
     state->desired_path_len = 1;
   } else {
-    int r = new_route_len(get_options()->PathlenCoinWeight,
-                          circ->_base.purpose, exit, rl->routers);
+    int r = new_route_len(circ->_base.purpose, exit, rl->routers);
     if (r < 1) /* must be at least 1 */
       return -1;
     state->desired_path_len = r;

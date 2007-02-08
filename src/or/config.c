@@ -207,8 +207,7 @@ static config_var_t _option_vars[] = {
   VAR("ORListenAddress",     LINELIST, ORListenAddress,      NULL),
   VAR("ORPort",              UINT,     ORPort,               "0"),
   VAR("OutboundBindAddress", STRING,   OutboundBindAddress,  NULL),
-  /* XXXX012 mark this obsolete?  Warn if it's set? */
-  VAR("PathlenCoinWeight",   DOUBLE,   PathlenCoinWeight,    "0.3"),
+  OBSOLETE("PathlenCoinWeight"),
   VAR("PidFile",             STRING,   PidFile,              NULL),
   VAR("PreferTunneledDirConns", BOOL,  PreferTunneledDirConns, "0"),
   VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
@@ -221,9 +220,6 @@ static config_var_t _option_vars[] = {
   VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),
   VAR("RecommendedServerVersions", LINELIST, RecommendedServerVersions,  NULL),
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
-  /* XXXX012 These aren't implemented. Take them out for now? */
-  VAR("RelayBandwidthBurst", MEMUNIT,  RelayBandwidthBurst,  "0"),
-  VAR("RelayBandwidthRate",  MEMUNIT,  RelayBandwidthRate,   "0"),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
   VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "1 hour"),
@@ -2611,9 +2607,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
       });
   }
 
+#if 0
   if (options->SocksPort >= 1 &&
       (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0))
     REJECT("PathlenCoinWeight option must be >=0.0 and <1.0.");
+#endif
 
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
     log(LOG_WARN,LD_CONFIG,"RendPostPeriod option must be at least %d seconds."

@@ -320,20 +320,12 @@ void
 dns_free_all(void)
 {
   cached_resolve_t **ptr, **next, *item;
+  assert_cache_ok();
   if (cached_resolve_pqueue) {
     SMARTLIST_FOREACH(cached_resolve_pqueue, cached_resolve_t *, res,
       {
-        /* XXXX012 The hash lookups here could be quite slow; remove them
-         * once we're happy. (Leave them in for at least 0.1.2.7-alpha, so they
-         * get some testing.) -NM */
-        if (res->state == CACHE_STATE_DONE) {
-          cached_resolve_t *found = HT_FIND(cache_map, &cache_root, res);
-          tor_assert(!found || found != res);
+        if (res->state == CACHE_STATE_DONE)
           _free_cached_resolve(res);
-        } else {
-          cached_resolve_t *found = HT_FIND(cache_map, &cache_root, res);
-          tor_assert(found);
-        }
       });
   }
   for (ptr = HT_START(cache_map, &cache_root); ptr != NULL; ptr = next) {
@@ -2032,6 +2024,17 @@ _assert_cache_ok(void)
 
   smartlist_pqueue_assert_ok(cached_resolve_pqueue,
                              _compare_cached_resolves_by_expiry);
+
+  SMARTLIST_FOREACH(cached_resolve_pqueue, cached_resolve_t *, res,
+    {
+      if (res->state == CACHE_STATE_DONE) {
+        cached_resolve_t *found = HT_FIND(cache_map, &cache_root, res);
+        tor_assert(!found || found != res);
+      } else {
+        cached_resolve_t *found = HT_FIND(cache_map, &cache_root, res);
+        tor_assert(found);
+      }
+    });
 }
 #endif
 

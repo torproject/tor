@@ -1610,8 +1610,6 @@ typedef struct {
   int DirAllowPrivateAddresses;
   char *User; /**< Name of user to run Tor as. */
   char *Group; /**< Name of group to run Tor as. */
-  double PathlenCoinWeight; /**< Parameter used to configure average path
-                             * length (alpha in geometric distribution). */
   int ORPort; /**< Port to listen on for OR connections. */
   int SocksPort; /**< Port to listen on for SOCKS connections. */
   /** Port to listen on for transparent pf/netfilter connections. */
@@ -1683,10 +1681,6 @@ typedef struct {
                             * to use in a second? */
   uint64_t MaxAdvertisedBandwidth; /**< How much bandwidth are we willing to
                                     * tell people we have? */
-  uint64_t RelayBandwidthRate; /**< How much bandwidth, on average, are we
-                                 * willing to use for all relayed conns? */
-  uint64_t RelayBandwidthBurst; /**< How much bandwidth, at maximum, will we
-                                 * use in a second for all relayed conns? */
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */

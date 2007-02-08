@@ -477,9 +477,8 @@ connection_about_to_close_connection(connection_t *conn)
                  conn->marked_for_close_file, conn->marked_for_close);
       }
       if (!edge_conn->end_reason) {
-        // XXXX012 Disable this before 0.1.2.x-final ships.
         log_warn(LD_BUG,"Bug: Closing stream (marked at %s:%d) without having"
-                 " set end_reason. Please tell Nick.",
+                 " set end_reason.",
                  conn->marked_for_close_file, conn->marked_for_close);
       }
       control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED,
@@ -2385,7 +2384,7 @@ assert_connection_ok(connection_t *conn, time_t now)
   if (conn->hold_open_until_flushed)
     tor_assert(conn->marked_for_close);
 
-  /* XXXX012 check: wants_to_read, wants_to_write, s, conn_array_index,
+  /* XXXX check: wants_to_read, wants_to_write, s, conn_array_index,
    * marked_for_close. */
 
   /* buffers */
@@ -2394,7 +2393,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     assert_buf_ok(conn->outbuf);
   }
 
-  /* XXXX012 Fix this; no longer so.*/
+  /* XXXX Fix this; no longer so.*/
 #if 0
   if (conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
     tor_assert(!conn->pkey);

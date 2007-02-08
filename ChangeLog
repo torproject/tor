@@ -23,6 +23,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
     - Warn the user when an application uses the obsolete binary v0 control
       protocol.  We're planning to remove support for it during the next
       development series, so it's good to give people some advance warning.
+    - Remove some never-implemented options.  Mark PathlenCoinWeight as
+      obsolete.
 
 
 Changes in version 0.1.2.7-alpha - 2007-02-06
