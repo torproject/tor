@@ -349,11 +349,13 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
 static void
 connection_dir_download_routerdesc_failed(dir_connection_t *conn)
 {
-  /* Try again. No need to increment the failure count for routerdescs, since
+  /* No need to increment the failure count for routerdescs, since
    * it's not their fault. */
+
+  /* There's no need to call this here: we already call it every 10 seconds *
+   *  (DESCRIPTOR_RETRY_INTERVAL) in main.c -NM */
   /* update_router_descriptor_downloads(time(NULL)); */
   (void) conn;
-  /* XXXX012 Why did the above get commented out? -NM */
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
@@ -2055,9 +2057,8 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
                 cp, (int)rs->n_download_failures);
   });
 
-  /* XXX012 why did this get commented out too? -RD */
-  /*        Because we already call update_router_descriptor_downloads()
-   *        every 10 seconds (DESCRIPTOR_RETRY_INTERVAL) in main.c -NM */
+  /* There's no need to call this here: we already call it every 10 seconds *
+   *  (DESCRIPTOR_RETRY_INTERVAL) in main.c -NM */
   /* update_router_descriptor_downloads(time(NULL)); */
 }
 
