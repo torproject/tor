@@ -9,20 +9,22 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       we don't need to send a redundant CLOSED event.  (Resolves part 3 of
       bug 367.)
     - Report events where a resolve succeeded or where we got a socks
-      protocol error correctly, rather than calling both of them "INTERNAL".
+      protocol error correctly, rather than calling both of them
+      "INTERNAL".
 
   o Minor bugfixes (other):
-    - Display correct results when reporting which versions are recommended,
-      and how recommended they are.  (Resolves bug 383.)
-    - Improve our estimates for directory bandwidth to be less random: guess
-      that an unrecognized directory will have the average bandwidth from all
-      known directories, not that it will have the average bandwidth from
-      those directories earlier than it on the list.
+    - Display correct results when reporting which versions are
+      recommended, and how recommended they are. (Resolves bug 383.)
+    - Improve our estimates for directory bandwidth to be less random:
+      guess that an unrecognized directory will have the average bandwidth
+      from all known directories, not that it will have the average
+      bandwidth from those directories earlier than it on the list.
 
   o Minor features:
-    - Warn the user when an application uses the obsolete binary v0 control
-      protocol.  We're planning to remove support for it during the next
-      development series, so it's good to give people some advance warning.
+    - Warn the user when an application uses the obsolete binary v0
+      control protocol.  We're planning to remove support for it during
+      the next development series, so it's good to give people some
+      advance warning.
     - Remove some never-implemented options.  Mark PathlenCoinWeight as
       obsolete.
 
