@@ -1,5 +1,5 @@
 Filename: 104-short-descriptors.txt
-Title:  Long and Short Router Descriptors
+Title: Long and Short Router Descriptors
 Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson

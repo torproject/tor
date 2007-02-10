@@ -39,6 +39,9 @@ Any time:
   - Spec should incorporate some prose from tor-design to be more readable.
   - Spec when we should rotate which keys
 
+  - We should use a variable-length path length by default -- 3 +/- some
+    distribution. Need to think harder about allowing values less than 3,
+    and there's a tradeoff between having a wide variance and performance.
 
 Things that should change...
 
@@ -73,5 +76,6 @@ B.2. ... and that we have no idea how to do.
      doesn't grow with the number of hops, is not patented, and
      is implemented and maintained by smart people.
 
-Let onion keys be not just RSA but maybe DH too. for the reply onion
+Let onion keys be not just RSA but maybe DH too, for Paul's reply onion
 design.
+

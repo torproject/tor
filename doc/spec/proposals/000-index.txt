@@ -8,7 +8,7 @@ Status: Meta
 
 Overview:
 
-   This document provides an index to closed and open Tor proposals.
+   This document provides an index to Tor proposals.
 
    This is an informational document.
 
@@ -20,7 +20,7 @@ Proposals by number:
 099  Miscellaneous proposals [META]
 100  Tor Unreliable Datagram Extension Proposal [DEAD]
 101  Voting on the Tor Directory System [OPEN]
-102  Droping "opt" from the directory format [CLOSED]
+102  Dropping "opt" from the directory format [CLOSED]
 103  Splitting identity key from regularly used signing key [OPEN]
 104  Long and Short Router Descriptors [OPEN]
 105  Version negotiation for the Tor protocol [OPEN]

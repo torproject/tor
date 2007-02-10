@@ -25,7 +25,7 @@ Motivation:
 
    First, even at its most efficient, the old process would often have the
    spec out of sync with the code.  The worst cases were those where
-   implementation was deferred: the spec and could stay out of sync for
+   implementation was deferred: the spec and code could stay out of sync for
    versions at a time.
 
    Second, it was hard to participate in discussion, since you had to know
@@ -55,12 +55,12 @@ How to change the specs now:
    remain the canonical documentation for the Tor protocol: no proposal is
    ever the canonical documentation for an implemented feature.
 
-   {It's still okay to make mall changes to the spec if the code can be
+   {It's still okay to make small changes to the spec if the code can be
    written more or less immediately, or cosmetic changes if no code change is
    required.  This document reflects the current developers' _intent_, not
    a permanent promise to always use this process in the future: we reserve
    the right to get really excited and run off and implement something in a
-   caffeine-and-m&m-fueled all-night hacking session.}
+   caffeine-or-m&m-fueled all-night hacking session.}
 
 Proposal status:
 
@@ -105,11 +105,11 @@ What should go in a proposal:
    The body of the proposal should start with an Overview section explaining
    what the proposal's about, what it does, and about what state it's in.
 
-   After the Overview, the proposal becomes more free-form.  Depending its
+   After the Overview, the proposal becomes more free-form.  Depending on its
    the length and complexity, the proposal can break into sections as
    appropriate, or follow a short discursive format.  Every proposal should
    contain at least the following information before it can be "ACCEPTED",
-   thought the information does not need to be in sections with these names.
+   though the information does not need to be in sections with these names.
 
       Motivation: What problem is the proposal trying to solve?  Why does
         this problem matter?  If several approaches are possible, why take this
@@ -122,7 +122,7 @@ What should go in a proposal:
         Motivation and a Design, and wait for a specification until the
         Design seems approximately right.
 
-      Security implications: What effects might the proposed changes have on
+      Security implications: What effects the proposed changes might have on
         anonymity, how well understood these effects are, and so on.
 
       Specification: A detailed description of what needs to be added to the
@@ -134,9 +134,9 @@ What should go in a proposal:
 
       Compatibility: Will versions of Tor that follow the proposal be
         compatible with versions that do not?  If so, how will compatibility
-        me achieved?  Generally, we try to not to drop compatibility if at
-        all possible; we haven't made a "flag day" change since 2003 or
-        earlier, and we don't want to do another one.  [XXX is this true?]
+        be achieved?  Generally, we try to not drop compatibility if at
+        all possible; we haven't made a "flag day" change since May 2004,
+        and we don't want to do another one.
 
       Implementation: If the proposal will be tricky to implement in Tor's
         current architecture, the document can contain some discussion of how
