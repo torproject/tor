@@ -1,4 +1,4 @@
-Filename: 105-less-tls-constraint.txt
+Filename: 106-less-tls-constraint.txt
 Title: Checking fewer things during TLS handshakes
 Version: $Revision: 12105 $
 Last-Modified: $Date: 2007-01-30T07:50:01.643717Z $
@@ -15,8 +15,10 @@ Motivation:
 
     Later, we want to try harder to avoid protocol fingerprinting attacks.
     This means that we'll need to make our connection handshake look closer
-    to a regular HTTPS connection.  For now, about the best we can do is to
-    stop requiring things during handshake that we don't actually use.
+    to a regular HTTPS connection: one certificate on the server side and
+    zero certificates on the client side.  For now, about the best we
+    can do is to stop requiring things during handshake that we don't
+    actually use.
 
 What we check now, and where we check it:
 
@@ -26,7 +28,7 @@ tor_tls_check_lifetime:
 
 tor_tls_verify:
     peer has at least one certificate
-    There is at lease one certificate in the chain
+    There is at least one certificate in the chain
     At least one of the certificates in the chain is not the one used to
         negotiate the connection.  (The "identity cert".)
     The certificate _not_ used to negotiate the connection has signed the
@@ -56,16 +58,19 @@ USEFUL THINGS WE COULD DO:
     an identity certificate.  Internally to the code, we could assign the
     identity_digest field of these or_connections to a random number, or even
     not add them to the identity_digest->or_conn map.
+[so if somebody connects with no certs, we let them. and mark them as
+a client and don't treat them as a server. great. -rd]
 
-[2] Instead of using a restricted nickname character set that make our
+[2] Instead of using a restricted nickname character set that makes our
     commonName structure look unlike typical SSL certificates, we could treat
     the nickname as extending from the start of the commonName up to but not
-    including the first non-nickname character
+    including the first non-nickname character.
 
     Alternatively, we could stop checking commonNames entirely.  We don't
     actually _do_ anything based on the nickname in the certificate, so
     there's really no harm in letting every router have any commonName it
     wants.
+[this is the better choice -rd]
 
 REMAINING WAYS TO RECOGNIZE CLIENT->SERVER CONNECTIONS:
 
