@@ -1,0 +1,103 @@
+Filename: 105-less-tls-constraint.txt
+Title: Checking fewer things during TLS handshakes
+Version: $Revision: 12105 $
+Last-Modified: $Date: 2007-01-30T07:50:01.643717Z $
+Author: Nick Mathewson
+Created:
+Status: Open
+
+Overview:
+
+    This document proposes that we relax our requirements on the context of
+    X.509 certificates during initial TLS handshakes.
+
+Motivation:
+
+    Later, we want to try harder to avoid protocol fingerprinting attacks.
+    This means that we'll need to make our connection handshake look closer
+    to a regular HTTPS connection.  For now, about the best we can do is to
+    stop requiring things during handshake that we don't actually use.
+
+What we check now, and where we check it:
+
+tor_tls_check_lifetime:
+    peer has certificate
+    notBefore <= now <= notAfter
+
+tor_tls_verify:
+    peer has at least one certificate
+    There is at lease one certificate in the chain
+    At least one of the certificates in the chain is not the one used to
+        negotiate the connection.  (The "identity cert".)
+    The certificate _not_ used to negotiate the connection has signed the
+        link cert
+
+tor_tls_get_peer_cert_nickname:
+    peer has a certificate.
+    certificate has a subjectName.
+    subjectName has a commonName.
+    commonName consists only of characters in LEGAL_NICKNAME_CHARACTERS. [2]
+
+tor_tls_peer_has_cert:
+    peer has a certificate.
+
+connection_or_check_valid_handshake:
+    tor_tls_peer_has_cert [1]
+    tor_tls_get_peer_cert_nickname [1]
+    tor_tls_verify [1]
+    If nickname in cert is a known, named router, then its identity digest
+        must be as expected.
+    If we initiated the connection, then we got the identity digest we
+        expected.
+
+USEFUL THINGS WE COULD DO:
+
+[1] We could just not force clients to have any certificate at all, let alone
+    an identity certificate.  Internally to the code, we could assign the
+    identity_digest field of these or_connections to a random number, or even
+    not add them to the identity_digest->or_conn map.
+
+[2] Instead of using a restricted nickname character set that make our
+    commonName structure look unlike typical SSL certificates, we could treat
+    the nickname as extending from the start of the commonName up to but not
+    including the first non-nickname character
+
+    Alternatively, we could stop checking commonNames entirely.  We don't
+    actually _do_ anything based on the nickname in the certificate, so
+    there's really no harm in letting every router have any commonName it
+    wants.
+
+REMAINING WAYS TO RECOGNIZE CLIENT->SERVER CONNECTIONS:
+
+Assuming that we removed the above requirements, we could then (in a later
+release) have clients not send certificates, and sometimes and started making
+our DNs a little less formulaic, client->server OR connections would still be
+recognizable by:
+    having a two-certificate chain sent by the server
+    using a particular set of ciphersuites
+    traffic patterns
+    probing the server later
+
+OTHER IMPLICATIONS:
+
+If we stop verifying the above requirements:
+
+    It will be slightly (but only slightly) more common to connect to a non-Tor
+    server running TLS, and believe that you're talking to a Tor server (until
+    you send the first cell).
+
+    It will be far easier for non-Tor SSL clients to accidentally to Tor servers
+    and speak HTTPS or whatever to them.
+
+If, in a later release, we have clients not send certificates, and we make
+DNs less recognizable:
+
+    If clients don't send certs, servers don't need to verify them: win!
+
+    If we remove these restrictions, it will be easier for people to write
+    clients to fuzz our protocol: sorta win!
+
+    If clients don't send certs, they look slightly less like servers.
+
+
+
