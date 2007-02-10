@@ -802,40 +802,55 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   int v0 = STATE_IS_V0(conn->_base.state);
 
   if (!v0) {
-    char *config = tor_malloc(len+1);
-    char *outp = config;
+    char *config;
+    smartlist_t *entries = smartlist_create();
+    /* We have a string, "body", of the format '(key(=val|="val")?)' entries
+     * separated by space.  break it into a list of configuration entries. */
     while (*body) {
       char *eq = body;
+      char *key;
+      char *entry;
       while (!TOR_ISSPACE(*eq) && *eq != '=')
         ++eq;
-      memcpy(outp, body, eq-body);
-      outp += (eq-body);
+      key = tor_strndup(body, eq-body);
       body = eq+1;
       if (*eq == '=') {
-        *outp++ = ' ';
+        char *val;
+        size_t val_len;
+        size_t ent_len;
         if (*body != '\"') {
+          char *val_start = body;
           while (!TOR_ISSPACE(*body))
-            *outp++ = *body++;
+            body++;
+          val = tor_strndup(val_start, body-val_start);
+          val_len = strlen(val);
         } else {
-          char *val;
-          size_t val_len;
           body = (char*)get_escaped_string(body, (len - (body-start)),
                                            &val, &val_len);
           if (!body) {
             connection_write_str_to_buf("551 Couldn't parse string\r\n", conn);
-            tor_free(config);
+            SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
+            smartlist_free(entries);
             return 0;
           }
-          memcpy(outp, val, val_len);
-          outp += val_len;
-          tor_free(val);
         }
+        ent_len = strlen(key)+val_len+3;
+        entry = tor_malloc(ent_len+1);
+        tor_snprintf(entry, ent_len, "%s %s", key, val);
+        tor_free(key);
+        tor_free(val);
+      } else {
+        entry = key;
       }
+      smartlist_add(entries, entry);
       while (TOR_ISSPACE(*body))
         ++body;
-      *outp++ = '\n';
     }
-    *outp = '\0';
+
+    smartlist_add(entries, tor_strdup(""));
+    config = smartlist_join_strings(entries, "\n", 0, NULL);
+    SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
+    smartlist_free(entries);
 
     if (config_get_lines(config, &lines) < 0) {
       log_warn(LD_CONTROL,"Controller gave us config lines we can't parse.");
