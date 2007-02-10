@@ -1699,13 +1699,6 @@ launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);
-    /* XXX012 the above warning triggers sometimes on my exit
-     * node, with "error 1". Is there anything the user can do to
-     * resolve this? -RD */
-    /* XXX012 Are you sure I didn't fix that in version r9336 with
-     * ServerDNSAllowNonRFC953Addreesses? If it's still not working,
-     * let me know which addresses are breaking. If it _is_ working,
-     * please remove these comments. :) -NM */
     if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE) {
       if (evdns_err_is_transient(r))
         send_resolved_cell(exitconn, circ, RESOLVED_TYPE_ERROR_TRANSIENT);
