@@ -113,12 +113,6 @@ NR. Write path-spec.txt
 N   - we should add a preamble to tor-design saying it's out of date.
 N   - Document transport and natdport
 
-  - Improvements to bandwidth counting
-R   - look into "uncounting" bytes spent on local connections, so
-      we can bandwidthrate but still have fast downloads.
-R   - "bandwidth classes", for incoming vs initiated-here conns,
-      and to give dir conns lower priority.
-
   - Forward compatibility fixes
     - Caches should start trying to cache consensus docs?
 NR    - Design
@@ -134,16 +128,28 @@ N     - Implement, if we think it's smart.
       certificates that would prevent us from executing certain
       blocking-resistance strategies.
 
+Things we'd like to do in 0.2.0:
+  - Proposals:
+    - 101: Voting on the Tor Directory System
+    - 104: Long and Short Router Descriptors
+    - 105: Version negotiation for the Tor protocol
+  - Refactoring:
+    - Make resolves no longer use edge_connection_t unless needed.
+    - Make cells get buffered on circuit, not on the or_conn.
+    - Move all status info out of routerinfo into local_routerstatus.  Make
+      "who can change what" in local_routerstatus explicit.  Make
+      local_routerstatus (or equivalent) subsume all places to go for "what
+      router is this?"
+    - Remove socketpair-based bridges conns, and the word "bridge".
+  - Features:
+    - Implement a DNS proxy
+    - Bridges.
+    - Let controller set router flags for authority to transmit, and for
+       client to use.
+    - Support relaying streams to ipv6.
+  - Deprecations:
+    - Remove v0 control protocol.
 
-Topics to think about during 0.1.2.x development:
-  * Figure out incentives.
-    - (How can we make this tolerant of a bad v0?)
-  * Figure out non-clique.
-  * Figure out China.
-  - Figure out partial network knowledge.
-  - Figure out hidden services.
-  - Design next-version protocol for directories
-  - Design next-version protocol for connections
 
 Deferred from 0.1.2.x:
   - finish status event implementation and accompanying getinfos
@@ -294,6 +300,12 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
       some way to learn which status events are currently "in effect."
       We should specify which these are, what format they appear in, and so
       on.
+
+  - Improvements to bandwidth counting
+    - look into "uncounting" bytes spent on local connections, so
+      we can bandwidthrate but still have fast downloads.
+    - "bandwidth classes", for incoming vs initiated-here conns,
+      and to give dir conns lower priority.
 
 Minor items for 0.1.2.x as time permits:
   - include bandwidth breakdown by conn->type in BW events.
