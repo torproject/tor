@@ -810,9 +810,9 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
         ++eq;
       memcpy(outp, body, eq-body);
       outp += (eq-body);
-      *outp++ = ' ';
       body = eq+1;
       if (*eq == '=') {
+        *outp++ = ' ';
         if (*body != '\"') {
           while (!TOR_ISSPACE(*body))
             *outp++ = *body++;
