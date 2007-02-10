@@ -14,14 +14,14 @@ Overview:
 
 Proposals by number:
 
-000  Index of Tor Proposals
-001  The Tor Proposal Process
-098  Proposals that should be written
-099  Miscellaneous proposals
-100  Tor Unreliable Datagram Extension Proposal
-101  Voting on the Tor Directory System.
-102  Droping "opt" from the directory format
-103  Splitting identity key from regularly used signing key.
-104  Long and Short Router Descriptors
-105  Version negotiation for the Tor protocol
+000  Index of Tor Proposals [META]
+001  The Tor Proposal Process [META]
+098  Proposals that should be written [META]
+099  Miscellaneous proposals [META]
+100  Tor Unreliable Datagram Extension Proposal [DEAD]
+101  Voting on the Tor Directory System [OPEN]
+102  Droping "opt" from the directory format [CLOSED]
+103  Splitting identity key from regularly used signing key [OPEN]
+104  Long and Short Router Descriptors [OPEN]
+105  Version negotiation for the Tor protocol [OPEN]
 

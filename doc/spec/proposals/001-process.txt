@@ -82,7 +82,8 @@ Proposal status:
       See comments in the document for details.
 
    Dead: The proposal hasn't been touched in a long time, and it doesn't look
-      like anybody is going to complete it soon.
+      like anybody is going to complete it soon.  It can become "Open" again
+      if it gets a new proponent.
 
    Needs-Research: There are research problems that need to be solved before
       it's clear whether the proposal is a good idea.
@@ -96,7 +97,54 @@ Proposal numbering:
 
 What should go in a proposal:
 
-   WRITE MORE.
+   Every proposal should have a header containing these fields:
+     Filename, Title, Version, Last-Modified, Author, Created, Status.
+   The Version and Last-Modified fields should use the SVN Revision and Date
+   tags respectively.
 
-   Before a proposal is "ACCEPTED", it should have about as much detail as
-   the specs would for the proposed feature.
+   The body of the proposal should start with an Overview section explaining
+   what the proposal's about, what it does, and about what state it's in.
+
+   After the Overview, the proposal becomes more free-form.  Depending its
+   the length and complexity, the proposal can break into sections as
+   appropriate, or follow a short discursive format.  Every proposal should
+   contain at least the following information before it can be "ACCEPTED",
+   thought the information does not need to be in sections with these names.
+
+      Motivation: What problem is the proposal trying to solve?  Why does
+        this problem matter?  If several approaches are possible, why take this
+        one?
+
+      Design: A high-level view of what the new or modified features are, how
+        the new or modified features work, how they interoperate with each
+        other, and how they interact with the rest of Tor.  This is the main
+        body of the proposal.  Some proposals will start out with only a
+        Motivation and a Design, and wait for a specification until the
+        Design seems approximately right.
+
+      Security implications: What effects might the proposed changes have on
+        anonymity, how well understood these effects are, and so on.
+
+      Specification: A detailed description of what needs to be added to the
+        Tor specifications in order to implement the proposal.  This should
+        be in about as much detail as the specifications will eventually
+        contain: it should be possible for independent programmers to write
+        mutually compatible implementations of the proposal based on its
+        specifications.
+
+      Compatibility: Will versions of Tor that follow the proposal be
+        compatible with versions that do not?  If so, how will compatibility
+        me achieved?  Generally, we try to not to drop compatibility if at
+        all possible; we haven't made a "flag day" change since 2003 or
+        earlier, and we don't want to do another one.  [XXX is this true?]
+
+      Implementation: If the proposal will be tricky to implement in Tor's
+        current architecture, the document can contain some discussion of how
+        to go about making it work.
+
+      Performance and scalability notes: If the feature will have an effect
+        on performance (in RAM, CPU, bandwidth) or scalability, there should
+        be some analysis on how significant this effect will be, so that we
+        can avoid really expensive performance regressions, and so we can
+        avoid wasting time on insignificant gains.
+
