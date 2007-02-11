@@ -99,13 +99,13 @@ conn_state_to_string(int type, int state)
       break;
     case CONN_TYPE_AP:
       switch (state) {
-        case AP_CONN_STATE_SOCKS_WAIT: return "waiting for dest info";
+        case AP_CONN_STATE_SOCKS_WAIT: return "waiting for socks info";
         case AP_CONN_STATE_NATD_WAIT: return "waiting for natd dest info";
         case AP_CONN_STATE_RENDDESC_WAIT: return "waiting for rendezvous desc";
         case AP_CONN_STATE_CONTROLLER_WAIT: return "waiting for controller";
-        case AP_CONN_STATE_CIRCUIT_WAIT: return "waiting for safe circuit";
-        case AP_CONN_STATE_CONNECT_WAIT: return "waiting for connect";
-        case AP_CONN_STATE_RESOLVE_WAIT: return "waiting for resolve";
+        case AP_CONN_STATE_CIRCUIT_WAIT: return "waiting for circuit";
+        case AP_CONN_STATE_CONNECT_WAIT: return "waiting for connect response";
+        case AP_CONN_STATE_RESOLVE_WAIT: return "waiting for resolve response";
         case AP_CONN_STATE_OPEN: return "open";
       }
       break;
