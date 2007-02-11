@@ -378,20 +378,6 @@ connection_ap_expire_beginning(void)
             seconds_idle, safe_str(conn->socks_request->address),
             conn->socks_request->port,
             conn_state_to_string(CONN_TYPE_AP, conn->_base.state));
-        /* XXX012 remove the below clause before stable release -RD */
-        if (conn->_base.state == AP_CONN_STATE_SOCKS_WAIT) {
-          /* extra debugging */
-          log_fn(severity, LD_APP,
-                 "Hints: is_reading %d, inbuf len %lu, socks: version %d, "
-                 "command %d, has_finished %d, address %s, port %d.",
-                 connection_is_reading(TO_CONN(conn)),
-                 (unsigned long)buf_datalen(conn->_base.inbuf),
-                 (int)conn->socks_request->socks_version,
-                 conn->socks_request->command,
-                 conn->socks_request->has_finished,
-                 conn->socks_request->address,
-                 (int)conn->socks_request->port);
-        }
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
       continue;
