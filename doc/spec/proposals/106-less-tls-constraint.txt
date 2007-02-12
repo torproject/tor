@@ -4,7 +4,7 @@ Version: $Revision: 12105 $
 Last-Modified: $Date: 2007-01-30T07:50:01.643717Z $
 Author: Nick Mathewson
 Created:
-Status: Open
+Status: Accepted
 
 Overview:
 
@@ -71,6 +71,7 @@ a client and don't treat them as a server. great. -rd]
     there's really no harm in letting every router have any commonName it
     wants.
 [this is the better choice -rd]
+[agreed. -nm]
 
 REMAINING WAYS TO RECOGNIZE CLIENT->SERVER CONNECTIONS:
 
@@ -91,8 +92,8 @@ If we stop verifying the above requirements:
     server running TLS, and believe that you're talking to a Tor server (until
     you send the first cell).
 
-    It will be far easier for non-Tor SSL clients to accidentally to Tor servers
-    and speak HTTPS or whatever to them.
+    It will be far easier for non-Tor SSL clients to accidentally connect to
+    Tor servers and speak HTTPS or whatever to them.
 
 If, in a later release, we have clients not send certificates, and we make
 DNs less recognizable:
@@ -104,5 +105,8 @@ DNs less recognizable:
 
     If clients don't send certs, they look slightly less like servers.
 
+OTHER SPEC CHANGES:
 
-
+When a client doesn't give us an identity, we should never extend any
+circuits to it (duh), and we should allow it to set circuit ID however it
+wants.
