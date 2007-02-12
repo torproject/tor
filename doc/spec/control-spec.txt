@@ -927,6 +927,7 @@ $Id$
   Expiry is expressed as the local time (rather than GMT).
 
   [XXX We should rename this to ADDRESSMAP. -RD]
+    [Why? Surely it can't be worth the compatibility issues. -NM]
 
   [FFF We should add a SOURCE=%s argument for extended events,
    which specifies what exit node told us this addressmap. -RD]

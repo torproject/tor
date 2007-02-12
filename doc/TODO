@@ -131,8 +131,11 @@ N     - Implement, if we think it's smart.
       blocking-resistance strategies.
       o Design (proposal 106)
       o Implement
+N     - Hack up a client that gives out weird/no certificates, so we can
+        test to make sure that this doesn't cause servers to crash.
 
-Things we'd like to do in 0.2.0:
+
+Things we'd like to do in 0.2.0.x:
   - Proposals:
     - 101: Voting on the Tor Directory System
     - 104: Long and Short Router Descriptors
@@ -145,6 +148,8 @@ Things we'd like to do in 0.2.0:
       local_routerstatus (or equivalent) subsume all places to go for "what
       router is this?"
     - Remove socketpair-based bridges conns, and the word "bridge".
+    - Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
+      online config documentation from a single source.
   - Features:
     - Implement a DNS proxy
     - Bridges.
@@ -158,10 +163,10 @@ Things we'd like to do in 0.2.0:
 Deferred from 0.1.2.x:
   - finish status event implementation and accompanying getinfos
   - More work on AvoidDiskWrites?
-NR- Get some kind of "meta signing key" to be used solely to sign
+  - Get some kind of "meta signing key" to be used solely to sign
     releases/to certify releases when signed by the right people/
     to certify sign the right people's keys?  Also use this to cert the SSL
-    key, etc.
+    key, etc. (Proposal 103)
   - per-conn write buckets
   - separate config options for read vs write limiting
     (It's hard to support read > write, since we need better
@@ -211,7 +216,7 @@ P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
     just not try to get) descriptors, so it'll never build circuits.
   - Tolerate clock skew on bridge relays.
 
-  - A more efficient dir protocol.
+  - A more efficient dir protocol. (Proposal 101)
     - Authorities should fetch the network-statuses amongst each
       other, consensus them, and advertise a communal network-status.
       This is not so much for safety/complexity as it is to reduce
@@ -425,11 +430,6 @@ R - add d64 and fp64 along-side d and fp so people can paste status
       we can have an edge_connection_t and (say) dns_request_t both extend an
       edge_stream_t, and have p_streams and n_streams both be linked lists
       of edge_stream_t.
-
-  - Look into generating torrc.{complete|sample}.in, tor.1.in,
-    the HTML manual, and the online config documentation from a single
-    source.
-    - torrc.complete.in needs attention?
 
 Future version:
   - Configuration format really wants sections.
