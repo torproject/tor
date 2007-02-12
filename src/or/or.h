@@ -2427,6 +2427,7 @@ void dirserv_set_cached_networkstatus_v2(const char *directory,
                                          const char *identity,
                                          time_t published);
 void dirserv_clear_old_networkstatuses(time_t cutoff);
+void dirserv_clear_old_v1_info(time_t now);
 void dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
 void dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
                                                const char *key);

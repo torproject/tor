@@ -2590,8 +2590,9 @@ networkstatus_list_clean(time_t now)
   }
 
   /* And now go through the directory cache for any cached untrusted
-   * networkstatuses. */
+   * networkstatuses and other network info. */
   dirserv_clear_old_networkstatuses(now - MAX_NETWORKSTATUS_AGE);
+  dirserv_clear_old_v1_info(now);
 }
 
 /** Helper for bsearching a list of routerstatus_t pointers.*/

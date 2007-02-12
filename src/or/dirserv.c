@@ -937,10 +937,11 @@ dirserv_dump_directory_to_string(char **dir_out,
   return -1;
 }
 
-/** Most recently generated encoded signed directory. (auth dirservers only.)*/
+/** Most recently generated encoded signed v1 directory. (auth dirservers
+ * only.)*/
 static cached_dir_t *the_directory = NULL;
 
-/* Used only by non-auth dirservers: The directory and runningrouters we'll
+/* Used only by non-auth dirservers: The v1 directory and runningrouters we'll
  * serve when requested. */
 static cached_dir_t *cached_directory = NULL;
 static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
@@ -1135,7 +1136,22 @@ dirserv_clear_old_networkstatuses(time_t cutoff)
       iter = digestmap_iter_next(cached_v2_networkstatus, iter);
     }
   }
+}
 
+/** Remove any networkstatus from the directory cache that was published
+ * before <b>cutoff</b>. */
+void
+dirserv_clear_old_v1_info(time_t now)
+{
+#define MAX_V1_DIRECTORY_AGE (30*24*60*60)
+#define MAX_V1_RR_AGE (7*24*60*60)
+  if (cached_directory &&
+      cached_directory->published < (now-MAX_V1_DIRECTORY_AGE)) {
+    cached_dir_decref(cached_directory);
+  }
+  if (cached_runningrouters.published < (now - MAX_V1_RR_AGE)) {
+    clear_cached_dir(&cached_runningrouters);
+  }
 }
 
 /** Helper: If we're an authority for the right directory version (the

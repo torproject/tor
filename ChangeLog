@@ -6,6 +6,9 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
   o Major bugfixes (crashes):
     - Stop crashing when the controller asks us to resetconf more than
       one config option at once. (Vidalia 0.0.11 does this.)
+    - Fix a crash that happened on Win98 when we're given command-line
+      arguments: Don't try to load NT service functions from advapi32.dll
+      except when we need them. (bug introduced in 0.1.2.7-alpha).
 
   o Minor bugfixes (controller):
     - Give the controller END_STREAM_REASON_DESTROY events _before_ we
@@ -31,8 +34,6 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       other than file-not-found.
     - Don't warn the user when cached-routers.new doesn't exist: that's
       perfectly fine when starting up for the first time.
-    - Don't try to load NT service functions from advapi32.dll except when
-      we need them. (bug introduced in 0.1.2.7-alpha).
 
   o Minor features:
     - Warn the user when an application uses the obsolete binary v0
@@ -49,6 +50,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       protocol easier to recognize on the wire.)
     - Revise messages on handshake failure again to be even more clear about
       which are incoming connections and which are outgoing.
+    - Discard any v1 directory info that's over 1 month old (for
+      directories) or over 1 week old (for running-routers lists).
 
 
 Changes in version 0.1.2.7-alpha - 2007-02-06
