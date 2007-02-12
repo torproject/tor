@@ -111,12 +111,14 @@ NR. Write path-spec.txt
       - recommend gaim.
       - unrecommend IE because of ftp:// bug.
 N   - we should add a preamble to tor-design saying it's out of date.
-N   - Document transport and natdport
+N   . Document transport and natdport
+      o In man page
+      - In a good HOWTO.
 
-  - Forward compatibility fixes
-    - Caches should start trying to cache consensus docs?
-NR    - Design
-N     - Implement, if we think it's smart.
+  . Forward compatibility fixes
+    D Caches should start trying to cache consensus docs?
+      D Design
+      D Implement, if we think it's smart.
     - Start uploading short and long descriptors; authorities should support
       URLs to retrieve long descriptors, and should discard short descriptors
       for now.  Later, once tools use the "long descriptor" URLs, authorities
@@ -124,9 +126,11 @@ N     - Implement, if we think it's smart.
       a descriptor.
 NR    - Design
 N     - Implement, if we think it's smart.
-    - Check for any outstanding checks we do on the form or number of client
+    o Check for any outstanding checks we do on the form or number of client
       certificates that would prevent us from executing certain
       blocking-resistance strategies.
+      o Design (proposal 106)
+      o Implement
 
 Things we'd like to do in 0.2.0:
   - Proposals:

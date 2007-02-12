@@ -26,7 +26,7 @@ static int connection_or_empty_enough_for_dirserv_data(or_connection_t *conn);
 static digestmap_t *orconn_identity_map = NULL;
 
 /** If conn is listed in orconn_identity_map, remove it, and clear
- * conn->identity_digest. */
+ * conn->identity_digest.  Otherwise do nothing. */
 void
 connection_or_remove_from_identity_map(or_connection_t *conn)
 {
@@ -35,8 +35,13 @@ connection_or_remove_from_identity_map(or_connection_t *conn)
   if (!orconn_identity_map)
     return;
   tmp = digestmap_get(orconn_identity_map, conn->identity_digest);
-  if (!tmp)
+  if (!tmp) {
+    if (!tor_digest_is_zero(conn->identity_digest)) {
+      log_warn(LD_BUG, "Didn't found connection on identity map when trying "
+               "to remove it.");
+    }
     return;
+  }
   if (conn == tmp) {
     if (conn->next_with_same_id)
       digestmap_set(orconn_identity_map, conn->identity_digest,
@@ -81,7 +86,7 @@ connection_or_clear_identity_map(void)
 }
 
 /** Change conn->identity_digest to digest, and add conn into
- * orconn_digest_map. */
+ * orconn_digest_map.   */
 static void
 connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 {
@@ -93,14 +98,22 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
     orconn_identity_map = digestmap_new();
   if (!memcmp(conn->identity_digest, digest, DIGEST_LEN))
     return;
-  if (tor_digest_is_zero(conn->identity_digest))
+
+  /* If the identity was set previously, remove the old mapping. */
+  if (! tor_digest_is_zero(conn->identity_digest))
     connection_or_remove_from_identity_map(conn);
 
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
+
+  /* If we're setting the ID to zero, don't add a mapping.*/
+  if (tor_digest_is_zero(digest))
+    return;
+
   tmp = digestmap_set(orconn_identity_map, digest, conn);
   conn->next_with_same_id = tmp;
 
-#if 0
+#if 1
+  /*XXXX012 change this back to if 0. */
   /* Testing code to check for bugs in representation. */
   for (; tmp; tmp = tmp->next_with_same_id) {
     tor_assert(!memcmp(tmp->identity_digest, digest, DIGEST_LEN));
@@ -551,16 +564,21 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
   return !tor_tls_is_server(conn->tls);
 }
 
-/** Conn just completed its handshake. Return 0 if all is well, and
+/** <b>Conn</b> just completed its handshake. Return 0 if all is well, and
  * return -1 if he is lying, broken, or otherwise something is wrong.
  *
- * Make sure he sent a correctly formed certificate. If it has a
- * recognized ("named") nickname, make sure his identity key matches
- * it. If I initiated the connection, make sure it's the right guy.
+ * If we initiated this connection (<b>started_here</b> is true), make sure
+ * the other side sent sent a correctly formed certificate. If I initiated the
+ * connection, make sure it's the right guy.
  *
- * If we return 0, write a hash of the identity key into digest_rcvd,
- * which must have DIGEST_LEN space in it. (If we return -1 this
- * buffer is undefined.)
+ * Otherwise (if we _didn't_ initiate this connection), it's okay for
+ * the certificate to be weird or absent.
+ *
+ * If we return 0, and the certificate is as expected, write a hash of the
+ * identity key into digest_rcvd, which must have DIGEST_LEN space in it. (If
+ * we return -1 this buffer is undefined.)  If the certificate is invalid
+ * or missing on an incoming connection, we return 0 and set digest_rcvd to
+ * DIGEST_LEN 0 bytes.
  *
  * As side effects,
  * 1) Set conn->circ_id_type according to tor-spec.txt.
@@ -569,66 +587,68 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
  *    this guy; and note that this guy is reachable.
  */
 static int
-connection_or_check_valid_handshake(or_connection_t *conn, char *digest_rcvd)
+connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
+                                    char *digest_rcvd)
 {
-  routerinfo_t *router;
   crypto_pk_env_t *identity_rcvd=NULL;
   char nickname[MAX_NICKNAME_LEN+1];
   or_options_t *options = get_options();
   int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
-  int started_here = connection_or_nonopen_was_started_here(conn);
   const char *safe_address =
     started_here ? conn->_base.address : safe_str(conn->_base.address);
-  const char *peer_type = started_here ? "Router" : "Client or router";
+  const char *conn_type = started_here ? "outgoing" : "incoming";
+  int has_cert = 0, has_identity = 0;
 
   check_no_tls_errors();
-  if (! tor_tls_peer_has_cert(conn->tls)) {
-    log_info(LD_PROTOCOL,"%s (%s:%d) didn't send a cert! Closing.",
-             peer_type, safe_address, conn->_base.port);
+  has_cert = tor_tls_peer_has_cert(conn->tls);
+  if (started_here && !has_cert) {
+    log_info(LD_PROTOCOL,"Tried connecting to router at %s:%d, but it didn't "
+             "send a cert! Closing.",
+             safe_address, conn->_base.port);
     return -1;
+  } else if (!has_cert) {
+    log_debug(LD_PROTOCOL,"Got incoming connection with no certificate. "
+              "That's ok.");
   }
   check_no_tls_errors();
-  if (tor_tls_get_peer_cert_nickname(severity, conn->tls, nickname,
-                                     sizeof(nickname))) {
-    log_fn(severity,LD_PROTOCOL,"%s (%s:%d) has a cert without a "
-           "valid nickname. Closing.",
-           peer_type, safe_address, conn->_base.port);
-    return -1;
-  }
-  check_no_tls_errors();
-  log_debug(LD_OR, "%s (%s:%d) claims to be router '%s'",
-            peer_type, safe_address, conn->_base.port, nickname);
 
-  if (tor_tls_verify(severity, conn->tls, &identity_rcvd) < 0) {
-    log_fn(severity,LD_OR,"%s which claims to be router '%s' (%s:%d),"
-           " has a cert but it's invalid. Closing.",
-           peer_type, nickname, safe_address, conn->_base.port);
-    return -1;
+  if (has_cert) {
+    int v = tor_tls_verify(started_here?severity:LOG_INFO,
+                           conn->tls, &identity_rcvd);
+    if (started_here && v<0) {
+      log_fn(severity,LD_OR,"Tried connecting to router at %s:%d: It"
+             " has a cert but it's invalid. Closing.",
+             safe_address, conn->_base.port);
+      return -1;
+    } else if (v<0) {
+      log_info(LD_PROTOCOL,"Incoming connection gave us an invalid cert "
+               "chain; ignoring.");
+    } else {
+      log_debug(LD_OR,"The certificate seems to be valid on %s connection "
+                "with %s:%d", conn_type, safe_address, conn->_base.port);
+    }
+    check_no_tls_errors();
   }
-  check_no_tls_errors();
-  log_debug(LD_OR,"The router's cert is valid.");
-  crypto_pk_get_digest(identity_rcvd, digest_rcvd);
 
-  if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
-    conn->circ_id_type = CIRC_ID_TYPE_LOWER;
+  if (identity_rcvd) {
+    has_identity=1;
+    crypto_pk_get_digest(identity_rcvd, digest_rcvd);
+
+    if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
+      conn->circ_id_type = CIRC_ID_TYPE_LOWER;
+    } else {
+      conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
+    }
+    crypto_free_pk_env(identity_rcvd);
   } else {
-    conn->circ_id_type = CIRC_ID_TYPE_HIGHER;
-  }
-  crypto_free_pk_env(identity_rcvd);
-
-  router = router_get_by_nickname(nickname, 0);
-  if (router && /* we know this nickname */
-      router->is_named && /* make sure it's the right guy */
-      memcmp(digest_rcvd, router->cache_info.identity_digest,DIGEST_LEN) !=0) {
-    log_fn(severity, LD_OR,
-           "Identity key not as expected for peer claiming to be "
-           "'%s' (%s:%d)",
-           nickname, safe_address, conn->_base.port);
-    return -1;
+    memset(digest_rcvd, 0, DIGEST_LEN);
+    conn->circ_id_type = CIRC_ID_TYPE_NEITHER;
   }
 
   if (started_here) {
     int as_advertised = 1;
+    tor_assert(has_cert);
+    tor_assert(has_identity);
     if (memcmp(digest_rcvd, conn->identity_digest, DIGEST_LEN)) {
       /* I was aiming for a particular digest. I didn't get it! */
       char seen[HEX_DIGEST_LEN+1];
@@ -637,8 +657,8 @@ connection_or_check_valid_handshake(or_connection_t *conn, char *digest_rcvd)
       base16_encode(expected, sizeof(expected), conn->identity_digest,
                     DIGEST_LEN);
       log_fn(severity, LD_OR,
-             "Identity key not as expected for router at %s:%d: wanted %s "
-             "but got %s",
+             "Tried connecting to router at %s:%d, but identity key was not "
+             "as expected wanted %s but got %s",
              conn->_base.address, conn->_base.port, expected, seen);
       entry_guard_register_connect_status(conn->identity_digest,0,time(NULL));
       router_set_status(conn->identity_digest, 0);
@@ -677,7 +697,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
   int started_here = connection_or_nonopen_was_started_here(conn);
 
   log_debug(LD_OR,"tls handshake done. verifying.");
-  if (connection_or_check_valid_handshake(conn, digest_rcvd) < 0)
+  if (connection_or_check_valid_handshake(conn, started_here, digest_rcvd) < 0)
     return -1;
 
   if (!started_here) {

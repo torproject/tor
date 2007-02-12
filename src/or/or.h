@@ -201,7 +201,8 @@
 /** DOCDOC */
 typedef enum {
   CIRC_ID_TYPE_LOWER=0,
-  CIRC_ID_TYPE_HIGHER=1
+  CIRC_ID_TYPE_HIGHER=1,
+  CIRC_ID_TYPE_NEITHER=2
 } circ_id_type_t;
 
 #define _CONN_TYPE_MIN 3
@@ -772,8 +773,9 @@ typedef struct connection_t {
 typedef struct or_connection_t {
   connection_t _base;
 
-  char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
-                                     * the other side's signing key. */
+  /** Hash of the public RSA key for the other side's identity key, or zero if
+   * the other side hasn't shown us a valid identity key. */
+  char identity_digest[DIGEST_LEN];
   char *nickname; /**< Nickname of OR on other side (if any). */
 
   tor_tls_t *tls; /**< TLS connection state */
@@ -787,9 +789,6 @@ typedef struct or_connection_t {
   int read_bucket; /**< When this hits 0, stop receiving. Every second we
                     * add 'bandwidthrate' to this, capping it at
                     * bandwidthburst. (OPEN ORs only) */
-  circ_id_type_t circ_id_type; /**< When we send CREATE cells along this
-                                * connection, which half of the space should
-                                * we use? */
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
   struct or_connection_t *next_with_same_id; /**< Next connection with same
@@ -797,6 +796,9 @@ typedef struct or_connection_t {
   /** Linked list of bridged dirserver connections that can't write until
    * this connection's outbuf is less full. */
   struct dir_connection_t *blocked_dir_connections;
+  circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
+                                  * connection, which half of the space should
+                                  * we use? */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
                           * range 0..1<<15-1. */

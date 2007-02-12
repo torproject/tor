@@ -70,6 +70,11 @@ get_unique_circ_id_by_conn(or_connection_t *conn)
   uint16_t high_bit;
 
   tor_assert(conn);
+  if (conn->circ_id_type == CIRC_ID_TYPE_NEITHER) {
+    log_warn(LD_BUG, "Bug: Trying to pick a circuit ID for a connection from "
+             "a client with no identity.");
+    return 0;
+  }
   high_bit = (conn->circ_id_type == CIRC_ID_TYPE_HIGHER) ? 1<<15 : 0;
   do {
     /* Sequentially iterate over test_circ_id=1...1<<15-1 until we find a

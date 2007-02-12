@@ -33,6 +33,14 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       advance warning.
     - Remove some never-implemented options.  Mark PathlenCoinWeight as
       obsolete.
+    - Implement proposal 106: Stop requiring clients to have well-formed
+      certificates; stop checking nicknames in certificates.  (Clients have
+      certificates so that they can look like Tor servers, but in the future
+      we might want to allow them to look like regular TLS clients instead.
+      Nicknames in certificates serve no purpose other than making our
+      protocol easier to recognize on the wire.)
+    - Revise messages on handshake failure again to be even more clear about
+      which are incoming connections and which are outgoing.
 
 
 Changes in version 0.1.2.7-alpha - 2007-02-06
