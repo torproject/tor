@@ -1,5 +1,5 @@
 /* Copyright 2003-2004 Roger Dingledine
- * Copyright 2004-2006 Roger Dingledine, Nick Mathewson */
+ * Copyright 2004-2007 Roger Dingledine, Nick Mathewson */
 /* See LICENSE for licensing information */
 /* $Id$ */
 const char compat_c_id[] =
@@ -1432,3 +1432,4 @@ format_win32_error(DWORD err)
   return result;
 }
 #endif
+
