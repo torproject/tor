@@ -74,7 +74,7 @@ of their choices.
 
 2. Building circuits
 
-2.1. When we build.
+2.1. When we build
 
 2.1.1. Clients build circuits preemptively
 
@@ -85,20 +85,26 @@ of their choices.
    that support the ports we have used in the recent past (by default
    one hour). Specifically, on startup Tor tries to maintain one clean
    fast exit circuit that allows connections to port 80, and at least
-   two internal circuits in case we get a resolve request or hidden
-   service request (at least three internal circuits if we _run_ a
+   two fast clean stable internal circuits in case we get a resolve
+   request or hidden service request (at least three if we _run_ a
    hidden service).
 
    After that, Tor will adapt the circuits that it preemptively builds
-   based on the requests it sees from the user: it tries to have a clean
-   fast exit circuit available for every port seen recently (one circuit
-   is adequate for many predicted ports -- it doesn't keep a separate
-   circuit for each port), and it tries to have the above internal
-   circuits available if we've seen resolves or hidden service activity
-   recently. If there are 12 clean circuits open, it doesn't open more
-   even if it has more predictions. Lastly, note that if there are no
-   requests from the user for an hour, Tor will predict no use and build
-   no preemptive circuits.
+   based on the requests it sees from the user: it tries to have two fast
+   clean exit circuits available for every port seen within the past hour
+   (each circuit can be adequate for many predicted ports -- it doesn't
+   need two separate circuits for each port), and it tries to have the
+   above internal circuits available if we've seen resolves or hidden
+   service activity within the past hour. If there are 12 or more clean
+   circuits open, it doesn't open more even if it has more predictions.
+
+   Only stable circuits can "cover" a port that is listed in the
+   LongLivedPorts config option. Similarly, hidden service requests
+   to ports listed in LongLivedPorts make us create stable internal
+   circuits.
+
+   Note that if there are no requests from the user for an hour, Tor
+   will predict no use and build no preemptive circuits.
 
    The Tor client SHOULD NOT store its list of predicted requests to a
    persistent medium.
@@ -107,25 +113,35 @@ of their choices.
 
    Additionally, when a client request exists that no circuit (built or
    pending) might support, we create a new circuit to support the request.
-   We do so by picking a request arbitrarily, launching a circuit to
-   support it, and repeating until every unattached request might be
-   supported by a pending or built circuit.
+   For exit connections, we pick an exit node that will handle the
+   most pending requests (choosing arbitrarily among ties), launch a
+   circuit to end there, and repeat until every unattached request
+   might be supported by a pending or built circuit. For internal
+   circuits, we pick an arbitrary acceptable path, repeating as needed.
 
-   For hidden service interations, we can "cannibalize" a clean internal
-   circuit if one is available, so we don't need to build those circuits
-   from scratch on demand.
+   In some cases we can reuse an already established circuit if it's
+   clean; see Section 2.3 (cannibalizing circuits) for details.
 
-   We can also cannibalize clean circuits when the client asks to exit
-   at a given node -- either via mapaddress or the ".exit" notation,
-   or because the destination is running at the same location as an
-   exit node.
+2.1.3. Servers build circuits for testing reachability and bandwidth
 
-2.1.3. Servers build circuits for testing reachability
+   Tor servers test reachability of their ORPort once they have
+   successfully built a circuit (on start and whenever their IP address
+   changes). They build an ordinary fast internal circuit with themselves
+   as the last hop. As soon as any testing circuit succeeds, the Tor
+   server decides it's reachable and is willing to publish a descriptor.
 
-   Tor servers test reachability of their ORPort on start and whenever
-   their IP address changes.
+   We launch multiple testing circuits (one at a time), until we
+   have NUM_PARALLEL_TESTING_CIRC (4) such circuits open. Then we
+   do a "bandwidth test" by sending a certain number of relay drop
+   cells down each circuit: BandwidthRate * 10 / CELL_NETWORK_SIZE
+   total cells divided across the four circuits, but never more than
+   CIRCWINDOW_START (1000) cells total. This exercises both outgoing and
+   incoming bandwidth, and helps to jumpstart the observed bandwidth
+   (see dir-spec.txt).
 
-   [XXXX arma: write this.] 
+   Tor servers also test reachability of their DirPort once they have
+   established a circuit, but they use an ordinary exit circuit for
+   this purpose.
 
 2.1.4. Hidden-service circuits
 
@@ -199,9 +215,9 @@ of their choices.
 
 2.2.1. Choosing an exit
 
-   If we know what IP address we want to resolve, we can trivially tell
-   whether a given router will support it by simulating its declared
-   exit policy.
+   If we know what IP address we want to connect to or resolve, we can
+   trivially tell whether a given router will support it by simulating
+   its declared exit policy.
 
    Because we often connect to addresses of the form hostname:port, we do not
    always know the target IP address when we select an exit node.  In these
@@ -231,7 +247,22 @@ of their choices.
      <target>, and the request is only supported by the exit whose nickname
      or fingerprint is <servername>.
 
-2.3. Handling failure
+2.3. Cannibalizing circuits
+
+   If we need a circuit and have a clean one already established, in
+   some cases we can adapt the clean circuit for our new
+   purpose. Specifically,
+
+   For hidden service interactions, we can "cannibalize" a clean internal
+   circuit if one is available, so we don't need to build those circuits
+   from scratch on demand.
+
+   We can also cannibalize clean circuits when the client asks to exit
+   at a given node -- either via the ".exit" notation or because the
+   destination is running at the same location as an exit node.
+
+
+2.4. Handling failure
 
    If an attempt to extend a circuit fails (either because the first create
    failed or a subsequent extend failed) then the circuit is torn down and is
@@ -249,14 +280,15 @@ of their choices.
 3. Attaching streams to circuits
 
    When a circuit that might support a request is built, Tor tries to attach
-   the request's stream to the circuit and sends a BEGIN or RESOLVE relay
+   the request's stream to the circuit and sends a BEGIN, BEGIN_DIR,
+   or RESOLVE relay
    cell as appropriate.  If the request completes unsuccessfully, Tor
    considers the reason given in the CLOSE relay cell. [XXX yes, and?]
 
 
-   After a request has remained unattached for [XXXX interval?], Tor
-   abandons the attempt and signals an error to the client as appropriate
-   (e.g., by closing the SOCKS connection).
+   After a request has remained unattached for SocksTimeout (2 minutes
+   by default), Tor abandons the attempt and signals an error to the
+   client as appropriate (e.g., by closing the SOCKS connection).
 
    XXX Timeouts and when Tor auto-retries.
     * What stream-end-reasons are appropriate for retrying.
@@ -316,9 +348,6 @@ of their choices.
   Tor does not add a guard persistently to the list until the first time we
   have connected to it successfully.
 
-6. Testing circuits
-
-  XXXX
 
 
 
@@ -373,3 +402,4 @@ X.3. Some stuff that worries me about entry guards. 2006 Jun, Nickm.
 
   [Do we do any of this now? If not, this should move into 099-misc or
   098-todo. -NM]
+
