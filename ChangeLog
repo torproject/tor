@@ -25,6 +25,12 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       bandwidth from those directories earlier than it on the list.
     - If we start a server with ClientOnly 1, then set ClientOnly to 0
       and hup, stop triggering an assert based on an empty onion_key.
+    - On platforms with no working mmap() equivalent, don't warn the
+      user when cached-routers doesn't exist.
+    - Warn the user when mmap() [or its equivalent] fails for some reason
+      other than file-not-found.
+    - Don't warn the user when cached-routers.new doesn't exist: that's
+      perfectly fine when starting up for the first time.
 
   o Minor features:
     - Warn the user when an application uses the obsolete binary v0

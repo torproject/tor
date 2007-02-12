@@ -189,8 +189,13 @@ int write_chunks_to_file(const char *fname, const struct smartlist_t *chunks,
 int append_bytes_to_file(const char *fname, const char *str, size_t len,
                          int bin);
 
+/** Flag for read_file_to_str: open the file in binary mode. */
+#define RFTS_BIN            1
+/** Flag for read_file_to_str: it's okay if the file doesn't exist */
+#define RFTS_IGNORE_MISSING 2
+
 struct stat;
-char *read_file_to_str(const char *filename, int bin, struct stat *stat_out)
+char *read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   ATTR_MALLOC;
 char *parse_line_from_str(char *line, char **key_out, char **value_out);
 char *expand_filename(const char *filename);

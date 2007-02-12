@@ -353,7 +353,7 @@ router_reload_router_list(void)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
-  char *fname = tor_malloc(fname_len), *contents;
+  char *fname = tor_malloc(fname_len), *contents = NULL;
 
   if (!routerlist)
     router_get_routerlist(); /* mallocs and inits it in place */
@@ -374,7 +374,8 @@ router_reload_router_list(void)
 
   tor_snprintf(fname, fname_len, "%s/cached-routers.new",
                options->DataDirectory);
-  contents = read_file_to_str(fname, 1, NULL);
+  if (file_status(fname) == FN_FILE)
+    contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, NULL);
   if (contents) {
     router_load_routers_from_string(contents,
                                     SAVED_IN_JOURNAL, NULL);

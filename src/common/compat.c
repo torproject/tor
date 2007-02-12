@@ -134,7 +134,9 @@ tor_mmap_file(const char *filename)
 
   fd = open(filename, O_RDONLY, 0);
   if (fd<0) {
-    log_info(LD_FS,"Could not open \"%s\" for mmap().",filename);
+    int severity = (errno == ENOENT) ? LOG_INFO : LOG_WARN;
+    log_fn(severity, LD_FS,"Could not open \"%s\" for mmap(): %s",filename,
+           strerror(errno));
     return NULL;
   }
 
@@ -199,9 +201,14 @@ tor_mmap_file(const char *filename)
                                 0);
 
   if (res->file_handle == INVALID_HANDLE_VALUE)
-    goto err;
+    goto win_err;
 
   res->base.size = GetFileSize(res->file_handle, NULL);
+
+  if (res->base.size == 0) {
+    log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
+    goto err;
+  }
 
   res->mmap_handle = CreateFileMapping(res->file_handle,
                                        NULL,
@@ -214,14 +221,22 @@ tor_mmap_file(const char *filename)
                                        (res->base.size & 0xfffffffful),
                                        NULL);
   if (res->mmap_handle == NULL)
-    goto err;
+    goto win_err;
   res->base.data = (char*) MapViewOfFile(res->mmap_handle,
                                          FILE_MAP_READ,
                                          0, 0, 0);
   if (!res->base.data)
-    goto err;
+    goto win_err;
 
   return &(res->base);
+ win_err: {
+    DWORD e = GetLastError();
+    int severity = (e == ERROR_FILE_NOT_FOUND || e == PATH_NOT_FOUND) ?
+      LOG_INFO : LOG_WARN;
+    char *msg = format_win32_error(e);
+    log_fn(LOG_INFO, "Couldn't mmap file \"%s\": %s", filename, msg);
+    tor_free(msg);
+  }
  err:
   tor_munmap_file(&res->base);
   return NULL;
@@ -247,7 +262,7 @@ tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
   struct stat st;
-  char *res = read_file_to_str(filename, 1, &st);
+  char *res = read_file_to_str(filename, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
   tor_mmap_t *handle;
   if (! res)
     return NULL;
@@ -1388,3 +1403,32 @@ network_init(void)
   return 0;
 }
 
+#ifdef MS_WINDOWS
+/** Return a newly allocated string describing the windows system error code
+ * <b>err</b>.  Note that error codes are different from errno.  Error codes
+ * come from GetLastError() when a winapi call fails.  errno is set only when
+ * ansi functions fail.  Whee. */
+char *
+format_win32_error(DWORD err)
+{
+  LPVOID str = NULL;
+  char *result;
+
+  /* Somebody once decided that this interface was better than strerror(). */
+  FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                 FORMAT_MESSAGE_FROM_SYSTEM |
+                 FORMAT_MESSAGE_IGNORE_INSERTS,
+                 NULL, err,
+                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                 (LPTSTR) &str,
+                 0, NULL);
+
+  if (str) {
+    result = tor_strdup((char*)str);
+    LocalFree(str); /* LocalFree != free() */
+  } else {
+    result = tor_strdup("<unformattable error>");
+  }
+  return result;
+}
+#endif

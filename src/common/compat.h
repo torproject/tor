@@ -320,6 +320,11 @@ unsigned long tor_get_thread_id(void);
 #define tor_get_thread_id() (1UL)
 #endif
 
+/* Platform-specific helpers. */
+#ifdef MS_WINDOWS
+char *format_win32_error(DWORD err);
+#endif
+
 /*for some reason my compiler doesn't have these version flags defined
   a nice homework assignment for someone one day is to define the rest*/
 //these are the values as given on MSDN

@@ -1351,7 +1351,11 @@ append_bytes_to_file(const char *fname, const char *str, size_t len,
  * string; return the string on success or NULL on failure.
  *
  * If <b>size_out</b> is provided, store the length of the result in
- * <b>size_out</b>
+ * <b>size_out</b>.
+ *
+ * If <b>flags</b> &amp; RFTS_BIN, open the file in binary mode.
+ * If <b>flags</b> &amp; RFTS_IGNORE_MISSING, don't warn if the file
+ * doesn't exist.
  */
 /*
  * This function <em>may</em> return an erroneous result if the file
@@ -1361,24 +1365,29 @@ append_bytes_to_file(const char *fname, const char *str, size_t len,
  * be truncated.
  */
 char *
-read_file_to_str(const char *filename, int bin, struct stat *stat_out)
+read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 {
   int fd; /* router file */
   struct stat statbuf;
   char *string;
   int r;
+  int bin = flags & RFTS_BIN;
 
   tor_assert(filename);
 
   fd = open(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
   if (fd<0) {
-    log_warn(LD_FS,"Could not open \"%s\".",filename);
+    int severity = LOG_WARN;
+    if (errno == ENOENT && (flags & RFTS_IGNORE_MISSING))
+      severity = LOG_INFO;
+    log_fn(severity, LD_FS,"Could not open \"%s\": %s ",filename,
+           strerror(errno));
     return NULL;
   }
 
   if (fstat(fd, &statbuf)<0) {
     close(fd);
-    log_info(LD_FS,"Could not fstat \"%s\".",filename);
+    log_warn(LD_FS,"Could not fstat \"%s\".",filename);
     return NULL;
   }
 
