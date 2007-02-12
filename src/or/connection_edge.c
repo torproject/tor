@@ -57,9 +57,11 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
 
     if (SOCKS_COMMAND_IS_CONNECT(conn->socks_request->command))
       connection_ap_handshake_socks_reply(conn, NULL, 0, endreason);
-    else
+    else if (SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command))
       connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
                                              0, NULL, -1);
+    else /* unknown or no handshake at all. send no response. */
+      conn->socks_request->has_finished = 1;
   }
 
   _connection_mark_for_close(TO_CONN(conn), line, file);
@@ -329,7 +331,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
  * two tries, and 15 seconds for each retry after
  * that. Hopefully this will improve the expected user experience. */
 static int
-compute_socks_timeout(edge_connection_t *conn)
+compute_retry_timeout(edge_connection_t *conn)
 {
   if (conn->num_socks_retries < 2) /* try 0 and try 1 */
     return 10;
@@ -386,7 +388,10 @@ connection_ap_expire_beginning(void)
     if (conn->_base.state == AP_CONN_STATE_OPEN)
       continue;
 
-    cutoff = compute_socks_timeout(conn);
+    /* We're in state connect_wait or resolve_wait now -- waiting for a
+     * reply to our relay cell. See if we want to retry/give up. */
+
+    cutoff = compute_retry_timeout(conn);
     if (seconds_idle < cutoff)
       continue;
     circ = circuit_get_by_edge_conn(conn);
@@ -397,7 +402,7 @@ connection_ap_expire_beginning(void)
       continue;
     }
     if (circ->purpose == CIRCUIT_PURPOSE_C_REND_JOINED) {
-      if (seconds_idle > options->SocksTimeout) {
+      if (seconds_idle >= options->SocksTimeout) {
         log_fn(severity, LD_REND,
                "Rend stream is %d seconds late. Giving up on address"
                " '%s.onion'.",
@@ -1352,7 +1357,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     rend_cache_entry_t *entry;
     int r;
 
-    if (!SOCKS_COMMAND_IS_CONNECT(socks->command)) {
+    if (SOCKS_COMMAND_IS_RESOLVE(socks->command)) {
       /* if it's a resolve request, fail it right now, rather than
        * building all the circuits and then realizing it won't work. */
       log_warn(LD_APP,
