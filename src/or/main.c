@@ -1781,22 +1781,22 @@ struct service_fns {
                   NULL, NULL, NULL, NULL, NULL, NULL,
                   NULL};
 
-/** Loads functions used by NT services. Returns 0 on success, or -1 on
+/** Loads functions used by NT services. Returns 0 on success, exits on
  * error. */
-static int
+static void
 nt_service_loadlibrary(void)
 {
   HMODULE library = 0;
   void *fn;
 
   if (service_fns.loaded)
-    return 0;
+    return;
 
   /* XXXX Possibly, we should hardcode the location of this DLL. */
   if (!(library = LoadLibrary("advapi32.dll"))) {
     log_err(LD_GENERAL, "Couldn't open advapi32.dll.  Are you trying to use "
             "NT services on Windows 98? That doesn't work.");
-    return -1;
+    goto err;
   }
 
 #define LOAD(f) do {                                                    \
@@ -1804,7 +1804,7 @@ nt_service_loadlibrary(void)
       log_err(LD_BUG,                                                   \
               "Couldn't find %s in advapi32.dll! We probably got the "  \
               "name wrong.", #f);                                       \
-      return -1;                                                        \
+      goto err;                                                         \
     } else {                                                            \
       service_fns.f ## _fn = fn;                                        \
     }                                                                   \
@@ -1826,7 +1826,10 @@ nt_service_loadlibrary(void)
 
   service_fns.loaded = 1;
 
-  return 0;
+  return;
+ err:
+  printf("Unable to load library support for NT services: exiting.\n");
+  exit(1);
 }
 
 /** If we're compiled to run as an NT service, and the service has been
@@ -1836,8 +1839,7 @@ nt_service_loadlibrary(void)
 static int
 nt_service_is_stopped(void)
 {
-  if (nt_service_loadlibrary()<0)
-    return -1;
+  nt_service_loadlibrary();
 
   if (service_status.dwCurrentState == SERVICE_STOP_PENDING) {
     service_status.dwWin32ExitCode = 0;
@@ -1859,8 +1861,7 @@ nt_service_control(DWORD request)
   exit_now.tv_sec  = 0;
   exit_now.tv_usec = 0;
 
-  if (nt_service_loadlibrary()<0)
-    return;
+  nt_service_loadlibrary();
 
   switch (request) {
     case SERVICE_CONTROL_STOP:
@@ -1882,8 +1883,7 @@ void
 nt_service_body(int argc, char **argv)
 {
   int r;
-  if (nt_service_loadlibrary()<0)
-    return;
+  nt_service_loadlibrary();
   service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   service_status.dwCurrentState = SERVICE_START_PENDING;
   service_status.dwControlsAccepted =
@@ -1927,8 +1927,7 @@ nt_service_main(void)
   SERVICE_TABLE_ENTRY table[2];
   DWORD result = 0;
   char *errmsg;
-  if (nt_service_loadlibrary()<0)
-    return;
+  nt_service_loadlibrary();
   table[0].lpServiceName = GENSRV_SERVICENAME;
   table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)nt_service_body;
   table[1].lpServiceName = NULL;
@@ -1972,8 +1971,7 @@ nt_service_open_scm(void)
   SC_HANDLE hSCManager;
   char *errmsg = NULL;
 
-  if (nt_service_loadlibrary()<0)
-    return 0;
+  nt_service_loadlibrary();
   if ((hSCManager = service_fns.OpenSCManagerA_fn(
                             NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
     errmsg = nt_strerror(GetLastError());
@@ -1990,9 +1988,7 @@ nt_service_open(SC_HANDLE hSCManager)
 {
   SC_HANDLE hService;
   char *errmsg = NULL;
-
-  if (nt_service_loadlibrary()<0)
-    return 0;
+  nt_service_loadlibrary();
   if ((hService = service_fns.OpenServiceA_fn(hSCManager, GENSRV_SERVICENAME,
                               SERVICE_ALL_ACCESS)) == NULL) {
     errmsg = nt_strerror(GetLastError());
@@ -2009,8 +2005,7 @@ nt_service_start(SC_HANDLE hService)
 {
   char *errmsg = NULL;
 
-  if (nt_service_loadlibrary()<0)
-    return -1;
+  nt_service_loadlibrary();
 
   service_fns.QueryServiceStatus_fn(hService, &service_status);
   if (service_status.dwCurrentState == SERVICE_RUNNING) {
@@ -2051,8 +2046,7 @@ nt_service_stop(SC_HANDLE hService)
 #define MAX_SERVICE_WAIT_TIME 10
   int wait_time;
   char *errmsg = NULL;
-  if (nt_service_loadlibrary()<0)
-    return -1;
+  nt_service_loadlibrary();
 
   service_fns.QueryServiceStatus_fn(hService, &service_status);
   if (service_status.dwCurrentState == SERVICE_STOPPED) {
@@ -2169,8 +2163,7 @@ nt_service_install(int argc, char **argv)
   int is_win2k_or_worse = 0;
   int using_default_torrc = 0;
 
-  if (nt_service_loadlibrary()<0)
-    return -1;
+  nt_service_loadlibrary();
 
   /* Open the service control manager so we can create a new service */
   if ((hSCManager = nt_service_open_scm()) == NULL)
@@ -2282,8 +2275,7 @@ nt_service_remove(void)
   SC_HANDLE hService = NULL;
   char *errmsg;
 
-  if (nt_service_loadlibrary()<0)
-    return -1;
+  nt_service_loadlibrary();
   if ((hSCManager = nt_service_open_scm()) == NULL)
     return -1;
   if ((hService = nt_service_open(hSCManager)) == NULL) {
@@ -2393,10 +2385,7 @@ tor_main(int argc, char *argv[])
   backup_argc = argc;
   if ((argc >= 3) &&
       (!strcmp(argv[1], "-service") || !strcmp(argv[1], "--service"))) {
-    if (nt_service_loadlibrary() < 0) {
-      printf("Unable to load library support for NT services.\n");
-      return -1;
-    }
+    nt_service_loadlibrary();
     if (!strcmp(argv[2], "install"))
       return nt_service_install(argc, argv);
     if (!strcmp(argv[2], "remove"))
@@ -2409,23 +2398,22 @@ tor_main(int argc, char *argv[])
     return -1;
   }
   if (argc >= 2) {
-    if (nt_service_loadlibrary() < 0) {
-      printf("Unable to load library support for NT services.\n");
-      return -1;
-    }
     if (!strcmp(argv[1], "-nt-service") || !strcmp(argv[1], "--nt-service")) {
+      nt_service_loadlibrary();
       nt_service_main();
       return 0;
     }
     // These values have been deprecated since 0.1.1.2-alpha; we've warned
     // about them since 0.1.2.7-alpha.
     if (!strcmp(argv[1], "-install") || !strcmp(argv[1], "--install")) {
+      nt_service_loadlibrary();
       fprintf(stderr,
             "The %s option is deprecated; use \"--service install\" instead.",
             argv[1]);
       return nt_service_install(argc, argv);
     }
     if (!strcmp(argv[1], "-remove") || !strcmp(argv[1], "--remove")) {
+      nt_service_loadlibrary();
       fprintf(stderr,
             "The %s option is deprecated; use \"--service remove\" instead.",
             argv[1]);

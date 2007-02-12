@@ -31,6 +31,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       other than file-not-found.
     - Don't warn the user when cached-routers.new doesn't exist: that's
       perfectly fine when starting up for the first time.
+    - Don't try to load NT service functions from advapi32.dll except when
+      we need them. (bug introduced in 0.1.2.7-alpha).
 
   o Minor features:
     - Warn the user when an application uses the obsolete binary v0
