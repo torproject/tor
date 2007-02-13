@@ -868,7 +868,8 @@ dns_cancel_pending_resolve(const char *address)
     circ = circuit_get_by_edge_conn(pendconn);
     if (circ)
       circuit_detach_stream(circ, pendconn);
-    connection_free(TO_CONN(pendconn));
+    if (!pendconn->_base.marked_for_close)
+      connection_free(TO_CONN(pendconn));
     resolve->pending_connections = pend->next;
     tor_free(pend);
   }

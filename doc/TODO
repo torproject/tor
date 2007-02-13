@@ -232,7 +232,7 @@ P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
       - Then clients can choose a bucket (or set of buckets) to
         download and use.
 
-  - Improvements to versioning.
+  - Improvements to versioning. (Proposal 105)
     - When we connect to a Tor server, it sends back a cell listing
       the IP it believes it is using. Use this to block dvorak's attack.
       Also, this is a fine time to say what time you think it is.

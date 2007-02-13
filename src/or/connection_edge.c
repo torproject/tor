@@ -175,8 +175,8 @@ connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn)
 
 /** Send a relay end cell from stream <b>conn</b> to conn's circuit,
  * with a destination of cpath_layer. (If cpath_layer is NULL, the
- * destination is the circuit's origin.) Mark the relay end cell as
- * closing because of <b>reason</b>.
+ * destination is the circuit's origin.) Set the relay end cell's
+ * reason for closing as <b>reason</b>.
  *
  * Return -1 if this function has already been called on this conn,
  * else return 0.
@@ -213,11 +213,11 @@ connection_edge_end(edge_connection_t *conn, char reason,
 
   circ = circuit_get_by_edge_conn(conn);
   if (circ && !circ->marked_for_close) {
-    log_debug(LD_EDGE,"Marking conn (fd %d) and sending end.",conn->_base.s);
+    log_debug(LD_EDGE,"Sending end on conn (fd %d).",conn->_base.s);
     connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
                                  payload, payload_len, cpath_layer);
   } else {
-    log_debug(LD_EDGE,"Marking conn (fd %d); no circ to send end.",
+    log_debug(LD_EDGE,"No circ to send end on conn (fd %d).",
               conn->_base.s);
   }
 

@@ -2,6 +2,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
   o Major bugfixes (accounting):
     - When we start during an accounting interval before it's time to wake
       up, remember to wake up at the correct time. (May fix bug 342.)
+    - Fix a longstanding obscure crash bug that could occur when
+      low on DNS resources. (Resolves bug 390.)
 
   o Major bugfixes (crashes):
     - Stop crashing when the controller asks us to resetconf more than
