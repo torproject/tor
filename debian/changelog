@@ -1,10 +1,10 @@
-tor (0.1.2.6-alpha-2) unreleased; urgency=low
+tor (0.1.2.7-alpha-1) experimental; urgency=low
 
-  * UNRELEASED
+  * New upstream version.
   * Install all the spec files into usr/share/doc/tor/spec now.
     They moved to doc/spec/* from just doc/* in the source too.
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 27 Jan 2007 21:41:37 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 13 Feb 2007 18:51:14 +0100
 
 tor (0.1.2.6-alpha-1) experimental; urgency=low
 
