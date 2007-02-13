@@ -221,6 +221,20 @@ smartlist_string_num_isin(const smartlist_t *sl, int num)
   return smartlist_string_isin(sl, buf);
 }
 
+/** Return true iff <b>sl</b> has some element E such that
+ * !memcmp(E,<b>element</b>,DIGEST_LEN)
+ */
+int
+smartlist_digest_isin(const smartlist_t *sl, const char *element)
+{
+  int i;
+  if (!sl) return 0;
+  for (i=0; i < sl->num_used; i++)
+    if (memcmp((const char*)sl->list[i],element,DIGEST_LEN)==0)
+      return 1;
+  return 0;
+}
+
 /** Return true iff some element E of sl2 has smartlist_isin(sl1,E).
  */
 int

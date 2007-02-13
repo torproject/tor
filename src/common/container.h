@@ -43,6 +43,8 @@ int smartlist_string_isin(const smartlist_t *sl, const char *element)
 int smartlist_string_isin_case(const smartlist_t *sl, const char *element)
   ATTR_PURE;
 int smartlist_string_num_isin(const smartlist_t *sl, int num) ATTR_PURE;
+int smartlist_digest_isin(const smartlist_t *sl, const char *element)
+  ATTR_PURE;
 int smartlist_overlap(const smartlist_t *sl1, const smartlist_t *sl2)
   ATTR_PURE;
 void smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2);

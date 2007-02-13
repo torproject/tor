@@ -1226,10 +1226,10 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
            n_pending_connections);
 
   preferredexits = smartlist_create();
-  add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1,1,1);
+  add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1);
 
   excludedexits = smartlist_create();
-  add_nickname_list_to_smartlist(excludedexits,options->ExcludeNodes,0,0,1);
+  add_nickname_list_to_smartlist(excludedexits,options->ExcludeNodes,0);
 
   sl = smartlist_create();
 
@@ -2253,46 +2253,58 @@ entry_nodes_should_be_added(void)
 void
 entry_guards_prepend_from_config(void)
 {
-  int missed_some = 0;
-  int idx;
   or_options_t *options = get_options();
-  smartlist_t *routers = smartlist_create();
-  smartlist_t *tmp = smartlist_create();
+  smartlist_t *entry_routers = smartlist_create();
+  smartlist_t *old_entry_guards_on_list = smartlist_create();
+  smartlist_t *old_entry_guards_not_on_list = smartlist_create();
+  smartlist_t *entry_fps = smartlist_create();
 
   tor_assert(entry_guards);
   tor_assert(options->EntryNodes);
 
-  if (options->StrictEntryNodes) {
-    log_info(LD_CIRC,"Clearing old entry guards");
-    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, tor_free(e));
-    smartlist_clear(entry_guards);
-    entry_guards_changed();
-  }
-
-  add_nickname_list_to_smartlist(routers, options->EntryNodes,
-                                 0, 1, 1);
-
-  /* take a moment first to notice whether we got them all */
   log_info(LD_CIRC,"Adding configured EntryNodes '%s'.",
            options->EntryNodes);
-  smartlist_split_string(tmp, options->EntryNodes, ",",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  missed_some = smartlist_len(routers) != smartlist_len(tmp);
-  SMARTLIST_FOREACH(tmp, char *, nick, tor_free(nick));
-  smartlist_free(tmp);
 
-  for (idx = smartlist_len(routers)-1 ; idx >= 0; idx--) {
-    /* pick off the last one, turn it into a router, prepend it
-     * to our entry_guards list. If we can't find it, set missed_some
-     * to 1. */
-    routerinfo_t *r = smartlist_get(routers, idx);
-    add_an_entry_guard(r);
+  /* Split entry guards into those on the list and those not. */
+  add_nickname_list_to_smartlist(entry_routers, options->EntryNodes, 0);
+  SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri,
+                    smartlist_add(entry_fps,ri->cache_info.identity_digest));
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
+    if (smartlist_digest_isin(entry_fps, e->identity))
+      smartlist_add(old_entry_guards_on_list, e);
+    else
+      smartlist_add(old_entry_guards_not_on_list, e);
+  });
+
+  /* Remove all currently configured entry guards from entry_routers. */
+  SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri, {
+    if (is_an_entry_guard(ri->cache_info.identity_digest)) {
+      smartlist_del(entry_routers, ri_sl_idx--);
+    }
+  });
+
+  /* Now build the new entry_guards list. */
+  smartlist_clear(entry_guards);
+  /* First, the previously configured guards that are in EntryNodes. */
+  smartlist_add_all(entry_guards, old_entry_guards_on_list);
+  /* Next, the rest of EntryNodes */
+  SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri, {
+    add_an_entry_guard(ri);
+  });
+  /* Finally, the remaining EntryNodes, unless we're strict */
+  if (options->StrictEntryNodes) {
+    SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
+                      tor_free(e));
+  } else {
+    smartlist_add_all(entry_guards, old_entry_guards_not_on_list);
   }
 
-  if (!missed_some)
-    should_add_entry_nodes = 0; /* whew, we're done */
-
-  smartlist_free(routers);
+  should_add_entry_nodes = 0;
+  smartlist_free(entry_routers);
+  smartlist_free(entry_fps);
+  smartlist_free(old_entry_guards_on_list);
+  smartlist_free(old_entry_guards_not_on_list);
+  entry_guards_changed();
 }
 
 /** Pick a live (up and listed) entry guard from entry_guards, and

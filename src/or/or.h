@@ -2869,8 +2869,7 @@ trusted_dir_server_t *router_get_trusteddirserver_by_digest(
      const char *digest);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
-                                    int must_be_running,
-                                    int warn_if_down, int warn_if_unnamed);
+                                    int must_be_running);
 int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 routerinfo_t *router_find_exact_exit_enclave(const char *address,

@@ -751,7 +751,7 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   /* If the user declared any families locally, honor those too. */
   for (cl = get_options()->NodeFamilies; cl; cl = cl->next) {
     if (router_nickname_is_in_list(router, cl->value)) {
-      add_nickname_list_to_smartlist(sl, cl->value, 0, 1, 1);
+      add_nickname_list_to_smartlist(sl, cl->value, 0);
     }
   }
 }
@@ -759,14 +759,12 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
 /** Given a (possibly NULL) comma-and-whitespace separated list of nicknames,
  * see which nicknames in <b>list</b> name routers in our routerlist, and add
  * the routerinfos for those routers to <b>sl</b>.  If <b>must_be_running</b>,
- * only include routers that we think are running.  If <b>warn_if_down</b>,
- * warn if some included routers aren't running.  If <b>warn_if_unnamed</b>,
- * warn if any non-Named routers are specified by nickname.
+ * only include routers that we think are running.
+ * Warn if any non-Named routers are specified by nickname.
  */
 void
 add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
-                               int must_be_running,
-                               int warn_if_down, int warn_if_unnamed)
+                               int must_be_running)
 {
   routerinfo_t *router;
   smartlist_t *nickname_list;
@@ -789,21 +787,13 @@ add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
       log_warn(LD_CONFIG, "Nickname '%s' is misformed; skipping", nick);
       continue;
     }
-    router = router_get_by_nickname(nick, warn_if_unnamed);
+    router = router_get_by_nickname(nick, 1);
     warned = smartlist_string_isin(warned_nicknames, nick);
     if (router) {
       if (!must_be_running || router->is_running) {
         smartlist_add(sl,router);
-        if (warned)
-          smartlist_string_remove(warned_nicknames, nick);
-      } else {
-        if (!warned) {
-          log_fn(warn_if_down ? LOG_WARN : LOG_DEBUG, LD_CONFIG,
-                 "Nickname list includes '%s' which is known but down.",nick);
-          smartlist_add(warned_nicknames, tor_strdup(nick));
-        }
       }
-    } else if (!router_get_combined_status_by_nickname(nick,warn_if_unnamed)) {
+    } else if (!router_get_combined_status_by_nickname(nick,1)) {
       if (!warned) {
         log_fn(have_dir_info ? LOG_WARN : LOG_INFO, LD_CONFIG,
                "Nickname list includes '%s' which isn't a known router.",nick);
@@ -1135,13 +1125,13 @@ router_choose_random_node(const char *preferred,
   routerinfo_t *choice = NULL;
 
   excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,excluded,0,0,1);
+  add_nickname_list_to_smartlist(excludednodes,excluded,0);
 
   /* Try the preferred nodes first. Ignore need_uptime and need_capacity
    * and need_guard, since the user explicitly asked for these nodes. */
   if (preferred) {
     sl = smartlist_create();
-    add_nickname_list_to_smartlist(sl,preferred,1,1,1);
+    add_nickname_list_to_smartlist(sl,preferred,1);
     smartlist_subtract(sl,excludednodes);
     if (excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
@@ -1179,9 +1169,15 @@ router_choose_random_node(const char *preferred,
     }
   }
   smartlist_free(excludednodes);
-  if (!choice)
-    log_warn(LD_CIRC,
-             "No available nodes when trying to choose node. Failing.");
+  if (!choice) {
+    if (strict) {
+      log_warn(LD_CIRC, "All preferred nodes were down when trying to choose "
+               "node, and the Strict[...]Nodes option was set. Failing.");
+    } else {
+      log_warn(LD_CIRC,
+               "No available nodes when trying to choose node. Failing.");
+    }
+  }
   return choice;
 }
 

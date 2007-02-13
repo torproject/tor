@@ -34,6 +34,9 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       other than file-not-found.
     - Don't warn the user when cached-routers.new doesn't exist: that's
       perfectly fine when starting up for the first time.
+    - When EntryNodes are configured, rebuild the guard list to contain, in
+      order: the EntryNodes that were guards before; the rest of the
+      EntryNodes; the nodes that were guards before.
 
   o Minor features:
     - Warn the user when an application uses the obsolete binary v0
@@ -52,6 +55,9 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       which are incoming connections and which are outgoing.
     - Discard any v1 directory info that's over 1 month old (for
       directories) or over 1 week old (for running-routers lists).
+    - Do not warn when individual nodes in the configuration's EntryNodes,
+      ExitNodes (etc) are down: warn only when all possible nodes are down.
+      (Fixes bug 348.)
 
 
 Changes in version 0.1.2.7-alpha - 2007-02-06
