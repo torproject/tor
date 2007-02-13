@@ -4154,10 +4154,14 @@ update_router_have_minimum_dir_info(void)
 {
   int tot = 0, num_running = 0;
   int n_ns, n_authorities, res, avg;
+  time_t now = time(NULL);
   if (!networkstatus_list || !routerlist) {
     res = 0;
     goto done;
   }
+  routerlist_remove_old_routers();
+  networkstatus_list_clean(now);
+
   n_authorities = get_n_v2_authorities();
   n_ns = smartlist_len(networkstatus_list);
   if (n_ns<=n_authorities/2) {
