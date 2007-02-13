@@ -231,10 +231,10 @@ tor_mmap_file(const char *filename)
   return &(res->base);
  win_err: {
     DWORD e = GetLastError();
-    int severity = (e == ERROR_FILE_NOT_FOUND || e == PATH_NOT_FOUND) ?
+    int severity = (e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND) ?
       LOG_INFO : LOG_WARN;
     char *msg = format_win32_error(e);
-    log_fn(LOG_INFO, "Couldn't mmap file \"%s\": %s", filename, msg);
+    log_fn(severity, LD_FS, "Couldn't mmap file \"%s\": %s", filename, msg);
     tor_free(msg);
   }
  err:
