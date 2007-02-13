@@ -149,7 +149,7 @@ see tor-design.pdf.
    support any suite without ephemeral keys, symmetric keys of at
    least KEY_LEN bits, and digests of at least HASH_LEN bits.
 
-   Even though the connection protocol is identical, we think of the
+   Even though the connection protocol is identical, we will think of the
    initiator as either an onion router (OR) if it is willing to relay
    traffic for other Tor users, or an onion proxy (OP) if it only handles
    local requests. Onion proxies SHOULD NOT provide long-term-trackable
@@ -175,8 +175,11 @@ see tor-design.pdf.
    the key is not as expected, the party must close the connection.
 
    All parties SHOULD reject connections to or from ORs that have malformed
-   or missing certificates.  ORs MAY accept or reject connections from OPs
-   with malformed or missing certificates.
+   or missing certificates.  ORs SHOULD NOT reject incoming connections from
+   OPs with malformed or missing certificates.
+
+   [Before version 0.1.2.8-rc, ORs rejected incoming connections from ORs and
+   OPs alike if their certificates were missing or malformed.]
 
    Once a TLS connection is established, the two sides send cells
    (specified below) to one another.  Cells are sent serially.  All
@@ -286,7 +289,7 @@ see tor-design.pdf.
 
    The CircID for a CREATE cell is an arbitrarily chosen 2-byte integer,
    selected by the node (OP or OR) that sends the CREATE cell.  To prevent
-   CircID collisions, when one OR sends a CREATE cell to another, it chooses
+   CircID collisions, when one OR sends a CREATE cell to another OR, it chooses
    from only one half of the possible values based on the ORs' public
    identity keys: if the sending OR has a lower key, it chooses a CircID with
    an MSB of 0; otherwise, it chooses a CircID with an MSB of 1.
