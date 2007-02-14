@@ -5,10 +5,33 @@
 
 1. Coding conventions
 
+1.0. Whitespace and C conformance
+
+  Invoke "make check-spaces" from time to time, so it can tell you about
+  deviations from our C whitespace style.  Generally, we use:
+    - Unix-style line endings
+    - K&R-style indentation
+    - No space before newlines
+    - A blank line at the end of each file
+    - Never more than one blank line in a row
+    - Always spaces, never tabs
+    - A space between control keywords and their corresponding paren
+      "if (x)", "while (x)", and "switch (x)", never "if(x)", "while(x)", or
+      "switch(x)".
+    - A space between anything and an open brace.
+    - No space between a function name and an opening paren. "puts(x)", not
+      "puts (x)".
+    - Function declarations at the start of the line.
+
+  We try hard to build without warnings everywhere.  In particular, if you're
+  using gcc, you should invoke the configure script with the option
+  "--enable-gcc-warnings".  This will give a bunch of extra warning flags to
+  the compiler, and help us find divergences from our preferred C style.
+
 1.1. Details
 
-  Use tor_malloc, tor_free, tor_snprintf, tor_strdup, and tor_gettimeofday
-  instead of their generic equivalents.  (They always succeed or exit.)
+  Use tor_malloc, tor_free, tor_strdup, and tor_gettimeofday instead of their
+  generic equivalents.  (They always succeed or exit.)
 
   You can get a full list of the compatibility functions that Tor provides
   by looking through src/common/util.h and src/common/compat.h.
