@@ -838,13 +838,11 @@ typedef struct edge_connection_t {
   /* XXXX NM This can get re-used after 2**32 streams */
   uint32_t global_identifier;
 
-  /** Bytes read */
+  /** Bytes read since last call to control_event_stream_bandwidth_used() */
   uint32_t n_read;
-  uint32_t p_read;
 
-  /** Bytes written */
+  /** Bytes written since last call to control_event_stream_bandwidth_used() */
   uint32_t n_written;
-  uint32_t p_written;
 
   /** Exit only: a dirserv connection that is tunneled over this connection
    * using a socketpair. */

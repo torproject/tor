@@ -45,7 +45,7 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       control protocol.  We're planning to remove support for it during
       the next development series, so it's good to give people some
       advance warning.
-    - Add STREAM_BW events to reprot per-entry-stream bandwidth use. (Patch
+    - Add STREAM_BW events to report per-entry-stream bandwidth use. (Patch
       from Robert Hogan.)
 
   o Minor features:

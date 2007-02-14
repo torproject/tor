@@ -1271,16 +1271,20 @@ $Id$
 
   [First added in 0.1.2.3-alpha]
 
-4.1.13. Bandwidth used on a stream
+4.1.13. Bandwidth used on an application stream
 
   The syntax is:
      "650" SP "STREAM_BW" SP StreamID SP BytesRead SP BytesWritten
      BytesRead = 1*DIGIT
      BytesWritten = 1*DIGIT
 
-  The number of bytes read and written since the last read or write event
-  on a stream.
+  BytesRead and BytesWritten are the number of bytes read and written since
+  the last STREAM_BW event on a stream.  These events are generated about
+  once per second per stream; No event is generated for streams that have not
+  read or written.
 
+  These events apply only to streams entering Tor (such as on a SOCKSPort,
+  TransPort, or so on).  They are not generated for exiting streams.
 
 5. Implementation notes
 

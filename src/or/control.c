@@ -126,9 +126,10 @@ static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
  * has interest in without having to walk over the global connection
  * list to find out.
  **/
-static uint32_t global_event_mask0 = 0;
-static uint32_t global_event_mask1long = 0;
-static uint32_t global_event_mask1short = 0;
+typedef uint32_t event_mask_t;
+static event_mask_t global_event_mask0 = 0;
+static event_mask_t global_event_mask1long = 0;
+static event_mask_t global_event_mask1short = 0;
 
 /** True iff we have disabled log messages from being sent to the controller */
 static int disable_log_messages = 0;
@@ -276,6 +277,11 @@ control_update_global_event_mask(void)
 {
   connection_t **conns;
   int n_conns, i;
+  event_mask_t old_mask, new_mask;
+  old_mask = global_event_mask0;
+  old_mask |= global_event_mask1short;
+  old_mask |= global_event_mask1long;
+
   global_event_mask0 = 0;
   global_event_mask1short = 0;
   global_event_mask1long = 0;
@@ -293,7 +299,25 @@ control_update_global_event_mask(void)
     }
   }
 
+  new_mask = global_event_mask0;
+  new_mask |= global_event_mask1short;
+  new_mask |= global_event_mask1long;
+
+  /* Handle the aftermath.  Set up the log callback to tell us only what
+   * we want to hear...*/
   control_adjust_event_log_severity();
+
+  /* ...then, if we've started logging stream bw, clear the appropriate
+   * fields. */
+  if (! (old_mask & EVENT_STREAM_BANDWIDTH_USED) &&
+      (new_mask & EVENT_STREAM_BANDWIDTH_USED)) {
+    for (i = 0; i < n_conns; ++i) {
+      if (conns[i]->type == CONN_TYPE_AP) {
+        edge_connection_t *conn = TO_EDGE_CONN(conns[i]);
+        conn->n_written = conn->n_read = 0;
+      }
+    }
+  }
 }
 
 /** Adjust the log severities that result in control_event_logmsg being called
@@ -3416,12 +3440,11 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp,
 /** A second or more has elapsed: tell any interested control
  * connections how much bandwidth streams have used. */
 int
-control_event_stream_bandwidth_used()
+control_event_stream_bandwidth_used(void)
 {
   connection_t **carray;
   edge_connection_t *conn;
   int n, i;
-  uint32_t justread, justwritten;
 
   if (EVENT_IS_INTERESTING1(EVENT_STREAM_BANDWIDTH_USED)) {
 
@@ -3431,20 +3454,16 @@ control_event_stream_bandwidth_used()
         if (carray[i]->type != CONN_TYPE_AP)
           continue;
         conn = TO_EDGE_CONN(carray[i]);
-        if (conn->p_read == conn->n_read && conn->p_written == conn->n_written)
+        if (!conn->n_read && !conn->n_written)
           continue;
-
-        justread = conn->n_read - conn->p_read;
-        conn->p_read = conn->n_read;
-        justwritten = conn->n_written - conn->p_written;
-        conn->p_written = conn->n_written;
 
         send_control1_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
                             "650 STREAM_BW %lu %lu %lu\r\n",
                             (unsigned long)conn->global_identifier,
-                            (unsigned long)justread,
-                            (unsigned long)justwritten);
+                            (unsigned long)conn->n_read,
+                            (unsigned long)conn->n_written);
 
+        conn->n_written = conn->n_read = 0;
     }
   }
 
