@@ -1571,6 +1571,13 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     *max_to_read = at_most - n_read;
   }
 
+  if (CONN_IS_EDGE(conn)) {
+    if (conn->type == CONN_TYPE_AP) {
+        edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+        edge_conn->n_read += n_read;
+    }
+  }
+
   if (connection_is_rate_limited(conn)) {
     /* For non-local IPs, remember if we flushed any bytes over the wire. */
     time_t now = time(NULL);
@@ -1765,6 +1772,13 @@ connection_handle_write(connection_t *conn, int force)
       return -1;
     }
     n_written = (size_t) result;
+  }
+
+  if (CONN_IS_EDGE(conn)) {
+    if (conn->type == CONN_TYPE_AP) {
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      edge_conn->n_written += n_written;
+    }
   }
 
   if (connection_is_rate_limited(conn)) {

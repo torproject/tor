@@ -40,11 +40,15 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       order: the EntryNodes that were guards before; the rest of the
       EntryNodes; the nodes that were guards before.
 
-  o Minor features:
+  o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0
       control protocol.  We're planning to remove support for it during
       the next development series, so it's good to give people some
       advance warning.
+    - Add STREAM_BW events to reprot per-entry-stream bandwidth use. (Patch
+      from Robert Hogan.)
+
+  o Minor features:
     - Remove some never-implemented options.  Mark PathlenCoinWeight as
       obsolete.
     - Implement proposal 106: Stop requiring clients to have well-formed

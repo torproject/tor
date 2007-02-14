@@ -998,6 +998,7 @@ second_elapsed_callback(int fd, short event, void *args)
   if (accounting_is_enabled(options) && seconds_elapsed >= 0)
     accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
   control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
+  control_event_stream_bandwidth_used();
 
   if (seconds_elapsed > 0)
     connection_bucket_refill(seconds_elapsed);

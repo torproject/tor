@@ -194,7 +194,7 @@ $Id$
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
          "AUTHDIR_NEWDESCS" / "DESCCHANGED" / "STATUS_GENERAL" /
-         "STATUS_CLIENT" / "STATUS_SERVER" / "GUARDS" / "NS"
+         "STATUS_CLIENT" / "STATUS_SERVER" / "GUARDS" / "NS" / "STREAM_BW"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -1270,6 +1270,17 @@ $Id$
      "650" "+" "NS" CRLF  1*NetworkStatus "." CRLF
 
   [First added in 0.1.2.3-alpha]
+
+4.1.13. Bandwidth used on a stream
+
+  The syntax is:
+     "650" SP "STREAM_BW" SP StreamID SP BytesRead SP BytesWritten
+     BytesRead = 1*DIGIT
+     BytesWritten = 1*DIGIT
+
+  The number of bytes read and written since the last read or write event
+  on a stream.
+
 
 5. Implementation notes
 

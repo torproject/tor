@@ -838,6 +838,14 @@ typedef struct edge_connection_t {
   /* XXXX NM This can get re-used after 2**32 streams */
   uint32_t global_identifier;
 
+  /** Bytes read */
+  uint32_t n_read;
+  uint32_t p_read;
+
+  /** Bytes written */
+  uint32_t n_written;
+  uint32_t p_written;
+
   /** Exit only: a dirserv connection that is tunneled over this connection
    * using a socketpair. */
   struct dir_connection_t *bridge_for_conn;
@@ -2329,6 +2337,7 @@ int control_tls_error_to_reason(int e);
 int control_event_or_conn_status(or_connection_t *conn,
                                  or_conn_status_event_t e, int reason);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
+int control_event_stream_bandwidth_used(void);
 void control_event_logmsg(int severity, unsigned int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,

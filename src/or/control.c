@@ -89,7 +89,8 @@ const char control_c_id[] =
 #define EVENT_STATUS_SERVER    0x0011
 #define EVENT_STATUS_GENERAL   0x0012
 #define EVENT_GUARD            0x0013
-#define _EVENT_MAX             0x0013
+#define EVENT_STREAM_BANDWIDTH_USED   0x0014
+#define _EVENT_MAX             0x0014
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Array mapping from message type codes to human-readable message
@@ -1104,6 +1105,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
           event_code = EVENT_STATUS_SERVER;
         else if (!strcasecmp(ev, "GUARD"))
           event_code = EVENT_GUARD;
+        else if (!strcasecmp(ev, "STREAM_BW"))
+          event_code = EVENT_STREAM_BANDWIDTH_USED;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                    ev);
@@ -3407,6 +3410,44 @@ control_event_or_conn_status(or_connection_t *conn,or_conn_status_event_t tp,
                           or_conn_end_reason_to_string(reason), ncircs_buf);
     }
   }
+  return 0;
+}
+
+/** A second or more has elapsed: tell any interested control
+ * connections how much bandwidth streams have used. */
+int
+control_event_stream_bandwidth_used()
+{
+  connection_t **carray;
+  edge_connection_t *conn;
+  int n, i;
+  uint32_t justread, justwritten;
+
+  if (EVENT_IS_INTERESTING1(EVENT_STREAM_BANDWIDTH_USED)) {
+
+    get_connection_array(&carray, &n);
+
+    for (i = 0; i < n; ++i) {
+        if (carray[i]->type != CONN_TYPE_AP)
+          continue;
+        conn = TO_EDGE_CONN(carray[i]);
+        if (conn->p_read == conn->n_read && conn->p_written == conn->n_written)
+          continue;
+
+        justread = conn->n_read - conn->p_read;
+        conn->p_read = conn->n_read;
+        justwritten = conn->n_written - conn->p_written;
+        conn->p_written = conn->n_written;
+
+        send_control1_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
+                            "650 STREAM_BW %lu %lu %lu\r\n",
+                            (unsigned long)conn->global_identifier,
+                            (unsigned long)justread,
+                            (unsigned long)justwritten);
+
+    }
+  }
+
   return 0;
 }
 
