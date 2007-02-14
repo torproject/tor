@@ -552,6 +552,8 @@ see tor-design.pdf.
         12 -- RELAY_RESOLVED  [backward]
         13 -- RELAY_BEGIN_DIR [forward]
 
+        32..40 -- Used for hidden services; see rend-spec.txt.
+
    Commands labelled as "forward" must only be sent by the originator
    of the circuit. Commands labelled as "backward" must only be sent by
    other nodes in the circuit back to the originator. Commands marked

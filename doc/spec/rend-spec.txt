@@ -32,8 +32,8 @@ $Id$
 
 0.1. Notation, conventions and prerequisites
 
-   In the specifications below, we use the same notation as in
-   "tor-spec.txt".  The service specified here also requires the
+   In the specifications below, we use the same notation and terminology
+   as in "tor-spec.txt".  The service specified here also requires the
    existence of an onion routing network as specified in that file.
 
         H(x) is a SHA1 digest of x.
@@ -47,6 +47,15 @@ $Id$
    In all discussions, "Alice" will refer to a user connecting to a
    location-hidden service, and "Bob" will refer to a user running a
    location-hidden service.
+
+   An OP is (as defined elsewhere) an "Onion Proxy" or Tor client.
+
+   An OR is (as defined elsewhere) an "Onion Router" or Tor server.
+
+   An "Introduction point" is a Tor server chosen to be Bob's medium-term
+   'meeting place'.  A "Rendezvous point" is a Tor server chosen by Alice to
+   be a short-term communication relay between her and Bob.  All Tor servers
+   potentially act as introduction and rendezvous points.
 
 0.2. Protocol outline
 
