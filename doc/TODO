@@ -44,20 +44,6 @@ R     - handle connect-dir streams that don't have a chosen_exit_name set.
         list the orport as 0 if it can't handle begin_dir.
         o List orports of actual dirservers..
 
-  o Servers are easy to setup and run: being a relay is about as easy as
-    being a client.
-    o Reduce resource load
-      o A way to alert controller when router flags change.
-        o Specify: SETEVENTS NS
-        o Implement
-        o Hunt for places that change networkstatus info that I might have
-          missed.
-        D "NS" appears to be used to notify of routerstatus updates.
-          Do we want an actual NS event, for when new networkstatuses
-          arrive, and then rename this one?
-          (Renaming would be more trouble than it's worth, and a
-          'networkstatus arrived' event can wait till next series.
-
   . option to dl directory info via tor:
     TunnelDirConns and PreferTunneledDirConns
 R   - actually cause the directory.c functions to know about or_port
@@ -67,9 +53,6 @@ R   - actually cause the directory.c functions to know about or_port
       o make directory bridge data not get produced when the corresponding
         or_conn is full, and accept the sometimes directory data will just
         never get written.
-
-  o When we get a connection using the v0 controller protocol, warn that the
-    next revision of Tor won't support it.
 
 N - DNS improvements
     . Asynchronous DNS
@@ -116,9 +99,6 @@ N   . Document transport and natdport
       - In a good HOWTO.
 
   . Forward compatibility fixes
-    D Caches should start trying to cache consensus docs?
-      D Design
-      D Implement, if we think it's smart.
     - Start uploading short and long descriptors; authorities should support
       URLs to retrieve long descriptors, and should discard short descriptors
       for now.  Later, once tools use the "long descriptor" URLs, authorities
