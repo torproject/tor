@@ -2669,6 +2669,8 @@ int rep_hist_get_predicted_internal(time_t now, int *need_uptime,
 int any_predicted_circuits(time_t now);
 int rep_hist_circbuilding_dormant(time_t now);
 
+/** Possible public/private key operations in Tor: used to keep track of where
+ * we're spending our time. */
 typedef enum {
   SIGN_DIR, SIGN_RTR,
   VERIFY_DIR, VERIFY_RTR,

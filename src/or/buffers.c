@@ -20,15 +20,25 @@ const char buffers_c_id[] =
 #undef PARANOIA
 #undef NOINLINE
 
-#ifdef SENTINELS
 /* If SENTINELS is defined, check for attempts to write beyond the
- * end/before the start of the buffer. DOCDOC macros
+ * end/before the start of the buffer.
  */
+#ifdef SENTINELS
+/* 4-byte value to write at the start of each buffer memory region */
 #define START_MAGIC 0x70370370u
+/* 4-byte value to write at the end of each buffer memory region */
 #define END_MAGIC 0xA0B0C0D0u
+/* Given buf-&gt;mem, yield a pointer to the raw memory region (for free(),
+ * realloc(), and so on) */
 #define RAW_MEM(m) ((void*)(((char*)m)-4))
+/* Given a pointer to the raw memory region (from malloc() or realloc()),
+ * yield the correct value for buf-&gt;mem (just past the first sentinel). */
 #define GUARDED_MEM(m) ((void*)(((char*)m)+4))
+/* How much memory do we need to allocate for a buffer to hold <b>ln</b> bytes
+ * of data? */
 #define ALLOC_LEN(ln) ((ln)+8)
+/* Initialize the sentinel values on <b>m</b> (a value of buf-&gt;mem), which
+ * has <b>ln</b> useful bytes. */
 #define SET_GUARDS(m, ln) \
   do { set_uint32((m)-4,START_MAGIC); set_uint32((m)+ln,END_MAGIC); } while (0)
 #else
@@ -49,7 +59,7 @@ const char buffers_c_id[] =
 #define INLINE
 #endif
 
-/* DOCDOC */
+/** Magic value for buf_t.magic, to catch pointer errors. */
 #define BUFFER_MAGIC 0xB0FFF312u
 /** A resizeable buffer, optimized for reading and writing. */
 struct buf_t {

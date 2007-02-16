@@ -214,7 +214,9 @@ router_append_to_journal(signed_descriptor_t *desc)
   return 0;
 }
 
-/** DOCDOC */
+/** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
+ * signed_descriptor_t* in *<b>a</b> is older, the same age as, or newer than
+ * the signed_descriptor_t* in *<b>b</b> */
 static int
 _compare_old_routers_by_age(const void **_a, const void **_b)
 {
@@ -222,7 +224,9 @@ _compare_old_routers_by_age(const void **_a, const void **_b)
   return r1->published_on - r2->published_on;
 }
 
-/** DOCDOC */
+/** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
+ * routerinfo_t* in *<b>a</b> is older, the same age as, or newer than
+ * the routerinfo_t in *<b>b</b> */
 static int
 _compare_routers_by_age(const void **_a, const void **_b)
 {
@@ -924,7 +928,8 @@ router_get_advertised_bandwidth(routerinfo_t *router)
   return router->bandwidthrate;
 }
 
-/** DOCDOC */
+/** Do not weight any declared bandwidth more than this much when picking
+ * routers by bandwidth. */
 #define MAX_BELIEVABLE_BANDWIDTH 1500000 /* 1.5 MB/sec */
 
 /** Helper function:
@@ -1995,7 +2000,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   return 0;
 }
 
-/** DOCDOC */
+/** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
+ * signed_descriptor_t* in *<b>a</b> has an identity digest preceeding, equal
+ * to, or later than that of <b>b</b>. */
 static int
 _compare_old_routers_by_identity(const void **_a, const void **_b)
 {
@@ -2006,14 +2013,16 @@ _compare_old_routers_by_identity(const void **_a, const void **_b)
   return r1->published_on - r2->published_on;
 }
 
-/** DOCDOC */
+/** Internal type used to represent how long an old descriptor was valid,
+ * where it appeared in the list of old descriptors, and whether it's extra
+ * old. Used only by routerlist_remove_old_cached_routers_with_id(). */
 struct duration_idx_t {
   int duration;
   int idx;
   int old;
 };
 
-/** DOCDOC */
+/** Sorting helper: compare two duration_idx_t by their duration. */
 static int
 _compare_duration_idx(const void *_d1, const void *_d2)
 {
@@ -2620,7 +2629,10 @@ router_get_combined_status_by_digest(const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
-/** DOCDOC */
+/** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
+ * the corresponding local_routerstatus_t, or NULL if none exists.  Warn the
+ * user if <b>warn_if_unnamed</b> is set, and they have specified a router by
+ * nickname, but the Named flag isn't set for that router. */
 static local_routerstatus_t *
 router_get_combined_status_by_nickname(const char *nickname,
                                        int warn_if_unnamed)
@@ -4105,7 +4117,8 @@ update_router_descriptor_downloads(time_t now)
   }
 }
 
-/** DOCDOC */
+/** Return the number of routerstatus_t in <b>entries</b> that we'd actually
+ * use. */
 static int
 routerstatus_count_usable_entries(smartlist_t *entries)
 {
@@ -4117,9 +4130,12 @@ routerstatus_count_usable_entries(smartlist_t *entries)
   return count;
 }
 
-/** DOCDOC */
+/** True iff, the last time we checked whether we had enough directory info
+ * to build circuits, the answer was "yes". */
 static int have_min_dir_info = 0;
-/** DOCDOC */
+/** True iff enough has changes since the last time we checked whether we had
+ * enough directory info to build circuits that our old answer can no longer
+ * be trusted.  */
 static int need_to_update_have_min_dir_info = 1;
 
 /** Return true iff we have enough networkstatus and router information to

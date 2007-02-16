@@ -956,7 +956,7 @@ static uint32_t n_rend_client_ops = 0;
 static uint32_t n_rend_mid_ops = 0;
 static uint32_t n_rend_server_ops = 0;
 
-/** DOCDOC */
+/** Increment the count of the number of times we've done <b>operation</b> */
 void
 note_crypto_pk_op(pk_op_t operation)
 {
@@ -1000,7 +1000,7 @@ note_crypto_pk_op(pk_op_t operation)
   }
 }
 
-/** DOCDOC */
+/** Log the number of times we've done each public/private-key operation. */
 void
 dump_pk_ops(int severity)
 {

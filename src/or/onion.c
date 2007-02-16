@@ -25,7 +25,8 @@ typedef struct onion_queue_t {
 /** 5 seconds on the onion queue til we just send back a destroy */
 #define ONIONQUEUE_WAIT_CUTOFF 5
 
-/** DOCDOC */
+/** First and last elements in the linked list of of circuits waiting for CPU
+ * workers, or NULL if the list is empty. */
 static onion_queue_t *ol_list=NULL;
 static onion_queue_t *ol_tail=NULL;
 /** Length of ol_list */

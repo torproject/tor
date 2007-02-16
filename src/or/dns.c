@@ -68,7 +68,8 @@ typedef struct pending_connection_t {
   struct pending_connection_t *next;
 } pending_connection_t;
 
-/** DOCDOC */
+/** Value of 'magic' field for cached_resolve_t.  Used to try to catch bad
+ * pointers and memory stomping. */
 #define CACHED_RESOLVE_MAGIC 0x1234F00D
 
 /* Possible states for a cached resolve_t */

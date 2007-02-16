@@ -12,15 +12,18 @@ const char policies_c_id[] = \
 
 #include "or.h"
 
-/** DOCDOC */
+/** Policy that addresses for incoming SOCKS connections must match. */
 static addr_policy_t *socks_policy = NULL;
-/** DOCDOC */
+/** Policy that addresses for incoming directory connections must match. */
 static addr_policy_t *dir_policy = NULL;
-/** DOCDOC */
+/** Policy that addresses for incoming router descriptors must match in order
+ * to be published by us. */
 static addr_policy_t *authdir_reject_policy = NULL;
-/** DOCDOC */
+/** Policy that addresses for incoming router descriptors must match in order
+ * to be marked as valid in our networkstatus. */
 static addr_policy_t *authdir_invalid_policy = NULL;
-/** DOCDOC */
+/** Policy that addresses for incoming router descriptors must <b>not</b>
+ * match in order to not be marked as BadExit. */
 static addr_policy_t *authdir_badexit_policy = NULL;
 
 /** Parsed addr_policy_t describing which addresses we believe we can start
@@ -153,6 +156,7 @@ addr_policy_permits_address(uint32_t addr, uint16_t port,
   }
 }
 
+/** DOCDOC */
 int
 fascist_firewall_allows_address_or(uint32_t addr, uint16_t port)
 {
@@ -160,6 +164,7 @@ fascist_firewall_allows_address_or(uint32_t addr, uint16_t port)
                                      reachable_or_addr_policy);
 }
 
+/** DOCDOC */
 int
 fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port)
 {
@@ -215,7 +220,9 @@ authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 #define REJECT(arg) \
   do { *msg = tor_strdup(arg); goto err; } while (0)
 
-/** DOCDOC */
+/** Config helper: If there's any problem with the policy configuration
+ * options in <b>options</b>, return -1 and set <b>msg</b> to a newly
+ * allocated description of the error. Else return 0. */
 int
 validate_addr_policies(or_options_t *options, char **msg)
 {
@@ -273,7 +280,8 @@ load_policy_from_option(config_line_t *config, addr_policy_t **policy,
   }
 }
 
-/** DOCDOC */
+/** Set all policies based on <b>options</b>, which should have been validated
+ * first. */
 void
 policies_parse_from_options(or_options_t *options)
 {
@@ -663,7 +671,8 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy)
   return (int)written;
 }
 
-/** DOCDOC */
+/** Implementation for GETINFO control command: knows the answer for questions
+ * about "exit-policy/..." */
 int
 getinfo_helper_policies(control_connection_t *conn,
                         const char *question, char **answer)
@@ -689,7 +698,7 @@ addr_policy_free(addr_policy_t *p)
   }
 }
 
-/** DOCDOC */
+/** Release all storage held by policy variables. */
 void
 policies_free_all(void)
 {

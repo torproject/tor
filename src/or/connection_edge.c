@@ -1394,9 +1394,10 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                safe_str(conn->rend_query));
       rend_client_refetch_renddesc(conn->rend_query);
     } else { /* r > 0 */
-/** DOCDOC */
-#define NUM_SECONDS_BEFORE_REFETCH (60*15)
-      if (time(NULL) - entry->received < NUM_SECONDS_BEFORE_REFETCH) {
+/** How long after we receive a hidden service descriptor do we consider
+ * it valid? */
+#define NUM_SECONDS_BEFORE_HS_REFETCH (60*15)
+      if (time(NULL) - entry->received < NUM_SECONDS_BEFORE_HS_REFETCH) {
         conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
         log_info(LD_REND, "Descriptor is here and fresh enough. Great.");
         if (connection_ap_handshake_attach_circuit(conn) < 0) {

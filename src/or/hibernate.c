@@ -42,7 +42,8 @@ typedef enum {
 
 extern long stats_n_seconds_working; /* published uptime */
 
-/** DOCDOC */
+/** Are we currently awake, asleep, running out of bandwidth, or shutting
+ * down? */
 static hibernate_state_t hibernate_state = HIBERNATE_STATE_LIVE;
 /** If are hibernating, when do we plan to wake up? Set to 0 if we
  * aren't hibernating. */
@@ -51,7 +52,7 @@ static time_t hibernate_end_time = 0;
  * we aren't shutting down. */
 static time_t shutdown_time = 0;
 
-/** DOCDOC */
+/** Possible accounting periods. */
 typedef enum {
   UNIT_MONTH=1, UNIT_WEEK=2, UNIT_DAY=3,
 } time_unit_t;

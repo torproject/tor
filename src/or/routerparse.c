@@ -709,7 +709,10 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
 static digestmap_t *verified_digests = NULL;
 #endif
 
-/** DOCDOC */
+/** Log the total count of the number of distinct router digests we've ever
+ * verified.  When compared to the number of times we've verified routerdesc
+ * signatures <i>in toto</i>, this will tell us if we're doing too much
+ * multiple-verification. */
 void
 dump_distinct_digest_count(int severity)
 {
@@ -1122,7 +1125,7 @@ _compare_routerstatus_entries(const void **_a, const void **_b)
   return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
 }
 
-/** DOCDOC */
+/** Helper: used in call to _smartlist_uniq to clear out duplicate entries. */
 static void
 _free_duplicate_routerstatus_entry(void *e)
 {

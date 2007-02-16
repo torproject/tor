@@ -114,13 +114,15 @@ const char compat_c_id[] =
 #endif
 
 #ifdef HAVE_SYS_MMAN_H
-/** DOCDOC */
+/** Implementation for tor_mmap_t: holds the regular tor_mmap_t, along
+ * with extra fields needed for mmap()-based memory mapping. */
 typedef struct tor_mmap_impl_t {
   tor_mmap_t base;
   size_t mapping_size; /**< Size of the actual mapping. (This is this file
                         * size, rounded up to the nearest page.) */
 } tor_mmap_impl_t;
-/** DOCDOC */
+/** Try to create a memory mapping for <b>filename</b> and return it.  On
+ * failure, return NULL. */
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
@@ -170,7 +172,7 @@ tor_mmap_file(const char *filename)
 
   return &(res->base);
 }
-/** DOCDOC */
+/** Release storage held for a memory mapping. */
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
@@ -179,7 +181,8 @@ tor_munmap_file(tor_mmap_t *handle)
   tor_free(h);
 }
 #elif defined(MS_WINDOWS)
-/** DOCDOC */
+/** Implementation for tor_mmap_t: holds the regular tor_mmap_t, along
+ * with extra fields needed for WIN32 memory mapping. */
 typedef struct win_mmap_t {
   tor_mmap_t base;
   HANDLE file_handle;
@@ -977,14 +980,16 @@ get_uname(void)
  */
 
 #if defined(USE_PTHREADS)
-/** Wraps a an int (*)(void*) function and its argument so we can
+/** Wraps a void (*)(void*) function and its argument so we can
  * invoke them in a way pthreads would expect.
  */
 typedef struct tor_pthread_data_t {
   void (*func)(void *);
   void *data;
 } tor_pthread_data_t;
-/** DOCDOC */
+/** Given a tor_pthread_data_t <b>d</b>, call d-&gt;func(d-&gt;data);, and
+ * free d.  Used to make sure we can call functions the way pthread
+ * expects. */
 static void *
 tor_pthread_helper_fn(void *_data)
 {
@@ -1227,7 +1232,7 @@ tor_get_thread_id(void)
 struct tor_mutex_t {
   pthread_mutex_t mutex;
 };
-/** DOCDOC */
+/** Allocate and return new lock. */
 tor_mutex_t *
 tor_mutex_new(void)
 {
@@ -1235,21 +1240,21 @@ tor_mutex_new(void)
   pthread_mutex_init(&mutex->mutex, NULL);
   return mutex;
 }
-/** DOCDOC */
+/** Wait until <b>m</b> is free, then acquire it. */
 void
 tor_mutex_acquire(tor_mutex_t *m)
 {
   tor_assert(m);
   pthread_mutex_lock(&m->mutex);
 }
-/** DOCDOC */
+/** Release the lock <b>m</b> so another thread can have it. */
 void
 tor_mutex_release(tor_mutex_t *m)
 {
   tor_assert(m);
   pthread_mutex_unlock(&m->mutex);
 }
-/** DOCDOC */
+/** Free all storage held by the lock <b>m</b>. */
 void
 tor_mutex_free(tor_mutex_t *m)
 {
@@ -1257,7 +1262,7 @@ tor_mutex_free(tor_mutex_t *m)
   pthread_mutex_destroy(&m->mutex);
   tor_free(m);
 }
-/** DOCDOC */
+/** Return an integer representing this thread. */
 unsigned long
 tor_get_thread_id(void)
 {
