@@ -865,7 +865,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   switch (fetch_from_buf_http(conn->_base.inbuf,
                               &headers, MAX_HEADERS_SIZE,
-                              &body, &body_len, MAX_DIR_SIZE,
+                              &body, &body_len, MAX_DIR_DL_SIZE,
                               allow_partial)) {
     case -1: /* overflow */
       log_warn(LD_PROTOCOL,
@@ -1911,7 +1911,7 @@ directory_handle_command(dir_connection_t *conn)
 
   switch (fetch_from_buf_http(conn->_base.inbuf,
                               &headers, MAX_HEADERS_SIZE,
-                              &body, &body_len, MAX_BODY_SIZE, 0)) {
+                              &body, &body_len, MAX_DIR_UL_SIZE, 0)) {
     case -1: /* overflow */
       log_warn(LD_DIRSERV,
                "Invalid input from address '%s'. Closing.",

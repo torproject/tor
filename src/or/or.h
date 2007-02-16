@@ -155,27 +155,32 @@
 #define cell_t tor_cell_t
 #endif
 
-/** DOCDOC */
+/** Length of longest allowable configured nickname. */
 #define MAX_NICKNAME_LEN 19
-/** DOCDOC: Hex digest plus dollar sign. */
+/** Length of a router identity encoded as a hexadecimal digest, plus
+ * possible dollar sign. */
 #define MAX_HEX_NICKNAME_LEN (HEX_DIGEST_LEN+1)
-/** DOCDOC: $Hexdigest=nickname */
+/** Maximum length of verbose router identifier (Dollar sign, hex ID digest,
+ * equal or tilde, nickname) */
 #define MAX_VERBOSE_NICKNAME_LEN (1+HEX_DIGEST_LEN+1+MAX_NICKNAME_LEN)
 
 /** Maximum size, in bytes, for resized buffers. */
-#define MAX_BUF_SIZE ((1<<24)-1)
-/** DOCDOC */
-#define MAX_DIR_SIZE MAX_BUF_SIZE
+#define MAX_BUF_SIZE ((1<<24)-1) /* 16MB-1 */
+/** Maximum size, in bytes, for any directory object that we've downloaded */
+#define MAX_DIR_DL_SIZE MAX_BUF_SIZE
 
-/** For http parsing DOCDOC */
+/** For http parsing: Maximum number of bytes we'll accept in the headers
+ * of an HTTP request or response.*/
 #define MAX_HEADERS_SIZE 50000
-/** DOCDOC */
-#define MAX_BODY_SIZE 500000
+/** Maximum size, in bytes, for any directory object that we're accepting
+ * as an upload. */
+#define MAX_DIR_UL_SIZE 500000
 
 /** How long do we keep DNS cache entries before purging them (regardless of
  * their TTL)? */
 #define MAX_DNS_ENTRY_AGE (30*60)
-/** DOCDOC */
+/** How long do we cache/tell clients to cache DNS records when no TTL is
+ * known? */
 #define DEFAULT_DNS_TTL (30*60)
 /** How long can a TTL be before we stop believing it? */
 #define MAX_DNS_TTL (3*60*60)
@@ -198,10 +203,12 @@
 /** How old do we let a networkstatus get before ignoring it? */
 #define NETWORKSTATUS_MAX_AGE (60*60*24)
 
-/** DOCDOC */
+/** Possible rules for generating circuit IDs on an OR connection. */
 typedef enum {
-  CIRC_ID_TYPE_LOWER=0,
-  CIRC_ID_TYPE_HIGHER=1,
+  CIRC_ID_TYPE_LOWER=0, /**< Pick from 0..1<<15-1. */
+  CIRC_ID_TYPE_HIGHER=1, /**< Pick from 1<<15..1<<16-1 */
+  /** The other side of a connection is an OP: never create circuits to it,
+   * and let it use any circuit ID it wants. */
   CIRC_ID_TYPE_NEITHER=2
 } circ_id_type_t;
 
@@ -309,7 +316,8 @@ typedef enum {
 #define AP_CONN_STATE_NATD_WAIT 12
 #define _AP_CONN_STATE_MAX 12
 
-/** DOCDOC */
+/** True iff the AP_CONN_STATE_* value <b>s</b> means that the corresponding
+ * edge connection is not attached to any circuit. */
 #define AP_CONN_STATE_IS_UNATTACHED(s) \
   ((s) <= AP_CONN_STATE_CIRCUIT_WAIT || (s) == AP_CONN_STATE_NATD_WAIT)
 
@@ -328,17 +336,21 @@ typedef enum {
 #define DIR_CONN_STATE_SERVER_WRITING 6
 #define _DIR_CONN_STATE_MAX 6
 
-/** DOCDOC */
+/** True iff the purpose of <b>conn</b> means that it's a server-side
+ * directory connection. */
 #define DIR_CONN_IS_SERVER(conn) ((conn)->purpose == DIR_PURPOSE_SERVER)
 
 #define _CONTROL_CONN_STATE_MIN 1
-/** DOCDOC */
+/** State for a control connection: Authenticated and accepting v0 commands. */
 #define CONTROL_CONN_STATE_OPEN_V0 1
-/** DOCDOC */
+/** State for a control connection: Authenticated and accepting v1 commands. */
 #define CONTROL_CONN_STATE_OPEN_V1 2
-/** DOCDOC */
+/** State for a control connection: Waiting for authentication; either
+ * speaking v0 commands or waiting for evidence that it's a v1
+ * connection. */
 #define CONTROL_CONN_STATE_NEEDAUTH_V0 3
-/** DOCDOC */
+/** State for a control connection: Waiting for authentication; speaking
+ * protocol v1. */
 #define CONTROL_CONN_STATE_NEEDAUTH_V1 4
 #define _CONTROL_CONN_STATE_MAX 4
 
@@ -507,7 +519,7 @@ typedef enum {
 #define END_STREAM_REASON_DESTROY 5
 #define END_STREAM_REASON_DONE 6
 #define END_STREAM_REASON_TIMEOUT 7
-/* 8 is unallocated. */
+/* 8 is unallocated for historical reasons. */
 #define END_STREAM_REASON_HIBERNATING 9
 #define END_STREAM_REASON_INTERNAL 10
 #define END_STREAM_REASON_RESOURCELIMIT 11
@@ -520,15 +532,20 @@ typedef enum {
  * to be more informative when sending back socks replies to the
  * application. */
 /* XXXX 256 is no longer used; feel free to reuse it. */
-/** DOCDOC */
+/** We were unable to attach the connection to any circuit at all. */
+/* XXXX the ways we use this one don't make a lot of sense. */
 #define END_STREAM_REASON_CANT_ATTACH 257
-/** DOCDOC */
+/** We can't connect to any directories at all, so we killed our streams
+ * before they can time out. */
 #define END_STREAM_REASON_NET_UNREACHABLE 258
-/** DOCDOC */
+/** This is a SOCKS connection, and the client used (or misused) the SOCKS
+ * protocol in a way we couldn't handle. */
 #define END_STREAM_REASON_SOCKSPROTOCOL 259
-/** DOCDOC */
+/** This is a transparent proxy connection, but we can't extract the original
+ * target address:port. */
 #define END_STREAM_REASON_CANT_FETCH_ORIG_DEST 260
-/** DOCDOC */
+/** This is a connection on the NATD port, and the destination IP:Port was
+ * either ill-formed or out-of-range.*/
 #define END_STREAM_REASON_INVALID_NATD_DEST 261
 
 /** Bitwise-and this value with endreason to mask out all flags. */
@@ -545,7 +562,7 @@ typedef enum {
  * connection_mark_unattached_ap(). */
 #define END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED 2048
 
-/* DOCDOC */
+/* 'type' values to use in RESOLVED cells.  Specified in tor-spec.txt */
 #define RESOLVED_TYPE_HOSTNAME 0
 #define RESOLVED_TYPE_IPV4 4
 #define RESOLVED_TYPE_IPV6 6
@@ -594,13 +611,15 @@ typedef enum {
 #define STREAMWINDOW_START 5000
 #define STREAMWINDOW_INCREMENT 500
 #else
-/** DOCDOC */
+/** Initial value for both sides of a circuit transmission window when the
+ * circuit is initialized.  Measured in cells. */
 #define CIRCWINDOW_START 1000
-/** DOCDOC */
+/** Amount to increment a circuit window when we get a circuit SENDME. */
 #define CIRCWINDOW_INCREMENT 100
-/** DOCDOC */
+/** Initial value on both sides of a stream transmission window when the
+ * stream is initialized.  Measured in cells. */
 #define STREAMWINDOW_START 500
-/** DOCDOC */
+/** Amount to increment a stream window when we get a stream SENDME. */
 #define STREAMWINDOW_INCREMENT 50
 #endif
 
@@ -623,10 +642,10 @@ typedef enum {
 /** Name to use in client TLS certificates if no nickname is given. */
 #define DEFAULT_CLIENT_NICKNAME "client"
 
-/** DOCDOC */
+/** Number of bytes in a SOCKS4 header. */
 #define SOCKS4_NETWORK_LEN 8
 
-/** DOCDOC */
+/** Specified SOCKS5 status codes. */
 typedef enum {
   SOCKS5_SUCCEEDED                  = 0x00,
   SOCKS5_GENERAL_ERROR              = 0x01,
@@ -649,14 +668,15 @@ typedef enum {
  *         Relay payload           [498 bytes]
  */
 
-/** DOCDOC */
+/** Number of bytes in a cell, minus cell header. */
 #define CELL_PAYLOAD_SIZE 509
-/** DOCDOC */
+/** Number of bytes in a cell transmitted over the network. */
 #define CELL_NETWORK_SIZE 512
 
-/** DOCDOC */
+/** Number of bytes in a relay cell's header (not including general cell
+ * header). */
 #define RELAY_HEADER_SIZE (1+2+2+4+2)
-/** DOCDOC */
+/** Largest number of bytes that can fit in a relay cell payload. */
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
 /** Parsed onion routing cell.  All communication between nodes
@@ -680,15 +700,12 @@ typedef struct {
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
 
-/** DOCDOC */
+/* Values for connection_t.magic: used to make sure that downcasts (casts from
+* connection_t to foo_connection_t) are safe. */
 #define BASE_CONNECTION_MAGIC 0x7C3C304Eu
-/** DOCDOC */
 #define OR_CONNECTION_MAGIC 0x7D31FF03u
-/** DOCDOC */
 #define EDGE_CONNECTION_MAGIC 0xF0374013u
-/** DOCDOC */
 #define DIR_CONNECTION_MAGIC 0x9988ffeeu
-/** DOCDOC */
 #define CONTROL_CONNECTION_MAGIC 0x8abc765du
 
 /** Description of a connection to another host or process, and associated
