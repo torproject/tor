@@ -52,23 +52,24 @@ static void clear_cached_dir(cached_dir_t *d);
 #define FP_REJECT  4  /**< We will not publish this router. */
 #define FP_BADEXIT 8 /**< We'll tell clients not to use this as an exit. */
 
-/** DOCDOC */
+/** Encapsulate a nickname and an FP_* status; target of status_by_digest
+ * map. */
 typedef struct router_status_t {
   char nickname[MAX_NICKNAME_LEN+1];
   uint32_t status;
 } router_status_t;
 
 /** List of nickname-\>identity fingerprint mappings for all the routers
- * that we name.  Used to prevent router impersonation. DODDOC */
+ * that we name.  Used to prevent router impersonation. */
 typedef struct authdir_config_t {
   strmap_t *fp_by_name; /* Map from lc nickname to fingerprint */
-  digestmap_t *status_by_digest; /* Map from digest to FP_x mask */
+  digestmap_t *status_by_digest; /* Map from digest to router_status_t. */
 } authdir_config_t;
 
 /** Should be static; exposed for testing */
 authdir_config_t *fingerprint_list = NULL;
 
-/** DOCDOC */
+/** Allocate and return a new, empty, authdir_config_t. */
 static authdir_config_t *
 authdir_config_new(void)
 {
@@ -576,11 +577,12 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   }
 }
 
-/** DOCDOC */
+/** Helper: return true iff the boolean values of <b>a</b> and <b>b</b> are
+ * different. */
 static INLINE int
 bool_neq(int a, int b)
 {
-  return (a && !b) || (!a && b);
+  return (a) ? !b : b;
 }
 
 /** Remove all descriptors whose nicknames or fingerprints no longer
@@ -1338,7 +1340,8 @@ dirserv_get_runningrouters(const char **rr, int compress)
 /** For authoritative directories: the current (v2) network status */
 static cached_dir_t *the_v2_networkstatus = NULL;
 
-/** DOCDOC */
+/** Return true iff our opinion of the routers has been stale for long
+ * enough that we should generate a new network status doc. */
 static int
 should_generate_v2_networkstatus(void)
 {
@@ -1488,11 +1491,11 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 static cached_dir_t *
 generate_v2_networkstatus(void)
 {
-/** DOCDOC */
+/** Longest status flag name that we generate. */
 #define LONGEST_STATUS_FLAG_NAME_LEN 9
-/** DOCDOC */
-#define N_STATUS_FLAGS 9
-/** DOCDOC */
+/** Maximum number of status flags we'll apply to one router. */
+#define N_STATUS_FLAGS 10
+/** Amount of space to allocate for each entry. (r line and s line.) */
 #define RS_ENTRY_LEN                                                    \
   ( /* first line */                                                    \
    MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \

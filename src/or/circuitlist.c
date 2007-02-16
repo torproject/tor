@@ -48,14 +48,15 @@ _orconn_circid_entries_eq(orconn_circid_circuit_map_t *a,
   return a->or_conn == b->or_conn && a->circ_id == b->circ_id;
 }
 
-/** DOCDOC */
+/** Helper: return a hash based on circuit ID and the pointer value of
+ * or_conn in <b>a</b>. */
 static INLINE unsigned int
 _orconn_circid_entry_hash(orconn_circid_circuit_map_t *a)
 {
   return (((unsigned)a->circ_id)<<16) ^ (unsigned)(uintptr_t)(a->or_conn);
 }
 
-/** DOCDOC */
+/** Map from [orconn,circid] to circuit. */
 static HT_HEAD(orconn_circid_map, orconn_circid_circuit_map_t)
      orconn_circid_circuit_map = HT_INITIALIZER();
 HT_PROTOTYPE(orconn_circid_map, orconn_circid_circuit_map_t, node,
@@ -319,7 +320,8 @@ origin_circuit_new(void)
   return circ;
 }
 
-/** DOCDOC */
+/** Allocate a new or_circuit_t, connected to <b>p_conn</b> as
+ * <b>p_circ_id</b>.  If <b>p_conn</b> is NULL, the circuit is unattached. */
 or_circuit_t *
 or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn)
 {

@@ -58,7 +58,8 @@ static time_t time_to_check_for_correct_dns = 0;
 /** Array of all open connections.  The first n_conns elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS+1] =
         { NULL };
-/** DOCDOC */
+/** List of connections that have been marked for close and need to be freed
+ * and removed from connection_array. */
 static smartlist_t *closeable_connection_lst = NULL;
 
 static int n_conns=0; /**< Number of connections currently active. */
@@ -818,7 +819,7 @@ run_scheduled_events(time_t now)
       if (any_trusted_dir_is_v1_authority())
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
-/** DOCDOC */
+/** How often do we (as a cache) fetch a new V1 directory? */
 #define V1_DIR_FETCH_PERIOD (6*60*60)
     time_to_fetch_directory = now + V1_DIR_FETCH_PERIOD;
   }
@@ -828,7 +829,7 @@ run_scheduled_events(time_t now)
     if (!authdir_mode(options) || !options->V1AuthoritativeDir) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
-/** DOCDOC */
+/** How often do we (as a cache) fetch a new V1 runningrouters document? */
 #define V1_RUNNINGROUTERS_FETCH_PERIOD (30*60)
     time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
 
@@ -955,9 +956,9 @@ run_scheduled_events(time_t now)
   }
 }
 
-/** DOCDOC */
+/** Libevent timer: used to invoke second_elapsed_callback once per second. */
 static struct event *timeout_event = NULL;
-/** DOCDOC */
+/** Number of libevent errors in the last second: we die if we get too many. */
 static int n_libevent_errors = 0;
 
 /** Libevent callback: invoked once every second. */

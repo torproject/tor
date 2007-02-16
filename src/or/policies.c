@@ -156,7 +156,8 @@ addr_policy_permits_address(uint32_t addr, uint16_t port,
   }
 }
 
-/** DOCDOC */
+/** Return true iff we think our firewall will let us make an OR connection to
+ * addr:port. */
 int
 fascist_firewall_allows_address_or(uint32_t addr, uint16_t port)
 {
@@ -164,7 +165,8 @@ fascist_firewall_allows_address_or(uint32_t addr, uint16_t port)
                                      reachable_or_addr_policy);
 }
 
-/** DOCDOC */
+/** Return true iff we think our firewall will let us make a directory
+ * connection to addr:port. */
 int
 fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port)
 {

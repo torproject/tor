@@ -566,10 +566,11 @@ circuit_expire_old_circuits(time_t now)
   }
 }
 
-/** DOCDOC */
+/** Number of circuits to open at once when testing our bandwidth. */
 #define NUM_PARALLEL_TESTING_CIRCS 4
 
-/** DOCDOC */
+/** True iff we've ever opened enough testing circuits to test our
+ * bandwidth. */
 static int have_performed_bandwidth_test = 0;
 
 /** Reset have_performed_bandwidth_test, so we'll start building
@@ -776,7 +777,8 @@ circuit_build_failed(origin_circuit_t *circ)
  * circuit_launch_new and circuit_*_failure_count.
  */
 static int n_circuit_failures = 0;
-/** DOCDOC */
+/** Before the last time we called circuit_reset_failure_count(), were
+ * there a lot of failures? */
 static int did_circs_fail_last_period = 0;
 
 /** Don't retry launching a new circuit if we try this many times with no

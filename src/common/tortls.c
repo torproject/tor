@@ -103,7 +103,8 @@ tls_log_errors(int severity, const char *doing)
   }
 }
 
-/** DOCDOC */
+/** Convert an errno (or a WSAerrno on windows) into a TOR_TLS_* error
+ * code. */
 static int
 tor_errno_to_tls_error(int e)
 {
@@ -206,7 +207,7 @@ tor_tls_init(void)
   }
 }
 
-/** DOCDOC */
+/** Free all global TLS structures. */
 void
 tor_tls_free_all(void)
 {
@@ -672,7 +673,7 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
   return 1;
 }
 
-/** DOCDOC */
+/** Warn that a certificate lifetime extends through a certain range. */
 static void
 log_cert_lifetime(X509 *cert, const char *problem)
 {

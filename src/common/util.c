@@ -862,9 +862,9 @@ tv_addms(struct timeval *a, long ms)
   a->tv_usec %= 1000000;
 }
 
-/** DOCDOC */
+/** Yield true iff <b>y</b> is a leap-year */
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
-/** DOCDOC */
+/** Helper: Return the number of leap-days between Jan 1, y1 and Jan 1, y2. */
 static int
 n_leapdays(int y1, int y2)
 {
@@ -1957,11 +1957,12 @@ get_interface_address(int severity, uint32_t *addr)
 
 #ifndef MS_WINDOWS
 /* Based on code contributed by christian grothoff */
-/** DOCDOC */
+/** True iff we've called start_daemon. */
 static int start_daemon_called = 0;
-/** DOCDOC */
+/** True iff we've called finish_daemon. */
 static int finish_daemon_called = 0;
-/** DOCDOC */
+/** Socketpair used to communicate between parent and child process while
+ * daemonizing. */
 static int daemon_filedes[2];
 /** Start putting the process into daemon mode: fork and drop all resources
  * except standard fds.  The parent process never returns, but stays around
