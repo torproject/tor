@@ -174,8 +174,7 @@ tor_mmap_file(const char *filename)
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  tor_mmap_impl_t *h = (tor_mmap_impl_t*)
-    (((char*)handle) - STRUCT_OFFSET(tor_mmap_impl_t, base));
+  tor_mmap_impl_t *h = SUBTYPE_P(handle, tor_mmap_impl_t, base);
   munmap((char*)h->base.data, h->mapping_size);
   tor_free(h);
 }
@@ -244,8 +243,7 @@ tor_mmap_file(const char *filename)
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  win_mmap_t *h = (win_mmap_t*)
-    (((char*)handle) - STRUCT_OFFSET(win_mmap_t, base));
+  win_mmap_t *h = SUBTYPE_P(handle, win_mmap_t, base);
   if (handle->data)
     /* This is an ugly cast, but without it, "data" in struct tor_mmap_t would
        have to be redefined as non-const. */

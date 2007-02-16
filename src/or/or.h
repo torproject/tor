@@ -928,8 +928,7 @@ typedef struct control_connection_t {
 /** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) (&(((c)->_base)))
 /** Helper macro: Given a pointer to to._base, of type from*, return &to. */
-#define DOWNCAST(to, ptr) \
-  (to*) (((char*)(ptr)) - STRUCT_OFFSET(to, _base))
+#define DOWNCAST(to, ptr) ((to*)SUBTYPE_P(ptr, to, _base))
 
 /** Convert a connection_t* to an or_connection_t*; assert if the cast is
  * invalid. */
@@ -1515,14 +1514,11 @@ static origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
 static INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);
-  //return (or_circuit_t*) (((char*)x) - STRUCT_OFFSET(or_circuit_t, _base));
   return DOWNCAST(or_circuit_t, x);
 }
 static INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
-  //return (origin_circuit_t*)
-  //  (((char*)x) - STRUCT_OFFSET(origin_circuit_t, _base));
   return DOWNCAST(origin_circuit_t, x);
 }
 

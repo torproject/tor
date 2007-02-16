@@ -102,18 +102,6 @@ typedef struct config_var_t {
   const char *initvalue; /**< String (or null) describing initial value. */
 } config_var_t;
 
-/** Macro: yield a pointer to the field at position <b>off</b> within the
- * structure <b>st</b>.  Example:
- * <pre>
- *   struct a { int foo; int bar; } x;
- *   off_t bar_offset = STRUCT_OFFSET(struct a, bar);
- *   int *bar_p = STRUCT_VAR_P(&x, bar_offset);
- *   *bar_p = 3;
- * </pre>
- */
-#define STRUCT_VAR_P(st, off) \
-  ((void*) ( ((char*)st) + off ) )
-
 /** An entry for config_vars: "The option <b>name</b> has type
  * CONFIG_TYPE_<b>conftype</b>, and corresponds to
  * or_options_t.<b>member</b>"
