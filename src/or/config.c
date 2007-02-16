@@ -102,7 +102,15 @@ typedef struct config_var_t {
   const char *initvalue; /**< String (or null) describing initial value. */
 } config_var_t;
 
-/** DOCDOC */
+/** Macro: yield a pointer to the field at position <b>off</b> within the
+ * structure <b>st</b>.  Example:
+ * <pre>
+ *   struct a { int foo; int bar; } x;
+ *   off_t bar_offset = STRUCT_OFFSET(struct a, bar);
+ *   int *bar_p = STRUCT_VAR_P(&x, bar_offset);
+ *   *bar_p = 3;
+ * </pre>
+ */
 #define STRUCT_VAR_P(st, off) \
   ((void*) ( ((char*)st) + off ) )
 
@@ -508,26 +516,33 @@ static config_var_description_t state_description[] = {
   { NULL, NULL },
 };
 
-/** DOCDOC */
+/** Type of a callback to validate whether a given configuration is
+ * well-formed and consistant.  See options_trial_assign for documentation
+ * of arguments. */
 typedef int (*validate_fn_t)(void*,void*,int,char**);
 
 /** Information on the keys, value types, key-to-struct-member mappings,
  * variable descriptions, validation functions, and abbreviations for a
  * configuration or storage format. */
 typedef struct {
-  size_t size;
-  uint32_t magic;
-  off_t magic_offset;
-  config_abbrev_t *abbrevs;
-  config_var_t *vars;
-  validate_fn_t validate_fn;
+  size_t size; /**< Size of the struct that everything gets parsed into. */
+  uint32_t magic; /**< Required 'magic value' to make sure we have a struct
+                   * of the right type. */
+  off_t magic_offset; /**< Offset of the magic value within the struct */
+  config_abbrev_t *abbrevs; /**< List of abbreviations that we expand when
+                             * parsing this format */
+  config_var_t *vars; /**< List of variables we recognize, their default
+                       * values, and where we stick them in the structure. */
+  validate_fn_t validate_fn; /**< Function to validate config. */
+  /** Documentation for configuration variables. */
   config_var_description_t *descriptions;
   /** If present, extra is a LINELIST variable for unrecognized
    * lines.  Otherwise, unrecognized lines are an error. */
   config_var_t *extra;
 } config_format_t;
 
-/** DOCDOC */
+/** Macro: assert that <b>cfg</b> has the right magic field for format
+ * <b>fmt</b>. */
 #define CHECK(fmt, cfg) do {                                            \
     tor_assert(fmt && cfg);                                             \
     tor_assert((fmt)->magic ==                                          \
@@ -581,6 +596,7 @@ typedef enum {
   /* Note: we compare these, so it's important that "old" precede everything,
    * and that "other" come last. */
   LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_12A,
+  LE_13,
   LE_OTHER
 } le_version_t;
 static le_version_t decode_libevent_version(void);
@@ -590,10 +606,10 @@ static void check_libevent_version(const char *m, int server);
 
 /*static*/ or_options_t *options_new(void);
 
-/** DOCDOC */
+/** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
 
-/** DOCDOC */
+/** Configuration format for or_options_t. */
 static config_format_t options_format = {
   sizeof(or_options_t),
   OR_OPTIONS_MAGIC,
@@ -605,15 +621,16 @@ static config_format_t options_format = {
   NULL
 };
 
-/** DOCDOC */
+/** Magic value for or_state_t. */
 #define OR_STATE_MAGIC 0x57A73f57
 
-/** DOCDOC */
+/** "Extra" variable in the state that receives lines we can't parse. This
+ * lets us preserve options from versions of Tor newer than us. */
 static config_var_t state_extra_var = {
   "__extra", CONFIG_TYPE_LINELIST, STRUCT_OFFSET(or_state_t, ExtraLines), NULL
 };
 
-/** DOCDOC */
+/** Configuration format for or_state_t. */
 static config_format_t state_format = {
   sizeof(or_state_t),
   OR_STATE_MAGIC,
@@ -1448,7 +1465,7 @@ option_get_assignment(or_options_t *options, const char *key)
   return get_assigned_option(&options_format, options, key);
 }
 
-/** DOCDOC */
+/** Return a newly allocated deep copy of the lines in <b>inp</b>. */
 static config_line_t *
 config_lines_dup(const config_line_t *inp)
 {
@@ -1465,10 +1482,12 @@ config_lines_dup(const config_line_t *inp)
   return result;
 }
 
-/** DOCDOC */
+/** Return newly allocated line or lines corresponding to <b>key</b> in the
+ * configuration <b>options</b>.  Return NULL if no such key exists. */
 static config_line_t *
 get_assigned_option(config_format_t *fmt, or_options_t *options,
                     const char *key)
+/* XXXX argument is options, but fmt is provided. Inconsistent. */
 {
   config_var_t *var;
   const void *value;
@@ -3794,6 +3813,7 @@ init_libevent(void)
 }
 
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
+/** Table mapping return value of event_get_version() to le_version_t */
 static const struct {
   const char *name; le_version_t version;
 } le_version_table[] = {
@@ -3806,10 +3826,13 @@ static const struct {
   { "1.1b", LE_11B },
   { "1.2",  LE_12 },
   { "1.2a", LE_12A },
+  { "1.3",  LE_13 },
   { NULL, LE_OTHER }
 };
 
-/** DOCDOC */
+/** Return the le_version_t for the current version of libevent.  If the
+ * version is very new, return LE_OTHER.  If the version is so old that it
+ * doesn't support event_get_version(), return LE_OLD. */
 static le_version_t
 decode_libevent_version(void)
 {
@@ -3826,8 +3849,7 @@ decode_libevent_version(void)
 /**
  * Compare the given libevent method and version to a list of versions
  * which are known not to work.  Warn the user as appropriate.
- *
- */
+a */
 static void
 check_libevent_version(const char *m, int server)
 {
