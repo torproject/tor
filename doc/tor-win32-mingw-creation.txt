@@ -80,19 +80,14 @@ Done.
 Stage Four: Download, extract, and patch libevent-1.1b.
 ------------------------------------------------------
 
-Download libevent-1.1b:
+Download libevent-1.3:
 http://www.monkey.org/~provos/libevent/
 
 Copy the libevent tarball into the "tor-mingw" directory.
 Type "cd tor-mingw"
 
 Extract libevent: 
-Type "tar zxf libevent-1.1b.tar.gz"
-
-Download the libevent-1.1b-mingw.diff from 
-http://cvs.seul.org/viewcvs/viewcvs.cgi/tor/trunk/Win32Build/mingw/libevent-1.1b-mingw.diff?rev=8456&root=tor&view=log
-Copy the libevent-1.1b diff into the libevent-1.1b directory.
-Type "patch -p0 < libevent-1.1b-mingw.diff"
+Type "tar zxf libevent-1.3.tar.gz"
 
 Type "aclocal && autoheader && automake && autoconf".
 There may be WARNING messages.  There will be no output if all runs successfuly.
