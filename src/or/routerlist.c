@@ -1909,6 +1909,14 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   } else if (from_fetch) {
     /* Only check the descriptor digest against the network statuses when
      * we are receiving in response to a fetch. */
+    /* XXXX012 This warning seems to happen fairly regularly when we download
+     * router information based on an old networkstatus, then discard the
+     * networkstatus between requesting the routers and getting the reply.
+     * That's no good at all.  I think we should switch to a behavior where we
+     * don't download a descriptor unless it's in a _recent_ networkstatus;
+     * also, we should drop this warning in (hopefully less likely) case where
+     * we decide we don't want a descriptor after we start downloading
+     * it. -NM */
     if (!signed_desc_digest_is_recognized(&router->cache_info)) {
       log_warn(LD_DIR, "Dropping unrecognized descriptor for router '%s'",
                router->nickname);
@@ -1992,7 +2000,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
-  /* We haven't seen a router with this name before.  Add it to the end of
+  /* We haven't seen a router with this idntity before.  Add it to the end of
    * the list. */
   routerlist_insert(routerlist, router);
   if (!from_cache)
