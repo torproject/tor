@@ -62,38 +62,12 @@ How to change the specs now:
    the right to get really excited and run off and implement something in a
    caffeine-or-m&m-fueled all-night hacking session.}
 
-Proposal status:
+How new proposals get added:
 
-   Open: A proposal under discussion.
-
-   Accepted: The proposal is complete, and we intend to implement it.
-
-   Finished: The proposal has been accepted and implemented.
-
-   Closed: The proposal has been accepted, implemented, and merged into the
-      main specification documents.
-
-   Rejected: We're not going to implement the feature as described here,
-      though we might do some other version.  See comments in the document
-      for details.
-
-   Needs-Revision: The idea for the proposal is a good one, but the proposal
-      as it stands has serious problems that keep it from being accepted.
-      See comments in the document for details.
-
-   Dead: The proposal hasn't been touched in a long time, and it doesn't look
-      like anybody is going to complete it soon.  It can become "Open" again
-      if it gets a new proponent.
-
-   Needs-Research: There are research problems that need to be solved before
-      it's clear whether the proposal is a good idea.
-
-   Meta: This is not a proposal, but a document about proposals.
-
-Proposal numbering:
-
-   Numbers 000-099 are reserved for special and meta-proposals.  100 and up
-   are used for actual proposals.  Numbers aren't recycled.
+  Once an idea has been proposed on the development list, a properly formatted
+  (see below) draft exists, and rough consensus withing the active development
+  community exists that this idea warrants consideration the proposal editor
+  will official add the proposal.
 
 What should go in a proposal:
 
@@ -148,3 +122,39 @@ What should go in a proposal:
         can avoid really expensive performance regressions, and so we can
         avoid wasting time on insignificant gains.
 
+Proposal status:
+
+   Open: A proposal under discussion.
+
+   Accepted: The proposal is complete, and we intend to implement it.
+
+   Finished: The proposal has been accepted and implemented.
+
+   Closed: The proposal has been accepted, implemented, and merged into the
+      main specification documents.
+
+   Rejected: We're not going to implement the feature as described here,
+      though we might do some other version.  See comments in the document
+      for details.
+
+   Needs-Revision: The idea for the proposal is a good one, but the proposal
+      as it stands has serious problems that keep it from being accepted.
+      See comments in the document for details.
+
+   Dead: The proposal hasn't been touched in a long time, and it doesn't look
+      like anybody is going to complete it soon.  It can become "Open" again
+      if it gets a new proponent.
+
+   Needs-Research: There are research problems that need to be solved before
+      it's clear whether the proposal is a good idea.
+
+   Meta: This is not a proposal, but a document about proposals.
+
+
+   The editor maintains the correct status of proposals, based on rough
+   consensus and his own discretion.
+
+Proposal numbering:
+
+   Numbers 000-099 are reserved for special and meta-proposals.  100 and up
+   are used for actual proposals.  Numbers aren't recycled.
