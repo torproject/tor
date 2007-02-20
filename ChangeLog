@@ -39,6 +39,9 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
     - When EntryNodes are configured, rebuild the guard list to contain, in
       order: the EntryNodes that were guards before; the rest of the
       EntryNodes; the nodes that were guards before.
+    - Mask out all signals in sub-threads; only the libevent signal handler
+      should be processing them. This should prevent some crashes on some
+      machines using pthreads. (Patch from coderman.)
 
   o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0
