@@ -25,10 +25,11 @@ Proposal:
   One possible solution here is that routers should generate and upload a
   short-form and long-form descriptor.  Only the short-form descriptor should
   ever be used by anybody for routing.  The long-form descriptor should be
-  used only for analytics and other tools.  (If we allowed people to route with
-  long descriptors, we'd have to ensure that they stayed in sync with the
-  short ones somehow.)  We can ensure that the short descriptors are used by
-  only recommending those in the network statuses.
+  used only for analytics and other tools.  (If we allowed people to route
+  with long descriptors, we'd have to ensure that they stayed in sync with
+  the short ones somehow.  So let's not do that.)  We can ensure that the
+  short descriptors are used by only recommending those in the network
+  statuses.
 
   Another possible solution would be to drop these fields from descriptors,
   and have them uploaded as a part of a separate "bandwidth report" to the
@@ -40,6 +41,10 @@ Proposal:
 Migration:
 
   For long/short descriptors:
+     * In 0.1.2.x:
+       * Add a "long version" URL that tools can start using now.  Need to
+         design it first.
+
      * In 0.1.2.x:
        * Authorities should accept both, now, and silently drop short
          descriptors.
