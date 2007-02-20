@@ -42,6 +42,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
     - Mask out all signals in sub-threads; only the libevent signal handler
       should be processing them. This should prevent some crashes on some
       machines using pthreads. (Patch from coderman.)
+    - Fix switched arguments on memset in the implementation of tor_munmap()
+      for systems with no mmap() call.
 
   o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0

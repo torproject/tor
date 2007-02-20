@@ -280,7 +280,7 @@ tor_munmap_file(tor_mmap_t *handle)
 {
   char *d = (char*)handle->data;
   tor_free(d);
-  memset(handle, sizeof(tor_mmap_t), 0);
+  memset(handle, 0, sizeof(tor_mmap_t));
   tor_free(handle);
 }
 #endif
