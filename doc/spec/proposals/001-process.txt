@@ -45,7 +45,8 @@ How to change the specs now:
    Once it's fleshed out enough, it becomes a proposal.
 
    Like an RFC, every proposal gets a number.  Unlike RFCs, proposals can
-   change over time and keep the same number.  The history for each proposal
+   change over time and keep the same number, until they are finally
+   accepted or rejected.  The history for each proposal
    will be stored in the Tor Subversion repository.
 
    Once a proposal is in the repository, we should discuss and improve it
@@ -55,7 +56,8 @@ How to change the specs now:
    remain the canonical documentation for the Tor protocol: no proposal is
    ever the canonical documentation for an implemented feature.
 
-   {It's still okay to make small changes to the spec if the code can be
+   {It's still okay to make small changes directly to the spec if the code
+   can be
    written more or less immediately, or cosmetic changes if no code change is
    required.  This document reflects the current developers' _intent_, not
    a permanent promise to always use this process in the future: we reserve
@@ -66,8 +68,12 @@ How new proposals get added:
 
   Once an idea has been proposed on the development list, a properly formatted
   (see below) draft exists, and rough consensus withing the active development
-  community exists that this idea warrants consideration the proposal editor
-  will official add the proposal.
+  community exists that this idea warrants consideration, the proposal editor
+  will officially add the proposal.
+
+  To get your proposal in, send it to or-dev.
+
+  The current proposal editor is Nick Mathewson.
 
 What should go in a proposal:
 
@@ -82,7 +88,7 @@ What should go in a proposal:
    After the Overview, the proposal becomes more free-form.  Depending on its
    the length and complexity, the proposal can break into sections as
    appropriate, or follow a short discursive format.  Every proposal should
-   contain at least the following information before it can be "ACCEPTED",
+   contain at least the following information before it is "ACCEPTED",
    though the information does not need to be in sections with these names.
 
       Motivation: What problem is the proposal trying to solve?  Why does
@@ -127,15 +133,21 @@ Proposal status:
    Open: A proposal under discussion.
 
    Accepted: The proposal is complete, and we intend to implement it.
+      After this point, substantive changes to the proposal should be
+      avoided, and regarded as a sign of the process having failed
+      somewhere.
 
-   Finished: The proposal has been accepted and implemented.
+   Finished: The proposal has been accepted and implemented.  After this
+      point, the proposal should not be changed.
 
    Closed: The proposal has been accepted, implemented, and merged into the
-      main specification documents.
+      main specification documents.  The proposal should not be changed after
+      this point.
 
    Rejected: We're not going to implement the feature as described here,
       though we might do some other version.  See comments in the document
-      for details.
+      for details.  The proposal should not be changed after this point;
+      to bring up some other version of the idea, write a new proposal.
 
    Needs-Revision: The idea for the proposal is a good one, but the proposal
       as it stands has serious problems that keep it from being accepted.
