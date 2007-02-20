@@ -76,6 +76,14 @@ N - DNS improvements
         should abandon.
       - update dir-spec with what we decided for each of these
 
+N - Controller fixes
+    - Make REMAP stream events have a SOURCE (cache or exit), and make them
+      generated in every case where we get a connected or resolved cell.
+
+N - Libevent fixes
+    - Try to get the pthread_sigprocmask situation under control; see
+      coderman's or-dev post of 20-Feb-2007.
+
 NR. Write path-spec.txt
 
   - Polishing
