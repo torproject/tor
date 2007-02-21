@@ -120,6 +120,8 @@ void _log(int severity, uint32_t domain, const char *format, ...)
 #define log _log /* hack it so we don't conflict with log() as much */
 
 #ifdef __GNUC__
+extern int _log_global_min_severity;
+
 void _log_fn(int severity, uint32_t domain,
              const char *funcname, const char *format, ...)
   CHECK_PRINTF(4,5);
@@ -127,8 +129,11 @@ void _log_fn(int severity, uint32_t domain,
  * of the current function name. */
 #define log_fn(severity, domain, args...)               \
   _log_fn(severity, domain, __PRETTY_FUNCTION__, args)
-#define log_debug(domain, args...)                          \
-  _log_fn(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args)
+#define log_debug(domain, args...)                              \
+  do {                                                          \
+    if (PREDICT(_log_global_min_severity == LOG_DEBUG, 0))      \
+      _log_fn(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args);    \
+  } while (0)
 #define log_info(domain, args...)                           \
   _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)
 #define log_notice(domain, args...)                         \
@@ -155,13 +160,6 @@ void _log_err(uint32_t domain, const char *format, ...);
 #define log_notice _log_notice
 #define log_warn _log_warn
 #define log_err _log_err
-/*
-#define debug _debug
-#define info _info
-#define notice _notice
-#define warn _warn
-#define err _err
-*/
 #else
 /* We don't have GCC's varargs macros, so use a global variable to pass the
  * function name to log_fn */
@@ -175,13 +173,6 @@ extern const char *_log_fn_function_name;
 #define log_notice (_log_fn_function_name=__func__),_log_notice
 #define log_warn (_log_fn_function_name=__func__),_log_warn
 #define log_err (_log_fn_function_name=__func__),_log_err
-/*
-#define debug (_log_fn_function_name=__func__),_debug
-#define info (_log_fn_function_name=__func__),_info
-#define notice (_log_fn_function_name=__func__),_notice
-#define warn (_log_fn_function_name=__func__),_warn
-#define err (_log_fn_function_name=__func__),_err
-*/
 #endif
 
 #endif /* !GNUC */

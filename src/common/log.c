@@ -86,6 +86,9 @@ static logfile_t *logfiles = NULL;
 static int syslog_count = 0;
 #endif
 
+/* What's the lowest log level anybody cares about? */
+int _log_global_min_severity = LOG_NOTICE;
+
 static void delete_log(logfile_t *victim);
 static void close_log(logfile_t *victim);
 
@@ -405,6 +408,8 @@ add_stream_log(int loglevelMin, int loglevelMax,
   lf->file = stream;
   lf->next = logfiles;
   logfiles = lf;
+
+  _log_global_min_severity = get_min_log_level();
 }
 
 /** Add a log handler to receive messages during startup (before the real
@@ -415,6 +420,8 @@ add_temp_log(void)
 {
   add_stream_log(LOG_NOTICE, LOG_ERR, "<temp>", stdout);
   logfiles->is_temporary = 1;
+
+  _log_global_min_severity = get_min_log_level();
 }
 
 /**
@@ -433,6 +440,8 @@ add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
   lf->callback = cb;
   lf->next = logfiles;
   logfiles = lf;
+
+  _log_global_min_severity = get_min_log_level();
   return 0;
 }
 
@@ -449,6 +458,8 @@ change_callback_log_severity(int loglevelMin, int loglevelMax,
       lf->max_loglevel = loglevelMax;
     }
   }
+
+  _log_global_min_severity = get_min_log_level();
 }
 
 /** Close any log handlers added by add_temp_log or marked by mark_logs_temp */
@@ -468,6 +479,8 @@ close_temp_logs(void)
       p = &((*p)->next);
     }
   }
+
+  _log_global_min_severity = get_min_log_level();
 }
 
 /** Make all currently temporary logs (set to be closed by close_temp_logs)
@@ -506,6 +519,7 @@ add_file_log(int loglevelMin, int loglevelMax, const char *filename)
   if (log_tor_version(logfiles, 0) < 0) {
     delete_log(logfiles);
   }
+  _log_global_min_severity = get_min_log_level();
   return 0;
 }
 
@@ -528,6 +542,8 @@ add_syslog_log(int loglevelMin, int loglevelMax)
   lf->is_syslog = 1;
   lf->next = logfiles;
   logfiles = lf;
+
+  _log_global_min_severity = get_min_log_level();
   return 0;
 }
 #endif
