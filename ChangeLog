@@ -53,6 +53,10 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
     - Add STREAM_BW events to report per-entry-stream bandwidth use. (Patch
       from Robert Hogan.)
 
+  o Minor bugfixes (performance):
+    - Call router_have_min_dir_info half as often.  (This is showing up in
+      some profiles, but not others.)
+
   o Minor features:
     - Remove some never-implemented options.  Mark PathlenCoinWeight as
       obsolete.

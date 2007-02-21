@@ -445,7 +445,10 @@ circuit_build_needed_circs(time_t now)
   connection_ap_attach_pending();
 
   /* make sure any hidden services have enough intro points */
-  if (router_have_minimum_dir_info())
+  /* XXXX012 circuit_build_needed_circs is only called at all if
+   *         router_have_minimum_dir_info is true; this check is redundant,
+   *         and it appears to show up on some people's profiles. */
+  if (1 || router_have_minimum_dir_info())
     rend_services_introduce();
 
   if (time_to_new_circuit < now) {
