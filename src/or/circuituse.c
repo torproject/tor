@@ -431,10 +431,10 @@ circuit_predict_and_launch_new(void)
 /** Build a new test circuit every 5 minutes */
 #define TESTING_CIRCUIT_INTERVAL 300
 
-/** This function is called once a second. Its job is to make sure
- * all services we offer have enough circuits available. Some
- * services just want enough circuits for current tasks, whereas
- * others want a minimum set of idle circuits hanging around.
+/** This function is called once a second, if router_have_min_dir_info() is
+ * true. Its job is to make sure all services we offer have enough circuits
+ * available. Some services just want enough circuits for current tasks,
+ * whereas others want a minimum set of idle circuits hanging around.
  */
 void
 circuit_build_needed_circs(time_t now)
@@ -445,11 +445,7 @@ circuit_build_needed_circs(time_t now)
   connection_ap_attach_pending();
 
   /* make sure any hidden services have enough intro points */
-  /* XXXX012 circuit_build_needed_circs is only called at all if
-   *         router_have_minimum_dir_info is true; this check is redundant,
-   *         and it appears to show up on some people's profiles. */
-  if (1 || router_have_minimum_dir_info())
-    rend_services_introduce();
+  rend_services_introduce();
 
   if (time_to_new_circuit < now) {
     circuit_reset_failure_count(1);
