@@ -44,6 +44,10 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       machines using pthreads. (Patch from coderman.)
     - Fix switched arguments on memset in the implementation of tor_munmap()
       for systems with no mmap() call.
+    - When Tor receives a router descriptor that it asked for, but no longer
+      wants (because it has received fresh networkstatuses in the meantime),
+      do not warn the user.  Cache the descriptor if we're a cache; drop it
+      if we aren't.
 
   o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0

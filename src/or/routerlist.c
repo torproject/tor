@@ -729,8 +729,7 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   config_line_t *cl;
   or_options_t *options = get_options();
 
-  /* First, add any routers with similar network addresses.
-   * XXXX012 It's possible this will be really expensive; we'll see. */
+  /* First, add any routers with similar network addresses. */
   if (options->EnforceDistinctSubnets)
     routerlist_add_network_family(sl, router);
 
@@ -1909,19 +1908,19 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   } else if (from_fetch) {
     /* Only check the descriptor digest against the network statuses when
      * we are receiving in response to a fetch. */
-    /* XXXX012 This warning seems to happen fairly regularly when we download
-     * router information based on an old networkstatus, then discard the
-     * networkstatus between requesting the routers and getting the reply.
-     * That's no good at all.  I think we should switch to a behavior where we
-     * don't download a descriptor unless it's in a _recent_ networkstatus;
-     * also, we should drop this warning in (hopefully less likely) case where
-     * we decide we don't want a descriptor after we start downloading
-     * it. -NM */
+
     if (!signed_desc_digest_is_recognized(&router->cache_info)) {
-      log_warn(LD_DIR, "Dropping unrecognized descriptor for router '%s'",
+      /* We asked for it, so some networkstatus must have listed it when we
+       * did.  save it in case we're a cache and somebody else asks for it. */
+      log_info(LD_DIR,
+               "Received a no-longer-recognized descriptor for router '%s'",
                router->nickname);
       *msg = "Router descriptor is not referenced by any network-status.";
-      routerinfo_free(router);
+
+      /* Only journal this desc if we'll be serving it. */
+      if (!from_cache && get_options()->DirPort)
+        router_append_to_journal(&router->cache_info);
+      routerlist_insert_old(routerlist, router);
       return -1;
     }
   }
@@ -4029,7 +4028,12 @@ update_router_descriptor_cache_downloads(time_t now)
   n_download = 0;
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
-      smartlist_t *dl = smartlist_create();
+      smartlist_t *dl;
+      if (ns->published_on + MAX_NETWORKSTATUS_AGE-10*60 > now) {
+        /* Don't download if the networkstatus is almost ancient. */
+        continue;
+      }
+      dl = smartlist_create();
       downloadable[ns_sl_idx] = dl;
       download_from[ns_sl_idx] = smartlist_create();
       SMARTLIST_FOREACH(ns->entries, routerstatus_t * , rs,

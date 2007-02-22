@@ -352,9 +352,9 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
   /* No need to increment the failure count for routerdescs, since
    * it's not their fault. */
 
-  /* There's no need to call this here: we already call it every 10 seconds *
-   *  (DESCRIPTOR_RETRY_INTERVAL) in main.c -NM */
-  /* update_router_descriptor_downloads(time(NULL)); */
+  /* There's no relaunch descriptor downloads here: we already do it every 10
+   * seconds (DESCRIPTOR_RETRY_INTERVAL) in main.c */
+
   (void) conn;
 }
 
@@ -2057,9 +2057,8 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
                 cp, (int)rs->n_download_failures);
   });
 
-  /* There's no need to call this here: we already call it every 10 seconds *
-   *  (DESCRIPTOR_RETRY_INTERVAL) in main.c -NM */
-  /* update_router_descriptor_downloads(time(NULL)); */
+  /* There's no relaunch descriptor downloads here: we already do it every 10
+   * seconds (DESCRIPTOR_RETRY_INTERVAL) in main.c */
 }
 
 /** Given a directory <b>resource</b> request, containing zero
