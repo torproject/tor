@@ -54,6 +54,8 @@ static time_t time_to_fetch_directory = 0;
 static time_t time_to_fetch_running_routers = 0;
 /** When do we next launch DNS wildcarding checks? */
 static time_t time_to_check_for_correct_dns = 0;
+/** When do we next allow a SIGNEWNYM? */
+static time_t time_to_allow_next_signewnym = 0;
 
 /** Array of all open connections.  The first n_conns elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS+1] =
@@ -1328,6 +1330,7 @@ signal_callback(int fd, short events, void *arg)
   uintptr_t sig = (uintptr_t)arg;
   (void)fd;
   (void)events;
+  time_t now = time(NULL);
   switch (sig)
     {
     case SIGTERM:
@@ -1371,8 +1374,12 @@ signal_callback(int fd, short events, void *arg)
       break;
 #endif
     case SIGNEWNYM:
-      circuit_expire_all_dirty_circs();
-      addressmap_clear_transient();
+      if (time_to_allow_next_signewnym < now) {
+        circuit_expire_all_dirty_circs();
+        addressmap_clear_transient();
+#define NEXT_SIGNEWNYM (5)
+        time_to_allow_next_signewnym = now + NEXT_SIGNEWNYM;
+      }
       break;
     case SIGCLEARDNSCACHE:
       addressmap_clear_transient();
