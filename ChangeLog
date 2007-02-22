@@ -52,6 +52,9 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       advance warning.
     - Add STREAM_BW events to report per-entry-stream bandwidth use. (Patch
       from Robert Hogan.)
+    - Rate-limit SIGNEWNYM events in response to controllers that impolitely
+      generate them for every single stream.  (Patch from mwenge; closes bug
+      394.)
 
   o Minor bugfixes (performance):
     - Call router_have_min_dir_info half as often.  (This is showing up in

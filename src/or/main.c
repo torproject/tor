@@ -54,8 +54,13 @@ static time_t time_to_fetch_directory = 0;
 static time_t time_to_fetch_running_routers = 0;
 /** When do we next launch DNS wildcarding checks? */
 static time_t time_to_check_for_correct_dns = 0;
-/** When do we next allow a SIGNEWNYM? */
-static time_t time_to_allow_next_signewnym = 0;
+
+/** How often will we honor SIGNEWNYM requests? */
+#define MAX_SIGNEWNYM_RATE 10
+/** When did we last process a SIGNEWNYM request? */
+static time_t time_of_last_signewnym = 0;
+/** Is there a signewnym request we're currently waiting to handle? */
+static int signewnym_is_pending = 0;
 
 /** Array of all open connections.  The first n_conns elements are valid. */
 static connection_t *connection_array[MAXCONNECTIONS+1] =
@@ -748,6 +753,16 @@ run_scheduled_events(time_t now)
    */
   consider_hibernation(now);
 
+  /* 0b. If we've deferred a signewnym, make sure it gets handled
+   * eventually */
+  if (signewnym_is_pending &&
+      time_of_last_signewnym + MAX_SIGNEWNYM_RATE < now) {
+    circuit_expire_all_dirty_circs();
+    addressmap_clear_transient();
+    time_of_last_signewnym = now;
+    signewnym_is_pending = 0;
+  }
+
   /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
    *  shut down and restart all cpuworkers, and update the directory if
    *  necessary.
@@ -1330,7 +1345,6 @@ signal_callback(int fd, short events, void *arg)
   uintptr_t sig = (uintptr_t)arg;
   (void)fd;
   (void)events;
-  time_t now = time(NULL);
   switch (sig)
     {
     case SIGTERM:
@@ -1373,14 +1387,17 @@ signal_callback(int fd, short events, void *arg)
                                                 zombies */
       break;
 #endif
-    case SIGNEWNYM:
-      if (time_to_allow_next_signewnym < now) {
+    case SIGNEWNYM: {
+      time_t now = time(NULL);
+      if (time_of_last_signewnym + MAX_SIGNEWNYM_RATE >= now) {
+        signewnym_is_pending = 1;
+      } else {
         circuit_expire_all_dirty_circs();
         addressmap_clear_transient();
-#define NEXT_SIGNEWNYM (5)
-        time_to_allow_next_signewnym = now + NEXT_SIGNEWNYM;
+        time_of_last_signewnym = now;
       }
       break;
+    }
     case SIGCLEARDNSCACHE:
       addressmap_clear_transient();
       break;
