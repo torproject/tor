@@ -565,6 +565,11 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
  * If resolve failed, unlink exitconn if needed, free it, and return -1.
  *
+ * (For EXIT_PURPOSE_RESOLVE connections, send back a RESOLVED error cell
+ * on returning -1.  For EXIT_PURPOSE_CONNECT connections, there's no
+ * need to send back an END cell, since connection_exit_begin_conn will
+ * do that for us.)
+ *
  * If <b>oncirc</b> is provided, and this is a resolve request, we have
  * a cached answer, send the answer back along oncirc; otherwise, send
  * the answer back along <b>exitconn</b>'s attached circuit.
@@ -607,7 +612,6 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
         escaped_safe_str(exitconn->_base.address));
     if (is_resolve)
       send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
-    /* XXXX012 send error in connect case? -NM */
     circ = circuit_get_by_edge_conn(exitconn);
     if (circ)
       circuit_detach_stream(circ, exitconn);
@@ -697,7 +701,6 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
                   exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
-        /*  XXXX012 send back indication of failure for connect case? -NM*/
         if (is_resolve)
           send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
         circ = circuit_get_by_edge_conn(exitconn);
