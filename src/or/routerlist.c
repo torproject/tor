@@ -4029,13 +4029,12 @@ update_router_descriptor_cache_downloads(time_t now)
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
       smartlist_t *dl;
+      dl = downloadable[ns_sl_idx] = smartlist_create();
+      download_from[ns_sl_idx] = smartlist_create();
       if (ns->published_on + MAX_NETWORKSTATUS_AGE-10*60 > now) {
         /* Don't download if the networkstatus is almost ancient. */
         continue;
       }
-      dl = smartlist_create();
-      downloadable[ns_sl_idx] = dl;
-      download_from[ns_sl_idx] = smartlist_create();
       SMARTLIST_FOREACH(ns->entries, routerstatus_t * , rs,
         {
           if (!rs->need_to_mirror)
@@ -4076,7 +4075,6 @@ update_router_descriptor_cache_downloads(time_t now)
     smartlist_t *dl = downloadable[which_ns];
     int idx;
     char *d;
-    tor_assert(dl);
     if (!smartlist_len(dl))
       continue;
     idx = crypto_rand_int(smartlist_len(dl));
