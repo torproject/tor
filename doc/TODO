@@ -13,12 +13,7 @@ P       - phobos claims
         D Deferred
         X Abandoned
 
-    X <nickm> "Let's try to find a way to make it run and make the version
-       match, but if not, let's just make it run."
-    X <arma> "should we detect if we have a --with-ssl-dir and try the -R
-      by default, if it works?"
-
-Items for 0.1.2.x, real soon now:
+Items for 0.1.2.x-rc:
 ? - Bug: combination of things:
     When we've been idle a long time, we stop fetching server
     descriptors. When we then get a socks request, we build circuits
@@ -29,7 +24,6 @@ N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.
 
-Items for 0.1.2.x:
   o weight dir requests by advertised bandwidth? with maybe a lower cutoff
     than for tor traffic. perhaps also weighted by the expected size of
     the response.
@@ -54,11 +48,13 @@ R   - actually cause the directory.c functions to know about or_port
         or_conn is full, and accept the sometimes directory data will just
         never get written.
 
-N - DNS improvements
-    . Asynchronous DNS
-      - Make evdns use windows strerror equivalents.
+  o DNS improvements
+    o Asynchronous DNS
+      X Make evdns use windows strerror equivalents.
+        (there don't seem to be windows equivalents for strerror on the
+         WSAERR* codes.)
       o Make sure patches get into libevent.
-      - Verify that it works well on windows
+      o Verify that it works well on windows
     o Debug and re-enable server-side reverse DNS caching
 
   - Critical but minor bugs, backport candidates.
@@ -81,30 +77,17 @@ N - Controller fixes
       generated in every case where we get a connected or resolved cell.
 
 N - Libevent fixes
-    - Try to get the pthread_sigprocmask situation under control; see
+    . Try to get the pthread_sigprocmask situation under control; see
       coderman's or-dev post of 20-Feb-2007.
-
-NR. Write path-spec.txt
 
   - Polishing
     - Profile client and server; fix slow spots
     - Address XXX012 items
 
-  - Packaging
-    - Tell people about OSX Uninstaller
-    - Quietly document NT Service options
-    - Switch canonical win32 compiler to mingw.
+  . Packaging
+    o Switch canonical win32 compiler to mingw.
     - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
-
-  - Docs
-    - More prominently, we should have a recommended apps list.
-      - recommend gaim.
-      - unrecommend IE because of ftp:// bug.
-N   - we should add a preamble to tor-design saying it's out of date.
-N   . Document transport and natdport
-      o In man page
-      - In a good HOWTO.
 
   . Forward compatibility fixes
     - Start uploading short and long descriptors; authorities should support
@@ -121,6 +104,21 @@ N     - Implement, if we think it's smart.
       o Implement
 N     - Hack up a client that gives out weird/no certificates, so we can
         test to make sure that this doesn't cause servers to crash.
+
+For 0.1.2.x-final:
+
+NR. Write path-spec.txt
+
+  - Docs
+    - Tell people about OSX Uninstaller
+    - Quietly document NT Service options
+    - More prominently, we should have a recommended apps list.
+      - recommend gaim.
+      - unrecommend IE because of ftp:// bug.
+N   - we should add a preamble to tor-design saying it's out of date.
+N   . Document transport and natdport
+      o In man page
+      - In a good HOWTO.
 
 
 Things we'd like to do in 0.2.0.x:
@@ -149,6 +147,11 @@ Things we'd like to do in 0.2.0.x:
 
 
 Deferred from 0.1.2.x:
+  - Improve autoconf process to handle multiple SSL installations better.
+    X <nickm> "Let's try to find a way to make it run and make the version
+       match, but if not, let's just make it run."
+    X <arma> "should we detect if we have a --with-ssl-dir and try the -R
+       by default, if it works?"
   - finish status event implementation and accompanying getinfos
   - More work on AvoidDiskWrites?
   - Get some kind of "meta signing key" to be used solely to sign
