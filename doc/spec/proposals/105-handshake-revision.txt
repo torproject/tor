@@ -15,6 +15,44 @@ Overview:
 
   This is an open proposal.
 
+Motivation:
+
+   Our *current* approach to versioning the Tor protocol(s) has been as
+   follows:
+     - All changes must be backward compatible.
+     - It's okay to add new cell types, if they would be ignored by previous
+       versions of Tor.
+     - It's okay to add new data elements to cells, if they would have been
+       ignored by previous versions of Tor.
+     - For forward compatibility, Tor must ignore cell types it doesn't
+       recognize, and ignore data in those cells it doesn't expect.
+     - Clients can inspect the version of Tor declared in the platform line
+       of a router's descriptor, and use that to learn whether a server
+       supports a given feature.  Servers, however, aren't assumed to all
+       know about each other, and so don't know the version of who they're
+       talking to.
+
+   This system has these problems:
+     - It's very hard to change fundamental aspects of the protocol, like the
+       cell format, the link protocol, any of the various encryption schemes,
+       and so on.
+     - The router-to-router link protocol has remained more-or-less frozen
+       for a long time, since we can't easily have an OR use new features
+       unless it knows the other OR will understand them.
+
+   We need to resolve these problems because:
+     - Our cipher suite is showing its age: SHA1/AES128/RSA1024/DH1024 will
+       not seem like the best idea for all time.
+     - There are many ideas circulating for multiple cell sizes; while it's
+       not obvious whether these are safe, we can't do them at all without a
+       mechanism to permit them.
+     - There are many ideas circulating for alternative cell relay rules:
+       they don't work unless they can coexist in the current network.
+     - If our protocol changes a lot, it's hard to describe any coherent
+       version of it: we need to say "the version that Tor versions W through
+       X use when talking to versions Y through Z".  This makes analysis
+       harder.
+
 Proposal:
 
 1.0. Version numbers
