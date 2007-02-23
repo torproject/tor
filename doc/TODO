@@ -72,8 +72,8 @@ R   - actually cause the directory.c functions to know about or_port
         should abandon.
       - update dir-spec with what we decided for each of these
 
-N - Controller fixes
-    - Make REMAP stream events have a SOURCE (cache or exit), and make them
+  o Controller fixes
+    o Make REMAP stream events have a SOURCE (cache or exit), and make them
       generated in every case where we get a connected or resolved cell.
 
 N - Libevent fixes

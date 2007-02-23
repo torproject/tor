@@ -3309,6 +3309,19 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
         tor_snprintf(reason_buf, sizeof(reason_buf),
                      "REASON=%s", reason_str);
       tor_free(r);
+    } else if (reason_code && tp == STREAM_EVENT_REMAP) {
+      switch (reason_code) {
+        case REMAP_STREAM_SOURCE_CACHE:
+          strlcpy(reason_buf, "SOURCE=CACHE", sizeof(reason_buf));
+          break;
+        case REMAP_STREAM_SOURCE_EXIT:
+          strlcpy(reason_buf, "SOURCE=EXIT", sizeof(reason_buf));
+          break;
+        default:
+          tor_snprintf(reason_buf, sizeof(reason_buf), "REASON=UNKNOWN_%d",
+                       reason_code);
+          break;
+      }
     }
     circ = circuit_get_by_edge_conn(conn);
     if (circ && CIRCUIT_IS_ORIGIN(circ))

@@ -828,7 +828,8 @@ $Id$
     The syntax is:
 
       "650" SP "STREAM" SP StreamID SP StreamStatus SP CircID SP Target
-          [SP "REASON=" Reason [ SP "REMOTE_REASON=" Reason ]] CRLF
+          [SP "REASON=" Reason [ SP "REMOTE_REASON=" Reason ]]
+          [SP "SOURCE=" Source] CRLF
 
       StreamStatus =
                "NEW"          / ; New request to connect
@@ -858,11 +859,19 @@ $Id$
 
       END          (We received a RELAY_END cell from the other side of thise
                     stream.)
+      [XXXX document more.]
 
    The "REMOTE_REASON" field is provided only when we receive a RELAY_END
    cell, and only if extended events are enabled.  It contains the actual
    reason given by the remote OR for closing the stream. Clients MUST accept
    reasons not listed above.  Reasons are as listed in tor-spec.txt.
+
+   "REMAP" events include a Source if extended events are enabled:
+      Source = "CACHE" / "EXIT"
+   Clients MUST accept sources not listed above.  "CACHE" is given if
+   the Tor client decided to remap the address because of a cached
+   answer, and "EXIT" is given if the remote node we queried gave us
+   the new address as a response.
 
 4.1.3. OR Connection status changed
 
@@ -929,9 +938,6 @@ $Id$
 
   [XXX We should rename this to ADDRESSMAP. -RD]
     [Why? Surely it can't be worth the compatibility issues. -NM]
-
-  [FFF We should add a SOURCE=%s argument for extended events,
-   which specifies what exit node told us this addressmap. -RD]
 
 4.1.8. Descriptors uploaded to us in our role as authoritative dirserver
 

@@ -20,6 +20,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
     - Report events where a resolve succeeded or where we got a socks
       protocol error correctly, rather than calling both of them
       "INTERNAL".
+    - Change reported stream target addresses to IP consistently when
+      we finally get the IP from an exit node.
 
   o Minor bugfixes (other):
     - Display correct results when reporting which versions are
@@ -61,6 +63,9 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
     - Rate-limit SIGNEWNYM events in response to controllers that impolitely
       generate them for every single stream.  (Patch from mwenge; closes bug
       394.)
+    - Make REMAP stream events have a SOURCE (cache or exit), and make them
+      generated in every case where we get a successful connected or resolved
+      cell.
 
   o Minor bugfixes (performance):
     - Call router_have_min_dir_info half as often.  (This is showing up in

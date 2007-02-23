@@ -1212,7 +1212,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   } else {
     /* For address map controls, remap the address */
     if (addressmap_rewrite(socks->address, sizeof(socks->address))) {
-      control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
+      control_event_stream_status(conn, STREAM_EVENT_REMAP,
+                                  REMAP_STREAM_SOURCE_CACHE);
     }
   }
 

@@ -829,6 +829,21 @@ connection_edge_process_end_not_open(
   return 0;
 }
 
+/** Helper: change the socks_request->address field on conn to the dotted-quad
+ * representation of <b>new_addr</b> (given in host order), and send an
+ * appropriate REMAP event. */
+static void
+remap_event_helper(edge_connection_t *conn, uint32_t new_addr)
+{
+  struct in_addr in;
+
+  in.s_addr = htonl(new_addr);
+  tor_inet_ntoa(&in, conn->socks_request->address,
+                sizeof(conn->socks_request->address));
+  control_event_stream_status(conn, STREAM_EVENT_REMAP,
+                              REMAP_STREAM_SOURCE_EXIT);
+}
+
 /** An incoming relay cell has arrived from circuit <b>circ</b> to
  * stream <b>conn</b>.
  *
@@ -858,7 +873,7 @@ connection_edge_process_relay_cell_not_open(
              "Got 'connected' while not in state connect_wait. Dropping.");
       return 0;
     }
-//    log_fn(LOG_INFO,"Connected! Notifying application.");
+    // log_fn(LOG_INFO,"Connected! Notifying application.");
     conn->_base.state = AP_CONN_STATE_OPEN;
     log_info(LD_APP,"'connected' received after %d seconds.",
              (int)(time(NULL) - conn->_base.timestamp_lastread));
@@ -879,6 +894,8 @@ connection_edge_process_relay_cell_not_open(
         ttl = -1;
       client_dns_set_addressmap(conn->socks_request->address, addr,
                                 conn->chosen_exit_name, ttl);
+
+      remap_event_helper(conn, addr);
     }
     circuit_log_path(LOG_INFO,LD_APP,TO_ORIGIN_CIRCUIT(circ));
     /* don't send a socks reply to transparent conns */
@@ -896,6 +913,7 @@ connection_edge_process_relay_cell_not_open(
       rh->command == RELAY_COMMAND_RESOLVED) {
     int ttl;
     int answer_len;
+    uint8_t answer_type;
     if (conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
       log_fn(LOG_PROTOCOL_WARN, LD_APP, "Got a 'resolved' cell while "
              "not in state resolve_wait. Dropping.");
@@ -914,11 +932,17 @@ connection_edge_process_relay_cell_not_open(
                                   2+answer_len));
     else
       ttl = -1;
+
+    answer_type = cell->payload[RELAY_HEADER_SIZE];
     connection_ap_handshake_socks_resolved(conn,
-                   cell->payload[RELAY_HEADER_SIZE], /*answer_type*/
+                   answer_type,
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
                    cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
                    ttl);
+    if (answer_type == RESOLVED_TYPE_IPV4) {
+      uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
+      remap_event_helper(conn, addr);
+    }
     connection_mark_unattached_ap(conn,
                               END_STREAM_REASON_DONE |
                               END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);

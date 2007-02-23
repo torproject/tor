@@ -562,6 +562,13 @@ typedef enum {
  * connection_mark_unattached_ap(). */
 #define END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED 2048
 
+/** Reason for remapping an AP connection's address: we have a cached
+ * answer. */
+#define REMAP_STREAM_SOURCE_CACHE 1
+/** Reason for remapping an AP connection's address: the exit node told us an
+ * answer. */
+#define REMAP_STREAM_SOURCE_EXIT 2
+
 /* 'type' values to use in RESOLVED cells.  Specified in tor-spec.txt */
 #define RESOLVED_TYPE_HOSTNAME 0
 #define RESOLVED_TYPE_IPV4 4
