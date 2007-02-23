@@ -25,8 +25,10 @@ extern circuit_t *global_circuitlist;
 typedef struct {
   char nickname[MAX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
-  uint8_t made_contact; /**< 0 if we have never connected to this router,
-                         * 1 if we have. */
+  unsigned int made_contact : 1; /**< 0 if we have never connected to this
+                                  * router, 1 if we have. */
+  unsigned int can_retry : 1; /**< Should we retry connecting to this entry,
+                               * in spite of having it marked as unreachable?*/
   time_t bad_since; /**< 0 if this guard is currently usable, or the time at
                       * which it was observed to become (according to the
                       * directory or the user configuration) unusable. */
@@ -1881,7 +1883,8 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
   routerinfo_t *r;
   if (e->bad_since)
     return NULL;
-  if (!assume_reachable &&
+  /* no good if it's unreachable, unless assume_unreachable or can_retry. */
+  if ((!assume_reachable && !e->can_retry) &&
       e->unreachable_since && !entry_is_time_to_retry(e, time(NULL)))
     return NULL;
   r = router_get_by_digest(e->identity);
@@ -2162,6 +2165,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
     if (entry->unreachable_since) {
       log_info(LD_CIRC, "Entry guard '%s' (%s) is now reachable again. Good.",
                entry->nickname, buf);
+      entry->can_retry = 0;
       entry->unreachable_since = 0;
       entry->last_attempted = now;
       control_event_guard(entry->nickname, entry->identity, "UP");
@@ -2197,6 +2201,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
                 entry->nickname, buf, tbuf);
       entry->last_attempted = now;
     }
+    entry->can_retry = 0; /* We gave it an early chance; no good. */
   }
 
   if (first_contact) {
@@ -2205,19 +2210,13 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
      * and close this connection so we don't use it before we've given
      * the others a shot. */
     SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
-        routerinfo_t *r;
         if (e == entry)
           break;
         if (e->made_contact) {
-          r = entry_is_live(e, 0, 1, 1);
-          if (r && !r->is_running) {
+          routerinfo_t *r = entry_is_live(e, 0, 1, 1);
+          if (r && e->unreachable_since) {
             refuse_conn = 1;
-            /* XXXX012 I think this might be broken; when picking entry nodes,
-             * we only look at unreachable_since and is_time_to_retry, and we
-             * pay no attention to is_running. If this is indeed the case, we
-             * can fix the bug by adding a retry_as_entry flag to
-             * routerinfo_t. -NM */
-            r->is_running = 1;
+            e->can_retry = 1;
           }
         }
       });
