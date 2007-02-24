@@ -1177,7 +1177,7 @@ router_choose_random_node(const char *preferred,
   if (!choice) {
     if (strict) {
       log_warn(LD_CIRC, "All preferred nodes were down when trying to choose "
-               "node, and the Strict[...]Nodes option was set. Failing.");
+               "node, and the Strict[...]Nodes option is set. Failing.");
     } else {
       log_warn(LD_CIRC,
                "No available nodes when trying to choose node. Failing.");
@@ -2685,9 +2685,9 @@ router_get_combined_status_by_nickname(const char *nickname,
         }
       });
     if (any_unwarned) {
-      log_warn(LD_CONFIG,"There are multiple matches for the nickname \"%s\",",
+      log_warn(LD_CONFIG,"There are multiple matches for the nickname \"%s\","
                " but none is listed as named by the directory authorites. "
-               "Choosing one arbitrarily.");
+               "Choosing one arbitrarily.", nickname);
     }
   } else if (warn_if_unnamed && best && !best->name_lookup_warned) {
     char fp[HEX_DIGEST_LEN+1];
