@@ -791,7 +791,7 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 	return -1;
 }
 
-// parses a raw request from a nameserver.
+// parses a raw reply from a nameserver.
 static int
 reply_parse(u8 *packet, int length) {
 	int j = 0;	// index into packet
@@ -799,10 +799,11 @@ reply_parse(u8 *packet, int length) {
 	u32 _t32;  // used by the macros
 	char tmp_name[256]; // used by the macros
 
-	u16 trans_id, flags, questions, answers, authority, additional, datalength;
+	u16 trans_id, questions, answers, authority, additional, datalength;
+	u16 flags = 0;
 	u32 ttl, ttl_r = 0xffffffff;
 	struct reply reply;
-	struct request *req;
+	struct request *req = NULL;
 	unsigned int i;
 
 	GET16(trans_id);
@@ -815,16 +816,16 @@ reply_parse(u8 *packet, int length) {
 	(void) additional; /* suppress "unused variable" warnings. */
 
 	req = request_find_from_trans_id(trans_id);
+	/* if no request, can't do anything. */
 	if (!req) return -1;
-	// XXXX012 should the other return points also call reply_handle? -NM
 
 	memset(&reply, 0, sizeof(reply));
 
+	/* if not an answer, it doesn't go with any of our requests. */
 	if (!(flags & 0x8000)) return -1;  // must be an answer
 	if (flags & 0x020f) {
 		// there was an error
-		reply_handle(req, flags, 0, NULL);
-		return -1;
+		goto err;
 	}
 	// if (!answers) return;  // must have an answer of some form
 
@@ -843,7 +844,7 @@ reply_parse(u8 *packet, int length) {
 		//	 <label:name><u16:type><u16:class>
 		SKIP_NAME;
 		j += 4;
-		if (j >= length) return -1;
+		if (j >= length) goto err;
 	}
 
 	// now we have the answer section which looks like
@@ -866,13 +867,13 @@ reply_parse(u8 *packet, int length) {
 				j += datalength; continue;
 			}
 			if ((datalength & 3) != 0) /* not an even number of As. */
-				return -1;
+				goto err;
 			addrcount = datalength >> 2;
 			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, (unsigned)addrcount);
 
 			ttl_r = MIN(ttl_r, ttl);
 			// we only bother with the first four addresses.
-			if (j + 4*addrtocopy > length) return -1;
+			if (j + 4*addrtocopy > length) goto err;
 			memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
 				   packet + j, 4*addrtocopy);
 			j += 4*addrtocopy;
@@ -885,7 +886,7 @@ reply_parse(u8 *packet, int length) {
 			}
 			if (name_parse(packet, length, &j, reply.data.ptr.name,
 						   sizeof(reply.data.ptr.name))<0)
-				return -1;
+				goto err;
 			ttl_r = MIN(ttl_r, ttl);
 			reply.have_answer = 1;
 			break;
@@ -895,13 +896,13 @@ reply_parse(u8 *packet, int length) {
 				j += datalength; continue;
 			}
 			if ((datalength & 15) != 0) /* not an even number of AAAAs. */
-				return -1;
+				goto err;
 			addrcount = datalength >> 4;  // each address is 16 bytes long
 			addrtocopy = MIN(MAX_ADDRS - reply.data.aaaa.addrcount, (unsigned)addrcount);
 			ttl_r = MIN(ttl_r, ttl);
 
 			// we only bother with the first four addresses.
-			if (j + 16*addrtocopy > length) return -1;
+			if (j + 16*addrtocopy > length) goto err;
 			memcpy(&reply.data.aaaa.addresses[reply.data.aaaa.addrcount],
 				   packet + j, 16*addrtocopy);
 			reply.data.aaaa.addrcount += addrtocopy;
@@ -917,6 +918,8 @@ reply_parse(u8 *packet, int length) {
 	reply_handle(req, flags, ttl_r, &reply);
 	return 0;
  err:
+	if (req)
+		reply_handle(req, flags, 0, NULL);
 	return -1;
 }
 

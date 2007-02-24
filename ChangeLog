@@ -53,6 +53,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       if we aren't.
     - Make earlier entry guards _really_ get retried when the network comes
       back online.
+    - On a malformed DNS reply, always give an error to the corresponding
+      DNS request.
 
   o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0
