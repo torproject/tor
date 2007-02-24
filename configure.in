@@ -196,6 +196,12 @@ fi
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
+dnl This is a disgusting hack so we safely include recent libevent headers.
+AC_CHECK_TYPE(u_int64_t, unsigned long long)
+AC_CHECK_TYPE(u_int32_t, unsigned long)
+AC_CHECK_TYPE(u_int16_t, unsigned short)
+AC_CHECK_TYPE(u_int8_t, unsigned char)
+
 AC_CACHE_CHECK([for libevent directory], tor_cv_libevent_dir, [
   saved_LIBS="$LIBS"
   saved_LDFLAGS="$LDFLAGS"

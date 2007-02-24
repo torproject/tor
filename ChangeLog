@@ -55,6 +55,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       back online.
     - On a malformed DNS reply, always give an error to the corresponding
       DNS request.
+    - Build with recent libevents on platforms that do not define the
+      nonstandard types "u_int8_t" and friends.
 
   o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0
