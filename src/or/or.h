@@ -797,8 +797,8 @@ typedef struct connection_t {
 typedef struct or_connection_t {
   connection_t _base;
 
-  /** Hash of the public RSA key for the other side's identity key, or zero if
-   * the other side hasn't shown us a valid identity key. */
+  /** Hash of the public RSA key for the other side's identity key, or zeroes
+   * if the other side hasn't shown us a valid identity key. */
   char identity_digest[DIGEST_LEN];
   char *nickname; /**< Nickname of OR on other side (if any). */
 

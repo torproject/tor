@@ -1028,8 +1028,11 @@ _free_cached_dir(void *_d)
   cached_dir_decref(d);
 }
 
-/** If we have no cached directory, or it is older than <b>when</b>, then
- * replace it with <b>directory</b>, published at <b>when</b>.
+/** If we have no cached directory, or it is older than <b>published</b>,
+ * then replace it with <b>directory</b>, published at <b>published</b>.
+ *
+ * If <b>is_running_routers</b>, this is really a running_routers document
+ * rather than a v1 directory.
  */
 void
 dirserv_set_cached_directory(const char *directory, time_t published,
@@ -1140,15 +1143,15 @@ dirserv_clear_old_networkstatuses(time_t cutoff)
   }
 }
 
-/** Remove any networkstatus from the directory cache that was published
- * before <b>cutoff</b>. */
+/** Remove any v1 info from the directory cache that was published
+ * too long ago. */
 void
 dirserv_clear_old_v1_info(time_t now)
 {
 #define MAX_V1_DIRECTORY_AGE (30*24*60*60)
 #define MAX_V1_RR_AGE (7*24*60*60)
   if (cached_directory &&
-      cached_directory->published < (now-MAX_V1_DIRECTORY_AGE)) {
+      cached_directory->published < (now - MAX_V1_DIRECTORY_AGE)) {
     cached_dir_decref(cached_directory);
   }
   if (cached_runningrouters.published < (now - MAX_V1_RR_AGE)) {
@@ -1226,7 +1229,7 @@ dirserv_get_obj(const char **out,
 
 /** Return the most recently generated encoded signed directory, generating a
  * new one as necessary.  If not an authoritative directory may return NULL if
- * no directory is yet cached.*/
+ * no directory is yet cached. */
 cached_dir_t *
 dirserv_get_directory(void)
 {
@@ -1267,7 +1270,7 @@ dirserv_regenerate_directory(void)
   return the_directory;
 }
 
-/** For authoritative directories: the current (v1) network status */
+/** For authoritative directories: the current (v1) network status. */
 static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
 
 /** Replace the current running-routers list with a newly generated one. */
@@ -1337,7 +1340,7 @@ dirserv_get_runningrouters(const char **rr, int compress)
                          "v1 network status list", 1);
 }
 
-/** For authoritative directories: the current (v2) network status */
+/** For authoritative directories: the current (v2) network status. */
 static cached_dir_t *the_v2_networkstatus = NULL;
 
 /** Return true iff our opinion of the routers has been stale for long
@@ -1390,8 +1393,8 @@ dirserv_thinks_router_is_unreliable(time_t now,
   return 0;
 }
 
-/** Helper: returns a tristate based on comparing **(uint32_t**)a to
-* **(uint32_t**)b. */
+/** Helper: returns a tristate based on comparing **(uint32_t**)<b>a</b>
+ * to **(uint32_t**)<b>b</b>. */
 static int
 _compare_uint32(const void **a, const void **b)
 {

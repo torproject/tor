@@ -1,6 +1,6 @@
 ;tor.nsi - A basic win32 installer for Tor
 ; Originally written by J Doe.
-; See LICENSE for licencing information
+; See LICENSE for licensing information
 ;-----------------------------------------
 ; NOTE: This file might be obsolete. Look at tor-mingw.nsi.in instead.
 ;-----------------------------------------

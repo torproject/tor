@@ -37,8 +37,8 @@ connection_or_remove_from_identity_map(or_connection_t *conn)
   tmp = digestmap_get(orconn_identity_map, conn->identity_digest);
   if (!tmp) {
     if (!tor_digest_is_zero(conn->identity_digest)) {
-      log_warn(LD_BUG, "Didn't found connection on identity map when trying "
-               "to remove it.");
+      log_warn(LD_BUG, "Bug: Didn't find connection on identity map when "
+               "trying to remove it.");
     }
     return;
   }
@@ -86,7 +86,7 @@ connection_or_clear_identity_map(void)
 }
 
 /** Change conn->identity_digest to digest, and add conn into
- * orconn_digest_map.   */
+ * orconn_digest_map. */
 static void
 connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 {
@@ -105,7 +105,7 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
 
-  /* If we're setting the ID to zero, don't add a mapping.*/
+  /* If we're setting the ID to zero, don't add a mapping. */
   if (tor_digest_is_zero(digest))
     return;
 
@@ -658,7 +658,7 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
                     DIGEST_LEN);
       log_fn(severity, LD_OR,
              "Tried connecting to router at %s:%d, but identity key was not "
-             "as expected wanted %s but got %s",
+             "as expected: wanted %s but got %s.",
              conn->_base.address, conn->_base.port, expected, seen);
       entry_guard_register_connect_status(conn->identity_digest,0,time(NULL));
       router_set_status(conn->identity_digest, 0);

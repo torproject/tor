@@ -1807,8 +1807,8 @@ struct service_fns {
                   NULL, NULL, NULL, NULL, NULL, NULL,
                   NULL};
 
-/** Loads functions used by NT services. Returns 0 on success, exits on
- * error. */
+/** Loads functions used by NT services. Returns on success, or prints a
+ * complaint to stdout and exits on error. */
 static void
 nt_service_loadlibrary(void)
 {

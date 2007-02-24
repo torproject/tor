@@ -751,10 +751,7 @@ circuit_get_intro_point(const char *digest)
  * if required, and if info is defined, does not already use info
  * as any of its hops; or NULL if no circuit fits this description.
  *
- * Return need_uptime circuits if that is requested; and if it's not
- * requested, return non-uptime circuits if possible, else either.
- *
- * Only return internal circuits if that is requested.
+ * If ! need_uptime, prefer returning non-uptime circuits.
  */
 origin_circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,

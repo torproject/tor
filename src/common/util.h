@@ -214,7 +214,7 @@ int append_bytes_to_file(const char *fname, const char *str, size_t len,
 
 /** Flag for read_file_to_str: open the file in binary mode. */
 #define RFTS_BIN            1
-/** Flag for read_file_to_str: it's okay if the file doesn't exist */
+/** Flag for read_file_to_str: it's okay if the file doesn't exist. */
 #define RFTS_IGNORE_MISSING 2
 
 struct stat;
