@@ -756,7 +756,8 @@ run_scheduled_events(time_t now)
   /* 0b. If we've deferred a signewnym, make sure it gets handled
    * eventually */
   if (signewnym_is_pending &&
-      time_of_last_signewnym + MAX_SIGNEWNYM_RATE < now) {
+      time_of_last_signewnym + MAX_SIGNEWNYM_RATE <= now) {
+    log(LOG_INFO, LD_CONTROL, "Honoring delayed NEWNYM request");
     circuit_expire_all_dirty_circs();
     addressmap_clear_transient();
     time_of_last_signewnym = now;
@@ -1389,9 +1390,15 @@ signal_callback(int fd, short events, void *arg)
 #endif
     case SIGNEWNYM: {
       time_t now = time(NULL);
-      if (time_of_last_signewnym + MAX_SIGNEWNYM_RATE >= now) {
+      if (time_of_last_signewnym + MAX_SIGNEWNYM_RATE > now) {
         signewnym_is_pending = 1;
+        log(LOG_NOTICE, LD_CONTROL,
+            "Rate limiting NEWNYM request: delaying by %d second(s)",
+            (int)(MAX_SIGNEWNYM_RATE+time_of_last_signewnym-now));
       } else {
+        /* XXX refactor someday: these two calls are in
+         * run_scheduled_events() above too, and they should be in just
+         * one place. */
         circuit_expire_all_dirty_circs();
         addressmap_clear_transient();
         time_of_last_signewnym = now;

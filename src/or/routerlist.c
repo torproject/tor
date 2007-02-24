@@ -1911,7 +1911,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
     if (!signed_desc_digest_is_recognized(&router->cache_info)) {
       /* We asked for it, so some networkstatus must have listed it when we
-       * did.  save it in case we're a cache and somebody else asks for it. */
+       * did.  Save it if we're a cache in case somebody else asks for it. */
       log_info(LD_DIR,
                "Received a no-longer-recognized descriptor for router '%s'",
                router->nickname);
