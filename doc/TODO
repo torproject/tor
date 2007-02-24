@@ -51,34 +51,6 @@ R   - actually cause the directory.c functions to know about or_port
         or_conn is full, and accept the sometimes directory data will just
         never get written.
 
-  o DNS improvements
-    o Asynchronous DNS
-      X Make evdns use windows strerror equivalents.
-        (there don't seem to be windows equivalents for strerror on the
-         WSAERR* codes.)
-      o Make sure patches get into libevent.
-      o Verify that it works well on windows
-    o Debug and re-enable server-side reverse DNS caching
-
-  - Critical but minor bugs, backport candidates.
-    - support dir 503s better
-      o clients don't log as loudly when they receive them
-      o they don't count toward the 3-strikes rule
-        D But eventually, we give up after getting a lot of 503s.
-        D Delay when we get a lot of 503s, rather than punting onto the
-          servers that have given us 503s?
-        o Add a 'BadDirectory' flag to statuses.
-      o authorities should *never* 503 a cache, and should never 503
-        network status requests.
-      D They can 503 client descriptor requests when they feel like it.
-        How can they distinguish? Not implemented for now, maybe
-        should abandon.
-      - update dir-spec with what we decided for each of these
-
-  o Controller fixes
-    o Make REMAP stream events have a SOURCE (cache or exit), and make them
-      generated in every case where we get a connected or resolved cell.
-
 N - Libevent fixes
     . Try to get the pthread_sigprocmask situation under control; see
       coderman's or-dev post of 20-Feb-2007.
@@ -88,7 +60,6 @@ N - Libevent fixes
     - Address XXX012 items
 
   . Packaging
-    o Switch canonical win32 compiler to mingw.
     - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
 
@@ -123,6 +94,20 @@ N   . Document transport and natdport
       o In man page
       - In a good HOWTO.
 
+    - Update dir-spec with decisions made on these issues:
+
+        o clients don't log as loudly when they receive them
+        o they don't count toward the 3-strikes rule
+          D But eventually, we give up after getting a lot of 503s.
+          D Delay when we get a lot of 503s, rather than punting onto the
+            servers that have given us 503s?
+          o Add a 'BadDirectory' flag to statuses.
+        o authorities should *never* 503 a cache, and should never 503
+          network status requests.
+        D They can 503 client descriptor requests when they feel like it.
+          How can they distinguish? Not implemented for now, maybe
+          should abandon.
+        - update dir-spec with what we decided for each of these
 
 Things we'd like to do in 0.2.0.x:
   - Proposals:
@@ -426,6 +411,8 @@ R - add d64 and fp64 along-side d and fp so people can paste status
       of edge_stream_t.
 
 Future version:
+  - Include the output of svn info/svk info output into the binary, so
+    it's trivial to see what version a binary was built from.
   - Add a doxygen style checker to make check-spaces so nick doesn't drift
     too far from arma's undocumented styleguide.  Also, document that
     styleguide in HACKING.  (See r9634 for example.)
