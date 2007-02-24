@@ -175,8 +175,12 @@ see tor-design.pdf.
    the key is not as expected, the party must close the connection.
 
    All parties SHOULD reject connections to or from ORs that have malformed
-   or missing certificates.  ORs SHOULD NOT reject incoming connections from
-   OPs with malformed or missing certificates.
+   or missing certificates.
+   [XXX How can we recognize that it's an OR if it's an incoming connection
+    with malformed/missing certs? Should we change the above to just "to
+    ORs"? -RD]
+   ORs SHOULD NOT reject incoming connections from OPs with malformed
+   or missing certificates.
 
    [Before version 0.1.2.8-rc, ORs rejected incoming connections from ORs and
    OPs alike if their certificates were missing or malformed.]
