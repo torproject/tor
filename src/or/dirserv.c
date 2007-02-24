@@ -1914,8 +1914,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
 
 /** Called when a TLS handshake has completed successfully with a
  * router listening at <b>address</b>:<b>or_port</b>, and has yielded
- * a certificate with digest <b>digest_rcvd</b> and nickname
- * <b>nickname_rcvd</b>.
+ * a certificate with digest <b>digest_rcvd</b>.
  *
  * Also, if as_advertised is 1, then inform the reachability checker
  * that we could get to this guy.
@@ -1924,20 +1923,17 @@ void
 dirserv_orconn_tls_done(const char *address,
                         uint16_t or_port,
                         const char *digest_rcvd,
-                        const char *nickname_rcvd,
                         int as_advertised)
 {
   routerlist_t *rl = router_get_routerlist();
   tor_assert(address);
   tor_assert(digest_rcvd);
-  tor_assert(nickname_rcvd);
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (!strcasecmp(address, ri->address) && or_port == ri->or_port &&
         as_advertised &&
-        !memcmp(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN) &&
-        !strcasecmp(nickname_rcvd, ri->nickname)) {
-      /* correct nickname and digest. mark this router reachable! */
+        !memcmp(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN)) {
+      /* correct digest. mark this router reachable! */
       log_info(LD_DIRSERV, "Found router %s to be reachable. Yay.",
                ri->nickname);
       ri->last_reachable = time(NULL);

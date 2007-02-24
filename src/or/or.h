@@ -2465,7 +2465,6 @@ int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
 void dirserv_orconn_tls_done(const char *address,
                              uint16_t or_port,
                              const char *digest_rcvd,
-                             const char *nickname,
                              int as_advertised);
 void dirserv_test_reachability(int try_all);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,

@@ -591,7 +591,6 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
                                     char *digest_rcvd)
 {
   crypto_pk_env_t *identity_rcvd=NULL;
-  char nickname[MAX_NICKNAME_LEN+1];
   or_options_t *options = get_options();
   int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
   const char *safe_address =
@@ -668,10 +667,10 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
     }
     if (authdir_mode(options)) {
       /* We initiated this connection to address:port.  Drop all routers
-       * with the same address:port and a different key or nickname.
+       * with the same address:port and a different key.
        */
       dirserv_orconn_tls_done(conn->_base.address, conn->_base.port,
-                              digest_rcvd, nickname, as_advertised);
+                              digest_rcvd, as_advertised);
     }
     if (!as_advertised)
       return -1;
