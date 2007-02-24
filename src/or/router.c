@@ -1316,8 +1316,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   ri_tmp = router_parse_entry_from_string(cp, NULL, 1);
   if (!ri_tmp) {
     log_err(LD_BUG,
-            "We just generated a router descriptor we can't parse: <<%s>>",
-            s);
+            "We just generated a router descriptor we can't parse.");
+    log_err(LD_BUG, "Descriptor was: <<%s>>", s);
     return -1;
   }
   tor_free(s_dup);
