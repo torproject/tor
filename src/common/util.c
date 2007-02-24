@@ -862,7 +862,7 @@ tv_addms(struct timeval *a, long ms)
   a->tv_usec %= 1000000;
 }
 
-/** Yield true iff <b>y</b> is a leap-year */
+/** Yield true iff <b>y</b> is a leap-year. */
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
 /** Helper: Return the number of leap-days between Jan 1, y1 and Jan 1, y2. */
 static int
@@ -1957,9 +1957,9 @@ get_interface_address(int severity, uint32_t *addr)
 
 #ifndef MS_WINDOWS
 /* Based on code contributed by christian grothoff */
-/** True iff we've called start_daemon. */
+/** True iff we've called start_daemon(). */
 static int start_daemon_called = 0;
-/** True iff we've called finish_daemon. */
+/** True iff we've called finish_daemon(). */
 static int finish_daemon_called = 0;
 /** Socketpair used to communicate between parent and child process while
  * daemonizing. */

@@ -216,7 +216,7 @@ router_append_to_journal(signed_descriptor_t *desc)
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
  * signed_descriptor_t* in *<b>a</b> is older, the same age as, or newer than
- * the signed_descriptor_t* in *<b>b</b> */
+ * the signed_descriptor_t* in *<b>b</b>. */
 static int
 _compare_old_routers_by_age(const void **_a, const void **_b)
 {
@@ -226,7 +226,7 @@ _compare_old_routers_by_age(const void **_a, const void **_b)
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
  * routerinfo_t* in *<b>a</b> is older, the same age as, or newer than
- * the routerinfo_t in *<b>b</b> */
+ * the routerinfo_t* in *<b>b</b>. */
 static int
 _compare_routers_by_age(const void **_a, const void **_b)
 {
@@ -1999,7 +1999,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
-  /* We haven't seen a router with this idntity before.  Add it to the end of
+  /* We haven't seen a router with this identity before. Add it to the end of
    * the list. */
   routerlist_insert(routerlist, router);
   if (!from_cache)
@@ -2009,8 +2009,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 }
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
- * signed_descriptor_t* in *<b>a</b> has an identity digest preceeding, equal
- * to, or later than that of <b>b</b>. */
+ * signed_descriptor_t* in *<b>a</b> has an identity digest preceding, equal
+ * to, or later than that of *<b>b</b>. */
 static int
 _compare_old_routers_by_identity(const void **_a, const void **_b)
 {
@@ -4144,9 +4144,9 @@ routerstatus_count_usable_entries(smartlist_t *entries)
 /** True iff, the last time we checked whether we had enough directory info
  * to build circuits, the answer was "yes". */
 static int have_min_dir_info = 0;
-/** True iff enough has changes since the last time we checked whether we had
+/** True iff enough has changed since the last time we checked whether we had
  * enough directory info to build circuits that our old answer can no longer
- * be trusted.  */
+ * be trusted. */
 static int need_to_update_have_min_dir_info = 1;
 
 /** Return true iff we have enough networkstatus and router information to

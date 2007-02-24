@@ -24,20 +24,20 @@ const char buffers_c_id[] =
  * end/before the start of the buffer.
  */
 #ifdef SENTINELS
-/* 4-byte value to write at the start of each buffer memory region */
+/** 4-byte value to write at the start of each buffer memory region. */
 #define START_MAGIC 0x70370370u
-/* 4-byte value to write at the end of each buffer memory region */
+/** 4-byte value to write at the end of each buffer memory region. */
 #define END_MAGIC 0xA0B0C0D0u
-/* Given buf-&gt;mem, yield a pointer to the raw memory region (for free(),
- * realloc(), and so on) */
+/** Given buf-&gt;mem, yield a pointer to the raw memory region (for free(),
+ * realloc(), and so on). */
 #define RAW_MEM(m) ((void*)(((char*)m)-4))
-/* Given a pointer to the raw memory region (from malloc() or realloc()),
+/** Given a pointer to the raw memory region (from malloc() or realloc()),
  * yield the correct value for buf-&gt;mem (just past the first sentinel). */
 #define GUARDED_MEM(m) ((void*)(((char*)m)+4))
-/* How much memory do we need to allocate for a buffer to hold <b>ln</b> bytes
+/** How much memory do we need to allocate for a buffer to hold <b>ln</b> bytes
  * of data? */
 #define ALLOC_LEN(ln) ((ln)+8)
-/* Initialize the sentinel values on <b>m</b> (a value of buf-&gt;mem), which
+/** Initialize the sentinel values on <b>m</b> (a value of buf-&gt;mem), which
  * has <b>ln</b> useful bytes. */
 #define SET_GUARDS(m, ln) \
   do { set_uint32((m)-4,START_MAGIC); set_uint32((m)+ln,END_MAGIC); } while (0)
@@ -64,10 +64,10 @@ const char buffers_c_id[] =
 /** A resizeable buffer, optimized for reading and writing. */
 struct buf_t {
   uint32_t magic; /**< Magic cookie for debugging: Must be set to
-                   *   BUFFER_MAGIC */
-  char *mem;      /**< Storage for data in the buffer */
+                   *   BUFFER_MAGIC. */
+  char *mem;      /**< Storage for data in the buffer. */
   char *cur;      /**< The first byte used for storing data in the buffer. */
-  size_t highwater; /**< Largest observed datalen since last buf_shrink */
+  size_t highwater; /**< Largest observed datalen since last buf_shrink. */
   size_t len;     /**< Maximum amount of data that <b>mem</b> can hold. */
   size_t memsize; /**< How many bytes did we actually allocate? Can be less
                    * than 'len' if we shortened 'len' by a few bytes to make

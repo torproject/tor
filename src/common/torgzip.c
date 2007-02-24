@@ -299,8 +299,8 @@ detect_compression_method(const char *in, size_t in_len)
   }
 }
 
-/** Internal state for a incremental zlib compression/decompression.  The body
- * of this struct is not exposed.  */
+/** Internal state for an incremental zlib compression/decompression.  The
+ * body of this struct is not exposed. */
 struct tor_zlib_state_t {
   struct z_stream_s stream;
   int compress;
@@ -308,7 +308,7 @@ struct tor_zlib_state_t {
 
 /** Construct and return a tor_zlib_state_t object using <b>method</b>.  If
  * <b>compress</b>, it's for compression; otherwise it's for
- * decompression.  */
+ * decompression. */
 tor_zlib_state_t *
 tor_zlib_new(int compress, compress_method_t method)
 {

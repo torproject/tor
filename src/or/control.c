@@ -15,7 +15,7 @@ const char control_c_id[] =
  * finished authentication and is accepting commands. */
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN_V0 ||          \
                           (s) == CONTROL_CONN_STATE_OPEN_V1)
-/** Yield trie iff <b>s</b> is the state of a control_connection_t that is
+/** Yield true iff <b>s</b> is the state of a control_connection_t that is
  * speaking the V0 protocol.
  */
 #define STATE_IS_V0(s) ((s) == CONTROL_CONN_STATE_NEEDAUTH_V0 ||        \
@@ -24,7 +24,6 @@ const char control_c_id[] =
 /*
  * See control-spec.txt and control-spec-v0.txt for full details on
  * protocol(s).
- *
  */
 
 /* Recognized version 0 message type codes; do not add new codes to this list.
@@ -725,7 +724,7 @@ send_control1_event_string(uint16_t event, event_format_t which,
  * sent only to controllers that have enabled extended events.
  *
  * Currently the length of the message is limited to 1024 (including the
- * ending \n\r\0. */
+ * ending \n\r\0). */
 static void
 send_control1_event_impl(uint16_t event, event_format_t which, int extended,
                          const char *format, va_list ap)
@@ -1535,7 +1534,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   return 0;
 }
 
-/** Implementatino helper for GETINFO: knows the answers for questions about
+/** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */
 static int
 getinfo_helper_dir(control_connection_t *control_conn,
@@ -1801,7 +1800,7 @@ typedef int (*getinfo_helper_t)(control_connection_t *,
 
 /** A single item for the GETINFO question-to-answer-function table. */
 typedef struct getinfo_item_t {
-  const char *varname; /**< The value (or prefix) of the question */
+  const char *varname; /**< The value (or prefix) of the question. */
   getinfo_helper_t fn; /**< The function that knows the answer: NULL if
                         * this entry is documentation-only. */
   const char *desc; /**< Description of the variable. */
@@ -3337,9 +3336,9 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   return 0;
 }
 
-/** Figure out best name for the target router of an OR connection, and write
- * it into the <b>len</b>-character buffer <b>name</b>.  Use verbose names if
- * <b>long_names</b> is set. */
+/** Figure out the best name for the target router of an OR connection
+ * <b>conn</b>, and write it into the <b>len</b>-character buffer
+ * <b>name</b>.  Use verbose names if <b>long_names</b> is set. */
 static void
 orconn_target_get_name(int long_names,
                        char *name, size_t len, or_connection_t *conn)
@@ -3366,7 +3365,7 @@ orconn_target_get_name(int long_names,
   }
 }
 
-/** Convert a TOR_TLS error code into an END_OR_CONN_* reason. */
+/** Convert a TOR_TLS_* error code into an END_OR_CONN_* reason. */
 int
 control_tls_error_to_reason(int e)
 {
@@ -3428,7 +3427,7 @@ or_conn_end_reason_to_string(int r)
  */
 int
 control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
-        int reason)
+                             int reason)
 {
   char buf[HEX_DIGEST_LEN+3]; /* status, dollar, identity, NUL */
   size_t len;

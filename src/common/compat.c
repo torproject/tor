@@ -990,8 +990,8 @@ typedef struct tor_pthread_data_t {
   void (*func)(void *);
   void *data;
 } tor_pthread_data_t;
-/** Given a tor_pthread_data_t <b>d</b>, call d-&gt;func(d-&gt;data);, and
- * free d.  Used to make sure we can call functions the way pthread
+/** Given a tor_pthread_data_t <b>_data</b>, call _data-&gt;func(d-&gt;data);,
+ * and free _data.  Used to make sure we can call functions the way pthread
  * expects. */
 static void *
 tor_pthread_helper_fn(void *_data)

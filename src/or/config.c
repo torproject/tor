@@ -505,7 +505,7 @@ static config_var_description_t state_description[] = {
 };
 
 /** Type of a callback to validate whether a given configuration is
- * well-formed and consistant.  See options_trial_assign for documentation
+ * well-formed and consistent. See options_trial_assign() for documentation
  * of arguments. */
 typedef int (*validate_fn_t)(void*,void*,int,char**);
 
@@ -516,9 +516,9 @@ typedef struct {
   size_t size; /**< Size of the struct that everything gets parsed into. */
   uint32_t magic; /**< Required 'magic value' to make sure we have a struct
                    * of the right type. */
-  off_t magic_offset; /**< Offset of the magic value within the struct */
+  off_t magic_offset; /**< Offset of the magic value within the struct. */
   config_abbrev_t *abbrevs; /**< List of abbreviations that we expand when
-                             * parsing this format */
+                             * parsing this format. */
   config_var_t *vars; /**< List of variables we recognize, their default
                        * values, and where we stick them in the structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
@@ -3801,7 +3801,7 @@ init_libevent(void)
 }
 
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-/** Table mapping return value of event_get_version() to le_version_t */
+/** Table mapping return value of event_get_version() to le_version_t. */
 static const struct {
   const char *name; le_version_t version;
 } le_version_table[] = {
@@ -3837,7 +3837,7 @@ decode_libevent_version(void)
 /**
  * Compare the given libevent method and version to a list of versions
  * which are known not to work.  Warn the user as appropriate.
-a */
+ */
 static void
 check_libevent_version(const char *m, int server)
 {

@@ -62,11 +62,11 @@ typedef struct router_status_t {
 /** List of nickname-\>identity fingerprint mappings for all the routers
  * that we name.  Used to prevent router impersonation. */
 typedef struct authdir_config_t {
-  strmap_t *fp_by_name; /* Map from lc nickname to fingerprint */
-  digestmap_t *status_by_digest; /* Map from digest to router_status_t. */
+  strmap_t *fp_by_name; /**< Map from lc nickname to fingerprint. */
+  digestmap_t *status_by_digest; /**< Map from digest to router_status_t. */
 } authdir_config_t;
 
-/** Should be static; exposed for testing */
+/** Should be static; exposed for testing. */
 authdir_config_t *fingerprint_list = NULL;
 
 /** Allocate and return a new, empty, authdir_config_t. */

@@ -973,7 +973,7 @@ run_scheduled_events(time_t now)
   }
 }
 
-/** Libevent timer: used to invoke second_elapsed_callback once per second. */
+/** Libevent timer: used to invoke second_elapsed_callback() once per second. */
 static struct event *timeout_event = NULL;
 /** Number of libevent errors in the last second: we die if we get too many. */
 static int n_libevent_errors = 0;

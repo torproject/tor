@@ -565,10 +565,10 @@ circuit_expire_old_circuits(time_t now)
   }
 }
 
-/** Number of circuits to open at once when testing our bandwidth. */
+/** Number of testing circuits we want open before testing our bandwidth. */
 #define NUM_PARALLEL_TESTING_CIRCS 4
 
-/** True iff we've ever opened enough testing circuits to test our
+/** True iff we've ever had enough testing circuits open to test our
  * bandwidth. */
 static int have_performed_bandwidth_test = 0;
 

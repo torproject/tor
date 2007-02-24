@@ -160,17 +160,17 @@
 /** Length of a router identity encoded as a hexadecimal digest, plus
  * possible dollar sign. */
 #define MAX_HEX_NICKNAME_LEN (HEX_DIGEST_LEN+1)
-/** Maximum length of verbose router identifier (Dollar sign, hex ID digest,
- * equal or tilde, nickname) */
+/** Maximum length of verbose router identifier: dollar sign, hex ID digest,
+ * equal sign or tilde, nickname. */
 #define MAX_VERBOSE_NICKNAME_LEN (1+HEX_DIGEST_LEN+1+MAX_NICKNAME_LEN)
 
 /** Maximum size, in bytes, for resized buffers. */
 #define MAX_BUF_SIZE ((1<<24)-1) /* 16MB-1 */
-/** Maximum size, in bytes, for any directory object that we've downloaded */
+/** Maximum size, in bytes, for any directory object that we've downloaded. */
 #define MAX_DIR_DL_SIZE MAX_BUF_SIZE
 
 /** For http parsing: Maximum number of bytes we'll accept in the headers
- * of an HTTP request or response.*/
+ * of an HTTP request or response. */
 #define MAX_HEADERS_SIZE 50000
 /** Maximum size, in bytes, for any directory object that we're accepting
  * as an upload. */
@@ -206,7 +206,7 @@
 /** Possible rules for generating circuit IDs on an OR connection. */
 typedef enum {
   CIRC_ID_TYPE_LOWER=0, /**< Pick from 0..1<<15-1. */
-  CIRC_ID_TYPE_HIGHER=1, /**< Pick from 1<<15..1<<16-1 */
+  CIRC_ID_TYPE_HIGHER=1, /**< Pick from 1<<15..1<<16-1. */
   /** The other side of a connection is an OP: never create circuits to it,
    * and let it use any circuit ID it wants. */
   CIRC_ID_TYPE_NEITHER=2
@@ -293,7 +293,7 @@ typedef enum {
 #define EXIT_CONN_STATE_RESOLVEFAILED 4
 #define _EXIT_CONN_STATE_MAX 4
 
-/* the AP state values must be disjoint from the EXIT state values */
+/* The AP state values must be disjoint from the EXIT state values. */
 #define _AP_CONN_STATE_MIN 5
 /** State for a SOCKS connection: waiting for SOCKS request. */
 #define AP_CONN_STATE_SOCKS_WAIT 5
@@ -545,7 +545,7 @@ typedef enum {
  * target address:port. */
 #define END_STREAM_REASON_CANT_FETCH_ORIG_DEST 260
 /** This is a connection on the NATD port, and the destination IP:Port was
- * either ill-formed or out-of-range.*/
+ * either ill-formed or out-of-range. */
 #define END_STREAM_REASON_INVALID_NATD_DEST 261
 
 /** Bitwise-and this value with endreason to mask out all flags. */
@@ -569,7 +569,7 @@ typedef enum {
  * answer. */
 #define REMAP_STREAM_SOURCE_EXIT 2
 
-/* 'type' values to use in RESOLVED cells.  Specified in tor-spec.txt */
+/* 'type' values to use in RESOLVED cells.  Specified in tor-spec.txt. */
 #define RESOLVED_TYPE_HOSTNAME 0
 #define RESOLVED_TYPE_IPV4 4
 #define RESOLVED_TYPE_IPV6 6

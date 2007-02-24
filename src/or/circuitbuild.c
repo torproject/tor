@@ -1112,7 +1112,7 @@ router_handles_some_port(routerinfo_t *router, smartlist_t *needed_ports)
   return 0;
 }
 
-/** Return true iff <b>conn</b> is waiting for a general circuit to be
+/** Return true iff <b>conn</b> needs another general circuit to be
  * built. */
 static int
 ap_stream_wants_exit_attention(connection_t *conn)
