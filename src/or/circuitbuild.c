@@ -2280,8 +2280,7 @@ entry_guards_prepend_from_config(void)
   /* Remove all currently configured entry guards from entry_routers. */
   SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri, {
     if (is_an_entry_guard(ri->cache_info.identity_digest)) {
-      smartlist_del(entry_routers, ri_sl_idx--);
-      ri_sl_len--;
+      SMARTLIST_DEL_CURRENT(entry_routers, ri);
     }
   });
 

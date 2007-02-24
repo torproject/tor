@@ -156,6 +156,16 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
       cmd;                                                      \
     } } while (0)
 
+/** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
+ * with the variable <b>var</b>, remover the current element in a way that
+ * won't confuse the loop. */
+#define SMARTLIST_DEL_CURRENT(sl, var)          \
+  do {                                          \
+    smartlist_del(sl, var ## _sl_idx);          \
+    --var ## _sl_idx;                           \
+    --var ## _sl_len;                           \
+  } while (0);
+
 #define DECLARE_MAP_FNS(maptype, keytype, prefix)                       \
   typedef struct maptype maptype;                                       \
   typedef struct prefix##entry_t *prefix##iter_t;                       \
