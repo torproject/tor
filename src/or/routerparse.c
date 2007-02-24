@@ -814,10 +814,19 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
     router->bandwidthrate =
       tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
+
+    if (!router->bandwidthrate) {
+      log_warn(LD_DIR, "bandwidthrate %s unreadable or 0. Failing.",
+               escaped(tok->args[0]));
+      goto err;
+    }
+
     router->bandwidthburst =
       tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
     router->bandwidthcapacity =
       tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
+
+    /* XXX we don't error-check these values? -RD */
   }
 
   if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
@@ -953,10 +962,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR,"or_port unreadable or 0. Failing.");
     goto err;
   }
-  if (!router->bandwidthrate) {
-    log_warn(LD_DIR,"bandwidthrate unreadable or 0. Failing.");
-    goto err;
-  }
+
   if (!router->platform) {
     router->platform = tor_strdup("<unknown>");
   }
