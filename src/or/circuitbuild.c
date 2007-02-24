@@ -2201,7 +2201,8 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
                 entry->nickname, buf, tbuf);
       entry->last_attempted = now;
     }
-    entry->can_retry = 0; /* We gave it an early chance; no good. */
+    if (entry)
+      entry->can_retry = 0; /* We gave it an early chance; no good. */
   }
 
   if (first_contact) {
