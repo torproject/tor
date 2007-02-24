@@ -426,6 +426,9 @@ R - add d64 and fp64 along-side d and fp so people can paste status
       of edge_stream_t.
 
 Future version:
+  - Add a doxygen style checker to make check-spaces so nick doesn't drift
+    too far from arma's undocumented styleguide.  Also, document that
+    styleguide in HACKING.  (See r9634 for example.)
   - Should TrackHostExits expire TrackHostExitsExpire seconds after their
     *last* use, not their *first* use?
   - Configuration format really wants sections.
