@@ -63,10 +63,9 @@ http://www.monkey.org/~provos/libevent/
 
 3) The first step of compiling libevent is to configure it as
 follows:
-CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc"
-\ LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
-       ./configure --enable-static --disable-shared \
-       --disable-dependency-tracking
+CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc" \
+LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
+./configure --enable-static --disable-shared --disable-dependency-tracking
 
 3) Complete the "make" and "make install".  You will need to be root,
 or sudo -s, to complete the "make install".
