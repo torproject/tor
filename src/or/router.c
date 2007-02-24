@@ -1242,16 +1242,20 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   tor_free(identity_pkey);
   tor_free(bandwidth_usage);
 
-  if (result < 0)
+  if (result < 0) {
+    log_warn(LD_BUG,"descriptor snprintf #1 ran out of room!");
     return -1;
+  }
   /* From now on, we use 'written' to remember the current length of 's'. */
   written = result;
 
   if (options->ContactInfo && strlen(options->ContactInfo)) {
     result = tor_snprintf(s+written,maxlen-written, "contact %s\n",
                           options->ContactInfo);
-    if (result<0)
+    if (result<0) {
+      log_warn(LD_BUG,"descriptor snprintf #2 ran out of room!");
       return -1;
+    }
     written += result;
   }
 
@@ -1265,24 +1269,31 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
   for ( ; tmpe; tmpe=tmpe->next) {
     result = policy_write_item(s+written, maxlen-written, tmpe);
-    if (result < 0)
+    if (result < 0) {
+      log_warn(LD_BUG,"descriptor policy_write_item ran out of room!");
       return -1;
+    }
     tor_assert(result == (int)strlen(s+written));
     written += result;
-    if (written+2 > maxlen)
+    if (written+2 > maxlen) {
+      log_warn(LD_BUG,"descriptor policy_write_item ran out of room (2)!");
       return -1;
+    }
     s[written++] = '\n';
   }
 
-  if (written+256 > maxlen) /* Not enough room for signature. */
+  if (written+256 > maxlen) { /* Not enough room for signature. */
+    log_warn(LD_BUG,"not enough room left in descriptor for signature!");
     return -1;
+  }
 
   /* Sign the directory */
   strlcpy(s+written, "router-signature\n", maxlen-written);
   written += strlen(s+written);
   s[written] = '\0';
-  if (router_get_router_hash(s, digest) < 0)
+  if (router_get_router_hash(s, digest) < 0) {
     return -1;
+  }
 
   note_crypto_pk_op(SIGN_RTR);
   if (router_append_dirobj_signature(s+written,maxlen-written,
@@ -1292,8 +1303,10 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
   written += strlen(s+written);
 
-  if (written+2 > maxlen)
+  if (written+2 > maxlen) {
+    log_warn(LD_BUG,"Not enough room to finish descriptor.");
     return -1;
+  }
   /* include a last '\n' */
   s[written] = '\n';
   s[written+1] = 0;
