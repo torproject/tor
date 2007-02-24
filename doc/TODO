@@ -135,6 +135,7 @@ Things we'd like to do in 0.2.0.x:
 
 
 Deferred from 0.1.2.x:
+  - 'networkstatus arrived' event
   - Improve autoconf process to handle multiple SSL installations better.
     X <nickm> "Let's try to find a way to make it run and make the version
        match, but if not, let's just make it run."
@@ -411,11 +412,21 @@ R - add d64 and fp64 along-side d and fp so people can paste status
       of edge_stream_t.
 
 Future version:
+  - More consistent error checking in router_parse_entry_from_string().
+    I can say "banana" as my bandwidthcapacity, and it won't even squeak.
   - Include the output of svn info/svk info output into the binary, so
     it's trivial to see what version a binary was built from.
   - Add a doxygen style checker to make check-spaces so nick doesn't drift
     too far from arma's undocumented styleguide.  Also, document that
     styleguide in HACKING.  (See r9634 for example.)
+    - exactly one space at beginning and at end of comments, except i
+      guess when there's line-length pressure.
+    - if we refer to a function name, put a () after it.
+    - only write <b>foo</b> when foo is an argument to this function.
+    - doxygen comments must always end in some form of punctuation.
+    - capitalize the first sentence in the doxygen comment, except
+      when you shouldn't.
+    - avoid spelling errors and incorrect comments. ;)
   - Should TrackHostExits expire TrackHostExitsExpire seconds after their
     *last* use, not their *first* use?
   - Configuration format really wants sections.
