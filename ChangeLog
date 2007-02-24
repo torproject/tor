@@ -23,6 +23,8 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       "INTERNAL".
     - Change reported stream target addresses to IP consistently when
       we finally get the IP from an exit node.
+    - Send log messages to the controller even if they happen to be very
+      long.
 
   o Minor bugfixes (other):
     - Display correct results when reporting which versions are

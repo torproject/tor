@@ -729,9 +729,10 @@ static void
 send_control1_event_impl(uint16_t event, event_format_t which, int extended,
                          const char *format, va_list ap)
 {
-#define SEND_CONTROL1_EVENT_BUFFERSIZE 1024
+  /* This is just a little longer than the longest allowed log message */
+#define SEND_CONTROL1_EVENT_BUFFERSIZE 10064
   int r;
-  char buf[SEND_CONTROL1_EVENT_BUFFERSIZE]; /* XXXX Length */
+  char buf[SEND_CONTROL1_EVENT_BUFFERSIZE];
   size_t len;
   char *cp;
 
