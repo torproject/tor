@@ -21,6 +21,11 @@ const char dirserv_c_id[] =
  * directory authorities. */
 #define MAX_UNTRUSTED_NETWORKSTATUSES 16
 
+/** If a v1 directory is older than this, discard it. */
+#define MAX_V1_DIRECTORY_AGE (30*24*60*60)
+/** If a v1 running-routers is older than this, discard it. */
+#define MAX_V1_RR_AGE (7*24*60*60)
+
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
@@ -1031,6 +1036,8 @@ _free_cached_dir(void *_d)
 /** If we have no cached directory, or it is older than <b>published</b>,
  * then replace it with <b>directory</b>, published at <b>published</b>.
  *
+ * If <b>published</b> is too old, do nothing.
+ *
  * If <b>is_running_routers</b>, this is really a running_routers document
  * rather than a v1 directory.
  */
@@ -1038,11 +1045,16 @@ void
 dirserv_set_cached_directory(const char *directory, time_t published,
                              int is_running_routers)
 {
+  time_t now = time(NULL);
+
   if (is_running_routers) {
-    set_cached_dir(&cached_runningrouters, tor_strdup(directory), published);
+    if (published >= now - MAX_V1_RR_AGE)
+      set_cached_dir(&cached_runningrouters, tor_strdup(directory), published);
   } else {
-    cached_dir_decref(cached_directory);
-    cached_directory = new_cached_dir(tor_strdup(directory), published);
+    if (published >= now - MAX_V1_DIRECTORY_AGE) {
+      cached_dir_decref(cached_directory);
+      cached_directory = new_cached_dir(tor_strdup(directory), published);
+    }
   }
 }
 
@@ -1148,8 +1160,6 @@ dirserv_clear_old_networkstatuses(time_t cutoff)
 void
 dirserv_clear_old_v1_info(time_t now)
 {
-#define MAX_V1_DIRECTORY_AGE (30*24*60*60)
-#define MAX_V1_RR_AGE (7*24*60*60)
   if (cached_directory &&
       cached_directory->published < (now - MAX_V1_DIRECTORY_AGE)) {
     cached_dir_decref(cached_directory);
