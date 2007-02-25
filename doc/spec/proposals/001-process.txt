@@ -67,7 +67,7 @@ How to change the specs now:
 How new proposals get added:
 
   Once an idea has been proposed on the development list, a properly formatted
-  (see below) draft exists, and rough consensus withing the active development
+  (see below) draft exists, and rough consensus within the active development
   community exists that this idea warrants consideration, the proposal editor
   will officially add the proposal.
 

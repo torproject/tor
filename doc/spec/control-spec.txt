@@ -1286,9 +1286,9 @@ $Id$
      BytesWritten = 1*DIGIT
 
   BytesRead and BytesWritten are the number of bytes read and written since
-  the last STREAM_BW event on a stream.  These events are generated about
-  once per second per stream; No event is generated for streams that have not
-  read or written.
+  the last STREAM_BW event on this stream.  These events are generated about
+  once per second per stream; no events are generated for streams that have
+  not read or written.
 
   These events apply only to streams entering Tor (such as on a SOCKSPort,
   TransPort, or so on).  They are not generated for exiting streams.

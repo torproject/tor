@@ -1,4 +1,4 @@
-Changes in version 0.1.2.8-alpha - 2007-??-??
+Changes in version 0.1.2.8-rc - 2007-02-??
   o Major bugfixes (crashes):
     - Stop crashing when the controller asks us to resetconf more than
       one config option at once. (Vidalia 0.0.11 does this.)
@@ -41,20 +41,20 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       other than file-not-found.
     - Don't warn the user when cached-routers.new doesn't exist: that's
       perfectly fine when starting up for the first time.
-    - When EntryNodes are configured, rebuild the guard list to contain, in
-      order: the EntryNodes that were guards before; the rest of the
+    - When EntryNodes are configured, rebuild the guard list to contain,
+      in order: the EntryNodes that were guards before; the rest of the
       EntryNodes; the nodes that were guards before.
-    - Mask out all signals in sub-threads; only the libevent signal handler
-      should be processing them. This should prevent some crashes on some
-      machines using pthreads. (Patch from coderman.)
-    - Fix switched arguments on memset in the implementation of tor_munmap()
-      for systems with no mmap() call.
-    - When Tor receives a router descriptor that it asked for, but no longer
-      wants (because it has received fresh networkstatuses in the meantime),
-      do not warn the user.  Cache the descriptor if we're a cache; drop it
-      if we aren't.
-    - Make earlier entry guards _really_ get retried when the network comes
-      back online.
+    - Mask out all signals in sub-threads; only the libevent signal
+      handler should be processing them. This should prevent some crashes
+      on some machines using pthreads. (Patch from coderman.)
+    - Fix switched arguments on memset in the implementation of
+      tor_munmap() for systems with no mmap() call.
+    - When Tor receives a router descriptor that it asked for, but
+      no longer wants (because it has received fresh networkstatuses
+      in the meantime), do not warn the user.  Cache the descriptor if
+      we're a cache; drop it if we aren't.
+    - Make earlier entry guards _really_ get retried when the network
+      comes back online.
     - On a malformed DNS reply, always give an error to the corresponding
       DNS request.
     - Build with recent libevents on platforms that do not define the
@@ -65,19 +65,19 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
       control protocol.  We're planning to remove support for it during
       the next development series, so it's good to give people some
       advance warning.
-    - Add STREAM_BW events to report per-entry-stream bandwidth use. (Patch
-      from Robert Hogan.)
-    - Rate-limit SIGNEWNYM events in response to controllers that impolitely
-      generate them for every single stream.  (Patch from mwenge; closes bug
-      394.)
-    - Make REMAP stream events have a SOURCE (cache or exit), and make them
-      generated in every case where we get a successful connected or resolved
-      cell.
+    - Add STREAM_BW events to report per-entry-stream bandwidth
+      use. (Patch from Robert Hogan.)
+    - Rate-limit SIGNEWNYM signals in response to controllers that
+      impolitely generate them for every single stream. (Patch from
+      mwenge; closes bug 394.)
+    - Make REMAP stream events have a SOURCE (cache or exit), and
+      make them generated in every case where we get a successful
+      connected or resolved cell.
 
   o Minor bugfixes (performance):
-    - Call router_have_min_dir_info half as often.  (This is showing up in
+    - Call router_have_min_dir_info half as often. (This is showing up in
       some profiles, but not others.)
-    - When using GCC, make log_debug and never get called at all, and its
+    - When using GCC, make log_debug never get called at all, and its
       arguments never get evaluated, when no debug logs are configured.
       (This is showing up in some profiles, but not others.)
 
@@ -85,20 +85,21 @@ Changes in version 0.1.2.8-alpha - 2007-??-??
     - Remove some never-implemented options.  Mark PathlenCoinWeight as
       obsolete.
     - Implement proposal 106: Stop requiring clients to have well-formed
-      certificates; stop checking nicknames in certificates.  (Clients have
-      certificates so that they can look like Tor servers, but in the future
-      we might want to allow them to look like regular TLS clients instead.
-      Nicknames in certificates serve no purpose other than making our
-      protocol easier to recognize on the wire.)
+      certificates; stop checking nicknames in certificates. (Clients
+      have certificates so that they can look like Tor servers, but in
+      the future we might want to allow them to look like regular TLS
+      clients instead. Nicknames in certificates serve no purpose other
+      than making our protocol easier to recognize on the wire.)
     - Revise messages on handshake failure again to be even more clear about
       which are incoming connections and which are outgoing.
     - Discard any v1 directory info that's over 1 month old (for
       directories) or over 1 week old (for running-routers lists).
     - Do not warn when individual nodes in the configuration's EntryNodes,
-      ExitNodes (etc) are down: warn only when all possible nodes are down.
-      (Fixes bug 348.)
+      ExitNodes, etc are down: warn only when all possible nodes
+      are down. (Fixes bug 348.)
     - Always remove expired routers and networkstatus docs before checking
-      whether we have enough information to build circuits. (Fixes bug 373)
+      whether we have enough information to build circuits. (Fixes
+      bug 373.)
 
 
 Changes in version 0.1.2.7-alpha - 2007-02-06
