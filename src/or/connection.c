@@ -2062,10 +2062,10 @@ connection_get_by_type_state_rendquery(int type, int state,
         !conn->marked_for_close &&
         (!state || state == conn->state)) {
       if (type == CONN_TYPE_DIR &&
-          rend_cmp_service_ids(rendquery, TO_DIR_CONN(conn)->rend_query))
+          !rend_cmp_service_ids(rendquery, TO_DIR_CONN(conn)->rend_query))
         return conn;
       else if (CONN_IS_EDGE(conn) &&
-               rend_cmp_service_ids(rendquery, TO_EDGE_CONN(conn)->rend_query))
+              !rend_cmp_service_ids(rendquery, TO_EDGE_CONN(conn)->rend_query))
         return conn;
     }
   }

@@ -59,6 +59,8 @@ Changes in version 0.1.2.8-rc - 2007-02-??
       DNS request.
     - Build with recent libevents on platforms that do not define the
       nonstandard types "u_int8_t" and friends.
+    - Correctly detect whether hidden service descriptor downloads are
+      in-progress. (Fixes bug 399.)
 
   o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0
