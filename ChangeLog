@@ -102,6 +102,7 @@ Changes in version 0.1.2.8-rc - 2007-02-??
     - Always remove expired routers and networkstatus docs before checking
       whether we have enough information to build circuits. (Fixes
       bug 373.)
+    - Put a lower-bound on MaxAdvertisedBandwidth.
 
 
 Changes in version 0.1.2.7-alpha - 2007-02-06

@@ -2647,16 +2647,27 @@ options_validate(or_options_t *old_options, or_options_t *options,
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
-  if (server_mode(options) &&
-      options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH*2) {
-    r = tor_snprintf(buf, sizeof(buf),
-                     "BandwidthRate is set to %d bytes/second. "
-                     "For servers, it must be at least %d.",
-                     (int)options->BandwidthRate,
-                     ROUTER_REQUIRED_MIN_BANDWIDTH*2);
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
-    return -1;
+  if (server_mode(options)) {
+    if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH*2) {
+      r = tor_snprintf(buf, sizeof(buf),
+                       "BandwidthRate is set to %d bytes/second. "
+                       "For servers, it must be at least %d.",
+                       (int)options->BandwidthRate,
+                       ROUTER_REQUIRED_MIN_BANDWIDTH*2);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
+      return -1;
+    } else if (options->MaxAdvertisedBandwidth <
+               ROUTER_REQUIRED_MIN_BANDWIDTH) {
+      r = tor_snprintf(buf, sizeof(buf),
+                       "MaxAdvertisedBandwidth is set to %d bytes/second. "
+                       "For servers, it must be at least %d.",
+                       (int)options->MaxAdvertisedBandwidth,
+                       ROUTER_REQUIRED_MIN_BANDWIDTH);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
+      return -1;
+    }
   }
+
   if (options->BandwidthRate > options->BandwidthBurst)
     REJECT("BandwidthBurst must be at least equal to BandwidthRate.");
 
