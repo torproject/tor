@@ -829,9 +829,9 @@ connection_edge_process_end_not_open(
   return 0;
 }
 
-/** Helper: change the socks_request->address field on conn to the dotted-quad
- * representation of <b>new_addr</b> (given in host order), and send an
- * appropriate REMAP event. */
+/** Helper: change the socks_request-&gt;address field on conn to the
+ * dotted-quad representation of <b>new_addr</b> (given in host order),
+ * and send an appropriate REMAP event. */
 static void
 remap_event_helper(edge_connection_t *conn, uint32_t new_addr)
 {
@@ -873,7 +873,6 @@ connection_edge_process_relay_cell_not_open(
              "Got 'connected' while not in state connect_wait. Dropping.");
       return 0;
     }
-    // log_fn(LOG_INFO,"Connected! Notifying application.");
     conn->_base.state = AP_CONN_STATE_OPEN;
     log_info(LD_APP,"'connected' received after %d seconds.",
              (int)(time(NULL) - conn->_base.timestamp_lastread));

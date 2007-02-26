@@ -562,7 +562,7 @@ router_perform_bandwidth_test(int num_circs, time_t now)
   int cells_per_circuit = max_cells / num_circs;
   origin_circuit_t *circ = NULL;
 
-  log_notice(LD_OR,"Performing bandwidth self-test.");
+  log_notice(LD_OR,"Performing bandwidth self-test...done.");
   while ((circ = circuit_get_next_by_pk_and_purpose(circ, NULL,
                                               CIRCUIT_PURPOSE_TESTING))) {
     /* dump cells_per_circuit drop cells onto this circ */

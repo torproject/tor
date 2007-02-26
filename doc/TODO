@@ -412,6 +412,8 @@ R - add d64 and fp64 along-side d and fp so people can paste status
       of edge_stream_t.
 
 Future version:
+  - LD_BUG log messages could prepend "Bug: " automatically, so we don't
+    have to try to remember to.
   - More consistent error checking in router_parse_entry_from_string().
     I can say "banana" as my bandwidthcapacity, and it won't even squeak.
   - Include the output of svn info/svk info output into the binary, so

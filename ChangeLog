@@ -6,12 +6,16 @@ Changes in version 0.1.2.8-rc - 2007-02-??
       arguments: don't try to load NT service functions from advapi32.dll
       except when we need them. (Bug introduced in 0.1.2.7-alpha;
       resolves bug 389.)
+    - Fix a longstanding obscure crash bug that could occur when
+      we run out of DNS worker processes. (Resolves bug 390.)
+
+  o Major bugfixes (hidden services):
+    - Correctly detect whether hidden service descriptor downloads are
+      in-progress. (Suggested by Karsten Loesing; fixes bug 399.)
 
   o Major bugfixes (accounting):
     - When we start during an accounting interval before it's time to wake
       up, remember to wake up at the correct time. (May fix bug 342.)
-    - Fix a longstanding obscure crash bug that could occur when
-      we run out of DNS worker processes. (Resolves bug 390.)
 
   o Minor bugfixes (controller):
     - Give the controller END_STREAM_REASON_DESTROY events _before_ we
@@ -59,8 +63,6 @@ Changes in version 0.1.2.8-rc - 2007-02-??
       DNS request.
     - Build with recent libevents on platforms that do not define the
       nonstandard types "u_int8_t" and friends.
-    - Correctly detect whether hidden service descriptor downloads are
-      in-progress. (Fixes bug 399.)
 
   o Minor features (controller):
     - Warn the user when an application uses the obsolete binary v0

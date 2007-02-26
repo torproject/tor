@@ -157,7 +157,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
     } } while (0)
 
 /** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
- * with the variable <b>var</b>, remover the current element in a way that
+ * with the variable <b>var</b>, remove the current element in a way that
  * won't confuse the loop. */
 #define SMARTLIST_DEL_CURRENT(sl, var)          \
   do {                                          \

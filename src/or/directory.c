@@ -712,7 +712,8 @@ http_set_address_origin(const char *headers, connection_t *conn)
   if (fwd) {
     struct in_addr in;
     if (!tor_inet_aton(fwd, &in) || is_internal_IP(ntohl(in.s_addr), 0)) {
-      log_debug(LD_DIR, "Ignoring unrecognized or internal IP '%s'", fwd);
+      log_debug(LD_DIR, "Ignoring unrecognized or internal IP %s",
+                escaped(fwd));
       tor_free(fwd);
       return;
     }
