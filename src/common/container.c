@@ -752,6 +752,9 @@ strmap_set(strmap_t *map, const char *key, void *val)
 void *
 digestmap_set(digestmap_t *map, const char *key, void *val)
 {
+  /* XXXX We spend up to 5% of our time in this function. We should tighten
+   * it up... but not on the 0.1.2.x series; the HT code has historically
+   * been finicky and fragile. */
   digestmap_entry_t *resolve;
   digestmap_entry_t search;
   void *oldval;

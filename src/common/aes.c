@@ -35,6 +35,8 @@ const char aes_c_id[] = "$Id$";
  * significantly faster than using OpenSSL's EVP code (by about 27%)
  * and faster than using OpenSSL's AES functions (by about 19%).
  * The counter-mode optimization saves around 5%.
+ *
+ * (XXXX We should actually test this more, and test it regularly.)
  */
 #undef USE_OPENSSL_AES
 #undef USE_OPENSSL_EVP
@@ -183,6 +185,10 @@ void
 aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
           char *output)
 {
+  /* XXXX This function is up to 5% of our runtime in some profiles;
+   * we should look into unrolling some of the loops; taking advantage
+   * of alignmement, using a bigger buffer, and so on. Not till after 0.1.2.x,
+   * though. */
   int c = cipher->pos;
   if (!len) return;
 

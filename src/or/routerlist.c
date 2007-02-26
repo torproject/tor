@@ -2148,6 +2148,14 @@ routerlist_remove_old_routers(void)
   /* Build a list of all the descriptors that _anybody_ recommends. */
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
+      /* XXXX The inner loop here gets pretty expensive, and actually shows up
+       * on some profiles.  It may be the reason digestmap_set shows up in
+       * profiles too.  If instead we kept a per-descriptor digest count of
+       * how many networkstatuses recommended each descriptor, and changed
+       * that only when the networkstatuses changed, that would be a speed
+       * improvement, possibly 1-4% if it also removes digestmap_set from the
+       * profile.  Not worth it for 0.1.2.x, though.  The new directory
+       * system will obsolete this whole thing in 0.2.0.x. */
       SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
         if (rs->published_on >= cutoff)
           digestmap_set(retain, rs->descriptor_digest, (void*)1));
