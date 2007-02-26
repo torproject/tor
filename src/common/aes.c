@@ -41,6 +41,7 @@ const char aes_c_id[] = "$Id$";
 #undef USE_OPENSSL_AES
 #undef USE_OPENSSL_EVP
 #define USE_RIJNDAEL_COUNTER_OPTIMIZATION
+#undef FULL_UNROLL
 
 /*======================================================================*/
 /* From rijndael-alg-fst.h */
@@ -910,3 +911,20 @@ rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16]
 }
 #endif
 
+#ifdef AES_BENCHMARK
+int
+main(int c, char **v)
+{
+  int i;
+  char blob[509]; /* the size of a cell payload. */
+  char blob_out[509];
+  aes_cnt_cipher_t *cipher = aes_new_cipher();
+  aes_set_key(cipher, "aesbenchmarkkey!", 128);
+  memset(blob, 'z', sizeof(blob));
+
+  for (i=0;i<1000000; ++i) {
+    aes_crypt(cipher, blob, sizeof(blob), blob_out);
+  }
+  return 0;
+}
+#endif
