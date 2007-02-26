@@ -1598,6 +1598,9 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   // routerlist_assert_ok(rl);
 }
 
+/** If we're a directory cache and routerlist <b>rl</b> doesn't have
+ * a copy of router <b>ri</b> yet, add it to the list of old (not
+ * recommended but still served) descriptors. Else free it. */
 static void
 routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 {
@@ -4031,8 +4034,14 @@ update_router_descriptor_cache_downloads(time_t now)
       smartlist_t *dl;
       dl = downloadable[ns_sl_idx] = smartlist_create();
       download_from[ns_sl_idx] = smartlist_create();
-      if (ns->published_on + MAX_NETWORKSTATUS_AGE-10*60 > now) {
+      if (ns->published_on + MAX_NETWORKSTATUS_AGE+10*60 < now) {
         /* Don't download if the networkstatus is almost ancient. */
+        /* Actually, I suspect what's happening here is that we ask
+         * for the descriptor when we have a given networkstatus,
+         * and then we get a newer networkstatus, and then we receive
+         * the descriptor. Having a networkstatus actually expire is
+         * probably a rare event, and we'll probably be happiest if
+         * we take this clause out. -RD */
         continue;
       }
       SMARTLIST_FOREACH(ns->entries, routerstatus_t * , rs,
