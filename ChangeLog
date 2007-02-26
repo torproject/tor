@@ -1,4 +1,4 @@
-Changes in version 0.1.2.8-rc - 2007-02-??
+Changes in version 0.1.2.8-beta - 2007-02-26
   o Major bugfixes (crashes):
     - Stop crashing when the controller asks us to resetconf more than
       one config option at once. (Vidalia 0.0.11 does this.)
