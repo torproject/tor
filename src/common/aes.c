@@ -39,7 +39,7 @@ const char aes_c_id[] = "$Id$";
 # define CPU_IS_X86
 #elif (defined(__amd64__) || defined(__amd64) || \
        defined(__x86_64__) || defined(__x86_64) || \
-       defined(_M_X64)
+       defined(_M_X64))
 # define CPU_IS_X86_64
 #elif (defined(__ia64__) || defined(__ia64) || defined(_IA64) || \
        defined(_M_IA64))
@@ -62,14 +62,12 @@ const char aes_c_id[] = "$Id$";
 /* OpenSSL 0.9.7 was the first to support AES.  It was slower than our
  *    builtin implementation.
  * OpenSSL 0.9.8 added assembly implementations for i386 and ia64.
+ *    Either the i386 stuff isn't used for x86-64, or it isn't faster.
  * OpenSSL 0.9.9 (not yet out) has added assembly implementations for
  *    x86_64 (aka amd64), sparc9, and arm
  *
  * Note: the "f" at the end of openssl version numbers below means
  * "release". */
-
-/* XXXX012 is the i386 implementation faster than our C on x86_64?
- * Benchmark. */
 # if defined(CPU_IS_X86) || defined(CPU_IS_IA64)
 #  if OPENSSL_VERSION_NUMBER >= 0x0090800fL
 #   define USE_OPENSSL_AES
