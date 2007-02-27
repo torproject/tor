@@ -291,7 +291,7 @@ init_keys(void)
      * or it's a holdover from 0.1.2.4-alpha-dev or earlier.  In either case,
      * start the clock ticking now so that we will eventually rotate it even
      * if we don't stay up for a full MIN_ONION_KEY_LIFETIME. */
-    state->LastRotatedOnionKey = time(NULL);
+    state->LastRotatedOnionKey = onionkey_set_at = time(NULL);
     or_state_mark_dirty(state, options->AvoidDiskWrites ? time(NULL)+3600 : 0);
   }
 

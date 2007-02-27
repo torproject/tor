@@ -1,3 +1,9 @@
+Changes in version 0.1.2.9-??? - 2007-??-??
+  o Minor bugfixes (server):
+    - Do not rotate onion key immediately after setting it for the first
+      time.
+
+
 Changes in version 0.1.2.8-beta - 2007-02-26
   o Major bugfixes (crashes):
     - Stop crashing when the controller asks us to resetconf more than
