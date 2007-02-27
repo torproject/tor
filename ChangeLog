@@ -1,4 +1,8 @@
 Changes in version 0.1.2.9-??? - 2007-??-??
+  o Minor bugfixes (performance):
+    - Use OpenSSL's AES implementation on platforms where it's faster.
+      This could save us as much as 10% CPU usage.
+
   o Minor bugfixes (server):
     - Do not rotate onion key immediately after setting it for the first
       time.

@@ -19,29 +19,90 @@ const char aes_c_id[] = "$Id$";
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include "compat.h"
 #include "aes.h"
 #include "util.h"
 #include "log.h"
 
-/* Use OpenSSL's AES if we're running 0.9.7 or later.  (The f at the end of
- * the version below means "release"; see opensslv.h) */
-#if OPENSSL_VERSION_NUMBER >= 0x0090700fl
-#define USE_OPENSSL_AES
-#include <openssl/aes.h>
-#include <openssl/evp.h>
-#endif
-
-/* Benchmarking suggests that using the built-in rijndael below is
- * significantly faster than using OpenSSL's EVP code (by about 27%)
- * and faster than using OpenSSL's AES functions (by about 19%).
- * The counter-mode optimization saves around 5%.
- *
- * (XXXX We should actually test this more, and test it regularly.)
- */
+/* We have 3 strategies for getting AES: Via OpenSSL's AES_encrypt function,
+ * via OpenSSL's EVP_EncryptUpdate function, or via the built-in AES
+ * implementation below. */
 #undef USE_OPENSSL_AES
 #undef USE_OPENSSL_EVP
-#define USE_RIJNDAEL_COUNTER_OPTIMIZATION
-#undef FULL_UNROLL
+#undef USE_BUILTIN_AES
+
+/* Figure out our CPU type.  We use this to pick an AES implementation.
+ * Macros are as listed at http://predef.sourceforge.net/prearch.html
+ */
+#if (defined(i386) || defined(__i386__) || defined(__i386) || defined(_X86_) \
+     || defined(_M_IX86) || defined(__THW_INTEL__) || defined(__I86__))
+# define CPU_IS_X86
+#elif (defined(__amd64__) || defined(__amd64) || \
+       defined(__x86_64__) || defined(__x86_64) || \
+       defined(_M_X64)
+# define CPU_IS_X86_64
+#elif (defined(__ia64__) || defined(__ia64) || defined(_IA64) || \
+       defined(_M_IA64))
+# define CPU_IS_IA64
+#elif (defined(__sparc__) || defined(__sparc))
+# define CPU_IS_SPARC
+#elif (defined(__arm__) || defined (__TARGET_ARCH_ARM))
+# define CPU_IS_ARM
+#endif
+
+/* Here we pick which to use, if none is force-defined.  See
+ *      http://archives.seul.org/or/dev/Feb-2007/msg00045.html
+ * for a summary of the most recent benchmarking results that led to this
+ * nutty decision tree.
+*/
+#if (!defined(USE_BUILTIN_AES) &&               \
+     !defined(USE_OPENSSL_AES) &&               \
+     !defined(USE_OPENSSL_EVP))
+
+/* OpenSSL 0.9.7 was the first to support AES.  It was slower than our
+ *    builtin implementation.
+ * OpenSSL 0.9.8 added assembly implementations for i386 and ia64.
+ * OpenSSL 0.9.9 (not yet out) has added assembly implementations for
+ *    x86_64 (aka amd64), sparc9, and arm
+ *
+ * Note: the "f" at the end of openssl version numbers below means
+ * "release". */
+
+/* XXXX012 is the i386 implementation faster than our C on x86_64?
+ * Benchmark. */
+# if defined(CPU_IS_X86) || defined(CPU_IS_IA64)
+#  if OPENSSL_VERSION_NUMBER >= 0x0090800fL
+#   define USE_OPENSSL_AES
+#  endif
+# endif
+
+# if defined(CPU_IS_X86_64) || defined(CPU_IS_ARM) || defined(CPU_IS_SPARC)
+#  if OPENSSL_VERSION_NUMBER >= 0x0090900fL
+#   define USE_OPENSSL_AES
+#  endif
+# endif
+
+/* Otherwise, use the builtin implementation below. */
+# ifndef USE_OPENSSL_AES
+#  define USE_BUILTIN_AES
+# endif
+#endif /* endif need to pick a method */
+
+/* Include OpenSSL headers as needed. */
+#ifdef USE_OPENSSL_AES
+# include <openssl/aes.h>
+#endif
+#ifdef USE_OPENSSL_EVP
+# include <openssl/evp.h>
+#endif
+
+/* Figure out which AES optimizations to use. */
+#ifdef USE_BUILTIN_AES
+# define USE_RIJNDAEL_COUNTER_OPTIMIZATION
+# if defined(__powerpc__) || defined(__powerpc64__)
+#  define FULL_UNROLL
+# endif
+#endif
 
 /*======================================================================*/
 /* From rijndael-alg-fst.h */
@@ -50,7 +111,7 @@ typedef uint64_t u64;
 typedef uint32_t u32;
 typedef uint8_t u8;
 
-#ifndef USE_OPENSSL_AES
+#ifdef USE_BUILTIN_AES
 #define MAXNR   14
 
 static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/],
@@ -95,8 +156,7 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
    *  3) changing the counter position was not trivial, last time I looked.
    * None of these issues are insurmountable in principle.
    */
-#if (!defined(USE_OPENSSL_EVP) && !defined(USE_OPENSSL_AES) && \
-     defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION))
+#if defined(USE_BUILTIN_AES) && defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION)
   rijndaelEncrypt(cipher->rk, cipher->nr,
                   cipher->counter1, cipher->counter0, cipher->buf);
 #else
@@ -234,7 +294,7 @@ aes_adjust_counter(aes_cnt_cipher_t *cipher, long delta)
   aes_set_counter(cipher, counter);
 }
 
-#ifndef USE_OPENSSL_AES
+#ifdef USE_BUILTIN_AES
 /*======================================================================*/
 /* From rijndael-alg-fst.c */
 
