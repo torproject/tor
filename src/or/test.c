@@ -695,6 +695,18 @@ test_util(void)
   test_eq(10L, tor_parse_long("10",10,0,100,NULL,NULL));
   test_eq(0L, tor_parse_long("10",10,50,100,NULL,NULL));
 
+  /* Test tor_parse_uint64. */
+  test_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
+  test_assert(i == 1);
+  test_streq(cp, " x");
+  test_assert(U64_LITERAL(12345678901) ==
+              tor_parse_uint64("12345678901",10,0,UINT64_MAX, &i, &cp));
+  test_assert(i == 1);
+  test_streq(cp, "");
+  test_assert(U64_LITERAL(0) ==
+              tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
+  test_assert(i == 0);
+
   /* Test parse_line_from_str */
   strlcpy(buf, "k v\n" " key    value with spaces   \n" "keykey val\n"
           "k2\n"
