@@ -13,7 +13,7 @@
 #define WIN32_WINNT 0x400
 #define _WIN32_WINNT 0x400
 #define WIN32_LEAN_AND_MEAN
-#if defined(_MSC_VER) && (_MSC_VER <= 1300)
+#if defined(_MSC_VER) && (_MSC_VER < 1300)
 #include <winsock.h>
 #else
 #include <winsock2.h>
