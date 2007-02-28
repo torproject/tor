@@ -12,6 +12,8 @@ Changes in version 0.1.2.9-??? - 2007-??-??
       cleared EntryNodes.  (Bug found by Udo van den Heuvel.)
     - On architectures where sizeof(int)>4, still clamp declarable bandwidth
       to INT32_MAX.
+    - Fix a potential race condition in the rpm installer.  Found by
+      Stefan Nordhausen.
 
 
 Changes in version 0.1.2.8-beta - 2007-02-26
