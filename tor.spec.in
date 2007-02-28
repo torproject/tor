@@ -201,6 +201,7 @@ for high-stakes anonymity.
 %__mkdir_p -m 700 ${RPM_BUILD_ROOT}%{_localstatedir}/lib/%{name}
 %__mkdir_p -m 755 ${RPM_BUILD_ROOT}%{_localstatedir}/run/%{name}
 %__mkdir_p -m 755 ${RPM_BUILD_ROOT}%{_localstatedir}/log/%{name}
+%__mkdir_p -m 700 ${RPM_BUILD_ROOT}%{_localstatedir}/tmp/%{name}
 
 %clean
 [ "${RPM_BUILD_ROOT}" != "/" ] && rm -rf ${RPM_BUILD_ROOT}
@@ -212,10 +213,10 @@ for high-stakes anonymity.
 
 # If tor is already installed and running (whether installed by RPM
 # or not), then kill it, but remember that it was running.
-%__rm -f /tmp/${name}-was-running-%{version}-%{release}
+%__rm -f /%{_localstatedir}/tmp/${name}-was-running-%{version}-%{release}
 if [ -f %{_initrddir}/%{name} ] && /sbin/service %{name} status ; then
     /sbin/service %{name} stop
-    touch /tmp/${name}-was-running-%{version}-%{release}
+    touch /%{_localstatedir}/tmp/${name}-was-running-%{version}-%{release}
 fi
 
 #
@@ -251,9 +252,9 @@ fi
 # Make sure the runtime data have the right ownership.
 %__chown -R %{toruser}.%{torgroup} %{_localstatedir}/{lib,log,run}/%{name}
 
-if [ -f /tmp/${name}-was-running-%{version}-%{release} ]; then
+if [ -f /%{_localstatedir}/tmp/${name}-was-running-%{version}-%{release} ]; then
     /sbin/service %{name} start
-    %__rm -f /tmp/${name}-was-running-%{version}-%{release}
+    %__rm -f /%{_localstatedir}/tmp/${name}-was-running-%{version}-%{release}
 fi
 exit 0
 
@@ -296,13 +297,17 @@ exit 0
 
 %changelog
 
-* Fri May 26 2006 Andrew Lewman <phobos@interloper.org>
+* Tue Feb 27 2007 Andrew Lewman <phobos@rootme.org>
+- Fix a potential race condition in how we determine the running state of tor.  Found by Stefan Nordhausen.
+- see OR-CVS for details
+
+* Fri May 26 2006 Andrew Lewman <phobos@rootme.org>
 - Add in a few "SUSEisms" to make dist-rpm actually work on suse
 - Turn Tor "on" via chkconfig
 - Update -mcpu to -mtune to make GCC happy
 - see OR-CVS for details
 
-* Tue Mar 28 2006 Andrew Lewman <phobos@interloper.org>
+* Tue Mar 28 2006 Andrew Lewman <phobos@rootme.org>
 - converted to build the specified target cpu and arch
 - override related rpm macros to build correctly
 - see OR-CVS for details
