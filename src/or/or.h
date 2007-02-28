@@ -95,9 +95,9 @@
  * select() anywhere in our application or in anything it links to: these
  * documents are either the holy texts of a cargo cult of network
  * programmers, or more likely a simplification of what's going on for
- * people who haven't read winsock[2].c for themselves.
+ * people who haven't read winsock[2].h for themselves.
  */
-#if (_MSC_VER <= 1300)
+#if defined(_MSC_VER) && (_MSC_VER <= 1300)
 #include <winsock.h>
 #else
 #include <winsock2.h>
