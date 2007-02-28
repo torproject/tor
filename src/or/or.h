@@ -1980,7 +1980,6 @@ void entry_guards_compute_status(void);
 int entry_guard_register_connect_status(const char *digest, int succeeded,
                                         time_t now);
 void entry_nodes_should_be_added(void);
-void entry_guards_prepend_from_config(void);
 void entry_guards_update_state(or_state_t *state);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 int getinfo_helper_entry_guards(control_connection_t *conn,

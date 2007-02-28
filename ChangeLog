@@ -7,6 +7,10 @@ Changes in version 0.1.2.9-??? - 2007-??-??
     - Do not rotate onion key immediately after setting it for the first
       time.
 
+  o Minor bugfixes (other):
+    - Fix an assert that could trigger if a controller quickly set then
+      cleared EntryNodes.  (Bug found by Udo van den Heuvel.)
+
 
 Changes in version 0.1.2.8-beta - 2007-02-26
   o Major bugfixes (crashes):

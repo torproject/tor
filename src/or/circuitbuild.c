@@ -2251,7 +2251,7 @@ entry_nodes_should_be_added(void)
 
 /** Add all nodes in EntryNodes that aren't currently guard nodes to the list
  * of guard nodes, at the front. */
-void
+static void
 entry_guards_prepend_from_config(void)
 {
   or_options_t *options = get_options();
@@ -2259,9 +2259,17 @@ entry_guards_prepend_from_config(void)
   smartlist_t *old_entry_guards_on_list = smartlist_create();
   smartlist_t *old_entry_guards_not_on_list = smartlist_create();
   smartlist_t *entry_fps = smartlist_create();
-
   tor_assert(entry_guards);
-  tor_assert(options->EntryNodes);
+
+  should_add_entry_nodes = 0;
+
+  if (!options->EntryNodes) {
+    /* It's possible that a controller set EntryNodes, thus making
+     * should_add_entry_nodes set, then cleared it again, all before the
+     * call to choose_random_entry() that triggered us. If so, just return.
+     */
+    return;
+  }
 
   log_info(LD_CIRC,"Adding configured EntryNodes '%s'.",
            options->EntryNodes);
@@ -2300,7 +2308,6 @@ entry_guards_prepend_from_config(void)
     smartlist_add_all(entry_guards, old_entry_guards_not_on_list);
   }
 
-  should_add_entry_nodes = 0;
   smartlist_free(entry_routers);
   smartlist_free(entry_fps);
   smartlist_free(old_entry_guards_on_list);
