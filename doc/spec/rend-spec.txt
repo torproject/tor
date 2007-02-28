@@ -452,7 +452,7 @@ $Id$
    multiple streams to Bob.  Alice SHOULD NOT send RELAY_BEGIN cells for any
    other address along her circuit to Bob; if she does, Bob MUST reject them.
 
-2.0. Authentication and authorization.
+2. Authentication and authorization.
 
 Foo.
 

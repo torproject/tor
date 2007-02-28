@@ -62,7 +62,7 @@ $Id$
   they would not recognize "keyword ....."; and MUST treat "opt keyword ....."
   as synonymous with "keyword ......" when keyword is recognized.
 
-8.2. Router descriptor format.
+2. Router descriptor format.
 
   Every router descriptor MUST start with a "router" Item; MUST end with a
   "router-signature" Item and an extra NL; and MUST contain exactly one
@@ -178,7 +178,7 @@ $Id$
        [We didn't start parsing these lines until Tor 0.1.0.6-rc; they should
         be marked with "opt" until earlier versions of Tor are obsolete.]
 
-2.1. Nonterminals in routerdescriptors 
+2.1. Nonterminals in routerdescriptors
 
   nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
 
@@ -284,15 +284,15 @@ $Id$
 
      "published" YYYY-MM-DD HH:MM:SS
 
-        (see 8.3 above)
+        (see section 3 above)
 
      "router-status" list
 
-        (see 8.3 above)
+        (see section 3 above)
 
      "directory-signature" NL signature
 
-        (see 8.3 above)
+        (see section 3 above)
 
 5. Behavior of a directory server
 

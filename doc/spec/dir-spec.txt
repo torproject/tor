@@ -280,7 +280,7 @@ $Id$
          marked "opt".  With some future version, the old 'dnsworker' logic
          will be removed, rendering this option of historical interest only.]
 
-2.1. Nonterminals in router descriptors
+2.2. Nonterminals in router descriptors
 
    nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
    hexdigest ::= a '$', followed by 20 hexadecimal characters.
@@ -779,7 +779,7 @@ $Id$
      - Clients SHOULD NOT download directory information from non-'V2Dir'
        caches.
 
-6.1. Managing naming
+6.2. Managing naming
 
    In order to provide human-memorable names for individual server
    identities, some directory servers bind names to IDs.  Clients handle
@@ -806,7 +806,7 @@ $Id$
    SHOULD NOT ever use a router in response to a user request for a router
    called "Unnamed".
 
-6.2. Software versions
+6.3. Software versions
 
    An implementation of Tor SHOULD warn when it has fetched (or has
    attempted to fetch and failed four consecutive times) a network-status
@@ -814,7 +814,7 @@ $Id$
    not listed on more than half of the live "Versioning" network-status
    documents.
 
-6.3. Warning about a router's status.
+6.4. Warning about a router's status.
 
    If a router tries to publish its descriptor to a Naming authority
    that has its nickname mapped to another key, the router SHOULD
@@ -831,7 +831,7 @@ $Id$
 
    ...
 
-6.4. Router protocol versions
+6.5. Router protocol versions
 
    A client should believe that a router supports a given feature if that
    feature is supported by the router or protocol versions in more than half

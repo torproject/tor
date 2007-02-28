@@ -43,7 +43,7 @@ of their choices.
    ATTACHSTREAM commands).  Paths constructed through these means may
    violate some constraints given below.
 
-1b. Terminology
+1.1. Terminology
 
    A "path" is an ordered sequence of nodes, not yet built as a circuit.
 
