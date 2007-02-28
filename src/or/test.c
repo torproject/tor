@@ -707,6 +707,11 @@ test_util(void)
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
   test_assert(i == 0);
 
+  /* Test printf with uint64 */
+  tor_snprintf(buf, sizeof(buf), "x!"U64_FORMAT"!x",
+               U64_PRINTF_ARG(U64_LITERAL(12345678901)));
+  test_streq(buf, "x!12345678901!x");
+
   /* Test parse_line_from_str */
   strlcpy(buf, "k v\n" " key    value with spaces   \n" "keykey val\n"
           "k2\n"
