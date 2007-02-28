@@ -2637,13 +2637,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->BandwidthRate > ROUTER_MAX_DECLARED_BANDWIDTH) {
     r = tor_snprintf(buf, sizeof(buf),
-                     "BandwidthRate must be less than %d",INT32_MAX);
+                     "BandwidthRate must be at most %d",
+                     ROUTER_MAX_DECLARED_BANDWIDTH);
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
   if (options->BandwidthBurst > ROUTER_MAX_DECLARED_BANDWIDTH) {
     r = tor_snprintf(buf, sizeof(buf),
-                     "BandwidthBurst must be less than %d",INT32_MAX);
+                     "BandwidthBurst must be at most %d",
+                     ROUTER_MAX_DECLARED_BANDWIDTH);
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
