@@ -2635,15 +2635,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->KeepalivePeriod < 1)
     REJECT("KeepalivePeriod option must be positive.");
 
-  if (options->BandwidthRate > INT_MAX) {
+  if (options->BandwidthRate > ROUTER_MAX_DECLARED_BANDWIDTH) {
     r = tor_snprintf(buf, sizeof(buf),
-                     "BandwidthRate must be less than %d",INT_MAX);
+                     "BandwidthRate must be less than %d",INT32_MAX);
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
-  if (options->BandwidthBurst > INT_MAX) {
+  if (options->BandwidthBurst > ROUTER_MAX_DECLARED_BANDWIDTH) {
     r = tor_snprintf(buf, sizeof(buf),
-                     "BandwidthBurst must be less than %d",INT_MAX);
+                     "BandwidthBurst must be less than %d",INT32_MAX);
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }

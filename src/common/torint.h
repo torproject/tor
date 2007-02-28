@@ -120,6 +120,9 @@ typedef unsigned int uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX 0xffffffffu
 #endif
+#ifndef INT32_MAX
+#define INT32_MAX 0x7fffffffu
+#endif
 #endif
 
 #if (SIZEOF_LONG == 4)

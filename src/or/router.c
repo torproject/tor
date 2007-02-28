@@ -877,8 +877,13 @@ router_rebuild_descriptor(int force)
   ri->bandwidthburst = (int)options->BandwidthBurst;
   ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
 
-  if (options->BandwidthRate > options->MaxAdvertisedBandwidth)
-    ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
+  if (options->BandwidthRate > options->MaxAdvertisedBandwidth) {
+    if (options->MaxAdvertisedBandwidth > ROUTER_MAX_DECLARED_BANDWIDTH) {
+      ri->bandwidthrate = ROUTER_MAX_DECLARED_BANDWIDTH;
+    } else {
+      ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
+    }
+  }
 
   policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
                              options->ExitPolicyRejectPrivate);

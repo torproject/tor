@@ -10,6 +10,8 @@ Changes in version 0.1.2.9-??? - 2007-??-??
   o Minor bugfixes (other):
     - Fix an assert that could trigger if a controller quickly set then
       cleared EntryNodes.  (Bug found by Udo van den Heuvel.)
+    - On architectures where sizeof(int)>4, still clamp declarable bandwidth
+      to INT32_MAX.
 
 
 Changes in version 0.1.2.8-beta - 2007-02-26
