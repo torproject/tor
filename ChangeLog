@@ -14,6 +14,10 @@ Changes in version 0.1.2.9-??? - 2007-??-??
       to INT32_MAX.
     - Fix a potential race condition in the rpm installer.  Found by
       Stefan Nordhausen.
+    - Try to fix eventdns warnings once and for all: do not treat a dns rcode
+      of 2 as indicating that the server is completely bad; it sometimes
+      means that the server is just bad for the request in question. (may fix
+      the last of bug 326.)
 
 
 Changes in version 0.1.2.8-beta - 2007-02-26

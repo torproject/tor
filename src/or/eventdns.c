@@ -696,7 +696,6 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 		}
 
 		switch(error) {
-		case DNS_ERR_SERVERFAILED:
 		case DNS_ERR_NOTIMPL:
 		case DNS_ERR_REFUSED:
 			// we regard these errors as marking a bad nameserver
@@ -707,6 +706,15 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 				nameserver_failed(req->ns, msg);
 				if (!request_reissue(req)) return;
 			}
+			break;
+		case DNS_ERR_SERVERFAILED:
+			// rcode 2 (servfailed) sometimes means "we are broken" and
+			// sometimes (with some binds) means "that request was very
+			// confusing."  Treat this as a timeout, not a failure.
+			/*XXXX refactor the parts of */
+			log(EVDNS_LOG_DEBUG, "Got a SERVERFAILED from nameserver %s; "
+				"will allow the request to time out.",
+				debug_nota(req->ns->address));
 			break;
 		default:
 			// we got a good reply from the nameserver
@@ -1876,9 +1884,9 @@ evdns_request_transmit(struct request *req) {
 	case 2:
 		// failed in some other way
 		retcode = 1;
-		// fall through
+		break;
 	default:
-		// all ok
+		// transmitted; we need to check for timeout.
 		log(EVDNS_LOG_DEBUG,
 			"Setting timeout for request %lx", (unsigned long) req);
 		evtimer_set(&req->timeout_event, evdns_request_timeout_callback, req);
@@ -1888,10 +1896,11 @@ evdns_request_transmit(struct request *req) {
 				(unsigned long) req);
 			// ???? Do more?
 		}
-		req->tx_count++;
-		req->transmit_me = 0;
-		return retcode;
 	}
+
+	req->tx_count++;
+	req->transmit_me = 0;
+	return retcode;
 }
 
 static void
