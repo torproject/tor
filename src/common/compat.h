@@ -123,13 +123,17 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #ifdef _MSC_VER
 #define U64_PRINTF_ARG(a) (a)
 #define U64_SCANF_ARG(a) (a)
-#define U64_FORMAT "%I64u"
 #define U64_LITERAL(n) (n ## ui64)
 #else
 #define U64_PRINTF_ARG(a) ((long long unsigned int)(a))
 #define U64_SCANF_ARG(a) ((long long unsigned int*)(a))
-#define U64_FORMAT "%llu"
 #define U64_LITERAL(n) (n ## llu)
+#endif
+
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+#define U64_FORMAT "%I64u"
+#else
+#define U64_FORMAT "%llu"
 #endif
 
 /** Represents an mmaped file. Allocated via tor_mmap_file; freed with
