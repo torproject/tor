@@ -1741,8 +1741,10 @@ do_hash_password(void)
 
 #ifdef MS_WINDOWS_SERVICE
 
-/* XXXX can some/all these functions become static? without breaing NT
- * services? */
+/* XXXX can some/all these functions become static? without breaking NT
+ * services? -NM */
+/* XXXX I'd also like to move much of the NT service stuff into its own
+ * file. -RD */
 void nt_service_control(DWORD request);
 void nt_service_body(int argc, char **argv);
 void nt_service_main(void);
