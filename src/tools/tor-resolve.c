@@ -31,7 +31,7 @@
 #endif
 
 #ifdef MS_WINDOWS
-#if (_MSC_VER <= 1300)
+#if defined(_MSC_VER) && (_MSC_VER <= 1300)
 #include <winsock.h>
 #else
 #include <winsock2.h>

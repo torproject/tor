@@ -541,7 +541,7 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
 #ifdef HAVE_STRTOULL
   r = (uint64_t)strtoull(s, &endptr, base);
 #elif defined(MS_WINDOWS)
-#if _MSC_VER < 1300
+#if defined(_MSC_VER) && _MSC_VER < 1300
   tor_assert(base <= 10);
   r = (uint64_t)_atoi64(s);
   endptr = (char*)s;
