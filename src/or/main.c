@@ -1576,6 +1576,8 @@ handle_signals(int is_parent)
     sigaction(SIGXFSZ, &action, NULL);
 #endif
   }
+#else /* MS windows */
+  (void)is_parent;
 #endif /* signal stuff */
 }
 
@@ -1738,6 +1740,20 @@ do_hash_password(void)
 }
 
 #ifdef MS_WINDOWS_SERVICE
+
+/* XXXX can some/all these functions become static? without breaing NT
+ * services? */
+void nt_service_control(DWORD request);
+void nt_service_body(int argc, char **argv);
+void nt_service_main(void);
+SC_HANDLE nt_service_open_scm(void);
+SC_HANDLE nt_service_open(SC_HANDLE hSCManager);
+int nt_service_start(SC_HANDLE hService);
+int nt_service_stop(SC_HANDLE hService);
+int nt_service_install(int argc, char **argv);
+int nt_service_remove(void);
+int nt_service_cmd_start(void);
+int nt_service_cmd_stop(void);
 
 struct service_fns {
   int loaded;
@@ -1917,6 +1933,8 @@ void
 nt_service_body(int argc, char **argv)
 {
   int r;
+  (void) argc; /* unused */
+  (void) argv; /* unused */
   nt_service_loadlibrary();
   service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   service_status.dwCurrentState = SERVICE_START_PENDING;
@@ -1962,7 +1980,7 @@ nt_service_main(void)
   DWORD result = 0;
   char *errmsg;
   nt_service_loadlibrary();
-  table[0].lpServiceName = GENSRV_SERVICENAME;
+  table[0].lpServiceName = (char*)GENSRV_SERVICENAME;
   table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)nt_service_body;
   table[1].lpServiceName = NULL;
   table[1].lpServiceProc = NULL;
@@ -1988,6 +2006,7 @@ nt_service_main(void)
       case CMD_VERIFY_CONFIG:
         printf("Configuration was valid\n");
         break;
+      case CMD_RUN_UNITTESTS:
       default:
         log_err(LD_CONFIG, "Illegal command number %d: internal error.",
                 get_options()->command);
@@ -2285,7 +2304,7 @@ nt_service_install(int argc, char **argv)
   printf("Done with CreateService.\n");
 
   /* Set the service's description */
-  sdBuff.lpDescription = GENSRV_DESCRIPTION;
+  sdBuff.lpDescription = (char*)GENSRV_DESCRIPTION;
   service_fns.ChangeServiceConfig2A_fn(hService, SERVICE_CONFIG_DESCRIPTION,
                                        &sdBuff);
   printf("Service installed successfully\n");

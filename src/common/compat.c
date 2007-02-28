@@ -713,6 +713,9 @@ switch_id(const char *user, const char *group)
   }
 
   return 0;
+#else
+  (void)user;
+  (void)group;
 #endif
 
   log_warn(LD_CONFIG,
@@ -878,7 +881,7 @@ get_uname(void)
         unsigned int leftover_mask;
         const char *plat = NULL;
         static struct {
-          int major; int minor; const char *version;
+          unsigned major; unsigned minor; const char *version;
         } win_version_table[] = {
           { 6, 0, "Windows \"Longhorn\"" },
           { 5, 2, "Windows Server 2003" },
@@ -889,7 +892,7 @@ get_uname(void)
           { 4, 10, "Windows 98" },
           /* { 4, 0, "Windows 95" } */
           { 3, 51, "Windows NT 3.51" },
-          { -1, -1, NULL }
+          { 0, 0, NULL }
         };
 #ifdef VER_SUITE_BACKOFFICE
         static struct {
@@ -924,7 +927,7 @@ get_uname(void)
           else
             plat = "Windows 95";
         } else {
-          for (i=0; win_version_table[i].major>=0; ++i) {
+          for (i=0; win_version_table[i].major>0; ++i) {
             if (win_version_table[i].major == info.dwMajorVersion &&
                 win_version_table[i].minor == info.dwMinorVersion) {
               plat = win_version_table[i].version;
@@ -1027,8 +1030,8 @@ spawn_func(void (*func)(void *), void *data)
 {
 #if defined(USE_WIN32_THREADS)
   int rv;
-  rv = _beginthread(func, 0, data);
-  if (rv == (unsigned long) -1)
+  rv = (int)_beginthread(func, 0, data);
+  if (rv == (int)-1)
     return -1;
   return 0;
 #elif defined(USE_PTHREADS)

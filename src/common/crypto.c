@@ -1567,7 +1567,7 @@ crypto_seed_rng(void)
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
                              CRYPT_VERIFYCONTEXT)) {
-      if (GetLastError() != NTE_BAD_KEYSET) {
+      if ((unsigned long)GetLastError() != (unsigned long)NTE_BAD_KEYSET) {
         log_warn(LD_CRYPTO, "Can't get CryptoAPI provider [1]");
         return rand_poll_status ? 0 : -1;
       }

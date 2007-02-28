@@ -2070,6 +2070,7 @@ start_daemon(void)
 void
 finish_daemon(const char *cp)
 {
+  (void)cp;
 }
 #endif
 

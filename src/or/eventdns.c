@@ -714,7 +714,7 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 			/*XXXX refactor the parts of */
 			log(EVDNS_LOG_DEBUG, "Got a SERVERFAILED from nameserver %s; "
 				"will allow the request to time out.",
-				debug_nota(req->ns->address));
+				debug_ntoa(req->ns->address));
 			break;
 		default:
 			// we got a good reply from the nameserver
@@ -2559,6 +2559,7 @@ evdns_resolv_set_defaults(int flags) {
 #ifndef HAVE_STRTOK_R
 static char *
 strtok_r(char *s, const char *delim, char **state) {
+	(void)state;
 	return strtok(s, delim);
 }
 #endif
