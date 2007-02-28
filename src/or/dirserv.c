@@ -822,16 +822,16 @@ format_versions_list(config_line_t *ln)
   return result;
 }
 
-/** Return 1 if <b>ri</b>'s descriptor is worth including in the v1
- * directory, else return 0.
+/** Return 1 if <b>ri</b>'s descriptor is "active" -- running, valid,
+ * not hibernating, and not too old. Else return 0.
  */
 static int
-live_enough_for_v1_dir(routerinfo_t *ri, time_t now)
+router_is_active(routerinfo_t *ri, time_t now)
 {
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   if (ri->cache_info.published_on < cutoff)
     return 0;
-  if (!ri->is_running || !ri->is_valid)
+  if (!ri->is_running || !ri->is_valid || ri->is_hibernating)
     return 0;
   return 1;
 }
@@ -878,7 +878,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-                    if (complete || live_enough_for_v1_dir(ri, now))
+                    if (complete || router_is_active(ri, now))
                       buf_len += ri->cache_info.signed_descriptor_len+1);
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
@@ -904,7 +904,7 @@ dirserv_dump_directory_to_string(char **dir_out,
     {
       size_t len = ri->cache_info.signed_descriptor_len;
       const char *body;
-      if (!complete && !live_enough_for_v1_dir(ri, now))
+      if (!complete && !router_is_active(ri, now))
         continue;
       if (cp+len+1 >= buf+buf_len)
         goto truncated;
@@ -1441,7 +1441,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   bandwidths_excluding_exits = smartlist_create();
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-    if (ri->is_running && ri->is_valid) {
+    if (router_is_active(ri, now)) {
       uint32_t *up = tor_malloc(sizeof(uint32_t));
       uint32_t *bw = tor_malloc(sizeof(uint32_t));
       ri->is_exit = exit_policy_is_general_exit(ri->exit_policy);
@@ -1968,6 +1968,7 @@ void
 dirserv_test_reachability(int try_all)
 {
   time_t now = time(NULL);
+//  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   routerlist_t *rl = router_get_routerlist();
   static char ctr = 0;
 
@@ -1975,6 +1976,8 @@ dirserv_test_reachability(int try_all)
     const char *id_digest = router->cache_info.identity_digest;
     if (router_is_me(router))
       continue;
+//    if (router->cache_info.published_on > cutoff)
+//      continue;
     if (try_all || (((uint8_t)id_digest[0]) % 128) == ctr) {
       log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
                 router->nickname, router->address, router->or_port);
