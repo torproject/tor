@@ -689,7 +689,7 @@ static const u32 rcon[] = {
  *
  * @return      the number of rounds for the given cipher key size.
  */
-int
+static int
 rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits)
 {
         int i = 0;
@@ -773,10 +773,10 @@ rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/], const u8 cipherKey[], int keyBits)
 }
 
 #ifdef USE_RIJNDAEL_COUNTER_OPTIMIZATION
-void
+static void
 rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, u32 ctr1, u32 ctr0, u8 ct[16])
 #else
-void
+static void
 rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16], u8 ct[16])
 #endif
 {

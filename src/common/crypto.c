@@ -105,7 +105,6 @@ struct crypto_dh_env_t {
 
 /* Prototypes for functions only used by tortls.c */
 crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
-RSA *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
 EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
 DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
@@ -267,13 +266,6 @@ _crypto_new_pk_env_rsa(RSA *rsa)
   env->refs = 1;
   env->key = rsa;
   return env;
-}
-
-/** used by tortls.c: return the RSA* from a crypto_pk_env_t. */
-RSA *
-_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
-{
-  return env->key;
 }
 
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_env_t.  Iff

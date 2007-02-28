@@ -3047,7 +3047,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
 }
 
 /** Free storage held in <b>ds</b> */
-void
+static void
 trusted_dir_server_free(trusted_dir_server_t *ds)
 {
   tor_free(ds->nickname);
