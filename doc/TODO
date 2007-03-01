@@ -51,8 +51,8 @@ R   - actually cause the directory.c functions to know about or_port
         or_conn is full, and accept the sometimes directory data will just
         never get written.
 
-N - Libevent fixes
-    . Try to get the pthread_sigprocmask situation under control; see
+  o Libevent fixes
+    o Try to get the pthread_sigprocmask situation under control; see
       coderman's or-dev post of 20-Feb-2007.
 
   - Polishing

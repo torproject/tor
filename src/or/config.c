@@ -584,7 +584,7 @@ typedef enum {
   /* Note: we compare these, so it's important that "old" precede everything,
    * and that "other" come last. */
   LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_12A,
-  LE_13,
+  LE_13, LE_13A,
   LE_OTHER
 } le_version_t;
 static le_version_t decode_libevent_version(void);
@@ -3828,6 +3828,7 @@ static const struct {
   { "1.2",  LE_12 },
   { "1.2a", LE_12A },
   { "1.3",  LE_13 },
+  { "1.3a", LE_13A },
   { NULL, LE_OTHER }
 };
 
@@ -3907,6 +3908,9 @@ check_libevent_version(const char *m, int server)
         v,m);
     badness = "SLOW";
   }
+  /* XXXX012 if libevent 1.3b comes out before 0.1.2.x, and it works,
+   * recomment an upgrade to everybody on BSD or OSX or anywhere with
+   * that flavor of pthreads. */
   if (badness) {
     control_event_general_status(LOG_WARN,
         "BAD_LIBEVENT VERSION=%s METHOD=%s BADNESS=%s RECOVERED=NO",
