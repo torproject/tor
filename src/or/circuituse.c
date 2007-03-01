@@ -1027,7 +1027,6 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
              * routerstatus or equivalent. */
             routerstatus_t *s =
               routerstatus_get_by_hexdigest(conn->chosen_exit_name+1);
-            log_debug(LD_DIR, "result is %d", (int)s);
             if (s) {
               extend_info = extend_info_from_routerstatus(s);
             } else {
