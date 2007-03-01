@@ -97,7 +97,9 @@ const char aes_c_id[] = "$Id$";
 /* Figure out which AES optimizations to use. */
 #ifdef USE_BUILTIN_AES
 # define USE_RIJNDAEL_COUNTER_OPTIMIZATION
-# if defined(__powerpc__) || defined(__powerpc64__)
+# if 0 && (defined(__powerpc__) || defined(__powerpc64__))
+/* XXXX do more experimentation before concluding this is actually
+ * a good idea. */
 #  define FULL_UNROLL
 # endif
 #endif
