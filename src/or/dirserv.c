@@ -1968,6 +1968,8 @@ void
 dirserv_test_reachability(int try_all)
 {
   time_t now = time(NULL);
+  /* XXXX012 decide what to do here; see or-talk thread "purging old router
+   * information, revocation." */
 //  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   routerlist_t *rl = router_get_routerlist();
   static char ctr = 0;
