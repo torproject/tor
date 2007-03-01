@@ -35,7 +35,7 @@ N - Test guard unreachable logic; make sure that we actually attempt to
     directory port."
     o Implement
     D turn the received socks addr:port into a digest for setting .exit
-R   - be able to connect without having a server descriptor, to bootstrap.
+    D be able to connect without having a server descriptor, to bootstrap.
     D handle connect-dir streams that don't have a chosen_exit_name set.
     o include ORPort in DirServers lines so we can know where to connect.
       list the orport as 0 if it can't handle begin_dir.
@@ -43,7 +43,7 @@ R   - be able to connect without having a server descriptor, to bootstrap.
 
   . option to dl directory info via tor:
     TunnelDirConns and PreferTunneledDirConns
-R   - actually cause the directory.c functions to know about or_port
+    D actually cause the directory.c functions to know about or_port
       and use it when we're supposed to.
     o for tunneled edge conns, stop reading to the bridge connection
       when the or_conn we're writing to has a full outbuf.

@@ -33,6 +33,9 @@ Changes in version 0.1.2.9-??? - 2007-??-??
       configuration values on mingw; the high-order 32 bits would get
       truncated.  If the value was then reloaded, disaster would
       occur. (Fixes bug 400 and maybe also bug 397.)
+    - Disable encrypted directory connections when we don't have a server
+      descriptor for the destination. We'll get this working again in
+      the 0.2.0 branch.
 
 
 Changes in version 0.1.2.8-beta - 2007-02-26

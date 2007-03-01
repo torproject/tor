@@ -561,6 +561,7 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     if (fascistfirewall &&
         prefer_tunnel &&
         status->version_supports_begindir &&
+        router_get_by_digest(status->identity_digest) &&
         fascist_firewall_allows_address_or(status->addr, status->or_port))
       smartlist_add(is_trusted ? trusted_tunnel :
                       is_overloaded ? overloaded_tunnel : tunnel, status);
@@ -639,6 +640,7 @@ router_pick_trusteddirserver_impl(authority_type_t type,
       if (fascistfirewall &&
           prefer_tunnel &&
           d->or_port &&
+          router_get_by_digest(d->digest) &&
           fascist_firewall_allows_address_or(d->addr, d->or_port))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel,
                       &d->fake_status.status);

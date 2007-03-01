@@ -372,7 +372,8 @@ directory_initiate_command(const char *address, uint32_t addr,
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
-  int want_to_tunnel = options->TunnelDirConns && supports_begindir;
+  int want_to_tunnel = options->TunnelDirConns && supports_begindir &&
+                       router_get_by_digest(digest);
 
   tor_assert(address);
   tor_assert(addr);
