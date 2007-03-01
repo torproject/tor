@@ -81,8 +81,8 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
     return 0;
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-    if (!exitrouter) {
-      log_debug(LD_CIRC,"Not considering circuit with unknown router.");
+    if (!exitrouter && !build_state->onehop_tunnel) {
+        log_debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
                  * or is a rendezvous circuit. */
     }
@@ -98,7 +98,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
         return 0;
       }
     }
-    if (!connection_ap_can_use_exit(conn, exitrouter)) {
+    if (exitrouter && !connection_ap_can_use_exit(conn, exitrouter)) {
       /* can't exit from this router */
       return 0;
     }
@@ -1019,12 +1019,15 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
         if (r) {
           extend_info = extend_info_from_router(r);
         } else {
+          log_debug(LD_DIR, "considering %d, %s",
+                    want_onehop, conn->chosen_exit_name);
           if (want_onehop && conn->chosen_exit_name[0] == '$') {
             /* We're asking for a one-hop circuit to a router that
              * we don't have a routerinfo about. Hope we have a
              * routerstatus or equivalent. */
             routerstatus_t *s =
               routerstatus_get_by_hexdigest(conn->chosen_exit_name+1);
+            log_debug(LD_DIR, "result is %d", (int)s);
             if (s) {
               extend_info = extend_info_from_routerstatus(s);
             } else {
@@ -1204,10 +1207,12 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
 {
   int retval;
   int conn_age;
+  int want_onehop;
 
   tor_assert(conn);
   tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(conn->socks_request);
+  want_onehop = conn->socks_request->command == SOCKS_COMMAND_CONNECT_DIR;
 
   conn_age = time(NULL) - conn->_base.timestamp_created;
 
@@ -1217,7 +1222,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
     if (conn->chosen_exit_name) {
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->_base.chosen_exit_optional;
-      if (!router) {
+      if (!router && !want_onehop) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' is not known. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
@@ -1228,7 +1233,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
         }
         return -1;
       }
-      if (!connection_ap_can_use_exit(conn, router)) {
+      if (router && !connection_ap_can_use_exit(conn, router)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
