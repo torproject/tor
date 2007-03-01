@@ -1968,8 +1968,14 @@ void
 dirserv_test_reachability(int try_all)
 {
   time_t now = time(NULL);
-  /* XXXX012 decide what to do here; see or-talk thread "purging old router
-   * information, revocation." */
+  /* XXX decide what to do here; see or-talk thread "purging old router
+   * information, revocation." -NM
+   * We can't afford to mess with this in 0.1.2.x. The reason is that
+   * if we stop doing reachability tests on some of routerlist, then
+   * we'll for-sure think they're down, which may have unexpected
+   * effects in other parts of the code. It doesn't hurt much to do
+   * the testing, and directory authorities are easy to upgrade. Let's
+   * wait til 0.2.0. -RD */
 //  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   routerlist_t *rl = router_get_routerlist();
   static char ctr = 0;
