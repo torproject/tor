@@ -13,6 +13,10 @@ Changes in version 0.1.2.9-??? - 2007-??-??
       uptime and bandwidth cutoffs.
     - Stop listing hibernating servers in the v1 directory.
 
+  o Minor bugfixes (hidden services):
+    - Upload hidden service descriptors slightly less often, to reduce
+      load on authorities.
+
   o Minor bugfixes (other):
     - Fix an assert that could trigger if a controller quickly set then
       cleared EntryNodes.  (Bug found by Udo van den Heuvel.)

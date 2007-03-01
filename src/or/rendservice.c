@@ -1091,9 +1091,9 @@ rend_consider_services_upload(time_t now)
     }
     if (service->next_upload_time < now ||
         (service->desc_is_dirty &&
-         service->desc_is_dirty < now-5)) {
+         service->desc_is_dirty < now-30)) {
       /* if it's time, or if the directory servers have a wrong service
-       * descriptor and ours has been stable for 5 seconds, upload a
+       * descriptor and ours has been stable for 30 seconds, upload a
        * new one of each format. */
       upload_service_descriptor(service, 0);
       service->next_upload_time = now + rendpostperiod;

@@ -2272,7 +2272,7 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
 
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
-#define MIN_REND_POST_PERIOD (5*60)
+#define MIN_REND_POST_PERIOD (10*60)
 
 /** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
