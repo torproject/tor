@@ -1,4 +1,4 @@
-Changes in version 0.1.2.9-rc - 2007-03-??
+Changes in version 0.1.2.9-rc - 2007-03-02
   o Major bugfixes (Windows):
     - On MinGW, use "%I64u" to printf/scanf 64-bit integers, instead
       of the usual GCC "%llu". This prevents a bug when saving 64-bit
