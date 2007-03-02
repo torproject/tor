@@ -124,12 +124,20 @@ Things we'd like to do in 0.2.0.x:
     - Remove socketpair-based bridges conns, and the word "bridge".
     - Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
       online config documentation from a single source.
+    - Have clients do TLS connection rotation less often than "every 10
+      minutes" in the thrashy case, and more often than "once a week" in the
+      extra-stable case.
+    - Implement TLS shutdown properly when possible.
   - Features:
     - Implement a DNS proxy
     - Bridges.
     - Let controller set router flags for authority to transmit, and for
        client to use.
     - Support relaying streams to ipv6.
+    - Let servers decide to support BEGIN_DIR but not DirPort.
+  - Blocking
+    - It would be potentially helpful to https requests on the OR port by
+      acting like an HTTPS server.
   - Deprecations:
     - Remove v0 control protocol.
 
