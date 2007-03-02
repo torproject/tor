@@ -526,7 +526,7 @@ leaking DNS requests.
 .TP
 \fBVirtualAddrNetwork \fR\fIAddress\fB/\fIbits\fP
 When a controller asks for a virtual (unused) address with the
-'MAPADDRESS' command, Tor picks an unassigned address from this range.
+MAPADDRESS command, Tor picks an unassigned address from this range.
 (Default: 127.192.0.0/10)
 
 When providing proxy server service to a network of computers using a tool like
