@@ -15,7 +15,7 @@ Overview:
 
   This is an open proposal.
 
-Motivation:
+Motivation: Tor versions
 
    Our *current* approach to versioning the Tor protocol(s) has been as
    follows:
@@ -46,34 +46,80 @@ Motivation:
      - There are many ideas circulating for multiple cell sizes; while it's
        not obvious whether these are safe, we can't do them at all without a
        mechanism to permit them.
-     - There are many ideas circulating for alternative cell relay rules:
-       they don't work unless they can coexist in the current network.
+     - There are many ideas circulating for alternative circuit building and
+       cell relay rules: they don't work unless they can coexist in the
+       current network.
      - If our protocol changes a lot, it's hard to describe any coherent
        version of it: we need to say "the version that Tor versions W through
        X use when talking to versions Y through Z".  This makes analysis
        harder.
+
+Motivation: Preventing MITM attacks
+
+   TLS prevents a man-in-the-middle attacker from reading or changing the
+   contents of a communication.  It does not, however, prevent such an
+   attacker from observing timing information.  Since timing attacks are some
+   of the most effective against low-latency anonymity nets like Tor, we
+   should take more care to make sure that once we're not only talking to who
+   we think we're talking to, but that we're using the network path we
+   believe we're using.
+
+Motivation: Signed clock information
+
+   It's very useful for Tor instances to know how skewed they are relative
+   to one another.  The only way to find out currently has been to download
+   directory information, and check the Date header--but this is not
+   authenticated, and hence subject to modification on the wire.  Using
+   BEGIN_DIR to create an authenticated directory stream through an existing
+   circuit is better, but only works when the other party serves directory
+   information.
 
 Proposal:
 
 1.0. Version numbers
 
    The node-to-node TLS-based "OR connection" protocol and the multi-hop
-   "circuit" protocol are versioned quasi-independently.  (Certain versions
+   "circuit" protocol are versioned quasi-independently.
+
+   Of course, some dependencies will continue to exist: Certain versions
    of the circuit protocol may require a minimum version of the connection
-   protocol to be used.)
+   protocol to be used.  The connection protocol affects:
+     - Initial connection setup, link encryption, transport guarantees,
+       etc.
+     - The allowable set of cell commands
+     - Allowable formats for cells.
+
+   The circuit protocol determines:
+     - How circuits are established and maintained
+     - How cells are decrypted and relayed
+     - How streams are established and maintained.
 
    Version numbers are incremented for backward-incompatible protocol changes
    only.  Backward-compatible changes are generally implemented by adding
    additional fields to existing structures; implementations MUST ignore
-   fields they do not expect.
+   fields they do not expect.  Unused portions of cells MUST be set to zero.
 
+   Though versioning the protocol will make it easier to maintain backward
+   compatibility with older versions of Tor, we will nevertheless continue to
+   periodically drop support for older protocol,
+      - to keep the implementation from growing without bound,
+      - to limit the maintenance burden of patching bugs in obsolete Tors,
+      - to limit the testing burden of verifying that many old protocol
+        versions continue to be implemented properly, and
+      - to limit the exposure of the network to protocol versions that are
+        expensive to support.
+
+   The Tor protocol as implemented through the 0.1.2.x Tor series will be
+   called "version 1" in its link protocol and "version 1" in its relay
+   protocol.  Versions of the Tor protocol so old as to be incompatible with
+   Tor 0.1.2.x
 
 2.1. VERSIONS cells
 
    When a Tor connection is established, both parties normally send a
    VERSIONS cell before sending any other cells.  (But see below.)
 
-         NumVersions            [1 byte]
+         NumVersions          [1 byte]
          Versions               [NumVersions bytes]
 
    "Versions" is a sequence of NumVersions link connection protocol versions,
@@ -94,10 +140,14 @@ Proposal:
    cells listing all their supported versions.  Upon receiving the
    other party's VERSIONS cell, the implementation begins using the
    highest-valued version common to both cells.  If the first cell from
-   the other party is _not_ a VERSIONS cell, we assume a v1 protocol.
+   the other party has a recognized command, and is _not_ a VERSIONS cell, we
+   assume a v1 protocol.
 
-   Implementations MUST discard cells that are not the first cells sent on a
-   connection.
+   Implementations MUST discard VERSIONS cells that are not the first
+   recognized cells sent on a connection.
+ 
+   The VERSIONS cell must be sent as a v1 cell (2 bytes of circuitID, 1
+   byte of command, 590 bytes of payload).
 
 2.2. MITM-prevention and time checking
 
@@ -125,3 +175,81 @@ Proposal:
    The second address is the one that the party sending the VERSIONS cell
    believes the other has -- it can be used to learn what your IP address
    is if you have no other hints.
+
+Discussion: Versions versus feature lists
+
+   Many protocols negotiate lists of available features instead of (or in
+   addition to) protocol versions.  While it's possible that some amount of
+   version negotiation could be supported in a later Tor, we should prefer to
+   use protocol versions whenever possible, for reasons discussed in
+   the "Anonymity Loves Company" paper.
+
+Discussion: Bytes per version, versions per cell
+
+   This document provides for a one-byte count of how many versions a Tor
+   supports, and allows one byte per version.  Thus, it can only support only
+   254 more versions of the protocol beyond the unallocated v0 and the
+   current v1.  If we ever need to split the protocol into 255 incompatible
+   versions, we've probably screwed up badly somewhere.
+
+   Nevertheless, here are two ways we could support more versions:
+     - Change the version count to a two-byte field that counts the number of
+       _bytes_ used, and use a UTF8-style encoding Versions 0 through 127
+       take one byte to encode; versions 128 through 2047 take two bytes to
+       encode, and so on.  We wouldn't need to parse any version higher than
+       127 right now, since all bytes used to encode higher versions would
+       have their high bit set.
+
+       We'd still have a limit of 380 simultaneously versions that could be
+       declared in any version.  This is probably okay.
+
+     - Decide that if we need to support more versions, we can add a
+       MOREVERSIONS cell that gets sent before the VERSIONS cell.  The spec
+       above requires Tors to ignore unrecognized cell types that they get
+       before the first VERSIONS cell, and still allow version negotiation to
+       succeed.
+
+Discussion: Reducing round-trips
+
+   It might be appealing to see if we can cram more information in the
+   initial VERSIONS cell.  For example, the contents of NETINFO will pretty
+   soon be sent by everybody before any more information is exchanged, but
+   decoupling them from the version exchange increases round-trips.
+
+   Instead, we could speculatively include handshaking information at
+   the end of a VERSIONS cell, wrapped in a marker to indicate, "if we wind
+   up speaking VERSION 2, here's the NETINFO I'll send.  Otherwise, ignore
+   this."  This could be extended to opportunistically reduce round trips
+   when possible for future versions when we guess the versions right.
+
+   Of course, we'd need to be careful about using a feature like this:
+     - We don't want to include things that are expensive to compute,
+       like PK signatures or proof-of-work.
+     - We don't want to speculate as a mobile client it will leak our
+       experience with the server in question.
+
+Discussion: Advertising versions in routerdescs and networkstatuses.
+
+   XXXX
+
+Security issues:
+
+   Client partitioning is the big danger when we introduce new versions; if a
+   client supports some very unusual set of protocol versions, it will stand
+   out from others no matter where it goes.  If a server supports an unusual
+   version, it will get a disproportionate amount of traffic from clients who
+   prefer that version.  We can mitigate this somewhat as follows:
+
+     - Do not have clients prefer any protocol version by default until that
+       version is widespread.
+
+     - Do not multiply protocol versions needlessly.
+
+     - Encourage protocol implementors to implement the same protocol version
+       sets as some popular version of Tor.
+
+     - Disrecommend very old/unpopular versions of Tor via the directory
+       authorities' RecommmendedVersions mechanism, even if it is still
+       technically possible to use them.
+
+
