@@ -56,6 +56,10 @@ How to change the specs now:
    remain the canonical documentation for the Tor protocol: no proposal is
    ever the canonical documentation for an implemented feature.
 
+   (This process is pretty similar to the Python Enhancement Process, with
+   the major exception that Tor proposals get re-integrated into the specs
+   after implementation, whereas PEPs _become_ the new spec.)
+
    {It's still okay to make small changes directly to the spec if the code
    can be
    written more or less immediately, or cosmetic changes if no code change is
