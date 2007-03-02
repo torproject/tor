@@ -62,3 +62,6 @@ $Id$
   controllers that want to test whether a given application is indeed using
   the same instance of Tor that they're controlling.
 
+5. [XXX Is there a ".virtual" address that we expose too, or is that
+just intended to be internal? -RD]
+
