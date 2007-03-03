@@ -1,3 +1,9 @@
+Changes in version 0.1.2.10-rc - 2007-03-??
+  o Major bugfixes (Windows)
+    - Do not load the NT services library functions (which may not exist)
+      just to detect if we're a service trying to shut down.
+
+
 Changes in version 0.1.2.9-rc - 2007-03-02
   o Major bugfixes (Windows):
     - On MinGW, use "%I64u" to printf/scanf 64-bit integers, instead

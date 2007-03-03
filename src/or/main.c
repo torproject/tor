@@ -98,10 +98,10 @@ SERVICE_STATUS_HANDLE hStatus;
  * is a job for arguments, not globals. */
 static char **backup_argv;
 static int backup_argc;
-static int nt_service_is_stopped(void);
+static int nt_service_is_stopping(void);
 static char* nt_strerror(uint32_t errnum);
 #else
-#define nt_service_is_stopped() (0)
+#define nt_service_is_stopping() (0)
 #endif
 
 /** If our router descriptor ever goes this long without being regenerated
@@ -1252,7 +1252,7 @@ do_main_loop(void)
   second_elapsed_callback(0,0,NULL);
 
   for (;;) {
-    if (nt_service_is_stopped())
+    if (nt_service_is_stopping())
       return 0;
 
 #ifndef MS_WINDOWS
@@ -1884,14 +1884,18 @@ nt_service_loadlibrary(void)
   exit(1);
 }
 
-/** If we're compiled to run as an NT service, and the service has been
+/** If we're compiled to run as an NT service, and the service wants to
  * shut down, then change our current status and return 1.  Else
  * return 0.
  */
 static int
-nt_service_is_stopped(void)
+nt_service_is_stopping(void)
+/* XXXX this function would probably _love_ to be inline, in 0.2.0. */
 {
-  nt_service_loadlibrary();
+  /* If we haven't loaded the function pointers, we can't possibly be an NT
+   * service trying to shut down. */
+  if (!service_fns.loaded)
+    return 0;
 
   if (service_status.dwCurrentState == SERVICE_STOP_PENDING) {
     service_status.dwWin32ExitCode = 0;

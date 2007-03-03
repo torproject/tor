@@ -128,6 +128,7 @@ Things we'd like to do in 0.2.0.x:
       minutes" in the thrashy case, and more often than "once a week" in the
       extra-stable case.
     - Implement TLS shutdown properly when possible.
+    - Maybe move NT services into their own module.
   - Features:
     - Implement a DNS proxy
     - Bridges.
