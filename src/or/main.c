@@ -536,6 +536,8 @@ conn_close_if_marked(int i)
         severity = LOG_INFO;
       else
         severity = LOG_NOTICE;
+      /* XXXX012 rewrite this error message; it generates lots of worried
+       * support requests. */
       log_fn(severity, LD_NET, "Something wrong with your network connection? "
              "We tried to write %d bytes to addr %s (fd %d, type %s, state %d)"
              " but timed out. (Marked at %s:%d)",
@@ -2278,7 +2280,7 @@ nt_service_install(int argc, char **argv)
                             NULL, &sidLen, // Don't care about the SID
                             NULL, &domainLen, // Don't care about the domain
                             &sidUse) == 0) {
-    /* XXXX012 For some reason, the above test segfaults. Fix that. */
+    /* XXXX For some reason, the above test segfaults. Fix that. */
     printf("User \"%s\" doesn't seem to exist.\n", user_acct);
     return -1;
   } else {

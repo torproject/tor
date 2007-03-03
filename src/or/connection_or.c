@@ -113,7 +113,6 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
   conn->next_with_same_id = tmp;
 
 #if 1
-  /*XXXX012 change this back to if 0. */
   /* Testing code to check for bugs in representation. */
   for (; tmp; tmp = tmp->next_with_same_id) {
     tor_assert(!memcmp(tmp->identity_digest, digest, DIGEST_LEN));
