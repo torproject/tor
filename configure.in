@@ -5,7 +5,7 @@ dnl See LICENSE for licensing information
 
 AC_INIT
 AM_INIT_AUTOMAKE(tor, 0.1.2.9-rc-dev)
-AM_CONFIG_HEADER(orconfig.h)
+AC_CONFIG_HEADERS([orconfig.h])
 
 AC_CANONICAL_HOST
 
@@ -14,13 +14,13 @@ if test -f /etc/redhat-release ; then
 fi
 
 AC_ARG_ENABLE(debug,
- AC_HELP_STRING(--enable-debug, compile with debugging info),
+ AS_HELP_STRING(--enable-debug, compile with debugging info),
 [if test x$enableval = xyes; then
     CFLAGS="$CFLAGS -g"
 fi])
 
 AC_ARG_ENABLE(eventdns,
-     AC_HELP_STRING(--enable-eventdns, enable asynchronous dns module),
+     AS_HELP_STRING(--enable-eventdns, enable asynchronous dns module),
      [case "${enableval}" in
         yes) eventdns=true ;;
         no)  eventdns=false ;;
@@ -32,7 +32,7 @@ if test x$eventdns = xtrue; then
 fi
 
 AC_ARG_ENABLE(transparent,
-     AC_HELP_STRING(--disable-transparent, disable transparent proxy support),
+     AS_HELP_STRING(--disable-transparent, disable transparent proxy support),
      [case "${enableval}" in
         yes) transparent=true ;;
         no)  transparent=false ;;
@@ -40,7 +40,7 @@ AC_ARG_ENABLE(transparent,
       esac], [transparent=true])
 
 AC_ARG_ENABLE(threads,
-     AC_HELP_STRING(--disable-threads, disable multi-threading support))
+     AS_HELP_STRING(--disable-threads, disable multi-threading support))
 
 if test x$enable_threads = x; then
    case $host in
@@ -73,7 +73,7 @@ case $host in
 esac
 
 AC_ARG_ENABLE(gcc-warnings,
-     AC_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
+     AS_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
 
 AC_PROG_CC
 AC_PROG_MAKE_SET
@@ -159,14 +159,14 @@ fi
 
 dnl Enable C99 when compiling with MIPSpro
 AC_MSG_CHECKING([for MIPSpro compiler])
-AC_TRY_COMPILE([], [
+AC_COMPILE_IFELSE(AC_LANG_PROGRAM(, [
 #if (defined(__sgi) && defined(_COMPILER_VERSION))
 #error
   return x(y);
 #endif
-],
-bmipspro=false; AC_MSG_RESULT([no]),
-bmipspro=true; AC_MSG_RESULT([yes]))
+]),
+bmipspro=false; AC_MSG_RESULT(no),
+bmipspro=true; AC_MSG_RESULT(yes))
 
 if test $bmipspro = true; then
   CFLAGS="$CFLAGS -c99"
@@ -230,18 +230,13 @@ AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
 
-dnl         AC_TRY_RUN([
-dnl #include <openssl/opensslv.h>
-dnl #include <openssl/crypto.h>
-dnl int main(void) {
-dnl return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
-dnl }],
-
 TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $GDIlib],
     [#include <openssl/rand.h>],
     [void RAND_add(const void *buf, int num, double entropy);],
     [RAND_add((void*)0,0,0); exit(0);], [--with-ssl-dir],
     [/usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /opt/openssl])
+
+dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
 
 dnl Make sure to enable support for large off_t if avalable.
 
@@ -272,14 +267,14 @@ dnl These headers are not essential
 
 AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h limits.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h inttypes.h utime.h sys/utime.h sys/mman.h netintet/in.h netinet/in6.h)
 
-AC_CHECK_HEADERS(net/if.h, [net_if_found=1], [net_if_found=0],
+AC_CHECK_HEADERS(net/if.h, net_if_found=1, net_if_found=0,
 [#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif])
-AC_CHECK_HEADERS(net/pfvar.h, [net_pfvar_found=1], [net_pfvar_found=0],
+AC_CHECK_HEADERS(net/pfvar.h, net_pfvar_found=1, net_pfvar_found=0,
 [#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -290,7 +285,7 @@ AC_CHECK_HEADERS(net/pfvar.h, [net_pfvar_found=1], [net_pfvar_found=0],
 #include <net/if.h>
 #endif])
 AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
-        [linux_netfilter_ipv4=1], [linux_netfilter_ipv4=0],
+        linux_netfilter_ipv4=1, linux_netfilter_ipv4=0,
 [#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -371,7 +366,7 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_storage], , ,
 
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
-AC_TRY_RUN([
+AC_RUN_IFELSE(AC_LANG_SOURCE([
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -381,7 +376,7 @@ AC_TRY_RUN([
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }],
+int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }]),
   tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes)
 ])
 else
@@ -516,14 +511,14 @@ AC_CHECK_FUNC(gethostbyname_r, [
   AC_MSG_CHECKING([how many arguments gethostbyname_r() wants])
   OLD_CFLAGS=$CFLAGS
   CFLAGS="$CFLAGS $MY_CPPFLAGS $MY_THREAD_CPPFLAGS $MY_CFLAGS"
-  AC_TRY_COMPILE([
+  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([
 #include <netdb.h>
   ], [
     char *cp1, *cp2;
     struct hostent *h1, *h2;
     int i1, i2;
     (void)gethostbyname_r(cp1,h1,cp2,i1,&h2,&i2);
-  ], [
+  ]),[
     AC_DEFINE(HAVE_GETHOSTBYNAME_R)
     AC_DEFINE(HAVE_GETHOSTBYNAME_R_6_ARG, 1,
      [Define this if gethostbyname_r takes 6 arguments])
@@ -639,10 +634,10 @@ fi
 # released versions.  (Some relevant gcc versions can't handle these.)
 if test x$enable_gcc_warnings = xyes; then
 
-  AC_TRY_COMPILE([], [
+  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
 #if !defined(__GNUC__) || (__GNUC__ < 4)
 #error
-#endif], have_gcc4=yes, have_gcc4=no)
+#endif]), have_gcc4=yes, have_gcc4=no)
 
   CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wbad-function-cast -Wswitch-enum -Werror"
 
@@ -656,7 +651,8 @@ if test x$enable_gcc_warnings = xyes; then
 
 fi
 
-AC_OUTPUT(Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile doc/spec/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh)
+AC_CONFIG_FILES([Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile doc/spec/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh])
+AC_OUTPUT
 
 if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
   ./contrib/updateVersions.pl
