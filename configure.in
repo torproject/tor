@@ -5,7 +5,7 @@ dnl See LICENSE for licensing information
 
 AC_INIT
 AM_INIT_AUTOMAKE(tor, 0.2.0.0-alpha-dev)
-AC_CONFIG_HEADERS([orconfig.h])
+AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
 
