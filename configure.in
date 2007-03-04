@@ -513,12 +513,12 @@ AC_CHECK_FUNC(gethostbyname_r, [
   CFLAGS="$CFLAGS $MY_CPPFLAGS $MY_THREAD_CPPFLAGS $MY_CFLAGS"
   AC_COMPILE_IFELSE(AC_LANG_PROGRAM([
 #include <netdb.h>
-  ], [
+  ], [[
     char *cp1, *cp2;
     struct hostent *h1, *h2;
     int i1, i2;
     (void)gethostbyname_r(cp1,h1,cp2,i1,&h2,&i2);
-  ]),[
+  ]]),[
     AC_DEFINE(HAVE_GETHOSTBYNAME_R)
     AC_DEFINE(HAVE_GETHOSTBYNAME_R_6_ARG, 1,
      [Define this if gethostbyname_r takes 6 arguments])
