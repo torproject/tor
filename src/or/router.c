@@ -944,7 +944,7 @@ router_rebuild_descriptor(int force)
   ri->cache_info.signed_descriptor_body = tor_malloc(8192);
   if (router_dump_router_to_string(ri->cache_info.signed_descriptor_body, 8192,
                                    ri, get_identity_key())<0) {
-    log_warn(LD_BUG, "Couldn't allocate string for descriptor.");
+    log_warn(LD_BUG, "Bug: Couldn't generate router descriptor.");
     return -1;
   }
   ri->cache_info.signed_descriptor_len =

@@ -1,7 +1,10 @@
 Changes in version 0.1.2.10-rc - 2007-03-??
-  o Major bugfixes (Windows)
+  o Major bugfixes (Windows):
     - Do not load the NT services library functions (which may not exist)
       just to detect if we're a service trying to shut down.
+
+  o Minor bugfixes (other):
+    - Clarify a couple of log messages.
 
 
 Changes in version 0.1.2.9-rc - 2007-03-02

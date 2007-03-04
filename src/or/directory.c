@@ -1056,6 +1056,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
+      /* XXXX This warning tends to freak out clients who get a 403. */
       log_warn(LD_DIR,
            "Received http status code %d (%s) from server "
            "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
@@ -1133,6 +1134,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         (status_code == 400 && !strcmp(reason, "Servers unavailable."));
       /* 404 means that it didn't have them; no big deal.
        * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
+      /* XXXX This warning tends to freak out clients who get a 403. */
       log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
              "Received http status code %d (%s) from server '%s:%d' "
              "while fetching \"/tor/server/%s\". I'll try again soon.",

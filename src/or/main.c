@@ -536,11 +536,13 @@ conn_close_if_marked(int i)
         severity = LOG_INFO;
       else
         severity = LOG_NOTICE;
-      /* XXXX012 rewrite this error message; it generates lots of worried
-       * support requests. */
-      log_fn(severity, LD_NET, "Something wrong with your network connection? "
-             "We tried to write %d bytes to addr %s (fd %d, type %s, state %d)"
-             " but timed out. (Marked at %s:%d)",
+      /* XXXX Maybe allow this to happen a certain amount per hour; it usually
+       * is meaningless. */
+      log_fn(severity, LD_NET, "We stalled too much while trying to write %d "
+             "bytes to addr %s.  If this happens a lot, either "
+             "something is wrong with your network connection, or "
+             "something is wrong with theirs. "
+             "(fd %d, type %s, state %d, marked at %s:%d).",
              (int)buf_datalen(conn->outbuf),
              escaped_safe_str(conn->address), conn->s,
              conn_type_to_string(conn->type), conn->state,
