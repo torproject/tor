@@ -196,6 +196,14 @@ fi
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
+if test $bwin32 = true; then
+  WS32lib=-lws2_32
+  GDIlib=-lgdi32
+else
+  W32lib=
+  GDIlib=
+fi
+
 dnl This is a disgusting hack so we safely include recent libevent headers.
 AC_CHECK_TYPE(u_int64_t, unsigned long long)
 AC_CHECK_TYPE(u_int32_t, unsigned long)
