@@ -1242,7 +1242,7 @@ write_str_to_file(const char *fname, const char *str, int bin)
 #ifdef MS_WINDOWS
   if (!bin && strchr(str, '\r')) {
     log_warn(LD_BUG,
-             "Bug: we're writing a text string that already contains a CR.");
+             "We're writing a text string that already contains a CR.");
   }
 #endif
   return write_bytes_to_file(fname, str, strlen(str), bin);

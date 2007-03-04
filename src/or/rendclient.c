@@ -280,7 +280,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 
   r = rend_cache_lookup_entry(query, -1, &ent);
   if (r<0) {
-    log_warn(LD_BUG, "Bug: malformed service ID %s.", escaped_safe_str(query));
+    log_warn(LD_BUG, "Malformed service ID %s.", escaped_safe_str(query));
     return -1;
   }
   if (r==0) {

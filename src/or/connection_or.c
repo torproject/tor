@@ -37,7 +37,7 @@ connection_or_remove_from_identity_map(or_connection_t *conn)
   tmp = digestmap_get(orconn_identity_map, conn->identity_digest);
   if (!tmp) {
     if (!tor_digest_is_zero(conn->identity_digest)) {
-      log_warn(LD_BUG, "Bug: Didn't find connection on identity map when "
+      log_warn(LD_BUG, "Didn't find connection on identity map when "
                "trying to remove it.");
     }
     return;
@@ -267,7 +267,7 @@ connection_or_finished_flushing(or_connection_t *conn)
       connection_stop_writing(TO_CONN(conn));
       break;
     default:
-      log_err(LD_BUG,"BUG: called in unexpected state %d.", conn->_base.state);
+      log_err(LD_BUG,"Called in unexpected state %d.", conn->_base.state);
       tor_fragile_assert();
       return -1;
   }

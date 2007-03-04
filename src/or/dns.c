@@ -848,7 +848,7 @@ dns_cancel_pending_resolve(const char *address)
   if (!resolve->pending_connections) {
     /* XXX this should never trigger, but sometimes it does */
     log_warn(LD_BUG,
-             "Bug: Address %s is pending but has no pending connections!",
+             "Address %s is pending but has no pending connections!",
              escaped_safe_str(address));
     tor_fragile_assert();
     return;
@@ -1165,7 +1165,7 @@ connection_dns_process_inbuf(connection_t *conn)
 
   if (conn->state != DNSWORKER_STATE_BUSY && buf_datalen(conn->inbuf)) {
     log_warn(LD_BUG,
-             "Bug: read data (%d bytes) from an idle dns worker (fd %d, "
+             "read data (%d bytes) from an idle dns worker (fd %d, "
              "address %s). Please report.", (int)buf_datalen(conn->inbuf),
              conn->s, escaped_safe_str(conn->address));
     tor_fragile_assert();
@@ -1680,7 +1680,7 @@ launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
     : DNS_QUERY_NO_SEARCH;
   /* What? Nameservers not configured?  Sounds like a bug. */
   if (!nameservers_configured) {
-    log_warn(LD_EXIT, "Harmless bug: nameservers not configured, but resolve "
+    log_warn(LD_EXIT, "(Harmless.) Nameservers not configured, but resolve "
              "launched.  Configuring.");
     if (configure_nameservers(1) < 0)
       return -1;

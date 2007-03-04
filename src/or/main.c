@@ -422,7 +422,7 @@ conn_read_callback(int fd, short event, void *_conn)
   if (connection_handle_read(conn) < 0) {
     if (!conn->marked_for_close) {
 #ifndef MS_WINDOWS
-      log_warn(LD_BUG,"Bug: unhandled error on read for %s connection "
+      log_warn(LD_BUG,"Unhandled error on read for %s connection "
                "(fd %d); removing",
                conn_type_to_string(conn->type), conn->s);
       tor_fragile_assert();
@@ -456,7 +456,7 @@ conn_write_callback(int fd, short events, void *_conn)
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it. */
       log_fn(LOG_WARN,LD_BUG,
-           "Bug: unhandled error on write for %s connection (fd %d); removing",
+           "unhandled error on write for %s connection (fd %d); removing",
            conn_type_to_string(conn->type), conn->s);
       tor_fragile_assert();
       if (CONN_IS_EDGE(conn)) {

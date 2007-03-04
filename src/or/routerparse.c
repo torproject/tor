@@ -1806,7 +1806,7 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
   tor_assert(platform);
 
   if (tor_version_parse(cutoff, &cutoff_version)<0) {
-    log_warn(LD_DIR,"Bug: cutoff version '%s' unparseable.",cutoff);
+    log_warn(LD_BUG,"cutoff version '%s' unparseable.",cutoff);
     return 0;
   }
   if (strcmpstart(platform,"Tor ")) /* nonstandard Tor; be safe and say yes */

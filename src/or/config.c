@@ -890,7 +890,7 @@ options_act(or_options_t *old_options)
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 0)<0) {
         log_err(LD_BUG,
-            "Bug: Previously validated DirServer line could not be added!");
+            "Previously validated DirServer line could not be added!");
         return -1;
       }
     }
@@ -900,7 +900,7 @@ options_act(or_options_t *old_options)
 
   if (running_tor && rend_config_services(options, 0)<0) {
     log_err(LD_BUG,
-       "Bug: Previously validated hidden services line could not be added!");
+       "Previously validated hidden services line could not be added!");
     return -1;
   }
 
@@ -1561,7 +1561,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
     default:
       tor_free(result->key);
       tor_free(result);
-      log_warn(LD_BUG,"Bug: unknown type %d for known key '%s'",
+      log_warn(LD_BUG,"Unknown type %d for known key '%s'",
                var->type, key);
       return NULL;
     }
@@ -2106,7 +2106,7 @@ options_dup(config_format_t *fmt, or_options_t *old)
     if (line) {
       char *msg = NULL;
       if (config_assign(fmt, newopts, line, 0, 0, &msg) < 0) {
-        log_err(LD_BUG, "Bug: config_get_assigned_option() generated "
+        log_err(LD_BUG, "Config_get_assigned_option() generated "
                 "something we couldn't config_assign(): %s", msg);
         tor_free(msg);
         tor_assert(0);

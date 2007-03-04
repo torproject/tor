@@ -287,7 +287,7 @@ router_rebuild_store(int force)
       sized_chunk_t *c;
       const char *body = signed_descriptor_get_body(sd);
       if (!body) {
-        log_warn(LD_BUG, "Bug! No descriptor available for router.");
+        log_warn(LD_BUG, "No descriptor available for router.");
         goto done;
       }
       c = tor_malloc(sizeof(sized_chunk_t));
@@ -4061,7 +4061,7 @@ update_router_descriptor_cache_downloads(time_t now)
             continue;
           if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
             log_warn(LD_BUG,
-                 "Bug: We have a router descriptor, but need_to_mirror=1.");
+                 "We have a router descriptor, but need_to_mirror=1.");
             rs->need_to_mirror = 0;
             continue;
           }

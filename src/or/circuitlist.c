@@ -279,7 +279,7 @@ circuit_state_to_string(int state)
     case CIRCUIT_STATE_OR_WAIT: return "connecting to server";
     case CIRCUIT_STATE_OPEN: return "open";
     default:
-      log_warn(LD_BUG, "Bug: unknown circuit state %d", state);
+      log_warn(LD_BUG, "Unknown circuit state %d", state);
       tor_snprintf(buf, sizeof(buf), "unknown state [%d]", state);
       return buf;
   }

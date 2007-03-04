@@ -520,7 +520,7 @@ connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
 
   if (fromconn && fromconn->_base.marked_for_close) {
     log_warn(LD_BUG,
-             "Bug: called on conn that's already marked for close at %s:%d.",
+             "called on conn that's already marked for close at %s:%d.",
              fromconn->_base.marked_for_close_file,
              fromconn->_base.marked_for_close);
     return 0;
@@ -1064,7 +1064,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                conn->stream_id);
       if (conn->socks_request && !conn->socks_request->has_finished)
         log_warn(LD_BUG,
-                 "Bug: open stream hasn't sent socks answer yet? Closing.");
+                 "open stream hasn't sent socks answer yet? Closing.");
       /* We just *got* an end; no reason to send one. */
       conn->_base.edge_has_sent_end = 1;
       if (!conn->end_reason)
@@ -1234,7 +1234,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial)
 
   if (conn->_base.marked_for_close) {
     log_warn(LD_BUG,
-             "Bug: called on conn that's already marked for close at %s:%d.",
+             "called on conn that's already marked for close at %s:%d.",
              conn->_base.marked_for_close_file, conn->_base.marked_for_close);
     return 0;
   }

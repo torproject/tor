@@ -359,7 +359,7 @@ rend_service_load_keys(void)
       return -1;
     }
     if (crypto_pk_get_digest(s->private_key, s->pk_digest)<0) {
-      log_warn(LD_BUG, "Bug: Couldn't compute hash of public key.");
+      log_warn(LD_BUG, "Couldn't compute hash of public key.");
       return -1;
     }
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||

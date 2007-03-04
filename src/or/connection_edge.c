@@ -52,7 +52,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
   if (!conn->socks_request->has_finished) {
     if (endreason & END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED)
       log_warn(LD_BUG,
-               "Bug: stream (marked at %s:%d) sending two socks replies?",
+               "stream (marked at %s:%d) sending two socks replies?",
                file, line);
 
     if (SOCKS_COMMAND_IS_CONNECT(conn->socks_request->command))
@@ -138,7 +138,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
                conn_state_to_string(conn->_base.type, conn->_base.state));
       return 0;
   }
-  log_warn(LD_BUG,"Bug: Got unexpected state %d. Closing.",conn->_base.state);
+  log_warn(LD_BUG,"Got unexpected state %d. Closing.",conn->_base.state);
   tor_fragile_assert();
   connection_edge_end(conn, END_STREAM_REASON_INTERNAL, conn->cpath_layer);
   connection_mark_for_close(TO_CONN(conn));
@@ -190,7 +190,7 @@ connection_edge_end(edge_connection_t *conn, char reason,
   circuit_t *circ;
 
   if (conn->_base.edge_has_sent_end) {
-    log_warn(LD_BUG,"Harmless bug: Calling connection_edge_end (reason %d) "
+    log_warn(LD_BUG,"(Harmless.) Calling connection_edge_end (reason %d) "
              "on an already ended stream?", reason);
     tor_fragile_assert();
     return -1;
@@ -198,7 +198,7 @@ connection_edge_end(edge_connection_t *conn, char reason,
 
   if (conn->_base.marked_for_close) {
     log_warn(LD_BUG,
-             "Bug: called on conn that's already marked for close at %s:%d.",
+             "called on conn that's already marked for close at %s:%d.",
              conn->_base.marked_for_close_file, conn->_base.marked_for_close);
     return 0;
   }
@@ -269,7 +269,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
       connection_stop_writing(TO_CONN(conn));
       return 0;
     default:
-      log_warn(LD_BUG,"BUG: called in unexpected state %d.",conn->_base.state);
+      log_warn(LD_BUG, "Called in unexpected state %d.",conn->_base.state);
       tor_fragile_assert();
       return -1;
   }
@@ -1384,7 +1384,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     /* see if we already have it cached */
     r = rend_cache_lookup_entry(conn->rend_query, -1, &entry);
     if (r<0) {
-      log_warn(LD_BUG,"Bug: Invalid service name '%s'",
+      log_warn(LD_BUG,"Invalid service name '%s'",
                safe_str(conn->rend_query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
@@ -2038,7 +2038,7 @@ connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
                               endreason);
 
   if (conn->socks_request->has_finished) {
-    log_warn(LD_BUG, "Harmless bug: duplicate calls to "
+    log_warn(LD_BUG, "(Harmless.) duplicate calls to "
              "connection_ap_handshake_socks_reply.");
     return;
   }
@@ -2390,7 +2390,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
   conn->state = EXIT_CONN_STATE_OPEN;
   if (connection_wants_to_flush(conn)) {
     /* in case there are any queued data cells */
-    log_warn(LD_BUG,"Bug: newly connected conn had data waiting!");
+    log_warn(LD_BUG,"newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
   connection_watch_events(conn, EV_READ);

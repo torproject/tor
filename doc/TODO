@@ -424,7 +424,7 @@ Future version:
   - when we hit a funny error from a dir request (eg 403 forbidden),
     but tor is working and happy otherwise, and we haven't seen many
     such errors recently, then don't warn about it.
-  - LD_BUG log messages could prepend "Bug: " automatically, so we don't
+  o LD_BUG log messages could prepend "Bug: " automatically, so we don't
     have to try to remember to.
   - More consistent error checking in router_parse_entry_from_string().
     I can say "banana" as my bandwidthcapacity, and it won't even squeak.

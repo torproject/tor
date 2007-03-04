@@ -597,7 +597,7 @@ directory_send_command(dir_connection_t *conn,
 
   if (strlen(proxystring) + strlen(url) >= 4096) {
     log_warn(LD_BUG,
-             "Bug: squid does not like URLs longer than 4095 bytes, this "
+             "Squid does not like URLs longer than 4095 bytes, this "
              "one is %d bytes long: %s%s",
              (int)(strlen(proxystring) + strlen(url)), proxystring, url);
   }
@@ -1362,7 +1362,7 @@ write_http_status_line(dir_connection_t *conn, int status,
   char buf[256];
   if (tor_snprintf(buf, sizeof(buf), "HTTP/1.0 %d %s\r\n\r\n",
       status, reason_phrase) < 0) {
-    log_warn(LD_BUG,"Bug: status line too long.");
+    log_warn(LD_BUG,"status line too long.");
     return;
   }
   connection_write_to_buf(buf, strlen(buf), TO_CONN(conn));
@@ -1966,7 +1966,7 @@ connection_dir_finished_flushing(dir_connection_t *conn)
       connection_mark_for_close(TO_CONN(conn));
       return 0;
     default:
-      log_warn(LD_BUG,"Bug: called in unexpected state %d.",
+      log_warn(LD_BUG,"called in unexpected state %d.",
                conn->_base.state);
       tor_fragile_assert();
       return -1;

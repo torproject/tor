@@ -96,7 +96,7 @@ static void close_log(logfile_t *victim);
  * <b>buf_len</b> character buffer in <b>buf</b>.
  */
 static INLINE size_t
-_log_prefix(char *buf, size_t buf_len, int severity)
+_log_prefix(char *buf, size_t buf_len, int severity, uint32_t domain)
 {
   time_t t;
   struct timeval now;
@@ -110,7 +110,7 @@ _log_prefix(char *buf, size_t buf_len, int severity)
   n = strftime(buf, buf_len, "%b %d %H:%M:%S", tor_localtime_r(&t, &tm));
   r = tor_snprintf(buf+n, buf_len-n,
                 ".%.3ld [%s] ",
-                (long)now.tv_usec / 1000, sev_to_string(severity));
+                   (long)now.tv_usec / 1000, sev_to_string(severity));
   if (r<0)
     return buf_len-1;
   else
@@ -144,7 +144,7 @@ log_tor_version(logfile_t *lf, int reset)
     /* We are resetting, but we aren't at the start of the file; no
      * need to log again. */
     return 0;
-  n = _log_prefix(buf, sizeof(buf), LOG_NOTICE);
+  n = _log_prefix(buf, sizeof(buf), LOG_NOTICE, LD_GENERAL);
   tor_snprintf(buf+n, sizeof(buf)-n,
                "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
   if (fputs(buf, lf->file) == EOF ||
@@ -170,7 +170,7 @@ format_msg(char *buf, size_t buf_len,
   tor_assert(buf_len >= 2); /* prevent integer underflow */
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 
-  n = _log_prefix(buf, buf_len, severity);
+  n = _log_prefix(buf, buf_len, severity, domain);
   end_of_prefix = buf+n;
 
   if (funcname && should_log_function_name(domain, severity)) {
@@ -179,6 +179,11 @@ format_msg(char *buf, size_t buf_len,
       n = strlen(buf);
     else
       n += r;
+  }
+
+  if (domain == LD_BUG && buf_len-n > 6) {
+    memcpy(buf+n, "Bug: ", 6);
+    n += 5;
   }
 
   r = tor_vsnprintf(buf+n,buf_len-n,format,ap);

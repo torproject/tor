@@ -56,7 +56,7 @@ conn_type_to_string(int type)
     case CONN_TYPE_CONTROL_LISTENER: return "Control listener";
     case CONN_TYPE_CONTROL: return "Control";
     default:
-      log_warn(LD_BUG, "Bug: unknown connection type %d", type);
+      log_warn(LD_BUG, "unknown connection type %d", type);
       tor_snprintf(buf, sizeof(buf), "unknown [%d]", type);
       return buf;
   }
@@ -142,7 +142,7 @@ conn_state_to_string(int type, int state)
       break;
   }
 
-  log_warn(LD_BUG, "Bug: unknown connection state %d (type %d)", state, type);
+  log_warn(LD_BUG, "unknown connection state %d (type %d)", state, type);
   tor_snprintf(buf, sizeof(buf),
                "unknown state [%d] on unknown [%s] connection",
                state, conn_type_to_string(type));
@@ -408,7 +408,7 @@ connection_about_to_close_connection(connection_t *conn)
 
   if (CONN_IS_EDGE(conn)) {
     if (!conn->edge_has_sent_end) {
-      log_warn(LD_BUG, "Harmless bug: Edge connection (marked at %s:%d) "
+      log_warn(LD_BUG, "(Harmless.) Edge connection (marked at %s:%d) "
                "hasn't sent end yet?",
                conn->marked_for_close_file, conn->marked_for_close);
       tor_fragile_assert();
@@ -472,12 +472,12 @@ connection_about_to_close_connection(connection_t *conn)
       if (edge_conn->socks_request->has_finished == 0) {
         /* since conn gets removed right after this function finishes,
          * there's no point trying to send back a reply at this point. */
-        log_warn(LD_BUG,"Bug: Closing stream (marked at %s:%d) without sending"
+        log_warn(LD_BUG,"Closing stream (marked at %s:%d) without sending"
                  " back a socks reply.",
                  conn->marked_for_close_file, conn->marked_for_close);
       }
       if (!edge_conn->end_reason) {
-        log_warn(LD_BUG,"Bug: Closing stream (marked at %s:%d) without having"
+        log_warn(LD_BUG,"Closing stream (marked at %s:%d) without having"
                  " set end_reason.",
                  conn->marked_for_close_file, conn->marked_for_close);
       }
@@ -516,7 +516,7 @@ connection_close_immediate(connection_t *conn)
 {
   assert_connection_ok(conn,0);
   if (conn->s < 0) {
-    log_err(LD_BUG,"Bug: Attempt to close already-closed connection.");
+    log_err(LD_BUG,"Attempt to close already-closed connection.");
     tor_fragile_assert();
     return;
   }
@@ -1543,7 +1543,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
        * believing that SSL bytes are the same as TCP bytes anyway. */
       int r2 = read_to_buf_tls(or_conn->tls, pending, conn->inbuf);
       if (r2<0) {
-        log_warn(LD_BUG, "Bug: apparently, reading pending bytes can fail.");
+        log_warn(LD_BUG, "apparently, reading pending bytes can fail.");
         return -1;
       } else {
         result += r2;
@@ -1896,7 +1896,7 @@ _connection_write_to_buf_impl(const char *string, size_t len,
     if (connection_handle_write(conn, 0) < 0) {
       if (!conn->marked_for_close) {
         /* this connection is broken. remove it. */
-        log_warn(LD_BUG, "Bug: unhandled error on write for "
+        log_warn(LD_BUG, "unhandled error on write for "
                  "conn (type %d, fd %d); removing",
                  conn->type, conn->s);
         tor_fragile_assert();
@@ -2253,7 +2253,7 @@ connection_process_inbuf(connection_t *conn, int package_partial)
     case CONN_TYPE_CONTROL:
       return connection_control_process_inbuf(TO_CONTROL_CONN(conn));
     default:
-      log_err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
+      log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
   }
@@ -2300,7 +2300,7 @@ connection_finished_flushing(connection_t *conn)
     case CONN_TYPE_CONTROL:
       return connection_control_finished_flushing(TO_CONTROL_CONN(conn));
     default:
-      log_err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
+      log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
   }
@@ -2325,7 +2325,7 @@ connection_finished_connecting(connection_t *conn)
     case CONN_TYPE_DIR:
       return connection_dir_finished_connecting(TO_DIR_CONN(conn));
     default:
-      log_err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
+      log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
   }
@@ -2350,7 +2350,7 @@ connection_reached_eof(connection_t *conn)
     case CONN_TYPE_CONTROL:
       return connection_control_reached_eof(TO_CONTROL_CONN(conn));
     default:
-      log_err(LD_BUG,"Bug: got unexpected conn type %d.", conn->type);
+      log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
   }

@@ -849,7 +849,7 @@ circuit_launch_by_extend_info(uint8_t purpose, int onehop_tunnel,
           break;
         default:
           log_warn(LD_BUG,
-                   "Bug: unexpected purpose %d when cannibalizing a circ.",
+                   "unexpected purpose %d when cannibalizing a circ.",
                    purpose);
           tor_fragile_assert();
           return NULL;

@@ -73,7 +73,7 @@ get_unique_circ_id_by_conn(or_connection_t *conn)
 
   tor_assert(conn);
   if (conn->circ_id_type == CIRC_ID_TYPE_NEITHER) {
-    log_warn(LD_BUG, "Bug: Trying to pick a circuit ID for a connection from "
+    log_warn(LD_BUG, "Trying to pick a circuit ID for a connection from "
              "a client with no identity.");
     return 0;
   }
@@ -803,12 +803,12 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
 
   if (!(cpath->f_crypto =
         crypto_create_init_cipher(key_data+(2*DIGEST_LEN),1))) {
-    log_warn(LD_BUG,"Bug: forward cipher initialization failed.");
+    log_warn(LD_BUG,"Forward cipher initialization failed.");
     return -1;
   }
   if (!(cpath->b_crypto =
         crypto_create_init_cipher(key_data+(2*DIGEST_LEN)+CIPHER_KEY_LEN,0))) {
-    log_warn(LD_BUG,"Bug: backward cipher initialization failed.");
+    log_warn(LD_BUG,"Backward cipher initialization failed.");
     return -1;
   }
 
@@ -1342,7 +1342,7 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
                NULL, need_uptime, need_capacity, 0,
                options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS, 0, 0);
   }
-  log_warn(LD_BUG,"Bug: unhandled purpose %d", purpose);
+  log_warn(LD_BUG,"Unhandled purpose %d", purpose);
   tor_fragile_assert();
   return NULL;
 }
