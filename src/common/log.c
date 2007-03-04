@@ -96,7 +96,7 @@ static void close_log(logfile_t *victim);
  * <b>buf_len</b> character buffer in <b>buf</b>.
  */
 static INLINE size_t
-_log_prefix(char *buf, size_t buf_len, int severity, uint32_t domain)
+_log_prefix(char *buf, size_t buf_len, int severity)
 {
   time_t t;
   struct timeval now;
@@ -144,7 +144,7 @@ log_tor_version(logfile_t *lf, int reset)
     /* We are resetting, but we aren't at the start of the file; no
      * need to log again. */
     return 0;
-  n = _log_prefix(buf, sizeof(buf), LOG_NOTICE, LD_GENERAL);
+  n = _log_prefix(buf, sizeof(buf), LOG_NOTICE);
   tor_snprintf(buf+n, sizeof(buf)-n,
                "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
   if (fputs(buf, lf->file) == EOF ||
@@ -170,7 +170,7 @@ format_msg(char *buf, size_t buf_len,
   tor_assert(buf_len >= 2); /* prevent integer underflow */
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 
-  n = _log_prefix(buf, buf_len, severity, domain);
+  n = _log_prefix(buf, buf_len, severity);
   end_of_prefix = buf+n;
 
   if (funcname && should_log_function_name(domain, severity)) {
