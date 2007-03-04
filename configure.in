@@ -202,112 +202,11 @@ AC_CHECK_TYPE(u_int32_t, unsigned long)
 AC_CHECK_TYPE(u_int16_t, unsigned short)
 AC_CHECK_TYPE(u_int8_t, unsigned char)
 
-AC_CACHE_CHECK([for libevent directory], tor_cv_libevent_dir, [
-  saved_LIBS="$LIBS"
-  saved_LDFLAGS="$LDFLAGS"
-  saved_CPPFLAGS="$CPPFLAGS"
-  le_found=no
-  for ledir in $trylibeventdir "" $prefix /usr/local /usr/pkg ; do
-    LDFLAGS="$saved_LDFLAGS"
-
-    if test $bwin32 = true; then
-        LIBS="$saved_LIBS -levent -lws2_32"
-    else
-        LIBS="$saved_LIBS -levent"
-    fi
-
-    # Skip the directory if it isn't there.
-    if test ! -z "$ledir" -a ! -d "$ledir" ; then
-       continue;
-    fi
-    if test ! -z "$ledir" ; then
-      if test -d "$ledir/lib" ; then
-        LDFLAGS="-L$ledir/lib $LDFLAGS"
-      else
-        LDFLAGS="-L$ledir $LDFLAGS"
-      fi
-      if test -d "$ledir/include" ; then
-        CPPFLAGS="-I$ledir/include $CPPFLAGS"
-      else
-        CPPFLAGS="-I$ledir $CPPFLAGS"
-      fi
-    fi
-    # Can I compile and link it?
-    AC_TRY_LINK([#include <sys/time.h>
+TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $WS32lib], [
+#include <sys/time.h>
 #include <sys/types.h>
-#include <event.h>], [ event_init(); ],
-       [ libevent_linked=yes ], [ libevent_linked=no ])
-    if test $libevent_linked = yes; then
-       if test ! -z "$ledir" ; then
-         tor_cv_libevent_dir=$ledir
-       else
-         tor_cv_libevent_dir="(system)"
-       fi
-       le_found=yes
-       break
-    fi
-  done
-  LIBS="$saved_LIBS"
-  LDFLAGS="$saved_LDFLAGS"
-  CPPFLAGS="$saved_CPPFLAGS"
-  if test $le_found = no ; then
-    AC_MSG_ERROR([Could not find a linkable libevent. You can specify an explicit path using --with-libevent-dir])
-  fi
-])
-
-if test $bwin32 = true; then
-LIBS="$LIBS -levent -lws2_32"
-else
-LIBS="$LIBS -levent"
-fi
-if test $tor_cv_libevent_dir != "(system)"; then
-  if test -d "$tor_cv_libevent_dir/lib" ; then
-    LDFLAGS="-L$tor_cv_libevent_dir/lib $LDFLAGS"
-    le_libdir="$tor_cv_libevent_dir/lib"
-  else
-    LDFLAGS="-L$tor_cv_libevent_dir $LDFLAGS"
-    le_libdir="$tor_cv_libevent_dir"
-  fi
-  if test -d "$tor_cv_libevent_dir/include" ; then
-    CPPFLAGS="-I$tor_cv_libevent_dir/include $CPPFLAGS"
-  else
-    CPPFLAGS="-I$tor_cv_libevent_dir $CPPFLAGS"
-  fi
-fi
-
-if test -z "$CROSS_COMPILE"; then
-AC_CACHE_CHECK([whether we need extra options to link libevent],
-               tor_cv_libevent_linker_option, [
-    saved_LDFLAGS="$LDFLAGS"
-    le_runs=no
-    linked_with=nothing
-    for le_extra in "" "-Wl,-R$le_libdir" "-R$le_libdir" "-Wl,-rpath,$le_libdir" ; do
-      LDFLAGS="$le_extra $saved_LDFLAGS"
-      AC_TRY_RUN([void *event_init(void);
-                int main(int c, char **v) {
-                   event_init(); return 0;
-                }],
-                libevent_runs=yes, libevent_runs=no, libevent_runs=cross)
-      if test $libevent_runs != no ; then
-        if test -z "$le_extra" ; then
-          tor_cv_libevent_linker_option='(none)'
-        else
-          tor_cv_libevent_linker_option=$le_extra
-        fi
-        le_runs=yes
-        break
-      fi
-    done
-    if test $le_runs = no ; then
-      AC_MSG_ERROR([Found linkable libevent in $tor_cv_libevent_dir, but it doesn't run, even with -R.  Maybe specify another using --with-libevent-dir?])
-    fi
-    LDFLAGS="$saved_LDFLAGS"
-])
-
-if test $tor_cv_libevent_linker_option != '(none)' ; then
-   LDFLAGS="$tor_cv_libevent_linker_option $LDFLAGS"
-fi
-fi
+#include <event.h>], [void *event_init(void);],
+    [event_init(); exit(0);], [--with-libevent-dir])
 
 dnl Now check for particular libevent functions.
 AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
