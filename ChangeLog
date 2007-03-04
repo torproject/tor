@@ -1,3 +1,8 @@
+Changes in version 0.2.0.1-alpha - 2007-??-??
+  o Minor features (build):
+    - Make autoconf search for libevent and openssl consistently.
+    - Update deprecated macros in configure.in
+
 Changes in version 0.1.2.10-rc - 2007-03-??
   o Major bugfixes (Windows):
     - Do not load the NT services library functions (which may not exist)
