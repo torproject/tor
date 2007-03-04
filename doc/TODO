@@ -139,8 +139,8 @@ Things we'd like to do in 0.2.0.x:
   - Blocking
     - It would be potentially helpful to https requests on the OR port by
       acting like an HTTPS server.
-  - Deprecations:
-    - Remove v0 control protocol.
+  o Deprecations:
+    o Remove v0 control protocol.
 
 
 Deferred from 0.1.2.x:
