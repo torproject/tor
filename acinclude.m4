@@ -4,6 +4,16 @@ dnl Copyright (c) 2001-2004, Roger Dingledine
 dnl Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson
 dnl See LICENSE for licensing information
 
+dnl TODO
+dnl  - Stop requiring gethostbyname_r entirely when we're building with
+dnl    eventdns?
+dnl  - Remove redundant event.h check.
+dnl  - Make the "no longe strictly accurate" message accurate.
+dnl  - Tell the user what -dev package to install based on OS.
+dnl  - Detect correct version of library.
+dnl  - After merge:
+dnl     Run autoupdate
+
 AC_DEFUN([TOR_EXTEND_CODEPATH],
 [
   if test -d "$1/lib"; then
@@ -22,7 +32,7 @@ dnl Look for a library, and its associated includes, and how to link
 dnl against it.
 dnl 
 dnl TOR_SEARCH_LIBRARY(libname, withlocation, linkargs, headers, prototype,
-dnl                    code, optionname)
+dnl                    code, optionname, searchextra)
 
 AC_DEFUN([TOR_SEARCH_LIBRARY], [
 tor_saved_LIBS="$LIBS"
@@ -32,7 +42,7 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
   tor_$1_dir_found=no
   tor_$1_any_linkable=no
   
-  for tor_trydir in "$2" "(system)" "$prefix" /usr/local /usr/pkg; do
+  for tor_trydir in "$2" "(system)" "$prefix" /usr/local /usr/pkg $8; do
     LDFLAGS="$tor_saved_LDFLAGS"
     LIBS="$tor_saved_LIBS $3"
     CPPFLAGS="$tor_saved_CPPFLAGS"

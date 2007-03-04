@@ -9,7 +9,7 @@ AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
 
-if test -f /etc/redhat-release; then
+if test -f /etc/redhat-release ; then
     CFLAGS="$CFLAGS -I/usr/kerberos/include"
 fi
 
@@ -202,11 +202,19 @@ AC_CHECK_TYPE(u_int32_t, unsigned long)
 AC_CHECK_TYPE(u_int16_t, unsigned short)
 AC_CHECK_TYPE(u_int8_t, unsigned char)
 
+if test $bwin32 = true; then
+  WS32lib=-lws2_32
+  GDIlib=-lgdi32
+else
+  W32lib=
+  GDIlib=
+fi
+
 TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $WS32lib], [
 #include <sys/time.h>
 #include <sys/types.h>
 #include <event.h>], [void *event_init(void);],
-    [event_init(); exit(0);], [--with-libevent-dir])
+    [event_init(); exit(0);], [--with-libevent-dir], [/opt/libevent])
 
 dnl Now check for particular libevent functions.
 AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
@@ -214,141 +222,18 @@ AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
 
-AC_CACHE_CHECK([for OpenSSL directory], tor_cv_openssl_dir, [
-  saved_LIBS="$LIBS"
-  saved_LDFLAGS="$LDFLAGS"
-  saved_CPPFLAGS="$CPPFLAGS"
-  ssl_found=no
-  for ssldir in $tryssldir "" $prefix /usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /usr/pkg /opt /opt/openssl ; do
-    LDFLAGS="$saved_LDFLAGS"
+dnl         AC_TRY_RUN([
+dnl #include <openssl/opensslv.h>
+dnl #include <openssl/crypto.h>
+dnl int main(void) {
+dnl return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
+dnl }],
 
-    if test $bwin32 = true; then
-      LIBS="$saved_LIBS -lssl -lcrypto -lws2_32 -lgdi32"
-    else
-      LIBS="$saved_LIBS -lssl -lcrypto"
-    fi
-
-    # Skip the directory if it isn't there.
-    if test ! -z "$ssldir" -a ! -d "$ssldir" ; then
-       continue;
-    fi
-    if test ! -z "$ssldir" ; then
-      if test -d "$ssldir/lib" ; then
-        LDFLAGS="-L$ssldir/lib $LDFLAGS"
-      else
-        LDFLAGS="-L$ssldir $LDFLAGS"
-      fi
-      if test -d "$ssldir/include" ; then
-        CPPFLAGS="-I$ssldir/include $CPPFLAGS"
-      else
-        CPPFLAGS="-I$ssldir $CPPFLAGS"
-      fi
-    fi
-    # Can I link it?
-    AC_TRY_LINK([#include <openssl/rand.h>],
-       [ RAND_add((void*)0,0,0); ],
-       [ openssl_linked=yes ], [ openssl_linked=no ])
-    if test $openssl_linked = yes; then
-       if test ! -z "$ssldir" ; then
-         tor_cv_openssl_dir=$ssldir
-       else
-         tor_cv_openssl_dir="(system)"
-       fi
-       ssl_found=yes
-       break
-    fi
-  done
-  LIBS="$saved_LIBS"
-  LDFLAGS="$saved_LDFLAGS"
-  CPPFLAGS="$saved_CPPFLAGS"
-  if test $ssl_found = no ; then
-    AC_MSG_ERROR([Could not find a linkable OpenSSL. You can specify an explicit path using --with-ssl-dir])
-  fi
-])
-
-if test $bwin32 = true; then
-LIBS="$LIBS -lssl -lcrypto -lws2_32 -lgdi32"
-else
-LIBS="$LIBS -lssl -lcrypto"
-fi
-
-if test "$tor_cv_openssl_dir" != "(system)"; then
-  if test -d "$tor_cv_openssl_dir/lib" ; then
-    LDFLAGS="-L$tor_cv_openssl_dir/lib $LDFLAGS"
-    ssl_libdir="$tor_cv_openssl_dir/lib"
-  else
-    LDFLAGS="-L$tor_cv_openssl_dir $LDFLAGS"
-    ssl_libdir="$tor_cv_openssl_dir"
-  fi
-  if test -d "$tor_cv_openssl_dir/include" ; then
-    CPPFLAGS="-I$tor_cv_openssl_dir/include $CPPFLAGS"
-  else
-    CPPFLAGS="-I$tor_cv_openssl_dir $CPPFLAGS"
-  fi
-fi
-
-if test -z "$CROSS_COMPILE"
-then
-AC_CACHE_CHECK([whether we need extra options to link OpenSSL],
-               tor_cv_openssl_linker_option, [
-    saved_LDFLAGS="$LDFLAGS"
-    ssl_runs=no
-    linked_with=nothing
-    for ssl_extra in "" "-Wl,-R$ssl_libdir" "-R$ssl_libdir" ; do
-      LDFLAGS="$ssl_extra $saved_LDFLAGS"
-      AC_TRY_RUN([
-#include <string.h>
-#include <openssl/rand.h>
-int main(void)
-{
-        char a[2048];
-        memset(a, 0, sizeof(a));
-        RAND_add(a, sizeof(a), sizeof(a));
-        return(RAND_status() <= 0);
-}
-                        ],
-                openssl_runs=yes, openssl_runs=no, openssl_runs=cross)
-      if test $openssl_runs != no ; then
-        if test "$linked_with" = nothing; then
-           linked_with="$ssl_extra"
-        fi
-        AC_TRY_RUN([
-#include <openssl/opensslv.h>
-#include <openssl/crypto.h>
-int main(void) {
-return (OPENSSL_VERSION_NUMBER == SSLeay()) == 0;
-}],
-        right_version=yes, right_version=no)
-        if test "$right_version" = yes; then
-          if test -z "$ssl_extra" ; then
-            tor_cv_openssl_linker_option='(none)'
-          else
-            tor_cv_openssl_linker_option=$ssl_extra
-          fi
-          ssl_runs=yes
-          break
-        fi
-     fi
-    done
-    if test $ssl_runs = no ; then
-      if test "$linked_with" = 'nothing' ; then
-        AC_MSG_ERROR([Found linkable OpenSSL in $tor_cv_openssl_dir, but it doesn't run, even with -R.  Maybe specify another using --with-ssl-dir?])
-      else
-        if test -z "$linked_with" ; then
-            tor_cv_openssl_linker_option='(none)'
-        else
-            tor_cv_openssl_linker_option=$linked_with
-        fi
-        AC_MSG_WARN([I managed to make OpenSSL link and run, but I couldn't make it link against the same version I found header files for.])
-      fi
-    fi
-    LDFLAGS="$saved_LDFLAGS"
-])
-
-if test "$tor_cv_openssl_linker_option" != '(none)' ; then
-   LDFLAGS="$tor_cv_openssl_linker_option $LDFLAGS"
-fi
-fi
+TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $GDIlib],
+    [#include <openssl/rand.h>],
+    [void RAND_add(const void *buf, int num, double entropy);],
+    [RAND_add((void*)0,0,0); exit(0);], [--with-ssl-dir],
+    [/usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /opt/openssl])
 
 dnl Make sure to enable support for large off_t if avalable.
 
