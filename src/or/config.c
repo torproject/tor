@@ -1001,13 +1001,10 @@ options_act(or_options_t *old_options)
       cpuworkers_rotate();
       if (dns_reset())
         return -1;
-    }
-#ifdef USE_EVENTDNS
-    else {
+    } else {
       if (dns_reset())
         return -1;
     }
-#endif
   }
 
   /* Check if we need to parse and add the EntryNodes config option. */
@@ -2713,12 +2710,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->UseEntryGuards && ! options->NumEntryGuards)
     REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
-
-#ifndef USE_EVENTDNS
-  if (options->ServerDNSResolvConfFile)
-    log(LOG_WARN, LD_CONFIG,
-       "ServerDNSResolvConfFile only works when eventdns support is enabled.");
-#endif
 
   if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))
     return -1;

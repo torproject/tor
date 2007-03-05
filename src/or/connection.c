@@ -51,7 +51,6 @@ conn_type_to_string(int type)
     case CONN_TYPE_AP: return "Socks";
     case CONN_TYPE_DIR_LISTENER: return "Directory listener";
     case CONN_TYPE_DIR: return "Directory";
-    case CONN_TYPE_DNSWORKER: return "DNS worker";
     case CONN_TYPE_CPUWORKER: return "CPU worker";
     case CONN_TYPE_CONTROL_LISTENER: return "Control listener";
     case CONN_TYPE_CONTROL: return "Control";
@@ -116,12 +115,6 @@ conn_state_to_string(int type, int state)
         case DIR_CONN_STATE_CLIENT_READING: return "client reading";
         case DIR_CONN_STATE_SERVER_COMMAND_WAIT: return "waiting for command";
         case DIR_CONN_STATE_SERVER_WRITING: return "writing";
-      }
-      break;
-    case CONN_TYPE_DNSWORKER:
-      switch (state) {
-        case DNSWORKER_STATE_IDLE: return "idle";
-        case DNSWORKER_STATE_BUSY: return "busy";
       }
       break;
     case CONN_TYPE_CPUWORKER:
@@ -495,11 +488,6 @@ connection_about_to_close_connection(connection_t *conn)
       /* If we're relaying a dirserv connection, clean up any pointers */
       if (edge_conn->bridge_for_conn)
         connection_dirserv_unlink_from_bridge(edge_conn->bridge_for_conn);
-      break;
-    case CONN_TYPE_DNSWORKER:
-      if (conn->state == DNSWORKER_STATE_BUSY) {
-        dns_cancel_pending_resolve(conn->address);
-      }
       break;
   }
 }
@@ -2242,8 +2230,6 @@ connection_process_inbuf(connection_t *conn, int package_partial)
                                            package_partial);
     case CONN_TYPE_DIR:
       return connection_dir_process_inbuf(TO_DIR_CONN(conn));
-    case CONN_TYPE_DNSWORKER:
-      return connection_dns_process_inbuf(conn);
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_process_inbuf(conn);
     case CONN_TYPE_CONTROL:
@@ -2289,8 +2275,6 @@ connection_finished_flushing(connection_t *conn)
       return connection_edge_finished_flushing(TO_EDGE_CONN(conn));
     case CONN_TYPE_DIR:
       return connection_dir_finished_flushing(TO_DIR_CONN(conn));
-    case CONN_TYPE_DNSWORKER:
-      return connection_dns_finished_flushing(conn);
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_finished_flushing(conn);
     case CONN_TYPE_CONTROL:
@@ -2339,8 +2323,6 @@ connection_reached_eof(connection_t *conn)
       return connection_edge_reached_eof(TO_EDGE_CONN(conn));
     case CONN_TYPE_DIR:
       return connection_dir_reached_eof(TO_DIR_CONN(conn));
-    case CONN_TYPE_DNSWORKER:
-      return connection_dns_reached_eof(conn);
     case CONN_TYPE_CPUWORKER:
       return connection_cpu_reached_eof(conn);
     case CONN_TYPE_CONTROL:
@@ -2512,10 +2494,6 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->state <= _DIR_CONN_STATE_MAX);
       tor_assert(conn->purpose >= _DIR_PURPOSE_MIN);
       tor_assert(conn->purpose <= _DIR_PURPOSE_MAX);
-      break;
-    case CONN_TYPE_DNSWORKER:
-      tor_assert(conn->state >= _DNSWORKER_STATE_MIN);
-      tor_assert(conn->state <= _DNSWORKER_STATE_MAX);
       break;
     case CONN_TYPE_CPUWORKER:
       tor_assert(conn->state >= _CPUWORKER_STATE_MIN);

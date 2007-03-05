@@ -8,31 +8,17 @@ const char dns_c_id[] =
 /**
  * \file dns.c
  * \brief Implements a local cache for DNS results for Tor servers.
- * We provide two asynchronous backend implementations:
- *   1) A farm of 'DNS worker' threads or processes to perform DNS lookups for
- *      onion routers and cache the results.
- *   2) A wrapper around Adam Langley's eventdns.c code, to send requests
- *      to the nameservers asynchronously.
+ * This is implemetned as a wrapper around Adam Langley's eventdns.c code.
  * (We can't just use gethostbyname() and friends because we really need to
  * be nonblocking.)
  **/
 
 #include "or.h"
 #include "../common/ht.h"
-#ifdef USE_EVENTDNS
 #include "eventdns.h"
-#endif
 
 /** Longest hostname we're willing to resolve. */
 #define MAX_ADDRESSLEN 256
-
-/** Maximum DNS processes to spawn. */
-#define MAX_DNSWORKERS 100
-/** Minimum DNS processes to spawn. */
-#define MIN_DNSWORKERS 3
-
-/** If more than this many processes are idle, shut down the extras. */
-#define MAX_IDLE_DNSWORKERS 10
 
 /** How long will we wait for an answer from the resolver before we decide
  * that the resolver is wedged? */
@@ -44,14 +30,6 @@ const char dns_c_id[] =
 #define DNS_RESOLVE_FAILED_PERMANENT 2
 #define DNS_RESOLVE_SUCCEEDED 3
 
-#ifndef USE_EVENTDNS
-/** How many dnsworkers we have running right now. */
-static int num_dnsworkers=0;
-/** How many of the running dnsworkers have an assigned task right now. */
-static int num_dnsworkers_busy=0;
-/** When did we last rotate the dnsworkers? */
-static time_t last_rotation_time=0;
-#else
 /** Have we currently configured nameservers with eventdns? */
 static int nameservers_configured = 0;
 /** What was the resolv_conf fname we last used when configuring the
@@ -60,7 +38,6 @@ static char *resolv_conf_fname = NULL;
 /** What was the mtime on the resolv.conf file we last used when configuring
  * the nameservers?  Used to check whether we need to reconfigure. */
 static time_t resolv_conf_mtime = 0;
-#endif
 
 /** Linked list of connections waiting for a DNS answer. */
 typedef struct pending_connection_t {
@@ -118,16 +95,9 @@ static void dns_found_answer(const char *address, int is_reverse,
 static void send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
                                uint8_t answer_type);
 static int launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ);
-#ifndef USE_EVENTDNS
-static void dnsworkers_rotate(void);
-static void dnsworker_main(void *data);
-static int spawn_dnsworker(void);
-static int spawn_enough_dnsworkers(void);
-#else
 static void add_wildcarded_test_address(const char *address);
 static int configure_nameservers(int force);
 static int answer_is_wildcarded(const char *ip);
-#endif
 #ifdef DEBUG_DNS_CACHE
 static void _assert_cache_ok(void);
 #define assert_cache_ok() _assert_cache_ok()
@@ -168,7 +138,6 @@ init_cache_map(void)
   HT_INIT(cache_map, &cache_root);
 }
 
-#ifdef USE_EVENTDNS
 /** Helper: called by eventdns when eventdns wants to log something. */
 static void
 evdns_log_cb(int warn, const char *msg)
@@ -208,19 +177,14 @@ evdns_log_cb(int warn, const char *msg)
   }
   log(severity, LD_EXIT, "eventdns: %s", msg);
 }
-#endif
 
 /** Initialize the DNS subsystem; called by the OR process. */
 int
 dns_init(void)
 {
   init_cache_map();
-#ifdef USE_EVENTDNS
   if (server_mode(get_options()))
     return configure_nameservers(1);
-#else
-  dnsworkers_rotate();
-#endif
   return 0;
 }
 
@@ -229,7 +193,6 @@ dns_init(void)
 int
 dns_reset(void)
 {
-#ifdef USE_EVENTDNS
   or_options_t *options = get_options();
   if (! server_mode(options)) {
     evdns_clear_nameservers_and_suspend();
@@ -241,9 +204,6 @@ dns_reset(void)
     if (configure_nameservers(0) < 0)
       return -1;
   }
-#else
-  dnsworkers_rotate();
-#endif
   return 0;
 }
 
@@ -338,9 +298,7 @@ dns_free_all(void)
   if (cached_resolve_pqueue)
     smartlist_free(cached_resolve_pqueue);
   cached_resolve_pqueue = NULL;
-#ifdef USE_EVENTDNS
   tor_free(resolv_conf_fname);
-#endif
 }
 
 /** Remove every cached_resolve whose <b>expire</b> time is before <b>now</b>
@@ -635,7 +593,6 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
     if (r == 1)
       is_reverse = 1;
 
-#ifdef USE_EVENTDNS
     if (!is_reverse || !is_resolve) {
       if (!is_reverse)
         log_info(LD_EXIT, "Bad .in-addr.arpa address \"%s\"; sending error.",
@@ -645,12 +602,6 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
                  "Attempt to connect to a .in-addr.arpa address \"%s\"; "
                  "sending error.",
                  escaped_safe_str(exitconn->_base.address));
-#else
-    if (1) {
-      log_info(LD_PROTOCOL, "Dnsworker code does not support in-addr.arpa "
-               "domain, but received a request for \"%s\"; sending error.",
-               escaped_safe_str(exitconn->_base.address));
-#endif
 
       if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
         send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
@@ -1062,412 +1013,6 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
   assert_cache_ok();
 }
 
-#ifndef USE_EVENTDNS
-/** Find or spawn a dns worker process to handle resolving
- * <b>exitconn</b>-\>address; tell that dns worker to begin resolving.
- */
-static int
-launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
-{
-  connection_t *dnsconn;
-  unsigned char len;
-
-  tor_assert(exitconn->_base.state == EXIT_CONN_STATE_RESOLVING);
-  assert_connection_ok(TO_CONN(exitconn), 0);
-  tor_assert(exitconn->_base.s == -1);
-
-  /* respawn here, to be sure there are enough */
-  if (spawn_enough_dnsworkers() < 0) {
-    goto err;
-  }
-
-  dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
-                                         DNSWORKER_STATE_IDLE);
-
-  if (!dnsconn) {
-    log_warn(LD_EXIT,"no idle dns workers. Failing.");
-    if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
-      send_resolved_cell(exitconn, circ, RESOLVED_TYPE_ERROR_TRANSIENT);
-    goto err;
-  }
-
-  log_debug(LD_EXIT,
-            "Connection (fd %d) needs to resolve %s; assigning "
-            "to DNSWorker (fd %d)", exitconn->_base.s,
-            escaped_safe_str(exitconn->_base.address), dnsconn->s);
-
-  tor_free(dnsconn->address);
-  dnsconn->address = tor_strdup(exitconn->_base.address);
-  dnsconn->state = DNSWORKER_STATE_BUSY;
-  /* touch the lastwritten timestamp, since that's how we check to
-   * see how long it's been since we asked the question, and sometimes
-   * we check before the first call to connection_handle_write(). */
-  dnsconn->timestamp_lastwritten = time(NULL);
-  num_dnsworkers_busy++;
-
-  len = strlen(dnsconn->address);
-  connection_write_to_buf((char*)&len, 1, dnsconn);
-  connection_write_to_buf(dnsconn->address, len, dnsconn);
-
-  return 0;
-err:
-  /* also sends end and frees */
-  dns_cancel_pending_resolve(exitconn->_base.address);
-  return -1;
-}
-
-/******************************************************************/
-
-/*
- * Connection between OR and dnsworker
- */
-
-/** Write handler: called when we've pushed a request to a dnsworker. */
-int
-connection_dns_finished_flushing(connection_t *conn)
-{
-  tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_DNSWORKER);
-  connection_stop_writing(conn);
-  return 0;
-}
-
-/** Called when a connection to a dnsworker hits an EOF; this only happens
- * when a dnsworker dies unexpectedly. */
-int
-connection_dns_reached_eof(connection_t *conn)
-{
-  log_warn(LD_EXIT,"Read eof. DNS worker died unexpectedly.");
-  if (conn->state == DNSWORKER_STATE_BUSY) {
-    /* don't cancel the resolve here -- it would be cancelled in
-     * connection_about_to_close_connection(), since conn is still
-     * in state BUSY
-     */
-    num_dnsworkers_busy--;
-  }
-  num_dnsworkers--;
-  connection_mark_for_close(conn);
-  return 0;
-}
-
-/** Read handler: called when we get data from a dnsworker. See
- * if we have a complete answer.  If so, call dns_found_answer on the
- * result.  If not, wait.  Returns 0. */
-int
-connection_dns_process_inbuf(connection_t *conn)
-{
-  char success;
-  uint32_t addr;
-  int ttl;
-
-  tor_assert(conn);
-  tor_assert(conn->type == CONN_TYPE_DNSWORKER);
-
-  if (conn->state != DNSWORKER_STATE_BUSY && buf_datalen(conn->inbuf)) {
-    log_warn(LD_BUG,
-             "read data (%d bytes) from an idle dns worker (fd %d, "
-             "address %s). Please report.", (int)buf_datalen(conn->inbuf),
-             conn->s, escaped_safe_str(conn->address));
-    tor_fragile_assert();
-
-    /* Pull it off the buffer anyway, or it will just stay there.
-     * Keep pulling things off because sometimes we get several
-     * answers at once (!). */
-    while (buf_datalen(conn->inbuf)) {
-      connection_fetch_from_buf(&success,1,conn);
-      connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
-      log_warn(LD_EXIT,"Discarding idle dns answer (success %d, addr %d.)",
-               success, addr);
-    }
-    return 0;
-  }
-  if (buf_datalen(conn->inbuf) < 5) /* entire answer available? */
-    return 0; /* not yet */
-  tor_assert(conn->state == DNSWORKER_STATE_BUSY);
-  tor_assert(buf_datalen(conn->inbuf) == 5);
-
-  connection_fetch_from_buf(&success,1,conn);
-  connection_fetch_from_buf((char *)&addr,sizeof(uint32_t),conn);
-
-  log_debug(LD_EXIT, "DNSWorker (fd %d) returned answer for %s",
-            conn->s, escaped_safe_str(conn->address));
-
-  tor_assert(success >= DNS_RESOLVE_FAILED_TRANSIENT);
-  tor_assert(success <= DNS_RESOLVE_SUCCEEDED);
-
-  ttl = (success == DNS_RESOLVE_FAILED_TRANSIENT) ? 0 : MAX_DNS_ENTRY_AGE;
-  dns_found_answer(conn->address, 0, ntohl(addr), NULL, success, ttl);
-
-  tor_free(conn->address);
-  conn->address = tor_strdup("<idle>");
-  conn->state = DNSWORKER_STATE_IDLE;
-  num_dnsworkers_busy--;
-  if (conn->timestamp_created < last_rotation_time) {
-    connection_mark_for_close(conn);
-    num_dnsworkers--;
-    spawn_enough_dnsworkers();
-  }
-  return 0;
-}
-
-/** Close and re-open all idle dnsworkers; schedule busy ones to be closed
- * and re-opened once they're no longer busy.
- **/
-static void
-dnsworkers_rotate(void)
-{
-  connection_t *dnsconn;
-  while ((dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
-                                                 DNSWORKER_STATE_IDLE))) {
-    connection_mark_for_close(dnsconn);
-    num_dnsworkers--;
-  }
-  last_rotation_time = time(NULL);
-  if (server_mode(get_options()))
-    spawn_enough_dnsworkers();
-}
-
-/** Implementation for DNS workers; this code runs in a separate
- * execution context.  It takes as its argument an fdarray as returned
- * by socketpair(), and communicates via fdarray[1].  The protocol is
- * as follows:
- *    - The OR says:
- *         - ADDRESSLEN [1 byte]
- *         - ADDRESS    [ADDRESSLEN bytes]
- *    - The DNS worker does the lookup, and replies:
- *         - OUTCOME    [1 byte]
- *         - IP         [4 bytes]
- *
- * OUTCOME is one of DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
- * IP is in host order.
- *
- * The dnsworker runs indefinitely, until its connection is closed or an error
- * occurs.
- */
-static void
-dnsworker_main(void *data)
-{
-  char address[MAX_ADDRESSLEN+1]; /* Plus a byte for a final '.' */
-  unsigned char address_len;
-  char *log_address;
-  char answer[5];
-  uint32_t ip;
-  int *fdarray = data;
-  int fd;
-  int result;
-  int search = get_options()->ServerDNSSearchDomains;
-
-  /* log_fn(LOG_NOTICE,"After spawn: fdarray @%d has %d:%d", (int)fdarray,
-   * fdarray[0],fdarray[1]); */
-
-  fd = fdarray[1]; /* this side is ours */
-#ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the
-                                 * parent uses */
-  tor_free_all(1); /* so the child doesn't hold the parent's fd's open */
-  handle_signals(0); /* ignore interrupts from the keyboard, etc */
-#endif
-  tor_free(data);
-
-  for (;;) {
-    int r;
-
-    if ((r = recv(fd, &address_len, 1, 0)) != 1) {
-      if (r == 0) {
-        log_info(LD_EXIT,"DNS worker exiting because Tor process closed "
-                 "connection (either pruned idle dnsworker or died).");
-      } else {
-        log_info(LD_EXIT,"DNS worker exiting because of error on connection "
-                 "to Tor process.");
-        log_info(LD_EXIT,"(Error on %d was %s)", fd,
-                 tor_socket_strerror(tor_socket_errno(fd)));
-      }
-      tor_close_socket(fd);
-      crypto_thread_cleanup();
-      spawn_exit();
-    }
-
-    if (address_len && read_all(fd, address, address_len, 1) != address_len) {
-      log_err(LD_BUG,"read hostname failed. Child exiting.");
-      tor_close_socket(fd);
-      crypto_thread_cleanup();
-      spawn_exit();
-    }
-    /* Add a period to prevent local domain search, and NUL-terminate. */
-    if (address[address_len-1] != '.' && !search) {
-      address[address_len] = '.';
-      address[address_len+1] = '\0';
-    } else {
-      address[address_len] = '\0';
-    }
-
-    log_address = esc_for_log(safe_str(address));
-    result = tor_lookup_hostname(address, &ip);
-    /* Make 0.0.0.0 an error, so that we can use "0" to mean "no addr") */
-    if (!ip)
-      result = -1;
-    switch (result) {
-      case 1:
-        /* XXX result can never be 1, because we set it to -1 above on error */
-        log_info(LD_NET,"Could not resolve dest addr %s (transient)",
-                 log_address);
-        answer[0] = DNS_RESOLVE_FAILED_TRANSIENT;
-        break;
-      case -1:
-        log_info(LD_NET,"Could not resolve dest addr %s (permanent)",
-                 log_address);
-        answer[0] = DNS_RESOLVE_FAILED_PERMANENT;
-        break;
-      case 0:
-        log_info(LD_NET,"Resolved address %s", log_address);
-        answer[0] = DNS_RESOLVE_SUCCEEDED;
-        break;
-    }
-    tor_free(log_address);
-    set_uint32(answer+1, ip);
-    if (write_all(fd, answer, 5, 1) != 5) {
-      log_err(LD_NET,"writing answer failed. Child exiting.");
-      tor_close_socket(fd);
-      crypto_thread_cleanup();
-      spawn_exit();
-    }
-  }
-}
-
-/** Launch a new DNS worker; return 0 on success, -1 on failure.
- */
-static int
-spawn_dnsworker(void)
-{
-  int *fdarray;
-  int fd;
-  connection_t *conn;
-  int err;
-
-  fdarray = tor_malloc(sizeof(int)*2);
-  if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
-    log_warn(LD_NET, "Couldn't construct socketpair for dns worker: %s",
-             tor_socket_strerror(-err));
-    tor_free(fdarray);
-    return -1;
-  }
-
-  tor_assert(fdarray[0] >= 0);
-  tor_assert(fdarray[1] >= 0);
-
-  /* log_fn(LOG_NOTICE,"Before spawn: fdarray @%d has %d:%d",
-            (int)fdarray, fdarray[0],fdarray[1]); */
-
-  fd = fdarray[0]; /* We copy this out here, since dnsworker_main may free
-                    * fdarray */
-  spawn_func((void*) dnsworker_main, (void*)fdarray);
-  log_debug(LD_EXIT,"just spawned a dns worker.");
-#ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
-  tor_free(fdarray);
-#endif
-
-  conn = connection_new(CONN_TYPE_DNSWORKER);
-
-  set_socket_nonblocking(fd);
-
-  /* set up conn so it's got all the data we need to remember */
-  conn->s = fd;
-  conn->address = tor_strdup("<unused>");
-
-  if (connection_add(conn) < 0) { /* no space, forget it */
-    log_warn(LD_NET,"connection_add for dnsworker failed. Giving up.");
-    connection_free(conn); /* this closes fd */
-    return -1;
-  }
-
-  conn->state = DNSWORKER_STATE_IDLE;
-  connection_start_reading(conn);
-
-  return 0; /* success */
-}
-
-/** If we have too many or too few DNS workers, spawn or kill some.
- * Return 0 if we are happy, return -1 if we tried to spawn more but
- * we couldn't.
- */
-static int
-spawn_enough_dnsworkers(void)
-{
-  int num_dnsworkers_needed; /* aim to have 1 more than needed,
-                           * but no less than min and no more than max */
-  connection_t *dnsconn;
-
-  /* XXX This may not be the best strategy. Maybe we should queue pending
-   *     requests until the old ones finish or time out: otherwise, if the
-   *     connection requests come fast enough, we never get any DNS done. -NM
-   *
-   * XXX But if we queue them, then the adversary can pile even more
-   *     queries onto us, blocking legitimate requests for even longer.  Maybe
-   *     we should compromise and only kill if it's been at it for more than,
-   *     e.g., 2 seconds. -RD
-   */
-  if (num_dnsworkers_busy == MAX_DNSWORKERS) {
-    /* We always want at least one worker idle.
-     * So find the oldest busy worker and kill it.
-     */
-    dnsconn = connection_get_by_type_state_lastwritten(CONN_TYPE_DNSWORKER,
-                                                       DNSWORKER_STATE_BUSY);
-    tor_assert(dnsconn);
-
-    log_warn(LD_EXIT, "%d DNS workers are spawned; all are busy. Killing one.",
-             MAX_DNSWORKERS);
-
-    connection_mark_for_close(dnsconn);
-    num_dnsworkers_busy--;
-    num_dnsworkers--;
-  }
-
-  if (num_dnsworkers_busy >= MIN_DNSWORKERS)
-    num_dnsworkers_needed = num_dnsworkers_busy+1;
-  else
-    num_dnsworkers_needed = MIN_DNSWORKERS;
-
-  while (num_dnsworkers < num_dnsworkers_needed) {
-    if (spawn_dnsworker() < 0) {
-      log_warn(LD_EXIT,"DNS worker spawn failed. Will try again later.");
-      return -1;
-    }
-    num_dnsworkers++;
-  }
-
-  while (num_dnsworkers > num_dnsworkers_busy+MAX_IDLE_DNSWORKERS) {
-    /* too many idle? */
-    /* cull excess workers */
-    log_info(LD_EXIT,"%d of %d dnsworkers are idle. Killing one.",
-             num_dnsworkers-num_dnsworkers_busy, num_dnsworkers);
-    dnsconn = connection_get_by_type_state(CONN_TYPE_DNSWORKER,
-                                           DNSWORKER_STATE_IDLE);
-    tor_assert(dnsconn);
-    connection_mark_for_close(dnsconn);
-    num_dnsworkers--;
-  }
-
-  return 0;
-}
-
-void
-dns_launch_correctness_checks(void)
-{
-}
-
-int
-dns_seems_to_be_broken(void)
-{
-  return 0;
-}
-
-void
-dns_reset_correctness_checks(void)
-{
-}
-#else /* !USE_EVENTDNS */
-
 /** Eventdns helper: return true iff the eventdns result <b>err</b> is
  * a transient failure. */
 static int
@@ -1482,30 +1027,6 @@ evdns_err_is_transient(int err)
     default:
       return 0;
   }
-}
-/* Dummy function; never called with eventdns enabled. */
-int
-connection_dns_finished_flushing(connection_t *conn)
-{
-  (void)conn;
-  tor_assert(0);
-  return 0;
-}
-/* Dummy function; never called with eventdns enabled. */
-int
-connection_dns_process_inbuf(connection_t *conn)
-{
-  (void)conn;
-  tor_assert(0);
-  return 0;
-}
-/* Dummy function; never called with eventdns enabled. */
-int
-connection_dns_reached_eof(connection_t *conn)
-{
-  (void)conn;
-  tor_assert(0);
-  return 0;
 }
 
 /** Configure eventdns nameservers if force is true, or if the configuration
@@ -1978,7 +1499,6 @@ answer_is_wildcarded(const char *ip)
 {
   return dns_wildcard_list && smartlist_string_isin(dns_wildcard_list, ip);
 }
-#endif /* USE_EVENTDNS */
 
 /** Exit with an assertion if <b>resolve</b> is corrupt. */
 static void

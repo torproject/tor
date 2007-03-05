@@ -1224,9 +1224,6 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "bandwidth %d %d %d\n"
                     "onion-key\n%s"
                     "signing-key\n%s"
-#ifndef USE_EVENTDNS
-                    "opt eventdns 0\n"
-#endif
                     "%s%s%s",
     router->nickname,
     router->address,

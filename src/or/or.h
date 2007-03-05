@@ -229,21 +229,19 @@ typedef enum {
 #define CONN_TYPE_DIR_LISTENER 8
 /** Type for HTTP connections to the directory server. */
 #define CONN_TYPE_DIR 9
-/** Connection from the main process to a DNS worker process. */
-#define CONN_TYPE_DNSWORKER 10
 /** Connection from the main process to a CPU worker process. */
-#define CONN_TYPE_CPUWORKER 11
+#define CONN_TYPE_CPUWORKER 10
 /** Type for listening for connections from user interface process. */
-#define CONN_TYPE_CONTROL_LISTENER 12
+#define CONN_TYPE_CONTROL_LISTENER 11
 /** Type for connections from user interface process. */
-#define CONN_TYPE_CONTROL 13
+#define CONN_TYPE_CONTROL 12
 /** Type for sockets listening for transparent connections redirected by pf or
  * netfilter. */
-#define CONN_TYPE_AP_TRANS_LISTENER 14
+#define CONN_TYPE_AP_TRANS_LISTENER 13
 /** Type for sockets listening for transparent connections redirected by
  * natd. */
-#define CONN_TYPE_AP_NATD_LISTENER 15
-#define _CONN_TYPE_MAX 15
+#define CONN_TYPE_AP_NATD_LISTENER 14
+#define _CONN_TYPE_MAX 14
 
 #define CONN_IS_EDGE(x) \
   ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
@@ -2473,9 +2471,6 @@ void cached_dir_decref(cached_dir_t *d);
 int dns_init(void);
 void dns_free_all(void);
 uint32_t dns_clip_ttl(uint32_t ttl);
-int connection_dns_finished_flushing(connection_t *conn);
-int connection_dns_reached_eof(connection_t *conn);
-int connection_dns_process_inbuf(connection_t *conn);
 int dns_reset(void);
 void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);

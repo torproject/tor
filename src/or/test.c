@@ -1557,9 +1557,6 @@ test_dir_format(void)
   strlcat(buf2, pk1_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
-#ifndef USE_EVENTDNS
-  strlcat(buf2, "opt eventdns 0\n", sizeof(buf2));
-#endif
   strlcat(buf2, bw_lines, sizeof(buf2));
   strlcat(buf2, "router-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
