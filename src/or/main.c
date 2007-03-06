@@ -1353,7 +1353,7 @@ signal_callback(int fd, short events, void *arg)
   switch (sig)
     {
     case SIGTERM:
-      log_err(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
+      log_notice(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
       tor_cleanup();
       exit(0);
       break;
