@@ -2708,8 +2708,10 @@ router_get_combined_status_by_nickname(const char *nickname,
     base16_encode(fp, sizeof(fp),
                   best->status.identity_digest, DIGEST_LEN);
     log_warn(LD_CONFIG,
-         "To look up a status, you specified a server \"%s\" by name, but the "
-         "directory authorities do not have a binding for this nickname. "
+         "When looking up a status, you specified a server \"%s\" by name, "
+         "but the directory authorities do not have any key registered for "
+         "this nickname -- so it could be used by any server, "
+         "not just the one you meant. "
          "To make sure you get the same server in the future, refer to "
          "it by key, as \"$%s\".", nickname, fp);
     best->name_lookup_warned = 1;
