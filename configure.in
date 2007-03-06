@@ -199,9 +199,10 @@ else
 fi
 
 TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $WS32lib], [
+#include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <event.h>], [void *event_init(void);],
+#include <event.h>], [void exit(int); void *event_init(void);],
     [event_init(); exit(0);], [--with-libevent-dir], [/opt/libevent])
 
 dnl Now check for particular libevent functions.

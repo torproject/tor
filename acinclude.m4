@@ -31,8 +31,9 @@ AC_DEFUN([TOR_EXTEND_CODEPATH],
 dnl Look for a library, and its associated includes, and how to link
 dnl against it.
 dnl 
-dnl TOR_SEARCH_LIBRARY(libname, withlocation, linkargs, headers, prototype,
-dnl                    code, optionname, searchextra)
+dnl TOR_SEARCH_LIBRARY(1:libname, 2:withlocation, 3:linkargs, 4:headers, 
+dnl                    5:prototype,
+dnl                    6:code, 7:optionname, 8:searchextra)
 
 AC_DEFUN([TOR_SEARCH_LIBRARY], [
 tor_saved_LIBS="$LIBS"
@@ -87,7 +88,7 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
   fi
 
   LDFLAGS="$tor_saved_LDFLAGS"
-  LIBS="$tor_saved_LIBS $3"
+  LIBS="$tor_saved_LIBS"
   CPPFLAGS="$tor_saved_CPPFLAGS"
 ]) dnl end cache check
 
@@ -104,11 +105,11 @@ if test -z "$CROSS_COMPILE"; then
    runs=no
    linked_with=nothing
    for tor_tryextra in "(none)" "-Wl,-R$tor_trydir" "-R$tor_trydir" \
-                       "-Wl,-rpath,$le_libdir" ; do
+                       "-Wl,-rpath,$tor_trydir" ; do
      if test "$tor_tryextra" = "(none)"; then
-       LDFLAGS="$saved_LDFLAGS"
+       LDFLAGS="$tor_saved_LDFLAGS"
      else
-       LDFLAGS="$tor_tryextra $saved_LDFLAGS"
+       LDFLAGS="$tor_tryextra $tor_saved_LDFLAGS"
      fi
      AC_RUN_IFELSE(AC_LANG_PROGRAM([$5], [$6]),
                    [runnable=yes], [runnable=no])
@@ -121,7 +122,8 @@ if test -z "$CROSS_COMPILE"; then
    if test "$runnable" = no; then
      AC_MSG_ERROR([Found linkable $1 in $tor_cv_library_$1_dir, but it does not seem to run, even with -R. Maybe specify another using $7}])
    fi
-  ]) dnl check for extra options.
+   LDFLAGS="$tor_saved_LDFLAGS"
+  ]) dnl end cache check check for extra options.
 
   if test "$tor_cv_library_$1_linker_option" != "(none)" ; then
    LDFLAGS="$tor_cv_library_$1_linker_option $LDFLAGS"
