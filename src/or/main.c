@@ -1923,8 +1923,8 @@ nt_service_control(DWORD request)
   switch (request) {
     case SERVICE_CONTROL_STOP:
         case SERVICE_CONTROL_SHUTDOWN:
-          log_err(LD_GENERAL,
-                  "Got stop/shutdown request; shutting down cleanly.");
+          log_notice(LD_GENERAL,
+                     "Got stop/shutdown request; shutting down cleanly.");
           service_status.dwCurrentState = SERVICE_STOP_PENDING;
           event_loopexit(&exit_now);
           return;
