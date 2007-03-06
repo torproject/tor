@@ -41,7 +41,7 @@
 #ifdef __GNUC__
 /** Macro: evaluate the expression x, which we expect to be false.
  * Used to hint the compiler that a branch won't be taken. */
-#define PREDICT_FALSE(x) PREDICT((x) == ((typeof(x)) 0), 0)
+#define PREDICT_FALSE(x) PREDICT_UNLIKELY((x) == ((typeof(x)) 0))
 #else
 #define PREDICT_FALSE(x) !(x)
 #endif
@@ -85,14 +85,18 @@ void _tor_free(void *mem);
 extern int dmalloc_free(const char *file, const int line, void *pnt,
                         const int func_id);
 #define tor_free(p) do { \
-    if (PREDICT((p)!=NULL, 1)) {                     \
+    if (PREDICT_LIKELY((p)!=NULL)) {                \
       dmalloc_free(_SHORT_FILE_, __LINE__, (p), 0); \
       (p)=NULL;                                     \
     }                                               \
   } while (0)
 #else
-#define tor_free(p) do { if (PREDICT((p)!=NULL,1)) { free(p); (p)=NULL;} } \
-  while (0)
+#define tor_free(p) do {                                       \
+    if (PREDICT_LIKELY((p)!=NULL)) {                           \
+      free(p);                                                 \
+      (p)=NULL;                                                \
+    }                                                          \
+  } while (0)
 #endif
 
 #define tor_malloc(size)       _tor_malloc(size DMALLOC_ARGS)
@@ -172,10 +176,10 @@ void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 /* Time helpers */
-long tv_udiff(struct timeval *start, struct timeval *end);
+long tv_udiff(const struct timeval *start, const struct timeval *end);
 void tv_addms(struct timeval *a, long ms);
-void tv_add(struct timeval *a, struct timeval *b);
-int tv_cmp(struct timeval *a, struct timeval *b);
+void tv_add(struct timeval *a, const struct timeval *b);
+int tv_cmp(const struct timeval *a, const struct timeval *b);
 time_t tor_timegm(struct tm *tm);
 #define RFC1123_TIME_LEN 29
 void format_rfc1123_time(char *buf, time_t t);

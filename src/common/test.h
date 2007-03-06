@@ -71,20 +71,27 @@ extern int have_failed;
 #define test_eq_ptr(expr1, expr2)               \
   test_eq_type(void*, "%p", expr1, expr2)
 
-#define test_neq(expr1, expr2)                                  \
-  STMT_BEGIN                                                    \
-    long v1=(long)(expr1), v2=(long)(expr2);                    \
-    if (v1!=v2) { printf("."); fflush(stdout); } else {         \
-    have_failed = 1;                                            \
-    printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
-           "      (%ld == %ld)\n",                              \
-      _SHORT_FILE_,                                             \
-      __LINE__,                                                 \
-      PRETTY_FUNCTION,                                          \
-      #expr1, #expr2,                                           \
-      v1, v2);                                                  \
-    return;                                                     \
+#define test_neq_type(tp, fmt, expr1, expr2)                            \
+  STMT_BEGIN                                                            \
+  tp v1=(tp)(expr1);                                                    \
+  tp v2=(tp)(expr2);                                                    \
+  if (v1!=v2) { printf("."); fflush(stdout); } else {                   \
+    have_failed = 1;                                                    \
+    printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"      \
+           "      ("fmt" == "fmt")\n",                                  \
+           _SHORT_FILE_,                                                \
+           __LINE__,                                                    \
+           PRETTY_FUNCTION,                                             \
+           #expr1, #expr2,                                              \
+             v1, v2);                                                   \
+    return;                                                             \
   } STMT_END
+
+#define test_neq(expr1, expr2)                  \
+  test_neq_type(long, "%ld", expr1, expr2)
+
+#define test_neq_ptr(expr1, expr2)              \
+  test_neq_type(void *, "%p", expr1, expr2)
 
 #define test_streq(expr1, expr2)                                \
   STMT_BEGIN                                                    \

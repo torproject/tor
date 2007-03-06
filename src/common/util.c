@@ -115,7 +115,7 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
 #endif
   result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
 
-  if (PREDICT(result == NULL, 0)) {
+  if (PREDICT_UNLIKELY(result == NULL)) {
     log_err(LD_MM,"Out of memory on malloc(). Dying.");
     /* If these functions die within a worker process, they won't call
      * spawn_exit, but that's ok, since the parent will run out of memory soon
@@ -147,7 +147,7 @@ _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
   void *result;
 
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
-  if (PREDICT(result == NULL, 0)) {
+  if (PREDICT_UNLIKELY(result == NULL)) {
     log_err(LD_MM,"Out of memory on realloc(). Dying.");
     exit(1);
   }
@@ -165,7 +165,7 @@ _tor_strdup(const char *s DMALLOC_PARAMS)
   tor_assert(s);
 
   dup = dmalloc_strdup(file, line, s, 0);
-  if (PREDICT(dup == NULL, 0)) {
+  if (PREDICT_UNLIKELY(dup == NULL)) {
     log_err(LD_MM,"Out of memory on strdup(). Dying.");
     exit(1);
   }
@@ -517,7 +517,7 @@ tor_parse_long(const char *s, int base, long min, long max,
   CHECK_STRTOX_RESULT();
 }
 
-/** As tor_parse_log, but return an unsigned long. */
+/** As tor_parse_long, but return an unsigned long. */
 unsigned long
 tor_parse_ulong(const char *s, int base, unsigned long min,
                 unsigned long max, int *ok, char **next)
@@ -615,6 +615,7 @@ int
 base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   const char *end;
+
   int v1,v2;
   if ((srclen % 2) != 0)
     return -1;
@@ -812,7 +813,7 @@ wrap_string(smartlist_t *out, const char *string, size_t width,
 /** Return the number of microseconds elapsed between *start and *end.
  */
 long
-tv_udiff(struct timeval *start, struct timeval *end)
+tv_udiff(const struct timeval *start, const struct timeval *end)
 {
   long udiff;
   long secdiff = end->tv_sec - start->tv_sec;
@@ -829,7 +830,7 @@ tv_udiff(struct timeval *start, struct timeval *end)
 /** Return -1 if *a \< *b, 0 if *a==*b, and 1 if *a \> *b.
  */
 int
-tv_cmp(struct timeval *a, struct timeval *b)
+tv_cmp(const struct timeval *a, const struct timeval *b)
 {
   if (a->tv_sec > b->tv_sec)
     return 1;
@@ -845,7 +846,7 @@ tv_cmp(struct timeval *a, struct timeval *b)
 /** Increment *a by the number of seconds and microseconds in *b.
  */
 void
-tv_add(struct timeval *a, struct timeval *b)
+tv_add(struct timeval *a, const struct timeval *b)
 {
   a->tv_usec += b->tv_usec;
   a->tv_sec += b->tv_sec + (a->tv_usec / 1000000);

@@ -129,10 +129,10 @@ void _log_fn(int severity, uint32_t domain,
  * of the current function name. */
 #define log_fn(severity, domain, args...)               \
   _log_fn(severity, domain, __PRETTY_FUNCTION__, args)
-#define log_debug(domain, args...)                              \
-  do {                                                          \
-    if (PREDICT(_log_global_min_severity == LOG_DEBUG, 0))      \
-      _log_fn(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args);    \
+#define log_debug(domain, args...)                                      \
+  do {                                                                  \
+    if (PREDICT_UNLIKELY(_log_global_min_severity == LOG_DEBUG))        \
+      _log_fn(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args);            \
   } while (0)
 #define log_info(domain, args...)                           \
   _log_fn(LOG_INFO, domain, __PRETTY_FUNCTION__, args)

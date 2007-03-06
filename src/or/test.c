@@ -535,6 +535,12 @@ test_crypto(void)
   test_eq(i,0);
   test_memeq(data2, "\xf0\xd6\x78\xaf\xfc\x00\x01\x00",8);
 
+  /* now try some failing base16 decodes */
+  test_eq(-1, base16_decode(data2, 8, data1, 15)); /* odd input len */
+  test_eq(-1, base16_decode(data2, 7, data1, 16)); /* dest too short */
+  strlcpy(data1, "f0dz!8affc000100", 1024);
+  test_eq(-1, base16_decode(data2, 8, data1, 16));
+
   tor_free(data1);
   tor_free(data2);
   tor_free(data3);
@@ -606,6 +612,10 @@ test_util(void)
 
   end.tv_usec = 7000;
 
+  test_assert(tv_cmp(&start, &end)<0);
+  test_assert(tv_cmp(&end, &start)>0);
+  test_assert(tv_cmp(&end, &end)==0);
+
   test_eq(2000L, tv_udiff(&start, &end));
 
   end.tv_sec = 6;
@@ -619,6 +629,17 @@ test_util(void)
   end.tv_sec = 4;
 
   test_eq(-1005000L, tv_udiff(&start, &end));
+
+  tv_addms(&end, 5090);
+  test_eq(end.tv_sec, 9);
+  test_eq(end.tv_usec, 90000);
+
+  end.tv_usec = 999990;
+  start.tv_sec = 1;
+  start.tv_usec = 500;
+  tv_add(&start, &end);
+  test_eq(start.tv_sec, 11);
+  test_eq(start.tv_usec, 490);
 
   /* The test values here are confirmed to be correct on a platform
    * with a working timegm. */
@@ -644,6 +665,8 @@ test_util(void)
   i = parse_rfc1123_time(timestr, &t_res);
   test_eq(i,0);
   test_eq(t_res, (time_t)1091580502UL);
+  test_eq(-1, parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
+  tor_gettimeofday(&start);
 
   /* Test tor_strstrip() */
   strlcpy(buf, "Testing 1 2 3", sizeof(buf));
@@ -694,6 +717,11 @@ test_util(void)
   /* Test tor_parse_long. */
   test_eq(10L, tor_parse_long("10",10,0,100,NULL,NULL));
   test_eq(0L, tor_parse_long("10",10,50,100,NULL,NULL));
+  test_eq(-50L, tor_parse_long("-50",10,-100,100,NULL,NULL));
+
+  /* Test tor_parse_ulong */
+  test_eq(10UL, tor_parse_ulong("10",10,0,100,NULL,NULL));
+  test_eq(0UL, tor_parse_ulong("10",10,50,100,NULL,NULL));
 
   /* Test tor_parse_uint64. */
   test_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
@@ -772,6 +800,26 @@ test_util(void)
   test_assert(strcmpend("abcdef", "dee")>0);
   test_assert(strcmpend("ab", "abb")<0);
 
+  test_assert(strcasecmpend("AbcDEF", "abcdef")==0);
+  test_assert(strcasecmpend("abcdef", "dEF")==0);
+  test_assert(strcasecmpend("abcDEf", "deg")<0);
+  test_assert(strcasecmpend("abcdef", "DEE")>0);
+  test_assert(strcasecmpend("ab", "abB")<0);
+
+  /* Test mem_is_zero */
+  memset(buf,0,128);
+  buf[128] = 'x';
+  test_assert(tor_digest_is_zero(buf));
+  test_assert(tor_mem_is_zero(buf, 10));
+  test_assert(tor_mem_is_zero(buf, 20));
+  test_assert(tor_mem_is_zero(buf, 128));
+  test_assert(!tor_mem_is_zero(buf, 129));
+  buf[60] = (char)255;
+  test_assert(!tor_mem_is_zero(buf, 128));
+  buf[0] = (char)1;
+  test_assert(!tor_mem_is_zero(buf, 10));
+
+  /* Test inet_ntoa */
   {
     char tmpbuf[INET_NTOA_BUF_LEN];
     struct in_addr in;
@@ -785,6 +833,58 @@ test_util(void)
   test_streq("\"abcd\"", escaped("abcd"));
   test_streq("\"\\\\\\n\\r\\t\\\"\\'\"", escaped("\\\n\r\t\"\'"));
   test_streq("\"z\\001abc\\277d\"", escaped("z\001abc\277d"));
+  test_assert(NULL == escaped(NULL));
+
+  /* Test strndup and memdup */
+  {
+    const char *s = "abcdefghijklmnopqrstuvwxyz";
+    cp = tor_strndup(s, 30);
+    test_streq(cp, s); /* same string, */
+    test_neq(cp, s); /* but different pointers. */
+    tor_free(cp);
+
+    cp = tor_strndup(s, 5);
+    test_streq(cp, "abcde");
+    tor_free(cp);
+
+    s = "a\0b\0c\0d\0e\0";
+    cp = tor_memdup(s,10);
+    test_memeq(cp, s, 10); /* same ram, */
+    test_neq(cp, s); /* but different pointers. */
+    tor_free(cp);
+  }
+
+  /* Test str-foo functions */
+  cp = tor_strdup("abcdef");
+  test_assert(tor_strisnonupper(cp));
+  cp[3] = 'D';
+  test_assert(!tor_strisnonupper(cp));
+  tor_strupper(cp);
+  test_streq(cp, "ABCDEF");
+  test_assert(tor_strisprint(cp));
+  cp[3] = 3;
+  test_assert(!tor_strisprint(cp));
+  tor_free(cp);
+
+  /* Test eat_whitespace. */
+  {
+    const char *s = "  \n a";
+    test_eq_ptr(eat_whitespace(s), s+4);
+    s = "abcd";
+    test_eq_ptr(eat_whitespace(s), s);
+    s = "#xyz\nab";
+    test_eq_ptr(eat_whitespace(s), s+5);
+  }
+
+  /* Test memmem */
+  {
+    const char *haystack = "abcde";
+    tor_assert(!tor_memmem(haystack, 5, "ef", 2));
+    test_eq_ptr(tor_memmem(haystack, 5, "cd", 2), haystack + 2);
+    test_eq_ptr(tor_memmem(haystack, 5, "cde", 3), haystack + 2);
+    haystack = "ababcad";
+    test_eq_ptr(tor_memmem(haystack, 7, "abc", 3), haystack + 2);
+  }
 
   /* Test wrap_string */
   {
@@ -809,6 +909,11 @@ test_util(void)
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_clear(sl);
   }
+
+  /* now make sure time works. */
+  tor_gettimeofday(&end);
+  /* We might've timewarped a little. */
+  test_assert(tv_udiff(&start, &end) >= -5000);
 }
 
 static void
@@ -983,9 +1088,11 @@ test_smartlist(void)
   test_streq(cp, "50,a,canal,man,noon,panama,plan,radar");
   tor_free(cp);
 
-  /* Test string_isin. */
+  /* Test string_isin and isin_case and num_isin */
   test_assert(smartlist_string_isin(sl, "noon"));
   test_assert(!smartlist_string_isin(sl, "noonoon"));
+  test_assert(smartlist_string_isin_case(sl, "nOOn"));
+  test_assert(!smartlist_string_isin_case(sl, "nooNooN"));
   test_assert(smartlist_string_num_isin(sl, 50));
   test_assert(!smartlist_string_num_isin(sl, 60));
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
@@ -1059,6 +1166,85 @@ test_smartlist(void)
   }
 
   smartlist_free(sl);
+}
+
+/* stop threads running at once. */
+static tor_mutex_t *_thread_test_mutex = NULL;
+/* make sure that threads have to run at the same time. */
+static tor_mutex_t *_thread_test_start1 = NULL;
+static tor_mutex_t *_thread_test_start2 = NULL;
+static strmap_t *_thread_test_strmap = NULL;
+
+static void
+_thread_test_func(void* _s)
+{
+  char *s = _s;
+  int i;
+  tor_mutex_t *m;
+  if (!strcmp(s, "thread 1"))
+    m = _thread_test_start1;
+  else
+    m = _thread_test_start2;
+  tor_mutex_acquire(m);
+
+  for (i=0; i<1000; ++i) {
+    tor_mutex_acquire(_thread_test_mutex);
+    strmap_set(_thread_test_strmap, "last to run",
+               (void*)(int)tor_get_thread_id());
+    tor_mutex_release(_thread_test_mutex);
+  }
+  strmap_set(_thread_test_strmap, s, (void*)(int)tor_get_thread_id());
+
+  tor_mutex_release(m);
+
+  spawn_exit();
+}
+
+static void
+test_threads(void)
+{
+  char *s1, *s2;
+  int done = 0;
+#ifndef TOR_IS_MULTITHREADED
+  /* Skip this test if we aren't threading. We should be threading most
+   * everywhere by now. */
+  if (1)
+    return 0;
+#endif
+  _thread_test_mutex = tor_mutex_new();
+  _thread_test_start1 = tor_mutex_new();
+  _thread_test_start2 = tor_mutex_new();
+  _thread_test_strmap = strmap_new();
+  s1 = tor_strdup("thread 1");
+  s2 = tor_strdup("thread 2");
+  tor_mutex_acquire(_thread_test_start1);
+  tor_mutex_acquire(_thread_test_start2);
+  spawn_func(_thread_test_func, s1);
+  spawn_func(_thread_test_func, s2);
+  tor_mutex_release(_thread_test_start2);
+  tor_mutex_release(_thread_test_start1);
+  while (!done) {
+    tor_mutex_acquire(_thread_test_mutex);
+    strmap_assert_ok(_thread_test_strmap);
+    if (strmap_get(_thread_test_strmap, "thread 1") &&
+        strmap_get(_thread_test_strmap, "thread 2"))
+      done = 1;
+    tor_mutex_release(_thread_test_mutex);
+  }
+  tor_mutex_free(_thread_test_mutex);
+
+  /* different thread IDs. */
+  test_neq_ptr(strmap_get(_thread_test_strmap, "thread 1"),
+               strmap_get(_thread_test_strmap, "thread 2"));
+  test_assert(strmap_get(_thread_test_strmap, "thread 1") ==
+              strmap_get(_thread_test_strmap, "last to run") ||
+              strmap_get(_thread_test_strmap, "thread 2") ==
+              strmap_get(_thread_test_strmap, "last to run"));
+
+  strmap_free(_thread_test_strmap, NULL);
+
+  tor_free(s1);
+  tor_free(s2);
 }
 
 static int
@@ -1959,6 +2145,7 @@ main(int c, char**v)
   test_control_formats();
   test_pqueue();
   test_mmap();
+  test_threads();
   puts("\n========================= Onion Skins =====================");
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");

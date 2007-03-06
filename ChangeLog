@@ -6,6 +6,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
   o Minor features (logging):
     - Always prepend "Bug: " to any log message about a bug.
 
+  o Minor features (other):
+    - More unit tests.
+
   o Removed features:
     - Removed support for the old binary "version 0" controller protocol.
       This has been deprecated since 0.1.1, and warnings have been issued
