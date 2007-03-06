@@ -1181,19 +1181,23 @@ _thread_test_func(void* _s)
   char *s = _s;
   int i;
   tor_mutex_t *m;
+  char buf[64];
+  char *cp;
   if (!strcmp(s, "thread 1"))
     m = _thread_test_start1;
   else
     m = _thread_test_start2;
   tor_mutex_acquire(m);
 
+  tor_snprintf(buf, sizeof(buf), "%lu", tor_get_thread_id());
+  cp = tor_strdup(buf);
+
   for (i=0; i<1000; ++i) {
     tor_mutex_acquire(_thread_test_mutex);
-    strmap_set(_thread_test_strmap, "last to run",
-               (void*)(int)tor_get_thread_id());
+    strmap_set(_thread_test_strmap, "last to run", cp);
     tor_mutex_release(_thread_test_mutex);
   }
-  strmap_set(_thread_test_strmap, s, (void*)(int)tor_get_thread_id());
+  strmap_set(_thread_test_strmap, s, tor_strdup(buf));
 
   tor_mutex_release(m);
 
@@ -1234,14 +1238,14 @@ test_threads(void)
   tor_mutex_free(_thread_test_mutex);
 
   /* different thread IDs. */
-  test_neq_ptr(strmap_get(_thread_test_strmap, "thread 1"),
-               strmap_get(_thread_test_strmap, "thread 2"));
-  test_assert(strmap_get(_thread_test_strmap, "thread 1") ==
-              strmap_get(_thread_test_strmap, "last to run") ||
-              strmap_get(_thread_test_strmap, "thread 2") ==
-              strmap_get(_thread_test_strmap, "last to run"));
+  test_assert(strcmp(strmap_get(_thread_test_strmap, "thread 1"),
+                     strmap_get(_thread_test_strmap, "thread 2")));
+  test_assert(!strcmp(strmap_get(_thread_test_strmap, "thread 1"),
+                      strmap_get(_thread_test_strmap, "last to run")) ||
+              !strcmp(strmap_get(_thread_test_strmap, "thread 2"),
+                      strmap_get(_thread_test_strmap, "last to run")));
 
-  strmap_free(_thread_test_strmap, NULL);
+  strmap_free(_thread_test_strmap, _tor_free);
 
   tor_free(s1);
   tor_free(s2);
