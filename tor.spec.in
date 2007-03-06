@@ -122,13 +122,13 @@ Group: System Environment/Daemons
 
 License: BSD-like
 Vendor: R. Dingledine <arma@seul.org>
-Packager: Andrew Lewman <phobos@interloper.org>
+Packager: Andrew Lewman <phobos@rootme.org>
 
 %if %{is_suse}
 Requires: openssl >= 0.9.6
 BuildRequires: openssl-devel >= 0.9.6, rpm >= 4.0, zlib-devel
 %else 
-Requires: openssl >= 0.9.6, libevent >= 1.2
+Requires: openssl >= 0.9.6
 BuildRequires: openssl-devel >= 0.9.6, libevent-devel >= 1.2
 %endif
 %if %{is_fc}
