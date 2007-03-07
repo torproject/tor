@@ -468,7 +468,7 @@ rend_client_desc_here(const char *query)
     } else { /* 404, or fetch didn't get that far */
       log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
                  "unavailable (try again later).", safe_str(query));
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
     }
   }
 }
