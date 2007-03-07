@@ -227,6 +227,6 @@
 #define USING_TWOS_COMPLEMENT
 
 /* Version number of package */
-#define VERSION "0.1.2.9-rc-dev"
+#define VERSION "0.1.2.10-rc"
 
 
