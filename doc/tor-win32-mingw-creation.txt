@@ -80,19 +80,19 @@ Done.
 Stage Four: Download, extract, and patch libevent-1.1b.
 ------------------------------------------------------
 
-Download libevent-1.3a:
+Download libevent-1.3b:
 http://www.monkey.org/~provos/libevent/
 
 Copy the libevent tarball into the "tor-mingw" directory.
 Type "cd tor-mingw"
 
 Extract libevent: 
-Type "tar zxf libevent-1.3a.tar.gz"
+Type "tar zxf libevent-1.3b.tar.gz"
 
 Type "./configure --enable-static --disable-shared"
---------------------libevent 1.3a only---------------------------------------
+--------------------libevent 1.3b only---------------------------------------
 You need to manually edit the Makefile and remove all references to "sample".
-libevent 1.3a won't compile in mingw currently due to issues in event_test.c.
+libevent 1.3b won't compile in mingw currently due to issues in event_test.c.
 Removing the "sample" directory and all references to it in Makefile create a
 completely valid libevent library.
 -----------------------------------------------------------------------------
