@@ -1,12 +1,13 @@
-tor (0.1.2.8-beta-1) XX; urgency=low
+tor (0.1.2.10-rc-1) experimental; urgency=low
 
+  * New upstream version.
   * Change recommends on privoxy to privoxy | polipo (>= 1) (closes: #413728).
 
- -- Peter Palfrader <weasel@debian.org>  Wed,  7 Mar 2007 10:19:54 +0100
+ -- Peter Palfrader <weasel@debian.org>  Fri,  9 Mar 2007 10:57:40 +0100
 
 tor (0.1.2.8-beta-1) experimental; urgency=low
 
-  *  upstream version.
+  * New upstream version.
 
  -- Peter Palfrader <weasel@debian.org>  Mon, 26 Feb 2007 11:50:49 +0100
 
