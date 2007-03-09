@@ -116,29 +116,3 @@ Migration:
        * Have routers stop including bandwidth info in their router
          descriptors.
 
-Discussion:
-
-  Solution 4 seems like a nice plan: in many cases, the external services
-  that use read-history and write-history are directory authorities
-  themselves, so they just use their local opinion.
-
-  Roger thinks we should go with the long/short descriptor plan, along
-  with solution 4. We don't want to just upload a bandwidth message,
-  because that involves new data structures for every new piece of
-  information we decide to upload. I suspect we'll realize once this
-  is deployed that there is other info we want to put in the long
-  descriptors.
-
-  This won't solve the future sanitized GeoIP uploading question, but
-  who knows where we'll actually want to send that data, and whether
-  we'll want to handle it with the same privacy constraints as this data,
-  so let's not try to solve that yet.
-
-  However, we may still need some basic reconciling algorithms between
-  authorities -- otherwise, if a router uploads to four authorities
-  and fails to reach the fifth, then that fifth will never have the new
-  descriptor. This will mean that the best strategy for external tools
-  is to fetch full concatenated-style long-descriptor lists from every
-  single authority, and merge them locally. So each authority should
-  periodically fetch the list from the others and take the new ones.
-
