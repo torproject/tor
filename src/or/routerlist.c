@@ -125,7 +125,7 @@ router_reload_networkstatus(void)
   if (!networkstatus_list)
     networkstatus_list = smartlist_create();
 
-  tor_snprintf(filename,sizeof(filename),"%s/cached-status",
+  tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-status",
                get_options()->DataDirectory);
   entries = tor_listdir(filename);
   SMARTLIST_FOREACH(entries, const char *, fn, {
@@ -136,7 +136,8 @@ router_reload_networkstatus(void)
                  "Skipping cached-status file with unexpected name \"%s\"",fn);
         continue;
       }
-      tor_snprintf(filename,sizeof(filename),"%s/cached-status/%s",
+      tor_snprintf(filename,sizeof(filename),
+                   "%s"PATH_SEPARATOR"cached-status"PATH_SEPARATOR"%s",
                    get_options()->DataDirectory, fn);
       s = read_file_to_str(filename, 0, &st);
       if (s) {
@@ -196,7 +197,7 @@ router_append_to_journal(signed_descriptor_t *desc)
   const char *body = signed_descriptor_get_body(desc);
   size_t len = desc->signed_descriptor_len;
 
-  tor_snprintf(fname, fname_len, "%s/cached-routers.new",
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers.new",
                options->DataDirectory);
 
   tor_assert(len == strlen(body));
@@ -264,8 +265,9 @@ router_rebuild_store(int force)
   fname_len = strlen(options->DataDirectory)+32;
   fname = tor_malloc(fname_len);
   fname_tmp = tor_malloc(fname_len);
-  tor_snprintf(fname, fname_len, "%s/cached-routers", options->DataDirectory);
-  tor_snprintf(fname_tmp, fname_len, "%s/cached-routers.tmp",
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers",
+               options->DataDirectory);
+  tor_snprintf(fname_tmp, fname_len, "%s"PATH_SEPARATOR"cached-routers.tmp",
                options->DataDirectory);
 
   chunk_list = smartlist_create();
@@ -331,7 +333,7 @@ router_rebuild_store(int force)
     });
   }
 
-  tor_snprintf(fname, fname_len, "%s/cached-routers.new",
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers.new",
                options->DataDirectory);
 
   write_str_to_file(fname, "", 1);
@@ -364,7 +366,8 @@ router_reload_router_list(void)
 
   router_journal_len = router_store_len = 0;
 
-  tor_snprintf(fname, fname_len, "%s/cached-routers", options->DataDirectory);
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers",
+               options->DataDirectory);
 
   if (routerlist->mmap_descriptors) /* get rid of it first */
     tor_munmap_file(routerlist->mmap_descriptors);
@@ -376,7 +379,7 @@ router_reload_router_list(void)
                                     SAVED_IN_CACHE, NULL);
   }
 
-  tor_snprintf(fname, fname_len, "%s/cached-routers.new",
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers.new",
                options->DataDirectory);
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, NULL);
@@ -2352,7 +2355,8 @@ networkstatus_get_cache_filename(const char *identity_digest)
   char fp[HEX_DIGEST_LEN+1];
   char *fn = tor_malloc(len+1);
   base16_encode(fp, HEX_DIGEST_LEN+1, identity_digest, DIGEST_LEN);
-  tor_snprintf(fn, len, "%s/cached-status/%s",datadir,fp);
+  tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status"PATH_SEPARATOR"%s",
+               datadir,fp);
   return fn;
 }
 

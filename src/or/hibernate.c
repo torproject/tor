@@ -588,7 +588,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
                U64_PRINTF_ARG(ROUND_UP(n_bytes_written_in_interval)),
                (unsigned long)n_seconds_active_in_interval,
                (unsigned long)expected);
-  tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
+  tor_snprintf(fname, sizeof(fname), "%s"PATH_SEPARATOR"bw_accounting",
                get_options()->DataDirectory);
   if (!get_options()->AvoidDiskWrites || (last_recorded + 3600 < now)) {
     r = write_str_to_file(fname, buf, 0);

@@ -21,6 +21,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       since 0.1.2.2-alpha, and all the servers seem to be using the new
       eventdns code.
 
+  o Minor bufixes (portability):
+    - Even though windows is equally happy with / and \ as path separators,
+      try to use \ consistently on windows and / consistently on unix: it
+      makes the log messages nicer.
+
 
 Changes in version 0.1.2.10-rc - 2007-03-07
   o Major bugfixes (Windows):

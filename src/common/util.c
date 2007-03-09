@@ -1549,14 +1549,14 @@ expand_filename(const char *filename)
     }
     tor_assert(home);
     /* Remove trailing slash. */
-    if (strlen(home)>1 && !strcmpend(home,"/")) {
+    if (strlen(home)>1 && !strcmpend(home,PATH_SEPARATOR)) {
       home[strlen(home)-1] = '\0';
     }
     /* Plus one for /, plus one for NUL.
      * Round up to 16 in case we can't do math. */
     len = strlen(home)+strlen(rest)+16;
     result = tor_malloc(len);
-    tor_snprintf(result,len,"%s/%s",home,rest?rest:"");
+    tor_snprintf(result,len,"%s"PATH_SEPARATOR"%s",home,rest?rest:"");
     tor_free(home);
     return result;
   } else {

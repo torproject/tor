@@ -344,7 +344,8 @@ rend_service_load_keys(void)
 
     /* Load key */
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
-        strlcat(fname,"/private_key",sizeof(fname)) >= sizeof(fname)) {
+        strlcat(fname,PATH_SEPARATOR"private_key",sizeof(fname))
+                                                  >= sizeof(fname)) {
       log_warn(LD_CONFIG, "Directory name too long to store key file: \"%s\".",
                s->directory);
       return -1;
@@ -363,7 +364,8 @@ rend_service_load_keys(void)
       return -1;
     }
     if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
-        strlcat(fname,"/hostname",sizeof(fname)) >= sizeof(fname)) {
+        strlcat(fname,PATH_SEPARATOR"hostname",sizeof(fname))
+                                                  >= sizeof(fname)) {
       log_warn(LD_CONFIG, "Directory name too long to store hostname file:"
                " \"%s\".", s->directory);
       return -1;

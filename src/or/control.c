@@ -3205,7 +3205,7 @@ init_cookie_authentication(int enabled)
     return 0;
   }
 
-  tor_snprintf(fname, sizeof(fname), "%s/control_auth_cookie",
+  tor_snprintf(fname, sizeof(fname), "%s"PATH_SEPARATOR"control_auth_cookie",
                get_options()->DataDirectory);
   crypto_rand(authentication_cookie, AUTHENTICATION_COOKIE_LEN);
   authentication_cookie_is_set = 1;

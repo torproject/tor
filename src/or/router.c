@@ -133,9 +133,11 @@ rotate_onion_key(void)
   or_state_t *state = get_or_state();
   time_t now;
   tor_snprintf(fname,sizeof(fname),
-           "%s/keys/secret_onion_key",get_options()->DataDirectory);
+               "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key",
+               get_options()->DataDirectory);
   tor_snprintf(fname_prev,sizeof(fname_prev),
-           "%s/keys/secret_onion_key.old",get_options()->DataDirectory);
+               "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key.old",
+               get_options()->DataDirectory);
   if (!(prkey = crypto_new_pk_env())) {
     log_err(LD_GENERAL,"Error constructing rotated onion key");
     goto error;
@@ -267,19 +269,21 @@ init_keys(void)
     return -1;
   }
   /* Check the key directory. */
-  tor_snprintf(keydir,sizeof(keydir),"%s/keys", datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s"PATH_SEPARATOR"keys", datadir);
   if (check_private_dir(keydir, CPD_CREATE)) {
     return -1;
   }
 
   /* 1. Read identity key. Make it if none is found. */
-  tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_id_key",datadir);
+  tor_snprintf(keydir,sizeof(keydir),
+               "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_id_key",datadir);
   log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir);
   prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_identity_key(prkey);
   /* 2. Read onion key.  Make it if none is found. */
-  tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key",datadir);
+  tor_snprintf(keydir,sizeof(keydir),
+             "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key",datadir);
   log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir);
   prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
@@ -295,7 +299,8 @@ init_keys(void)
     or_state_mark_dirty(state, options->AvoidDiskWrites ? time(NULL)+3600 : 0);
   }
 
-  tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key.old",datadir);
+  tor_snprintf(keydir,sizeof(keydir),
+         "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key.old",datadir);
   if (file_status(keydir) == FN_FILE) {
     prkey = init_key_from_file(keydir);
     if (prkey)
@@ -330,7 +335,7 @@ init_keys(void)
   }
 
   /* 5. Dump fingerprint to 'fingerprint' */
-  tor_snprintf(keydir,sizeof(keydir),"%s/fingerprint", datadir);
+  tor_snprintf(keydir,sizeof(keydir),"%s"PATH_SEPARATOR"fingerprint", datadir);
   log_info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
   if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 1)<0) {
     log_err(LD_GENERAL,"Error computing fingerprint");

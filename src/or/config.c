@@ -907,7 +907,8 @@ options_act(or_options_t *old_options)
   if (running_tor) {
     len = strlen(options->DataDirectory)+32;
     fn = tor_malloc(len);
-    tor_snprintf(fn, len, "%s/cached-status", options->DataDirectory);
+    tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
+                 options->DataDirectory);
     if (check_private_dir(fn, CPD_CREATE) != 0) {
       log_err(LD_CONFIG,
               "Couldn't access/create private data directory \"%s\"", fn);
@@ -3516,11 +3517,10 @@ normalize_data_directory(or_options_t *options)
       * want. */
      log_warn(LD_CONFIG,
               "Default DataDirectory is \"~/.tor\".  This expands to "
-              "\"%s\", which is probably not what you want.  Using \"%s/tor\" "
-              "instead", fn, LOCALSTATEDIR);
+              "\"%s\", which is probably not what you want.  Using "
+              "\"%s"PATH_SEPARATOR"tor\" instead", fn, LOCALSTATEDIR);
      tor_free(fn);
-     fn = tor_strdup(LOCALSTATEDIR"/tor");
-
+     fn = tor_strdup(LOCALSTATEDIR PATH_SEPARATOR "tor");
    }
    tor_free(options->DataDirectory);
    options->DataDirectory = fn;
@@ -3933,7 +3933,7 @@ get_or_state_fname(void)
   or_options_t *options = get_options();
   size_t len = strlen(options->DataDirectory) + 16;
   fname = tor_malloc(len);
-  tor_snprintf(fname, len, "%s/state", options->DataDirectory);
+  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"state", options->DataDirectory);
   return fname;
 }
 
