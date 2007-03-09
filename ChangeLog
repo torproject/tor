@@ -19,13 +19,15 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       eventdns code.
 
 
-Changes in version 0.1.2.10-rc - 2007-03-??
+Changes in version 0.1.2.10-rc - 2007-03-07
   o Major bugfixes (Windows):
     - Do not load the NT services library functions (which may not exist)
-      just to detect if we're a service trying to shut down.
+      just to detect if we're a service trying to shut down. Now we run
+      on Win98 and friends again.
 
   o Minor bugfixes (other):
     - Clarify a couple of log messages.
+    - Fix a misleading socks5 error number.
 
 
 Changes in version 0.1.2.9-rc - 2007-03-02
