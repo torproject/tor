@@ -5,6 +5,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
 
   o Minor features (logging):
     - Always prepend "Bug: " to any log message about a bug.
+    - Put a platform string (e.g. "Linux i686") in the startup log
+      message, so when people paste just their logs, we know if it's
+      openbsd or windows or what.
 
   o Minor features (other):
     - More unit tests.
