@@ -98,15 +98,17 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define ATTR_PURE __attribute__((pure))
 #define ATTR_MALLOC __attribute__((malloc))
 #define ATTR_NONNULL(x) __attribute__((nonnull x))
-#define PREDICT(exp, val) __builtin_expect((exp), (val))
-#define PREDICT_LIKELY(exp) PREDICT((exp), 1)
-#define PREDICT_UNLIKELY(exp) PREDICT((exp), 0)
+/** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
+ * of <b>exp</b> will probably be true. */
+#define PREDICT_LIKELY(exp) __builtin_expect((exp), 1)
+/** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
+ * of <b>exp</b> will probably be false. */
+#define PREDICT_UNLIKELY(exp) __builtin_expect((exp), 0)
 #else
 #define ATTR_NORETURN
 #define ATTR_PURE
 #define ATTR_MALLOC
 #define ATTR_NONNULL(x)
-#define PREDICT(exp, val) (exp)
 #define PREDICT_LIKELY(exp) (exp)
 #define PREDICT_UNLIKELY(exp) (exp)
 #endif

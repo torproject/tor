@@ -39,17 +39,16 @@
 #error "Sorry; we don't support building with NDEBUG."
 #else
 #ifdef __GNUC__
-/** Macro: evaluate the expression x, which we expect to be false.
- * Used to hint the compiler that a branch won't be taken. */
-#define PREDICT_FALSE(x) PREDICT_UNLIKELY((x) == ((typeof(x)) 0))
+/* Give an int-valued version of !x that won't confuse PREDICT_UNLIKELY. */
+#define IS_FALSE_AS_INT(x) ((x) == ((typeof(x)) 0))
 #else
-#define PREDICT_FALSE(x) !(x)
+#define IS_FALSE_AS_INT(x) !(x)
 #endif
 
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
 #define tor_assert(expr) do {                                           \
-    if (PREDICT_FALSE(expr)) {                                          \
+    if (PREDICT_UNLIKELY(IS_FALSE_AS_INT(expr))) {                      \
       log(LOG_ERR, LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.", \
           _SHORT_FILE_, __LINE__, __func__, #expr);                     \
       fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",      \
