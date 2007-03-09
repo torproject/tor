@@ -38,6 +38,10 @@ Any time:
   - REASON_CONNECTFAILED should include an IP.
   - Spec should incorporate some prose from tor-design to be more readable.
   - Spec when we should rotate which keys
+  - Spec how to publish descriptors less often
+  - Describe pros and cons of non-deterministic path lengths
+  - get rid of the Named flag, or automate it at the dir auth end,
+    or automate it at the client end, or something.
 
   - We should use a variable-length path length by default -- 3 +/- some
     distribution. Need to think harder about allowing values less than 3,
