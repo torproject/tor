@@ -112,8 +112,8 @@ N   . Document transport and natdport
 Things we'd like to do in 0.2.0.x:
   - Proposals:
     - 101: Voting on the Tor Directory System
-    - 104: Long and Short Router Descriptors
-    - 105: Version negotiation for the Tor protocol
+    - 104: Long and Short Router Descriptors (by Jun 1)
+    - 105: Version negotiation for the Tor protocol (finalize by Jun 1)
   - Refactoring:
     - Make resolves no longer use edge_connection_t unless needed.
     - Make cells get buffered on circuit, not on the or_conn.
@@ -130,10 +130,28 @@ Things we'd like to do in 0.2.0.x:
     - Implement TLS shutdown properly when possible.
     - Maybe move NT services into their own module.
   - Features:
+    - Traffic priorities (by Jun 1)
+      - Ability to prioritize own traffic over relayed traffic.
     - Implement a DNS proxy
-    - Bridges.
+    - A better UI for authority ops.
+    - Bridges (rudimentary version) (By Jun 1)
+      - Ability to specify bridges manually
+      - Use bridges to build circuits
+      - Ask all directory questions to bridge via BEGIN_DIR.
+      - Ability to act as dir cache without a dir port.
+      - Bridges publish to bridge authorities
+      - Rudimentary "do not publish networkstatus" option for bridge
+        authorities.
+      - Clients can ask bridge authorities for more bridges.
+      - Fix BEGIN_DIR so that you connect to bridge of which you only
+        know IP (and optionally fingerprint), and then use BEGIN_DIR to learn
+        more about it.
+    - Bridges (not necessarily by Jun 1)
+      - Clients can ask bridge authorities for updates on known bridges.
+      - More TLS normalization work: make Tor less easily
+        fingerprinted. (Researched by Jun 1)
     - Let controller set router flags for authority to transmit, and for
-       client to use.
+      client to use.
     - Support relaying streams to ipv6.
     - Let servers decide to support BEGIN_DIR but not DirPort.
   - Blocking
@@ -141,6 +159,8 @@ Things we'd like to do in 0.2.0.x:
       acting like an HTTPS server.
   o Deprecations:
     o Remove v0 control protocol.
+  - Packaging:
+    - Can we switch to polipo? (Jun 1)
 
 
 Deferred from 0.1.2.x:
