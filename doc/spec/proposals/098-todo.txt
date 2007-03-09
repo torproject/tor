@@ -32,6 +32,9 @@ For protocol version 2:
   - SHA1 is showing its age
   - Not being able to upgrade ciphersuites or increase key lengths is
     lame.
+  - Paul has some ideas about circuit creation; read his PET paper once it's
+    out.
+  - Allow more TLS ciphersuites.
 
 Any time:
 
