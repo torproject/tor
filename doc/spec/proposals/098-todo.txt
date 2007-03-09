@@ -38,6 +38,17 @@ For protocol version 2:
 
 Any time:
 
+  - Some ideas for revising the directory protocol:
+    - Should we also look into a "delta since last network-status
+      checkpoint" scheme, to reduce overhead further?
+    - Extend the "r" line in network-status to give a set of buckets (say,
+      comma-separated) for that router.
+      - Buckets are deterministic based on IP address.
+      - Then clients can choose a bucket (or set of buckets) to
+        download and use.
+    - We need a way for the authorities to declare that nodes are in a
+      family.  Also, it kinda sucks that family declarations use O(N^2) space
+      in the descriptors.
   - REASON_CONNECTFAILED should include an IP.
   - Spec should incorporate some prose from tor-design to be more readable.
   - Spec when we should rotate which keys
