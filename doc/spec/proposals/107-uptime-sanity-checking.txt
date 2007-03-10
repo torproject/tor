@@ -4,12 +4,12 @@ Version:
 Last-Modified:
 Author: Kevin Bauer & Damon McCoy
 Created: 8-March-2007
-Status: Open
+Status: Closed
 
 Overview:
 
    This document describes how to cap the uptime that is used when computing
-   which routers are maked as stable such that highly stable routers cannot
+   which routers are marked as stable such that highly stable routers cannot
    be displaced by malicious routers that report extremely high uptime
    values.
 
@@ -33,7 +33,7 @@ Specification:
    "Stable" -- A router is 'Stable' if it is running, valid, not
    hibernating, and either its uptime is at least the median uptime for
    known running, valid, non-hibernating routers, or its uptime is at
-   least one month. Routers are never called stable if they are running
+   least 30 days. Routers are never called stable if they are running
    a version of Tor known to drop circuits stupidly.  (0.1.1.10-alpha
    through 0.1.1.16-rc are stupid this way.)
 
@@ -47,8 +47,9 @@ Implementation:
 
 Discussion:
 
-   Initially, this proposal set the maximum at 50 days, not 30; the 30 day
+   Initially, this proposal set the maximum at 60 days, not 30; the 30 day
    limit and spec wording was suggested by Roger in an or-dev post on 9 March
    2007.
 
    This proposal also led to 108-mtbf-based-stability.txt
+
