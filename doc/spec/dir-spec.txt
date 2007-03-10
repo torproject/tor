@@ -441,10 +441,12 @@ $Id$
    "Running" -- A router is 'Running' if the authority managed to connect to
    it successfully within the last 30 minutes.
 
-   "Stable" -- A router is 'Stable' if its uptime is above median for known
-   running, valid routers, and it's running a version of Tor not known to
-   drop circuits stupidly.  (0.1.1.10-alpha through 0.1.1.16-rc are stupid
-   this way.)
+   "Stable" -- A router is 'Stable' if it is running, valid, not
+   hibernating, and either its uptime is at least the median uptime for
+   known running, valid, non-hibernating routers, or its uptime is at
+   least 30 days. Routers are never called stable if they are running
+   a version of Tor known to drop circuits stupidly.  (0.1.1.10-alpha
+   through 0.1.1.16-rc are stupid this way.)
 
    "Fast" -- A router is 'Fast' if its bandwidth is in the top 7/8ths for
    known running, valid routers.

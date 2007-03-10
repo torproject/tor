@@ -1,4 +1,10 @@
 Changes in version 0.2.0.1-alpha - 2007-??-??
+  o Security fixes:
+    - Directory authorities now call routers stable if they have an
+      uptime of at least 30 days, even if that's not the median uptime
+      in the network. Implements proposal 1xx, suggested by Kevin Bauer
+      and Damon McCoy.
+
   o Minor features (build):
     - Make autoconf search for libevent and openssl consistently.
     - Update deprecated macros in configure.in

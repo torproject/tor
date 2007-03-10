@@ -1364,6 +1364,13 @@ should_generate_v2_networkstatus(void)
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }
 
+/** If a router's uptime is at least this value, then it is always
+ * considered stable, regardless of the rest of the network. This
+ * way we resist attacks where an attacker doubles the size of the
+ * network using allegedly high-uptime nodes, displacing all the
+ * current guards. */
+#define UPTIME_TO_GUARANTEE_STABLE (3600*24*30)
+
 /* Thresholds for server performance: set by
  * dirserv_compute_performance_thresholds, and used by
  * generate_v2_networkstatus */
@@ -1395,9 +1402,12 @@ dirserv_thinks_router_is_unreliable(time_t now,
                                     routerinfo_t *router,
                                     int need_uptime, int need_capacity)
 {
-  if (need_uptime &&
-      (unsigned)real_uptime(router, now) < stable_uptime)
-    return 1;
+  if (need_uptime) {
+    int uptime = real_uptime(router, now);
+    if ((unsigned)uptime < stable_uptime &&
+        (unsigned)uptime < UPTIME_TO_GUARANTEE_STABLE)
+      return 1;
+  }
   if (need_capacity &&
       router_get_advertised_bandwidth(router) < fast_bandwidth)
     return 1;
