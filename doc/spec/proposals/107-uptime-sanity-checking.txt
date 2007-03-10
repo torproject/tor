@@ -2,7 +2,7 @@ Filename: 107-uptime-sanity-checking.txt
 Title: Uptime Sanity Checking
 Version:
 Last-Modified:
-Author: Kevin Buaer and Damon McCoy
+Author: Kevin Bauer & Damon McCoy
 Created: 8-March-2007
 Status: Open
 
@@ -28,10 +28,14 @@ Security implications:
 
 Specification:
 
-   We propose that uptime be capped at two months.  Currently there are
-   approximetly 50 nodes with this amount of uptime, and the average uptime
-   is around 9 days. This cap would prevent these 50 nodes from being
-   displaced by an attacker.
+  So we could patch Section 3.1 of dir-spec.txt to say:
+
+   "Stable" -- A router is 'Stable' if it is running, valid, not
+   hibernating, and either its uptime is at least the median uptime for
+   known running, valid, non-hibernating routers, or its uptime is at
+   least one month. Routers are never called stable if they are running
+   a version of Tor known to drop circuits stupidly.  (0.1.1.10-alpha
+   through 0.1.1.16-rc are stupid this way.)
 
 Compatibility:
 
@@ -39,10 +43,12 @@ Compatibility:
 
 Implementation:
 
-   #define MAX_BELIEVABLE_UPTIME 60*24*60*60
-  dirserv.c
-  1448: *up = (uint32_t) real_uptime(ri, now);
-        if(*up > MAX_BELIEVABLE_UPTIME) {
-          *up = MAX_BELIEVABLE_UPTIME;
-        }
+   Implemented and merged into dir-spec in 0.2.0.0-alpha-dev (r9788).
 
+Discussion:
+
+   Initially, this proposal set the maximum at 50 days, not 30; the 30 day
+   limit and spec wording was suggested by Roger in an or-dev post on 9 March
+   2007.
+
+   This proposal also led to 108-mtbf-based-uptime.txt
