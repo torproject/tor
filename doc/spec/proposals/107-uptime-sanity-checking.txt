@@ -1,0 +1,48 @@
+Filename: 107-uptime-sanity-checking.txt
+Title: Uptime Sanity Checking
+Version:
+Last-Modified:
+Author: Kevin Buaer and Damon McCoy
+Created: 8-March-2007
+Status: Open
+
+Overview:
+
+   This document describes how to cap the uptime that is used when computing
+   which routers are maked as stable such that highly stable routers cannot
+   be displaced by malicious routers that report extremely high uptime
+   values.
+
+   This is similar to how bandwidth is capped at 1.5MB/s.
+
+Motivation:
+
+   It has been pointed out that an attacker can displace all stable nodes and
+   entry guard nodes by reporting high uptimes. This is an easy fix that will
+   prevent highly stable nodes from being displaced.
+
+Security implications:
+
+   It should decrease the effectiveness of routing attacks that report high
+   uptimes while not impacting the normal routing algorithms.
+
+Specification:
+
+   We propose that uptime be capped at two months.  Currently there are
+   approximetly 50 nodes with this amount of uptime, and the average uptime
+   is around 9 days. This cap would prevent these 50 nodes from being
+   displaced by an attacker.
+
+Compatibility:
+
+   There should be no compatiblity issues due to uptime capping.
+
+Implementation:
+
+   #define MAX_BELIEVABLE_UPTIME 60*24*60*60
+  dirserv.c
+  1448: *up = (uint32_t) real_uptime(ri, now);
+        if(*up > MAX_BELIEVABLE_UPTIME) {
+          *up = MAX_BELIEVABLE_UPTIME;
+        }
+

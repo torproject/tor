@@ -25,4 +25,4 @@ Proposals by number:
 104  Long and Short Router Descriptors [OPEN]
 105  Version negotiation for the Tor protocol [OPEN]
 106  Checking fewer things during TLS handshakes [CLOSED]
-
+107  Uptime Sanity Checking [OPEN]
