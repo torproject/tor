@@ -51,4 +51,4 @@ Discussion:
    limit and spec wording was suggested by Roger in an or-dev post on 9 March
    2007.
 
-   This proposal also led to 108-mtbf-based-uptime.txt
+   This proposal also led to 108-mtbf-based-stability.txt
