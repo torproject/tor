@@ -229,19 +229,6 @@ AC_CHECK_HEADERS(unistd.h string.h signal.h ctype.h sys/stat.h sys/types.h fcntl
 
 AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h)
 
-AC_CHECK_HEADERS(event.h, , AC_MSG_ERROR(Libevent header (event.h) not found. Tor requires libevent to build.),
-[#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#else
-  struct timeval {
-    long tv_sec;
-    long tv_usec;
- };
-#endif])
-
 AC_CHECK_HEADERS(zlib.h, , AC_MSG_ERROR(Zlib header (zlib.h) not found. Tor requires zlib to build. You may need to install a zlib development package.))
 
 dnl These headers are not essential

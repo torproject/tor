@@ -4,16 +4,6 @@ dnl Copyright (c) 2001-2004, Roger Dingledine
 dnl Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson
 dnl See LICENSE for licensing information
 
-dnl TODO
-dnl  - Stop requiring gethostbyname_r entirely when we're building with
-dnl    eventdns?
-dnl  - Remove redundant event.h check.
-dnl  - Make the "no longe strictly accurate" message accurate.
-dnl  - Tell the user what -dev package to install based on OS.
-dnl  - Detect correct version of library.
-dnl  - After merge:
-dnl     Run autoupdate
-
 AC_DEFUN([TOR_EXTEND_CODEPATH],
 [
   if test -d "$1/lib"; then
@@ -30,8 +20,8 @@ AC_DEFUN([TOR_EXTEND_CODEPATH],
 
 dnl Look for a library, and its associated includes, and how to link
 dnl against it.
-dnl 
-dnl TOR_SEARCH_LIBRARY(1:libname, 2:withlocation, 3:linkargs, 4:headers, 
+dnl
+dnl TOR_SEARCH_LIBRARY(1:libname, 2:withlocation, 3:linkargs, 4:headers,
 dnl                    5:prototype,
 dnl                    6:code, 7:optionname, 8:searchextra)
 
@@ -42,7 +32,7 @@ tor_saved_CPPFLAGS="$CPPFLAGS"
 AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
   tor_$1_dir_found=no
   tor_$1_any_linkable=no
-  
+
   for tor_trydir in "$2" "(system)" "$prefix" /usr/local /usr/pkg $8; do
     LDFLAGS="$tor_saved_LDFLAGS"
     LIBS="$tor_saved_LIBS $3"
@@ -63,12 +53,14 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
       TOR_EXTEND_CODEPATH($tor_trydir)
     fi
 
-    # Can we link against (but not necessarily compile) the binary?
+    # Can we link against (but not necessarily run, or find the headers for)
+    # the binary?
     AC_LINK_IFELSE(AC_LANG_PROGRAM([$5], [$6]),
                    [linkable=yes], [linkable=no])
 
     if test $linkable = yes; then
       tor_$1_any_linkable=yes
+      # Okay, we can link against it.  Can we find the headers?
       AC_COMPILE_IFELSE(AC_LANG_PROGRAM([$4], [$6]),
                         [buildable=yes], [buildable=no])
       if test $buildable = yes; then
@@ -132,5 +124,3 @@ fi # cross-compile
 
 ]) dnl end defun
 
-#XXXX Check for right version
-#XXXX accept list of search paths as options

@@ -113,11 +113,7 @@
 #define snprintf _snprintf
 #endif
 
-#ifdef HAVE_EVENT_H
 #include <event.h>
-#else
-#error "Tor requires libevent to build."
-#endif
 
 #include "../common/crypto.h"
 #include "../common/tortls.h"
