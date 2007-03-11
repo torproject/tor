@@ -1592,7 +1592,7 @@ _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 
 /** Insert an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
  * as needed.  There must be no previous member of <b>rl</b> with the same
- * identity giest as <b>ri</b>: If there is, call routerlist_replace
+ * identity digest as <b>ri</b>: If there is, call routerlist_replace
  * instead.
  */
 static void
