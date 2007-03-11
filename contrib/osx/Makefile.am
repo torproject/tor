@@ -8,5 +8,4 @@ EXTRA_DIST = PrivoxyConfDesc.plist PrivoxyConfInfo.plist          \
     TorInfo.plist.in TorStartupDesc.plist.in TorStartupInfo.plist \
     package.sh privoxy.config TorPostflight addsysuser            \
     Tor_Uninstaller.applescript uninstall_tor_bundle.sh           \
-    package_list.txt tor_logo.gif                                 \
-    TorPreFlight
+    package_list.txt tor_logo.gif TorPreFlight

@@ -12,7 +12,7 @@ TORUSER=_tor
 TORGROUP=daemon
 TARGET=$2/Library/Tor
 TORDIR=$TARGET/var/lib/tor
-LOGDIR=$TARGET/var/log/tor
+LOGFILE=/var/log/tor.log
 
 # Check defaults for TARGET
 if [ "$TARGET" == "//Library/Tor" ]; then
@@ -26,16 +26,13 @@ $ADDSYSUSER $TORUSER "Tor System user" $TORDIR
 if [ ! -d $TORDIR ]; then
   mkdir -p $TORDIR
 fi
-if [ ! -d $LOGDIR ]; then
-  mkdir -p $LOGDIR
-fi
 # Check its permissions.
 chown $TORUSER $TORDIR
 chgrp daemon $TORDIR
 chmod 700 $TORDIR
-chown $TORUSER $LOGDIR
-chgrp daemon $LOGDIR
-chmod 700 $LOGDIR
+chown $TORUSER $LOGFILE
+chgrp daemon $LOGFILE
+chmod 660 $LOGFILE
 
 # Create the configuration file only if there wasn't one already.
 if [ ! -f $TARGET/torrc ]; then
@@ -57,12 +54,6 @@ cd /usr/share/man/man1
 MAN1=$TARGET/man/man1
 ln -sf $MAN1/*.1 .
 
-if [ ! -e /var/log/tor -o -L /var/log/tor ]; then
-  cd /var/log
-  rm -f tor
-  ln -sf $LOGDIR tor
-fi
-
 if [ -d /Library/StartupItems/Privoxy ]; then
   find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel
 fi
@@ -75,12 +66,12 @@ fi
 # Copy Uninstaller
 if [ -f $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.applescript ]; then 
    cp $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.applescript $TARGET/Tor_Uninstaller.applescript
-   chmod 755 $TARGET/Tor_Uninstaller.applescript
+   chmod 555 $TARGET/Tor_Uninstaller.applescript
 fi
 
 if [ -f $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh ]; then
    cp $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh $TARGET/uninstall_tor_bundle.sh
-   chmod 755 $TARGET/uninstall_tor_bundle.sh
+   chmod 555 $TARGET/uninstall_tor_bundle.sh
 fi
 
 if [ -f $PACKAGE_PATH/Contents/Resources/package_list.txt ]; then
