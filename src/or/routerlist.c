@@ -1709,7 +1709,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   }
   ri_tmp = digestmap_set(rl->identity_map,
                          ri_new->cache_info.identity_digest, ri_new);
-  tor_assert(!ri_tmp);
+  tor_assert(!ri_tmp || ri_tmp == ri_old);
   digestmap_set(rl->desc_digest_map,
           ri_new->cache_info.signed_descriptor_digest, &(ri_new->cache_info));
 
