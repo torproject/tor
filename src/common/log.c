@@ -25,11 +25,7 @@ const char log_c_id[] = "$Id$";
 #include "./util.h"
 #include "./log.h"
 
-#ifdef HAVE_EVENT_H
 #include <event.h>
-#else
-#error "Tor requires libevent to build."
-#endif
 
 #define TRUNCATED_STR "[...truncated]"
 #define TRUNCATED_STR_LEN 14
