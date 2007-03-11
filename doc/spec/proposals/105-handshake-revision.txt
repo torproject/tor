@@ -22,7 +22,7 @@ Motivation: Tor versions
      - All changes must be backward compatible.
      - It's okay to add new cell types, if they would be ignored by previous
        versions of Tor.
-     - It's okay to add new data elements to cells, if they would have been
+     - It's okay to add new data elements to cells, if they would be
        ignored by previous versions of Tor.
      - For forward compatibility, Tor must ignore cell types it doesn't
        recognize, and ignore data in those cells it doesn't expect.
@@ -60,7 +60,7 @@ Motivation: Preventing MITM attacks
    contents of a communication.  It does not, however, prevent such an
    attacker from observing timing information.  Since timing attacks are some
    of the most effective against low-latency anonymity nets like Tor, we
-   should take more care to make sure that once we're not only talking to who
+   should take more care to make sure that we're not only talking to who
    we think we're talking to, but that we're using the network path we
    believe we're using.
 
@@ -71,8 +71,8 @@ Motivation: Signed clock information
    directory information, and check the Date header--but this is not
    authenticated, and hence subject to modification on the wire.  Using
    BEGIN_DIR to create an authenticated directory stream through an existing
-   circuit is better, but only works when the other party serves directory
-   information.
+   circuit is better, but that's an extra step and it might be nicer to
+   learn the information in the course of the regular protocol.
 
 Proposal:
 
@@ -101,7 +101,7 @@ Proposal:
 
    Though versioning the protocol will make it easier to maintain backward
    compatibility with older versions of Tor, we will nevertheless continue to
-   periodically drop support for older protocol,
+   periodically drop support for older protocols,
       - to keep the implementation from growing without bound,
       - to limit the maintenance burden of patching bugs in obsolete Tors,
       - to limit the testing burden of verifying that many old protocol
@@ -112,7 +112,8 @@ Proposal:
    The Tor protocol as implemented through the 0.1.2.x Tor series will be
    called "version 1" in its link protocol and "version 1" in its relay
    protocol.  Versions of the Tor protocol so old as to be incompatible with
-   Tor 0.1.2.x
+   Tor 0.1.2.x can be considered to be version 0 of each, and are not
+   supported.
 
 2.1. VERSIONS cells
 
@@ -120,17 +121,18 @@ Proposal:
    VERSIONS cell before sending any other cells.  (But see below.)
 
          NumVersions          [1 byte]
-         Versions               [NumVersions bytes]
+         Versions             [NumVersions bytes]
 
    "Versions" is a sequence of NumVersions link connection protocol versions,
    each one byte long.  Parties should list all of the versions which they
    are able and willing to support.  Parties can only communicate if they
    have some connection protocol version in common.
 
-   Version 0.1.x.y-alpha and earlier don't understand VERSIONS cells,
+   Version 0.2.0.x-alpha and earlier don't understand VERSIONS cells,
    and therefore don't support version negotiation.  Thus, waiting until
    the other side has sent a VERSIONS cell won't work for these servers:
-   if they send no cells back, it is impossible to tell whether they
+   if the other side sends no cells back, it is impossible to tell
+   whether they
    have sent a VERSIONS cell that has been stalled, or whether they have
    dropped our own VERSIONS cell as unrecognized.  Thus, immediately after
    a TLS connection has been established, the parties check whether the
@@ -145,13 +147,13 @@ Proposal:
 
    Implementations MUST discard VERSIONS cells that are not the first
    recognized cells sent on a connection.
- 
+
    The VERSIONS cell must be sent as a v1 cell (2 bytes of circuitID, 1
-   byte of command, 590 bytes of payload).
+   byte of command, 509 bytes of payload).
 
 2.2. MITM-prevention and time checking
 
-   If we negotiate a v2 connection or higher, the first cell we send SHOULD
+   If we negotiate a v2 connection or higher, the second cell we send SHOULD
    be a NETINFO cell.  Implementations SHOULD NOT send NETINFO cells at other
    times.
 
@@ -161,18 +163,20 @@ Proposal:
          Other OR's address     [variable]
 
    Timestamp is the OR's current Unix time, in seconds since the epoch.  If
-   an implementation receives time values from many validated ORs that
+   an implementation receives time values from many ORs that
    indicate that its clock is skewed, it SHOULD try to warn the
-   administrator.
+   administrator. (We leave the definition of 'many' intentionally vague
+   for now.)
 
-   Each address contains Type/Length/Value as used in Section 6.4.  The first
-   address is the address of the interface the party sending the VERSIONS cell
+   Each address contains Type/Length/Value as used in Section 6.4 of
+   tor-spec.txt.  The first address is the address of the interface the
+   party sending the NETINFO cell
    used to connect to or accept connections from the other -- we include it
    to block a man-in-the-middle attack on TLS that lets an attacker bounce
    traffic through his own computers to enable timing and packet-counting
    attacks.
 
-   The second address is the one that the party sending the VERSIONS cell
+   The second address is the one that the party sending the NETINFO cell
    believes the other has -- it can be used to learn what your IP address
    is if you have no other hints.
 
@@ -194,8 +198,8 @@ Discussion: Bytes per version, versions per cell
 
    Nevertheless, here are two ways we could support more versions:
      - Change the version count to a two-byte field that counts the number of
-       _bytes_ used, and use a UTF8-style encoding Versions 0 through 127
-       take one byte to encode; versions 128 through 2047 take two bytes to
+       _bytes_ used, and use a UTF8-style encoding: versions 0 through 127
+       take one byte to encode, versions 128 through 2047 take two bytes to
        encode, and so on.  We wouldn't need to parse any version higher than
        127 right now, since all bytes used to encode higher versions would
        have their high bit set.
@@ -206,7 +210,7 @@ Discussion: Bytes per version, versions per cell
      - Decide that if we need to support more versions, we can add a
        MOREVERSIONS cell that gets sent before the VERSIONS cell.  The spec
        above requires Tors to ignore unrecognized cell types that they get
-       before the first VERSIONS cell, and still allow version negotiation to
+       before the first VERSIONS cell, and still allows version negotiation to
        succeed.
 
 Discussion: Reducing round-trips
@@ -225,7 +229,7 @@ Discussion: Reducing round-trips
    Of course, we'd need to be careful about using a feature like this:
      - We don't want to include things that are expensive to compute,
        like PK signatures or proof-of-work.
-     - We don't want to speculate as a mobile client it will leak our
+     - We don't want to speculate as a mobile client: it may leak our
        experience with the server in question.
 
 Discussion: Advertising versions in routerdescs and networkstatuses.
@@ -240,8 +244,8 @@ Security issues:
    version, it will get a disproportionate amount of traffic from clients who
    prefer that version.  We can mitigate this somewhat as follows:
 
-     - Do not have clients prefer any protocol version by default until that
-       version is widespread.
+     - Do not have clients prefer any protocol version by default
+       until that version is widespread.
 
      - Do not multiply protocol versions needlessly.
 
@@ -251,5 +255,4 @@ Security issues:
      - Disrecommend very old/unpopular versions of Tor via the directory
        authorities' RecommmendedVersions mechanism, even if it is still
        technically possible to use them.
-
 
