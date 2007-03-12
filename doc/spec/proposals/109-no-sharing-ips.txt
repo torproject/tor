@@ -1,0 +1,77 @@
+Filename: 109-no-sharing-ips.txt
+Title: No more than one server per IP address.
+Version:
+Last-Modified:
+Author: Kevin Bauer & Damon McCoy
+Created: 9-March-2007
+Status: Open
+
+Overview:
+  This document describes a solution to a Sybil attack vulnerability in the
+  directory servers. Currently, it is possible for a single IP address to
+  host an arbitrarily high number of Tor routers. We propose that the
+  directory servers limit the number of Tor routers that may be registered at
+  a particular IP address to some small (fixed) number, perhaps just one Tor
+  router per IP address.
+
+  While Tor never uses more than one server from a given /16 in the same
+  circuit, an attacker with multiple servers in the same place is still
+  dangerous because he can get around the per-server bandwidth cap that is
+  designed to prevent a single server from attracting too much of the overall
+  traffic.
+
+Motivation:
+  Since it is possible for an attacker to register an arbitrarily large
+  number of Tor routers, it is possible for malicious parties to do this to
+  as part of a traffic analysis attack.
+
+Security implications:
+  This countermeasure will increase the number of IP addresses that an
+  attacker must control in order to carry out traffic analysis.
+
+Specification:
+  We propose that the directory servers check if an incoming Tor router IP
+  address is already registered under another router. If this is the case,
+  then prevent this router from joining the network.
+
+Compatibility:
+
+  Upon inspection of a directory server, we found that the following IP
+  addresses have more than one Tor router:
+
+  Scruples    68.5.113.81     ip68-5-113-81.oc.oc.cox.net     443
+  WiseUp      68.5.113.81     ip68-5-113-81.oc.oc.cox.net     9001
+  Unnamed     62.1.196.71     pc01-megabyte-net-arkadiou.megabyte.gr  9001
+  Unnamed     62.1.196.71     pc01-megabyte-net-arkadiou.megabyte.gr  9001
+  Unnamed     62.1.196.71     pc01-megabyte-net-arkadiou.megabyte.gr  9001
+  aurel       85.180.62.138   e180062138.adsl.alicedsl.de     9001
+  sokrates    85.180.62.138   e180062138.adsl.alicedsl.de     9001
+  moria1      18.244.0.188    moria.mit.edu   9001
+  peacetime   18.244.0.188    moria.mit.edu   9100
+
+  There may exist compatibility issues with this proposed fix.  Reasons why
+  more than one server would share an IP address include:
+
+  * Testing. moria1, moria2, peacetime, and other morias all run on one
+    computer at MIT, because that way we get testing. Moria1 and moria2 are
+    run by Roger, and peacetime is run by Nick.
+  * NAT. If there are several servers but they port-forward through the same
+    IP address, ... we can hope that the operators coordinate with each
+    other. Also, we should recognize that while they help the network in
+    terms of increased capacity, they don't help as much as they could in
+    terms of location diversity. But our approach so far has been to take
+    what we can get.
+  * People who have more than 1.5MB/s and want to help out more. For
+    example, for a while Tonga was offering 10MB/s and its Tor server
+    would only make use of a bit of it. So Roger suggested that he run
+    two Tor servers, to use more.
+
+Alternatives:
+
+  Roger suggested that instead of capping number of servers per IP to 1, we
+  should cap total declared bandwidth per IP to some N, and total declared
+  servers to some M.  (He suggested N=5MB/s and M=5.)
+
+  Roger also suggested that rather than not listing servers, we mark them as
+  not Valid.
+

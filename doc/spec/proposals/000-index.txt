@@ -27,3 +27,4 @@ Proposals by number:
 106  Checking fewer things during TLS handshakes [CLOSED]
 107  Uptime Sanity Checking [CLOSED]
 108  Base "Stable" Flag on Mean Time Between Failures [OPEN]
+109  No more than one server per IP address [OPEN]
