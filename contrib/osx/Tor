@@ -16,7 +16,7 @@ TORPID=/var/run/Tor.pid
 TORUSER=_tor
 TORGROUP=daemon
 TORCMD=$TORDIR/tor
-TORLOG=/var/log/tor/tor.log
+TORLOG=/var/log/tor.log
 
 ##
 # Tor Service
