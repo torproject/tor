@@ -425,6 +425,9 @@ $Id$
    authorities MAY do things differently, so long as clients keep working
    well.  Clients MUST NOT depend on the exact behaviors in this section.)
 
+   In the below definitions, a router is considered "active" if it is
+   running, valid, and not hibernating.
+
    "Valid" -- a router is 'Valid' if it is running a version of Tor not
    known to be broken, and the directory authority has not blacklisted
    it as suspicious.
@@ -441,20 +444,19 @@ $Id$
    "Running" -- A router is 'Running' if the authority managed to connect to
    it successfully within the last 30 minutes.
 
-   "Stable" -- A router is 'Stable' if it is running, valid, not
-   hibernating, and either its uptime is at least the median uptime for
-   known running, valid, non-hibernating routers, or its uptime is at
-   least 30 days. Routers are never called stable if they are running
-   a version of Tor known to drop circuits stupidly.  (0.1.1.10-alpha
-   through 0.1.1.16-rc are stupid this way.)
+   "Stable" -- A router is 'Stable' if it is active, and either its
+   uptime is at least the median uptime for known active routers, or
+   its uptime is at least 30 days. Routers are never called stable if
+   they are running a version of Tor known to drop circuits stupidly.
+   (0.1.1.10-alpha through 0.1.1.16-rc are stupid this way.)
 
-   "Fast" -- A router is 'Fast' if its bandwidth is in the top 7/8ths for
-   known running, valid routers.
+   "Fast" -- A router is 'Fast' if it is active, and its bandwidth is
+   in the top 7/8ths for known active routers.
 
    "Guard" -- A router is a possible 'Guard' if it is 'Stable' and its
-   bandwidth is above median for known running, valid routers.  If the total
-   bandwidth of Running Valid non-BadExit Exit servers is less than one third
-   of the total bandwidth of all Running Valid servers, no Exit is listed as
+   bandwidth is above median for known active routers. If the total
+   bandwidth of active non-BadExit Exit servers is less than one third
+   of the total bandwidth of all active servers, no Exit is listed as
    a Guard.
 
    "Authority" -- A router is called an 'Authority' if the authority

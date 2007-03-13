@@ -1629,9 +1629,11 @@ generate_v2_networkstatus(void)
         tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") &&
         !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
       int f_stable = ri->is_stable =
+        router_is_active(ri, now) &&
         !dirserv_thinks_router_is_unreliable(now, ri, 1, 0) &&
         !unstable_version;
       int f_fast = ri->is_fast =
+        router_is_active(ri, now) &&
         !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
       int f_running = ri->is_running; /* computed above */
       int f_authority = router_digest_is_trusted_dir(
