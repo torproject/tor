@@ -22,7 +22,7 @@ Overview:
 
 Motivation:
   Since it is possible for an attacker to register an arbitrarily large
-  number of Tor routers, it is possible for malicious parties to do this to
+  number of Tor routers, it is possible for malicious parties to do this
   as part of a traffic analysis attack.
 
 Security implications:
@@ -32,7 +32,7 @@ Security implications:
 Specification:
   We propose that the directory servers check if an incoming Tor router IP
   address is already registered under another router. If this is the case,
-  then prevent this router from joining the network.
+  then prevent the new router from joining the network.
 
 Compatibility:
 
@@ -70,8 +70,13 @@ Alternatives:
 
   Roger suggested that instead of capping number of servers per IP to 1, we
   should cap total declared bandwidth per IP to some N, and total declared
-  servers to some M.  (He suggested N=5MB/s and M=5.)
+  servers to some M.  (He suggested N=5MB/s and M=5.) Directory authorities
+  would then always choose to keep the highest-bandwidth running servers
+  -- if they pick based on time joining the network we can get into bad
+  race conditions.
 
   Roger also suggested that rather than not listing servers, we mark them as
-  not Valid.
+  not Running. (He originally suggested marking them as Running but not
+  Valid, but that would still allow an attacker to control an arbitrary
+  number of middle hops, which is still likely to be worrisome.)
 
