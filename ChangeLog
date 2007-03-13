@@ -27,9 +27,8 @@ Changes in version 0.1.2.9-rc - 2007-03-02
       time.
 
   o Minor bugfixes (directory authorities):
-    - Stop calling servers that have been hibernating for a long time
-      "stable". Also, stop letting hibernating or obsolete servers affect
-      uptime and bandwidth cutoffs.
+    - Stop letting hibernating or obsolete servers affect uptime and
+      bandwidth cutoffs.
     - Stop listing hibernating servers in the v1 directory.
 
   o Minor bugfixes (hidden services):
