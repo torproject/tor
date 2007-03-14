@@ -28,3 +28,4 @@ Proposals by number:
 107  Uptime Sanity Checking [CLOSED]
 108  Base "Stable" Flag on Mean Time Between Failures [OPEN]
 109  No more than one server per IP address [OPEN]
+110  Avoiding infinite length circuits [OPEN]

@@ -1,0 +1,105 @@
+Hi folks,
+
+I figured I'd get up to speed on proposal writing with a rather simple
+one, rather than jump in over my head first. :) This design has been
+kicking around since Christian Grothoff and I came up with it at PET 2004.
+
+Filename: 1xx-avoid-infinite-circuits.txt
+Title: Avoiding infinite length circuits
+Version:
+Last-Modified:
+Author: Roger Dingledine
+Created:
+Status: Open
+
+Overview:
+
+  Right now, an attacker can add load to the Tor network by extending a
+  circuit an arbitrary number of times. Every cell that goes down the
+  circuit then adds N times that amount of load in overall bandwidth
+  use. This vulnerability arises because servers don't know their position
+  on the path, so they can't tell how many nodes there are before them
+  on the path.
+
+  We propose a new set of relay cells that are distinguishable by
+  intermediate hops as permitting extend cells. This approach will allow
+  us to put an upper bound on circuit length relative to the number of
+  colluding adversary nodes; but there are some downsides too.
+
+Motivation:
+
+  The above attack can be used to generally increase load all across the
+  network, or it can be used to target specific servers: by building a
+  circuit back and forth between two victim servers, even a low-bandwidth
+  attacker can soak up all the bandwidth offered by the fastest Tor
+  servers.
+
+  The general attacks could be used as a demonstration that Tor isn't
+  perfect (leading to yet more media articles about "breaking" Tor), and
+  the targetted attacks will come into play once we have a reputation
+  system -- it will be trivial to DoS a server so it can't pass its
+  reputation checks, in turn impacting security.
+
+Design:
+
+  We should split RELAY cells into two types: RELAY and RELAY_EXTEND.
+
+  Relay_extend cells can only be sent in the first K (say, 10) data
+  cells sent across a circuit, and only relay_extend cells are allowed
+  to contain extend requests. We still support obscuring the length of
+  the circuit (if more research shows us what to do), because Alice can
+  choose how many of the K to mark as relay_extend. Note that relay_extend
+  cells *can* contain any sort of data cell; so in effect it's actually
+  the relay type cells that are restricted.
+
+  Each intermediate server would pass on the same type of cell that it
+  received (either relay or relay_extend), and the cell's destination
+  will be able to learn whether it's allowed to contain an Extend request.
+
+  If an intermediate server receives a relay_extend cell after it has
+  already seen k cells, or if it sees a relay cell that contains an
+  extend request, then it tears down the circuit (protocol violation).
+
+Security implications:
+
+  The upside is that this limits the bandwidth amplification factor to
+  K: for an individual circuit to become arbitrary-length, the attacker
+  would need an adversary-controlled node every K hops, and at that
+  point the attack is no worse than if the attacker creates N/K separate
+  K-hop circuits.
+
+  On the other hand, we want to pick a large enough value of K that we
+  don't mind the cap.
+
+  If we ever want to take steps to hide the number of hops in the circuit
+  or a node's position in the circuit, this design probably makes that
+  more complex.
+
+Migration:
+
+  Phase one: servers should recognize relay_extend cells and pass them
+  on just like relay cells. Don't do any enforcement of the protocol
+  yet. We could do this phase in the 0.2.0 timeline.
+
+  Phase two: once support in phase one is pervasive, clients could start
+  using relay_extend cells when all nodes currently in the circuit would
+  recognize them. We could conceivably do this phase during 0.2.0 too.
+
+  Phase three: once clients that don't use relay_extend cells are
+  obsolete, servers should start enforcing the protocol.
+
+  (Another migration plan would be to coordinate this with proposal
+  105's new link versions. Would that be better/worse? Can somebody
+  sketch out what it might look like?)
+
+Spec:
+
+  [We can formalize this part once we think the design is a good one.]
+
+Additional complexity:
+
+  Rather than limiting the relay_extend cells to being in the first K
+  data cells seen, we could instead permit up to K relay_extend cells
+  in the lifetime of the circuit. This would let us extend the circuit
+  later on in its life if we decided it was worth doing, though we would
+  reveal our intent to each node in the circuit when we do.
