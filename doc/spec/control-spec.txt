@@ -194,7 +194,7 @@ $Id$
      EventCode = "CIRC" / "STREAM" / "ORCONN" / "BW" / "DEBUG" /
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
          "AUTHDIR_NEWDESCS" / "DESCCHANGED" / "STATUS_GENERAL" /
-         "STATUS_CLIENT" / "STATUS_SERVER" / "GUARDS" / "NS" / "STREAM_BW"
+         "STATUS_CLIENT" / "STATUS_SERVER" / "GUARD" / "NS" / "STREAM_BW"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -1263,7 +1263,7 @@ $Id$
 4.1.11. Our set of guard nodes has changed
 
   Syntax:
-     "650" SP "GUARDS" SP Type SP Name SP Status ... CRLF
+     "650" SP "GUARD" SP Type SP Name SP Status ... CRLF
      Type = "ENTRY"
      Name = The (possibly verbose) nickname of the guard affected.
      Status = "NEW" | "UP" | "DOWN" | "BAD" | "GOOD" | "DROPPED"
