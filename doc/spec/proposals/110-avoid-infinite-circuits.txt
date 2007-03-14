@@ -44,14 +44,16 @@ Design:
   the circuit (if more research shows us what to do), because Alice can
   choose how many of the K to mark as relay_extend. Note that relay_extend
   cells *can* contain any sort of data cell; so in effect it's actually
-  the relay type cells that are restricted.
+  the relay type cells that are restricted. By default, she would just
+  send the first K data cells over the stream as relay_extend cells,
+  regardless of their actual type.
 
   Each intermediate server would pass on the same type of cell that it
   received (either relay or relay_extend), and the cell's destination
   will be able to learn whether it's allowed to contain an Extend request.
 
   If an intermediate server receives a relay_extend cell after it has
-  already seen k cells, or if it sees a relay cell that contains an
+  already seen k data cells, or if it sees a relay cell that contains an
   extend request, then it tears down the circuit (protocol violation).
 
 Security implications:
