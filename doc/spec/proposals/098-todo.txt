@@ -3,7 +3,7 @@ Title: Proposals that should be written
 Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson, Roger Dingledine
-Created:
+Created: 26-Jan-2007
 Status: Meta
 
 Overview:

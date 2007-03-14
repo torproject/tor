@@ -3,7 +3,7 @@ Title: Base "Stable" Flag on Mean Time Between Failures
 Version: $Revision: 12105 $
 Last-Modified: $Date: 2007-01-30T07:50:01.643717Z $
 Author: Nick Mathewson
-Created:
+Created: 10-Mar-2007
 Status: Open
 
 Overview:

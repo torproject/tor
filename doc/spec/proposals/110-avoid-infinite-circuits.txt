@@ -1,15 +1,9 @@
-Hi folks,
-
-I figured I'd get up to speed on proposal writing with a rather simple
-one, rather than jump in over my head first. :) This design has been
-kicking around since Christian Grothoff and I came up with it at PET 2004.
-
 Filename: 1xx-avoid-infinite-circuits.txt
 Title: Avoiding infinite length circuits
 Version:
 Last-Modified:
 Author: Roger Dingledine
-Created:
+Created: 13-Mar-2007
 Status: Open
 
 Overview:
@@ -103,3 +97,9 @@ Additional complexity:
   in the lifetime of the circuit. This would let us extend the circuit
   later on in its life if we decided it was worth doing, though we would
   reveal our intent to each node in the circuit when we do.
+
+Acknowledgements:
+
+  This design has been kicking around since Christian Grothoff and I
+  came up with it at PET 2004.
+
