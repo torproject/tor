@@ -486,7 +486,7 @@ set_socket_nonblocking(int socket)
  * type,protocol,fd), but works on systems that don't have
  * socketpair.)
  *
- * Currently, only (AF_UNIX, SOCK_STREAM, 0 ) sockets are supported.
+ * Currently, only (AF_UNIX, SOCK_STREAM, 0) sockets are supported.
  *
  * Note that on systems without socketpair, this call will fail if
  * localhost is inaccessible (for example, if the networking
@@ -507,7 +507,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
   r = socketpair(family, type, protocol, fd);
   return r < 0 ? -errno : r;
 #elif defined(USE_BSOCKETS)
-  return bsockepair(family, type, protocol, fd);
+  return bsocketpair(family, type, protocol, fd);
 #else
     /* This socketpair does not work when localhost is down. So
      * it's really not the same thing at all. But it's close enough
