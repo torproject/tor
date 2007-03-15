@@ -9,28 +9,31 @@ Status: Open
 Overview:
 
    This document proposes that we change how directory authorities set the
-   stability flag from inspection of routers declared Uptime to the
+   stability flag from inspection of a router's declared Uptime to the
    authorities' perceived mean time between failure for the router.
 
 Motivation:
 
-   Clients prefer nodes that the authorities call Stable.  This flags are (as
-   of 0.2.0.0-alpha-dev) set entirely based on the nodes' declared values for
+   Clients prefer nodes that the authorities call Stable.  This flag is (as
+   of 0.2.0.0-alpha-dev) set entirely based on the node's declared value for
    uptime.  This creates an opportunity for malicious nodes to declare
    falsely high uptimes in order to get more traffic.
 
 Spec changes:
 
-   Instead of setting the current rule for setting the Stable flag:
+   Replace the current rule for setting the Stable flag with:
 
-   "An authority should call a server Stable if its observed MTBF for
-   the past month is at or above the median MTBF for Valid servers.
+   "Stable" -- A router is 'Stable' if it is active and its observed MTBF
+   for the past month is at or above the median MTBF for active routers.
+   Routers are never called stable if they are running a version of Tor
+   known to drop circuits stupidly. (0.1.1.10-alpha through 0.1.1.16-rc
+   are stupid this way.)
 
    MTBF shall be defined as the mean length of the runs observed by a
    given directory authority.  A run begins when an authority decides
    that the server is Running, and ends when the authority decides that
    the server is not Running.  In-progress runs are counted when
-   measuring MTBF."
+   measuring MTBF.
 
 Issues:
 
@@ -40,3 +43,4 @@ Issues:
    take 29 days on its own and discard the year?
 
    Surely somebody has done this kinds of thing before.
+
