@@ -1,0 +1,160 @@
+Design For A Tor RBL {DRAFT}
+
+Status:
+
+  This is a suggested design for a DNSBL for Tor exit nodes.  It hasn't been
+  implemented.
+
+Why?
+
+  It's useful for third parties to be able to tell when they've got a
+  connection from a Tor exit node.  Potential aplications range from
+  "anonymous user" cloaks on IRC networks like oftc, to networks like
+  Freenode that apply special authentication rules to users from these
+  IPs, to systems like Wikipedia that want to make a priority of
+  _unblocking_ shared IPs more liberally than non-shared IPs, since shared
+  IPs presumably have non-abusive users as well as abusive ones.
+
+  Since Tor provides exit policies, not every Tor server will connect to
+  every address:port combination on the Internet.  Unless you're trying to
+  penalize hosts for supporting anonymity, it makes more sense to answer
+  the fine-grained question "which Tor servers will connect to _me_" than
+  the coarse-grained question "which Tor servers exist?"  The fine-grained
+  approach also helps Tor server ops who share an IP with their Tor
+  server: if they want to access a site that blocks Tor users, they can
+  add that site to their exit policy, and the site can learn that they
+  won't send it anonymous connections.
+
+  Tor already ships with a tool (the "exitlist" script) to identify which
+  Tor nodes might open anonymous connections to any given exit address.
+  But this is a bit tricky to set up, and isn't seeing much use.
+  Conversely, providers of some DNSBL implementations are providing
+  coarse-grained lists of Tor hosts -- sometimes even listing servers that
+  permit no exit connections at all.  This is rather a problem, since
+  support for DNSBL is pretty ubiquitous.
+
+
+How?
+
+  Keep a running Tor instance, and parse the cached-routers and
+  cached-routers.new files as new routers arrive.  To tell whether a given
+  server allows connections to a certain address:port combo, look at the
+  definitions in dir-spec.txt or follow the logic of the current exitlist
+  script.
+
+  FetchUselessDescriptors would probably be a good option to enable.
+
+  If you're also running a directory cache, you get extra-fresh
+  information.
+
+
+The DNS interface
+
+  DNSBL, if I understand right, looks like this:  There's some host at
+  foo.example.com.  You want to know if 1.2.3.4 is in the list, so you
+  query for an A record for 4.3.2.1.foo.example.com.  If the record
+  exists, 1.2.3.4 is in the list.  If you get an NXDOMAIN error, 1.2.3.4
+  is not in the list.
+
+  Assume that the DNSBL sits at some host, torhosts.example.com.  Below
+  are some queries that could be supported, though some of them are
+  possibly a bad idea.
+
+
+  "General IP:Port"
+
+    Format:
+        {IP1}.{port}.{IP2}.ip-port.torhosts.example.com
+
+    Rule:
+        Iff {IP1} is a Tor server that permits connections to {port} on
+        {IP2}, then there should be an A record.
+
+    Example:
+        "1.0.0.10.80.4.3.2.1.ip-port.torhosts.example.com" should exist
+        if and only if there is a Tor server at 10.0.0.1 that allows
+        connections to port 80 on 1.2.3.4.
+
+    Example use:
+        I'm running an IRC server at w.x.y.z:9999, and I want to tell
+        whether an incoming connections are from Tor servers.  I set
+        up my IRC server to give a special mask to any user coming from
+        an IP listed in 9999.z.y.x.w.ip-port.torhosts.example.com.
+
+        Later, when I get a connection from a.b.c.d, my ircd looks up
+        "d.c.b.a.9999.z.y.x.w.ip-port.torhosts.example.com" to see
+        if it's a Tor server that allows connections to my ircd.
+
+
+  "IP-port group."
+
+    Format:
+        {IP}.{listname}.list.torhosts.example.com
+
+    Rule:
+        Iff this Tor server is configured with an IP:Port list named
+        {listname}, and {IP} is a Tor server that permits connections to
+        any member of {listname}, then there exists an A record.
+
+    Example:
+        Suppose torhosts.example.com has a list of IP:Port called "foo".
+        There is an A record for 4.3.2.1.foo.list.torhosts.example.com
+        if and only if 1.2.3.4 is a Tor server that permits connections
+        to one of the addresses in list "foo|.
+
+    Example use:
+        Suppose torhosts.example.com has a list of hosts in "examplenet",
+        a popular IRC network.  Rather than having them each set up to
+        query the appropriate "ip-port" list, they could instead all be
+        set to query a central examplenet.list.torhosts.example.com.
+
+    Problems:
+        We'd be better off if each individual server queried about hosts
+        that allowed connections to itself.  That way, if I wanted to
+        allow anonymous connections to foonet, but I wanted to be able to
+        connect to foonet from my own IP without being marked, I could add
+        just a few foonet addresses to my exit policy.
+
+
+  "My IP, with port."
+
+    Format:
+        {IP}.{port}.me.torhosts.example.com
+
+    Rule:
+        An A record exists iff there is a tor server at {IP} that permits
+        connections to {port} on the host that requested the lookup.
+
+    Example:
+        "4.3.2.1.80.me.torhosts.example.com" should have an A record if
+        and only if there is a Tor server at 1.2.3.4 that allows
+        connections to port 80 of the querying host.
+
+    Example use:
+        Somebody wants to set up a quick-and-dirty Tor detector for a
+        single webserver: just point them at 80.me.torhosts.example.com.
+
+    Problem:
+        This would be easiest to use, but DNS gets in the way. If you
+        create DNS records that give different results depending on who is
+        asking, you mess up caching.  There could be a fix here, but might
+        now.
+        here.
+
+
+  RECOMMENDATION: Just build ip-port for now, and see what demand is
+  like.  There's no point in building mechanisms nobody wants.
+
+Web interface:
+
+  Should provide the same data as the dns interface.
+
+Other issues:
+
+  30-60 minutes is not an unreasonable TTL.
+
+  There could be some demand for address masks and port lists. Address
+  masks wider than /8 make me nervous here, as do port ranges.
+
+  We need an answer for what to do about hosts which exit from different
+  IPs than their advertised IP.
