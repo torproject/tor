@@ -34,6 +34,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
 
   o Minor bugfixes:
     - Stop allowing hibernating servers to be "stable" or "fast".
+    - Make 'getinfo fingerprint' return a 551 error if we're not a
+      server, so we match what the control spec claims we do. Reported
+      by daejees.
 
 
 Changes in version 0.1.2.10-rc - 2007-03-07

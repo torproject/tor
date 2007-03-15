@@ -1207,13 +1207,11 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {
     routerinfo_t *me = router_get_my_routerinfo();
-    if (!me) {
-      *answer = tor_strdup("");
-    } else {
-      *answer = tor_malloc(HEX_DIGEST_LEN+1);
-      base16_encode(*answer, HEX_DIGEST_LEN+1, me->cache_info.identity_digest,
-                    DIGEST_LEN);
-    }
+    if (!me)
+      return -1;
+    *answer = tor_malloc(HEX_DIGEST_LEN+1);
+    base16_encode(*answer, HEX_DIGEST_LEN+1, me->cache_info.identity_digest,
+                  DIGEST_LEN);
   }
   return 0;
 }
