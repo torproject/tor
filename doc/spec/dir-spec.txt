@@ -841,9 +841,9 @@ $Id$
    feature is supported by the router or protocol versions in more than half
    of the live networkstatus's "v" entries for that router.  In other words,
    if the "v" entries for some router are:
-       v Tor 0.0.8pre1
-       v Tor 0.1.2.11
-       v FutureProtocolDescription 99
+       v Tor 0.0.8pre1                (from authority 1)
+       v Tor 0.1.2.11                 (from authority 2)
+       v FutureProtocolDescription 99 (from authority 3)
    then the client should believe that the router supports any feature
    supported by 0.1.2.11.
 

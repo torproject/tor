@@ -1192,7 +1192,7 @@ _thread_test_func(void* _s)
   tor_snprintf(buf, sizeof(buf), "%lu", tor_get_thread_id());
   cp = tor_strdup(buf);
 
-  for (i=0; i<1000; ++i) {
+  for (i=0; i<100000; ++i) {
     tor_mutex_acquire(_thread_test_mutex);
     strmap_set(_thread_test_strmap, "last to run", cp);
     tor_mutex_release(_thread_test_mutex);
