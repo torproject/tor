@@ -1,0 +1,137 @@
+Filename: 111-local-traffic-priority.txt
+Title: Prioritizing local traffic over relayed traffic
+Version:
+Last-Modified:
+Author: Roger Dingledine
+Created: 14-Mar-2007
+Status: Open
+
+Overview:
+
+  We describe some ways to let Tor users operate as a relay and enforce
+  rate limiting for relayed traffic without impacting their locally
+  initiated traffic.
+
+Motivation:
+
+  Right now we encourage people who use Tor as a client to configure it
+  as a relay too ("just click the button in Vidalia"). Most of these users
+  are on asymmetric links, meaning they have a lot more download capacity
+  than upload capacity. But if they enable rate limiting too, suddenly
+  they're limited to the same download capacity as upload capacity. And
+  they have to enable rate limiting, or their upstream pipe gets filled
+  up, starts dropping packets, and now their net connection doesn't work
+  even for non-Tor stuff. So they end up turning off the relaying part.
+  so they can use Tor (and other applications) again.
+
+  So far this hasn't mattered that much: most of our fast relays are
+  being operated only in relay mode, so the rate limiting makes sense
+  for them. But if we want to be able to attract many more relays in
+  the future, we need to let ordinary users act as relays too.
+
+  Further, as we begin to deploy the blocking-resistance design and we
+  rely on ordinary users to click the "Tor for Freedom" button, this
+  limitation will become a serious stumbling block to getting volunteers
+  to act as bridges.
+
+The problem:
+
+  Tor implements its rate limiting on the 'read' side by only reading
+  a certain number of bytes from the network in each second. If it has
+  emptied its token bucket, it doesn't read any more from the network;
+  eventually TCP notices and stalls until we resume reading. But if we
+  want to have two classes of service, we can't know what class a given
+  incoming cell will be until we look at it, at which point we've already
+  read it.
+
+Some options:
+
+  Option 1: read when our token bucket is full enough, and if it turns
+  out that what we read was local traffic, then add the tokens back into
+  the token bucket. This will work when local traffic load alternates
+  with relayed traffic load; but it's a poor option in general, because
+  when we're receiving both local and relayed traffic, there are plenty
+  of cases where we'll end up with an empty token bucket, and then we're
+  back where we were before.
+
+  More generally, notice that our problem is easy when a given TCP
+  connection either has entirely local circuits or entirely relayed
+  circuits. In fact, even if they are both present, if one class is
+  entirely idle (none of its circuits have sent or received in the past
+  N seconds), we can ignore that class until it wakes up again. So it
+  only gets complex when a single connection contains active circuits
+  of both classes.
+
+  Next, notice that local traffic uses only the entry guards, whereas
+  relayed traffic likely doesn't. So if we're a bridge handling just
+  a few users, the expected number of overlapping connections would be
+  almost zero, and even if we're a full relay the number of overlapping
+  connections will be quite small.
+
+  Option 2: build separate TCP connections for local traffic and for
+  relayed traffic. In practice this will actually only require a few
+  extra TCP connections: we would only need redundant TCP connections
+  to at most the number of entry guards in use.
+
+  However, this approach has some drawbacks. First, if the remote side
+  wants to extend a circuit to you, how does it know which TCP connection
+  to send it on? We would need some extra scheme to label some connections
+  "client-only" during construction. Perhaps we could do this by seeing
+  whether any circuit was made via CREATE_FAST; but this still opens
+  up a race condition where the other side sends a create request
+  immediately. The only ways I can imagine to avoid the race entirely
+  are to specify our preference in the VERSIONS cell, or to add some
+  sort of "nope, not this connection, why don't you try another rather
+  than failing" response to create cells, or to forbid create cells on
+  connections that you didn't initiate and on which you haven't seen
+  any circuit creation requests yet -- this last one would lead to a bit
+  more connection bloat but doesn't seem so bad. And we already accept
+  this race for the case where directory authorities establish new TCP
+  connections periodically to check reachability, and then hope to hang
+  up on them soon after. (In any case this issue is moot for bridges,
+  since each destination will be one-way with respect to extend requests:
+  either receiving extend requests from bridge users or sending extend
+  requests to the Tor server, never both.)
+
+  The second problem with option 2 is that using two TCP connections
+  reveals that there are two classes of traffic (and probably quickly
+  reveals which is which, based on throughput). Now, it's unclear whether
+  this information is already available to the other relay -- he would
+  easily be able to tell that some circuits are fast and some are rate
+  limited, after all -- but it would be nice to not add even more ways to
+  leak that information. Also, it's less clear that an external observer
+  already has this information if the circuits are all bundled together,
+  and for this case it's worth trying to protect it.
+
+  Option 3: tell the other side about our rate limiting rules. When we
+  establish the TCP connection, specify the different policy classes we
+  have configured. Each time we extend a circuit, specify which policy
+  class that circuit should be part of. Then hope the other side obeys
+  our wishes. (If he doesn't, hang up on him.) Besides the design and
+  coordination hassles involved in this approach, there's a big problem:
+  our rate limiting classes apply to all our connections, not just
+  pairwise connections. How does one server we're connected to know how
+  much of our bucket has already been spent by another? I could imagine
+  a complex and inefficient "ok, now you can send me those two more cells
+  that you've got queued" protocol. I'm not sure how else we could do it.
+
+  (Gosh. How could UDP designs possibly be compatible with rate limiting
+  with multiple bucket sizes?)
+
+  Option 4: ?
+
+Prognosis:
+
+  Of the above options, only option 2 can actually be built and achieve
+  what we want. So that's it by default, unless we can come up with
+  something better.
+
+  In terms of implementation, it will be easy: just add a bit to
+  or_connection_t that specifies priority_traffic (used by the initiator
+  of the connection to ignore that connection when relaying a create
+  request), and another bit that specifies client_only (used by a
+  receiving Tor server so it can ignore that connection when sending
+  create requests).
+
+[Not writing the rest of the proposal until we sort out which option
+we'll take.]
