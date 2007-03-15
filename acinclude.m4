@@ -93,9 +93,13 @@ if test -z "$CROSS_COMPILE"; then
   AC_CACHE_CHECK([whether we need extra options to link $1],
                  tor_cv_library_$1_linker_option, [
    tor_saved_LDFLAGS="$LDFLAGS"
-   tor_trydir="$tor_cv_library_$1_dir"
    runs=no
    linked_with=nothing
+   if test -d "$tor_cv_library_$1_dir/lib"; then
+     tor_trydir="$tor_cv_library_$1_dir/lib"
+   else
+     tor_trydir="$tor_cv_library_$1_dir"
+   fi
    for tor_tryextra in "(none)" "-Wl,-R$tor_trydir" "-R$tor_trydir" \
                        "-Wl,-rpath,$tor_trydir" ; do
      if test "$tor_tryextra" = "(none)"; then
