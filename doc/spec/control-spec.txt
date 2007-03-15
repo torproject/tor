@@ -378,8 +378,8 @@ $Id$
     "addr-mappings/all"
     "addr-mappings/config"
     "addr-mappings/cache"
-    "addr-mappings/control" -- a space-separated list of address
-      mappings, each in the form of "from-address=to-address".
+    "addr-mappings/control" -- a \r\n-separated list of address
+      mappings, each in the form of "from-address to-address".
       The 'config' key returns those address mappings set in the
       configuration; the 'cache' key returns the mappings in the
       client-side DNS cache; the 'control' key returns the mappings set

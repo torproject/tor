@@ -1465,7 +1465,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     }
     mappings = smartlist_create();
     addressmap_get_mappings(mappings, min_e, max_e);
-    *answer = smartlist_join_strings(mappings, " ", 0, NULL);
+    *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
   }

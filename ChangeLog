@@ -40,7 +40,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       server, so we match what the control spec claims we do.
     - Fix a typo in an error message when extendcircuit fails that
       caused us to not follow the \r\n-based delimiter protocol.
-    - Make the response to 'getinfo addr-mappings/*' follow the spec.
+    - Correct the control spec to match how the code actually responds
+      to 'getinfo addr-mappings/*'.
 
 
 Changes in version 0.1.2.10-rc - 2007-03-07
