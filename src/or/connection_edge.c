@@ -1142,7 +1142,7 @@ address_is_invalid_destination(const char *address, int client)
 
 /** Iterate over all address mappings which have expiry times between
  * min_expires and max_expires, inclusive.  If sl is provided, add an
- * "old-addr new-addr" string to sl for each mapping.  If sl is NULL,
+ * "old-addr=new-addr" string to sl for each mapping.  If sl is NULL,
  * remove the mappings.
  */
 void
@@ -1168,7 +1168,7 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
        } else if (val->new_address) {
          size_t len = strlen(key)+strlen(val->new_address)+2;
          char *line = tor_malloc(len);
-         tor_snprintf(line, len, "%s %s", key, val->new_address);
+         tor_snprintf(line, len, "%s=%s", key, val->new_address);
          smartlist_add(sl, line);
        }
      }
