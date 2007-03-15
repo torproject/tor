@@ -1805,7 +1805,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
         log_info(LD_CONTROL,
                  "send_next_onion_skin failed; circuit marked for closing.");
         circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
-        connection_write_str_to_buf("551 Couldn't send onion skinr\n", conn);
+        connection_write_str_to_buf("551 Couldn't send onion skin\r\n", conn);
         goto done;
       }
     }
