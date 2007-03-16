@@ -27,7 +27,7 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       since 0.1.2.2-alpha, and all the servers seem to be using the new
       eventdns code.
 
-  o Minor bufixes (portability):
+  o Minor bugfixes (portability):
     - Even though windows is equally happy with / and \ as path separators,
       try to use \ consistently on windows and / consistently on unix: it
       makes the log messages nicer.
@@ -40,6 +40,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       server, so we match what the control spec claims we do.
     - Fix a typo in an error message when extendcircuit fails that
       caused us to not follow the \r\n-based delimiter protocol.
+    - The control spec described a GUARDS event, but the code
+      implemented a GUARD event. Standardize on GUARD, but support people
+      asking for GUARDS too.
     - Correct the control spec to match how the code actually responds
       to 'getinfo addr-mappings/*'.
 
