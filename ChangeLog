@@ -1,10 +1,10 @@
 Changes in version 0.1.2.11-rc - 2007-03-15
-  o Minor bugfixes (controller):
+  o Minor bugfixes (controller), reported by daejees:
     - Correct the control spec to match how the code actually responds
       to 'getinfo addr-mappings/*'.
     - The control spec described a GUARDS event, but the code
-      implemented a GUARD event. Standardize on GUARD, but support people
-      asking for GUARDS too.
+      implemented a GUARD event. Standardize on GUARD, but let people
+      ask for GUARDS too.
 
 
 Changes in version 0.1.2.10-rc - 2007-03-07
