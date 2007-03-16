@@ -1,3 +1,12 @@
+Changes in version 0.1.2.11-rc - 2007-03-15
+  o Minor bugfixes (controller):
+    - Correct the control spec to match how the code actually responds
+      to 'getinfo addr-mappings/*'.
+    - The control spec described a GUARDS event, but the code
+      implemented a GUARD event. Standardize on GUARD, but support people
+      asking for GUARDS too.
+
+
 Changes in version 0.1.2.10-rc - 2007-03-07
   o Major bugfixes (Windows):
     - Do not load the NT services library functions (which may not exist)

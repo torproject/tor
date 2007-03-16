@@ -1142,7 +1142,10 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
           event_code = EVENT_STATUS_SERVER;
         else if (!strcasecmp(ev, "GUARD"))
           event_code = EVENT_GUARD;
-        else if (!strcasecmp(ev, "STREAM_BW"))
+        else if (!strcasecmp(ev, "GUARDS")) {
+          /* XXX tolerate buggy spec in 0.1.2.5-alpha through 0.1.2.10-rc */
+          event_code = EVENT_GUARD;
+        } else if (!strcasecmp(ev, "STREAM_BW"))
           event_code = EVENT_STREAM_BANDWIDTH_USED;
         else {
           connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
