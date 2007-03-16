@@ -1,3 +1,11 @@
+Changes in version 0.1.2.12-rc - 2007-03-??
+  o Major bugfixes:
+    - Fix an infinite loop introduced in 0.1.2.7-alpha when we serve
+      directory information requested inside Tor connections (i.e. via
+      begin_dir cells). It only triggered when the same connection was
+      serving other data at the same time. Reported by seeess.
+
+
 Changes in version 0.1.2.11-rc - 2007-03-15
   o Minor bugfixes (controller), reported by daejees:
     - Correct the control spec to match how the code actually responds
