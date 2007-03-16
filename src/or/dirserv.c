@@ -2093,8 +2093,8 @@ connection_dirserv_stop_blocking_all_on_or_conn(or_connection_t *or_conn)
 {
   dir_connection_t *dir_conn, *next;
 
-  while (or_conn->blocked_dir_connections) {
-    dir_conn = or_conn->blocked_dir_connections;
+  dir_conn=or_conn->blocked_dir_connections;
+  while (dir_conn) {
     next = dir_conn->next_blocked_on_same_or_conn;
 
     dir_conn->is_blocked_on_or_conn = 0;

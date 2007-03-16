@@ -5,6 +5,12 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       in the network. Implements proposal 1xx, suggested by Kevin Bauer
       and Damon McCoy.
 
+  o Major bugfixes:
+    - Fix an infinite loop introduced in 0.1.2.7-alpha when we serve
+      directory information requested inside Tor connections (i.e. via
+      begin_dir cells). It only triggered when the same connection was
+      serving other data at the same time. Reported by seeess.
+
   o Minor features (build):
     - Make autoconf search for libevent and openssl consistently.
     - Update deprecated macros in configure.in
