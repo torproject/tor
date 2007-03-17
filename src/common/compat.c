@@ -1248,30 +1248,50 @@ struct tor_mutex_t {
 tor_mutex_t *
 tor_mutex_new(void)
 {
+  int err;
   tor_mutex_t *mutex = tor_malloc_zero(sizeof(tor_mutex_t));
-  pthread_mutex_init(&mutex->mutex, NULL);
+  err = pthread_mutex_init(&mutex->mutex, NULL);
+  if (PREDICT_UNLIKELY(err)) {
+    log_err(LD_GENERAL, "Error %d creating a mutex.", err);
+    tor_fragile_assert();
+  }
   return mutex;
 }
 /** Wait until <b>m</b> is free, then acquire it. */
 void
 tor_mutex_acquire(tor_mutex_t *m)
 {
+  int err;
   tor_assert(m);
-  pthread_mutex_lock(&m->mutex);
+  err = pthread_mutex_lock(&m->mutex);
+  if (PREDICT_UNLIKELY(err)) {
+    log_err(LD_GENERAL, "Error %d locking a mutex.", err);
+    tor_fragile_assert();
+  }
 }
 /** Release the lock <b>m</b> so another thread can have it. */
 void
 tor_mutex_release(tor_mutex_t *m)
 {
+  int err;
   tor_assert(m);
-  pthread_mutex_unlock(&m->mutex);
+  err = pthread_mutex_unlock(&m->mutex);
+  if (PREDICT_UNLIKELY(err)) {
+    log_err(LD_GENERAL, "Error %d unlocking a mutex.", err);
+    tor_fragile_assert();
+  }
 }
 /** Free all storage held by the lock <b>m</b>. */
 void
 tor_mutex_free(tor_mutex_t *m)
 {
+  int err;
   tor_assert(m);
-  pthread_mutex_destroy(&m->mutex);
+  err = pthread_mutex_destroy(&m->mutex);
+  if (PREDICT_UNLIKELY(err)) {
+    log_err(LD_GENERAL, "Error %d destroying a mutex.", err);
+    tor_fragile_assert();
+  }
   tor_free(m);
 }
 /** Return an integer representing this thread. */

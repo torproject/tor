@@ -38,8 +38,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       try to use \ consistently on windows and / consistently on unix: it
       makes the log messages nicer.
 
-  o Minor bugfixes:
+  o Minor bugfixes (other):
     - Stop allowing hibernating servers to be "stable" or "fast".
+    - Check return values from pthread_mutex functions. 
 
   o Minor bugfixes (controller), reported by daejees:
     - Make 'getinfo fingerprint' return a 551 error if we're not a
