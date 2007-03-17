@@ -1,3 +1,9 @@
+tor (0.1.2.12-rc-1) experimental; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 17 Mar 2007 11:35:31 +0100
+
 tor (0.1.2.10-rc-1) experimental; urgency=low
 
   * New upstream version.
