@@ -1705,6 +1705,32 @@ get_purpose(char **string, int for_circuits, uint8_t *purpose)
   return 0;
 }
 
+/** Return a newly allocated smartlist containing the arguments to the command
+ * waiting in <b>body</b>. If there are fewer than <b>min_args</b> arguments,
+ * or if <b>max_args</b> is nonnegative and there are more than
+ * <b>max_args</b> arguments, send a 512 error to the controller, using
+ * <b>command</b> as the command name in the error message. */
+static smartlist_t *
+getargs_helper(const char *command, control_connection_t *conn,
+               const char *body, int min_args, int max_args)
+{
+  smartlist_t *args = smartlist_create();
+  smartlist_split_string(args, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (smartlist_len(args) < min_args) {
+    connection_printf_to_buf(conn, "512 Missing argument to %s\r\n",command);
+    goto err;
+  } else if (max_args >= 0 && smartlist_len(args) > max_args) {
+    connection_printf_to_buf(conn, "512 Too many arguments to %s\r\n",command);
+    goto err;
+  }
+  return args;
+ err:
+  SMARTLIST_FOREACH(args, char *, s, tor_free(s));
+  smartlist_free(args);
+  return NULL;
+}
+
 /** Called when we get an EXTENDCIRCUIT message.  Try to extend the listed
  * circuit, and report success or failure. */
 static int
@@ -1720,16 +1746,9 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   router_nicknames = smartlist_create();
 
-  args = smartlist_create();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args)<2) {
-    connection_printf_to_buf(conn,
-                             "512 Missing argument to EXTENDCIRCUIT\r\n");
-    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-    smartlist_free(args);
+  args = getargs_helper("EXTENDCIRCUIT", conn, body, 2, -1);
+  if (!args)
     goto done;
-  }
 
   zero_circ = !strcmp("0", (char*)smartlist_get(args,0));
   if (!zero_circ && !(circ = get_circ(smartlist_get(args,0)))) {
@@ -1825,16 +1844,14 @@ handle_control_setpurpose(control_connection_t *conn, int for_circuits,
   origin_circuit_t *circ = NULL;
   routerinfo_t *ri = NULL;
   uint8_t new_purpose;
-  smartlist_t *args = smartlist_create();
+  smartlist_t *args;
+  const char *command =
+    for_circuits ? "SETCIRCUITPURPOSE" : "SETROUTERPURPOSE";
   (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args)<2) {
-    connection_printf_to_buf(conn,
-                             "512 Missing argument to SET%sPURPOSE\r\n",
-                             for_circuits ? "CIRCUIT" : "ROUTER");
+
+  args = getargs_helper(command, conn, body, 2, -1);
+  if (!args)
     goto done;
-  }
 
   if (for_circuits) {
     if (!(circ = get_circ(smartlist_get(args,0)))) {
@@ -1865,8 +1882,10 @@ handle_control_setpurpose(control_connection_t *conn, int for_circuits,
   connection_write_str_to_buf("250 OK\r\n", conn);
 
 done:
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-  smartlist_free(args);
+  if (args) {
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+  }
   return 0;
 }
 
@@ -1882,16 +1901,9 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   smartlist_t *args;
   (void) len;
 
-  args = smartlist_create();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args)<2) {
-    connection_printf_to_buf(conn,
-                             "512 Missing argument to ATTACHSTREAM\r\n");
-    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-    smartlist_free(args);
+  args = getargs_helper("ATTACHSTREAM", conn, body, 2, -1);
+  if (!args)
     return 0;
-  }
 
   zero_circ = !strcmp("0", (char*)smartlist_get(args,1));
 
@@ -1962,6 +1974,7 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   smartlist_t *args = smartlist_create();
   tor_assert(cp);
   *cp++ = '\0';
+
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (smartlist_len(args)) {
@@ -2008,13 +2021,11 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
   smartlist_t *args;
   (void) len;
 
-  args = smartlist_create();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args) < 2)
-    connection_printf_to_buf(conn,
-                             "512 Missing argument to REDIRECTSTREAM\r\n");
-  else if (!(ap_conn = get_stream(smartlist_get(args, 0)))
+  args = getargs_helper("REDIRECTSTREAM", conn, body, 2, -1);
+  if (!args)
+    return 0;
+
+  if (!(ap_conn = get_stream(smartlist_get(args, 0)))
            || !ap_conn->socks_request) {
     connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
                              (char*)smartlist_get(args, 0));
@@ -2058,12 +2069,10 @@ handle_control_closestream(control_connection_t *conn, uint32_t len,
   int ok;
   (void) len;
 
-  args = smartlist_create();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args)<2)
-    connection_printf_to_buf(conn,
-                             "512 Missing argument to CLOSESTREAM\r\n");
+  args = getargs_helper("CLOSESTREAM", conn, body, 2, -1);
+  if (!args)
+    return 0;
+
   else if (!(ap_conn = get_stream(smartlist_get(args, 0))))
     connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
                              (char*)smartlist_get(args, 0));
@@ -2097,13 +2106,11 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   smartlist_t *args;
   (void) len;
 
-  args = smartlist_create();
-  smartlist_split_string(args, body, " ",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args)<1)
-    connection_printf_to_buf(conn,
-                             "512 Missing argument to CLOSECIRCUIT\r\n");
-  else if (!(circ=get_circ(smartlist_get(args, 0))))
+  args = getargs_helper("CLOSECIRCUIT", conn, body, 1, -1);
+  if (!args)
+    return 0;
+
+  if (!(circ=get_circ(smartlist_get(args, 0))))
     connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
                              (char*)smartlist_get(args, 0));
   else {
