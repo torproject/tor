@@ -4,7 +4,7 @@ Version:
 Last-Modified:
 Author: Kevin Bauer & Damon McCoy
 Created: 9-March-2007
-Status: Open
+Status: Accepted
 
 Overview:
   This document describes a solution to a Sybil attack vulnerability in the
@@ -30,9 +30,24 @@ Security implications:
   attacker must control in order to carry out traffic analysis.
 
 Specification:
-  We propose that the directory servers check if an incoming Tor router IP
-  address is already registered under another router. If this is the case,
-  then prevent the new router from joining the network.
+
+  For each IP address, each directory authority tracks the number of routers
+  using that IP address, along with their total observed bandwidth.  If there
+  are more than MAX_SERVERS_PER_IP servers at some IP, the authority should
+  "disable" all but MAX_SERVERS_PER_IP servers.  If the total observed
+  bandwidth of the remaining non-"disabled" servers exceeds MAX_BW_PER_IP,
+  the authority should "disable" some of the remaining servers until only one
+  server remains, or until the remaining observed bandwidth of non-"disabled"
+  servers is under MAX_BW_PER_IP.  When choosing which servers to disable,
+  the authority should first disable non-Running servers in increasing order
+  of observed bandwidth, and then should disable Running servers in
+  increasing order of bandwidth.
+
+  Servers that are "disabled" MUST be marked as non-Valid and non-Running.
+
+  MAX_SERVERS_PER_IP is 3.
+
+  MAX_BW_PER_IP is 8 MB per s.
 
 Compatibility:
 
@@ -65,18 +80,4 @@ Compatibility:
     example, for a while Tonga was offering 10MB/s and its Tor server
     would only make use of a bit of it. So Roger suggested that he run
     two Tor servers, to use more.
-
-Alternatives:
-
-  Roger suggested that instead of capping number of servers per IP to 1, we
-  should cap total declared bandwidth per IP to some N, and total declared
-  servers to some M.  (He suggested N=5MB/s and M=5.) Directory authorities
-  would then always choose to keep the highest-bandwidth running servers
-  -- if they pick based on time joining the network we can get into bad
-  race conditions.
-
-  Roger also suggested that rather than not listing servers, we mark them as
-  not Running. (He originally suggested marking them as Running but not
-  Valid, but that would still allow an attacker to control an arbitrary
-  number of middle hops, which is still likely to be worrisome.)
 
