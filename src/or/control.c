@@ -2192,6 +2192,8 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
     connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
                              (unsigned long)circ->global_identifier);
   }
+  if (zero_circ) /* send a 'launched' event, for completeness */
+    control_event_circuit_status(circ, CIRC_EVENT_LAUNCHED, 0);
  done:
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
