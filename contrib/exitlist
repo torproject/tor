@@ -218,7 +218,7 @@ def run():
             opts, pargs = getopt.getopt(sys.argv[1:], "vx")
         except getopt.GetoptError, e:
             print """
-usage: %s [-v] [-x] [host:port [host:port [...]]]
+usage: cat ~/.tor/cached-routers* | %s [-v] [-x] [host:port [host:port [...]]]
     -v  verbose output
     -x  invert results
 """ % sys.argv[0]

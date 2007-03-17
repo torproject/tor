@@ -21,7 +21,7 @@ Motivation:
   they're limited to the same download capacity as upload capacity. And
   they have to enable rate limiting, or their upstream pipe gets filled
   up, starts dropping packets, and now their net connection doesn't work
-  even for non-Tor stuff. So they end up turning off the relaying part.
+  even for non-Tor stuff. So they end up turning off the relaying part
   so they can use Tor (and other applications) again.
 
   So far this hasn't mattered that much: most of our fast relays are
