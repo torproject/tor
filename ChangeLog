@@ -1,4 +1,4 @@
-Changes in version 0.1.2.12-rc - 2007-03-??
+Changes in version 0.1.2.12-rc - 2007-03-16
   o Major bugfixes:
     - Fix an infinite loop introduced in 0.1.2.7-alpha when we serve
       directory information requested inside Tor connections (i.e. via
