@@ -113,3 +113,14 @@ Type "make"
 
 You now have a tor.exe in src/or/.  This is Tor.
 You now have a tor_resolve.exe in src/tools/.
+
+Stage Six:  Build installer
+---------------------------
+Install the latest NSIS:
+http://nsis.sourceforge.net/Download
+
+Run the package script in contrib:
+From the Tor build directory above, run:
+"./contrib/package_nsis-mingw.sh"
+
+The resulting Tor installer executable is in ./win_tmp/.
