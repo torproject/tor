@@ -13,7 +13,13 @@ http://prdownloads.sf.net/mingw/MSYS-1.0.10.exe?download
 Download the mingw developer tool kit:
 http://prdownloads.sf.net/mingw/msysDTK-1.0.1.exe?download
 
-Install mingw, msys and mingw-dtk.
+Download the mingw autoconf-2.59 update:
+http://prdownloads.sf.net/mingw/msys-autoconf-2.59.tar.bz2?download
+
+Install mingw, msys and mingw-dtk.  Extract msys-autoconf-2.59.tar.bz2 into
+your mingw install location.  For example, if you installed mingw into
+/c/mingw/1.0/ you want to extract msys-autoconf-2.59.tar.bz2 into this
+directory.
 
 Create a directory called "tor-mingw".
 
@@ -80,14 +86,13 @@ Done.
 Stage Four: Download, extract, and patch libevent-1.1b.
 ------------------------------------------------------
 
-Download libevent-1.3b:
+Download the latest libevent release:
 http://www.monkey.org/~provos/libevent/
 
 Copy the libevent tarball into the "tor-mingw" directory.
 Type "cd tor-mingw"
 
-Extract libevent: 
-Type "tar zxf libevent-1.3b.tar.gz"
+Extract libevent. 
 
 Type "./configure --enable-static --disable-shared"
 --------------------libevent 1.3b only---------------------------------------
@@ -113,3 +118,16 @@ Type "make"
 
 You now have a tor.exe in src/or/.  This is Tor.
 You now have a tor_resolve.exe in src/tools/.
+
+Stage Six:  Build the installer
+-------------------------------
+
+Install the latest NSIS:
+http://nsis.sourceforge.net/Download
+
+Run the package script in contrib:
+From the Tor build directory above, run:
+"./contrib/package_nsis-mingw.sh"
+
+The resulting Tor installer executable is in ./win_tmp/.
+
