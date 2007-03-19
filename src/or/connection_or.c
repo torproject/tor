@@ -549,10 +549,6 @@ connection_tls_continue_handshake(or_connection_t *conn)
 
 /** Return 1 if we initiated this connection, or 0 if it started
  * out as an incoming connection.
- *
- * This is implemented for now by checking to see if
- * conn-\>identity_digest is set or not. Perhaps we should add a flag
- * one day so we're clearer.
  */
 int
 connection_or_nonopen_was_started_here(or_connection_t *conn)
