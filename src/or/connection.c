@@ -1119,10 +1119,8 @@ static int write_buckets_empty_last_second = 0;
 static int
 connection_counts_as_relayed_traffic(connection_t *conn)
 {
-#if 0
-  if (conn->type == CONN_TYPE_OR && TO_OR_CONN(conn)->bandwidth_class)
+  if (conn->type == CONN_TYPE_OR && !TO_OR_CONN(conn)->client_used)
     return 1;
-#endif
   if (conn->type == CONN_TYPE_DIR && DIR_CONN_IS_SERVER(conn))
     return 1;
   return 0;

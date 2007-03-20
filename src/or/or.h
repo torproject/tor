@@ -790,8 +790,11 @@ typedef struct or_connection_t {
   char identity_digest[DIGEST_LEN];
   char *nickname; /**< Nickname of OR on other side (if any). */
 
-  tor_tls_t *tls; /**< TLS connection state */
-  int tls_error; /**< Last tor_tls error code */
+  tor_tls_t *tls; /**< TLS connection state. */
+  int tls_error; /**< Last tor_tls error code. */
+  /** Whether we are using this conn for any client traffic. If we're
+   * not, we can rate limit it further. */
+  uint8_t client_used:1;
 
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
