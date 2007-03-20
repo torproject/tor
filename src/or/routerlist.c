@@ -4069,6 +4069,13 @@ update_router_descriptor_cache_downloads(time_t now)
          * we take this clause out. -RD */
         continue;
       }
+      { /* XXX temporary hack so I can debug other stuff without bug 384
+         * filling up my logs. */
+        trusted_dir_server_t *ds;
+        ds = router_get_trusteddirserver_by_digest(ns->identity_digest);
+        if (ds && !ds->is_running)
+          continue;
+      }
       SMARTLIST_FOREACH(ns->entries, routerstatus_t * , rs,
         {
           if (!rs->need_to_mirror)
