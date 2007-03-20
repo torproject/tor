@@ -216,6 +216,8 @@ static config_var_t _option_vars[] = {
   VAR("RecommendedClientVersions", LINELIST, RecommendedClientVersions,  NULL),
   VAR("RecommendedServerVersions", LINELIST, RecommendedServerVersions,  NULL),
   VAR("RedirectExit",        LINELIST, RedirectExit,         NULL),
+  VAR("RelayBandwidthBurst", MEMUNIT,  RelayBandwidthBurst,  "0"),
+  VAR("RelayBandwidthRate",  MEMUNIT,  RelayBandwidthRate,   "0"),
   VAR("RendExcludeNodes",    STRING,   RendExcludeNodes,     NULL),
   VAR("RendNodes",           STRING,   RendNodes,            NULL),
   VAR("RendPostPeriod",      INTERVAL, RendPostPeriod,       "1 hour"),
@@ -2662,6 +2664,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
                        "MaxAdvertisedBandwidth is set to %d bytes/second. "
                        "For servers, it must be at least %d.",
                        (int)options->MaxAdvertisedBandwidth,
+                       ROUTER_REQUIRED_MIN_BANDWIDTH);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
+      return -1;
+    }
+    if (options->RelayBandwidthRate > options->RelayBandwidthBurst)
+      REJECT("RelayBandwidthBurst must be at least equal "
+             "to RelayBandwidthRate.");
+    if (options->RelayBandwidthRate &&
+      options->RelayBandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
+      r = tor_snprintf(buf, sizeof(buf),
+                       "RelayBandwidthRate is set to %d bytes/second. "
+                       "For servers, it must be at least %d.",
+                       (int)options->RelayBandwidthRate,
                        ROUTER_REQUIRED_MIN_BANDWIDTH);
       *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;

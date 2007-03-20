@@ -34,12 +34,18 @@ static int conn_close_if_marked(int i);
 int global_read_bucket; /**< Max number of bytes I can read this second. */
 int global_write_bucket; /**< Max number of bytes I can write this second. */
 
+/** Max number of relayed (bandwidth class 1) bytes I can read this second. */
+int global_relayed_read_bucket;
+/** Max number of relayed (bandwidth class 1) bytes I can write this second. */
+int global_relayed_write_bucket;
+
 /** What was the read bucket before the last call to prepare_for_pool?
  * (used to determine how many bytes we've read). */
 static int stats_prev_global_read_bucket;
 /** What was the write bucket before the last call to prepare_for_pool?
  * (used to determine how many bytes we've written). */
 static int stats_prev_global_write_bucket;
+/* XXX we might want to keep stats about global_relayed_*_bucket too. Or not.*/
 /** How many bytes have we read/written since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
 static uint64_t stats_n_bytes_written = 0;

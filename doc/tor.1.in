@@ -65,8 +65,7 @@ bandwidth usage to that same value. (Default: 3 MB)
 .TP
 \fBBandwidthBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 Limit the maximum token bucket size (also known as the burst) to the
-given number of bytes in each direction. This value should be at least
-twice your BandwidthRate. (Default: 6 MB)
+given number of bytes in each direction. (Default: 6 MB)
 .LP
 .TP
 \fBMaxAdvertisedBandwidth \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
@@ -75,6 +74,20 @@ BandwidthRate. Server operators who want to reduce the number of clients
 who ask to build circuits through them (since this is proportional to
 advertised bandwidth rate) can thus reduce the CPU demands on their
 server without impacting network performance.
+.LP
+.TP
+\fBRelayBandwidthRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
+If defined, a separate token bucket limits the average incoming bandwidth
+usage for _relayed traffic_ on this node to the specified number of
+bytes per second, and the average outgoing bandwidth usage to that same
+value. Relayed traffic is currently defined as answers to directory
+requests, but that may change. (Default: 0)
+.LP
+.TP
+\fBRelayBandwidthBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
+Limit the maximum token bucket size (also known as the burst) for
+_relayed traffic_ to the
+given number of bytes in each direction. (Default: 0)
 .LP
 .TP
 \fBConnLimit \fR\fINUM\fP

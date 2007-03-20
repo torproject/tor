@@ -804,7 +804,7 @@ typedef struct or_connection_t {
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
   struct or_connection_t *next_with_same_id; /**< Next connection with same
-                                           * identity digest as this one. */
+                                              * identity digest as this one. */
   /** Linked list of bridged dirserver connections that can't write until
    * this connection's outbuf is less full. */
   struct dir_connection_t *blocked_dir_connections;
@@ -1697,6 +1697,10 @@ typedef struct {
                             * to use in a second? */
   uint64_t MaxAdvertisedBandwidth; /**< How much bandwidth are we willing to
                                     * tell people we have? */
+  uint64_t RelayBandwidthRate; /**< How much bandwidth, on average, are we
+                                 * willing to use for all relayed conns? */
+  uint64_t RelayBandwidthBurst; /**< How much bandwidth, at maximum, will we
+                                 * use in a second for all relayed conns? */
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */
