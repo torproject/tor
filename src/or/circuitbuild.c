@@ -489,6 +489,10 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
 
   memcpy(cell.payload, payload, ONIONSKIN_CHALLENGE_LEN);
   connection_or_write_cell_to_buf(&cell, circ->n_conn);
+
+  /* mark it so it gets better rate limiting treatment. */
+  circ->n_conn->client_used = 1;
+
   return 0;
 }
 

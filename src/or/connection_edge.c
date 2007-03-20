@@ -1792,11 +1792,6 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
   log_info(LD_APP,"Address/port sent, ap socket %d, n_circ_id %d",
            ap_conn->_base.s, circ->_base.n_circ_id);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_CONNECT, 0);
-
-  if ((TO_CIRCUIT(circ))->n_conn) {
-    /* mark it so it gets better rate limiting treatment. */
-    (TO_CIRCUIT(circ))->n_conn->client_used = 1;
-  }
   return 0;
 }
 
