@@ -238,7 +238,7 @@ Discussion: Advertising versions in routerdescs and networkstatuses.
 
      The networkstatus "v" line now has the format:
         "v" IMPLEMENTATION IMPL-VERSION "Link" LINK-VERSION-LIST
-            Circuit" CIRCUIT-VERSION-LIST NL
+            "Circuit" CIRCUIT-VERSION-LIST NL
 
      LINK-VERSION-LIST and CIRCUIT-VERSION-LIST are comma-separated lists of
      supported version numbers.  IMPLEMENTATION is the name of the
@@ -246,14 +246,14 @@ Discussion: Advertising versions in routerdescs and networkstatuses.
      version of the implementation.
 
      Examples:
-        v Tor 0.2.5.1-alpha Link 0,1,2,3 Circuit 0,2,5
+        v Tor 0.2.5.1-alpha Link 1,2,3 Circuit 2,5
 
         v OtherOR 2000+ Link 3 Circuit 5
 
      Implementations that release independently of the Tor codebase SHOULD NOT
      use "Tor" as the value of their IMPLEMENTATION.
 
-     Additional fields on the "v" line MUSTbe ignored.
+     Additional fields on the "v" line MUST be ignored.
 
    In router descriptors:
 
