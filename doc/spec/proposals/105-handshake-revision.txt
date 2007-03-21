@@ -234,7 +234,38 @@ Discussion: Reducing round-trips
 
 Discussion: Advertising versions in routerdescs and networkstatuses.
 
-   XXXX
+   In network-statuses:
+
+     The networkstatus "v" line now has the format:
+        "v" IMPLEMENTATION IMPL-VERSION "Link" LINK-VERSION-LIST
+            Circuit" CIRCUIT-VERSION-LIST NL
+
+     LINK-VERSION-LIST and CIRCUIT-VERSION-LIST are comma-separated lists of
+     supported version numbers.  IMPLEMENTATION is the name of the
+     implementation of the Tor protocol (e.g., "Tor"), and IMPL-VERSION is the
+     version of the implementation.
+
+     Examples:
+        v Tor 0.2.5.1-alpha Link 0,1,2,3 Circuit 0,2,5
+
+        v OtherOR 2000+ Link 3 Circuit 5
+
+     Implementations that release independently of the Tor codebase SHOULD NOT
+     use "Tor" as the value of their IMPLEMENTATION.
+
+     Additional fields on the "v" line MUSTbe ignored.
+
+   In router descriptors:
+
+     The router descriptor should contain a line of the form,
+       "protocols" "Link" LINK-VERSION-LIST "Circuit" CIRCUIT_VERSION_LIST
+
+     Additional fields on the "protocols" line MUST be ignored.
+
+     [Versions of Tor before 0.1.2.5-alpha rejected router descriptors with
+     unrecognized items; the protocols line should be preceded with an "opt"
+     until these Tors are obsolete.]
+
 
 Security issues:
 
@@ -244,8 +275,11 @@ Security issues:
    version, it will get a disproportionate amount of traffic from clients who
    prefer that version.  We can mitigate this somewhat as follows:
 
-     - Do not have clients prefer any protocol version by default
-       until that version is widespread.
+     - Do not have clients prefer any protocol version by default until that
+       version is widespread.  (First introduce the new version to servers,
+       and have clients admit to using it only when configured to do so for
+       testing.  Then, once many servers are running the new protocol
+       version, enable its use by default.)
 
      - Do not multiply protocol versions needlessly.
 
