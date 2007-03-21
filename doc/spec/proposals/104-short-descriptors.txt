@@ -55,18 +55,19 @@ Specification:
 
   1. Extra Info Format.
 
-    A "extra info" descriptor contains the following fields:
+    An "extra info" descriptor contains the following fields:
 
-    "extra-info" Nickname IP FINGERPRINT
+    "extra-info" Nickname IP Fingerprint
         Identifies what router this is an extra info descriptor for.
-        FINGERPRINT is encoded in hex, with no spaces.
+        Fingerprint is encoded in hex (using upper-case letters), with
+        no spaces.
 
     "published"
-        As currently documented in dir-spec.txt
+        As currently documented in dir-spec.txt.
 
     "read-history"
     "write-history"
-        As currently documented in dir-spec.txt
+        As currently documented in dir-spec.txt.
 
     "router-signature" NL Signature NL
 
@@ -83,14 +84,18 @@ Specification:
   2. Existing formats
 
      Implementations that use "read-history" and "write-history" SHOULD
-     accept router descriptors that contain them.  (Prior to 0.2.0.x, this
-     information was encoded in ordinary router descriptors.)
+     continue accepting router descriptors that contain them.  (Prior to
+     0.2.0.x, this information was encoded in ordinary router descriptors;
+     in any case they have always been listed as opt, so they should be
+     accepted anyway.)
 
-     Add these field to router descriptors:
-       "extra-info-digest" DIGEST
-          DIGEST is a hex-encoded digest of the router's extra-info document,
-          as signed in the router's extra-info.  (If this field is absent,
-          no extra-info-digest exists.)
+     Add these fields to router descriptors:
+
+       "extra-info-digest" Digest
+          "Digest" is a hex-encoded digest (using upper-case characters)
+          of the router's extra-info document, as signed in the router's
+          extra-info.  (If this field is absent, no extra-info-digest
+          exists.)
 
        "caches-extra-info"
           Present if this router is a directory cache that provides
@@ -102,7 +107,7 @@ Specification:
      descriptor they generate and upload; no more, no less.  Clients MUST
      upload the new descriptor before they upload the new extra-info.
 
-     Authorities receiving an extra-info documents SHOULD verify all of the
+     Authorities receiving an extra-info document SHOULD verify all of the
      following:
        * They have a router descriptor for some server with a matching
          nickname, IP, and identity fingerprint.
@@ -126,24 +131,25 @@ Specification:
 
      http://<hostname>/tor/extra/d/...
      http://<hostname>/tor/extra/fp/...
-     http://<hostname>/tor/extra/all.z
+     http://<hostname>/tor/extra/all[.z]
         (As for /tor/server/ URLs: supports fetching extra-info documents
-        by their digest, by the fingerprint of their servers, or all at
-        once.  Only directory authorities are guaranteed to support these
-        URLs.)
+        by their digest, by the fingerprint of their servers, or all
+        at once. When serving by fingerprint, we serve the extra-info
+        that corresponds to the descriptor we would serve by that
+        fingerprint. Only directory authorities are guaranteed to support
+        these URLs.)
 
-     http://<hostname>/tor/extra/authority.z
+     http://<hostname>/tor/extra/authority[.z]
         (The extra-info document for this router.)
 
      Extra-info documents are uploaded to the same URLs as regular
      router descriptors.
 
-
 Migration:
 
   For extra info approach:
      * First:
-       * Authorities should accept extra info, and support downloading it.
+       * Authorities should accept extra info, and support serving it.
        * Routers should upload bandwidth info once authorities accept it.
        * Caches should support an option to download and cache it, once
          authorities serve it.
