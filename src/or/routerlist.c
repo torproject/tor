@@ -185,18 +185,26 @@ router_should_rebuild_store(void)
     return router_journal_len > (1<<15);
 }
 
-/** Add the <b>len</b>-type router descriptor in <b>s</b> to the router
+/** Add the router descriptor in <b>desc</b> to the router
  * journal; change its saved_location to SAVED_IN_JOURNAL and set its
- * offset appropriately. */
+ * offset appropriately.
+ *
+ * If <b>purpose</b> isn't ROUTER_PURPOSE_GENERAL, just do nothing. */
 static int
-router_append_to_journal(signed_descriptor_t *desc)
+router_append_to_journal(signed_descriptor_t *desc, uint8_t purpose)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
-  char *fname = tor_malloc(fname_len);
+  char *fname;
   const char *body = signed_descriptor_get_body(desc);
   size_t len = desc->signed_descriptor_len;
 
+  if (purpose != ROUTER_PURPOSE_GENERAL) {
+    /* we shouldn't cache it. be happy and return. */
+    return 0;
+  }
+
+  fname = tor_malloc(fname_len);
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers.new",
                options->DataDirectory);
 
@@ -272,6 +280,7 @@ router_rebuild_store(int force)
 
   chunk_list = smartlist_create();
 
+  /* We sort the routers by age to enhance locality on disk. */
   old_routers = smartlist_create();
   smartlist_add_all(old_routers, routerlist->old_routers);
   smartlist_sort(old_routers, _compare_old_routers_by_age);
@@ -279,7 +288,6 @@ router_rebuild_store(int force)
   smartlist_add_all(routers, routerlist->routers);
   smartlist_sort(routers, _compare_routers_by_age);
   for (i = 0; i < 2; ++i) {
-    /* We sort the routers by age to enhance locality on disk. */
     smartlist_t *lst = (i == 0) ? old_routers : routers;
     /* Now, add the appropriate members to chunk_list */
     SMARTLIST_FOREACH(lst, void *, ptr,
@@ -292,6 +300,8 @@ router_rebuild_store(int force)
         log_warn(LD_BUG, "No descriptor available for router.");
         goto done;
       }
+      if (i==1 && ((routerinfo_t*)ptr)->purpose != ROUTER_PURPOSE_GENERAL)
+        continue;
       c = tor_malloc(sizeof(sized_chunk_t));
       c->bytes = body;
       c->len = sd->signed_descriptor_len;
@@ -322,6 +332,9 @@ router_rebuild_store(int force)
     {
       signed_descriptor_t *sd = (i==0) ?
         ((signed_descriptor_t*)ptr): &((routerinfo_t*)ptr)->cache_info;
+
+      if (i==1 && ((routerinfo_t*)ptr)->purpose != ROUTER_PURPOSE_GENERAL)
+        continue;
 
       sd->saved_location = SAVED_IN_CACHE;
       if (routerlist->mmap_descriptors) {
@@ -1616,6 +1629,7 @@ static void
 routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 {
   if (get_options()->DirPort &&
+      ri->purpose == ROUTER_PURPOSE_GENERAL &&
       !digestmap_get(rl->desc_digest_map,
                      ri->cache_info.signed_descriptor_digest)) {
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri);
@@ -1631,7 +1645,9 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
  * as needed. If <b>idx</b> is nonnegative and smartlist_get(rl-&gt;routers,
  * idx) == ri, we don't need to do a linear search over the list to decide
  * which to remove.  We fill the gap in rl-&gt;routers with a later element in
- * the list, if any exists. <b>ri</b> is freed. */
+ * the list, if any exists. <b>ri</b> is freed.
+ *
+ * DOCDOC make_old */
 void
 routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
 {
@@ -1649,7 +1665,8 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   ri_tmp = digestmap_remove(rl->identity_map, ri->cache_info.identity_digest);
   router_dir_info_changed();
   tor_assert(ri_tmp == ri);
-  if (make_old && get_options()->DirPort) {
+  if (make_old && get_options()->DirPort &&
+      ri->purpose == ROUTER_PURPOSE_GENERAL) {
     signed_descriptor_t *sd;
     sd = signed_descriptor_from_routerinfo(ri);
     smartlist_add(rl->old_routers, sd);
@@ -1684,7 +1701,9 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
  * <b>ri_new</b>, updating all index info.  If <b>idx</b> is nonnegative and
  * smartlist_get(rl-&gt;routers, idx) == ri, we don't need to do a linear
  * search over the list to decide which to remove.  We put ri_new in the same
- * index as ri_old, if possible.  ri is freed as appropriate. */
+ * index as ri_old, if possible.  ri is freed as appropriate.
+ *
+ * DOCDOC make_old */
 static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx, int make_old)
@@ -1713,7 +1732,8 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   digestmap_set(rl->desc_digest_map,
           ri_new->cache_info.signed_descriptor_digest, &(ri_new->cache_info));
 
-  if (make_old && get_options()->DirPort) {
+  if (make_old && get_options()->DirPort &&
+      ri_old->purpose == ROUTER_PURPOSE_GENERAL) {
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri_old);
     smartlist_add(rl->old_routers, sd);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
@@ -1936,7 +1956,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && get_options()->DirPort)
-        router_append_to_journal(&router->cache_info);
+        router_append_to_journal(&router->cache_info, router->purpose);
       routerlist_insert_old(routerlist, router);
       return -1;
     }
@@ -1967,7 +1987,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                 router->nickname);
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && get_options()->DirPort)
-        router_append_to_journal(&router->cache_info);
+        router_append_to_journal(&router->cache_info, router->purpose);
       routerlist_insert_old(routerlist, router);
       *msg = "Router descriptor was not new.";
       return -1;
@@ -2005,7 +2025,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       }
       routerlist_replace(routerlist, old_router, router, pos, 1);
       if (!from_cache) {
-        router_append_to_journal(&router->cache_info);
+        router_append_to_journal(&router->cache_info, router->purpose);
       }
       directory_set_dirty();
       *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
@@ -2020,7 +2040,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
    * the list. */
   routerlist_insert(routerlist, router);
   if (!from_cache)
-    router_append_to_journal(&router->cache_info);
+    router_append_to_journal(&router->cache_info, router->purpose);
   directory_set_dirty();
   return 0;
 }

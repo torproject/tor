@@ -1107,7 +1107,7 @@ connection_is_rate_limited(connection_t *conn)
 extern int global_read_bucket, global_write_bucket;
 extern int global_relayed_read_bucket, global_relayed_write_bucket;
 
-/** Did our either global write bucket run dry last second? If so,
+/** Did either global write bucket run dry last second? If so,
  * we are likely to run dry again this second, so be stingy with the
  * tokens we just put in. */
 static int write_buckets_empty_last_second = 0;
@@ -1364,7 +1364,6 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
     log(LOG_DEBUG, LD_NET,"%s now %d.", name, *bucket);
   }
 }
-
 
 /** A second has rolled over; increment buckets appropriately. */
 void
