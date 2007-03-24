@@ -291,8 +291,9 @@ command_process_created_cell(cell_t *cell, or_connection_t *conn)
   } else { /* pack it into an extended relay cell, and send it. */
     log_debug(LD_OR,
               "Converting created cell to extended relay cell, sending.");
-    connection_edge_send_command(NULL, circ, RELAY_COMMAND_EXTENDED,
-                                 cell->payload, ONIONSKIN_REPLY_LEN);
+    relay_send_command_from_edge(0, circ, RELAY_COMMAND_EXTENDED,
+                                 cell->payload, ONIONSKIN_REPLY_LEN,
+                                 NULL);
   }
 }
 
@@ -383,8 +384,8 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
       char payload[1];
       log_debug(LD_OR, "Delivering 'truncated' back.");
       payload[0] = (char)reason;
-      connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
-                                   payload, sizeof(payload));
+      relay_send_command_from_edge(0, circ, RELAY_COMMAND_TRUNCATED,
+                                   payload, sizeof(payload), NULL);
     }
   }
 }

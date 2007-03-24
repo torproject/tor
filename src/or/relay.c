@@ -512,14 +512,18 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
  * return -1. Else return 0.
  */
 int
-connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
+connection_edge_send_command(edge_connection_t *fromconn,
                              int relay_command, const char *payload,
                              size_t payload_len)
 {
   /* XXXX NM Split this function into a separate versions per circuit type? */
-  crypt_path_t *cpath_layer = fromconn ? fromconn->cpath_layer : NULL;
+  crypt_path_t *cpath_layer;
+  circuit_t *circ;
+  tor_assert(fromconn);
+  cpath_layer = fromconn ? fromconn->cpath_layer : NULL;
+  circ = fromconn->on_circuit;
 
-  if (fromconn && fromconn->_base.marked_for_close) {
+  if (fromconn->_base.marked_for_close) {
     log_warn(LD_BUG,
              "called on conn that's already marked for close at %s:%d.",
              fromconn->_base.marked_for_close_file,
@@ -528,7 +532,6 @@ connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
   }
 
   if (!circ) {
-    tor_assert(fromconn);
     if (fromconn->_base.type == CONN_TYPE_AP) {
       log_info(LD_APP,"no circ. Closing conn.");
       connection_mark_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);
@@ -541,9 +544,9 @@ connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
     return -1;
   }
 
-  return relay_send_command_from_edge(fromconn ? fromconn->stream_id : 0,
-                                      circ, relay_command, payload,
-                                      payload_len, cpath_layer);
+  return relay_send_command_from_edge(fromconn->stream_id, circ,
+                                      relay_command, payload,
+                                      payload_len, fromconn->cpath_layer);
 }
 
 /** Translate <b>reason</b>, which came from a relay 'end' cell,
@@ -1114,8 +1117,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       {
         char payload[1];
         payload[0] = (char)END_CIRC_REASON_REQUESTED;
-        connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
-                                     payload, sizeof(payload));
+        relay_send_command_from_edge(0, circ, RELAY_COMMAND_TRUNCATED,
+                                     payload, sizeof(payload), NULL);
       }
       return 0;
     case RELAY_COMMAND_TRUNCATED:
@@ -1277,7 +1280,7 @@ repeat_connection_edge_package_raw_inbuf:
   log_debug(domain,"(%d) Packaging %d bytes (%d waiting).", conn->_base.s,
             (int)length, (int)buf_datalen(conn->_base.inbuf));
 
-  if (connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
+  if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,
                                    payload, length) < 0 )
     /* circuit got marked for close, don't continue, don't need to mark conn */
     return 0;
@@ -1329,7 +1332,7 @@ connection_edge_consider_sending_sendme(edge_connection_t *conn)
               "Outbuf %d, Queueing stream sendme.",
               (int)conn->_base.outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
-    if (connection_edge_send_command(conn, circ, RELAY_COMMAND_SENDME,
+    if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
                                      NULL, 0) < 0) {
       log_warn(LD_APP,"connection_edge_send_command failed. Returning.");
       return; /* the circuit's closed, don't continue */

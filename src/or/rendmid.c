@@ -96,9 +96,9 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
   }
 
   /* Acknowledge the request. */
-  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
+  if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                    RELAY_COMMAND_INTRO_ESTABLISHED,
-                                   "", 0)<0) {
+                                   "", 0, NULL)<0) {
     log_info(LD_GENERAL, "Couldn't send INTRO_ESTABLISHED cell.");
     goto err;
   }
@@ -170,17 +170,17 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
            intro_circ->p_circ_id);
 
   /* Great.  Now we just relay the cell down the circuit. */
-  if (connection_edge_send_command(NULL, TO_CIRCUIT(intro_circ),
+  if (relay_send_command_from_edge(0, TO_CIRCUIT(intro_circ),
                                    RELAY_COMMAND_INTRODUCE2,
-                                   request, request_len)) {
+                                   request, request_len, NULL)) {
     log_warn(LD_GENERAL,
              "Unable to send INTRODUCE2 cell to Tor client.");
     goto err;
   }
   /* And sent an ack down Alice's circuit.  Empty body means succeeded. */
-  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
+  if (relay_send_command_from_edge(0,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_INTRODUCE_ACK,
-                                   NULL,0)) {
+                                   NULL,0,NULL)) {
     log_warn(LD_GENERAL, "Unable to send INTRODUCE_ACK cell to Tor client.");
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return -1;
@@ -190,9 +190,9 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
  err:
   /* Send the client an NACK */
   nak_body[0] = 1;
-  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
+  if (relay_send_command_from_edge(0,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_INTRODUCE_ACK,
-                                   nak_body, 1)) {
+                                   nak_body, 1, NULL)) {
     log_warn(LD_GENERAL, "Unable to send NAK to Tor client.");
     /* Is this right? */
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
@@ -228,9 +228,9 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
   }
 
   /* Acknowledge the request. */
-  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
+  if (relay_send_command_from_edge(0,TO_CIRCUIT(circ),
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
-                                   "", 0)<0) {
+                                   "", 0, NULL)<0) {
     log_warn(LD_PROTOCOL, "Couldn't send RENDEZVOUS_ESTABLISHED cell.");
     reason = END_CIRC_REASON_INTERNAL;
     goto err;
@@ -296,10 +296,10 @@ rend_mid_rendezvous(or_circuit_t *circ, const char *request,
   }
 
   /* Send the RENDEZVOUS2 cell to Alice. */
-  if (connection_edge_send_command(NULL, TO_CIRCUIT(rend_circ),
+  if (relay_send_command_from_edge(0, TO_CIRCUIT(rend_circ),
                                    RELAY_COMMAND_RENDEZVOUS2,
                                    request+REND_COOKIE_LEN,
-                                   request_len-REND_COOKIE_LEN)) {
+                                   request_len-REND_COOKIE_LEN, NULL)) {
     log_warn(LD_GENERAL,
              "Unable to send RENDEZVOUS2 cell to client on circuit %d.",
              rend_circ->p_circ_id);

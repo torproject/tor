@@ -92,9 +92,8 @@ static void purge_expired_resolves(time_t now);
 static void dns_found_answer(const char *address, int is_reverse,
                              uint32_t addr, const char *hostname, char outcome,
                              uint32_t ttl);
-static void send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
-                               uint8_t answer_type);
-static int launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ);
+static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
+static int launch_resolve(edge_connection_t *exitconn);
 static void add_wildcarded_test_address(const char *address);
 static int configure_nameservers(int force);
 static int answer_is_wildcarded(const char *ip);
@@ -389,8 +388,7 @@ purge_expired_resolves(time_t now)
  * <b>conn</b>'s attached circuit.
  */
 static void
-send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
-                   uint8_t answer_type)
+send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
 {
   char buf[RELAY_PAYLOAD_SIZE];
   size_t buflen;
@@ -425,14 +423,7 @@ send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
     }
   // log_notice(LD_EXIT, "Sending a regular RESOLVED reply: ");
 
-  if (!circ) {
-    circuit_t *tmp = circuit_get_by_edge_conn(conn);
-    if (! CIRCUIT_IS_ORIGIN(tmp))
-      circ = TO_OR_CIRCUIT(tmp);
-  }
-
-  connection_edge_send_command(conn, TO_CIRCUIT(circ),
-                               RELAY_COMMAND_RESOLVED, buf, buflen);
+  connection_edge_send_command(conn, RELAY_COMMAND_RESOLVED, buf, buflen);
 }
 
 /** Send a response to the RESOLVE request of a connection for an in-addr.arpa
@@ -444,8 +435,7 @@ send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
  * <b>conn</b>'s attached circuit.
  */
 static void
-send_resolved_hostname_cell(edge_connection_t *conn, or_circuit_t *circ,
-                            const char *hostname)
+send_resolved_hostname_cell(edge_connection_t *conn, const char *hostname)
 {
   char buf[RELAY_PAYLOAD_SIZE];
   size_t buflen;
@@ -462,15 +452,8 @@ send_resolved_hostname_cell(edge_connection_t *conn, or_circuit_t *circ,
   set_uint32(buf+2+namelen, htonl(ttl));
   buflen = 2+namelen+4;
 
-  if (!circ) {
-    circuit_t *tmp = circuit_get_by_edge_conn(conn);
-    if (! CIRCUIT_IS_ORIGIN(tmp))
-      circ = TO_OR_CIRCUIT(tmp);
-  }
-
   // log_notice(LD_EXIT, "Sending a reply RESOLVED reply: %s", hostname);
-  connection_edge_send_command(conn, TO_CIRCUIT(circ),
-                               RELAY_COMMAND_RESOLVED, buf, buflen);
+  connection_edge_send_command(conn, RELAY_COMMAND_RESOLVED, buf, buflen);
   // log_notice(LD_EXIT, "Sent");
 }
 
@@ -525,9 +508,8 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
  * need to send back an END cell, since connection_exit_begin_conn will
  * do that for us.)
  *
- * If <b>oncirc</b> is provided, and this is a resolve request, we have
- * a cached answer, send the answer back along oncirc; otherwise, send
- * the answer back along <b>exitconn</b>'s attached circuit.
+ * If we have a cached answer, send the answer back along <b>exitconn</b>'s
+ * attached circuit.
  *
  * Else, if seen before and pending, add conn to the pending list,
  * and return 0.
@@ -536,18 +518,17 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
  * dns farm, and return 0.
  */
 int
-dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
+dns_resolve(edge_connection_t *exitconn)
 {
   cached_resolve_t *resolve;
   cached_resolve_t search;
   pending_connection_t *pending_connection;
-  circuit_t *circ;
   struct in_addr in;
   time_t now = time(NULL);
   int is_reverse = 0, is_resolve, r;
+  or_circuit_t *oncirc = TO_OR_CIRCUIT(exitconn->on_circuit);
   assert_connection_ok(TO_CONN(exitconn), 0);
   tor_assert(exitconn->_base.s == -1);
-
   assert_cache_ok();
 
   is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
@@ -558,7 +539,7 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
     exitconn->_base.addr = ntohl(in.s_addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
     if (is_resolve)
-      send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_IPV4);
+      send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
     return 1;
   }
   if (address_is_invalid_destination(exitconn->_base.address, 0)) {
@@ -566,10 +547,8 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
         "Rejecting invalid destination address %s",
         escaped_safe_str(exitconn->_base.address));
     if (is_resolve)
-      send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
-    circ = circuit_get_by_edge_conn(exitconn);
-    if (circ)
-      circuit_detach_stream(circ, exitconn);
+      send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
+    circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
     if (!exitconn->_base.marked_for_close)
       connection_free(TO_CONN(exitconn));
     return -1;
@@ -601,10 +580,8 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
                  escaped_safe_str(exitconn->_base.address));
 
       if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
-        send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
-      circ = circuit_get_by_edge_conn(exitconn);
-      if (circ)
-        circuit_detach_stream(circ, exitconn);
+        send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
+      circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
       if (!exitconn->_base.marked_for_close)
         connection_free(TO_CONN(exitconn));
       return -1;
@@ -637,12 +614,12 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
         exitconn->address_ttl = resolve->ttl;
         if (resolve->is_reverse) {
           tor_assert(is_resolve);
-          send_resolved_hostname_cell(exitconn, oncirc,
+          send_resolved_hostname_cell(exitconn,
                                       resolve->result.hostname);
         } else {
           exitconn->_base.addr = resolve->result.addr;
           if (is_resolve)
-            send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_IPV4);
+            send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         }
         return 1;
       case CACHE_STATE_CACHED_FAILED:
@@ -650,10 +627,8 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
                   exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
         if (is_resolve)
-          send_resolved_cell(exitconn, oncirc, RESOLVED_TYPE_ERROR);
-        circ = circuit_get_by_edge_conn(exitconn);
-        if (circ)
-          circuit_detach_stream(circ, exitconn);
+          send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
+        circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
         if (!exitconn->_base.marked_for_close)
           connection_free(TO_CONN(exitconn));
         return -1;
@@ -683,7 +658,7 @@ dns_resolve(edge_connection_t *exitconn, or_circuit_t *oncirc)
   log_debug(LD_EXIT,"Launching %s.",
             escaped_safe_str(exitconn->_base.address));
   assert_cache_ok();
-  return launch_resolve(exitconn, oncirc);
+  return launch_resolve(exitconn);
 }
 
 /** Log an error and abort if conn is waiting for a DNS resolve.
@@ -953,7 +928,7 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
         /* This detach must happen after we send the end cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       } else {
-        send_resolved_cell(pendconn, NULL, RESOLVED_TYPE_ERROR);
+        send_resolved_cell(pendconn, RESOLVED_TYPE_ERROR);
         /* This detach must happen after we send the resolved cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       }
@@ -980,9 +955,9 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
          * but it does the right thing. */
         pendconn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
         if (is_reverse)
-          send_resolved_hostname_cell(pendconn, NULL, hostname);
+          send_resolved_hostname_cell(pendconn, hostname);
         else
-          send_resolved_cell(pendconn, NULL, RESOLVED_TYPE_IPV4);
+          send_resolved_cell(pendconn, RESOLVED_TYPE_IPV4);
         circ = circuit_get_by_edge_conn(pendconn);
         tor_assert(circ);
         circuit_detach_stream(circ, pendconn);
@@ -1187,7 +1162,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
 /** For eventdns: start resolving as necessary to find the target for
  * <b>exitconn</b> */
 static int
-launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
+launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
   struct in_addr in;
@@ -1222,10 +1197,10 @@ launch_resolve(edge_connection_t *exitconn, or_circuit_t *circ)
              escaped_safe_str(addr), r);
     if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE) {
       if (evdns_err_is_transient(r))
-        send_resolved_cell(exitconn, circ, RESOLVED_TYPE_ERROR_TRANSIENT);
+        send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
       else {
         exitconn->address_ttl = DEFAULT_DNS_TTL;
-        send_resolved_cell(exitconn, circ, RESOLVED_TYPE_ERROR);
+        send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
       }
     }
     dns_cancel_pending_resolve(addr); /* also sends end and frees */

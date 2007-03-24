@@ -211,7 +211,7 @@ connection_edge_end(edge_connection_t *conn, char reason)
   circ = circuit_get_by_edge_conn(conn);
   if (circ && !circ->marked_for_close) {
     log_debug(LD_EDGE,"Sending end on conn (fd %d).",conn->_base.s);
-    connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
+    connection_edge_send_command(conn, RELAY_COMMAND_END,
                                  payload, payload_len);
   } else {
     log_debug(LD_EDGE,"No circ to send end on conn (fd %d).",
@@ -301,7 +301,6 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   /* deliver a 'connected' relay cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(edge_conn)) {
     if (connection_edge_send_command(edge_conn,
-                                     circuit_get_by_edge_conn(edge_conn),
                                      RELAY_COMMAND_CONNECTED, NULL, 0) < 0)
       return 0; /* circuit is closed, don't continue */
   } else {
@@ -310,7 +309,6 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
     set_uint32(connected_payload+4,
                htonl(dns_clip_ttl(edge_conn->address_ttl)));
     if (connection_edge_send_command(edge_conn,
-                                     circuit_get_by_edge_conn(edge_conn),
                                      RELAY_COMMAND_CONNECTED,
                                      connected_payload, 8) < 0)
       return 0; /* circuit is closed, don't continue */
@@ -1740,12 +1738,14 @@ again:
  * If ap_conn is broken, mark it for close and return -1. Else return 0.
  */
 int
-connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
-                                   origin_circuit_t *circ)
+connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
 {
   char payload[CELL_PAYLOAD_SIZE];
   int payload_len;
   int begin_type;
+  origin_circuit_t *circ;
+  tor_assert(ap_conn->on_circuit);
+  circ = TO_ORIGIN_CIRCUIT(ap_conn->on_circuit);
 
   tor_assert(ap_conn->_base.type == CONN_TYPE_AP);
   tor_assert(ap_conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
@@ -1774,7 +1774,7 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
     tor_assert(circ->build_state->onehop_tunnel == 0);
   }
 
-  if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ), begin_type,
+  if (connection_edge_send_command(ap_conn, begin_type,
                   begin_type == RELAY_COMMAND_BEGIN ? payload : NULL,
                   begin_type == RELAY_COMMAND_BEGIN ? payload_len : 0) < 0)
     return -1; /* circuit is closed, don't continue */
@@ -1794,12 +1794,14 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
  * If ap_conn is broken, mark it for close and return -1. Else return 0.
  */
 int
-connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
-                                     origin_circuit_t *circ)
+connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
 {
   int payload_len, command;
   const char *string_addr;
   char inaddr_buf[32];
+  origin_circuit_t *circ;
+  tor_assert(ap_conn->on_circuit);
+  circ = TO_ORIGIN_CIRCUIT(ap_conn->on_circuit);
 
   tor_assert(ap_conn->_base.type == CONN_TYPE_AP);
   tor_assert(ap_conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
@@ -1841,7 +1843,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
   log_debug(LD_APP,
             "Sending relay cell to begin stream %d.", ap_conn->stream_id);
 
-  if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ),
+  if (connection_edge_send_command(ap_conn,
                            RELAY_COMMAND_RESOLVE,
                            string_addr, payload_len) < 0)
     return -1; /* circuit is closed, don't continue */
@@ -2238,13 +2240,14 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     return connection_exit_connect_dir(n_stream);
   }
 
+  TO_OR_CIRCUIT(circ)->n_streams = n_stream;  n_stream->on_circuit = circ;
+
   /* send it off to the gethostbyname farm */
-  switch (dns_resolve(n_stream, NULL)) {
+  switch (dns_resolve(n_stream)) {
     case 1: /* resolve worked */
 
       /* add it into the linked list of n_streams on this circuit */
       n_stream->next_stream = TO_OR_CIRCUIT(circ)->n_streams;
-      n_stream->on_circuit = circ;
       TO_OR_CIRCUIT(circ)->n_streams = n_stream;
       assert_circuit_ok(circ);
 
@@ -2255,12 +2258,11 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       end_payload[0] = END_STREAM_REASON_RESOLVEFAILED;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);
-      /* n_stream got freed. don't touch it. */
+      /* n_stream got detached and freed. don't touch it. */
       break;
     case 0: /* resolve added to pending list */
       /* add it into the linked list of resolving_streams on this circuit */
       n_stream->next_stream = TO_OR_CIRCUIT(circ)->resolving_streams;
-      n_stream->on_circuit = circ;
       TO_OR_CIRCUIT(circ)->resolving_streams = n_stream;
       assert_circuit_ok(circ);
       ;
@@ -2296,8 +2298,10 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
   dummy_conn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
   dummy_conn->_base.purpose = EXIT_PURPOSE_RESOLVE;
 
+  dummy_conn->on_circuit = TO_CIRCUIT(circ);
+
   /* send it off to the gethostbyname farm */
-  switch (dns_resolve(dummy_conn, circ)) {
+  switch (dns_resolve(dummy_conn)) {
     case -1: /* Impossible to resolve; a resolved cell was sent. */
       /* Connection freed; don't touch it. */
       return 0;
@@ -2307,7 +2311,6 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
       return 0;
     case 0: /* resolve added to pending list */
       dummy_conn->next_stream = circ->resolving_streams;
-      dummy_conn->on_circuit = TO_CIRCUIT(circ);
       circ->resolving_streams = dummy_conn;
       assert_circuit_ok(TO_CIRCUIT(circ));
       break;
@@ -2392,7 +2395,6 @@ connection_exit_connect(edge_connection_t *edge_conn)
     /* rendezvous stream */
     /* don't send an address back! */
     connection_edge_send_command(edge_conn,
-                                 circuit_get_by_edge_conn(edge_conn),
                                  RELAY_COMMAND_CONNECTED,
                                  NULL, 0);
   } else { /* normal stream */
@@ -2402,7 +2404,6 @@ connection_exit_connect(edge_connection_t *edge_conn)
     set_uint32(connected_payload+4,
                htonl(dns_clip_ttl(edge_conn->address_ttl)));
     connection_edge_send_command(edge_conn,
-                                 circuit_get_by_edge_conn(edge_conn),
                                  RELAY_COMMAND_CONNECTED,
                                  connected_payload, 8);
   }
@@ -2475,7 +2476,6 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
   connection_start_reading(TO_CONN(exit_conn));
 
   if (connection_edge_send_command(exit_conn,
-                                   circuit_get_by_edge_conn(exit_conn),
                                    RELAY_COMMAND_CONNECTED, NULL, 0) < 0) {
     connection_mark_for_close(TO_CONN(exit_conn));
     connection_mark_for_close(TO_CONN(dir_conn));

@@ -2195,10 +2195,8 @@ int connection_edge_end_errno(edge_connection_t *conn);
 int connection_edge_finished_flushing(edge_connection_t *conn);
 int connection_edge_finished_connecting(edge_connection_t *conn);
 
-int connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
-                                       origin_circuit_t *circ);
-int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
-                                         origin_circuit_t *circ);
+int connection_ap_handshake_send_begin(edge_connection_t *ap_conn);
+int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn);
 
 int connection_ap_make_bridge(char *address, uint16_t port,
                               const char *digest, int command);
@@ -2477,7 +2475,7 @@ void connection_dns_remove(edge_connection_t *conn);
 void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
 void assert_all_pending_dns_resolves_ok(void);
 void dns_cancel_pending_resolve(const char *question);
-int dns_resolve(edge_connection_t *exitconn, or_circuit_t *circ);
+int dns_resolve(edge_connection_t *exitconn);
 void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
 void dns_reset_correctness_checks(void);
@@ -2619,7 +2617,7 @@ void relay_header_unpack(relay_header_t *dest, const char *src);
 int relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
                                int relay_command, const char *payload,
                                size_t payload_len, crypt_path_t *cpath_layer);
-int connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
+int connection_edge_send_command(edge_connection_t *fromconn,
                                  int relay_command, const char *payload,
                                  size_t payload_len);
 int connection_edge_package_raw_inbuf(edge_connection_t *conn,
