@@ -433,8 +433,7 @@ conn_read_callback(int fd, short event, void *_conn)
       tor_fragile_assert();
 #endif
       if (CONN_IS_EDGE(conn))
-        connection_edge_end_errno(TO_EDGE_CONN(conn),
-                                  TO_EDGE_CONN(conn)->cpath_layer);
+        connection_edge_end_errno(TO_EDGE_CONN(conn));
       connection_mark_for_close(conn);
     }
   }

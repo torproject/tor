@@ -1931,8 +1931,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   /* Do we need to detach it first? */
   if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT) {
     circuit_t *tmpcirc = circuit_get_by_edge_conn(ap_conn);
-    connection_edge_end(ap_conn, END_STREAM_REASON_TIMEOUT,
-                        ap_conn->cpath_layer);
+    connection_edge_end(ap_conn, END_STREAM_REASON_TIMEOUT);
     /* Un-mark it as ending, since we're going to reuse it. */
     ap_conn->_base.edge_has_sent_end = 0;
     ap_conn->end_reason = 0;

@@ -37,7 +37,7 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return -1;
   }
-  if (connection_edge_send_command(NULL,TO_CIRCUIT(circ),
+  if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                    RELAY_COMMAND_ESTABLISH_RENDEZVOUS,
                                    circ->rend_cookie, REND_COOKIE_LEN,
                                    circ->cpath->prev)<0) {
@@ -144,7 +144,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   tor_assert(DIGEST_LEN + r <= RELAY_PAYLOAD_SIZE); /* we overran something */
   payload_len = DIGEST_LEN + r;
 
-  if (connection_edge_send_command(NULL, TO_CIRCUIT(introcirc),
+  if (relay_send_command_from_edge(0, TO_CIRCUIT(introcirc),
                                    RELAY_COMMAND_INTRODUCE1,
                                    payload, payload_len,
                                    introcirc->cpath->prev)<0) {

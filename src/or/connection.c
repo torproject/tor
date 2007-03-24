@@ -1506,7 +1506,7 @@ loop_again:
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
     if (CONN_IS_EDGE(conn)) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      connection_edge_end_errno(edge_conn, edge_conn->cpath_layer);
+      connection_edge_end_errno(edge_conn);
       if (edge_conn->socks_request) /* broken, don't send a socks reply back */
         edge_conn->socks_request->has_finished = 1;
     }
@@ -1737,8 +1737,7 @@ connection_handle_write(connection_t *conn, int force)
       log_warn(LD_BUG,
                "getsockopt() syscall failed?! Please report to tor-ops.");
       if (CONN_IS_EDGE(conn))
-        connection_edge_end_errno(TO_EDGE_CONN(conn),
-                                  TO_EDGE_CONN(conn)->cpath_layer);
+        connection_edge_end_errno(TO_EDGE_CONN(conn));
       connection_mark_for_close(conn);
       return -1;
     }
@@ -1747,8 +1746,7 @@ connection_handle_write(connection_t *conn, int force)
       if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
         log_info(LD_NET,"in-progress connect failed. Removing.");
         if (CONN_IS_EDGE(conn))
-          connection_edge_end_errno(TO_EDGE_CONN(conn),
-                                    TO_EDGE_CONN(conn)->cpath_layer);
+          connection_edge_end_errno(TO_EDGE_CONN(conn));
 
         connection_close_immediate(conn);
         connection_mark_for_close(conn);
@@ -1827,8 +1825,7 @@ connection_handle_write(connection_t *conn, int force)
                                 max_to_write, &conn->outbuf_flushlen));
     if (result < 0) {
       if (CONN_IS_EDGE(conn))
-        connection_edge_end_errno(TO_EDGE_CONN(conn),
-                                  TO_EDGE_CONN(conn)->cpath_layer);
+        connection_edge_end_errno(TO_EDGE_CONN(conn));
 
       connection_close_immediate(conn); /* Don't flush; connection is dead. */
       connection_mark_for_close(conn);

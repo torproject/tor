@@ -2190,10 +2190,8 @@ int connection_edge_reached_eof(edge_connection_t *conn);
 int connection_edge_process_inbuf(edge_connection_t *conn,
                                   int package_partial);
 int connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn);
-int connection_edge_end(edge_connection_t *conn, char reason,
-                        crypt_path_t *cpath_layer);
-int connection_edge_end_errno(edge_connection_t *conn,
-                              crypt_path_t *cpath_layer);
+int connection_edge_end(edge_connection_t *conn, char reason);
+int connection_edge_end_errno(edge_connection_t *conn);
 int connection_edge_finished_flushing(edge_connection_t *conn);
 int connection_edge_finished_connecting(edge_connection_t *conn);
 
@@ -2623,8 +2621,7 @@ int relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
                                size_t payload_len, crypt_path_t *cpath_layer);
 int connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
                                  int relay_command, const char *payload,
-                                 size_t payload_len,
-                                 crypt_path_t *cpath_layer);
+                                 size_t payload_len);
 int connection_edge_package_raw_inbuf(edge_connection_t *conn,
                                       int package_partial);
 void connection_edge_consider_sending_sendme(edge_connection_t *conn);

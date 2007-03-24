@@ -83,7 +83,7 @@ connection_edge_reached_eof(edge_connection_t *conn)
   if (!conn->_base.marked_for_close) {
     /* only mark it if not already marked. it's possible to
      * get the 'end' right around when the client hangs up on us. */
-    connection_edge_end(conn, END_STREAM_REASON_DONE, conn->cpath_layer);
+    connection_edge_end(conn, END_STREAM_REASON_DONE);
     if (conn->socks_request) /* eof, so don't send a socks reply back */
       conn->socks_request->has_finished = 1;
     connection_mark_for_close(TO_CONN(conn));
@@ -140,7 +140,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
   }
   log_warn(LD_BUG,"Got unexpected state %d. Closing.",conn->_base.state);
   tor_fragile_assert();
-  connection_edge_end(conn, END_STREAM_REASON_INTERNAL, conn->cpath_layer);
+  connection_edge_end(conn, END_STREAM_REASON_INTERNAL);
   connection_mark_for_close(TO_CONN(conn));
   return -1;
 }
@@ -173,17 +173,14 @@ connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn)
   return 0;
 }
 
-/** Send a relay end cell from stream <b>conn</b> to conn's circuit,
- * with a destination of cpath_layer. (If cpath_layer is NULL, the
- * destination is the circuit's origin.) Set the relay end cell's
- * reason for closing as <b>reason</b>.
+/** Send a relay end cell from stream <b>conn</b> down conn's circuit.  Set
+ * the relay end cell's reason for closing as <b>reason</b>.
  *
  * Return -1 if this function has already been called on this conn,
  * else return 0.
  */
 int
-connection_edge_end(edge_connection_t *conn, char reason,
-                    crypt_path_t *cpath_layer)
+connection_edge_end(edge_connection_t *conn, char reason)
 {
   char payload[RELAY_PAYLOAD_SIZE];
   size_t payload_len=1;
@@ -215,7 +212,7 @@ connection_edge_end(edge_connection_t *conn, char reason,
   if (circ && !circ->marked_for_close) {
     log_debug(LD_EDGE,"Sending end on conn (fd %d).",conn->_base.s);
     connection_edge_send_command(conn, circ, RELAY_COMMAND_END,
-                                 payload, payload_len, cpath_layer);
+                                 payload, payload_len);
   } else {
     log_debug(LD_EDGE,"No circ to send end on conn (fd %d).",
               conn->_base.s);
@@ -227,16 +224,16 @@ connection_edge_end(edge_connection_t *conn, char reason,
 }
 
 /** An error has just occured on an operation on an edge connection
- * <b>conn</b>.  Extract the errno; convert it to an end reason, and send
- * an appropriate relay end cell to <b>cpath_layer</b>.
+ * <b>conn</b>.  Extract the errno; convert it to an end reason, and send an
+ * appropriate relay end cell to the other end of the connection's circuit.
  **/
 int
-connection_edge_end_errno(edge_connection_t *conn, crypt_path_t *cpath_layer)
+connection_edge_end_errno(edge_connection_t *conn)
 {
   uint8_t reason;
   tor_assert(conn);
   reason = (uint8_t)errno_to_end_reason(tor_socket_errno(conn->_base.s));
-  return connection_edge_end(conn, reason, cpath_layer);
+  return connection_edge_end(conn, reason);
 }
 
 /** Connection <b>conn</b> has finished writing and has no bytes left on
@@ -305,8 +302,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   if (connection_edge_is_rendezvous_stream(edge_conn)) {
     if (connection_edge_send_command(edge_conn,
                                      circuit_get_by_edge_conn(edge_conn),
-                                     RELAY_COMMAND_CONNECTED, NULL, 0,
-                                     edge_conn->cpath_layer) < 0)
+                                     RELAY_COMMAND_CONNECTED, NULL, 0) < 0)
       return 0; /* circuit is closed, don't continue */
   } else {
     char connected_payload[8];
@@ -316,8 +312,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
     if (connection_edge_send_command(edge_conn,
                                      circuit_get_by_edge_conn(edge_conn),
                                      RELAY_COMMAND_CONNECTED,
-                                     connected_payload, 8,
-                                     edge_conn->cpath_layer) < 0)
+                                     connected_payload, 8) < 0)
       return 0; /* circuit is closed, don't continue */
   }
   tor_assert(edge_conn->package_window > 0);
@@ -408,8 +403,7 @@ connection_ap_expire_beginning(void)
                " '%s.onion'.",
                seconds_idle,
                safe_str(conn->socks_request->address));
-        connection_edge_end(conn, END_STREAM_REASON_TIMEOUT,
-                            conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_TIMEOUT);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
       continue;
@@ -423,7 +417,7 @@ connection_ap_expire_beginning(void)
            seconds_idle, safe_str(conn->socks_request->address),
            nickname ? nickname : "*unnamed*");
     /* send an end down the circuit */
-    connection_edge_end(conn, END_STREAM_REASON_TIMEOUT, conn->cpath_layer);
+    connection_edge_end(conn, END_STREAM_REASON_TIMEOUT);
     /* un-mark it as ending, since we're going to reuse it */
     conn->_base.edge_has_sent_end = 0;
     conn->end_reason = 0;
@@ -1782,8 +1776,7 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn,
 
   if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ), begin_type,
                   begin_type == RELAY_COMMAND_BEGIN ? payload : NULL,
-                  begin_type == RELAY_COMMAND_BEGIN ? payload_len : 0,
-                                   ap_conn->cpath_layer) < 0)
+                  begin_type == RELAY_COMMAND_BEGIN ? payload_len : 0) < 0)
     return -1; /* circuit is closed, don't continue */
 
   ap_conn->package_window = STREAMWINDOW_START;
@@ -1850,7 +1843,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn,
 
   if (connection_edge_send_command(ap_conn, TO_CIRCUIT(circ),
                            RELAY_COMMAND_RESOLVE,
-                           string_addr, payload_len, ap_conn->cpath_layer) < 0)
+                           string_addr, payload_len) < 0)
     return -1; /* circuit is closed, don't continue */
 
   ap_conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
@@ -2340,8 +2333,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
       router_compare_to_my_exit_policy(edge_conn)) {
     log_info(LD_EXIT,"%s:%d failed exit policy. Closing.",
              escaped_safe_str(conn->address), conn->port);
-    connection_edge_end(edge_conn, END_STREAM_REASON_EXITPOLICY,
-                        edge_conn->cpath_layer);
+    connection_edge_end(edge_conn, END_STREAM_REASON_EXITPOLICY);
     circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
     connection_free(conn);
     return;
@@ -2373,7 +2365,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
   log_debug(LD_EXIT,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port)) {
     case -1:
-      connection_edge_end_errno(edge_conn, edge_conn->cpath_layer);
+      connection_edge_end_errno(edge_conn);
       circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
       connection_free(conn);
       return;
@@ -2402,7 +2394,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
     connection_edge_send_command(edge_conn,
                                  circuit_get_by_edge_conn(edge_conn),
                                  RELAY_COMMAND_CONNECTED,
-                                 NULL, 0, edge_conn->cpath_layer);
+                                 NULL, 0);
   } else { /* normal stream */
     /* This must be the original address, not the redirected address. */
     char connected_payload[8];
@@ -2412,7 +2404,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
     connection_edge_send_command(edge_conn,
                                  circuit_get_by_edge_conn(edge_conn),
                                  RELAY_COMMAND_CONNECTED,
-                                 connected_payload, 8, edge_conn->cpath_layer);
+                                 connected_payload, 8);
   }
 }
 
@@ -2437,8 +2429,7 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
              "Couldn't construct socketpair (%s). "
              "Network down? Out of sockets?",
              tor_socket_strerror(-err));
-    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT,
-                        exit_conn->cpath_layer);
+    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT);
     connection_free(TO_CONN(exit_conn));
     return 0;
   }
@@ -2463,16 +2454,14 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
   dir_conn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
 
   if (connection_add(TO_CONN(exit_conn))<0) {
-    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT,
-                        exit_conn->cpath_layer);
+    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT);
     connection_free(TO_CONN(exit_conn));
     connection_free(TO_CONN(dir_conn));
     return 0;
   }
 
   if (connection_add(TO_CONN(dir_conn))<0) {
-    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT,
-                        exit_conn->cpath_layer);
+    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT);
     connection_close_immediate(TO_CONN(exit_conn));
     connection_mark_for_close(TO_CONN(exit_conn));
     connection_free(TO_CONN(dir_conn));
@@ -2487,8 +2476,7 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
 
   if (connection_edge_send_command(exit_conn,
                                    circuit_get_by_edge_conn(exit_conn),
-                                   RELAY_COMMAND_CONNECTED, NULL, 0,
-                                   exit_conn->cpath_layer) < 0) {
+                                   RELAY_COMMAND_CONNECTED, NULL, 0) < 0) {
     connection_mark_for_close(TO_CONN(exit_conn));
     connection_mark_for_close(TO_CONN(dir_conn));
     return 0;

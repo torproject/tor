@@ -514,9 +514,10 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
 int
 connection_edge_send_command(edge_connection_t *fromconn, circuit_t *circ,
                              int relay_command, const char *payload,
-                             size_t payload_len, crypt_path_t *cpath_layer)
+                             size_t payload_len)
 {
   /* XXXX NM Split this function into a separate versions per circuit type? */
+  crypt_path_t *cpath_layer = fromconn ? fromconn->cpath_layer : NULL;
 
   if (fromconn && fromconn->_base.marked_for_close) {
     log_warn(LD_BUG,
@@ -882,8 +883,7 @@ connection_edge_process_relay_cell_not_open(
       if (!addr) {
         log_info(LD_APP,
                  "...but it claims the IP address was 0.0.0.0. Closing.");
-        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL,
-                            conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return 0;
       }
@@ -953,8 +953,7 @@ connection_edge_process_relay_cell_not_open(
          rh->command, conn->_base.state,
          conn_state_to_string(conn->_base.type, conn->_base.state));
   return 0; /* for forward compatibility, don't kill the circuit */
-//  connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL,
-//                      conn->cpath_layer);
+//  connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
 //  connection_mark_for_close(conn);
 //  return -1;
 }
@@ -1023,8 +1022,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
           (!layer_hint && --circ->deliver_window < 0)) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "(relay data) circ deliver_window below 0. Killing.");
-        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL,
-                            conn->cpath_layer);
+        connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
         connection_mark_for_close(TO_CONN(conn));
         return -END_CIRC_REASON_TORPROTOCOL;
       }
@@ -1117,7 +1115,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         char payload[1];
         payload[0] = (char)END_CIRC_REASON_REQUESTED;
         connection_edge_send_command(NULL, circ, RELAY_COMMAND_TRUNCATED,
-                                     payload, sizeof(payload), NULL);
+                                     payload, sizeof(payload));
       }
       return 0;
     case RELAY_COMMAND_TRUNCATED:
@@ -1280,7 +1278,7 @@ repeat_connection_edge_package_raw_inbuf:
             (int)length, (int)buf_datalen(conn->_base.inbuf));
 
   if (connection_edge_send_command(conn, circ, RELAY_COMMAND_DATA,
-                                   payload, length, conn->cpath_layer) < 0)
+                                   payload, length) < 0 )
     /* circuit got marked for close, don't continue, don't need to mark conn */
     return 0;
 
@@ -1332,7 +1330,7 @@ connection_edge_consider_sending_sendme(edge_connection_t *conn)
               (int)conn->_base.outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, circ, RELAY_COMMAND_SENDME,
-                                     NULL, 0, conn->cpath_layer) < 0) {
+                                     NULL, 0) < 0) {
       log_warn(LD_APP,"connection_edge_send_command failed. Returning.");
       return; /* the circuit's closed, don't continue */
     }
@@ -1447,7 +1445,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
     else
       circ->deliver_window += CIRCWINDOW_INCREMENT;
-    if (connection_edge_send_command(NULL, circ, RELAY_COMMAND_SENDME,
+    if (relay_send_command_from_edge(0, circ, RELAY_COMMAND_SENDME,
                                      NULL, 0, layer_hint) < 0) {
       log_warn(LD_CIRC,
                "connection_edge_send_command failed. Circuit's closed.");

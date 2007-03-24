@@ -768,7 +768,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   }
   len += r;
 
-  if (connection_edge_send_command(NULL, TO_CIRCUIT(circuit),
+  if (relay_send_command_from_edge(0, TO_CIRCUIT(circuit),
                                    RELAY_COMMAND_ESTABLISH_INTRO,
                                    buf, len, circuit->cpath->prev)<0) {
     log_info(LD_GENERAL,
@@ -862,7 +862,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
          DIGEST_LEN);
 
   /* Send the cell */
-  if (connection_edge_send_command(NULL, TO_CIRCUIT(circuit),
+  if (relay_send_command_from_edge(0, TO_CIRCUIT(circuit),
                                    RELAY_COMMAND_RENDEZVOUS1,
                                    buf, REND_COOKIE_LEN+DH_KEY_LEN+DIGEST_LEN,
                                    circuit->cpath->prev)<0) {

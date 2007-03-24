@@ -348,8 +348,7 @@ purge_expired_resolves(time_t now)
         /* Connections should only be pending if they have no socket. */
         tor_assert(pend->conn->_base.s == -1);
         pendconn = pend->conn;
-        connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT,
-                            pendconn->cpath_layer);
+        connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT);
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
         connection_free(TO_CONN(pendconn));
         tor_free(pend);
@@ -433,8 +432,7 @@ send_resolved_cell(edge_connection_t *conn, or_circuit_t *circ,
   }
 
   connection_edge_send_command(conn, TO_CIRCUIT(circ),
-                               RELAY_COMMAND_RESOLVED, buf, buflen,
-                               conn->cpath_layer);
+                               RELAY_COMMAND_RESOLVED, buf, buflen);
 }
 
 /** Send a response to the RESOLVE request of a connection for an in-addr.arpa
@@ -472,8 +470,7 @@ send_resolved_hostname_cell(edge_connection_t *conn, or_circuit_t *circ,
 
   // log_notice(LD_EXIT, "Sending a reply RESOLVED reply: %s", hostname);
   connection_edge_send_command(conn, TO_CIRCUIT(circ),
-                               RELAY_COMMAND_RESOLVED, buf, buflen,
-                               conn->cpath_layer);
+                               RELAY_COMMAND_RESOLVED, buf, buflen);
   // log_notice(LD_EXIT, "Sent");
 }
 
@@ -817,8 +814,7 @@ dns_cancel_pending_resolve(const char *address)
     assert_connection_ok(TO_CONN(pendconn), 0);
     tor_assert(pendconn->_base.s == -1);
     if (!pendconn->_base.marked_for_close) {
-      connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT,
-                          pendconn->cpath_layer);
+      connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT);
     }
     circ = circuit_get_by_edge_conn(pendconn);
     if (circ)
@@ -953,8 +949,7 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
       /* prevent double-remove. */
       pendconn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
       if (pendconn->_base.purpose == EXIT_PURPOSE_CONNECT) {
-        connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED,
-                            pendconn->cpath_layer);
+        connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED);
         /* This detach must happen after we send the end cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       } else {

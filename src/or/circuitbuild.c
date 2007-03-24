@@ -653,7 +653,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     log_debug(LD_CIRC,"Sending extend relay cell.");
     /* send it to hop->prev, because it will transfer
      * it to a create cell and then send to hop */
-    if (connection_edge_send_command(NULL, TO_CIRCUIT(circ),
+    if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
                                      RELAY_COMMAND_EXTEND,
                                      payload, payload_len, hop->prev) < 0)
       return 0; /* circuit is closed */
