@@ -305,7 +305,7 @@ static void
 command_process_relay_cell(cell_t *cell, or_connection_t *conn)
 {
   circuit_t *circ;
-  int reason;
+  int reason, direction;
 
   circ = circuit_get_by_circid_orconn(cell->circ_id, conn);
 
@@ -323,23 +323,16 @@ command_process_relay_cell(cell_t *cell, or_connection_t *conn)
   }
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
-      cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
-    /* it's an outgoing cell */
-    if ((reason = circuit_receive_relay_cell(cell, circ,
-                                             CELL_DIRECTION_OUT)) < 0) {
-      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
-             "(forward) failed. Closing.");
-      circuit_mark_for_close(circ, -reason);
-      return;
-    }
-  } else { /* it's an ingoing cell */
-    if ((reason = circuit_receive_relay_cell(cell, circ,
-                                             CELL_DIRECTION_IN)) < 0) {
-      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
-             "(backward) failed. Closing.");
-      circuit_mark_for_close(circ, -reason);
-      return;
-    }
+      cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id)
+    direction = CELL_DIRECTION_OUT;
+  else
+    direction = CELL_DIRECTION_IN;
+
+  if ((reason = circuit_receive_relay_cell(cell, circ, direction)) < 0) {
+    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "
+           "(%s) failed. Closing.",
+           direction==CELL_DIRECTION_OUT?"forward":"backward");
+    circuit_mark_for_close(circ, -reason);
   }
 }
 

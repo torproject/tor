@@ -674,14 +674,23 @@ typedef enum {
 /** Largest number of bytes that can fit in a relay cell payload. */
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
+typedef struct cell_t cell_t;
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
-typedef struct {
+struct cell_t {
+  struct cell_t *next; /**< Next cell queued on a this circuit. */
   uint16_t circ_id; /**< Circuit which received the cell. */
   uint8_t command; /**< Type of the cell: one of PADDING, CREATE, RELAY,
                     * or DESTROY. */
   char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
-} cell_t;
+};
+
+/** DOCDOC */
+typedef struct cell_queue_t {
+  cell_t *head;
+  cell_t *tail;
+  int n;
+} cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
 typedef struct {
@@ -806,6 +815,7 @@ typedef struct or_connection_t {
                     * bandwidthburst. (OPEN ORs only) */
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
+  struct circuit_t *active_circuits; /**< DOCDOC */
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
   /** Linked list of bridged dirserver connections that can't write until
@@ -1374,6 +1384,8 @@ typedef struct circuit_t {
   uint32_t magic; /**< For memory and type debugging: must equal
                    * ORIGIN_CIRCUIT_MAGIC or OR_CIRCUIT_MAGIC. */
 
+  /** DOCDOC */
+  cell_queue_t n_conn_cells;
   /** The OR connection that is next in this circuit. */
   or_connection_t *n_conn;
   /** The identity hash of n_conn. */
@@ -1413,6 +1425,8 @@ typedef struct circuit_t {
   const char *marked_for_close_file; /**< For debugging: in which file was this
                                       * circuit marked for close? */
 
+  struct circuit_t *next_active_on_n_conn; /**< DOCDOC */
+  struct circuit_t *prev_active_on_n_conn; /**< DOCDOC */
   struct circuit_t *next; /**< Next circuit in linked list. */
 } circuit_t;
 
@@ -1467,8 +1481,13 @@ typedef struct origin_circuit_t {
 typedef struct or_circuit_t {
   circuit_t _base;
 
+  struct circuit_t *next_active_on_p_conn; /**< DOCDOC */
+  struct circuit_t *prev_active_on_p_conn; /**< DOCDOC */
+
   /** The circuit_id used in the previous (backward) hop of this circuit. */
   circid_t p_circ_id;
+  /** DOCDOC */
+  cell_queue_t p_conn_cells;
   /** The OR connection that is previous in this circuit. */
   or_connection_t *p_conn;
   /** Linked list of Exit streams associated with this circuit. */
@@ -2630,6 +2649,19 @@ extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;
 extern uint64_t stats_n_data_cells_received;
 extern uint64_t stats_n_data_bytes_received;
+
+void cell_queue_clear(cell_queue_t *queue);
+void cell_queue_append(cell_queue_t *queue, cell_t *cell);
+void cell_queue_append_copy(cell_queue_t *queue, const cell_t *cell);
+
+void append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
+                                  cell_t *cell, int direction);
+void connection_or_unlink_all_active_circs(or_connection_t *conn);
+int connection_or_flush_from_first_active_circuit(or_connection_t *conn,
+                                                  int max);
+void assert_active_circuits_ok(or_connection_t *orconn);
+void make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn);
+void make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn);
 
 /********************************* rephist.c ***************************/
 

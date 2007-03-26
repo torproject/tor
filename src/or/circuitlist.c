@@ -71,10 +71,12 @@ HT_GENERATE(orconn_circid_map, orconn_circid_circuit_map_t, node,
  */
 orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
+/** DOCDOC */
 static void
 circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
                                  or_connection_t *conn,
-                                 uint16_t old_id, or_connection_t *old_conn)
+                                 uint16_t old_id, or_connection_t *old_conn,
+                                 int active)
 {
   orconn_circid_circuit_map_t search;
   orconn_circid_circuit_map_t *found;
@@ -96,6 +98,8 @@ circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
       tor_free(found);
       --old_conn->n_circuits;
     }
+    if (active)
+      make_circuit_inactive_on_conn(circ,old_conn);
   }
 
   if (conn == NULL)
@@ -114,6 +118,9 @@ circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
     found->circuit = circ;
     HT_INSERT(orconn_circid_map, &orconn_circid_circuit_map, found);
   }
+  if (active)
+    make_circuit_active_on_conn(circ,conn);
+
   ++conn->n_circuits;
 }
 
@@ -126,16 +133,18 @@ circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
 {
   uint16_t old_id;
   or_connection_t *old_conn;
+  int active;
 
   old_id = circ->p_circ_id;
   old_conn = circ->p_conn;
   circ->p_circ_id = id;
   circ->p_conn = conn;
+  active = circ->p_conn_cells.n > 0;
 
   if (id == old_id && conn == old_conn)
     return;
   circuit_set_circid_orconn_helper(TO_CIRCUIT(circ), id, conn,
-                                   old_id, old_conn);
+                                   old_id, old_conn, active);
 }
 
 /** Set the n_conn field of a circuit <b>circ</b>, along
@@ -147,15 +156,17 @@ circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
 {
   uint16_t old_id;
   or_connection_t *old_conn;
+  int active;
 
   old_id = circ->n_circ_id;
   old_conn = circ->n_conn;
   circ->n_circ_id = id;
   circ->n_conn = conn;
+  active = circ->n_conn_cells.n > 0;
 
   if (id == old_id && conn == old_conn)
     return;
-  circuit_set_circid_orconn_helper(circ, id, conn, old_id, old_conn);
+  circuit_set_circid_orconn_helper(circ, id, conn, old_id, old_conn, active);
 }
 
 /** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing
@@ -380,11 +391,15 @@ circuit_free(circuit_t *circ)
       other->rend_splice = NULL;
     }
 
+    cell_queue_clear(&ocirc->p_conn_cells);
+
     tor_free(circ->onionskin);
 
     /* remove from map. */
     circuit_set_p_circid_orconn(ocirc, 0, NULL);
   }
+
+  cell_queue_clear(&circ->n_conn_cells);
 
   /* Remove from map. */
   circuit_set_n_circid_orconn(circ, 0, NULL);
@@ -637,6 +652,9 @@ void
 circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason)
 {
   circuit_t *circ;
+
+  connection_or_unlink_all_active_circs(conn);
+
   for (circ = global_circuitlist; circ; circ = circ->next) {
     int mark = 0;
     if (circ->n_conn == conn) {

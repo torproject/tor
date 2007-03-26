@@ -488,7 +488,7 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
   cell.circ_id = circ->n_circ_id;
 
   memcpy(cell.payload, payload, ONIONSKIN_CHALLENGE_LEN);
-  connection_or_write_cell_to_buf(&cell, circ->n_conn);
+  append_cell_to_circuit_queue(circ, circ->n_conn, &cell, CELL_DIRECTION_OUT);
 
   /* mark it so it gets better rate limiting treatment. */
   circ->n_conn->client_used = 1;
@@ -650,7 +650,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       return - END_CIRC_REASON_INTERNAL;
     }
 
-    log_debug(LD_CIRC,"Sending extend relay cell.");
+    log_info(LD_CIRC,"Sending extend relay cell.");
     /* send it to hop->prev, because it will transfer
      * it to a create cell and then send to hop */
     if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
@@ -988,7 +988,8 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
 
   circ->is_first_hop = (cell_type == CELL_CREATED_FAST);
 
-  connection_or_write_cell_to_buf(&cell, circ->p_conn);
+  append_cell_to_circuit_queue(TO_CIRCUIT(circ),
+                               circ->p_conn, &cell, CELL_DIRECTION_IN);
   log_debug(LD_CIRC,"Finished sending 'created' cell.");
 
   if (!is_local_IP(circ->p_conn->_base.addr) &&

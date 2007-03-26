@@ -1,4 +1,12 @@
 Changes in version 0.2.0.1-alpha - 2007-??-??
+  o Major features:
+    - Change the way that Tor buffers data that it is waiting to write.
+      Instead of queueing data cells in an enormous ring buffer for each
+      client->OR or OR->OR connection, we now queue cells on a separate
+      queue for each circuit.  This lets us use less slack memory, and
+      will eventually let us be smarter about prioritizing different kinds
+      of traffic.
+
   o Security fixes:
     - Directory authorities now call routers stable if they have an
       uptime of at least 30 days, even if that's not the median uptime
@@ -57,8 +65,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       to 'getinfo addr-mappings/*'.
 
   o Code simplifications and refactoring
-    - Stop passing around crypt_path_t pointers that are implicit in other
-      procedure arguments.
+    - Stop passing around circuit_t and crypt_path_t pointers that are
+      implicit in other procedure arguments.
 
 
 Changes in version 0.1.2.12-rc - 2007-03-16

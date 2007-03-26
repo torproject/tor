@@ -61,11 +61,21 @@ Things we'd like to do in 0.2.0.x:
       _on_ on a socks connection: have edge_connection_t and (say)
       dns_request_t both extend an edge_stream_t, and have p_streams and
       n_streams both be linked lists of edge_stream_t.
-    - Make cells get buffered on circuit, not on the or_conn.
-      - Don't move them into the target conn until there is space on the
+    . Make cells get buffered on circuit, not on the or_conn.
+      O Implement cell queues
+      o Keep doubly-linked list of active circuits on each or_conn.
+      o Put all relay data on the circuit cell queue, not on the outbuf.
+      o Don't move them into the target conn until there is space on the
         target conn's outbuf.
+      o When making a circuit active on a connection with an empty buf,
+        we need to "prime" the buffer, so that we can trigger the "I flushed
+        some" test.
+      - Change how directory-bridge-choking works: choke when circuit queue
+        is full, not when the orconn is "too full".
+      - Do we switch to arena-allocation for cells?
+      - Can we stop doing so many memcpys on cells?
       - Also, only package data from exitconns when there is space on the
-        target OR conn's outbuf.
+        target OR conn's outbuf?  or when the circuit is not too full.
       - MAYBE kill stalled circuits rather than stalled connections; consider
         anonymity implications.
     - Move all status info out of routerinfo into local_routerstatus.  Make

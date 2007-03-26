@@ -9,7 +9,7 @@ const char relay_c_id[] =
 /**
  * \file relay.c
  * \brief Handle relay cell encryption/decryption, plus packaging and
- * receiving from circuits.
+ *    receiving from circuits, plus queueing on circuits.
  **/
 
 #include "or.h"
@@ -137,7 +137,7 @@ relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
  *    a conn that the cell is intended for, and deliver it to
  *    connection_edge.
  *  - Else connection_or_write_cell_to_buf to the conn on the other
- *    side of the circuit.
+ *    side of the circuit.DOCDOC
  *
  * Return -reason on failure.
  */
@@ -225,8 +225,12 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
   }
 
   log_debug(LD_OR,"Passing on unrecognized cell.");
-  ++stats_n_relay_cells_relayed;
-  connection_or_write_cell_to_buf(cell, or_conn);
+
+  ++stats_n_relay_cells_relayed; /* XXXX no longer quite accurate {cells}
+                                  * we might kill the circ before we relay
+                                  * the cells. */
+
+  append_cell_to_circuit_queue(circ, or_conn, cell, cell_direction);
   return 0;
 }
 
@@ -318,7 +322,7 @@ relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
 
 /** Package a relay cell from an edge:
  *  - Encrypt it to the right layer
- *  - connection_or_write_cell_to_buf to the right conn
+ *  - connection_or_write_cell_to_buf to the right conn DOCDOC
  */
 static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
@@ -364,7 +368,8 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
       return -1;
   }
   ++stats_n_relay_cells_relayed;
-  connection_or_write_cell_to_buf(cell, conn);
+
+  append_cell_to_circuit_queue(circ, conn, cell, cell_direction);
   return 0;
 }
 
@@ -1457,3 +1462,234 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
   }
 }
 
+/** DOCDOC */
+static INLINE void
+cell_free(cell_t *cell)
+{
+  tor_free(cell);
+}
+
+/** DOCDOC */
+static INLINE cell_t *
+cell_copy(const cell_t *cell)
+{
+  cell_t *c = tor_malloc(sizeof(cell_t));
+  memcpy(c, cell, sizeof(cell_t));
+  c->next = NULL;
+  return c;
+}
+
+/** DOCDOC */
+void
+cell_queue_append(cell_queue_t *queue, cell_t *cell)
+{
+  if (queue->tail) {
+    tor_assert(!queue->tail->next);
+    queue->tail->next = cell;
+  } else {
+    queue->head = cell;
+  }
+  queue->tail = cell;
+  cell->next = NULL;
+  ++queue->n;
+}
+
+/** DOCDOC */
+void
+cell_queue_append_copy(cell_queue_t *queue, const cell_t *cell)
+{
+  cell_queue_append(queue, cell_copy(cell));
+}
+
+/** DOCDOC */
+void
+cell_queue_clear(cell_queue_t *queue)
+{
+  cell_t *cell, *next;
+  cell = queue->head;
+  while (cell) {
+    next = cell->next;
+    cell_free(cell);
+    cell = next;
+  }
+  queue->head = queue->tail = NULL;
+  queue->n = 0;
+}
+
+/** DOCDOC */
+static INLINE cell_t *
+cell_queue_pop(cell_queue_t *queue)
+{
+  cell_t *cell = queue->head;
+  if (!cell)
+    return NULL;
+  queue->head = cell->next;
+  if (cell == queue->tail) {
+    tor_assert(!queue->head);
+    queue->tail = NULL;
+  }
+  --queue->n;
+  return cell;
+}
+
+static INLINE circuit_t **
+next_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
+{
+  if (conn == circ->n_conn) {
+    return &circ->next_active_on_n_conn;
+  } else {
+    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    tor_assert(conn == orcirc->p_conn);
+    return &orcirc->next_active_on_p_conn;
+  }
+}
+
+/** DOCDOC */
+static INLINE circuit_t **
+prev_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
+{
+  if (conn == circ->n_conn) {
+    return &circ->prev_active_on_n_conn;
+  } else {
+    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    tor_assert(conn == orcirc->p_conn);
+    return &orcirc->prev_active_on_p_conn;
+  }
+}
+
+/** DOCDOC */
+void
+make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn)
+{
+  if (! conn->active_circuits) {
+    conn->active_circuits = circ;
+    *prev_circ_on_conn_p(circ, conn) = circ;
+    *next_circ_on_conn_p(circ, conn) = circ;
+  } else {
+    circuit_t *head = conn->active_circuits;
+    circuit_t *old_tail = *prev_circ_on_conn_p(head, conn);
+    *next_circ_on_conn_p(old_tail, conn) = circ;
+    *next_circ_on_conn_p(circ, conn) = head;
+    *prev_circ_on_conn_p(head, conn) = circ;
+    *prev_circ_on_conn_p(circ, conn) = old_tail;
+  }
+}
+
+/** DOCDOC */
+void
+make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn)
+{
+  // XXXX add some assert.
+  circuit_t *next = *next_circ_on_conn_p(circ, conn);
+  circuit_t *prev = *next_circ_on_conn_p(circ, conn);
+  if (next == circ) {
+    conn->active_circuits = NULL;
+  } else {
+    *prev_circ_on_conn_p(next, conn) = prev;
+    *next_circ_on_conn_p(prev, conn) = next;
+    if (conn->active_circuits == circ)
+      conn->active_circuits = next;
+  }
+  *prev_circ_on_conn_p(circ, conn) = NULL;
+  *next_circ_on_conn_p(circ, conn) = NULL;
+}
+
+/** DOCDOC */
+void
+connection_or_unlink_all_active_circs(or_connection_t *orconn)
+{
+  circuit_t *head = orconn->active_circuits;
+  circuit_t *cur = head;
+  if (! head)
+    return;
+  do {
+    circuit_t *next = *next_circ_on_conn_p(cur, orconn);
+    *prev_circ_on_conn_p(cur, orconn) = NULL;
+    *next_circ_on_conn_p(cur, orconn) = NULL;
+    cur = next;
+  } while (cur != head);
+  orconn->active_circuits = NULL;
+}
+
+/** DOCDOC */
+int
+connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
+{
+  int n_flushed;
+  cell_queue_t *queue;
+  circuit_t *circ;
+  circ = conn->active_circuits;
+  if (!circ) return 0;
+  if (circ->n_conn == conn)
+    queue = &circ->n_conn_cells;
+  else
+    queue = &TO_OR_CIRCUIT(circ)->p_conn_cells;
+
+  for (n_flushed = 0; n_flushed < max && queue->head; ++n_flushed) {
+    cell_t *cell = cell_queue_pop(queue);
+
+    connection_or_write_cell_to_buf(cell, conn);
+    cell_free(cell);
+    log_info(LD_GENERAL, "flushed a cell; n ==%d", queue->n);
+    ++n_flushed;
+  }
+  conn->active_circuits = *next_circ_on_conn_p(circ, conn);
+  if (queue->n == 0) {
+    log_info(LD_GENERAL, "Made a circuit inactive.");
+    make_circuit_inactive_on_conn(circ, conn);
+  }
+  return n_flushed;
+}
+
+/** DOCDOC */
+void
+append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
+                             cell_t *cell, int direction)
+{
+  cell_queue_t *queue;
+  if (direction == CELL_DIRECTION_OUT) {
+    queue = &circ->n_conn_cells;
+  } else {
+    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    queue = &orcirc->p_conn_cells;
+  }
+
+  cell_queue_append_copy(queue, cell);
+
+  log_info(LD_GENERAL, "Added a cell; n ==%d", queue->n);
+
+  if (queue->n == 1) {
+    /* This was the first cell added to the queue.  We need to make this
+     * circuit active. */
+    log_info(LD_GENERAL, "Made a circuit active.");
+    make_circuit_active_on_conn(circ, orconn);
+  }
+
+  if (! buf_datalen(orconn->_base.outbuf)) {
+    /* XXXX Should this be a "<16K"? {cells} */
+    /* There is no data at all waiting to be sent on the outbuf.  Add a
+     * cell, so that we can notice when it gets flushed, flushed_some can
+     * get called, and we can start putting more data onto the buffer then.
+     */
+    log_info(LD_GENERAL, "Primed a buffer.");
+    connection_or_flush_from_first_active_circuit(orconn, 1);
+  }
+}
+
+void
+assert_active_circuits_ok(or_connection_t *orconn)
+{
+  circuit_t *head = orconn->active_circuits;
+  circuit_t *cur = head;
+  if (! head)
+    return;
+  do {
+    circuit_t *next = *next_circ_on_conn_p(cur, orconn);
+    circuit_t *prev = *prev_circ_on_conn_p(cur, orconn);
+    tor_assert(next);
+    tor_assert(prev);
+    tor_assert(*next_circ_on_conn_p(prev, orconn) == cur);
+    tor_assert(*prev_circ_on_conn_p(next, orconn) == cur);
+    cur = next;
+  } while (cur != head);
+}
