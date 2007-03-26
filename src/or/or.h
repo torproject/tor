@@ -685,11 +685,12 @@ struct cell_t {
   char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 };
 
-/** DOCDOC */
+/** A queue of cells on a circuit, waiting to be added to the
+ * or_connection_t's outbuf. */
 typedef struct cell_queue_t {
-  cell_t *head;
-  cell_t *tail;
-  int n;
+  cell_t *head; /**< The first cell, or NULL if the queue is empty */
+  cell_t *tail; /**< The last cell, or NULL if the queue is empty */
+  int n; /**< The number of cells in the queue */
 } cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
@@ -754,14 +755,17 @@ typedef struct connection_t {
                          * connections.  Set once we've set the stream end,
                          * and check in connection_about_to_close_connection().
                          */
-  unsigned int edge_blocked_on_circ:1; /**< DOCDOC */
+  /** Edge connections only: true if we've blocked writing until the
+   * circuit has fewer queued cells. */
+  unsigned int edge_blocked_on_circ:1;
   /** Used for OR conns that shouldn't get any new circs attached to them. */
   unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
   unsigned int chosen_exit_optional:1;
 
-  int s; /**< Our socket; -1 if this connection is closed. */
+  int s; /**< Our socket; -1 if this connection is closed, or has no
+          * sockets. */
   int conn_array_index; /**< Index into the global connection array. */
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
@@ -816,7 +820,11 @@ typedef struct or_connection_t {
                     * bandwidthburst. (OPEN ORs only) */
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
-  struct circuit_t *active_circuits; /**< DOCDOC */
+
+  /** Double-linked ring of circuits with queued cells waiting for room to
+   * free up on this connection's outbuf.  Every time we pull cells from a
+   * circuit, we advance this pointer to the next circuit in the ring. */
+  struct circuit_t *active_circuits;
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
 
@@ -1366,7 +1374,7 @@ typedef struct circuit_t {
   uint32_t magic; /**< For memory and type debugging: must equal
                    * ORIGIN_CIRCUIT_MAGIC or OR_CIRCUIT_MAGIC. */
 
-  /** DOCDOC */
+  /** Queue of cells waiting to be transmitted on n_conn. */
   cell_queue_t n_conn_cells;
   /** The OR connection that is next in this circuit. */
   or_connection_t *n_conn;
@@ -1379,8 +1387,11 @@ typedef struct circuit_t {
   /** The IPv4 address of the OR that is next in this circuit. */
   uint32_t n_addr;
 
-  /** DOCDOC */
+  /** True iff we are waiting for n_conn_cells to become less full before
+   * allowing p_streams to add any more cells. (Origin circuit only.) */
   unsigned int streams_blocked_on_n_conn : 1;
+  /** True iff we are waiting for p_conn_cells to become less full before
+   * allowing n_streams to add any more cells. (OR circuit only.) */
   unsigned int streams_blocked_on_p_conn : 1;
 
   /** How many relay data cells can we package (read from edge streams)
@@ -1412,9 +1423,13 @@ typedef struct circuit_t {
   const char *marked_for_close_file; /**< For debugging: in which file was this
                                       * circuit marked for close? */
 
-  struct circuit_t *next_active_on_n_conn; /**< DOCDOC */
-  struct circuit_t *prev_active_on_n_conn; /**< DOCDOC */
-  struct circuit_t *next; /**< Next circuit in linked list. */
+  /** Next circuit in the doubly-linked ring of circuits waiting to add
+   * cells to n_conn.  NULL if we have no cells pending. */
+  struct circuit_t *next_active_on_n_conn;
+  /** Previous circuit in the doubly-linked ring of circuits waiting to add
+   * cells to n_conn.  NULL if we have no cells pending. */
+  struct circuit_t *prev_active_on_n_conn;
+  struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
 } circuit_t;
 
 /** An origin_circuit_t holds data necessary to build and use a circuit.
@@ -1468,12 +1483,16 @@ typedef struct origin_circuit_t {
 typedef struct or_circuit_t {
   circuit_t _base;
 
-  struct circuit_t *next_active_on_p_conn; /**< DOCDOC */
-  struct circuit_t *prev_active_on_p_conn; /**< DOCDOC */
+  /** Next circuit in the doubly-linked ring of circuits waiting to add
+   * cells to p_conn.  NULL if we have no cells pending. */
+  struct circuit_t *next_active_on_p_conn;
+  /** Previous circuit in the doubly-linked ring of circuits waiting to add
+   * cells to p_conn.  NULL if we have no cells pending. */
+  struct circuit_t *prev_active_on_p_conn;
 
   /** The circuit_id used in the previous (backward) hop of this circuit. */
   circid_t p_circ_id;
-  /** DOCDOC */
+  /** Queue of cells waiting to be transmitted on p_conn. */
   cell_queue_t p_conn_cells;
   /** The OR connection that is previous in this circuit. */
   or_connection_t *p_conn;
@@ -2648,6 +2667,7 @@ int connection_or_flush_from_first_active_circuit(or_connection_t *conn,
 void assert_active_circuits_ok(or_connection_t *orconn);
 void make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn);
 void make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn);
+void circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn);
 
 /********************************* rephist.c ***************************/
 

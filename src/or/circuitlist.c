@@ -71,7 +71,12 @@ HT_GENERATE(orconn_circid_map, orconn_circid_circuit_map_t, node,
  */
 orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 
-/** DOCDOC */
+/** Implementation helper for circuit_set_{p,n}_circid_orconn: A circuit ID
+ * and/or or_connection for circ has just changed from <b>old_conn, old_id</b>
+ * to <b>conn, id</b>.  Adjust the conn,circid map as appropriate, removing
+ * the old entry (if any) and adding a new one.  If If <b>active</b> is true,
+ * remove the circuit from the list of active circuits on old_conn and add it
+ * to the list of active circuits on conn. */
 static void
 circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
                                  or_connection_t *conn,

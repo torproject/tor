@@ -231,10 +231,12 @@ connection_or_process_inbuf(or_connection_t *conn)
   }
 }
 
-/**DOCDOC*/
+/** When adding cells to an OR connection's outbuf, keep adding until the
+ * outbuf is at least this long, or we run out of cells. */
 #define OR_CONN_HIGHWATER (32*1024)
 
-/**DOCDOC*/
+/** Add cells to an OR connection's outbuf whenever the outbuf's data length
+ * drops below this size. */
 #define OR_CONN_LOWWATER (16*1024)
 
 /** Called whenever we have flushed some data on an or_conn: add more data
@@ -243,8 +245,11 @@ int
 connection_or_flushed_some(or_connection_t *conn)
 {
   size_t datalen = buf_datalen(conn->_base.outbuf);
+  /* If we're under the low water mark, add cells until we're just over the
+   * high water mark. */
   if (datalen < OR_CONN_LOWWATER) {
-    int n = (OR_CONN_HIGHWATER - datalen) / CELL_NETWORK_SIZE;
+    int n = (OR_CONN_HIGHWATER - datalen + CELL_NETWORK_SIZE-1)
+      / CELL_NETWORK_SIZE;
     while (conn->active_circuits && n > 0) {
       int flushed = connection_or_flush_from_first_active_circuit(conn, 1);
       n -= flushed;
@@ -726,8 +731,9 @@ connection_tls_finish_handshake(or_connection_t *conn)
   return 0;
 }
 
-/** Pack <b>cell</b> into wire-format, and write it onto <b>conn</b>'s
- * outbuf.
+/** Pack <b>cell</b> into wire-format, and write it onto <b>conn</b>'s outbuf.
+ * For cells that use or affect a circuit, this should only be called by
+ * connection_or_flush_from_first_active_circuit()
  */
 void
 connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
@@ -786,6 +792,7 @@ int
 connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
 {
   cell_t cell;
+  circuit_t *circ;
 
   tor_assert(conn);
 
@@ -794,7 +801,12 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   cell.command = CELL_DESTROY;
   cell.payload[0] = (uint8_t) reason;
   log_debug(LD_OR,"Sending destroy (circID %d).", circ_id);
-  /* XXXX clear the rest of the cell queue on the circuit. {cells} */
+
+  /* Clear the cell queue on the circuit, so that our destroy cell will
+   * be the very next thing written.*/
+  circ = circuit_get_by_circid_orconn(circ_id, conn);
+  circuit_clear_cell_queue(circ, conn);
+
   connection_or_write_cell_to_buf(&cell, conn);
   return 0;
 }

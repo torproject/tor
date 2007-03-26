@@ -131,15 +131,16 @@ relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
 }
 
 /** Receive a relay cell:
- *  - Crypt it (encrypt APward, decrypt at AP, decrypt exitward).
+ *  - Crypt it (encrypt if headed toward the origin or if we <b>are</b> the
+ *    origin; decrypt if we're headed toward the exit).
  *  - Check if recognized (if exitward).
- *  - If recognized and the digest checks out, then find if there's
- *    a conn that the cell is intended for, and deliver it to
+ *  - If recognized and the digest checks out, then find if there's a stream
+ *    that the cell is intended for, and deliver it to the right
  *    connection_edge.
- *  - Else connection_or_write_cell_to_buf to the conn on the other
- *    side of the circuit.DOCDOC
+ *  - If not recognized, then we need to relay it: append it to the appropriate
+ *    cell_queue on <b>circ</b>.
  *
- * Return -reason on failure.
+ * Return -<b>reason</b> on failure.
  */
 int
 circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
@@ -322,7 +323,7 @@ relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
 
 /** Package a relay cell from an edge:
  *  - Encrypt it to the right layer
- *  - connection_or_write_cell_to_buf to the right conn DOCDOC
+ *  - Append it to the appropriate cell_queue on <b>circ</b>
  */
 static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
@@ -1462,19 +1463,21 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
   }
 }
 
-/** DOCDOC */
+/** Stop reading on edge connections when we have this many cells
+ * waiting on the appropriate queue. */
 #define CELL_QUEUE_HIGHWATER_SIZE 256
- /** DOCDOC */
+/** Start reading from edge connections again when we get down to this many
+ * cells. */
 #define CELL_QUEUE_LOWWATER_SIZE 64
 
-/** DOCDOC */
+/** Release storage held by <b>cell</b> */
 static INLINE void
 cell_free(cell_t *cell)
 {
   tor_free(cell);
 }
 
-/** DOCDOC */
+/** Allocate a new copy of <b>cell</b>. */
 static INLINE cell_t *
 cell_copy(const cell_t *cell)
 {
@@ -1484,7 +1487,7 @@ cell_copy(const cell_t *cell)
   return c;
 }
 
-/** DOCDOC */
+/** Append <b>cell</b> to the end of <b>queue</b>. */
 void
 cell_queue_append(cell_queue_t *queue, cell_t *cell)
 {
@@ -1499,14 +1502,14 @@ cell_queue_append(cell_queue_t *queue, cell_t *cell)
   ++queue->n;
 }
 
-/** DOCDOC */
+/** Append a newly allocated copy of <b>cell</b> to the end of <b>queue</b> */
 void
 cell_queue_append_copy(cell_queue_t *queue, const cell_t *cell)
 {
   cell_queue_append(queue, cell_copy(cell));
 }
 
-/** DOCDOC */
+/** Remove and free every cell in <b>queue</b>. */
 void
 cell_queue_clear(cell_queue_t *queue)
 {
@@ -1521,7 +1524,8 @@ cell_queue_clear(cell_queue_t *queue)
   queue->n = 0;
 }
 
-/** DOCDOC */
+/** Extract and return the cell at the head of <b>queue</b>; return NULL if
+ * <b>queue</b> is empty. */
 static INLINE cell_t *
 cell_queue_pop(cell_queue_t *queue)
 {
@@ -1537,7 +1541,8 @@ cell_queue_pop(cell_queue_t *queue)
   return cell;
 }
 
-/** DOCDOC */
+/** Return a pointer to the "next_active_on_{n,p}_conn" pointer of <b>circ</b>,
+ * depending on whether <b>conn</b> matches n_conn or p_conn. */
 static INLINE circuit_t **
 next_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 {
@@ -1550,7 +1555,8 @@ next_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
   }
 }
 
-/** DOCDOC */
+/** Return a pointer to the "prev_active_on_{n,p}_conn" pointer of <b>circ</b>,
+ * depending on whether <b>conn</b> matches n_conn or p_conn. */
 static INLINE circuit_t **
 prev_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 {
@@ -1563,10 +1569,14 @@ prev_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
   }
 }
 
-/** DOCDOC */
+/** Add <b>circ</b> to the list of circuits with pending cells on
+ * <b>conn</b>. */
 void
 make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn)
 {
+  tor_assert(! *prev_circ_on_conn_p(circ, conn));
+  tor_assert(! *next_circ_on_conn_p(circ, conn));
+
   if (! conn->active_circuits) {
     conn->active_circuits = circ;
     *prev_circ_on_conn_p(circ, conn) = circ;
@@ -1581,13 +1591,16 @@ make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn)
   }
 }
 
-/** DOCDOC */
+/** Remove <b>circ</b> to the list of circuits with pending cells on
+ * <b>conn</b>. */
 void
 make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn)
 {
-  // XXXX add some assert.
   circuit_t *next = *next_circ_on_conn_p(circ, conn);
-  circuit_t *prev = *next_circ_on_conn_p(circ, conn);
+  circuit_t *prev = *prev_circ_on_conn_p(circ, conn);
+  tor_assert(*prev_circ_on_conn_p(next, conn) == circ);
+  tor_assert(*next_circ_on_conn_p(prev, conn) == circ);
+
   if (next == circ) {
     conn->active_circuits = NULL;
   } else {
@@ -1600,7 +1613,8 @@ make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn)
   *next_circ_on_conn_p(circ, conn) = NULL;
 }
 
-/** DOCDOC */
+/** Remove all circuits from the list of circuits with pending cells on
+ * <b>conn</b>. */
 void
 connection_or_unlink_all_active_circs(or_connection_t *orconn)
 {
@@ -1617,9 +1631,12 @@ connection_or_unlink_all_active_circs(or_connection_t *orconn)
   orconn->active_circuits = NULL;
 }
 
-/** DOCDOC */
+/** Block (if <b>block</b> is true) or unblock (if <b>block</b> is false)
+ * every edge connection that is using <b>circ</b> to write to <b>orconn</b>,
+ * and start or stop reading as appropriate. */
 static void
-block_streams_on_circ(circuit_t *circ, or_connection_t *orconn, int block)
+set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
+                            int block)
 {
   edge_connection_t *edge = NULL;
   if (circ->n_conn == orconn) {
@@ -1647,7 +1664,10 @@ block_streams_on_circ(circuit_t *circ, or_connection_t *orconn, int block)
   }
 }
 
-/** DOCDOC */
+/** Pull as many cells as possible (but no more than <b>max</b>) from the
+ * queue of the first active circuit on <b>conn</b>, and write then to
+ * <b>conn</b>-&gt;outbuf.  Return the number of cells written.  Advance
+ * the active circuit pointer to the next active circuit in the ring. */
 int
 connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
 {
@@ -1674,9 +1694,12 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
   }
   conn->active_circuits = *next_circ_on_conn_p(circ, conn);
 
+  /* Is the cell queue low enough to unblock all the streams that are waiting
+   * to write to this circuit? */
   if (streams_blocked && queue->n <= CELL_QUEUE_LOWWATER_SIZE)
-    block_streams_on_circ(circ, conn, 0); /* unblock streams */
+    set_streams_blocked_on_circ(circ, conn, 0); /* unblock streams */
 
+  /* Did we just ran out of cells on this queue? */
   if (queue->n == 0) {
     log_info(LD_GENERAL, "Made a circuit inactive.");
     make_circuit_inactive_on_conn(circ, conn);
@@ -1684,7 +1707,8 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
   return n_flushed;
 }
 
-/** DOCDOC */
+/** Add <b>cell</b> to the queue of <b>circ</b> writing to <b>orconn</b>
+ * transmitting in <b>direction</b>. */
 void
 append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
                              cell_t *cell, int direction)
@@ -1702,8 +1726,10 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
 
   cell_queue_append_copy(queue, cell);
 
+  /* If we have too many cells on the circuit, we should stop reading from
+   * the edge streams for a while. */
   if (!streams_blocked && queue->n >= CELL_QUEUE_HIGHWATER_SIZE)
-    block_streams_on_circ(circ, orconn, 1); /* block streams */
+    set_streams_blocked_on_circ(circ, orconn, 1); /* block streams */
 
   if (queue->n == 1) {
     /* This was the first cell added to the queue.  We need to make this
@@ -1713,7 +1739,6 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
   }
 
   if (! buf_datalen(orconn->_base.outbuf)) {
-    /* XXXX Should this be a "<16K"? {cells} */
     /* There is no data at all waiting to be sent on the outbuf.  Add a
      * cell, so that we can notice when it gets flushed, flushed_some can
      * get called, and we can start putting more data onto the buffer then.
@@ -1723,7 +1748,29 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
   }
 }
 
-/** DOCDOC */
+/** Remove all the cells queued on <b>circ</b> for <b>orconn</b>. */
+void
+circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn)
+{
+  cell_queue_t *queue;
+  int streams_blocked;
+  if (circ->n_conn == orconn) {
+    queue = &circ->n_conn_cells;
+    streams_blocked = circ->streams_blocked_on_n_conn;
+  } else {
+    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    queue = &orcirc->p_conn_cells;
+    streams_blocked = circ->streams_blocked_on_p_conn;
+  }
+
+  if (queue->n)
+    make_circuit_inactive_on_conn(circ,orconn);
+
+  cell_queue_clear(queue);
+}
+
+/** Fail with an assert if the active circuits ring on <b>orconn</b> is
+ * corrupt.  */
 void
 assert_active_circuits_ok(or_connection_t *orconn)
 {
