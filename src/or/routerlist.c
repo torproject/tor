@@ -1647,7 +1647,8 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
  * which to remove.  We fill the gap in rl-&gt;routers with a later element in
  * the list, if any exists. <b>ri</b> is freed.
  *
- * DOCDOC make_old */
+ * If <b>make_old</b> is true, instead of deleting the router, we try adding
+ * it to rl-&gt;old_routers. */
 void
 routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
 {
@@ -1703,7 +1704,8 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
  * search over the list to decide which to remove.  We put ri_new in the same
  * index as ri_old, if possible.  ri is freed as appropriate.
  *
- * DOCDOC make_old */
+ * If <b>make_old</b> is true, instead of deleting the router, we try adding
+ * it to rl-&gt;old_routers. */
 static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx, int make_old)
