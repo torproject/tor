@@ -2240,7 +2240,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     return connection_exit_connect_dir(n_stream);
   }
 
-  TO_OR_CIRCUIT(circ)->n_streams = n_stream;  n_stream->on_circuit = circ;
+  n_stream->on_circuit = circ;
 
   /* send it off to the gethostbyname farm */
   switch (dns_resolve(n_stream)) {
