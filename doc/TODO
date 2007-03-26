@@ -74,7 +74,7 @@ Things we'd like to do in 0.2.0.x:
         is full, not when the orconn is "too full".
       - Do we switch to arena-allocation for cells?
       - Can we stop doing so many memcpys on cells?
-      - Also, only package data from exitconns when there is space on the
+      o Also, only package data from exitconns when there is space on the
         target OR conn's outbuf?  or when the circuit is not too full.
       - MAYBE kill stalled circuits rather than stalled connections; consider
         anonymity implications.

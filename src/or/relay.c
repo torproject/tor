@@ -1463,6 +1463,11 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 }
 
 /** DOCDOC */
+#define CELL_QUEUE_HIGHWATER_SIZE 256
+ /** DOCDOC */
+#define CELL_QUEUE_LOWWATER_SIZE 64
+
+/** DOCDOC */
 static INLINE void
 cell_free(cell_t *cell)
 {
@@ -1532,6 +1537,7 @@ cell_queue_pop(cell_queue_t *queue)
   return cell;
 }
 
+/** DOCDOC */
 static INLINE circuit_t **
 next_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 {
@@ -1612,28 +1618,65 @@ connection_or_unlink_all_active_circs(or_connection_t *orconn)
 }
 
 /** DOCDOC */
+static void
+block_streams_on_circ(circuit_t *circ, or_connection_t *orconn, int block)
+{
+  edge_connection_t *edge = NULL;
+  if (circ->n_conn == orconn) {
+    circ->streams_blocked_on_n_conn = block;
+    if (CIRCUIT_IS_ORIGIN(circ))
+      edge = TO_ORIGIN_CIRCUIT(circ)->p_streams;
+  } else {
+    circ->streams_blocked_on_p_conn = block;
+    tor_assert(!CIRCUIT_IS_ORIGIN(circ));
+    edge = TO_OR_CIRCUIT(circ)->n_streams;
+  }
+
+  for (; edge; edge = edge->next_stream) {
+    connection_t *conn = TO_CONN(edge);
+    conn->edge_blocked_on_circ = block;
+
+    if (block) {
+      if (connection_is_reading(conn))
+        connection_stop_reading(conn);
+    } else {
+      /* Is this right? */
+      if (!connection_is_reading(conn))
+        connection_start_reading(conn);
+    }
+  }
+}
+
+/** DOCDOC */
 int
 connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
 {
   int n_flushed;
   cell_queue_t *queue;
   circuit_t *circ;
+  int streams_blocked;
   circ = conn->active_circuits;
   if (!circ) return 0;
-  if (circ->n_conn == conn)
+  if (circ->n_conn == conn) {
     queue = &circ->n_conn_cells;
-  else
+    streams_blocked = circ->streams_blocked_on_n_conn;
+  } else {
     queue = &TO_OR_CIRCUIT(circ)->p_conn_cells;
+    streams_blocked = circ->streams_blocked_on_p_conn;
+  }
 
   for (n_flushed = 0; n_flushed < max && queue->head; ++n_flushed) {
     cell_t *cell = cell_queue_pop(queue);
 
     connection_or_write_cell_to_buf(cell, conn);
     cell_free(cell);
-    log_info(LD_GENERAL, "flushed a cell; n ==%d", queue->n);
     ++n_flushed;
   }
   conn->active_circuits = *next_circ_on_conn_p(circ, conn);
+
+  if (streams_blocked && queue->n <= CELL_QUEUE_LOWWATER_SIZE)
+    block_streams_on_circ(circ, conn, 0); /* unblock streams */
+
   if (queue->n == 0) {
     log_info(LD_GENERAL, "Made a circuit inactive.");
     make_circuit_inactive_on_conn(circ, conn);
@@ -1647,16 +1690,20 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
                              cell_t *cell, int direction)
 {
   cell_queue_t *queue;
+  int streams_blocked;
   if (direction == CELL_DIRECTION_OUT) {
     queue = &circ->n_conn_cells;
+    streams_blocked = circ->streams_blocked_on_n_conn;
   } else {
     or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
     queue = &orcirc->p_conn_cells;
+    streams_blocked = circ->streams_blocked_on_p_conn;
   }
 
   cell_queue_append_copy(queue, cell);
 
-  log_info(LD_GENERAL, "Added a cell; n ==%d", queue->n);
+  if (!streams_blocked && queue->n >= CELL_QUEUE_HIGHWATER_SIZE)
+    block_streams_on_circ(circ, orconn, 1); /* block streams */
 
   if (queue->n == 1) {
     /* This was the first cell added to the queue.  We need to make this
@@ -1676,6 +1723,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
   }
 }
 
+/** DOCDOC */
 void
 assert_active_circuits_ok(or_connection_t *orconn)
 {
@@ -1693,3 +1741,4 @@ assert_active_circuits_ok(or_connection_t *orconn)
     cur = next;
   } while (cur != head);
 }
+

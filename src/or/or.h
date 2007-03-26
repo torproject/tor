@@ -750,10 +750,11 @@ typedef struct connection_t {
                                       * before closing it? */
   unsigned int inbuf_reached_eof:1; /**< Boolean: did read() return 0 on this
                                      * conn? */
-  unsigned edge_has_sent_end:1; /**< For debugging; only used on edge
+  unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
                          * connections.  Set once we've set the stream end,
                          * and check in connection_about_to_close_connection().
                          */
+  unsigned int edge_blocked_on_circ:1; /**< DOCDOC */
   /** Used for OR conns that shouldn't get any new circs attached to them. */
   unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
@@ -818,9 +819,7 @@ typedef struct or_connection_t {
   struct circuit_t *active_circuits; /**< DOCDOC */
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
-  /** Linked list of bridged dirserver connections that can't write until
-   * this connection's outbuf is less full. */
-  struct dir_connection_t *blocked_dir_connections;
+
   circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
                                   * connection, which half of the space should
                                   * we use? */
@@ -869,10 +868,6 @@ typedef struct edge_connection_t {
   /** Bytes written since last call to control_event_stream_bandwidth_used() */
   uint32_t n_written;
 
-  /** Exit only: a dirserv connection that is tunneled over this connection
-   * using a socketpair. */
-  struct dir_connection_t *bridge_for_conn;
-
   char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
                                            * querying for? (AP only) */
 
@@ -891,10 +886,6 @@ typedef struct dir_connection_t {
   char *requested_resource; /**< Which 'resource' did we ask the directory
                              * for? */
   unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
-  /** True iff this is a dirserv conn, and it's tunneled over an or_conn,
-   * and we've stopped writing because the or_conn had too much pending
-   * data to write */
-  unsigned int is_blocked_on_or_conn : 1;
 
   /* Used only for server sides of some dir connections, to implement
    * "spooling" of directory material to the outbuf.  Otherwise, we'd have
@@ -918,15 +909,6 @@ typedef struct dir_connection_t {
 
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the directory server's signing key. */
-
-  /** If this is a dirserv conn created with a BEGIN_DIR (a "bridged" dirserv
-   * connection), a pointer to the edge_conn at the other end of its
-   * socketpair. */
-  edge_connection_t *bridge_conn;
-  /** Next connection in linked list of dirserv connections blocked until
-   * the or_conns over which they're bridged have enough space in their
-   * outbufs. */
-  struct dir_connection_t *next_blocked_on_same_or_conn;
 
 } dir_connection_t;
 
@@ -1396,6 +1378,11 @@ typedef struct circuit_t {
   uint16_t n_port;
   /** The IPv4 address of the OR that is next in this circuit. */
   uint32_t n_addr;
+
+  /** DOCDOC */
+  unsigned int streams_blocked_on_n_conn : 1;
+  unsigned int streams_blocked_on_p_conn : 1;
+
   /** How many relay data cells can we package (read from edge streams)
    * on this circuit before we receive a circuit-level sendme cell asking
    * for more? */
@@ -2196,7 +2183,6 @@ char *alloc_http_authenticator(const char *authenticator);
 
 void assert_connection_ok(connection_t *conn, time_t now);
 int connection_or_nonopen_was_started_here(or_connection_t *conn);
-int connection_or_too_full_for_dirserv_data(or_connection_t *conn);
 
 /********************************* connection_edge.c *************************/
 

@@ -16,7 +16,6 @@ const char connection_or_c_id[] =
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
-static int connection_or_empty_enough_for_dirserv_data(or_connection_t *conn);
 
 /**************************************************************/
 
@@ -232,21 +231,22 @@ connection_or_process_inbuf(or_connection_t *conn)
   }
 }
 
+/**DOCDOC*/
+#define OR_CONN_HIGHWATER (32*1024)
+
+/**DOCDOC*/
+#define OR_CONN_LOWWATER (16*1024)
+
 /** Called whenever we have flushed some data on an or_conn: add more data
  * from active circuits. */
 int
 connection_or_flushed_some(or_connection_t *conn)
 {
-  if (conn->blocked_dir_connections &&
-      connection_or_empty_enough_for_dirserv_data(conn)) {
-    connection_dirserv_stop_blocking_all_on_or_conn(conn);
-  }
-  if (buf_datalen(conn->_base.outbuf) < 16*1024) {
-    int n = (32*1024 - buf_datalen(conn->_base.outbuf)) / CELL_NETWORK_SIZE;
+  size_t datalen = buf_datalen(conn->_base.outbuf);
+  if (datalen < OR_CONN_LOWWATER) {
+    int n = (OR_CONN_HIGHWATER - datalen) / CELL_NETWORK_SIZE;
     while (conn->active_circuits && n > 0) {
-      int flushed;
-      log_info(LD_GENERAL, "Loop, n==%d",n);
-      flushed = connection_or_flush_from_first_active_circuit(conn, 1);
+      int flushed = connection_or_flush_from_first_active_circuit(conn, 1);
       n -= flushed;
     }
   }
@@ -797,34 +797,5 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   /* XXXX clear the rest of the cell queue on the circuit. {cells} */
   connection_or_write_cell_to_buf(&cell, conn);
   return 0;
-}
-
-/** A high waterlevel for whether to refill this OR connection
- * with more directory information, if any is pending. */
-#define DIR_BUF_FULLNESS_THRESHOLD (128*1024)
-/** A bottom waterlevel for whether to refill this OR connection
- * with more directory information, if any is pending. We don't want
- * to make this too low, since we already run the risk of starving
- * the pending dir connections if the OR conn is frequently busy with
- * other things. */
-#define DIR_BUF_EMPTINESS_THRESHOLD (96*1024)
-
-/** Return true iff there is so much data waiting to be flushed on <b>conn</b>
- * that we should stop writing directory data to it. */
-int
-connection_or_too_full_for_dirserv_data(or_connection_t *conn)
-{
-  return buf_datalen(conn->_base.outbuf) > DIR_BUF_FULLNESS_THRESHOLD;
-}
-
-/** Return true iff there is no longer so much data waiting to be flushed on
- * <b>conn</b> that we should not write directory data to it. */
-static int
-connection_or_empty_enough_for_dirserv_data(or_connection_t *conn)
-{
-  /* Note that the threshold to stop writing is a bit higher than the
-   * threshold to start again: this should (with any luck) keep us from
-   * flapping about indefinitely. */
-  return buf_datalen(conn->_base.outbuf) < DIR_BUF_EMPTINESS_THRESHOLD;
 }
 
