@@ -313,7 +313,7 @@ isn't open in that time, give up on it.
 .LP
 .TP
 \fBCircuitIdleTimeout \fR\fINUM\fP
-If we have keept a clean (never used) circuit around for NUM seconds,
+If we have kept a clean (never used) circuit around for NUM seconds,
 then close it. This way when the Tor client is entirely idle, it can
 expire all of its circuits, and then expire its TLS connections. Also,
 if we end up making a circuit that is not useful for exiting any of
@@ -558,7 +558,7 @@ resolved.  This helps trap accidental attempts to resolve URLs and so on.
 (Default: 0)
 .LP
 .TP
-\fBFastFirstHopPK \fR\fB0\fR|fB1\fR\fP
+\fBFastFirstHopPK \fR\fB0\fR\fB1\fR\fP
 When this option is enabled and we aren't running as a server, Tor
 skips the public key step for the first hop of creating circuits.  This is
 safe since we have already used TLS to authenticate the server and to
