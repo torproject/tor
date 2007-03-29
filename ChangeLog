@@ -884,9 +884,6 @@ Changes in version 0.1.1.24 - 2006-09-29
       This should improve client CPU usage by 25-50%.
     - Don't crash if, after a server has been running for a while,
       it can't resolve its hostname.
-    - When a client asks us to resolve (not connect to) an address,
-      and we have a cached answer, give them the cached answer.
-      Previously, we would give them no answer at all.
 
   o Minor bugfixes:
     - Allow Tor to start when RunAsDaemon is set but no logs are set.
