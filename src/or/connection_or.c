@@ -792,7 +792,6 @@ int
 connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
 {
   cell_t cell;
-  circuit_t *circ;
 
   tor_assert(conn);
 
@@ -802,10 +801,14 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   cell.payload[0] = (uint8_t) reason;
   log_debug(LD_OR,"Sending destroy (circID %d).", circ_id);
 
+#if 0
+  /* XXXX020 Actually, don't kill the cell queue: it may have data that we're
+   * waiting to flush.  We need to do something more sensible here. */
   /* Clear the cell queue on the circuit, so that our destroy cell will
    * be the very next thing written.*/
   circ = circuit_get_by_circid_orconn(circ_id, conn);
   circuit_clear_cell_queue(circ, conn);
+#endif
 
   connection_or_write_cell_to_buf(&cell, conn);
   return 0;
