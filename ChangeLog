@@ -12,14 +12,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
   o Security fixes:
     - Directory authorities now call routers stable if they have an
       uptime of at least 30 days, even if that's not the median uptime
-      in the network. Implements proposal 1xx, suggested by Kevin Bauer
+      in the network. Implements proposal 107, suggested by Kevin Bauer
       and Damon McCoy.
-
-  o Major bugfixes:
-    - Fix an infinite loop introduced in 0.1.2.7-alpha when we serve
-      directory information requested inside Tor connections (i.e. via
-      begin_dir cells). It only triggered when the same connection was
-      serving other data at the same time. Reported by seeess.
 
   o Minor features (build):
     - Make autoconf search for libevent and openssl consistently.
@@ -961,9 +955,6 @@ Changes in version 0.1.1.24 - 2006-09-29
       This should improve client CPU usage by 25-50%.
     - Don't crash if, after a server has been running for a while,
       it can't resolve its hostname.
-    - When a client asks us to resolve (not connect to) an address,
-      and we have a cached answer, give them the cached answer.
-      Previously, we would give them no answer at all.
 
   o Minor bugfixes:
     - Allow Tor to start when RunAsDaemon is set but no logs are set.
