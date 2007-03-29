@@ -1470,6 +1470,13 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
  * cells. */
 #define CELL_QUEUE_LOWWATER_SIZE 64
 
+#ifdef ACTIVE_CIRCUITS_PARANOIA
+#define assert_active_circuits_ok_paranoid(conn) \
+     assert_active_circuits_ok(conn)
+#else
+#define assert_active_circuits_ok_paranoid(conn)
+#endif
+
 /** Release storage held by <b>cell</b> */
 static INLINE void
 cell_free(cell_t *cell)
@@ -1546,6 +1553,8 @@ cell_queue_pop(cell_queue_t *queue)
 static INLINE circuit_t **
 next_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 {
+  tor_assert(circ);
+  tor_assert(conn);
   if (conn == circ->n_conn) {
     return &circ->next_active_on_n_conn;
   } else {
@@ -1560,6 +1569,8 @@ next_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 static INLINE circuit_t **
 prev_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 {
+  tor_assert(circ);
+  tor_assert(conn);
   if (conn == circ->n_conn) {
     return &circ->prev_active_on_n_conn;
   } else {
@@ -1589,6 +1600,7 @@ make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn)
     *prev_circ_on_conn_p(head, conn) = circ;
     *prev_circ_on_conn_p(circ, conn) = old_tail;
   }
+  assert_active_circuits_ok_paranoid(conn);
 }
 
 /** Remove <b>circ</b> to the list of circuits with pending cells on
@@ -1598,6 +1610,7 @@ make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn)
 {
   circuit_t *next = *next_circ_on_conn_p(circ, conn);
   circuit_t *prev = *prev_circ_on_conn_p(circ, conn);
+  tor_assert(next && prev);
   tor_assert(*prev_circ_on_conn_p(next, conn) == circ);
   tor_assert(*next_circ_on_conn_p(prev, conn) == circ);
 
@@ -1611,6 +1624,7 @@ make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn)
   }
   *prev_circ_on_conn_p(circ, conn) = NULL;
   *next_circ_on_conn_p(circ, conn) = NULL;
+  assert_active_circuits_ok_paranoid(conn);
 }
 
 /** Remove all circuits from the list of circuits with pending cells on
@@ -1677,6 +1691,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
   int streams_blocked;
   circ = conn->active_circuits;
   if (!circ) return 0;
+  assert_active_circuits_ok_paranoid(conn);
   if (circ->n_conn == conn) {
     queue = &circ->n_conn_cells;
     streams_blocked = circ->streams_blocked_on_n_conn;
@@ -1684,14 +1699,27 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
     queue = &TO_OR_CIRCUIT(circ)->p_conn_cells;
     streams_blocked = circ->streams_blocked_on_p_conn;
   }
+  tor_assert(*next_circ_on_conn_p(circ,conn));
 
   for (n_flushed = 0; n_flushed < max && queue->head; ++n_flushed) {
     cell_t *cell = cell_queue_pop(queue);
+    tor_assert(*next_circ_on_conn_p(circ,conn));
 
     connection_or_write_cell_to_buf(cell, conn);
     cell_free(cell);
     ++n_flushed;
+    if (circ != conn->active_circuits) {
+      /* If this happens, the current circuit just got made inactive by
+       * a call in connection_write_to_buf().  That's nothing to worry about:
+       * circuit_make_inactive_on_conn() already advanced conn->active_circuits
+       * for us.
+       */
+      assert_active_circuits_ok_paranoid(conn);
+      return n_flushed;
+    }
   }
+  tor_assert(*next_circ_on_conn_p(circ,conn));
+  assert_active_circuits_ok_paranoid(conn);
   conn->active_circuits = *next_circ_on_conn_p(circ, conn);
 
   /* Is the cell queue low enough to unblock all the streams that are waiting
