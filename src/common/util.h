@@ -136,6 +136,12 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define SUBTYPE_P(p, subtype, basemember) \
   ((void*) ( ((char*)(p)) - STRUCT_OFFSET(subtype, basemember) ))
 
+/* Logic */
+/** Macro: true if two values have the same boolean value. */
+#define bool_eq(a,b) (!(a)==!(b))
+/** Macro: true if two values have different boolean values. */
+#define bool_neq(a,b) (!(a)!=!(b))
+
 /* String manipulation */
 
 /** Allowable characters in a hexadecimal string. */

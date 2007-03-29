@@ -582,14 +582,6 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   }
 }
 
-/** Helper: return true iff the boolean values of <b>a</b> and <b>b</b> are
- * different. */
-static INLINE int
-bool_neq(int a, int b)
-{
-  return (a) ? !b : b;
-}
-
 /** Remove all descriptors whose nicknames or fingerprints no longer
  * are allowed by our fingerprint list. (Descriptors that used to be
  * good can become bad when we reload the fingerprint list.)
