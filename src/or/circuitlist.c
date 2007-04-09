@@ -78,13 +78,29 @@ orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
  * remove the circuit from the list of active circuits on old_conn and add it
  * to the list of active circuits on conn. */
 static void
-circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
+circuit_set_circid_orconn_helper(circuit_t *circ, int direction,
+                                 uint16_t id,
                                  or_connection_t *conn,
-                                 uint16_t old_id, or_connection_t *old_conn,
                                  int active)
 {
   orconn_circid_circuit_map_t search;
   orconn_circid_circuit_map_t *found;
+  or_connection_t *old_conn, **conn_ptr;
+  uint16_t old_id, *circid_ptr;
+
+  if (direction == CELL_DIRECTION_OUT) {
+    conn_ptr = &circ->n_conn;
+    circid_ptr = &circ->n_circ_id;
+  } else {
+    or_circuit_t *c = TO_OR_CIRCUIT(circ);
+    conn_ptr = &c->p_conn;
+    circid_ptr = &c->p_circ_id;
+  }
+  old_conn = *conn_ptr;
+  old_id = *circid_ptr;
+
+  if (id == old_id && conn == old_conn)
+    return;
 
   if (_last_circid_orconn_ent &&
       ((old_id == _last_circid_orconn_ent->circ_id &&
@@ -106,6 +122,11 @@ circuit_set_circid_orconn_helper(circuit_t *circ, uint16_t id,
     if (active && old_conn != conn)
       make_circuit_inactive_on_conn(circ,old_conn);
   }
+
+  /* Change the values only after we have possibly made the circuit inactive
+   * on the previous conn. */
+  *conn_ptr = conn;
+  *circid_ptr = id;
 
   if (conn == NULL)
     return;
@@ -136,21 +157,16 @@ void
 circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
                             or_connection_t *conn)
 {
-  uint16_t old_id;
-  or_connection_t *old_conn;
   int active;
 
-  old_id = circ->p_circ_id;
-  old_conn = circ->p_conn;
-  circ->p_circ_id = id;
-  circ->p_conn = conn;
   active = circ->p_conn_cells.n > 0;
   tor_assert(bool_eq(active, circ->next_active_on_p_conn));
 
-  if (id == old_id && conn == old_conn)
-    return;
-  circuit_set_circid_orconn_helper(TO_CIRCUIT(circ), id, conn,
-                                   old_id, old_conn, active);
+  circuit_set_circid_orconn_helper(TO_CIRCUIT(circ), CELL_DIRECTION_IN,
+                                   id, conn, active);
+
+  if (conn)
+    tor_assert(bool_eq(active, circ->next_active_on_p_conn));
 }
 
 /** Set the n_conn field of a circuit <b>circ</b>, along
@@ -160,20 +176,16 @@ void
 circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
                             or_connection_t *conn)
 {
-  uint16_t old_id;
-  or_connection_t *old_conn;
   int active;
 
-  old_id = circ->n_circ_id;
-  old_conn = circ->n_conn;
-  circ->n_circ_id = id;
-  circ->n_conn = conn;
   active = circ->n_conn_cells.n > 0;
   tor_assert(bool_eq(active, circ->next_active_on_n_conn));
 
-  if (id == old_id && conn == old_conn)
-    return;
-  circuit_set_circid_orconn_helper(circ, id, conn, old_id, old_conn, active);
+  circuit_set_circid_orconn_helper(circ, CELL_DIRECTION_OUT,
+                                   id, conn, active);
+
+  if (conn)
+    tor_assert(bool_eq(active, circ->next_active_on_n_conn));
 }
 
 /** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing
