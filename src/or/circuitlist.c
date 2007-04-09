@@ -408,8 +408,6 @@ circuit_free(circuit_t *circ)
       other->rend_splice = NULL;
     }
 
-    cell_queue_clear(&ocirc->p_conn_cells);
-
     tor_free(circ->onionskin);
 
     /* remove from map. */
@@ -419,8 +417,6 @@ circuit_free(circuit_t *circ)
      * "active" checks will be violated. */
     cell_queue_clear(&ocirc->p_conn_cells);
   }
-
-  cell_queue_clear(&circ->n_conn_cells);
 
   /* Remove from map. */
   circuit_set_n_circid_orconn(circ, 0, NULL);
