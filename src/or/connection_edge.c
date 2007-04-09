@@ -2245,12 +2245,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   /* send it off to the gethostbyname farm */
   switch (dns_resolve(n_stream)) {
     case 1: /* resolve worked */
-
-      /* add it into the linked list of n_streams on this circuit */
-      n_stream->next_stream = TO_OR_CIRCUIT(circ)->n_streams;
-      TO_OR_CIRCUIT(circ)->n_streams = n_stream;
       assert_circuit_ok(circ);
-
       log_debug(LD_EXIT,"about to call connection_exit_connect().");
       connection_exit_connect(n_stream);
       return 0;
@@ -2262,8 +2257,6 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       break;
     case 0: /* resolve added to pending list */
       /* add it into the linked list of resolving_streams on this circuit */
-      n_stream->next_stream = TO_OR_CIRCUIT(circ)->resolving_streams;
-      TO_OR_CIRCUIT(circ)->resolving_streams = n_stream;
       assert_circuit_ok(circ);
       ;
   }
@@ -2310,8 +2303,6 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
         connection_free(TO_CONN(dummy_conn));
       return 0;
     case 0: /* resolve added to pending list */
-      dummy_conn->next_stream = circ->resolving_streams;
-      circ->resolving_streams = dummy_conn;
       assert_circuit_ok(TO_CIRCUIT(circ));
       break;
   }

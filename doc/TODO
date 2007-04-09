@@ -70,8 +70,11 @@ Things we'd like to do in 0.2.0.x:
       o When making a circuit active on a connection with an empty buf,
         we need to "prime" the buffer, so that we can trigger the "I flushed
         some" test.
-      - Change how directory-bridge-choking works: choke when circuit queue
+      X Change how directory-bridge-choking works: choke when circuit queue
         is full, not when the orconn is "too full".
+        [No need to do this: the edge-connection choking will already take
+        care of this a bit, and rewriting the 'bridged connection' code
+        to not use socketpairs will give us even more control.]
       - Do we switch to arena-allocation for cells?
       - Can we stop doing so many memcpys on cells?
       o Also, only package data from exitconns when there is space on the

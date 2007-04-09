@@ -509,14 +509,22 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
  * do that for us.)
  *
  * If we have a cached answer, send the answer back along <b>exitconn</b>'s
- * attached circuit.
+ * circuit.
  *
  * Else, if seen before and pending, add conn to the pending list,
  * and return 0.
  *
  * Else, if not seen before, add conn to pending list, hand to
  * dns farm, and return 0.
+ *
+ * Exitconn's on_circuit field must be set, but exitconn should not
+ * yet be linked onto the n_streams/resolving_streams list of that circuit.
+ * On success, link the connection to n_streams if it's an exit connection.
+ * On "pending", link the connection to resolving streams.  Otherwise,
+ * clear its on_circuit field.
  */
+/* XXXX020 Split this into a helper that checks whether there is an answer,
+ * and a caller that takes appropriate action based on what happened. */
 int
 dns_resolve(edge_connection_t *exitconn)
 {
@@ -530,6 +538,7 @@ dns_resolve(edge_connection_t *exitconn)
   assert_connection_ok(TO_CONN(exitconn), 0);
   tor_assert(exitconn->_base.s == -1);
   assert_cache_ok();
+  tor_assert(oncirc);
 
   is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
 
@@ -538,8 +547,12 @@ dns_resolve(edge_connection_t *exitconn)
   if (tor_inet_aton(exitconn->_base.address, &in) != 0) {
     exitconn->_base.addr = ntohl(in.s_addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
-    if (is_resolve)
+    if (is_resolve) {
       send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
+    } else {
+      exitconn->next_stream = oncirc->n_streams;
+      oncirc->n_streams = exitconn;
+    }
     return 1;
   }
   if (address_is_invalid_destination(exitconn->_base.address, 0)) {
@@ -548,7 +561,8 @@ dns_resolve(edge_connection_t *exitconn)
         escaped_safe_str(exitconn->_base.address));
     if (is_resolve)
       send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
-    circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
+    //circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
+    exitconn->on_circuit = NULL;
     if (!exitconn->_base.marked_for_close)
       connection_free(TO_CONN(exitconn));
     return -1;
@@ -581,7 +595,8 @@ dns_resolve(edge_connection_t *exitconn)
 
       if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
         send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
-      circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
+      //circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
+      exitconn->on_circuit = NULL;
       if (!exitconn->_base.marked_for_close)
         connection_free(TO_CONN(exitconn));
       return -1;
@@ -606,6 +621,9 @@ dns_resolve(edge_connection_t *exitconn)
                   "resolve of %s", exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
         exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
+
+        exitconn->next_stream = oncirc->resolving_streams;
+        oncirc->resolving_streams = exitconn;
         return 0;
       case CACHE_STATE_CACHED_VALID:
         log_debug(LD_EXIT,"Connection (fd %d) found cached answer for %s",
@@ -621,6 +639,12 @@ dns_resolve(edge_connection_t *exitconn)
           if (is_resolve)
             send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         }
+        if (!is_resolve) {
+          /* It's a connect; add it into the linked list of n_streams on this
+             circuit */
+          exitconn->next_stream = oncirc->n_streams;
+          oncirc->n_streams = exitconn;
+        }
         return 1;
       case CACHE_STATE_CACHED_FAILED:
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
@@ -628,7 +652,8 @@ dns_resolve(edge_connection_t *exitconn)
                   escaped_safe_str(exitconn->_base.address));
         if (is_resolve)
           send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
-        circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
+        // circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
+        exitconn->on_circuit = NULL;
         if (!exitconn->_base.marked_for_close)
           connection_free(TO_CONN(exitconn));
         return -1;
@@ -658,7 +683,18 @@ dns_resolve(edge_connection_t *exitconn)
   log_debug(LD_EXIT,"Launching %s.",
             escaped_safe_str(exitconn->_base.address));
   assert_cache_ok();
-  return launch_resolve(exitconn);
+
+  r = launch_resolve(exitconn);
+  if (r == 0) {
+    exitconn->next_stream = oncirc->resolving_streams;
+    oncirc->resolving_streams = exitconn;
+  } else {
+    tor_assert(r<0);
+    exitconn->on_circuit = NULL;
+    if (!exitconn->_base.marked_for_close)
+      connection_free(TO_CONN(exitconn));
+  }
+  return r;
 }
 
 /** Log an error and abort if conn is waiting for a DNS resolve.
@@ -1160,7 +1196,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
 }
 
 /** For eventdns: start resolving as necessary to find the target for
- * <b>exitconn</b> */
+ * <b>exitconn</b>.  Returns -1 on error, 0 on "resolve launched." */
 static int
 launch_resolve(edge_connection_t *exitconn)
 {
