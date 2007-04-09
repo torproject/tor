@@ -323,7 +323,7 @@ relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
 
 /** Package a relay cell from an edge:
  *  - Encrypt it to the right layer
- *  - Append it to the appropriate cell_queue on <b>circ</b>
+ *  - Append it to the appropriate cell_queue on <b>circ</b>.
  */
 static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
@@ -1479,24 +1479,24 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 
 /** Release storage held by <b>cell</b> */
 static INLINE void
-cell_free(cell_t *cell)
+packed_cell_free(packed_cell_t *cell)
 {
   tor_free(cell);
 }
 
-/** Allocate a new copy of <b>cell</b>. */
-static INLINE cell_t *
-cell_copy(const cell_t *cell)
+/** Allocate a new copy of packed <b>cell</b>. */
+static INLINE packed_cell_t *
+packed_cell_copy(const cell_t *cell)
 {
-  cell_t *c = tor_malloc(sizeof(cell_t));
-  memcpy(c, cell, sizeof(cell_t));
+  packed_cell_t *c = tor_malloc(sizeof(packed_cell_t));
+  cell_pack(c, cell);
   c->next = NULL;
   return c;
 }
 
 /** Append <b>cell</b> to the end of <b>queue</b>. */
 void
-cell_queue_append(cell_queue_t *queue, cell_t *cell)
+cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
 {
   if (queue->tail) {
     tor_assert(!queue->tail->next);
@@ -1511,20 +1511,20 @@ cell_queue_append(cell_queue_t *queue, cell_t *cell)
 
 /** Append a newly allocated copy of <b>cell</b> to the end of <b>queue</b> */
 void
-cell_queue_append_copy(cell_queue_t *queue, const cell_t *cell)
+cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
 {
-  cell_queue_append(queue, cell_copy(cell));
+  cell_queue_append(queue, packed_cell_copy(cell));
 }
 
 /** Remove and free every cell in <b>queue</b>. */
 void
 cell_queue_clear(cell_queue_t *queue)
 {
-  cell_t *cell, *next;
+  packed_cell_t *cell, *next;
   cell = queue->head;
   while (cell) {
     next = cell->next;
-    cell_free(cell);
+    packed_cell_free(cell);
     cell = next;
   }
   queue->head = queue->tail = NULL;
@@ -1533,10 +1533,10 @@ cell_queue_clear(cell_queue_t *queue)
 
 /** Extract and return the cell at the head of <b>queue</b>; return NULL if
  * <b>queue</b> is empty. */
-static INLINE cell_t *
+static INLINE packed_cell_t *
 cell_queue_pop(cell_queue_t *queue)
 {
-  cell_t *cell = queue->head;
+  packed_cell_t *cell = queue->head;
   if (!cell)
     return NULL;
   queue->head = cell->next;
@@ -1702,11 +1702,12 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
   tor_assert(*next_circ_on_conn_p(circ,conn));
 
   for (n_flushed = 0; n_flushed < max && queue->head; ++n_flushed) {
-    cell_t *cell = cell_queue_pop(queue);
+    packed_cell_t *cell = cell_queue_pop(queue);
     tor_assert(*next_circ_on_conn_p(circ,conn));
 
-    connection_or_write_cell_to_buf(cell, conn);
-    cell_free(cell);
+    connection_write_to_buf(cell->body, CELL_NETWORK_SIZE, TO_CONN(conn));
+
+    packed_cell_free(cell);
     ++n_flushed;
     if (circ != conn->active_circuits) {
       /* If this happens, the current circuit just got made inactive by
@@ -1752,7 +1753,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
     streams_blocked = circ->streams_blocked_on_p_conn;
   }
 
-  cell_queue_append_copy(queue, cell);
+  cell_queue_append_packed_copy(queue, cell);
 
   /* If we have too many cells on the circuit, we should stop reading from
    * the edge streams for a while. */

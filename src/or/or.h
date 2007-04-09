@@ -678,18 +678,24 @@ typedef struct cell_t cell_t;
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
 struct cell_t {
-  struct cell_t *next; /**< Next cell queued on a this circuit. */
   uint16_t circ_id; /**< Circuit which received the cell. */
   uint8_t command; /**< Type of the cell: one of PADDING, CREATE, RELAY,
                     * or DESTROY. */
   char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 };
 
+typedef struct packed_cell_t packed_cell_t;
+/** A cell as packed for writing to the network. */
+struct packed_cell_t {
+  struct packed_cell_t *next; /**< Next cell queued on a this circuit. */
+  char body[CELL_NETWORK_SIZE]; /**< Cell as packed for network. */
+};
+
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
 typedef struct cell_queue_t {
-  cell_t *head; /**< The first cell, or NULL if the queue is empty */
-  cell_t *tail; /**< The last cell, or NULL if the queue is empty */
+  packed_cell_t *head; /**< The first cell, or NULL if the queue is empty */
+  packed_cell_t *tail; /**< The last cell, or NULL if the queue is empty */
   int n; /**< The number of cells in the queue */
 } cell_queue_t;
 
@@ -2299,6 +2305,8 @@ void connection_or_write_cell_to_buf(const cell_t *cell,
 int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
 
+void cell_pack(packed_cell_t *dest, const cell_t *src);
+
 /********************************* control.c ***************************/
 
 typedef enum circuit_status_event_t {
@@ -2656,8 +2664,8 @@ extern uint64_t stats_n_data_cells_received;
 extern uint64_t stats_n_data_bytes_received;
 
 void cell_queue_clear(cell_queue_t *queue);
-void cell_queue_append(cell_queue_t *queue, cell_t *cell);
-void cell_queue_append_copy(cell_queue_t *queue, const cell_t *cell);
+void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);
+void cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell);
 
 void append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
                                   cell_t *cell, int direction);

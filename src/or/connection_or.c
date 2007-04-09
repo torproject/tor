@@ -124,9 +124,10 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
  * in the buffer <b>dest</b>. See tor-spec.txt for details about the
  * wire format.
  */
-static void
-cell_pack(char *dest, const cell_t *src)
+void
+cell_pack(packed_cell_t *dst, const cell_t *src)
 {
+  char *dest = dst->body;
   *(uint16_t*)dest    = htons(src->circ_id);
   *(uint8_t*)(dest+2) = src->command;
   memcpy(dest+3, src->payload, CELL_PAYLOAD_SIZE);
@@ -738,15 +739,14 @@ connection_tls_finish_handshake(or_connection_t *conn)
 void
 connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 {
-  char networkcell[CELL_NETWORK_SIZE];
-  char *n = networkcell;
+  packed_cell_t networkcell;
 
   tor_assert(cell);
   tor_assert(conn);
 
-  cell_pack(n, cell);
+  cell_pack(&networkcell, cell);
 
-  connection_write_to_buf(n, CELL_NETWORK_SIZE, TO_CONN(conn));
+  connection_write_to_buf(networkcell.body, CELL_NETWORK_SIZE, TO_CONN(conn));
 }
 
 /** Process cells from <b>conn</b>'s inbuf.
