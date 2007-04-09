@@ -97,6 +97,8 @@ static int launch_resolve(edge_connection_t *exitconn);
 static void add_wildcarded_test_address(const char *address);
 static int configure_nameservers(int force);
 static int answer_is_wildcarded(const char *ip);
+static int dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
+                            or_circuit_t *oncirc, char **resolved_to_hostname);
 #ifdef DEBUG_DNS_CACHE
 static void _assert_cache_ok(void);
 #define assert_cache_ok() _assert_cache_ok()
@@ -523,48 +525,85 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
  * On "pending", link the connection to resolving streams.  Otherwise,
  * clear its on_circuit field.
  */
-/* XXXX020 Split this into a helper that checks whether there is an answer,
- * and a caller that takes appropriate action based on what happened. */
 int
 dns_resolve(edge_connection_t *exitconn)
+{
+  or_circuit_t *oncirc = TO_OR_CIRCUIT(exitconn->on_circuit);
+  int is_resolve, r;
+  char *hostname = NULL;
+  is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
+
+  r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
+  switch (r) {
+    case 1:
+      if (is_resolve) {
+        if (hostname)
+          send_resolved_hostname_cell(exitconn, hostname);
+        else
+          send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
+      } else {
+        exitconn->next_stream = oncirc->n_streams;
+        oncirc->n_streams = exitconn;
+      }
+      break;
+    case 0:
+      exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
+      exitconn->next_stream = oncirc->resolving_streams;
+      oncirc->resolving_streams = exitconn;
+      break;
+    case -2:
+    case -1:
+      if (is_resolve) {
+        send_resolved_cell(exitconn,
+             (r == -1) ? RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT);
+      }
+      //circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
+      exitconn->on_circuit = NULL;
+      if (!exitconn->_base.marked_for_close)
+        connection_free(TO_CONN(exitconn));
+      break;
+    default:
+      tor_assert(0);
+  }
+
+  tor_free(hostname);
+  return r;
+}
+
+/** Helper function for dns_resolve: same functionality, but does not handle:
+ *     - marking connections on error and clearing their on_circuit
+ *     - linking connections to n_streams/resolving_streams,
+ *     - sending resolved cells if we have an answer/error right away,
+ *
+ * Returns -2 on a transient error.  Sets *<b>hostname_out</b> to a newly
+ * allocated string holding a cached reverse DNS value, if any.
+ */
+static int
+dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
+                 or_circuit_t *oncirc, char **hostname_out)
 {
   cached_resolve_t *resolve;
   cached_resolve_t search;
   pending_connection_t *pending_connection;
   struct in_addr in;
   time_t now = time(NULL);
-  int is_reverse = 0, is_resolve, r;
-  or_circuit_t *oncirc = TO_OR_CIRCUIT(exitconn->on_circuit);
+  int is_reverse = 0, r;
   assert_connection_ok(TO_CONN(exitconn), 0);
   tor_assert(exitconn->_base.s == -1);
   assert_cache_ok();
   tor_assert(oncirc);
-
-  is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
 
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
   if (tor_inet_aton(exitconn->_base.address, &in) != 0) {
     exitconn->_base.addr = ntohl(in.s_addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
-    if (is_resolve) {
-      send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
-    } else {
-      exitconn->next_stream = oncirc->n_streams;
-      oncirc->n_streams = exitconn;
-    }
     return 1;
   }
   if (address_is_invalid_destination(exitconn->_base.address, 0)) {
     log(LOG_PROTOCOL_WARN, LD_EXIT,
         "Rejecting invalid destination address %s",
         escaped_safe_str(exitconn->_base.address));
-    if (is_resolve)
-      send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
-    //circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
-    exitconn->on_circuit = NULL;
-    if (!exitconn->_base.marked_for_close)
-      connection_free(TO_CONN(exitconn));
     return -1;
   }
 
@@ -593,12 +632,6 @@ dns_resolve(edge_connection_t *exitconn)
                  "sending error.",
                  escaped_safe_str(exitconn->_base.address));
 
-      if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE)
-        send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
-      //circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
-      exitconn->on_circuit = NULL;
-      if (!exitconn->_base.marked_for_close)
-        connection_free(TO_CONN(exitconn));
       return -1;
     }
     //log_notice(LD_EXIT, "Looks like an address %s",
@@ -620,10 +653,6 @@ dns_resolve(edge_connection_t *exitconn)
         log_debug(LD_EXIT,"Connection (fd %d) waiting for pending DNS "
                   "resolve of %s", exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
-        exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
-
-        exitconn->next_stream = oncirc->resolving_streams;
-        oncirc->resolving_streams = exitconn;
         return 0;
       case CACHE_STATE_CACHED_VALID:
         log_debug(LD_EXIT,"Connection (fd %d) found cached answer for %s",
@@ -632,30 +661,15 @@ dns_resolve(edge_connection_t *exitconn)
         exitconn->address_ttl = resolve->ttl;
         if (resolve->is_reverse) {
           tor_assert(is_resolve);
-          send_resolved_hostname_cell(exitconn,
-                                      resolve->result.hostname);
+          *hostname_out = tor_strdup(resolve->result.hostname);
         } else {
           exitconn->_base.addr = resolve->result.addr;
-          if (is_resolve)
-            send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
-        }
-        if (!is_resolve) {
-          /* It's a connect; add it into the linked list of n_streams on this
-             circuit */
-          exitconn->next_stream = oncirc->n_streams;
-          oncirc->n_streams = exitconn;
         }
         return 1;
       case CACHE_STATE_CACHED_FAILED:
         log_debug(LD_EXIT,"Connection (fd %d) found cached error for %s",
                   exitconn->_base.s,
                   escaped_safe_str(exitconn->_base.address));
-        if (is_resolve)
-          send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
-        // circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
-        exitconn->on_circuit = NULL;
-        if (!exitconn->_base.marked_for_close)
-          connection_free(TO_CONN(exitconn));
         return -1;
       case CACHE_STATE_DONE:
         log_err(LD_BUG, "Found a 'DONE' dns resolve still in the cache.");
@@ -674,7 +688,6 @@ dns_resolve(edge_connection_t *exitconn)
   pending_connection = tor_malloc_zero(sizeof(pending_connection_t));
   pending_connection->conn = exitconn;
   resolve->pending_connections = pending_connection;
-  exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
 
   /* Add this resolve to the cache and priority queue. */
   HT_INSERT(cache_map, &cache_root, resolve);
@@ -684,17 +697,7 @@ dns_resolve(edge_connection_t *exitconn)
             escaped_safe_str(exitconn->_base.address));
   assert_cache_ok();
 
-  r = launch_resolve(exitconn);
-  if (r == 0) {
-    exitconn->next_stream = oncirc->resolving_streams;
-    oncirc->resolving_streams = exitconn;
-  } else {
-    tor_assert(r<0);
-    exitconn->on_circuit = NULL;
-    if (!exitconn->_base.marked_for_close)
-      connection_free(TO_CONN(exitconn));
-  }
-  return r;
+  return launch_resolve(exitconn);
 }
 
 /** Log an error and abort if conn is waiting for a DNS resolve.
@@ -1196,7 +1199,8 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
 }
 
 /** For eventdns: start resolving as necessary to find the target for
- * <b>exitconn</b>.  Returns -1 on error, 0 on "resolve launched." */
+ * <b>exitconn</b>.  Returns -1 on error, -2 on transient errror,
+ * 0 on "resolve launched." */
 static int
 launch_resolve(edge_connection_t *exitconn)
 {
@@ -1231,18 +1235,11 @@ launch_resolve(edge_connection_t *exitconn)
   if (r) {
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);
-    if (exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE) {
-      if (evdns_err_is_transient(r))
-        send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR_TRANSIENT);
-      else {
-        exitconn->address_ttl = DEFAULT_DNS_TTL;
-        send_resolved_cell(exitconn, RESOLVED_TYPE_ERROR);
-      }
-    }
+    r = evdns_err_is_transient(r) ? -2 : -1;
     dns_cancel_pending_resolve(addr); /* also sends end and frees */
     tor_free(addr);
   }
-  return r ? -1 : 0;
+  return r;
 }
 
 /** How many requests for bogus addresses have we launched so far? */
