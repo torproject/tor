@@ -792,7 +792,6 @@ int
 connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
 {
   cell_t cell;
-  circuit_t *circ;
 
   tor_assert(conn);
 

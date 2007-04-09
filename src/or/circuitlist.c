@@ -157,12 +157,9 @@ void
 circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
                             or_connection_t *conn)
 {
-  int active;
-  int active;
+  int active = circ->p_conn_cells.n > 0;
 
-  active = circ->p_conn_cells.n > 0;
   tor_assert(bool_eq(active, circ->next_active_on_p_conn));
-  active = circ->p_conn_cells.n > 0;
 
   circuit_set_circid_orconn_helper(TO_CIRCUIT(circ), CELL_DIRECTION_IN,
                                    id, conn, active);
@@ -178,12 +175,9 @@ void
 circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
                             or_connection_t *conn)
 {
-  int active;
-  int active;
+  int active = circ->n_conn_cells.n > 0;
 
-  active = circ->n_conn_cells.n > 0;
   tor_assert(bool_eq(active, circ->next_active_on_n_conn));
-  active = circ->n_conn_cells.n > 0;
 
   circuit_set_circid_orconn_helper(circ, CELL_DIRECTION_OUT,
                                    id, conn, active);
