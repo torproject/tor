@@ -1430,10 +1430,12 @@ typedef struct circuit_t {
                                       * circuit marked for close? */
 
   /** Next circuit in the doubly-linked ring of circuits waiting to add
-   * cells to n_conn.  NULL if we have no cells pending. */
+   * cells to n_conn.  NULL if we have no cells pending, or if we're not
+   * linked to an OR connection. */
   struct circuit_t *next_active_on_n_conn;
   /** Previous circuit in the doubly-linked ring of circuits waiting to add
-   * cells to n_conn.  NULL if we have no cells pending. */
+   * cells to n_conn.  NULL if we have no cells pending, or if we're not
+   * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_conn;
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
 } circuit_t;
@@ -1490,10 +1492,12 @@ typedef struct or_circuit_t {
   circuit_t _base;
 
   /** Next circuit in the doubly-linked ring of circuits waiting to add
-   * cells to p_conn.  NULL if we have no cells pending. */
+   * cells to p_conn.  NULL if we have no cells pending, or if we're not
+   * linked to an OR connection. */
   struct circuit_t *next_active_on_p_conn;
   /** Previous circuit in the doubly-linked ring of circuits waiting to add
-   * cells to p_conn.  NULL if we have no cells pending. */
+   * cells to p_conn.  NULL if we have no cells pending, or if we're not
+   * linked to an OR connection. */
   struct circuit_t *prev_active_on_p_conn;
 
   /** The circuit_id used in the previous (backward) hop of this circuit. */

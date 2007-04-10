@@ -80,21 +80,25 @@ orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 static void
 circuit_set_circid_orconn_helper(circuit_t *circ, int direction,
                                  uint16_t id,
-                                 or_connection_t *conn,
-                                 int active)
+                                 or_connection_t *conn)
 {
   orconn_circid_circuit_map_t search;
   orconn_circid_circuit_map_t *found;
   or_connection_t *old_conn, **conn_ptr;
   uint16_t old_id, *circid_ptr;
+  int was_active, make_active;
 
   if (direction == CELL_DIRECTION_OUT) {
     conn_ptr = &circ->n_conn;
     circid_ptr = &circ->n_circ_id;
+    was_active = circ->next_active_on_n_conn != NULL;
+    make_active = circ->n_conn_cells.n > 0;
   } else {
     or_circuit_t *c = TO_OR_CIRCUIT(circ);
     conn_ptr = &c->p_conn;
     circid_ptr = &c->p_circ_id;
+    was_active = c->next_active_on_p_conn != NULL;
+    make_active = c->p_conn_cells.n > 0;
   }
   old_conn = *conn_ptr;
   old_id = *circid_ptr;
@@ -119,7 +123,7 @@ circuit_set_circid_orconn_helper(circuit_t *circ, int direction,
       tor_free(found);
       --old_conn->n_circuits;
     }
-    if (active && old_conn != conn)
+    if (was_active && old_conn != conn)
       make_circuit_inactive_on_conn(circ,old_conn);
   }
 
@@ -144,7 +148,7 @@ circuit_set_circid_orconn_helper(circuit_t *circ, int direction,
     found->circuit = circ;
     HT_INSERT(orconn_circid_map, &orconn_circid_circuit_map, found);
   }
-  if (active && old_conn != conn)
+  if (make_active && old_conn != conn)
     make_circuit_active_on_conn(circ,conn);
 
   ++conn->n_circuits;
@@ -157,15 +161,11 @@ void
 circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
                             or_connection_t *conn)
 {
-  int active = circ->p_conn_cells.n > 0;
-
-  tor_assert(bool_eq(active, circ->next_active_on_p_conn));
-
   circuit_set_circid_orconn_helper(TO_CIRCUIT(circ), CELL_DIRECTION_IN,
-                                   id, conn, active);
+                                   id, conn);
 
   if (conn)
-    tor_assert(bool_eq(active, circ->next_active_on_p_conn));
+    tor_assert(bool_eq(circ->p_conn_cells.n, circ->next_active_on_p_conn));
 }
 
 /** Set the n_conn field of a circuit <b>circ</b>, along
@@ -175,15 +175,10 @@ void
 circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
                             or_connection_t *conn)
 {
-  int active = circ->n_conn_cells.n > 0;
-
-  tor_assert(bool_eq(active, circ->next_active_on_n_conn));
-
-  circuit_set_circid_orconn_helper(circ, CELL_DIRECTION_OUT,
-                                   id, conn, active);
+  circuit_set_circid_orconn_helper(circ, CELL_DIRECTION_OUT, id, conn);
 
   if (conn)
-    tor_assert(bool_eq(active, circ->next_active_on_n_conn));
+    tor_assert(bool_eq(circ->n_conn_cells.n, circ->next_active_on_n_conn));
 }
 
 /** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing

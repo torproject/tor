@@ -1581,35 +1581,46 @@ prev_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 }
 
 /** Add <b>circ</b> to the list of circuits with pending cells on
- * <b>conn</b>. */
+ * <b>conn</b>.   No effect if <b>circ</b> is already unlinked. */
 void
 make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn)
 {
-  tor_assert(! *prev_circ_on_conn_p(circ, conn));
-  tor_assert(! *next_circ_on_conn_p(circ, conn));
+  circuit_t **nextp = next_circ_on_conn_p(circ, conn);
+  circuit_t **prevp = prev_circ_on_conn_p(circ, conn);
+
+  if (*nextp && *prevp) {
+    /* Already active. */
+    return;
+  }
 
   if (! conn->active_circuits) {
     conn->active_circuits = circ;
-    *prev_circ_on_conn_p(circ, conn) = circ;
-    *next_circ_on_conn_p(circ, conn) = circ;
+    *prevp = *nextp = circ;
   } else {
     circuit_t *head = conn->active_circuits;
     circuit_t *old_tail = *prev_circ_on_conn_p(head, conn);
     *next_circ_on_conn_p(old_tail, conn) = circ;
-    *next_circ_on_conn_p(circ, conn) = head;
+    *nextp = head;
     *prev_circ_on_conn_p(head, conn) = circ;
-    *prev_circ_on_conn_p(circ, conn) = old_tail;
+    *prevp = old_tail;
   }
   assert_active_circuits_ok_paranoid(conn);
 }
 
 /** Remove <b>circ</b> to the list of circuits with pending cells on
- * <b>conn</b>. */
+ * <b>conn</b>.  No effect if <b>circ</b> is already unlinked. */
 void
 make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn)
 {
-  circuit_t *next = *next_circ_on_conn_p(circ, conn);
-  circuit_t *prev = *prev_circ_on_conn_p(circ, conn);
+  circuit_t **nextp = next_circ_on_conn_p(circ, conn);
+  circuit_t **prevp = prev_circ_on_conn_p(circ, conn);
+  circuit_t *next = *nextp, *prev = *prevp;
+
+  if (!next && !prev) {
+    /* Already inactive. */
+    return;
+  }
+
   tor_assert(next && prev);
   tor_assert(*prev_circ_on_conn_p(next, conn) == circ);
   tor_assert(*next_circ_on_conn_p(prev, conn) == circ);
@@ -1622,8 +1633,7 @@ make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn)
     if (conn->active_circuits == circ)
       conn->active_circuits = next;
   }
-  *prev_circ_on_conn_p(circ, conn) = NULL;
-  *next_circ_on_conn_p(circ, conn) = NULL;
+  *prevp = *nextp = NULL;
   assert_active_circuits_ok_paranoid(conn);
 }
 
