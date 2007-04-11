@@ -30,9 +30,13 @@ fi
 chown $TORUSER $TORDIR
 chgrp daemon $TORDIR
 chmod 700 $TORDIR
-chown $TORUSER $LOGFILE
-chgrp daemon $LOGFILE
-chmod 660 $LOGFILE
+
+if [ ! -f $LOGFILE ]; then
+    touch $LOGFILE
+    chown $TORUSER $LOGFILE
+    chgrp daemon $LOGFILE
+    chmod 660 $LOGFILE
+fi
 
 # Create the configuration file only if there wasn't one already.
 if [ ! -f $TARGET/torrc ]; then
