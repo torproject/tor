@@ -1485,7 +1485,7 @@ void
 init_cell_pool(void)
 {
   tor_assert(!cell_pool);
-  cell_pool = mp_pool_new(sizeof(packed_cell_t), 64);
+  cell_pool = mp_pool_new(sizeof(packed_cell_t), 1<<19);
 }
 
 /** Free all storage used to hold cells. */

@@ -2119,7 +2119,7 @@ test_mempool(void)
   test_assert(pool->item_alloc_size >= sizeof(void*)+1);
   mp_pool_destroy(pool);
 
-  pool = mp_pool_new(241, 10);
+  pool = mp_pool_new(241, 2500);
   test_assert(pool->new_chunk_capacity >= 10);
   test_assert(pool->item_alloc_size >= sizeof(void*)+241);
   test_eq(pool->item_alloc_size & 0x03, 0);

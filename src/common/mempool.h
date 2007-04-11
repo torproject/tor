@@ -17,7 +17,7 @@ typedef struct mp_pool_t mp_pool_t;
 
 void *mp_pool_get(mp_pool_t *pool);
 void mp_pool_release(void *item);
-mp_pool_t *mp_pool_new(size_t item_size, unsigned int n_per_chunk);
+mp_pool_t *mp_pool_new(size_t item_size, size_t chunk_capacity);
 void mp_pool_clean(mp_pool_t *pool, int n);
 void mp_pool_destroy(mp_pool_t *pool);
 void mp_pool_assert_ok(mp_pool_t *pool);

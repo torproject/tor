@@ -329,7 +329,7 @@ mp_pool_release(void *item)
 }
 
 /** Allocate a new memory pool to hold items of size <b>item_size</b>. We'll
- * try to fit about <b>chunk_capacity</b> items in each chunk. */
+ * try to fit about <b>chunk_capacity</b> bytes in each chunk. */
 mp_pool_t *
 mp_pool_new(size_t item_size, size_t chunk_capacity)
 {
