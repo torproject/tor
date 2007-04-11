@@ -267,7 +267,8 @@ R - add d64 and fp64 along-side d and fp so people can paste status
     entries into a url. since + is a valid base64 char, only allow one
     at a time. spec and then do.
   - When we export something from foo.c file for testing purposes only,
-    make a foo_test.h file for test.c to include.
+    make a foo_test.h file for test.c to include... or put them behind an
+    #ifdef FOO_PRIVATE.
   - The Debian package now uses --verify-config when (re)starting,
     to distinguish configuration errors from other errors. Perhaps
     the RPM and other startup scripts should too?
