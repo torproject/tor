@@ -1479,8 +1479,8 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 #endif
 
 #ifdef ENABLE_CELL_POOL
-static mp_pool_t *cell_pool;
-/* DOCDOC */
+static mp_pool_t *cell_pool = NULL;
+/** Allocate structures to hold cells. */
 void
 init_cell_pool(void)
 {
@@ -1488,7 +1488,7 @@ init_cell_pool(void)
   cell_pool = mp_pool_new(sizeof(packed_cell_t), 64);
 }
 
-/* DOCDOC */
+/** Free all storage used to hold cells. */
 void
 free_cell_pool(void)
 {
@@ -1497,20 +1497,22 @@ free_cell_pool(void)
   cell_pool = NULL;
 }
 
-/** Release storage held by <b>cell</b> */
+/** Release storage held by <b>cell</b>. */
 static INLINE void
 packed_cell_free(packed_cell_t *cell)
 {
   mp_pool_release(cell);
 }
 
-/* DOCDOC */
-static INLINE packed_cell_t*
+/** Allocate and return a new packed_cell_t. */
+static INLINE packed_cell_t *
 packed_cell_alloc(void)
 {
   return mp_pool_get(cell_pool);
 }
 #else
+/* ENABLE_CELL_POOL isn't defined: here are some stubs to use tor_malloc()
+ * and tor_free() instead. */
 void
 init_cell_pool(void)
 {
