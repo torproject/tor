@@ -1229,6 +1229,9 @@ do_main_loop(void)
     }
   }
 
+  /* DOCDOC */
+  init_cell_pool();
+
   /* Set up our buckets */
   connection_bucket_init();
   stats_prev_global_read_bucket = global_read_bucket;
@@ -1665,6 +1668,7 @@ tor_free_all(int postfork)
     config_free_all();
     router_free_all();
   }
+  free_cell_pool();
   tor_tls_free_all();
   /* stuff in main.c */
   smartlist_free(closeable_connection_lst);

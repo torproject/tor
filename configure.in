@@ -19,6 +19,14 @@ AC_ARG_ENABLE(debug,
     CFLAGS="$CFLAGS -g"
 fi])
 
+AC_ARG_ENABLE(cell-pool,
+     AS_HELP_STRING(--disable-cell-pool, disable pool allocator for cells))
+
+if test x$enable_cell_pool != xno; then
+  AC_DEFINE(ENABLE_CELL_POOL, 1,
+            [Defined if we try to use the pool allocator for queued cells])
+fi
+
 AC_ARG_ENABLE(transparent,
      AS_HELP_STRING(--disable-transparent, disable transparent proxy support),
      [case "${enableval}" in

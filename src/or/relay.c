@@ -13,6 +13,7 @@ const char relay_c_id[] =
  **/
 
 #include "or.h"
+#include "../common/mempool.h"
 
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
@@ -1477,18 +1478,67 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 #define assert_active_circuits_ok_paranoid(conn)
 #endif
 
+#ifdef ENABLE_CELL_POOL
+static mp_pool_t *cell_pool;
+/* DOCDOC */
+void
+init_cell_pool(void)
+{
+  tor_assert(!cell_pool);
+  cell_pool = mp_pool_new(sizeof(packed_cell_t), 64);
+}
+
+/* DOCDOC */
+void
+free_cell_pool(void)
+{
+  tor_assert(cell_pool);
+  mp_pool_destroy(cell_pool);
+  cell_pool = NULL;
+}
+
 /** Release storage held by <b>cell</b> */
+static INLINE void
+packed_cell_free(packed_cell_t *cell)
+{
+  mp_pool_release(cell);
+}
+
+/* DOCDOC */
+static INLINE packed_cell_t*
+packed_cell_alloc(void)
+{
+  return mp_pool_get(cell_pool);
+}
+#else
+void
+init_cell_pool(void)
+{
+}
+
+void
+free_cell_pool(void)
+{
+}
+
 static INLINE void
 packed_cell_free(packed_cell_t *cell)
 {
   tor_free(cell);
 }
 
+static INLINE packed_cell_t *
+packed_cell_alloc(void)
+{
+  return tor_malloc(sizeof(packed_cell_t));
+}
+#endif
+
 /** Allocate a new copy of packed <b>cell</b>. */
 static INLINE packed_cell_t *
 packed_cell_copy(const cell_t *cell)
 {
-  packed_cell_t *c = tor_malloc(sizeof(packed_cell_t));
+  packed_cell_t *c = packed_cell_alloc();
   cell_pack(c, cell);
   c->next = NULL;
   return c;

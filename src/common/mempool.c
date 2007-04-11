@@ -7,6 +7,10 @@
 #define MEMPOOL_PRIVATE
 #include "mempool.h"
 
+/* OVERVIEW:
+ *   DOCDOC
+ */
+
 /* DRAWBACKS:
  *   - Not even slightly threadsafe.
  *   - Likes to have lots of items per chunks.
@@ -17,6 +21,7 @@
  *     if you need doubles.
  *   - Could probably be optimized a bit; the representation contains
  *     a bit more info than it really needs to have.
+ *   - probably, chunks should always be a power of 2.
  */
 
 /* NOTES:
