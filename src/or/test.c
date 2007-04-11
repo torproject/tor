@@ -23,9 +23,12 @@ const char test_c_id[] =
 #include <dirent.h>
 #endif
 
+#define MEMPOOL_PRIVATE
+
 #include "or.h"
 #include "../common/test.h"
 #include "../common/torgzip.h"
+#include "../common/mempool.h"
 
 int have_failed = 0;
 
@@ -2104,6 +2107,52 @@ bench_aes(void)
   crypto_free_cipher_env(c);
 }
 
+static void
+test_mempool(void)
+{
+  mp_pool_t *pool;
+  smartlist_t *allocated;
+  int i;
+
+  pool = mp_pool_new(1, 100);
+  test_assert(pool->new_chunk_capacity >= 100);
+  test_assert(pool->item_alloc_size >= sizeof(void*)+1);
+  mp_pool_destroy(pool);
+
+  pool = mp_pool_new(241, 10);
+  test_assert(pool->new_chunk_capacity >= 10);
+  test_assert(pool->item_alloc_size >= sizeof(void*)+241);
+  test_eq(pool->item_alloc_size & 0x03, 0);
+  test_assert(pool->new_chunk_capacity < 60);
+
+  allocated = smartlist_create();
+  for (i = 0; i < 100000; ++i) {
+    if (smartlist_len(allocated) < 20 || crypto_rand_int(2)) {
+      void *m = mp_pool_get(pool);
+      memset(m, 0x09, 241);
+      smartlist_add(allocated, m);
+      //printf("%d: %p\n", i, m);
+      //mp_pool_assert_ok(pool);
+    } else {
+      int idx = crypto_rand_int(smartlist_len(allocated));
+      void *m = smartlist_get(allocated, idx);
+      //printf("%d: free %p\n", i, m);
+      smartlist_del(allocated, idx);
+      mp_pool_release(m);
+      //mp_pool_assert_ok(pool);
+    }
+    if (crypto_rand_int(777)==0)
+      mp_pool_clean(pool);
+
+    if (i % 777)
+      mp_pool_assert_ok(pool);
+  }
+  SMARTLIST_FOREACH(allocated, void *, m, mp_pool_release(m));
+  mp_pool_assert_ok(pool);
+  mp_pool_destroy(pool);
+  smartlist_free(allocated);
+}
+
 int
 main(int c, char**v)
 {
@@ -2145,6 +2194,7 @@ main(int c, char**v)
   test_gzip();
   test_util();
   test_smartlist();
+  test_mempool();
   test_strmap();
   test_control_formats();
   test_pqueue();

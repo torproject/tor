@@ -56,6 +56,8 @@
 /** DOCDOC */
 #define MIN_CHUNK 4096
 
+typedef struct mp_allocated_t mp_allocated_t;
+
 /** DOCDOC */
 struct mp_allocated_t {
   mp_chunk_t *in_chunk;
@@ -67,15 +69,29 @@ struct mp_allocated_t {
 };
 
 /** DOCDOC */
+struct mp_chunk_t {
+  unsigned long magic;
+  mp_chunk_t *next;
+  mp_chunk_t *prev;
+  mp_pool_t *pool;
+  mp_allocated_t *first_free;
+  int n_allocated;
+  int capacity;
+  size_t mem_size;
+  char *next_mem;
+  char mem[1];
+};
+
+/** DOCDOC */
 #define MP_CHUNK_MAGIC 0x09870123
 
 /** DOCDOC */
 #define CHUNK_OVERHEAD (sizeof(mp_chunk_t)-1)
 
 /** DOCDOC */
-#define A2M(a) (&(a)->mem)
+#define A2M(a) (&(a)->mem[0])
 /** DOCDOC */
-#define M2A(p) ( ((char*)p) - STRUCT_OFFSET(mp_chunk_t, mem) )
+#define M2A(p) ( ((char*)p) - STRUCT_OFFSET(mp_allocated_t, mem) )
 
 /* INVARIANT: every chunk can hold 2 or more items. */
 
@@ -113,6 +129,7 @@ mp_pool_get(mp_pool_t *pool)
       chunk->next->prev = chunk;
     pool->used_chunks = chunk;
     ASSERT(!chunk->prev);
+    --pool->n_empty_chunks;
   } else {
     /* Allocate a new chunk and add it to the used list. */
     chunk = mp_chunk_new(pool);
@@ -130,7 +147,7 @@ mp_pool_get(mp_pool_t *pool)
     chunk->first_free = allocated->next_free;
     allocated->next_free = NULL; /* debugging */
   } else {
-    ASSERT(chunk->next_mem + pool->item_alloc_size <
+    ASSERT(chunk->next_mem + pool->item_alloc_size <=
            chunk->mem + chunk->mem_size);
     allocated = (void*)chunk->next_mem;
     chunk->next_mem += pool->item_alloc_size;
@@ -147,7 +164,8 @@ mp_pool_get(mp_pool_t *pool)
       chunk->next->prev = NULL;
 
     chunk->next = pool->full_chunks;
-    pool->full_chunks->prev = chunk;
+    if (chunk->next)
+      chunk->next->prev = chunk;
     pool->full_chunks = chunk;
   }
 
@@ -245,7 +263,7 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
   if (chunk_capacity < MIN_CHUNK) /* Guess system page size. */
     chunk_capacity = MIN_CHUNK;
 
-  pool->new_chunk_capacity = (chunk_capacity-CHUNK_OVERHEAD / alloc_size);
+  pool->new_chunk_capacity = (chunk_capacity-CHUNK_OVERHEAD) / alloc_size;
   pool->item_alloc_size = alloc_size;
 
   return pool;
@@ -289,5 +307,56 @@ mp_pool_destroy(mp_pool_t *pool)
   destroy_chunks(pool->full_chunks);
   memset(pool, 0xe0, sizeof(mp_pool_t));
   FREE(pool);
+}
+
+static int
+assert_chunks_ok(mp_pool_t *pool, mp_chunk_t *chunk, int empty, int full)
+{
+  mp_allocated_t *allocated;
+  int n = 0;
+  if (chunk)
+    ASSERT(chunk->prev == NULL);
+
+  while (chunk) {
+    n++;
+    ASSERT(chunk->magic == MP_CHUNK_MAGIC);
+    ASSERT(chunk->pool == pool);
+    for (allocated = chunk->first_free; allocated;
+         allocated = allocated->next_free) {
+      ASSERT(allocated->in_chunk == chunk);
+    }
+    if (empty)
+      ASSERT(chunk->n_allocated == 0);
+    else if (full)
+      ASSERT(chunk->n_allocated == chunk->capacity);
+    else
+      ASSERT(chunk->n_allocated > 0 && chunk->n_allocated < chunk->capacity);
+
+    ASSERT(chunk->capacity == pool->new_chunk_capacity);
+
+    ASSERT(chunk->mem_size ==
+           pool->new_chunk_capacity * pool->item_alloc_size);
+
+    ASSERT(chunk->next_mem >= chunk->mem &&
+           chunk->next_mem <= chunk->mem + chunk->mem_size);
+
+    if (chunk->next)
+      ASSERT(chunk->next->prev == chunk);
+
+    chunk = chunk->next;
+  }
+  return n;
+}
+
+void
+mp_pool_assert_ok(mp_pool_t *pool)
+{
+  int n_empty;
+
+  n_empty = assert_chunks_ok(pool, pool->empty_chunks, 1, 0);
+  assert_chunks_ok(pool, pool->full_chunks, 0, 1);
+  assert_chunks_ok(pool, pool->used_chunks, 0, 0);
+
+  ASSERT(pool->n_empty_chunks == n_empty);
 }
 
