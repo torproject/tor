@@ -116,7 +116,7 @@ struct mp_allocated_t {
     char mem[1];
     /** An extra element to the union to insure correct alignment. */
     ALIGNMENT_TYPE _dummy;
-  };
+  } u;
 };
 
 /** 'Magic' value used to detect memory corruption. */
@@ -146,10 +146,10 @@ struct mp_chunk_t {
 
 /** Given a pointer to a mp_allocated_t, return a pointer to the memory
  * item it holds. */
-#define A2M(a) (&(a)->mem[0])
+#define A2M(a) (&(a)->u.mem)
 /** Given a pointer to a memory_item_t, return a pointer to its enclosing
  * mp_allocated_t. */
-#define M2A(p) ( ((char*)p) - STRUCT_OFFSET(mp_allocated_t, mem) )
+#define M2A(p) ( ((char*)p) - STRUCT_OFFSET(mp_allocated_t, u.mem) )
 
 #ifdef ALLOC_CAN_RETURN_NULL
 /** If our ALLOC() macro can return NULL, check whether <b>x</b> is NULL,
@@ -230,8 +230,8 @@ mp_pool_get(mp_pool_t *pool)
   if (chunk->first_free) {
     /* If there's anything on the chunk's freelist, unlink it and use it. */
     allocated = chunk->first_free;
-    chunk->first_free = allocated->next_free;
-    allocated->next_free = NULL; /* For debugging; not really needed. */
+    chunk->first_free = allocated->u.next_free;
+    allocated->u.next_free = NULL; /* For debugging; not really needed. */
     ASSERT(allocated->in_chunk == chunk);
   } else {
     /* Otherwise, the chunk had better have some free space left on it. */
@@ -243,7 +243,7 @@ mp_pool_get(mp_pool_t *pool)
     allocated = (void*)chunk->next_mem;
     chunk->next_mem += pool->item_alloc_size;
     allocated->in_chunk = chunk;
-    allocated->next_free = NULL; /* For debugging; not really needed. */
+    allocated->u.next_free = NULL; /* For debugging; not really needed. */
   }
 
   ++chunk->n_allocated;
@@ -280,7 +280,7 @@ mp_pool_release(void *item)
   ASSERT(chunk->magic == MP_CHUNK_MAGIC);
   ASSERT(chunk->n_allocated > 0);
 
-  allocated->next_free = chunk->first_free;
+  allocated->u.next_free = chunk->first_free;
   chunk->first_free = allocated;
 
   if (PREDICT_UNLIKELY(chunk->n_allocated == chunk->capacity)) {
@@ -344,7 +344,7 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
 
   /* First, we figure out how much space to allow per item.  We'll want to
    * use make sure we have enough for the overhead plus the item size. */
-  alloc_size = STRUCT_OFFSET(mp_allocated_t, mem) + item_size;
+  alloc_size = STRUCT_OFFSET(mp_allocated_t, u.mem) + item_size;
   /* If the item_size is less than sizeof(next_free), we need to make
    * the allocation bigger. */
   if (alloc_size < sizeof(mp_allocated_t))
@@ -450,7 +450,7 @@ assert_chunks_ok(mp_pool_t *pool, mp_chunk_t *chunk, int empty, int full)
     ASSERT(chunk->magic == MP_CHUNK_MAGIC);
     ASSERT(chunk->pool == pool);
     for (allocated = chunk->first_free; allocated;
-         allocated = allocated->next_free) {
+         allocated = allocated->u.next_free) {
       ASSERT(allocated->in_chunk == chunk);
     }
     if (empty)
