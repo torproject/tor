@@ -10,6 +10,8 @@ const char control_c_id[] =
  *   See control-spec.txt for full details on protocol.
  **/
 
+#define CONTROL_PRIVATE
+
 #include "or.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
@@ -84,10 +86,6 @@ typedef int event_format_t;
 static void connection_printf_to_buf(control_connection_t *conn,
                                      const char *format, ...)
   CHECK_PRINTF(2,3);
-/*static*/ size_t write_escaped_data(const char *data, size_t len,
-                                     int translate_newlines, char **out);
-/*static*/ size_t read_escaped_data(const char *data, size_t len,
-                                    int translate_newlines,  char **out);
 static void send_control_done(control_connection_t *conn);
 static void send_control_event(uint16_t event, event_format_t which,
                                const char *format, ...)
@@ -317,7 +315,7 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
  * that appears at the start of a line.  If <b>translate_newlines</b>
  * is true, replace all CRLF sequences with LF.  Return the number of
  * bytes in *<b>out</b>. */
-/*static*/ size_t
+/* static */ size_t
 read_escaped_data(const char *data, size_t len, int translate_newlines,
                   char **out)
 {

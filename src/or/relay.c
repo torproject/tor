@@ -1497,6 +1497,14 @@ free_cell_pool(void)
   cell_pool = NULL;
 }
 
+/** Free excess storage in cell pool. */
+void
+clean_cell_pool(void)
+{
+  tor_assert(cell_pool);
+  mp_pool_clean(cell_pool, -1);
+}
+
 /** Release storage held by <b>cell</b>. */
 static INLINE void
 packed_cell_free(packed_cell_t *cell)
@@ -1520,6 +1528,11 @@ init_cell_pool(void)
 
 void
 free_cell_pool(void)
+{
+}
+
+void
+clean_cell_pool(void)
 {
 }
 

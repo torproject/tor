@@ -79,7 +79,7 @@ Things we'd like to do in 0.2.0.x:
         o Implement pool-allocation
         o Have Tor use it for packed cells.
         o Document it.
-        - Do something smart with freeing unused chunks.
+        o Do something smart with freeing unused chunks.
         - Benchmark pool-allocation vs straightforward malloc.
       - Can we stop doing so many memcpys on cells?
       o Also, only package data from exitconns when there is space on the
@@ -271,7 +271,7 @@ Minor items for 0.1.2.x as time permits:
 R - add d64 and fp64 along-side d and fp so people can paste status
     entries into a url. since + is a valid base64 char, only allow one
     at a time. spec and then do.
-  - When we export something from foo.c file for testing purposes only,
+  o When we export something from foo.c file for testing purposes only,
     make a foo_test.h file for test.c to include... or put them behind an
     #ifdef FOO_PRIVATE.
   - The Debian package now uses --verify-config when (re)starting,

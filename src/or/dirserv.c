@@ -35,6 +35,7 @@ static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
 /* Should be static; exposed for testing */
+/* XXXX020 not actually tested. */
 struct authdir_config_t;
 int add_fingerprint_to_dir(const char *nickname, const char *fp,
                            struct authdir_config_t *list);
@@ -72,6 +73,7 @@ typedef struct authdir_config_t {
 } authdir_config_t;
 
 /** Should be static; exposed for testing. */
+/* XXXX020 not actually tested. */
 authdir_config_t *fingerprint_list = NULL;
 
 /** Allocate and return a new, empty, authdir_config_t. */
@@ -88,7 +90,7 @@ authdir_config_new(void)
  * the smartlist of fingerprint_entry_t's <b>list</b>. Return 0 if it's
  * new, or 1 if we replaced the old value.
  */
-int /* Should be static; exposed for testing */
+/* static */ int
 add_fingerprint_to_dir(const char *nickname, const char *fp,
                        authdir_config_t *list)
 {

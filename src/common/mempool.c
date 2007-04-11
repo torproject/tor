@@ -210,6 +210,8 @@ mp_pool_get(mp_pool_t *pool)
 
     ASSERT(!chunk->prev);
     --pool->n_empty_chunks;
+    if (pool->n_empty_chunks < pool->min_empty_chunks)
+      pool->min_empty_chunks = pool->n_empty_chunks;
   } else {
     /* We have no used or empty chunks: allocate a new chunk. */
     chunk = mp_chunk_new(pool);
@@ -375,11 +377,20 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
 }
 
 /** If there are more than <b>n</b> empty chunks in <b>pool</b>, free the
- * exces ones that have been empty for the longest. */
+ * exces ones that have been empty for the longest.   (If <b>n</b> is less
+ * than zero, free only empty chunks that were not used since the last
+ * call to mp_pool_clean(), leaving only -<b>n</b>.) */
 void
 mp_pool_clean(mp_pool_t *pool, int n)
 {
   mp_chunk_t *chunk, **first_to_free;
+  if (n < 0) {
+    n = pool->min_empty_chunks + (-n);
+    if (n < pool->n_empty_chunks)
+      pool->min_empty_chunks = n;
+  }
+  ASSERT(n>=0);
+
   first_to_free = &pool->empty_chunks;
   while (*first_to_free && n > 0) {
     first_to_free = &(*first_to_free)->next;

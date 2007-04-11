@@ -11,6 +11,8 @@ const char config_c_id[] = \
  * \brief Code to parse and interpret configuration files.
  **/
 
+#define CONFIG_PRIVATE
+
 #include "or.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>
@@ -593,8 +595,6 @@ static le_version_t decode_libevent_version(void);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 static void check_libevent_version(const char *m, int server);
 #endif
-
-/*static*/ or_options_t *options_new(void);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909

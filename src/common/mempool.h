@@ -38,6 +38,9 @@ struct mp_pool_t {
   struct mp_chunk_t *full_chunks;
   /** Length of <b>empty_chunks</b>. */
   int n_empty_chunks;
+  /** Lowest value of <b>empty_chunks</b> since last call to
+   * mp_pool_clean(-1). */
+  int min_empty_chunks;
   /** Size of each chunk (in items). */
   int new_chunk_capacity;
   /** Size to allocate for each item, including overhead and alignment

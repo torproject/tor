@@ -23,7 +23,12 @@ const char test_c_id[] =
 #include <dirent.h>
 #endif
 
+/* These macros pull in declarations for some functions and structures that
+ * are typically file-private. */
+#define CONFIG_PRIVATE
+#define CONTROL_PRIVATE
 #define MEMPOOL_PRIVATE
+#define ROUTER_PRIVATE
 
 #include "or.h"
 #include "../common/test.h"
@@ -31,14 +36,6 @@ const char test_c_id[] =
 #include "../common/mempool.h"
 
 int have_failed = 0;
-
-/* These functions are file-local, but are exposed so we can test. */
-void get_platform_str(char *platform, size_t len);
-size_t read_escaped_data(const char *data, size_t len, int translate_newlines,
-                         char **out);
-or_options_t *options_new(void);
-int parse_addr_policy(config_line_t *cfg, addr_policy_t **dest,
-                      int assume_action);
 
 static char temp_dir[256];
 
@@ -2142,7 +2139,7 @@ test_mempool(void)
       //mp_pool_assert_ok(pool);
     }
     if (crypto_rand_int(777)==0)
-      mp_pool_clean(pool, 2);
+      mp_pool_clean(pool, -1);
 
     if (i % 777)
       mp_pool_assert_ok(pool);

@@ -117,8 +117,9 @@ static char* nt_strerror(uint32_t errnum);
 #define CHECK_DESCRIPTOR_INTERVAL (60)
 /** How often do we (as a router) check whether our IP address has changed? */
 #define CHECK_IPADDRESS_INTERVAL (15*60)
-/** How often do we check buffers for empty space that can be deallocated? */
-#define BUF_SHRINK_INTERVAL (60)
+/** How often do we check buffers and pools for empty space that can be
+ * deallocated? */
+#define MEM_SHRINK_INTERVAL (60)
 /** How often do we check for router descriptors that we should download? */
 #define DESCRIPTOR_RETRY_INTERVAL (10)
 /** How often do we 'forgive' undownloadable router descriptors and attempt
@@ -747,7 +748,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
   static time_t time_to_check_ipaddress = 0;
-  static time_t time_to_shrink_buffers = 0;
+  static time_t time_to_shrink_memory = 0;
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
@@ -941,7 +942,7 @@ run_scheduled_events(time_t now)
   for (i=0;i<n_conns;i++) {
     run_connection_housekeeping(i, now);
   }
-  if (time_to_shrink_buffers < now) {
+  if (time_to_shrink_memory < now) {
     for (i=0;i<n_conns;i++) {
       connection_t *conn = connection_array[i];
       if (conn->outbuf)
@@ -949,7 +950,8 @@ run_scheduled_events(time_t now)
       if (conn->inbuf)
         buf_shrink(conn->inbuf);
     }
-    time_to_shrink_buffers = now + BUF_SHRINK_INTERVAL;
+    clean_cell_pool();
+    time_to_shrink_memory = now + MEM_SHRINK_INTERVAL;
   }
 
   /** 6. And remove any marked circuits... */

@@ -6,6 +6,8 @@
 const char router_c_id[] =
   "$Id$";
 
+#define ROUTER_PRIVATE
+
 #include "or.h"
 
 /**
@@ -15,8 +17,6 @@ const char router_c_id[] =
  **/
 
 extern long stats_n_seconds_working;
-
-/* Exposed for test.c. */ void get_platform_str(char *platform, size_t len);
 
 /************************************************************/
 

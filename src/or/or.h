@@ -2137,6 +2137,11 @@ int or_state_save(time_t now);
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer);
 
+#ifdef CONFIG_PRIVATE
+/* Used only by config.c and test.c */
+or_options_t *options_new(void);
+#endif
+
 /********************************* connection.c ***************************/
 
 const char *conn_type_to_string(int type);
@@ -2406,6 +2411,14 @@ int decode_hashed_password(char *buf, const char *hashed);
 void disable_control_logging(void);
 void enable_control_logging(void);
 
+#ifdef CONTROL_PRIVATE
+/* Used only by control.c and test.c */
+size_t write_escaped_data(const char *data, size_t len,
+                          int translate_newlines, char **out);
+size_t read_escaped_data(const char *data, size_t len,
+                         int translate_newlines,  char **out);
+#endif
+
 /********************************* cpuworker.c *****************************/
 
 void cpu_init(void);
@@ -2669,6 +2682,7 @@ extern uint64_t stats_n_data_bytes_received;
 
 void init_cell_pool(void);
 void free_cell_pool(void);
+void clean_cell_pool(void);
 
 void cell_queue_clear(cell_queue_t *queue);
 void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);
@@ -2884,6 +2898,11 @@ void router_get_verbose_nickname(char *buf, routerinfo_t *router);
 void router_reset_warnings(void);
 void router_reset_reachability(void);
 void router_free_all(void);
+
+#ifdef ROUTER_PRIVATE
+/* Used only by router.c and test.c */
+void get_platform_str(char *platform, size_t len);
+#endif
 
 /********************************* routerlist.c ***************************/
 
