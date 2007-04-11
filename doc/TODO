@@ -101,11 +101,11 @@ Things we'd like to do in 0.2.0.x:
       less magic and less control logic.
     - Implement TLS shutdown properly when possible.
     - Maybe move NT services into their own module.
-    - Autoconf cleanups and improvements:
+    . Autoconf cleanups and improvements:
       o Remove redundant event.h check.
-      - Check for zlib with the same machinery as for libevent and openssl.
-      - Make the "no longer strictly accurate" message accurate.
-      - Tell the user what -dev package to install based on OS.
+      o Check for zlib with the same machinery as for libevent and openssl.
+      o Make the "no longer strictly accurate" message accurate.
+      . Tell the user what -dev package to install based on OS.
       - Detect correct version of libraries.
       o Run autoupdate
     - Refactor networkstatus generation:

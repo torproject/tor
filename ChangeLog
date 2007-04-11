@@ -18,8 +18,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       and Damon McCoy.
 
   o Minor features (build):
-    - Make autoconf search for libevent and openssl consistently.
+    - Make autoconf search for libevent, openssl, and zlib consistently.
     - Update deprecated macros in configure.in
+    - When warning about missing headers, tell the user to let us
+      know if the compile succeeds anyway, so we can downgrade the
+      warning.
 
   o Minor features (logging):
     - Always prepend "Bug: " to any log message about a bug.

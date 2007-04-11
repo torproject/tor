@@ -18,14 +18,39 @@ AC_DEFUN([TOR_EXTEND_CODEPATH],
   fi
 ])
 
+dnl 1:libname
+AC_DEFUN([TOR_WARN_MISSING_LIB], [
+h=""
+if test x$2 = xdevpkg; then
+  h=" headers for"
+fi
+if test -f /etc/debian_version -a x"$tor_$1_$2_debian" != x; then
+  AC_WARN([On Debian, you can install$h $1 using "apt-get install $tor_$1_$2_debian"])
+fi
+if test -f /etc/fedora-release -a x"$tor_$1_$2_redhat" != x; then
+  AC_WARN([On Fedora Core, you can install$h $1 using "yum install $tor_$1_$2_redhat"])
+else
+  if test -f /etc/redhat-release -a x"$tor_$1_$2_redhat" != x; then
+    AC_WARN([On most Redhat-based systems, you can get$h $1 by installing the $tor_$1_$2_redhat" RPM package])
+  fi
+fi
+])
+
 dnl Look for a library, and its associated includes, and how to link
 dnl against it.
 dnl
-dnl TOR_SEARCH_LIBRARY(1:libname, 2:withlocation, 3:linkargs, 4:headers,
+dnl TOR_SEARCH_LIBRARY(1:libname, 2:IGNORED, 3:linkargs, 4:headers,
 dnl                    5:prototype,
 dnl                    6:code, 7:optionname, 8:searchextra)
-
 AC_DEFUN([TOR_SEARCH_LIBRARY], [
+try$1dir=""
+AC_ARG_WITH($1-dir,
+  [  --with-$1-dir=PATH    Specify path to $1 installation ],
+  [
+     if test x$withval != xno ; then
+        try$1dir="$withval"
+     fi
+  ])
 tor_saved_LIBS="$LIBS"
 tor_saved_LDFLAGS="$LDFLAGS"
 tor_saved_CPPFLAGS="$CPPFLAGS"
@@ -33,7 +58,7 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
   tor_$1_dir_found=no
   tor_$1_any_linkable=no
 
-  for tor_trydir in "$2" "(system)" "$prefix" /usr/local /usr/pkg $8; do
+  for tor_trydir in "$try$1dir" "(system)" "$prefix" /usr/local /usr/pkg $8; do
     LDFLAGS="$tor_saved_LDFLAGS"
     LIBS="$tor_saved_LIBS $3"
     CPPFLAGS="$tor_saved_CPPFLAGS"
@@ -73,9 +98,13 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
 
   if test $tor_$1_dir_found = no; then
     if test $tor_$1_any_linkable = no ; then
-      AC_MSG_ERROR([Could not find a linkable $1.  You can specify an explicit path using $7])
+      AC_MSG_WARN([Could not find a linkable $1.  If you have it installed somewhere unusal, you can specify an explicit path using $7])
+      TOR_WARN_MISSING_LIB($1, pkg)
+      AC_MSG_ERROR([Missing libraries; unable to proceed.])
     else
-      AC_MSG_ERROR([We found the libraries for $1, but we could not find the C header files.  You may need to install a devel package.])
+      AC_MSG_WARN([We found the libraries for $1, but we could not find the C header files.  You may need to install a devel package.])
+      TOR_WARN_MISSING_LIB($1, devpkg)
+      AC_MSG_ERROR([Missing headers; unable to proceed.])
     fi
   fi
 

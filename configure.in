@@ -67,28 +67,6 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
-# The big search for OpenSSL
-# copied from openssh's configure.ac
-tryssldir=""
-AC_ARG_WITH(ssl-dir,
-        [  --with-ssl-dir=PATH     Specify path to OpenSSL installation ],
-        [
-                if test "x$withval" != "xno" ; then
-                        tryssldir=$withval
-                fi
-        ]
-)
-
-trylibeventdir=""
-AC_ARG_WITH(libevent-dir,
-       [  --with-libevent-dir=PATH     Specify path to Libevent installation ],
-       [
-                if test "x$withval" != "xno" ; then
-                        trylibeventdir=$withval
-                fi
-       ]
-)
-
 TORUSER=_tor
 AC_ARG_WITH(tor-user,
         [  --with-tor-user=NAME    Specify username for tor daemon ],
@@ -206,6 +184,11 @@ else
   GDIlib=
 fi
 
+tor_libevent_pkg_redhat="libevent"
+tor_libevent_pkg_debian="libevent"
+tor_libevent_devpkg_redhat="libevent-devel"
+tor_libevent_devpkg_debian="libevent-dev"
+
 TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $WS32lib], [
 #include <stdlib.h>
 #include <sys/time.h>
@@ -219,6 +202,11 @@ AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
 
+tor_openssl_pkg_redhat="openssl"
+tor_openssl_pkg_debian="libssl"
+tor_openssl_devpkg_redhat="openssl-devel"
+tor_openssl_devpkg_debian="libssl-dev"
+
 TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $GDIlib],
     [#include <openssl/rand.h>],
     [void RAND_add(const void *buf, int num, double entropy);],
@@ -227,17 +215,27 @@ TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $GDIlib],
 
 dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
 
+dnl ------------------------------------------------------
+dnl Where do you live, zlib?  And how do we call you?
+
+tor_openssl_pkg_redhat="zlib"
+tor_openssl_pkg_debian="zlib1g"
+tor_openssl_devpkg_redhat="zlib-devel"
+tor_openssl_devpkg_debian="zlib1g-dev"
+
+TOR_SEARCH_LIBRARY(zlib, $tryzlibdir, [-lz],
+    [#include <zlib.h>],
+    [const char * zlibVersion(void);],
+    [zlibVersion(); exit(0);], [--with-zlib-dir],
+    [/opt/zlib])
+
 dnl Make sure to enable support for large off_t if avalable.
 
 AC_SYS_LARGEFILE
 
-dnl The warning message here is no longer strictly accurate.
-
-AC_CHECK_HEADERS(unistd.h string.h signal.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/time.h errno.h assert.h time.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+AC_CHECK_HEADERS(unistd.h string.h signal.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/time.h errno.h assert.h time.h, , AC_MSG_WARN(Some headers were not found, compilation may fail.  If compilation succeeds, please send your orconfig.h to the developers so we can fix this warning.))
 
 AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h)
-
-AC_CHECK_HEADERS(zlib.h, , AC_MSG_ERROR(Zlib header (zlib.h) not found. Tor requires zlib to build. You may need to install a zlib development package.))
 
 dnl These headers are not essential
 

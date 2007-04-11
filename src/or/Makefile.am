@@ -13,7 +13,7 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	eventdns.c \
 	tor_main.c
 
-tor_LDADD = ../common/libor.a ../common/libor-crypto.a -lz
+tor_LDADD = ../common/libor.a ../common/libor-crypto.a
 
 test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
@@ -24,7 +24,7 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	eventdns.c \
 	test.c
 
-test_LDADD = ../common/libor.a ../common/libor-crypto.a -lz
+test_LDADD = ../common/libor.a ../common/libor-crypto.a
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h
 
