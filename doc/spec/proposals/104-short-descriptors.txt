@@ -62,8 +62,8 @@ Specification:
         Fingerprint is encoded in hex (using upper-case letters), with
         no spaces.
 
-    "published"
-        As currently documented in dir-spec.txt.
+    "published" As currently documented in dir-spec.txt.  It MUST match the
+        "published" field of the descriptor published at the same time.
 
     "read-history"
     "write-history"
@@ -101,10 +101,14 @@ Specification:
           Present if this router is a directory cache that provides
           extra-info documents.
 
+     (Since implementations before 0.1.2.5-alpha required that "opt" keyword
+     precede any unrecognized entry with "opt", these keys MUST be preceded
+     with "opt" until 0.1.2.5-alpha is obsolete.)
+
   3. New communications rules
 
-     Clients SHOULD generate and upload an extra-info document after each
-     descriptor they generate and upload; no more, no less.  Clients MUST
+     Servers SHOULD generate and upload an extra-info document after each
+     descriptor they generate and upload; no more, no less.  Servers MUST
      upload the new descriptor before they upload the new extra-info.
 
      Authorities receiving an extra-info document SHOULD verify all of the
@@ -115,6 +119,7 @@ Specification:
          document.
        * The extra-info-digest field in the router descriptor matches
          the digest of the extra-info document.
+       * The published fields in the two documents match.
 
      Authorities SHOULD try to fetch extra-info documents from one another if
      they do not have one matching the digest declared in a router
@@ -150,7 +155,7 @@ Migration:
   For extra info approach:
      * First:
        * Authorities should accept extra info, and support serving it.
-       * Routers should upload bandwidth info once authorities accept it.
+       * Routers should upload extra info once authorities accept it.
        * Caches should support an option to download and cache it, once
          authorities serve it.
        * Tools should be updated to use locally cached information.
@@ -160,7 +165,10 @@ Migration:
            https://nighteffect.us/tns/ for its graphs
            and check with or-talk for the rest, once it's time.
 
-     * Once tools that want bandwidth info support fetching it:
+     * Set a cutoff time for including bandwidth in router descriptors, so
+       that tools that use bandwidth info know that they will need to fetch
+       extra info documents.
+
+     * Once tools that want bandwidth info support fetching extra info:
        * Have routers stop including bandwidth info in their router
          descriptors.
-
