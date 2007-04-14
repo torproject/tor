@@ -781,10 +781,13 @@ see tor-design.pdf.
 
 7.3. Circuit-level flow control
 
-   To control a circuit's bandwidth usage, each OR keeps track of
-   two 'windows', consisting of how many RELAY_DATA cells it is
-   allowed to package for transmission, and how many RELAY_DATA cells
-   it is willing to deliver to streams outside the network.
+   To control a circuit's bandwidth usage, each OR keeps track of two
+   'windows', consisting of how many RELAY_DATA cells it is allowed to
+   originate (package for transmission), and how many RELAY_DATA cells
+   it is willing to consume (receive for local streams).  These limits
+   do not apply to cells that the OR receives from one host and relays
+   to another.
+
    Each 'window' value is initially set to 1000 data cells
    in each direction (cells that are not data cells do not affect
    the window).  When an OR is willing to deliver more cells, it sends a
