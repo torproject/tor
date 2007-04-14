@@ -15,6 +15,8 @@
     - A blank line at the end of each file
     - Never more than one blank line in a row
     - Always spaces, never tabs
+    - No more than 79-columns per line.
+    - Two spaces per indent.
     - A space between control keywords and their corresponding paren
       "if (x)", "while (x)", and "switch (x)", never "if(x)", "while(x)", or
       "switch(x)".
