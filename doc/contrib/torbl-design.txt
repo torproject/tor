@@ -1,9 +1,9 @@
-Design For A Tor RBL {DRAFT}
+Design For A Tor DNS-based Exit List
 
 Status:
 
-  This is a suggested design for a DNSBL for Tor exit nodes.  It hasn't been
-  implemented.
+  This is a suggested design for a DNS Exit List (DNSEL) for Tor exit nodes.
+  It hasn't been implemented.
 
 Why?
 
@@ -29,10 +29,10 @@ Why?
   identify which Tor nodes might open anonymous connections to any given
   exit address.  But this is a bit tricky to set up, so only sites like
   Freenode and OFTC that are dedicated to privacy use it.
-  Conversely, providers of some DNSBL implementations are providing
+  Conversely, providers of some DNSEL implementations are providing
   coarse-grained lists of Tor hosts -- sometimes even listing servers that
   permit no exit connections at all.  This is rather a problem, since
-  support for DNSBL is pretty ubiquitous.
+  support for DNSEL is pretty ubiquitous.
 
 
 How?
@@ -54,13 +54,13 @@ How?
 
 The DNS interface
 
-  DNSBL, if I understand right, looks like this:  There's some host at
-  foo.example.com.  You want to know if 1.2.3.4 is in the list, so you
-  query for an A record for 4.3.2.1.foo.example.com.  If the record
-  exists, 1.2.3.4 is in the list.  If you get an NXDOMAIN error, 1.2.3.4
-  is not in the list.
+  Standard DNSEL, if I understand right, looks like this: There's some host
+  at foo.example.com.  You want to know if 1.2.3.4 is in the list, so you
+  query for an A record for 4.3.2.1.foo.example.com.  If the record exists,
+  1.2.3.4 is in the list.  If you get an NXDOMAIN error, 1.2.3.4 is not in
+  the list.
 
-  Assume that the DNSBL sits at some host, torhosts.example.com.  Below
+  Assume that the DNSEL sits at some host, torhosts.example.com.  Below
   are some queries that could be supported, though some of them are
   possibly a bad idea.
 
@@ -160,7 +160,7 @@ Other issues:
   masks wider than /8 make me nervous here, as do port ranges.
 
   We need an answer for what to do about hosts which exit from different
-  IPs than their advertised IP. One approach would be for the DNSBL
+  IPs than their advertised IP. One approach would be for the DNSEL
   to launch periodic requests to itself through all exit servers whose
   policies allow it -- and then see where the requests actually come from.
 
