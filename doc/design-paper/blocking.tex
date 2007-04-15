@@ -1280,6 +1280,9 @@ in the face of an adversary with limited resources.
 %bridge authority, in a way that's sticky even when we add bridge
 %directory authorities, but isn't sticky when our authority goes
 %away. Does this exist?)
+%   [[Ian says: What about just using something like hash table chaining?
+%   This should work, so long as the client knows which authorities currently
+%   exist.]]
 
 %\subsection{Discovery based on social networks}
 
@@ -1321,6 +1324,19 @@ It's hard to say which of these pressures will ultimately win out,
 but we should keep both sides of the issue in mind.
 
 %Nick, want to rewrite/elaborate on this section?
+
+%Ian suggests: 
+%  Possession of Tor: this is totally of-the-cuff, and there are lots of
+% security issues to think about, but what about an ActiveX version of
+% Tor?  The magic you learn (as opposed to a bridge address) is a plain
+% old HTTPS server, which feeds you an ActiveX applet pre-configured with
+% some bridge address (possibly on the same machine).  For bonus points,
+% somehow arrange that (a) the applet is signed in some way the user can
+% reliably check, but (b) don't end up with anything like an incriminating
+% long-term cert stored on the user's computer.  This may be marginally
+% useful in some Internet-cafe situations as well, though (a) is even
+% harder to get right there.
+
 
 \subsection{Observers can tell who is publishing and who is reading}
 \label{subsec:upload-padding}
@@ -1588,6 +1604,12 @@ SSL certificates.
 %it has received a message it does not understand (as would be the
 %case were it not a bridge).
 
+% Ian suggests a ``socialist millionaires'' protocol here, for something.
+
+% Did we once mention knocking here?  it's a good idea, but we should clarify
+% what we mean.  Ian also notes that knocking itself is very fingerprintable,
+% and we should beware.
+
 \subsection{How to motivate people to run bridge relays}
 \label{subsec:incentives}
 
@@ -1674,6 +1696,9 @@ other media. We might also mirror the latest version of the software on
 each bridge, so users who hear about an honest bridge can get a good
 copy.
 See Section~\ref{subsec:first-bridge} for more discussion.
+
+% Ian suggests that we have every tor server distribute a signed copy of the
+% software.
 
 \section{Future designs}
 \label{sec:future}
