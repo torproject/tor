@@ -150,13 +150,12 @@ Things we'd like to do in 0.2.0.x:
       acting like an HTTPS server.
   o Deprecations:
     o Remove v0 control protocol.
-  - Packaging:
-    - Can we switch to polipo? (Jun 1)
-    - If we haven't replaced privoxy, lock down its configuration in all
+P  - Packaging:
+P   - Can we switch to polipo? (Jun 1)
+P   - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
-P   - make the nsis mingw packaging scripts fail if it tries to parse
-      a file but the file is missing.
-
+P - Figure out why dll's compiled in mingw don't work right in WinXP.
+P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
 
 Deferred from 0.1.2.x:
   - BEGIN_DIR items
@@ -173,8 +172,6 @@ Deferred from 0.1.2.x:
     (It's hard to support read > write, since we need better
      congestion control to avoid overfull buffers there.  So,
      defer the whole thing.)
-P - Figure out why dll's compiled in mingw don't work right in WinXP.
-P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
   - don't do dns hijacking tests if we're reject *:* exit policy?
     (deferred until 0.1.1.x is less common)
   - Directory guards
@@ -316,6 +313,7 @@ R - add d64 and fp64 along-side d and fp so people can paste status
     - Vet all pending installer patches
       - Win32 installer plus privoxy, sockscap/freecap, etc.
       - Vet win32 systray helper code
+      (2007-04-15 phobos, do we still need these installer patches?)
 
   - Improve controller
       - a NEWSTATUS event similar to NEWDESC.
@@ -442,19 +440,26 @@ NR- write a spec appendix for 'being nice with tor'
   - Remove need for HACKING file.
   - Figure out licenses for website material.
   - Specify the keys and key rotation schedules and stuff
+P - document http://wiki.noreply.org/noreply/TheOnionRouter/TransparentProxy on freebsd and osx
+P - figure out why x86_64 won't build rpms from tor.spec
+P - figure out spec files for bundles of vidalia-tor-polipo
+P - figure out polipo install scripts for bundles of vidalia-tor-polipo on osx, win32
+P - evaluate https://sourceforge.net/projects/kleanup/
+P - evaluate TorK
+P - evaluate Tor under CentOS5/RHES5
+P - figure out selinux policy for tor
+P - make the nsis mingw packaging scripts fail if it tries to parse
 
 Website:
   - and remove home and make the "Tor" picture be the link to home.
   - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
+  - put the source image for the stickers on the website, so people can
+    print their own
 R - make a page with the hidden service diagrams.
-
   - ask Jan to be the translation coordinator? add to volunteer page.
-
   - add a page for localizing all tor's components.
-
   - It would be neat if we had a single place that described _all_ the
     tor-related tools you can use, and what they give you, and how well they
     work.  Right now, we don't give a lot of guidance wrt
     torbutton/foxproxy/privoxy/polipo in any consistent place.
-
