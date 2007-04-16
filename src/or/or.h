@@ -2892,6 +2892,7 @@ void check_descriptor_ipaddress_changed(time_t now);
 void router_new_address_suggestion(const char *suggestion);
 int router_compare_to_my_exit_policy(edge_connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
+const char *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
 int router_digest_is_me(const char *digest);
 int router_is_me(routerinfo_t *router);
@@ -2900,6 +2901,8 @@ int router_pick_published_address(or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
+int extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
+                             crypto_pk_env_t *ident_key);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);
@@ -3048,6 +3051,7 @@ void networkstatus_list_update_recent(time_t now);
 void router_reset_descriptor_download_failures(void);
 void router_reset_status_download_failures(void);
 int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
+int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei);
 const char *esc_router_info(routerinfo_t *router);
 
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);

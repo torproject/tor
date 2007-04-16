@@ -1743,6 +1743,7 @@ test_dir_format(void)
    * uptime, that still wouldn't make it right, because the two
    * descriptors might be made on different seconds... hm. */
          "bandwidth 1000 5000 10000\n"
+          "opt extra-info-digest 0000000000000000000000000000000000000000\n"
           "onion-key\n", sizeof(buf2));
   strlcat(buf2, pk1_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));

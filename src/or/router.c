@@ -710,6 +710,8 @@ router_is_clique_mode(routerinfo_t *router)
 
 /** My routerinfo. */
 static routerinfo_t *desc_routerinfo = NULL;
+/** DOCDOC */
+static extrainfo_t *desc_extrainfo = NULL;
 /** Since when has our descriptor been "clean"?  0 if we need to regenerate it
  * now. */
 static time_t desc_clean_since = 0;
@@ -812,6 +814,17 @@ router_get_my_descriptor(void)
   return body;
 }
 
+/** DOCDOC */
+const char *
+router_get_my_extrainfo(void)
+{
+  if (!server_mode(get_options()))
+    return NULL;
+  if (router_rebuild_descriptor(0))
+    return NULL;
+  return desc_extrainfo->cache_info.signed_descriptor_body;
+}
+
 /** A list of nicknames that we've warned about including in our family
  * declaration verbatim rather than as digests. */
 static smartlist_t *warned_nonexistent_family = NULL;
@@ -839,11 +852,13 @@ router_pick_published_address(or_options_t *options, uint32_t *addr)
 /** If <b>force</b> is true, or our descriptor is out-of-date, rebuild
  * a fresh routerinfo and signed server descriptor for this OR.
  * Return 0 on success, -1 on temporary error.
+ * DOCDOC extrainfo.
  */
 int
 router_rebuild_descriptor(int force)
 {
   routerinfo_t *ri;
+  extrainfo_t *ei;
   uint32_t addr;
   char platform[256];
   int hibernating = we_are_hibernating();
@@ -946,6 +961,27 @@ router_rebuild_descriptor(int force)
 
     smartlist_free(family);
   }
+
+  /* Now generate the extrainfo. */
+  ei = tor_malloc_zero(sizeof(extrainfo_t));
+  strlcpy(ei->nickname, get_options()->Nickname, sizeof(ei->nickname));
+  ei->cache_info.published_on = ri->cache_info.published_on;
+  memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
+         DIGEST_LEN);
+  ei->cache_info.signed_descriptor_body = tor_malloc(8192);
+  if (extrainfo_dump_to_string(ei->cache_info.signed_descriptor_body, 8192,
+                               ei, get_identity_key()) < 0) {
+    log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
+    return -1;
+  }
+  ei->cache_info.signed_descriptor_len =
+    strlen(ei->cache_info.signed_descriptor_body);
+  router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
+                            ei->cache_info.signed_descriptor_digest);
+
+  /* Now finish the router descriptor. */
+  memcpy(ri->extra_info_digest, ei->cache_info.signed_descriptor_digest,
+         DIGEST_LEN);
   ri->cache_info.signed_descriptor_body = tor_malloc(8192);
   if (router_dump_router_to_string(ri->cache_info.signed_descriptor_body, 8192,
                                    ri, get_identity_key())<0) {
@@ -954,13 +990,19 @@ router_rebuild_descriptor(int force)
   }
   ri->cache_info.signed_descriptor_len =
     strlen(ri->cache_info.signed_descriptor_body);
+  /* XXXX020 router_get_router_hash??? */
   crypto_digest(ri->cache_info.signed_descriptor_digest,
                 ri->cache_info.signed_descriptor_body,
                 ri->cache_info.signed_descriptor_len);
 
+  tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei));
+
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
+  if (desc_extrainfo)
+    extrainfo_free(desc_extrainfo);
+  desc_extrainfo = ei;
 
   desc_clean_since = time(NULL);
   desc_needs_upload = 1;
@@ -1161,17 +1203,13 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   char digest[DIGEST_LEN];
   char published[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
+  char extra_info_digest[HEX_DIGEST_LEN+1];
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
   int result=0;
   addr_policy_t *tmpe;
   char *bandwidth_usage;
   char *family_line;
-#ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-  char *s_dup;
-  const char *cp;
-  routerinfo_t *ri_tmp;
-#endif
   or_options_t *options = get_options();
 
   /* Make sure the identity key matches the one in the routerinfo. */
@@ -1219,6 +1257,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     family_line = tor_strdup("");
   }
 
+  base16_encode(extra_info_digest, sizeof(extra_info_digest),
+                router->extra_info_digest, DIGEST_LEN);
+
   /* Generate the easy portion of the router descriptor. */
   result = tor_snprintf(s, maxlen,
                     "router %s %s %d 0 %d\n"
@@ -1227,6 +1268,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "opt fingerprint %s\n"
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
+                    "opt extra-info-digest %s\n"
                     "onion-key\n%s"
                     "signing-key\n%s"
                     "%s%s%s",
@@ -1241,6 +1283,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,
+    extra_info_digest,
     onion_pkey, identity_pkey,
     family_line, bandwidth_usage,
     we_are_hibernating() ? "opt hibernating 1\n" : "");
@@ -1319,19 +1362,76 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   s[written+1] = 0;
 
 #ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
-  cp = s_dup = tor_strdup(s);
-  ri_tmp = router_parse_entry_from_string(cp, NULL, 1);
-  if (!ri_tmp) {
-    log_err(LD_BUG,
-            "We just generated a router descriptor we can't parse.");
-    log_err(LD_BUG, "Descriptor was: <<%s>>", s);
-    return -1;
+  {
+    char *s_dup;
+    const char *cp;
+    routerinfo_t *ri_tmp;
+    cp = s_dup = tor_strdup(s);
+    ri_tmp = router_parse_entry_from_string(cp, NULL, 1);
+    if (!ri_tmp) {
+      log_err(LD_BUG,
+              "We just generated a router descriptor we can't parse.");
+      log_err(LD_BUG, "Descriptor was: <<%s>>", s);
+      return -1;
+    }
+    tor_free(s_dup);
+    routerinfo_free(ri_tmp);
   }
-  tor_free(s_dup);
-  routerinfo_free(ri_tmp);
 #endif
 
   return written+1;
+}
+
+/** DOCDOC */
+int
+extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
+                         crypto_pk_env_t *ident_key)
+{
+  char identity[HEX_DIGEST_LEN+1];
+  char published[ISO_TIME_LEN+1];
+  char digest[DIGEST_LEN];
+  char *bandwidth_usage;
+  int result;
+  size_t len;
+
+  base16_encode(identity, sizeof(identity),
+                extrainfo->cache_info.identity_digest, DIGEST_LEN);
+  format_iso_time(published, extrainfo->cache_info.published_on);
+  bandwidth_usage = rep_hist_get_bandwidth_lines();
+
+  result = tor_snprintf(s, maxlen,
+                        "extra-info %s %s\n"
+                        "published %s\n%s"
+                        "router-signature\n",
+                        extrainfo->nickname, identity,
+                        published, bandwidth_usage);
+  tor_free(bandwidth_usage);
+  if (result<0)
+    return -1;
+  len = strlen(s);
+  if (router_get_extrainfo_hash(s, digest)<0)
+    return -1;
+  if (router_append_dirobj_signature(s+len, maxlen-len, digest, ident_key)<0)
+    return -1;
+
+#ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
+  {
+    char *cp, *s_dup;
+    extrainfo_t *ei_tmp;
+    cp = s_dup = tor_strdup(s);
+    ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
+    if (!ei_tmp) {
+      log_err(LD_BUG,
+              "We just generated an extrainfo descriptor we can't parse.");
+      log_err(LD_BUG, "Descriptor was: <<%s>>", s);
+      return -1;
+    }
+    tor_free(s_dup);
+    extrainfo_free(ei_tmp);
+  }
+#endif
+
+  return strlen(s)+1;
 }
 
 /** Return true iff <b>s</b> is a legally valid server nickname. */
@@ -1420,6 +1520,9 @@ router_free_all(void)
     tor_mutex_free(key_lock);
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
+  if (desc_extrainfo)
+    extrainfo_free(desc_extrainfo);
+
   if (warned_nonexistent_family) {
     SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));
     smartlist_free(warned_nonexistent_family);

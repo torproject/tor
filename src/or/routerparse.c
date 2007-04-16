@@ -835,7 +835,6 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->cache_info.signed_descriptor_len = end-s;
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
-
   router->nickname = tor_strdup(tok->args[0]);
   if (!is_legal_nickname(router->nickname)) {
     log_warn(LD_DIR,"Router nickname is invalid");
@@ -1070,6 +1069,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     extrainfo->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
   extrainfo->cache_info.signed_descriptor_len = end-s;
   memcpy(extrainfo->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
+
   tor_assert(tok->n_args >= 2);
   if (!is_legal_nickname(tok->args[0])) {
     log_warn(LD_DIR,"Bad nickname %s on \"extra-info\"",escaped(tok->args[0]));

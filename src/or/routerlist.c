@@ -4422,6 +4422,37 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
   return 1;
 }
 
+/** DOCDOC */
+int
+routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei)
+{
+  tor_assert(ri);
+  tor_assert(ei);
+
+  if (strcmp(ri->nickname, ei->nickname) ||
+      memcmp(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
+             DIGEST_LEN))
+    return 1; /* different servers */
+
+  if (ei->pending_sig) {
+    char signed_digest[128];
+    if (crypto_pk_public_checksig(ri->identity_pkey, signed_digest,
+                                  ei->pending_sig, 128) != 20 ||
+        memcmp(signed_digest, ei->cache_info.signed_descriptor_digest,
+               DIGEST_LEN))
+      return 1; /* Bad signature, or no match. */
+
+    tor_free(ei->pending_sig);
+  }
+
+  if (ei->cache_info.published_on < ei->cache_info.published_on)
+    return 1;
+  else if (ei->cache_info.published_on > ei->cache_info.published_on)
+    return -1;
+
+  return 0;
+}
+
 /** Generate networkstatus lines for a single routerstatus_t object, and
  * return the result in a newly allocated string.  Used only by controller
  * interface (for now.) */
