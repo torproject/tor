@@ -22,7 +22,7 @@ Proposals by number:
 101  Voting on the Tor Directory System [OPEN]
 102  Dropping "opt" from the directory format [CLOSED]
 103  Splitting identity key from regularly used signing key [OPEN]
-104  Long and Short Router Descriptors [OPEN]
+104  Long and Short Router Descriptors [ACCEPTED]
 105  Version negotiation for the Tor protocol [OPEN]
 106  Checking fewer things during TLS handshakes [CLOSED]
 107  Uptime Sanity Checking [CLOSED]
