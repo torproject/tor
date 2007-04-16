@@ -80,19 +80,12 @@ typedef struct directory_token_t {
   size_t object_size;          /**< Bytes in object_body */
   char *object_body;           /**< Contents of object, base64-decoded. */
   crypto_pk_env_t *key;        /**< For public keys only. */
-  const char *error;           /**< For _ERR tokens only. */
+  char *error;                 /**< For _ERR tokens only. */
 } directory_token_t;
 
 /* ********************************************************************** */
 
 /** We use a table of rules to decide how to parse each token type. */
-
-/** Rules for how many arguments a keyword can take. */
-typedef enum {
-  NO_ARGS,     /**< No arguments, ever. */
-  ARGS,        /**< A list of arguments separated by spaces. */
-  CONCAT_ARGS, /**< The rest of the line, treated as a single argument. */
-} arg_syntax;
 
 /** Rules for whether the keyword needs an object. */
 typedef enum {
@@ -104,38 +97,46 @@ typedef enum {
 
 /** DOCDOC */
 typedef struct token_rule_t {
-  const char *t; directory_keyword v; arg_syntax s; obj_syntax os;
+  const char *t; directory_keyword v;
+  int min_args; int max_args; int concat_args;
+  obj_syntax os;
   int min_cnt; int max_cnt;
 } token_rule_t;
 
 /** DOCDOC */
-#define END_OF_TABLE { NULL, _NIL, NO_ARGS, NO_OBJ, 0, INT_MAX }
+#define END_OF_TABLE { NULL, _NIL, 0,0,0, NO_OBJ, 0, INT_MAX }
 #define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX }
 #define T0N(s,t,a,o)  { s, t, a, o, 0, INT_MAX }
 #define T1(s,t,a,o)   { s, t, a, o, 1, 1 }
 #define T01(s,t,a,o)  { s, t, a, o, 0, 1 }
 
+#define ARGS        0,INT_MAX,0
+#define NO_ARGS     0,0,0
+#define CONCAT_ARGS 1,1,1
+#define GE(n)       n,INT_MAX,0
+#define EQ(n)       n,n,0
+
 /** DOCDOC */
 static token_rule_t routerdesc_token_table[] = {
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
-  T1( "router",              K_ROUTER,              ARGS,    NO_OBJ ),
+  T1( "router",              K_ROUTER,              GE(5),   NO_OBJ ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY ),
   T1( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T01("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
-  T01("uptime",              K_UPTIME,              ARGS,    NO_OBJ ),
+  T01("uptime",              K_UPTIME,              GE(1),   NO_OBJ ),
   T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
   T01("fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
-  T01("hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ ),
+  T01("hibernating",         K_HIBERNATING,         GE(1),   NO_OBJ ),
   T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
   T01("eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ ),
-  T01("extra-info-digest",   K_EXTRA_INFO_DIGEST,   ARGS,    NO_OBJ ),
+  T01("extra-info-digest",   K_EXTRA_INFO_DIGEST,   GE(1),   NO_OBJ ),
   T01("caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ ),
-  T1("bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ ),
+  T1( "bandwidth",           K_BANDWIDTH,           GE(3),   NO_OBJ ),
   T01("platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ ),
 
   END_OF_TABLE
@@ -147,13 +148,13 @@ static token_rule_t extrainfo_token_table[] = {
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
-  T1( "extra-info",          K_EXTRA_INFO,          ARGS,    NO_OBJ ),
+  T1( "extra-info",          K_EXTRA_INFO,          GE(2),   NO_OBJ ),
 
   END_OF_TABLE
 };
 
 static token_rule_t rtrstatus_token_table[] = {
-  T1( "r",                   K_R,                   ARGS,    NO_OBJ ),
+  T1( "r",                   K_R,                   GE(8),    NO_OBJ ),
   T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
   T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
@@ -164,20 +165,21 @@ static token_rule_t netstatus_token_table[] = {
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
+  /* XXXX should dir-signing-key really have ARGS? */
   T1( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    NEED_KEY ),
   T1( "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
   T1( "network-status-version", K_NETWORK_STATUS_VERSION,
-                                                   ARGS,    NO_OBJ ),
-  T1( "dir-source",          K_DIR_SOURCE,          ARGS,    NO_OBJ ),
+                                                    GE(1),   NO_OBJ ),
+  T1( "dir-source",          K_DIR_SOURCE,          GE(3),   NO_OBJ ),
   T01("dir-options",         K_DIR_OPTIONS,         ARGS,    NO_OBJ ),
-  T01("client-versions",     K_CLIENT_VERSIONS,     ARGS,    NO_OBJ ),
-  T01("server-versions",     K_SERVER_VERSIONS,     ARGS,    NO_OBJ ),
+  T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
+  T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS,    NO_OBJ ),
 
   END_OF_TABLE
 };
 
 static token_rule_t dir_footer_token_table[] = {
-  T1( "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ ),
+  T1( "directory-signature", K_DIRECTORY_SIGNATURE, EQ(1),   NEED_OBJ ),
   END_OF_TABLE
 };
 
@@ -185,12 +187,12 @@ static token_rule_t dir_token_table[] = {
   /* don't enforce counts; this is obsolete. */
   T( "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ ),
   T( "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ ),
-  T( "recommended-software",K_RECOMMENDED_SOFTWARE,ARGS,    NO_OBJ ),
+  T( "recommended-software",K_RECOMMENDED_SOFTWARE,CONCAT_ARGS, NO_OBJ ),
   T( "signed-directory",    K_SIGNED_DIRECTORY,    NO_ARGS, NO_OBJ ),
 
   T( "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ ),
   T( "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ ),
-  T1("published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
+  T( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T( "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK ),
@@ -642,10 +644,7 @@ check_directory_signature(const char *digest,
   char signed_digest[PK_BYTES];
   crypto_pk_env_t *_pkey = NULL;
 
-  if (tok->n_args != 1) {
-    log_warn(LD_DIR, "Too many or too few arguments to directory-signature");
-    return -1;
-  }
+  tor_assert(tok->n_args == 1);
 
   if (declared_key) {
     if (!check_authority || dir_signing_key_is_trusted(declared_key))
@@ -827,6 +826,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR,"Entry does not start with \"router\"");
     goto err;
   }
+  tor_assert(tok->n_args >= 5);
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->routerlist_index = -1;
@@ -835,70 +835,49 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->cache_info.signed_descriptor_len = end-s;
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
-  if (tok->n_args >= 5) {
-    router->nickname = tor_strdup(tok->args[0]);
-    if (!is_legal_nickname(router->nickname)) {
-      log_warn(LD_DIR,"Router nickname is invalid");
-      goto err;
-    }
-    router->address = tor_strdup(tok->args[1]);
-    if (!tor_inet_aton(router->address, &in)) {
-      log_warn(LD_DIR,"Router address is not an IP.");
-      goto err;
-    }
-    router->addr = ntohl(in.s_addr);
 
-    router->or_port =
-      (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
-    router->dir_port =
-      (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
-  } else {
-    log_warn(LD_DIR,"Wrong # of arguments to \"router\" (%d)",tok->n_args);
+  router->nickname = tor_strdup(tok->args[0]);
+  if (!is_legal_nickname(router->nickname)) {
+    log_warn(LD_DIR,"Router nickname is invalid");
     goto err;
   }
+  router->address = tor_strdup(tok->args[1]);
+  if (!tor_inet_aton(router->address, &in)) {
+    log_warn(LD_DIR,"Router address is not an IP.");
+    goto err;
+  }
+  router->addr = ntohl(in.s_addr);
+
+  router->or_port =
+    (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
+  router->dir_port =
+    (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
 
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
-  if (!tok) {
-    log_warn(LD_DIR,"No bandwidth declared; failing.");
+  tor_assert(tok && tok->n_args >= 3);
+  router->bandwidthrate =
+    tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
+
+  if (!router->bandwidthrate) {
+    log_warn(LD_DIR, "bandwidthrate %s unreadable or 0. Failing.",
+             escaped(tok->args[0]));
     goto err;
-  } else {
-    if (tok->n_args < 3) {
-      log_warn(LD_DIR,
-               "Not enough arguments to \"bandwidth\" in server descriptor.");
-      goto err;
-    }
-    router->bandwidthrate =
-      tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
-
-    if (!router->bandwidthrate) {
-      log_warn(LD_DIR, "bandwidthrate %s unreadable or 0. Failing.",
-               escaped(tok->args[0]));
-      goto err;
-    }
-
-    router->bandwidthburst =
-      tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
-    router->bandwidthcapacity =
-      tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
-
-    /* XXX we don't error-check these values? -RD */
   }
+  router->bandwidthburst =
+    tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
+  router->bandwidthcapacity =
+    tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
+  /* XXX we don't error-check these values? -RD */
 
   if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
-    if (tok->n_args != 1) {
-      log_warn(LD_DIR, "Unrecognized number of args on K_UPTIME; skipping.");
-    } else {
-      router->uptime = tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL);
-    }
+    tor_assert(tok->n_args >= 1);
+    router->uptime = tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL);
   }
 
   if ((tok = find_first_by_keyword(tokens, K_HIBERNATING))) {
-    if (tok->n_args < 1) {
-      log_warn(LD_DIR, "Too few args on 'hibernating' keyword. Skipping.");
-    } else {
-      router->is_hibernating
-        = (tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL) != 0);
-    }
+    tor_assert(tok->n_args >= 1);
+    router->is_hibernating
+      = (tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL) != 0);
   }
 
   tok = find_first_by_keyword(tokens, K_PUBLISHED);
@@ -934,10 +913,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   if ((tok = find_first_by_keyword(tokens, K_FINGERPRINT))) {
     /* If there's a fingerprint line, it must match the identity digest. */
     char d[DIGEST_LEN];
-    if (tok->n_args < 1) {
-      log_warn(LD_DIR, "Too few arguments to router fingerprint");
-      goto err;
-    }
+    tor_assert(tok->n_args == 1);
     tor_strstrip(tok->args[0], " ");
     if (base16_decode(d, DIGEST_LEN, tok->args[0], strlen(tok->args[0]))) {
       log_warn(LD_DIR, "Couldn't decode router fingerprint %s",
@@ -989,8 +965,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   if ((tok = find_first_by_keyword(tokens, K_CACHES_EXTRA_INFO)))
     router->caches_extra_info = 1;
 
-  if ((tok = find_first_by_keyword(tokens, K_EXTRA_INFO_DIGEST)) &&
-      tok->n_args) {
+  if ((tok = find_first_by_keyword(tokens, K_EXTRA_INFO_DIGEST))) {
+    tor_assert(tok->n_args >= 1);
     if (strlen(tok->args[0]) == HEX_DIGEST_LEN) {
       base16_decode(router->extra_info_digest, DIGEST_LEN, tok->args[0],
                     HEX_DIGEST_LEN);
@@ -1094,11 +1070,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     extrainfo->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
   extrainfo->cache_info.signed_descriptor_len = end-s;
   memcpy(extrainfo->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
-
-  if (tok->n_args < 2) {
-    log_warn(LD_DIR,"Insufficient arguments to \"extra-info\"");
-    goto err;
-  }
+  tor_assert(tok->n_args >= 2);
   if (!is_legal_nickname(tok->args[0])) {
     log_warn(LD_DIR,"Bad nickname %s on \"extra-info\"",escaped(tok->args[0]));
     goto err;
@@ -1203,10 +1175,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   }
   tok = find_first_by_keyword(tokens, K_R);
   tor_assert(tok);
-  if (tok->n_args < 8) {
-    log_warn(LD_DIR,
-         "Too few arguments to 'r' keywork in router status; skipping.");
-  }
+  tor_assert(tok->n_args >= 8);
   rs = tor_malloc_zero(sizeof(routerstatus_t));
 
   if (!is_legal_nickname(tok->args[0])) {
@@ -1272,7 +1241,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
         rs->is_bad_directory = 1;
     }
   }
-  if ((tok = find_first_by_keyword(tokens, K_V)) && tok->n_args) {
+  if ((tok = find_first_by_keyword(tokens, K_V))) {
+    tor_assert(tok->n_args == 1);
     rs->version_known = 1;
     if (strcmpstart(tok->args[0], "Tor ")) {
       rs->version_supports_begindir = 1;
@@ -1352,10 +1322,7 @@ networkstatus_parse_from_string(const char *s)
 
   tok = find_first_by_keyword(tokens, K_DIR_SOURCE);
   tor_assert(tok);
-  if (tok->n_args < 3) {
-    log_warn(LD_DIR, "Too few arguments to dir-source keyword");
-    goto err;
-  }
+  tor_assert(tok->n_args >= 3);
   ns->source_address = tok->args[0]; tok->args[0] = NULL;
   if (tor_inet_aton(tok->args[1], &in) == 0) {
     log_warn(LD_DIR, "Error parsing network-status source address %s",
@@ -1372,10 +1339,7 @@ networkstatus_parse_from_string(const char *s)
 
   tok = find_first_by_keyword(tokens, K_FINGERPRINT);
   tor_assert(tok);
-  if (tok->n_args < 1) {
-    log_warn(LD_DIR, "Too few arguments to networkstatus fingerprint");
-    goto err;
-  }
+  tor_assert(tok->n_args);
   if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
     log_warn(LD_DIR, "Couldn't decode networkstatus fingerprint %s",
@@ -1383,7 +1347,8 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_CONTACT)) && tok->n_args) {
+  if ((tok = find_first_by_keyword(tokens, K_CONTACT))) {
+    tor_assert(tok->n_args);
     ns->contact = tok->args[0];
     tok->args[0] = NULL;
   }
@@ -1417,8 +1382,7 @@ networkstatus_parse_from_string(const char *s)
   }
 
   if (ns->recommends_versions) {
-    if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS)) ||
-        tok->n_args<1) {
+    if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS))) {
       log_warn(LD_DIR, "Missing client-versions");
     }
     ns->client_versions = tok->args[0];
@@ -1684,6 +1648,7 @@ token_free(directory_token_t *tok)
   }
   tor_free(tok->object_type);
   tor_free(tok->object_body);
+  tor_free(tok->error);
   if (tok->key)
     crypto_free_pk_env(tok->key);
   tor_free(tok);
@@ -1696,17 +1661,19 @@ static directory_token_t *
 get_next_token(const char **s, struct token_rule_t *table)
 {
   const char *next, *obstart;
-  int i, done, allocated, is_opt;
+  int i, j, done, allocated, is_opt;
   directory_token_t *tok;
-  arg_syntax a_syn;
   obj_syntax o_syn = NO_OBJ;
+  char ebuf[128];
+  const char *kwd = "";
 
-#define RET_ERR(msg)                                    \
-  do { if (tok) token_free(tok);                        \
-       tok = tor_malloc_zero(sizeof(directory_token_t));\
-       tok->tp = _ERR;                                  \
-       tok->error = msg;                                \
-       goto done_tokenizing; } while (0)
+#define RET_ERR(msg)                                               \
+  do {                                                             \
+    if (tok) token_free(tok);                                      \
+    tok = tor_malloc_zero(sizeof(directory_token_t));              \
+    tok->tp = _ERR;                                                \
+    tok->error = tor_strdup(msg);                                  \
+    goto done_tokenizing; } while (0)
 
   tok = tor_malloc_zero(sizeof(directory_token_t));
   tok->tp = _ERR;
@@ -1718,7 +1685,7 @@ get_next_token(const char **s, struct token_rule_t *table)
   }
   next = find_whitespace(*s);
   if (!next) {
-    tok->error = "Unexpected EOF"; return tok;
+    tok->error = tor_strdup("Unexpected EOF"); return tok;
   }
   /* It's a keyword... but which one? */
   is_opt = !strncmp("opt", *s, next-*s);
@@ -1734,29 +1701,10 @@ get_next_token(const char **s, struct token_rule_t *table)
   for (i = 0; table[i].t ; ++i) {
     if (!strncmp(table[i].t, *s, next-*s)) {
       /* We've found the keyword. */
+      kwd = table[i].t;
       tok->tp = table[i].v;
-      a_syn = table[i].s;
       o_syn = table[i].os;
-      if (a_syn == ARGS) {
-        /* This keyword takes multiple arguments. */
-        i = 0;
-        done = (*next == '\n');
-        allocated = 32;
-        tok->args = tor_malloc(sizeof(char*)*32);
-        *s = eat_whitespace_no_nl(next);
-        while (**s != '\n' && !done) {
-          next = find_whitespace(*s);
-          if (*next == '\n')
-            done = 1;
-          if (i == allocated) {
-            allocated *= 2;
-            tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
-          }
-          tok->args[i++] = tor_strndup(*s,next-*s);
-          *s = eat_whitespace_no_nl(next+1);
-        }
-        tok->n_args = i;
-      } else if (a_syn == CONCAT_ARGS) {
+      if (table[i].concat_args) {
         /* The keyword takes the line as a single argument */
         *s = eat_whitespace_no_nl(next);
         next = strchr(*s, '\n');
@@ -1767,15 +1715,33 @@ get_next_token(const char **s, struct token_rule_t *table)
         tok->n_args = 1;
         *s = eat_whitespace_no_nl(next+1);
       } else {
-        /* The keyword takes no arguments. */
-        tor_assert(a_syn == NO_ARGS);
+        /* This keyword takes multiple arguments. */
+        j = 0;
+        done = (*next == '\n');
+        allocated = 32;
+        tok->args = tor_malloc(sizeof(char*)*32);
         *s = eat_whitespace_no_nl(next);
-        if (**s != '\n') {
-          RET_ERR("Unexpected arguments");
+        while (**s != '\n' && !done) {
+          next = find_whitespace(*s);
+          if (*next == '\n')
+            done = 1;
+          if (j == allocated) {
+            allocated *= 2;
+            tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
+          }
+          tok->args[j++] = tor_strndup(*s,next-*s);
+          *s = eat_whitespace_no_nl(next+1);
         }
-        tok->n_args = 0;
-        *s = eat_whitespace_no_nl(*s+1);
+        tok->n_args = j;
       }
+      if (tok->n_args < table[i].min_args) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Too few arguments to %s", kwd);
+        RET_ERR(ebuf);
+      } else if (tok->n_args > table[i].max_args) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Too many arguments to %s", kwd);
+        RET_ERR(ebuf);
+      }
+
       break;
     }
   }
@@ -1832,18 +1798,26 @@ get_next_token(const char **s, struct token_rule_t *table)
   switch (o_syn)
     {
     case NO_OBJ:
-      if (tok->object_body)
-        RET_ERR("Unexpected object for keyword");
-      if (tok->key)
-        RET_ERR("Unexpected public key for keyword");
+      if (tok->object_body) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Unexpected object for %s", kwd);
+        RET_ERR(ebuf);
+      }
+      if (tok->key) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Unexpected public key for %s", kwd);
+        RET_ERR(ebuf);
+      }
       break;
     case NEED_OBJ:
-      if (!tok->object_body)
-        RET_ERR("Missing object for keyword");
+      if (!tok->object_body) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Missing object for %s", kwd);
+        RET_ERR(ebuf);
+      }
       break;
     case NEED_KEY:
-      if (!tok->key)
-        RET_ERR("Missing public key for keyword");
+      if (!tok->key) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Missing public key for %s", kwd);
+        RET_ERR(ebuf);
+      }
       break;
     case OBJ_OK:
       break;
