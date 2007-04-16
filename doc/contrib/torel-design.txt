@@ -54,15 +54,17 @@ How?
 
 The DNS interface
 
-  Standard DNSEL, if I understand right, looks like this: There's some host
-  at foo.example.com.  You want to know if 1.2.3.4 is in the list, so you
-  query for an A record for 4.3.2.1.foo.example.com.  If the record exists,
-  1.2.3.4 is in the list.  If you get an NXDOMAIN error, 1.2.3.4 is not in
-  the list.
+  Standard DNSEL, if I understand right, looks like this: There's some
+  authoritative name server for foo.example.com.  You want to know if
+  1.2.3.4 is in the list, so you query for an A record for
+  4.3.2.1.foo.example.com.  If the record exists and has the value
+  127.0.0.2[DNSBL-EMAIL], 1.2.3.4 is in the list.  If you get an NXDOMAIN
+  error, 1.2.3.4 is not in the list.  If you ask for a domain name outside
+  of the foo.example.com zone, you get a Server Failure error[RFC 1035].
 
-  Assume that the DNSEL sits at some host, torhosts.example.com.  Below
-  are some queries that could be supported, though some of them are
-  possibly a bad idea.
+  Assume that the DNSEL answers queries authoritatively for some zone,
+  torhosts.example.com.  Below are some queries that could be supported,
+  though some of them are possibly a bad idea.
 
 
   Query type 1: "General IP:Port"
@@ -72,12 +74,12 @@ The DNS interface
 
     Rule:
         Iff {IP1} is a Tor server that permits connections to {port} on
-        {IP2}, then there should be an A record.
+        {IP2}, then there should be an A record with the value 127.0.0.2.
 
     Example:
-        "1.0.0.10.80.4.3.2.1.ip-port.torhosts.example.com" should exist
-        if and only if there is a Tor server at 10.0.0.1 that allows
-        connections to port 80 on 1.2.3.4.
+        "1.0.0.10.80.4.3.2.1.ip-port.torhosts.example.com" should have the
+        value 127.0.0.2 if and only if there is a Tor server at 10.0.0.1
+        that allows connections to port 80 on 1.2.3.4.
 
     Example use:
         I'm running an IRC server at w.x.y.z:9999, and I want to tell
@@ -154,6 +156,11 @@ Web interface:
 
 Other issues:
 
+  After a Tor server op turns off their server, it stops publishing server
+  descriptors. We should consider that server's IP address to still
+  represent a Tor node until 48 hours after its last descriptor was
+  published.
+
   30-60 minutes is not an unreasonable TTL.
 
   There could be some demand for address masks and port lists. Address
@@ -164,3 +171,11 @@ Other issues:
   to launch periodic requests to itself through all exit servers whose
   policies allow it -- and then see where the requests actually come from.
 
+References:
+
+  [DNSBL-EMAIL] Levine, J., "DNS Based Blacklists and Whitelists for
+  E-Mail", http://tools.ietf.org/html/draft-irtf-asrg-dnsbl-02, November
+  2005.
+
+  [RFC 1035] Mockapetris, P., "Domain Names - Implementation and
+  Specification", RFC 1035, November 1987.
