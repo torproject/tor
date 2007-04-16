@@ -150,10 +150,16 @@ $Id$
    Every router descriptor MUST start with a "router" Item; MUST end with a
    "router-signature" Item and an extra NL; and MUST contain exactly one
    instance of each of the following Items: "published" "onion-key"
-   "link-key" "signing-key" "bandwidth".  Additionally, a router descriptor
-   MAY contain any number of "accept", "reject", "fingerprint", "uptime", and
-   "opt" Items.  Other than "router" and "router-signature", the items may
-   appear in any order.
+   "link-key" "signing-key" "bandwidth". 
+
+   A router descriptor MAY have zero or one of each of the following Items,
+   but MUST NOT have more than one: "contact", "uptime", "fingerprint",
+   "hibernating", "read-history", "write-history", "eventdns", "platform",
+   "family".
+
+   Additionally, a router descriptor MAY contain any number of "accept",
+   "reject", and "opt" Items.  Other than "router" and "router-signature",
+   the items may appear in any order.
 
    The items' formats are as follows:
     "router" nickname address ORPort SocksPort DirPort
