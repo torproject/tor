@@ -22,7 +22,7 @@ const char routerparse_c_id[] =
  * not-a-token.
  */
 typedef enum {
-  K_ACCEPT,
+  K_ACCEPT = 0,
   K_DIRECTORY_SIGNATURE,
   K_RECOMMENDED_SOFTWARE,
   K_REJECT,
@@ -77,7 +77,7 @@ typedef struct directory_token_t {
   int n_args;                  /**< Number of elements in args */
   char **args;                 /**< Array of arguments from keyword line. */
   char *object_type;           /**< -----BEGIN [object_type]-----*/
-  size_t object_size;             /**< Bytes in object_body */
+  size_t object_size;          /**< Bytes in object_body */
   char *object_body;           /**< Contents of object, base64-decoded. */
   crypto_pk_env_t *key;        /**< For public keys only. */
   const char *error;           /**< For _ERR tokens only. */
@@ -102,62 +102,104 @@ typedef enum {
   OBJ_OK,      /**< Object is optional. */
 } obj_syntax;
 
-/** Rules for where a keyword can appear. */
-typedef enum {
-  DIR = 1,        /**< Appears only in directory. */
-  RTR = 2,        /**< Appears only in router descriptor or runningrouters. */
-  NETSTATUS = 4,  /**< v2 or later ("versioned") network status. */
-  ANYSIGNED = 7,  /**< Any "full" document (that is, not a router status.) */
-  RTRSTATUS = 8,  /**< Router-status portion of a versioned network status. */
-  EXTRAINFO = 16, /**< DOCDOC */
-  ANY = 31,       /**< Appears in any document type. */
-} where_syntax;
+/** DOCDOC */
+typedef struct token_rule_t {
+  const char *t; directory_keyword v; arg_syntax s; obj_syntax os;
+  int min_cnt; int max_cnt;
+} token_rule_t;
 
-/** Table mapping keywords to token value and to argument rules. */
-static struct {
-  const char *t; directory_keyword v; arg_syntax s; obj_syntax os; int ws;
-} token_table[] = {
-  { "accept",              K_ACCEPT,              ARGS,    NO_OBJ,  RTR },
-  { "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ,
-                                                           DIR|NETSTATUS},
-  { "r",                   K_R,                   ARGS,    NO_OBJ, RTRSTATUS },
-  { "s",                   K_S,                   ARGS,    NO_OBJ, RTRSTATUS },
-  { "v",                   K_V,               CONCAT_ARGS, NO_OBJ, RTRSTATUS },
-  { "reject",              K_REJECT,              ARGS,    NO_OBJ,  RTR },
-  { "router",              K_ROUTER,              ARGS,    NO_OBJ,  RTR },
-  { "recommended-software",K_RECOMMENDED_SOFTWARE,ARGS,    NO_OBJ,  DIR },
-  { "signed-directory",    K_SIGNED_DIRECTORY,    NO_ARGS, NO_OBJ,  DIR },
-  { "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY,RTR },
-  { "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY,RTR },
-  { "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ,RTR|EXTRAINFO },
-  { "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ,  DIR },
-  { "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ,  DIR },
-  { "bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ,  RTR },
-  { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR },
-  { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ, ANYSIGNED|EXTRAINFO },
-  { "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK, ANY },
-  { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ, ANYSIGNED },
-  { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR },
-  { "uptime",              K_UPTIME,              ARGS,    NO_OBJ,  RTR },
-  { "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK,
-                                                                DIR|NETSTATUS},
-  { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR },
-  { "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ, ANYSIGNED },
-  { "hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ,  RTR },
-  { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR|EXTRAINFO },
-  { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR|EXTRAINFO },
-  { "network-status-version", K_NETWORK_STATUS_VERSION,
-                                                  ARGS,    NO_OBJ, NETSTATUS },
-  { "dir-source",          K_DIR_SOURCE,          ARGS,    NO_OBJ, NETSTATUS },
-  { "dir-options",         K_DIR_OPTIONS,         ARGS,    NO_OBJ, NETSTATUS },
-  { "client-versions",     K_CLIENT_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
-  { "server-versions",     K_SERVER_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
-  { "eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ, RTR },
-  { "extra-info",          K_EXTRA_INFO,          ARGS,    NO_OBJ, EXTRAINFO },
-  { "extra-info-digest",   K_EXTRA_INFO_DIGEST,   ARGS,    NO_OBJ, RTR },
-  { "caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ, RTR },
-  { NULL, _NIL, NO_ARGS, NO_OBJ, ANY }
+/** DOCDOC */
+#define END_OF_TABLE { NULL, _NIL, NO_ARGS, NO_OBJ, 0, INT_MAX }
+#define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX }
+#define T0N(s,t,a,o)  { s, t, a, o, 0, INT_MAX }
+#define T1(s,t,a,o)   { s, t, a, o, 1, 1 }
+#define T01(s,t,a,o)  { s, t, a, o, 0, 1 }
+
+/** DOCDOC */
+static token_rule_t routerdesc_token_table[] = {
+  T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
+  T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
+  T1( "router",              K_ROUTER,              ARGS,    NO_OBJ ),
+  T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY ),
+  T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY ),
+  T1( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
+  T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
+  T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
+  T01("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
+  T01("uptime",              K_UPTIME,              ARGS,    NO_OBJ ),
+  T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
+  T01("fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
+  T01("hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ ),
+  T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
+  T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
+  T01("eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ ),
+  T01("extra-info-digest",   K_EXTRA_INFO_DIGEST,   ARGS,    NO_OBJ ),
+  T01("caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ ),
+  T1("bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ ),
+  T01("platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ ),
+
+  END_OF_TABLE
 };
+
+static token_rule_t extrainfo_token_table[] = {
+  T1( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
+  T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
+  T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
+  T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
+  T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
+  T1( "extra-info",          K_EXTRA_INFO,          ARGS,    NO_OBJ ),
+
+  END_OF_TABLE
+};
+
+static token_rule_t rtrstatus_token_table[] = {
+  T1( "r",                   K_R,                   ARGS,    NO_OBJ ),
+  T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
+  T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
+  T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
+  END_OF_TABLE
+};
+
+static token_rule_t netstatus_token_table[] = {
+  T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
+  T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
+  T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
+  T1( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK ),
+  T1( "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
+  T1( "network-status-version", K_NETWORK_STATUS_VERSION,
+                                                   ARGS,    NO_OBJ ),
+  T1( "dir-source",          K_DIR_SOURCE,          ARGS,    NO_OBJ ),
+  T01("dir-options",         K_DIR_OPTIONS,         ARGS,    NO_OBJ ),
+  T01("client-versions",     K_CLIENT_VERSIONS,     ARGS,    NO_OBJ ),
+  T01("server-versions",     K_SERVER_VERSIONS,     ARGS,    NO_OBJ ),
+
+  END_OF_TABLE
+};
+
+static token_rule_t dir_footer_token_table[] = {
+  T1( "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ ),
+  END_OF_TABLE
+};
+
+static token_rule_t dir_token_table[] = {
+  /* don't enforce counts; this is obsolete. */
+  T( "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ ),
+  T( "directory-signature", K_DIRECTORY_SIGNATURE, ARGS,    NEED_OBJ ),
+  T( "recommended-software",K_RECOMMENDED_SOFTWARE,ARGS,    NO_OBJ ),
+  T( "signed-directory",    K_SIGNED_DIRECTORY,    NO_ARGS, NO_OBJ ),
+
+  T( "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ ),
+  T( "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ ),
+  T( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
+  T( "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
+  T( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
+  T( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK ),
+  T( "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
+
+  END_OF_TABLE
+};
+
+#undef T
 
 /* static function prototypes */
 static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok);
@@ -171,8 +213,10 @@ static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *find_first_by_keyword(smartlist_t *s,
                                                 directory_keyword keyword);
 static int tokenize_string(const char *start, const char *end,
-                           smartlist_t *out, where_syntax where);
-static directory_token_t *get_next_token(const char **s, where_syntax where);
+                           smartlist_t *out,
+                           struct token_rule_t *table);
+static directory_token_t *get_next_token(const char **s,
+                                         struct token_rule_t *table);
 static int check_directory_signature(const char *digest,
                                      directory_token_t *tok,
                                      crypto_pk_env_t *pkey,
@@ -402,7 +446,7 @@ router_parse_directory(const char *str)
   }
   ++cp;
   tokens = smartlist_create();
-  if (tokenize_string(cp,strchr(cp,'\0'),tokens,DIR)) {
+  if (tokenize_string(cp,strchr(cp,'\0'),tokens,dir_token_table)) {
     log_warn(LD_DIR, "Error tokenizing directory signature"); goto err;
   }
   if (smartlist_len(tokens) != 1) {
@@ -431,7 +475,7 @@ router_parse_directory(const char *str)
   }
 
   tokens = smartlist_create();
-  if (tokenize_string(str,end,tokens,DIR)) {
+  if (tokenize_string(str,end,tokens,dir_token_table)) {
     log_warn(LD_DIR, "Error tokenizing directory"); goto err;
   }
 
@@ -481,7 +525,7 @@ router_parse_runningrouters(const char *str)
     goto err;
   }
   tokens = smartlist_create();
-  if (tokenize_string(str,str+strlen(str),tokens,DIR)) {
+  if (tokenize_string(str,str+strlen(str),tokens,dir_token_table)) {
     log_warn(LD_DIR, "Error tokenizing running-routers"); goto err;
   }
   tok = smartlist_get(tokens,0);
@@ -540,7 +584,7 @@ find_dir_signing_key(const char *str)
     return NULL;
   ++cp; /* Now cp points to the start of the token. */
 
-  tok = get_next_token(&cp, DIR);
+  tok = get_next_token(&cp, dir_token_table);
   if (!tok) {
     log_warn(LD_DIR, "Unparseable dir-signing-key token");
     return NULL;
@@ -772,7 +816,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     return NULL;
   }
   tokens = smartlist_create();
-  if (tokenize_string(s,end,tokens,RTR)) {
+  if (tokenize_string(s,end,tokens,routerdesc_token_table)) {
     log_warn(LD_DIR, "Error tokeninzing router descriptor.");
     goto err;
   }
@@ -1038,7 +1082,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     return NULL;
   }
   tokens = smartlist_create();
-  if (tokenize_string(s,end,tokens,EXTRAINFO)) {
+  if (tokenize_string(s,end,tokens,extrainfo_token_table)) {
     log_warn(LD_DIR, "Error tokeninzing router descriptor.");
     goto err;
   }
@@ -1162,7 +1206,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
 
   eos = find_start_of_next_routerstatus(*s);
 
-  if (tokenize_string(*s, eos, tokens, RTRSTATUS)) {
+  if (tokenize_string(*s, eos, tokens, rtrstatus_token_table)) {
     log_warn(LD_DIR, "Error tokenizing router status");
     goto err;
   }
@@ -1297,6 +1341,7 @@ networkstatus_parse_from_string(const char *s)
 {
   const char *eos;
   smartlist_t *tokens = smartlist_create();
+  smartlist_t *footer_tokens = smartlist_create();
   networkstatus_t *ns = NULL;
   char ns_digest[DIGEST_LEN];
   char tmp_digest[DIGEST_LEN];
@@ -1310,7 +1355,7 @@ networkstatus_parse_from_string(const char *s)
   }
 
   eos = find_start_of_next_routerstatus(s);
-  if (tokenize_string(s, eos, tokens, NETSTATUS)) {
+  if (tokenize_string(s, eos, tokens, netstatus_token_table)) {
     log_warn(LD_DIR, "Error tokenizing network-status header.");
     goto err;
   }
@@ -1433,15 +1478,15 @@ networkstatus_parse_from_string(const char *s)
   smartlist_uniq(ns->entries, _compare_routerstatus_entries,
                  _free_duplicate_routerstatus_entry);
 
-  if (tokenize_string(s, NULL, tokens, NETSTATUS)) {
+  if (tokenize_string(s, NULL, footer_tokens, dir_footer_token_table)) {
     log_warn(LD_DIR, "Error tokenizing network-status footer.");
     goto err;
   }
-  if (smartlist_len(tokens) < 1) {
+  if (smartlist_len(footer_tokens) < 1) {
     log_warn(LD_DIR, "Too few items in network-status footer.");
     goto err;
   }
-  tok = smartlist_get(tokens, smartlist_len(tokens)-1);
+  tok = smartlist_get(footer_tokens, smartlist_len(footer_tokens)-1);
   if (tok->tp != K_DIRECTORY_SIGNATURE) {
     log_warn(LD_DIR,
              "Expected network-status footer to end with a signature.");
@@ -1460,6 +1505,8 @@ networkstatus_parse_from_string(const char *s)
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
+  SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_free(t));
+  smartlist_free(footer_tokens);
 
   return ns;
 }
@@ -1494,7 +1541,7 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
     tor_free(tmp);
     cp = tmp = new_str;
   }
-  tok = get_next_token(&cp, RTR);
+  tok = get_next_token(&cp, routerdesc_token_table);
   if (tok->tp == _ERR) {
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
     goto err;
@@ -1668,11 +1715,10 @@ token_free(directory_token_t *tok)
 }
 
 /** Helper function: read the next token from *s, advance *s to the end
- * of the token, and return the parsed token.  If 'where' is DIR
- * or RTR, reject all tokens of the wrong type.
+ * of the token, and return the parsed token. DOCDOC table
  */
 static directory_token_t *
-get_next_token(const char **s, where_syntax where)
+get_next_token(const char **s, struct token_rule_t *table)
 {
   const char *next, *obstart;
   int i, done, allocated, is_opt;
@@ -1710,23 +1756,12 @@ get_next_token(const char **s, where_syntax where)
       RET_ERR("opt without keyword");
     }
   }
-  for (i = 0; token_table[i].t ; ++i) {
-    if (!strncmp(token_table[i].t, *s, next-*s)) {
+  for (i = 0; table[i].t ; ++i) {
+    if (!strncmp(table[i].t, *s, next-*s)) {
       /* We've found the keyword. */
-      tok->tp = token_table[i].v;
-      a_syn = token_table[i].s;
-      o_syn = token_table[i].os;
-      if (!(token_table[i].ws & where)) {
-        if (where == DIR) {
-          RET_ERR("Found an out-of-place token in a directory section");
-        } else if (where == RTR) {
-          RET_ERR("Found an out-of-place token in a router descriptor");
-        } else if (where == NETSTATUS) {
-          RET_ERR("Found an out-of-place token in a network-status header");
-        } else {
-          RET_ERR("Found an out-of-place token in a router status body");
-        }
-      }
+      tok->tp = table[i].v;
+      a_syn = table[i].s;
+      o_syn = table[i].os;
       if (a_syn == ARGS) {
         /* This keyword takes multiple arguments. */
         i = 0;
@@ -1846,28 +1881,45 @@ get_next_token(const char **s, where_syntax where)
 }
 
 /** Read all tokens from a string between <b>start</b> and <b>end</b>, and add
- * them to <b>out</b>.  If <b>is_dir</b> is true, reject all non-directory
- * tokens; else reject all non-routerdescriptor tokens.
+ * them to <b>out</b>.  DOCDOC table.
  */
 static int
 tokenize_string(const char *start, const char *end, smartlist_t *out,
-                where_syntax where)
+                token_rule_t *table)
 {
   const char **s;
   directory_token_t *tok = NULL;
+  int counts[_NIL];
+  int i;
+
   s = &start;
   if (!end)
     end = start+strlen(start);
+  memset(counts, 0, sizeof(counts));
+  for (i = 0; i < _NIL; ++i)
+    counts[i] = 0;
   while (*s < end && (!tok || tok->tp != _EOF)) {
-    tok = get_next_token(s, where);
+    tok = get_next_token(s, table);
     if (tok->tp == _ERR) {
       log_warn(LD_DIR, "parse error: %s", tok->error);
       return -1;
     }
+    ++counts[tok->tp];
     smartlist_add(out, tok);
     *s = eat_whitespace(*s);
   }
 
+  for (i = 0; table[i].t; ++i) {
+    if (counts[table[i].v] < table[i].min_cnt) {
+      log_warn(LD_DIR, "Parse error: missing %s element.", table[i].t);
+      tor_assert(0);
+      return -1;
+    }
+    if (counts[table[i].v] > table[i].max_cnt) {
+      log_warn(LD_DIR, "Parse error: too many %s elements.", table[i].t);
+      return -1;
+    }
+  }
   return 0;
 }
 

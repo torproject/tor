@@ -53,6 +53,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Don't save non-general-purpose router descriptors to the disk cache,
       because we have no way of remembering what their purpose was when
       we restart.
+    - Correctly enforce that elements of directory objects do not appear
+      more often than they are allowed to appear.
 
   o Minor bugfixes (controller), reported by daejees:
     - Make 'getinfo fingerprint' return a 551 error if we're not a
