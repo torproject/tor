@@ -5,6 +5,10 @@
 const char tor_main_c_id[] =
   "$Id$";
 
+const char tor_svn_revision[] =
+#include "micro-revision.i"
+  "";
+
 /**
  * \file tor_main.c
  * \brief Stub module containing a main() function. Allows unit

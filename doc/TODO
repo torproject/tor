@@ -357,8 +357,9 @@ Future version:
     such errors recently, then don't warn about it.
   - More consistent error checking in router_parse_entry_from_string().
     I can say "banana" as my bandwidthcapacity, and it won't even squeak.
-  - Include the output of svn info/svk info output into the binary, so
-    it's trivial to see what version a binary was built from.
+  o Include the output of svn info in the binary, so it's trivial to see what
+    version a binary was built from.
+    - Do the same for svk info.
   - Add a doxygen style checker to make check-spaces so nick doesn't drift
     too far from arma's undocumented styleguide.  Also, document that
     styleguide in HACKING.  (See r9634 for example.)

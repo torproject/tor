@@ -1172,6 +1172,8 @@ router_guess_address_from_dir_headers(uint32_t *guess)
   return -1;
 }
 
+extern const char tor_svn_revision[]; /* from main.c */
+
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
  * string describing the version of Tor and the operating system we're
  * currently running on.
@@ -1179,8 +1181,17 @@ router_guess_address_from_dir_headers(uint32_t *guess)
 void
 get_platform_str(char *platform, size_t len)
 {
-  tor_snprintf(platform, len, "Tor %s on %s",
-           VERSION, get_uname());
+  char svn_version_buf[128];
+  if (!strcmpend(VERSION, "-dev") &&
+      tor_svn_revision && strlen(tor_svn_revision)) {
+    tor_snprintf(svn_version_buf, sizeof(svn_version_buf), " (r%s)",
+                 tor_svn_revision);
+  } else {
+    svn_version_buf[0] = 0;
+  }
+
+  tor_snprintf(platform, len, "Tor %s%s on %s",
+               VERSION, svn_version_buf, get_uname());
   return;
 }
 

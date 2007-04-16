@@ -28,3 +28,17 @@ test_LDADD = ../common/libor.a ../common/libor-crypto.a
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h
 
+tor_main.o: micro-revision.i
+
+micro-revision.i: FORCE
+	rm -f micro-revision.i;					\
+	if test -d ../../.svn ; then 				\
+	  svn info ../.. |              			\
+	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.i \
+	     || true; \
+	fi;							\
+	if test ! -f micro-revision.i; then			\
+	  echo '""' > micro-revision.i;				\
+	fi
+
+FORCE:

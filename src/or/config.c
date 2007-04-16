@@ -2982,6 +2982,8 @@ check_nickname_list(const char *lst, const char *name, char **msg)
   return r;
 }
 
+extern const char tor_svn_revision[]; /* from main.c */
+
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
  * validate them for consistency, then take actions based on them.
@@ -3018,7 +3020,13 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
-    printf("Tor version %s.\n",VERSION);
+    char vbuf[128];
+    if (tor_svn_revision && strlen(tor_svn_revision)) {
+      tor_snprintf(vbuf, sizeof(vbuf), " (r%s)", tor_svn_revision);
+    } else {
+      vbuf[0] = 0;
+    }
+    printf("Tor version %s%s.\n",VERSION,vbuf);
     if (argc > 2 && (!strcmp(argv[2],"--version"))) {
       print_svn_version();
     }

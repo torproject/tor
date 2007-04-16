@@ -23,6 +23,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - When warning about missing headers, tell the user to let us
       know if the compile succeeds anyway, so we can downgrade the
       warning.
+    - If we're building from a subversion repository, include the current
+      SVN revision as part of the version string.
 
   o Minor features (logging):
     - Always prepend "Bug: " to any log message about a bug.

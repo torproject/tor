@@ -5,6 +5,8 @@
 const char test_c_id[] =
   "$Id$";
 
+const char tor_svn_revision[] = "";
+
 /**
  * \file test.c
  * \brief Unit tests for many pieces of the lower level Tor modules.
