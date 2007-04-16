@@ -1468,7 +1468,7 @@ signed_descriptor_get_body(signed_descriptor_t *desc)
     r = desc->signed_descriptor_body;
   }
   tor_assert(r);
-  tor_assert(!memcmp("router ", r, 7));
+  tor_assert(!memcmp("router ", r, 7) || !memcmp("extra-info ", r, 11));
 #if 0
   tor_assert(!memcmp("\n-----END SIGNATURE-----\n",
                      r + len - 25, 25));

@@ -1244,7 +1244,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   format_iso_time(published, router->cache_info.published_on);
 
   /* How busy have we been? */
-  bandwidth_usage = rep_hist_get_bandwidth_lines();
+  bandwidth_usage = rep_hist_get_bandwidth_lines(0);
 
   if (router->declared_family && smartlist_len(router->declared_family)) {
     size_t n;
@@ -1397,7 +1397,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   base16_encode(identity, sizeof(identity),
                 extrainfo->cache_info.identity_digest, DIGEST_LEN);
   format_iso_time(published, extrainfo->cache_info.published_on);
-  bandwidth_usage = rep_hist_get_bandwidth_lines();
+  bandwidth_usage = rep_hist_get_bandwidth_lines(1);
 
   result = tor_snprintf(s, maxlen,
                         "extra-info %s %s\n"

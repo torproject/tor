@@ -2722,7 +2722,7 @@ void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(int num_bytes, time_t when);
 void rep_hist_note_bytes_written(int num_bytes, time_t when);
 int rep_hist_bandwidth_assess(void);
-char *rep_hist_get_bandwidth_lines(void);
+char *rep_hist_get_bandwidth_lines(int for_extrainfo);
 void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);

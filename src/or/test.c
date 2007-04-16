@@ -1716,7 +1716,7 @@ test_dir_format(void)
   r2.exit_policy = &ex1;
   r2.nickname = tor_strdup("Fred");
 
-  bw_lines = rep_hist_get_bandwidth_lines();
+  bw_lines = rep_hist_get_bandwidth_lines(0);
   test_assert(bw_lines);
   test_assert(!strcmpstart(bw_lines, "opt write-history "));
 
