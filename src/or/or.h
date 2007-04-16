@@ -1080,10 +1080,12 @@ typedef struct {
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
   char *contact_info; /**< Declared contact info for this router. */
+  char extra_info_digest[DIGEST_LEN]; /**< DOCDOC */
   unsigned int is_hibernating:1; /**< Whether the router claims to be
                                   * hibernating */
   unsigned int has_old_dnsworkers:1; /**< Whether the router is using
                                       * dnsworker code. */
+  unsigned int caches_extra_info:1; /**< DOCDOC */
 
   /* local info */
   unsigned int is_running:1; /**< As far as we know, is this OR currently
@@ -1120,6 +1122,13 @@ typedef struct {
    * none. */
   int routerlist_index;
 } routerinfo_t;
+
+/** DOCDOC */
+typedef struct extrainfo_t {
+  signed_descriptor_t cache_info;
+  char nickname[MAX_NICKNAME_LEN+1];
+  char *pending_sig;
+} extrainfo_t;
 
 /** Contents of a single router entry in a network status object.
  */
@@ -2991,6 +3000,8 @@ void dump_routerlist_mem_usage(int severity);
 void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx,
                        int make_old);
 void routerinfo_free(routerinfo_t *router);
+void extrainfo_free(extrainfo_t *extrainfo);
+
 void routerstatus_free(routerstatus_t *routerstatus);
 void networkstatus_free(networkstatus_t *networkstatus);
 void routerlist_free_all(void);
@@ -3076,6 +3087,7 @@ int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
 int router_get_networkstatus_v2_hash(const char *s, char *digest);
+int router_get_extrainfo_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
                                    crypto_pk_env_t *private_key);
@@ -3091,6 +3103,8 @@ int router_parse_runningrouters(const char *str);
 int router_parse_directory(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
                                              int cache_copy);
+extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
+                                      int cache_copy, digestmap_t *routermap);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
                                                     int assume_action);
 version_status_t tor_version_is_obsolete(const char *myversion,

@@ -54,7 +54,13 @@ N   . Document transport and natdport
 Things we'd like to do in 0.2.0.x:
   - Proposals:
     - 101: Voting on the Tor Directory System
-    - 104: Long and Short Router Descriptors (by Jun 1)
+    . 104: Long and Short Router Descriptors (by Jun 1)
+      . Finalize proposal
+      - Implement parsing for extra-info documents; have authorities
+        accept them and serve them from specified URLs
+      - Have routers generate and upload extra-info documents.
+      - Implement option to download and cache extra-info documents.
+      - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol (finalize by Jun 1)
   - Refactoring:
     - Make resolves no longer use edge_connection_t unless they are actually

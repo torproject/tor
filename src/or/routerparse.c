@@ -56,6 +56,9 @@ typedef enum {
   K_S,
   K_V,
   K_EVENTDNS,
+  K_EXTRA_INFO,
+  K_EXTRA_INFO_DIGEST,
+  K_CACHES_EXTRA_INFO,
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -106,7 +109,8 @@ typedef enum {
   NETSTATUS = 4,  /**< v2 or later ("versioned") network status. */
   ANYSIGNED = 7,  /**< Any "full" document (that is, not a router status.) */
   RTRSTATUS = 8,  /**< Router-status portion of a versioned network status. */
-  ANY = 15,       /**< Appears in any document type. */
+  EXTRAINFO = 16, /**< DOCDOC */
+  ANY = 31,       /**< Appears in any document type. */
 } where_syntax;
 
 /** Table mapping keywords to token value and to argument rules. */
@@ -125,12 +129,12 @@ static struct {
   { "signed-directory",    K_SIGNED_DIRECTORY,    NO_ARGS, NO_OBJ,  DIR },
   { "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY,RTR },
   { "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY,RTR },
-  { "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ,RTR },
+  { "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ,RTR|EXTRAINFO },
   { "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ,  DIR },
   { "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ,  DIR },
   { "bandwidth",           K_BANDWIDTH,           ARGS,    NO_OBJ,  RTR },
   { "platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ,  RTR },
-  { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ, ANYSIGNED },
+  { "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ, ANYSIGNED|EXTRAINFO },
   { "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK, ANY },
   { "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ, ANYSIGNED },
   { "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ,  DIR },
@@ -140,8 +144,8 @@ static struct {
   { "family",              K_FAMILY,              ARGS,    NO_OBJ,  RTR },
   { "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ, ANYSIGNED },
   { "hibernating",         K_HIBERNATING,         ARGS,    NO_OBJ,  RTR },
-  { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR },
-  { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR },
+  { "read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ,  RTR|EXTRAINFO },
+  { "write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ,  RTR|EXTRAINFO },
   { "network-status-version", K_NETWORK_STATUS_VERSION,
                                                   ARGS,    NO_OBJ, NETSTATUS },
   { "dir-source",          K_DIR_SOURCE,          ARGS,    NO_OBJ, NETSTATUS },
@@ -149,6 +153,9 @@ static struct {
   { "client-versions",     K_CLIENT_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
   { "server-versions",     K_SERVER_VERSIONS,     ARGS,    NO_OBJ, NETSTATUS },
   { "eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ, RTR },
+  { "extra-info",          K_EXTRA_INFO,          ARGS,    NO_OBJ, EXTRAINFO },
+  { "extra-info-digest",   K_EXTRA_INFO_DIGEST,   ARGS,    NO_OBJ, RTR },
+  { "caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ, RTR },
   { NULL, _NIL, NO_ARGS, NO_OBJ, ANY }
 };
 
@@ -211,6 +218,14 @@ router_get_networkstatus_v2_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                             "network-status-version","\ndirectory-signature");
+}
+
+/** DOCDOC
+ */
+int
+router_get_extrainfo_hash(const char *s, char *digest)
+{
+  return router_get_hash_impl(s,digest,"extra-info","\nrouter-signature");
 }
 
 /** Helper: used to generate signatures for routers, directories and
@@ -934,6 +949,19 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
+  if ((tok = find_first_by_keyword(tokens, K_CACHES_EXTRA_INFO)))
+    router->caches_extra_info = 1;
+
+  if ((tok = find_first_by_keyword(tokens, K_EXTRA_INFO_DIGEST)) &&
+      tok->n_args) {
+    if (strlen(tok->args[0]) == HEX_DIGEST_LEN) {
+      base16_decode(router->extra_info_digest, DIGEST_LEN, tok->args[0],
+                    HEX_DIGEST_LEN);
+    } else {
+      log_warn(LD_DIR, "Invalid extra info digest %s", escaped(tok->args[0]));
+    }
+  }
+
   if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
     log_warn(LD_DIR, "Missing router signature");
     goto err;
@@ -981,6 +1009,124 @@ router_parse_entry_from_string(const char *s, const char *end,
     smartlist_free(exit_policy_tokens);
   }
   return router;
+}
+
+/* DOCDOC */
+extrainfo_t *
+extrainfo_parse_entry_from_string(const char *s, const char *end,
+                                  int cache_copy, digestmap_t *routermap)
+{
+  extrainfo_t *extrainfo = NULL;
+  char signed_digest[128];
+  char digest[128];
+  smartlist_t *tokens = NULL;
+  directory_token_t *tok;
+  int t;
+  crypto_pk_env_t *key = NULL;
+  routerinfo_t *router;
+
+  if (!end) {
+    end = s + strlen(s);
+  }
+
+  /* point 'end' to a point immediately after the final newline. */
+  while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
+    --end;
+
+  if (router_get_extrainfo_hash(s, digest) < 0) {
+    log_warn(LD_DIR, "Couldn't compute router hash.");
+    return NULL;
+  }
+  tokens = smartlist_create();
+  if (tokenize_string(s,end,tokens,EXTRAINFO)) {
+    log_warn(LD_DIR, "Error tokeninzing router descriptor.");
+    goto err;
+  }
+
+  if (smartlist_len(tokens) < 2) {
+    log_warn(LD_DIR, "Impossibly short router descriptor.");
+    goto err;
+  }
+
+  tok = smartlist_get(tokens,0);
+  if (tok->tp != K_EXTRA_INFO) {
+    log_warn(LD_DIR,"Entry does not start with \"extra-info\"");
+    goto err;
+  }
+
+  extrainfo = tor_malloc_zero(sizeof(extrainfo_t));
+  if (cache_copy)
+    extrainfo->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
+  extrainfo->cache_info.signed_descriptor_len = end-s;
+  memcpy(extrainfo->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
+
+  if (tok->n_args < 2) {
+    log_warn(LD_DIR,"Insufficient arguments to \"extra-info\"");
+    goto err;
+  }
+  if (!is_legal_nickname(tok->args[0])) {
+    log_warn(LD_DIR,"Bad nickname %s on \"extra-info\"",escaped(tok->args[0]));
+    goto err;
+  }
+  strlcpy(extrainfo->nickname, tok->args[0], sizeof(extrainfo->nickname));
+  if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
+      base16_decode(extrainfo->cache_info.identity_digest, DIGEST_LEN,
+                    tok->args[1], HEX_DIGEST_LEN)) {
+    log_warn(LD_DIR,"Invalid fingerprint %s on \"extra-info\"",
+             escaped(tok->args[1]));
+    goto err;
+  }
+
+  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
+    log_warn(LD_DIR,"No published time on \"extra-info\"");
+    goto err;
+  }
+  if (parse_iso_time(tok->args[0], &extrainfo->cache_info.published_on)) {
+    log_warn(LD_DIR,"Invalid published time %s on \"extra-info\"",
+             escaped(tok->args[0]));
+    goto err;
+  }
+
+  if (routermap &&
+      (router = digestmap_get(routermap,
+                              extrainfo->cache_info.identity_digest))) {
+    key = router->identity_pkey;
+  }
+
+  if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
+    log_warn(LD_DIR, "Missing router signature");
+    goto err;
+  }
+  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
+    log_warn(LD_DIR, "Bad object type or length on router signature");
+    goto err;
+  }
+
+  if (key) {
+    note_crypto_pk_op(VERIFY_RTR);
+    if ((t=crypto_pk_public_checksig(key, signed_digest,
+                                     tok->object_body, 128)) != 20) {
+      log_warn(LD_DIR, "Invalid signature %d",t);
+      goto err;
+    }
+    if (memcmp(digest, signed_digest, DIGEST_LEN)) {
+      log_warn(LD_DIR, "Mismatched signature");
+      goto err;
+    }
+  } else {
+    extrainfo->pending_sig = tor_memdup(tok->object_body, 128);
+  }
+
+  goto done;
+ err:
+  // extrainfo_free(extrainfo); // DOCDOC
+  extrainfo = NULL;
+ done:
+  if (tokens) {
+    SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
+    smartlist_free(tokens);
+  }
+  return extrainfo;
 }
 
 /** Helper: given a string <b>s</b>, return the start of the next router-status

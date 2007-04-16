@@ -57,7 +57,7 @@ Specification:
 
     An "extra info" descriptor contains the following fields:
 
-    "extra-info" Nickname IP Fingerprint
+    "extra-info" Nickname Fingerprint
         Identifies what router this is an extra info descriptor for.
         Fingerprint is encoded in hex (using upper-case letters), with
         no spaces.
@@ -67,7 +67,7 @@ Specification:
 
     "read-history"
     "write-history"
-        As currently documented in dir-spec.txt.
+        As currently documented in dir-spec.txt.  Optional.
 
     "router-signature" NL Signature NL
 
@@ -99,7 +99,8 @@ Specification:
 
        "caches-extra-info"
           Present if this router is a directory cache that provides
-          extra-info documents.
+          extra-info documents, or an authority that handles extra-info
+          documents.
 
      (Since implementations before 0.1.2.5-alpha required that "opt" keyword
      precede any unrecognized entry with "opt", these keys MUST be preceded

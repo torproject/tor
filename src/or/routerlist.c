@@ -1506,6 +1506,17 @@ routerinfo_free(routerinfo_t *router)
   tor_free(router);
 }
 
+/** DOCDOC */
+void
+extrainfo_free(extrainfo_t *extrainfo)
+{
+  if (!extrainfo)
+    return;
+  tor_free(extrainfo->cache_info.signed_descriptor_body);
+  tor_free(extrainfo->pending_sig);
+  tor_free(extrainfo);
+}
+
 /** Release storage held by <b>sd</b>. */
 static void
 signed_descriptor_free(signed_descriptor_t *sd)
