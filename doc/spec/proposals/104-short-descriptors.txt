@@ -32,7 +32,7 @@ Proposal:
   well-behaved tools would need to download short-form descriptors too (as
   these would be the only ones indexed), and hence get redundant info. Badly
   behaved tools would download only long-form descriptors, and expose
-  themselves to partitioning attacks and that like.)
+  themselves to partitioning attacks.)
 
 Other disposable fields:
 
@@ -102,20 +102,20 @@ Specification:
           extra-info documents, or an authority that handles extra-info
           documents.
 
-     (Since implementations before 0.1.2.5-alpha required that "opt" keyword
-     precede any unrecognized entry with "opt", these keys MUST be preceded
+     (Since implementations before 0.1.2.5-alpha required that the "opt"
+     keyword precede any unrecognized entry, these keys MUST be preceded
      with "opt" until 0.1.2.5-alpha is obsolete.)
 
   3. New communications rules
 
-     Servers SHOULD generate and upload an extra-info document after each
+     Servers SHOULD generate and upload one extra-info document after each
      descriptor they generate and upload; no more, no less.  Servers MUST
      upload the new descriptor before they upload the new extra-info.
 
      Authorities receiving an extra-info document SHOULD verify all of the
      following:
        * They have a router descriptor for some server with a matching
-         nickname, IP, and identity fingerprint.
+         nickname and identity fingerprint.
        * That server's identity key has been used to sign the extra-info
          document.
        * The extra-info-digest field in the router descriptor matches
