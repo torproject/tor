@@ -562,9 +562,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
       extrainfo_free(ei);
       return -1;
     }
-    /* XXXX020 Eventually, we should store this.  For now, we'll just
-     * discard it. */
-    extrainfo_free(ei);
+    router_add_extrainfo_to_routerlist(ei, msg, 0, 0);
     return 2;
   }
 
@@ -2115,11 +2113,11 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
         routerinfo_t *ri = router_get_by_digest(fp);
         if (ri &&
             ri->cache_info.published_on > publish_cutoff) {
-          if (extra) {
-            sd = extrainfo_get_by_descriptor_digest(ri->extra_info_digest);
-          } else {
+          if (extra)
+            sd = extrainfo_get_by_descriptor_digest(
+                                         ri->cache_info.extra_info_digest);
+          else
             sd = &ri->cache_info;
-          }
         }
       }
     } else {

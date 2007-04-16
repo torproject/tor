@@ -967,8 +967,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   if ((tok = find_first_by_keyword(tokens, K_EXTRA_INFO_DIGEST))) {
     tor_assert(tok->n_args >= 1);
     if (strlen(tok->args[0]) == HEX_DIGEST_LEN) {
-      base16_decode(router->extra_info_digest, DIGEST_LEN, tok->args[0],
-                    HEX_DIGEST_LEN);
+      base16_decode(router->cache_info.extra_info_digest,
+                    DIGEST_LEN, tok->args[0], HEX_DIGEST_LEN);
     } else {
       log_warn(LD_DIR, "Invalid extra info digest %s", escaped(tok->args[0]));
     }

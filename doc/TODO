@@ -60,7 +60,8 @@ Things we'd like to do in 0.2.0.x:
       o Have routers generate extra-info documents.
       . Have have authorities accept them and serve them from specified URLs
         o Implement directory-protocol side.
-        - Implement storage.
+        o Implement storage in memory
+        - Implement cache on disk.
       - Have routers upload extra-info documents.
       - Implement option to download and cache extra-info documents.
       - Drop bandwidth history from router-descriptors

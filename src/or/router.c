@@ -980,7 +980,8 @@ router_rebuild_descriptor(int force)
                             ei->cache_info.signed_descriptor_digest);
 
   /* Now finish the router descriptor. */
-  memcpy(ri->extra_info_digest, ei->cache_info.signed_descriptor_digest,
+  memcpy(ri->cache_info.extra_info_digest,
+         ei->cache_info.signed_descriptor_digest,
          DIGEST_LEN);
   ri->cache_info.signed_descriptor_body = tor_malloc(8192);
   if (router_dump_router_to_string(ri->cache_info.signed_descriptor_body, 8192,
@@ -1258,7 +1259,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   base16_encode(extra_info_digest, sizeof(extra_info_digest),
-                router->extra_info_digest, DIGEST_LEN);
+                router->cache_info.extra_info_digest, DIGEST_LEN);
 
   /* Generate the easy portion of the router descriptor. */
   result = tor_snprintf(s, maxlen,

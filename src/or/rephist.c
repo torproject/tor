@@ -630,7 +630,7 @@ rep_hist_get_bandwidth_lines(int for_extrainfo)
     tor_assert(b);
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
     tor_snprintf(cp, len-(cp-buf), "%s%s %s (%d s) ",
-                 for_extrainfo ? "" : "opt ", 
+                 for_extrainfo ? "" : "opt ",
                  r ? "read-history" : "write-history", t,
                  NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);

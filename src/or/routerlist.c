@@ -1446,9 +1446,11 @@ router_get_by_descriptor_digest(const char *digest)
 signed_descriptor_t *
 extrainfo_get_by_descriptor_digest(const char *digest)
 {
-  /* XXXX020 implement me. */
-  (void)digest;
-  return NULL;
+  extrainfo_t *ei;
+  tor_assert(digest);
+  if (!routerlist) return NULL;
+  ei = digestmap_get(routerlist->extra_info_map, digest);
+  return ei ? &ei->cache_info : NULL;
 }
 
 /** Return a pointer to the signed textual representation of a descriptor.
@@ -1487,6 +1489,7 @@ router_get_routerlist(void)
     routerlist->old_routers = smartlist_create();
     routerlist->identity_map = digestmap_new();
     routerlist->desc_digest_map = digestmap_new();
+    routerlist->extra_info_map = digestmap_new();
   }
   return routerlist;
 }
@@ -1546,6 +1549,13 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
   return sd;
 }
 
+/** DOCDOC */
+static void
+_extrainfo_free(void *e)
+{
+  extrainfo_free(e);
+}
+
 /** Free all storage held by a routerlist <b>rl</b> */
 void
 routerlist_free(routerlist_t *rl)
@@ -1553,6 +1563,7 @@ routerlist_free(routerlist_t *rl)
   tor_assert(rl);
   digestmap_free(rl->identity_map, NULL);
   digestmap_free(rl->desc_digest_map, NULL);
+  digestmap_free(rl->extra_info_map, _extrainfo_free);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
@@ -1642,6 +1653,44 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   // routerlist_assert_ok(rl);
 }
 
+/**DOCDOC*/
+static void
+extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
+{
+  routerinfo_t *ri = digestmap_get(rl->identity_map,
+                                   ei->cache_info.identity_digest);
+  extrainfo_t *ei_tmp;
+  if (!ri || routerinfo_incompatible_with_extrainfo(ri,ei)) {
+    int found = 0;
+    if (ei->pending_sig || ei->bad_sig) {
+      extrainfo_free(ei);
+      return;
+    }
+    /* The signature checks out; let's see if one of the old routers
+     * matches. */
+    SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd, {
+        if (!memcmp(ei->cache_info.identity_digest,
+                    sd->identity_digest, DIGEST_LEN) &&
+            !memcmp(ei->cache_info.signed_descriptor_digest,
+                    sd->extra_info_digest, DIGEST_LEN) &&
+            sd->published_on == ei->cache_info.published_on) {
+          found = 1;
+          break;
+        }
+      });
+    if (!found) {
+      extrainfo_free(ei);
+      return;
+    }
+  }
+
+  ei_tmp = digestmap_set(rl->extra_info_map,
+                         ei->cache_info.signed_descriptor_digest,
+                         ei);
+  if (ei_tmp)
+    extrainfo_free(ei_tmp);
+}
+
 /** If we're a directory cache and routerlist <b>rl</b> doesn't have
  * a copy of router <b>ri</b> yet, add it to the list of old (not
  * recommended but still served) descriptors. Else free it. */
@@ -1673,6 +1722,7 @@ void
 routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
 {
   routerinfo_t *ri_tmp;
+  extrainfo_t *ei_tmp;
   idx = _routerlist_find_elt(rl->routers, ri, idx);
   if (idx < 0)
     return;
@@ -1686,6 +1736,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   ri_tmp = digestmap_remove(rl->identity_map, ri->cache_info.identity_digest);
   router_dir_info_changed();
   tor_assert(ri_tmp == ri);
+
   if (make_old && get_options()->DirPort &&
       ri->purpose == ROUTER_PURPOSE_GENERAL) {
     signed_descriptor_t *sd;
@@ -1698,6 +1749,10 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
     tor_assert(ri_tmp == ri);
     router_bytes_dropped += ri->cache_info.signed_descriptor_len;
     routerinfo_free(ri);
+    ei_tmp = digestmap_remove(rl->extra_info_map,
+                              ri->cache_info.extra_info_digest);
+    if (ei_tmp)
+      extrainfo_free(ei_tmp);
   }
   // routerlist_assert_ok(rl);
 }
@@ -1706,6 +1761,7 @@ static void
 routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
 {
   signed_descriptor_t *sd_tmp;
+  extrainfo_t *ei_tmp;
   idx = _routerlist_find_elt(rl->old_routers, sd, idx);
   if (idx < 0)
     return;
@@ -1715,6 +1771,12 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   tor_assert(sd_tmp == sd);
   router_bytes_dropped += sd->signed_descriptor_len;
   signed_descriptor_free(sd);
+
+  ei_tmp = digestmap_remove(rl->extra_info_map,
+                            sd->extra_info_digest);
+  if (ei_tmp)
+    extrainfo_free(ei_tmp);
+
   // routerlist_assert_ok(rl);
 }
 
@@ -1731,6 +1793,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx, int make_old)
 {
   routerinfo_t *ri_tmp;
+  extrainfo_t *ei_tmp;
   tor_assert(ri_old != ri_new);
   idx = _routerlist_find_elt(rl->routers, ri_old, idx);
   router_dir_info_changed();
@@ -1766,6 +1829,12 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
       /* digests don't match; digestmap_set didn't replace */
       digestmap_remove(rl->desc_digest_map,
                        ri_old->cache_info.signed_descriptor_digest);
+
+      ei_tmp = digestmap_remove(rl->extra_info_map,
+                                ri_old->cache_info.extra_info_digest);
+      if (ei_tmp) {
+        extrainfo_free(ei_tmp);
+      }
     }
     routerinfo_free(ri_old);
   }
@@ -2065,6 +2134,18 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     router_append_to_journal(&router->cache_info, router->purpose);
   directory_set_dirty();
   return 0;
+}
+
+/** DOCDOC */
+void
+router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
+                                   int from_cache, int from_fetch)
+{
+  /* XXXX020 cache on disk */
+  (void)from_cache;
+  (void)from_fetch;
+  (void)msg;
+  extrainfo_insert(router_get_routerlist(), ei);
 }
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
@@ -4438,6 +4519,9 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei)
   tor_assert(ri);
   tor_assert(ei);
 
+  if (ei->bad_sig)
+    return 1;
+
   if (strcmp(ri->nickname, ei->nickname) ||
       memcmp(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
              DIGEST_LEN))
@@ -4448,8 +4532,11 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei)
     if (crypto_pk_public_checksig(ri->identity_pkey, signed_digest,
                                   ei->pending_sig, 128) != 20 ||
         memcmp(signed_digest, ei->cache_info.signed_descriptor_digest,
-               DIGEST_LEN))
+               DIGEST_LEN)) {
+      ei->bad_sig = 1;
+      tor_free(ei->pending_sig);
       return 1; /* Bad signature, or no match. */
+    }
 
     tor_free(ei->pending_sig);
   }

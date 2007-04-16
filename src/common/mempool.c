@@ -140,7 +140,6 @@ struct mp_chunk_t {
   char mem[1]; /**< Storage for this chunk. (Not actual size.) */
 };
 
-
 /** Number of extra bytes needed beyond mem_size to allocate a chunk. */
 #define CHUNK_OVERHEAD (sizeof(mp_chunk_t)-1)
 

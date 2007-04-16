@@ -1047,6 +1047,8 @@ typedef struct signed_descriptor_t {
   char identity_digest[DIGEST_LEN];
   /** Declared publication time of the descriptor */
   time_t published_on;
+ /** DOCDOC; routerinfo_t only. */
+  char extra_info_digest[DIGEST_LEN];
   /** Where is the descriptor saved? */
   saved_location_t saved_location;
   /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
@@ -1081,7 +1083,6 @@ typedef struct {
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
   char *contact_info; /**< Declared contact info for this router. */
-  char extra_info_digest[DIGEST_LEN]; /**< DOCDOC */
   unsigned int is_hibernating:1; /**< Whether the router claims to be
                                   * hibernating */
   unsigned int has_old_dnsworkers:1; /**< Whether the router is using
@@ -1128,6 +1129,7 @@ typedef struct {
 typedef struct extrainfo_t {
   signed_descriptor_t cache_info;
   char nickname[MAX_NICKNAME_LEN+1];
+  unsigned int bad_sig : 1;
   char *pending_sig;
 } extrainfo_t;
 
@@ -1245,6 +1247,9 @@ typedef struct {
   /** Map from server descriptor digest to a signed_descriptor_t from
    * routers or old_routers. */
   digestmap_t *desc_digest_map;
+  /** Map from extra-info digest to a signed_descriptor_t.  Only for
+   * routers in routers or old_routers. */
+  digestmap_t *extra_info_map;
   /** List of routerinfo_t for all currently live routers we know. */
   smartlist_t *routers;
   /** List of signed_descriptor_t for older router descriptors we're
@@ -3016,6 +3021,8 @@ void routerlist_remove_old_routers(void);
 void networkstatus_list_clean(time_t now);
 int router_add_to_routerlist(routerinfo_t *router, const char **msg,
                              int from_cache, int from_fetch);
+void router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
+                                        int from_cache, int from_fetch);
 int router_load_single_router(const char *s, uint8_t purpose,
                               const char **msg);
 void router_load_routers_from_string(const char *s,
