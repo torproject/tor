@@ -907,6 +907,7 @@ typedef struct dir_connection_t {
   /** What exactly are we spooling right now? */
   enum {
     DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
+    DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
     DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS
   } dir_spool_src : 3;
   /** List of fingerprints for networkstatuses or desriptors to be spooled. */
@@ -2892,7 +2893,7 @@ void check_descriptor_ipaddress_changed(time_t now);
 void router_new_address_suggestion(const char *suggestion);
 int router_compare_to_my_exit_policy(edge_connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
-const char *router_get_my_extrainfo(void);
+extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
 int router_digest_is_me(const char *digest);
 int router_is_me(routerinfo_t *router);
@@ -2993,6 +2994,7 @@ routerinfo_t *router_get_by_nickname(const char *nickname,
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
+signed_descriptor_t *extrainfo_get_by_descriptor_digest(const char *digest);
 const char *signed_descriptor_get_body(signed_descriptor_t *desc);
 int router_digest_version_as_new_as(const char *digest, const char *cutoff);
 int router_digest_is_trusted_dir(const char *digest);

@@ -1442,6 +1442,15 @@ router_get_by_descriptor_digest(const char *digest)
   return digestmap_get(routerlist->desc_digest_map, digest);
 }
 
+/** DOCDOC */
+signed_descriptor_t *
+extrainfo_get_by_descriptor_digest(const char *digest)
+{
+  /* XXXX020 implement me. */
+  (void)digest;
+  return NULL;
+}
+
 /** Return a pointer to the signed textual representation of a descriptor.
  * The returned string is not guaranteed to be NUL-terminated: the string's
  * length will be in desc-\>signed_descriptor_len. */

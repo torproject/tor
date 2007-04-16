@@ -815,14 +815,14 @@ router_get_my_descriptor(void)
 }
 
 /** DOCDOC */
-const char *
+extrainfo_t *
 router_get_my_extrainfo(void)
 {
   if (!server_mode(get_options()))
     return NULL;
   if (router_rebuild_descriptor(0))
     return NULL;
-  return desc_extrainfo->cache_info.signed_descriptor_body;
+  return desc_extrainfo;
 }
 
 /** A list of nicknames that we've warned about including in our family

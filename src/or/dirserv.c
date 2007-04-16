@@ -537,8 +537,36 @@ dirserv_add_descriptor(const char *desc, const char **msg)
 {
   int r;
   routerinfo_t *ri = NULL, *ri_old = NULL;
+  extrainfo_t *ei = NULL;
   tor_assert(msg);
   *msg = NULL;
+  desc = eat_whitespace(desc);
+
+  if (!strcmpstart(desc, "extra-info")) {
+    /* It's an extra-info thingie. */
+    routerlist_t *rl = router_get_routerlist();
+    ei = extrainfo_parse_entry_from_string(desc, NULL, 1, rl->identity_map);
+    if (!ei) {
+      log_warn(LD_DIRSERV, "Couldn't parse uploaded extra-info descriptor");
+      *msg = "Rejected: couldn't parse extra-info descriptor";
+      return -2;
+    }
+    ri = router_get_by_digest(ei->cache_info.identity_digest);
+    if (!ri) {
+      *msg = "No corresponding router descriptor for extra-info descriptor";
+      extrainfo_free(ei);
+      return -1;
+    }
+    if (routerinfo_incompatible_with_extrainfo(ri, ei)) {
+      *msg = "Router descriptor incompatible with extra-info descriptor";
+      extrainfo_free(ei);
+      return -1;
+    }
+    /* XXXX020 Eventually, we should store this.  For now, we'll just
+     * discard it. */
+    extrainfo_free(ei);
+    return 2;
+  }
 
   /* Check: is the descriptor syntactically valid? */
   ri = router_parse_entry_from_string(desc, NULL, 1);
@@ -1815,8 +1843,9 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
 }
 
 /** As dirserv_get_routerdescs(), but instead of getting signed_descriptor_t
- * pointers, adds copies of digests to fps_out.  For a /tor/server/d/ request,
- * adds descriptor digests; for other requests, adds identity digests.
+ * pointers, adds copies of digests to fps_out, and doesn't use the
+ * /tor/server/ prefix.  For a /d/ request, adds descriptor digests; for other
+ * requests, adds identity digests.
  */
 int
 dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
@@ -1824,21 +1853,21 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
 {
   *msg = NULL;
 
-  if (!strcmp(key, "/tor/server/all")) {
+  if (!strcmp(key, "all")) {
     routerlist_t *rl = router_get_routerlist();
     SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                       smartlist_add(fps_out,
                       tor_memdup(r->cache_info.identity_digest, DIGEST_LEN)));
-  } else if (!strcmp(key, "/tor/server/authority")) {
+  } else if (!strcmp(key, "authority")) {
     routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
       smartlist_add(fps_out,
                     tor_memdup(ri->cache_info.identity_digest, DIGEST_LEN));
-  } else if (!strcmpstart(key, "/tor/server/d/")) {
-    key += strlen("/tor/server/d/");
+  } else if (!strcmpstart(key, "d/")) {
+    key += strlen("d/");
     dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
-  } else if (!strcmpstart(key, "/tor/server/fp/")) {
-    key += strlen("/tor/server/fp/");
+  } else if (!strcmpstart(key, "fp/")) {
+    key += strlen("fp/");
     dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
   } else {
     *msg = "Key not recognized";
@@ -2065,7 +2094,11 @@ connection_dirserv_finish_spooling(dir_connection_t *conn)
 static int
 connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 {
-  int by_fp = conn->dir_spool_src == DIR_SPOOL_SERVER_BY_FP;
+  int by_fp = (conn->dir_spool_src == DIR_SPOOL_SERVER_BY_FP ||
+               conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_FP);
+  int extra = (conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_FP ||
+               conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_DIGEST);
+  time_t publish_cutoff = time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH;
 
   while (smartlist_len(conn->fingerprint_stack) &&
          buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
@@ -2074,15 +2107,25 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
     signed_descriptor_t *sd = NULL;
     if (by_fp) {
       if (router_digest_is_me(fp)) {
-        sd = &(router_get_my_routerinfo()->cache_info);
+        if (extra)
+          sd = &(router_get_my_extrainfo()->cache_info);
+        else
+          sd = &(router_get_my_routerinfo()->cache_info);
       } else {
         routerinfo_t *ri = router_get_by_digest(fp);
         if (ri &&
-            ri->cache_info.published_on > time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH)
-          sd = &ri->cache_info;
+            ri->cache_info.published_on > publish_cutoff) {
+          if (extra) {
+            sd = extrainfo_get_by_descriptor_digest(ri->extra_info_digest);
+          } else {
+            sd = &ri->cache_info;
+          }
+        }
       }
-    } else
-      sd = router_get_by_descriptor_digest(fp);
+    } else {
+      sd = extra ? extrainfo_get_by_descriptor_digest(fp)
+        : router_get_by_descriptor_digest(fp);
+    }
     tor_free(fp);
     if (!sd)
       continue;
@@ -2216,6 +2259,8 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
     return 0;
 
   switch (conn->dir_spool_src) {
+    case DIR_SPOOL_EXTRA_BY_DIGEST:
+    case DIR_SPOOL_EXTRA_BY_FP:
     case DIR_SPOOL_SERVER_BY_DIGEST:
     case DIR_SPOOL_SERVER_BY_FP:
       return connection_dirserv_add_servers_to_outbuf(conn);

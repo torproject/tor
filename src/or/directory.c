@@ -1683,31 +1683,34 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     return 0;
   }
 
-  if (!strcmpstart(url,"/tor/server/")) {
+  if (!strcmpstart(url,"/tor/server/") ||
+      !strcmpstart(url,"/tor/extra/")) {
     size_t url_len = strlen(url);
     int deflated = !strcmp(url+url_len-2, ".z");
     int res;
     const char *msg;
     const char *request_type = NULL;
     int cache_lifetime = 0;
+    int is_extra = !strcmpstart(url,"/tor/extra/");
     if (deflated)
       url[url_len-2] = '\0';
+    url += is_extra ? strlen("/tor/extra/") : strlen("/tor/server/");
     conn->fingerprint_stack = smartlist_create();
     res = dirserv_get_routerdesc_fingerprints(conn->fingerprint_stack, url,
                                               &msg);
 
-    if (!strcmpstart(url, "/tor/server/fp/")) {
+    if (!strcmpstart(url, "fp/")) {
       request_type = deflated?"/tor/server/fp.z":"/tor/server/fp";
       if (smartlist_len(conn->fingerprint_stack) == 1)
         cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
-    } else if (!strcmpstart(url, "/tor/server/authority")) {
+    } else if (!strcmpstart(url, "authority")) {
       request_type = deflated?"/tor/server/authority.z":
         "/tor/server/authority";
       cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
-    } else if (!strcmpstart(url, "/tor/server/all")) {
+    } else if (!strcmpstart(url, "all")) {
       request_type = deflated?"/tor/server/all.z":"/tor/server/all";
       cache_lifetime = FULL_DIR_CACHE_LIFETIME;
-    } else if (!strcmpstart(url, "/tor/server/d/")) {
+    } else if (!strcmpstart(url, "d/")) {
       request_type = deflated?"/tor/server/d.z":"/tor/server/d";
       if (smartlist_len(conn->fingerprint_stack) == 1)
         cache_lifetime = ROUTERDESC_BY_DIGEST_CACHE_LIFETIME;
@@ -1715,10 +1718,12 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       request_type = "/tor/server/?";
     }
     (void) request_type; /* usable for note_request. */
-    if (!strcmpstart(url, "/tor/server/d/"))
-      conn->dir_spool_src = DIR_SPOOL_SERVER_BY_DIGEST;
+    if (!strcmpstart(url, "d/"))
+      conn->dir_spool_src =
+        is_extra ? DIR_SPOOL_EXTRA_BY_DIGEST : DIR_SPOOL_SERVER_BY_DIGEST;
     else
-      conn->dir_spool_src = DIR_SPOOL_SERVER_BY_FP;
+      conn->dir_spool_src =
+        is_extra ? DIR_SPOOL_EXTRA_BY_FP : DIR_SPOOL_SERVER_BY_FP;
     tor_free(url);
     if (res < 0)
       write_http_status_line(conn, 404, msg);
