@@ -164,7 +164,7 @@ static token_rule_t netstatus_token_table[] = {
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
-  T1( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK ),
+  T1( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    NEED_KEY ),
   T1( "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
   T1( "network-status-version", K_NETWORK_STATUS_VERSION,
                                                    ARGS,    NO_OBJ ),
@@ -190,7 +190,7 @@ static token_rule_t dir_token_table[] = {
 
   T( "running-routers",     K_RUNNING_ROUTERS,     ARGS,    NO_OBJ ),
   T( "router-status",       K_ROUTER_STATUS,       ARGS,    NO_OBJ ),
-  T( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
+  T1("published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T( "opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    OBJ_OK ),
@@ -479,10 +479,8 @@ router_parse_directory(const char *str)
     log_warn(LD_DIR, "Error tokenizing directory"); goto err;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_warn(LD_DIR, "Missing published time on directory.");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_PUBLISHED);
+  tor_assert(tok);
   tor_assert(tok->n_args == 1);
 
   if (parse_iso_time(tok->args[0], &published_on) < 0) {
@@ -534,10 +532,8 @@ router_parse_runningrouters(const char *str)
     goto err;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_warn(LD_DIR, "Missing published time on running-routers.");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_PUBLISHED);
+  tor_assert(tok);
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &published_on) < 0) {
      goto err;
@@ -905,16 +901,14 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_warn(LD_DIR, "Missing published time on router descriptor"); goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_PUBLISHED);
+  tor_assert(tok);
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &router->cache_info.published_on) < 0)
     goto err;
 
-  if (!(tok = find_first_by_keyword(tokens, K_ONION_KEY))) {
-    log_warn(LD_DIR, "Missing onion key"); goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_ONION_KEY);
+  tor_assert(tok);
   if (crypto_pk_keysize(tok->key) != PK_BYTES) {
     log_warn(LD_DIR, "Wrong size on onion key: %d bits!",
              (int)crypto_pk_keysize(tok->key)*8);
@@ -923,9 +917,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
 
-  if (!(tok = find_first_by_keyword(tokens, K_SIGNING_KEY))) {
-    log_warn(LD_DIR, "Missing identity key"); goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_SIGNING_KEY);
+  tor_assert(tok);
   if (crypto_pk_keysize(tok->key) != PK_BYTES) {
     log_warn(LD_DIR, "Wrong size on identity key: %d bits!",
            (int)crypto_pk_keysize(tok->key)*8);
@@ -1006,10 +999,8 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
-    log_warn(LD_DIR, "Missing router signature");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE);
+  tor_assert(tok);
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
     log_warn(LD_DIR, "Bad object type or length on router signature");
     goto err;
@@ -1121,10 +1112,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_warn(LD_DIR,"No published time on \"extra-info\"");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_PUBLISHED);
+  tor_assert(tok);
   if (parse_iso_time(tok->args[0], &extrainfo->cache_info.published_on)) {
     log_warn(LD_DIR,"Invalid published time %s on \"extra-info\"",
              escaped(tok->args[0]));
@@ -1137,10 +1126,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     key = router->identity_pkey;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE))) {
-    log_warn(LD_DIR, "Missing router signature");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE);
+  tor_assert(tok);
   if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
     log_warn(LD_DIR, "Bad object type or length on router signature");
     goto err;
@@ -1214,10 +1201,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
     log_warn(LD_DIR, "Impossibly short router status");
     goto err;
   }
-  if (!(tok = find_first_by_keyword(tokens, K_R))) {
-    log_warn(LD_DIR, "Missing 'r' keywork in router status; skipping.");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_R);
+  tor_assert(tok);
   if (tok->n_args < 8) {
     log_warn(LD_DIR,
          "Too few arguments to 'r' keywork in router status; skipping.");
@@ -1362,15 +1347,11 @@ networkstatus_parse_from_string(const char *s)
   ns = tor_malloc_zero(sizeof(networkstatus_t));
   memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
-  if (!(tok = find_first_by_keyword(tokens, K_NETWORK_STATUS_VERSION))) {
-    log_warn(LD_DIR, "Couldn't find network-status-version keyword");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_NETWORK_STATUS_VERSION);
+  tor_assert(tok);
 
-  if (!(tok = find_first_by_keyword(tokens, K_DIR_SOURCE))) {
-    log_warn(LD_DIR, "Couldn't find dir-source keyword");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_DIR_SOURCE);
+  tor_assert(tok);
   if (tok->n_args < 3) {
     log_warn(LD_DIR, "Too few arguments to dir-source keyword");
     goto err;
@@ -1389,10 +1370,8 @@ networkstatus_parse_from_string(const char *s)
     goto err;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_FINGERPRINT))) {
-    log_warn(LD_DIR, "Couldn't find fingerprint keyword");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_FINGERPRINT);
+  tor_assert(tok);
   if (tok->n_args < 1) {
     log_warn(LD_DIR, "Too few arguments to networkstatus fingerprint");
     goto err;
@@ -1409,10 +1388,8 @@ networkstatus_parse_from_string(const char *s)
     tok->args[0] = NULL;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY)) || !tok->key) {
-    log_warn(LD_DIR, "Missing dir-signing-key");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY);
+  tor_assert(tok && tok->key);
   ns->signing_key = tok->key;
   tok->key = NULL;
 
@@ -1456,10 +1433,8 @@ networkstatus_parse_from_string(const char *s)
     tok->args[0] = NULL;
   }
 
-  if (!(tok = find_first_by_keyword(tokens, K_PUBLISHED))) {
-    log_warn(LD_DIR, "Missing published time on network-status.");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_PUBLISHED);
+  tor_assert(tok);
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &ns->published_on) < 0) {
      goto err;
