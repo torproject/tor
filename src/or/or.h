@@ -3084,6 +3084,7 @@ typedef struct tor_version_t {
   enum { VER_PRE=0, VER_RC=1, VER_RELEASE=2, } status;
   int patchlevel;
   char status_tag[MAX_STATUS_TAG_LEN];
+  int svn_revision;
 } tor_version_t;
 
 typedef enum version_status_t {

@@ -1947,7 +1947,7 @@ int
 tor_version_as_new_as(const char *platform, const char *cutoff)
 {
   tor_version_t cutoff_version, router_version;
-  char *s, *start;
+  char *s, *s2, *start;
   char tmp[128];
 
   tor_assert(platform);
@@ -1962,6 +1962,10 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
   start = (char *)eat_whitespace(platform+3);
   if (!*start) return 0;
   s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
+  s2 = (char*)eat_whitespace(s);
+  if (!strcmpstart(s2, "(r"))
+    s = (char*)find_whitespace(s2);
+
   if ((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
     return 0;
   strlcpy(tmp, start, s-start+1);
@@ -1971,6 +1975,15 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
     return 1; /* be safe and say yes */
   }
 
+  /* Here's why we don't need to do any special handling for svn revisions:
+   * - If neither has an svn revision, we're fine.
+   * - If the router doesn't have an svn revision, we can't assume that it
+   *   is "at least" any svn revision, so we need to return 0.
+   * - If the target version doesn't have an svn revision, any svn revision
+   *   (or none at all) is good enough, so return 1.
+   * - If both target and router have an svn revision, we compare them.
+   */
+
   return tor_version_compare(&router_version, &cutoff_version) >= 0;
 }
 
@@ -1979,7 +1992,8 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
 int
 tor_version_parse(const char *s, tor_version_t *out)
 {
-  char *eos=NULL, *cp=NULL;
+  char *eos=NULL;
+  const char *cp=NULL;
   /* Format is:
    *   "Tor " ? NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ - tag ] ]
    */
@@ -2033,7 +2047,19 @@ tor_version_parse(const char *s, tor_version_t *out)
   /* Get status tag. */
   if (*cp == '-' || *cp == '.')
     ++cp;
-  strlcpy(out->status_tag, cp, sizeof(out->status_tag));
+  eos = (char*) find_whitespace(cp);
+  if (eos-cp >= (int)sizeof(out->status_tag))
+    strlcpy(out->status_tag, cp, sizeof(out->status_tag));
+  else {
+    memcpy(out->status_tag, cp, eos-cp);
+    out->status_tag[eos-cp] = 0;
+  }
+  cp = eat_whitespace(eos);
+
+  if (!strcmpstart(cp, "(r")) {
+    cp += 2;
+    out->svn_revision = strtol(cp,&eos,10);
+  }
 
   return 0;
 }
@@ -2056,8 +2082,10 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
     return i;
   else if ((i = a->patchlevel - b->patchlevel))
     return i;
-
-  return strcmp(a->status_tag, b->status_tag);
+  else if ((i = strcmp(a->status_tag, b->status_tag)))
+    return i;
+  else
+    return a->svn_revision - b->svn_revision;
 }
 
 /** Return true iff versions <b>a</b> and <b>b</b> belong to the same series.

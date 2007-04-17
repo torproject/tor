@@ -1918,6 +1918,21 @@ test_dir_format(void)
           "Tor 0.0.8 on Darwin 64-121-192-100.c3-0."
           "sfpo-ubr1.sfrn-sfpo.ca.cable.rcn.com Power Macintosh", "0.0.8.2"));
 
+  /* Now try svn revisions. */
+  test_eq(1, tor_version_as_new_as("Tor 0.2.1.0-dev (r100)",
+                                   "Tor 0.2.1.0-dev (r99)"));
+  test_eq(1, tor_version_as_new_as("Tor 0.2.1.0-dev (r100) on Banana Jr",
+                                   "Tor 0.2.1.0-dev (r99) on Hal 9000"));
+  test_eq(1, tor_version_as_new_as("Tor 0.2.1.0-dev (r100)",
+                                   "Tor 0.2.1.0-dev on Colossus"));
+  test_eq(0, tor_version_as_new_as("Tor 0.2.1.0-dev (r99)",
+                                   "Tor 0.2.1.0-dev (r100)"));
+  test_eq(0, tor_version_as_new_as("Tor 0.2.1.0-dev (r99) on MCP",
+                                   "Tor 0.2.1.0-dev (r100) on AM"));
+  test_eq(0, tor_version_as_new_as("Tor 0.2.1.0-dev",
+                                   "Tor 0.2.1.0-dev (r99)"));
+  test_eq(1, tor_version_as_new_as("Tor 0.2.1.1",
+                                   "Tor 0.2.1.0-dev (r99)"));
 }
 
 static void
