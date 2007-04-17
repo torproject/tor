@@ -37,6 +37,28 @@ micro-revision.i: FORCE
 	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.i \
 	     || true; \
 	fi;							\
+	if test ! -f micro-revision.i -a x`which svk` != x; then\
+          location=../..;                                       \
+          rev=x;                                                \
+          while test x$$rev = xx; do                             \
+            x=`svk info $$location |                             \
+              sed -n 's/^Mirrored From:.*, Rev\. \([0-9][0-9]*\)/\1/p'`; \
+            if test x$$x != x; then                              \
+              rev=$$x;                                           \
+              break;                                            \
+            else                                                \
+              loc=`svk info $$location |                         \
+                sed -n 's/^Copied From: \(.*\), Rev\. [0-9][0-9]*/\1/p'`; \
+              if test x$$loc == x; then                          \
+                rev="";                                         \
+                break;                                          \
+              else                                              \
+                location=/$$loc;                                 \
+              fi;                                               \
+            fi;                                                 \
+          done;                                                 \
+          echo \"$$rev\" > micro-revision.i;                   \
+        fi;                                                     \
 	if test ! -f micro-revision.i; then			\
 	  echo '""' > micro-revision.i;				\
 	fi
