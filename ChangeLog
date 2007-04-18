@@ -23,8 +23,10 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - When warning about missing headers, tell the user to let us
       know if the compile succeeds anyway, so we can downgrade the
       warning.
-    - If we're building from a subversion checkout or an SVK mirror, include
-      the current SVN revision as part of the version string.
+    - Include the current subversion revision as part of the version
+      string: either fetch it directly if we're in an SVN checkout, do
+      some magic to guess it if we're in an SVK checkout, or use
+      the last-detected version if we're building from a .tar.gz.
 
   o Minor features (logging):
     - Always prepend "Bug: " to any log message about a bug.
