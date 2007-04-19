@@ -517,7 +517,7 @@ mp_pool_log_status(mp_pool_t *pool, int severity)
          " bytes in %d partially full chunks",
          U64_PRINTF_ARG(bu), U64_PRINTF_ARG(ba), n_used);
   bytes_used += bu;
-  bytes_allocated += bu;
+  bytes_allocated += ba;
   bu = ba = 0;
   for (chunk = pool->full_chunks; chunk; chunk = chunk->next) {
     ++n_full;
@@ -528,7 +528,7 @@ mp_pool_log_status(mp_pool_t *pool, int severity)
          " bytes in %d full chunks",
          U64_PRINTF_ARG(bu), U64_PRINTF_ARG(ba), n_full);
   bytes_used += bu;
-  bytes_allocated += bu;
+  bytes_allocated += ba;
 
   log_fn(severity, LD_MM, "Total: "U64_FORMAT"/"U64_FORMAT" bytes allocated "
          "for cell pools are full.",

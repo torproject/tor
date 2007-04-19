@@ -1478,6 +1478,9 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 #define assert_active_circuits_ok_paranoid(conn)
 #endif
 
+/** DOCDOC */
+static int total_cells_allocated = 0;
+
 #ifdef ENABLE_CELL_POOL
 static mp_pool_t *cell_pool = NULL;
 /** Allocate structures to hold cells. */
@@ -1509,6 +1512,7 @@ clean_cell_pool(void)
 static INLINE void
 packed_cell_free(packed_cell_t *cell)
 {
+  --total_cells_allocated;
   mp_pool_release(cell);
 }
 
@@ -1516,11 +1520,23 @@ packed_cell_free(packed_cell_t *cell)
 static INLINE packed_cell_t *
 packed_cell_alloc(void)
 {
+  ++total_cells_allocated;
   return mp_pool_get(cell_pool);
 }
 void
 dump_cell_pool_usage(int severity)
 {
+  circuit_t *c;
+  int n_circs = 0;
+  int n_cells = 0;
+  for (c = _circuit_get_global_list(); c; c = c->next) {
+    n_cells += c->n_conn_cells.n;
+    if (!CIRCUIT_IS_ORIGIN(c))
+      n_cells += TO_OR_CIRCUIT(c)->p_conn_cells.n;
+    ++n_circs;
+  }
+  log(severity, LD_MM, "%d cells allocated on %d circuits. %d cells leaked.",
+      n_cells, n_circs, total_cells_allocated - n_cells);
   mp_pool_log_status(cell_pool, severity);
 }
 #else
@@ -1544,12 +1560,14 @@ clean_cell_pool(void)
 static INLINE void
 packed_cell_free(packed_cell_t *cell)
 {
+  --total_cells_allocated;
   tor_free(cell);
 }
 
 static INLINE packed_cell_t *
 packed_cell_alloc(void)
 {
+  ++total_cells_allocated;
   return tor_malloc(sizeof(packed_cell_t));
 }
 void
