@@ -1518,6 +1518,11 @@ packed_cell_alloc(void)
 {
   return mp_pool_get(cell_pool);
 }
+void
+dump_cell_pool_usage(int severity)
+{
+  mp_pool_log_status(cell_pool, severity);
+}
 #else
 /* ENABLE_CELL_POOL isn't defined: here are some stubs to use tor_malloc()
  * and tor_free() instead. */
@@ -1546,6 +1551,11 @@ static INLINE packed_cell_t *
 packed_cell_alloc(void)
 {
   return tor_malloc(sizeof(packed_cell_t));
+}
+void
+dump_cell_pool_usage(int severity)
+{
+  (void) severity;
 }
 #endif
 

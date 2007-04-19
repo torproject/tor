@@ -2698,6 +2698,7 @@ extern uint64_t stats_n_data_bytes_received;
 void init_cell_pool(void);
 void free_cell_pool(void);
 void clean_cell_pool(void);
+void dump_cell_pool_usage(int severity);
 
 void cell_queue_clear(cell_queue_t *queue);
 void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);

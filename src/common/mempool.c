@@ -72,6 +72,7 @@
 #define FREE(x) tor_free(x)
 #define ASSERT(x) tor_assert(x)
 #undef ALLOC_CAN_RETURN_NULL
+#define TOR
 /* End Tor dependencies */
 #else
 /* If you're not building this as part of Tor, you'll want to define the
@@ -487,4 +488,51 @@ mp_pool_assert_ok(mp_pool_t *pool)
 
   ASSERT(pool->n_empty_chunks == n_empty);
 }
+
+#ifdef TOR
+/*FFFF uses Tor logging functions. */
+/**DOCDOC*/
+void
+mp_pool_log_status(mp_pool_t *pool, int severity)
+{
+  uint64_t bytes_used = 0;
+  uint64_t bytes_allocated = 0;
+  uint64_t bu = 0, ba = 0;
+  mp_chunk_t *chunk;
+  int n_full = 0, n_used = 0;
+
+  ASSERT(pool);
+
+  for (chunk = pool->empty_chunks; chunk; chunk = chunk->next) {
+    bytes_allocated += chunk->mem_size;
+  }
+  log_fn(severity, LD_MM, U64_FORMAT" bytes in %d empty chunks",
+         U64_PRINTF_ARG(bytes_used), pool->n_empty_chunks);
+  for (chunk = pool->used_chunks; chunk; chunk = chunk->next) {
+    ++n_used;
+    bu += chunk->n_allocated * pool->item_alloc_size;
+    ba += chunk->mem_size;
+  }
+  log_fn(severity, LD_MM, U64_FORMAT"/"U64_FORMAT
+         " bytes in %d partially full chunks",
+         U64_PRINTF_ARG(bu), U64_PRINTF_ARG(ba), n_used);
+  bytes_used += bu;
+  bytes_allocated += bu;
+  bu = ba = 0;
+  for (chunk = pool->full_chunks; chunk; chunk = chunk->next) {
+    ++n_full;
+    bu += chunk->n_allocated * pool->item_alloc_size;
+    ba += chunk->mem_size;
+  }
+  log_fn(severity, LD_MM, U64_FORMAT"/"U64_FORMAT
+         " bytes in %d full chunks",
+         U64_PRINTF_ARG(bu), U64_PRINTF_ARG(ba), n_full);
+  bytes_used += bu;
+  bytes_allocated += bu;
+
+  log_fn(severity, LD_MM, "Total: "U64_FORMAT"/"U64_FORMAT" bytes allocated "
+         "for cell pools are full.",
+         U64_PRINTF_ARG(bytes_used), U64_PRINTF_ARG(bytes_allocated));
+}
+#endif
 
