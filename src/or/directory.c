@@ -1685,6 +1685,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
   if (!strcmpstart(url,"/tor/server/") ||
       !strcmpstart(url,"/tor/extra/")) {
+    char *url_mem = url;
     size_t url_len = strlen(url);
     int deflated = !strcmp(url+url_len-2, ".z");
     int res;
@@ -1724,7 +1725,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     else
       conn->dir_spool_src =
         is_extra ? DIR_SPOOL_EXTRA_BY_FP : DIR_SPOOL_SERVER_BY_FP;
-    tor_free(url);
+    tor_free(url_mem);
     if (res < 0)
       write_http_status_line(conn, 404, msg);
     else {
