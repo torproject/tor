@@ -23,17 +23,17 @@ Spec changes:
 
    Replace the current rule for setting the Stable flag with:
 
-   "Stable" -- A router is 'Stable' if it is active and its observed MTBF
-   for the past month is at or above the median MTBF for active routers.
+   "Stable" -- A router is 'Stable' if it is active and its observed Stability
+   for the past month is at or above the median Stability for active routers.
    Routers are never called stable if they are running a version of Tor
    known to drop circuits stupidly. (0.1.1.10-alpha through 0.1.1.16-rc
    are stupid this way.)
 
-   MTBF shall be defined as the mean length of the runs observed by a
+   Stability shall be defined as the mean length of the runs observed by a
    given directory authority.  A run begins when an authority decides
    that the server is Running, and ends when the authority decides that
    the server is not Running.  In-progress runs are counted when
-   measuring MTBF.
+   measuring Stability.
 
 Issues:
 
@@ -44,3 +44,18 @@ Issues:
 
    Surely somebody has done this kinds of thing before.
 
+Alternative:
+
+   "A router's Stability shall be defined as the sum of $alpha ^ d$ for every
+   $d$ such that the router was not observed to be unavailable $d$ days ago."
+
+   This allows a simpler implementation: every day, we multiply yesterday's
+   Stability by alpha, and if the router was running for all of today, we add
+   1.
+
+Limitations:
+
+   Authorities can have false positives and false negatives when trying to
+   tell whether a router is up or down.  So long as these aren't terribly
+   wrong, and so long as they aren't significantly biased, we should be able
+   to use them to estimate stability pretty well.
