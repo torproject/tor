@@ -79,6 +79,10 @@ Things we'd like to do in 0.2.0.x:
       - Implement option to download and cache extra-info documents.
       - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol (finalize by Jun 1)
+    - 108: Base "Stable" Flag on Mean Time Between Failures
+    - 109: No more than one server per IP address
+    - 103: Splitting identity key from regularly used signing key
+    - 113: Simplifying directory authority administration
   - Refactoring:
     - Make resolves no longer use edge_connection_t unless they are actually
       _on_ on a socks connection: have edge_connection_t and (say)
@@ -104,7 +108,9 @@ Things we'd like to do in 0.2.0.x:
         o Document it.
         o Do something smart with freeing unused chunks.
         - Benchmark pool-allocation vs straightforward malloc.
-      - Can we stop doing so many memcpys on cells?
+        - Adjust memory allocation logic in pools to favor a little less
+          slack memory.
+      D Can we stop doing so many memcpys on cells?
       o Also, only package data from exitconns when there is space on the
         target OR conn's outbuf?  or when the circuit is not too full.
       - MAYBE kill stalled circuits rather than stalled connections; consider
@@ -136,7 +142,7 @@ Things we'd like to do in 0.2.0.x:
         o Actually create and use linked connections.
         - Handle rate-limiting on directory writes to linked directory
           connections in a more sensible manner.
-        - Rename want_to_read and want_to_write; they're actually about
+        o Rename want_to_read and want_to_write; they're actually about
           being blocked, not about wanting to read/write.
         - Find more ways to test this.
     D Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
