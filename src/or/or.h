@@ -801,9 +801,14 @@ typedef struct connection_t {
   struct connection_t *linked_conn;
   /* XXXX020 NM move these up to the other 1-bit flags. */
   unsigned int linked:1; /**< True if there is, or has been, a linked_conn. */
-  unsigned int reading_from_linked_conn:1; /**DOCDOC*/
-  unsigned int writing_to_linked_conn:1; /**DOCDOC*/
-  unsigned int active_on_link:1; /**DOCDOC*/
+  /** True iff we'd like to be notified about read events from the linked conn.
+   */
+  unsigned int reading_from_linked_conn:1;
+  /** True iff we're willing  to write to the linked conn. */
+  unsigned int writing_to_linked_conn:1;
+  /** True iff we're currently able to read on the linked conn, and our
+   * read_event should be made active with libevent. */
+  unsigned int active_on_link:1;
 
 } connection_t;
 
@@ -1132,11 +1137,16 @@ typedef struct {
   int routerlist_index;
 } routerinfo_t;
 
-/** DOCDOC */
+/** Information needed to keep and cache a signed extra-info document. */
 typedef struct extrainfo_t {
   signed_descriptor_t cache_info;
+  /** The router's nickname. */
   char nickname[MAX_NICKNAME_LEN+1];
+  /** True iff we found the right key for this extra-info, verified the
+   * signature, and found it to be bad. */
   unsigned int bad_sig : 1;
+  /** If present, we didn't have the right key to verify this extra-info,
+   * so this is a copy of the signature in the document. */
   char *pending_sig;
 } extrainfo_t;
 
