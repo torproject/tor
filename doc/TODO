@@ -100,8 +100,22 @@ Things we'd like to do in 0.2.0.x:
       "who can change what" in local_routerstatus explicit.  Make
       local_routerstatus (or equivalent) subsume all places to go for "what
       router is this?"
-    - Remove socketpair-based bridges conns, and the word "bridge".  (Use
+    . Remove socketpair-based bridges conns, and the word "bridge".  (Use
       shared (or connected) buffers for communication, rather than sockets.)
+      o Design
+        o Pick a term.  The term is now "linked connection."
+        o Figure out how to ensure that handle_read is always called.
+          (Use event_active; keep active events in a list; use event_once
+          to make sure that we call the event base dispatch function enough.)
+      . Implement
+        o Count connections and sockets separately
+        - Allow connections with s == -1
+        - Add a linked_conn field; it should get marked when we're marked.
+        - Add a function to move bytes from buffer to buffer.
+        - Have handle_read dtrt for linked connections
+        - Have an activate/deactivate_linked_connection function.
+        - Have activated functions added to a list on first activation, and
+          that list made active before calls to event_loop.
     - Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
       online config documentation from a single source.
     - Have clients do TLS connection rotation less often than "every 10

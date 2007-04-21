@@ -468,6 +468,48 @@ touch_file(const char *fname)
   return 0;
 }
 
+/** Count of number of sockets currently open.  (Undercounts sockets opened by
+ * eventdns and libevent.) */
+static int n_sockets_open = 0;
+
+/** As close(), but guaranteed to work for sockets across platforms (including
+ * Windows, where close()ing a socket doesn't work. */
+void
+tor_close_socket(int s)
+{
+  /* On Windows, you have to call close() on fds returned by open(),
+   * and closesocket() on fds returned by socket().  On Unix, everything
+   * gets close()'d.  We abstract this difference by always using
+   * tor_close_socket to close sockets, and always using close() on
+   * files.
+   */
+#ifdef USE_BSOCKETS
+  bclose(s);
+#elif defined(MS_WINDOWS)
+  closesocket(s);
+#else
+  close(s);
+#endif
+  --n_sockets_open;
+}
+
+/** As socket(), but counts the number of open sockets. */
+int
+tor_open_socket(int domain, int type, int protocol)
+{
+  int s = socket(domain, type, protocol);
+  if (s >= 0)
+    ++n_sockets_open;
+  return s;
+}
+
+/** Return the number of sockets we currently have opened. */
+int
+get_n_open_sockets(void)
+{
+  return n_sockets_open;
+}
+
 /** Turn <b>socket</b> into a nonblocking socket.
  */
 void
@@ -537,7 +579,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
       return -EINVAL;
     }
 
-    listener = socket(AF_INET, type, 0);
+    listener = tor_open_socket(AF_INET, type, 0);
     if (listener < 0)
       return -tor_socket_errno(-1);
     memset(&listen_addr, 0, sizeof(listen_addr));
@@ -550,7 +592,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     if (listen(listener, 1) == -1)
       goto tidy_up_and_fail;
 
-    connector = socket(AF_INET, type, 0);
+    connector = tor_open_socket(AF_INET, type, 0);
     if (connector < 0)
       goto tidy_up_and_fail;
     /* We want to find out the port number to connect to.  */

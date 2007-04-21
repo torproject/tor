@@ -213,19 +213,10 @@ int touch_file(const char *fname);
 #endif
 
 /* ===== Net compatibility */
-#ifdef USE_BSOCKETS
-#define tor_close_socket(s) bclose(s)
-#elif defined(MS_WINDOWS)
-/** On Windows, you have to call close() on fds returned by open(),
- * and closesocket() on fds returned by socket().  On Unix, everything
- * gets close()'d.  We abstract this difference by always using
- * tor_close_socket to close sockets, and always using close() on
- * files.
- */
-#define tor_close_socket(s) closesocket(s)
-#else
-#define tor_close_socket(s) close(s)
-#endif
+
+void tor_close_socket(int s);
+int tor_open_socket(int domain, int type, int protocol);
+int get_n_open_sockets(void);
 
 #ifdef USE_BSOCKETS
 #define tor_socket_send(s, buf, len, flags) bsend(s, buf, len, flags)

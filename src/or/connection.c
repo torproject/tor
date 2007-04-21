@@ -613,7 +613,16 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
   log_notice(LD_NET, "Opening %s on %s:%d",
              conn_type_to_string(type), address, usePort);
 
-  s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
+  if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
+    int n_conns = get_n_open_sockets();
+    log_warn(LD_NET,"Failing because we have %d connections already. Please "
+             "raise your ulimit -n.", n_conns);
+    control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
+                                 n_conns);
+    return NULL;
+  }
+
+  s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
     log_warn(LD_NET,"Socket creation failed.");
     goto err;
@@ -853,7 +862,16 @@ connection_connect(connection_t *conn, const char *address,
   struct sockaddr_in dest_addr;
   or_options_t *options = get_options();
 
-  s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
+  if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
+    int n_conns = get_n_open_sockets();
+    log_warn(LD_NET,"Failing because we have %d connections already. Please "
+             "raise your ulimit -n.", n_conns);
+    control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
+                                 n_conns);
+    return -1;
+  }
+
+  s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
     log_warn(LD_NET,"Error creating network socket: %s",
              tor_socket_strerror(tor_socket_errno(-1)));

@@ -68,6 +68,7 @@ static time_t time_of_last_signewnym = 0;
 static int signewnym_is_pending = 0;
 
 /** Array of all open connections.  The first n_conns elements are valid. */
+/*XXXX020 Should we just use a smartlist here? */
 static connection_t *connection_array[MAXCONNECTIONS+1] =
         { NULL };
 /** List of connections that have been marked for close and need to be freed
@@ -156,15 +157,12 @@ connection_add(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->s >= 0);
 
-  if (n_conns >= get_options()->_ConnLimit-1) {
-    log_warn(LD_NET,"Failing because we have %d connections already. Please "
-             "raise your ulimit -n.", n_conns);
-    control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
-                                 n_conns);
+  tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
+  if (n_conns == MAXCONNECTIONS) {
+    log_warn(LD_BUG, "Unable to add a connection; MAXCONNECTIONS is set too "
+             "low.  This is a bug; tell the developers.");
     return -1;
   }
-
-  tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
   conn->conn_array_index = n_conns;
   connection_array[n_conns] = conn;
 

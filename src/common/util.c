@@ -1914,7 +1914,7 @@ get_interface_address(int severity, uint32_t *addr)
   tor_assert(addr);
   *addr = 0;
 
-  sock = socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
+  sock = tor_open_socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
   if (sock < 0) {
     int e = tor_socket_errno(-1);
     log_fn(severity, LD_NET, "unable to create socket: %s",

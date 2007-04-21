@@ -153,7 +153,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   *result_addr = 0;
   *result_hostname = NULL;
 
-  s = socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
+  s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s<0) {
     log_sock_error("creating_socket", -1);
     return -1;

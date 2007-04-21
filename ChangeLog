@@ -17,6 +17,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       in the network. Implements proposal 107, suggested by Kevin Bauer
       and Damon McCoy.
 
+  o Minor fixes (resource management):
+    - Count the number of open sockets separately from the number of active
+      connection_t objects.  This will let us avoid underusing our
+      allocated connection limit.
+
   o Minor features (build):
     - Make autoconf search for libevent, openssl, and zlib consistently.
     - Update deprecated macros in configure.in
