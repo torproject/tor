@@ -21,6 +21,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Count the number of open sockets separately from the number of active
       connection_t objects.  This will let us avoid underusing our
       allocated connection limit.
+    - We no longer use socket pairs to link an edge connection to an
+      anonymous directory connection.  Instead, we track the link
+      internally and transfer the data in-process.  This saves two
+      sockets per anonymous directory connection (at the client and at
+      the server), and avoids the nasty Windows socketpair() workaround.
 
   o Minor features (build):
     - Make autoconf search for libevent, openssl, and zlib consistently.

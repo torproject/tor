@@ -113,6 +113,7 @@ conn_state_to_string(int type, int state)
         case DIR_CONN_STATE_CONNECTING: return "connecting";
         case DIR_CONN_STATE_CLIENT_SENDING: return "client sending";
         case DIR_CONN_STATE_CLIENT_READING: return "client reading";
+        case DIR_CONN_STATE_CLIENT_FINISHED: return "client finished";
         case DIR_CONN_STATE_SERVER_COMMAND_WAIT: return "waiting for command";
         case DIR_CONN_STATE_SERVER_WRITING: return "writing";
       }
@@ -212,9 +213,22 @@ connection_new(int type)
   return conn;
 }
 
+/** Create a link between <b>conn_a</b> and <b>conn_b</b> */
+void
+connection_link_connections(connection_t *conn_a, connection_t *conn_b)
+{
+  tor_assert(conn_a->s < 0);
+  tor_assert(conn_b->s < 0);
+
+  conn_a->linked = 1;
+  conn_b->linked = 1;
+  conn_a->linked_conn = conn_b;
+  conn_b->linked_conn = conn_a;
+}
+
 /** Tell libevent that we don't care about <b>conn</b> any more. */
 void
-connection_unregister(connection_t *conn)
+connection_unregister_events(connection_t *conn)
 {
   if (conn->read_event) {
     if (event_del(conn->read_event))
@@ -258,6 +272,17 @@ _connection_free(connection_t *conn)
       tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
       mem = conn;
       break;
+  }
+
+  if (conn->linked) {
+    int severity = buf_datalen(conn->inbuf)+buf_datalen(conn->outbuf)
+      ? LOG_NOTICE : LOG_INFO;
+    log_fn(severity, LD_GENERAL, "Freeing linked %s connection [%s] with %d "
+           "bytes on inbuf, %d on outbuf.",
+           conn_type_to_string(conn->type),
+           conn_state_to_string(conn->type, conn->state),
+           (int)buf_datalen(conn->inbuf), (int)buf_datalen(conn->outbuf));
+    // tor_assert(!buf_datalen(conn->outbuf)); /*XXXX020 remove me.*/
   }
 
   if (!connection_is_listener(conn)) {
@@ -325,6 +350,15 @@ connection_free(connection_t *conn)
   tor_assert(conn);
   tor_assert(!connection_is_on_closeable_list(conn));
   tor_assert(!connection_in_array(conn));
+  if (conn->linked_conn) {
+    log_err(LD_BUG, "Called with conn->linked_conn still set.");
+    tor_fragile_assert();
+    conn->linked_conn->linked_conn = NULL;
+    if (! conn->linked_conn->marked_for_close &&
+        conn->linked_conn->reading_from_linked_conn)
+      connection_start_reading(conn->linked_conn);
+    conn->linked_conn = NULL;
+  }
   if (connection_speaks_cells(conn)) {
     if (conn->state == OR_CONN_STATE_OPEN)
       directory_set_dirty();
@@ -336,7 +370,7 @@ connection_free(connection_t *conn)
     TO_CONTROL_CONN(conn)->event_mask = 0;
     control_update_global_event_mask();
   }
-  connection_unregister(conn);
+  connection_unregister_events(conn);
   _connection_free(conn);
 }
 
@@ -486,7 +520,7 @@ void
 connection_close_immediate(connection_t *conn)
 {
   assert_connection_ok(conn,0);
-  if (conn->s < 0) {
+  if (conn->s < 0 && !conn->linked) {
     log_err(LD_BUG,"Attempt to close already-closed connection.");
     tor_fragile_assert();
     return;
@@ -498,9 +532,10 @@ connection_close_immediate(connection_t *conn)
              (int)conn->outbuf_flushlen);
   }
 
-  connection_unregister(conn);
+  connection_unregister_events(conn);
 
-  tor_close_socket(conn->s);
+  if (conn->s >= 0)
+    tor_close_socket(conn->s);
   conn->s = -1;
   if (!connection_is_listener(conn)) {
     buf_clear(conn->outbuf);
@@ -528,6 +563,12 @@ _connection_mark_for_close(connection_t *conn, int line, const char *file)
   conn->marked_for_close = line;
   conn->marked_for_close_file = file;
   add_connection_to_closeable_list(conn);
+
+#if 0
+  /* XXXX020 Actually, I don't think this is right. */
+  if (conn->linked_conn && !conn->linked_conn->marked_for_close)
+    _connection_mark_for_close(conn->linked_conn, line, file);
+#endif
 
   /* in case we're going to be held-open-til-flushed, reset
    * the number of seconds since last successful write, so
@@ -1101,11 +1142,14 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
 
 /** Return 1 if we should apply rate limiting to <b>conn</b>,
  * and 0 otherwise. Right now this just checks if it's an internal
- * IP address. */
+ * IP address or an internal connection. */
 static int
 connection_is_rate_limited(connection_t *conn)
 {
-  return !is_internal_IP(conn->addr, 0);
+  if (conn->linked || is_internal_IP(conn->addr, 0))
+    return 0;
+  else
+    return 1;
 }
 
 extern int global_read_bucket, global_write_bucket;
@@ -1483,6 +1527,7 @@ int
 connection_handle_read(connection_t *conn)
 {
   int max_to_read=-1, try_to_read;
+  size_t before, n_read = 0;
 
   if (conn->marked_for_close)
     return 0; /* do nothing */
@@ -1505,6 +1550,8 @@ connection_handle_read(connection_t *conn)
 loop_again:
   try_to_read = max_to_read;
   tor_assert(!conn->marked_for_close);
+
+  before = buf_datalen(conn->inbuf);
   if (connection_read_to_buf(conn, &max_to_read) < 0) {
     /* There's a read error; kill the connection.*/
     connection_close_immediate(conn); /* Don't flush; connection is dead. */
@@ -1517,6 +1564,7 @@ loop_again:
     connection_mark_for_close(conn);
     return -1;
   }
+  n_read += buf_datalen(conn->inbuf) - before;
   if (CONN_IS_EDGE(conn) && try_to_read != max_to_read) {
     /* instruct it not to try to package partial cells. */
     if (connection_process_inbuf(conn, 0) < 0) {
@@ -1533,6 +1581,27 @@ loop_again:
       connection_process_inbuf(conn, 1) < 0) {
     return -1;
   }
+  if (conn->linked_conn) {
+    /* The other side's handle_write will never actually get called, so
+     * we need to invoke the appropriate callbacks ourself. */
+    connection_t *linked = conn->linked_conn;
+    /* XXXX020 Do we need to ensure that this stuff is called even if
+     * conn dies in a way that causes us to return -1 earlier? */
+
+    if (n_read) {
+      /* Probably a no-op, but hey. */
+      connection_buckets_decrement(linked, time(NULL), 0, n_read);
+
+      if (connection_flushed_some(linked) < 0)
+        connection_mark_for_close(linked);
+      if (!connection_wants_to_flush(linked))
+        connection_finished_flushing(linked);
+    }
+
+    if (!buf_datalen(linked->outbuf) && conn->active_on_link)
+      connection_stop_reading_from_linked_conn(conn);
+  }
+  /* If we hit the EOF, call connection_reached_eof. */
   if (!conn->marked_for_close &&
       conn->inbuf_reached_eof &&
       connection_reached_eof(conn) < 0) {
@@ -1541,9 +1610,9 @@ loop_again:
   return 0;
 }
 
-/** Pull in new bytes from conn-\>s onto conn-\>inbuf, either
- * directly or via TLS. Reduce the token buckets by the number of
- * bytes read.
+/** Pull in new bytes from conn-\>s or conn-\>linked_conn onto conn-\>inbuf,
+ * either directly or via TLS. Reduce the token buckets by the number of bytes
+ * read.
  *
  * If *max_to_read is -1, then decide it ourselves, else go with the
  * value passed to us. When returning, if it's changed, subtract the
@@ -1633,7 +1702,24 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     tor_tls_get_n_raw_bytes(or_conn->tls, &n_read, &n_written);
     log_debug(LD_GENERAL, "After TLS read of %d: %ld read, %ld written",
               result, (long)n_read, (long)n_written);
+  } else if (conn->linked) {
+    if (conn->linked_conn) {
+      result = move_buf_to_buf(conn->inbuf, conn->linked_conn->outbuf,
+                               &conn->linked_conn->outbuf_flushlen);
+    } else {
+      result = 0;
+    }
+    //log_notice(LD_GENERAL, "Moved %d bytes on an internal link!", result);
+    /* If the other side has disappeared, or if it's been marked for close and
+     * we flushed its outbuf, then we should set our inbuf_reached_eof. */
+    if (!conn->linked_conn ||
+        (conn->linked_conn->marked_for_close &&
+         buf_datalen(conn->linked_conn->outbuf) == 0))
+      conn->inbuf_reached_eof = 1;
+
+    n_read = (size_t) result;
   } else {
+    /* !connection_speaks_cells, !conn->linked_conn. */
     int reached_eof = 0;
     CONN_LOG_PROTECT(conn,
         result = read_to_buf(conn->s, at_most, conn->inbuf, &reached_eof));
@@ -1687,7 +1773,7 @@ connection_fetch_from_buf(char *string, size_t len, connection_t *conn)
 int
 connection_wants_to_flush(connection_t *conn)
 {
-  return conn->outbuf_flushlen;
+  return conn->outbuf_flushlen > 0;
 }
 
 /** Are there too many bytes on edge connection <b>conn</b>'s outbuf to
@@ -2203,6 +2289,19 @@ connection_state_is_connecting(connection_t *conn)
   return 0;
 }
 
+/** DOCDOC */
+int
+connection_should_read_from_linked_conn(connection_t *conn)
+{
+  if (conn->linked && conn->reading_from_linked_conn) {
+    if (! conn->linked_conn ||
+        (conn->linked_conn->writing_to_linked_conn &&
+         buf_datalen(conn->linked_conn->outbuf)))
+      return 1;
+  }
+  return 0;
+}
+
 /** Allocates a base64'ed authenticator for use in http or https
  * auth, based on the input string <b>authenticator</b>. Returns it
  * if success, else returns NULL. */
@@ -2432,6 +2531,13 @@ assert_connection_ok(connection_t *conn, time_t now)
       tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
       break;
   }
+
+  if (conn->linked_conn) {
+    tor_assert(conn->linked_conn->linked_conn == conn);
+    tor_assert(conn->linked != 0);
+  }
+  if (conn->linked)
+    tor_assert(conn->s < 0);
 
   if (conn->outbuf_flushlen > 0) {
     tor_assert(connection_is_writing(conn) || conn->wants_to_write ||

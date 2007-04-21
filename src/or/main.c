@@ -74,6 +74,10 @@ static connection_t *connection_array[MAXCONNECTIONS+1] =
 /** List of connections that have been marked for close and need to be freed
  * and removed from connection_array. */
 static smartlist_t *closeable_connection_lst = NULL;
+/** DOCDOC */
+static smartlist_t *active_linked_connection_lst = NULL;
+/** DOCDOC */
+static int called_loop_once = 0;
 
 static int n_conns=0; /**< Number of connections currently active. */
 
@@ -155,7 +159,7 @@ int
 connection_add(connection_t *conn)
 {
   tor_assert(conn);
-  tor_assert(conn->s >= 0);
+  tor_assert(conn->s >= 0 || conn->linked);
 
   tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
   if (n_conns == MAXCONNECTIONS) {
@@ -198,12 +202,11 @@ connection_remove(connection_t *conn)
 
   tor_assert(conn->conn_array_index >= 0);
   current_index = conn->conn_array_index;
+  connection_unregister_events(conn); /* This is redundant, but cheap. */
   if (current_index == n_conns-1) { /* this is the end */
     n_conns--;
     return 0;
   }
-
-  connection_unregister(conn);
 
   /* replace this one with the one at the end */
   n_conns--;
@@ -213,23 +216,31 @@ connection_remove(connection_t *conn)
   return 0;
 }
 
-/** If it's an edge conn, remove it from the list
+/** If <b>conn</b> is an edge conn, remove it from the list
  * of conn's on this circuit. If it's not on an edge,
  * flush and send destroys for all circuits on this conn.
  *
- * If <b>remove</b> is non-zero, then remove it from the
- * connection_array and closeable_connection_lst.
+ * Remove it from connection_array (if applicable) and
+ * from closeable_connection_list.
  *
  * Then free it.
  */
 static void
-connection_unlink(connection_t *conn, int remove)
+connection_unlink(connection_t *conn)
 {
   connection_about_to_close_connection(conn);
-  if (remove) {
+  if (conn->conn_array_index >= 0) {
     connection_remove(conn);
   }
+  if (conn->linked_conn) {
+    conn->linked_conn->linked_conn = NULL;
+    if (! conn->linked_conn->marked_for_close &&
+        conn->linked_conn->reading_from_linked_conn)
+      connection_start_reading(conn->linked_conn);
+    conn->linked_conn = NULL;
+  }
   smartlist_remove(closeable_connection_lst, conn);
+  smartlist_remove(active_linked_connection_lst, conn);
   if (conn->type == CONN_TYPE_EXIT) {
     assert_connection_edge_not_dns_pending(TO_EDGE_CONN(conn));
   }
@@ -286,16 +297,23 @@ get_connection_array(connection_t ***array, int *n)
 void
 connection_watch_events(connection_t *conn, short events)
 {
-  int r;
+  int r = 0;
 
   tor_assert(conn);
   tor_assert(conn->read_event);
   tor_assert(conn->write_event);
 
-  if (events & EV_READ) {
-    r = event_add(conn->read_event, NULL);
+  if (conn->linked) {
+    if (events & EV_READ)
+      connection_start_reading(conn);
+    else
+      connection_stop_reading(conn);
   } else {
-    r = event_del(conn->read_event);
+    if (events & EV_READ) {
+      r = event_add(conn->read_event, NULL);
+    } else {
+      r = event_del(conn->read_event);
+    }
   }
 
   if (r<0)
@@ -305,10 +323,17 @@ connection_watch_events(connection_t *conn, short events)
              conn->s, (events & EV_READ)?"":"un",
              tor_socket_strerror(tor_socket_errno(conn->s)));
 
-  if (events & EV_WRITE) {
-    r = event_add(conn->write_event, NULL);
+  if (conn->linked) {
+    if (events & EV_WRITE)
+      connection_start_writing(conn);
+    else
+      connection_stop_writing(conn);
   } else {
-    r = event_del(conn->write_event);
+    if (events & EV_WRITE) {
+      r = event_add(conn->write_event, NULL);
+    } else {
+      r = event_del(conn->write_event);
+    }
   }
 
   if (r<0)
@@ -325,7 +350,8 @@ connection_is_reading(connection_t *conn)
 {
   tor_assert(conn);
 
-  return conn->read_event && event_pending(conn->read_event, EV_READ, NULL);
+  return conn->reading_from_linked_conn ||
+    (conn->read_event && event_pending(conn->read_event, EV_READ, NULL));
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any read events. */
@@ -335,12 +361,16 @@ connection_stop_reading(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->read_event);
 
-  log_debug(LD_NET,"entering.");
-  if (event_del(conn->read_event))
-    log_warn(LD_NET, "Error from libevent setting read event state for %d "
-             "to unwatched: %s",
-             conn->s,
-             tor_socket_strerror(tor_socket_errno(conn->s)));
+  if (conn->linked) {
+    conn->reading_from_linked_conn = 0;
+    connection_stop_reading_from_linked_conn(conn);
+  } else {
+    if (event_del(conn->read_event))
+      log_warn(LD_NET, "Error from libevent setting read event state for %d "
+               "to unwatched: %s",
+               conn->s,
+               tor_socket_strerror(tor_socket_errno(conn->s)));
+  }
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any read events. */
@@ -350,11 +380,17 @@ connection_start_reading(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->read_event);
 
-  if (event_add(conn->read_event, NULL))
-    log_warn(LD_NET, "Error from libevent setting read event state for %d "
-             "to watched: %s",
-             conn->s,
-             tor_socket_strerror(tor_socket_errno(conn->s)));
+  if (conn->linked) {
+    conn->reading_from_linked_conn = 1;
+    if (connection_should_read_from_linked_conn(conn))
+      connection_start_reading_from_linked_conn(conn);
+  } else {
+    if (event_add(conn->read_event, NULL))
+      log_warn(LD_NET, "Error from libevent setting read event state for %d "
+               "to watched: %s",
+               conn->s,
+               tor_socket_strerror(tor_socket_errno(conn->s)));
+  }
 }
 
 /** Return true iff <b>conn</b> is listening for write events. */
@@ -363,7 +399,8 @@ connection_is_writing(connection_t *conn)
 {
   tor_assert(conn);
 
-  return conn->write_event && event_pending(conn->write_event, EV_WRITE, NULL);
+  return conn->writing_to_linked_conn ||
+    (conn->write_event && event_pending(conn->write_event, EV_WRITE, NULL));
 }
 
 /** Tell the main loop to stop notifying <b>conn</b> of any write events. */
@@ -373,11 +410,17 @@ connection_stop_writing(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->write_event);
 
-  if (event_del(conn->write_event))
-    log_warn(LD_NET, "Error from libevent setting write event state for %d "
-             "to unwatched: %s",
-             conn->s,
-             tor_socket_strerror(tor_socket_errno(conn->s)));
+  if (conn->linked) {
+    conn->writing_to_linked_conn = 0;
+    if (conn->linked_conn)
+      connection_stop_reading_from_linked_conn(conn->linked_conn);
+  } else {
+    if (event_del(conn->write_event))
+      log_warn(LD_NET, "Error from libevent setting write event state for %d "
+               "to unwatched: %s",
+               conn->s,
+               tor_socket_strerror(tor_socket_errno(conn->s)));
+  }
 }
 
 /** Tell the main loop to start notifying <b>conn</b> of any write events. */
@@ -387,11 +430,58 @@ connection_start_writing(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->write_event);
 
-  if (event_add(conn->write_event, NULL))
-    log_warn(LD_NET, "Error from libevent setting write event state for %d "
-             "to watched: %s",
-             conn->s,
-             tor_socket_strerror(tor_socket_errno(conn->s)));
+  if (conn->linked) {
+    conn->writing_to_linked_conn = 1;
+    if (conn->linked_conn &&
+        connection_should_read_from_linked_conn(conn->linked_conn))
+      connection_start_reading_from_linked_conn(conn->linked_conn);
+  } else {
+    if (event_add(conn->write_event, NULL))
+      log_warn(LD_NET, "Error from libevent setting write event state for %d "
+               "to watched: %s",
+               conn->s,
+               tor_socket_strerror(tor_socket_errno(conn->s)));
+  }
+}
+
+/** DOCDOC*/
+void
+connection_start_reading_from_linked_conn(connection_t *conn)
+{
+  tor_assert(conn);
+  tor_assert(conn->linked == 1);
+
+  if (!conn->active_on_link) {
+    conn->active_on_link = 1;
+    smartlist_add(active_linked_connection_lst, conn);
+    if (!called_loop_once) {
+      /* This is the first event on the list; we won't be in LOOP_ONCE mode,
+       * so we need to make sure that the event_loop() actually exits at the
+       * end of its run through the current connections and
+       * lets us activate read events for linked connections.  */
+      struct timeval tv = { 0, 0 };
+      event_loopexit(&tv);
+    }
+  } else {
+    tor_assert(smartlist_isin(active_linked_connection_lst, conn));
+  }
+}
+
+/** DOCDOC*/
+void
+connection_stop_reading_from_linked_conn(connection_t *conn)
+{
+  tor_assert(conn);
+  tor_assert(conn->linked == 1);
+
+  if (conn->active_on_link) {
+    conn->active_on_link = 0;
+    /* XXXX020 maybe we should keep an index here so we can smartlist_del
+     * cleanly. */
+    smartlist_remove(active_linked_connection_lst, conn);
+  } else {
+    tor_assert(!smartlist_isin(active_linked_connection_lst, conn));
+  }
 }
 
 /** Close all connections that have been scheduled to get closed */
@@ -402,7 +492,7 @@ close_closeable_connections(void)
   for (i = 0; i < smartlist_len(closeable_connection_lst); ) {
     connection_t *conn = smartlist_get(closeable_connection_lst, i);
     if (conn->conn_array_index < 0) {
-      connection_unlink(conn, 0); /* blow it away right now */
+      connection_unlink(conn); /* blow it away right now */
     } else {
       if (!conn_close_if_marked(conn->conn_array_index))
         ++i;
@@ -500,7 +590,7 @@ conn_close_if_marked(int i)
   assert_all_pending_dns_resolves_ok();
 
   log_debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
-  if (conn->s >= 0 && connection_wants_to_flush(conn)) {
+  if ((conn->s >= 0 || conn->linked_conn) && connection_wants_to_flush(conn)) {
     /* s == -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
     int sz = connection_bucket_write_limit(conn);
@@ -512,7 +602,21 @@ conn_close_if_marked(int i)
                conn->s, conn_type_to_string(conn->type), conn->state,
                (int)conn->outbuf_flushlen,
                 conn->marked_for_close_file, conn->marked_for_close);
-    if (connection_speaks_cells(conn)) {
+    if (conn->linked_conn) {
+      retval = move_buf_to_buf(conn->linked_conn->inbuf, conn->outbuf,
+                               &conn->outbuf_flushlen);
+      if (retval >= 0) {
+        /* The linked conn will notice that it has data when it notices that
+         * we're gone. */
+        connection_start_reading_from_linked_conn(conn->linked_conn);
+      }
+      /* XXXX020 Downgrade to debug. */
+      log_info(LD_GENERAL, "Flushed last %d bytes from a linked conn; "
+               "%d left; flushlen %d; wants-to-flush==%d", retval,
+               (int)buf_datalen(conn->outbuf),
+               (int)conn->outbuf_flushlen,
+               connection_wants_to_flush(conn));
+    } else if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
         retval = flush_buf_tls(TO_OR_CONN(conn)->tls, conn->outbuf, sz,
                                &conn->outbuf_flushlen);
@@ -553,7 +657,7 @@ conn_close_if_marked(int i)
              conn->marked_for_close);
     }
   }
-  connection_unlink(conn, 1); /* unlink, remove, free */
+  connection_unlink(conn); /* unlink, remove, free */
   return 1;
 }
 
@@ -1270,8 +1374,14 @@ do_main_loop(void)
     /* Make it easier to tell whether libevent failure is our fault or not. */
     errno = 0;
 #endif
-    /* poll until we have an event, or the second ends */
-    loop_result = event_dispatch();
+    /* All active linked conns should get their read events activated. */
+    SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
+                      event_active(conn->read_event, EV_READ, 1));
+    called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
+
+    /* poll until we have an event, or the second ends, or until we have
+     * some active linked connections to triggger events for. */
+    loop_result = event_loop(called_loop_once ? EVLOOP_ONCE : 0);
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */
     if (loop_result < 0) {
@@ -1601,6 +1711,8 @@ tor_init(int argc, char *argv[])
   time_of_process_start = time(NULL);
   if (!closeable_connection_lst)
     closeable_connection_lst = smartlist_create();
+  if (!active_linked_connection_lst)
+    active_linked_connection_lst = smartlist_create();
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
@@ -1673,6 +1785,7 @@ tor_free_all(int postfork)
   tor_tls_free_all();
   /* stuff in main.c */
   smartlist_free(closeable_connection_lst);
+  smartlist_free(active_linked_connection_lst);
   tor_free(timeout_event);
   /* Stuff in util.c */
   escaped(NULL);

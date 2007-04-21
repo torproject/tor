@@ -451,22 +451,25 @@ directory_initiate_command(const char *address, uint32_t addr,
            error indicates broken link in windowsland. */
     }
   } else { /* we want to connect via tor */
+    edge_connection_t *linked_conn;
     /* make an AP connection
      * populate it and add it at the right state
      * socketpair and hook up both sides
      */
     conn->dirconn_direct = 0;
-    conn->_base.s =
+    linked_conn =
       connection_ap_make_bridge(conn->_base.address, conn->_base.port,
                                 digest,
                                 private_connection ?
                                   SOCKS_COMMAND_CONNECT :
                                   SOCKS_COMMAND_CONNECT_DIR);
-    if (conn->_base.s < 0) {
+    if (!linked_conn) {
       log_warn(LD_NET,"Making AP bridge to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));
+      connection_mark_for_close(TO_CONN(linked_conn));
       return;
     }
+    connection_link_connections(TO_CONN(conn), TO_CONN(linked_conn));
 
     if (connection_add(TO_CONN(conn)) < 0) {
       log_warn(LD_NET,"Unable to add AP bridge to dirserver.");
@@ -478,6 +481,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     directory_send_command(conn, purpose, 0, resource,
                            payload, payload_len);
     connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
+    connection_start_reading(TO_CONN(linked_conn));
   }
 }
 
@@ -1297,7 +1301,8 @@ connection_dir_reached_eof(dir_connection_t *conn)
 {
   int retval;
   if (conn->_base.state != DIR_CONN_STATE_CLIENT_READING) {
-    log_info(LD_HTTP,"conn reached eof, not reading. Closing.");
+    log_info(LD_HTTP,"conn reached eof, not reading. [state=%d] Closing.",
+             conn->_base.state);
     connection_close_immediate(TO_CONN(conn)); /* error: give up on flushing */
     connection_mark_for_close(TO_CONN(conn));
     return -1;

@@ -1860,32 +1860,21 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
  * and call connection_ap_handshake_attach_circuit(conn) on it.
  *
  * Return the other end of the socketpair, or -1 if error.
+ *
+ * DOCDOC The above is now wrong; we use links.
+ * DOCDOC start_reading
  */
-int
+edge_connection_t *
 connection_ap_make_bridge(char *address, uint16_t port,
                           const char *digest, int command)
 {
-  int fd[2];
   edge_connection_t *conn;
-  int err;
 
-  log_info(LD_APP,"Making AP bridge to %s:%d ...",safe_str(address),port);
-
-  if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd)) < 0) {
-    log_warn(LD_NET,
-             "Couldn't construct socketpair (%s). Network down? Delaying.",
-             tor_socket_strerror(-err));
-    return -1;
-  }
-
-  tor_assert(fd[0] >= 0);
-  tor_assert(fd[1] >= 0);
-
-  set_socket_nonblocking(fd[0]);
-  set_socket_nonblocking(fd[1]);
+  log_notice(LD_APP,"Making internal anonymized tunnel to %s:%d ...",
+             safe_str(address),port); /* XXXX020 Downgrade back to info. */
 
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP));
-  conn->_base.s = fd[0];
+  conn->_base.linked = 1; /* so that we can add it safely below. */
 
   /* populate conn->socks_request */
 
@@ -1903,28 +1892,25 @@ connection_ap_make_bridge(char *address, uint16_t port,
                   digest, DIGEST_LEN);
   }
 
-  conn->_base.address = tor_strdup("(local bridge)");
+  conn->_base.address = tor_strdup("(local bridge)"); /*XXXX020 no "bridge"*/
   conn->_base.addr = 0;
   conn->_base.port = 0;
 
   if (connection_add(TO_CONN(conn)) < 0) { /* no space, forget it */
-    connection_free(TO_CONN(conn)); /* this closes fd[0] */
-    tor_close_socket(fd[1]);
-    return -1;
+    connection_free(TO_CONN(conn));
+    return NULL;
   }
 
   conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
-  connection_start_reading(TO_CONN(conn));
 
   /* attaching to a dirty circuit is fine */
   if (connection_ap_handshake_attach_circuit(conn) < 0) {
     connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
-    tor_close_socket(fd[1]);
-    return -1;
+    return NULL;
   }
 
   log_info(LD_APP,"... AP bridge created and connected.");
-  return fd[1];
+  return conn;
 }
 
 /** Send an answer to an AP connection that has requested a DNS lookup
@@ -2406,37 +2392,19 @@ connection_exit_connect(edge_connection_t *edge_conn)
  * back an end cell for).  Return -(some circuit end reason) if the circuit
  * needs to be torn down.  Either connects exit_conn, frees it, or marks it,
  * as appropriate.
+ *
+ * DOCDOC no longer uses socketpair
  */
 static int
 connection_exit_connect_dir(edge_connection_t *exit_conn)
 {
-  int fd[2];
-  int err;
   dir_connection_t *dir_conn = NULL;
 
-  log_info(LD_EXIT, "Opening dir bridge");
+  log_info(LD_EXIT, "Opening local connection for anonymized directory exit");
 
-  if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fd)) < 0) {
-    log_warn(LD_NET,
-             "Couldn't construct socketpair (%s). "
-             "Network down? Out of sockets?",
-             tor_socket_strerror(-err));
-    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT);
-    connection_free(TO_CONN(exit_conn));
-    return 0;
-  }
-
-  tor_assert(fd[0] >= 0);
-  tor_assert(fd[1] >= 0);
-
-  set_socket_nonblocking(fd[0]);
-  set_socket_nonblocking(fd[1]);
-
-  exit_conn->_base.s = fd[0];
   exit_conn->_base.state = EXIT_CONN_STATE_OPEN;
 
   dir_conn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR));
-  dir_conn->_base.s = fd[1];
 
   dir_conn->_base.addr = 0x7f000001;
   dir_conn->_base.port = 0;
@@ -2444,6 +2412,8 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
   dir_conn->_base.type = CONN_TYPE_DIR;
   dir_conn->_base.purpose = DIR_PURPOSE_SERVER;
   dir_conn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
+
+  connection_link_connections(TO_CONN(dir_conn), TO_CONN(exit_conn));
 
   if (connection_add(TO_CONN(exit_conn))<0) {
     connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT);

@@ -817,6 +817,32 @@ fetch_from_buf(char *string, size_t string_len, buf_t *buf)
   return buf->datalen;
 }
 
+/** Move up to <b>buf_flushlen</b> bytes from <b>buf_in</b> to <b>buf_out</b>.
+ * Return the number of bytes actually copied.
+ */
+int
+move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
+{
+  char b[4096];
+  size_t cp, len;
+  len = *buf_flushlen;
+  if (len > buf_in->datalen)
+    len = buf_in->datalen;
+
+  cp = len; /* Remember the number of bytes we intend to copy. */
+  while (len) {
+    /* This isn't the most efficient implementation one could imagine, since
+     * it does two copies instead of 1, but I kinda doubt that this will be
+     * critical path. */
+    size_t n = len > sizeof(b) ? sizeof(b) : len;
+    fetch_from_buf(b, n, buf_in);
+    write_to_buf(b, n, buf_out);
+    len -= n;
+  }
+  *buf_flushlen -= cp;
+  return cp;
+}
+
 /** There is a (possibly incomplete) http statement on <b>buf</b>, of the
  * form "\%s\\r\\n\\r\\n\%s", headers, body. (body may contain nuls.)
  * If a) the headers include a Content-Length field and all bytes in

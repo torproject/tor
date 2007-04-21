@@ -111,9 +111,10 @@ test_buffers(void)
   char str[256];
   char str2[256];
 
-  buf_t *buf;
+  buf_t *buf, *buf2;
 
   int j;
+  size_t r;
 
   /****
    * buf_new
@@ -218,6 +219,37 @@ test_buffers(void)
     test_memeq(str2, str, 255);
   }
 
+  /* Move from buf to buf. */
+  buf_free(buf);
+  buf = buf_new_with_capacity(4096);
+  buf2 = buf_new_with_capacity(4096);
+  for (j=0;j<100;++j)
+    write_to_buf(str, 255, buf);
+  test_eq(buf_datalen(buf), 25500);
+  for (j=0;j<100;++j) {
+    r = 10;
+    move_buf_to_buf(buf2, buf, &r);
+    test_eq(r, 0);
+  }
+  test_eq(buf_datalen(buf), 24500);
+  test_eq(buf_datalen(buf2), 1000);
+  for (j=0;j<3;++j) {
+    fetch_from_buf(str2, 255, buf2);
+    test_memeq(str2, str, 255);
+  }
+  r = 8192; /*big move*/
+  move_buf_to_buf(buf2, buf, &r);
+  test_eq(r, 0);
+  r = 30000; /* incomplete move */
+  move_buf_to_buf(buf2, buf, &r);
+  test_eq(r, 13692);
+  for (j=0;j<97;++j) {
+    fetch_from_buf(str2, 255, buf2);
+    test_memeq(str2, str, 255);
+  }
+  buf_free(buf);
+  buf_free(buf2);
+
 #if 0
   {
   int s;
@@ -285,8 +317,6 @@ test_buffers(void)
   test_eq(eof, 1);
   }
 #endif
-
-  buf_free(buf);
 }
 
 static void

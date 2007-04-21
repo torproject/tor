@@ -748,6 +748,7 @@ typedef struct connection_t {
   /* The next fields are all one-bit booleans. Some are only applicable
    * to connection subtypes, but we hold them here anyway, to save space.
    * (Currently, they all fit into a single byte.) */
+  /*XXXX020 rename wants_to_*; the names are misleading. */
   unsigned wants_to_read:1; /**< Boolean: should we start reading again once
                             * the bandwidth throttler allows it? */
   unsigned wants_to_write:1; /**< Boolean: should we start writing again once
@@ -771,7 +772,7 @@ typedef struct connection_t {
   unsigned int chosen_exit_optional:1;
 
   int s; /**< Our socket; -1 if this connection is closed, or has no
-          * sockets. */
+          * socket. */
   int conn_array_index; /**< Index into the global connection array. */
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
@@ -797,6 +798,13 @@ typedef struct connection_t {
                                       * we marked for close? */
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it. */
+  /** Annother connection that's connected to this one in lieu of a socket. */
+  struct connection_t *linked_conn;
+  /* XXXX020 NM move these up to the other 1-bit flags. */
+  unsigned int linked:1; /**< True if there is, or has been, a linked_conn. */
+  unsigned int reading_from_linked_conn:1; /**DOCDOC*/
+  unsigned int writing_to_linked_conn:1; /**DOCDOC*/
+  unsigned int active_on_link:1; /**DOCDOC*/
 
 } connection_t;
 
@@ -1967,6 +1975,7 @@ int flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen);
 int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
                       const char *data, size_t data_len, int done);
+int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
@@ -2163,7 +2172,8 @@ const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 
 connection_t *connection_new(int type);
-void connection_unregister(connection_t *conn);
+void connection_link_connections(connection_t *conn_a, connection_t *conn_b);
+void connection_unregister_events(connection_t *conn);
 void connection_free(connection_t *conn);
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
@@ -2227,6 +2237,7 @@ connection_t *connection_get_by_type_state_rendquery(int type, int state,
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 int connection_state_is_connecting(connection_t *conn);
+int connection_should_read_from_linked_conn(connection_t *conn);
 
 char *alloc_http_authenticator(const char *authenticator);
 
@@ -2252,8 +2263,8 @@ int connection_edge_finished_connecting(edge_connection_t *conn);
 int connection_ap_handshake_send_begin(edge_connection_t *ap_conn);
 int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn);
 
-int connection_ap_make_bridge(char *address, uint16_t port,
-                              const char *digest, int command);
+edge_connection_t  *connection_ap_make_bridge(char *address, uint16_t port,
+                                              const char *digest, int command);
 void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
                                          size_t replylen,
                                          int endreason);
@@ -2579,6 +2590,9 @@ void connection_start_reading(connection_t *conn);
 int connection_is_writing(connection_t *conn);
 void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
+
+void connection_stop_reading_from_linked_conn(connection_t *conn);
+void connection_start_reading_from_linked_conn(connection_t *conn);
 
 void directory_all_unreachable(time_t now);
 void directory_info_has_arrived(time_t now, int from_cache);

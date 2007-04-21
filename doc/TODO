@@ -54,6 +54,19 @@ N   . Document transport and natdport
 Things we'd like to do in 0.2.0.x:
   - Proposals:
     - 101: Voting on the Tor Directory System
+      - Prepare ASAP for new voting formats
+        - Don't flip out with warnings when voting-related URLs are
+          uploaded/downloaded.
+      - Finalize proposal
+      - Get authorities voting
+        - Implement parsing for new document formats
+        - Code to generate votes
+        - Code to generate consensus from a list of votes
+        - Add a signature to a consensus.
+        - Code to check signatures on a consensus
+        - Push/pull documents as appropriate.
+      - Start caching consensus documents once authorities make them
+      - Start downloading and using consensus documents once caches serve them
     . 104: Long and Short Router Descriptors (by Jun 1)
       . Finalize proposal
       o Implement parsing for extra-info documents
@@ -109,14 +122,24 @@ Things we'd like to do in 0.2.0.x:
           to make sure that we call the event base dispatch function enough.)
       . Implement
         o Count connections and sockets separately
-        - Allow connections with s == -1
-        - Add a linked_conn field; it should get marked when we're marked.
-        - Add a function to move bytes from buffer to buffer.
-        - Have handle_read dtrt for linked connections
-        - Have an activate/deactivate_linked_connection function.
-        - Have activated functions added to a list on first activation, and
+        . Allow connections with s == -1
+        o Add a linked_conn field; it should get marked when we're marked.
+        o Add a function to move bytes from buffer to buffer.
+        o Have read_to_buf dtrt for linked connections
+        o Have handle_read dtrt for linked connections
+        o Have an activate/deactivate_linked_connection function.
+        o Have activated connections added to a list on first activation, and
           that list made active before calls to event_loop.
-    - Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
+        o Have connections get deactivated when no more data to write on
+          linked conn outbuf.
+        o Handle closing connections properly.
+        o Actually create and use linked connections.
+        - Handle rate-limiting on directory writes to linked directory
+          connections in a more sensible manner.
+        - Rename want_to_read and want_to_write; they're actually about
+          being blocked, not about wanting to read/write.
+        - Find more ways to test this.
+    D Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
       online config documentation from a single source.
     - Have clients do TLS connection rotation less often than "every 10
       minutes" in the thrashy case, and more often than "once a week" in the
@@ -172,6 +195,8 @@ Things we'd like to do in 0.2.0.x:
     - Blocking-resistance.
     - It would be potentially helpful to https requests on the OR port by
       acting like an HTTPS server.
+    - Audit how much RAM we're using for buffers and cell pools; try to
+      trim down a lot.
   o Deprecations:
     o Remove v0 control protocol.
 P  - Packaging:
@@ -280,7 +305,7 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
 
 Minor items for 0.1.2.x as time permits:
   - include bandwidth breakdown by conn->type in BW events.
-  - Unify autoconf search code for libevent and openssl.  Make code
+  o Unify autoconf search code for libevent and openssl.  Make code
     suggest platform-appropriate "devel" / "dev" / whatever packages
     if we can link but we can't find the headers.
   - Recommend polipo? Please?
@@ -318,7 +343,7 @@ R - add d64 and fp64 along-side d and fp so people can paste status
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
     extend-data cells can be extend requests.
-    - Specify, including thought about anonymity implications.
+    . Specify, including thought about anonymity implications. [proposal 110]
   - Display the reasons in 'destroy' and 'truncated' cells under some
     circumstances?
   - If the server is spewing complaints about raising your ulimit -n,
@@ -373,7 +398,7 @@ Future version:
     I can say "banana" as my bandwidthcapacity, and it won't even squeak.
   o Include the output of svn info in the binary, so it's trivial to see what
     version a binary was built from.
-    - Do the same for svk info.
+    o Do the same for svk info.
   - Add a doxygen style checker to make check-spaces so nick doesn't drift
     too far from arma's undocumented styleguide.  Also, document that
     styleguide in HACKING.  (See r9634 for example.)
@@ -388,7 +413,10 @@ Future version:
   - Should TrackHostExits expire TrackHostExitsExpire seconds after their
     *last* use, not their *first* use?
   X Configuration format really wants sections.
-  - Good RBL substitute.
+  . Good RBL substitute.
+    - Play with the implementations; link them from somewhere; add a
+      round-robin link from torel.torproject.org; describe how to
+      use them in the FAQ.
   - Authorities should try using exits for http to connect to some URLS
     (specified in a configuration file, so as not to make the List Of Things
     Not To Censor completely obvious) and ask them for results.  Exits that
