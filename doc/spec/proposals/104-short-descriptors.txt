@@ -122,6 +122,13 @@ Specification:
          the digest of the extra-info document.
        * The published fields in the two documents match.
 
+     Authorities SHOULD drop extra-info documents that do not meet these
+     criteria.
+
+     Extra-info documents MAY be uploaded as part of the same HTTP post as
+     the router descriptor, or separately.  Authorities MUST accept both
+     methods.
+
      Authorities SHOULD try to fetch extra-info documents from one another if
      they do not have one matching the digest declared in a router
      descriptor.

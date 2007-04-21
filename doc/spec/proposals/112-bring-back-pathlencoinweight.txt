@@ -1,0 +1,209 @@
+Filename: 112-bring-back-pathlencoinweight.txt
+Title: Bring Back Pathlen Coin Weight
+Version:
+Last-Modified:
+Author: Mike Perry
+Created:
+Status: Open
+
+
+Overview:
+
+  The idea is that users should be able to choose a weight which
+  probabilistically chooses their path lengths to be 2 or 3 hops. This
+  weight will essentially be a biased coin that indicates an
+  additional hop (beyond 2) with probability P. The user should be
+  allowed to choose 0 for this weight to always get 2 hops and 1 to
+  always get 3.
+
+  This value should be modifiable from the controller, and should be
+  available from Vidalia.
+
+
+Motivation:
+
+  The Tor network is slow and overloaded. Increasingly often I hear
+  stories about friends and friends of friends who are behind firewalls,
+  annoying censorware, or under surveillance that interferes with their
+  productivity and Internet usage, or chills their speech. These people
+  know about Tor, but they choose to put up with the censorship because
+  Tor is too slow to be usable for them. In fact, to download a fresh,
+  complete copy of levine-timing.pdf for the Anonymity Implications
+  section of this proposal over Tor took me 3 tries.
+
+  There are many ways to improve the speed problem, and of course we
+  should and will implement as many as we can. Johannes's GSoC project
+  and my reputation system are longer term, higher-effort things that
+  will still provide benefit independent of this proposal.
+
+  However, reducing the path length to 2 for those who do not need the
+  (questionable) extra anonymity 3 hops provide not only improves
+  their Tor experience but also reduces their load on the Tor network by
+  33%, and can be done in less than 10 lines of code. That's not just
+  Win-Win, it's Win-Win-Win.
+
+  Furthermore, when blocking resistance measures insert an extra relay
+  hop into the equation, 4 hops will certainly be completely unusable
+  for these users, especially since it will be considerably more
+  difficult to balance the load across a dark relay net than balancing
+  the load on Tor itself (which today is still not without its flaws).
+
+
+Anonymity Implications:
+
+  It has long been established that timing attacks against mixed
+  networks are extremely effective, and that regardless of path
+  length, if the adversary has compromised your first and last
+  hop of your path, you can assume they have compromised your
+  identity for that connection.
+
+  In [1], it is demonstrated that for all but the slowest, lossiest
+  networks, error rates for false positives and false negatives were
+  very near zero. Only for constant streams of traffic over slow and
+  (more importantly) extremely lossy network links did the error rate
+  hit 20%. For loss rates typical to the Internet, even the error rate
+  for slow nodes with constant traffic streams was 13%.
+
+  When you take into account that most Tor streams are not constant,
+  but probably much more like their "HomeIP" dataset, which consists
+  mostly of web traffic that exists over finite intervals at specific
+  times, error rates drop to fractions of 1%, even for the "worst"
+  network nodes.
+
+  Therefore, the user has little benefit from the extra hop, assuming
+  the adversary does timing correlation on their nodes. The real
+  protection is the probability of getting both the first and last hop,
+  and this is constant whether the client chooses 2 hops, 3 hops, or 42.
+
+  Partitioning attacks form another concern. Since Tor uses telescoping
+  to build circuits, it is possible to tell a user is constructing only
+  two hop paths at the entry node. It is questionable if this data is
+  actually worth anything though, especially if the majority of users
+  have easy access to this option, and do actually choose their path
+  lengths semi-randomly.
+
+  Nick has postulated that exits may also be able to tell that you are
+  using only 2 hops by the amount of time between sending their
+  RELAY_CONNECTED cell and the first bit of RELAY_DATA traffic they
+  see from the OP. I doubt that they will be able to make much use
+  of this timing pattern, since it will likely vary widely depending
+  upon the type of node selected for that first hop, and the user's
+  connection rate to that first hop. It is also questionable if this
+  data is worth anything, especially if many users are using this
+  option (and I imagine many will).
+
+  Perhaps most seriously, two hop paths do allow malicious guards
+  to easily fail circuits if they do not extend to their colluding peers
+  for the exit hop. Since guards can detect the number of hops in a
+  path, they could always fail the 3 hop circuits and focus on
+  selectively failing the two hop ones until a peer was chosen.
+
+  I believe currently guards are rotated if circuits fail, which does
+  provide some protection, but this could be changed so that an entry
+  guard is completely abandoned after a certain number of extend or
+  general circuit failures, though perhaps this also could be gamed
+  to increase guard turnover. Such a game would be much more noticeable
+  than an individual guard failing circuits, though, since it would
+  affect all clients, not just those who chose a particular guard.
+
+
+Why not fix Pathlen=2?:
+
+  The main reason I am not advocating that we always use 2 hops is that
+  in some situations, timing correlation evidence by itself may not be
+  considered as solid and convincing as an actual, uninterrupted, fully
+  traced path. Are these timing attacks as effective on a real network
+  as they are in simulation? Would an extralegal adversary or authoritarian
+  government even care? In the face of these situation-dependent unknowns,
+  it should be up to the user to decide if this is a concern for them or not.
+
+
+Implementation:
+
+  new_route_len() can be modified directly with a check of the
+  PathlenCoinWeight option (converted to percent) and a call to
+  crypto_rand_int(0,100) for the weighted coin.
+
+  The Vidalia setting should probably be in the network status window
+  as a slider, complete with tooltip, help documentation, and perhaps
+  an "Are you Sure?" checkbox.
+
+  The entry_guard_t structure could have a num_circ_failed member
+  such that if it exceeds N circuit extend failure to a second hop,
+  it is removed from the entry list. N should be sufficiently high
+  to avoid churn from normal Tor circuit failure, and could possibly be
+  represented as a ratio of failed to successful circuits through that
+  guard.
+
+
+Migration:
+
+  Phase one: Re-enable config and modify new_route_len() to add an
+  extra hop if coin comes up "heads".
+
+  Phase two: Experiment with the proper ratio of circuit failures
+  used to expire garbage or malicious guards.
+
+  Phase three: Make slider or entry box in Vidalia, along with help entry
+  that explains in layman's terms the risks involved.
+
+
+[1] http://www.cs.umass.edu/~mwright/papers/levine-timing.pdf
+
+
+============================================================
+
+I love replying to myself. I can't resist doing it. Sorry. "Think twice
+post once" is a concept totally lost on me, especially when I'm wrong
+the first two times ;)
+
+
+Thus spake Mike Perry (mikepery@fscked.org):
+
+> Why not fix Pathlen=2?:
+> 
+>   The main reason I am not advocating that we always use 2 hops is that 
+>   in some situations, timing correlation evidence by itself may not be 
+>   considered as solid and convincing as an actual, uninterrupted, fully 
+>   traced path. Are these timing attacks as effective on a real network 
+>   as they are in simulation? Would an extralegal adversary or authoritarian 
+>   government even care? In the face of these situation-dependent unknowns, 
+>   it should be up to the user to decide if this is a concern for them or not.
+
+Hrmm.. it should probably also be noted that even a false positive
+rate of 1% for a 200k concurrent-user network could mean that for a
+given node, a given stream could be confused with something like 10
+users, assuming ~200 nodes carry most of the traffic (ie 1000 users
+each). Though of course to really know for sure, someone needs to do
+an attack on a real network, unfortunately.
+
+For this reason this option should instead be represented not as a
+slider, but as a straight boolean value, at least in Vidalia.
+
+Perhaps something like a radiobutton: 
+
+ * "I use Tor for Censorship Resistance, not Anonymity. Speed is more
+    important to me than Anonymity."
+ * "I use Tor for Anonymity. I need extra protection at the cost of speed."
+
+and then some explanation in the help for exactly what this means, and
+the risks involved with eliminating the adversary's need for timing attacks 
+wrt to false positives, etc.
+
+This radio button can then also be used to toggle Johannes's work,
+should it be discovered that using latency/bandwidth measurements
+gives the adversary some information as to your location or likely
+node choices. Or we can create a series of choices along these lines
+as more load balancing/path choice optimizations are developed.
+
+---- 
+
+So what does this change mean wrt to the proposal process? Should I
+submit a new proposal? I'm still on the fence if the underlying torrc
+option and Tor implementation should be a coin weight or a fixed
+value, so at this point really all this changes is the proposed
+Vidalia behavior (Vidalia is an imporant part of this proposal,
+because it would be nice to take 33% of the load off the network for
+all users who do not need 3 hops).
+
+

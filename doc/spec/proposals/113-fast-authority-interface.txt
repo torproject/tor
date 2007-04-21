@@ -1,0 +1,80 @@
+Filename: 113-fast-authority-interface.txt
+Title: Simplifying directory authority administration
+Version: $Revision: 12412 $
+Last-Modified: $Date: 2007-04-16T19:11:29.511998Z $
+Author: Nick Mathewson
+Created:
+Status: Open
+
+Overview
+
+The problem:
+
+  Administering a directory authority is a pain: you need to go through
+  emails and manually add new nodes as "named".  When bad things come up,
+  you need to mark nodes (or whole regions) as invalid, badexit, etc.
+
+  This means that mostly, authority admins don't: only 2/4 current authority
+  admins actually bind names or list bad exits, and those two have often
+  complained about how annoying it is to do so.
+
+  Worse, name binding is a common path, but it's a pain in the neck: nobody
+  has done it for a couple of months.
+
+Digression: who knows what?
+
+  It's trivial for Tor to automatically keep track of all of the
+  following information about a server:
+    name, fingerprint, IP, last-seen time, first-seen time, declared
+    contact.
+
+  All we need to have the administrator set is:
+    - Is this name/fingerprint pair bound?
+    - Is this fingerprint/IP a bad exit?
+    - Is this fingerprint/IP an invalid node?
+    - Is this fingerprint/IP to be rejected?
+
+  The workflow for authority admins has two parts:
+    - Periodically, go through tor-ops and add new names.  This doesn't
+      need to be done urgently.
+    - Less often, mark badly behaved serves as badly behaved.  This is more
+      urgent.
+
+Possible solution #1: Web-interface for name binding.
+
+  Deprecate use of the tor-ops mailing list; instead, have operators go to a
+  webform and enter their server info.  This would put the information in a
+  standardized format, thus allowing quick, nearly-automated approval and
+  reply.
+
+Possible solution #2: Self-binding names.
+
+  Peter Palfrader has proposed that names be assigned automatically to nodes
+  that have been up and running and valid for a while.
+
+Possible solution #3: Self-maintaining approved-routers file
+
+  Mixminion alpha has a neat feature where whenever a new server is seen,
+  a stub line gets added to a configuration file.  For Tor, it could look
+  something like this:
+
+    ## First seen with this key on 2007-04-21 13:13:14
+    ## Stayed up for at least 12 hours on IP 192.168.10.10
+    #RouterName AAAABBBBCCCCDDDDEFEF
+
+  (Note that the implementation needs to parse commented lines to make sure
+  that it doesn't add duplicates, but that's not so hard.)
+
+  To add a router as named, administrators would only need to uncomment the
+  entry.  This automatically maintained file could be kept separately from a
+  manually maintained one.
+
+  This could be combined with solution #2, such that Tor would do the hard
+  work of uncommenting entries for routers that should get Named, but
+  operators could override its decisions.
+
+Possible solution #4: A separate mailing list for authority operators.
+
+  Right now, the tor-ops list is very high volume.  There should be another
+  list that's only for dealing with problems that need prompt action, like
+  marking a router as !badexit.

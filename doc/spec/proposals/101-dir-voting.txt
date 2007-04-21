@@ -90,9 +90,14 @@ Proposal:
 
 2. Details.
 
+2.0. Versioning
+
+  All documents generated here have version "3" given in their
+  network-status-version entries.
+
 2.1. Vote specifications
 
-  Votes in v2.1 are similar to v2 network status documents.  We add these
+  Votes in v3 are similar to v2 network status documents.  We add these
   fields to the preamble:
 
      "vote-status" -- the word "vote".
@@ -122,7 +127,7 @@ Proposal:
 
 2.2. Consensus directory specifications
 
-  Consensuses are like v2.1 votes, except for the following fields:
+  Consensuses are like v3 votes, except for the following fields:
 
      "vote-status" -- the word "consensus".
 

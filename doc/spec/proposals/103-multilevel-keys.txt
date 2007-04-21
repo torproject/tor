@@ -57,10 +57,99 @@ Proposal:
   (who will expect descriptors to be signed by the identity keys they know
   and love, and who will not understand signing keys) happy.
 
-  I'd enumerate designs here, but I'm hoping that somebody will come up with
-  a better one, so I'll try not to prejudice them with more ideas yet.
+A possible solution:
 
-  Oh, and of course, we'll want to make sure that the keys are
-  cross-certified. :)
+  One thing to consider is that router identity keys are not very sensitive:
+  if an OR disappears and reappears with a new key, the network treats it as
+  though an old router had disappeared and a new one had joined the network.
+  The Tor network continues unharmed; this isn't a disaster.
 
-  Ideas? -NM
+  Thus, the ideas above are mostly relevant for authorities.
+
+  The most straightforward solution for the authorities is probably to take
+  advantage of the protocol transition that will come with proposal 101, and
+  introduce a new set of signing _and_ identity keys used only to sign votes
+  and consensus network-status documents.  Signing and identity keys could be
+  delivered to users in a separate, rarely changing "keys" document, so that
+  the consensus network-status documents wouldn't need to include N signing
+  keys, N identity keys, and N certifications.
+
+  Note also that there is no reason that the identity/signing keys used by
+  directory authorities would necessarily have to be the same as the identity
+  keys those authorities use in their capacity as routers.  Decoupling these
+  keys would give directory authorities the following set of keys:
+
+       Directory authority identity:
+           Highly confidential; stored encrypted and/or offline.  Used to
+           identity directory authorities.  Shipped with clients.  Used to
+           sign Directory authority signing keys.
+
+       Directory authority signing key:
+           Stored online, accessible to regular Tor process.  Used to sign
+           votes and consensus directories.  Downloaded as part of a "keys"
+           document.
+
+           [Administrators SHOULD rotate their signing keys every month or
+           two, just to keep in practice and keep from forgetting the
+           password to the authority identity.]
+
+       V1-V2 directory authority identity:
+           Stored online, never changed.  Used to sign legacy network-status
+           and directory documents.
+
+       Router identity:
+           Stored online, seldom changed.  Used to sign server descriptors
+           for this authority in its role as a router.  Implicitly certified
+           by being listed in network-status documents.
+
+       Onion key, link key:
+           As in tor-spec.txt
+
+
+Extensions to Proposal 101.
+
+  Add the following elements to vote documents:
+
+     "dir-identity-key": The long-term identity key for this authority.
+     "dir-key-published": The time when this directory's signing key was last
+         changed.
+     "dir-key-certification": A signature of the fields "fingerprint",
+         "dir-key-published", "dir-signing-key", and "dir-identity-key",
+         concatenated, in that order.  The signed material extends from the
+         beginning of "fingerprint" through the newline after
+         "dir-key-certification".  The identity key is used to generate this
+         signature.
+
+      The elements "fingerprint", "dir-key-published", "dir-signing-key",
+      "dir-identity-key", and "dir-key-certification" together constitute a
+      "key certificate".  These are generated offline when starting a v2.1
+      authority.
+
+      The elements "dir-signing-key", "dir-key-published", and
+      "dir-identity-key", "dir-key-certification" and MUST NOT appear in
+      consensus documents.
+
+      The "fingerprint" field is generated based on the identity key, not
+      the signing key.
+
+  Consensus network statues change as follows:
+
+      Remove dir-signing-key.
+
+      Change "directory-signature" to take a fingerprint of the authority's
+      identity key rather than the authority's nickname.
+
+  Add a new document type:
+
+      A "keys" document contains all currently known key certification
+      certificates.  All authorities serve it at
+
+          http://<hostname>/tor/status/keys.z
+
+      Caches and clients download the keys document whenever they receive a
+      consensus vote that uses a key they do not recognize.  Caches download
+      from authorities; clients download from caches.
+
+  Verification:
+
+      [XXXX write me]
