@@ -748,11 +748,10 @@ typedef struct connection_t {
   /* The next fields are all one-bit booleans. Some are only applicable
    * to connection subtypes, but we hold them here anyway, to save space.
    * (Currently, they all fit into a single byte.) */
-  /*XXXX020 rename wants_to_*; the names are misleading. */
-  unsigned wants_to_read:1; /**< Boolean: should we start reading again once
-                            * the bandwidth throttler allows it? */
-  unsigned wants_to_write:1; /**< Boolean: should we start writing again once
-                             * the bandwidth throttler allows reads? */
+  unsigned read_blocked_on_bw:1; /**< Boolean: should we start reading again
+                            * once the bandwidth throttler allows it? */
+  unsigned write_blocked_on_bw:1; /**< Boolean: should we start writing again
+                             * once the bandwidth throttler allows reads? */
   unsigned hold_open_until_flushed:1; /**< Despite this connection's being
                                       * marked for close, do we flush it
                                       * before closing it? */

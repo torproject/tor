@@ -1354,7 +1354,7 @@ connection_consider_empty_read_buckets(connection_t *conn)
     return; /* all good, no need to stop it */
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "%s", reason));
-  conn->wants_to_read = 1;
+  conn->read_blocked_on_bw = 1;
   connection_stop_reading(conn);
 }
 
@@ -1380,7 +1380,7 @@ connection_consider_empty_write_buckets(connection_t *conn)
     return; /* all good, no need to stop it */
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "%s", reason));
-  conn->wants_to_write = 1;
+  conn->write_blocked_on_bw = 1;
   connection_stop_writing(conn);
 }
 
@@ -1468,7 +1468,7 @@ connection_bucket_refill(int seconds_elapsed)
       }
     }
 
-    if (conn->wants_to_read == 1 /* it's marked to turn reading back on now */
+    if (conn->read_blocked_on_bw == 1 /* marked to turn reading back on now */
         && global_read_bucket > 0 /* and we're allowed to read */
         && (!connection_counts_as_relayed_traffic(conn) ||
             global_relayed_read_bucket > 0) /* even if we're relayed traffic */
@@ -1478,18 +1478,18 @@ connection_bucket_refill(int seconds_elapsed)
         /* and either a non-cell conn or a cell conn with non-empty bucket */
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
                          "waking up conn (fd %d) for read", conn->s));
-      conn->wants_to_read = 0;
+      conn->read_blocked_on_bw = 0;
       connection_start_reading(conn);
     }
 
-    if (conn->wants_to_write == 1
+    if (conn->write_blocked_on_bw == 1
         && global_write_bucket > 0 /* and we're allowed to write */
         && (!connection_counts_as_relayed_traffic(conn) ||
             global_relayed_write_bucket > 0)) {
             /* even if we're relayed traffic */
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
                          "waking up conn (fd %d) for write", conn->s));
-      conn->wants_to_write = 0;
+      conn->write_blocked_on_bw = 0;
       connection_start_writing(conn);
     }
   }
@@ -1893,7 +1893,7 @@ connection_handle_write(connection_t *conn, int force)
         log_debug(LD_NET,"wanted read.");
         if (!connection_is_reading(conn)) {
           connection_stop_writing(conn);
-          conn->wants_to_write = 1;
+          conn->write_blocked_on_bw = 1;
           /* we'll start reading again when the next second arrives,
            * and then also start writing again.
            */
@@ -2540,14 +2540,14 @@ assert_connection_ok(connection_t *conn, time_t now)
     tor_assert(conn->s < 0);
 
   if (conn->outbuf_flushlen > 0) {
-    tor_assert(connection_is_writing(conn) || conn->wants_to_write ||
+    tor_assert(connection_is_writing(conn) || conn->write_blocked_on_bw ||
                conn->edge_blocked_on_circ);
   }
 
   if (conn->hold_open_until_flushed)
     tor_assert(conn->marked_for_close);
 
-  /* XXXX check: wants_to_read, wants_to_write, s, conn_array_index,
+  /* XXXX check: read_blocked_on_bw, write_blocked_on_bw, s, conn_array_index,
    * marked_for_close. */
 
   /* buffers */
