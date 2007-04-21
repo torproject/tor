@@ -31,7 +31,7 @@ noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 tor_main.o: micro-revision.i
 
 micro-revision.i: FORCE
-	if test -d ../../.svn ; then 				\
+	@if test -d ../../.svn ; then 				\
 	  svn info ../.. |              			\
 	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.i \
 	     || true;                                           \
