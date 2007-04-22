@@ -100,11 +100,12 @@ Anonymity Implications:
 
   I believe currently guards are rotated if circuits fail, which does
   provide some protection, but this could be changed so that an entry
-  guard is completely abandoned after a certain number of extend or
-  general circuit failures, though perhaps this also could be gamed
-  to increase guard turnover. Such a game would be much more noticeable
-  than an individual guard failing circuits, though, since it would
-  affect all clients, not just those who chose a particular guard.
+  guard is completely abandoned after a certain ratio of extend or
+  general circuit failures with respect to non-failed circuits. This 
+  could possibly be gamed to increase guard turnover, but such a game 
+  would be much more noticeable than an individual guard failing circuits, 
+  though, since it would affect all clients, not just those who chose 
+  a particular guard.
 
 
 Why not fix Pathlen=2?:
@@ -117,6 +118,13 @@ Why not fix Pathlen=2?:
   government even care? In the face of these situation-dependent unknowns,
   it should be up to the user to decide if this is a concern for them or not.
 
+  It should probably also be noted that even a false positive
+  rate of 1% for a 200k concurrent-user network could mean that for a
+  given node, a given stream could be confused with something like 10
+  users, assuming ~200 nodes carry most of the traffic (ie 1000 users
+  each). Though of course to really know for sure, someone needs to do
+  an attack on a real network, unfortunately.
+
 
 Implementation:
 
@@ -124,86 +132,33 @@ Implementation:
   PathlenCoinWeight option (converted to percent) and a call to
   crypto_rand_int(0,100) for the weighted coin.
 
-  The Vidalia setting should probably be in the network status window
-  as a slider, complete with tooltip, help documentation, and perhaps
-  an "Are you Sure?" checkbox.
+  The entry_guard_t structure could have num_circ_failed and
+  num_circ_succeeded members such that if it exceeds N% circuit 
+  extend failure rate to a second hop, it is removed from the entry list. 
+  N should be sufficiently high to avoid churn from normal Tor circuit 
+  failure as determined by TorFlow scans.
 
-  The entry_guard_t structure could have a num_circ_failed member
-  such that if it exceeds N circuit extend failure to a second hop,
-  it is removed from the entry list. N should be sufficiently high
-  to avoid churn from normal Tor circuit failure, and could possibly be
-  represented as a ratio of failed to successful circuits through that
-  guard.
-
+  The Vidalia option should be presented as a boolean, to minimize confusion
+  for the user. Something like a radiobutton with:
+ 
+   * "I use Tor for Censorship Resistance, not Anonymity. Speed is more
+      important to me than Anonymity."
+   * "I use Tor for Anonymity. I need extra protection at the cost of speed."
+  
+  and then some explanation in the help for exactly what this means, and
+  the risks involved with eliminating the adversary's need for timing attacks 
+  wrt to false positives, etc.
 
 Migration:
 
-  Phase one: Re-enable config and modify new_route_len() to add an
+  Phase one: Experiment with the proper ratio of circuit failures
+  used to expire garbage or malicious guards via TorFlow.
+
+  Phase two: Re-enable config and modify new_route_len() to add an
   extra hop if coin comes up "heads".
 
-  Phase two: Experiment with the proper ratio of circuit failures
-  used to expire garbage or malicious guards.
-
-  Phase three: Make slider or entry box in Vidalia, along with help entry
+  Phase three: Make radiobutton in Vidalia, along with help entry
   that explains in layman's terms the risks involved.
 
 
 [1] http://www.cs.umass.edu/~mwright/papers/levine-timing.pdf
-
-
-============================================================
-
-I love replying to myself. I can't resist doing it. Sorry. "Think twice
-post once" is a concept totally lost on me, especially when I'm wrong
-the first two times ;)
-
-
-Thus spake Mike Perry (mikepery@fscked.org):
-
-> Why not fix Pathlen=2?:
-> 
->   The main reason I am not advocating that we always use 2 hops is that 
->   in some situations, timing correlation evidence by itself may not be 
->   considered as solid and convincing as an actual, uninterrupted, fully 
->   traced path. Are these timing attacks as effective on a real network 
->   as they are in simulation? Would an extralegal adversary or authoritarian 
->   government even care? In the face of these situation-dependent unknowns, 
->   it should be up to the user to decide if this is a concern for them or not.
-
-Hrmm.. it should probably also be noted that even a false positive
-rate of 1% for a 200k concurrent-user network could mean that for a
-given node, a given stream could be confused with something like 10
-users, assuming ~200 nodes carry most of the traffic (ie 1000 users
-each). Though of course to really know for sure, someone needs to do
-an attack on a real network, unfortunately.
-
-For this reason this option should instead be represented not as a
-slider, but as a straight boolean value, at least in Vidalia.
-
-Perhaps something like a radiobutton: 
-
- * "I use Tor for Censorship Resistance, not Anonymity. Speed is more
-    important to me than Anonymity."
- * "I use Tor for Anonymity. I need extra protection at the cost of speed."
-
-and then some explanation in the help for exactly what this means, and
-the risks involved with eliminating the adversary's need for timing attacks 
-wrt to false positives, etc.
-
-This radio button can then also be used to toggle Johannes's work,
-should it be discovered that using latency/bandwidth measurements
-gives the adversary some information as to your location or likely
-node choices. Or we can create a series of choices along these lines
-as more load balancing/path choice optimizations are developed.
-
----- 
-
-So what does this change mean wrt to the proposal process? Should I
-submit a new proposal? I'm still on the fence if the underlying torrc
-option and Tor implementation should be a coin weight or a fixed
-value, so at this point really all this changes is the proposed
-Vidalia behavior (Vidalia is an imporant part of this proposal,
-because it would be nice to take 33% of the load off the network for
-all users who do not need 3 hops).
-
-
