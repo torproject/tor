@@ -75,11 +75,6 @@ struct buf_t {
   size_t datalen; /**< Number of bytes currently in <b>mem</b>. */
 };
 
-/** How many bytes, total, are used in all buffers? */
-uint64_t buf_total_used = 0;
-/** How many bytes, total, are allocated in all buffers? */
-uint64_t buf_total_alloc = 0;
-
 /** Size, in bytes, for newly allocated buffers.  Should be a power of 2. */
 #define INITIAL_BUF_SIZE (4*1024)
 /** Size, in bytes, for minimum 'shrink' size for buffers.  Buffers may start
@@ -228,8 +223,6 @@ buf_resize(buf_t *buf, size_t new_capacity)
     SET_GUARDS(buf->mem, new_capacity);
     buf->cur = buf->mem+offset;
   }
-  buf_total_alloc += new_capacity;
-  buf_total_alloc -= buf->len;
 
   if (offset + buf->datalen > buf->len) {
     /* We need to move data now that we are done growing.  The buffer
@@ -317,7 +310,6 @@ buf_remove_from_front(buf_t *buf, size_t n)
 {
   tor_assert(buf->datalen >= n);
   buf->datalen -= n;
-  buf_total_used -= n;
   if (buf->datalen) {
     buf->cur = _wrap_ptr(buf, buf->cur+n);
   } else {
@@ -347,7 +339,6 @@ buf_new_with_capacity(size_t size)
   SET_GUARDS(buf->mem, size);
   buf->len = buf->memsize = size;
 
-  buf_total_alloc += size;
   assert_buf_ok(buf);
   return buf;
 }
@@ -363,7 +354,6 @@ buf_new(void)
 void
 buf_clear(buf_t *buf)
 {
-  buf_total_used -= buf->datalen;
   buf->datalen = 0;
   buf->cur = buf->mem;
   buf->len = buf->memsize;
@@ -401,8 +391,6 @@ buf_free(buf_t *buf)
   buf->magic = 0xDEADBEEF;
   oldmem = RAW_MEM(buf->mem);
   tor_free(oldmem);
-  buf_total_alloc -= buf->len;
-  buf_total_used -= buf->datalen;
   tor_free(buf);
 }
 
@@ -436,7 +424,6 @@ read_to_buf_impl(int s, size_t at_most, buf_t *buf,
     return 0;
   } else { /* we read some bytes */
     buf->datalen += read_result;
-    buf_total_used += read_result;
     if (buf->datalen > buf->highwater)
       buf->highwater = buf->datalen;
     log_debug(LD_NET,"Read %d bytes. %d on inbuf.",read_result,
@@ -512,7 +499,6 @@ read_to_buf_tls_impl(tor_tls_t *tls, size_t at_most, buf_t *buf, char *next)
   if (r<0)
     return r;
   buf->datalen += r;
-  buf_total_used += r;
   if (buf->datalen > buf->highwater)
     buf->highwater = buf->datalen;
   log_debug(LD_NET,"Read %d bytes. %d on inbuf; %d pending",r,
@@ -756,13 +742,11 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
 
   memcpy(next, string, string_len);
   buf->datalen += string_len;
-  buf_total_used += string_len;
 
   if (len2) {
     tor_assert(_buf_end(buf) == buf->mem);
     memcpy(buf->mem, string+string_len, len2);
     buf->datalen += len2;
-    buf_total_used += len2;
   }
   if (buf->datalen > buf->highwater)
     buf->highwater = buf->datalen;
@@ -1410,7 +1394,6 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
     buf->datalen += old_avail - avail;
     if (buf->datalen > buf->highwater)
       buf->highwater = buf->datalen;
-    buf_total_used += old_avail - avail;
   } while (!over);
   return 0;
 }

@@ -389,7 +389,6 @@ connection_free_all(void)
   connection_t **carray;
 
   get_connection_array(&carray,&n);
-
   /* We don't want to log any messages to controllers. */
   for (i=0;i<n;i++)
     if (carray[i]->type == CONN_TYPE_CONTROL)
@@ -2500,6 +2499,55 @@ connection_reached_eof(connection_t *conn)
       log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
+  }
+}
+
+/** Log how many bytes are used by buffers of different kinds and sizes. */
+void
+connection_dump_buffer_mem_stats(int severity)
+{
+  uint64_t used_by_type[_CONN_TYPE_MAX+1];
+  uint64_t alloc_by_type[_CONN_TYPE_MAX+1];
+  int n_conns_by_type[_CONN_TYPE_MAX+1];
+  uint64_t total_alloc = 0;
+  uint64_t total_used = 0;
+  int i, n;
+  connection_t **carray;
+
+  memset(used_by_type, 0, sizeof(used_by_type));
+  memset(alloc_by_type, 0, sizeof(alloc_by_type));
+  memset(n_conns_by_type, 0, sizeof(n_conns_by_type));
+
+  get_connection_array(&carray,&n);
+
+  for (i=0; i<n; ++i) {
+    connection_t *c = carray[i];
+    int tp = c->type;
+    ++n_conns_by_type[tp];
+    if (c->inbuf) {
+      used_by_type[tp] += buf_datalen(c->inbuf);
+      alloc_by_type[tp] += buf_capacity(c->inbuf);
+    }
+    if (c->outbuf) {
+      used_by_type[tp] += buf_datalen(c->outbuf);
+      alloc_by_type[tp] += buf_capacity(c->outbuf);
+    }
+  }
+  for (i=0; i <= _CONN_TYPE_MAX; ++i) {
+    total_used += used_by_type[i];
+    total_alloc += alloc_by_type[i];
+  }
+
+  log(severity, LD_GENERAL,
+     "In buffers for %d connections: "U64_FORMAT" used/"U64_FORMAT" allocated",
+      n, U64_PRINTF_ARG(total_used), U64_PRINTF_ARG(total_alloc));
+  for (i=_CONN_TYPE_MIN; i <= _CONN_TYPE_MAX; ++i) {
+    if (!n_conns_by_type[i])
+      continue;
+    log(severity, LD_GENERAL,
+        "  For %d %s connections: "U64_FORMAT" used/"U64_FORMAT" allocated",
+        n_conns_by_type[i], conn_type_to_string(i),
+        U64_PRINTF_ARG(used_by_type[i]), U64_PRINTF_ARG(alloc_by_type[i]));
   }
 }
 

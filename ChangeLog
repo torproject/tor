@@ -43,6 +43,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Put a platform string (e.g. "Linux i686") in the startup log
       message, so when people paste just their logs, we know if it's
       openbsd or windows or what.
+    - When logging memory usage, break down memory used in buffers by
+      buffer type.
 
   o Minor features (directory system):
     - Directory authorities accept and serve "extra info" documents for

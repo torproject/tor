@@ -2252,6 +2252,7 @@ char *alloc_http_authenticator(const char *authenticator);
 
 void assert_connection_ok(connection_t *conn, time_t now);
 int connection_or_nonopen_was_started_here(or_connection_t *conn);
+void connection_dump_buffer_mem_stats(int severity);
 
 /********************************* connection_edge.c *************************/
 

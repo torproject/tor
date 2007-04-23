@@ -1533,8 +1533,6 @@ signal_callback(int fd, short events, void *arg)
   }
 }
 
-extern uint64_t buf_total_used;
-extern uint64_t buf_total_alloc;
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
 
@@ -1544,10 +1542,7 @@ extern uint32_t rephist_total_num;
 static void
 dumpmemusage(int severity)
 {
-  log(severity, LD_GENERAL,
-      "In buffers: "U64_FORMAT" used/"U64_FORMAT" allocated (%d conns).",
-      U64_PRINTF_ARG(buf_total_used), U64_PRINTF_ARG(buf_total_alloc),
-      n_conns);
+  connection_dump_buffer_mem_stats(severity);
   log(severity, LD_GENERAL, "In rephist: "U64_FORMAT" used by %d Tors.",
       U64_PRINTF_ARG(rephist_total_alloc), rephist_total_num);
   dump_routerlist_mem_usage(severity);
