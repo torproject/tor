@@ -468,6 +468,7 @@ buf_free(buf_t *buf)
   assert_buf_ok(buf);
   buf->magic = 0xDEADBEEF;
   if (buf->len == MIN_LAZY_SHRINK_SIZE) {
+    buf->datalen = 0; /* Avoid assert in add_buf_mem_to_freelist. */
     add_buf_mem_to_freelist(buf);
   } else if (buf->mem) {
     oldmem = RAW_MEM(buf->mem);
