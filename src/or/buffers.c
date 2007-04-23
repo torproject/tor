@@ -469,7 +469,7 @@ buf_free(buf_t *buf)
   buf->magic = 0xDEADBEEF;
   if (buf->len == MIN_LAZY_SHRINK_SIZE) {
     add_buf_mem_to_freelist(buf);
-  } else {
+  } else if (buf->mem) {
     oldmem = RAW_MEM(buf->mem);
     tor_free(oldmem);
   }
