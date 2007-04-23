@@ -1588,11 +1588,16 @@ _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 }
 
 /** Insert an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
- * as needed. */
+ * as needed.  There must be no previous member of <b>rl</b> with the same
+ * identity giest as <b>ri</b>: If there is, call routerlist_replace
+ * instead.
+ */
 static void
 routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
-  digestmap_set(rl->identity_map, ri->cache_info.identity_digest, ri);
+  routerinfo_t *ri_old;
+  ri_old = digestmap_set(rl->identity_map, ri->cache_info.identity_digest, ri);
+  tor_assert(!ri_old);
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
                 &(ri->cache_info));
   smartlist_add(rl->routers, ri);
@@ -1656,6 +1661,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   // routerlist_assert_ok(rl);
 }
 
+/** DOCDOC */
 static void
 routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
 {
@@ -1681,6 +1687,7 @@ static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx, int make_old)
 {
+  routerinfo_t *ri_tmp;
   tor_assert(ri_old != ri_new);
   idx = _routerlist_find_elt(rl->routers, ri_old, idx);
   router_dir_info_changed();
@@ -1698,7 +1705,9 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     /* digests don't match; digestmap_set won't replace */
     digestmap_remove(rl->identity_map, ri_old->cache_info.identity_digest);
   }
-  digestmap_set(rl->identity_map, ri_new->cache_info.identity_digest, ri_new);
+  ri_tmp = digestmap_set(rl->identity_map,
+                         ri_new->cache_info.identity_digest, ri_new);
+  tor_assert(!ri_tmp);
   digestmap_set(rl->desc_digest_map,
           ri_new->cache_info.signed_descriptor_digest, &(ri_new->cache_info));
 
@@ -2146,6 +2155,8 @@ routerlist_remove_old_routers(void)
   if (!routerlist || !networkstatus_list)
     return;
 
+  routerlist_assert_ok(routerlist);
+
   retain = digestmap_new();
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   /* Build a list of all the descriptors that _anybody_ recommends. */
@@ -2185,6 +2196,8 @@ routerlist_remove_old_routers(void)
     }
   }
 
+  routerlist_assert_ok(routerlist);
+
   /* Remove far-too-old members of routerlist->old_routers. */
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   for (i = 0; i < smartlist_len(routerlist->old_routers); ++i) {
@@ -2195,6 +2208,8 @@ routerlist_remove_old_routers(void)
       routerlist_remove_old(routerlist, sd, i--);
     }
   }
+
+  routerlist_assert_ok(routerlist);
 
   /* Now we might have to look at routerlist->old_routers for extraneous
    * members. (We'd keep all the members if we could, but we need to save
