@@ -1588,16 +1588,11 @@ _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 }
 
 /** Insert an item <b>ri</b> into the routerlist <b>rl</b>, updating indices
- * as needed.  There must be no previous member of <b>rl</b> with the same
- * identity giest as <b>ri</b>: If there is, call routerlist_replace
- * instead.
- */
+ * as needed. */
 static void
 routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
-  routerinfo_t *ri_old;
-  ri_old = digestmap_set(rl->identity_map, ri->cache_info.identity_digest, ri);
-  tor_assert(!ri_old);
+  digestmap_set(rl->identity_map, ri->cache_info.identity_digest, ri);
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
                 &(ri->cache_info));
   smartlist_add(rl->routers, ri);
@@ -1687,7 +1682,6 @@ static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx, int make_old)
 {
-  routerinfo_t *ri_tmp;
   tor_assert(ri_old != ri_new);
   idx = _routerlist_find_elt(rl->routers, ri_old, idx);
   router_dir_info_changed();
@@ -1705,9 +1699,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     /* digests don't match; digestmap_set won't replace */
     digestmap_remove(rl->identity_map, ri_old->cache_info.identity_digest);
   }
-  ri_tmp = digestmap_set(rl->identity_map,
-                         ri_new->cache_info.identity_digest, ri_new);
-  tor_assert(!ri_tmp);
+  digestmap_set(rl->identity_map, ri_new->cache_info.identity_digest, ri_new);
   digestmap_set(rl->desc_digest_map,
           ri_new->cache_info.signed_descriptor_digest, &(ri_new->cache_info));
 
