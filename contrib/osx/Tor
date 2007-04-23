@@ -18,6 +18,28 @@ TORGROUP=daemon
 TORCMD=$TORDIR/tor
 TORLOG=/var/log/tor.log
 
+## Determine OSX Version
+# map version to name
+if [ -x /usr/bin/sw_vers ]; then
+# This is poor, yet functional.  We don't care about the 3rd number in
+# the OS version
+  OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
+      case "$OSVER" in
+	"10.5") OS="leopard" ARCH="universal";;
+ 	"10.4") OS="tiger" ARCH="universal";;
+ 	"10.3") OS="panther" ARCH="ppc";;
+ 	"10.2") OS="jaguar" ARCH="ppc";;
+ 	"10.1") OS="puma" ARCH="ppc";;
+ 	"10.0") OS="cheetah" ARCH="ppc";;
+      esac
+else
+	OS="unknown"
+fi
+ 
+if [ $ARCH != "universal" ]; then
+	export EVENT_NOKQUEUE=1
+fi
+
 ##
 # Tor Service
 ##
