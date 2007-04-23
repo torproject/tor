@@ -1757,6 +1757,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   // routerlist_assert_ok(rl);
 }
 
+/** DOCDOC */
 static void
 routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
 {
@@ -2280,6 +2281,8 @@ routerlist_remove_old_routers(void)
   if (!routerlist || !networkstatus_list)
     return;
 
+  routerlist_assert_ok(routerlist);
+
   retain = digestmap_new();
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   /* Build a list of all the descriptors that _anybody_ recommends. */
@@ -2319,6 +2322,8 @@ routerlist_remove_old_routers(void)
     }
   }
 
+  routerlist_assert_ok(routerlist);
+
   /* Remove far-too-old members of routerlist->old_routers. */
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   for (i = 0; i < smartlist_len(routerlist->old_routers); ++i) {
@@ -2329,6 +2334,8 @@ routerlist_remove_old_routers(void)
       routerlist_remove_old(routerlist, sd, i--);
     }
   }
+
+  routerlist_assert_ok(routerlist);
 
   /* Now we might have to look at routerlist->old_routers for extraneous
    * members. (We'd keep all the members if we could, but we need to save
