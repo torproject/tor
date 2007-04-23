@@ -158,6 +158,57 @@ _split_range(buf_t *buf, char *at, size_t *len,
   }
 }
 
+/** DOCDOC */
+static char *free_mem_list = NULL;
+static int free_mem_list_len = 0;
+/*XXXX020 Actually remove stuff from freelist when it gets too big */
+
+/** DOCDOC */
+static void
+add_buf_mem_to_freelist(buf_t *buf)
+{
+  char *mem;
+
+  tor_assert(buf->len == MIN_LAZY_SHRINK_SIZE);
+  tor_assert(buf->datalen == 0);
+  tor_assert(buf->mem);
+
+  mem = RAW_MEM(buf->mem);
+  buf->len = buf->memsize = 0;
+  buf->mem = buf->cur = NULL;
+
+  *(char**)mem = free_mem_list;
+  free_mem_list = mem;
+  ++free_mem_list_len;
+  log_info(LD_GENERAL, "Add buf mem to freelist.  Freelist has %d entries.",
+           free_mem_list_len);
+}
+
+/** DOCDOC */
+static void
+buf_get_initial_mem(buf_t *buf)
+{
+  char *mem;
+  tor_assert(!buf->mem);
+
+  if (free_mem_list) {
+    mem = free_mem_list;
+    free_mem_list = *(char**)mem;
+    --free_mem_list_len;
+    log_info(LD_GENERAL, "Got buf mem from freelist. Freelist has %d entries.",
+             free_mem_list_len);
+  } else {
+    log_info(LD_GENERAL, "Freelist empty; allocating another chunk.");
+    tor_assert(free_mem_list_len == 0);
+    mem = tor_malloc(ALLOC_LEN(MIN_LAZY_SHRINK_SIZE));
+  }
+  buf->mem = GUARDED_MEM(mem);
+  SET_GUARDS(buf->mem, MIN_LAZY_SHRINK_SIZE);
+  buf->len = MIN_LAZY_SHRINK_SIZE;
+  buf->memsize = ALLOC_LEN(MIN_LAZY_SHRINK_SIZE);
+  buf->cur = buf->mem;
+}
+
 /** Change a buffer's capacity. <b>new_capacity</b> must be \>=
  * buf->datalen. */
 static void
@@ -205,6 +256,7 @@ buf_resize(buf_t *buf, size_t new_capacity)
     }
   }
 
+#if 0
   /* XXX Some play code to throw away old buffers sometimes rather
    * than constantly reallocing them; just in case this is our memory
    * problem. It looks for now like it isn't, so disabled. -RD */
@@ -217,9 +269,23 @@ buf_resize(buf_t *buf, size_t new_capacity)
     oldmem = RAW_MEM(buf->mem);
     tor_free(oldmem);
     buf->mem = buf->cur = newmem;
+  } else { /* ... */ }
+#endif
+
+  if (buf->len == 0 && new_capacity <= MIN_LAZY_SHRINK_SIZE) {
+    new_capacity = MIN_LAZY_SHRINK_SIZE;
+    tor_assert(!buf->mem);
+    buf_get_initial_mem(buf);
   } else {
-    buf->mem = GUARDED_MEM(tor_realloc(RAW_MEM(buf->mem),
-                                       ALLOC_LEN(new_capacity)));
+    char *raw;
+    if (buf->mem)
+      raw = tor_realloc(RAW_MEM(buf->mem), ALLOC_LEN(new_capacity));
+    else {
+      log_info(LD_GENERAL, "Jumping straight from 0 bytes to %d",
+               (int)new_capacity);
+      raw = tor_malloc(ALLOC_LEN(new_capacity));
+    }
+    buf->mem = GUARDED_MEM(raw);
     SET_GUARDS(buf->mem, new_capacity);
     buf->cur = buf->mem+offset;
   }
@@ -239,7 +305,8 @@ buf_resize(buf_t *buf, size_t new_capacity)
             (size_t)(buf->len-offset));
     buf->cur += new_capacity-buf->len;
   }
-  buf->memsize = buf->len = new_capacity;
+  buf->len = new_capacity;
+  buf->memsize = ALLOC_LEN(buf->len);
 
 #ifdef CHECK_AFTER_RESIZE
   assert_buf_ok(buf);
@@ -292,6 +359,11 @@ buf_shrink(buf_t *buf)
   size_t new_len;
 
   new_len = buf->len;
+  if (buf->datalen == 0 && buf->highwater == 0 &&
+      buf->len == MIN_LAZY_SHRINK_SIZE) {
+    add_buf_mem_to_freelist(buf);
+    return;
+  }
   while (buf->highwater < (new_len>>2) && new_len > MIN_LAZY_SHRINK_SIZE*2)
     new_len >>= 1;
 
@@ -328,16 +400,22 @@ buf_nul_terminate(buf_t *buf)
   return 0;
 }
 
-/** Create and return a new buf with capacity <b>size</b>. */
+/** Create and return a new buf with capacity <b>size</b>.
+ * (Used for testing). */
 buf_t *
 buf_new_with_capacity(size_t size)
 {
   buf_t *buf;
   buf = tor_malloc_zero(sizeof(buf_t));
   buf->magic = BUFFER_MAGIC;
-  buf->cur = buf->mem = GUARDED_MEM(tor_malloc(ALLOC_LEN(size)));
-  SET_GUARDS(buf->mem, size);
-  buf->len = buf->memsize = size;
+  if (size == MIN_LAZY_SHRINK_SIZE) {
+    buf_get_initial_mem(buf);
+  } else {
+    buf->cur = buf->mem = GUARDED_MEM(tor_malloc(ALLOC_LEN(size)));
+    SET_GUARDS(buf->mem, size);
+    buf->len = size;
+    buf->memsize = ALLOC_LEN(size);
+  }
 
   assert_buf_ok(buf);
   return buf;
@@ -356,7 +434,7 @@ buf_clear(buf_t *buf)
 {
   buf->datalen = 0;
   buf->cur = buf->mem;
-  buf->len = buf->memsize;
+  /* buf->len = buf->memsize; bad. */
 }
 
 /** Return the number of bytes stored in <b>buf</b> */
@@ -389,8 +467,12 @@ buf_free(buf_t *buf)
   char *oldmem;
   assert_buf_ok(buf);
   buf->magic = 0xDEADBEEF;
-  oldmem = RAW_MEM(buf->mem);
-  tor_free(oldmem);
+  if (buf->len == MIN_LAZY_SHRINK_SIZE) {
+    add_buf_mem_to_freelist(buf);
+  } else {
+    oldmem = RAW_MEM(buf->mem);
+    tor_free(oldmem);
+  }
   tor_free(buf);
 }
 
@@ -1405,14 +1487,24 @@ assert_buf_ok(buf_t *buf)
 {
   tor_assert(buf);
   tor_assert(buf->magic == BUFFER_MAGIC);
-  tor_assert(buf->mem);
   tor_assert(buf->highwater <= buf->len);
   tor_assert(buf->datalen <= buf->highwater);
+
+  if (buf->mem) {
+    tor_assert(buf->cur >= buf->mem);
+    tor_assert(buf->cur < buf->mem+buf->len);
+    tor_assert(buf->memsize == ALLOC_LEN(buf->len));
+  } else {
+    tor_assert(!buf->cur);
+    tor_assert(!buf->len);
+    tor_assert(!buf->memsize);
+  }
+
 #ifdef SENTINELS
-  {
+  if (buf->mem) {
     uint32_t u32 = get_uint32(buf->mem - 4);
     tor_assert(u32 == START_MAGIC);
-    u32 = get_uint32(buf->mem + buf->memsize);
+    u32 = get_uint32(buf->mem + buf->memsize - 8);
     tor_assert(u32 == END_MAGIC);
   }
 #endif

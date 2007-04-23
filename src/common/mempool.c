@@ -377,7 +377,7 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
 }
 
 /** If there are more than <b>n</b> empty chunks in <b>pool</b>, free the
- * exces ones that have been empty for the longest.   (If <b>n</b> is less
+ * excess ones that have been empty for the longest.   (If <b>n</b> is less
  * than zero, free only empty chunks that were not used since the last
  * call to mp_pool_clean(), leaving only -<b>n</b>.) */
 void
