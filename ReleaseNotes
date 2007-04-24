@@ -3,7 +3,12 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.1.2.13 - 2007-04-xx
+Changes in version 0.1.2.13 - 2007-04-24
+
+Tor 0.1.2.13 is released in memory of Rob Levin (1955-2006), aka lilo
+of the Freenode IRC network, remembering his patience and vision for
+free speech on the Internet.
+
   o Major features, client performance:
     - Weight directory requests by advertised bandwidth. Now we can
       let servers enable write limiting but still allow most clients to
@@ -219,6 +224,7 @@ Changes in version 0.1.2.13 - 2007-04-xx
     - Mask out all signals in sub-threads; only the libevent signal
       handler should be processing them. This should prevent some crashes
       on some machines using pthreads. (Patch from coderman.)
+    - Disable kqueue on OS X 10.3 and earlier, to fix bug 371.
 
   o Major fixes, anonymity/security:
     - Automatically avoid picking more than one node from the same
