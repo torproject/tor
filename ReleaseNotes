@@ -563,6 +563,8 @@ free speech on the Internet.
     - Behave correctly in case we ever have a network with more than
       2GB/s total advertised capacity.
     - Claim a commonname of Tor, rather than TOR, in TLS handshakes.
+    - Fix a memory leak when we ask for "all" networkstatuses and we
+      get one we don't recognize.
 
 
 Changes in version 0.1.1.26 - 2006-12-14
