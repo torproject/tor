@@ -104,13 +104,13 @@ cp AUTHORS $DOC/AUTHORS.txt
 groff doc/tor.1.in -T ps -m man | pstopdf -i -o $DOC/tor-reference.pdf
 groff doc/tor-resolve.1 -T ps -m man | pstopdf -i -o $DOC/tor-resolve.pdf
 mkdir $DOC/Advanced
-cp	$TOR_DIR/doc/spec/tor-spec.txt         \
-	$TOR_DIR/doc/spec/rend-spec.txt        \
-	$TOR_DIR/doc/spec/control-spec.txt     \
-	$TOR_DIR/doc/spec/socks-extensions.txt \
-	$TOR_DIR/doc/spec/version-spec.txt     \
-	$TOR_DIR/doc/spec/address-spec.txt     \
-	$TOR_DIR/doc/spec/path-spec.txt        \
+cp	doc/spec/tor-spec.txt         \
+	doc/spec/rend-spec.txt        \
+	doc/spec/control-spec.txt     \
+	doc/spec/socks-extensions.txt \
+	doc/spec/version-spec.txt     \
+	doc/spec/address-spec.txt     \
+	doc/spec/path-spec.txt        \
 	$DOC/Advanced
 
 cp doc/HACKING $DOC/Advanced/HACKING.txt
