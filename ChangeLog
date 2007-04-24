@@ -104,6 +104,15 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       so the caller doesn't have to.
     - Rename wants_to_read and wants_to_write to read/write_blocked_on_bw.
 
+
+Changes in version 0.1.2.13 - 2007-04-24
+  o Minor fixes:
+    - Fix a memory leak when we ask for "all" networkstatuses and we
+      get one we don't recognize.
+    - Add more asserts to hunt down bug 417.
+    - Disable kqueue on OS X 10.3 and earlier, to fix bug 371.
+
+
 Changes in version 0.1.2.12-rc - 2007-03-16
   o Major bugfixes:
     - Fix an infinite loop introduced in 0.1.2.7-alpha when we serve
@@ -517,7 +526,7 @@ Changes in version 0.1.2.5-alpha - 2007-01-06
 
   o Minor features (directory):
     - Authorities now specify server versions in networkstatus. This adds
-      about 2% to the side of compressed networkstatus docs, and allows
+      about 2% to the size of compressed networkstatus docs, and allows
       clients to tell which servers support BEGIN_DIR and which don't.
       The implementation is forward-compatible with a proposed future
       protocol version scheme not tied to Tor versions.
@@ -1763,7 +1772,6 @@ Changes in version 0.1.0.16 - 2006-01-02
     - Do not check whether DirPort is reachable when we are suppressing
       advertising it because of hibernation.
     - When building with -static or on Solaris, we sometimes needed -ldl.
-    - One of the dirservers (tor26) changed its IP address.
     - When we're deciding whether a stream has enough circuits around
       that can handle it, count the freshly dirty ones and not the ones
       that are so dirty they won't be able to handle it.

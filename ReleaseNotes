@@ -3,6 +3,570 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.1.2.13 - 2007-04-24
+
+Tor 0.1.2.13 is released in memory of Rob Levin (1955-2006), aka lilo
+of the Freenode IRC network, remembering his patience and vision for
+free speech on the Internet.
+
+  o Major features, client performance:
+    - Weight directory requests by advertised bandwidth. Now we can
+      let servers enable write limiting but still allow most clients to
+      succeed at their directory requests. (We still ignore weights when
+      choosing a directory authority; I hope this is a feature.)
+    - Stop overloading exit nodes -- avoid choosing them for entry or
+      middle hops when the total bandwidth available from non-exit nodes
+      is much higher than the total bandwidth available from exit nodes.
+    - Rather than waiting a fixed amount of time between retrying
+      application connections, we wait only 10 seconds for the first,
+      10 seconds for the second, and 15 seconds for each retry after
+      that. Hopefully this will improve the expected user experience.
+    - Sometimes we didn't bother sending a RELAY_END cell when an attempt
+      to open a stream fails; now we do in more cases. This should
+      make clients able to find a good exit faster in some cases, since
+      unhandleable requests will now get an error rather than timing out.
+
+  o Major features, client functionality:
+    - Implement BEGIN_DIR cells, so we can connect to a directory
+      server via TLS to do encrypted directory requests rather than
+      plaintext. Enable via the TunnelDirConns and PreferTunneledDirConns
+      config options if you like. For now, this feature only works if
+      you already have a descriptor for the destination dirserver.
+    - Add support for transparent application connections: this basically
+      bundles the functionality of trans-proxy-tor into the Tor
+      mainline. Now hosts with compliant pf/netfilter implementations
+      can redirect TCP connections straight to Tor without diverting
+      through SOCKS. (Based on patch from tup.)
+    - Add support for using natd; this allows FreeBSDs earlier than
+      5.1.2 to have ipfw send connections through Tor without using
+      SOCKS. (Patch from Zajcev Evgeny with tweaks from tup.)
+
+  o Major features, servers:
+    - Setting up a dyndns name for your server is now optional: servers
+      with no hostname or IP address will learn their IP address by
+      asking the directory authorities. This code only kicks in when you
+      would normally have exited with a "no address" error. Nothing's
+      authenticated, so use with care.
+    - Directory servers now spool server descriptors, v1 directories,
+      and v2 networkstatus objects to buffers as needed rather than en
+      masse. They also mmap the cached-routers files. These steps save
+      lots of memory.
+    - Stop requiring clients to have well-formed certificates, and stop
+      checking nicknames in certificates. (Clients have certificates so
+      that they can look like Tor servers, but in the future we might want
+      to allow them to look like regular TLS clients instead. Nicknames
+      in certificates serve no purpose other than making our protocol
+      easier to recognize on the wire.) Implements proposal 106.
+
+  o Improvements on DNS support:
+    - Add "eventdns" asynchronous dns library originally based on code
+      from Adam Langley. Now we can discard the old rickety dnsworker
+      concept, and support a wider variety of DNS functions. Allows
+      multithreaded builds on NetBSD and OpenBSD again.
+    - Add server-side support for "reverse" DNS lookups (using PTR
+      records so clients can determine the canonical hostname for a given
+      IPv4 address). Only supported by servers using eventdns; servers
+      now announce in their descriptors if they don't support eventdns.
+    - Workaround for name servers (like Earthlink's) that hijack failing
+      DNS requests and replace the no-such-server answer with a "helpful"
+      redirect to an advertising-driven search portal. Also work around
+      DNS hijackers who "helpfully" decline to hijack known-invalid
+      RFC2606 addresses. Config option "ServerDNSDetectHijacking 0"
+      lets you turn it off.
+    - Servers now check for the case when common DNS requests are going to
+      wildcarded addresses (i.e. all getting the same answer), and change
+      their exit policy to reject *:* if it's happening.
+    - When asked to resolve a hostname, don't use non-exit servers unless
+      requested to do so. This allows servers with broken DNS to be
+      useful to the network.
+    - Start passing "ipv4" hints to getaddrinfo(), so servers don't do
+      useless IPv6 DNS resolves.
+    - Specify and implement client-side SOCKS5 interface for reverse DNS
+      lookups (see doc/socks-extensions.txt). Also cache them.
+    - When we change nameservers or IP addresses, reset and re-launch
+      our tests for DNS hijacking.
+
+  o Improvements on reachability testing:
+    - Servers send out a burst of long-range padding cells once they've
+      established that they're reachable. Spread them over 4 circuits,
+      so hopefully a few will be fast. This exercises bandwidth and
+      bootstraps them into the directory more quickly.
+    - When we find our DirPort to be reachable, publish a new descriptor
+      so we'll tell the world (reported by pnx).
+    - Directory authorities now only decide that routers are reachable
+      if their identity keys are as expected.
+    - Do DirPort reachability tests less often, since a single test
+      chews through many circuits before giving up.
+    - Avoid some false positives during reachability testing: don't try
+      to test via a server that's on the same /24 network as us.
+    - Start publishing one minute or so after we find our ORPort
+      to be reachable. This will help reduce the number of descriptors
+      we have for ourselves floating around, since it's quite likely
+      other things (e.g. DirPort) will change during that minute too.
+    - Routers no longer try to rebuild long-term connections to directory
+      authorities, and directory authorities no longer try to rebuild
+      long-term connections to all servers. We still don't hang up
+      connections in these two cases though -- we need to look at it
+      more carefully to avoid flapping, and we likely need to wait til
+      0.1.1.x is obsolete.
+
+  o Improvements on rate limiting:
+    - Enable write limiting as well as read limiting. Now we sacrifice
+      capacity if we're pushing out lots of directory traffic, rather
+      than overrunning the user's intended bandwidth limits.
+    - Include TLS overhead when counting bandwidth usage; previously, we
+      would count only the bytes sent over TLS, but not the bytes used
+      to send them.
+    - Servers decline directory requests much more aggressively when
+      they're low on bandwidth. Otherwise they end up queueing more and
+      more directory responses, which can't be good for latency.
+    - But never refuse directory requests from local addresses.
+    - Be willing to read or write on local connections (e.g. controller
+      connections) even when the global rate limiting buckets are empty.
+    - Flush local controller connection buffers periodically as we're
+      writing to them, so we avoid queueing 4+ megabytes of data before
+      trying to flush.
+    - Revise and clean up the torrc.sample that we ship with; add
+      a section for BandwidthRate and BandwidthBurst.
+
+  o Major features, NT services:
+    - Install as NT_AUTHORITY\LocalService rather than as SYSTEM; add a
+      command-line flag so that admins can override the default by saying
+      "tor --service install --user "SomeUser"". This will not affect
+      existing installed services. Also, warn the user that the service
+      will look for its configuration file in the service user's
+      %appdata% directory. (We can't do the "hardwire the user's appdata
+      directory" trick any more, since we may not have read access to that
+      directory.)
+    - Support running the Tor service with a torrc not in the same
+      directory as tor.exe and default to using the torrc located in
+      the %appdata%\Tor\ of the user who installed the service. Patch
+      from Matt Edman.
+    - Add an --ignore-missing-torrc command-line option so that we can
+      get the "use sensible defaults if the configuration file doesn't
+      exist" behavior even when specifying a torrc location on the
+      command line.
+    - When stopping an NT service, wait up to 10 sec for it to actually
+      stop. (Patch from Matt Edman; resolves bug 295.)
+
+  o Directory authority improvements:
+    - Stop letting hibernating or obsolete servers affect uptime and
+      bandwidth cutoffs.
+    - Stop listing hibernating servers in the v1 directory.
+    - Authorities no longer recommend exits as guards if this would shift
+      too much load to the exit nodes.
+    - Authorities now specify server versions in networkstatus. This adds
+      about 2% to the size of compressed networkstatus docs, and allows
+      clients to tell which servers support BEGIN_DIR and which don't.
+      The implementation is forward-compatible with a proposed future
+      protocol version scheme not tied to Tor versions.
+    - DirServer configuration lines now have an orport= option so
+      clients can open encrypted tunnels to the authorities without
+      having downloaded their descriptors yet. Enabled for moria1,
+      moria2, tor26, and lefkada now in the default configuration.
+    - Add a BadDirectory flag to network status docs so that authorities
+      can (eventually) tell clients about caches they believe to be
+      broken. Not used yet.
+    - Allow authorities to list nodes as bad exits in their
+      approved-routers file by fingerprint or by address. If most
+      authorities set a BadExit flag for a server, clients don't think
+      of it as a general-purpose exit. Clients only consider authorities
+      that advertise themselves as listing bad exits.
+    - Patch from Steve Hildrey: Generate network status correctly on
+      non-versioning dirservers.
+    - Have directory authorities allow larger amounts of drift in uptime
+      without replacing the server descriptor: previously, a server that
+      restarted every 30 minutes could have 48 "interesting" descriptors
+      per day.
+    - Reserve the nickname "Unnamed" for routers that can't pick
+      a hostname: any router can call itself Unnamed; directory
+      authorities will never allocate Unnamed to any particular router;
+      clients won't believe that any router is the canonical Unnamed.
+
+  o Directory mirrors and clients:
+    - Discard any v1 directory info that's over 1 month old (for
+      directories) or over 1 week old (for running-routers lists).
+    - Clients track responses with status 503 from dirservers. After a
+      dirserver has given us a 503, we try not to use it until an hour has
+      gone by, or until we have no dirservers that haven't given us a 503.
+    - When we get a 503 from a directory, and we're not a server, we no
+      longer count the failure against the total number of failures
+      allowed for the object we're trying to download.
+    - Prepare for servers to publish descriptors less often: never
+      discard a descriptor simply for being too old until either it is
+      recommended by no authorities, or until we get a better one for
+      the same router. Make caches consider retaining old recommended
+      routers for even longer.
+    - Directory servers now provide 'Pragma: no-cache' and 'Expires'
+      headers for content, so that we can work better in the presence of
+      caching HTTP proxies.
+    - Stop fetching descriptors if you're not a dir mirror and you
+      haven't tried to establish any circuits lately. (This currently
+      causes some dangerous behavior, because when you start up again
+      you'll use your ancient server descriptors.)
+
+  o Major fixes, crashes:
+    - Stop crashing when the controller asks us to resetconf more than
+      one config option at once. (Vidalia 0.0.11 does this.)
+    - Fix a longstanding obscure crash bug that could occur when we run
+      out of DNS worker processes, if we're not using eventdns. (Resolves
+      bug 390.)
+    - Fix an assert that could trigger if a controller quickly set then
+      cleared EntryNodes. (Bug found by Udo van den Heuvel.)
+    - Avoid crash when telling controller about stream-status and a
+      stream is detached.
+    - Avoid sending junk to controllers or segfaulting when a controller
+      uses EVENT_NEW_DESC with verbose nicknames.
+    - Stop triggering asserts if the controller tries to extend hidden
+      service circuits (reported by mwenge).
+    - If we start a server with ClientOnly 1, then set ClientOnly to 0
+      and hup, stop triggering an assert based on an empty onion_key.
+    - Mask out all signals in sub-threads; only the libevent signal
+      handler should be processing them. This should prevent some crashes
+      on some machines using pthreads. (Patch from coderman.)
+    - Disable kqueue on OS X 10.3 and earlier, to fix bug 371.
+
+  o Major fixes, anonymity/security:
+    - Automatically avoid picking more than one node from the same
+      /16 network when constructing a circuit. Add an
+      "EnforceDistinctSubnets" option to let people disable it if they
+      want to operate private test networks on a single subnet.
+    - When generating bandwidth history, round down to the nearest
+      1k. When storing accounting data, round up to the nearest 1k.
+    - When we're running as a server, remember when we last rotated onion
+      keys, so that we will rotate keys once they're a week old even if
+      we never stay up for a week ourselves.
+    - If a client asked for a server by name, and there's a named server
+      in our network-status but we don't have its descriptor yet, we
+      could return an unnamed server instead.
+    - Reject (most) attempts to use Tor circuits with length one. (If
+      many people start using Tor as a one-hop proxy, exit nodes become
+      a more attractive target for compromise.)
+    - Just because your DirPort is open doesn't mean people should be
+      able to remotely teach you about hidden service descriptors. Now
+      only accept rendezvous posts if you've got HSAuthoritativeDir set.
+    - Fix a potential race condition in the rpm installer. Found by
+      Stefan Nordhausen.
+    - Do not log IPs with TLS failures for incoming TLS
+      connections. (Fixes bug 382.)
+
+  o Major fixes, other:
+    - If our system clock jumps back in time, don't publish a negative
+      uptime in the descriptor.
+    - When we start during an accounting interval before it's time to wake
+      up, remember to wake up at the correct time. (May fix bug 342.)
+    - Previously, we would cache up to 16 old networkstatus documents
+      indefinitely, if they came from nontrusted authorities. Now we
+      discard them if they are more than 10 days old.
+    - When we have a state file we cannot parse, tell the user and
+      move it aside. Now we avoid situations where the user starts
+      Tor in 1904, Tor writes a state file with that timestamp in it,
+      the user fixes her clock, and Tor refuses to start.
+    - Publish a new descriptor after we hup/reload. This is important
+      if our config has changed such that we'll want to start advertising
+      our DirPort now, etc.
+    - If we are using an exit enclave and we can't connect, e.g. because
+      its webserver is misconfigured to not listen on localhost, then
+      back off and try connecting from somewhere else before we fail.
+
+  o New config options or behaviors:
+    - When EntryNodes are configured, rebuild the guard list to contain,
+      in order: the EntryNodes that were guards before; the rest of the
+      EntryNodes; the nodes that were guards before.
+    - Do not warn when individual nodes in the configuration's EntryNodes,
+      ExitNodes, etc are down: warn only when all possible nodes
+      are down. (Fixes bug 348.)
+    - Put a lower-bound on MaxAdvertisedBandwidth.
+    - Start using the state file to store bandwidth accounting data:
+      the bw_accounting file is now obsolete. We'll keep generating it
+      for a while for people who are still using 0.1.2.4-alpha.
+    - Try to batch changes to the state file so that we do as few
+      disk writes as possible while still storing important things in
+      a timely fashion.
+    - The state file and the bw_accounting file get saved less often when
+      the AvoidDiskWrites config option is set.
+    - Make PIDFile work on Windows.
+    - Add internal descriptions for a bunch of configuration options:
+      accessible via controller interface and in comments in saved
+      options files.
+    - Reject *:563 (NNTPS) in the default exit policy. We already reject
+      NNTP by default, so this seems like a sensible addition.
+    - Clients now reject hostnames with invalid characters. This should
+      avoid some inadvertent info leaks. Add an option
+      AllowNonRFC953Hostnames to disable this behavior, in case somebody
+      is running a private network with hosts called @, !, and #.
+    - Check for addresses with invalid characters at the exit as well,
+      and warn less verbosely when they fail. You can override this by
+      setting ServerDNSAllowNonRFC953Addresses to 1.
+    - Remove some options that have been deprecated since at least
+      0.1.0.x: AccountingMaxKB, LogFile, DebugLogFile, LogLevel, and
+      SysLog. Use AccountingMax instead of AccountingMaxKB, and use Log
+      to set log options. Mark PathlenCoinWeight as obsolete.
+    - Stop accepting certain malformed ports in configured exit policies.
+    - When the user uses bad syntax in the Log config line, stop
+      suggesting other bad syntax as a replacement.
+    - Add new config option "ResolvConf" to let the server operator
+      choose an alternate resolve.conf file when using eventdns.
+    - If one of our entry guards is on the ExcludeNodes list, or the
+      directory authorities don't think it's a good guard, treat it as
+      if it were unlisted: stop using it as a guard, and throw it off
+      the guards list if it stays that way for a long time.
+    - Allow directory authorities to be marked separately as authorities
+      for the v1 directory protocol, the v2 directory protocol, and
+      as hidden service directories, to make it easier to retire old
+      authorities. V1 authorities should set "HSAuthoritativeDir 1"
+      to continue being hidden service authorities too.
+    - Remove 8888 as a LongLivedPort, and add 6697 (IRCS).
+    - Make TrackExitHosts case-insensitive, and fix the behavior of
+      ".suffix" TrackExitHosts items to avoid matching in the middle of
+      an address.
+    - New DirPort behavior: if you have your dirport set, you download
+      descriptors aggressively like a directory mirror, whether or not
+      your ORPort is set.
+
+  o Docs:
+    - Create a new file ReleaseNotes which was the old ChangeLog. The
+      new ChangeLog file now includes the notes for all development
+      versions too.
+    - Add a new address-spec.txt document to describe our special-case
+      addresses: .exit, .onion, and .noconnnect.
+    - Fork the v1 directory protocol into its own spec document,
+      and mark dir-spec.txt as the currently correct (v2) spec.
+
+  o Packaging, porting, and contrib
+    - "tor --verify-config" now exits with -1(255) or 0 depending on
+      whether the config options are bad or good.
+    - The Debian package now uses --verify-config when (re)starting,
+      to distinguish configuration errors from other errors.
+    - Adapt a patch from goodell to let the contrib/exitlist script
+      take arguments rather than require direct editing.
+    - Prevent the contrib/exitlist script from printing the same
+      result more than once.
+    - Add support to tor-resolve tool for reverse lookups and SOCKS5.
+    - In the hidden service example in torrc.sample, stop recommending
+      esoteric and discouraged hidden service options.
+    - Patch from Michael Mohr to contrib/cross.sh, so it checks more
+      values before failing, and always enables eventdns.
+    - Try to detect Windows correctly when cross-compiling.
+    - Libevent-1.2 exports, but does not define in its headers, strlcpy.
+      Try to fix this in configure.in by checking for most functions
+      before we check for libevent.
+    - Update RPMs to require libevent 1.2.
+    - Experimentally re-enable kqueue on OSX when using libevent 1.1b
+      or later. Log when we are doing this, so we can diagnose it when
+      it fails. (Also, recommend libevent 1.1b for kqueue and
+      win32 methods; deprecate libevent 1.0b harder; make libevent
+      recommendation system saner.)
+    - Build with recent (1.3+) libevents on platforms that do not
+      define the nonstandard types "u_int8_t" and friends.
+    - Remove architecture from OS X builds. The official builds are
+      now universal binaries.
+    - Run correctly on OS X platforms with case-sensitive filesystems.
+    - Correctly set maximum connection limit on Cygwin. (This time
+      for sure!)
+    - Start compiling on MinGW on Windows (patches from Mike Chiussi
+      and many others).
+    - Start compiling on MSVC6 on Windows (patches from Frediano Ziglio).
+    - Finally fix the openssl warnings from newer gccs that believe that
+      ignoring a return value is okay, but casting a return value and
+      then ignoring it is a sign of madness.
+    - On architectures where sizeof(int)>4, still clamp declarable
+      bandwidth to INT32_MAX.
+
+  o Minor features, controller:
+    - Warn the user when an application uses the obsolete binary v0
+      control protocol. We're planning to remove support for it during
+      the next development series, so it's good to give people some
+      advance warning.
+    - Add STREAM_BW events to report per-entry-stream bandwidth
+      use. (Patch from Robert Hogan.)
+    - Rate-limit SIGNEWNYM signals in response to controllers that
+      impolitely generate them for every single stream. (Patch from
+      mwenge; closes bug 394.)
+    - Add a REMAP status to stream events to note that a stream's
+      address has changed because of a cached address or a MapAddress
+      directive.
+    - Make REMAP stream events have a SOURCE (cache or exit), and
+      make them generated in every case where we get a successful
+      connected or resolved cell.
+    - Track reasons for OR connection failure; make these reasons
+      available via the controller interface. (Patch from Mike Perry.)
+    - Add a SOCKS_BAD_HOSTNAME client status event so controllers
+      can learn when clients are sending malformed hostnames to Tor.
+    - Specify and implement some of the controller status events.
+    - Have GETINFO dir/status/* work on hosts with DirPort disabled.
+    - Reimplement GETINFO so that info/names stays in sync with the
+      actual keys.
+    - Implement "GETINFO fingerprint".
+    - Implement "SETEVENTS GUARD" so controllers can get updates on
+      entry guard status as it changes.
+    - Make all connections to addresses of the form ".noconnect"
+      immediately get closed. This lets application/controller combos
+      successfully test whether they're talking to the same Tor by
+      watching for STREAM events.
+    - Add a REASON field to CIRC events; for backward compatibility, this
+      field is sent only to controllers that have enabled the extended
+      event format. Also, add additional reason codes to explain why
+      a given circuit has been destroyed or truncated. (Patches from
+      Mike Perry)
+    - Add a REMOTE_REASON field to extended CIRC events to tell the
+      controller why a remote OR told us to close a circuit.
+    - Stream events also now have REASON and REMOTE_REASON fields,
+      working much like those for circuit events.
+    - There's now a GETINFO ns/... field so that controllers can ask Tor
+      about the current status of a router.
+    - A new event type "NS" to inform a controller when our opinion of
+      a router's status has changed.
+    - Add a GETINFO events/names and GETINFO features/names so controllers
+      can tell which events and features are supported.
+    - A new CLEARDNSCACHE signal to allow controllers to clear the
+      client-side DNS cache without expiring circuits.
+    - Fix CIRC controller events so that controllers can learn the
+      identity digests of non-Named servers used in circuit paths.
+    - Let controllers ask for more useful identifiers for servers. Instead
+      of learning identity digests for un-Named servers and nicknames
+      for Named servers, the new identifiers include digest, nickname,
+      and indication of Named status. Off by default; see control-spec.txt
+      for more information.
+    - Add a "getinfo address" controller command so it can display Tor's
+      best guess to the user.
+    - New controller event to alert the controller when our server
+      descriptor has changed.
+    - Give more meaningful errors on controller authentication failure.
+    - Export the default exit policy via the control port, so controllers
+      don't need to guess what it is / will be later.
+
+  o Minor bugfixes, controller:
+    - When creating a circuit via the controller, send a 'launched'
+      event when we're done, so we follow the spec better.
+    - Correct the control spec to match how the code actually responds
+      to 'getinfo addr-mappings/*'. Reported by daejees.
+    - The control spec described a GUARDS event, but the code
+      implemented a GUARD event. Standardize on GUARD, but let people
+      ask for GUARDS too. Reported by daejees.
+    - Give the controller END_STREAM_REASON_DESTROY events _before_ we
+      clear the corresponding on_circuit variable, and remember later
+      that we don't need to send a redundant CLOSED event. (Resolves part
+      3 of bug 367.)
+    - Report events where a resolve succeeded or where we got a socks
+      protocol error correctly, rather than calling both of them
+      "INTERNAL".
+    - Change reported stream target addresses to IP consistently when
+      we finally get the IP from an exit node.
+    - Send log messages to the controller even if they happen to be very
+      long.
+    - Flush ERR-level controller status events just like we currently
+      flush ERR-level log events, so that a Tor shutdown doesn't prevent
+      the controller from learning about current events.
+    - Report the circuit number correctly in STREAM CLOSED events. Bug
+      reported by Mike Perry.
+    - Do not report bizarre values for results of accounting GETINFOs
+      when the last second's write or read exceeds the allotted bandwidth.
+    - Report "unrecognized key" rather than an empty string when the
+      controller tries to fetch a networkstatus that doesn't exist.
+    - When the controller does a "GETINFO network-status", tell it
+      about even those routers whose descriptors are very old, and use
+      long nicknames where appropriate.
+    - Fix handling of verbose nicknames with ORCONN controller events:
+      make them show up exactly when requested, rather than exactly when
+      not requested.
+    - Controller signals now work on non-Unix platforms that don't define
+      SIGUSR1 and SIGUSR2 the way we expect.
+    - Respond to SIGNAL command before we execute the signal, in case
+      the signal shuts us down. Suggested by Karsten Loesing.
+    - Handle reporting OR_CONN_EVENT_NEW events to the controller.
+
+  o Minor features, code performance:
+    - Major performance improvement on inserting descriptors: change
+      algorithm from O(n^2) to O(n).
+    - Do not rotate onion key immediately after setting it for the first
+      time.
+    - Call router_have_min_dir_info half as often. (This is showing up in
+      some profiles, but not others.)
+    - When using GCC, make log_debug never get called at all, and its
+      arguments never get evaluated, when no debug logs are configured.
+      (This is showing up in some profiles, but not others.)
+    - Statistics dumped by -USR2 now include a breakdown of public key
+      operations, for profiling.
+    - Make the common memory allocation path faster on machines where
+      malloc(0) returns a pointer.
+    - Split circuit_t into origin_circuit_t and or_circuit_t, and
+      split connection_t into edge, or, dir, control, and base structs.
+      These will save quite a bit of memory on busy servers, and they'll
+      also help us track down bugs in the code and bugs in the spec.
+    - Use OpenSSL's AES implementation on platforms where it's faster.
+      This could save us as much as 10% CPU usage.
+
+  o Minor features, descriptors and descriptor handling:
+    - Avoid duplicate entries on MyFamily line in server descriptor.
+    - When Tor receives a router descriptor that it asked for, but
+      no longer wants (because it has received fresh networkstatuses
+      in the meantime), do not warn the user. Cache the descriptor if
+      we're a cache; drop it if we aren't.
+    - Servers no longer ever list themselves in their "family" line,
+      even if configured to do so. This makes it easier to configure
+      family lists conveniently.
+
+  o Minor fixes, confusing/misleading log messages:
+    - Display correct results when reporting which versions are
+      recommended, and how recommended they are. (Resolves bug 383.)
+    - Inform the server operator when we decide not to advertise a
+      DirPort due to AccountingMax enabled or a low BandwidthRate.
+    - Only include function names in log messages for info/debug messages.
+      For notice/warn/err, the content of the message should be clear on
+      its own, and printing the function name only confuses users.
+    - Remove even more protocol-related warnings from Tor server logs,
+      such as bad TLS handshakes and malformed begin cells.
+    - Fix bug 314: Tor clients issued "unsafe socks" warnings even
+      when the IP address is mapped through MapAddress to a hostname.
+    - Fix misleading log messages: an entry guard that is "unlisted",
+      as well as not known to be "down" (because we've never heard
+      of it), is not therefore "up".
+
+  o Minor fixes, old/obsolete behavior:
+    - Start assuming we can use a create_fast cell if we don't know
+      what version a router is running.
+    - We no longer look for identity and onion keys in "identity.key" and
+      "onion.key" -- these were replaced by secret_id_key and
+      secret_onion_key in 0.0.8pre1.
+    - We no longer require unrecognized directory entries to be
+      preceded by "opt".
+    - Drop compatibility with obsolete Tors that permit create cells
+      to have the wrong circ_id_type.
+    - Remove code to special-case "-cvs" ending, since it has not
+      actually mattered since 0.0.9.
+    - Don't re-write the fingerprint file every restart, unless it has
+      changed.
+
+  o Minor fixes, misc client-side behavior:
+    - Always remove expired routers and networkstatus docs before checking
+      whether we have enough information to build circuits. (Fixes
+      bug 373.)
+    - When computing clock skew from directory HTTP headers, consider what
+      time it was when we finished asking for the directory, not what
+      time it is now.
+    - Make our socks5 handling more robust to broken socks clients:
+      throw out everything waiting on the buffer in between socks
+      handshake phases, since they can't possibly (so the theory
+      goes) have predicted what we plan to respond to them.
+    - Expire socks connections if they spend too long waiting for the
+      handshake to finish. Previously we would let them sit around for
+      days, if the connecting application didn't close them either.
+    - And if the socks handshake hasn't started, don't send a
+      "DNS resolve socks failed" handshake reply; just close it.
+    - If the user asks to use invalid exit nodes, be willing to use
+      unstable ones.
+    - Track unreachable entry guards correctly: don't conflate
+      'unreachable by us right now' with 'listed as down by the directory
+      authorities'. With the old code, if a guard was unreachable by us
+      but listed as running, it would clog our guard list forever.
+    - Behave correctly in case we ever have a network with more than
+      2GB/s total advertised capacity.
+    - Claim a commonname of Tor, rather than TOR, in TLS handshakes.
+    - Fix a memory leak when we ask for "all" networkstatuses and we
+      get one we don't recognize.
+
+
 Changes in version 0.1.1.26 - 2006-12-14
   o Security bugfixes:
     - Stop sending the HttpProxyAuthenticator string to directory
