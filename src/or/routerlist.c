@@ -2490,9 +2490,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     if (smartlist_string_isin(requested_fingerprints, fp)) {
       smartlist_string_remove(requested_fingerprints, fp);
     } else {
-      char *requested =
-        smartlist_join_strings(requested_fingerprints," ",0,NULL);
       if (source != NS_FROM_DIR_ALL) {
+        char *requested =
+          smartlist_join_strings(requested_fingerprints," ",0,NULL);
         log_warn(LD_DIR,
                "We received a network status with a fingerprint (%s) that we "
                "never requested. (We asked for: %s.) Dropping.",
