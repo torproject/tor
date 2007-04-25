@@ -1833,7 +1833,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
 
   /* Did we just ran out of cells on this queue? */
   if (queue->n == 0) {
-    log_info(LD_GENERAL, "Made a circuit inactive.");
+    log_debug(LD_GENERAL, "Made a circuit inactive.");
     make_circuit_inactive_on_conn(circ, conn);
   }
   return n_flushed;
@@ -1866,7 +1866,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
   if (queue->n == 1) {
     /* This was the first cell added to the queue.  We need to make this
      * circuit active. */
-    log_info(LD_GENERAL, "Made a circuit active.");
+    log_debug(LD_GENERAL, "Made a circuit active.");
     make_circuit_active_on_conn(circ, orconn);
   }
 
@@ -1875,7 +1875,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
      * cell, so that we can notice when it gets flushed, flushed_some can
      * get called, and we can start putting more data onto the buffer then.
      */
-    log_info(LD_GENERAL, "Primed a buffer.");
+    log_debug(LD_GENERAL, "Primed a buffer.");
     connection_or_flush_from_first_active_circuit(orconn, 1);
   }
 }
