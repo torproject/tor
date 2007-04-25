@@ -173,18 +173,28 @@ Things we'd like to do in 0.2.0.x:
     - A better UI for authority ops.
       - Follow weasel's proposal, crossed with mixminion dir config format
       - Write a proposal
-    - Bridges (rudimentary version) (By Jun 1)
+    - Bridges users (rudimentary version) (By Jun 1)
       - Ability to specify bridges manually
-      - Use bridges to build circuits
+      D cache of bridges that we've learned about and use but aren't
+        manually listed in the torrc.
+        D and some mechanism for specifying that we want to stop using
+          a given bridge in this cache.
+      - Config option 'UseBridges' that bridge users can turn on.
+        - uses bridges as first hop rather than entry guards.
+      D Do we want to maintain our own set of entryguards that we use
+        after the bridge? Open research question; let's say no for 0.2.0
+        unless we learn otherwise.
       - Ask all directory questions to bridge via BEGIN_DIR.
+    - Bridges operators (rudimentary version) (By Jun 1)
       - Ability to act as dir cache without a dir port.
       - Bridges publish to bridge authorities
-      - Rudimentary "do not publish networkstatus" option for bridge
-        authorities.
-      - Clients can ask bridge authorities for more bridges.
       - Fix BEGIN_DIR so that you connect to bridge of which you only
         know IP (and optionally fingerprint), and then use BEGIN_DIR to learn
         more about it.
+    - Bridges authorities (rudimentary version) (By Jun 1)
+      - Rudimentary "do not publish networkstatus" option for bridge
+        authorities.
+      - Clients can ask bridge authorities for more bridges.
     - Bridges (not necessarily by Jun 1)
       - Clients can ask bridge authorities for updates on known bridges.
       - More TLS normalization work: make Tor less easily
@@ -201,6 +211,8 @@ Things we'd like to do in 0.2.0.x:
     - Blocking-resistance.
     - It would be potentially helpful to https requests on the OR port by
       acting like an HTTPS server.
+    - add an 'exit-address' line in the descriptor for servers that exit
+      from something that isn't their published address.
     - Audit how much RAM we're using for buffers and cell pools; try to
       trim down a lot.
   o Deprecations:
@@ -211,6 +223,7 @@ P   - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
+  - add an AuthDirBadexit torrc option if we decide we want one.
 
 Deferred from 0.1.2.x:
   - BEGIN_DIR items
@@ -397,6 +410,9 @@ R - add d64 and fp64 along-side d and fp so people can paste status
 
 
 Future version:
+  - we try to build 4 test circuits to break them over different
+    servers. but sometimes our entry node is the same for multiple
+    test circuits. this defeats the point.
   - when we hit a funny error from a dir request (eg 403 forbidden),
     but tor is working and happy otherwise, and we haven't seen many
     such errors recently, then don't warn about it.
