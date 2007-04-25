@@ -1105,8 +1105,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       if (next) {
         next[1] = 'n';
         cp = next+1;
-      }
-      else
+      } else
         break;
     }
     routers_update_all_from_networkstatus(); /*launches router downloads*/

@@ -368,7 +368,7 @@ rend_cache_store(const char *desc, size_t desc_len)
   rend_cache_entry_t *e;
   rend_service_descriptor_t *parsed;
   char query[REND_SERVICE_ID_LEN+1];
-  char key[REND_SERVICE_ID_LEN+2]; /* 1<query>\0   or  0<query>\0 */
+  char key[REND_SERVICE_ID_LEN+2]; /* 1<query>\0  or  0<query>\0 */
   time_t now;
 
   tor_assert(rend_cache);

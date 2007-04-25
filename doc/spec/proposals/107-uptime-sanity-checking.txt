@@ -39,7 +39,7 @@ Specification:
 
 Compatibility:
 
-   There should be no compatiblity issues due to uptime capping.
+   There should be no compatibility issues due to uptime capping.
 
 Implementation:
 

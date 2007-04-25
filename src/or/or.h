@@ -687,16 +687,16 @@ struct cell_t {
 typedef struct packed_cell_t packed_cell_t;
 /** A cell as packed for writing to the network. */
 struct packed_cell_t {
-  struct packed_cell_t *next; /**< Next cell queued on a this circuit. */
+  struct packed_cell_t *next; /**< Next cell queued on this circuit. */
   char body[CELL_NETWORK_SIZE]; /**< Cell as packed for network. */
 };
 
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
 typedef struct cell_queue_t {
-  packed_cell_t *head; /**< The first cell, or NULL if the queue is empty */
-  packed_cell_t *tail; /**< The last cell, or NULL if the queue is empty */
-  int n; /**< The number of cells in the queue */
+  packed_cell_t *head; /**< The first cell, or NULL if the queue is empty. */
+  packed_cell_t *tail; /**< The last cell, or NULL if the queue is empty. */
+  int n; /**< The number of cells in the queue. */
 } cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
