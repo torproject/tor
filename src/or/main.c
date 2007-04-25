@@ -162,7 +162,7 @@ connection_add(connection_t *conn)
   tor_assert(conn->s >= 0 || conn->linked);
 
   tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
-  if (n_conns == MAXCONNECTIONS) {
+  if (n_conns >= MAXCONNECTIONS) {
     log_warn(LD_BUG, "Unable to add a connection; MAXCONNECTIONS is set too "
              "low.  This is a bug; tell the developers.");
     return -1;
@@ -297,51 +297,15 @@ get_connection_array(connection_t ***array, int *n)
 void
 connection_watch_events(connection_t *conn, short events)
 {
-  int r = 0;
+  if (events & EV_READ)
+    connection_start_reading(conn);
+  else
+    connection_stop_reading(conn);
 
-  tor_assert(conn);
-  tor_assert(conn->read_event);
-  tor_assert(conn->write_event);
-
-  if (conn->linked) {
-    if (events & EV_READ)
-      connection_start_reading(conn);
-    else
-      connection_stop_reading(conn);
-  } else {
-    if (events & EV_READ) {
-      r = event_add(conn->read_event, NULL);
-    } else {
-      r = event_del(conn->read_event);
-    }
-  }
-
-  if (r<0)
-    log_warn(LD_NET,
-             "Error from libevent setting read event state for %d to "
-             "%swatched: %s",
-             conn->s, (events & EV_READ)?"":"un",
-             tor_socket_strerror(tor_socket_errno(conn->s)));
-
-  if (conn->linked) {
-    if (events & EV_WRITE)
-      connection_start_writing(conn);
-    else
-      connection_stop_writing(conn);
-  } else {
-    if (events & EV_WRITE) {
-      r = event_add(conn->write_event, NULL);
-    } else {
-      r = event_del(conn->write_event);
-    }
-  }
-
-  if (r<0)
-    log_warn(LD_NET,
-             "Error from libevent setting read event state for %d to "
-             "%swatched: %s",
-             conn->s, (events & EV_WRITE)?"":"un",
-             tor_socket_strerror(tor_socket_errno(conn->s)));
+  if (events & EV_WRITE)
+    connection_start_writing(conn);
+  else
+    connection_stop_writing(conn);
 }
 
 /** Return true iff <b>conn</b> is listening for read events. */
@@ -458,7 +422,7 @@ connection_start_reading_from_linked_conn(connection_t *conn)
       /* This is the first event on the list; we won't be in LOOP_ONCE mode,
        * so we need to make sure that the event_loop() actually exits at the
        * end of its run through the current connections and
-       * lets us activate read events for linked connections.  */
+       * lets us activate read events for linked connections. */
       struct timeval tv = { 0, 0 };
       event_loopexit(&tv);
     }
@@ -484,7 +448,7 @@ connection_stop_reading_from_linked_conn(connection_t *conn)
   }
 }
 
-/** Close all connections that have been scheduled to get closed */
+/** Close all connections that have been scheduled to get closed. */
 static void
 close_closeable_connections(void)
 {
@@ -1380,7 +1344,7 @@ do_main_loop(void)
     called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
 
     /* poll until we have an event, or the second ends, or until we have
-     * some active linked connections to triggger events for. */
+     * some active linked connections to trigger events for. */
     loop_result = event_loop(called_loop_once ? EVLOOP_ONCE : 0);
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */

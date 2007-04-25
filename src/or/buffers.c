@@ -884,7 +884,8 @@ fetch_from_buf(char *string, size_t string_len, buf_t *buf)
   return buf->datalen;
 }
 
-/** Move up to <b>buf_flushlen</b> bytes from <b>buf_in</b> to <b>buf_out</b>.
+/** Move up to *<b>buf_flushlen</b> bytes from <b>buf_in</b> to
+ * <b>buf_out</b>, and modify *<b>buf_flushlen</b> appropriately.
  * Return the number of bytes actually copied.
  */
 int
