@@ -454,7 +454,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     edge_connection_t *linked_conn;
     /* make an AP connection
      * populate it and add it at the right state
-     * socketpair and hook up both sides
+     * hook up both sides
      */
     conn->dirconn_direct = 0;
     linked_conn =
@@ -466,7 +466,6 @@ directory_initiate_command(const char *address, uint32_t addr,
     if (!linked_conn) {
       log_warn(LD_NET,"Making AP bridge to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));
-      connection_mark_for_close(TO_CONN(linked_conn));
       return;
     }
     connection_link_connections(TO_CONN(conn), TO_CONN(linked_conn));
