@@ -1,3 +1,16 @@
+tor (0.1.2.13-2) unstable; urgency=low
+
+  * In options_init_from_torrc()'s error path only config_free() options
+    if they already have been initialized (closes: #421235).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 27 Apr 2007 13:06:37 +0200
+
+tor (0.1.2.13-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 24 Apr 2007 21:21:10 +0200
+
 tor (0.1.2.12-rc-1) experimental; urgency=low
 
   * New upstream version.
