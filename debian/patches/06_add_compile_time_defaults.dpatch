@@ -89,7 +89,7 @@ diff -urNad tor-debian~/src/or/config.c tor-debian/src/or/config.c
 +  uid = getuid();
 +  pw = getpwuid(uid);
 +  if (!pw) {
-+    log(LOG_WARN, LD_GENERAL, "Could not get passwd information for %d.", uid);
++    log(LOG_WARN, LD_GENERAL, "Could not get passwd information for uid %d.", uid);
 +    return -1;
 +  }
 +  assert(pw->pw_name);
