@@ -10,6 +10,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       especially on platforms where malloc() is inefficient.
     - Stop reading on edge connections when their corresponding circuit
       buffers are full; start again as the circuits empty out.
+    - Make PreferTunneledDirConns and TunnelDirConns work even when
+      we have no cached directory info. This means Tor clients can now
+      do all of their connections protected by TLS.
 
   o Security fixes:
     - Directory authorities now call routers stable if they have an

@@ -248,7 +248,8 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
     tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
     address = address_buf;
   }
-  directory_initiate_command(address, status->addr, status->dir_port,
+  directory_initiate_command(address, status->addr,
+                             status->or_port, status->dir_port,
                              status->version_supports_begindir,
                              status->identity_digest,
                              purpose, private_connection, resource,
@@ -365,7 +366,8 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
  * <b>digest</b>. */
 void
 directory_initiate_command(const char *address, uint32_t addr,
-                           uint16_t dir_port, int supports_begindir,
+                           uint16_t or_port, uint16_t dir_port,
+                           int supports_begindir,
                            const char *digest, uint8_t purpose,
                            int private_connection, const char *resource,
                            const char *payload, size_t payload_len)
@@ -373,7 +375,8 @@ directory_initiate_command(const char *address, uint32_t addr,
   dir_connection_t *conn;
   or_options_t *options = get_options();
   int want_to_tunnel = options->TunnelDirConns && supports_begindir &&
-                       router_get_by_digest(digest);
+                       !private_connection && or_port &&
+                       fascist_firewall_allows_address_or(addr, or_port);
 
   tor_assert(address);
   tor_assert(addr);
@@ -414,7 +417,7 @@ directory_initiate_command(const char *address, uint32_t addr,
 
   /* set up conn so it's got all the data we need to remember */
   conn->_base.addr = addr;
-  conn->_base.port = dir_port;
+  conn->_base.port = want_to_tunnel ? or_port : dir_port;
   conn->_base.address = tor_strdup(address);
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
 

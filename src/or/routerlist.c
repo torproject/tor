@@ -574,16 +574,15 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
     if (for_v2_directory && !(status->is_v2_dir || is_trusted))
       continue;
-    if (fascistfirewall &&
-        prefer_tunnel &&
+    if (prefer_tunnel &&
         status->version_supports_begindir &&
-        router_get_by_digest(status->identity_digest) &&
-        fascist_firewall_allows_address_or(status->addr, status->or_port))
+        (!fascistfirewall ||
+         fascist_firewall_allows_address_or(status->addr, status->or_port)))
       smartlist_add(is_trusted ? trusted_tunnel :
                       is_overloaded ? overloaded_tunnel : tunnel, status);
-    else if (!fascistfirewall || (fascistfirewall &&
+    else if (!fascistfirewall ||
              fascist_firewall_allows_address_dir(status->addr,
-                                                 status->dir_port)))
+                                                 status->dir_port))
       smartlist_add(is_trusted ? trusted_direct :
                       is_overloaded ? overloaded_direct : direct, status);
   });
@@ -652,17 +651,14 @@ router_pick_trusteddirserver_impl(authority_type_t type,
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
-
-      if (fascistfirewall &&
-          prefer_tunnel &&
+      if (prefer_tunnel &&
           d->or_port &&
-          router_get_by_digest(d->digest) &&
-          fascist_firewall_allows_address_or(d->addr, d->or_port))
+          (!fascistfirewall ||
+           fascist_firewall_allows_address_or(d->addr, d->or_port)))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel,
                       &d->fake_status.status);
-      else if (!fascistfirewall || (fascistfirewall &&
-               fascist_firewall_allows_address_dir(d->addr,
-                                                   d->dir_port)))
+      else if (!fascistfirewall ||
+               fascist_firewall_allows_address_dir(d->addr, d->dir_port))
         smartlist_add(is_overloaded ? overloaded_direct : direct,
                       &d->fake_status.status);
     });
@@ -1379,6 +1375,21 @@ router_digest_is_trusted_dir(const char *digest)
   return 0;
 }
 
+/** If hexdigest is correctly formed, base16_decode it into
+ * digest, which must have DIGEST_LEN space in it.
+ * Return 0 on success, -1 on failure.
+ */
+int
+hexdigest_to_digest(const char *hexdigest, char *digest)
+{
+  if (hexdigest[0]=='$')
+    ++hexdigest;
+  if (strlen(hexdigest) < HEX_DIGEST_LEN ||
+      base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN) < 0)
+    return -1;
+  return 0;
+}
+
 /** Return the router in our routerlist whose hexadecimal key digest
  * is <b>hexdigest</b>.  Return NULL if no such router is known. */
 routerinfo_t *
@@ -1394,8 +1405,7 @@ router_get_by_hexdigest(const char *hexdigest)
   if (hexdigest[0]=='$')
     ++hexdigest;
   len = strlen(hexdigest);
-  if (len < HEX_DIGEST_LEN ||
-      base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN) < 0)
+  if (hexdigest_to_digest(hexdigest, digest) < 0)
     return NULL;
 
   ri = router_get_by_digest(digest);
@@ -3188,6 +3198,9 @@ add_trusted_dir_server(const char *nickname, const char *address,
     ent->fake_status.status.nickname[0] = '\0';
   ent->fake_status.status.dir_port = ent->dir_port;
   ent->fake_status.status.or_port = ent->or_port;
+
+  if (ent->or_port)
+    ent->fake_status.status.version_supports_begindir = 1;
 
   smartlist_add(trusted_dir_servers, ent);
   router_dir_info_changed();

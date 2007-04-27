@@ -2487,7 +2487,8 @@ int connection_dir_finished_flushing(dir_connection_t *conn);
 int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_request_failed(dir_connection_t *conn);
 void directory_initiate_command(const char *address, uint32_t addr,
-                                uint16_t dir_port, int supports_begindir,
+                                uint16_t or_port, uint16_t dir_port,
+                                int supports_begindir,
                                 const char *digest, uint8_t purpose,
                                 int private_connection, const char *resource,
                                 const char *payload, size_t payload_len);
@@ -3021,6 +3022,7 @@ routerinfo_t *router_choose_random_node(const char *preferred,
                                         int weight_for_exit);
 routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
+int hexdigest_to_digest(const char *hexdigest, char *digest);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);

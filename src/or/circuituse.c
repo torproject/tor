@@ -91,10 +91,18 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
         log_debug(LD_CIRC,"Skipping one-hop circuit.");
         return 0;
       }
+      tor_assert(conn->chosen_exit_name);
+      if (build_state->chosen_exit) {
+        char digest[DIGEST_LEN];
+        if (hexdigest_to_digest(conn->chosen_exit_name, digest) < 0 ||
+            memcmp(digest, build_state->chosen_exit->identity_digest,
+                   DIGEST_LEN))
+          return 0; /* this is a circuit to somewhere else */
+      }
     } else {
       if (conn->socks_request->command == SOCKS_COMMAND_CONNECT_DIR) {
         /* don't use three-hop circuits -- that could hurt our anonymity. */
-        log_debug(LD_CIRC,"Skipping multi-hop circuit for CONNECT_DIR.");
+//        log_debug(LD_CIRC,"Skipping multi-hop circuit for CONNECT_DIR.");
         return 0;
       }
     }
