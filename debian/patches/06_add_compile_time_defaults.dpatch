@@ -23,9 +23,9 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad tor~/src/or/config.c tor/src/or/config.c
---- tor~/src/or/config.c	2006-07-23 19:31:29.000000000 +0200
-+++ tor/src/or/config.c	2006-07-24 05:13:19.924871985 +0200
+diff -urNad tor-debian~/src/or/config.c tor-debian/src/or/config.c
+--- tor-debian~/src/or/config.c	2007-03-06 21:52:33.000000000 +0100
++++ tor-debian/src/or/config.c	2007-04-27 13:05:42.420147495 +0200
 @@ -12,6 +12,7 @@
   **/
  
@@ -34,8 +34,8 @@ diff -urNad tor~/src/or/config.c tor/src/or/config.c
  #ifdef MS_WINDOWS
  #include <shlobj.h>
  #endif
-@@ -396,6 +397,10 @@
- static void check_libevent_version(const char *m, const char *v, int server);
+@@ -592,6 +593,10 @@
+ static void check_libevent_version(const char *m, int server);
  #endif
  
 +static int debian_running_as_debiantor();
@@ -44,8 +44,8 @@ diff -urNad tor~/src/or/config.c tor/src/or/config.c
 +
  /*static*/ or_options_t *options_new(void);
  
- #define OR_OPTIONS_MAGIC 9090909
-@@ -2663,7 +2668,7 @@
+ /** Magic value for or_options_t. */
+@@ -2982,7 +2987,7 @@
  int
  options_init_from_torrc(int argc, char **argv)
  {
@@ -54,7 +54,7 @@ diff -urNad tor~/src/or/config.c tor/src/or/config.c
    config_line_t *cl;
    char *cf=NULL, *fname=NULL, *errmsg=NULL;
    int i, retval;
-@@ -2671,6 +2676,9 @@
+@@ -2991,6 +2996,9 @@
    static char **backup_argv;
    static int backup_argc;
  
@@ -64,7 +64,17 @@ diff -urNad tor~/src/or/config.c tor/src/or/config.c
    if (argv) { /* first time we're called. save commandline args */
      backup_argv = argv;
      backup_argc = argc;
-@@ -3948,3 +3956,52 @@
+@@ -3120,7 +3128,8 @@
+  err:
+   tor_free(fname);
+   torrc_fname = NULL;
+-  config_free(&options_format, newoptions);
++  if (newoptions)
++    config_free(&options_format, newoptions);
+   if (errmsg) {
+     log(LOG_WARN,LD_CONFIG,"Failed to parse/validate config: %s", errmsg);
+     tor_free(errmsg);
+@@ -4306,3 +4315,52 @@
    puts(routerparse_c_id);
  }
  
