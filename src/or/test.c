@@ -1229,7 +1229,9 @@ _thread_test_func(void* _s)
     strmap_set(_thread_test_strmap, "last to run", cp);
     tor_mutex_release(_thread_test_mutex);
   }
+  tor_mutex_acquire(_thread_test_mutex);
   strmap_set(_thread_test_strmap, s, tor_strdup(buf));
+  tor_mutex_release(_thread_test_mutex);
 
   tor_mutex_release(m);
 
