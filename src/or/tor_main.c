@@ -6,7 +6,9 @@ const char tor_main_c_id[] =
   "$Id$";
 
 const char tor_svn_revision[] =
+#ifndef _MSC_VER
 #include "micro-revision.i"
+#endif
   "";
 
 /**
