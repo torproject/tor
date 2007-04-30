@@ -197,7 +197,13 @@ TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $WS32lib], [
     [event_init(); exit(0);], [--with-libevent-dir], [/opt/libevent])
 
 dnl Now check for particular libevent functions.
+save_LIBS="$LIBS"
+save_LDFLAGS="$LDFLAGS"
+LIBS="-levent $LIBS"
+LDFLAGS="$TOR_LDFLAGS_libevent $LIBS"
 AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
+LIBS="$save_LIBS"
+LDFLAGS="$save_LDFLAGS"
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
