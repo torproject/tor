@@ -4776,7 +4776,7 @@ routerlist_check_bug_417(void)
 #endif
   }
 
-  tor_assert(ri_generated->routerlist_index == 0);
+  tor_assert(ri_generated->routerlist_index == -1);
 }
 
 /** Allocate and return a new string representing the contact info
