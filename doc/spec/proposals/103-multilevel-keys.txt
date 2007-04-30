@@ -108,41 +108,54 @@ A possible solution:
 
 Extensions to Proposal 101.
 
-  Add the following elements to vote documents:
+  Define a new document type, "Key certificate".  It contains the
+  following fields, in order:
 
-     "dir-identity-key": The long-term identity key for this authority.
-     "dir-key-published": The time when this directory's signing key was last
-         changed.
-     "dir-key-certification": A signature of the fields "fingerprint",
-         "dir-key-published", "dir-signing-key", and "dir-identity-key",
-         concatenated, in that order.  The signed material extends from the
-         beginning of "fingerprint" through the newline after
-         "dir-key-certification".  The identity key is used to generate this
-         signature.
+    "dir-key-certificate-version": As network-status-version.  Must be
+         "3".
+    "fingerprint": Hex fingerprint, with spaces, based on the directory
+         authority's identity key.
+    "dir-identity-key": The long-term identity key for this authority.
+    "dir-key-published": The time when this directory's signing key was
+         last changed.
+    "dir-signing-key": As in proposal 101.
+    "dir-key-certification": A signature of the above fields, in order.
+         The signed material extends from the beginning of
+         "dir-key-certicate-version" through the newline after
+         "dir-key-certification".  The identity key is used to generate
+         this signature.
 
-      The elements "fingerprint", "dir-key-published", "dir-signing-key",
-      "dir-identity-key", and "dir-key-certification" together constitute a
-      "key certificate".  These are generated offline when starting a v3
-      authority.
+      These elements together constitute a "key certificate".  These are
+      generated offline when starting a v3 authority.  Private identity
+      keys SHOULD be stored offline, encrypted, or both.  A running
+      authority only needs access to the signing key.
 
-      The elements "dir-signing-key", "dir-key-published", and
-      "dir-identity-key", "dir-key-certification" and MUST NOT appear in
-      consensus documents.
+      Unlike other keys currently used by Tor, the authority identity
+      keys and directory signing keys MAY be longer than 1024 bits.
+      (They SHOULD be 2048 bits or longer; they MUST NOT be shorter than
+      1024.)
 
-      The "fingerprint" field is generated based on the identity key, not
-      the signing key.
+  Vote documents change as follows:
+
+      A key certificate MUST be included in-line in every vote document.  With
+      the exception of "fingerprint", its elements MUST NOT appear in consensus
+      documents.
 
   Consensus network statuses change as follows:
 
       Remove dir-signing-key.
 
       Change "directory-signature" to take a fingerprint of the authority's
-      identity key rather than the authority's nickname.
+      identity key and a fingerprint of the authority's current signing key
+      rather than the authority's nickname.
+
+      Change "dir-source" to take the a fingerprint of the authority's
+      identity key rather than the authority's nickname or hostname.
 
   Add a new document type:
 
-      A "keys" document contains all currently known key certification
-      certificates.  All authorities serve it at
+      A "keys" document contains all currently known key certificates.
+      All authorities serve it at
 
           http://<hostname>/tor/status/keys.z
 
@@ -150,6 +163,42 @@ Extensions to Proposal 101.
       consensus vote that uses a key they do not recognize.  Caches download
       from authorities; clients download from caches.
 
-  Verification:
+  Processing votes:
 
-      [XXXX write me]
+      When receiving a vote, authorities check to see if the key
+      certificate for the voter is different from the one they have.  If
+      the key certificate _is_ different, and its dir-key-published is
+      more recent than the most recently known one, and it is
+      well-formed and correctly signed with the correct identity key,
+      then authorities remember it as the new canonical key certificate
+      for that voter.
+
+  A key certificate is invalid if any of the following hold:
+      * The version is unrecognized
+      * The fingerprint does not match the identity key.
+      * The identity key or the signing key is ill-formed.
+      * The published date is very far in the past or future.
+
+      * The signature is not a valid signature of the key certificate
+        generated with the identity key.
+
+  When processing the signatures on consensus, clients and caches act as
+  follows:
+
+      1. Only consider the directory-signature entries whose identity
+         key hashes match trusted authorities.
+
+      2. If any such entries have signing key hashes that match unknown
+         signing keys, download a new keys document.
+
+      3. For every entry with a known (identity key,signing key) pair,
+         check the signature on the document.
+
+      4. If the document has been signed by more than half of the
+         authorities the client recognizes, treat the consensus as
+         correctly signed.
+
+         If not, but the number entries with known identity keys but
+         unknown signing keys might be enough to make the consensus
+         correctly signed, do not use the consensus, but do not discard
+         it until we have a new keys document.
