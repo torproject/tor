@@ -360,17 +360,18 @@ rend_cache_lookup_desc(const char *query, int version, const char **desc,
  * If we have an older descriptor with the same ID, replace it.
  * Return -1 if it's malformed or otherwise rejected; return 0 if
  * it's the same or older than one we've already got; return 1 if
- * it's novel.
+ * it's novel. The published flag tells us if we store the descriptor
+ * in our role aus directory (1) or if we cache it as client (0).
  */
 int
-rend_cache_store(const char *desc, size_t desc_len)
+rend_cache_store(const char *desc, size_t desc_len, int published)
 {
   rend_cache_entry_t *e;
   rend_service_descriptor_t *parsed;
   char query[REND_SERVICE_ID_LEN+1];
   char key[REND_SERVICE_ID_LEN+2]; /* 1<query>\0  or  0<query>\0 */
   time_t now;
-
+  or_options_t *options = get_options();
   tor_assert(rend_cache);
   parsed = rend_parse_service_descriptor(desc,desc_len);
   if (!parsed) {
@@ -396,6 +397,10 @@ rend_cache_store(const char *desc, size_t desc_len)
     rend_service_descriptor_free(parsed);
     return -1;
   }
+  /* report novel publication to statistic */
+  if (published && options->HSAuthorityRecordStats) {
+    hs_usage_note_publish_total(query, time(NULL));
+  }
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
   if (e && e->parsed->timestamp > parsed->timestamp) {
     log_info(LD_REND,"We already have a newer service descriptor %s with the "
@@ -413,6 +418,10 @@ rend_cache_store(const char *desc, size_t desc_len)
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
     strmap_set_lc(rend_cache, key, e);
+    /* report novel publication to statistic */
+    if (published && options->HSAuthorityRecordStats) {
+      hs_usage_note_publish_novel(query, time(NULL));
+    }
   } else {
     rend_service_descriptor_free(e->parsed);
     tor_free(e->desc);
@@ -475,5 +484,11 @@ rend_process_relay_cell(circuit_t *circ, int command, size_t length,
   }
 
   (void)r;
+}
+
+int
+rend_cache_size(void)
+{
+  return strmap_size(rend_cache);
 }
 

@@ -1709,6 +1709,8 @@ typedef struct {
                            * for version 1 directories? */
   int HSAuthoritativeDir; /**< Boolean: does this an authoritative directory
                            * handle hidden service requests? */
+  int HSAuthorityRecordStats; /**< Boolean: does this HS authoritative
+                               * directory record statistics? */
   int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that's willing to bind names? */
   int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
@@ -2789,6 +2791,14 @@ void dump_pk_ops(int severity);
 
 void rep_hist_free_all(void);
 
+/* for hidden service usage statistic */
+void hs_usage_note_publish_total(const char *service_id, time_t now);
+void hs_usage_note_publish_novel(const char *service_id, time_t now);
+void hs_usage_note_fetch_total(const char *service_id, time_t now);
+void hs_usage_note_fetch_successful(const char *service_id, time_t now);
+void hs_usage_write_statistics_to_file(time_t now);
+void hs_usage_free_all(void);
+
 /********************************* rendclient.c ***************************/
 
 void rend_client_introcirc_has_opened(origin_circuit_t *circ);
@@ -2861,7 +2871,8 @@ int rend_cache_lookup_desc(const char *query, int version, const char **desc,
                            size_t *desc_len);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
-int rend_cache_store(const char *desc, size_t desc_len);
+int rend_cache_store(const char *desc, size_t desc_len, int published);
+int rend_cache_size(void);
 
 /********************************* rendservice.c ***************************/
 

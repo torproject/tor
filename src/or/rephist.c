@@ -15,6 +15,7 @@ const char rephist_c_id[] =
 
 static void bw_arrays_init(void);
 static void predicted_ports_init(void);
+static void hs_usage_init(void);
 
 uint64_t rephist_total_alloc=0;
 uint32_t rephist_total_num=0;
@@ -147,6 +148,7 @@ rep_hist_init(void)
   history_map = digestmap_new();
   bw_arrays_init();
   predicted_ports_init();
+  hs_usage_init();
 }
 
 /** Remember that an attempt to connect to the OR with identity digest
@@ -382,7 +384,7 @@ rep_history_clean(time_t before)
 /** For how many seconds do we keep track of individual per-second bandwidth
  * totals? */
 #define NUM_SECS_ROLLING_MEASURE 10
-/** How large are the intervals for with we track and report bandwidth use? */
+/** How large are the intervals for which we track and report bandwidth use? */
 #define NUM_SECS_BW_SUM_INTERVAL (15*60)
 /** How far in the past do we remember and publish bandwidth use? */
 #define NUM_SECS_BW_SUM_IS_VALID (24*60*60)
@@ -1039,5 +1041,529 @@ rep_hist_free_all(void)
   tor_free(read_array);
   tor_free(write_array);
   predicted_ports_free();
+}
+
+/****************** hidden service usage statistics ******************/
+
+/** How large are the intervals for which we track and report hidden service
+ * use? */
+#define NUM_SECS_HS_USAGE_SUM_INTERVAL (15*60)
+/** How far in the past do we remember and publish hidden service use? */
+#define NUM_SECS_HS_USAGE_SUM_IS_VALID (24*60*60)
+/** How many hidden service usage intervals do we remember? (derived) */
+#define NUM_TOTALS_HS_USAGE (NUM_SECS_HS_USAGE_SUM_IS_VALID/ \
+                             NUM_SECS_HS_USAGE_SUM_INTERVAL)
+
+/** List element containing a service id and the count. */
+typedef struct hs_usage_list_elem_t {
+   /** Service id of this elem. */
+  char service_id[REND_SERVICE_ID_LEN+1];
+  /** Number of occurrences for the given service id. */
+  uint32_t count;
+  /* Pointer to next list elem */
+  struct hs_usage_list_elem_t *next;
+} hs_usage_list_elem_t;
+
+/* Ordered list that stores service ids and the number of observations. It is
+ * ordered by the number of occurrences in descending order. Its purpose is to
+ * calculate the frequency distribution when the period is over. */
+typedef struct hs_usage_list_t {
+  /* Pointer to the first element in the list. */
+  hs_usage_list_elem_t *start;
+  /* Number of total occurrences for all list elements. */
+  uint32_t total_count;
+  /* Number of service ids, i.e. number of list elements. */
+  uint32_t total_service_ids;
+} hs_usage_list_t;
+
+/** Tracks service-related observations in the current period and their
+ * history. */
+typedef struct hs_usage_service_related_observation_t {
+  /** Ordered list that stores service ids and the number of observations in
+   * the current period. It is ordered by the number of occurrences in
+   * descending order. Its purpose is to calculate the frequency distribution
+   * when the period is over. */
+  hs_usage_list_t *list;
+  /** Circular arrays that store the history of observations. totals stores all
+   * observations, twenty (ten, five) the number of observations related to a
+   * service id being accounted for the top 20 (10, 5) percent of all
+   * observations. */
+  uint32_t totals[NUM_TOTALS_HS_USAGE];
+  uint32_t five[NUM_TOTALS_HS_USAGE];
+  uint32_t ten[NUM_TOTALS_HS_USAGE];
+  uint32_t twenty[NUM_TOTALS_HS_USAGE];
+} hs_usage_service_related_observation_t;
+
+/** Tracks the history of general period-related observations, i.e. those that
+ * cannot be related to a specific service id. */
+typedef struct hs_usage_general_period_related_observations_t {
+  /** Circular array that stores the history of observations. */
+  uint32_t totals[NUM_TOTALS_HS_USAGE];
+} hs_usage_general_period_related_observations_t;
+
+/** Keeps information about the current observation period and its relation to
+ * the histories of observations. */
+typedef struct hs_usage_current_observation_period_t {
+  /** Where do we write the next history entry? */
+  int next_idx;
+  /** How many values in history have been set ever? (upper bound!) */
+  int num_set;
+  /** When did this period begin? */
+  time_t start_of_current_period;
+  /** When does the next period begin? */
+  time_t start_of_next_period;
+} hs_usage_current_observation_period_t;
+
+static hs_usage_current_observation_period_t *current_period = NULL;
+static hs_usage_service_related_observation_t *publish_total = NULL;
+static hs_usage_service_related_observation_t *publish_novel = NULL;
+static hs_usage_service_related_observation_t *fetch_total = NULL;
+static hs_usage_service_related_observation_t *fetch_successful = NULL;
+static hs_usage_general_period_related_observations_t *descs = NULL;
+
+/** Creates an empty ordered list element. */
+static hs_usage_list_elem_t *
+hs_usage_list_elem_new(void)
+{
+  hs_usage_list_elem_t *e;
+  e = tor_malloc_zero(sizeof(hs_usage_list_elem_t));
+  rephist_total_alloc += sizeof(hs_usage_list_elem_t);
+  e->count = 1;
+  e->next = NULL;
+  return e;
+}
+
+/** Creates an empty ordered list. */
+static hs_usage_list_t *
+hs_usage_list_new(void)
+{
+  hs_usage_list_t *l;
+  l = tor_malloc_zero(sizeof(hs_usage_list_t));
+  rephist_total_alloc += sizeof(hs_usage_list_t);
+  l->start = NULL;
+  l->total_count = 0;
+  l->total_service_ids = 0;
+  return l;
+}
+
+/** Creates an empty structure for storing service-related observations. */
+static hs_usage_service_related_observation_t *
+hs_usage_service_related_observation_new(void)
+{
+  hs_usage_service_related_observation_t *h;
+  h = tor_malloc_zero(sizeof(hs_usage_service_related_observation_t));
+  rephist_total_alloc += sizeof(hs_usage_service_related_observation_t);
+  h->list = hs_usage_list_new();
+  return h;
+}
+
+/** Creates an empty structure for storing general period-related
+ * observations. */
+static hs_usage_general_period_related_observations_t *
+hs_usage_general_period_related_observations_new(void)
+{
+  hs_usage_general_period_related_observations_t *p;
+  p = tor_malloc_zero(sizeof(hs_usage_general_period_related_observations_t));
+  rephist_total_alloc+= sizeof(hs_usage_general_period_related_observations_t);
+  return p;
+}
+
+/** Creates an empty structure for storing period-specific information. */
+static hs_usage_current_observation_period_t *
+hs_usage_current_observation_period_new(void)
+{
+  hs_usage_current_observation_period_t *c;
+  time_t now;
+  c = tor_malloc_zero(sizeof(hs_usage_current_observation_period_t));
+  rephist_total_alloc += sizeof(hs_usage_current_observation_period_t);
+  now = time(NULL);
+  c->start_of_current_period = now;
+  c->start_of_next_period = now + NUM_SECS_HS_USAGE_SUM_INTERVAL;
+  return c;
+}
+
+/** Initializes the structures for collecting hidden service usage data. */
+static void
+hs_usage_init(void)
+{
+  current_period = hs_usage_current_observation_period_new();
+  publish_total = hs_usage_service_related_observation_new();
+  publish_novel = hs_usage_service_related_observation_new();
+  fetch_total = hs_usage_service_related_observation_new();
+  fetch_successful = hs_usage_service_related_observation_new();
+  descs = hs_usage_general_period_related_observations_new();
+}
+
+/** Clears the given ordered list by resetting its attributes and releasing
+ * the memory allocated by its elements. */
+static void
+hs_usage_list_clear(hs_usage_list_t *l)
+{
+  /* walk through elements and free memory */
+  hs_usage_list_elem_t *current = l->start;
+  hs_usage_list_elem_t *tmp;
+  while (current != NULL) {
+    tmp = current->next;
+    rephist_total_alloc -= sizeof(hs_usage_list_elem_t);
+    tor_free(current);
+    current = tmp;
+  }
+  /* reset attributes */
+  l->start = NULL;
+  l->total_count = 0;
+  l->total_service_ids = 0;
+  return;
+}
+
+/** Frees the memory used by the given list. */
+static void
+hs_usage_list_free(hs_usage_list_t *l)
+{
+  hs_usage_list_clear(l);
+  rephist_total_alloc -= sizeof(hs_usage_list_t);
+  tor_free(l);
+}
+
+/** Frees the memory used by the given service-related observations. */
+static void
+hs_usage_service_related_observation_free(
+                                    hs_usage_service_related_observation_t *s)
+{
+  hs_usage_list_free(s->list);
+  rephist_total_alloc -= sizeof(hs_usage_service_related_observation_t);
+  tor_free(s);
+}
+
+/** Frees the memory used by the given period-specific observations. */
+static void
+hs_usage_general_period_related_observations_free(
+                             hs_usage_general_period_related_observations_t *s)
+{
+  rephist_total_alloc-=sizeof(hs_usage_general_period_related_observations_t);
+  tor_free(s);
+}
+
+/** Frees the memory used by period-specific information. */
+static void
+hs_usage_current_observation_period_free(
+                                    hs_usage_current_observation_period_t *s)
+{
+  rephist_total_alloc -= sizeof(hs_usage_current_observation_period_t);
+  tor_free(s);
+}
+
+/** Frees all memory that was used for collecting hidden service usage data. */
+void
+hs_usage_free_all(void)
+{
+  hs_usage_general_period_related_observations_free(descs);
+  hs_usage_service_related_observation_free(fetch_successful);
+  hs_usage_service_related_observation_free(fetch_total);
+  hs_usage_service_related_observation_free(publish_novel);
+  hs_usage_service_related_observation_free(publish_total);
+  hs_usage_current_observation_period_free(current_period);
+}
+
+/** Inserts a new occurence for the given service id to the given ordered
+ * list. */
+static void
+hs_usage_insert_value(hs_usage_list_t *l, const char *service_id)
+{
+  /* search if there is already an elem with same service_id in list */
+  hs_usage_list_elem_t *current = l->start;
+  hs_usage_list_elem_t *previous = NULL;
+  while (current != NULL && strcmp(current->service_id,service_id)) {
+    previous = current;
+    current = current->next;
+  }
+  /* found an element with same service_id? */
+  if (current == NULL) {
+    /* not found! append to end (which could also be the end of a zero-length
+     * list), don't need to sort (1 is smallest value). */
+    /* create elem */
+    hs_usage_list_elem_t *e = hs_usage_list_elem_new();
+    /* update list attributes (one new elem, one new occurence) */
+    l->total_count++;
+    l->total_service_ids++;
+    /* copy service id to elem */
+    strlcpy(e->service_id,service_id,sizeof(e->service_id));
+    /* let either l->start or previously last elem point to new elem */
+    if (l->start == NULL) {
+      /* this is the first elem */
+      l->start = e;
+    } else {
+      /* there were elems in the list before */
+      previous->next = e;
+    }
+  } else {
+    /* found! add occurence to elem and consider resorting */
+    /* update list attributes (no new elem, but one new occurence) */
+    l->total_count++;
+    /* add occurence to elem */
+    current->count++;
+    /* is it another than the first list elem? and has previous elem fewer
+     * count than current? then we need to resort */
+    if (previous != NULL && previous->count < current->count) {
+      /* yes! we need to resort */
+      /* remove current elem first */
+      previous->next = current->next;
+      /* can we prepend elem to all other elements? */
+      if (l->start->count <= current->count) {
+        /* yes! prepend elem */
+        current->next = l->start;
+        l->start = current;
+      } else {
+        /* no! walk through list a second time and insert at correct place */
+        hs_usage_list_elem_t *insert_current = l->start->next;
+        hs_usage_list_elem_t *insert_previous = l->start;
+        while (insert_current != NULL &&
+               insert_current->count > current->count) {
+          insert_previous = insert_current;
+          insert_current = insert_current->next;
+        }
+        /* insert here */
+        current->next = insert_current;
+        insert_previous->next = current;
+      }
+    }
+  }
+}
+
+/** Writes the current service-related observations to the history array and
+ * clears the observations of the current period. */
+static void
+hs_usage_write_service_related_observations_to_history(
+                                    hs_usage_current_observation_period_t *p,
+                                    hs_usage_service_related_observation_t *h)
+{
+  /* walk through the first 20 % of list elements and calculate frequency
+   * distributions */
+  /* maximum indices for the three frequencies */
+  int five_percent_idx = h->list->total_service_ids/20;
+  int ten_percent_idx = h->list->total_service_ids/10;
+  int twenty_percent_idx = h->list->total_service_ids/5;
+  /* temp values */
+  uint32_t five_percent = 0;
+  uint32_t ten_percent = 0;
+  uint32_t twenty_percent = 0;
+  /* walk through list */
+  hs_usage_list_elem_t *current = h->list->start;
+  int i=0;
+  while (current != NULL && i <= twenty_percent_idx) {
+    twenty_percent += current->count;
+    if (i <= ten_percent_idx)
+      ten_percent += current->count;
+    if (i <= five_percent_idx)
+      five_percent += current->count;
+    current = current->next;
+    i++;
+  }
+  /* copy frequencies */
+  h->twenty[p->next_idx] = twenty_percent;
+  h->ten[p->next_idx] = ten_percent;
+  h->five[p->next_idx] = five_percent;
+  /* copy total number of observations */
+  h->totals[p->next_idx] = h->list->total_count;
+  /* free memory of old list */
+  hs_usage_list_clear(h->list);
+}
+
+/** Advances to next observation period */
+static void
+hs_usage_advance_current_observation_period(void)
+{
+  /* aggregate observations to history, including frequency distribution
+   * arrays */
+  hs_usage_write_service_related_observations_to_history(
+                                    current_period, publish_total);
+  hs_usage_write_service_related_observations_to_history(
+                                    current_period, publish_novel);
+  hs_usage_write_service_related_observations_to_history(
+                                    current_period, fetch_total);
+  hs_usage_write_service_related_observations_to_history(
+                                    current_period, fetch_successful);
+  /* write current number of descriptors to descs history */
+  descs->totals[current_period->next_idx] = rend_cache_size();
+  /* advance to next period */
+  current_period->next_idx++;
+  if (current_period->next_idx == NUM_TOTALS_HS_USAGE)
+    current_period->next_idx = 0;
+  if (current_period->num_set < NUM_TOTALS_HS_USAGE)
+    ++current_period->num_set;
+  current_period->start_of_current_period=current_period->start_of_next_period;
+  current_period->start_of_next_period += NUM_SECS_HS_USAGE_SUM_INTERVAL;
+}
+
+/** Checks if the current period is up to date, and if not, advances it. */
+static void
+hs_usage_check_if_current_period_is_up_to_date(time_t now)
+{
+  while (now > current_period->start_of_next_period) {
+    hs_usage_advance_current_observation_period();
+  }
+}
+
+/** Adds a service-related observation, maybe after advancing to next
+ * observation period. */
+static void
+hs_usage_add_service_related_observation(
+                                    hs_usage_service_related_observation_t *h,
+                                    time_t now,
+                                    const char *service_id)
+{
+  if (now < current_period->start_of_current_period) {
+    /* don't record old data */
+    return;
+  }
+  /* check if we are up-to-date */
+  hs_usage_check_if_current_period_is_up_to_date(now);
+  /* add observation */
+  hs_usage_insert_value(h->list, service_id);
+}
+
+/** Adds the observation of storing a rendezvous service descriptor to our
+ * cache in our role as HS authoritative directory. */
+void
+hs_usage_note_publish_total(const char *service_id, time_t now)
+{
+  hs_usage_add_service_related_observation(publish_total, now, service_id);
+}
+
+/** Adds the observation of storing a novel rendezvous service descriptor to
+ * our cache in our role as HS authoritative directory. */
+void
+hs_usage_note_publish_novel(const char *service_id, time_t now)
+{
+  hs_usage_add_service_related_observation(publish_novel, now, service_id);
+}
+
+/** Adds the observation of being requested for a rendezvous service descriptor
+* in our role as HS authoritative directory. */
+void
+hs_usage_note_fetch_total(const char *service_id, time_t now)
+{
+  hs_usage_add_service_related_observation(fetch_total, now, service_id);
+}
+
+/** Adds the observation of being requested for a rendezvous service descriptor
+* in our role as HS authoritative directory and being able to answer that
+* request successfully. */
+void
+hs_usage_note_fetch_successful(const char *service_id, time_t now)
+{
+  hs_usage_add_service_related_observation(fetch_successful, now, service_id);
+}
+
+/** Writes the given circular array to a string */
+static size_t
+hs_usage_format_history(char *buf, size_t len, uint32_t *data)
+{
+  char *cp = buf; /* pointer where we are in the buffer */
+  int i, n;
+  if (current_period->num_set <= current_period->next_idx) {
+    i = 0; /* not been through circular array */
+  } else {
+    i = current_period->next_idx;
+  }
+  for (n = 0; n < current_period->num_set; ++n,++i) {
+    while (i >= NUM_TOTALS_HS_USAGE) i -= NUM_TOTALS_HS_USAGE;
+    if (n == (current_period->num_set-1))
+      tor_snprintf(cp, len-(cp-buf), "%d", data[i]);
+    else
+      tor_snprintf(cp, len-(cp-buf), "%d,", data[i]);
+    cp += strlen(cp);
+  }
+  return cp-buf;
+}
+
+/** Writes the complete usage history as hidden service authoritative directory
+ * to a string */
+static char *
+hs_usage_format_statistics(void)
+{
+  char *buf, *cp, *s = NULL;
+  char t[ISO_TIME_LEN+1];
+  int r;
+  uint32_t *data = NULL;
+  size_t len;
+  len = (70+20*NUM_TOTALS_HS_USAGE)*11;
+  buf = tor_malloc_zero(len);
+  cp = buf;
+  for (r = 0; r < 11; ++r) {
+    switch (r) {
+    case 0:
+      s = (char*) "publish-total-history";
+      data = publish_total->totals;
+      break;
+    case 1:
+      s = (char*) "publish-novel-history";
+      data = publish_novel->totals;
+      break;
+    case 2:
+      s = (char*) "publish-top-5-percent-history";
+      data = publish_total->five;
+      break;
+    case 3:
+      s = (char*) "publish-top-10-percent-history";
+      data = publish_total->ten;
+      break;
+    case 4:
+      s = (char*) "publish-top-20-percent-history";
+      data = publish_total->twenty;
+      break;
+    case 5:
+      s = (char*) "fetch-total-history";
+      data = fetch_total->totals;
+      break;
+    case 6:
+      s = (char*) "fetch-successful-history";
+      data = fetch_successful->totals;
+      break;
+    case 7:
+      s = (char*) "fetch-top-5-percent-history";
+      data = fetch_total->five;
+      break;
+    case 8:
+      s = (char*) "fetch-top-10-percent-history";
+      data = fetch_total->ten;
+      break;
+    case 9:
+      s = (char*) "fetch-top-20-percent-history";
+      data = fetch_total->twenty;
+      break;
+    case 10:
+      s = (char*) "desc-total-history";
+      data = descs->totals;
+      break;
+    }
+    format_iso_time(t, current_period->start_of_current_period);
+    tor_snprintf(cp, len-(cp-buf), "%s %s (%d s) ", s, t,
+                 NUM_SECS_HS_USAGE_SUM_INTERVAL);
+    cp += strlen(cp);
+    cp += hs_usage_format_history(cp, len-(cp-buf), data);
+    strlcat(cp, "\n", len-(cp-buf));
+    ++cp;
+  }
+  return buf;
+}
+
+/** Writes current statistics to file. */
+void
+hs_usage_write_statistics_to_file(time_t now)
+{
+  char *buf;
+  size_t len;
+  char *fname;
+  or_options_t *options;
+  /* check if we are up-to-date */
+  hs_usage_check_if_current_period_is_up_to_date(now);
+  buf = hs_usage_format_statistics();
+  options = get_options();
+  len = strlen(options->DataDirectory) + 16;
+  fname = tor_malloc(len);
+  tor_snprintf(fname,len, "%s"PATH_SEPARATOR"hsusage", options->DataDirectory);
+  write_str_to_file(fname,buf,0);
+  tor_free(buf);
+  tor_free(fname);
 }
 

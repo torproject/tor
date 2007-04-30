@@ -141,6 +141,8 @@ static char* nt_strerror(uint32_t errnum);
 /** How long do we let OR connections handshake before we decide that
  * they are obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT           (60)
+/** How often do we write hidden service usage statistics to disk* */
+#define WRITE_HSUSAGE_INTERVAL (900)
 
 /********* END VARIABLES ************/
 
@@ -818,6 +820,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
+  static time_t time_to_write_hs_statistics = 0;
   or_options_t *options = get_options();
   int i;
   int have_dir_info;
@@ -1047,6 +1050,12 @@ run_scheduled_events(time_t now)
       time_to_check_for_correct_dns = now + 12*3600 +
         crypto_rand_int(12*3600);
     }
+  }
+
+  /** 10. write hidden service usage statistic to disk */
+  if (options->HSAuthorityRecordStats && time_to_write_hs_statistics < now) {
+    hs_usage_write_statistics_to_file(now);
+    time_to_write_hs_statistics = now+WRITE_HSUSAGE_INTERVAL;
   }
 }
 
@@ -1730,6 +1739,7 @@ tor_free_all(int postfork)
   rend_service_free_all();
   rend_cache_free_all();
   rep_hist_free_all();
+  hs_usage_free_all();
   dns_free_all();
   clear_pending_onions();
   circuit_free_all();

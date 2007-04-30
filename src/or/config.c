@@ -174,6 +174,7 @@ static config_var_t _option_vars[] = {
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
   VAR("HSAuthoritativeDir",  BOOL,     HSAuthoritativeDir,   "0"),
+  VAR("HSAuthorityRecordStats",BOOL,   HSAuthorityRecordStats,"0"),
   VAR("HttpProxy",           STRING,   HttpProxy,            NULL),
   VAR("HttpProxyAuthenticator",STRING, HttpProxyAuthenticator,NULL),
   VAR("HttpsProxy",          STRING,   HttpsProxy,           NULL),
@@ -2496,6 +2497,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->AuthoritativeDir && options->ClientOnly)
     REJECT("Running as authoritative directory, but ClientOnly also set.");
+
+  if (options->HSAuthorityRecordStats && !options->HSAuthoritativeDir)
+    REJECT("HSAuthorityRecordStats is set but we're not running as "
+           "a hidden service authority.");
 
   if (options->ConnLimit <= 0) {
     r = tor_snprintf(buf, sizeof(buf),

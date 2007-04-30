@@ -13,6 +13,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Make PreferTunneledDirConns and TunnelDirConns work even when
       we have no cached directory info. This means Tor clients can now
       do all of their connections protected by TLS.
+    - Add an HSAuthorityRecordStats option that hidden service authorities
+      can use to track statistics of overall hidden service usage without
+      logging information that would be very useful to an attacker.
 
   o Security fixes:
     - Directory authorities now call routers stable if they have an
