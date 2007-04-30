@@ -36,7 +36,7 @@ micro-revision.i: FORCE
 	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.i \
 	     || true;                                           \
 	else                                                    \
-	if test x`which svk` != x; then                         \
+	if test x`which svk` != x -a -d ~/.svk; then            \
           location=../..;                                       \
           rev=x;                                                \
           while test x$$rev = xx; do                            \
