@@ -124,6 +124,8 @@ router_reload_networkstatus(void)
   if (!networkstatus_list)
     networkstatus_list = smartlist_create();
 
+  routerlist_check_bug_417();
+
   tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-status",
                get_options()->DataDirectory);
   entries = tor_listdir(filename);
@@ -150,6 +152,7 @@ router_reload_networkstatus(void)
   smartlist_free(entries);
   networkstatus_list_clean(time(NULL));
   routers_update_all_from_networkstatus();
+  routerlist_check_bug_417();
   return 0;
 }
 
@@ -198,6 +201,8 @@ router_append_to_journal(signed_descriptor_t *desc, uint8_t purpose)
   const char *body = signed_descriptor_get_body(desc);
   size_t len = desc->signed_descriptor_len;
 
+  routerlist_check_bug_417();
+
   if (purpose != ROUTER_PURPOSE_GENERAL) {
     /* we shouldn't cache it. be happy and return. */
     return 0;
@@ -219,6 +224,8 @@ router_append_to_journal(signed_descriptor_t *desc, uint8_t purpose)
 
   tor_free(fname);
   router_journal_len += len;
+
+  routerlist_check_bug_417();
   return 0;
 }
 
@@ -262,6 +269,8 @@ router_rebuild_store(int force)
     return 0;
   if (!routerlist)
     return 0;
+
+  routerlist_check_bug_417();
 
   /* Don't save deadweight. */
   routerlist_remove_old_routers();
@@ -360,6 +369,8 @@ router_rebuild_store(int force)
   tor_free(fname);
   SMARTLIST_FOREACH(chunk_list, sized_chunk_t *, c, tor_free(c));
   smartlist_free(chunk_list);
+
+  routerlist_check_bug_417();
   return r;
 }
 
@@ -372,6 +383,8 @@ router_reload_router_list(void)
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
   char *fname = tor_malloc(fname_len), *contents = NULL;
+
+  routerlist_check_bug_417();
 
   if (!routerlist)
     router_get_routerlist(); /* mallocs and inits it in place */
@@ -411,6 +424,8 @@ router_reload_router_list(void)
      * router_rebuild_store() also calls remove_old_routers().) */
     routerlist_remove_old_routers();
   }
+
+  routerlist_check_bug_417();
 
   return 0;
 }
@@ -1652,6 +1667,7 @@ static void
 routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
   routerinfo_t *ri_old;
+  routerlist_check_bug_417();
   ri_old = digestmap_set(rl->identity_map, ri->cache_info.identity_digest, ri);
   tor_assert(!ri_old);
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
@@ -1660,6 +1676,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   ri->routerlist_index = smartlist_len(rl->routers) - 1;
   router_dir_info_changed();
   // routerlist_assert_ok(rl);
+  routerlist_check_bug_417();
 }
 
 /**DOCDOC*/
@@ -1669,11 +1686,12 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   routerinfo_t *ri = digestmap_get(rl->identity_map,
                                    ei->cache_info.identity_digest);
   extrainfo_t *ei_tmp;
+  routerlist_check_bug_417();
   if (!ri || routerinfo_incompatible_with_extrainfo(ri,ei)) {
     int found = 0;
     if (ei->pending_sig || ei->bad_sig) {
       extrainfo_free(ei);
-      return;
+      goto done;
     }
     /* The signature checks out; let's see if one of the old routers
      * matches. */
@@ -1689,7 +1707,7 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
       });
     if (!found) {
       extrainfo_free(ei);
-      return;
+      goto done;
     }
   }
 
@@ -1698,6 +1716,9 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
                          ei);
   if (ei_tmp)
     extrainfo_free(ei_tmp);
+
+ done:
+  routerlist_check_bug_417();
 }
 
 /** If we're a directory cache and routerlist <b>rl</b> doesn't have
@@ -1706,6 +1727,7 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
 static void
 routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 {
+  routerlist_check_bug_417();
   if (get_options()->DirPort &&
       ri->purpose == ROUTER_PURPOSE_GENERAL &&
       !digestmap_get(rl->desc_digest_map,
@@ -1717,6 +1739,7 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
     routerinfo_free(ri);
   }
   // routerlist_assert_ok(rl);
+  routerlist_check_bug_417();
 }
 
 /** Remove an item <b>ri</b> from the routerlist <b>rl</b>, updating indices
@@ -1732,6 +1755,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
 {
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
+  routerlist_check_bug_417();
   idx = _routerlist_find_elt(rl->routers, ri, idx);
   if (idx < 0)
     return;
@@ -1764,6 +1788,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
       extrainfo_free(ei_tmp);
   }
   // routerlist_assert_ok(rl);
+  routerlist_check_bug_417();
 }
 
 /** DOCDOC */
@@ -1772,6 +1797,7 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
 {
   signed_descriptor_t *sd_tmp;
   extrainfo_t *ei_tmp;
+  routerlist_check_bug_417();
   idx = _routerlist_find_elt(rl->old_routers, sd, idx);
   if (idx < 0)
     return;
@@ -1787,6 +1813,7 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   if (ei_tmp)
     extrainfo_free(ei_tmp);
 
+  routerlist_check_bug_417();
   // routerlist_assert_ok(rl);
 }
 
@@ -1804,6 +1831,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
 {
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
+  routerlist_check_bug_417();
   tor_assert(ri_old != ri_new);
   idx = _routerlist_find_elt(rl->routers, ri_old, idx);
   router_dir_info_changed();
@@ -1849,6 +1877,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     routerinfo_free(ri_old);
   }
   // routerlist_assert_ok(rl);
+  routerlist_check_bug_417();
 }
 
 /** Free all memory held by the routerlist module. */
@@ -1957,6 +1986,7 @@ router_set_status(const char *digest, int up)
   local_routerstatus_t *status;
   tor_assert(digest);
 
+  routerlist_check_bug_417();
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
                     if (!memcmp(d->digest, digest, DIGEST_LEN))
                       d->is_running = up);
@@ -1976,6 +2006,7 @@ router_set_status(const char *digest, int up)
     control_event_networkstatus_changed_single(status);
   }
   router_dir_info_changed();
+  routerlist_check_bug_417();
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
@@ -2012,6 +2043,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
 
+  routerlist_check_bug_417();
   tor_assert(msg);
 
   if (!routerlist)
@@ -2401,6 +2433,7 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
   tor_assert(msg);
   *msg = NULL;
 
+  routerlist_check_bug_417();
   if (!(ri = router_parse_entry_from_string(s, NULL, 1))) {
     log_warn(LD_DIR, "Error parsing router descriptor; dropping.");
     *msg = "Couldn't parse router descriptor.";
@@ -4711,6 +4744,39 @@ routerlist_assert_ok(routerlist_t *rl)
     tor_assert(!memcmp(sd->signed_descriptor_digest, d, DIGEST_LEN));
     iter = digestmap_iter_next(rl->desc_digest_map, iter);
   }
+}
+
+/** Debugging function.  With any luck, we can remove this soon.  Fail with an
+ * assertion if the symptoms for bug 417/404 seem to be present. */
+void
+routerlist_check_bug_417(void)
+{
+  /* XXXX020 remove this function once bug 417/404 is fixed. */
+  routerlist_t *rl = router_get_routerlist();
+  routerinfo_t *ri_generated, *r2, *r;
+  int idx = -1;
+
+  ri_generated = router_get_my_routerinfo();
+
+  r = digestmap_get(rl->identity_map,
+                    ri_generated->cache_info.identity_digest);
+  if (r) {
+    idx = r->routerlist_index;
+    tor_assert(idx >= 0);
+    tor_assert(idx < smartlist_len(rl->routers));
+    r2 = smartlist_get(rl->routers, idx);
+    tor_assert(r == r2);
+  } else {
+#if 0
+    /* Too slow; the bug seems to be in the former case anyway. */
+    SMARTLIST_FROEACH(rl->routers, routerinfo_t *, ri,
+      {
+        tor_assert(!router_is_me(ri));
+      });
+#endif
+  }
+
+  tor_assert(ri_generated->routerlist_index == 0);
 }
 
 /** Allocate and return a new string representing the contact info

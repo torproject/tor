@@ -3101,6 +3101,7 @@ int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
 
 void routerlist_assert_ok(routerlist_t *rl);
+void routerlist_check_bug_417(void);
 
 /********************************* routerparse.c ************************/
 
