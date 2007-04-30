@@ -173,5 +173,12 @@ int digest_from_base64(char *digest, const char *d64);
 void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
                    size_t secret_len, const char *s2k_specifier);
 
+#ifdef CRYPTO_PRIVATE
+/* Prototypes for private functions only used by tortls.c and crypto.c */
+crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
+EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
+DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
+#endif
+
 #endif
 

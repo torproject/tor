@@ -17,6 +17,16 @@ const char tortls_c_id[] =
  */
 
 #include "orconfig.h"
+
+#include <assert.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/tls1.h>
+#include <openssl/asn1.h>
+#include <openssl/bio.h>
+
+#define CRYPTO_PRIVATE
+
 #include "./crypto.h"
 #include "./tortls.h"
 #include "./util.h"
@@ -26,13 +36,6 @@ const char tortls_c_id[] =
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-#include <assert.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/tls1.h>
-#include <openssl/asn1.h>
-#include <openssl/bio.h>
 
 /** How long do identity certificates live? (sec) */
 #define IDENTITY_CERT_LIFETIME  (365*24*60*60)
@@ -75,11 +78,6 @@ static int tls_library_is_initialized = 0;
 /* Module-internal error codes. */
 #define _TOR_TLS_SYSCALL    (_MIN_TOR_TLS_ERROR_VAL - 2)
 #define _TOR_TLS_ZERORETURN (_MIN_TOR_TLS_ERROR_VAL - 1)
-
-/* These functions are declared in crypto.c but not exported. */
-EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
-crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
-DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 
 /** Log all pending tls errors at level <b>severity</b>.  Use
  * <b>doing</b> to describe our current activities.
