@@ -1,3 +1,10 @@
+tor (0.2.0.0-alpha-1~~pre.1) unstable; urgency=low
+
+  * svn r10063.
+  * Forward port 06_add_compile_time_defaults.
+
+ -- Peter Palfrader <weasel@debian.org>  Mon, 30 Apr 2007 17:00:11 +0200
+
 tor (0.1.2.13-2) unstable; urgency=low
 
   * In options_init_from_torrc()'s error path only config_free() options
