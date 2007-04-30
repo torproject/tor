@@ -3094,6 +3094,8 @@ char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
 
+void routerlist_assert_ok(routerlist_t *rl);
+
 /********************************* routerparse.c ************************/
 
 #define MAX_STATUS_TAG_LEN 32

@@ -33,7 +33,6 @@ static void trusted_dir_server_free(trusted_dir_server_t *ds);
 static void update_networkstatus_cache_downloads(time_t now);
 static void update_networkstatus_client_downloads(time_t now);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
-static void routerlist_assert_ok(routerlist_t *rl);
 static int have_tried_downloading_all_statuses(int n_failures);
 static routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
                                                 const char *digest);
@@ -4668,13 +4667,13 @@ getinfo_helper_networkstatus(control_connection_t *conn,
 
 /** Assert that the internal representation of <b>rl</b> is
  * self-consistent. */
-static void
+void
 routerlist_assert_ok(routerlist_t *rl)
 {
   digestmap_iter_t *iter;
   routerinfo_t *r2;
   signed_descriptor_t *sd2;
-  if (!rl);
+  if (!rl)
     return;
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
   {
