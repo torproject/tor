@@ -83,6 +83,9 @@ Things we'd like to do in 0.2.0.x:
     - 109: No more than one server per IP address
     - 103: Splitting identity key from regularly used signing key
     - 113: Simplifying directory authority administration
+    - 110: prevent infinite-length circuits (phase one)
+      - servers should recognize relay_extend cells and pass them
+        on just like relay cells
   - Refactoring:
     - Make resolves no longer use edge_connection_t unless they are actually
       _on_ on a socks connection: have edge_connection_t and (say)
