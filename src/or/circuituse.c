@@ -1096,9 +1096,23 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   return 0;
 }
 
+/** Return true iff <b>crypt_path</b> is one of the crypt_paths for
+ * <b>circ</b> */
+static int
+cpath_is_on_circuit(origin_circuit_t *circ, crypt_path_t *crypt_path)
+{
+  crypt_path_t *cpath, *cpath_next = NULL;
+  for (cpath = circ->cpath; cpath_next != circ->cpath; cpath = cpath_next) {
+    cpath_next = cpath->next;
+    if (crypt_path == cpath)
+      return 1;
+  }
+  return 0;
+}
+
 /** Attach the AP stream <b>apconn</b> to circ's linked list of
- * p_streams. Also set apconn's cpath_layer to the last hop in
- * circ's cpath.
+ * p_streams. Also set apconn's cpath_layer to <b>cpath</b>, or to the last
+ * hop in circ's cpath if <b>cpath</b> is NULL.
  */
 static void
 link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
@@ -1115,6 +1129,7 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
   circ->p_streams = apconn;
 
   if (cpath) { /* we were given one; use it */
+    tor_assert(cpath_is_on_circuit(circ, cpath));
     apconn->cpath_layer = cpath;
   } else { /* use the last hop in the circuit */
     tor_assert(circ->cpath);
@@ -1172,9 +1187,11 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
                       time(NULL) + options->TrackHostExitsExpire);
 }
 
-/** Attempt to attach the connection <b>conn</b> to <b>circ</b>, and
- * send a begin or resolve cell as appropriate.  Return values are as
- * for connection_ap_handshake_attach_circuit. */
+/** Attempt to attach the connection <b>conn</b> to <b>circ</b>, and send a
+ * begin or resolve cell as appropriate.  Return values are as for
+ * connection_ap_handshake_attach_circuit.  The stream will exit from the hop
+ * indicatd by <b>cpath</b>, or to the last hop in circ's cpath if
+ * <b>cpath</b> is NULL. */
 int
 connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
                                               origin_circuit_t *circ,

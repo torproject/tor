@@ -1178,6 +1178,10 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
  * one as needed), else if it's for a rendezvous circuit, fetch a
  * rendezvous descriptor first (or attach/launch a circuit if the
  * rendezvous descriptor is already here and fresh enough).
+ *
+ * The stream will exit from the hop
+ * indicatd by <b>cpath</b>, or to the last hop in circ's cpath if
+ * <b>cpath</b> is NULL.
  */
 int
 connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,

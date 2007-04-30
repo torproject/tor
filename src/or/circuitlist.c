@@ -849,7 +849,7 @@ circuit_get_cpath_len(origin_circuit_t *circ)
 crypt_path_t *
 circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum)
 {
-  if (circ && circ->cpath) {
+  if (circ && circ->cpath && hopnum > 0) {
     crypt_path_t *cpath, *cpath_next = NULL;
     for (cpath = circ->cpath; cpath_next != circ->cpath; cpath = cpath_next) {
       cpath_next = cpath->next;

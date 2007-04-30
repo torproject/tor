@@ -535,7 +535,7 @@ $Id$
 3.13. ATTACHSTREAM
 
   Sent from the client to the server.  The syntax is:
-     "ATTACHSTREAM" SP StreamID SP CircuitID ["HOP=" HopNum] CRLF
+     "ATTACHSTREAM" SP StreamID SP CircuitID [SP "HOP=" HopNum] CRLF
 
   This message informs the server that the specified stream should be
   associated with the specified circuit.  Each stream may be associated with
@@ -549,6 +549,7 @@ $Id$
 
   If HOP=HopNum is specified, Tor will choose the HopNumth hop in the
   circuit as the exit node, rather than the last node in the circuit.
+  Hops are 1-indexed; generally, it is not permitted to attach to hop 1.
 
   Tor responds with "250 OK" if it can attach the stream, 552 if the circuit
   or stream didn't exist, or 551 if the stream couldn't be attached for
