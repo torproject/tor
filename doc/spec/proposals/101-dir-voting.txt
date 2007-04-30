@@ -21,7 +21,7 @@ Proposal:
   This document describes a consensus voting scheme for Tor directories.
   Once it's accepted, it should be merged with dir-spec.txt.  Some
   preliminaries for authority and caching support should be done during
-  the 0.1.2.x series; the main deployment should come during the 0.1.3.x
+  the 0.1.2.x series; the main deployment should come during the 0.2.0.x
   series.
 
 0.1. Goals and motivation: voting.

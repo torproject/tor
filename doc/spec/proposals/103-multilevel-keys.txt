@@ -122,7 +122,7 @@ Extensions to Proposal 101.
 
       The elements "fingerprint", "dir-key-published", "dir-signing-key",
       "dir-identity-key", and "dir-key-certification" together constitute a
-      "key certificate".  These are generated offline when starting a v2.1
+      "key certificate".  These are generated offline when starting a v3
       authority.
 
       The elements "dir-signing-key", "dir-key-published", and
