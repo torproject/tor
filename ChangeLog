@@ -113,6 +113,10 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Correct the control spec to match how the code actually responds
       to 'getinfo addr-mappings/*'.
 
+  o Minor bugfixes (controller):
+    - Actually set the purpose correctly for descriptors inserted with
+      purpose=controller.
+
   o Code simplifications and refactoring
     - Stop passing around circuit_t and crypt_path_t pointers that are
       implicit in other procedure arguments.

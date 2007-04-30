@@ -1696,7 +1696,7 @@ get_purpose(char **string, int for_circuits, uint8_t *purpose)
                               ROUTER_PURPOSE_GENERAL;
   else if (!strcmp(*string, "controller"))
     *purpose = for_circuits ? CIRCUIT_PURPOSE_CONTROLLER :
-                              ROUTER_PURPOSE_GENERAL;
+                              ROUTER_PURPOSE_CONTROLLER;
   else { /* not a recognized purpose */
     return -1;
   }
