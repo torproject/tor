@@ -69,8 +69,12 @@
 #define _FORTIFY_SOURCE 3
 
 #include <string.h>
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
@@ -78,8 +82,12 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+#ifdef HAVE_LIMITS_H
 #include <limits.h>
+#endif
 #include <sys/stat.h>
 #include <ctype.h>
 #include <stdio.h>
