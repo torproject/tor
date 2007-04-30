@@ -13,6 +13,9 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	eventdns.c \
 	tor_main.c
 
+tor_LIBS = -lz -levent -lssl -lcrypto
+tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@ \
+        -lz -levent -lssl -lcrypto
 tor_LDADD = ../common/libor.a ../common/libor-crypto.a
 
 test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
@@ -24,6 +27,8 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	eventdns.c \
 	test.c
 
+test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
+        @TOR_LDFLAGS_libevent@ -lz -levent -lssl -lcrypto
 test_LDADD = ../common/libor.a ../common/libor-crypto.a
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
