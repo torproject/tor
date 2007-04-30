@@ -2518,7 +2518,9 @@ int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
-int dirserv_add_descriptor(const char *desc, const char **msg);
+int dirserv_add_multiple_descriptors(const char *desc, const char **msg);
+int dirserv_add_descriptor(const char *desc, const char *end,
+                           const char **msg);
 int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
                                         const char *question, char **answer);
 void dirserv_free_descriptors(void);

@@ -522,6 +522,41 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   return 0;
 }
 
+/** As for dirserv_add_descriptor, but accepts multiple documents, and
+ * returns the most severe error that occurred for any one of them. */
+int
+dirserv_add_multiple_descriptors(const char *desc, const char **msg)
+{
+  int r=100; /* higher than any actual return value. */
+  int r_tmp;
+  const char *msg_out;
+
+  while (desc && *desc) {
+    const char *eos = strstr(desc, "\nrouter-signature");
+    const char *next = NULL;
+    if (eos) {
+      char *next_extra = strstr(eos, "\nextra-info");
+      char *next_routerinfo = strstr(eos, "\nrouter ");
+      if (next_extra)
+        next = next_extra;
+      if (!next || (next_routerinfo && next_routerinfo < next))
+        next = next_routerinfo;
+    }
+    if (next)
+      ++next;
+
+    r_tmp = dirserv_add_descriptor(desc, next, &msg_out);
+    desc = next;
+
+    if (r_tmp < r) {
+      r = r_tmp;
+      *msg = msg_out;
+    }
+  }
+
+  return r <= 2 ? r : -2;
+}
+
 /** Parse the server descriptor at <b>desc</b> and maybe insert it into
  * the list of server descriptors. Set *<b>msg</b> to a message that
  * should be passed back to the origin of this descriptor.
@@ -533,7 +568,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
  * -2 if we can't find a router descriptor in <b>desc</b>.
  */
 int
-dirserv_add_descriptor(const char *desc, const char **msg)
+dirserv_add_descriptor(const char *desc, const char *end, const char **msg)
 {
   int r;
   routerinfo_t *ri = NULL, *ri_old = NULL;
@@ -545,7 +580,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   if (!strcmpstart(desc, "extra-info")) {
     /* It's an extra-info thingie. */
     routerlist_t *rl = router_get_routerlist();
-    ei = extrainfo_parse_entry_from_string(desc, NULL, 1, rl->identity_map);
+    ei = extrainfo_parse_entry_from_string(desc, end, 1, rl->identity_map);
     if (!ei) {
       log_warn(LD_DIRSERV, "Couldn't parse uploaded extra-info descriptor");
       *msg = "Rejected: couldn't parse extra-info descriptor";
@@ -567,7 +602,7 @@ dirserv_add_descriptor(const char *desc, const char **msg)
   }
 
   /* Check: is the descriptor syntactically valid? */
-  ri = router_parse_entry_from_string(desc, NULL, 1);
+  ri = router_parse_entry_from_string(desc, end, 1);
   if (!ri) {
     log_warn(LD_DIRSERV, "Couldn't parse uploaded server descriptor");
     *msg = "Rejected: Couldn't parse server descriptor.";
