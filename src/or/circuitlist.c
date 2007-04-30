@@ -844,6 +844,22 @@ circuit_get_cpath_len(origin_circuit_t *circ)
   return n;
 }
 
+/** Return the <b>hopnum</b>th hop in <b>circ</b>->cpath, or NULL if there
+ * aren't that many hops in the list. */
+crypt_path_t *
+circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum)
+{
+  if (circ && circ->cpath) {
+    crypt_path_t *cpath, *cpath_next = NULL;
+    for (cpath = circ->cpath; cpath_next != circ->cpath; cpath = cpath_next) {
+      cpath_next = cpath->next;
+      if (--hopnum <= 0)
+        return cpath;
+    }
+  }
+  return NULL;
+}
+
 /** Go through the circuitlist; mark-for-close each circuit that starts
  *  at us but has not yet been used. */
 void

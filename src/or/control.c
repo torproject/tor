@@ -1897,6 +1897,8 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   origin_circuit_t *circ = NULL;
   int zero_circ;
   smartlist_t *args;
+  crypt_path_t *cpath=NULL;
+  int hop=0, hop_line_ok=1;
   (void) len;
 
   args = getargs_helper("ATTACHSTREAM", conn, body, 2, -1);
@@ -1911,10 +1913,20 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   } else if (!zero_circ && !(circ = get_circ(smartlist_get(args, 1)))) {
     connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
                              (char*)smartlist_get(args, 1));
+  } else if (circ && smartlist_len(args) > 2) {
+    char *hopstring = smartlist_get(args, 2);
+    if (!strcasecmpstart(hopstring, "HOP=")) {
+      hopstring += strlen("HOP=");
+      hop = tor_parse_ulong(hopstring, 10, 0, ULONG_MAX,
+                            &hop_line_ok, NULL);
+      if (!hop_line_ok) { /* broken hop line */
+        connection_printf_to_buf(conn, "552 Bad value hop=%s\r\n", hopstring);
+      }
+    }
   }
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
-  if (!ap_conn || (!zero_circ && !circ))
+  if (!ap_conn || (!zero_circ && !circ) || !hop_line_ok)
     return 0;
 
   if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT &&
@@ -1940,16 +1952,25 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
 
   if (circ && (circ->_base.state != CIRCUIT_STATE_OPEN)) {
     connection_write_str_to_buf(
-                    "551 Can't attach stream to non-open, origin circuit\r\n",
+                    "551 Can't attach stream to non-open origin circuit\r\n",
                     conn);
     return 0;
   }
-  if (circ && circuit_get_cpath_len(circ) < 2) {
+  if (circ && (circuit_get_cpath_len(circ)<2 || hop==1)) {
     connection_write_str_to_buf(
                     "551 Can't attach stream to one-hop circuit.\r\n", conn);
     return 0;
   }
-  if (connection_ap_handshake_rewrite_and_attach(ap_conn, circ) < 0) {
+  if (circ && hop>0) {
+    /* find this hop in the circuit, and set cpath */
+    cpath = circuit_get_cpath_hop(circ, hop);
+    if (!cpath) {
+      connection_printf_to_buf(conn,
+                               "551 Circuit doesn't have %d hops.\r\n", hop);
+      return 0;
+    }
+  }
+  if (connection_ap_handshake_rewrite_and_attach(ap_conn, circ, cpath) < 0) {
     connection_write_str_to_buf("551 Unable to attach stream\r\n", conn);
     return 0;
   }

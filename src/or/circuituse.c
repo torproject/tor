@@ -1101,7 +1101,8 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
  * circ's cpath.
  */
 static void
-link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ)
+link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
+                    crypt_path_t *cpath)
 {
   /* add it into the linked list of streams on this circuit */
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %d.",
@@ -1113,10 +1114,14 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ)
   /* assert_connection_ok(conn, time(NULL)); */
   circ->p_streams = apconn;
 
-  tor_assert(circ->cpath);
-  tor_assert(circ->cpath->prev);
-  tor_assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
-  apconn->cpath_layer = circ->cpath->prev;
+  if (cpath) { /* we were given one; use it */
+    apconn->cpath_layer = cpath;
+  } else { /* use the last hop in the circuit */
+    tor_assert(circ->cpath);
+    tor_assert(circ->cpath->prev);
+    tor_assert(circ->cpath->prev->state == CPATH_STATE_OPEN);
+    apconn->cpath_layer = circ->cpath->prev;
+  }
 }
 
 /** If an exit wasn't specifically chosen, save the history for future
@@ -1172,7 +1177,8 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
  * for connection_ap_handshake_attach_circuit. */
 int
 connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
-                                              origin_circuit_t *circ)
+                                              origin_circuit_t *circ,
+                                              crypt_path_t *cpath)
 {
   tor_assert(conn);
   tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT ||
@@ -1186,7 +1192,7 @@ connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
   if (!circ->_base.timestamp_dirty)
     circ->_base.timestamp_dirty = time(NULL);
 
-  link_apconn_to_circ(conn, circ);
+  link_apconn_to_circ(conn, circ, cpath);
   tor_assert(conn->socks_request);
   switch (conn->socks_request->command) {
     case SOCKS_COMMAND_CONNECT:
@@ -1269,7 +1275,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
     circuit_log_path(LOG_INFO,LD_APP|LD_CIRC,circ);
 
     /* We have found a suitable circuit for our conn. Hurray. */
-    return connection_ap_handshake_attach_chosen_circuit(conn, circ);
+    return connection_ap_handshake_attach_chosen_circuit(conn, circ, NULL);
 
   } else { /* we're a rendezvous conn */
     origin_circuit_t *rendcirc=NULL, *introcirc=NULL;
@@ -1295,7 +1301,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
        * feasibility, at this point.
        */
       rendcirc->_base.timestamp_dirty = time(NULL);
-      link_apconn_to_circ(conn, rendcirc);
+      link_apconn_to_circ(conn, rendcirc, NULL);
       if (connection_ap_handshake_send_begin(conn) < 0)
         return 0; /* already marked, let them fade away */
       return 1;

@@ -1181,7 +1181,8 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
  */
 int
 connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
-                                           origin_circuit_t *circ)
+                                           origin_circuit_t *circ,
+                                           crypt_path_t *cpath)
 {
   socks_request_t *socks = conn->socks_request;
   hostname_type_t addresstype;
@@ -1337,8 +1338,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       tor_fragile_assert();
     }
     conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
-    if ((circ &&
-         connection_ap_handshake_attach_chosen_circuit(conn, circ) < 0) ||
+    if ((circ && connection_ap_handshake_attach_chosen_circuit(
+                   conn, circ, cpath) < 0) ||
         (!circ &&
          connection_ap_handshake_attach_circuit(conn) < 0)) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
@@ -1583,7 +1584,7 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
     conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
     return 0;
   }
-  return connection_ap_handshake_rewrite_and_attach(conn, NULL);
+  return connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
 }
 
 /** connection_init_accepted_conn() found a new trans AP conn.
@@ -1625,7 +1626,7 @@ connection_ap_process_transparent(edge_connection_t *conn)
     conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
     return 0;
   }
-  return connection_ap_handshake_rewrite_and_attach(conn, NULL);
+  return connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
 }
 
 /** connection_edge_process_inbuf() found a conn in state natd_wait. See if
@@ -1704,7 +1705,7 @@ connection_ap_process_natd(edge_connection_t *conn)
   }
   conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
 
-  return connection_ap_handshake_rewrite_and_attach(conn, NULL);
+  return connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
 }
 
 /** Iterate over the two bytes of stream_id until we get one that is not

@@ -2085,6 +2085,7 @@ void circuit_expire_all_dirty_circs(void);
 void _circuit_mark_for_close(circuit_t *circ, int reason,
                              int line, const char *file);
 int circuit_get_cpath_len(origin_circuit_t *circ);
+crypt_path_t *circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum);
 void circuit_get_all_pending_on_or_conn(smartlist_t *out,
                                         or_connection_t *or_conn);
 int circuit_count_pending_on_or_conn(or_connection_t *or_conn);
@@ -2127,7 +2128,8 @@ origin_circuit_t *circuit_launch_by_router(uint8_t purpose,
                                     int is_internal);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
-                                                  origin_circuit_t *circ);
+                                                  origin_circuit_t *circ,
+                                                  crypt_path_t *cpath);
 int connection_ap_handshake_attach_circuit(edge_connection_t *conn);
 
 /********************************* command.c ***************************/
@@ -2322,7 +2324,8 @@ const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
                              time_t max_expires);
 int connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
-                                               origin_circuit_t *circ);
+                                               origin_circuit_t *circ,
+                                               crypt_path_t *cpath);
 
 void set_exit_redirects(smartlist_t *lst);
 typedef enum hostname_type_t {
