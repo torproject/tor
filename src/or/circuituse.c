@@ -1190,7 +1190,7 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
 /** Attempt to attach the connection <b>conn</b> to <b>circ</b>, and send a
  * begin or resolve cell as appropriate.  Return values are as for
  * connection_ap_handshake_attach_circuit.  The stream will exit from the hop
- * indicatd by <b>cpath</b>, or to the last hop in circ's cpath if
+ * indicated by <b>cpath</b>, or from the last hop in circ's cpath if
  * <b>cpath</b> is NULL. */
 int
 connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,

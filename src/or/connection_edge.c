@@ -346,7 +346,6 @@ connection_ap_expire_beginning(void)
   connection_t **carray;
   edge_connection_t *conn;
   circuit_t *circ;
-  const char *nickname;
   int n, i;
   time_t now = time(NULL);
   or_options_t *options = get_options();
@@ -407,13 +406,12 @@ connection_ap_expire_beginning(void)
       continue;
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
-    nickname = build_state_get_exit_nickname(
-                                        TO_ORIGIN_CIRCUIT(circ)->build_state);
     log_fn(cutoff < 15 ? LOG_INFO : severity, LD_APP,
            "We tried for %d seconds to connect to '%s' using exit '%s'."
            " Retrying on a new circuit.",
            seconds_idle, safe_str(conn->socks_request->address),
-           nickname ? nickname : "*unnamed*");
+           conn->cpath_layer ?
+             conn->cpath_layer->extend_info->nickname : "*unnamed*");
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT);
     /* un-mark it as ending, since we're going to reuse it */
@@ -1180,7 +1178,7 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
  * rendezvous descriptor is already here and fresh enough).
  *
  * The stream will exit from the hop
- * indicatd by <b>cpath</b>, or to the last hop in circ's cpath if
+ * indicated by <b>cpath</b>, or from the last hop in circ's cpath if
  * <b>cpath</b> is NULL.
  */
 int
