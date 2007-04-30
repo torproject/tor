@@ -16,6 +16,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Add an HSAuthorityRecordStats option that hidden service authorities
       can use to track statistics of overall hidden service usage without
       logging information that would be very useful to an attacker.
+    - Start work implementing proposal 103: Add a standalone tool to
+      generate key certificates.
 
   o Security fixes:
     - Directory authorities now call routers stable if they have an
