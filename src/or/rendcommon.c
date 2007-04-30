@@ -361,7 +361,7 @@ rend_cache_lookup_desc(const char *query, int version, const char **desc,
  * Return -1 if it's malformed or otherwise rejected; return 0 if
  * it's the same or older than one we've already got; return 1 if
  * it's novel. The published flag tells us if we store the descriptor
- * in our role aus directory (1) or if we cache it as client (0).
+ * in our role as directory (1) or if we cache it as client (0).
  */
 int
 rend_cache_store(const char *desc, size_t desc_len, int published)
@@ -397,7 +397,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
     rend_service_descriptor_free(parsed);
     return -1;
   }
-  /* report novel publication to statistic */
+  /* report novel publication to statistics */
   if (published && options->HSAuthorityRecordStats) {
     hs_usage_note_publish_total(query, time(NULL));
   }
@@ -418,7 +418,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
     strmap_set_lc(rend_cache, key, e);
-    /* report novel publication to statistic */
+    /* report novel publication to statistics */
     if (published && options->HSAuthorityRecordStats) {
       hs_usage_note_publish_novel(query, time(NULL));
     }
@@ -486,6 +486,7 @@ rend_process_relay_cell(circuit_t *circ, int command, size_t length,
   (void)r;
 }
 
+/** Return the number of entries in our rendezvous descriptor cache. */
 int
 rend_cache_size(void)
 {

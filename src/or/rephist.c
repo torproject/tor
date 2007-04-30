@@ -1197,10 +1197,10 @@ hs_usage_init(void)
 /** Clears the given ordered list by resetting its attributes and releasing
  * the memory allocated by its elements. */
 static void
-hs_usage_list_clear(hs_usage_list_t *l)
+hs_usage_list_clear(hs_usage_list_t *lst)
 {
   /* walk through elements and free memory */
-  hs_usage_list_elem_t *current = l->start;
+  hs_usage_list_elem_t *current = lst->start;
   hs_usage_list_elem_t *tmp;
   while (current != NULL) {
     tmp = current->next;
@@ -1209,19 +1209,21 @@ hs_usage_list_clear(hs_usage_list_t *l)
     current = tmp;
   }
   /* reset attributes */
-  l->start = NULL;
-  l->total_count = 0;
-  l->total_service_ids = 0;
+  lst->start = NULL;
+  lst->total_count = 0;
+  lst->total_service_ids = 0;
   return;
 }
 
 /** Frees the memory used by the given list. */
 static void
-hs_usage_list_free(hs_usage_list_t *l)
+hs_usage_list_free(hs_usage_list_t *lst)
 {
-  hs_usage_list_clear(l);
+  if (!lst)
+    return;
+  hs_usage_list_clear(lst);
   rephist_total_alloc -= sizeof(hs_usage_list_t);
-  tor_free(l);
+  tor_free(lst);
 }
 
 /** Frees the memory used by the given service-related observations. */
@@ -1229,6 +1231,8 @@ static void
 hs_usage_service_related_observation_free(
                                     hs_usage_service_related_observation_t *s)
 {
+  if (!s)
+    return;
   hs_usage_list_free(s->list);
   rephist_total_alloc -= sizeof(hs_usage_service_related_observation_t);
   tor_free(s);
@@ -1257,20 +1261,23 @@ void
 hs_usage_free_all(void)
 {
   hs_usage_general_period_related_observations_free(descs);
+  descs = NULL;
   hs_usage_service_related_observation_free(fetch_successful);
   hs_usage_service_related_observation_free(fetch_total);
   hs_usage_service_related_observation_free(publish_novel);
   hs_usage_service_related_observation_free(publish_total);
+  fetch_successful = fetch_total = publish_novel = publish_total = NULL;
   hs_usage_current_observation_period_free(current_period);
+  current_period = NULL;
 }
 
 /** Inserts a new occurence for the given service id to the given ordered
  * list. */
 static void
-hs_usage_insert_value(hs_usage_list_t *l, const char *service_id)
+hs_usage_insert_value(hs_usage_list_t *lst, const char *service_id)
 {
   /* search if there is already an elem with same service_id in list */
-  hs_usage_list_elem_t *current = l->start;
+  hs_usage_list_elem_t *current = lst->start;
   hs_usage_list_elem_t *previous = NULL;
   while (current != NULL && strcmp(current->service_id,service_id)) {
     previous = current;
@@ -1283,14 +1290,14 @@ hs_usage_insert_value(hs_usage_list_t *l, const char *service_id)
     /* create elem */
     hs_usage_list_elem_t *e = hs_usage_list_elem_new();
     /* update list attributes (one new elem, one new occurence) */
-    l->total_count++;
-    l->total_service_ids++;
+    lst->total_count++;
+    lst->total_service_ids++;
     /* copy service id to elem */
     strlcpy(e->service_id,service_id,sizeof(e->service_id));
     /* let either l->start or previously last elem point to new elem */
-    if (l->start == NULL) {
+    if (lst->start == NULL) {
       /* this is the first elem */
-      l->start = e;
+      lst->start = e;
     } else {
       /* there were elems in the list before */
       previous->next = e;
@@ -1298,7 +1305,7 @@ hs_usage_insert_value(hs_usage_list_t *l, const char *service_id)
   } else {
     /* found! add occurence to elem and consider resorting */
     /* update list attributes (no new elem, but one new occurence) */
-    l->total_count++;
+    lst->total_count++;
     /* add occurence to elem */
     current->count++;
     /* is it another than the first list elem? and has previous elem fewer
@@ -1308,14 +1315,14 @@ hs_usage_insert_value(hs_usage_list_t *l, const char *service_id)
       /* remove current elem first */
       previous->next = current->next;
       /* can we prepend elem to all other elements? */
-      if (l->start->count <= current->count) {
+      if (lst->start->count <= current->count) {
         /* yes! prepend elem */
-        current->next = l->start;
-        l->start = current;
+        current->next = lst->start;
+        lst->start = current;
       } else {
         /* no! walk through list a second time and insert at correct place */
-        hs_usage_list_elem_t *insert_current = l->start->next;
-        hs_usage_list_elem_t *insert_previous = l->start;
+        hs_usage_list_elem_t *insert_current = lst->start->next;
+        hs_usage_list_elem_t *insert_previous = lst->start;
         while (insert_current != NULL &&
                insert_current->count > current->count) {
           insert_previous = insert_current;
