@@ -4757,6 +4757,8 @@ routerlist_check_bug_417(void)
   int idx = -1;
 
   ri_generated = router_get_my_routerinfo();
+  if (!ri_generated)
+    return;
 
   r = digestmap_get(rl->identity_map,
                     ri_generated->cache_info.identity_digest);
