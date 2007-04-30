@@ -399,7 +399,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   }
   /* report novel publication to statistics */
   if (published && options->HSAuthorityRecordStats) {
-    hs_usage_note_publish_total(query, time(NULL));
+    hs_usage_note_publish_total(query, now);
   }
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
   if (e && e->parsed->timestamp > parsed->timestamp) {
@@ -420,7 +420,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
     strmap_set_lc(rend_cache, key, e);
     /* report novel publication to statistics */
     if (published && options->HSAuthorityRecordStats) {
-      hs_usage_note_publish_novel(query, time(NULL));
+      hs_usage_note_publish_novel(query, now);
     }
   } else {
     rend_service_descriptor_free(e->parsed);

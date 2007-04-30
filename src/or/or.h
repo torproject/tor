@@ -2800,7 +2800,7 @@ void dump_pk_ops(int severity);
 
 void rep_hist_free_all(void);
 
-/* for hidden service usage statistic */
+/* for hidden service usage statistics */
 void hs_usage_note_publish_total(const char *service_id, time_t now);
 void hs_usage_note_publish_novel(const char *service_id, time_t now);
 void hs_usage_note_fetch_total(const char *service_id, time_t now);

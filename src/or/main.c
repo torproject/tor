@@ -141,7 +141,7 @@ static char* nt_strerror(uint32_t errnum);
 /** How long do we let OR connections handshake before we decide that
  * they are obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT           (60)
-/** How often do we write hidden service usage statistics to disk* */
+/** How often do we write hidden service usage statistics to disk? */
 #define WRITE_HSUSAGE_INTERVAL (900)
 
 /********* END VARIABLES ************/

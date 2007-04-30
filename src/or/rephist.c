@@ -1271,7 +1271,7 @@ hs_usage_free_all(void)
   current_period = NULL;
 }
 
-/** Inserts a new occurence for the given service id to the given ordered
+/** Inserts a new occurrence for the given service id to the given ordered
  * list. */
 static void
 hs_usage_insert_value(hs_usage_list_t *lst, const char *service_id)
@@ -1279,7 +1279,7 @@ hs_usage_insert_value(hs_usage_list_t *lst, const char *service_id)
   /* search if there is already an elem with same service_id in list */
   hs_usage_list_elem_t *current = lst->start;
   hs_usage_list_elem_t *previous = NULL;
-  while (current != NULL && strcmp(current->service_id,service_id)) {
+  while (current != NULL && strcasecmp(current->service_id,service_id)) {
     previous = current;
     current = current->next;
   }
@@ -1289,7 +1289,7 @@ hs_usage_insert_value(hs_usage_list_t *lst, const char *service_id)
      * list), don't need to sort (1 is smallest value). */
     /* create elem */
     hs_usage_list_elem_t *e = hs_usage_list_elem_new();
-    /* update list attributes (one new elem, one new occurence) */
+    /* update list attributes (one new elem, one new occurrence) */
     lst->total_count++;
     lst->total_service_ids++;
     /* copy service id to elem */
@@ -1303,10 +1303,10 @@ hs_usage_insert_value(hs_usage_list_t *lst, const char *service_id)
       previous->next = e;
     }
   } else {
-    /* found! add occurence to elem and consider resorting */
-    /* update list attributes (no new elem, but one new occurence) */
+    /* found! add occurrence to elem and consider resorting */
+    /* update list attributes (no new elem, but one new occurrence) */
     lst->total_count++;
-    /* add occurence to elem */
+    /* add occurrence to elem */
     current->count++;
     /* is it another than the first list elem? and has previous elem fewer
      * count than current? then we need to resort */
