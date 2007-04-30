@@ -922,6 +922,7 @@ get_uname(void)
         int i;
         unsigned int leftover_mask;
         const char *plat = NULL;
+        const char *extra = NULL;
         static struct {
           unsigned major; unsigned minor; const char *version;
         } win_version_table[] = {
@@ -968,6 +969,10 @@ get_uname(void)
             plat = "Windows NT 4.0";
           else
             plat = "Windows 95";
+          if (info.szCSDVersion[1] == 'B')
+            extra = "OSR2 (B)";
+          else if (info.szCSDVersion[1] == 'C')
+            extra = "OSR2 (C)";
         } else {
           for (i=0; win_version_table[i].major>0; ++i) {
             if (win_version_table[i].major == info.dwMajorVersion &&
@@ -977,9 +982,17 @@ get_uname(void)
             }
           }
         }
+        if (plat && !strcmp(plat, "Windows 98")) {
+          if (info.szCSDVersion[1] == 'A')
+            extra = "SE (A)";
+          else if (info.szCSDVersion[1] == 'B')
+            extra = "SE (B)";
+        }
         if (plat) {
+          if (!extra)
+            extra = info.szCSDVersion;
           tor_snprintf(uname_result, sizeof(uname_result), "%s %s",
-                       plat, info.szCSDVersion);
+                       plat, extra);
         } else {
           if (info.dwMajorVersion > 6 ||
               (info.dwMajorVersion==6 && info.dwMinorVersion>0))
