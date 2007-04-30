@@ -801,10 +801,10 @@ typedef struct connection_t {
   struct connection_t *linked_conn;
   /* XXXX020 NM move these up to the other 1-bit flags. */
   unsigned int linked:1; /**< True if there is, or has been, a linked_conn. */
-  /** True iff we'd like to be notified about read events from the linked conn.
-   */
+  /** True iff we'd like to be notified about read events from the
+   * linked conn. */
   unsigned int reading_from_linked_conn:1;
-  /** True iff we're willing  to write to the linked conn. */
+  /** True iff we're willing to write to the linked conn. */
   unsigned int writing_to_linked_conn:1;
   /** True iff we're currently able to read on the linked conn, and our
    * read_event should be made active with libevent. */

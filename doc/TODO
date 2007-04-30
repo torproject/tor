@@ -410,6 +410,9 @@ R - add d64 and fp64 along-side d and fp so people can paste status
 
 
 Future version:
+  - servers might check certs for known-good ssl websites, and if they
+    come back self-signed, declare themselves to be non-exits. similar
+    to how we test for broken/evil dns now.
   - we try to build 4 test circuits to break them over different
     servers. but sometimes our entry node is the same for multiple
     test circuits. this defeats the point.

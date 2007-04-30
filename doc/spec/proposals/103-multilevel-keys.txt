@@ -132,7 +132,7 @@ Extensions to Proposal 101.
       The "fingerprint" field is generated based on the identity key, not
       the signing key.
 
-  Consensus network statues change as follows:
+  Consensus network statuses change as follows:
 
       Remove dir-signing-key.
 

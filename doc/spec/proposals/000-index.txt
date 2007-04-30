@@ -30,5 +30,6 @@ Proposals by number:
 109  No more than one server per IP address [ACCEPTED]
 110  Avoiding infinite length circuits [OPEN]
 111  Prioritizing local traffic over relayed traffic [OPEN]
-112  Bring Back Patlen Coin Weight [OPEN]
+112  Bring Back Pathlen Coin Weight [OPEN]
 113  Simplifying directory authority administration [OPEN]
+
