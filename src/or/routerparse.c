@@ -693,12 +693,18 @@ check_directory_signature(const char *digest,
  * isn't SAVED_NOWHERE, remember the offset of each descriptor.
  *
  * Returns 0 on success and -1 on failure.
+ *
+ * DOCDOC is_extrainfo
  */
 int
 router_parse_list_from_string(const char **s, smartlist_t *dest,
-                              saved_location_t saved_location)
+                              saved_location_t saved_location,
+                              int is_extrainfo)
 {
   routerinfo_t *router;
+  extrainfo_t *extrainfo;
+  signed_descriptor_t *signed_desc;
+  void *elt;
   const char *end, *cp, *start;
 
   tor_assert(s);
@@ -709,9 +715,17 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
   while (1) {
     *s = eat_whitespace(*s);
     /* Don't start parsing the rest of *s unless it contains a router. */
-    if (strcmpstart(*s, "router ")!=0)
-      break;
-    if ((end = strstr(*s+1, "\nrouter "))) {
+    if (is_extrainfo) {
+      if (strcmpstart(*s, "extra-info")!=0)
+        break;
+    } else {
+      if (strcmpstart(*s, "router ")!=0)
+        break;
+    }
+    if (is_extrainfo && (end = strstr(*s+1, "\nextra-info"))) {
+      cp = end;
+      end++;
+    } else if (!is_extrainfo && (end = strstr(*s+1, "\nrouter "))) {
       cp = end;
       end++;
     } else if ((end = strstr(*s+1, "\ndirectory-signature"))) {
@@ -736,20 +750,31 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
       continue;
     }
 
-    router = router_parse_entry_from_string(*s, end,
-                                            saved_location != SAVED_IN_CACHE);
+    if (is_extrainfo) {
+      routerlist_t *rl = router_get_routerlist();
+      extrainfo = extrainfo_parse_entry_from_string(*s, end,
+                                       saved_location != SAVED_IN_CACHE,
+                                       rl->identity_map);
+      signed_desc = &extrainfo->cache_info;
+      elt = extrainfo;
+    } else {
+      router = router_parse_entry_from_string(*s, end,
+                                          saved_location != SAVED_IN_CACHE);
+      signed_desc = &router->cache_info;
+      elt = router;
+    }
 
-    if (!router) {
+    if (!elt) {
       log_warn(LD_DIR, "Error reading router; skipping");
       *s = end;
       continue;
     }
     if (saved_location != SAVED_NOWHERE) {
-      router->cache_info.saved_location = saved_location;
-      router->cache_info.saved_offset = *s - start;
+      signed_desc->saved_location = saved_location;
+      signed_desc->saved_offset = *s - start;
     }
     *s = end;
-    smartlist_add(dest, router);
+    smartlist_add(dest, elt);
   }
 
   return 0;

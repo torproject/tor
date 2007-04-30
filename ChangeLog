@@ -60,8 +60,7 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       aren't usually needed, and that use a lot of excess bandwidth. Once
       these fields are removed from router descriptors, the bandwidth savings
       should be about 60%.  (Limitation: servers do not yet upload extra-info
-      documents; authorities do not yet cache them.)  [Partially implements
-      proposal 104.]
+      documents.)  [Partially implements proposal 104.]
     - Directory authorities allow multiple router descriptors and/or extra
       info documents to be uploaded in a single go.  This will make
       implementing proposal 104 simpler.

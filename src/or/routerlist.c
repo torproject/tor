@@ -41,6 +41,8 @@ static local_routerstatus_t *router_get_combined_status_by_nickname(
                                                 int warn_if_unnamed);
 static void update_router_have_minimum_dir_info(void);
 static void router_dir_info_changed(void);
+static void router_load_extrainfo_from_string(const char *s,
+                                              saved_location_t saved_location);
 
 /****************************************************************************/
 
@@ -168,49 +170,65 @@ router_reload_networkstatus(void)
  * On startup, we read both files.
  */
 
-/** The size of the router log, in bytes. */
-static size_t router_journal_len = 0;
-/** The size of the router store, in bytes. */
-static size_t router_store_len = 0;
-/** Total bytes dropped since last rebuild. */
-static size_t router_bytes_dropped = 0;
+/** DOCDOC */
+typedef struct store_stats_t {
+  /** The size of the router log, in bytes. */
+  size_t journal_len;
+  /** The size of the router store, in bytes. */
+  size_t store_len;
+  /** Total bytes dropped since last rebuild. */
+  size_t bytes_dropped;
+} store_stats_t;
+
+/** DOCDOC */
+static store_stats_t router_store_stats = { 0, 0, 0 };
+/** DOCDOC */
+static store_stats_t extrainfo_store_stats = { 0, 0, 0 };
 
 /** Helper: return 1 iff the router log is so big we want to rebuild the
  * store. */
 static int
-router_should_rebuild_store(void)
+router_should_rebuild_store(store_stats_t *stats)
 {
-  if (router_store_len > (1<<16))
-    return (router_journal_len > router_store_len / 2 ||
-            router_bytes_dropped > router_store_len / 2);
+  if (stats->store_len > (1<<16))
+    return (stats->journal_len > stats->store_len / 2 ||
+            stats->bytes_dropped > stats->store_len / 2);
   else
-    return router_journal_len > (1<<15);
+    return stats->journal_len > (1<<15);
 }
 
-/** Add the router descriptor in <b>desc</b> to the router
+/** Add the signed_descriptor_t in <b>desc</b> to the router
  * journal; change its saved_location to SAVED_IN_JOURNAL and set its
  * offset appropriately.
  *
- * If <b>purpose</b> isn't ROUTER_PURPOSE_GENERAL, just do nothing. */
+ * If <b>purpose</b> isn't ROUTER_PURPOSE_GENERAL or
+ * EXTRAINFO_PURPOSE_GENERAL, just do nothing. */
 static int
-router_append_to_journal(signed_descriptor_t *desc, uint8_t purpose)
+signed_desc_append_to_journal(signed_descriptor_t *desc, int purpose)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
   char *fname;
   const char *body = signed_descriptor_get_body(desc);
   size_t len = desc->signed_descriptor_len;
+  const char *fname_base = purpose == ROUTER_PURPOSE_GENERAL ?
+    "cached-routers" : "cached-extrainfo";
+  store_stats_t *stats;
 
   routerlist_check_bug_417();
 
-  if (purpose != ROUTER_PURPOSE_GENERAL) {
+  if (purpose == ROUTER_PURPOSE_GENERAL) {
+    stats = &router_store_stats;
+  } else if (purpose == EXTRAINFO_PURPOSE_GENERAL) {
+    stats = &extrainfo_store_stats;
+  } else {
     /* we shouldn't cache it. be happy and return. */
     return 0;
   }
 
   fname = tor_malloc(fname_len);
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers.new",
-               options->DataDirectory);
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
+               options->DataDirectory, fname_base);
 
   tor_assert(len == strlen(body));
 
@@ -220,10 +238,10 @@ router_append_to_journal(signed_descriptor_t *desc, uint8_t purpose)
     return -1;
   }
   desc->saved_location = SAVED_IN_JOURNAL;
-  desc->saved_offset = router_journal_len;
-
   tor_free(fname);
-  router_journal_len += len;
+
+  desc->saved_offset = stats->journal_len;
+  stats->journal_len += len;
 
   routerlist_check_bug_417();
   return 0;
@@ -233,139 +251,147 @@ router_append_to_journal(signed_descriptor_t *desc, uint8_t purpose)
  * signed_descriptor_t* in *<b>a</b> is older, the same age as, or newer than
  * the signed_descriptor_t* in *<b>b</b>. */
 static int
-_compare_old_routers_by_age(const void **_a, const void **_b)
+_compare_signed_descriptors_by_age(const void **_a, const void **_b)
 {
   const signed_descriptor_t *r1 = *_a, *r2 = *_b;
   return r1->published_on - r2->published_on;
 }
 
-/** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
- * routerinfo_t* in *<b>a</b> is older, the same age as, or newer than
- * the routerinfo_t* in *<b>b</b>. */
-static int
-_compare_routers_by_age(const void **_a, const void **_b)
-{
-  const routerinfo_t *r1 = *_a, *r2 = *_b;
-  return r1->cache_info.published_on - r2->cache_info.published_on;
-}
-
 /** If the journal is too long, or if <b>force</b> is true, then atomically
  * replace the router store with the routers currently in our routerlist, and
  * clear the journal.  Return 0 on success, -1 on failure.
+ *
+ * DOCDOC extrainfo
  */
 static int
-router_rebuild_store(int force)
+router_rebuild_store(int force, int extrainfo)
 {
   size_t len = 0;
   or_options_t *options;
   size_t fname_len;
   smartlist_t *chunk_list = NULL;
   char *fname = NULL, *fname_tmp = NULL;
-  int r = -1, i;
+  int r = -1;
   off_t offset = 0;
-  smartlist_t *old_routers, *routers;
+  smartlist_t *signed_descriptors = NULL;
+  store_stats_t *stats =
+    extrainfo ? &extrainfo_store_stats : &router_store_stats;
+  const char *fname_base =
+    extrainfo ? "cached-extrainfo" : "cached-routers";
+  tor_mmap_t **mmap_ptr;
 
-  if (!force && !router_should_rebuild_store())
+  if (!force && !router_should_rebuild_store(stats))
     return 0;
   if (!routerlist)
     return 0;
+
+  mmap_ptr =
+    extrainfo ? &routerlist->mmap_extrainfo : &routerlist->mmap_descriptors;
 
   routerlist_check_bug_417();
 
   /* Don't save deadweight. */
   routerlist_remove_old_routers();
 
-  log_info(LD_DIR, "Rebuilding router descriptor cache");
+  log_info(LD_DIR, "Rebuilding %s cache",
+           extrainfo ? "Extra-info" : "router descriptor");
 
   options = get_options();
   fname_len = strlen(options->DataDirectory)+32;
   fname = tor_malloc(fname_len);
   fname_tmp = tor_malloc(fname_len);
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers",
-               options->DataDirectory);
-  tor_snprintf(fname_tmp, fname_len, "%s"PATH_SEPARATOR"cached-routers.tmp",
-               options->DataDirectory);
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s",
+               options->DataDirectory, fname_base);
+  tor_snprintf(fname_tmp, fname_len, "%s"PATH_SEPARATOR"%s.tmp",
+               options->DataDirectory, fname_base);
 
   chunk_list = smartlist_create();
 
   /* We sort the routers by age to enhance locality on disk. */
-  old_routers = smartlist_create();
-  smartlist_add_all(old_routers, routerlist->old_routers);
-  smartlist_sort(old_routers, _compare_old_routers_by_age);
-  routers = smartlist_create();
-  smartlist_add_all(routers, routerlist->routers);
-  smartlist_sort(routers, _compare_routers_by_age);
-  for (i = 0; i < 2; ++i) {
-    smartlist_t *lst = (i == 0) ? old_routers : routers;
-    /* Now, add the appropriate members to chunk_list */
-    SMARTLIST_FOREACH(lst, void *, ptr,
+  signed_descriptors = smartlist_create();
+  if (extrainfo) {
+    digestmap_iter_t *iter;
+    for (iter = digestmap_iter_init(routerlist->extra_info_map);
+         !digestmap_iter_done(iter);
+         iter = digestmap_iter_next(routerlist->extra_info_map, iter)) {
+      const char *key;
+      void *val;
+      extrainfo_t *ei;
+      digestmap_iter_get(iter, &key, &val);
+      ei = val;
+      smartlist_add(signed_descriptors, &ei->cache_info);
+    }
+  } else {
+    smartlist_add_all(signed_descriptors, routerlist->old_routers);
+    SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+                      smartlist_add(signed_descriptors, &ri->cache_info));
+  }
+
+  smartlist_sort(signed_descriptors, _compare_signed_descriptors_by_age);
+
+  /* Now, add the appropriate members to chunk_list */
+  SMARTLIST_FOREACH(signed_descriptors, signed_descriptor_t *, sd,
     {
-      signed_descriptor_t *sd = (i==0) ?
-        ((signed_descriptor_t*)ptr): &((routerinfo_t*)ptr)->cache_info;
       sized_chunk_t *c;
       const char *body = signed_descriptor_get_body(sd);
       if (!body) {
         log_warn(LD_BUG, "No descriptor available for router.");
         goto done;
       }
-      if (i==1 && ((routerinfo_t*)ptr)->purpose != ROUTER_PURPOSE_GENERAL)
+      if (sd->do_not_cache)
         continue;
       c = tor_malloc(sizeof(sized_chunk_t));
       c->bytes = body;
       c->len = sd->signed_descriptor_len;
       smartlist_add(chunk_list, c);
     });
-  }
+
   if (write_chunks_to_file(fname_tmp, chunk_list, 1)<0) {
     log_warn(LD_FS, "Error writing router store to disk.");
     goto done;
   }
+
   /* Our mmap is now invalid. */
-  if (routerlist->mmap_descriptors) {
-    tor_munmap_file(routerlist->mmap_descriptors);
+  if (*mmap_ptr) {
+    tor_munmap_file(*mmap_ptr);
+    *mmap_ptr = NULL;
   }
+
   if (replace_file(fname_tmp, fname)<0) {
     log_warn(LD_FS, "Error replacing old router store.");
     goto done;
   }
 
-  routerlist->mmap_descriptors = tor_mmap_file(fname);
-  if (! routerlist->mmap_descriptors)
+  *mmap_ptr = tor_mmap_file(fname);
+  if (! *mmap_ptr)
     log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
 
   offset = 0;
-  for (i = 0; i < 2; ++i) {
-    smartlist_t *lst = (i == 0) ? old_routers : routers;
-    SMARTLIST_FOREACH(lst, void *, ptr,
+  SMARTLIST_FOREACH(signed_descriptors, signed_descriptor_t *, sd,
     {
-      signed_descriptor_t *sd = (i==0) ?
-        ((signed_descriptor_t*)ptr): &((routerinfo_t*)ptr)->cache_info;
-
-      if (i==1 && ((routerinfo_t*)ptr)->purpose != ROUTER_PURPOSE_GENERAL)
+      if (sd->do_not_cache)
         continue;
-
       sd->saved_location = SAVED_IN_CACHE;
-      if (routerlist->mmap_descriptors) {
+      if (*mmap_ptr) {
         tor_free(sd->signed_descriptor_body); // sets it to null
         sd->saved_offset = offset;
       }
       offset += sd->signed_descriptor_len;
-      signed_descriptor_get_body(sd);
+      signed_descriptor_get_body(sd); /* reconstruct and assert */
     });
-  }
 
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers.new",
-               options->DataDirectory);
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
+               options->DataDirectory, fname_base);
 
   write_str_to_file(fname, "", 1);
 
   r = 0;
-  router_store_len = len;
-  router_journal_len = 0;
-  router_bytes_dropped = 0;
+  stats->store_len = len;
+  stats->journal_len = 0;
+  stats->bytes_dropped = 0;
  done:
-  smartlist_free(old_routers);
-  smartlist_free(routers);
+  if (signed_descriptors)
+    smartlist_free(signed_descriptors);
   tor_free(fname);
   SMARTLIST_FOREACH(chunk_list, sized_chunk_t *, c, tor_free(c));
   smartlist_free(chunk_list);
@@ -374,52 +400,65 @@ router_rebuild_store(int force)
   return r;
 }
 
-/** Load all cached router descriptors from the store. Return 0 on success and
- * -1 on failure.
- */
-int
-router_reload_router_list(void)
+/** DOCDOC */
+static int
+router_reload_router_list_impl(int extrainfo)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
   char *fname = tor_malloc(fname_len), *contents = NULL;
+  store_stats_t *stats =
+    extrainfo ? &extrainfo_store_stats : &router_store_stats;
+  const char *fname_base =
+    extrainfo ? "cached-extrainfo" : "cached-routers";
+  tor_mmap_t **mmap_ptr;
 
   routerlist_check_bug_417();
 
   if (!routerlist)
     router_get_routerlist(); /* mallocs and inits it in place */
 
-  router_journal_len = router_store_len = 0;
+  mmap_ptr =
+    extrainfo ? &routerlist->mmap_extrainfo : &routerlist->mmap_descriptors;
 
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers",
-               options->DataDirectory);
+  router_store_stats.journal_len = router_store_stats.store_len = 0;
 
-  if (routerlist->mmap_descriptors) /* get rid of it first */
-    tor_munmap_file(routerlist->mmap_descriptors);
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s",
+               options->DataDirectory, fname_base);
 
-  routerlist->mmap_descriptors = tor_mmap_file(fname);
-  if (routerlist->mmap_descriptors) {
-    router_store_len = routerlist->mmap_descriptors->size;
-    router_load_routers_from_string(routerlist->mmap_descriptors->data,
-                                    SAVED_IN_CACHE, NULL);
+  if (*mmap_ptr) /* get rid of it first */
+    tor_munmap_file(*mmap_ptr);
+  *mmap_ptr = NULL;
+
+  *mmap_ptr = tor_mmap_file(fname);
+  if (*mmap_ptr) {
+    stats->store_len = (*mmap_ptr)->size;
+    if (extrainfo)
+      router_load_extrainfo_from_string((*mmap_ptr)->data,
+                                      SAVED_IN_CACHE);
+    else
+      router_load_routers_from_string((*mmap_ptr)->data,
+                                      SAVED_IN_CACHE, NULL);
   }
 
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"cached-routers.new",
-               options->DataDirectory);
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
+               options->DataDirectory, fname_base);
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, NULL);
   if (contents) {
-    router_load_routers_from_string(contents,
-                                    SAVED_IN_JOURNAL, NULL);
+    if (extrainfo)
+      router_load_extrainfo_from_string(contents, SAVED_IN_JOURNAL);
+    else
+      router_load_routers_from_string(contents, SAVED_IN_JOURNAL, NULL);
     tor_free(contents);
   }
 
   tor_free(fname);
 
-  if (router_journal_len) {
+  if (stats->journal_len) {
     /* Always clear the journal on startup.*/
-    router_rebuild_store(1);
-  } else {
+    router_rebuild_store(1, extrainfo);
+  } else if (!extrainfo) {
     /* Don't cache expired routers. (This is in an else because
      * router_rebuild_store() also calls remove_old_routers().) */
     routerlist_remove_old_routers();
@@ -427,6 +466,19 @@ router_reload_router_list(void)
 
   routerlist_check_bug_417();
 
+  return 0;
+}
+
+/** Load all cached router descriptors and extra-info documents from the
+ * store. Return 0 on success and -1 on failure.
+ */
+int
+router_reload_router_list(void)
+{
+  if (router_reload_router_list_impl(0))
+    return 1;
+  if (router_reload_router_list_impl(1))
+    return 1;
   return 0;
 }
 
@@ -1679,10 +1731,12 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   routerlist_check_bug_417();
 }
 
-/**DOCDOC*/
-static void
+/** DOCDOC
+ * Returns true if actually inserted. */
+static int
 extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
 {
+  int r = 0;
   routerinfo_t *ri = digestmap_get(rl->identity_map,
                                    ei->cache_info.identity_digest);
   extrainfo_t *ei_tmp;
@@ -1714,11 +1768,13 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   ei_tmp = digestmap_set(rl->extra_info_map,
                          ei->cache_info.signed_descriptor_digest,
                          ei);
+  r = 1;
   if (ei_tmp)
     extrainfo_free(ei_tmp);
 
  done:
   routerlist_check_bug_417();
+  return r;
 }
 
 /** If we're a directory cache and routerlist <b>rl</b> doesn't have
@@ -1780,12 +1836,15 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
     ri_tmp = digestmap_remove(rl->desc_digest_map,
                               ri->cache_info.signed_descriptor_digest);
     tor_assert(ri_tmp == ri);
-    router_bytes_dropped += ri->cache_info.signed_descriptor_len;
+    router_store_stats.bytes_dropped += ri->cache_info.signed_descriptor_len;
     routerinfo_free(ri);
     ei_tmp = digestmap_remove(rl->extra_info_map,
                               ri->cache_info.extra_info_digest);
-    if (ei_tmp)
+    if (ei_tmp) {
+      extrainfo_store_stats.bytes_dropped +=
+        ei_tmp->cache_info.signed_descriptor_len;
       extrainfo_free(ei_tmp);
+    }
   }
   // routerlist_assert_ok(rl);
   routerlist_check_bug_417();
@@ -1805,13 +1864,16 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   sd_tmp = digestmap_remove(rl->desc_digest_map,
                             sd->signed_descriptor_digest);
   tor_assert(sd_tmp == sd);
-  router_bytes_dropped += sd->signed_descriptor_len;
+  router_store_stats.bytes_dropped += sd->signed_descriptor_len;
   signed_descriptor_free(sd);
 
   ei_tmp = digestmap_remove(rl->extra_info_map,
                             sd->extra_info_digest);
-  if (ei_tmp)
+  if (ei_tmp) {
+    extrainfo_store_stats.bytes_dropped +=
+      ei_tmp->cache_info.signed_descriptor_len;
     extrainfo_free(ei_tmp);
+  }
 
   routerlist_check_bug_417();
   // routerlist_assert_ok(rl);
@@ -1871,6 +1933,8 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
       ei_tmp = digestmap_remove(rl->extra_info_map,
                                 ri_old->cache_info.extra_info_digest);
       if (ei_tmp) {
+        extrainfo_store_stats.bytes_dropped +=
+          ei_tmp->cache_info.signed_descriptor_len;
         extrainfo_free(ei_tmp);
       }
     }
@@ -2089,7 +2153,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && get_options()->DirPort)
-        router_append_to_journal(&router->cache_info, router->purpose);
+        signed_desc_append_to_journal(&router->cache_info, router->purpose);
       routerlist_insert_old(routerlist, router);
       return -1;
     }
@@ -2120,7 +2184,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                 router->nickname);
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && get_options()->DirPort)
-        router_append_to_journal(&router->cache_info, router->purpose);
+        signed_desc_append_to_journal(&router->cache_info, router->purpose);
       routerlist_insert_old(routerlist, router);
       *msg = "Router descriptor was not new.";
       return -1;
@@ -2158,7 +2222,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       }
       routerlist_replace(routerlist, old_router, router, pos, 1);
       if (!from_cache) {
-        router_append_to_journal(&router->cache_info, router->purpose);
+        signed_desc_append_to_journal(&router->cache_info, router->purpose);
       }
       directory_set_dirty();
       *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
@@ -2173,7 +2237,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
    * the list. */
   routerlist_insert(routerlist, router);
   if (!from_cache)
-    router_append_to_journal(&router->cache_info, router->purpose);
+    signed_desc_append_to_journal(&router->cache_info, router->purpose);
   directory_set_dirty();
   return 0;
 }
@@ -2183,11 +2247,14 @@ void
 router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                    int from_cache, int from_fetch)
 {
-  /* XXXX020 cache on disk */
-  (void)from_cache;
+  int inserted;
   (void)from_fetch;
   (void)msg;
-  extrainfo_insert(router_get_routerlist(), ei);
+
+  inserted = extrainfo_insert(router_get_routerlist(), ei);
+
+  if (inserted && !from_cache)
+    signed_desc_append_to_journal(&ei->cache_info, EXTRAINFO_PURPOSE_GENERAL);
 }
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
@@ -2440,6 +2507,8 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
     return -1;
   }
   ri->purpose = purpose;
+  if (purpose != ROUTER_PURPOSE_GENERAL)
+    ri->cache_info.do_not_cache = 1;
   if (router_is_me(ri)) {
     log_warn(LD_DIR, "Router's identity key matches mine; dropping.");
     *msg = "Router's identity key matches mine.";
@@ -2485,7 +2554,7 @@ router_load_routers_from_string(const char *s, saved_location_t saved_location,
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
 
-  router_parse_list_from_string(&s, routers, saved_location);
+  router_parse_list_from_string(&s, routers, saved_location, 0);
 
   routers_update_status_from_networkstatus(routers, !from_cache);
 
@@ -2519,10 +2588,32 @@ router_load_routers_from_string(const char *s, saved_location_t saved_location,
     control_event_descriptors_changed(changed);
 
   routerlist_assert_ok(routerlist);
-  router_rebuild_store(0);
+  router_rebuild_store(0, 0);
 
   smartlist_free(routers);
   smartlist_free(changed);
+}
+
+/** DOCDOC */
+static void
+router_load_extrainfo_from_string(const char *s,
+                                  saved_location_t saved_location)
+{
+  smartlist_t *extrainfo_list = smartlist_create();
+  const char *msg;
+  int from_cache = (saved_location != SAVED_NOWHERE);
+
+  router_parse_list_from_string(&s, extrainfo_list, saved_location, 1);
+
+  log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
+
+  SMARTLIST_FOREACH(extrainfo_list, extrainfo_t *, ei,
+      router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache));
+
+  routerlist_assert_ok(routerlist);
+  router_rebuild_store(0, 1);
+
+  smartlist_free(extrainfo_list);
 }
 
 /** Helper: return a newly allocated string containing the name of the filename

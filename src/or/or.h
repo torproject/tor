@@ -1066,6 +1066,8 @@ typedef struct signed_descriptor_t {
   /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
    * this descriptor in the corresponding file. */
   off_t saved_offset;
+  /* DOCDOC */
+  unsigned int do_not_cache : 1;
 } signed_descriptor_t;
 
 /** Information about another onion router in the network. */
@@ -1136,6 +1138,9 @@ typedef struct {
    * none. */
   int routerlist_index;
 } routerinfo_t;
+
+/** DOCDOC */
+#define EXTRAINFO_PURPOSE_GENERAL -1
 
 /** Information needed to keep and cache a signed extra-info document. */
 typedef struct extrainfo_t {
@@ -1276,6 +1281,8 @@ typedef struct {
    * cache_info.saved_location == SAVED_IN_CACHE is stored in this file
    * starting at cache_info.saved_offset */
   tor_mmap_t *mmap_descriptors;
+  /** Mmaped file holding extra-info documents. */
+  tor_mmap_t *mmap_extrainfo;
 } routerlist_t;
 
 /** Information on router used when extending a circuit. We don't need a
@@ -3156,7 +3163,8 @@ int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
                                   smartlist_t *dest,
-                                  saved_location_t saved_location);
+                                  saved_location_t saved_location,
+                                  int is_extrainfo);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey,
