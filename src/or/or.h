@@ -1820,6 +1820,9 @@ typedef struct {
   int LeaveStreamsUnattached; /**< Boolean: Does Tor attach new streams to
                           * circuits itself (0), or does it expect a controller
                           * to cope? (1) */
+  int DisablePredictedCircuits; /**< Boolean: does Tor preemptively
+                                 * make circuits in the background (0),
+                                 * or not (1)? */
   int ShutdownWaitLength; /**< When we get a SIGINT and we're a server, how
                            * long do we wait before exiting? */
   int SafeLogging; /**< Boolean: are we allowed to log sensitive strings

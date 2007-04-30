@@ -448,6 +448,7 @@ void
 circuit_build_needed_circs(time_t now)
 {
   static long time_to_new_circuit = 0;
+  or_options_t *options = get_options();
 
   /* launch a new circ for any pending streams that need one */
   connection_ap_attach_pending();
@@ -457,7 +458,7 @@ circuit_build_needed_circs(time_t now)
 
   if (time_to_new_circuit < now) {
     circuit_reset_failure_count(1);
-    time_to_new_circuit = now + get_options()->NewCircuitPeriod;
+    time_to_new_circuit = now + options->NewCircuitPeriod;
     if (proxy_mode(get_options()))
       addressmap_clean(now);
     circuit_expire_old_circuits(now);
@@ -472,7 +473,8 @@ circuit_build_needed_circs(time_t now)
     }
 #endif
   }
-  circuit_predict_and_launch_new();
+  if (!options->DisablePredictedCircuits)
+    circuit_predict_and_launch_new();
 }
 
 /** If the stream <b>conn</b> is a member of any of the linked

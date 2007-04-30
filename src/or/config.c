@@ -123,7 +123,6 @@ static config_var_t _option_vars[] = {
   VAR("AccountingMax",       MEMUNIT,  AccountingMax,        "0 bytes"),
   VAR("AccountingStart",     STRING,   AccountingStart,      NULL),
   VAR("Address",             STRING,   Address,              NULL),
-  VAR("__AllDirActionsPrivate",BOOL,   AllDirActionsPrivate, "0"),
   VAR("AllowInvalidNodes",   CSV,      AllowInvalidNodes,
                                                         "middle,rendezvous"),
   VAR("AllowNonRFC953Hostnames", BOOL, AllowNonRFC953Hostnames, "0"),
@@ -258,6 +257,8 @@ static config_var_t _option_vars[] = {
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   VAR("VirtualAddrNetwork",  STRING,   VirtualAddrNetwork,   "127.192.0.0/10"),
+  VAR("__AllDirActionsPrivate",BOOL,   AllDirActionsPrivate, "0"),
+  VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits,"0"),
   VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };

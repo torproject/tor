@@ -63,6 +63,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
   o Minor features (other):
     - Correctly report Windows 95 OSR2 and Windows 98 SE.
     - More unit tests.
+    - Add a new config option __DisablePredictedCircuits designed for
+      use by the controller, when we don't want Tor to build any circuits
+      preemptively.
 
   o Removed features:
     - Removed support for the old binary "version 0" controller protocol.
