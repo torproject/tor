@@ -163,7 +163,9 @@ dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
 if test $bwin32 = true; then
-  TOR_LIB_WS32=-lws2_32 -lwsock32
+  TOR_LIB_WS32=-lws2_32
+  # Some of the cargo-cults recommend -lwsock32 as well, but I don't
+  # think it's actually necessary.
   TOR_LIB_GDI=-lgdi32
 else
   TOR_LIB_WS32=

@@ -13,10 +13,13 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	eventdns.c \
 	tor_main.c
 
-tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@ \
-        -lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
-tor_LDADD = ../common/libor.a ../common/libor-crypto.a
+# -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
+# This seems to matter nowhere but on windows, but I assure you that it
+# matters a lot there, and is quite hard to debug if you forget to do it.
 
+tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
+tor_LDADD = ../common/libor.a ../common/libor-crypto.a \
+  -lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
@@ -27,9 +30,9 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	test.c
 
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
-        @TOR_LDFLAGS_libevent@ -lz -levent -lssl -lcrypto \
-        @TOR_LIB_WS32@ @TOR_LIB_GDI@
-test_LDADD = ../common/libor.a ../common/libor-crypto.a
+        @TOR_LDFLAGS_libevent@
+test_LDADD = ../common/libor.a ../common/libor-crypto.a \
+        -lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 
