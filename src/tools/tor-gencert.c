@@ -29,12 +29,14 @@
 
 #define IDENTITY_KEY_BITS 3072
 #define SIGNING_KEY_BITS 1024
+#define DEFAULT_LIFETIME 12
 
 char *identity_key_file = NULL;
 char *signing_key_file = NULL;
 char *certificate_file = NULL;
 int verbose = 0;
 int make_new_id = 0;
+int months_lifetime = DEFAULT_LIFETIME;
 
 EVP_PKEY *identity_key = NULL;
 EVP_PKEY *signing_key = NULL;
@@ -92,6 +94,16 @@ parse_commandline(int argc, char **argv)
         return 1;
       }
       certificate_file = tor_strdup(argv[++i]);
+    } else if (!strcmp(argv[i], "-m")) {
+      if (i+1>=argc) {
+        fprintf(stderr, "No argument to -m\n");
+        return 1;
+      }
+      months_lifetime = atoi(argv[++i]);
+      if (months_lifetime > 24 || months_lifetime < 0) {
+        fprintf(stderr, "Lifetime (in months) was out of range.");
+        return 1;
+      }
     } else if (!strcmp(argv[i], "-v")) {
       verbose = 1;
     } else if (!strcmp(argv[i], "--create-identity-key")) {
@@ -275,7 +287,9 @@ generate_certificate(void)
 {
   char buf[8192];
   time_t now = time(NULL);
+  struct tm tm;
   char published[ISO_TIME_LEN+1];
+  char expires[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
   char *ident = key_to_string(identity_key);
   char *signing = key_to_string(signing_key);
@@ -286,16 +300,22 @@ generate_certificate(void)
   int r;
 
   get_fingerprint(identity_key, fingerprint);
+
+  tor_localtime_r(&now, &tm);
+  tm.tm_mon += months_lifetime;
+
   format_iso_time(published, now);
+  format_iso_time(expires, mktime(&tm));
 
   tor_snprintf(buf, sizeof(buf),
                "dir-key-certificate-version 3\n"
                "fingerprint %s\n"
                "dir-key-published %s\n"
+               "dir-key-expires %s\n"
                "dir-identity-key\n%s"
                "dir-signing-key\n%s"
                "dir-key-certification\n",
-               fingerprint, published, ident, signing);
+               fingerprint, published, expires, ident, signing);
   signed_len = strlen(buf);
   SHA1((const unsigned char*)buf,signed_len,(unsigned char*)digest);
 

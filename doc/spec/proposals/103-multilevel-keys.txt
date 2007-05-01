@@ -118,6 +118,7 @@ Extensions to Proposal 101.
     "dir-identity-key": The long-term identity key for this authority.
     "dir-key-published": The time when this directory's signing key was
          last changed.
+    "dir-key-expires": A time after which this key is no longer valid.
     "dir-signing-key": As in proposal 101.
     "dir-key-certification": A signature of the above fields, in order.
          The signed material extends from the beginning of
