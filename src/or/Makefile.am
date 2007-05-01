@@ -41,7 +41,7 @@ tor_main.o: micro-revision.i
 micro-revision.i: FORCE
 	@if test -d ../../.svn -a x`which svn` != x ; then	\
 	  svn info ../.. |              			\
-	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.i \
+	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.tmp \
 	     || true;                                           \
 	else                                                    \
 	if test x`which svk` != x -a -d ~/.svk; then            \
@@ -64,12 +64,16 @@ micro-revision.i: FORCE
             fi;                                                 \
           done;                                                 \
           if test x$$rev != x; then                             \
-            echo \"$$rev\" > micro-revision.i;                  \
+            echo \"$$rev\" > micro-revision.tmp;                \
           fi;                                                   \
         fi;                                                     \
 	fi;                                                     \
-	if test ! -f micro-revision.i; then			\
-	  echo '""' > micro-revision.i;				\
+	if test ! -f micro-revision.tmp; then			\
+	  echo '""' > micro-revision.tmp;			\
+	fi;                                                     \
+	if test "`cat micro-revision.tmp`" != "`cat micro-revision.i`"; then \
+	  mv micro-revision.tmp micro-revision.i;               \
 	fi
 
+#Dummy target to ensure that micro-revision.i _always_ gets built.
 FORCE:
