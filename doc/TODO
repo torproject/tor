@@ -77,8 +77,8 @@ Things we'd like to do in 0.2.0.x:
         o Implement cache on disk.
       o Have routers upload extra-info documents to authorities running
         version 0.2.0.0-alpha-dev (r10070) or later.
-        . Implement, but make it option-controlled.
-        - Make it always-on once it seems to work.
+        o Implement, but make it option-controlled.
+        o Make it always-on once it seems to work.
       - Implement option to download and cache extra-info documents.
       - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol (finalize by Jun 1)

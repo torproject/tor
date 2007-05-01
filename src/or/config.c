@@ -262,9 +262,6 @@ static config_var_t _option_vars[] = {
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits,"0"),
   VAR("__LeaveStreamsUnattached", BOOL,LeaveStreamsUnattached, "0"),
 
-  /* XXXX020 Testing only. This will become "always on" once we confirm
-   * that it works. */
-  VAR("_UploadExtraInfo", BOOL, _UploadExtraInfo, "0"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR

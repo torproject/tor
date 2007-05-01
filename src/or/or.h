@@ -1881,8 +1881,6 @@ typedef struct {
  /** If true, we try resolving hostnames with weird characters. */
   int ServerDNSAllowNonRFC953Hostnames;
 
-  /*XXXX020 remove me once no longer needed */
-  int _UploadExtraInfo;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

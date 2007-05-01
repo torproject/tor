@@ -730,7 +730,6 @@ router_upload_dir_desc_to_dirservers(int force)
   extrainfo_t *ei;
   char *msg;
   size_t desc_len, extra_len = 0, total_len;
-  int post_extra;
 
   ri = router_get_my_routerinfo();
   if (!ri) {
@@ -738,7 +737,6 @@ router_upload_dir_desc_to_dirservers(int force)
     return;
   }
   ei = router_get_my_extrainfo();
-  post_extra = ei && get_options()->_UploadExtraInfo;
   if (!get_options()->PublishServerDescriptor)
     return;
   if (!force && !desc_needs_upload)
@@ -746,11 +744,11 @@ router_upload_dir_desc_to_dirservers(int force)
   desc_needs_upload = 0;
 
   desc_len = ri->cache_info.signed_descriptor_len;
-  extra_len = (ei && post_extra) ? ei->cache_info.signed_descriptor_len : 0;
+  extra_len = ei ? ei->cache_info.signed_descriptor_len : 0;
   total_len = desc_len + extra_len + 1;
   msg = tor_malloc(total_len);
   memcpy(msg, ri->cache_info.signed_descriptor_body, desc_len);
-  if (ei && post_extra) {
+  if (ei) {
     memcpy(msg+desc_len, ei->cache_info.signed_descriptor_body, extra_len);
   }
   msg[desc_len+extra_len] = 0;
