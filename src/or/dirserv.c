@@ -1750,6 +1750,8 @@ generate_v2_networkstatus(void)
       outp += strlen(outp);
       if (ri->platform && !strcmpstart(ri->platform, "Tor ")) {
         const char *eos = find_whitespace(ri->platform+4);
+        if (eos && !strcmpstart(eos, " (r"))
+          eos = find_whitespace(eos+1);
         if (eos) {
           char *platform = tor_strndup(ri->platform, eos-(ri->platform));
           if (tor_snprintf(outp, endp-outp,
