@@ -869,6 +869,12 @@ When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor also
 accepts and serves hidden service descriptors. (Default: 0)
 .LP
 .TP
+\fBHSAuthorityRecordStats \fR\fB0\fR|\fB1\fR\fP
+When this option is set in addition to \fBHSAuthoritativeDir\fP, Tor
+periodically (every 15 minutes) writes statistics about hidden service
+usage to a file \fBhsusage\fP  in its data directory. (Default: 0)
+.LP
+.TP
 \fBDirPort \fR\fIPORT\fP
 Advertise the directory service on this port.
 .LP
@@ -1074,6 +1080,12 @@ A set of persistent key-value mappings.  These are documented in the file.  Thes
 .TP
 .B \fIDataDirectory\fP/bw_accounting
 Used to track bandwidth accounting values (when the current period starts and ends; how much has been read and written so far this period).  This file is obsolete, and the data is now stored in the 'state' file as well.  Only used when bandwidth accounting is enabled.
+.LP
+.TP
+.B \fIDataDirectory\fP/hsusage
+Used to track hidden service usage in terms of fetch and publish
+requests to this hidden service authoritative directory. Only used when
+recording of statistics is enabled.
 .LP
 .TP
 .B \fIDataDirectory\fP/control_auth_cookie
