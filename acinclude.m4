@@ -139,7 +139,7 @@ if test $tor_cv_library_$1_dir != "(system)"; then
    TOR_EXTEND_CODEPATH($tor_cv_library_$1_dir)
 fi
 
-TOR_DEFINE_CODEPATH($tor_cv_library_$1_dir , $1)
+TOR_DEFINE_CODEPATH($tor_cv_library_$1_dir, $1)
 
 if test -z "$CROSS_COMPILE"; then
   AC_CACHE_CHECK([whether we need extra options to link $1],
