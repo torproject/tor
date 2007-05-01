@@ -195,7 +195,7 @@ TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $TOR_LIB_WS32], [
 dnl Now check for particular libevent functions.
 save_LIBS="$LIBS"
 save_LDFLAGS="$LDFLAGS"
-LIBS="-levent $LIBS"
+LIBS="-levent $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LIBS"
 AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
 LIBS="$save_LIBS"
