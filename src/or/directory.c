@@ -126,9 +126,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
                                          "Tor 0.2.0.0-alpha-dev (r10070)"));
       if (extrainfo_len && new_enough) {
         upload_len += extrainfo_len;
-        /* XXXX020 Disable this once it's tested. */
-        log_notice(LD_DIR, "I am going to try to upload an extrainfo. How "
-                   "exciting! (length %d)", (int) extrainfo_len);
+        log_info(LD_DIR, "Uploading an extrainfo (length %d)",
+                 (int) extrainfo_len);
       }
       post_via_tor = purpose_is_private(purpose) ||
               !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
