@@ -110,6 +110,8 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
       routerstatus_t *rs = &(ds->fake_status.status);
       local_routerstatus_t *lrs = router_get_combined_status_by_digest(
                                                 ds->digest);
+      int new_enough;
+
       size_t upload_len = payload_len;
       if (post_to_hidserv_only && !ds->is_hidserv_authority)
         continue;
@@ -118,8 +120,11 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
         continue;
       if (purpose == DIR_PURPOSE_UPLOAD_DIR)
         ds->has_accepted_serverdesc = 0;
-      if (extrainfo_len && lrs &&
-          lrs->status.version_supports_extrainfo_upload) {
+
+      new_enough = (lrs && lrs->status.version_supports_extrainfo_upload) ||
+        (router_digest_version_as_new_as(ds->digest,
+                                         "Tor 0.2.0.0-alpha-dev (r10070)"));
+      if (extrainfo_len && new_enough) {
         upload_len += extrainfo_len;
         /* XXXX020 Disable this once it's tested. */
         log_notice(LD_DIR, "I am going to try to upload an extrainfo. How "
