@@ -163,12 +163,14 @@ dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
 if test $bwin32 = true; then
-  WS32lib=-lws2_32
-  GDIlib=-lgdi32
+  TOR_LIB_WS32=-lws2_32
+  TOR_LIB_GDI=-lgdi32
 else
-  W32lib=
-  GDIlib=
+  TOR_LIB_WS32=
+  TOR_LIB_GDI=
 fi
+AC_SUBST(TOR_LIB_WS32)
+AC_SUBST(TOR_LIB_GDI)
 
 dnl This is a disgusting hack so we safely include recent libevent headers.
 AC_CHECK_TYPE(u_int64_t, unsigned long long)
@@ -176,20 +178,12 @@ AC_CHECK_TYPE(u_int32_t, unsigned long)
 AC_CHECK_TYPE(u_int16_t, unsigned short)
 AC_CHECK_TYPE(u_int8_t, unsigned char)
 
-if test $bwin32 = true; then
-  WS32lib=-lws2_32
-  GDIlib=-lgdi32
-else
-  W32lib=
-  GDIlib=
-fi
-
 tor_libevent_pkg_redhat="libevent"
 tor_libevent_pkg_debian="libevent"
 tor_libevent_devpkg_redhat="libevent-devel"
 tor_libevent_devpkg_debian="libevent-dev"
 
-TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $WS32lib], [
+TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $TOR_LIB_WS32], [
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -213,7 +207,7 @@ tor_openssl_pkg_debian="libssl"
 tor_openssl_devpkg_redhat="openssl-devel"
 tor_openssl_devpkg_debian="libssl-dev"
 
-TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $GDIlib],
+TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI],
     [#include <openssl/rand.h>],
     [void RAND_add(const void *buf, int num, double entropy);],
     [RAND_add((void*)0,0,0); exit(0);], [--with-ssl-dir],

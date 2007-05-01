@@ -13,9 +13,8 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	eventdns.c \
 	tor_main.c
 
-tor_LIBS = -lz -levent -lssl -lcrypto
 tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@ \
-        -lz -levent -lssl -lcrypto
+        -lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 tor_LDADD = ../common/libor.a ../common/libor-crypto.a
 
 test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
@@ -28,7 +27,8 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	test.c
 
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
-        @TOR_LDFLAGS_libevent@ -lz -levent -lssl -lcrypto
+        @TOR_LDFLAGS_libevent@ -lz -levent -lssl -lcrypto \
+        @TOR_LIB_WS32@ @TOR_LIB_GDI@
 test_LDADD = ../common/libor.a ../common/libor-crypto.a
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
@@ -36,7 +36,7 @@ noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 tor_main.o: micro-revision.i
 
 micro-revision.i: FORCE
-	@if test -d ../../.svn ; then 				\
+	@if test -d ../../.svn -a x`which svn` != x ; then	\
 	  svn info ../.. |              			\
 	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.i \
 	     || true;                                           \

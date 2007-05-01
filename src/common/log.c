@@ -652,6 +652,7 @@ configure_libevent_logging(void)
 void
 suppress_libevent_log_msg(const char *msg)
 {
+  (void)msg;
 }
 #endif
 
