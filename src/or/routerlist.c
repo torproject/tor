@@ -3797,6 +3797,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     int n_v2_dir=0, n_fast=0, n_stable=0, n_exit=0, n_guard=0, n_bad_exit=0;
     int n_bad_directory=0;
     int n_version_known=0, n_supports_begindir=0;
+    int n_supports_extrainfo_upload=0;
     int n_desc_digests=0, highest_count=0;
     const char *the_name = NULL;
     local_routerstatus_t *rs_out, *rs_old;
@@ -3890,6 +3891,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
         ++n_version_known;
       if (rs->version_supports_begindir)
         ++n_supports_begindir;
+      if (rs->version_supports_extrainfo_upload)
+        ++n_supports_extrainfo_upload;
     }
     /* Go over the descriptor digests and figure out which descriptor we
      * want. */
@@ -3945,6 +3948,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
     rs_out->status.version_known = n_version_known > 0;
     rs_out->status.version_supports_begindir =
       n_supports_begindir > n_version_known/2;
+    rs_out->status.version_supports_extrainfo_upload =
+      n_supports_extrainfo_upload > n_version_known/2;
     if (!rs_old || memcmp(rs_old, rs_out, sizeof(local_routerstatus_t)))
       smartlist_add(changed_list, rs_out);
   }

@@ -87,10 +87,12 @@ purpose_is_private(uint8_t purpose)
  * connection purpose 'purpose' and uploading the payload 'payload'
  * (length 'payload_len').  The purpose should be one of
  * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
+ *
+ * DOCDOC extrainfo_len is in addition to payload_len.
  */
 void
 directory_post_to_dirservers(uint8_t purpose, const char *payload,
-                             size_t payload_len)
+                             size_t payload_len, size_t extrainfo_len)
 {
   smartlist_t *dirservers;
   int post_via_tor;
@@ -106,6 +108,9 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
       routerstatus_t *rs = &(ds->fake_status.status);
+      local_routerstatus_t *lrs = router_get_combined_status_by_digest(
+                                                ds->digest);
+      size_t upload_len = payload_len;
       if (post_to_hidserv_only && !ds->is_hidserv_authority)
         continue;
       if (!post_to_hidserv_only &&
@@ -113,10 +118,17 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
         continue;
       if (purpose == DIR_PURPOSE_UPLOAD_DIR)
         ds->has_accepted_serverdesc = 0;
+      if (extrainfo_len && lrs &&
+          lrs->status.version_supports_extrainfo_upload) {
+        upload_len += extrainfo_len;
+        /* XXXX020 Disable this once it's tested. */
+        log_notice(LD_DIR, "I am going to try to upload an extrainfo. How "
+                   "exciting! (length %d)", (int) extrainfo_len);
+      }
       post_via_tor = purpose_is_private(purpose) ||
               !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
       directory_initiate_command_routerstatus(rs, purpose, post_via_tor,
-                                              NULL, payload, payload_len);
+                                              NULL, payload, upload_len);
     });
 }
 

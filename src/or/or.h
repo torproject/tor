@@ -1191,6 +1191,8 @@ typedef struct routerstatus_t {
   unsigned int version_known:1;
   /** True iff this router is a version that supports BEGIN_DIR cells. */
   unsigned int version_supports_begindir:1;
+  /** True iff this router is a version that we can post extrainfo docs to. */
+  unsigned int version_supports_extrainfo_upload:1;
 
   /** True if we, as a directory mirror, want to download the corresponding
    * routerinfo from the authority who gave us this routerstatus.  (That is,
@@ -1878,6 +1880,9 @@ typedef struct {
                                 * with weird characters. */
  /** If true, we try resolving hostnames with weird characters. */
   int ServerDNSAllowNonRFC953Hostnames;
+
+  /*XXXX020 remove me once no longer needed */
+  int _UploadExtraInfo;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -2483,7 +2488,7 @@ int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 /********************************* directory.c ***************************/
 
 void directory_post_to_dirservers(uint8_t purpose, const char *payload,
-                                  size_t payload_len);
+                                  size_t payload_len, size_t extrainfo_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                   int retry_if_no_servers);
 void directory_initiate_command_routerstatus(routerstatus_t *status,
