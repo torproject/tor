@@ -59,6 +59,19 @@ typedef enum {
   K_EXTRA_INFO,
   K_EXTRA_INFO_DIGEST,
   K_CACHES_EXTRA_INFO,
+
+  K_DIR_KEY_CERTIFICATE_VERSION,
+  K_DIR_IDENTITY_KEY,
+  K_DIR_KEY_PUBLISHED,
+  K_DIR_KEY_EXPIRES,
+  K_DIR_KEY_CERTIFICATION,
+
+  K_VOTE_STATUS,
+  K_VALID_UNTIL,
+  K_KNOWN_FLAGS,
+  K_VOTE_DIGEST,
+  K_CONSENSUS_DIGEST,
+
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -91,6 +104,7 @@ typedef struct directory_token_t {
 typedef enum {
   NO_OBJ,      /**< No object, ever. */
   NEED_OBJ,    /**< Object is required. */
+  NEED_KEY_1024, /**< Object is required, and must be a public key of 1024 bits */
   NEED_KEY,    /**< Object is required, and must be a public key. */
   OBJ_OK,      /**< Object is optional. */
 } obj_syntax;
@@ -108,6 +122,7 @@ typedef struct token_rule_t {
 #define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX }
 #define T0N(s,t,a,o)  { s, t, a, o, 0, INT_MAX }
 #define T1(s,t,a,o)   { s, t, a, o, 1, 1 }
+#define T1N(s,t,a,o)  { s, t, a, o, 1, INT_MAX }
 #define T01(s,t,a,o)  { s, t, a, o, 0, 1 }
 
 #define ARGS        0,INT_MAX,0
@@ -121,8 +136,8 @@ static token_rule_t routerdesc_token_table[] = {
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T1( "router",              K_ROUTER,              GE(5),   NO_OBJ ),
-  T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY ),
-  T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY ),
+  T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
+  T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
   T1( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
@@ -166,7 +181,7 @@ static token_rule_t netstatus_token_table[] = {
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   /* XXXX should dir-signing-key really have ARGS? */
-  T1( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    NEED_KEY ),
+  T1( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    NEED_KEY_1024 ),
   T1( "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
   T1( "network-status-version", K_NETWORK_STATUS_VERSION,
                                                     GE(1),   NO_OBJ ),
@@ -200,6 +215,82 @@ static token_rule_t dir_token_table[] = {
 
   END_OF_TABLE
 };
+
+#define CERTIFICATE_MEMBERS                                                  \
+  T1("dir-key-certificate-version", K_DIR_KEY_CERTIFICATE_VERSION,           \
+                                                 GE(1),       NO_OBJ ),      \
+  T1("dir-identity-key", K_DIR_IDENTITY_KEY,         NO_ARGS,     NEED_KEY ),\
+  T1("dir-key-published",K_DIR_KEY_PUBLISHED,        CONCAT_ARGS, NO_OBJ),   \
+  T1("dir-key-expires",  K_DIR_KEY_EXPIRES,          CONCAT_ARGS, NO_OBJ),   \
+  T1("dir-signing-key",  K_DIR_SIGNING_KEY,          NO_ARGS,     NEED_KEY ),\
+  T1("dir-key-certification", K_DIR_KEY_CERTIFICATION,                       \
+                                                     NO_ARGS,     NEED_OBJ),
+
+static token_rule_t dir_key_certificate_table[] = {
+  CERTIFICATE_MEMBERS
+  T1("fingerprint",      K_FINGERPRINT,              CONCAT_ARGS, NO_OBJ ),
+  END_OF_TABLE
+};
+
+#if 0
+/* XXXX This stuff is commented out for now so we can avoid warnings about
+ * unused variables. */
+
+static token_rule_t status_vote_table[] = {
+  T1("network-status-version", K_NETWORK_STATUS_VERSION,
+                                                   GE(1),       NO_OBJ ),
+  T1("vote-status",            K_VOTE_STATUS,      GE(1),       NO_OBJ ),
+  T1("published",              K_PUBLISHED,        CONCAT_ARGS, NO_OBJ ),
+  T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
+  T1("known-flags",            K_KNOWN_FLAGS,      CONCAT_ARGS, NO_OBJ ),
+  T( "fingerprint",            K_FINGERPRINT,      CONCAT_ARGS, NO_OBJ ),
+
+  CERTIFICATE_MEMBERS
+
+  T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
+  T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
+  T1( "dir-source",          K_DIR_SOURCE,      GE(3),       NO_OBJ ),
+  T1( "dir-options",         K_DIR_OPTIONS,     ARGS,        NO_OBJ ),
+  T1( "known-flags",         K_KNOWN_FLAGS,     CONCAT_ARGS, NO_OBJ ),
+  T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
+  T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS, NO_OBJ ),
+
+  END_OF_TABLE
+};
+
+static token_rule_t status_consensus_table[] = {
+  T1("network-status-version", K_NETWORK_STATUS_VERSION,
+                                                   GE(1),       NO_OBJ ),
+  T1("vote-status",            K_VOTE_STATUS,      GE(1),       NO_OBJ ),
+  T1("published",              K_PUBLISHED,        CONCAT_ARGS, NO_OBJ ),
+  T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
+
+  CERTIFICATE_MEMBERS
+
+  T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
+
+  T1N("dir-source",          K_DIR_SOURCE,          GE(3),   NO_OBJ ),
+  T1N("fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
+  T1N("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
+  T1N("vote-digest",         K_VOTE_DIGEST,         GE(1),   NO_OBJ ),
+
+#if 0
+  T1( "dir-options",         K_DIR_OPTIONS,     ARGS,        NO_OBJ ),
+  T1( "known-flags",         K_KNOWN_FLAGS,     CONCAT_ARGS, NO_OBJ ),
+#endif
+
+  T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
+  T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS,    NO_OBJ ),
+
+  END_OF_TABLE
+};
+
+static token_rule_t vote_footer_token_table[] = {
+  T01("consensus-digest",    K_CONSENSUS_DIGEST,    EQ(1),   NO_OBJ ),
+  T(  "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
+  END_OF_TABLE
+};
+#endif
 
 #undef T
 
@@ -285,13 +376,14 @@ int
 router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
                                crypto_pk_env_t *private_key)
 {
-  char signature[PK_BYTES];
+  char *signature;
   int i;
 
+  signature = tor_malloc(crypto_pk_keysize(private_key));
   if (crypto_pk_private_sign(private_key, signature, digest, DIGEST_LEN) < 0) {
 
     log_warn(LD_BUG,"Couldn't sign digest.");
-    return -1;
+    goto err;
   }
   if (strlcat(buf, "-----BEGIN SIGNATURE-----\n", buf_len) >= buf_len)
     goto truncated;
@@ -300,15 +392,19 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
   if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
     log_warn(LD_BUG,"couldn't base64-encode signature");
     tor_free(buf);
-    return -1;
+    goto err;
   }
 
   if (strlcat(buf, "-----END SIGNATURE-----\n", buf_len) >= buf_len)
     goto truncated;
 
+  tor_free(signature);
   return 0;
+
  truncated:
   log_warn(LD_BUG,"tried to exceed string length.");
+ err:
+  tor_free(signature);
   return -1;
 }
 
@@ -623,7 +719,7 @@ dir_signing_key_is_trusted(crypto_pk_env_t *key)
 }
 
 /** Check whether the K_DIRECTORY_SIGNATURE token in <b>tok</b> has a
- * good signature for <b>digest</b>.
+ * good signature for <b>digest</b>. DOCDOC can be another type.
  *
  * If <b>declared_key</b> is set, the directory has declared what key
  * was used to sign it, so we will use that key only if it is an
@@ -641,10 +737,8 @@ check_directory_signature(const char *digest,
                           crypto_pk_env_t *declared_key,
                           int check_authority)
 {
-  char signed_digest[PK_BYTES];
+  char *signed_digest;
   crypto_pk_env_t *_pkey = NULL;
-
-  tor_assert(tok->n_args == 1);
 
   if (declared_key) {
     if (!check_authority || dir_signing_key_is_trusted(declared_key))
@@ -661,14 +755,15 @@ check_directory_signature(const char *digest,
     return -1;
   }
 
-  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
-    log_warn(LD_DIR, "Bad object type or length on directory signature");
+  if (strcmp(tok->object_type, "SIGNATURE")) {
+    log_warn(LD_DIR, "Bad object type on directory signature");
     return -1;
   }
-
   tor_assert(_pkey);
 
-  if (crypto_pk_public_checksig(_pkey, signed_digest, tok->object_body, 128)
+  signed_digest = tor_malloc(tok->object_size);
+  if (crypto_pk_public_checksig(_pkey, signed_digest, tok->object_body,
+                                tok->object_size)
       != 20) {
     log_warn(LD_DIR, "Error reading directory: invalid signature.");
     return -1;
@@ -912,21 +1007,11 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   tok = find_first_by_keyword(tokens, K_ONION_KEY);
   tor_assert(tok);
-  if (crypto_pk_keysize(tok->key) != PK_BYTES) {
-    log_warn(LD_DIR, "Wrong size on onion key: %d bits!",
-             (int)crypto_pk_keysize(tok->key)*8);
-    goto err;
-  }
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
 
   tok = find_first_by_keyword(tokens, K_SIGNING_KEY);
   tor_assert(tok);
-  if (crypto_pk_keysize(tok->key) != PK_BYTES) {
-    log_warn(LD_DIR, "Wrong size on identity key: %d bits!",
-           (int)crypto_pk_keysize(tok->key)*8);
-    goto err;
-  }
   router->identity_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
   if (crypto_pk_get_digest(router->identity_pkey,
@@ -1155,6 +1240,124 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     smartlist_free(tokens);
   }
   return extrainfo;
+}
+
+/** DOCDOC */
+void
+authority_cert_free(authority_cert_t *cert)
+{
+  if (!cert)
+    return;
+
+  tor_free(cert->cache_info.signed_descriptor_body);
+  if (cert->signing_key)
+    crypto_free_pk_env(cert->signing_key);
+  if (cert->identity_key)
+    crypto_free_pk_env(cert->identity_key);
+
+  tor_free(cert);
+}
+
+/** DOCDOC */
+authority_cert_t *
+authority_cert_parse_from_string(const char *s, char **end_of_string)
+{
+  authority_cert_t *cert = NULL;
+  smartlist_t *tokens = NULL;
+  char digest[DIGEST_LEN];
+  directory_token_t *tok;
+  char fp_declared[DIGEST_LEN];
+
+  char *eos = strstr(s, "\n-----END SIGNATURE-----\n");
+  size_t len;
+  if (! eos) {
+    log_warn(LD_DIR, "No end-of-signature found on key certificate");
+    return NULL;
+  }
+  eos = strchr(eos+2, '\n');
+  tor_assert(eos);
+  ++eos;
+  len = eos - s;
+
+  tokens = smartlist_create();
+  if (tokenize_string(s, eos, tokens, dir_key_certificate_table) < 0) {
+    log_warn(LD_DIR, "Error tokenizing key certificate");
+    goto err;
+  }
+  if (router_get_hash_impl(s, digest, "dir-key-certificate-version",
+                           "\ndir-key-certification") < 0)
+    goto err;
+  tok = smartlist_get(tokens, 0);
+  if (tok->tp != K_DIR_KEY_CERTIFICATE_VERSION || strcmp(tok->args[0], "3")) {
+    log_warn(LD_DIR,
+             "Key certificate does not begin with a recognized version (3).");
+    goto err;
+  }
+
+  cert = tor_malloc_zero(sizeof(authority_cert_t));
+
+  tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY);
+  tor_assert(tok && tok->key);
+  cert->signing_key = tok->key;
+  tok->key = NULL;
+
+  tok = find_first_by_keyword(tokens, K_DIR_IDENTITY_KEY);
+  tor_assert(tok && tok->key);
+  cert->identity_key = tok->key;
+  tok->key = NULL;
+
+  tok = find_first_by_keyword(tokens, K_FINGERPRINT);
+  tor_assert(tok && tok->n_args);
+  if (base16_decode(fp_declared, DIGEST_LEN, tok->args[0],
+                    strlen(tok->args[0]))) {
+    log_warn(LD_DIR, "Couldn't decode key certificate fingerprint %s",
+             escaped(tok->args[0]));
+    goto err;
+  }
+
+  if (crypto_pk_get_digest(cert->identity_key,
+                           cert->cache_info.identity_digest))
+    goto err;
+
+  if (memcmp(cert->cache_info.identity_digest, fp_declared, DIGEST_LEN)) {
+    log_warn(LD_DIR, "Digest of certificate key didn't match declared "
+             "fingerprint");
+    goto err;
+  }
+
+  tok = find_first_by_keyword(tokens, K_DIR_KEY_PUBLISHED);
+  tor_assert(tok);
+  if (parse_iso_time(tok->args[0], &cert->cache_info.published_on) < 0) {
+     goto err;
+  }
+  tok = find_first_by_keyword(tokens, K_DIR_KEY_EXPIRES);
+  tor_assert(tok);
+  if (parse_iso_time(tok->args[0], &cert->expires) < 0) {
+     goto err;
+  }
+
+  tok = smartlist_get(tokens, smartlist_len(tokens)-1);
+  if (tok->tp != K_DIR_KEY_CERTIFICATION) {
+    log_warn(LD_DIR, "Certificate didn't end with dir-key-certification.");
+    goto err;
+  }
+
+  /* XXXXX This doesn't check whether the key is an authority. IS that what we
+   * want? */
+  if (check_directory_signature(digest, tok, NULL, cert->identity_key, 0)) {
+    goto err;
+  }
+
+  cert->cache_info.signed_descriptor_len = len;
+  cert->cache_info.signed_descriptor_body = tor_malloc(len+1);
+  memcpy(cert->cache_info.signed_descriptor_body, s, len);
+  cert->cache_info.signed_descriptor_body[len] = 0;
+  cert->cache_info.saved_location = SAVED_NOWHERE;
+  *end_of_string = eos;
+  return cert;
+ err:
+  authority_cert_free(cert);
+  return NULL;
 }
 
 /** Helper: given a string <b>s</b>, return the start of the next router-status
@@ -1841,10 +2044,16 @@ get_next_token(const char **s, struct token_rule_t *table)
         RET_ERR(ebuf);
       }
       break;
+    case NEED_KEY_1024:
+      if (tok->key && crypto_pk_keysize(tok->key) != PK_BYTES) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Wrong size on key for %s: %d bits",
+                     kwd, (int)crypto_pk_keysize(tok->key));
+        RET_ERR(ebuf);
+      }
+      /* fall through */
     case NEED_KEY:
       if (!tok->key) {
         tor_snprintf(ebuf, sizeof(ebuf), "Missing public key for %s", kwd);
-        RET_ERR(ebuf);
       }
       break;
     case OBJ_OK:

@@ -1300,6 +1300,14 @@ typedef struct extend_info_t {
   crypto_pk_env_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
 
+/** DOCDOC */
+typedef struct authority_cert_t {
+  signed_descriptor_t cache_info;
+  crypto_pk_env_t *identity_key;
+  crypto_pk_env_t *signing_key;
+  time_t expires;
+} authority_cert_t;
+
 #define CRYPT_PATH_MAGIC 0x70127012u
 
 /** Holds accounting information for a single step in the layered encryption
@@ -3197,6 +3205,12 @@ void assert_addr_policy_ok(addr_policy_t *t);
 void dump_distinct_digest_count(int severity);
 
 networkstatus_t *networkstatus_parse_from_string(const char *s);
+
+void authority_cert_free(authority_cert_t *cert);
+authority_cert_t *authority_cert_parse_from_string(const char *s,
+                                                   char **end_of_string);
+
+
 
 #endif
 
