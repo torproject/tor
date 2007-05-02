@@ -43,8 +43,7 @@ micro-revision.i: FORCE
 	  svn info ../.. |              			\
 	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.tmp \
 	     || true;                                           \
-	else                                                    \
-	if test x`which svk` != x -a -d ~/.svk; then            \
+	elif test x`which svk` != x && test -d ~/.svk; then          \
           location=../..;                                       \
           rev=x;                                                \
           while test x$$rev = xx; do                            \
@@ -67,11 +66,11 @@ micro-revision.i: FORCE
             echo \"$$rev\" > micro-revision.tmp;                \
           fi;                                                   \
         fi;                                                     \
-	fi;                                                     \
 	if test ! -f micro-revision.tmp; then			\
 	  echo '""' > micro-revision.tmp;			\
 	fi;                                                     \
-	if test "`cat micro-revision.tmp`" != "`cat micro-revision.i`"; then \
+	if test ! -f micro-revision.i || \
+          test "`cat micro-revision.tmp`" != "`cat micro-revision.i`"; then \
 	  mv micro-revision.tmp micro-revision.i;               \
 	fi
 
