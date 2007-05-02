@@ -965,7 +965,7 @@ run_scheduled_events(time_t now)
     routerlist_remove_old_routers();
     networkstatus_list_clean(now);
     networkstatus_list_update_recent(now);
-    routers_update_all_from_networkstatus();
+    routers_update_all_from_networkstatus(now);
 
     /* Also, once per minute, check whether we want to download any
      * networkstatus documents.
