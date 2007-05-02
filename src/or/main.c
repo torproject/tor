@@ -899,7 +899,8 @@ run_scheduled_events(time_t now)
   if (accounting_is_enabled(options))
     accounting_run_housekeeping(now);
 
-  if (now % 10 == 0 && authdir_mode(options) && !we_are_hibernating()) {
+  if (now % 10 == 0 && (authdir_mode_handles_descs(options)) &&
+      !we_are_hibernating()) {
     /* try to determine reachability of the other Tor servers */
     dirserv_test_reachability(0);
   }
@@ -922,7 +923,7 @@ run_scheduled_events(time_t now)
 
   /* Caches need to fetch running_routers; directory clients don't. */
   if (options->DirPort && time_to_fetch_running_routers < now) {
-    if (!authdir_mode(options) || !options->V1AuthoritativeDir) {
+    if (!authdir_mode_v1(options)) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
 /** How often do we (as a cache) fetch a new V1 runningrouters document? */
@@ -1235,7 +1236,7 @@ do_hup(void)
     return -1;
   }
   options = get_options(); /* they have changed now */
-  if (authdir_mode(options)) {
+  if (authdir_mode_handles_descs(options)) {
     /* reload the approved-routers file */
     if (dirserv_load_fingerprint_file() < 0) {
       /* warnings are logged from dirserv_load_fingerprint_file() directly */
@@ -1326,7 +1327,7 @@ do_main_loop(void)
   }
   directory_info_has_arrived(time(NULL),1);
 
-  if (authdir_mode(get_options())) {
+  if (authdir_mode_handles_descs(get_options())) {
     /* the directory is already here, run startup things */
     dirserv_test_reachability(1);
   }
