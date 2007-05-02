@@ -716,7 +716,7 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
                                  int datalen, const char *sig, int siglen)
 {
   char digest[DIGEST_LEN];
-  char buf[PK_BYTES+1];
+  char *buf;
   int r;
 
   tor_assert(env);
@@ -727,15 +727,19 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
     log_warn(LD_BUG, "couldn't compute digest");
     return -1;
   }
+  buf = tor_malloc(crypto_pk_keysize(env)+1);
   r = crypto_pk_public_checksig(env,buf,sig,siglen);
   if (r != DIGEST_LEN) {
     log_warn(LD_CRYPTO, "Invalid signature");
+    tor_free(buf);
     return -1;
   }
   if (memcmp(buf, digest, DIGEST_LEN)) {
     log_warn(LD_CRYPTO, "Signature mismatched with digest.");
+    tor_free(buf);
     return -1;
   }
+  tor_free(buf);
 
   return 0;
 }
@@ -808,7 +812,7 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   int overhead, outlen, r, symlen;
   size_t pkeylen;
   crypto_cipher_env_t *cipher = NULL;
-  char buf[PK_BYTES+1];
+  char *buf = NULL;
 
   tor_assert(env);
   tor_assert(from);
@@ -838,6 +842,7 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
     cipher->key[0] &= 0x7f;
   if (crypto_cipher_encrypt_init_cipher(cipher)<0)
     goto err;
+  buf = tor_malloc(pkeylen+1);
   memcpy(buf, cipher->key, CIPHER_KEY_LEN);
   memcpy(buf+CIPHER_KEY_LEN, from, pkeylen-overhead-CIPHER_KEY_LEN);
 
@@ -852,11 +857,13 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
                             from+pkeylen-overhead-CIPHER_KEY_LEN, symlen);
 
   if (r<0) goto err;
-  memset(buf, 0, sizeof(buf));
+  memset(buf, 0, pkeylen);
+  tor_free(buf);
   crypto_free_cipher_env(cipher);
   return outlen + symlen;
  err:
-  memset(buf, 0, sizeof(buf));
+  memset(buf, 0, pkeylen);
+  tor_free(buf);
   if (cipher) crypto_free_cipher_env(cipher);
   return -1;
 }
@@ -872,7 +879,7 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   int outlen, r;
   size_t pkeylen;
   crypto_cipher_env_t *cipher = NULL;
-  char buf[PK_BYTES+1];
+  char *buf = NULL;
 
   pkeylen = crypto_pk_keysize(env);
 
@@ -880,32 +887,35 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
     return crypto_pk_private_decrypt(env,to,from,fromlen,padding,
                                      warnOnFailure);
   }
+  buf = tor_malloc(pkeylen+1);
   outlen = crypto_pk_private_decrypt(env,buf,from,pkeylen,padding,
                                      warnOnFailure);
   if (outlen<0) {
     log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, LD_CRYPTO,
            "Error decrypting public-key data");
-    return -1;
+    goto err;
   }
   if (outlen < CIPHER_KEY_LEN) {
     log_fn(warnOnFailure?LOG_WARN:LOG_INFO, LD_CRYPTO,
            "No room for a symmetric key");
-    return -1;
+    goto err;
   }
   cipher = crypto_create_init_cipher(buf, 0);
   if (!cipher) {
-    return -1;
+    goto err;
   }
   memcpy(to,buf+CIPHER_KEY_LEN,outlen-CIPHER_KEY_LEN);
   outlen -= CIPHER_KEY_LEN;
   r = crypto_cipher_decrypt(cipher, to+outlen, from+pkeylen, fromlen-pkeylen);
   if (r<0)
     goto err;
-  memset(buf,0,sizeof(buf));
+  memset(buf,0,pkeylen);
+  tor_free(buf);
   crypto_free_cipher_env(cipher);
   return outlen + (fromlen-pkeylen);
  err:
-  memset(buf,0,sizeof(buf));
+  memset(buf,0,pkeylen);
+  tor_free(buf);
   if (cipher) crypto_free_cipher_env(cipher);
   return -1;
 }
