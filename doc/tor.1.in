@@ -837,11 +837,15 @@ admins at tor-ops@freehaven.net if you think you should be a directory.
 .LP
 .TP
 \fBV1AuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
-When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor also
-generates a version 1 directory (for Tor clients up to 0.1.0.x).
-(As of Tor 0.1.1.12 every (v2) authoritative directory still provides most of
-the v1 directory functionality, even without this option set to 1.
-This however is expected to change in the future.)
+When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor
+generates version 1 directory and running-routers documents (for legacy
+Tor clients up to 0.1.0.x).
+.LP
+.TP
+\fBV2AuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor
+generates version 2 network statuses and serves descriptors, etc as
+described in doc/spec/dir-spec.txt.
 .LP
 .TP
 \fBVersioningAuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP

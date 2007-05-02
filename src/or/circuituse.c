@@ -1097,7 +1097,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
 }
 
 /** Return true iff <b>crypt_path</b> is one of the crypt_paths for
- * <b>circ</b> */
+ * <b>circ</b>. */
 static int
 cpath_is_on_circuit(origin_circuit_t *circ, crypt_path_t *crypt_path)
 {

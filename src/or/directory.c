@@ -886,6 +886,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   int skewed=0;
   int allow_partial = conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC;
   int was_compressed=0;
+  time_t now = time(NULL);
 
   switch (fetch_from_buf_http(conn->_base.inbuf,
                               &headers, MAX_HEADERS_SIZE,
@@ -957,7 +958,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (status_code == 503) {
     local_routerstatus_t *rs;
     trusted_dir_server_t *ds;
-    time_t now = time(NULL);
     log_info(LD_DIR,"Received http status code %d (%s) from server "
              "'%s:%d'. I'll try again soon.",
              status_code, escaped(reason), conn->_base.address,
@@ -1118,7 +1118,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       if (next)
         next[1] = '\0';
       /* learn from it, and then remove it from 'which' */
-      if (router_set_networkstatus(cp, time(NULL), source, which)<0)
+      if (router_set_networkstatus(cp, now, source, which)<0)
         break;
       if (next) {
         next[1] = 'n';
@@ -1126,8 +1126,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       } else
         break;
     }
-    routers_update_all_from_networkstatus(); /*launches router downloads*/
-    directory_info_has_arrived(time(NULL), 0);
+    routers_update_all_from_networkstatus(now); /*launches router downloads*/
+    directory_info_has_arrived(now, 0);
     if (which) {
       if (smartlist_len(which)) {
         dir_networkstatus_download_failed(which, status_code);
@@ -1180,7 +1180,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                   !strcmpstart(conn->requested_resource, "all"))) {
       /* as we learn from them, we remove them from 'which' */
       router_load_routers_from_string(body, SAVED_NOWHERE, which);
-      directory_info_has_arrived(time(NULL), 0);
+      directory_info_has_arrived(now, 0);
     }
     if (which) { /* mark remaining ones as failed */
       log_info(LD_DIR, "Received %d/%d routers requested from %s:%d",
@@ -1831,7 +1831,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
   if (!strcmp(url,"/tor/dir-all-weaselhack") &&
       (conn->_base.addr == 0x7f000001ul) &&
-      authdir_mode(options)) {
+      authdir_mode_v2(options)) {
     /* until weasel rewrites his scripts at noreply */
     char *new_directory=NULL;
 
@@ -1889,7 +1889,8 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   }
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
 
-  if (!strcmp(url,"/tor/")) { /* server descriptor post */
+  if (authdir_mode_handles_descs(options) &&
+      !strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg;
     int r = dirserv_add_multiple_descriptors(body, &msg);
     tor_assert(msg);

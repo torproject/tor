@@ -377,7 +377,7 @@ init_keys(void)
                            (uint16_t)options->ORPort,
                            digest,
                            options->V1AuthoritativeDir, /* v1 authority */
-                           1, /* v2 authority */
+                           options->V2AuthoritativeDir, /* v2 authority */
                            options->HSAuthoritativeDir /*hidserv authority*/);
   }
   return 0; /* success */
@@ -594,12 +594,37 @@ authdir_mode(or_options_t *options)
 {
   return options->AuthoritativeDir != 0;
 }
+/** Return true iff we believe ourselves to be a v1 authoritative
+ * directory server.
+ */
+int
+authdir_mode_v1(or_options_t *options)
+{
+  return authdir_mode(options) && options->V1AuthoritativeDir != 0;
+}
+/** Return true iff we believe ourselves to be a v2 authoritative
+ * directory server.
+ */
+int
+authdir_mode_v2(or_options_t *options)
+{
+  return authdir_mode(options) && options->V2AuthoritativeDir != 0;
+}
+/** Return true iff we are an authoritative directory server that
+ * handles descriptors -- including receiving posts, creating directories,
+ * and testing reachability.
+ */
+int
+authdir_mode_handles_descs(or_options_t *options)
+{
+  return authdir_mode_v1(options) || authdir_mode_v2(options);
+}
 /** Return true iff we try to stay connected to all ORs at once.
  */
 int
 clique_mode(or_options_t *options)
 {
-  return authdir_mode(options);
+  return authdir_mode_handles_descs(options);
 }
 
 /** Return true iff we are trying to be a server.
@@ -647,7 +672,7 @@ proxy_mode(or_options_t *options)
  * - We have ORPort set
  * and
  * - We believe we are reachable from the outside; or
- * - We have the AuthoritativeDirectory option set.
+ * - We are an authoritative directory server.
  */
 static int
 decide_if_publishable_server(void)
@@ -660,7 +685,7 @@ decide_if_publishable_server(void)
     return 0;
   if (!server_mode(options))
     return 0;
-  if (options->AuthoritativeDir)
+  if (authdir_mode(options))
     return 1;
 
   return check_whether_orport_reachable();
@@ -695,8 +720,8 @@ consider_publishable_server(int force)
  * Clique maintenance -- to be phased out.
  */
 
-/** Return true iff this OR should try to keep connections open to all
- * other ORs. */
+/** Return true iff we believe this OR tries to keep connections open
+ * to all other ORs. */
 int
 router_is_clique_mode(routerinfo_t *router)
 {
@@ -1128,7 +1153,7 @@ check_descriptor_ipaddress_changed(time_t now)
  * headers. */
 static uint32_t last_guessed_ip = 0;
 
-/** A directory authority told us our IP address is <b>suggestion</b>.
+/** A directory server told us our IP address is <b>suggestion</b>.
  * If this address is different from the one we think we are now, and
  * if our computer doesn't actually know its IP address, then switch. */
 void

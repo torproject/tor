@@ -66,6 +66,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Directory authorities allow multiple router descriptors and/or extra
       info documents to be uploaded in a single go.  This will make
       implementing proposal 104 simpler.
+    - New config option V2AuthoritativeDirectory that all directory
+      authorities should set. This will let future authorities choose
+      not to serve V2 directory information.
 
   o Minor features (controller):
     - Add a new config option __DisablePredictedCircuits designed for

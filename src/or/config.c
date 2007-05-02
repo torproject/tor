@@ -256,6 +256,7 @@ static config_var_t _option_vars[] = {
   VAR("UseEntryGuards",      BOOL,     UseEntryGuards,       "1"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
+  VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   VAR("VirtualAddrNetwork",  STRING,   VirtualAddrNetwork,   "127.192.0.0/10"),
   VAR("__AllDirActionsPrivate",BOOL,   AllDirActionsPrivate, "0"),

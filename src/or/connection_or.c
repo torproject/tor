@@ -676,7 +676,7 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
               END_OR_CONN_REASON_OR_IDENTITY);
       as_advertised = 0;
     }
-    if (authdir_mode(options)) {
+    if (authdir_mode_handles_descs(options)) {
       /* We initiated this connection to address:port.  Drop all routers
        * with the same address:port and a different key.
        */

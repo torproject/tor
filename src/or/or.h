@@ -1716,6 +1716,8 @@ typedef struct {
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 1 directories? */
+  int V2AuthoritativeDir; /**< Boolean: is this an authoritative directory
+                           * for version 2 directories? */
   int HSAuthoritativeDir; /**< Boolean: does this an authoritative directory
                            * handle hidden service requests? */
   int HSAuthorityRecordStats; /**< Boolean: does this HS authoritative
@@ -2938,6 +2940,9 @@ void router_dirport_found_reachable(void);
 void router_perform_bandwidth_test(int num_circs, time_t now);
 
 int authdir_mode(or_options_t *options);
+int authdir_mode_v1(or_options_t *options);
+int authdir_mode_v2(or_options_t *options);
+int authdir_mode_handles_descs(or_options_t *options);
 int clique_mode(or_options_t *options);
 int server_mode(or_options_t *options);
 int advertised_server_mode(void);
@@ -3107,7 +3112,7 @@ local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
 routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 void update_networkstatus_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);
-void routers_update_all_from_networkstatus(void);
+void routers_update_all_from_networkstatus(time_t now);
 void routers_update_status_from_networkstatus(smartlist_t *routers,
                                               int reset_failures);
 smartlist_t *router_list_superseded(void);

@@ -232,16 +232,7 @@ dirserv_load_fingerprint_file(void)
       /* If you approved an OR called "client", then clients who use
        * the default nickname could all be rejected.  That's no good. */
       log_notice(LD_CONFIG,
-                 "Authorizing a nickname '%s' would break "
-                 "many clients; skipping.",
-                 DEFAULT_CLIENT_NICKNAME);
-      continue;
-    }
-    if (0==strcasecmp(nickname, DEFAULT_CLIENT_NICKNAME)) {
-      /* If you approved an OR called "client", then clients who use
-       * the default nickname could all be rejected.  That's no good. */
-      log_notice(LD_CONFIG,
-                 "Authorizing a nickname '%s' would break "
+                 "Authorizing nickname '%s' would break "
                  "many clients; skipping.",
                  DEFAULT_CLIENT_NICKNAME);
       continue;
@@ -250,7 +241,7 @@ dirserv_load_fingerprint_file(void)
       /* If you approved an OR called "unnamed", then clients will be
        * confused. */
       log_notice(LD_CONFIG,
-                 "Authorizing a nickname '%s' is not allowed; skipping.",
+                 "Authorizing nickname '%s' is not allowed; skipping.",
                  UNNAMED_ROUTER_NICKNAME);
       continue;
     }
@@ -754,7 +745,7 @@ directory_set_dirty(void)
 
 /**
  * Allocate and return a description of the status of the server <b>desc</b>,
- * for use in a router-status line.  The server is listed
+ * for use in a v1-style router-status line.  The server is listed
  * as running iff <b>is_live</b> is true.
  */
 static char *
@@ -814,7 +805,7 @@ dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
 }
 
 /** Based on the routerinfo_ts in <b>routers</b>, allocate the
- * contents of a router-status line, and store it in
+ * contents of a v1-style router-status line, and store it in
  * *<b>router_status_out</b>.  Return 0 on success, -1 on failure.
  *
  * If for_controller is true, include the routers with very old descriptors.
@@ -829,14 +820,17 @@ list_server_status(smartlist_t *routers, char **router_status_out,
   smartlist_t *rs_entries;
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
-  int authdir_mode = get_options()->AuthoritativeDir;
+  or_options_t *options = get_options();
+  /* We include v2 dir auths here too, because they need to answer
+   * controllers. Eventually we'll deprecate this whole function. */
+  int authdir = authdir_mode_handles_descs(options);
   tor_assert(router_status_out);
 
   rs_entries = smartlist_create();
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
   {
-    if (authdir_mode) {
+    if (authdir) {
       /* Update router status in routerinfo_t. */
       ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
     }
@@ -1004,12 +998,12 @@ dirserv_dump_directory_to_string(char **dir_out,
   return -1;
 }
 
-/** Most recently generated encoded signed v1 directory. (auth dirservers
- * only.)*/
+/** Most recently generated encoded signed v1 directory. (v1 auth dirservers
+ * only.) */
 static cached_dir_t *the_directory = NULL;
 
-/* Used only by non-auth dirservers: The v1 directory and runningrouters we'll
- * serve when requested. */
+/* Used only by non-v1-auth dirservers: The v1 directory and
+ * runningrouters we'll serve when requested. */
 static cached_dir_t *cached_directory = NULL;
 static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
 
@@ -1098,8 +1092,8 @@ _free_cached_dir(void *_d)
  *
  * If <b>published</b> is too old, do nothing.
  *
- * If <b>is_running_routers</b>, this is really a running_routers document
- * rather than a v1 directory.
+ * If <b>is_running_routers</b>, this is really a v1 running_routers
+ * document rather than a v1 directory.
  */
 void
 dirserv_set_cached_directory(const char *directory, time_t published,
@@ -1118,11 +1112,13 @@ dirserv_set_cached_directory(const char *directory, time_t published,
   }
 }
 
-/** We've just received a v2 network-status for an authoritative directory
- * with identity digest <b>identity</b> published at
- * <b>published</b>.  Store it so we can serve it to others.  If
- * <b>directory</b> is NULL, remove the entry with the given fingerprint from
- * the cache.
+/** If <b>networkstatus</b> is non-NULL, we've just received a v2
+ * network-status for an authoritative directory with identity digest
+ * <b>identity</b> published at <b>published</b> -- store it so we can
+ * serve it to others.
+ *
+ * If <b>networkstatus</b> is NULL, remove the entry with the given
+ * identity fingerprint from the v2 cache.
  */
 void
 dirserv_set_cached_networkstatus_v2(const char *networkstatus,
@@ -1181,7 +1177,7 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
   }
 }
 
-/** Remove any networkstatus from the directory cache that was published
+/** Remove any v2 networkstatus from the directory cache that was published
  * before <b>cutoff</b>. */
 void
 dirserv_clear_old_networkstatuses(time_t cutoff)
@@ -1230,8 +1226,8 @@ dirserv_clear_old_v1_info(time_t now)
   }
 }
 
-/** Helper: If we're an authority for the right directory version (the
- * directory version is determined by <b>is_v1_object</b>), try to regenerate
+/** Helper: If we're an authority for the right directory version (v1 if
+ * <b>is_v1_object</b> if non-0, else v2), try to regenerate
  * auth_src as appropriate and return it, falling back to cache_src on
  * failure.  If we're a cache, return cache_src.
  */
@@ -1242,8 +1238,9 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
                             const char *name,
                             int is_v1_object)
 {
-  int authority = get_options()->AuthoritativeDir &&
-    (!is_v1_object || get_options()->V1AuthoritativeDir);
+  or_options_t *options = get_options();
+  int authority = (authdir_mode_v1(options) && is_v1_object) ||
+                  (authdir_mode_v2(options) && !is_v1_object);
 
   if (!authority) {
     return cache_src;
@@ -1298,9 +1295,9 @@ dirserv_get_obj(const char **out,
   }
 }
 
-/** Return the most recently generated encoded signed directory, generating a
- * new one as necessary.  If not an authoritative directory may return NULL if
- * no directory is yet cached. */
+/** Return the most recently generated encoded signed v1 directory,
+ * generating a new one as necessary.  If not a v1 authoritative directory
+ * may return NULL if no directory is yet cached. */
 cached_dir_t *
 dirserv_get_directory(void)
 {
@@ -1310,9 +1307,9 @@ dirserv_get_directory(void)
                                      "server directory", 1);
 }
 
-/**
- * Generate a fresh v1 directory (authdirservers only); set the_directory
- * and return a pointer to the new value.
+/** Only called by v1 auth dirservers.
+ * Generate a fresh v1 directory; set the_directory and return a pointer
+ * to the new value.
  */
 static cached_dir_t *
 dirserv_regenerate_directory(void)
@@ -1344,7 +1341,8 @@ dirserv_regenerate_directory(void)
 /** For authoritative directories: the current (v1) network status. */
 static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
 
-/** Replace the current running-routers list with a newly generated one. */
+/** Only called by v1 auth dirservers.
+ * Replace the current running-routers list with a newly generated one. */
 static cached_dir_t *
 generate_runningrouters(void)
 {
@@ -1415,11 +1413,11 @@ dirserv_get_runningrouters(const char **rr, int compress)
 static cached_dir_t *the_v2_networkstatus = NULL;
 
 /** Return true iff our opinion of the routers has been stale for long
- * enough that we should generate a new network status doc. */
+ * enough that we should generate a new v2 network status doc. */
 static int
 should_generate_v2_networkstatus(void)
 {
-  return get_options()->AuthoritativeDir &&
+  return authdir_mode_v2(get_options()) &&
     the_v2_networkstatus_is_dirty &&
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }
@@ -1569,7 +1567,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   smartlist_free(bandwidths_excluding_exits);
 }
 
-/** For authoritative directories only: replace the contents of
+/** For v2 authoritative directories only: replace the contents of
  * <b>the_v2_networkstatus</b> with a newly generated network status
  * object. */
 static cached_dir_t *
@@ -1744,6 +1742,8 @@ generate_v2_networkstatus(void)
                        f_running?" Running":"",
                        f_valid?" Valid":"",
                        f_v2_dir?" V2Dir":"")<0) {
+                       /* when adding more flags, remember to change
+                        * the #defines at the top of this function. */
         log_warn(LD_BUG, "Unable to print router status.");
         goto done;
       }
@@ -1819,7 +1819,7 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
     generate_v2_networkstatus();
 
   if (!strcmp(key,"authority")) {
-    if (get_options()->AuthoritativeDir) {
+    if (authdir_mode_v2(get_options())) {
       routerinfo_t *me = router_get_my_routerinfo();
       if (me)
         smartlist_add(result,
@@ -1839,7 +1839,8 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
     } else {
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                   trusted_dir_server_t *, ds,
-                  smartlist_add(result, tor_memdup(ds->digest, DIGEST_LEN)));
+                  if (ds->is_v2_authority)
+                    smartlist_add(result, tor_memdup(ds->digest, DIGEST_LEN)));
     }
     smartlist_sort_digests(result);
     if (smartlist_len(result) == 0)

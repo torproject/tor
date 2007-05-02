@@ -153,7 +153,7 @@ router_reload_networkstatus(void)
   SMARTLIST_FOREACH(entries, char *, fn, tor_free(fn));
   smartlist_free(entries);
   networkstatus_list_clean(time(NULL));
-  routers_update_all_from_networkstatus();
+  routers_update_all_from_networkstatus(time(NULL));
   routerlist_check_bug_417();
   return 0;
 }
@@ -565,8 +565,7 @@ router_get_trusteddirserver_by_digest(const char *digest)
 /** Try to find a running trusted dirserver. If there are no running
  * trusted dirservers and <b>retry_if_no_servers</b> is non-zero,
  * set them all as running again, and try again.
- * If <b>need_v1_authority</b> is set, return only trusted servers
- * that are authorities for the V1 directory protocol.
+ * <b>type> specifies the type of authoritative dir we require.
  * Other args are as in router_pick_trusteddirserver_impl().
  */
 routerstatus_t *
@@ -594,7 +593,8 @@ router_pick_trusteddirserver(authority_type_t type,
 #define DIR_503_TIMEOUT (60*60)
 
 /** Pick a random running valid directory server/mirror from our
- * routerlist.  Don't pick an authority if any non-authorities are viable.
+ * routerlist.
+ *
  * If <b>fascistfirewall</b>, make sure the router we pick is allowed
  * by our firewall options.
  * If <b>requireother</b>, it cannot be us. If <b>for_v2_directory</b>,
@@ -602,8 +602,9 @@ router_pick_trusteddirserver(authority_type_t type,
  * functionality.
  * If <b>prefer_tunnel</b>, choose a directory server that is reachable
  * and supports BEGIN_DIR cells, if possible.
- * Try to avoid using servers that are overloaded (have returned 503
- * recently).
+ *
+ * Don't pick an authority if any non-authorities are viable. Try to
+ * avoid using servers that are overloaded (have returned 503 recently).
  */
 static routerstatus_t *
 router_pick_directory_server_impl(int requireother, int fascistfirewall,
@@ -681,9 +682,8 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
 
 /** Choose randomly from among the trusted dirservers that are up.  If
  * <b>fascistfirewall</b>, make sure the port we pick is allowed by our
- * firewall options.  If <b>requireother</b>, it cannot be us.  If
- * <b>need_v1_authority</b>, choose a trusted authority for the v1 directory
- * system.
+ * firewall options.  If <b>requireother</b>, it cannot be us.
+ * <b>type> specifies the type of authoritative dir we require.
  */
 static routerstatus_t *
 router_pick_trusteddirserver_impl(authority_type_t type,
@@ -1433,8 +1433,7 @@ router_digest_is_trusted_dir(const char *digest)
 {
   if (!trusted_dir_servers)
     return 0;
-  if (get_options()->AuthoritativeDir &&
-      router_digest_is_me(digest))
+  if (authdir_mode(get_options()) && router_digest_is_me(digest))
     return 1;
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
                     if (!memcmp(digest, ent->digest, DIGEST_LEN)) return 1);
@@ -2103,7 +2102,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          int from_cache, int from_fetch)
 {
   const char *id_digest;
-  int authdir = get_options()->AuthoritativeDir;
+  int authdir = authdir_mode(get_options());
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
 
@@ -2778,7 +2777,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
        * authority we didn't recognize. */
       log_info(LD_DIR,
                "We do not recognize authority (%s) but we are willing "
-               "to cache it", fp);
+               "to cache it.", fp);
       add_networkstatus_to_cache(s, source, ns);
       networkstatus_free(ns);
     }
@@ -3043,14 +3042,15 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 #define NONAUTHORITY_NS_CACHE_INTERVAL (15*60)
 
 /** We are a directory server, and so cache network_status documents.
- * Initiate downloads as needed to update them.  For authorities, this means
- * asking each trusted directory for its network-status.  For caches, this
- * means asking a random authority for all network-statuses.
+ * Initiate downloads as needed to update them.  For v2 authorities,
+ * this means asking each trusted directory for its network-status.
+ * For caches, this means asking a random v2 authority for all
+ * network-statuses.
  */
 static void
 update_networkstatus_cache_downloads(time_t now)
 {
-  int authority = authdir_mode(get_options());
+  int authority = authdir_mode_v2(get_options());
   int interval =
     authority ? AUTHORITY_NS_CACHE_INTERVAL : NONAUTHORITY_NS_CACHE_INTERVAL;
 
@@ -3491,17 +3491,15 @@ compute_recommended_versions(time_t now, int client,
  * list.
  */
 void
-routers_update_all_from_networkstatus(void)
+routers_update_all_from_networkstatus(time_t now)
 {
   routerinfo_t *me;
-  time_t now;
   if (!routerlist || !networkstatus_list ||
       (!networkstatus_list_has_changed && !routerstatus_list_has_changed))
     return;
 
   router_dir_info_changed();
 
-  now = time(NULL);
   if (networkstatus_list_has_changed)
     routerstatus_list_update_from_networkstatus(now);
 
@@ -3756,7 +3754,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
                  other_digest != conflict) {
         if (!warned) {
           char *d;
-          int should_warn = options->DirPort && options->AuthoritativeDir;
+          int should_warn = options->DirPort && authdir_mode(options);
           char fp1[HEX_DIGEST_LEN+1];
           char fp2[HEX_DIGEST_LEN+1];
           base16_encode(fp1, sizeof(fp1), other_digest, DIGEST_LEN);
@@ -3982,9 +3980,8 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
   trusted_dir_server_t *ds;
   local_routerstatus_t *rs;
   or_options_t *options = get_options();
-  int authdir = options->AuthoritativeDir;
-  int namingdir = options->AuthoritativeDir &&
-    options->NamingAuthoritativeDir;
+  int authdir = authdir_mode_v2(options);
+  int namingdir = authdir && options->NamingAuthoritativeDir;
 
   if (!routerstatus_list)
     return;
@@ -4299,7 +4296,6 @@ update_router_descriptor_cache_downloads(time_t now)
   int i, j, n;
   int n_download;
   or_options_t *options = get_options();
-  (void) now;
 
   if (!options->DirPort) {
     log_warn(LD_BUG, "Called update_router_descriptor_cache_downloads() "
@@ -4357,7 +4353,7 @@ update_router_descriptor_cache_downloads(time_t now)
             rs->need_to_mirror = 0;
             continue;
           }
-          if (options->AuthoritativeDir && dirserv_would_reject_router(rs)) {
+          if (authdir_mode(options) && dirserv_would_reject_router(rs)) {
             rs->need_to_mirror = 0;
             continue;
           }

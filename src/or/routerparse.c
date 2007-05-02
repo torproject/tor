@@ -491,7 +491,7 @@ router_parse_directory(const char *str)
 
   /* Now that we know the signature is okay, and we have a
    * publication time, cache the directory. */
-  if (get_options()->DirPort && !get_options()->V1AuthoritativeDir)
+  if (get_options()->DirPort && !authdir_mode_v1(get_options()))
     dirserv_set_cached_directory(str, published_on, 0);
 
   r = 0;
@@ -551,7 +551,7 @@ router_parse_runningrouters(const char *str)
 
   /* Now that we know the signature is okay, and we have a
    * publication time, cache the list. */
-  if (get_options()->DirPort && !get_options()->V1AuthoritativeDir)
+  if (get_options()->DirPort && !authdir_mode_v1(get_options()))
     dirserv_set_cached_directory(str, published_on, 1);
 
   r = 0;
