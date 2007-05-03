@@ -1,200 +1,84 @@
 $Id$
 
-                      Tor directory protocol, version 3
+                      Tor directory protocol, version 2
 
 0. Scope and preliminaries
 
-   This directory protocol is used by Tor version 0.2.0.x-alpha and later.
-   See dir-spec-v1.txt for information on the protocol used up to the
-   0.1.0.x series, and dir-spec.v2 for information on the protocol used by
-   the 0.1.1.x and 0.1.2.x series.
+   This directory protocol is used by Tor version 0.1.1.x and later.  See
+   dir-spec-v1.txt for information on earlier versions.
 
-   Caches and authorities must still support older versions of the
-   directory protocols, until the versions of Tor that require them are
-   finally out of commission.  See Section XXXX on backward compatibility.
+0.1. Goals and motivation
 
-   This document merges and supersedes the following proposals:
+   There were several problems with the way Tor handles directory information
+   in version 0.1.0.x and earlier.  Here are the problems we try to fix with
+   this new design, already implemented in 0.1.1.x:
+      1. Directories were very large and use up a lot of bandwidth: clients
+         downloaded descriptors for all router several times an hour.
+      2. Every directory authority was a trust bottleneck: if a single
+         directory authority lied, it could make clients believe for a time an
+         arbitrarily distorted view of the Tor network.
+      3. Our current "verified server" system is kind of nonsensical.
 
-       101  Voting on the Tor Directory System
-       103  Splitting identity key from regularly used signing key
-       104  Long and Short Router Descriptors
+      4. Getting more directory authorities would add more points of failure
+         and worsen possible partitioning attacks.
 
-   AS OF 3 MAY 2007, THIS SPECIFICATION HAS NOT YET BEEN COMPLETELY
-   IMPLEMENTED.
+   There are two problems that remain unaddressed by this design.
+      5. Requiring every client to know about every router won't scale.
+      6. Requiring every directory cache to know every router won't scale.
 
-0.1. History
-
-   The earliest versions of Onion Routing shipped with a list of known
-   routers and their keys.  When the set of routers changed, users needed to
-   fetch a new list.
-
-   The Version 1 Directory protocol
-   --------------------------------
-
-   [XXX say which versions added what.]
-
-   Early versions of Tor introduced "Directory authorities": servers that
-   served signed "directory" documents containing a list of signed "router
-   descriptors", along with short summary of the status of each router.
-   Thus, clients could get up-to-date information on the state of the
-   network automatically, and be certain that they list they were getting
-   was attested by a trusted directory authority.
-
-   Later versions added directory caches, which download directories from
-   the authorities and serve them to clients.  Non-caches fetch from the
-   caches in preference to fetching from the authorities, thus distributing
-   bandwidth requirements.
-
-   Also added during the version 1 directory protocol were "router status"
-   documents: short documents that listed only the up/down status of the
-   routers on the network, rather than a complete list of all the
-   descriptors.  Clients and caches would fetch these documents far more
-   frequently than they would fetch full directories.
-
-   The Version 2 Directory Protocol
-   --------------------------------
-
-   During the Tor 0.1.1.x series, Tor revised its handling of directory
-   documents in order to address two major problems:
-
-      * Directories had grown quite large (over 1MB), and most directory
-        downloads consisted mainly of router descriptors that clients
-        already had.
-
-      * Every directory authorities was a trust bottleneck: if a single
-        directory authority lied, it could make clients believe for a time
-        an arbitrarily distorted view of the Tor network.  (Clients
-        trusted the most recent signed document they downloaded.) Thus,
-        adding more authorities would make the system less secure, not
-        more.
-
-   To address these, we extended the directory protocol so that
-   authorities now published signed "network status" documents.  Each
-   network status listed, for every router in the network: a hash of its
-   identity key, a hash of its most recent descriptor, and a summary of
-   what the authority believed about its status.  Clients would download
-   the authorities' network status documents in turn, and believe
-   statements about routers iff they were attested to by more than half of
-   the authorities.
-
-   Instead of downloading all router descriptors at once, clients
-   downloaded only the descriptors that they did not have.  Descriptors
-   were indexed by their digests, in order to prevent malicious caches
-   from giving different versions of a router descriptor to different
-   clients.
-
-   Routers began working harder to upload new descriptors only when their
-   contents were substantially changed.
-
-
-0.2. Goals of the version 3 protocol
-
-   Version 3 of the Tor directory protocol tries to solve the following
-   issues:
-
-      * A great deal of bandwidth used to transmit router descriptors was
-        used by two fields that are not actually used by Tor routers.  We
-        save about 60% by moving them into a separate document that most
-        clients do not fetch or use.
-
-      * It was possible under certain perverse circumstances for clients
-        to download an unusual set of network status documents, thus
-        partitioning themselves from clients who have a more recent and/or
-        typical set of documents.  Even under the best of circumstances,
-        clients were sensitive to the ages of the network status documents
-        they downloaded.  Therefore, instead of having the clients
-        correlate multiple network status documents, we have the
-        authorities collectively vote on a single consensus network status
-        document.
-
-      * The most sensitive data in the entire network (the identity keys
-        of the directory authorities) needed to be stored unencrypted so
-        that the authorities .  Now, the authorities' identity keys are
-        stored offline, and used to certify medium-term signing keys that
-        can be rotated.
-
-0.3. Some Remaining questions
-
-   Things we could solve on a v3 timeframe:
-
-     The SHA-1 hash is showing its age.  We should do something about our
-     dependency on it.  We could probably future-proof ourselves here in
-     this revision, at least so far as documents from the authorities are
-     concerned.
-
-     Too many things about the authorities are hardcoded by IP.
-
-     Perhaps we should start accepting longer identity keys for routers
-     too.
-
-   Things to solve eventually:
-
-     Requiring every client to know about every router won't scale forever.
-
-     Requiring every directory cache to know every router won't scale
-     forever.
-
+   We attempt to fix 1-4 here, and to build a solution that will work when we
+   figure out an answer for 5.  We haven't thought at all about what to do
+   about 6.
 
 1. Outline
 
-   There is a small set (say, around 5-10) of semi-trusted directory
+   There is a small set (say, around 10) of semi-trusted directory
    authorities.  A default list of authorities is shipped with the Tor
-   software.  Users can change this list, but are encouraged not to do so,
-   in order to avoid partitioning attacks.
+   software. Users can change this list, but are encouraged not to do so, in
+   order to avoid partitioning attacks.
 
-   Every authority has a very-secret, long-term "Authority Identity Key".
-   This is stored encrypted and/or offline, and is used to sign "key
-   certificate" documents.  Every key certificate contains a medium-term
-   (3-12 months) "authority signing key", that is used by the authority to
-   sign other directory information.  (Note that the authority identity
-   key is distinct from the router identity key that the authority uses
-   in its role as an ordinary router.)
+   Routers periodically upload signed "descriptors" to the directory
+   authorities describing their keys, capabilities, and other information.
+   Routers may act as directory mirrors (also called "caches"), to reduce
+   load on the directory authorities.  They announce this in their
+   descriptors.
 
-   Routers periodically upload signed "routers descriptors" to the
-   directory authorities describing their keys, capabilities, and other
-   information.  Routers may also upload signed "extra info documents"
-   containing information that is not required for the Tor protocol.
-   Directory authorities serve router descriptors indexed by router
-   identity, or by hash of the descriptor.
+   Each directory authority periodically generates and signs a compact
+   "network status" document that lists that authority's view of the current
+   descriptors and status for known routers, but which does not include the
+   descriptors themselves.
 
-   Routers may act as directory caches to reduce load on the directory
-   authorities.  They announce this in their descriptors.
+   Directory mirrors download, cache, and re-serve network-status documents
+   to clients.
 
-   Periodically, each directory authority periodically generates a view of
-   the current descriptors and status for known routers.  They send a
-   signed summary of this view (a "status vote") to the other
-   authorities.  The authorities compute the result of this vote, and sign
-   a "consensus status" document containing the result of the vote.
-
-   Directory caches download, cache, and re-serve consensus documents.
-
-   Clients, directory caches, and directory authorities all use consensus
-   documents to find out when their list of routers is out-of-date.
-   (Directory authorities also use vote statuses.) If it is, they download
-   any missing router descriptors.  Clients download missing descriptors
-   from mirrors; mirrors and authorities download from authorities.
-   Descriptors are downloaded by the hash of the descriptor, not by the
-   server's identity key: this prevents servers from attacking clients by
-   giving them descriptors nobody else uses.
+   Clients, directory mirrors, and directory authorities all use
+   network-status documents to find out when their list of routers is
+   out-of-date.  If it is, they download any missing router descriptors.
+   Clients download missing descriptors from mirrors; mirrors and authorities
+   download from authorities.  Descriptors are downloaded by the hash of the
+   descriptor, not by the server's identity key: this prevents servers from
+   attacking clients by giving them descriptors nobody else uses.
 
    All directory information is uploaded and downloaded with HTTP.
 
-   [Authorities also generate and caches also cache documents produced and
-   used by earlier versions of this protocol; see section XXX for notes.]
+   Coordination among directory authorities is done client-side: clients
+   compute a vote-like algorithm among the network-status documents they
+   have, and base their decisions on the result.
 
-1.1. What's different from version 2?
+1.1. What's different from 0.1.0.x?
 
-   Clients used to download a multiple network status documents,
-   corresponding roughly to "status votes" above.  They would compute the
-   result of the vote on the client side.
+   Clients used to download a signed concatenated set of router descriptors
+   (called a "directory") from directory mirrors, regardless of which
+   descriptors had changed.
 
-   Authorities used sign documents using the same private keys they used
-   for their roles as routers.  This forced them to keep these extremely
-   sensitive keys in memory unencrypted.
+   Between downloading directories, clients would download "network-status"
+   documents that would list which servers were supposed to running.
 
-   All of the information in extra-info documents used to be kept in the
-   main descriptors.
+   Clients would always believe the most recently published network-status
+   document they were served.
 
+   Routers used to upload fresh descriptors all the time, whether their keys
+   and other information had changed or not.
 
 1.2. Document meta-format
 
@@ -237,68 +121,18 @@ $Id$
 
   Implementations before 0.1.2.5-alpha rejected any document with a
   KeywordLine that started with a keyword that they didn't recognize.
-  When generating documents that need to be read by older versions of Tor,
-  implementations MUST prefix items not recognized by older versions of
-  Tor with an "opt" until those versions of Tor are obsolete.  [Note that
-  key certificates, status vote documents, extra info documents, and
-  status consensus documents will never by read by older versions of Tor.]
+  Implementations MUST prefix items not recognized by older versions of Tor
+  with an "opt" until those versions of Tor are obsolete.
 
   Other implementations that want to extend Tor's directory format MAY
   introduce their own items.  The keywords for extension items SHOULD start
   with the characters "x-" or "X-", to guarantee that they will not conflict
   with keywords used by future versions of Tor.
 
-  In our document descriptions below, we tag Items with a multiplicity in
-  brackets.  Possible tags are:
+2. Router operation
 
-    "At start, exactly once": These items MUST occur in every instance of
-      the document type, and MUST appear exactly once, and MUST be the
-      first item in their documents.
-
-    "Exactly once": These items MUST occur exactly one time in every
-      instance of the document type.
-
-    "At start, exactly once": These items MUST occur in every instance of
-      the document type, and MUST appear exactly once, and MUST be the
-      last item in their documents.
-
-    "At most once": These items MAY occur zero or one times in any
-      instance of the document type, but MUST NOT occur more than once.
-
-    "Any number": These items MAY occur zero, one, or more times in any
-      instance of the document type.
-
-    "Once or more": These items MUST occur at least once in any instance
-      of the document type, and MAY occur more.
-
-1.3. Signing documents
-
-   Every signable document below is signed in a similar manner, using a
-   given "Initial Item", a final "Signature Item", a digest algorithm, and
-   a signing key.
-
-   The Initial Item must be the first item in the document.
-
-   The Signature Item has the following format:
-
-     <signature item keyword> [arguments] NL SIGNATURE NL
-
-   The "SIGNATURE" Object contains a signature (using the signing key) of
-   the PKCS1-padded digest of the entire document, taken from the
-   beginning of the Initial item, through the newline after the Signature
-   Item's keyword and its arguments.
-
-   Unless otherwise, the digest algorithm is SHA-1.
-
-   All documents are invalid unless signed with the correct signing key.
-
-   The "Digest" of a document, unless stated otherwise, is its digest *as
-   signed by this signature scheme*.
-
-2. Router operation and formats
-
-   ORs SHOULD generate a new router descriptor and a new extra-info
-   document whenever any of the following events have occurred:
+   ORs SHOULD generate a new router descriptor whenever any of the
+   following events have occurred:
 
       - A period of time (18 hrs by default) has passed since the last
         time a descriptor was generated.
@@ -311,36 +145,40 @@ $Id$
 
       - Its uptime has been reset (by restarting).
 
-   After generating a descriptor, ORs upload them to every directory
-   authority they know, by posting them (in order) to the URL
+   After generating a descriptor, ORs upload it to every directory
+   authority they know, by posting it to the URL
 
       http://<hostname:port>/tor/
 
 2.1. Router descriptor format
 
-   Router descriptors consist of the following items.  For backward
-   compatibility, there should be an extra NL at the end of each router
-   descriptor.
+   Every router descriptor MUST start with a "router" Item; MUST end with a
+   "router-signature" Item and an extra NL; and MUST contain exactly one
+   instance of each of the following Items: "published" "onion-key"
+   "signing-key" "bandwidth". 
 
-   In lines that take multiple arguments, extra arguments SHOULD be
-   accepted and ignored.
+   A router descriptor MAY have zero or one of each of the following Items,
+   but MUST NOT have more than one: "contact", "uptime", "fingerprint",
+   "hibernating", "read-history", "write-history", "eventdns", "platform",
+   "family".
 
-     "router" nickname address ORPort SOCKSPort DirPort NL
+   Additionally, a router descriptor MAY contain any number of "accept",
+   "reject", and "opt" Items.  Other than "router" and "router-signature",
+   the items may appear in any order.
 
-       [At start, exactly once.]
+   The items' formats are as follows:
+    "router" nickname address ORPort SocksPort DirPort
 
        Indicates the beginning of a router descriptor.  "address" must be an
        IPv4 address in dotted-quad format. The last three numbers indicate
        the TCP ports at which this OR exposes functionality. ORPort is a port
        at which this OR accepts TLS connections for the main OR protocol;
-       SOCKSPort is deprecated and should always be 0; and DirPort is the
+       SocksPort is deprecated and should always be 0; and DirPort is the
        port at which this OR accepts directory-related HTTP connections.  If
        any port is not supported, the value 0 is given instead of a port
        number.
 
-    "bandwidth" bandwidth-avg bandwidth-burst bandwidth-observed NL
-
-       [Exactly once]
+    "bandwidth" bandwidth-avg bandwidth-burst bandwidth-observed
 
        Estimated bandwidth for this router, in bytes per second.  The
        "average" bandwidth is the volume per second that the OR is willing to
@@ -351,24 +189,17 @@ $Id$
        second period in the past day, and another sustained input.  The
        "observed" value is the lesser of these two numbers.
 
-    "platform" string NL
-
-       [At most once]
+    "platform" string
 
        A human-readable string describing the system on which this OR is
        running.  This MAY include the operating system, and SHOULD include
        the name and version of the software implementing the Tor protocol.
 
-    "published" YYYY-MM-DD HH:MM:SS NL
+    "published" YYYY-MM-DD HH:MM:SS
 
-       [Exactly once]
+       The time, in GMT, when this descriptor was generated.
 
-       The time, in GMT, when this descriptor (and its corresponding
-       extra-info document if any)  was generated.
-
-    "fingerprint" fingerprint NL
-
-       [At most once]
+    "fingerprint"
 
        A fingerprint (a HASH_LEN-byte of asn1 encoded public key, encoded in
        hex, with a single space after every 4 characters) for this router's
@@ -378,9 +209,7 @@ $Id$
        [We didn't start parsing this line until Tor 0.1.0.6-rc; it should
         be marked with "opt" until earlier versions of Tor are obsolete.]
 
-    "hibernating" bool NL
-
-       [At most once]
+    "hibernating" 0|1
 
        If the value is 1, then the Tor server was hibernating when the
        descriptor was published, and shouldn't be used to build circuits.
@@ -388,30 +217,22 @@ $Id$
        [We didn't start parsing this line until Tor 0.1.0.6-rc; it should be
         marked with "opt" until earlier versions of Tor are obsolete.]
 
-    "uptime" number NL
-
-       [At most once]
+    "uptime"
 
        The number of seconds that this OR process has been running.
 
     "onion-key" NL a public key in PEM format
 
-       [Exactly once]
-
        This key is used to encrypt EXTEND cells for this OR.  The key MUST be
        accepted for at least 1 week after any new key is published in a
-       subsequent descriptor. It MUST be 1024 bits.
+       subsequent descriptor.
 
     "signing-key" NL a public key in PEM format
 
-       [Exactly once]
+       The OR's long-term identity key.
 
-       The OR's long-term identity key.  It MUST be 1024 bits.
-
-    "accept" exitpattern NL
-    "reject" exitpattern NL
-
-       [Any number]
+    "accept" exitpattern
+    "reject" exitpattern
 
        These lines describe the rules that an OR follows when
        deciding whether to allow a new stream to a given address.  The
@@ -421,8 +242,6 @@ $Id$
 
     "router-signature" NL Signature NL
 
-       [At end, exactly once]
-
        The "SIGNATURE" object contains a signature of the PKCS1-padded
        hash of the entire router descriptor, taken from the beginning of the
        "router" line, through the newline after the "router-signature" line.
@@ -431,14 +250,10 @@ $Id$
 
     "contact" info NL
 
-       [At most once]
-
-       Describes a way to contact the server's administrator, preferably
-       including an email address and a PGP key fingerprint.
+        Describes a way to contact the server's administrator, preferably
+        including an email address and a PGP key fingerprint.
 
     "family" names NL
-
-        [At most once]
 
         'Names' is a space-separated list of server nicknames or
         hexdigests. If two ORs list one another in their "family" entries,
@@ -450,9 +265,7 @@ $Id$
         be used on the same circuit.
 
     "read-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM,NUM,NUM... NL
-        [At most once]
     "write-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM,NUM,NUM... NL
-        [At most once]
 
         Declare how much bandwidth the OR has used recently. Usage is divided
         into intervals of NSEC seconds.  The YYYY-MM-DD HH:MM:SS field
@@ -463,11 +276,7 @@ $Id$
         [We didn't start parsing these lines until Tor 0.1.0.6-rc; they should
          be marked with "opt" until earlier versions of Tor are obsolete.]
 
-        [See also migration notes in section 2.2.1.]
-
     "eventdns" bool NL
-
-        [At most once]
 
         Declare whether this version of Tor is using the newer enhanced
         dns logic.  Versions of Tor without eventdns SHOULD NOT be used for
@@ -480,81 +289,9 @@ $Id$
          not generated, even when eventdns was in use.  Versions of Tor
          before 0.1.2.1-alpha-dev did not parse this option, so it should be
          marked "opt".  With some future version, the old 'dnsworker' logic
-         will be removed, rendering this option of historical interest
-         only.]
+         will be removed, rendering this option of historical interest only.]
 
-   "caches-extra-info" 0|1 NL
-
-       [At most once.]
-
-       True if this router is a directory cache that provides extra-info
-       documents.  If absent, the value should be treated as false.
-
-       [Versions before 0.2.0.1-alpha don't recognize this, and versions
-        before 0.1.2.5-alpha will reject descriptors containing it unless
-        it is prefixed with "opt"; it should be so prefixed until these
-        versions are obsolete.]
-
-   "extra-info-digest" digest NL
-
-       [At most once]
-
-       "Digest" is a hex-encoded digest (using upper-case characters)
-       of the router's extra-info document, as signed in the router's
-       extra-info.  (If this field is absent, the router is not uploading
-       a corresponding extra-info document.)
-
-       [Versions before 0.2.0.1-alpha don't recognize this, and versions
-        before 0.1.2.5-alpha will reject descriptors containing it unless
-        it is prefixed with "opt"; it should be so prefixed until these
-        versions are obsolete.]
-
-2.2. Extra-info documents
-
-   Extra-info documents consist of the following items:
-
-    "extra-info" Nickname Fingerprint NL
-        [At start, exactly once.]
-
-        Identifies what router this is an extra info descriptor for.
-        Fingerprint is encoded in hex (using upper-case letters), with
-        no spaces.
-
-    "published"
-
-       [Exactly once.]
-
-       The time, in GMT, when this document (and its corresponding router
-       descriptor if any) was generated.  It MUST match the published time
-       in the corresponding router descriptor.
-
-    "read-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM,NUM,NUM... NL
-        [At most once.]
-    "write-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM,NUM,NUM... NL
-        [At most once.]
-
-        As documented in 2.1 above.  See migration notes in section 2.2.1.
-
-    "router-signature" NL Signature NL
-        [At end, exactly once.]
-
-        A document signature as documented in section 1.3, using the
-        initial item "extra-info" and the final item "router-signature",
-        signed with the router's identity key.
-
-2.2.1. Moving history fields to extra-info documents.
-
-   Tools that want to use the read-history and write-history values SHOULD
-   download extra-info documents as well as router descriptors.  Such
-   tools SHOULD accept history values from both sources; if they appear in
-   both documents, the values in the extra-info documents are authoritative.
-
-   At some future time, to save space, new versions of Tor will no longer
-   generate router descriptors containing read-history or write-history.
-   Tools should continue to accept read-history and write-history values
-   in router descriptors produced by older versions of Tor.
-
-2.3. Nonterminals in router descriptors
+2.2. Nonterminals in router descriptors
 
    nickname ::= between 1 and 19 alphanumeric characters, case-insensitive.
    hexdigest ::= a '$', followed by 20 hexadecimal characters.
@@ -563,7 +300,6 @@ $Id$
    exitpattern ::= addrspec ":" portspec
    portspec ::= "*" | port | port "-" port
    port ::= an integer between 1 and 65535, inclusive.
-
       [Some implementations incorrectly generate ports with value 0.
        Implementations SHOULD accept this, and SHOULD NOT generate it.]
 
@@ -578,231 +314,77 @@ $Id$
 
    bool ::= "0" | "1"
 
-3. Formats produced by directory authorities.
+   Ports are required; if they are not included in the router
+   line, they must appear in the "ports" lines.
 
-   Every authority has two keys used in this protocol: a signing key, and
-   an authority identity key.  (Authorities also have a router identity
-   key used in their role as a router and by earlier versions of the
-   directory protocol.)  The identity key is used from time to time to
-   sign new key certificates using new signing keys; it is very sensitive.
-   The signing key is used to sign key certificates and status documents.
+3. Network status format
 
-   There are three kinds of documents generated by directory authorities:
+   Directory authorities generate, sign, and compress network-status
+   documents.  Directory servers SHOULD generate a fresh network-status
+   document when the contents of such a document would be different from the
+   last one generated, and some time (at least one second, possibly longer)
+   has passed since the last one was generated.
 
-     Key certificates
-     Status votes
-     Status consensuses
+   The network status document contains a preamble, a set of router status
+   entries, and a signature, in that order.
 
-   Each is discussed below.
+   We use the same meta-format as used for directories and router descriptors
+   in "tor-spec.txt".  Implementations MAY insert blank lines
+   for clarity between sections; these blank lines are ignored.
+   Implementations MUST NOT depend on blank lines in any particular location.
 
-3.1. Key certificates
+   As used here, "whitespace" is a sequence of 1 or more tab or space
+   characters.
 
-   Key certificates consist of the following items:
+   The preamble contains:
 
-    "dir-key-certificate-version" version NL
-
-        [At start, exactly once.]
-
-        Determines the version of the key certificate.  MUST be "3" for
-        the protocol described in this document.  Implementations MUST
-        reject formats they don't understand.
-
-    "fingerprint" fingerprint NL
-
-        [Exactly once.]
-
-        Hexadecimal encoding without spaces based on the authority's
-        identity key.
-
-    "dir-identity-key" NL a public key in PEM format
-
-        [Exactly once.]
-
-        The long-term authority identity key for this authority.  This key
-        SHOULD be at least 2048 bits long; it MUST NOT be shorter than
-        1024 bits.
-
-    "dir-key-published" YYYY-MM-DD HH:MM:SS NL
-
-        [Exactly once.]
-
-        The time (in GMT) when this document and corresponding key were
-        last generated.
-
-    "dir-key-expires" YYYY-MM-DD HH:MM:SS NL
-
-        [Exactly once.]
-
-        A time (in GMT) after which this key is no longer valid.
-
-    "dir-signing-key" NL a key in PEM format
-
-        [Exactly once.]
-
-        The directory server's public signing key.  This key MUST be at
-        least 1024 bits, and MAY be longer.
-
-    "dir-key-certification" NL Signature NL
-
-        [At end, exactly once.]
-
-        A document signature as documented in section 1.3, using the
-        initial item "dir-key-certificate-version" and the final item
-        "dir-key-certification", signed with the authority identity key.
-
-   Authorities MUST generate a new signing key and corresponding
-   certificate before the key expires.
-
-3.2. Vote and consensus status documents
-
-   Votes and consensuses are more strictly formatted then other documents
-   in this specification, since different authorities must be able to
-   generate exactly the same consensus given the same set of votes.
-
-   The procedure for deciding when to generate vote and consensus status
-   documents are described in section XXX below.
-
-   Status documents contain a preamble, an authority section, a list of
-   router status entries, and one more footers signature, in that order.
-
-   Unlike other formats described above, a SP in these documents must be a
-   single space character (hex 20).
-
-   Some items appear only in votes, and some items appear only in
-   consensuses.  Unless specified, items occur in both.
-
-   The preamble contains the following items.  They MUST occur in the
-   order given here:
-
-    "network-status-version" SP version NL.
-
-        [At start, exactly once.]
-
-        A document format version.  For this specification, the version is
-        "3".
-
-    "vote-status" SP type NL
-
-        [Exactly once.]
-
-        The status MUST be "vote" or "consensus", depending on the type of
-        the document.
-
-    "published" SP YYYY-MM-DD SP HH:MM:SS NL
-
-        [Exactly once.]
-
-        The publication time for this status document (if a vote), or the
-        start of the period for this vote (if a consensus).
-
-    "valid-until"
-
-        [Exactly once.]
-
-        A time after which this vote or consensus will no longer be valid.
-
-    "client-versions" SP VersionList NL
-
-        [At most once.]
-
-        A comma-separated list of recommended client versions, in
-        ascending order.  If absent, no opinion is held about client
+      "network-status-version" -- A document format version.  For this
+         specification, the version is "2".
+      "dir-source" -- The authority's hostname, current IP address, and
+         directory port, all separated by whitespace.
+      "fingerprint" -- A base16-encoded hash of the signing key's
+         fingerprint, with no additional spaces added.
+      "contact" -- An arbitrary string describing how to contact the
+         directory server's administrator.  Administrators should include at
+         least an email address and a PGP fingerprint.
+      "dir-signing-key" -- The directory server's public signing key.
+      "client-versions" -- A comma-separated list of recommended client
         versions.
-
-    "server-versions" SP VersionList NL
-
-        [At most once.]
-
-        A comma-separated list of recommended server versions, in
-        ascending order.  If absent, no opinion is held about server
+      "server-versions" -- A comma-separated list of recommended server
         versions.
+      "published" -- The publication time for this network-status object.
+      "dir-options" -- A set of flags, in any order, separated by whitespace:
+          "Names" if this directory authority performs name bindings.
+          "Versions" if this directory authority recommends software versions.
+          "BadExits" if the directory authority flags nodes that it believes
+              are performing incorrectly as exit nodes.
+          "BadDirectories" if the directory authority flags nodes that it
+              believes are performing incorrectly as directory caches.
 
-    "known-flags" SP FlagList NL
+   The dir-options entry is optional.  The "-versions" entries are required if
+   the "Versions" flag is present.  The other entries are required and must
+   appear exactly once. The "network-status-version" entry must appear first;
+   the others may appear in any order.  Implementations MUST ignore
+   additional arguments to the items above, and MUST ignore unrecognized
+   flags.
 
-        [Exactly once.]
+   For each router, the router entry contains:  (This format is designed for
+   conciseness.)
 
-        A space-separated list of all of the flags that this document
-        might contain.  A flag is "known" either because the authority
-        knows about them and might set them (if in a vote), or because
-        enough votes were counted for the consensus for an authoritative
-        opinion to have been formed about their status.
-
-
-   The authority section of a vote contains the following items, followed
-   in turn by the authority's current key certificate:
-
-    "dir-source" SP nickname SP identity SP address SP IP SP dirport NL
-
-        [Exactly once, at start]
-
-        Describes this authority.  The nickname is a convenient identifier
-        for the authority.  The identity is a hex fingerprint of the
-        authority's current identity key.  The address is the server's
-        hostname.  The IP is the server's current IP address, and dirport
-        is its current directory port.
-
-    "contact" SP string NL
-
-        [At most once.]
-
-        An arbitrary string describing how to contact the directory
-        server's administrator.  Administrators should include at least an
-        email address and a PGP fingerprint.
-
-   The authority section of a consensus contains groups the following
-   items, in the order given, with one group for each authority that
-   contributed to the consensus:
-
-    "dir-source" SP nickname SP address SP IP SP dirport NL
-
-        [Exactly once, at start]
-
-        As in the authority section of a vote.
-
-    "contact" SP string NL
-
-        [At most once.]
-
-        As in the authority section of a vote.
-
-    "fingerprint" SP fingerprint NL
-
-        [Exactly once.]
-
-        A hex fingerprint, without spaces, of the authority's current
-        identity key.
-
-    "vote-digest" SP digest NL
-
-        [Exactly once.]
-
-        A digest of the vote from the authority that contributed to this
-        consensus.
-
-   Each router status entry contains the following items.  Router status
-   entries are sorted in ascending order by identity digest.
-
-    "r" SP nickname SP identity SP digest SP publication SP IP SP ORPort
-        SP DirPort NL
-
-        [At start, exactly once.]
-
-        "Nickname" is the OR's nickname.  "Identity" is a hash of its
-        identity key, encoded in base64, with trailing equals sign(s)
-        removed.  "Digest" is a hash of its most recent descriptor (as
-        signed), encoded in base64 as "identity".  "Publication" is the
-        publication time of its most recent descriptor, in the form
-        YYYY-MM-DD HH:MM:SS, in GMT.  "IP" is its current IP address;
-        ORPort is its current OR port, "DirPort" is it's current directory
-        port, or "0" for "none".
-
-    "s" SP Flags NL
-
-        [At most once.]
-
-        A series of space-separated status flags, in alphabetical order.
-        Currently documented flags are:
-
+      "r" -- followed by the following elements, in order, separated by
+          whitespace:
+          - The OR's nickname,
+          - A hash of its identity key, encoded in base64, with trailing =
+            signs removed.
+          - A hash of its most recent descriptor, encoded in base64, with
+            trailing = signs removed.  (The hash is calculated as for
+            computing the signature of a descriptor.)
+          - The publication time of its most recent descriptor, in the form
+            YYYY-MM-DD HH:MM:SS, in GMT.
+          - An IP address
+          - An OR port
+          - A directory port (or "0" for none")
+      "s" -- A series of whitespace-separated status flags, in any order:
           "Authority" if the router is a directory authority.
           "BadExit" if the router is believed to be useless as an exit node
              (because its ISP censors it, because it is behind a restrictive
@@ -821,38 +403,36 @@ $Id$
           "Running" if the router is currently usable.
           "Valid" if the router has been 'validated'.
           "V2Dir" if the router implements this protocol.
+      "v" -- The version of the Tor protocol that this server is running.  If
+          the value begins with "Tor" SP, the rest of the string is a Tor
+          version number, and the protocol is "The Tor protocol as supported
+          by the given version of Tor."  Otherwise, if the value begins with
+          some other string, Tor has upgraded to a more sophisticated
+          protocol versioning system, and the protocol is "a version of the
+          Tor protocol more recent than any we recognize."
 
-    "v" SP version NL
+      The "r" entry for each router must appear first and is required. The
+      "s" entry is optional (see Section 3.1 below for how the flags are
+      decided). Unrecognized flags on the "s" line and extra elements
+      on the "r" line must be ignored.  The "v" line is optional; it was not
+      supported until 0.1.2.5-alpha, and it must be preceded with an "opt"
+      until all earlier versions of Tor are obsolete.
 
-        [At most once.]
+   The signature section contains:
 
-        The version of the Tor protocol that this server is running.  If
-        the value begins with "Tor" SP, the rest of the string is a Tor
-        version number, and the protocol is "The Tor protocol as supported
-        by the given version of Tor."  Otherwise, if the value begins with
-        some other string, Tor has upgraded to a more sophisticated
-        protocol versioning system, and the protocol is "a version of the
-        Tor protocol more recent than any we recognize."
+      "directory-signature" nickname-of-dirserver NL Signature
 
-   The signature section contains the following item, which appears
-   Exactly Once for a vote, and At Least Once for a consensus.
+      Signature is a signature of this network-status document
+      (the document up until the signature, including the line
+      "directory-signature <nick>\n"), using the directory authority's
+      signing key.
 
-    "directory-signature" SP identity SP digest NL Signature
+   We compress the network status list with zlib before transmitting it.
 
-        This is a signature of the status document, with the initial item
-        "network-status-version", and the signature item
-        "directory-signature", using the signing key.  (In this case, we
-        take the hash through the _space_ after directory-signature, not
-        the newline: this ensures that all authorities sign the same
-        thing.)  "identity" is the hex-encoded digest of the authority
-        identity key of the signing authority, and "digest" is the
-        hex-encoded digest of the current authority signing key of the
-        signing authority.
-
-3.3. Deciding how to vote.
+3.1. Establishing server status
 
    (This section describes how directory authorities choose which status
-   flags to apply to routers, as of Tor 0.2.0.0-alpha-dev. Later directory
+   flags to apply to routers, as of Tor 0.1.1.18-rc. Later directory
    authorities MAY do things differently, so long as clients keep working
    well.  Clients MUST NOT depend on the exact behaviors in this section.)
 
@@ -903,40 +483,6 @@ $Id$
 
    Thus, the network-status list includes all non-blacklisted,
    non-expired, non-superseded descriptors.
-
-3.4. Computing a consensus from a set of votes
-
-   Given a set of votes, authorities compute the contents of the consensus
-   document as follows:
-
-     The "published" is the latest of all published times on the votes.
-
-     The "valid-until" is the earliest of all valid-until times on the
-     votes.
-
-    "client-versions" and "server-versions" are sorted in ascending
-     order; A version is recommended in the consensus if it is recommended
-     by more than half of the voting authorities that included a
-     client-versions or server-versions lines in their votes.
-
-     The authority item groups (dir-source, contact, fignerprint,
-     vote-digest) are taken from the votes of the voting
-     authorities. These groups are sorted by the digests of the
-     authorities identity keys, in ascending order.
-
-     A router status entry is included in the result if it is included by more
-     than half of the authorities (total authorities, not just those whose
-     votes we have).  A router entry has a flag set if it is included by
-     more than half of the authorities who care about that flag.  Two
-     router entries are "the same" if they have the same identity digest.
-     We use whatever descriptor digest is attested to by the most
-     authorities among the voters, breaking ties in favor of the one with
-     the most recent publication time.
-
-     The signatures at the end of the document appear are sorted in
-     ascending order by identity digest.
-
-[CUTOFF HERE.  STUFF BELOW THIS POINT HAS NOT YET BEEN UPDATED FROM V2.]
 
 4. Directory server operation
 
@@ -1339,6 +885,4 @@ $Id$
 7.2. HTTP status codes
 
   XXX We should write down what return codes dirservers send in what situations.
-
-8. Backward compatibility and migration plans
 
