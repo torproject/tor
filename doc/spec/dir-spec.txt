@@ -124,6 +124,11 @@ $Id$
   Implementations MUST prefix items not recognized by older versions of Tor
   with an "opt" until those versions of Tor are obsolete.
 
+  Other implementations that want to extend Tor's directory format MAY
+  introduce their own items.  The keywords for extension items SHOULD start
+  with the characters "x-" or "X-", to guarantee that they will not conflict
+  with keywords used by future versions of Tor.
+
 2. Router operation
 
    ORs SHOULD generate a new router descriptor whenever any of the
