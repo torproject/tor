@@ -1338,3 +1338,39 @@ $Id$
   command in both protocol versions, and implementations can detect which
   error they have received.
 
+5.4. Options for use by controllers
+
+  Tor provides a few special configuration options for use by controllers.
+  These options can be set and examined by the SETCONF and GETCONF commands,
+  but are not saved to disk by SAVECONF.
+
+  Generally, these options make Tor unusable by disabling a portion of Tor's
+  normal operations.  Unless a controller provides replacement functionality
+  to fill this gap, Tor will not correctly handle user requests.
+
+  __AllDirOptionsPrivate
+
+    If true, Tor will try to launch all directory operations through
+    anonymous connections.  (Ordinarily, Tor only tries to anonymize
+    requests related to hidden services.)  This option will slow down
+    directory access, and may stop Tor from working entirely if it does not
+    yet have enough directory information to build circuits.
+
+    (Boolean. Default: "0".)
+
+  __DisablePredictedCircuits
+
+    If true, Tor will not launch preemptive "general purpose" circuits for
+    streams to attach to.  (It will still launch circuits for testing and
+    for hidden services.)
+
+    (Boolean. Default: "0".)
+
+  __LeaveStreamsUnattached
+
+    If true, Tor will not automatically attach new streams to circuits;
+    instead, the controller must attach them with ATTACHSTREAM.  If the
+    controller does not attach the streams, their data will never be routed.
+
+    (Boolean. Default: "0".)
+
