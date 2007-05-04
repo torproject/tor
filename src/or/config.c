@@ -189,7 +189,7 @@ static config_var_t _option_vars[] = {
   VAR("LongLivedPorts",      CSV,      LongLivedPorts,
                          "21,22,706,1863,5050,5190,5222,5223,6667,6697,8300"),
   VAR("MapAddress",          LINELIST, AddressMap,           NULL),
-  VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"128 TB"),
+  VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"2 GB"),
   VAR("MaxCircuitDirtiness", INTERVAL, MaxCircuitDirtiness,  "10 minutes"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
   OBSOLETE("MonthlyAccountingStart"),
