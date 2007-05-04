@@ -2275,6 +2275,24 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
   return 0;
 }
 
+/** If <b>value</b> exceeds ROUTER_MAX_DECLARED_BANDWIDTH, write
+ * a complaint into *<b>msg</b> using string <b>desc</b>, and return -1.
+ * Else return 0.
+ */
+static int
+ensure_bandwidth_cap(uint64_t value, const char *desc, char **msg)
+{
+  int r;
+  char buf[1024];
+  if (value > ROUTER_MAX_DECLARED_BANDWIDTH) {
+    r = tor_snprintf(buf, sizeof(buf), "%s must be at most %d",
+                     desc, ROUTER_MAX_DECLARED_BANDWIDTH);
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    return -1;
+  }
+  return 0;
+}
+
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (10*60)
@@ -2644,20 +2662,22 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->KeepalivePeriod < 1)
     REJECT("KeepalivePeriod option must be positive.");
 
-  if (options->BandwidthRate > ROUTER_MAX_DECLARED_BANDWIDTH) {
-    r = tor_snprintf(buf, sizeof(buf),
-                     "BandwidthRate must be at most %d",
-                     ROUTER_MAX_DECLARED_BANDWIDTH);
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+  if (ensure_bandwidth_cap(options->BandwidthRate,
+                           "BandwidthRate", msg) < 0)
     return -1;
-  }
-  if (options->BandwidthBurst > ROUTER_MAX_DECLARED_BANDWIDTH) {
-    r = tor_snprintf(buf, sizeof(buf),
-                     "BandwidthBurst must be at most %d",
-                     ROUTER_MAX_DECLARED_BANDWIDTH);
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+  if (ensure_bandwidth_cap(options->BandwidthBurst,
+                           "BandwidthBurst", msg) < 0)
     return -1;
-  }
+  if (ensure_bandwidth_cap(options->MaxAdvertisedBandwidth,
+                           "MaxAdvertisedBandwidth", msg) < 0)
+    return -1;
+  if (ensure_bandwidth_cap(options->RelayBandwidthRate,
+                           "RelayBandwidthRate", msg) < 0)
+    return -1;
+  if (ensure_bandwidth_cap(options->RelayBandwidthBurst,
+                           "RelayBandwidthBurst", msg) < 0)
+    return -1;
+
   if (server_mode(options)) {
     if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH*2) {
       r = tor_snprintf(buf, sizeof(buf),

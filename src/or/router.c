@@ -944,17 +944,22 @@ router_rebuild_descriptor(int force)
   }
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
-  ri->bandwidthrate = (int)options->BandwidthRate;
-  ri->bandwidthburst = (int)options->BandwidthBurst;
-  ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
 
-  if (options->BandwidthRate > options->MaxAdvertisedBandwidth) {
-    if (options->MaxAdvertisedBandwidth > ROUTER_MAX_DECLARED_BANDWIDTH) {
-      ri->bandwidthrate = ROUTER_MAX_DECLARED_BANDWIDTH;
-    } else {
-      ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
-    }
-  }
+  /* compute ri->bandwidthrate as the min of various options */
+  ri->bandwidthrate = (int)options->BandwidthRate;
+  if (ri->bandwidthrate > options->MaxAdvertisedBandwidth)
+    ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
+  if (options->RelayBandwidthRate > 0 &&
+      ri->bandwidthrate > options->RelayBandwidthRate)
+    ri->bandwidthrate = (int)options->RelayBandwidthRate;
+
+  /* and compute ri->bandwidthburst similarly */
+  ri->bandwidthburst = (int)options->BandwidthBurst;
+  if (options->RelayBandwidthBurst > 0 &&
+      ri->bandwidthburst > options->RelayBandwidthBurst)
+    ri->bandwidthburst = (int)options->RelayBandwidthBurst;
+
+  ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
 
   policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
                              options->ExitPolicyRejectPrivate);

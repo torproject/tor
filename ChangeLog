@@ -6,10 +6,14 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       queue for each circuit.  This lets us use less slack memory, and
       will eventually let us be smarter about prioritizing different kinds
       of traffic.
-    - Allocate cells in memory pools better speed and memory efficiency,
-      especially on platforms where malloc() is inefficient.
+    - Use memory pools to allocate cells with better speed and memory
+      efficiency, especially on platforms where malloc() is inefficient.
     - Stop reading on edge connections when their corresponding circuit
       buffers are full; start again as the circuits empty out.
+    - New config options RelayBandwidthRate and RelayBandwidthBurst:
+      a separate set of token buckets for relayed traffic. Right now
+      relayed traffic is defined as answers to directory requests, and
+      OR connections that don't have any local circuits on them.
     - Make PreferTunneledDirConns and TunnelDirConns work even when
       we have no cached directory info. This means Tor clients can now
       do all of their connections protected by TLS.
