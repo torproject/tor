@@ -136,6 +136,7 @@ static config_var_t _option_vars[] = {
   VAR("AvoidDiskWrites",     BOOL,     AvoidDiskWrites,      "0"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "6 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "3 MB"),
+  VAR("BridgeAuthoritativeDir", BOOL,  BridgeAuthoritativeDir, "0"),
   VAR("CircuitBuildTimeout", INTERVAL, CircuitBuildTimeout,  "1 minute"),
   VAR("CircuitIdleTimeout",  INTERVAL, CircuitIdleTimeout,   "1 hour"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),

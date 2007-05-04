@@ -1735,6 +1735,8 @@ typedef struct {
   int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
                                    * directory that's willing to recommend
                                    * versions? */
+  int BridgeAuthoritativeDir; /**< Boolean: is this an authoritative directory
+                               * that aggregates bridge descriptors? */
   int AvoidDiskWrites; /**< Boolean: should we never cache things to disk?
                         * Not used yet. */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
@@ -2951,6 +2953,7 @@ int authdir_mode(or_options_t *options);
 int authdir_mode_v1(or_options_t *options);
 int authdir_mode_v2(or_options_t *options);
 int authdir_mode_handles_descs(or_options_t *options);
+int authdir_mode_bridge(or_options_t *options);
 int clique_mode(or_options_t *options);
 int server_mode(or_options_t *options);
 int advertised_server_mode(void);
@@ -3031,7 +3034,7 @@ routerstatus_t *router_pick_directory_server(int requireother,
                                              int for_v2_directory,
                                              int retry_if_no_servers);
 typedef enum {
-  V1_AUTHORITY, V2_AUTHORITY, HIDSERV_AUTHORITY,
+  V1_AUTHORITY, V2_AUTHORITY, HIDSERV_AUTHORITY, BRIDGE_AUTHORITY
 } authority_type_t;
 routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
                                              int requireother,

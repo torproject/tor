@@ -619,6 +619,14 @@ authdir_mode_handles_descs(or_options_t *options)
 {
   return authdir_mode_v1(options) || authdir_mode_v2(options);
 }
+/** Return true iff we believe ourselves to be a bridge authoritative
+ * directory server.
+ */
+int
+authdir_mode_bridge(or_options_t *options)
+{
+  return authdir_mode(options) && options->BridgeAuthoritativeDir != 0;
+}
 /** Return true iff we try to stay connected to all ORs at once.
  */
 int

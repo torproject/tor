@@ -1226,23 +1226,23 @@ dirserv_clear_old_v1_info(time_t now)
   }
 }
 
-/** Helper: If we're an authority for the right directory version (v1 if
- * <b>is_v1_object</b> if non-0, else v2), try to regenerate
+/** Helper: If we're an authority for the right directory version
+ * (based on <b>auth_type</b>), try to regenerate
  * auth_src as appropriate and return it, falling back to cache_src on
- * failure.  If we're a cache, return cache_src.
+ * failure.  If we're a cache, simply return cache_src.
  */
 static cached_dir_t *
 dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
                             cached_dir_t *auth_src,
                             time_t dirty, cached_dir_t *(*regenerate)(void),
                             const char *name,
-                            int is_v1_object)
+                            authority_type_t auth_type)
 {
   or_options_t *options = get_options();
-  int authority = (authdir_mode_v1(options) && is_v1_object) ||
-                  (authdir_mode_v2(options) && !is_v1_object);
+  int authority = (auth_type == V1_AUTHORITY && authdir_mode_v1(options)) ||
+                  (auth_type == V2_AUTHORITY && authdir_mode_v2(options));
 
-  if (!authority) {
+  if (!authority || authdir_mode_bridge(options)) { /* XXX020 */
     return cache_src;
   } else {
     /* We're authoritative. */
@@ -1268,7 +1268,7 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
  * set; otherwise return the uncompressed version.  (In either case, sets
  * *<b>out</b> and returns the size of the buffer in *<b>out</b>.)
  *
- * Use <b>is_v1_object</b> to help determine whether we're authoritative for
+ * Use <b>auth_type</b> to help determine whether we're authoritative for
  * this kind of object.
  **/
 static size_t
@@ -1278,11 +1278,11 @@ dirserv_get_obj(const char **out,
                 cached_dir_t *auth_src,
                 time_t dirty, cached_dir_t *(*regenerate)(void),
                 const char *name,
-                int is_v1_object)
+                authority_type_t auth_type)
 {
   cached_dir_t *d = dirserv_pick_cached_dir_obj(
       cache_src, auth_src,
-      dirty, regenerate, name, is_v1_object);
+      dirty, regenerate, name, auth_type);
 
   if (!d)
     return 0;
@@ -1304,7 +1304,7 @@ dirserv_get_directory(void)
   return dirserv_pick_cached_dir_obj(cached_directory, the_directory,
                                      the_directory_is_dirty,
                                      dirserv_regenerate_directory,
-                                     "server directory", 1);
+                                     "server directory", V1_AUTHORITY);
 }
 
 /** Only called by v1 auth dirservers.
@@ -1406,7 +1406,7 @@ dirserv_get_runningrouters(const char **rr, int compress)
                          &cached_runningrouters, &the_runningrouters,
                          runningrouters_is_dirty,
                          generate_runningrouters,
-                         "v1 network status list", 1);
+                         "v1 network status list", V1_AUTHORITY);
 }
 
 /** For authoritative directories: the current (v2) network status. */
@@ -1418,6 +1418,7 @@ static int
 should_generate_v2_networkstatus(void)
 {
   return authdir_mode_v2(get_options()) &&
+    !authdir_mode_bridge(get_options()) && /* XXX020 */
     the_v2_networkstatus_is_dirty &&
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }

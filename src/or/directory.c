@@ -1831,7 +1831,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
   if (!strcmp(url,"/tor/dir-all-weaselhack") &&
       (conn->_base.addr == 0x7f000001ul) &&
-      authdir_mode_v2(options)) {
+      authdir_mode_v2(options) &&
+      !authdir_mode_bridge(options)) {
     /* until weasel rewrites his scripts at noreply */
     char *new_directory=NULL;
 
