@@ -234,7 +234,8 @@ Things we'd like to do in 0.2.0.x:
       trim down a lot.
   o Deprecations:
     o Remove v0 control protocol.
-P  - Packaging:
+    - can we deprecate 'getinfo network-status'?
+P - Packaging:
 P   - Can we switch to polipo? (Jun 1)
 P   - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html

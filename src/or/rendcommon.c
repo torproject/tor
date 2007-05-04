@@ -233,8 +233,8 @@ rend_get_service_id(crypto_pk_env_t *pk, char *out)
 
 /* ==== Rendezvous service descriptor cache. */
 
-/** How old do we let hidden service descriptors get discarding them as too
- * old? */
+/** How old do we let hidden service descriptors get before discarding
+ * them as too old? */
 #define REND_CACHE_MAX_AGE (2*24*60*60)
 /** How wrong do we assume our clock may be when checking whether hidden
  * services are too old or too new? */

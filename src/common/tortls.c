@@ -25,7 +25,7 @@ const char tortls_c_id[] =
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 
-#define CRYPTO_PRIVATE
+#define CRYPTO_PRIVATE /* to import prototypes from crypto.h */
 
 #include "./crypto.h"
 #include "./tortls.h"
