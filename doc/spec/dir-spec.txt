@@ -109,9 +109,9 @@ $Id$
 
       * The most sensitive data in the entire network (the identity keys
         of the directory authorities) needed to be stored unencrypted so
-        that the authorities .  Now, the authorities' identity keys are
-        stored offline, and used to certify medium-term signing keys that
-        can be rotated.
+        that the authorities can sign network-status documents on the fly.
+        Now, the authorities' identity keys are stored offline, and used
+        to certify medium-term signing keys that can be rotated.
 
 0.3. Some Remaining questions
 
@@ -258,7 +258,7 @@ $Id$
     "Exactly once": These items MUST occur exactly one time in every
       instance of the document type.
 
-    "At start, exactly once": These items MUST occur in every instance of
+    "At end, exactly once": These items MUST occur in every instance of
       the document type, and MUST appear exactly once, and MUST be the
       last item in their documents.
 

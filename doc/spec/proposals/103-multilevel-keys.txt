@@ -175,7 +175,7 @@ Extensions to Proposal 101.
       for that voter.
 
   A key certificate is invalid if any of the following hold:
-      * The version is unrecognized
+      * The version is unrecognized.
       * The fingerprint does not match the identity key.
       * The identity key or the signing key is ill-formed.
       * The published date is very far in the past or future.

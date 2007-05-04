@@ -362,18 +362,20 @@ $Id$
       not necessarily those for a descriptor that Tor currently has.
       [First implemented in 0.1.2.3-alpha.]
 
-    "ns/all" -- Network status info for all ORs we have an opinion about,
-      joined by newlines. [First implemented in 0.1.2.3-alpha.]
+    "ns/all" -- Network status info (v2 directory style) for all ORs we
+      have an opinion about, joined by newlines. [First implemented
+      in 0.1.2.3-alpha.]
 
     "desc/all-recent" -- the latest server descriptor for every router that
       Tor knows about.
 
-    "network-status" -- a space-separated list of all known OR identities.
-      This is in the same format as the router-status line in directories;
-      see dir-spec-v1.txt section 3 for details.  (If VERBOSE_NAMES is
-      enabled, the output will not conform to dir-spec-v1.txt; instead, the
-      result will be a space-separated list of LongName, each preceded by a
-      "!" if it is believed to be not running.)
+    "network-status" -- a space-separated list (v1 directory style)
+      of all known OR identities. This is in the same format as the
+      router-status line in v1 directories; see dir-spec-v1.txt section
+      3 for details.  (If VERBOSE_NAMES is enabled, the output will
+      not conform to dir-spec-v1.txt; instead, the result will be a
+      space-separated list of LongName, each preceded by a "!" if it is
+      believed to be not running.)
 
     "addr-mappings/all"
     "addr-mappings/config"
