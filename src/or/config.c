@@ -189,7 +189,7 @@ static config_var_t _option_vars[] = {
   VAR("LongLivedPorts",      CSV,      LongLivedPorts,
                          "21,22,706,1863,5050,5190,5222,5223,6667,6697,8300"),
   VAR("MapAddress",          LINELIST, AddressMap,           NULL),
-  VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"2 GB"),
+  VAR("MaxAdvertisedBandwidth",MEMUNIT,MaxAdvertisedBandwidth,"1 GB"),
   VAR("MaxCircuitDirtiness", INTERVAL, MaxCircuitDirtiness,  "10 minutes"),
   VAR("MaxOnionsPending",    UINT,     MaxOnionsPending,     "100"),
   OBSOLETE("MonthlyAccountingStart"),
@@ -2285,8 +2285,8 @@ ensure_bandwidth_cap(uint64_t value, const char *desc, char **msg)
   int r;
   char buf[1024];
   if (value > ROUTER_MAX_DECLARED_BANDWIDTH) {
-    r = tor_snprintf(buf, sizeof(buf), "%s must be at most %d",
-                     desc, ROUTER_MAX_DECLARED_BANDWIDTH);
+    r = tor_snprintf(buf, sizeof(buf), "%s ("U64_FORMAT") must be at most %d",
+                     desc, value, ROUTER_MAX_DECLARED_BANDWIDTH);
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
