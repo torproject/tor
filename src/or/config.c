@@ -2286,7 +2286,8 @@ ensure_bandwidth_cap(uint64_t value, const char *desc, char **msg)
   char buf[1024];
   if (value > ROUTER_MAX_DECLARED_BANDWIDTH) {
     r = tor_snprintf(buf, sizeof(buf), "%s ("U64_FORMAT") must be at most %d",
-                     desc, value, ROUTER_MAX_DECLARED_BANDWIDTH);
+                     desc, U64_PRINTF_ARG(value),
+                     ROUTER_MAX_DECLARED_BANDWIDTH);
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
