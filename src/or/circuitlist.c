@@ -74,9 +74,10 @@ orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 /** Implementation helper for circuit_set_{p,n}_circid_orconn: A circuit ID
  * and/or or_connection for circ has just changed from <b>old_conn, old_id</b>
  * to <b>conn, id</b>.  Adjust the conn,circid map as appropriate, removing
- * the old entry (if any) and adding a new one.  If If <b>active</b> is true,
+ * the old entry (if any) and adding a new one.  If <b>active</b> is true,
  * remove the circuit from the list of active circuits on old_conn and add it
- * to the list of active circuits on conn. */
+ * to the list of active circuits on conn.
+ * XXX "active" isn't an arg anymore */
 static void
 circuit_set_circid_orconn_helper(circuit_t *circ, int direction,
                                  uint16_t id,
@@ -896,6 +897,22 @@ circuit_expire_all_dirty_circs(void)
   }
 }
 
+/** Return 1 if there are any origin circuits that use
+ * <b>conn</b> as there first hop. Else return 0. */
+static int
+circuit_any_origin_circs_on_conn(or_connection_t *conn)
+{
+  circuit_t *circ;
+
+  for (circ=global_circuitlist; circ; circ = circ->next) {
+    if (CIRCUIT_IS_ORIGIN(circ) &&
+        !circ->marked_for_close &&
+        circ->n_conn == conn)
+      return 1;
+  }
+  return 0;
+}
+
 /** Mark <b>circ</b> to be closed next time we call
  * circuit_close_all_marked(). Do any cleanup needed:
  *   - If state is onionskin_pending, remove circ from the onion_pending
@@ -1020,7 +1037,12 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   circ->marked_for_close = line;
   circ->marked_for_close_file = file;
 
-  if (! CIRCUIT_IS_ORIGIN(circ)) {
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    if (circ->n_conn && circ->n_conn->client_used) {
+      circ->n_conn->client_used =
+        circuit_any_origin_circs_on_conn(circ->n_conn);
+    }
+  } else {
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     if (or_circ->rend_splice) {
       if (!or_circ->rend_splice->_base.marked_for_close) {
