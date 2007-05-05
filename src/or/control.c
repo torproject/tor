@@ -1462,6 +1462,12 @@ getinfo_helper_events(control_connection_t *control_conn,
     *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
+  } else if (!strcmpstart(question, "status/")) {
+    if (!strcmp(question, "status/circuit-established")) {
+      *answer = tor_strdup(has_completed_circuit ? "1" : "0");
+    } else {
+      return 0;
+    }
   }
   return 0;
 }
@@ -1538,6 +1544,9 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("addr-mappings/cache", "Current cached DNS replies."),
   DOC("addr-mappings/config", "Current address mappings from configuration."),
   DOC("addr-mappings/control", "Current address mappings from controller."),
+  PREFIX("status/", events, NULL),
+  DOC("status/circuit-established",
+      "Whether we think client functionality is working."),
 
   ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
   ITEM("dir-usage", misc, "Breakdown of bytes transferred over DirPort."),

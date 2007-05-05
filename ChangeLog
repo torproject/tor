@@ -80,6 +80,7 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       preemptively.
     - Let the controller specify HOP=%d as an argument to ATTACHSTREAM,
       so we can exit from the middle of the circuit.
+    - Implement "getinfo status/circuit-established".
 
   o Minor features (other):
     - Correctly report Windows 95 OSR2 and Windows 98 SE.
