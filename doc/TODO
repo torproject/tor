@@ -240,7 +240,7 @@ P   - Can we switch to polipo? (Jun 1)
 P   - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
-P - Figure out why openssl 0.9.8d "make test" fails at sha256t test.
+P - Figure out why openssl 0.9.8e "make test" fails at sha256t test.
   - add an AuthDirBadexit torrc option if we decide we want one.
 
 Deferred from 0.1.2.x:
@@ -542,9 +542,7 @@ P - figure out spec files for bundles of vidalia-tor-polipo
 P - figure out polipo install scripts for bundles of vidalia-tor-polipo on osx, win32
 P - evaluate https://sourceforge.net/projects/kleanup/
 P - evaluate TorK
-P - evaluate Tor under CentOS5/RHES5
 P - figure out selinux policy for tor
-P - make the nsis mingw packaging scripts fail if it tries to parse
 
 Website:
   - and remove home and make the "Tor" picture be the link to home.
