@@ -6,8 +6,8 @@ $Id$
 
    This directory protocol is used by Tor version 0.2.0.x-alpha and later.
    See dir-spec-v1.txt for information on the protocol used up to the
-   0.1.0.x series, and dir-spec.v2 for information on the protocol used by
-   the 0.1.1.x and 0.1.2.x series.
+   0.1.0.x series, and dir-spec-v2.txt for information on the protocol
+   used by the 0.1.1.x and 0.1.2.x series.
 
    Caches and authorities must still support older versions of the
    directory protocols, until the versions of Tor that require them are

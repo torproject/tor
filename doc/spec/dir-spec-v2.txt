@@ -4,8 +4,9 @@ $Id$
 
 0. Scope and preliminaries
 
-   This directory protocol is used by Tor version 0.1.1.x and later.  See
-   dir-spec-v1.txt for information on earlier versions.
+   This directory protocol is used by Tor version 0.1.1.x and 0.1.2.x.  See
+   dir-spec-v1.txt for information on earlier versions, and dir-spec.txt
+   for information on later versions.
 
 0.1. Goals and motivation
 
