@@ -3011,6 +3011,8 @@ typedef struct trusted_dir_server_t {
   /** True iff this server is an authority for the newer ("v2") directory
    * protocol. */
   unsigned int is_v2_authority:1;
+  /** True iff this server is an authority for bridge relays. */
+  unsigned int is_bridge_authority:1;
   /** True iff this server is an authority for hidden services. */
   unsigned int is_hidserv_authority:1;
   /** True iff this server has accepted the most recent server descriptor
@@ -3115,7 +3117,8 @@ int router_exit_policy_rejects_all(routerinfo_t *router);
 void add_trusted_dir_server(const char *nickname, const char *address,
                             uint16_t dir_port, uint16_t or_port,
                             const char *digest, int is_v1_authority,
-                            int is_v2_authority, int is_hidserv_authority);
+                            int is_v2_authority, int is_bridge_authority,
+                            int is_hidserv_authority);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);

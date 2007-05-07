@@ -3264,7 +3264,8 @@ void
 add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
                        const char *digest, int is_v1_authority,
-                       int is_v2_authority, int is_hidserv_authority)
+                       int is_v2_authority, int is_bridge_authority,
+                       int is_hidserv_authority)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
@@ -3300,6 +3301,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->is_running = 1;
   ent->is_v1_authority = is_v1_authority;
   ent->is_v2_authority = is_v2_authority;
+  ent->is_bridge_authority = is_bridge_authority;
   ent->is_hidserv_authority = is_hidserv_authority;
   memcpy(ent->digest, digest, DIGEST_LEN);
 

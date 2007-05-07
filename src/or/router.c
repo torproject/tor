@@ -378,6 +378,7 @@ init_keys(void)
                            digest,
                            options->V1AuthoritativeDir, /* v1 authority */
                            options->V2AuthoritativeDir, /* v2 authority */
+                           options->BridgeAuthoritativeDir, /* bridge auth */
                            options->HSAuthoritativeDir /*hidserv authority*/);
   }
   return 0; /* success */

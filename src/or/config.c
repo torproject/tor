@@ -3444,7 +3444,8 @@ parse_dir_server_line(const char *line, int validate_only)
   uint16_t dir_port = 0, or_port = 0;
   char digest[DIGEST_LEN];
   int is_v1_authority = 0, is_hidserv_authority = 0,
-    is_not_hidserv_authority = 0, is_v2_authority = 1;
+    is_not_hidserv_authority = 0, is_v2_authority = 1,
+    is_bridge_authority = 0;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
@@ -3469,6 +3470,8 @@ parse_dir_server_line(const char *line, int validate_only)
       is_hidserv_authority = 1;
     } else if (!strcasecmp(flag, "no-hs")) {
       is_not_hidserv_authority = 1;
+    } else if (!strcasecmp(flag, "bridge")) {
+      is_bridge_authority = 1;
     } else if (!strcasecmp(flag, "no-v2")) {
       is_v2_authority = 0;
     } else if (!strcasecmpstart(flag, "orport=")) {
@@ -3519,8 +3522,8 @@ parse_dir_server_line(const char *line, int validate_only)
               (int)dir_port,
               (char*)smartlist_get(items,1));
     add_trusted_dir_server(nickname, address, dir_port, or_port, digest,
-                           is_v1_authority,
-                           is_v2_authority, is_hidserv_authority);
+                           is_v1_authority, is_v2_authority,
+                           is_bridge_authority, is_hidserv_authority);
 
   }
 
