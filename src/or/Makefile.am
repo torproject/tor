@@ -66,10 +66,11 @@ micro-revision.i: FORCE
             echo \"$$rev\" > micro-revision.tmp;                \
           fi;                                                   \
         fi;                                                     \
-	if test ! -f micro-revision.tmp; then			\
-	  echo '""' > micro-revision.tmp;			\
-	fi;                                                     \
-	if test ! -f micro-revision.i || \
+	if test ! -f micro-revision.tmp ; then                  \
+	  if test ! -f micro-revision.i ; then                  \
+	    echo '""' > micro-revision.i;                       \
+	  fi;                                                   \
+	elif test ! -f micro-revision.i ||                      \
           test "`cat micro-revision.tmp`" != "`cat micro-revision.i`"; then \
 	  mv micro-revision.tmp micro-revision.i;               \
 	fi
