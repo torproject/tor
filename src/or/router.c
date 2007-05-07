@@ -787,8 +787,8 @@ router_upload_dir_desc_to_dirservers(int force)
   }
   msg[desc_len+extra_len] = 0;
 
-  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, msg, desc_len,
-                               extra_len);
+  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, V2_AUTHORITY,
+                               msg, desc_len, extra_len);
   tor_free(msg);
 }
 

@@ -947,7 +947,8 @@ upload_service_descriptor(rend_service_t *service, int version)
   }
 
   /* Post it to the dirservers */
-  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC, desc, desc_len, 0);
+  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC,
+                               HIDSERV_AUTHORITY, desc, desc_len, 0);
   tor_free(desc);
 
   service->desc_is_dirty = 0;

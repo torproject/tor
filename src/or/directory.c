@@ -83,25 +83,24 @@ purpose_is_private(uint8_t purpose)
   return 1;
 }
 
-/** Start a connection to every known directory server, using
+/** Start a connection to every suitable directory server, using
  * connection purpose 'purpose' and uploading the payload 'payload'
  * (length 'payload_len').  The purpose should be one of
  * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
  *
+ * <b>type</b> specifies what sort of dir authorities (V1, V2,
+ * HIDSERV, BRIDGE) we should upload to.
+ *
  * DOCDOC extrainfo_len is in addition to payload_len.
  */
 void
-directory_post_to_dirservers(uint8_t purpose, const char *payload,
+directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
+                             const char *payload,
                              size_t payload_len, size_t extrainfo_len)
 {
-  smartlist_t *dirservers;
   int post_via_tor;
-  int post_to_hidserv_only;
-
-  dirservers = router_get_trusted_dir_servers();
+  smartlist_t *dirservers = router_get_trusted_dir_servers();
   tor_assert(dirservers);
-  /* Only old dirservers handle rendezvous descriptor publishing. */
-  post_to_hidserv_only = (purpose == DIR_PURPOSE_UPLOAD_RENDDESC);
   /* This tries dirservers which we believe to be down, but ultimately, that's
    * harmless, and we may as well err on the side of getting things uploaded.
    */
@@ -113,10 +112,13 @@ directory_post_to_dirservers(uint8_t purpose, const char *payload,
       int new_enough;
 
       size_t upload_len = payload_len;
-      if (post_to_hidserv_only && !ds->is_hidserv_authority)
+      if (type == HIDSERV_AUTHORITY && !ds->is_hidserv_authority)
         continue;
-      if (!post_to_hidserv_only &&
-          !(ds->is_v1_authority || ds->is_v2_authority))
+      if (type == BRIDGE_AUTHORITY && !ds->is_bridge_authority)
+        continue;
+      if (type == V1_AUTHORITY && !ds->is_v1_authority)
+        continue;
+      if (type == V2_AUTHORITY && !ds->is_v2_authority)
         continue;
       if (purpose == DIR_PURPOSE_UPLOAD_DIR)
         ds->has_accepted_serverdesc = 0;

@@ -2497,7 +2497,11 @@ int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
 /********************************* directory.c ***************************/
 
-void directory_post_to_dirservers(uint8_t purpose, const char *payload,
+typedef enum {
+  V1_AUTHORITY, V2_AUTHORITY, HIDSERV_AUTHORITY, BRIDGE_AUTHORITY
+} authority_type_t;
+void directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
+                                  const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
 void directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                   int retry_if_no_servers);
@@ -3035,9 +3039,6 @@ routerstatus_t *router_pick_directory_server(int requireother,
                                              int fascistfirewall,
                                              int for_v2_directory,
                                              int retry_if_no_servers);
-typedef enum {
-  V1_AUTHORITY, V2_AUTHORITY, HIDSERV_AUTHORITY, BRIDGE_AUTHORITY
-} authority_type_t;
 routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
                                              int requireother,
                                              int fascistfirewall,
