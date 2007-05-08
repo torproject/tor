@@ -1732,7 +1732,17 @@ extend_info_from_router(routerinfo_t *r)
   info->onion_key = crypto_pk_dup_key(r->onion_pkey);
   info->addr = r->addr;
   info->port = r->or_port;
+  info->router_purpose = r->purpose;
   return info;
+}
+
+/** What router purpose is <b>digest</b>?
+ * It's a general purpose router unless it's on our bridges list.
+ */
+static uint8_t
+get_router_purpose_from_digest(char *digest) {
+  (void)digest;
+  return ROUTER_PURPOSE_GENERAL; /* XXX020 */
 }
 
 /** Allocate and return a new extend_info_t that can be used to build a
@@ -1748,6 +1758,7 @@ extend_info_from_routerstatus(routerstatus_t *s)
   info->onion_key = NULL; /* routerstatus doesn't know this */
   info->addr = s->addr;
   info->port = s->or_port;
+  info->router_purpose = get_router_purpose_from_digest(info->identity_digest);
   return info;
 }
 

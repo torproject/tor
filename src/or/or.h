@@ -1118,11 +1118,13 @@ typedef struct {
   unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
                                * or otherwise nasty? */
 
-/** Tor can use this desc for circuit-building. */
+/** Tor can use this router for general positions in circuits. */
 #define ROUTER_PURPOSE_GENERAL 0
-/** Tor should avoid using this desc for circuit-building. */
+/** Tor should avoid using this router for circuit-building. */
 #define ROUTER_PURPOSE_CONTROLLER 1
-  uint8_t purpose; /** Should Tor use this desc for circuit-building? */
+/** Tor should use this router only for bridge positions in circuits. */
+#define ROUTER_PURPOSE_BRIDGE 1
+  uint8_t purpose; /** What positions in a circuit is this router good for? */
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
@@ -1297,6 +1299,7 @@ typedef struct extend_info_t {
   char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
   uint32_t addr; /**< IP address in host order. */
   uint16_t port; /**< OR port. */
+  uint8_t router_purpose; /**< General, controller, or bridge. */
   crypto_pk_env_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
 
