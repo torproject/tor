@@ -764,6 +764,7 @@ router_upload_dir_desc_to_dirservers(int force)
   extrainfo_t *ei;
   char *msg;
   size_t desc_len, extra_len = 0, total_len;
+  authority_type_t auth = get_options()->_PublishServerDescriptor;
 
   ri = router_get_my_routerinfo();
   if (!ri) {
@@ -771,7 +772,7 @@ router_upload_dir_desc_to_dirservers(int force)
     return;
   }
   ei = router_get_my_extrainfo();
-  if (get_options()->_PublishServerDescriptor == NO_AUTHORITY)
+  if (auth == NO_AUTHORITY)
     return;
   if (!force && !desc_needs_upload)
     return;
@@ -787,7 +788,7 @@ router_upload_dir_desc_to_dirservers(int force)
   }
   msg[desc_len+extra_len] = 0;
 
-  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, V2_AUTHORITY,
+  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR, auth,
                                msg, desc_len, extra_len);
   tor_free(msg);
 }
