@@ -210,7 +210,7 @@ static config_var_t _option_vars[] = {
   VAR("PidFile",             STRING,   PidFile,              NULL),
   VAR("PreferTunneledDirConns", BOOL,  PreferTunneledDirConns, "0"),
   VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
-  VAR("PublishServerDescriptor",BOOL,  PublishServerDescriptor,"1"),
+  VAR("PublishServerDescriptor",STRING,PublishServerDescriptor,"v2"),
   VAR("PublishHidServDescriptors",BOOL,PublishHidServDescriptors, "1"),
   VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
   VAR("ReachableDirAddresses",LINELIST,ReachableDirAddresses,NULL),
@@ -450,7 +450,7 @@ static config_var_description_t options_description[] = {
     "and servers." },
   { "ORListenAddress", "Bind to this address to listen for connections from "
     "clients and servers, instead of the default 0.0.0.0:ORPort." },
-  { "PublishServerDescriptors", "Set to 0 in order to keep the server from "
+  { "PublishServerDescriptors", "Set to \"\" to keep the server from "
     "uploading info to the directory authorities." },
   /*{ "RedirectExit", "When an outgoing connection tries to connect to a "
    *"given address, redirect it to another address instead." },
@@ -1915,7 +1915,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
   if (is_internal_IP(ntohl(in.s_addr), 0) &&
-      options->PublishServerDescriptor) {
+      options->_PublishServerDescriptor != NO_AUTHORITY) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers) {
       /* if they are using the default dirservers, disallow internal IPs
@@ -2294,6 +2294,30 @@ ensure_bandwidth_cap(uint64_t value, const char *desc, char **msg)
   return 0;
 }
 
+/** Parse an authority type from <b>string</b> and write it to *<b>auth</b>.
+ * If <b>compatible</b> is non-zero, treat "1" as "v2" and treat "0" as "".
+ * Return 0 on success or -1 if not a recognized authority type.
+ */
+static int
+parse_authority_type_from_string(const char *string, authority_type_t *auth,
+                                 int compatible)
+{
+  tor_assert(auth);
+  if (!strcasecmp(string, "v1"))
+    *auth = V1_AUTHORITY;
+  else if (!strcasecmp(string, "v2") || (compatible && !strcmp(string, "1")))
+    *auth = V2_AUTHORITY;
+  else if (!strcasecmp(string, "bridge"))
+    *auth = BRIDGE_AUTHORITY;
+  else if (!strcasecmp(string, "hidserv"))
+    *auth = HIDSERV_AUTHORITY;
+  else if (!strcasecmp(string, "") || (compatible && !strcmp(string, "0")))
+    *auth = NO_AUTHORITY;
+  else
+    return -1;
+  return 0;
+}
+
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (10*60)
@@ -2435,7 +2459,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->NoPublish) {
     log(LOG_WARN, LD_CONFIG,
         "NoPublish is obsolete. Use PublishServerDescriptor instead.");
-    options->PublishServerDescriptor = 0;
+    tor_free(options->PublishServerDescriptor);
+    options->PublishServerDescriptor = tor_strdup("");
   }
 
   if (authdir_mode(options)) {
@@ -2640,6 +2665,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
           return -1;
         }
       });
+  }
+
+  if (parse_authority_type_from_string(options->PublishServerDescriptor,
+                               &options->_PublishServerDescriptor, 1) < 0) {
+    r = tor_snprintf(buf, sizeof(buf),
+        "Unrecognized value '%s' for PublishServerDescriptor",
+        options->PublishServerDescriptor);
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    return -1;
   }
 
 #if 0
@@ -2910,8 +2944,8 @@ options_transition_affects_descriptor(or_options_t *old_options,
       old_options->DirPort != new_options->DirPort ||
       old_options->ClientOnly != new_options->ClientOnly ||
       old_options->NoPublish != new_options->NoPublish ||
-      old_options->PublishServerDescriptor !=
-        new_options->PublishServerDescriptor ||
+      old_options->_PublishServerDescriptor !=
+        new_options->_PublishServerDescriptor ||
       old_options->BandwidthRate != new_options->BandwidthRate ||
       old_options->BandwidthBurst != new_options->BandwidthBurst ||
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||

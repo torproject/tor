@@ -528,7 +528,7 @@ router_orport_found_reachable(void)
     routerinfo_t *me = router_get_my_routerinfo();
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
-               get_options()->PublishServerDescriptor ?
+               get_options()->_PublishServerDescriptor != NO_AUTHORITY ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
@@ -676,7 +676,7 @@ proxy_mode(or_options_t *options)
 /** Decide if we're a publishable server. We are a publishable server if:
  * - We don't have the ClientOnly option set
  * and
- * - We have the PublishServerDescriptor option set
+ * - We have the PublishServerDescriptor option set to non-empty
  * and
  * - We have ORPort set
  * and
@@ -690,7 +690,7 @@ decide_if_publishable_server(void)
 
   if (options->ClientOnly)
     return 0;
-  if (!options->PublishServerDescriptor)
+  if (options->_PublishServerDescriptor == NO_AUTHORITY)
     return 0;
   if (!server_mode(options))
     return 0;
@@ -771,7 +771,7 @@ router_upload_dir_desc_to_dirservers(int force)
     return;
   }
   ei = router_get_my_extrainfo();
-  if (!get_options()->PublishServerDescriptor)
+  if (get_options()->_PublishServerDescriptor == NO_AUTHORITY)
     return;
   if (!force && !desc_needs_upload)
     return;

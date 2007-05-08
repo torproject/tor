@@ -1308,6 +1308,11 @@ typedef struct authority_cert_t {
   time_t expires;
 } authority_cert_t;
 
+typedef enum {
+  NO_AUTHORITY=0, V1_AUTHORITY, V2_AUTHORITY,
+  HIDSERV_AUTHORITY, BRIDGE_AUTHORITY
+} authority_type_t;
+
 #define CRYPT_PATH_MAGIC 0x70127012u
 
 /** Holds accounting information for a single step in the layered encryption
@@ -1683,8 +1688,9 @@ typedef struct {
   char *RendExcludeNodes; /**< Comma-separated list of nicknames not to use
                            * as introduction points. */
 
-  smartlist_t *AllowInvalidNodes; /**< List of "entry", "middle", "exit" */
-  int _AllowInvalid; /**< Bitmask; derived from AllowInvalidNodes; */
+  /** List of "entry", "middle", "exit", "introduction", "rendezvous". */
+  smartlist_t *AllowInvalidNodes;
+  int _AllowInvalid; /**< Bitmask; derived from AllowInvalidNodes. */
   config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   int ExitPolicyRejectPrivate; /**< Should we not exit to local addresses? */
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
@@ -1740,9 +1746,15 @@ typedef struct {
   int AvoidDiskWrites; /**< Boolean: should we never cache things to disk?
                         * Not used yet. */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
-  int NoPublish; /**< Boolean: should we never publish a descriptor? */
-  int PublishServerDescriptor; /**< Do we publish our descriptor as normal? */
-  int PublishHidServDescriptors; /**< and our hidden service descriptors? */
+  /** Boolean: should we never publish a descriptor? Deprecated. */
+  int NoPublish;
+  /** To what authority types do we publish our descriptor? Choices are
+   * "v1", "v2", "bridge", or "". */
+  char *PublishServerDescriptor;
+  /** An authority type, derived from PublishServerDescriptor. */
+  authority_type_t _PublishServerDescriptor;
+  /** Boolean: do we publish hidden service descriptors to the HS auths? */
+  int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /** and hidden service descriptors? */
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
@@ -2497,9 +2509,6 @@ int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
 /********************************* directory.c ***************************/
 
-typedef enum {
-  V1_AUTHORITY, V2_AUTHORITY, HIDSERV_AUTHORITY, BRIDGE_AUTHORITY
-} authority_type_t;
 void directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
                                   const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
