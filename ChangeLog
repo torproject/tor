@@ -111,6 +111,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Fix a bug in dirserv_remove_invalid() that would cause authorities to
       corrupt memory under some really unlikely scenarios.
     - Add even more asserts to hunt down bug 417.
+    - When we are reporting the DirServer line we just parsed, we were
+      logging the second stanza of the key fingerprint, not the first.
 
   o Minor bugfixes (controller), reported by daejees:
     - Make 'getinfo fingerprint' return a 551 error if we're not a

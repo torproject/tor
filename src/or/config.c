@@ -3554,7 +3554,7 @@ parse_dir_server_line(const char *line, int validate_only)
   if (!validate_only) {
     log_debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address,
               (int)dir_port,
-              (char*)smartlist_get(items,1));
+              (char*)smartlist_get(items,0));
     add_trusted_dir_server(nickname, address, dir_port, or_port, digest,
                            is_v1_authority, is_v2_authority,
                            is_bridge_authority, is_hidserv_authority);
