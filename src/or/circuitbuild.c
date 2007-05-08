@@ -304,7 +304,7 @@ origin_circuit_init(uint8_t purpose, int onehop_tunnel,
  */
 origin_circuit_t *
 circuit_establish_circuit(uint8_t purpose, int onehop_tunnel,
-                          extend_info_t *info,
+                          extend_info_t *exit,
                           int need_uptime, int need_capacity, int internal)
 {
   origin_circuit_t *circ;
@@ -313,7 +313,7 @@ circuit_establish_circuit(uint8_t purpose, int onehop_tunnel,
   circ = origin_circuit_init(purpose, onehop_tunnel,
                              need_uptime, need_capacity, internal);
 
-  if (onion_pick_cpath_exit(circ, info) < 0 ||
+  if (onion_pick_cpath_exit(circ, exit) < 0 ||
       onion_populate_cpath(circ) < 0) {
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_NOPATH);
     return NULL;
@@ -1393,20 +1393,20 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
  * the caller will do this if it wants to.
  */
 int
-circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info)
+circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *exit)
 {
   cpath_build_state_t *state;
-  tor_assert(info);
+  tor_assert(exit);
   tor_assert(circ);
 
   state = circ->build_state;
   tor_assert(state);
   if (state->chosen_exit)
     extend_info_free(state->chosen_exit);
-  state->chosen_exit = extend_info_dup(info);
+  state->chosen_exit = extend_info_dup(exit);
 
   ++circ->build_state->desired_path_len;
-  onion_append_hop(&circ->cpath, info);
+  onion_append_hop(&circ->cpath, exit);
   return 0;
 }
 
@@ -1415,14 +1415,14 @@ circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info)
  * send the next extend cell to begin connecting to that hop.
  */
 int
-circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info)
+circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *exit)
 {
   int err_reason = 0;
-  circuit_append_new_exit(circ, info);
+  circuit_append_new_exit(circ, exit);
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_BUILDING);
   if ((err_reason = circuit_send_next_onion_skin(circ))<0) {
     log_warn(LD_CIRC, "Couldn't extend circuit to new point '%s'.",
-             info->nickname);
+             exit->nickname);
     circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
     return -1;
   }
