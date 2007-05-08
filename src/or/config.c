@@ -137,6 +137,7 @@ static config_var_t _option_vars[] = {
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "6 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "3 MB"),
   VAR("BridgeAuthoritativeDir", BOOL,  BridgeAuthoritativeDir, "0"),
+  VAR("Bridge",              LINELIST, Bridges,              NULL),
   VAR("CircuitBuildTimeout", INTERVAL, CircuitBuildTimeout,  "1 minute"),
   VAR("CircuitIdleTimeout",  INTERVAL, CircuitIdleTimeout,   "1 hour"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
@@ -254,6 +255,7 @@ static config_var_t _option_vars[] = {
   VAR("TransListenAddress",  LINELIST, TransListenAddress,   NULL),
   VAR("TransPort",           UINT,     TransPort,            "0"),
   VAR("TunnelDirConns",      BOOL,     TunnelDirConns,       "0"),
+  VAR("UseBridges",          BOOL,     UseBridges,           "0"),
   VAR("UseEntryGuards",      BOOL,     UseEntryGuards,       "1"),
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
@@ -570,6 +572,7 @@ static int options_transition_affects_descriptor(or_options_t *old_options,
 static int check_nickname_list(const char *lst, const char *name, char **msg);
 static void config_register_addressmaps(or_options_t *options);
 
+static int parse_bridge_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line, int validate_only);
 static int parse_redirect_line(smartlist_t *result,
                                config_line_t *line, char **msg);
@@ -903,6 +906,17 @@ options_act(or_options_t *old_options)
     }
   } else {
     add_default_trusted_dirservers();
+  }
+
+  clear_bridge_list();
+  if (options->Bridges) {
+    for (cl = options->Bridges; cl; cl = cl->next) {
+      if (parse_bridge_line(cl->value, 0)<0) {
+        log_err(LD_BUG,
+            "Previously validated Bridge line could not be added!");
+        return -1;
+      }
+    }
   }
 
   if (running_tor && rend_config_services(options, 0)<0) {
@@ -2833,6 +2847,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
+  if (options->Bridges) {
+    for (cl = options->Bridges; cl; cl = cl->next) {
+      if (parse_bridge_line(cl->value, 1)<0)
+        REJECT("Bridge line did not parse. See logs for details.");
+    }
+  }
+
   if (rend_config_services(options, 1) < 0)
     REJECT("Failed to configure rendezvous options. See logs for details.");
 
@@ -3465,10 +3486,76 @@ parse_redirect_line(smartlist_t *result, config_line_t *line, char **msg)
   }
 }
 
+/** Read the contents of a Bridge line from <b>line</b>. Return 0
+ * if the line is well-formed, and -1 if it isn't. If
+ * <b>validate_only</b> is 0, and the line is well-formed, then add
+ * the bridge described in the line to our internal bridge list. */
+static int
+parse_bridge_line(const char *line, int validate_only)
+{
+  smartlist_t *items = NULL;
+  int r;
+  char *addrport=NULL, *address=NULL, *fingerprint=NULL;
+  uint32_t addr = 0;
+  uint16_t port = 0;
+  char digest[DIGEST_LEN];
+
+  items = smartlist_create();
+  smartlist_split_string(items, line, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+  if (smartlist_len(items) < 1) {
+    log_warn(LD_CONFIG, "Too few arguments to Bridge line.");
+    goto err;
+  }
+  addrport = smartlist_get(items, 0);
+  smartlist_del_keeporder(items, 0);
+  if (parse_addr_port(LOG_WARN, addrport, &address, &addr, &port)<0) {
+    log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
+    goto err;
+  }
+  if (!port) {
+    log_warn(LD_CONFIG, "Missing port in Bridge address '%s'",addrport);
+    goto err;
+  }
+
+  if (smartlist_len(items)) {
+    fingerprint = smartlist_join_strings(items, "", 0, NULL);
+    if (strlen(fingerprint) != HEX_DIGEST_LEN) {
+      log_warn(LD_CONFIG, "Key digest for Bridge is wrong length.");
+      goto err;
+    }
+    if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
+      log_warn(LD_CONFIG, "Unable to decode Bridge key digest.");
+      goto err;
+    }
+  }
+
+  if (!validate_only) {
+    log_debug(LD_DIR, "Bridge at %s:%d (%s)", address,
+              (int)port,
+              fingerprint ? fingerprint : "no key listed");
+    bridge_add_from_config(addr, port, fingerprint ? digest : NULL);
+  }
+
+  r = 0;
+  goto done;
+
+  err:
+  r = -1;
+
+  done:
+  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
+  smartlist_free(items);
+  tor_free(addrport);
+  tor_free(address);
+  tor_free(fingerprint);
+  return r;
+}
+
 /** Read the contents of a DirServer line from <b>line</b>.  Return 0
  * if the line is well-formed, and -1 if it isn't.  If
  * <b>validate_only</b> is 0, and the line is well-formed, then add
- * the dirserver described in the line as a valid server. */
+ * the dirserver described in the line as a valid authority. */
 static int
 parse_dir_server_line(const char *line, int validate_only)
 {

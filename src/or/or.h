@@ -1746,6 +1746,10 @@ typedef struct {
                                    * versions? */
   int BridgeAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that aggregates bridge descriptors? */
+
+  int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
+  config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
+
   int AvoidDiskWrites; /**< Boolean: should we never cache things to disk?
                         * Not used yet. */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
@@ -2090,6 +2094,9 @@ int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 int getinfo_helper_entry_guards(control_connection_t *conn,
                                 const char *question, char **answer);
 void entry_guards_free_all(void);
+
+void clear_bridge_list(void);
+void bridge_add_from_config(uint32_t addr, uint16_t port, char *digest);
 
 /********************************* circuitlist.c ***********************/
 
