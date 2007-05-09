@@ -199,8 +199,8 @@ tor_mmap_file(const char *filename)
   res->mmap_handle = NULL;
 
   res->file_handle = CreateFile(filename,
-                                GENERIC_READ,
-                                0, NULL,
+                                GENERIC_READ, FILE_SHARE_READ,
+                                NULL,
                                 OPEN_EXISTING,
                                 FILE_ATTRIBUTE_NORMAL,
                                 0);
