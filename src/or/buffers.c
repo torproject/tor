@@ -158,80 +158,122 @@ _split_range(buf_t *buf, char *at, size_t *len,
   }
 }
 
-/** DOCDOC */
-static char *free_mem_list = NULL;
-static int free_mem_list_len = 0;
-static int free_mem_list_lowwater = 0;
+/** A freelist of buffer RAM chunks. */
+typedef struct free_mem_list_t {
+  char *list; /**< The first item on the list; begins with pointer to the
+               * next item. */
+  int len; /**< How many entries in <b>list</b>. */
+  int lowwater; /**< The smallest that list has gotten since the last call to
+                 * buf_shrink_freelists(). */
+  const size_t chunksize; /**< How big are the items on the list? */
+  const int slack; /**< We always keep at least this many items on the list
+                    * when shrinking it. */
+  const int max; /**< How many elements are we willing to throw onto the list?
+                  */
+} free_mem_list_t;
 
-/** DOCDOC */
-static void
+/** Freelists to hold 4k and 16k memory chunks.  This seems to be what
+ * we use most. */
+static free_mem_list_t free_mem_list_4k = { NULL, 0, 0, 4096, 16, INT_MAX };
+static free_mem_list_t free_mem_list_16k = { NULL, 0, 0, 16384, 4, 128 };
+
+/** Macro: True iff the size is one for which we keep a freelist. */
+#define IS_FREELIST_SIZE(sz) ((sz) == 4096 || (sz) == 16384)
+
+/** Return the proper freelist for chunks of size <b>sz</b>, or fail
+ * with an assertion. */
+static INLINE free_mem_list_t *
+get_free_mem_list(size_t sz)
+{
+  if (sz == 4096) {
+    return &free_mem_list_4k;
+  } else {
+    tor_assert(sz == 16384);
+    return &free_mem_list_16k;
+  }
+}
+
+/** Throw the memory from <b>buf</b> onto the appropriate freelist.
+ * Return true if we added the memory, 0 if the freelist was full. */
+static int
 add_buf_mem_to_freelist(buf_t *buf)
 {
   char *mem;
+  free_mem_list_t *list;
 
-  tor_assert(buf->len == MIN_LAZY_SHRINK_SIZE);
   tor_assert(buf->datalen == 0);
   tor_assert(buf->mem);
+  list = get_free_mem_list(buf->len);
+
+  if (list->len >= list->max)
+    return 0;
 
   mem = RAW_MEM(buf->mem);
   buf->len = buf->memsize = 0;
   buf->mem = buf->cur = NULL;
 
-  *(char**)mem = free_mem_list;
-  free_mem_list = mem;
-  ++free_mem_list_len;
-  log_info(LD_GENERAL, "Add buf mem to freelist.  Freelist has %d entries.",
-           free_mem_list_len);
+  *(char**)mem = list->list;
+  list->list = mem;
+  ++list->len;
+  log_debug(LD_GENERAL, "Add buf mem to %d-byte freelist.  Freelist has "
+            "%d entries.", (int)list->chunksize, list->len);
+
+  return 1;
 }
 
-/** DOCDOC */
+/** Pull memory of size <b>sz</b> from the appropriate freelist for use by
+ * <b>buf</b>, or allocate it as needed. */
 static void
-buf_get_initial_mem(buf_t *buf)
+buf_get_initial_mem(buf_t *buf, size_t sz)
 {
   char *mem;
+  free_mem_list_t *list = get_free_mem_list(sz);
   tor_assert(!buf->mem);
 
-  if (free_mem_list) {
-    mem = free_mem_list;
-    free_mem_list = *(char**)mem;
-    if (--free_mem_list_len < free_mem_list_lowwater)
-      free_mem_list_lowwater = free_mem_list_len;
-    log_info(LD_GENERAL, "Got buf mem from freelist. Freelist has %d entries.",
-             free_mem_list_len);
+  if (list->list) {
+    mem = list->list;
+    list->list = *(char**)mem;
+    if (--list->len < list->lowwater)
+      list->lowwater = list->len;
+    log_debug(LD_GENERAL, "Got buf mem from %d-byte freelist. Freelist has "
+             "%d entries.", (int)list->chunksize, list->len);
   } else {
-    log_info(LD_GENERAL, "Freelist empty; allocating another chunk.");
-    tor_assert(free_mem_list_len == 0);
-    mem = tor_malloc(ALLOC_LEN(MIN_LAZY_SHRINK_SIZE));
+    log_debug(LD_GENERAL, "%d-byte freelist empty; allocating another chunk.",
+             (int)list->chunksize);
+    tor_assert(list->len == 0);
+    mem = tor_malloc(ALLOC_LEN(sz));
   }
   buf->mem = GUARDED_MEM(mem);
-  SET_GUARDS(buf->mem, MIN_LAZY_SHRINK_SIZE);
-  buf->len = MIN_LAZY_SHRINK_SIZE;
-  buf->memsize = ALLOC_LEN(MIN_LAZY_SHRINK_SIZE);
+  SET_GUARDS(buf->mem, sz);
+  buf->len = sz;
+  buf->memsize = ALLOC_LEN(sz);
   buf->cur = buf->mem;
 }
 
-/** DOCDOC 64k of 4k buffers. */
-#define BUF_FREELIST_SLACK 16
-
-/** DOCDOC */
+/** Remove elements from the freelists that haven't been needed since the
+ * last call to this function. */
 void
-buf_shrink_freelist(void)
+buf_shrink_freelists(void)
 {
-  if (free_mem_list_lowwater > BUF_FREELIST_SLACK) {
-    int i;
-    log_info(LD_GENERAL, "We haven't used %d/%d allocated buffer memory "
-             "chunks since the last call(); freeing all but %d of them",
-             free_mem_list_lowwater, free_mem_list_len,
-             BUF_FREELIST_SLACK);
-    for (i = BUF_FREELIST_SLACK; i < free_mem_list_lowwater; ++i) {
-      char *mem = free_mem_list;
-      tor_assert(mem);
-      free_mem_list = *(char**)mem;
-      tor_free(mem);
-      --free_mem_list_len;
+  int j;
+  for (j = 0; j < 2; ++j) {
+    free_mem_list_t *list = j ? &free_mem_list_16k : &free_mem_list_4k;
+    if (list->lowwater > list->slack) {
+      int i;
+      log_info(LD_GENERAL, "We haven't used %d/%d allocated %d-byte buffer "
+               "memory chunks since the last call; freeing all but %d of them",
+               list->lowwater, list->len, list->chunksize, list->slack);
+      for (i = list->slack; i < list->lowwater; ++i) {
+        /* XXXX we should really free the last few entries, not the first. */
+        char *mem = list->list;
+        tor_assert(mem);
+        list->list = *(char**)mem;
+        tor_free(mem);
+        --list->len;
+      }
     }
+    list->lowwater = list->len;
   }
-  free_mem_list_lowwater = free_mem_list_len;
 }
 
 /** Change a buffer's capacity. <b>new_capacity</b> must be \>=
@@ -281,26 +323,12 @@ buf_resize(buf_t *buf, size_t new_capacity)
     }
   }
 
-#if 0
-  /* XXX Some play code to throw away old buffers sometimes rather
-   * than constantly reallocing them; just in case this is our memory
-   * problem. It looks for now like it isn't, so disabled. -RD */
-  if (0 && new_capacity == MIN_LAZY_SHRINK_SIZE &&
-      !buf->datalen &&
-      buf->len >= 1<<16) {
-    /* don't realloc; free and malloc */
-    char *oldmem, *newmem = GUARDED_MEM(tor_malloc(ALLOC_LEN(new_capacity)));
-    SET_GUARDS(newmem, new_capacity);
-    oldmem = RAW_MEM(buf->mem);
-    tor_free(oldmem);
-    buf->mem = buf->cur = newmem;
-  } else { /* ... */ }
-#endif
-
-  if (buf->len == 0 && new_capacity <= MIN_LAZY_SHRINK_SIZE) {
+  if (new_capacity < MIN_LAZY_SHRINK_SIZE)
     new_capacity = MIN_LAZY_SHRINK_SIZE;
+
+  if (buf->len == 0 && IS_FREELIST_SIZE(new_capacity)) {
     tor_assert(!buf->mem);
-    buf_get_initial_mem(buf);
+    buf_get_initial_mem(buf, new_capacity);
   } else {
     char *raw;
     if (buf->mem)
@@ -385,9 +413,9 @@ buf_shrink(buf_t *buf)
 
   new_len = buf->len;
   if (buf->datalen == 0 && buf->highwater == 0 &&
-      buf->len == MIN_LAZY_SHRINK_SIZE) {
-    add_buf_mem_to_freelist(buf);
-    return;
+      IS_FREELIST_SIZE(buf->len)) {
+    if (add_buf_mem_to_freelist(buf))
+      return;
   }
   while (buf->highwater < (new_len>>2) && new_len > MIN_LAZY_SHRINK_SIZE*2)
     new_len >>= 1;
@@ -433,8 +461,8 @@ buf_new_with_capacity(size_t size)
   buf_t *buf;
   buf = tor_malloc_zero(sizeof(buf_t));
   buf->magic = BUFFER_MAGIC;
-  if (size == MIN_LAZY_SHRINK_SIZE) {
-    buf_get_initial_mem(buf);
+  if (IS_FREELIST_SIZE(size)) {
+    buf_get_initial_mem(buf, size);
   } else {
     buf->cur = buf->mem = GUARDED_MEM(tor_malloc(ALLOC_LEN(size)));
     SET_GUARDS(buf->mem, size);
@@ -492,10 +520,12 @@ buf_free(buf_t *buf)
   char *oldmem;
   assert_buf_ok(buf);
   buf->magic = 0xDEADBEEF;
-  if (buf->len == MIN_LAZY_SHRINK_SIZE) {
+  if (IS_FREELIST_SIZE(buf->len)) {
     buf->datalen = 0; /* Avoid assert in add_buf_mem_to_freelist. */
     add_buf_mem_to_freelist(buf);
-  } else if (buf->mem) {
+  }
+  if (buf->mem) {
+    /* The freelist didn't want the RAM. */
     oldmem = RAW_MEM(buf->mem);
     tor_free(oldmem);
   }
