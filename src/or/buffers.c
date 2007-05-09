@@ -161,7 +161,7 @@ _split_range(buf_t *buf, char *at, size_t *len,
 /** DOCDOC */
 static char *free_mem_list = NULL;
 static int free_mem_list_len = 0;
-/*XXXX020 Actually remove stuff from freelist when it gets too big */
+static int free_mem_list_lowwater = 0;
 
 /** DOCDOC */
 static void
@@ -194,7 +194,8 @@ buf_get_initial_mem(buf_t *buf)
   if (free_mem_list) {
     mem = free_mem_list;
     free_mem_list = *(char**)mem;
-    --free_mem_list_len;
+    if (--free_mem_list_len < free_mem_list_lowwater)
+      free_mem_list_lowwater = free_mem_list_len;
     log_info(LD_GENERAL, "Got buf mem from freelist. Freelist has %d entries.",
              free_mem_list_len);
   } else {
@@ -207,6 +208,30 @@ buf_get_initial_mem(buf_t *buf)
   buf->len = MIN_LAZY_SHRINK_SIZE;
   buf->memsize = ALLOC_LEN(MIN_LAZY_SHRINK_SIZE);
   buf->cur = buf->mem;
+}
+
+/** DOCDOC 64k of 4k buffers. */
+#define BUF_FREELIST_SLACK 16
+
+/** DOCDOC */
+void
+buf_shrink_freelist(void)
+{
+  if (free_mem_list_lowwater > BUF_FREELIST_SLACK) {
+    int i;
+    log_info(LD_GENERAL, "We haven't used %d/%d allocated buffer memory "
+             "chunks since the last call(); freeing all but %d of them",
+             free_mem_list_lowwater, free_mem_list_len,
+             BUF_FREELIST_SLACK);
+    for (i = BUF_FREELIST_SLACK; i < free_mem_list_lowwater; ++i) {
+      char *mem = free_mem_list;
+      tor_assert(mem);
+      free_mem_list = *(char**)mem;
+      tor_free(mem);
+      --free_mem_list_len;
+    }
+  }
+  free_mem_list_lowwater = free_mem_list_len;
 }
 
 /** Change a buffer's capacity. <b>new_capacity</b> must be \>=

@@ -2020,6 +2020,7 @@ buf_t *buf_new_with_capacity(size_t size);
 void buf_free(buf_t *buf);
 void buf_clear(buf_t *buf);
 void buf_shrink(buf_t *buf);
+void buf_shrink_freelist(void);
 
 size_t buf_datalen(const buf_t *buf);
 size_t buf_capacity(const buf_t *buf);

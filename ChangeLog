@@ -40,6 +40,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       the server), and avoids the nasty Windows socketpair() workaround.
     - Keep unused 4k buffers on a free list, rather than wasting 8k for every
       single inactive connection_t.
+    - Free items from the 4k-buffer free list when they haven't been used
+      for a while.
 
   o Minor features (build):
     - Make autoconf search for libevent, openssl, and zlib consistently.

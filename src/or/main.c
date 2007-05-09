@@ -1021,6 +1021,7 @@ run_scheduled_events(time_t now)
         buf_shrink(conn->inbuf);
     }
     clean_cell_pool();
+    buf_shrink_freelist();
     time_to_shrink_memory = now + MEM_SHRINK_INTERVAL;
   }
 
