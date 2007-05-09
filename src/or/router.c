@@ -242,6 +242,7 @@ init_keys(void)
   char *cp;
   or_options_t *options = get_options();
   or_state_t *state = get_or_state();
+  authority_type_t type;
 
   if (!key_lock)
     key_lock = tor_mutex_new();
@@ -371,15 +372,17 @@ init_keys(void)
   }
   /* 6b. [authdirserver only] add own key to approved directories. */
   crypto_pk_get_digest(get_identity_key(), digest);
+  type = ((options->V1AuthoritativeDir ? V1_AUTHORITY : 0) |
+          (options->V2AuthoritativeDir ? V2_AUTHORITY : 0) |
+          (options->BridgeAuthoritativeDir ? BRIDGE_AUTHORITY : 0) |
+          (options->HSAuthoritativeDir ? HIDSERV_AUTHORITY : 0));
+
   if (!router_digest_is_trusted_dir(digest)) {
     add_trusted_dir_server(options->Nickname, NULL,
                            (uint16_t)options->DirPort,
                            (uint16_t)options->ORPort,
                            digest,
-                           options->V1AuthoritativeDir, /* v1 authority */
-                           options->V2AuthoritativeDir, /* v2 authority */
-                           options->BridgeAuthoritativeDir, /* bridge auth */
-                           options->HSAuthoritativeDir /*hidserv authority*/);
+                           type);
   }
   return 0; /* success */
 }

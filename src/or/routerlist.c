@@ -100,18 +100,21 @@ static int have_warned_about_old_version = 0;
  * listed by the authorities  */
 static int have_warned_about_new_version = 0;
 
-/** Return the number of v2 directory authorities */
+/** Return the number of directory authorities whose type matches some bit set
+ * in <b>type</b>  */
 static INLINE int
-get_n_v2_authorities(void)
+get_n_authorities(authority_type_t type)
 {
   int n = 0;
   if (!trusted_dir_servers)
     return 0;
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
-                    if (ds->is_v2_authority)
+                    if (ds->type & type)
                       ++n);
   return n;
 }
+
+#define get_n_v2_authorities() get_n_authorities(V2_AUTHORITY)
 
 /** Repopulate our list of network_status_t objects from the list cached on
  * disk.  Return 0 on success, -1 on failure. */
@@ -709,11 +712,7 @@ router_pick_trusteddirserver_impl(authority_type_t type,
       int is_overloaded =
           d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now;
       if (!d->is_running) continue;
-      if (type == V1_AUTHORITY && !d->is_v1_authority)
-        continue;
-      if (type == V2_AUTHORITY && !d->is_v2_authority)
-        continue;
-      if (type == HIDSERV_AUTHORITY && !d->is_hidserv_authority)
+      if ((type & d->type) == 0)
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
@@ -2713,7 +2712,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
   if (!(trusted_dir =
         router_get_trusteddirserver_by_digest(ns->identity_digest)) ||
-      !trusted_dir->is_v2_authority) {
+      !(trusted_dir->type & V2_AUTHORITY)) {
     log_info(LD_DIR, "Network status was signed, but not by an authoritative "
              "directory we recognize.");
     if (!get_options()->DirPort) {
@@ -3066,7 +3065,7 @@ update_networkstatus_cache_downloads(time_t now)
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
        {
          char resource[HEX_DIGEST_LEN+6]; /* fp/hexdigit.z\0 */
-         if (!ds->is_v2_authority)
+         if (!(ds->type & V2_AUTHORITY))
            continue;
          if (router_digest_is_me(ds->digest))
            continue;
@@ -3133,7 +3132,7 @@ update_networkstatus_client_downloads(time_t now)
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
        networkstatus_t *ns = networkstatus_get_by_digest(ds->digest);
-       if (!ds->is_v2_authority)
+       if (!(ds->type & V2_AUTHORITY))
          continue;
        ++n_dirservers;
        if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES)
@@ -3183,7 +3182,7 @@ update_networkstatus_client_downloads(time_t now)
       if (i >= n_dirservers)
         i = 0;
       ds = smartlist_get(trusted_dir_servers, i);
-      if (! ds->is_v2_authority)
+      if (!(ds->type & V2_AUTHORITY))
         continue;
       if (n_failed < n_dirservers &&
           ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
@@ -3263,9 +3262,7 @@ router_exit_policy_rejects_all(routerinfo_t *router)
 void
 add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
-                       const char *digest, int is_v1_authority,
-                       int is_v2_authority, int is_bridge_authority,
-                       int is_hidserv_authority)
+                       const char *digest, authority_type_t type)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
@@ -3299,10 +3296,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->dir_port = dir_port;
   ent->or_port = or_port;
   ent->is_running = 1;
-  ent->is_v1_authority = is_v1_authority;
-  ent->is_v2_authority = is_v2_authority;
-  ent->is_bridge_authority = is_bridge_authority;
-  ent->is_hidserv_authority = is_hidserv_authority;
+  ent->type = type;
   memcpy(ent->digest, digest, DIGEST_LEN);
 
   dlen = 64 + strlen(hostname) + (nickname?strlen(nickname):0);
@@ -3361,8 +3355,8 @@ int
 any_trusted_dir_is_v1_authority(void)
 {
   if (trusted_dir_servers)
-    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
-                      if (ent->is_v1_authority) return 1);
+    return get_n_authorities(V1_AUTHORITY) > 0;
+
   return 0;
 }
 
@@ -4545,7 +4539,7 @@ have_tried_downloading_all_statuses(int n_failures)
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
     {
-      if (!ds->is_v2_authority)
+      if (!(ds->type & V2_AUTHORITY))
         continue;
       /* If we don't have the status, and we haven't failed to get the status,
        * we haven't tried to get the status. */

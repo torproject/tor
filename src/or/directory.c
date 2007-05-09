@@ -83,17 +83,27 @@ purpose_is_private(uint8_t purpose)
   return 1;
 }
 
-/** Return a static string describing <b>auth</b>. */
-const char *
+/** Return a newly allocated string describing <b>auth</b>. */
+char *
 authority_type_to_string(authority_type_t auth)
 {
-  switch(auth) {
-    case V1_AUTHORITY: return "V1";
-    case V2_AUTHORITY: return "V2";
-    case BRIDGE_AUTHORITY: return "Bridge";
-    case HIDSERV_AUTHORITY: return "Hidden service";
-    case NO_AUTHORITY: default: return "[Unexpected authority type]";
+  char *result;
+  smartlist_t *lst = smartlist_create();
+  if (auth & V1_AUTHORITY)
+    smartlist_add(lst, (void*)"V1");
+  if (auth & V2_AUTHORITY)
+    smartlist_add(lst, (void*)"V2");
+  if (auth & BRIDGE_AUTHORITY)
+    smartlist_add(lst, (void*)"Bridge");
+  if (auth & HIDSERV_AUTHORITY)
+    smartlist_add(lst, (void*)"Hidden service");
+  if (smartlist_len(lst)) {
+    result = smartlist_join_strings(lst, ", ", 0, NULL);
+  } else {
+    result = tor_strdup("[Not an authority]");
   }
+  smartlist_free(lst);
+  return result;
 }
 
 /** Start a connection to every suitable directory server, using
@@ -124,16 +134,11 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
       local_routerstatus_t *lrs = router_get_combined_status_by_digest(
                                                 ds->digest);
       int new_enough;
-
       size_t upload_len = payload_len;
-      if (type == HIDSERV_AUTHORITY && !ds->is_hidserv_authority)
+
+      if ((type & ds->type) == 0)
         continue;
-      if (type == BRIDGE_AUTHORITY && !ds->is_bridge_authority)
-        continue;
-      if (type == V1_AUTHORITY && !ds->is_v1_authority)
-        continue;
-      if (type == V2_AUTHORITY && !ds->is_v2_authority)
-        continue;
+
       found = 1; /* at least one authority of this type was listed */
       if (purpose == DIR_PURPOSE_UPLOAD_DIR)
         ds->has_accepted_serverdesc = 0;
@@ -152,9 +157,10 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
                                               NULL, payload, upload_len);
     });
   if (!found) {
+    char *s = authority_type_to_string(type);
     log_warn(LD_DIR, "Publishing server descriptor to directory authorities "
-             "of type '%s', but no authorities of that type listed!",
-             authority_type_to_string(type));
+             "of type '%s', but no authorities of that type listed!", s);
+    tor_free(s);
   }
 }
 
@@ -1234,7 +1240,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           ds->has_accepted_serverdesc = 1;
           servers = router_get_trusted_dir_servers();
           SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
-              if ((d->is_v1_authority || d->is_v2_authority) &&
+              if ((d->type & (V1_AUTHORITY|V2_AUTHORITY)) &&
                   !d->has_accepted_serverdesc) {
                 all_done = 0;
                 break;

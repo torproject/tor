@@ -1740,7 +1740,8 @@ extend_info_from_router(routerinfo_t *r)
  * It's a general purpose router unless it's on our bridges list.
  */
 static uint8_t
-get_router_purpose_from_digest(char *digest) {
+get_router_purpose_from_digest(char *digest)
+{
   (void)digest;
   return ROUTER_PURPOSE_GENERAL; /* XXX020 */
 }

@@ -1311,9 +1311,13 @@ typedef struct authority_cert_t {
   time_t expires;
 } authority_cert_t;
 
+/** DOCDOC */
 typedef enum {
-  NO_AUTHORITY=0, V1_AUTHORITY, V2_AUTHORITY,
-  HIDSERV_AUTHORITY, BRIDGE_AUTHORITY
+  NO_AUTHORITY      = 0,
+  V1_AUTHORITY      = 1 << 0,
+  V2_AUTHORITY      = 1 << 1,
+  HIDSERV_AUTHORITY = 1 << 2,
+  BRIDGE_AUTHORITY  = 1 << 3,
 } authority_type_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u
@@ -1757,7 +1761,7 @@ typedef struct {
   int NoPublish;
   /** To what authority types do we publish our descriptor? Choices are
    * "v1", "v2", "bridge", or "". */
-  char *PublishServerDescriptor;
+  smartlist_t *PublishServerDescriptor;
   /** An authority type, derived from PublishServerDescriptor. */
   authority_type_t _PublishServerDescriptor;
   /** Boolean: do we publish hidden service descriptors to the HS auths? */
@@ -2519,7 +2523,7 @@ int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
 /********************************* directory.c ***************************/
 
-const char *authority_type_to_string(authority_type_t auth);
+char *authority_type_to_string(authority_type_t auth);
 void directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
                                   const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
@@ -3029,19 +3033,13 @@ typedef struct trusted_dir_server_t {
   uint16_t or_port; /**< OR port: Used for tunneling connections. */
   char digest[DIGEST_LEN]; /**< Digest of identity key. */
   unsigned int is_running:1; /**< True iff we think this server is running. */
-  /** True iff this server is an authority for the older ("v1") directory
-   * protocol. */
-  unsigned int is_v1_authority:1;
-  /** True iff this server is an authority for the newer ("v2") directory
-   * protocol. */
-  unsigned int is_v2_authority:1;
-  /** True iff this server is an authority for bridge relays. */
-  unsigned int is_bridge_authority:1;
-  /** True iff this server is an authority for hidden services. */
-  unsigned int is_hidserv_authority:1;
+
   /** True iff this server has accepted the most recent server descriptor
    * we tried to upload to it. */
   unsigned int has_accepted_serverdesc:1;
+
+  /** DOCDOC */
+  authority_type_t type;
 
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
@@ -3137,9 +3135,7 @@ int router_exit_policy_rejects_all(routerinfo_t *router);
 
 void add_trusted_dir_server(const char *nickname, const char *address,
                             uint16_t dir_port, uint16_t or_port,
-                            const char *digest, int is_v1_authority,
-                            int is_v2_authority, int is_bridge_authority,
-                            int is_hidserv_authority);
+                            const char *digest, authority_type_t type);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
@@ -3236,8 +3232,6 @@ networkstatus_t *networkstatus_parse_from_string(const char *s);
 void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_parse_from_string(const char *s,
                                                    char **end_of_string);
-
-
 
 #endif
 

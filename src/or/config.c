@@ -211,7 +211,7 @@ static config_var_t _option_vars[] = {
   VAR("PidFile",             STRING,   PidFile,              NULL),
   VAR("PreferTunneledDirConns", BOOL,  PreferTunneledDirConns, "0"),
   VAR("ProtocolWarnings",    BOOL,     ProtocolWarnings,     "0"),
-  VAR("PublishServerDescriptor",STRING,PublishServerDescriptor,"v2"),
+  VAR("PublishServerDescriptor", CSV,  PublishServerDescriptor,"v1,v2"),
   VAR("PublishHidServDescriptors",BOOL,PublishHidServDescriptors, "1"),
   VAR("ReachableAddresses",  LINELIST, ReachableAddresses,   NULL),
   VAR("ReachableDirAddresses",LINELIST,ReachableDirAddresses,NULL),
@@ -1929,7 +1929,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
   if (is_internal_IP(ntohl(in.s_addr), 0) &&
-      options->_PublishServerDescriptor != NO_AUTHORITY) {
+      options->_PublishServerDescriptor) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers) {
       /* if they are using the default dirservers, disallow internal IPs
@@ -2308,27 +2308,33 @@ ensure_bandwidth_cap(uint64_t value, const char *desc, char **msg)
   return 0;
 }
 
-/** Parse an authority type from <b>string</b> and write it to *<b>auth</b>.
- * If <b>compatible</b> is non-zero, treat "1" as "v2" and treat "0" as "".
- * Return 0 on success or -1 if not a recognized authority type.
+/** Parse an authority type from <b>list</b> and write it to *<b>auth</b>.  If
+ * <b>compatible</b> is non-zero, treat "1" as "v1,v2" and treat "0" as "".
+ * Return 0 on success or -(idx of first bad member) if not a recognized
+ * authority type.
  */
 static int
-parse_authority_type_from_string(const char *string, authority_type_t *auth,
-                                 int compatible)
+parse_authority_type_from_list(smartlist_t *list, authority_type_t *auth,
+                               int compatible)
 {
   tor_assert(auth);
-  if (!strcasecmp(string, "v1"))
-    *auth = V1_AUTHORITY;
-  else if (!strcasecmp(string, "v2") || (compatible && !strcmp(string, "1")))
-    *auth = V2_AUTHORITY;
-  else if (!strcasecmp(string, "bridge"))
-    *auth = BRIDGE_AUTHORITY;
-  else if (!strcasecmp(string, "hidserv"))
-    *auth = HIDSERV_AUTHORITY;
-  else if (!strcasecmp(string, "") || (compatible && !strcmp(string, "0")))
-    *auth = NO_AUTHORITY;
-  else
-    return -1;
+  *auth = 0;
+  SMARTLIST_FOREACH(list, const char *, string, {
+    if (!strcasecmp(string, "v1"))
+      *auth |= V1_AUTHORITY;
+    else if (compatible && !strcmp(string, "1"))
+      *auth |= V1_AUTHORITY | V2_AUTHORITY;
+    else if (!strcasecmp(string, "v2"))
+      *auth |= V2_AUTHORITY;
+    else if (!strcasecmp(string, "bridge"))
+      *auth |= BRIDGE_AUTHORITY;
+    else if (!strcasecmp(string, "hidserv"))
+      *auth |= HIDSERV_AUTHORITY;
+    else if (!strcasecmp(string, "") || (compatible && !strcmp(string, "0")))
+      /* no authority */;
+    else
+      return - string_sl_idx;
+    });
   return 0;
 }
 
@@ -2473,8 +2479,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->NoPublish) {
     log(LOG_WARN, LD_CONFIG,
         "NoPublish is obsolete. Use PublishServerDescriptor instead.");
-    tor_free(options->PublishServerDescriptor);
-    options->PublishServerDescriptor = tor_strdup("");
+    SMARTLIST_FOREACH(options->PublishServerDescriptor, char *, s,
+                      tor_free(s));
+    smartlist_clear(options->PublishServerDescriptor);
   }
 
   if (authdir_mode(options)) {
@@ -2681,11 +2688,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
       });
   }
 
-  if (parse_authority_type_from_string(options->PublishServerDescriptor,
-                               &options->_PublishServerDescriptor, 1) < 0) {
+  if ((i = parse_authority_type_from_list(options->PublishServerDescriptor,
+                               &options->_PublishServerDescriptor, 1) < 0)) {
     r = tor_snprintf(buf, sizeof(buf),
         "Unrecognized value '%s' for PublishServerDescriptor",
-        options->PublishServerDescriptor);
+                  (char*)smartlist_get(options->PublishServerDescriptor, -i));
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
@@ -3564,9 +3571,8 @@ parse_dir_server_line(const char *line, int validate_only)
   char *addrport=NULL, *address=NULL, *nickname=NULL, *fingerprint=NULL;
   uint16_t dir_port = 0, or_port = 0;
   char digest[DIGEST_LEN];
-  int is_v1_authority = 0, is_hidserv_authority = 0,
-    is_not_hidserv_authority = 0, is_v2_authority = 1,
-    is_bridge_authority = 0;
+  authority_type_t type = V2_AUTHORITY;
+  int is_not_hidserv_authority = 0, is_not_v2_authority = 0;
 
   items = smartlist_create();
   smartlist_split_string(items, line, NULL,
@@ -3586,15 +3592,15 @@ parse_dir_server_line(const char *line, int validate_only)
     if (TOR_ISDIGIT(flag[0]))
       break;
     if (!strcasecmp(flag, "v1")) {
-      is_v1_authority = is_hidserv_authority = 1;
+      type |= (V1_AUTHORITY | HIDSERV_AUTHORITY);
     } else if (!strcasecmp(flag, "hs")) {
-      is_hidserv_authority = 1;
+      type |= HIDSERV_AUTHORITY;
     } else if (!strcasecmp(flag, "no-hs")) {
       is_not_hidserv_authority = 1;
     } else if (!strcasecmp(flag, "bridge")) {
-      is_bridge_authority = 1;
+      type |= BRIDGE_AUTHORITY;
     } else if (!strcasecmp(flag, "no-v2")) {
-      is_v2_authority = 0;
+      is_not_v2_authority = 1;
     } else if (!strcasecmpstart(flag, "orport=")) {
       int ok;
       char *portstring = flag + strlen("orport=");
@@ -3609,9 +3615,10 @@ parse_dir_server_line(const char *line, int validate_only)
     tor_free(flag);
     smartlist_del_keeporder(items, 0);
   }
-
   if (is_not_hidserv_authority)
-    is_hidserv_authority = 0;
+    type &= ~HIDSERV_AUTHORITY;
+  if (is_not_v2_authority)
+    type &= ~V2_AUTHORITY;
 
   if (smartlist_len(items) < 2) {
     log_warn(LD_CONFIG, "Too few arguments to DirServer line.");
@@ -3642,10 +3649,7 @@ parse_dir_server_line(const char *line, int validate_only)
     log_debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address,
               (int)dir_port,
               (char*)smartlist_get(items,0));
-    add_trusted_dir_server(nickname, address, dir_port, or_port, digest,
-                           is_v1_authority, is_v2_authority,
-                           is_bridge_authority, is_hidserv_authority);
-
+    add_trusted_dir_server(nickname, address, dir_port, or_port, digest, type);
   }
 
   r = 0;
