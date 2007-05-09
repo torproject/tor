@@ -83,6 +83,19 @@ purpose_is_private(uint8_t purpose)
   return 1;
 }
 
+/** Return a static string describing <b>auth</b>. */
+const char *
+authority_type_to_string(authority_type_t auth)
+{
+  switch(auth) {
+    case V1_AUTHORITY: return "V1";
+    case V2_AUTHORITY: return "V2";
+    case BRIDGE_AUTHORITY: return "Bridge";
+    case HIDSERV_AUTHORITY: return "Hidden service";
+    case NO_AUTHORITY: default: return "[Unexpected authority type]";
+  }
+}
+
 /** Start a connection to every suitable directory server, using
  * connection purpose 'purpose' and uploading the payload 'payload'
  * (length 'payload_len').  The purpose should be one of
@@ -100,6 +113,7 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
 {
   int post_via_tor;
   smartlist_t *dirservers = router_get_trusted_dir_servers();
+  int found = 0;
   tor_assert(dirservers);
   /* This tries dirservers which we believe to be down, but ultimately, that's
    * harmless, and we may as well err on the side of getting things uploaded.
@@ -120,6 +134,7 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
         continue;
       if (type == V2_AUTHORITY && !ds->is_v2_authority)
         continue;
+      found = 1; /* at least one authority of this type was listed */
       if (purpose == DIR_PURPOSE_UPLOAD_DIR)
         ds->has_accepted_serverdesc = 0;
 
@@ -136,6 +151,11 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
       directory_initiate_command_routerstatus(rs, purpose, post_via_tor,
                                               NULL, payload, upload_len);
     });
+  if (!found) {
+    log_warn(LD_DIR, "Publishing server descriptor to directory authorities "
+             "of type '%s', but no authorities of that type listed!",
+             authority_type_to_string(type));
+  }
 }
 
 /** Start a connection to a random running directory server, using

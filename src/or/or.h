@@ -2519,6 +2519,7 @@ int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
 /********************************* directory.c ***************************/
 
+const char *authority_type_to_string(authority_type_t auth);
 void directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
                                   const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
