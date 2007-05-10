@@ -3176,14 +3176,14 @@ update_networkstatus_client_downloads(time_t now)
   /* If no networkstatus was found, choose a dirserver at random as "most
    * recent". */
   if (most_recent_idx<0)
-    most_recent_idx = crypto_rand_int(n_dirservers);
+    most_recent_idx = crypto_rand_int(smartlist_len(trusted_dir_servers));
 
   if (fetch_latest) {
     int i;
     int n_failed = 0;
     for (i = most_recent_idx + 1; 1; ++i) {
       trusted_dir_server_t *ds;
-      if (i >= n_dirservers)
+      if (i >= smartlist_len(trusted_dir_servers))
         i = 0;
       ds = smartlist_get(trusted_dir_servers, i);
       if (!(ds->type & V2_AUTHORITY))
