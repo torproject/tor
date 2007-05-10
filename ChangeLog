@@ -5,6 +5,10 @@ Changes in version 0.1.2.14 - 2007-0?-??
       but leave it attached to the circuit, leading to unpredictable
       behavior. (Reported by seeess, fixes bug 425.)
 
+  o Major bugfixes:
+    - Fix a bug in dirserv_remove_invalid() that would cause authorities to
+      corrupt memory under some really unlikely scenarios.
+
 
 Changes in version 0.1.2.13 - 2007-04-24
   o Minor fixes:

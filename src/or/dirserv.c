@@ -610,6 +610,7 @@ directory_remove_invalid(void)
                ent->nickname, msg?msg:"");
       routerlist_remove(rl, ent, i--, 0);
       changed = 1;
+      continue;
     }
     if (bool_neq((r & FP_NAMED), ent->is_named)) {
       log_info(LD_DIRSERV,

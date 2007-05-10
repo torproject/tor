@@ -4482,7 +4482,7 @@ routerlist_assert_ok(routerlist_t *rl)
   digestmap_iter_t *iter;
   routerinfo_t *r2;
   signed_descriptor_t *sd2;
-  if (!routerlist)
+  if (!rl)
     return;
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
   {
