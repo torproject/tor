@@ -29,7 +29,8 @@ static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
 static int connection_ap_process_natd(edge_connection_t *conn);
-static int connection_exit_connect_dir(edge_connection_t *exit_conn);
+static int connection_exit_connect_dir(edge_connection_t *exit_conn,
+                                       or_circuit_t *circ);
 static int hostname_is_noconnect_address(const char *address);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
@@ -2218,18 +2219,17 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     connection_free(TO_CONN(n_stream));
     return 0;
   }
-  log_debug(LD_EXIT,"about to start the dns_resolve().");
-
-  if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
-    if (or_circ && or_circ->p_conn && or_circ->p_conn->_base.addr)
-      n_stream->_base.addr = or_circ->p_conn->_base.addr;
-    n_stream->next_stream = TO_OR_CIRCUIT(circ)->n_streams;
-    n_stream->on_circuit = circ;
-    TO_OR_CIRCUIT(circ)->n_streams = n_stream;
-    return connection_exit_connect_dir(n_stream);
-  }
 
   n_stream->on_circuit = circ;
+
+  if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
+    tor_assert(or_circ);
+    if (or_circ->p_conn && or_circ->p_conn->_base.addr)
+      n_stream->_base.addr = or_circ->p_conn->_base.addr;
+    return connection_exit_connect_dir(n_stream, or_circ);
+  }
+
+  log_debug(LD_EXIT,"about to start the dns_resolve().");
 
   /* send it off to the gethostbyname farm */
   switch (dns_resolve(n_stream)) {
@@ -2399,7 +2399,8 @@ connection_exit_connect(edge_connection_t *edge_conn)
  * DOCDOC no longer uses socketpair
  */
 static int
-connection_exit_connect_dir(edge_connection_t *exit_conn)
+connection_exit_connect_dir(edge_connection_t *exit_conn,
+                            or_circuit_t *circ)
 {
   dir_connection_t *dir_conn = NULL;
 
@@ -2424,6 +2425,9 @@ connection_exit_connect_dir(edge_connection_t *exit_conn)
     connection_free(TO_CONN(dir_conn));
     return 0;
   }
+
+  exit_conn->next_stream = circ->n_streams;
+  circ->n_streams = exit_conn;
 
   if (connection_add(TO_CONN(dir_conn))<0) {
     connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT);
