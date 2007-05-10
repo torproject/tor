@@ -2795,6 +2795,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
                   ns->networkstatus_digest, DIGEST_LEN)) {
         /* Same one we had before. */
         networkstatus_free(ns);
+        tor_assert(trusted_dir);
         log_info(LD_DIR,
                  "Not replacing network-status from %s (published %s); "
                  "we already have it.",
@@ -2809,16 +2810,19 @@ router_set_networkstatus(const char *s, time_t arrived_at,
           }
           old_ns->received_on = arrived_at;
         }
+        ++trusted_dir->n_networkstatus_failures;
         return 0;
       } else if (old_ns->published_on >= ns->published_on) {
         char old_published[ISO_TIME_LEN+1];
         format_iso_time(old_published, old_ns->published_on);
+        tor_assert(trusted_dir);
         log_info(LD_DIR,
                  "Not replacing network-status from %s (published %s);"
                  " we have a newer one (published %s) for this authority.",
                  trusted_dir->description, published,
                  old_published);
         networkstatus_free(ns);
+        ++trusted_dir->n_networkstatus_failures;
         return 0;
       } else {
         networkstatus_free(old_ns);
