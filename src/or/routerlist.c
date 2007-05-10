@@ -3188,8 +3188,12 @@ update_networkstatus_client_downloads(time_t now)
       ds = smartlist_get(trusted_dir_servers, i);
       if (!(ds->type & V2_AUTHORITY))
         continue;
-      if (n_failed < n_dirservers &&
-          ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
+      if (n_failed >= n_dirservers) {
+        log_info(LD_DIR, "All authorities have failed. Not trying any.");
+        smartlist_free(missing);
+        return;
+      }
+      if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
         ++n_failed;
         continue;
       }
