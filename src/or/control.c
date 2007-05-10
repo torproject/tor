@@ -1463,8 +1463,40 @@ getinfo_helper_events(control_connection_t *control_conn,
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
   } else if (!strcmpstart(question, "status/")) {
+    /* Note that status/ is not a catch-all for events; there's only supposed
+     * to be a status GETINFO if there's a corresponding STATUS event. */
     if (!strcmp(question, "status/circuit-established")) {
       *answer = tor_strdup(has_completed_circuit ? "1" : "0");
+    } else if (!strcmpstart(question, "status/version/")) {
+      combined_version_status_t st;
+      int is_server = server_mode(get_options());
+      char *recommended;
+      recommended = compute_recommended_versions(time(NULL),
+                                                 !is_server, VERSION, &st);
+      if (!strcmp(question, "status/version/recommended")) {
+        *answer = recommended;
+        return 0;
+      }
+      tor_free(recommended);
+      if (!strcmp(question, "status/version/current")) {
+        switch (st.consensus)
+          {
+          case VS_RECOMMENDED: *answer = tor_strdup("recommended"); break;
+          case VS_OLD: *answer = tor_strdup("obsolete"); break;
+          case VS_NEW: *answer = tor_strdup("new"); break;
+          case VS_NEW_IN_SERIES: *answer = tor_strdup("new in series"); break;
+          case VS_UNRECOMMENDED: *answer = tor_strdup("unrecommended"); break;
+          default: tor_fragile_assert();
+          }
+      } else if (!strcmp(question, "status/version/num-versioning")) {
+        char s[33];
+        tor_snprintf(s, sizeof(s), "%d", st.n_versioning);
+        *answer = tor_strdup(s);
+      } else if (!strcmp(question, "status/version/num-concurring")) {
+        char s[33];
+        tor_snprintf(s, sizeof(s), "%d", st.n_concurring);
+        *answer = tor_strdup(s);
+      }
     } else {
       return 0;
     }
@@ -1547,7 +1579,13 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("status/", events, NULL),
   DOC("status/circuit-established",
       "Whether we think client functionality is working."),
-
+  /* DOCDOC specify status/version/ */
+  DOC("status/version/recommended", "List of currently recommended versions."),
+  DOC("status/version/current", "Status of the current version."),
+  DOC("status/version/num-versioning", "Number of versioning authorities."),
+  DOC("status/version/num-concurring",
+      "Number of versioning authorities agreeing on the status of the "
+      "current version"),
   ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
   ITEM("dir-usage", misc, "Breakdown of bytes transferred over DirPort."),
   PREFIX("dir/server/", dir,"Router descriptors as retrieved from a DirPort."),

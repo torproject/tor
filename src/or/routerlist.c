@@ -3384,19 +3384,9 @@ networkstatus_get_by_digest(const char *digest)
  * our server is broken, invalid, obsolete, etc. */
 #define SELF_OPINION_INTERVAL (90*60)
 
-/** Result of checking whether a version is recommended. */
-typedef struct combined_version_status_t {
-  /** How many networkstatuses claim to know about versions? */
-  int n_versioning;
-  /** What do the majority of networkstatuses believe about this version? */
-  version_status_t consensus;
-  /** How many networkstatuses constitute the majority? */
-  int n_concurring;
-} combined_version_status_t;
-
-/** Return a string naming the versions of Tor recommended by
+/** Return a newly allocated string naming the versions of Tor recommended by
  * more than half the versioning networkstatuses. */
-static char *
+char *
 compute_recommended_versions(time_t now, int client,
                              const char *my_version,
                              combined_version_status_t *status_out)

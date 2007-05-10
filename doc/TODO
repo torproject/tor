@@ -15,6 +15,9 @@ P       - phobos claims
 
 Documentation and testing on 0.1.2.x-final series
 
+  - Pending backports for 0.1.2.x:
+    - r10148: Open cached-routers with FILE_SHARE_READ on win32.
+
 N - Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.

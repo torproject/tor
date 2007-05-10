@@ -3193,6 +3193,18 @@ typedef enum version_status_t {
   VS_UNRECOMMENDED=4 /**< This version is not recommended (general case) */
 } version_status_t;
 
+typedef struct combined_version_status_t {
+  /** How many networkstatuses claim to know about versions? */
+  int n_versioning;
+  /** What do the majority of networkstatuses believe about this version? */
+  version_status_t consensus;
+  /** How many networkstatuses constitute the majority? */
+  int n_concurring;
+} combined_version_status_t;
+char *compute_recommended_versions(time_t now, int client,
+                             const char *my_version,
+                             combined_version_status_t *status_out);
+
 int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
