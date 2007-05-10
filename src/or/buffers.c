@@ -323,7 +323,7 @@ buf_resize(buf_t *buf, size_t new_capacity)
     }
   }
 
-  if (new_capacity < MIN_LAZY_SHRINK_SIZE)
+  if (buf->len == 0 && new_capacity < MIN_LAZY_SHRINK_SIZE)
     new_capacity = MIN_LAZY_SHRINK_SIZE;
 
   if (buf->len == 0 && IS_FREELIST_SIZE(new_capacity)) {
