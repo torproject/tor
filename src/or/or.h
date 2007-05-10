@@ -3056,7 +3056,7 @@ int router_reload_networkstatus(void);
 smartlist_t *router_get_trusted_dir_servers(void);
 routerstatus_t *router_pick_directory_server(int requireother,
                                              int fascistfirewall,
-                                             int for_v2_directory,
+                                             authority_type_t type,
                                              int retry_if_no_servers);
 routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
                                              int requireother,

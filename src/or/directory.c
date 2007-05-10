@@ -209,7 +209,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
     }
     if (!rs) {
       /* anybody with a non-zero dirport will do */
-      rs = router_pick_directory_server(1, 1, type==V2_AUTHORITY,
+      rs = router_pick_directory_server(1, 1, type,
                                         retry_if_no_servers);
       if (!rs) {
         const char *which;
@@ -239,7 +239,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                         retry_if_no_servers);
     } else {
       /* anybody with a non-zero dirport will do. Disregard firewalls. */
-      rs = router_pick_directory_server(1, 0, type == V2_AUTHORITY,
+      rs = router_pick_directory_server(1, 0, type,
                                         retry_if_no_servers);
       /* If we have any hope of building an indirect conn, we know some router
        * descriptors.  If (rs==NULL), we can't build circuits anyway, so

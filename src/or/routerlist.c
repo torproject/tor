@@ -19,9 +19,9 @@ const char routerlist_c_id[] =
 
 /* static function prototypes */
 static routerstatus_t *router_pick_directory_server_impl(int requireother,
-                                                         int fascistfirewall,
-                                                         int prefer_tunnel,
-                                                         int for_v2_directory);
+                                                     int fascistfirewall,
+                                                     int prefer_tunnel,
+                                                     authority_type_t auth);
 static routerstatus_t *router_pick_trusteddirserver_impl(
                  authority_type_t type, int requireother,
                  int fascistfirewall, int prefer_tunnel);
@@ -511,7 +511,7 @@ router_get_trusted_dir_servers(void)
 routerstatus_t *
 router_pick_directory_server(int requireother,
                              int fascistfirewall,
-                             int for_v2_directory,
+                             authority_type_t type,
                              int retry_if_no_servers)
 {
   routerstatus_t *choice;
@@ -521,7 +521,7 @@ router_pick_directory_server(int requireother,
     return NULL;
 
   choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             prefer_tunnel, for_v2_directory);
+                                             prefer_tunnel, type);
   if (choice || !retry_if_no_servers)
     return choice;
 
@@ -532,7 +532,7 @@ router_pick_directory_server(int requireother,
   mark_all_trusteddirservers_up();
   /* try again */
   choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             prefer_tunnel, for_v2_directory);
+                                             prefer_tunnel, type);
   if (choice)
     return choice;
 
@@ -543,7 +543,7 @@ router_pick_directory_server(int requireother,
   }
   /* give it one last try */
   choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             prefer_tunnel, for_v2_directory);
+                                             prefer_tunnel, type);
   return choice;
 }
 
@@ -611,7 +611,7 @@ router_pick_trusteddirserver(authority_type_t type,
  */
 static routerstatus_t *
 router_pick_directory_server_impl(int requireother, int fascistfirewall,
-                                  int prefer_tunnel, int for_v2_directory)
+                                  int prefer_tunnel, authority_type_t type)
 {
   routerstatus_t *result;
   smartlist_t *direct, *tunnel;
@@ -642,7 +642,7 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     if (requireother && router_digest_is_me(status->identity_digest))
       continue;
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
-    if (for_v2_directory && !(status->is_v2_dir || is_trusted))
+    if ((type & V2_AUTHORITY) && !(status->is_v2_dir || is_trusted))
       continue;
     if (prefer_tunnel &&
         status->version_supports_begindir &&
