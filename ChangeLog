@@ -13,6 +13,11 @@ Changes in version 0.1.2.14 - 2007-0?-??
     - Actually set the purpose correctly for descriptors inserted with
       purpose=controller.
 
+  o Minor features:
+    - When routers publish SVN revisions in their router descriptors,
+      authorities now include those versions correctly in networkstatus
+      documents.
+
 
 Changes in version 0.1.2.13 - 2007-04-24
   o Minor fixes:
