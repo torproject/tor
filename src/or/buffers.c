@@ -262,7 +262,7 @@ buf_shrink_freelists(void)
       int i;
       log_info(LD_GENERAL, "We haven't used %d/%d allocated %d-byte buffer "
                "memory chunks since the last call; freeing all but %d of them",
-               list->lowwater, list->len, list->chunksize, list->slack);
+               list->lowwater, list->len, (int)list->chunksize, list->slack);
       for (i = list->slack; i < list->lowwater; ++i) {
         /* XXXX we should really free the last few entries, not the first. */
         char *mem = list->list;
