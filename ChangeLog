@@ -1,3 +1,11 @@
+Changes in version 0.1.2.14 - 2007-0?-??
+  o Crash fixes:
+    - If a directory server runs out of space in the connection table
+      as it's processing a begin_dir request, it will free the exit stream
+      but leave it attached to the circuit, leading to unpredictable
+      behavior. (Reported by seeess, fixes bug 425.)
+
+
 Changes in version 0.1.2.13 - 2007-04-24
   o Minor fixes:
     - Fix a memory leak when we ask for "all" networkstatuses and we
