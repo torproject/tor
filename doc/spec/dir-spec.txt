@@ -172,7 +172,7 @@ $Id$
    documents to find out when their list of routers is out-of-date.
    (Directory authorities also use vote statuses.) If it is, they download
    any missing router descriptors.  Clients download missing descriptors
-   from mirrors; mirrors and authorities download from authorities.
+   from caches; caches and authorities download from authorities.
    Descriptors are downloaded by the hash of the descriptor, not by the
    server's identity key: this prevents servers from attacking clients by
    giving them descriptors nobody else uses.
@@ -690,12 +690,17 @@ $Id$
 
     "published" SP YYYY-MM-DD SP HH:MM:SS NL
 
+        [Exactly once for votes; Does not occur in consensuses.]
+
+        The publication time for this status document (if a vote).
+
+    "valid-after" SP YYYY-MM-DD SP HH:MM:SS NL
+
         [Exactly once.]
 
-        The publication time for this status document (if a vote), or the
-        start of the period for this vote (if a consensus).
+        The start of the Interval for this vote (if a consensus.)
 
-    "valid-until"
+    "valid-until" SP YYYY-MM-DD SP HH:MM:SS NL
 
         [Exactly once.]
 
@@ -909,7 +914,7 @@ $Id$
    Given a set of votes, authorities compute the contents of the consensus
    document as follows:
 
-     The "published" is the latest of all published times on the votes.
+     The "valid-after" is the latest of all valid-after times on the votes.
 
      The "valid-until" is the earliest of all valid-until times on the
      votes.
@@ -936,11 +941,35 @@ $Id$
      The signatures at the end of the document appear are sorted in
      ascending order by identity digest.
 
-[CUTOFF HERE.  STUFF BELOW THIS POINT HAS NOT YET BEEN UPDATED FROM V2.]
+3.4. Detached signatures
+
+   Assuming full connectivity, every authority should compute and sign the
+   same consensus directory in each period.  Therefore, it isn't necessary to
+   download the consensus computed by each authority; instead, the
+   authorities only push/fetch each others' signatures.  A "detached
+   signature" document contains items as follows:
+
+
+    "consensus-digest" SP Digest NL
+
+        [At start, at most once.]
+
+        The digest of the consensus being signed.
+
+    "valid-after" SP YYYY-MM-DD SP HH:MM:SS NL
+    "valid-until" SP YYYY-MM-DD SP HH:MM:SS NL
+
+        [As in the consensus]
+
+    "directory signature"
+
+        [As in the consensus; the signature object is the same as in the
+        consensus document.]
+
 
 4. Directory server operation
 
-   All directory authorities and directory mirrors ("directory servers")
+   All directory authorities and directory caches ("directory servers")
    implement this section, except as noted.
 
 4.1. Accepting uploads (authorities only)
@@ -971,7 +1000,59 @@ $Id$
    descriptors, not to descriptors that the authority downloads from other
    authorities.
 
-4.2. Downloading network-status documents (authorities and caches)
+   When a router posts a signed extra-info document to a directory authority,
+   the authority again checks it for well-formedness and correct signature,
+   and checks that its matches the extra-info-digest in some router
+   descriptor that it believes is currently useful.  If so, it accepts it and
+   stores it and serves it as requested.  If not, it drops it.
+
+4.2. Voting (authorities only)
+
+   Authorities divide time into Intervals.  Authority administrators SHOULD
+   try to all pick the same interval length, and SHOULD pick intervals that
+   are commonly used divisions of time (e.g., 5 minutes, 15 minutes, 30
+   minutes, 60 minutes, 90 minutes).  Voting intervals SHOULD be chosen to
+   divide evenly into a 24-hour day.
+
+   Authorities MUST take pains to ensure that their clocks remain accurate,
+   for example by running NTP.
+
+   The first voting period of each day begins at 00:00 (midnight) GMT.  If
+   the last period of the day would be truncated by one-half or more, it is
+   merged with the second-to-last period.
+
+   An authority SHOULD publish its vote immediately at the start of each voting
+   period.  It does this by making it available at
+     http://<hostname>/tor/status-vote/current/authority.z
+   and sending it in an HTTP POST request to each other authority at the URL
+     http://<hostname>/tor/post/vote
+
+   If, N minutes after the voting period has begun, an authority does not have
+   a current statement from another authority, the first authority retrieves
+   the other's statement.
+
+   Once an authority has a vote from another authority, it makes it available
+   at
+      http://<hostname>/tor/status-vote/current/<fp>.z
+   where <fp> is the fingerprint of the other authority's identity key.
+
+   The consensus status, along with as many signatures as the server
+   currently knows, should be available at
+      http://<hostname>/tor/status-vote/current/consensus.z
+   All of the detached signatures it knows for consensus status should be
+   available at:
+      http://<hostname>/tor/status-vote/current/consensus-signatures.z
+
+   Once an authority has computed and signed a consensus network status, it
+   should send its detached signature to each other authority in an HTTP POST
+   request to the URL:
+      http://<hostname>/tor/post/consensus-signature
+
+
+
+[XXXX CUTOFF HERE.  STUFF BELOW THIS POINT HAS NOT YET BEEN UPDATED FROM V2.]
+
+4.3. Downloading consensus status documents (authorities caches only)
 
    All directory servers (authorities and mirrors) try to keep a fresh
    set of network-status documents from every authority.  To do so,

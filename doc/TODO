@@ -57,11 +57,11 @@ N   . Document transport and natdport
 Things we'd like to do in 0.2.0.x:
   - Proposals:
     . 101: Voting on the Tor Directory System
-      - Prepare ASAP for new voting formats
-        - Don't flip out with warnings when voting-related URLs are
+      o Prepare ASAP for new voting formats
+        o Don't flip out with warnings when voting-related URLs are
           uploaded/downloaded.
       . Finalize proposal
-        - Merge 101 and 103 and dir-spec.txt into a new dir-spec.txt; fork
+        . Merge 101 and 103 and dir-spec.txt into a new dir-spec.txt; fork
           the existing one into dir-spec-v2.txt.
       - Get authorities voting
         . Implement parsing for new document formats
