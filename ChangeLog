@@ -34,16 +34,19 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       as it's processing a begin_dir request, it will free the exit stream
       but leave it attached to the circuit, leading to unpredictable
       behavior. (Reported by seeess, fixes bug 425.)
+    - Fix a bug in dirserv_remove_invalid() that would cause authorities
+      to corrupt memory under some really unlikely scenarios.
 
   o Minor fixes (resource management):
-    - Count the number of open sockets separately from the number of active
-      connection_t objects.  This will let us avoid underusing our
-      allocated connection limit.
+    - Count the number of open sockets separately from the number
+      of active connection_t objects. This will let us avoid underusing
+      our allocated connection limit.
     - We no longer use socket pairs to link an edge connection to an
-      anonymous directory connection.  Instead, we track the link
-      internally and transfer the data in-process.  This saves two
-      sockets per anonymous directory connection (at the client and at
-      the server), and avoids the nasty Windows socketpair() workaround.
+      anonymous directory connection or a dirport test connection.
+      Instead, we track the link internally and transfer the data
+      in-process. This saves two sockets per "linked" connection (at the
+      client and at the server), and avoids the nasty Windows socketpair()
+      workaround.
     - Keep unused 4k and 16k buffers on free lists, rather than wasting 8k
       for every single inactive connection_t.
     - Free items from the 4k/16k-buffer free lists when they haven't been
@@ -51,7 +54,7 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
 
   o Minor features (build):
     - Make autoconf search for libevent, openssl, and zlib consistently.
-    - Update deprecated macros in configure.in
+    - Update deprecated macros in configure.in.
     - When warning about missing headers, tell the user to let us
       know if the compile succeeds anyway, so we can downgrade the
       warning.
@@ -64,17 +67,18 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Always prepend "Bug: " to any log message about a bug.
     - Put a platform string (e.g. "Linux i686") in the startup log
       message, so when people paste just their logs, we know if it's
-      openbsd or windows or what.
+      OpenBSD or Windows or what.
     - When logging memory usage, break down memory used in buffers by
       buffer type.
 
   o Minor features (directory system):
     - Directory authorities accept and serve "extra info" documents for
-      routers.  These documents contain fields from router descriptors that
-      aren't usually needed, and that use a lot of excess bandwidth. Once
-      these fields are removed from router descriptors, the bandwidth savings
-      should be about 60%.  (Limitation: servers do not yet upload extra-info
-      documents.)  [Partially implements proposal 104.]
+      routers.  These documents contain fields from router descriptors
+      that aren't usually needed, and that use a lot of excess
+      bandwidth. Once these fields are removed from router descriptors,
+      the bandwidth savings should be about 60%.  (Limitation: servers
+      do not yet upload extra-info documents.)  [Partially implements
+      proposal 104.]
     - Directory authorities allow multiple router descriptors and/or extra
       info documents to be uploaded in a single go.  This will make
       implementing proposal 104 simpler.
@@ -89,12 +93,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Let the controller specify HOP=%d as an argument to ATTACHSTREAM,
       so we can exit from the middle of the circuit.
     - Implement "getinfo status/circuit-established".
-    - Implement "getinfo status/version/..." so a controller can tell whether
-      the current version is recommended, and whether any versions are good,
-      and how many authorities agree.  (Patch from shibz.)
+    - Implement "getinfo status/version/..." so a controller can tell
+      whether the current version is recommended, and whether any versions
+      are good, and how many authorities agree. (Patch from shibz.)
 
   o Minor features (other):
-    - Correctly report Windows 95 OSR2 and Windows 98 SE.
     - More unit tests.
 
   o Removed features:
@@ -110,6 +113,13 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Even though windows is equally happy with / and \ as path separators,
       try to use \ consistently on windows and / consistently on unix: it
       makes the log messages nicer.
+    - Correctly report platform name on Windows 95 OSR2 and Windows 98 SE.
+
+  o Minor bugfixes (directory):
+    - Correctly enforce that elements of directory objects do not appear
+      more often than they are allowed to appear.
+    - When we are reporting the DirServer line we just parsed, we were
+      logging the second stanza of the key fingerprint, not the first.
 
   o Minor bugfixes (other):
     - Stop allowing hibernating servers to be "stable" or "fast".
@@ -117,28 +127,22 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Don't save non-general-purpose router descriptors to the disk cache,
       because we have no way of remembering what their purpose was when
       we restart.
-    - Correctly enforce that elements of directory objects do not appear
-      more often than they are allowed to appear.
-    - Fix a bug in dirserv_remove_invalid() that would cause authorities to
-      corrupt memory under some really unlikely scenarios.
     - Add even more asserts to hunt down bug 417.
-    - When we are reporting the DirServer line we just parsed, we were
-      logging the second stanza of the key fingerprint, not the first.
     - On Windows, we were preventing other processes from reading
       cached-routers while Tor was running.  (Reported by janbar)
 
-  o Minor bugfixes (controller), reported by daejees:
+  o Minor bugfixes (controller):
     - Make 'getinfo fingerprint' return a 551 error if we're not a
-      server, so we match what the control spec claims we do.
+      server, so we match what the control spec claims we do. Reported
+      by daejees.
     - Fix a typo in an error message when extendcircuit fails that
-      caused us to not follow the \r\n-based delimiter protocol.
+      caused us to not follow the \r\n-based delimiter protocol. Reported
+      by daejees.
     - The control spec described a GUARDS event, but the code
       implemented a GUARD event. Standardize on GUARD, but support people
-      asking for GUARDS too.
+      asking for GUARDS too. Reported by daejees.
     - Correct the control spec to match how the code actually responds
-      to 'getinfo addr-mappings/*'.
-
-  o Minor bugfixes (controller):
+      to 'getinfo addr-mappings/*'. Reported by daejees.
     - Actually set the purpose correctly for descriptors inserted with
       purpose=controller.
 
@@ -146,10 +150,10 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Stop passing around circuit_t and crypt_path_t pointers that are
       implicit in other procedure arguments.
     - Drop the old code to choke directory connections when the corresponding
-      or connections got full: thanks to the cell queue feature, or conns
+      OR connections got full: thanks to the cell queue feature, OR conns
       don't get full any more.
-    - Make dns_resolve handle attaching connections to circuits properly,
-      so the caller doesn't have to.
+    - Make dns_resolve() handle attaching connections to circuits
+      properly, so the caller doesn't have to.
     - Rename wants_to_read and wants_to_write to read/write_blocked_on_bw.
 
 
