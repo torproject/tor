@@ -49,8 +49,8 @@ more than 30 nodes. We close with a list of open problems in anonymous communica
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc1">
-1</a>&nbsp;&nbsp;Overview</h2>
 <a name="sec:intro">
+1</a>&nbsp;&nbsp;Overview</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -92,7 +92,7 @@ extending to a new node.
 <div class="p"><!----></div>
 <b>Separation of "protocol cleaning" from anonymity:</b>
 Onion Routing originally required a separate "application
-proxy" for each supported application protocol-most of which were
+proxy" for each supported application protocol &mdash; most of which were
 never written, so many applications were never supported.  Tor uses the
 standard and near-ubiquitous SOCKS&nbsp;[<a href="#socks4" name="CITEsocks4">32</a>] proxy interface, allowing
 us to support most TCP-based programs without modification.  Tor now
@@ -130,7 +130,7 @@ streams along each circuit to improve efficiency and anonymity.
 <b>Leaky-pipe circuit topology:</b> Through in-band signaling
 within the circuit, Tor initiators can direct traffic to nodes partway
 down the circuit. This novel approach
-allows traffic to exit the circuit from the middle-possibly
+allows traffic to exit the circuit from the middle &mdash; possibly
 frustrating traffic shape and volume attacks based on observing the end
 of the circuit. (It also allows for long-range padding if
 future research shows this to be worthwhile.)
@@ -146,7 +146,7 @@ or flooding and send less data until the congestion subsides.
 
 <div class="p"><!----></div>
 <b>Directory servers:</b> The earlier Onion Routing design
-planned to flood state information through the network-an approach
+planned to flood state information through the network &mdash; an approach
 that can be unreliable and complex. Tor takes a simplified view toward distributing this
 information. Certain more trusted nodes act as <em>directory
 servers</em>: they provide signed directories describing known
@@ -164,7 +164,7 @@ from his node.
 <div class="p"><!----></div>
 <b>End-to-end integrity checking:</b> The original Onion Routing
 design did no integrity checking on data. Any node on the
-circuit could change the contents of data cells as they passed by-for
+circuit could change the contents of data cells as they passed by &mdash; for
 example, to alter a connection request so it would connect
 to a different webserver, or to `tag' encrypted traffic and look for
 corresponding corrupted traffic at the network edges&nbsp;[<a href="#minion-design" name="CITEminion-design">15</a>].
@@ -218,8 +218,8 @@ Routing project in Section&nbsp;<a href="#sec:conclusion">10</a>.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc2">
-2</a>&nbsp;&nbsp;Related work</h2>
 <a name="sec:related-work">
+2</a>&nbsp;&nbsp;Related work</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -377,8 +377,8 @@ Eternity and Free&nbsp;Haven.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc3">
-3</a>&nbsp;&nbsp;Design goals and assumptions</h2>
 <a name="sec:assumptions">
+3</a>&nbsp;&nbsp;Design goals and assumptions</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -404,7 +404,7 @@ this goal for non-anonymous users talking to hidden servers,
 however; see Section&nbsp;<a href="#sec:rendezvous">5</a>.)
 
 <div class="p"><!----></div>
-<b>Usability:</b> A hard-to-use system has fewer users-and because
+<b>Usability:</b> A hard-to-use system has fewer users &mdash; and because
 anonymity systems hide users among users, a system with fewer users
 provides less anonymity.  Usability is thus not only a convenience:
 it is a security requirement&nbsp;[<a href="#econymics" name="CITEeconymics">1</a>,<a href="#back01" name="CITEback01">5</a>]. Tor should
@@ -474,8 +474,8 @@ to the network.
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc3.1">
-3.1</a>&nbsp;&nbsp;Threat Model</h3>
 <a name="subsec:threat-model">
+3.1</a>&nbsp;&nbsp;Threat Model</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -504,7 +504,7 @@ which points in the network he should attack.
 Our adversary might try to link an initiator Alice with her
 communication partners, or try to build a profile of Alice's
 behavior. He might mount passive attacks by observing the network edges
-and correlating traffic entering and leaving the network-by
+and correlating traffic entering and leaving the network &mdash; by
 relationships in packet timing, volume, or externally visible
 user-selected
 options. The adversary can also mount active attacks by compromising
@@ -516,7 +516,7 @@ network stops; or by introducing patterns into traffic that can later be
 detected. The adversary might subvert the directory servers to give users
 differing views of network state. Additionally, he can try to decrease
 the network's reliability by attacking nodes or by performing antisocial
-activities from reliable nodes and trying to get them taken down-making
+activities from reliable nodes and trying to get them taken down &mdash; making
 the network unreliable flushes users to other less anonymous
 systems, where they may be easier to attack. We summarize
 in Section&nbsp;<a href="#sec:attacks">7</a> how well the Tor design defends against
@@ -526,8 +526,8 @@ each of these attacks.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc4">
-4</a>&nbsp;&nbsp;The Tor Design</h2>
 <a name="sec:design">
+4</a>&nbsp;&nbsp;The Tor Design</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -570,8 +570,8 @@ fairness issues.
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc4.1">
-4.1</a>&nbsp;&nbsp;Cells</h3>
 <a name="subsec:cells">
+4.1</a>&nbsp;&nbsp;Cells</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -627,8 +627,8 @@ in more detail below.
 </center>
 <div class="p"><!----></div>
      <h3><a name="tth_sEc4.2">
-4.2</a>&nbsp;&nbsp;Circuits and streams</h3>
 <a name="subsec:circuits">
+4.2</a>&nbsp;&nbsp;Circuits and streams</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -662,8 +662,9 @@ without harming user experience.<br />
 </a>
 </center>
 <div class="p"><!----></div>
-<font size="+1"><b>Constructing a circuit</b></font><a name="subsubsec:constructing-a-circuit">
-</a><br />
+<a name="subsubsec:constructing-a-circuit"></a>
+<font size="+1"><b>Constructing a circuit</b></font>
+<br />
 A user's OP constructs circuits incrementally, negotiating a
 symmetric key with each OR on the circuit, one hop at a time. To begin
 creating a new circuit, the OP (call her Alice) sends a
@@ -704,7 +705,7 @@ extend one hop further.
 <div class="p"><!----></div>
 This circuit-level handshake protocol achieves unilateral entity
 authentication (Alice knows she's handshaking with the OR, but
-the OR doesn't care who is opening the circuit-Alice uses no public key
+the OR doesn't care who is opening the circuit &mdash; Alice uses no public key
 and remains anonymous) and unilateral key authentication
 (Alice and the OR agree on a key, and Alice knows only the OR learns
 it). It also achieves forward
@@ -797,8 +798,8 @@ attack&nbsp;[<a href="#freedom21-security" name="CITEfreedom21-security">4</a>] 
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc4.3">
-4.3</a>&nbsp;&nbsp;Opening and closing streams</h3>
 <a name="subsec:tcp">
+4.3</a>&nbsp;&nbsp;Opening and closing streams</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -818,7 +819,7 @@ now accepts data from the application's TCP stream, packaging it into
 the chosen OR.
 
 <div class="p"><!----></div>
-There's a catch to using SOCKS, however-some applications pass the
+There's a catch to using SOCKS, however &mdash; some applications pass the
 alphanumeric hostname to the Tor client, while others resolve it into
 an IP address first and then pass the IP address to the Tor client. If
 the application does DNS resolution first, Alice thereby reveals her
@@ -855,8 +856,8 @@ connections.
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc4.4">
-4.4</a>&nbsp;&nbsp;Integrity checking on streams</h3>
 <a name="subsec:integrity-checking">
+4.4</a>&nbsp;&nbsp;Integrity checking on streams</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -920,8 +921,8 @@ receive a bad hash.
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc4.5">
-4.5</a>&nbsp;&nbsp;Rate limiting and fairness</h3>
 <a name="subsec:rate-limit">
+4.5</a>&nbsp;&nbsp;Rate limiting and fairness</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -955,8 +956,8 @@ attacks.
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc4.6">
-4.6</a>&nbsp;&nbsp;Congestion control</h3>
 <a name="subsec:congestion">
+4.6</a>&nbsp;&nbsp;Congestion control</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -1018,8 +1019,8 @@ and delay; see Section&nbsp;<a href="#sec:in-the-wild">8</a>.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc5">
-5</a>&nbsp;&nbsp;Rendezvous Points and hidden services</h2>
 <a name="sec:rendezvous">
+5</a>&nbsp;&nbsp;Rendezvous Points and hidden services</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -1144,7 +1145,7 @@ those users can switch to accessing Bob's service via
 the Tor rendezvous system.
 
 <div class="p"><!----></div>
-Bob's introduction points are themselves subject to DoS-he must
+Bob's introduction points are themselves subject to DoS &mdash; he must
 open many introduction points or risk such an attack.
 He can provide selected users with a current list or future schedule of
 unadvertised introduction points;
@@ -1170,7 +1171,7 @@ by the hash of his public key.  Bob's webserver is unmodified,
 and doesn't even know that it's hidden behind the Tor network.
 
 <div class="p"><!----></div>
-Alice's applications also work unchanged-her client interface
+Alice's applications also work unchanged &mdash; her client interface
 remains a SOCKS proxy.  We encode all of the necessary information
 into the fully qualified domain name (FQDN) Alice uses when establishing her
 connection. Location-hidden services use a virtual top level domain
@@ -1205,20 +1206,20 @@ service, to encourage volunteers to offer introduction and rendezvous
 services. Tor's introduction points do not output any bytes to the
 clients; the rendezvous points don't know the client or the server,
 and can't read the data being transmitted. The indirection scheme is
-also designed to include authentication/authorization-if Alice doesn't
+also designed to include authentication/authorization &mdash; if Alice doesn't
 include the right cookie with her request for service, Bob need not even
 acknowledge his existence.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc6">
-6</a>&nbsp;&nbsp;Other design decisions</h2>
 <a name="sec:other-design">
+6</a>&nbsp;&nbsp;Other design decisions</h2>
 </a>
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc6.1">
-6.1</a>&nbsp;&nbsp;Denial of service</h3>
 <a name="subsec:dos">
+6.1</a>&nbsp;&nbsp;Denial of service</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -1270,8 +1271,8 @@ extra complexity still require investigation.
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc6.2">
-6.2</a>&nbsp;&nbsp;Exit policies and abuse</h3>
 <a name="subsec:exitpolicies">
+6.2</a>&nbsp;&nbsp;Exit policies and abuse</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -1304,7 +1305,7 @@ nodes that will connect anywhere. On the other end are <em>middleman</em>
 nodes that only relay traffic to other Tor nodes, and <em>private exit</em>
 nodes that only connect to a local host or network.  A private
 exit can allow a client to connect to a given host or
-network more securely-an external adversary cannot eavesdrop traffic
+network more securely &mdash; an external adversary cannot eavesdrop traffic
 between the private exit and the final destination, and so is less sure of
 Alice's destination and activities. Most onion routers in the current
 network function as
@@ -1348,7 +1349,7 @@ an adversary needs to monitor for traffic analysis, and places a
 greater burden on the exit nodes.  This tension can be seen in the
 Java Anon Proxy
 cascade model, wherein only one node in each cascade needs to handle
-abuse complaints-but an adversary only needs to observe the entry
+abuse complaints &mdash; but an adversary only needs to observe the entry
 and exit of a cascade to perform traffic analysis on all that
 cascade's users. The hydra model (many entries, few exits) presents a
 different compromise: only a few exit nodes are needed, but an
@@ -1367,8 +1368,8 @@ project&nbsp;[<a href="#darkside" name="CITEdarkside">37</a>] give us a glimpse 
 
 <div class="p"><!----></div>
      <h3><a name="tth_sEc6.3">
-6.3</a>&nbsp;&nbsp;Directory Servers</h3>
 <a name="subsec:dirservers">
+6.3</a>&nbsp;&nbsp;Directory Servers</h3>
 </a>
 
 <div class="p"><!----></div>
@@ -1403,7 +1404,7 @@ to bootstrap each client's view of the network.
 <div class="p"><!----></div>
 When a directory server receives a signed statement for an OR, it
 checks whether the OR's identity key is recognized. Directory
-servers do not advertise unrecognized ORs-if they did,
+servers do not advertise unrecognized ORs &mdash; if they did,
 an adversary could take over the network by creating many
 servers&nbsp;[<a href="#sybil" name="CITEsybil">22</a>]. Instead, new nodes must be approved by the
 directory
@@ -1414,7 +1415,7 @@ in Section&nbsp;<a href="#sec:maintaining-anonymity">9</a>.
 <div class="p"><!----></div>
 Of course, a variety of attacks remain. An adversary who controls
 a directory server can track clients by providing them different
-information-perhaps by listing only nodes under its control, or by
+information &mdash; perhaps by listing only nodes under its control, or by
 informing only certain clients about a given node. Even an external
 adversary can exploit differences in client knowledge: clients who use
 a node listed on one directory server but not the others are vulnerable.
@@ -1460,8 +1461,8 @@ central point.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc7">
-7</a>&nbsp;&nbsp;Attacks and Defenses</h2>
 <a name="sec:attacks">
+7</a>&nbsp;&nbsp;Attacks and Defenses</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -1558,7 +1559,7 @@ be completed.  (Thanks to the perfect forward secrecy of session
 keys, the attacker cannot force nodes to decrypt recorded
 traffic once the circuits have been closed.)  Additionally, building
 circuits that cross jurisdictions can make legal coercion
-harder-this phenomenon is commonly called "jurisdictional
+harder &mdash; this phenomenon is commonly called "jurisdictional
 arbitrage." The Java Anon Proxy project recently experienced the
 need for this approach, when
 a German court forced them to add a backdoor to
@@ -1580,7 +1581,7 @@ to solve this latter problem.
 <em>Run an onion proxy.</em> It is expected that end users will
 nearly always run their own local onion proxy. However, in some
 settings, it may be necessary for the proxy to run
-remotely-typically, in institutions that want
+remotely &mdash; typically, in institutions that want
 to monitor the activity of those connecting to the proxy.
 Compromising an onion proxy compromises all future connections
 through it.
@@ -1603,7 +1604,7 @@ that those ORs are trustworthy and independent, then occasionally
 some user will choose one of those ORs for the start and another
 as the end of a circuit. If an adversary
 controls m &gt; 1 of N nodes, he can correlate at most
-([m/N])<sup>2</sup> of the traffic-although an
+([m/N])<sup>2</sup> of the traffic &mdash; although an
 adversary
 could still attract a disproportionately large amount of traffic
 by running an OR with a permissive exit policy, or by
@@ -1644,7 +1645,7 @@ some political heat.
 <div class="p"><!----></div>
 <em>Distribute hostile code.</em> An attacker could trick users
 into running subverted Tor software that did not, in fact, anonymize
-their connections-or worse, could trick ORs into running weakened
+their connections &mdash; or worse, could trick ORs into running weakened
 software that provided users with less anonymity.  We address this
 problem (but do not solve it completely) by signing all Tor releases
 with an official public key, and including an entry in the directory
@@ -1741,8 +1742,8 @@ with a session key shared by Alice and Bob.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc8">
-8</a>&nbsp;&nbsp;Early experiences: Tor in the Wild</h2>
 <a name="sec:in-the-wild">
+8</a>&nbsp;&nbsp;Early experiences: Tor in the Wild</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -1751,7 +1752,7 @@ As of mid-May 2004, the Tor network consists of 32 nodes
 matures. (For comparison, the current remailer network
 has about 40 nodes.) Each node has at least a 768Kb/768Kb connection, and
 many have 10Mb. The number of users varies (and of course, it's hard to
-tell for sure), but we sometimes have several hundred users-administrators at
+tell for sure), but we sometimes have several hundred users &mdash; administrators at
 several companies have begun sending their entire departments' web
 traffic through Tor, to block other divisions of
 their company from reading their traffic. Tor users have reported using
@@ -1766,7 +1767,7 @@ cells (a bit under half a gigabyte) per week. On average, about 80%
 of each 498-byte payload is full for cells going back to the client,
 whereas about 40% is full for cells coming from the client. (The difference
 arises because most of the network's traffic is web browsing.) Interactive
-traffic like SSH brings down the average a lot-once we have more
+traffic like SSH brings down the average a lot &mdash; once we have more
 experience, and assuming we can resolve the anonymity issues, we may
 partition traffic into two relay cell sizes: one to handle
 bulk traffic and one for interactive traffic.
@@ -1779,7 +1780,7 @@ issues since the network was deployed in October
 resolve bugs, and get a feel for what users actually want from an
 anonymity system.  Even though having more users would bolster our
 anonymity sets, we are not eager to attract the Kazaa or warez
-communities-we feel that we must build a reputation for privacy, human
+communities &mdash; we feel that we must build a reputation for privacy, human
 rights, research, and other socially laudable activities.
 
 <div class="p"><!----></div>
@@ -1816,8 +1817,8 @@ topology will help us choose among alternatives when the time comes.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc9">
-9</a>&nbsp;&nbsp;Open Questions in Low-latency Anonymity</h2>
 <a name="sec:maintaining-anonymity">
+9</a>&nbsp;&nbsp;Open Questions in Low-latency Anonymity</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -1913,7 +1914,7 @@ Will users abandon the system because of this brittleness? How well
 does the method in Section&nbsp;<a href="#subsec:dos">6.1</a> allow streams to survive
 node failure? If affected users rebuild circuits immediately, how much
 anonymity is lost? It seems the problem is even worse in a peer-to-peer
-environment-such systems don't yet provide an incentive for peers to
+environment &mdash; such systems don't yet provide an incentive for peers to
 stay connected when they're done retrieving content, so we would expect
 a higher churn rate.
 
@@ -1921,8 +1922,8 @@ a higher churn rate.
 
 <div class="p"><!----></div>
  <h2><a name="tth_sEc10">
-10</a>&nbsp;&nbsp;Future Directions</h2>
 <a name="sec:conclusion">
+10</a>&nbsp;&nbsp;Future Directions</h2>
 </a>
 
 <div class="p"><!----></div>
@@ -1955,7 +1956,7 @@ we need to explore more approaches to limiting abuse, and understand
 why most people don't bother using privacy systems.
 
 <div class="p"><!----></div>
-<em>Cover traffic:</em> Currently Tor omits cover traffic-its costs
+<em>Cover traffic:</em> Currently Tor omits cover traffic &mdash; its costs
 in performance and bandwidth are clear but its security benefits are
 not well understood. We must pursue more research on link-level cover
 traffic and long-range cover traffic to determine whether some simple padding
@@ -2484,3 +2485,4 @@ by <a href="http://hutchinson.belmont.ma.us/tth/">
 T<sub><font size="-1">T</font></sub>H</a>,
 version 3.59.<br />On 18 May 2004, 10:45.</small>
 </body></html>
+
