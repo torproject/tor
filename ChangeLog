@@ -37,6 +37,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Fix a bug in dirserv_remove_invalid() that would cause authorities
       to corrupt memory under some really unlikely scenarios.
 
+  o Major bugfixes:
+    - If a directory authority is down, skip it when deciding where to get
+      networkstatus objects or descriptors. Otherwise we keep asking
+      every 10 seconds forever.
+
   o Minor fixes (resource management):
     - Count the number of open sockets separately from the number
       of active connection_t objects. This will let us avoid underusing
