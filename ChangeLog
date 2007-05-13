@@ -40,7 +40,13 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
   o Major bugfixes:
     - If a directory authority is down, skip it when deciding where to get
       networkstatus objects or descriptors. Otherwise we keep asking
-      every 10 seconds forever.
+      every 10 seconds forever. Fixes bug 384.
+    - Count it as a failure if we fetch a valid network-status but we 
+      don't want to keep it. Otherwise we'll keep fetching it and keep
+      not wanting to keep it. Fixes part of bug 422.
+    - If all of our dirservers have given us bad or no networkstatuses 
+      lately, then stop hammering them once per minute even when we
+      think they're failed. Fixes another part of bug 422.
 
   o Minor fixes (resource management):
     - Count the number of open sockets separately from the number
@@ -125,6 +131,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       more often than they are allowed to appear.
     - When we are reporting the DirServer line we just parsed, we were
       logging the second stanza of the key fingerprint, not the first.
+    - When we have k non-v2 authorities in our DirServer config,
+      we ignored as many as k v2 authorities while updating our
+      network-statuses.
 
   o Minor bugfixes (other):
     - Stop allowing hibernating servers to be "stable" or "fast".
