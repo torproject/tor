@@ -8,7 +8,7 @@ const char dns_c_id[] =
 /**
  * \file dns.c
  * \brief Implements a local cache for DNS results for Tor servers.
- * This is implemetned as a wrapper around Adam Langley's eventdns.c code.
+ * This is implemented as a wrapper around Adam Langley's eventdns.c code.
  * (We can't just use gethostbyname() and friends because we really need to
  * be nonblocking.)
  **/

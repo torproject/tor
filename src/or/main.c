@@ -515,8 +515,8 @@ conn_write_callback(int fd, short events, void *_conn)
     if (!conn->marked_for_close) {
       /* this connection is broken. remove it. */
       log_fn(LOG_WARN,LD_BUG,
-           "unhandled error on write for %s connection (fd %d); removing",
-           conn_type_to_string(conn->type), conn->s);
+             "unhandled error on write for %s connection (fd %d); removing",
+             conn_type_to_string(conn->type), conn->s);
       tor_fragile_assert();
       if (CONN_IS_EDGE(conn)) {
         /* otherwise we cry wolf about duplicate close */

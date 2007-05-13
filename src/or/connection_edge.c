@@ -29,8 +29,7 @@ static smartlist_t *redirect_exit_list = NULL;
 
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
 static int connection_ap_process_natd(edge_connection_t *conn);
-static int connection_exit_connect_dir(edge_connection_t *exit_conn,
-                                       or_circuit_t *circ);
+static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int hostname_is_noconnect_address(const char *address);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
@@ -2226,7 +2225,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     tor_assert(or_circ);
     if (or_circ->p_conn && or_circ->p_conn->_base.addr)
       n_stream->_base.addr = or_circ->p_conn->_base.addr;
-    return connection_exit_connect_dir(n_stream, or_circ);
+    return connection_exit_connect_dir(n_stream);
   }
 
   log_debug(LD_EXIT,"about to start the dns_resolve().");
@@ -2393,57 +2392,57 @@ connection_exit_connect(edge_connection_t *edge_conn)
  * bridge connection with a socketpair, create a new directory conn, and join
  * them together.  Return 0 on success (or if there was an error we could send
  * back an end cell for).  Return -(some circuit end reason) if the circuit
- * needs to be torn down.  Either connects exit_conn, frees it, or marks it,
- * as appropriate.
+ * needs to be torn down.  Either connects <b>exitconn<b/>, frees it,
+ * or marks it, as appropriate.
  *
  * DOCDOC no longer uses socketpair
  */
 static int
-connection_exit_connect_dir(edge_connection_t *exit_conn,
-                            or_circuit_t *circ)
+connection_exit_connect_dir(edge_connection_t *exitconn)
 {
-  dir_connection_t *dir_conn = NULL;
+  dir_connection_t *dirconn = NULL;
+  or_circuit_t *circ = TO_OR_CIRCUIT(exitconn->on_circuit);
 
   log_info(LD_EXIT, "Opening local connection for anonymized directory exit");
 
-  exit_conn->_base.state = EXIT_CONN_STATE_OPEN;
+  exitconn->_base.state = EXIT_CONN_STATE_OPEN;
 
-  dir_conn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR));
+  dirconn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR));
 
-  dir_conn->_base.addr = 0x7f000001;
-  dir_conn->_base.port = 0;
-  dir_conn->_base.address = tor_strdup("Tor network");
-  dir_conn->_base.type = CONN_TYPE_DIR;
-  dir_conn->_base.purpose = DIR_PURPOSE_SERVER;
-  dir_conn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
+  dirconn->_base.addr = 0x7f000001;
+  dirconn->_base.port = 0;
+  dirconn->_base.address = tor_strdup("Tor network");
+  dirconn->_base.type = CONN_TYPE_DIR;
+  dirconn->_base.purpose = DIR_PURPOSE_SERVER;
+  dirconn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
 
-  connection_link_connections(TO_CONN(dir_conn), TO_CONN(exit_conn));
+  connection_link_connections(TO_CONN(dir_conn), TO_CONN(exitconn));
 
-  if (connection_add(TO_CONN(exit_conn))<0) {
-    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT);
-    connection_free(TO_CONN(exit_conn));
-    connection_free(TO_CONN(dir_conn));
+  if (connection_add(TO_CONN(exitconn))<0) {
+    connection_edge_end(exitconn, END_STREAM_REASON_RESOURCELIMIT);
+    connection_free(TO_CONN(exitconn));
+    connection_free(TO_CONN(dirconn));
     return 0;
   }
 
-  exit_conn->next_stream = circ->n_streams;
-  circ->n_streams = exit_conn;
+  exitconn->next_stream = circ->n_streams;
+  circ->n_streams = exitconn;
 
-  if (connection_add(TO_CONN(dir_conn))<0) {
-    connection_edge_end(exit_conn, END_STREAM_REASON_RESOURCELIMIT);
-    connection_close_immediate(TO_CONN(exit_conn));
-    connection_mark_for_close(TO_CONN(exit_conn));
-    connection_free(TO_CONN(dir_conn));
+  if (connection_add(TO_CONN(dirconn))<0) {
+    connection_edge_end(exitconn, END_STREAM_REASON_RESOURCELIMIT);
+    connection_close_immediate(TO_CONN(exitconn));
+    connection_mark_for_close(TO_CONN(exitconn));
+    connection_free(TO_CONN(dirconn));
     return 0;
   }
 
-  connection_start_reading(TO_CONN(dir_conn));
-  connection_start_reading(TO_CONN(exit_conn));
+  connection_start_reading(TO_CONN(dirconn));
+  connection_start_reading(TO_CONN(exitconn));
 
-  if (connection_edge_send_command(exit_conn,
+  if (connection_edge_send_command(exitconn,
                                    RELAY_COMMAND_CONNECTED, NULL, 0) < 0) {
-    connection_mark_for_close(TO_CONN(exit_conn));
-    connection_mark_for_close(TO_CONN(dir_conn));
+    connection_mark_for_close(TO_CONN(exitconn));
+    connection_mark_for_close(TO_CONN(dirconn));
     return 0;
   }
 

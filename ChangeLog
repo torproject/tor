@@ -121,8 +121,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       eventdns code.
 
   o Minor bugfixes (portability):
-    - Even though windows is equally happy with / and \ as path separators,
-      try to use \ consistently on windows and / consistently on unix: it
+    - Even though Windows is equally happy with / and \ as path separators,
+      try to use \ consistently on Windows and / consistently on Unix: it
       makes the log messages nicer.
     - Correctly report platform name on Windows 95 OSR2 and Windows 98 SE.
 
@@ -132,7 +132,7 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - When we are reporting the DirServer line we just parsed, we were
       logging the second stanza of the key fingerprint, not the first.
     - When we have k non-v2 authorities in our DirServer config,
-      we ignored as many as k v2 authorities while updating our
+      we ignored the last k authorities in the list when updating our
       network-statuses.
 
   o Minor bugfixes (other):
@@ -152,15 +152,10 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Fix a typo in an error message when extendcircuit fails that
       caused us to not follow the \r\n-based delimiter protocol. Reported
       by daejees.
-    - The control spec described a GUARDS event, but the code
-      implemented a GUARD event. Standardize on GUARD, but support people
-      asking for GUARDS too. Reported by daejees.
-    - Correct the control spec to match how the code actually responds
-      to 'getinfo addr-mappings/*'. Reported by daejees.
     - Actually set the purpose correctly for descriptors inserted with
       purpose=controller.
 
-  o Code simplifications and refactoring
+  o Code simplifications and refactoring:
     - Stop passing around circuit_t and crypt_path_t pointers that are
       implicit in other procedure arguments.
     - Drop the old code to choke directory connections when the corresponding

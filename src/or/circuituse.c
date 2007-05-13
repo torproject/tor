@@ -1216,11 +1216,11 @@ connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
       consider_recording_trackhost(conn, circ);
       /* fall through */
     case SOCKS_COMMAND_CONNECT_DIR:
-      if (connection_ap_handshake_send_begin(conn)<0)
+      if (connection_ap_handshake_send_begin(conn) < 0)
         return -1;
       break;
     default:
-      if (connection_ap_handshake_send_resolve(conn)<0)
+      if (connection_ap_handshake_send_resolve(conn) < 0)
         return -1;
   }
 

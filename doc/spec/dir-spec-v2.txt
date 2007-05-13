@@ -289,8 +289,8 @@ $Id$
          1 if it is not present.  Until 0.1.2.1-alpha-dev, this option was
          not generated, even when eventdns was in use.  Versions of Tor
          before 0.1.2.1-alpha-dev did not parse this option, so it should be
-         marked "opt".  With some future version, the old 'dnsworker' logic
-         will be removed, rendering this option of historical interest only.]
+         marked "opt".  With 0.2.0.1-alpha, the old 'dnsworker' logic has
+         been removed, rendering this option of historical interest only.]
 
 2.2. Nonterminals in router descriptors
 

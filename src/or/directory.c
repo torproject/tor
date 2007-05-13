@@ -647,7 +647,7 @@ directory_send_command(dir_connection_t *conn,
 
   if (strlen(proxystring) + strlen(url) >= 4096) {
     log_warn(LD_BUG,
-             "Squid does not like URLs longer than 4095 bytes, this "
+             "Squid does not like URLs longer than 4095 bytes, and this "
              "one is %d bytes long: %s%s",
              (int)(strlen(proxystring) + strlen(url)), proxystring, url);
   }

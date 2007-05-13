@@ -899,8 +899,8 @@ options_act(or_options_t *old_options)
   if (options->DirServers) {
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 0)<0) {
-        log_err(LD_BUG,
-            "Previously validated DirServer line could not be added!");
+        log_warn(LD_BUG,
+                 "Previously validated DirServer line could not be added!");
         return -1;
       }
     }
@@ -912,15 +912,15 @@ options_act(or_options_t *old_options)
   if (options->Bridges) {
     for (cl = options->Bridges; cl; cl = cl->next) {
       if (parse_bridge_line(cl->value, 0)<0) {
-        log_err(LD_BUG,
-            "Previously validated Bridge line could not be added!");
+        log_warn(LD_BUG,
+                 "Previously validated Bridge line could not be added!");
         return -1;
       }
     }
   }
 
   if (running_tor && rend_config_services(options, 0)<0) {
-    log_err(LD_BUG,
+    log_warn(LD_BUG,
        "Previously validated hidden services line could not be added!");
     return -1;
   }
@@ -931,8 +931,8 @@ options_act(or_options_t *old_options)
     tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
                  options->DataDirectory);
     if (check_private_dir(fn, CPD_CREATE) != 0) {
-      log_err(LD_CONFIG,
-              "Couldn't access/create private data directory \"%s\"", fn);
+      log_warn(LD_CONFIG,
+               "Couldn't access/create private data directory \"%s\"", fn);
       tor_free(fn);
       return -1;
     }
@@ -984,13 +984,13 @@ options_act(or_options_t *old_options)
 
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_keys()<0) {
-    log_err(LD_GENERAL,"Error loading rendezvous service keys");
+    log_warn(LD_GENERAL,"Error loading rendezvous service keys");
     return -1;
   }
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
-    log_err(LD_CONFIG,"Error in accounting options");
+    log_warn(LD_CONFIG,"Error in accounting options");
     return -1;
   }
   if (accounting_is_enabled(options))
@@ -1013,7 +1013,7 @@ options_act(or_options_t *old_options)
                "Worker-related options changed. Rotating workers.");
       if (server_mode(options) && !server_mode(old_options)) {
         if (init_keys() < 0) {
-          log_err(LD_BUG,"Error initializing keys; exiting");
+          log_warn(LD_BUG,"Error initializing keys; exiting");
           return -1;
         }
         ip_address_changed(0);
@@ -3689,7 +3689,7 @@ normalize_data_directory(or_options_t *options)
  if (strncmp(d,"~/",2) == 0) {
    char *fn = expand_filename(d);
    if (!fn) {
-     log_err(LD_CONFIG,"Failed to expand filename \"%s\".", d);
+     log_warn(LD_CONFIG,"Failed to expand filename \"%s\".", d);
      return -1;
    }
    if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
@@ -3719,7 +3719,7 @@ validate_data_directory(or_options_t *options)
     return -1;
   tor_assert(options->DataDirectory);
   if (strlen(options->DataDirectory) > (512-128)) {
-    log_err(LD_CONFIG, "DataDirectory is too long.");
+    log_warn(LD_CONFIG, "DataDirectory is too long.");
     return -1;
   }
   return 0;

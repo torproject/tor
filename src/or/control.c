@@ -7,7 +7,7 @@ const char control_c_id[] =
 /**
  * \file control.c
  * \brief Implementation for Tor's control-socket interface.
- *   See control-spec.txt for full details on protocol.
+ *   See doc/spec/control-spec.txt for full details on protocol.
  **/
 
 #define CONTROL_PRIVATE

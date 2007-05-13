@@ -465,24 +465,6 @@ $Id$
 
         [See also migration notes in section 2.2.1.]
 
-    "eventdns" bool NL
-
-        [At most once]
-
-        Declare whether this version of Tor is using the newer enhanced
-        dns logic.  Versions of Tor without eventdns SHOULD NOT be used for
-        reverse hostname lookups.
-
-        [All versions of Tor before 0.1.2.2-alpha should be assumed to have
-         this option set to 0 if it is not present.  All Tor versions at
-         0.1.2.2-alpha or later should be assumed to have this option set to
-         1 if it is not present.  Until 0.1.2.1-alpha-dev, this option was
-         not generated, even when eventdns was in use.  Versions of Tor
-         before 0.1.2.1-alpha-dev did not parse this option, so it should be
-         marked "opt".  With some future version, the old 'dnsworker' logic
-         will be removed, rendering this option of historical interest
-         only.]
-
    "caches-extra-info" 0|1 NL
 
        [At most once.]

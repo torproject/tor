@@ -104,8 +104,7 @@ _log_prefix(char *buf, size_t buf_len, int severity)
   t = (time_t)now.tv_sec;
 
   n = strftime(buf, buf_len, "%b %d %H:%M:%S", tor_localtime_r(&t, &tm));
-  r = tor_snprintf(buf+n, buf_len-n,
-                ".%.3ld [%s] ",
+  r = tor_snprintf(buf+n, buf_len-n, ".%.3ld [%s] ",
                    (long)now.tv_usec / 1000, sev_to_string(severity));
   if (r<0)
     return buf_len-1;

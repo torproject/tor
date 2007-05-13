@@ -4344,7 +4344,7 @@ update_router_descriptor_cache_downloads(time_t now)
             continue;
           if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
             log_warn(LD_BUG,
-                 "We have a router descriptor, but need_to_mirror=1.");
+                     "We have a router descriptor, but need_to_mirror=1.");
             rs->need_to_mirror = 0;
             continue;
           }
