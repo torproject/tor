@@ -2416,7 +2416,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
   dirconn->_base.purpose = DIR_PURPOSE_SERVER;
   dirconn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
 
-  connection_link_connections(TO_CONN(dir_conn), TO_CONN(exitconn));
+  connection_link_connections(TO_CONN(dirconn), TO_CONN(exitconn));
 
   if (connection_add(TO_CONN(exitconn))<0) {
     connection_edge_end(exitconn, END_STREAM_REASON_RESOURCELIMIT);
