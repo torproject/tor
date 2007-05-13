@@ -6,6 +6,9 @@ Changes in version 0.1.2.14 - 2007-0?-??
       behavior. (Reported by seeess, fixes bug 425.)
     - Fix a bug in dirserv_remove_invalid() that would cause authorities
       to corrupt memory under some really unlikely scenarios.
+    - If a directory authority is down, skip it when deciding where to get
+      networkstatus objects or descriptors. Otherwise we keep asking
+      every 10 seconds forever.
 
   o Minor bugfixes:
     - Actually set the purpose correctly for descriptors inserted with

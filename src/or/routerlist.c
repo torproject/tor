@@ -4051,6 +4051,7 @@ update_router_descriptor_cache_downloads(time_t now)
   n_download = 0;
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
+      trusted_dir_server_t *ds;
       smartlist_t *dl;
       dl = downloadable[ns_sl_idx] = smartlist_create();
       download_from[ns_sl_idx] = smartlist_create();
@@ -4064,6 +4065,13 @@ update_router_descriptor_cache_downloads(time_t now)
          * we take this clause out. -RD */
         continue;
       }
+
+      /* Don't try dirservers that we think are down -- we might have
+       * just tried them and just marked them as down. */
+      ds = router_get_trusteddirserver_by_digest(ns->identity_digest);
+      if (ds && !ds->is_running)
+        continue;
+
       SMARTLIST_FOREACH(ns->entries, routerstatus_t * , rs,
         {
           if (!rs->need_to_mirror)
