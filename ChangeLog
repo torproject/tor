@@ -8,7 +8,13 @@ Changes in version 0.1.2.14 - 2007-0?-??
       to corrupt memory under some really unlikely scenarios.
     - If a directory authority is down, skip it when deciding where to get
       networkstatus objects or descriptors. Otherwise we keep asking
-      every 10 seconds forever.
+      every 10 seconds forever. Fixes bug 384.
+    - Count it as a failure if we fetch a valid network-status but we
+      don't want to keep it. Otherwise we'll keep fetching it and keep
+      not wanting to keep it. Fixes part of bug 422.
+    - If all of our dirservers have given us bad or no networkstatuses
+      lately, then stop hammering them once per minute even when we
+      think they're failed. Fixes another part of bug 422.
 
   o Minor bugfixes:
     - Actually set the purpose correctly for descriptors inserted with

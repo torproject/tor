@@ -642,9 +642,10 @@ $Id$
    When choosing which documents to download, clients treat their list of
    directory authorities as a circular ring, and begin with the authority
    appearing immediately after the authority for their most recently
-   retrieved network-status document.  If this attempt fails, the client
-   retries at other caches several times, before moving on to the next
-   network-status document in sequence.
+   retrieved network-status document.  If this attempt fails (either it
+   fails to download at all, or the one it gets is not as good as the
+   one it has), the client retries at other caches several times, before
+   moving on to the next network-status document in sequence.
 
    Clients discard all network-status documents over 24 hours old.
 

@@ -2529,6 +2529,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
                   ns->networkstatus_digest, DIGEST_LEN)) {
         /* Same one we had before. */
         networkstatus_free(ns);
+        tor_assert(trusted_dir);
         log_info(LD_DIR,
                  "Not replacing network-status from %s (published %s); "
                  "we already have it.",
@@ -2543,16 +2544,19 @@ router_set_networkstatus(const char *s, time_t arrived_at,
           }
           old_ns->received_on = arrived_at;
         }
+        ++trusted_dir->n_networkstatus_failures;
         return 0;
       } else if (old_ns->published_on >= ns->published_on) {
         char old_published[ISO_TIME_LEN+1];
         format_iso_time(old_published, old_ns->published_on);
+        tor_assert(trusted_dir);
         log_info(LD_DIR,
                  "Not replacing network-status from %s (published %s);"
                  " we have a newer one (published %s) for this authority.",
                  trusted_dir->description, published,
                  old_published);
         networkstatus_free(ns);
+        ++trusted_dir->n_networkstatus_failures;
         return 0;
       } else {
         networkstatus_free(old_ns);
@@ -2917,8 +2921,12 @@ update_networkstatus_client_downloads(time_t now)
       ds = smartlist_get(trusted_dir_servers, i);
       if (! ds->is_v2_authority)
         continue;
-      if (n_failed < n_dirservers &&
-          ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
+      if (n_failed >= n_dirservers) {
+        log_info(LD_DIR, "All authorities have failed. Not trying any.");
+        smartlist_free(missing);
+        return;
+      }
+      if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
         ++n_failed;
         continue;
       }
