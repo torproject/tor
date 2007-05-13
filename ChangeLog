@@ -19,6 +19,9 @@ Changes in version 0.1.2.14 - 2007-0?-??
   o Minor bugfixes:
     - Actually set the purpose correctly for descriptors inserted with
       purpose=controller.
+    - When we have k non-v2 authorities in our DirServer config,
+      we ignored as many as k v2 authorities while updating our
+      network-statuses.
 
   o Minor features:
     - When routers publish SVN revisions in their router descriptors,
