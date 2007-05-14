@@ -1,4 +1,4 @@
-/* Copyright (c) 2001 Matej Pfajfar.
+/* oCpyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
@@ -102,61 +102,104 @@ typedef struct directory_token_t {
 
 /** Rules for whether the keyword needs an object. */
 typedef enum {
-  NO_OBJ,      /**< No object, ever. */
-  NEED_OBJ,    /**< Object is required. */
-  NEED_KEY_1024, /**< Object is required, and must be a public key of 1024 bits */
-  NEED_KEY,    /**< Object is required, and must be a public key. */
-  OBJ_OK,      /**< Object is optional. */
+  NO_OBJ,        /**< No object, ever. */
+  NEED_OBJ,      /**< Object is required. */
+  NEED_KEY_1024, /**< Object is required, and must be a 1024 bit public key */
+  NEED_KEY,      /**< Object is required, and must be a public key. */
+  OBJ_OK,        /**< Object is optional. */
 } obj_syntax;
 
-/** DOCDOC */
+#define AT_START 1
+#define AT_END 1
+
+/** Determines the parsing rules for a single token type. */
 typedef struct token_rule_t {
-  const char *t; directory_keyword v;
-  int min_args; int max_args; int concat_args;
+  /** The string value of the keyword identifying the type of item. */
+  const char *t;
+  /** The corresponding directory_keyword enum. */
+  directory_keyword v;
+  /** Minimum number of arguments for this item */
+  int min_args;
+  /** Maximum number of arguments for this item */
+  int max_args;
+  /** If true, we concatenate all arguments for this item into a single
+   * string. */
+  int concat_args;
+  /** Requirments on object syntax for this item. */
   obj_syntax os;
-  int min_cnt; int max_cnt;
+  /** Lowest number of times this item may appear in a document. */
+  int min_cnt;
+  /** Highest number of times this item may appear in a document. */
+  int max_cnt;
+  /** One or more of AT_START/AT_END to limit where the item may appear in a
+   * document. */
+  int pos;
 } token_rule_t;
 
-/** DOCDOC */
-#define END_OF_TABLE { NULL, _NIL, 0,0,0, NO_OBJ, 0, INT_MAX }
-#define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX }
-#define T0N(s,t,a,o)  { s, t, a, o, 0, INT_MAX }
-#define T1(s,t,a,o)   { s, t, a, o, 1, 1 }
-#define T1N(s,t,a,o)  { s, t, a, o, 1, INT_MAX }
-#define T01(s,t,a,o)  { s, t, a, o, 0, 1 }
+/*
+ * Helper macros to define token tables.  's' is a string, 't' is a
+ * directory_keyword, 'a' is a trio of argument multiplicities, and 'o' is an
+ * object syntax.
+ *
+ */
 
+/** Appears to indicate the end of a table. */
+#define END_OF_TABLE { NULL, _NIL, 0,0,0, NO_OBJ, 0, INT_MAX, 0 }
+/** An item with no restrictions: used for obsolete document types */
+#define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX, 0 }
+/** An item with no restrictions on multiplicity or location. */
+#define T0N(s,t,a,o)  { s, t, a, o, 0, INT_MAX, 0 }
+/** An item that must appear exactly once */
+#define T1(s,t,a,o)   { s, t, a, o, 1, 1, 0 }
+/** An item that must appear exactly once, at the start of the document */
+#define T1_START(s,t,a,o)   { s, t, a, o, 1, 1, 0, AT_START }
+/** An item that must appear exactly once, at the end of the document */
+#define T1_END(s,t,a,o)   { s, t, a, o, 1, 1, 0, AT_END }
+/** An item that must appear one or more times */
+#define T1N(s,t,a,o)  { s, t, a, o, 1, INT_MAX, 0 }
+/** An item that must appear no more than once */
+#define T01(s,t,a,o)  { s, t, a, o, 0, 1, 0 }
+
+/* Argument multiplicity: any number of arguments. */
 #define ARGS        0,INT_MAX,0
+/* Argument multiplicity: no arguments. */
 #define NO_ARGS     0,0,0
+/* Argument multiplicity: concatenate all arguments. */
 #define CONCAT_ARGS 1,1,1
+/* Argument multiplicity: at least <b>n</b> arguments. */
 #define GE(n)       n,INT_MAX,0
+/* Argument multiplicity: exactly <b>n</b> arguments. */
 #define EQ(n)       n,n,0
 
-/** DOCDOC */
+/** List of tokens allowable in router derscriptors */
 static token_rule_t routerdesc_token_table[] = {
-  T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
+  T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
   T1( "router",              K_ROUTER,              GE(5),   NO_OBJ ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
   T1( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
-  T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
-  T01("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T01("uptime",              K_UPTIME,              GE(1),   NO_OBJ ),
-  T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
   T01("fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
   T01("hibernating",         K_HIBERNATING,         GE(1),   NO_OBJ ),
+  T01("platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ ),
+  T01("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
-  T01("eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ ),
   T01("extra-info-digest",   K_EXTRA_INFO_DIGEST,   GE(1),   NO_OBJ ),
+
+  T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
   T01("caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ ),
+  T01("eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ ),
+
+  T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "bandwidth",           K_BANDWIDTH,           GE(3),   NO_OBJ ),
-  T01("platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ ),
 
   END_OF_TABLE
 };
 
+/** List of tokens allowable in extra-info documents. */
 static token_rule_t extrainfo_token_table[] = {
   T1( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
@@ -168,6 +211,8 @@ static token_rule_t extrainfo_token_table[] = {
   END_OF_TABLE
 };
 
+/** List of tokens allowable in the body part of v2 and v3 networkstatus
+ * documents. */
 static token_rule_t rtrstatus_token_table[] = {
   T1( "r",                   K_R,                   GE(8),    NO_OBJ ),
   T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
@@ -176,6 +221,8 @@ static token_rule_t rtrstatus_token_table[] = {
   END_OF_TABLE
 };
 
+/** List of tokens allowable in the header part of v2 networkstatus documents.
+ */
 static token_rule_t netstatus_token_table[] = {
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
@@ -193,11 +240,14 @@ static token_rule_t netstatus_token_table[] = {
   END_OF_TABLE
 };
 
+/** List of tokens allowable in the footer of v1/v2 directory/networkstatus
+ * footers. */
 static token_rule_t dir_footer_token_table[] = {
-  T1( "directory-signature", K_DIRECTORY_SIGNATURE, EQ(1),   NEED_OBJ ),
+  T1("directory-signature", K_DIRECTORY_SIGNATURE, EQ(1), NEED_OBJ ),
   END_OF_TABLE
 };
 
+/** List of tokens allowable in v1 diectory headers/footers. */
 static token_rule_t dir_token_table[] = {
   /* don't enforce counts; this is obsolete. */
   T( "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ ),
@@ -216,6 +266,8 @@ static token_rule_t dir_token_table[] = {
   END_OF_TABLE
 };
 
+/** List of tokens allowable in the footer of v1/v2 directory/networkstatus
+ * footers. */
 #define CERTIFICATE_MEMBERS                                                  \
   T1("dir-key-certificate-version", K_DIR_KEY_CERTIFICATE_VERSION,           \
                                                  GE(1),       NO_OBJ ),      \
@@ -307,14 +359,14 @@ static directory_token_t *find_first_by_keyword(smartlist_t *s,
                                                 directory_keyword keyword);
 static int tokenize_string(const char *start, const char *end,
                            smartlist_t *out,
-                           struct token_rule_t *table);
+                           token_rule_t *table);
 static directory_token_t *get_next_token(const char **s,
-                                         struct token_rule_t *table);
-static int check_directory_signature(const char *digest,
-                                     directory_token_t *tok,
-                                     crypto_pk_env_t *pkey,
-                                     crypto_pk_env_t *declared_key,
-                                     int check_authority);
+                                         token_rule_t *table);
+static int check_signature_token(const char *digest,
+                                 directory_token_t *tok,
+                                 crypto_pk_env_t *pkey,
+                                 int check_authority,
+                                 const char *doctype);
 static crypto_pk_env_t *find_dir_signing_key(const char *str);
 static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 
@@ -357,8 +409,8 @@ router_get_networkstatus_v2_hash(const char *s, char *digest)
                             "network-status-version","\ndirectory-signature");
 }
 
-/** DOCDOC
- */
+/** Set <b>digest</b> to the SHA-1 digest of the hash of the extrainfo
+ * string in <b>s</b>.  Return 0 on success, -1 on failure. */
 int
 router_get_extrainfo_hash(const char *s, char *digest)
 {
@@ -556,7 +608,7 @@ router_parse_directory(const char *str)
   }
   declared_key = find_dir_signing_key(str);
   note_crypto_pk_op(VERIFY_DIR);
-  if (check_directory_signature(digest, tok, NULL, declared_key, 1)<0)
+  if (check_signature_token(digest, tok, declared_key, 1, "directory")<0)
     goto err;
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
@@ -642,7 +694,8 @@ router_parse_runningrouters(const char *str)
   }
   declared_key = find_dir_signing_key(str);
   note_crypto_pk_op(VERIFY_DIR);
-  if (check_directory_signature(digest, tok, NULL, declared_key, 1) < 0)
+  if (check_signature_token(digest, tok, declared_key, 1, "running-routers")
+      < 0)
     goto err;
 
   /* Now that we know the signature is okay, and we have a
@@ -718,78 +771,64 @@ dir_signing_key_is_trusted(crypto_pk_env_t *key)
   return 1;
 }
 
-/** Check whether the K_DIRECTORY_SIGNATURE token in <b>tok</b> has a
- * good signature for <b>digest</b>. DOCDOC can be another type.
- *
- * If <b>declared_key</b> is set, the directory has declared what key
- * was used to sign it, so we will use that key only if it is an
- * authoritative directory signing key or if check_authority is 0.
- *
- * Otherwise, if pkey is provided, try to use it.
- *
- * (New callers should always use <b>declared_key</b> when possible;
- * <b>pkey</b> is only for debugging.)
+/** Check whether the object body of the token in <b>tok</b> has a good
+ * signature for <b>digest</b> using key <b>pkey</b>.  If
+ * <b>check_authority</b> is set, make sure that <b>pkey</b> is the key of a
+ * directory authority.  Use <b>doctype</b> as the type of the document when
+ * generating log messages.  Return 0 on success, negative on failure.
  */
 static int
-check_directory_signature(const char *digest,
-                          directory_token_t *tok,
-                          crypto_pk_env_t *pkey,
-                          crypto_pk_env_t *declared_key,
-                          int check_authority)
+check_signature_token(const char *digest,
+                      directory_token_t *tok,
+                      crypto_pk_env_t *pkey,
+                      int check_authority,
+                      const char *doctype)
 {
   char *signed_digest;
-  crypto_pk_env_t *_pkey = NULL;
 
-  if (declared_key) {
-    if (!check_authority || dir_signing_key_is_trusted(declared_key))
-      _pkey = declared_key;
-  }
-  if (!_pkey && pkey) {
-    /* pkey provided for debugging purposes */
-    _pkey = pkey;
-  }
-  if (!_pkey) {
-    log_warn(LD_DIR,
-             "Obsolete directory format (dir signing key not present) or "
-             "signing key not trusted--rejecting.");
+  tor_assert(pkey);
+  tor_assert(tok);
+  tor_assert(digest);
+  tor_assert(doctype);
+
+  if (check_authority && !dir_signing_key_is_trusted(pkey)) {
+    log_warn(LD_DIR, "Key on %s did not come from an authority; rejecting",
+             doctype);
     return -1;
   }
 
   if (strcmp(tok->object_type, "SIGNATURE")) {
-    log_warn(LD_DIR, "Bad object type on directory signature");
+    log_warn(LD_DIR, "Bad object type on %s signature", doctype);
     return -1;
   }
-  tor_assert(_pkey);
 
   signed_digest = tor_malloc(tok->object_size);
-  if (crypto_pk_public_checksig(_pkey, signed_digest, tok->object_body,
+  if (crypto_pk_public_checksig(pkey, signed_digest, tok->object_body,
                                 tok->object_size)
-      != 20) {
-    log_warn(LD_DIR, "Error reading directory: invalid signature.");
+      != DIGEST_LEN) {
+    log_warn(LD_DIR, "Error reading %s: invalid signature.", doctype);
     return -1;
   }
-  log_debug(LD_DIR,"Signed directory hash starts %s",
+  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
             hex_str(signed_digest,4));
   if (memcmp(digest, signed_digest, DIGEST_LEN)) {
-    log_warn(LD_DIR, "Error reading directory: signature does not match.");
+    log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
     return -1;
   }
   return 0;
 }
 
 /** Given a string *<b>s</b> containing a concatenated sequence of router
- * descriptors, parses them and stores the result in <b>dest</b>.  All routers
- * are marked running and valid.  Advances *s to a point immediately
- * following the last router entry.  Ignore any trailing router entries that
- * are not complete.
+ * descriptors (or extra-info documents if <b>is_extrainfo</b> is set), parses
+ * them and stores the result in <b>dest</b>.  All routers are marked running
+ * and valid.  Advances *s to a point immediately following the last router
+ * entry.  Ignore any trailing router entries that are not complete.
  *
  * If <b>saved_location</b> isn't SAVED_IN_CACHE, make a local copy of each
  * descriptor in the signed_descriptor_body field of each routerinfo_t.  If it
  * isn't SAVED_NOWHERE, remember the offset of each descriptor.
  *
  * Returns 0 on success and -1 on failure.
- *
- * DOCDOC is_extrainfo
  */
 int
 router_parse_list_from_string(const char **s, smartlist_t *dest,
@@ -817,6 +856,9 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
       if (strcmpstart(*s, "router ")!=0)
         break;
     }
+    /* XXXX020 this is hideously complicated.  Can't we just search for the
+     * first -----END SIGNATURE----- and be done with it?  Or the first
+     * -----END SIGNATURE----- after the first \nrouter-signature ?*/
     if (is_extrainfo && (end = strstr(*s+1, "\nextra-info"))) {
       cp = end;
       end++;
@@ -911,11 +953,9 @@ router_parse_entry_from_string(const char *s, const char *end,
                                int cache_copy)
 {
   routerinfo_t *router = NULL;
-  char signed_digest[128];
   char digest[128];
   smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
   directory_token_t *tok;
-  int t;
   struct in_addr in;
 
   if (!end) {
@@ -1086,25 +1126,15 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE);
   tor_assert(tok);
-  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
-    log_warn(LD_DIR, "Bad object type or length on router signature");
-    goto err;
-  }
   note_crypto_pk_op(VERIFY_RTR);
 #ifdef COUNT_DISTINCT_DIGESTS
   if (!verified_digests)
     verified_digests = digestmap_new();
   digestmap_set(verified_digests, signed_digest, (void*)(uintptr_t)1);
 #endif
-  if ((t=crypto_pk_public_checksig(router->identity_pkey, signed_digest,
-                                   tok->object_body, 128)) != 20) {
-    log_warn(LD_DIR, "Invalid signature %d",t);
+  if (check_signature_token(digest, tok, router->identity_pkey, 0,
+                            "router descriptor") < 0)
     goto err;
-  }
-  if (memcmp(digest, signed_digest, DIGEST_LEN)) {
-    log_warn(LD_DIR, "Mismatched signature");
-    goto err;
-  }
 
   if (!router->or_port) {
     log_warn(LD_DIR,"or_port unreadable or 0. Failing.");
@@ -1131,17 +1161,20 @@ router_parse_entry_from_string(const char *s, const char *end,
   return router;
 }
 
-/* DOCDOC */
+/** Parse a single extrainfo entry from the string <b>s</b>, ending at
+ * <b>end</b>.  (If <b>end</b> is NULL, parse up to the end of <b>s</b>.)  If
+ * <b>cache_copy</b> is true, make a copy of the extra-info document in the
+ * cache_info fields of the result.  If <b>routermap</b> is provided, use it
+ * as a map from router identity to routerinfo_t when looking up signing keys.
+ */
 extrainfo_t *
 extrainfo_parse_entry_from_string(const char *s, const char *end,
                                   int cache_copy, digestmap_t *routermap)
 {
   extrainfo_t *extrainfo = NULL;
-  char signed_digest[128];
   char digest[128];
   smartlist_t *tokens = NULL;
   directory_token_t *tok;
-  int t;
   crypto_pk_env_t *key = NULL;
   routerinfo_t *router;
 
@@ -1210,29 +1243,27 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
 
   tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE);
   tor_assert(tok);
-  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
-    log_warn(LD_DIR, "Bad object type or length on router signature");
+  if (strcmp(tok->object_type, "SIGNATURE") ||
+      tok->object_size < 128 || tok->object_size > 512) {
+    log_warn(LD_DIR, "Bad object type or length on extra-info signature");
     goto err;
   }
 
   if (key) {
     note_crypto_pk_op(VERIFY_RTR);
-    if ((t=crypto_pk_public_checksig(key, signed_digest,
-                                     tok->object_body, 128)) != 20) {
-      log_warn(LD_DIR, "Invalid signature %d",t);
+    if (check_signature_token(digest, tok, key, 0, "extra-info") < 0)
       goto err;
-    }
-    if (memcmp(digest, signed_digest, DIGEST_LEN)) {
-      log_warn(LD_DIR, "Mismatched signature");
-      goto err;
-    }
+
   } else {
-    extrainfo->pending_sig = tor_memdup(tok->object_body, 128);
+    extrainfo->pending_sig = tor_memdup(tok->object_body,
+                                        tok->object_size);
+    extrainfo->pending_sig_len = tok->object_size;
   }
 
   goto done;
  err:
-  // extrainfo_free(extrainfo); // DOCDOC
+  if (extrainfo)
+    extrainfo_free(extrainfo);
   extrainfo = NULL;
  done:
   if (tokens) {
@@ -1242,7 +1273,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   return extrainfo;
 }
 
-/** DOCDOC */
+/** Free storage held in <b>cert</b>. */
 void
 authority_cert_free(authority_cert_t *cert)
 {
@@ -1258,7 +1289,8 @@ authority_cert_free(authority_cert_t *cert)
   tor_free(cert);
 }
 
-/** DOCDOC */
+/** Parse a key certificate from <b>s</b>; point <b>end-of-string</b> to
+ * the first character after the certificate. */
 authority_cert_t *
 authority_cert_parse_from_string(const char *s, char **end_of_string)
 {
@@ -1344,7 +1376,8 @@ authority_cert_parse_from_string(const char *s, char **end_of_string)
 
   /* XXXXX This doesn't check whether the key is an authority. IS that what we
    * want? */
-  if (check_directory_signature(digest, tok, NULL, cert->identity_key, 0)) {
+  if (check_signature_token(digest, tok, cert->identity_key, 0,
+                            "key certificate")) {
     goto err;
   }
 
@@ -1664,7 +1697,8 @@ networkstatus_parse_from_string(const char *s)
   }
 
   note_crypto_pk_op(VERIFY_DIR);
-  if (check_directory_signature(ns_digest, tok, NULL, ns->signing_key, 0))
+  if (check_signature_token(ns_digest, tok, ns->signing_key, 0,
+                            "network-status") < 0)
     goto err;
 
   goto done;
@@ -1885,14 +1919,65 @@ token_free(directory_token_t *tok)
   tor_free(tok);
 }
 
-/** Helper function: read the next token from *s, advance *s to the end
- * of the token, and return the parsed token. DOCDOC table
+#define RET_ERR(msg)                                               \
+  do {                                                             \
+    if (tok) token_free(tok);                                      \
+    tok = tor_malloc_zero(sizeof(directory_token_t));              \
+    tok->tp = _ERR;                                                \
+    tok->error = tor_strdup(msg);                                  \
+    goto done_tokenizing; } while (0)
+
+static INLINE directory_token_t *
+token_check_object(const char *kwd,
+                   directory_token_t *tok, obj_syntax o_syn)
+{
+  char ebuf[128];
+  switch (o_syn) {
+    case NO_OBJ:
+      if (tok->object_body) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Unexpected object for %s", kwd);
+        RET_ERR(ebuf);
+      }
+      if (tok->key) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Unexpected public key for %s", kwd);
+        RET_ERR(ebuf);
+      }
+      break;
+    case NEED_OBJ:
+      if (!tok->object_body) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Missing object for %s", kwd);
+        RET_ERR(ebuf);
+      }
+      break;
+    case NEED_KEY_1024:
+      if (tok->key && crypto_pk_keysize(tok->key) != PK_BYTES) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Wrong size on key for %s: %d bits",
+                     kwd, (int)crypto_pk_keysize(tok->key));
+        RET_ERR(ebuf);
+      }
+      /* fall through */
+    case NEED_KEY:
+      if (!tok->key) {
+        tor_snprintf(ebuf, sizeof(ebuf), "Missing public key for %s", kwd);
+      }
+      break;
+    case OBJ_OK:
+      break;
+  }
+
+ done_tokenizing:
+  return tok;
+}
+
+/** Helper function: read the next token from *s, advance *s to the end of the
+ * token, and return the parsed token.  Parse *<b>s</b> according to the list
+ * of tokens in <b>table</b>.
  */
 static directory_token_t *
-get_next_token(const char **s, struct token_rule_t *table)
+get_next_token(const char **s, token_rule_t *table)
 {
   const char *next, *obstart;
-  int i, j, done, allocated, is_opt;
+  int i, j, done, allocated;
   directory_token_t *tok;
   obj_syntax o_syn = NO_OBJ;
   char ebuf[128];
@@ -1919,8 +2004,8 @@ get_next_token(const char **s, struct token_rule_t *table)
     tok->error = tor_strdup("Unexpected EOF"); return tok;
   }
   /* It's a keyword... but which one? */
-  is_opt = !strncmp("opt", *s, next-*s);
-  if (is_opt) {
+  if (!strncmp("opt", *s, next-*s)) {
+    /* Skip past an "opt" at the start of the line. */
     *s = eat_whitespace(next);
     next = NULL;
     if (**s)
@@ -1929,6 +2014,8 @@ get_next_token(const char **s, struct token_rule_t *table)
       RET_ERR("opt without keyword");
     }
   }
+  /* Search the table for the appropriate entry.  (I tried a binary search
+   * instead, but it wasn't any faster.) */
   for (i = 0; table[i].t ; ++i) {
     if (!strncmp(table[i].t, *s, next-*s)) {
       /* We've found the keyword. */
@@ -1990,7 +2077,7 @@ get_next_token(const char **s, struct token_rule_t *table)
   }
   *s = eat_whitespace(*s);
   if (strcmpstart(*s, "-----BEGIN ")) {
-    goto done_tokenizing;
+    goto check_object;
   }
   obstart = *s;
   *s += 11; /* length of "-----BEGIN ". */
@@ -2026,48 +2113,18 @@ get_next_token(const char **s, struct token_rule_t *table)
     }
     *s += i+6;
   }
-  switch (o_syn)
-    {
-    case NO_OBJ:
-      if (tok->object_body) {
-        tor_snprintf(ebuf, sizeof(ebuf), "Unexpected object for %s", kwd);
-        RET_ERR(ebuf);
-      }
-      if (tok->key) {
-        tor_snprintf(ebuf, sizeof(ebuf), "Unexpected public key for %s", kwd);
-        RET_ERR(ebuf);
-      }
-      break;
-    case NEED_OBJ:
-      if (!tok->object_body) {
-        tor_snprintf(ebuf, sizeof(ebuf), "Missing object for %s", kwd);
-        RET_ERR(ebuf);
-      }
-      break;
-    case NEED_KEY_1024:
-      if (tok->key && crypto_pk_keysize(tok->key) != PK_BYTES) {
-        tor_snprintf(ebuf, sizeof(ebuf), "Wrong size on key for %s: %d bits",
-                     kwd, (int)crypto_pk_keysize(tok->key));
-        RET_ERR(ebuf);
-      }
-      /* fall through */
-    case NEED_KEY:
-      if (!tok->key) {
-        tor_snprintf(ebuf, sizeof(ebuf), "Missing public key for %s", kwd);
-      }
-      break;
-    case OBJ_OK:
-      break;
-    }
+
+ check_object:
+  tok = token_check_object(kwd, tok, o_syn);
 
  done_tokenizing:
-
   return tok;
+
 #undef RET_ERR
 }
 
 /** Read all tokens from a string between <b>start</b> and <b>end</b>, and add
- * them to <b>out</b>.  DOCDOC table.
+ * them to <b>out</b>.  Parse according to the token rules in <b>table</b>.
  */
 static int
 tokenize_string(const char *start, const char *end, smartlist_t *out,
@@ -2104,6 +2161,20 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
     if (counts[table[i].v] > table[i].max_cnt) {
       log_warn(LD_DIR, "Parse error: too many %s elements.", table[i].t);
       return -1;
+    }
+    if (table[i].pos & AT_START) {
+      if (smartlist_len(out) < 1 ||
+          (tok = smartlist_get(out, 0))->tp != table[i].v) {
+        log_warn(LD_DIR, "Parse error: first item is not %s.", table[i].t);
+        return -1;
+      }
+    }
+    if (table[i].pos & AT_END) {
+      if (smartlist_len(out) < 1 ||
+          (tok = smartlist_get(out, smartlist_len(out)-1))->tp != table[i].v) {
+        log_warn(LD_DIR, "Parse error: last item is not %s.", table[i].t);
+        return -1;
+      }
     }
   }
   return 0;

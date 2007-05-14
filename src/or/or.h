@@ -1155,6 +1155,8 @@ typedef struct extrainfo_t {
   /** If present, we didn't have the right key to verify this extra-info,
    * so this is a copy of the signature in the document. */
   char *pending_sig;
+  /** DOCDOC */
+  size_t pending_sig_len;
 } extrainfo_t;
 
 /** Contents of a single router entry in a network status object.
