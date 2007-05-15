@@ -36,7 +36,7 @@ static int num_cpuworkers_busy=0;
  * the last time we got a key rotation event. */
 static time_t last_rotation_time=0;
 
-static void cpuworker_main(void *data);
+static void cpuworker_main(void *data) ATTR_NORETURN;
 static int spawn_cpuworker(void);
 static void spawn_enough_cpuworkers(void);
 static void process_pending_task(connection_t *cpuworker);

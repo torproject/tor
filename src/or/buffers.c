@@ -1093,7 +1093,7 @@ int
 fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                      int log_sockstype, int safe_socks)
 {
-  unsigned char len;
+  unsigned int len;
   char tmpbuf[INET_NTOA_BUF_LEN];
   uint32_t destip;
   enum {socks4, socks4a} socks4_prot = socks4a;
@@ -1191,18 +1191,18 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           return 1;
         case 3: /* fqdn */
           log_debug(LD_APP,"socks5: fqdn address type");
+          if (req->command == SOCKS_COMMAND_RESOLVE_PTR) {
+            log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
+                     "hostname type. Rejecting.");
+            return -1;
+          }
           len = (unsigned char)*(buf->cur+4);
-          if (buf->datalen < 7u+len) /* addr/port there? */
+          if (buf->datalen < 7+len) /* addr/port there? */
             return 0; /* not yet */
           if (len+1 > MAX_SOCKS_ADDR_LEN) {
             log_warn(LD_APP,
                      "socks5 hostname is %d bytes, which doesn't fit in "
                      "%d. Rejecting.", len+1,MAX_SOCKS_ADDR_LEN);
-            return -1;
-          }
-          if (req->command == SOCKS_COMMAND_RESOLVE_PTR) {
-            log_warn(LD_APP, "socks5 received RESOLVE_PTR command with "
-                     "hostname type. Rejecting.");
             return -1;
           }
           memcpy(req->address,buf->cur+5,len);

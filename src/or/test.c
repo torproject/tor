@@ -1207,6 +1207,8 @@ static tor_mutex_t *_thread_test_start1 = NULL;
 static tor_mutex_t *_thread_test_start2 = NULL;
 static strmap_t *_thread_test_strmap = NULL;
 
+static void _thread_test_func(void* _s) ATTR_NORETURN;
+
 static void
 _thread_test_func(void* _s)
 {

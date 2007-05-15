@@ -615,11 +615,24 @@ if test x$enable_gcc_warnings = xyes; then
 #error
 #endif]), have_gcc4=yes, have_gcc4=no)
 
+  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+#if !defined(__GNUC__) || (__GNUC_MINOR__ < 2)
+#error
+#endif]), have_gcc42=yes, have_gcc42=no)
+
   CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Wwrite-strings -Waggregate-return -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wbad-function-cast -Wswitch-enum -Werror"
 
   if test x$have_gcc4 = xyes ; then 
     # These warnings break gcc 3.3.5 and work on gcc 4.0.2
     CFLAGS="$CFLAGS -Winit-self -Wmissing-field-initializers -Wdeclaration-after-statement -Wold-style-definition"
+  fi
+
+  if test x$have_gcc42 = xyes ; then 
+    # These warnings break gcc 4.0.2 and work on gcc 4.2
+    # XXXX020 Use -fstack-protector.
+    # XXXX020 See if any of these work with earlier versions.
+    # XXXX020 See if we can get -Wstrict-overflow=x for x>1 working.
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -W"
   fi
 
 ##This will break the world on some 64-bit architectures

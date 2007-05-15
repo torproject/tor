@@ -44,6 +44,8 @@
   do { log_fn(LOG_ERR, LD_NET, "Error while %s: %s", act,              \
               tor_socket_strerror(tor_socket_errno(_s))); } while (0)
 
+static void usage(void) ATTR_NORETURN;
+
 /** Set *<b>out</b> to a newly allocated SOCKS4a resolve request with
  * <b>username</b> and <b>hostname</b> as provided.  Return the number
  * of bytes in the request. */

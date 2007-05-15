@@ -87,7 +87,7 @@ smartlist_ensure_capacity(smartlist_t *sl, int size)
     int higher = sl->capacity * 2;
     while (size > higher)
       higher *= 2;
-    tor_assert(higher > sl->capacity); /* detect overflow */
+    tor_assert(higher > 0); /* detect overflow */
     sl->capacity = higher;
     sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
   }

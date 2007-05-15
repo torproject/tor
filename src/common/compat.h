@@ -97,6 +97,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define ATTR_NORETURN __attribute__((noreturn))
 #define ATTR_PURE __attribute__((pure))
 #define ATTR_MALLOC __attribute__((malloc))
+#define ATTR_NORETURN __attribute__((noreturn))
 #define ATTR_NONNULL(x) __attribute__((nonnull x))
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
  * of <b>exp</b> will probably be true. */
@@ -108,6 +109,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define ATTR_NORETURN
 #define ATTR_PURE
 #define ATTR_MALLOC
+#define ATTR_NORETURN
 #define ATTR_NONNULL(x)
 #define PREDICT_LIKELY(exp) (exp)
 #define PREDICT_UNLIKELY(exp) (exp)

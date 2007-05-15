@@ -943,13 +943,18 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   const char *errstr = NULL;
   char *password;
   size_t password_len;
+  const char *cp;
+  int i;
 
   if (TOR_ISXDIGIT(body[0])) {
-    int i = 0;
-    while (TOR_ISXDIGIT(body[i]))
-      ++i;
-    password = tor_malloc(i/2 + 1);
-    if (base16_decode(password, i/2+1, body, i)<0) {
+    cp = body;
+    while (TOR_ISXDIGIT(*cp))
+      ++cp;
+    i = cp - body;
+    tor_assert(i>0);
+    password_len = i/2;
+    password = tor_malloc(password_len + 1);
+    if (base16_decode(password, password_len+1, body, i)<0) {
       connection_write_str_to_buf(
             "551 Invalid hexadecimal encoding.  Maybe you tried a plain text "
             "password?  If so, the standard requires that you put it in "
@@ -957,7 +962,6 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       tor_free(password);
       return 0;
     }
-    password_len = i/2;
   } else if (TOR_ISSPACE(body[0])) {
     password = tor_strdup("");
     password_len = 0;

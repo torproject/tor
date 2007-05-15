@@ -858,8 +858,9 @@ tv_add(struct timeval *a, const struct timeval *b)
 void
 tv_addms(struct timeval *a, long ms)
 {
-  a->tv_usec += (ms * 1000) % 1000000;
-  a->tv_sec += ((ms * 1000) / 1000000) + (a->tv_usec / 1000000);
+  uint64_t us = ms * 1000;
+  a->tv_usec += us % 1000000;
+  a->tv_sec += (us / 1000000) + (a->tv_usec / 1000000);
   a->tv_usec %= 1000000;
 }
 

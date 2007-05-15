@@ -141,8 +141,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     goto err;
   }
 
-  tor_assert(DIGEST_LEN + r <= RELAY_PAYLOAD_SIZE); /* we overran something */
   payload_len = DIGEST_LEN + r;
+  tor_assert(payload_len <= RELAY_PAYLOAD_SIZE); /* we overran something */
 
   if (relay_send_command_from_edge(0, TO_CIRCUIT(introcirc),
                                    RELAY_COMMAND_INTRODUCE1,
