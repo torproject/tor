@@ -3113,7 +3113,7 @@ options_init_from_torrc(int argc, char **argv)
 
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
     char vbuf[128];
-    if (tor_svn_revision && strlen(tor_svn_revision)) {
+    if (tor_svn_revision != NULL && strlen(tor_svn_revision)) {
       tor_snprintf(vbuf, sizeof(vbuf), " (r%s)", tor_svn_revision);
     } else {
       vbuf[0] = 0;

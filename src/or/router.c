@@ -1244,7 +1244,7 @@ get_platform_str(char *platform, size_t len)
 {
   char svn_version_buf[128];
   if (!strcmpend(VERSION, "-dev") &&
-      tor_svn_revision && strlen(tor_svn_revision)) {
+      tor_svn_revision != NULL && strlen(tor_svn_revision)) {
     tor_snprintf(svn_version_buf, sizeof(svn_version_buf), " (r%s)",
                  tor_svn_revision);
   } else {
