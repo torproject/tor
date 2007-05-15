@@ -51,6 +51,8 @@ static int dirserv_thinks_router_is_reachable(routerinfo_t *router,
                                               time_t now);
 static void clear_cached_dir(cached_dir_t *d);
 
+static int dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
+
 /************** Fingerprint handling code ************/
 
 #define FP_NAMED   1  /**< Listed in fingerprint file. */
@@ -521,84 +523,56 @@ dirserv_add_multiple_descriptors(const char *desc, const char **msg)
   int r=100; /* higher than any actual return value. */
   int r_tmp;
   const char *msg_out;
+  smartlist_t *list;
+  const char *s;
+  int n_parsed = 0;
 
-  while (desc && *desc) {
-    const char *eos = strstr(desc, "\nrouter-signature");
-    const char *next = NULL;
-    if (eos) {
-      char *next_extra = strstr(eos, "\nextra-info");
-      char *next_routerinfo = strstr(eos, "\nrouter ");
-      if (next_extra)
-        next = next_extra;
-      if (!next || (next_routerinfo && next_routerinfo < next))
-        next = next_routerinfo;
-    }
-    if (next)
-      ++next;
-
-    r_tmp = dirserv_add_descriptor(desc, next, &msg_out);
-    desc = next;
-
-    if (r_tmp < r) {
-      r = r_tmp;
-      *msg = msg_out;
-    }
+  s = desc;
+  list = smartlist_create();
+  if (!router_parse_list_from_string(&s, list, SAVED_NOWHERE, 0)) {
+    SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
+        r_tmp = dirserv_add_descriptor(ri, &msg_out);
+        if (r_tmp < r) {
+          r = r_tmp;
+          *msg = msg_out;
+        }
+      });
   }
+  n_parsed += smartlist_len(list);
+  smartlist_clear(list);
 
-  return r <= 2 ? r : -2;
+  s = desc;
+  if (!router_parse_list_from_string(&s, list, SAVED_NOWHERE, 1)) {
+    SMARTLIST_FOREACH(list, extrainfo_t *, ei, {
+        r_tmp = dirserv_add_extrainfo(ei, &msg_out);
+        if (r_tmp < r) {
+          r = r_tmp;
+          *msg = msg_out;
+        }
+      });
+  }
+  n_parsed += smartlist_len(list);
+  smartlist_free(list);
+
+  return r <= 2 ? r : 2;
 }
 
-/** Parse the server descriptor at <b>desc</b> and maybe insert it into
- * the list of server descriptors. Set *<b>msg</b> to a message that
- * should be passed back to the origin of this descriptor.
+/** Parse the server descriptor at <b>desc</b> and maybe insert it into the
+ * list of server descriptors. Set *<b>msg</b> to a message that should be
+ * passed back to the origin of this descriptor. DOCDOC no longer parses.
  *
  * Return 2 if descriptor is well-formed and accepted;
  *  1 if well-formed and accepted but origin should hear *msg;
  *  0 if well-formed but redundant with one we already have;
  * -1 if it looks vaguely like a router descriptor but rejected;
- * -2 if we can't find a router descriptor in <b>desc</b>.
  */
 int
-dirserv_add_descriptor(const char *desc, const char *end, const char **msg)
+dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
 {
   int r;
-  routerinfo_t *ri = NULL, *ri_old = NULL;
-  extrainfo_t *ei = NULL;
-  tor_assert(msg);
-  *msg = NULL;
-  desc = eat_whitespace(desc);
+  routerinfo_t *ri_old;
+  signed_descriptor_t *desc = &ri->cache_info;
 
-  if (!strcmpstart(desc, "extra-info")) {
-    /* It's an extra-info thingie. */
-    routerlist_t *rl = router_get_routerlist();
-    ei = extrainfo_parse_entry_from_string(desc, end, 1, rl->identity_map);
-    if (!ei) {
-      log_warn(LD_DIRSERV, "Couldn't parse uploaded extra-info descriptor");
-      *msg = "Rejected: couldn't parse extra-info descriptor";
-      return -2;
-    }
-    ri = router_get_by_digest(ei->cache_info.identity_digest);
-    if (!ri) {
-      *msg = "No corresponding router descriptor for extra-info descriptor";
-      extrainfo_free(ei);
-      return -1;
-    }
-    if (routerinfo_incompatible_with_extrainfo(ri, ei)) {
-      *msg = "Router descriptor incompatible with extra-info descriptor";
-      extrainfo_free(ei);
-      return -1;
-    }
-    router_add_extrainfo_to_routerlist(ei, msg, 0, 0);
-    return 2;
-  }
-
-  /* Check: is the descriptor syntactically valid? */
-  ri = router_parse_entry_from_string(desc, end, 1);
-  if (!ri) {
-    log_warn(LD_DIRSERV, "Couldn't parse uploaded server descriptor");
-    *msg = "Rejected: Couldn't parse server descriptor.";
-    return -2;
-  }
   /* Check whether this descriptor is semantically identical to the last one
    * from this server.  (We do this here and not in router_add_to_routerlist
    * because we want to be able to accept the newest router descriptor that
@@ -634,6 +608,29 @@ dirserv_add_descriptor(const char *desc, const char *end, const char **msg)
     }
     return r == 0 ? 2 : 1;
   }
+}
+
+/** DOCDOC */
+static int
+dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
+{
+  routerinfo_t *ri;
+  tor_assert(msg);
+  *msg = NULL;
+
+  ri = router_get_by_digest(ei->cache_info.identity_digest);
+  if (!ri) {
+    *msg = "No corresponding router descriptor for extra-info descriptor";
+    extrainfo_free(ei);
+    return -1;
+  }
+  if (routerinfo_incompatible_with_extrainfo(ri, ei)) {
+    *msg = "Router descriptor incompatible with extra-info descriptor";
+    extrainfo_free(ei);
+    return -1;
+  }
+  router_add_extrainfo_to_routerlist(ei, msg, 0, 0);
+  return 2;
 }
 
 /** Remove all descriptors whose nicknames or fingerprints no longer

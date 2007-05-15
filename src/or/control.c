@@ -3032,7 +3032,7 @@ control_event_address_mapped(const char *from, const char *to, time_t expires)
  * been done with it, and also optionally give an explanation/reason. */
 int
 control_event_or_authdir_new_descriptor(const char *action,
-                                        const char *descriptor,
+                                        signed_descriptor_t *desc,
                                         const char *msg)
 {
   char firstline[1024];
@@ -3050,7 +3050,8 @@ control_event_or_authdir_new_descriptor(const char *action,
                msg ? msg : "");
 
   /* Escape the server descriptor properly */
-  esclen = write_escaped_data(descriptor, strlen(descriptor), 1, &esc);
+  esclen = write_escaped_data(desc->signed_descriptor_body,
+                              desc->signed_descriptor_len, 1, &esc);
 
   totallen = strlen(firstline) + esclen + 1;
   buf = tor_malloc(totallen);

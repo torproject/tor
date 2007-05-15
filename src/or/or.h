@@ -2487,7 +2487,7 @@ int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,
                                  time_t expires);
 int control_event_or_authdir_new_descriptor(const char *action,
-                                            const char *descriptor,
+                                            signed_descriptor_t *desc,
                                             const char *msg);
 int control_event_my_descriptor_changed(void);
 int control_event_networkstatus_changed(smartlist_t *statuses);
@@ -2572,8 +2572,7 @@ int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_multiple_descriptors(const char *desc, const char **msg);
-int dirserv_add_descriptor(const char *desc, const char *end,
-                           const char **msg);
+int dirserv_add_descriptor(routerinfo_t *ri, const char **msg);
 int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
                                         const char *question, char **answer);
 void dirserv_free_descriptors(void);

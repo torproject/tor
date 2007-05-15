@@ -833,13 +833,14 @@ check_signature_token(const char *digest,
 int
 router_parse_list_from_string(const char **s, smartlist_t *dest,
                               saved_location_t saved_location,
-                              int is_extrainfo)
+                              int want_extrainfo)
 {
   routerinfo_t *router;
   extrainfo_t *extrainfo;
   signed_descriptor_t *signed_desc;
   void *elt;
-  const char *end, *cp, *start;
+  const char *end, *start;
+  int have_extrainfo;
 
   tor_assert(s);
   tor_assert(*s);
@@ -849,60 +850,46 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
   while (1) {
     *s = eat_whitespace(*s);
     /* Don't start parsing the rest of *s unless it contains a router. */
-    if (is_extrainfo) {
-      if (strcmpstart(*s, "extra-info")!=0)
-        break;
+    if (strcmpstart(*s, "extra-info ")==0) {
+      have_extrainfo = 1;
+    } else  if (strcmpstart(*s, "router ")==0) {
+      have_extrainfo = 0;
     } else {
-      if (strcmpstart(*s, "router ")!=0)
+      /* skip junk. */
+      const char *ei = strstr(*s, "\nextra-info ");
+      const char *ri = strstr(*s, "\nrouter ");
+      if (ri && (!ei || ri < ei)) {
+        have_extrainfo = 0;
+        *s = ri + 1;
+      } else if (ei) {
+        have_extrainfo = 1;
+        *s = ei + 1;
+      } else {
         break;
+      }
     }
-    /* XXXX020 this is hideously complicated.  Can't we just search for the
-     * first -----END SIGNATURE----- and be done with it?  Or the first
-     * -----END SIGNATURE----- after the first \nrouter-signature ?*/
-    if (is_extrainfo && (end = strstr(*s+1, "\nextra-info"))) {
-      cp = end;
-      end++;
-    } else if (!is_extrainfo && (end = strstr(*s+1, "\nrouter "))) {
-      cp = end;
-      end++;
-    } else if ((end = strstr(*s+1, "\ndirectory-signature"))) {
-      cp = end;
-      end++;
-    } else {
-      cp = end = *s+strlen(*s);
-    }
+    end = strstr(*s, "\nrouter-signature");
+    if (end)
+      end = strstr(end, "\n-----END SIGNATURE-----\n");
+    if (end)
+      end += strlen("\n-----END SIGNATURE-----\n");
 
-    while (cp > *s && (!*cp || TOR_ISSPACE(*cp)))
-      --cp;
-    /* cp now points to the last non-space character in this descriptor. */
+    if (!end)
+      break;
 
-    while (cp > *s  && *cp != '\n')
-      --cp;
-    /* cp now points to the first \n before the last non-blank line in this
-     * descriptor */
-
-    if (strcmpstart(cp, "\n-----END SIGNATURE-----\n")) {
-      log_info(LD_DIR, "Ignoring truncated router descriptor.");
-      *s = end;
-      continue;
-    }
-
-    if (is_extrainfo) {
+    if (have_extrainfo && want_extrainfo) {
       routerlist_t *rl = router_get_routerlist();
       extrainfo = extrainfo_parse_entry_from_string(*s, end,
                                        saved_location != SAVED_IN_CACHE,
                                        rl->identity_map);
       signed_desc = &extrainfo->cache_info;
       elt = extrainfo;
-    } else {
+    } else if (!have_extrainfo && !want_extrainfo) {
       router = router_parse_entry_from_string(*s, end,
                                           saved_location != SAVED_IN_CACHE);
       signed_desc = &router->cache_info;
       elt = router;
-    }
-
-    if (!elt) {
-      log_warn(LD_DIR, "Error reading router; skipping");
+    } else {
       *s = end;
       continue;
     }
@@ -2138,7 +2125,6 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
   s = &start;
   if (!end)
     end = start+strlen(start);
-  memset(counts, 0, sizeof(counts));
   for (i = 0; i < _NIL; ++i)
     counts[i] = 0;
   while (*s < end && (!tok || tok->tp != _EOF)) {

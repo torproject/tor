@@ -328,7 +328,7 @@ init_keys(void)
       log_err(LD_GENERAL,"Error initializing descriptor.");
       return -1;
     }
-    if (dirserv_add_descriptor(mydesc, NULL, &m) < 0) {
+    if (dirserv_add_descriptor(router_get_my_routerinfo(), &m) < 0) {
       log_err(LD_GENERAL,"Unable to add own descriptor to directory: %s",
               m?m:"<unknown error>");
       return -1;
