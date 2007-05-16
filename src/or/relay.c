@@ -1807,7 +1807,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
   }
   tor_assert(*next_circ_on_conn_p(circ,conn));
 
-  for (n_flushed = 0; n_flushed < max && queue->head; ++n_flushed) {
+  for (n_flushed = 0; n_flushed < max && queue->head; ) {
     packed_cell_t *cell = cell_queue_pop(queue);
     tor_assert(*next_circ_on_conn_p(circ,conn));
 
