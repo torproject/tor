@@ -221,11 +221,11 @@ accounting_parse_options(or_options_t *options, int validate_only)
     cfg_start_hour = (int)h;
     cfg_start_min = (int)m;
   }
-  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
+  SMARTLIST_FOREACH(items, char *, item, tor_free(item));
   smartlist_free(items);
   return 0;
  err:
-  SMARTLIST_FOREACH(items, char *, s, tor_free(s));
+  SMARTLIST_FOREACH(items, char *, item, tor_free(item));
   smartlist_free(items);
   return -1;
 }

@@ -237,18 +237,18 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
       }
       *result_addr = ntohl(get_uint32(reply_buf));
     } else if (reply_buf[3] == 3) {
-      size_t len;
+      size_t result_len;
       if (read_all(s, reply_buf, 1, 1) != 1) {
         log_err(LD_NET, "Error reading address_length in socks5 response.");
         return -1;
       }
-      len = *(uint8_t*)(reply_buf);
-      *result_hostname = tor_malloc(len+1);
-      if (read_all(s, *result_hostname, len, 1) != (int) len) {
+      result_len = *(uint8_t*)(reply_buf);
+      *result_hostname = tor_malloc(result_len+1);
+      if (read_all(s, *result_hostname, result_len, 1) != (int) result_len) {
         log_err(LD_NET, "Error reading hostname in socks5 response.");
         return -1;
       }
-      (*result_hostname)[len] = '\0';
+      (*result_hostname)[result_len] = '\0';
     }
   }
 

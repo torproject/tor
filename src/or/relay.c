@@ -1116,8 +1116,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return 0;
       }
       if (circ->n_conn) {
-        uint8_t reason = *(uint8_t*)(cell->payload + RELAY_HEADER_SIZE);
-        connection_or_send_destroy(circ->n_circ_id, circ->n_conn, reason);
+        uint8_t trunc_reason = *(uint8_t*)(cell->payload + RELAY_HEADER_SIZE);
+        connection_or_send_destroy(circ->n_circ_id, circ->n_conn,
+                                   trunc_reason);
         circuit_set_n_circid_orconn(circ, 0, NULL);
       }
       log_debug(LD_EXIT, "Processed 'truncate', replying.");

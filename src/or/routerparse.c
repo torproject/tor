@@ -611,7 +611,7 @@ router_parse_directory(const char *str)
   if (check_signature_token(digest, tok, declared_key, 1, "directory")<0)
     goto err;
 
-  SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
   tokens = NULL;
 
@@ -649,7 +649,7 @@ router_parse_directory(const char *str)
  done:
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
   return r;
@@ -707,7 +707,7 @@ router_parse_runningrouters(const char *str)
  err:
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
   return r;
@@ -1139,7 +1139,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   router = NULL;
  done:
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
   if (exit_policy_tokens) {
@@ -1254,7 +1254,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   extrainfo = NULL;
  done:
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, tok, token_free(tok));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
   return extrainfo;

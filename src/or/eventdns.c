@@ -1679,8 +1679,8 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 	r = sendto(port->socket, req->response, req->response_len, 0,
 			   (struct sockaddr*) &req->addr, req->addrlen);
 	if (r<0) {
-		int err = last_error(port->socket);
-		if (! error_is_eagain(err))
+		int e = last_error(port->socket);
+		if (! error_is_eagain(e))
 			return -1;
 
 		if (port->pending_replies) {
@@ -2514,7 +2514,7 @@ search_try_next(struct request *const req) {
 			// this name without a postfix
 			if (string_num_dots(req->search_origname) < req->search_state->ndots) {
 				// yep, we need to try it raw
-				struct request *const newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
+				newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
 				log(EVDNS_LOG_DEBUG, "Search: trying raw query %s", req->search_origname);
 				if (newreq) {
 					request_submit(newreq);

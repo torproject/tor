@@ -1685,7 +1685,6 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
     }
   });
   if (smartlist_len(unrecognized)) {
-    int i;
     for (i=0; i < smartlist_len(unrecognized)-1; ++i)
       connection_printf_to_buf(conn,
                                "552-Unrecognized key \"%s\"\r\n",
@@ -1705,10 +1704,10 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
       connection_write_str_to_buf("\r\n", conn);
     } else {
       char *esc = NULL;
-      size_t len;
-      len = write_escaped_data(v, strlen(v), 1, &esc);
+      size_t esc_len;
+      esc_len = write_escaped_data(v, strlen(v), 1, &esc);
       connection_printf_to_buf(conn, "250+%s=\r\n", k);
-      connection_write_to_buf(esc, len, TO_CONN(conn));
+      connection_write_to_buf(esc, esc_len, TO_CONN(conn));
       tor_free(esc);
     }
   }
@@ -2051,12 +2050,12 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
     if (get_purpose(&purp, 0, &purpose) < 0) {
       connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
                                purp);
-      SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+      SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
       smartlist_free(args);
       return 0;
     }
   }
-  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
   smartlist_free(args);
   read_escaped_data(cp, len-(cp-body), 1, &desc);
 
@@ -2974,9 +2973,9 @@ control_event_descriptors_changed(smartlist_t *routers)
   }
   if (EVENT_IS_INTERESTING1S(EVENT_NEW_DESC)) {
     char *ids = smartlist_join_strings(identities, " ", 0, &len);
-    size_t len = strlen(ids)+32;
-    msg = tor_malloc(len);
-    tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
+    size_t ids_len = strlen(ids)+32;
+    msg = tor_malloc(ids_len);
+    tor_snprintf(msg, ids_len, "650 NEWDESC %s\r\n", ids);
     send_control_event_string(EVENT_NEW_DESC, SHORT_NAMES|ALL_FORMATS, msg);
     tor_free(ids);
     tor_free(msg);
@@ -2984,16 +2983,16 @@ control_event_descriptors_changed(smartlist_t *routers)
   if (EVENT_IS_INTERESTING1L(EVENT_NEW_DESC)) {
     smartlist_t *names = smartlist_create();
     char *ids;
-    size_t len;
+    size_t names_len;
     SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
         char *b = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
         router_get_verbose_nickname(b, ri);
         smartlist_add(names, b);
       });
-    ids = smartlist_join_strings(names, " ", 0, &len);
-    len = strlen(ids)+32;
-    msg = tor_malloc(len);
-    tor_snprintf(msg, len, "650 NEWDESC %s\r\n", ids);
+    ids = smartlist_join_strings(names, " ", 0, &names_len);
+    names_len = strlen(ids)+32;
+    msg = tor_malloc(names_len);
+    tor_snprintf(msg, names_len, "650 NEWDESC %s\r\n", ids);
     send_control_event_string(EVENT_NEW_DESC, LONG_NAMES|ALL_FORMATS, msg);
     tor_free(ids);
     tor_free(msg);

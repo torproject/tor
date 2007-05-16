@@ -1074,10 +1074,10 @@ retry_listeners(int type, config_line_t *cfg,
   /* Now open all the listeners that are configured but not opened. */
   i = 0;
   if (!never_open_conns) {
-    SMARTLIST_FOREACH(launch, config_line_t *, cfg,
+    SMARTLIST_FOREACH(launch, config_line_t *, cfg_line,
       {
-        conn = connection_create_listener(cfg->value, (uint16_t) port_option,
-                                          type);
+        conn = connection_create_listener(cfg_line->value,
+                                          (uint16_t) port_option, type);
         if (!conn) {
           i = -1;
         } else {
@@ -1088,8 +1088,8 @@ retry_listeners(int type, config_line_t *cfg,
   }
 
   if (free_launch_elts) {
-    SMARTLIST_FOREACH(launch, config_line_t *, cfg,
-                      config_free_lines(cfg));
+    SMARTLIST_FOREACH(launch, config_line_t *, cfg_line,
+                      config_free_lines(cfg_line));
   }
   smartlist_free(launch);
 
@@ -2351,8 +2351,8 @@ client_check_address_changed(int sock)
 
   /* Okay.  If we've used this address previously, we're okay. */
   ip_out = ntohl(out_addr.sin_addr.s_addr);
-  SMARTLIST_FOREACH(outgoing_addrs, uint32_t*, ip,
-                    if (*ip == ip_out) return;
+  SMARTLIST_FOREACH(outgoing_addrs, uint32_t*, ip_ptr,
+                    if (*ip_ptr == ip_out) return;
                     );
 
   /* Uh-oh.  We haven't connected from this address before. Has the interface
@@ -2370,7 +2370,7 @@ client_check_address_changed(int sock)
      * keys.  First, reset the state. */
     log(LOG_NOTICE, LD_NET, "Our IP has changed.  Rotating keys...");
     last_interface_ip = iface_ip;
-    SMARTLIST_FOREACH(outgoing_addrs, void*, ip, tor_free(ip));
+    SMARTLIST_FOREACH(outgoing_addrs, void*, ip_ptr, tor_free(ip_ptr));
     smartlist_clear(outgoing_addrs);
     smartlist_add(outgoing_addrs, ip);
     /* Okay, now change our keys. */

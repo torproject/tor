@@ -1130,9 +1130,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                         trusted_dir_server_t *, ds,
         {
-          char *cp = tor_malloc(HEX_DIGEST_LEN+1);
-          base16_encode(cp, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
-          smartlist_add(which, cp);
+          char *hex = tor_malloc(HEX_DIGEST_LEN+1);
+          base16_encode(hex, HEX_DIGEST_LEN+1, ds->digest, DIGEST_LEN);
+          smartlist_add(which, hex);
         });
     } else {
       /* Can we even end up here? -- weasel*/
@@ -1160,7 +1160,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       if (smartlist_len(which)) {
         dir_networkstatus_download_failed(which, status_code);
       }
-      SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
+      SMARTLIST_FOREACH(which, char *, s, tor_free(s));
       smartlist_free(which);
     }
   }
@@ -1711,7 +1711,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                "Client asked for network status lists, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
       write_http_status_line(conn, 503, "Directory busy, try again later");
-      SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
+      SMARTLIST_FOREACH(dir_fps, char *, fp, tor_free(fp));
       smartlist_free(dir_fps);
       return 0;
     }

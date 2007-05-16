@@ -664,7 +664,7 @@ rep_hist_update_state(or_state_t *state)
     s_values  = r?&state->BWHistoryReadValues  :&state->BWHistoryWriteValues;
 
     if (*s_values) {
-      SMARTLIST_FOREACH(*s_values, char *, cp, tor_free(cp));
+      SMARTLIST_FOREACH(*s_values, char *, val, tor_free(val));
       smartlist_free(*s_values);
     }
     if (! server_mode(get_options())) {

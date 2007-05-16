@@ -455,10 +455,10 @@ circuit_free_all(void)
     if (! CIRCUIT_IS_ORIGIN(global_circuitlist)) {
       or_circuit_t *or_circ = TO_OR_CIRCUIT(global_circuitlist);
       while (or_circ->resolving_streams) {
-        edge_connection_t *next;
-        next = or_circ->resolving_streams->next_stream;
+        edge_connection_t *next_conn;
+        next_conn = or_circ->resolving_streams->next_stream;
         connection_free(TO_CONN(or_circ->resolving_streams));
-        or_circ->resolving_streams = next;
+        or_circ->resolving_streams = next_conn;
       }
     }
     circuit_free(global_circuitlist);

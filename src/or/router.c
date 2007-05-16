@@ -1321,11 +1321,11 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   if (router->declared_family && smartlist_len(router->declared_family)) {
     size_t n;
-    char *s = smartlist_join_strings(router->declared_family, " ", 0, &n);
+    char *family = smartlist_join_strings(router->declared_family, " ", 0, &n);
     n += strlen("family ") + 2; /* 1 for \n, 1 for \0. */
     family_line = tor_malloc(n);
-    tor_snprintf(family_line, n, "family %s\n", s);
-    tor_free(s);
+    tor_snprintf(family_line, n, "family %s\n", family);
+    tor_free(family);
   } else {
     family_line = tor_strdup("");
   }
