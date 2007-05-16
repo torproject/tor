@@ -828,6 +828,13 @@ typedef struct or_connection_t {
    * not, we can rate limit it further. */
   uint8_t client_used:1;
 
+  circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
+                                  * connection, which half of the space should
+                                  * we use? */
+  uint16_t next_circ_id; /**< Which circ_id do we try to use next on
+                          * this connection?  This is always in the
+                          * range 0..1<<15-1. */
+
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
   /* bandwidth* and read_bucket only used by ORs in OPEN state: */
@@ -845,13 +852,6 @@ typedef struct or_connection_t {
   struct circuit_t *active_circuits;
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
-
-  circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
-                                  * connection, which half of the space should
-                                  * we use? */
-  uint16_t next_circ_id; /**< Which circ_id do we try to use next on
-                          * this connection?  This is always in the
-                          * range 0..1<<15-1. */
 } or_connection_t;
 
 /** Subtype of connection_t for an "edge connection" -- that is, a socks (ap)
@@ -1124,6 +1124,7 @@ typedef struct {
 #define ROUTER_PURPOSE_CONTROLLER 1
 /** Tor should use this router only for bridge positions in circuits. */
 #define ROUTER_PURPOSE_BRIDGE 1
+  /*XXXX020 Should both of the above be 1? -NM */
   uint8_t purpose; /** What positions in a circuit is this router good for? */
 
   /* The below items are used only by authdirservers for
@@ -1246,14 +1247,6 @@ typedef struct networkstatus_t {
   uint32_t source_addr; /**< Canonical directory server IP. */
   uint16_t source_dirport; /**< Canonical directory server dirport. */
 
-  char identity_digest[DIGEST_LEN]; /**< Digest of signing key. */
-  char *contact; /**< How to contact directory admin? (may be NULL). */
-  crypto_pk_env_t *signing_key; /**< Key used to sign this directory. */
-  char *client_versions; /**< comma-separated list of recommended client
-                          * versions. */
-  char *server_versions; /**< comma-separated list of recommended server
-                          * versions. */
-
   unsigned int binds_names:1; /**< True iff this directory server binds
                                * names. */
   unsigned int recommends_versions:1; /**< True iff this directory server
@@ -1264,6 +1257,15 @@ typedef struct networkstatus_t {
   /** True iff this directory server marks malfunctioning directories as
    * bad. */
   unsigned int lists_bad_directories:1;
+
+  char identity_digest[DIGEST_LEN]; /**< Digest of signing key. */
+  char *contact; /**< How to contact directory admin? (may be NULL). */
+  crypto_pk_env_t *signing_key; /**< Key used to sign this directory. */
+  char *client_versions; /**< comma-separated list of recommended client
+                          * versions. */
+  char *server_versions; /**< comma-separated list of recommended server
+                          * versions. */
+
   smartlist_t *entries; /**< List of routerstatus_t*.   This list is kept
                          * sorted by identity_digest. */
 } networkstatus_t;
@@ -1299,9 +1301,9 @@ typedef struct extend_info_t {
   char nickname[MAX_HEX_NICKNAME_LEN+1]; /**< This router's nickname for
                                           * display. */
   char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
-  uint32_t addr; /**< IP address in host order. */
   uint16_t port; /**< OR port. */
   uint8_t router_purpose; /**< General, controller, or bridge. */
+  uint32_t addr; /**< IP address in host order. */
   crypto_pk_env_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
 
@@ -1463,6 +1465,9 @@ typedef struct circuit_t {
    * allowing n_streams to add any more cells. (OR circuit only.) */
   unsigned int streams_blocked_on_p_conn : 1;
 
+  uint8_t state; /**< Current status of this circuit. */
+  uint8_t purpose; /**< Why are we creating this circuit? */
+
   /** How many relay data cells can we package (read from edge streams)
    * on this circuit before we receive a circuit-level sendme cell asking
    * for more? */
@@ -1482,9 +1487,6 @@ typedef struct circuit_t {
   time_t timestamp_created; /**< When was this circuit created? */
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
                            * circuit is clean. */
-
-  uint8_t state; /**< Current status of this circuit. */
-  uint8_t purpose; /**< Why are we creating this circuit? */
 
   uint16_t marked_for_close; /**< Should we close this circuit at the end of
                               * the main loop? (If true, holds the line number
