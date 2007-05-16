@@ -2361,10 +2361,11 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
     }
   }
 
-  for (i = hi; i >= lo; --i) {
+  i = hi;
+  do {
     if (rmv[i-lo])
       routerlist_remove_old(routerlist, smartlist_get(lst, i), i);
-  }
+  } while (--i >= lo);
   tor_free(must_keep);
   tor_free(rmv);
   tor_free(lifespans);
@@ -4258,17 +4259,22 @@ update_router_descriptor_client_downloads(time_t now)
 
   if (! should_delay) {
     int i, n_per_request;
+    const char *req_plural = "", *rtr_plural = "";
     n_per_request = (n_downloadable+MIN_REQUESTS-1) / MIN_REQUESTS;
     if (n_per_request > MAX_DL_PER_REQUEST)
       n_per_request = MAX_DL_PER_REQUEST;
     if (n_per_request < MIN_DL_PER_REQUEST)
       n_per_request = MIN_DL_PER_REQUEST;
 
+    if (n_downloadable > n_per_request)
+      req_plural = rtr_plural = "s";
+    else if (n_downloadable > 1)
+      rtr_plural = "s";
+
     log_info(LD_DIR,
              "Launching %d request%s for %d router%s, %d at a time",
              (n_downloadable+n_per_request-1)/n_per_request,
-             n_downloadable>n_per_request?"s":"",
-             n_downloadable, n_downloadable>1?"s":"", n_per_request);
+             req_plural, n_downloadable, rtr_plural, n_per_request);
     smartlist_sort_digests(downloadable);
     for (i=0; i < n_downloadable; i += n_per_request) {
       initiate_descriptor_downloads(NULL, downloadable, i, i+n_per_request);

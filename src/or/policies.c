@@ -508,29 +508,30 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
   previous = NULL;
   while (ap) {
     for (tmp=ap->next; tmp; tmp=tmp->next) {
-      if (ap->policy_type != tmp->policy_type &&
-          addr_policy_intersects(ap, tmp)) {
-        tmp = NULL; /* so that we advance previous and ap */
-        break;
-      }
-      if (ap->policy_type == tmp->policy_type &&
-          addr_policy_covers(tmp, ap)) {
-        log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is already "
-            "covered by %s.", ap->string, tmp->string);
-        victim = ap;
-        ap = ap->next;
-
-        if (previous) {
-          assert(previous->next == victim);
-          previous->next = victim->next;
-        } else {
-          assert(*dest == victim);
-          *dest = victim->next;
+      if (ap->policy_type != tmp->policy_type) {
+        if (addr_policy_intersects(ap, tmp)) {
+          tmp = NULL; /* so that we advance previous and ap */
+          break;
         }
+      } else { /* policy_types are equal. */
+        if (addr_policy_covers(tmp, ap)) {
+          log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is already "
+              "covered by %s.", ap->string, tmp->string);
+          victim = ap;
+          ap = ap->next;
 
-        victim->next = NULL;
-        addr_policy_free(victim);
-        break;
+          if (previous) {
+            assert(previous->next == victim);
+            previous->next = victim->next;
+          } else {
+            assert(*dest == victim);
+            *dest = victim->next;
+          }
+
+          victim->next = NULL;
+          addr_policy_free(victim);
+          break;
+        }
       }
     }
     if (!tmp) {

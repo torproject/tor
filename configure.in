@@ -631,8 +631,7 @@ if test x$enable_gcc_warnings = xyes; then
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 Use -fstack-protector.
     # XXXX020 See if any of these work with earlier versions.
-    # XXXX020 See if we can get -Wstrict-overflow=x for x>1 working.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -W"
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=5"
   fi
 
 ##This will break the world on some 64-bit architectures
