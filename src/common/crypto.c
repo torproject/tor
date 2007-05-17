@@ -1494,12 +1494,14 @@ crypto_expand_key_material(const char *key_in, size_t key_in_len,
   tor_assert(key_out_len <= DIGEST_LEN*256);
 
   memcpy(tmp, key_in, key_in_len);
-  for (cp = key_out, i=0; key_out_len >= DIGEST_LEN;
+  for (cp = key_out, i=0; key_out_len;
        ++i, cp += DIGEST_LEN, key_out_len -= DIGEST_LEN) {
     tmp[key_in_len] = i;
     if (crypto_digest(digest, tmp, key_in_len+1))
       goto err;
     memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len));
+    if (key_out_len < DIGEST_LEN)
+      break;
   }
   memset(tmp, 0, key_in_len+1);
   tor_free(tmp);
