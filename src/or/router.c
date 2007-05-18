@@ -1341,7 +1341,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "opt fingerprint %s\n"
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
-                    "opt extra-info-digest %s\n"
+                    "opt extra-info-digest %s\n%s"
                     "onion-key\n%s"
                     "signing-key\n%s"
                     "%s%s%s",
@@ -1357,6 +1357,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,
     extra_info_digest,
+    options->DownloadExtraInfo ? "opt caches-extra-info 1\n" : "",
     onion_pkey, identity_pkey,
     family_line, bandwidth_usage,
     we_are_hibernating() ? "opt hibernating 1\n" : "");

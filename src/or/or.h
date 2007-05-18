@@ -360,14 +360,17 @@ typedef enum {
 /** A connection to a directory server: download one or more server
  * descriptors. */
 #define DIR_PURPOSE_FETCH_SERVERDESC 6
+/** A connection to a directory server: download one or more extra-info
+ * documents. */
+#define DIR_PURPOSE_FETCH_EXTRAINFO 7
 /** A connection to a directory server: upload a server descriptor. */
-#define DIR_PURPOSE_UPLOAD_DIR 7
+#define DIR_PURPOSE_UPLOAD_DIR 8
 /** A connection to a directory server: upload a rendezvous
  * descriptor. */
-#define DIR_PURPOSE_UPLOAD_RENDDESC 8
+#define DIR_PURPOSE_UPLOAD_RENDDESC 9
 /** Purpose for connection at a directory server. */
-#define DIR_PURPOSE_SERVER 9
-#define _DIR_PURPOSE_MAX 9
+#define DIR_PURPOSE_SERVER 10
+#define _DIR_PURPOSE_MAX 10
 
 #define _EXIT_PURPOSE_MIN 1
 /** This exit stream wants to do an ordinary connect. */
@@ -1068,6 +1071,8 @@ typedef struct signed_descriptor_t {
   off_t saved_offset;
   /* DOCDOC */
   unsigned int do_not_cache : 1;
+  /* DOCDOC; XXXX020 replace with something smarter. */
+  unsigned int tried_downloading_extrainfo : 1;
 } signed_descriptor_t;
 
 /** Information about another onion router in the network. */
@@ -1322,6 +1327,7 @@ typedef enum {
   V2_AUTHORITY      = 1 << 1,
   HIDSERV_AUTHORITY = 1 << 2,
   BRIDGE_AUTHORITY  = 1 << 3,
+  EXTRAINFO_CACHE   = 1 << 4,  /* not precisely an authority type. */
 } authority_type_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u
@@ -1919,6 +1925,10 @@ typedef struct {
                                 * with weird characters. */
  /** If true, we try resolving hostnames with weird characters. */
   int ServerDNSAllowNonRFC953Hostnames;
+
+  /** If true, we try to download extra-info documents (and we serve them,
+   * if we are a cache).  For authorities, this is always true. */
+  int DownloadExtraInfo;
 
 } or_options_t;
 
@@ -2560,6 +2570,7 @@ int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,
                                     int decode_hex, int sort_uniq);
 char *directory_dump_request_log(void);
+int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
 /********************************* dirserv.c ***************************/
 
@@ -3125,6 +3136,10 @@ int router_load_single_router(const char *s, uint8_t purpose,
 void router_load_routers_from_string(const char *s,
                                      saved_location_t saved_location,
                                      smartlist_t *requested_fingerprints);
+void router_load_extrainfo_from_string(const char *s,
+                                       saved_location_t saved_location,
+                                       smartlist_t *requested_fps);
+
 typedef enum {
   NS_FROM_CACHE, NS_FROM_DIR_BY_FP, NS_FROM_DIR_ALL, NS_GENERATED
 } networkstatus_source_t;
@@ -3147,6 +3162,7 @@ local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
 routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 void update_networkstatus_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);
+void update_extrainfo_downloads(time_t now);
 void routers_update_all_from_networkstatus(time_t now);
 void routers_update_status_from_networkstatus(smartlist_t *routers,
                                               int reset_failures);

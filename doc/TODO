@@ -92,7 +92,8 @@ Things we'd like to do in 0.2.0.x:
         version 0.2.0.0-alpha-dev (r10070) or later.
         o Implement, but make it option-controlled.
         o Make it always-on once it seems to work.
-      - Implement option to download and cache extra-info documents.
+      o Implement option to download and cache extra-info documents.
+      - Improve the 'retry' logic on extra-info documents.
       - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol (finalize by Jun 1)
     - 108: Base "Stable" Flag on Mean Time Between Failures

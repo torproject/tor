@@ -668,6 +668,11 @@ directory_info_has_arrived(time_t now, int from_cache)
         "build a circuit.");
     update_router_descriptor_downloads(now);
     return;
+  } else {
+    /* Don't even bother trying to get extrainfo until the rest of our
+     * directory info is up-to-date */
+    if (options->DownloadExtraInfo)
+      update_extrainfo_downloads(now);
   }
 
   if (server_mode(options) && !we_are_hibernating() && !from_cache &&
@@ -862,6 +867,7 @@ run_scheduled_events(time_t now)
     /* XXXX  Maybe we should do this every 10sec when not enough info,
      * and every 60sec when we have enough info -NM */
     update_router_descriptor_downloads(now);
+    update_extrainfo_downloads(now);
     time_to_try_getting_descriptors = now + DESCRIPTOR_RETRY_INTERVAL;
   }
 

@@ -155,6 +155,7 @@ static config_var_t _option_vars[] = {
   VAR("DirPort",             UINT,     DirPort,              "0"),
   OBSOLETE("DirPostPeriod"),
   VAR("DirServer",           LINELIST, DirServers,           NULL),
+  VAR("DownloadExtraInfo",   BOOL,     DownloadExtraInfo,    "0"),
   VAR("EnforceDistinctSubnets", BOOL,  EnforceDistinctSubnets,"1"),
   VAR("EntryNodes",          STRING,   EntryNodes,           NULL),
   VAR("ExcludeNodes",        STRING,   ExcludeNodes,         NULL),
@@ -2554,6 +2555,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
       log_info(LD_CONFIG, "Authoritative directory servers can't set "
                "UseEntryGuards. Disabling.");
       options->UseEntryGuards = 0;
+    }
+    if (!options->DownloadExtraInfo) {
+      log_info(LD_CONFIG, "Authoritative directories always try to download "
+               "extra-info documents. Setting DownloadExtraInfo.");
+      options->DownloadExtraInfo = 1;
     }
   }
 

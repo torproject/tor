@@ -45,7 +45,8 @@ static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
 static void dir_networkstatus_download_failed(smartlist_t *failed,
                                               int status_code);
 static void dir_routerdesc_download_failed(smartlist_t *failed,
-                                           int status_code);
+                                           int status_code,
+                                           int was_extrainfo);
 static void note_request(const char *key, size_t bytes);
 
 /********* START VARIABLES **********/
@@ -78,7 +79,8 @@ purpose_is_private(uint8_t purpose)
       purpose == DIR_PURPOSE_UPLOAD_DIR ||
       purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
       purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
-      purpose == DIR_PURPOSE_FETCH_SERVERDESC)
+      purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+      purpose == DIR_PURPOSE_FETCH_EXTRAINFO)
     return 0;
   return 1;
 }
@@ -106,6 +108,28 @@ authority_type_to_string(authority_type_t auth)
   return result;
 }
 
+/* DOCDOC  */
+int
+router_supports_extrainfo(const char *identity_digest, int is_authority)
+{
+  routerinfo_t *ri = router_get_by_digest(identity_digest);
+  local_routerstatus_t *lrs;
+
+  if (ri) {
+    if (ri->caches_extra_info)
+      return 1;
+    if (is_authority && ri->platform &&
+        tor_version_as_new_as(ri->platform, "Tor 0.2.0.0-alpha-dev (r10070)"))
+      return 1;
+  }
+  if (is_authority) {
+    lrs = router_get_combined_status_by_digest(identity_digest);
+    if (lrs && lrs->status.version_supports_extrainfo_upload)
+      return 1;
+  }
+  return 0;
+}
+
 /** Start a connection to every suitable directory server, using
  * connection purpose 'purpose' and uploading the payload 'payload'
  * (length 'payload_len').  The purpose should be one of
@@ -131,9 +155,6 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
       routerstatus_t *rs = &(ds->fake_status.status);
-      local_routerstatus_t *lrs = router_get_combined_status_by_digest(
-                                                ds->digest);
-      int new_enough;
       size_t upload_len = payload_len;
 
       if ((type & ds->type) == 0)
@@ -143,10 +164,7 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
       if (purpose == DIR_PURPOSE_UPLOAD_DIR)
         ds->has_accepted_serverdesc = 0;
 
-      new_enough = (lrs && lrs->status.version_supports_extrainfo_upload) ||
-        (router_digest_version_as_new_as(ds->digest,
-                                         "Tor 0.2.0.0-alpha-dev (r10070)"));
-      if (extrainfo_len && new_enough) {
+      if (extrainfo_len && router_supports_extrainfo(ds->digest, 1)) {
         upload_len += extrainfo_len;
         log_info(LD_DIR, "Uploading an extrainfo (length %d)",
                  (int) extrainfo_len);
@@ -182,6 +200,9 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   /* FFFF we could break this switch into its own function, and call
    * it elsewhere in directory.c. -RD */
   switch (purpose) {
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+      type = EXTRAINFO_CACHE | V2_AUTHORITY;
+      break;
     case DIR_PURPOSE_FETCH_NETWORKSTATUS:
     case DIR_PURPOSE_FETCH_SERVERDESC:
       type = V2_AUTHORITY;
@@ -344,7 +365,8 @@ connection_dir_request_failed(dir_connection_t *conn)
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
     connection_dir_download_networkstatus_failed(conn, -1);
-  } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
+  } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+             conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
     connection_dir_download_routerdesc_failed(conn);
@@ -389,7 +411,7 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
 }
 
 /** Called when an attempt to download one or more router descriptors
- * on connection <b>conn</b> failed.
+ * or extra-info documents on connection <b>conn</b> failed.
  */
 static void
 connection_dir_download_routerdesc_failed(dir_connection_t *conn)
@@ -399,6 +421,8 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
 
   /* No need to relaunch descriptor downloads here: we already do it
    * every 10 seconds (DESCRIPTOR_RETRY_INTERVAL) in main.c. */
+  tor_assert(conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+             conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
 
   (void) conn;
 }
@@ -451,6 +475,9 @@ directory_initiate_command(const char *address, uint32_t addr,
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
       log_debug(LD_DIR,"initiating server descriptor fetch");
+      break;
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+      log_debug(LD_DIR,"initiating extra-info fetch");
       break;
     default:
       log_err(LD_BUG, "Unrecognized directory connection purpose.");
@@ -610,6 +637,12 @@ directory_send_command(dir_connection_t *conn,
       len = strlen(resource)+32;
       url = tor_malloc(len);
       tor_snprintf(url, len, "/tor/server/%s", resource);
+      break;
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+      httpcommand = "GET";
+      len = strlen(resource)+32;
+      url = tor_malloc(len);
+      tor_snprintf(url, len, "/tor/extra/%s", resource);
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(!resource);
@@ -912,7 +945,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   compress_method_t compression;
   int plausible;
   int skewed=0;
-  int allow_partial = conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC;
+  int allow_partial = (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+                       conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
   int was_compressed=0;
   time_t now = time(NULL);
 
@@ -1165,12 +1199,18 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
   }
 
-  if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC) {
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+      conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
+    int was_ei = conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO;
     smartlist_t *which = NULL;
     int n_asked_for = 0;
-    log_info(LD_DIR,"Received server info (size %d) from server '%s:%d'",
+    log_info(LD_DIR,"Received %s (size %d) from server '%s:%d'",
+             was_ei ? "server info" : "extra server info",
              (int)body_len, conn->_base.address, conn->_base.port);
-    note_request(was_compressed?"dl/server.z":"dl/server", orig_len);
+    if (was_ei)
+      note_request(was_compressed?"dl/extra.z":"dl/extra", orig_len);
+    else
+      note_request(was_compressed?"dl/server.z":"dl/server", orig_len);
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"d/")) {
       which = smartlist_create();
@@ -1192,7 +1232,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       if (!which) {
         connection_dir_download_routerdesc_failed(conn);
       } else {
-        dir_routerdesc_download_failed(which, status_code);
+        dir_routerdesc_download_failed(which, status_code, was_ei);
         SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
         smartlist_free(which);
       }
@@ -1207,15 +1247,19 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     if (which || (conn->requested_resource &&
                   !strcmpstart(conn->requested_resource, "all"))) {
       /* as we learn from them, we remove them from 'which' */
-      router_load_routers_from_string(body, SAVED_NOWHERE, which);
-      directory_info_has_arrived(now, 0);
+      if (was_ei) {
+        router_load_extrainfo_from_string(body, SAVED_NOWHERE, which);
+      } else {
+        router_load_routers_from_string(body, SAVED_NOWHERE, which);
+        directory_info_has_arrived(now, 0);
+      }
     }
     if (which) { /* mark remaining ones as failed */
       log_info(LD_DIR, "Received %d/%d routers requested from %s:%d",
                n_asked_for-smartlist_len(which), n_asked_for,
                conn->_base.address, (int)conn->_base.port);
       if (smartlist_len(which)) {
-        dir_routerdesc_download_failed(which, status_code);
+        dir_routerdesc_download_failed(which, status_code, was_ei);
       }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
@@ -2078,17 +2122,23 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
 }
 
 /** Called when one or more routerdesc fetches have failed (with uppercase
- * fingerprints listed in <b>failed</b>). */
+ * fingerprints listed in <b>failed</b>).
+ *
+ * DOCDOC was_extrainfo */
 static void
-dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
+dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
+                               int was_extrainfo)
 {
   char digest[DIGEST_LEN];
   local_routerstatus_t *rs;
   time_t now = time(NULL);
   int server = server_mode(get_options()) && get_options()->DirPort;
+  (void) was_extrainfo;
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
     base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
+    /* XXXX020 BUG BUG BUG. Fails miserably when requesting by desc digest
+     * rather than by identity digest. */
     rs = router_get_combined_status_by_digest(digest);
     if (!rs || rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;

@@ -87,8 +87,7 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       routers.  These documents contain fields from router descriptors
       that aren't usually needed, and that use a lot of excess
       bandwidth. Once these fields are removed from router descriptors,
-      the bandwidth savings should be about 60%.  (Limitation: servers
-      do not yet upload extra-info documents.)  [Partially implements
+      the bandwidth savings should be about 60%. [Partially implements
       proposal 104.]
     - Directory authorities allow multiple router descriptors and/or extra
       info documents to be uploaded in a single go.  This will make
@@ -96,6 +95,10 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - New config option V2AuthoritativeDirectory that all directory
       authorities should set. This will let future authorities choose
       not to serve V2 directory information.
+    - Servers upload extra-info documents to any authority that accepts
+      them.  Authorities (and caches that have been configured to download
+      extra-info documents) download them as needed. [Partially implements
+      proposal 104.]
 
   o Minor features (controller):
     - Add a new config option __DisablePredictedCircuits designed for

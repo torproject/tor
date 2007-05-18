@@ -41,8 +41,6 @@ static local_routerstatus_t *router_get_combined_status_by_nickname(
                                                 int warn_if_unnamed);
 static void update_router_have_minimum_dir_info(void);
 static void router_dir_info_changed(void);
-static void router_load_extrainfo_from_string(const char *s,
-                                              saved_location_t saved_location);
 
 /****************************************************************************/
 
@@ -438,7 +436,7 @@ router_reload_router_list_impl(int extrainfo)
     stats->store_len = (*mmap_ptr)->size;
     if (extrainfo)
       router_load_extrainfo_from_string((*mmap_ptr)->data,
-                                      SAVED_IN_CACHE);
+                                        SAVED_IN_CACHE, NULL);
     else
       router_load_routers_from_string((*mmap_ptr)->data,
                                       SAVED_IN_CACHE, NULL);
@@ -450,7 +448,7 @@ router_reload_router_list_impl(int extrainfo)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, NULL);
   if (contents) {
     if (extrainfo)
-      router_load_extrainfo_from_string(contents, SAVED_IN_JOURNAL);
+      router_load_extrainfo_from_string(contents, SAVED_IN_JOURNAL, NULL);
     else
       router_load_routers_from_string(contents, SAVED_IN_JOURNAL, NULL);
     tor_free(contents);
@@ -644,6 +642,9 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
     if ((type & V2_AUTHORITY) && !(status->is_v2_dir || is_trusted))
       continue;
+    if ((type & EXTRAINFO_CACHE) &&
+        !router_supports_extrainfo(status->identity_digest, 0))
+      continue;
     if (prefer_tunnel &&
         status->version_supports_begindir &&
         (!fascistfirewall ||
@@ -713,6 +714,9 @@ router_pick_trusteddirserver_impl(authority_type_t type,
           d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now;
       if (!d->is_running) continue;
       if ((type & d->type) == 0)
+        continue;
+      if ((type & EXTRAINFO_CACHE) &&
+          !router_supports_extrainfo(d->digest, 1))
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
@@ -2594,9 +2598,10 @@ router_load_routers_from_string(const char *s, saved_location_t saved_location,
 }
 
 /** DOCDOC */
-static void
+void
 router_load_extrainfo_from_string(const char *s,
-                                  saved_location_t saved_location)
+                                  saved_location_t saved_location,
+                                  smartlist_t *requested_fingerprints)
 {
   smartlist_t *extrainfo_list = smartlist_create();
   const char *msg;
@@ -2606,8 +2611,15 @@ router_load_extrainfo_from_string(const char *s,
 
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 
-  SMARTLIST_FOREACH(extrainfo_list, extrainfo_t *, ei,
-      router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache));
+  SMARTLIST_FOREACH(extrainfo_list, extrainfo_t *, ei, {
+      if (requested_fingerprints) {
+        char fp[HEX_DIGEST_LEN+1];
+        base16_encode(fp, sizeof(fp), ei->cache_info.signed_descriptor_digest,
+                      DIGEST_LEN);
+        smartlist_string_remove(requested_fingerprints, fp);
+      }
+      router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
+    });
 
   routerlist_assert_ok(routerlist);
   router_rebuild_store(0, 1);
@@ -4015,15 +4027,17 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
 }
 
 /** For every router descriptor we are currently downloading by descriptor
- * digest, set result[d] to 1. */
+ * digest, set result[d] to 1. DOCDOC extrainfo */
 static void
-list_pending_descriptor_downloads(digestmap_t *result)
+list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
 {
   const char *prefix = "d/";
   size_t p_len = strlen(prefix);
   int i, n_conns;
   connection_t **carray;
   smartlist_t *tmp = smartlist_create();
+  int purpose =
+    extrainfo ? DIR_PURPOSE_FETCH_EXTRAINFO : DIR_PURPOSE_FETCH_SERVERDESC;
 
   tor_assert(result);
   get_connection_array(&carray, &n_conns);
@@ -4031,7 +4045,7 @@ list_pending_descriptor_downloads(digestmap_t *result)
   for (i = 0; i < n_conns; ++i) {
     connection_t *conn = carray[i];
     if (conn->type == CONN_TYPE_DIR &&
-        conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
+        conn->purpose == purpose &&
         !conn->marked_for_close) {
       const char *resource = TO_DIR_CONN(conn)->requested_resource;
       if (!strcmpstart(resource, prefix))
@@ -4054,6 +4068,7 @@ list_pending_descriptor_downloads(digestmap_t *result)
  */
 static void
 initiate_descriptor_downloads(routerstatus_t *source,
+                              int purpose,
                               smartlist_t *digests,
                               int lo, int hi)
 {
@@ -4081,14 +4096,11 @@ initiate_descriptor_downloads(routerstatus_t *source,
 
   if (source) {
     /* We know which authority we want. */
-    directory_initiate_command_routerstatus(source,
-                                            DIR_PURPOSE_FETCH_SERVERDESC,
+    directory_initiate_command_routerstatus(source, purpose,
                                             0, /* not private */
                                             resource, NULL, 0);
   } else {
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                                 resource,
-                                 1);
+    directory_get_from_dirserver(purpose, resource, 1);
   }
   tor_free(resource);
 }
@@ -4133,7 +4145,7 @@ router_list_client_downloadable(void)
     return downloadable;
 
   downloading = digestmap_new();
-  list_pending_descriptor_downloads(downloading);
+  list_pending_descriptor_downloads(downloading, 0);
 
   routerstatus_list_update_from_networkstatus(now);
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
@@ -4277,7 +4289,8 @@ update_router_descriptor_client_downloads(time_t now)
              req_plural, n_downloadable, rtr_plural, n_per_request);
     smartlist_sort_digests(downloadable);
     for (i=0; i < n_downloadable; i += n_per_request) {
-      initiate_descriptor_downloads(NULL, downloadable, i, i+n_per_request);
+      initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_SERVERDESC,
+                                    downloadable, i, i+n_per_request);
     }
     last_routerdesc_download_attempted = now;
   }
@@ -4313,7 +4326,7 @@ update_router_descriptor_cache_downloads(time_t now)
 
   /* Set map[d]=1 for the digest of every descriptor that we are currently
    * downloading. */
-  list_pending_descriptor_downloads(map);
+  list_pending_descriptor_downloads(map, 0);
 
   /* For the digest of every descriptor that we don't have, and that we aren't
    * downloading, add d to downloadable[i] if the i'th networkstatus knows
@@ -4411,7 +4424,8 @@ update_router_descriptor_cache_downloads(time_t now)
     log_info(LD_DIR, "Requesting %d descriptors from authority \"%s\"",
              smartlist_len(dl), ds->nickname);
     for (j=0; j < smartlist_len(dl); j += MAX_DL_PER_REQUEST) {
-      initiate_descriptor_downloads(&(ds->fake_status.status), dl, j,
+      initiate_descriptor_downloads(&(ds->fake_status.status),
+                                    DIR_PURPOSE_FETCH_SERVERDESC, dl, j,
                                     j+MAX_DL_PER_REQUEST);
     }
   }
@@ -4435,6 +4449,63 @@ update_router_descriptor_downloads(time_t now)
   } else {
     update_router_descriptor_client_downloads(now);
   }
+}
+
+/** DOCDOC */
+static INLINE int
+should_download_extrainfo(signed_descriptor_t *sd,
+                          const routerlist_t *rl,
+                          const digestmap_t *pending)
+{
+  const char *d = sd->extra_info_digest;
+  /* XXXX020 Check for failures; keep a failure count.  Don't just
+   * do this dumb "try once and give up" thing. */
+  return (!sd->tried_downloading_extrainfo &&
+          !tor_digest_is_zero(d) &&
+          !digestmap_get(rl->extra_info_map, d) &&
+          !digestmap_get(pending, d));
+}
+
+/** DOCDOC */
+void
+update_extrainfo_downloads(time_t now)
+{
+  or_options_t *options = get_options();
+  routerlist_t *rl;
+  smartlist_t *wanted;
+  digestmap_t *pending;
+  int i;
+  (void) now;
+  if (! options->DownloadExtraInfo)
+    return;
+
+  pending = digestmap_new();
+  list_pending_descriptor_downloads(pending, 1);
+  rl = router_get_routerlist();
+  wanted = smartlist_create();
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+      if (should_download_extrainfo(&ri->cache_info, rl, pending)) {
+        smartlist_add(wanted, ri->cache_info.extra_info_digest);
+        ri->cache_info.tried_downloading_extrainfo = 1; /*XXXX020 be smarter.*/
+      }
+    });
+  if (options->DirPort) {
+    SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd, {
+        if (should_download_extrainfo(sd, rl, pending)) {
+          smartlist_add(wanted, sd->extra_info_digest);
+          sd->tried_downloading_extrainfo = 1; /*XXXX020 be smarter. */
+        }
+      });
+  }
+  digestmap_free(pending, NULL);
+
+  smartlist_shuffle(wanted);
+  for (i = 0; i < smartlist_len(wanted); i += MAX_DL_PER_REQUEST) {
+    initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_EXTRAINFO,
+                                  wanted, i, i + MAX_DL_PER_REQUEST);
+  }
+
+  smartlist_free(wanted);
 }
 
 /** Return the number of routerstatus_t in <b>entries</b> that we'd actually
