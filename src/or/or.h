@@ -1049,6 +1049,14 @@ typedef enum {
   SAVED_IN_JOURNAL
 } saved_location_t;
 
+/** DOCDOC */
+typedef struct download_status_t {
+  time_t next_attempt_at; /**< When should we try downloading this descriptor
+                           * again? */
+  uint8_t n_download_failures; /**< Number of failures trying to download the
+                                * most recent descriptor. */
+} download_status_t;
+
 /** Information need to cache an onion router's descriptor. */
 typedef struct signed_descriptor_t {
   /** Pointer to the raw server descriptor.  Not necessarily NUL-terminated.
@@ -1062,8 +1070,10 @@ typedef struct signed_descriptor_t {
   char identity_digest[DIGEST_LEN];
   /** Declared publication time of the descriptor */
   time_t published_on;
- /** DOCDOC; routerinfo_t only. */
+  /** DOCDOC; routerinfo_t only. */
   char extra_info_digest[DIGEST_LEN];
+  /** DOCDOC; routerinfo_t only: for the corresponding extrainfo. */
+  download_status_t ei_dl_status;
   /** Where is the descriptor saved? */
   saved_location_t saved_location;
   /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
@@ -1071,8 +1081,6 @@ typedef struct signed_descriptor_t {
   off_t saved_offset;
   /* DOCDOC */
   unsigned int do_not_cache : 1;
-  /* DOCDOC; XXXX020 replace with something smarter. */
-  unsigned int tried_downloading_extrainfo : 1;
 } signed_descriptor_t;
 
 /** Information about another onion router in the network. */
@@ -1219,12 +1227,9 @@ typedef struct local_routerstatus_t {
    * descriptor_digest represents the descriptor we would most like to use for
    * this router. */
   routerstatus_t status;
-  time_t next_attempt_at; /**< When should we try downloading this descriptor
-                           * again? */
   time_t last_dir_503_at; /**< When did this router last tell us that it
                            * was too busy to serve directory info? */
-  uint8_t n_download_failures; /**< Number of failures trying to download the
-                                * most recent descriptor. */
+  download_status_t dl_status;
   unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
                                       * to this (unnamed) router by nickname?
                                       */
@@ -1285,6 +1290,8 @@ typedef struct {
   /** Map from extra-info digest to a signed_descriptor_t.  Only for
    * routers in routers or old_routers. */
   digestmap_t *extra_info_map;
+  /** DOCDOC */
+  digestmap_t *desc_by_eid_map;
   /** List of routerinfo_t for all currently live routers we know. */
   smartlist_t *routers;
   /** List of signed_descriptor_t for older router descriptors we're
@@ -3107,6 +3114,7 @@ int hexdigest_to_digest(const char *hexdigest, char *digest);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
+signed_descriptor_t *router_get_by_extrainfo_digest(const char *digest);
 signed_descriptor_t *extrainfo_get_by_descriptor_digest(const char *digest);
 const char *signed_descriptor_get_body(signed_descriptor_t *desc);
 int router_digest_version_as_new_as(const char *digest, const char *cutoff);
@@ -3159,6 +3167,9 @@ void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
 local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
+local_routerstatus_t *router_get_combined_status_by_descriptor_digest(
+                                                          const char *digest);
+
 routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 void update_networkstatus_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);

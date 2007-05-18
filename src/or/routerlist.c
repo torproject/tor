@@ -58,6 +58,8 @@ static smartlist_t *networkstatus_list = NULL;
 /** Global list of local_routerstatus_t for each router, known or unknown.
  * Kept sorted by digest. */
 static smartlist_t *routerstatus_list = NULL;
+/** DOCDOC */
+static digestmap_t *routerstatus_by_desc_digest_map = NULL;
 
 /** Map from lowercase nickname to digest of named server, if any. */
 static strmap_t *named_server_map = NULL;
@@ -1520,6 +1522,18 @@ router_get_by_descriptor_digest(const char *digest)
   return digestmap_get(routerlist->desc_digest_map, digest);
 }
 
+/** Return the router in our routerlist whose 20-byte descriptor
+ * is <b>digest</b>.  Return NULL if no such router is known. */
+signed_descriptor_t *
+router_get_by_extrainfo_digest(const char *digest)
+{
+  tor_assert(digest);
+
+  if (!routerlist) return NULL;
+
+  return digestmap_get(routerlist->desc_by_eid_map, digest);
+}
+
 /** DOCDOC */
 signed_descriptor_t *
 extrainfo_get_by_descriptor_digest(const char *digest)
@@ -1567,6 +1581,7 @@ router_get_routerlist(void)
     routerlist->old_routers = smartlist_create();
     routerlist->identity_map = digestmap_new();
     routerlist->desc_digest_map = digestmap_new();
+    routerlist->desc_by_eid_map = digestmap_new();
     routerlist->extra_info_map = digestmap_new();
   }
   return routerlist;
@@ -1641,6 +1656,7 @@ routerlist_free(routerlist_t *rl)
   tor_assert(rl);
   digestmap_free(rl->identity_map, NULL);
   digestmap_free(rl->desc_digest_map, NULL);
+  digestmap_free(rl->desc_by_eid_map, NULL);
   digestmap_free(rl->extra_info_map, _extrainfo_free);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                     routerinfo_free(r));
@@ -1726,6 +1742,9 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   tor_assert(!ri_old);
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
                 &(ri->cache_info));
+  if (!tor_digest_is_zero(ri->cache_info.extra_info_digest))
+    digestmap_set(rl->desc_by_eid_map, ri->cache_info.extra_info_digest,
+                  &ri->cache_info);
   smartlist_add(rl->routers, ri);
   ri->routerlist_index = smartlist_len(rl->routers) - 1;
   router_dir_info_changed();
@@ -1793,6 +1812,8 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
     smartlist_add(rl->old_routers, sd);
+    if (!tor_digest_is_zero(sd->extra_info_digest))
+      digestmap_set(rl->desc_by_eid_map, sd->extra_info_digest, sd);
   } else {
     routerinfo_free(ri);
   }
@@ -1839,7 +1860,6 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
                               ri->cache_info.signed_descriptor_digest);
     tor_assert(ri_tmp == ri);
     router_store_stats.bytes_dropped += ri->cache_info.signed_descriptor_len;
-    routerinfo_free(ri);
     ei_tmp = digestmap_remove(rl->extra_info_map,
                               ri->cache_info.extra_info_digest);
     if (ei_tmp) {
@@ -1847,6 +1867,9 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
         ei_tmp->cache_info.signed_descriptor_len;
       extrainfo_free(ei_tmp);
     }
+    if (!tor_digest_is_zero(ri->cache_info.extra_info_digest))
+      digestmap_remove(rl->desc_by_eid_map, ri->cache_info.extra_info_digest);
+    routerinfo_free(ri);
   }
   // routerlist_assert_ok(rl);
   routerlist_check_bug_417();
@@ -1867,7 +1890,6 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
                             sd->signed_descriptor_digest);
   tor_assert(sd_tmp == sd);
   router_store_stats.bytes_dropped += sd->signed_descriptor_len;
-  signed_descriptor_free(sd);
 
   ei_tmp = digestmap_remove(rl->extra_info_map,
                             sd->extra_info_digest);
@@ -1876,7 +1898,10 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
       ei_tmp->cache_info.signed_descriptor_len;
     extrainfo_free(ei_tmp);
   }
+  if (!tor_digest_is_zero(sd->extra_info_digest))
+    digestmap_remove(rl->desc_by_eid_map, sd->extra_info_digest);
 
+  signed_descriptor_free(sd);
   routerlist_check_bug_417();
   // routerlist_assert_ok(rl);
 }
@@ -1940,6 +1965,9 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
         extrainfo_free(ei_tmp);
       }
     }
+    if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest))
+      digestmap_remove(rl->desc_by_eid_map,
+                       ri_old->cache_info.extra_info_digest);
     routerinfo_free(ri_old);
   }
   // routerlist_assert_ok(rl);
@@ -1980,6 +2008,10 @@ routerlist_free_all(void)
                       local_routerstatus_free(rs));
     smartlist_free(routerstatus_list);
     routerstatus_list = NULL;
+  }
+  if (routerstatus_by_desc_digest_map) {
+    digestmap_free(routerstatus_by_desc_digest_map, NULL);
+    routerstatus_by_desc_digest_map = NULL;
   }
   if (named_server_map) {
     strmap_free(named_server_map, _tor_free);
@@ -2939,6 +2971,24 @@ router_get_combined_status_by_digest(const char *digest)
     return NULL;
   return smartlist_bsearch(routerstatus_list, digest,
                            _compare_digest_to_routerstatus_entry);
+}
+
+/** DOCDOC */
+local_routerstatus_t *
+router_get_combined_status_by_descriptor_digest(const char *digest)
+{
+  if (!routerstatus_by_desc_digest_map)
+    return NULL;
+#if 0
+  /* XXXX020 this could conceivably be critical path when a whole lot
+   * of descriptors fail.  Maybe we should use a digest map instead.*/
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, lrs,
+                    if (!memcmp(lrs->status.descriptor_digest, digest))
+                      return lrs);
+  return NULL;
+#else
+  return digestmap_get(routerstatus_by_desc_digest_map, digest);
+#endif
 }
 
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
@@ -3916,8 +3966,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
     if ((rs_old = router_get_combined_status_by_digest(lowest))) {
       if (!memcmp(rs_out->status.descriptor_digest,
                   most_recent->descriptor_digest, DIGEST_LEN)) {
-        rs_out->n_download_failures = rs_old->n_download_failures;
-        rs_out->next_attempt_at = rs_old->next_attempt_at;
+        rs_out->dl_status.n_download_failures = rs_old->dl_status.n_download_failures;
+        rs_out->dl_status.next_attempt_at = rs_old->dl_status.next_attempt_at;
       }
       rs_out->name_lookup_warned = rs_old->name_lookup_warned;
       rs_out->last_dir_503_at = rs_old->last_dir_503_at;
@@ -3963,6 +4013,14 @@ routerstatus_list_update_from_networkstatus(time_t now)
 
   smartlist_free(routerstatus_list);
   routerstatus_list = result;
+
+  if (routerstatus_by_desc_digest_map)
+    digestmap_free(routerstatus_by_desc_digest_map, NULL);
+  routerstatus_by_desc_digest_map = digestmap_new();
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+                    digestmap_set(routerstatus_by_desc_digest_map,
+                                  rs->status.descriptor_digest,
+                                  rs));
 
   tor_free(networkstatus);
   tor_free(index);
@@ -4019,8 +4077,8 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       ds->n_networkstatus_failures = 0;
     }
     if (reset_failures) {
-      rs->n_download_failures = 0;
-      rs->next_attempt_at = 0;
+      rs->dl_status.n_download_failures = 0;
+      rs->dl_status.next_attempt_at = 0;
     }
   });
   router_dir_info_changed();
@@ -4165,7 +4223,7 @@ router_list_client_downloadable(void)
       /* Oddly, we have a descriptor more recent than the 'best' one, but it
          was once best. So that's okay. */
       ++n_uptodate;
-    } else if (rs->next_attempt_at > now) {
+    } else if (rs->dl_status.next_attempt_at > now) {
       /* We failed too recently to try again. */
       ++n_not_ready;
     } else {
@@ -4455,13 +4513,12 @@ update_router_descriptor_downloads(time_t now)
 static INLINE int
 should_download_extrainfo(signed_descriptor_t *sd,
                           const routerlist_t *rl,
-                          const digestmap_t *pending)
+                          const digestmap_t *pending,
+                          time_t now)
 {
   const char *d = sd->extra_info_digest;
-  /* XXXX020 Check for failures; keep a failure count.  Don't just
-   * do this dumb "try once and give up" thing. */
-  return (!sd->tried_downloading_extrainfo &&
-          !tor_digest_is_zero(d) &&
+  return (!tor_digest_is_zero(d) &&
+          sd->ei_dl_status.next_attempt_at <= now &&
           !digestmap_get(rl->extra_info_map, d) &&
           !digestmap_get(pending, d));
 }
@@ -4475,7 +4532,6 @@ update_extrainfo_downloads(time_t now)
   smartlist_t *wanted;
   digestmap_t *pending;
   int i;
-  (void) now;
   if (! options->DownloadExtraInfo)
     return;
 
@@ -4484,16 +4540,14 @@ update_extrainfo_downloads(time_t now)
   rl = router_get_routerlist();
   wanted = smartlist_create();
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-      if (should_download_extrainfo(&ri->cache_info, rl, pending)) {
+      if (should_download_extrainfo(&ri->cache_info, rl, pending, now)) {
         smartlist_add(wanted, ri->cache_info.extra_info_digest);
-        ri->cache_info.tried_downloading_extrainfo = 1; /*XXXX020 be smarter.*/
       }
     });
   if (options->DirPort) {
     SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd, {
-        if (should_download_extrainfo(sd, rl, pending)) {
+        if (should_download_extrainfo(sd, rl, pending, now)) {
           smartlist_add(wanted, sd->extra_info_digest);
-          sd->tried_downloading_extrainfo = 1; /*XXXX020 be smarter. */
         }
       });
   }
@@ -4637,9 +4691,10 @@ router_reset_descriptor_download_failures(void)
     return;
   SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
   {
-    rs->n_download_failures = 0;
-    rs->next_attempt_at = 0;
+    rs->dl_status.n_download_failures = 0;
+    rs->dl_status.next_attempt_at = 0;
   });
+  /* XXXX020 reset extrainfo dl status too. */
   tor_assert(networkstatus_list);
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
      SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,

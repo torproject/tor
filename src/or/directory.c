@@ -2130,52 +2130,59 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
                                int was_extrainfo)
 {
   char digest[DIGEST_LEN];
-  local_routerstatus_t *rs;
   time_t now = time(NULL);
   int server = server_mode(get_options()) && get_options()->DirPort;
-  (void) was_extrainfo;
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
+    download_status_t *dls = NULL;
     base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
-    /* XXXX020 BUG BUG BUG. Fails miserably when requesting by desc digest
-     * rather than by identity digest. */
-    rs = router_get_combined_status_by_digest(digest);
-    if (!rs || rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
+    if (was_extrainfo) {
+      signed_descriptor_t *sd =
+        router_get_by_extrainfo_digest(digest);
+      if (sd)
+        dls = &sd->ei_dl_status;
+    } else {
+      local_routerstatus_t *rs =
+        router_get_combined_status_by_descriptor_digest(digest);
+      if (rs)
+        dls = &rs->dl_status;
+    }
+    if (!dls || dls->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;
     if (status_code != 503 || server)
-      ++rs->n_download_failures;
+      ++dls->n_download_failures;
     if (server) {
-      switch (rs->n_download_failures) {
-        case 0: rs->next_attempt_at = 0; break;
-        case 1: rs->next_attempt_at = 0; break;
-        case 2: rs->next_attempt_at = 0; break;
-        case 3: rs->next_attempt_at = now+60; break;
-        case 4: rs->next_attempt_at = now+60; break;
-        case 5: rs->next_attempt_at = now+60*2; break;
-        case 6: rs->next_attempt_at = now+60*5; break;
-        case 7: rs->next_attempt_at = now+60*15; break;
-        default: rs->next_attempt_at = TIME_MAX; break;
+      switch (dls->n_download_failures) {
+        case 0: dls->next_attempt_at = 0; break;
+        case 1: dls->next_attempt_at = 0; break;
+        case 2: dls->next_attempt_at = 0; break;
+        case 3: dls->next_attempt_at = now+60; break;
+        case 4: dls->next_attempt_at = now+60; break;
+        case 5: dls->next_attempt_at = now+60*2; break;
+        case 6: dls->next_attempt_at = now+60*5; break;
+        case 7: dls->next_attempt_at = now+60*15; break;
+        default: dls->next_attempt_at = TIME_MAX; break;
       }
     } else {
-      switch (rs->n_download_failures) {
-        case 0: rs->next_attempt_at = 0; break;
-        case 1: rs->next_attempt_at = 0; break;
-        case 2: rs->next_attempt_at = now+60; break;
-        case 3: rs->next_attempt_at = now+60*5; break;
-        case 4: rs->next_attempt_at = now+60*10; break;
-        default: rs->next_attempt_at = TIME_MAX; break;
+      switch (dls->n_download_failures) {
+        case 0: dls->next_attempt_at = 0; break;
+        case 1: dls->next_attempt_at = 0; break;
+        case 2: dls->next_attempt_at = now+60; break;
+        case 3: dls->next_attempt_at = now+60*5; break;
+        case 4: dls->next_attempt_at = now+60*10; break;
+        default: dls->next_attempt_at = TIME_MAX; break;
       }
     }
-    if (rs->next_attempt_at == 0)
+    if (dls->next_attempt_at == 0)
       log_debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
-                cp, (int)rs->n_download_failures);
-    else if (rs->next_attempt_at < TIME_MAX)
+                cp, (int)dls->n_download_failures);
+    else if (dls->next_attempt_at < TIME_MAX)
       log_debug(LD_DIR, "%s failed %d time(s); I'll try again in %d seconds.",
-                cp, (int)rs->n_download_failures,
-                (int)(rs->next_attempt_at-now));
+                cp, (int)dls->n_download_failures,
+                (int)(dls->next_attempt_at-now));
     else
       log_debug(LD_DIR, "%s failed %d time(s); Giving up for a while.",
-                cp, (int)rs->n_download_failures);
+                cp, (int)dls->n_download_failures);
   });
 
   /* No need to relaunch descriptor downloads here: we already do it

@@ -47,6 +47,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - If all of our dirservers have given us bad or no networkstatuses 
       lately, then stop hammering them once per minute even when we
       think they're failed. Fixes another part of bug 422.
+    - Back off correctly when downloading servers.  (Previously, we would
+      never actually increment the failure count for descriptors we were in
+      the process of retrieving.)
 
   o Minor fixes (resource management):
     - Count the number of open sockets separately from the number
