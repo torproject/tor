@@ -1677,6 +1677,21 @@ smartlist_choose(const smartlist_t *sl)
   return NULL; /* no elements to choose from */
 }
 
+/** Scramble the elements of sl into a random order. */
+void
+smartlist_shuffle(smartlist_t *sl)
+{
+  int i;
+  /* From the end of the list to the front, choose at random from the
+     positions we haven't looked at yet, and swap that position into the
+     current position.  Remember to give "no swap" the same probability as
+     any other swap. */
+  for (i = smartlist_len(sl)-1; i > 0; --i) {
+    int j = crypto_rand_int(i+1);
+    smartlist_swap(sl, i, j);
+  }
+}
+
 /** Base-64 encode <b>srclen</b> bytes of data from <b>src</b>.  Write
  * the result into <b>dest</b>, if it will fit within <b>destlen</b>
  * bytes.  Return the number of bytes written on success; -1 if

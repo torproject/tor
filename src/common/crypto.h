@@ -157,6 +157,7 @@ uint64_t crypto_rand_uint64(uint64_t max);
 
 struct smartlist_t;
 void *smartlist_choose(const struct smartlist_t *sl);
+void smartlist_shuffle(struct smartlist_t *sl);
 
 int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);

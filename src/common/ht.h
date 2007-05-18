@@ -91,7 +91,7 @@ ht_string_hash(const char *s)
 #define HT_PROTOTYPE(name, type, field, hashfn, eqfn)                   \
   int name##_HT_GROW(struct name *ht, unsigned min_capacity);           \
   void name##_HT_CLEAR(struct name *ht);                                \
-  int _##name##_HT_REP_IS_BAD(struct name *ht);                         \
+  int _##name##_HT_REP_IS_BAD(const struct name *ht);                   \
   static INLINE void                                                    \
   name##_HT_INIT(struct name *head) {                                   \
     head->hth_table_length = 0;                                         \
@@ -119,11 +119,11 @@ ht_string_hash(const char *s)
   /* Return a pointer to the element in the table 'head' matching 'elm', \
    * or NULL if no such element exists */                               \
   static INLINE struct type *                                           \
-  name##_HT_FIND(struct name *head, struct type *elm)                   \
+  name##_HT_FIND(const struct name *head, struct type *elm)             \
   {                                                                     \
     struct type **p;                                                    \
     _HT_SET_HASH(elm, field, hashfn);                                   \
-    p = _##name##_HT_FIND_P(head, elm);                                 \
+    p = _##name##_HT_FIND_P((struct name *)head, elm);                  \
     return p ? *p : NULL;                                               \
   }                                                                     \
   /* Insert the element 'elm' into the table 'head'.  Do not call this  \
@@ -349,7 +349,7 @@ ht_string_hash(const char *s)
   /* Debugging helper: return false iff the representation of 'head' is \
    * internally consistent. */                                          \
   int                                                                   \
-  _##name##_HT_REP_IS_BAD(struct name *head)                            \
+  _##name##_HT_REP_IS_BAD(const struct name *head)                      \
   {                                                                     \
     unsigned n, i;                                                      \
     struct type *elm;                                                   \

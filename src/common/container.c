@@ -658,28 +658,28 @@ DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
 
 /** Helper: compare strmap_entry_t objects by key value. */
 static INLINE int
-strmap_entries_eq(strmap_entry_t *a, strmap_entry_t *b)
+strmap_entries_eq(const strmap_entry_t *a, const strmap_entry_t *b)
 {
   return !strcmp(a->key, b->key);
 }
 
 /** Helper: return a hash value for a strmap_entry_t. */
 static INLINE unsigned int
-strmap_entry_hash(strmap_entry_t *a)
+strmap_entry_hash(const strmap_entry_t *a)
 {
   return ht_string_hash(a->key);
 }
 
 /** Helper: compare digestmap_entry_t objects by key value. */
 static INLINE int
-digestmap_entries_eq(digestmap_entry_t *a, digestmap_entry_t *b)
+digestmap_entries_eq(const digestmap_entry_t *a, const digestmap_entry_t *b)
 {
   return !memcmp(a->key, b->key, DIGEST_LEN);
 }
 
 /** Helper: return a hash value for a digest_map_t. */
 static INLINE unsigned int
-digestmap_entry_hash(digestmap_entry_t *a)
+digestmap_entry_hash(const digestmap_entry_t *a)
 {
   uint32_t *p = (uint32_t*)a->key;
   return ht_improve_hash(p[0] ^ p[1] ^ p[2] ^ p[3] ^ p[4]);
@@ -780,7 +780,7 @@ digestmap_set(digestmap_t *map, const char *key, void *val)
  * value is set.
  */
 void *
-strmap_get(strmap_t *map, const char *key)
+strmap_get(const strmap_t *map, const char *key)
 {
   strmap_entry_t *resolve;
   strmap_entry_t search;
@@ -797,7 +797,7 @@ strmap_get(strmap_t *map, const char *key)
 
 /** Like strmap_get() above but for digestmaps. */
 void *
-digestmap_get(digestmap_t *map, const char *key)
+digestmap_get(const digestmap_t *map, const char *key)
 {
   digestmap_entry_t *resolve;
   digestmap_entry_t search;
@@ -874,7 +874,7 @@ strmap_set_lc(strmap_t *map, const char *key, void *val)
 
 /** Same as strmap_get, but first converts <b>key</b> to lowercase. */
 void *
-strmap_get_lc(strmap_t *map, const char *key)
+strmap_get_lc(const strmap_t *map, const char *key)
 {
   void *v;
   char *lc_key = tor_strdup(key);
@@ -1058,38 +1058,38 @@ digestmap_free(digestmap_t *map, void (*free_val)(void*))
 }
 
 void
-strmap_assert_ok(strmap_t *map)
+strmap_assert_ok(const strmap_t *map)
 {
   tor_assert(!_strmap_impl_HT_REP_IS_BAD(&map->head));
 }
 void
-digestmap_assert_ok(digestmap_t *map)
+digestmap_assert_ok(const digestmap_t *map)
 {
   tor_assert(!_digestmap_impl_HT_REP_IS_BAD(&map->head));
 }
 
 /** Return true iff <b>map</b> has no entries. */
 int
-strmap_isempty(strmap_t *map)
+strmap_isempty(const strmap_t *map)
 {
   return HT_EMPTY(&map->head);
 }
 
 int
-digestmap_isempty(digestmap_t *map)
+digestmap_isempty(const digestmap_t *map)
 {
   return HT_EMPTY(&map->head);
 }
 
 /** Return the number of items in <b>map</b>. */
 int
-strmap_size(strmap_t *map)
+strmap_size(const strmap_t *map)
 {
   return HT_SIZE(&map->head);
 }
 
 int
-digestmap_size(digestmap_t *map)
+digestmap_size(const digestmap_t *map)
 {
   return HT_SIZE(&map->head);
 }

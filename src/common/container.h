@@ -78,6 +78,17 @@ extern INLINE void smartlist_set(smartlist_t *sl, int idx, void *val) {
 #define smartlist_set(sl, idx, val) ((sl)->list[idx] = (val))
 #endif
 
+void smartlist_swap(smartlist_t *sl, int idx1, int idx2);
+/**DOCDOC*/
+extern INLINE void smartlist_swap(smartlist_t *sl, int idx1, int idx2)
+{
+  if (idx1 != idx2) {
+    void *elt = smartlist_get(sl, idx1);
+    smartlist_set(sl, idx1, smartlist_get(sl, idx2));
+    smartlist_set(sl, idx2, elt);
+  }
+}
+
 void smartlist_del(smartlist_t *sl, int idx);
 void smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
@@ -171,24 +182,24 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   typedef struct prefix##entry_t *prefix##iter_t;                       \
   maptype* prefix##new(void);                                           \
   void* prefix##set(maptype *map, keytype key, void *val);              \
-  void* prefix##get(maptype *map, keytype key);                         \
+  void* prefix##get(const maptype *map, keytype key);                   \
   void* prefix##remove(maptype *map, keytype key);                      \
   void prefix##free(maptype *map, void (*free_val)(void*));             \
-  int prefix##isempty(maptype *map);                                    \
-  int prefix##size(maptype *map);                                       \
+  int prefix##isempty(const maptype *map);                              \
+  int prefix##size(const maptype *map);                                 \
   prefix##iter_t *prefix##iter_init(maptype *map);                      \
   prefix##iter_t *prefix##iter_next(maptype *map, prefix##iter_t *iter); \
   prefix##iter_t *prefix##iter_next_rmv(maptype *map, prefix##iter_t *iter); \
   void prefix##iter_get(prefix##iter_t *iter, keytype *keyp, void **valp); \
   int prefix##iter_done(prefix##iter_t *iter);                          \
-  void prefix##assert_ok(maptype *map);
+  void prefix##assert_ok(const maptype *map);
 
 /* Map from const char * to void *. Implemented with a hash table. */
 DECLARE_MAP_FNS(strmap_t, const char *, strmap_);
 DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
 
 void* strmap_set_lc(strmap_t *map, const char *key, void *val);
-void* strmap_get_lc(strmap_t *map, const char *key);
+void* strmap_get_lc(const strmap_t *map, const char *key);
 void* strmap_remove_lc(strmap_t *map, const char *key);
 
 #endif
