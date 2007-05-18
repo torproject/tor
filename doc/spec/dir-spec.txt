@@ -19,8 +19,12 @@ $Id$
        103  Splitting identity key from regularly used signing key
        104  Long and Short Router Descriptors
 
-   AS OF 3 MAY 2007, THIS SPECIFICATION HAS NOT YET BEEN COMPLETELY
-   IMPLEMENTED.
+   AS OF 18 MAY 2007, THIS SPECIFICATION HAS NOT YET BEEN COMPLETELY
+   IMPLEMENTED, OR COMPLETELY COMPLETED.
+
+   XXX when to download certificates.
+   XXX timeline
+   XXX fill in XXXXs
 
 0.1. History
 
@@ -465,6 +469,25 @@ $Id$
 
         [See also migration notes in section 2.2.1.]
 
+    "eventdns" bool NL
+
+        [At most once]
+
+        Declare whether this version of Tor is using the newer enhanced
+        dns logic.  Versions of Tor without eventdns SHOULD NOT be used for
+        reverse hostname lookups.
+
+        [All versions of Tor before 0.1.2.2-alpha should be assumed to have
+         this option set to 0 if it is not present.  All Tor versions at
+         0.1.2.2-alpha or later should be assumed to have this option set to
+         1 if it is not present.  Until 0.1.2.1-alpha-dev, this option was
+         not generated, even when eventdns was in use.  Versions of Tor
+         before 0.1.2.1-alpha-dev did not parse this option, so it should be
+         marked "opt".  The dnsworker logic has been removed, so this option
+         should not be used by new server code.  However, it can still be
+         used, and should still be recognized by new code until Tor 0.1.2.x
+         is obsolete.]
+
    "caches-extra-info" 0|1 NL
 
        [At most once.]
@@ -680,13 +703,13 @@ $Id$
 
         [Exactly once.]
 
-        The start of the Interval for this vote (if a consensus.)
+        The start of the Interval for this vote.
 
     "valid-until" SP YYYY-MM-DD SP HH:MM:SS NL
 
         [Exactly once.]
 
-        A time after which this vote or consensus will no longer be valid.
+        The end of the Interval for this vote, plus CONSENSUS_DELAY.
 
     "client-versions" SP VersionList NL
 
@@ -807,7 +830,8 @@ $Id$
           "Stable" if the router is suitable for long-lived circuits.
           "Running" if the router is currently usable.
           "Valid" if the router has been 'validated'.
-          "V2Dir" if the router implements this protocol.
+          "V2Dir" if the router implements the v2 directory protocol.
+          "V3Dir" if the router implements this protocol.
 
     "v" SP version NL
 
@@ -885,6 +909,11 @@ $Id$
    supports the functionality clients need.  (Currently, this is
    0.1.1.9-alpha or later.)
 
+   "V3Dir" -- A router supports the v3 directory protocol if it has an open
+   directory port, and it is running a version of the directory protocol that
+   supports the functionality clients need.  (Currently, this is
+   0.2.0.?????-alpha or later.)
+
    Directory server administrators may label some servers or IPs as
    blacklisted, and elect not to include them in their network-status lists.
 
@@ -930,7 +959,6 @@ $Id$
    download the consensus computed by each authority; instead, the
    authorities only push/fetch each others' signatures.  A "detached
    signature" document contains items as follows:
-
 
     "consensus-digest" SP Digest NL
 
@@ -1009,9 +1037,12 @@ $Id$
    and sending it in an HTTP POST request to each other authority at the URL
      http://<hostname>/tor/post/vote
 
-   If, N minutes after the voting period has begun, an authority does not have
-   a current statement from another authority, the first authority retrieves
-   the other's statement.
+   (Note that this requires the authority to settle upon and finalize its
+   vote slightly before the start of the voting period.)
+
+   If, VOTING_DELAY minutes after the voting period has begun, an authority
+   does not have a current statement from another authority, the first
+   authority retrieves the other's statement.
 
    Once an authority has a vote from another authority, it makes it available
    at
@@ -1030,73 +1061,87 @@ $Id$
    request to the URL:
       http://<hostname>/tor/post/consensus-signature
 
+   [XXX Note why we support push-and-then-pull.]
+
+   [XXX possible future features include support for downloading old
+    consensuses.]
+
+   [XXX Constants: VOTING_DELAY, CONSENSUS_DELAY]
 
 
-[XXXX CUTOFF HERE.  STUFF BELOW THIS POINT HAS NOT YET BEEN UPDATED FROM V2.]
+4.3. Downloading consensus status documents (caches only)
 
-4.3. Downloading consensus status documents (authorities caches only)
+   All directory servers (authorities and caches) try to keep a fresh
+   set of network-status consensus documents to serve to clients.  Every
+   15 minutes, or whenever the valid-until field on its most current
+   consensus is about to expire
 
-   All directory servers (authorities and mirrors) try to keep a fresh
-   set of network-status documents from every authority.  To do so,
-   every 5 minutes, each authority asks every other authority for its
-   most recent network-status document.  Every 15 minutes, each mirror
-   picks a random authority and asks it for the most recent network-status
-   documents for all the authorities the authority knows about (including
-   the chosen authority itself).
+[XXXX finish this section]
 
-   Directory servers and mirrors remember and serve the most recent
-   network-status document they have from each authority.  Other
-   network-status documents don't need to be stored.  If the most recent
-   network-status document is over 10 days old, it is discarded anyway.
-   Mirrors SHOULD store and serve network-status documents from authorities
-   they don't recognize, but SHOULD NOT use such documents for any other
-   purpose.  Mirrors SHOULD discard network-status documents older than 48
-   hours.
-
-4.3. Downloading and storing router descriptors (authorities and caches)
+4.4. Downloading and storing router descriptors (authorities and caches)
 
    Periodically (currently, every 10 seconds), directory servers check
-   whether there are any specific descriptors (as identified by descriptor
-   hash in a network-status document) that they do not have and that they
-   are not currently trying to download.
+   whether there are any specific descriptors that they do not have and that
+   they are not currently trying to download.  Caches identify these
+   descriptors by hash in the recent network-status consensus documents;
+   authorities identify them by hash in vote (if publication date is more
+   recent than the descriptor we currently have).
+
+ [XXXX need a way to fetch descriptors ahead of the vote?  v2 status docs can
+ do that for now.]
 
    If so, the directory server launches requests to the authorities for these
    descriptors, such that each authority is only asked for descriptors listed
-   in its most recent network-status.  When more than one authority lists the
-   descriptor, we choose which to ask at random.
+   in its most recent vote (if the requester is an authority) or in the
+   consensus (if the requester is a cache).  If we're an authority, and more
+   than one authority lists the descriptor, we choose which to ask at random.
 
    If one of these downloads fails, we do not try to download that descriptor
    from the authority that failed to serve it again unless we receive a newer
-   network-status from that authority that lists the same descriptor.
+   network-status (consensus or vote) from that authority that lists the same
+   descriptor.
 
    Directory servers must potentially cache multiple descriptors for each
-   router. Servers must not discard any descriptor listed by any current
-   network-status document from any authority.  If there is enough space to
-   store additional descriptors, servers SHOULD try to hold those which
-   clients are likely to download the most.  (Currently, this is judged
-   based on the interval for which each descriptor seemed newest.)
+   router. Servers must not discard any descriptor listed by any recent
+   consensus.  If there is enough space to store additional descriptors,
+   servers SHOULD try to hold those which clients are likely to download the
+   most.  (Currently, this is judged based on the interval for which each
+   descriptor seemed newest.)
+[XXXX define recent]
 
    Authorities SHOULD NOT download descriptors for routers that they would
    immediately reject for reasons listed in 3.1.
 
-4.4. HTTP URLs
+4.5. Downloading and storing extra-info documents
+
+   All authorities, and any cache that chooses to cache extra-info documents,
+   and any client that uses extra-info documents, should implement this
+   section.
+
+   Note that generally, clients don't need extra-info documents.
+
+   Periodically, the Tor instance checks whether it is missing any extra-info
+   documents: in other words, if it has any router descriptors with an
+   extra-info-digest field that does not match any of the extra-info
+   documents currently held.  If so, it downloads whatever extra-info
+   documents are missing.  Caches download from authorities; non-caches try
+   to download from caches.  We follow the same splitting and back-off rules
+   as in 4.4 (if a cache) or 5.3 (if a client).
+
+4.6. General-use HTTP URLs
 
    "Fingerprints" in these URLs are base-16-encoded SHA1 hashes.
 
-   The authoritative network-status published by a host should be available at:
-      http://<hostname>/tor/status/authority.z
+   The most recent v3 consensus should be available at:
+      http://<hostname>/tor/status-vote/current/consensus.z
 
-   The network-status published by a host with fingerprint
-   <F> should be available at:
-      http://<hostname>/tor/status/fp/<F>.z
+   A concatenated set of all the current key certificates should be available
+   at:
+      http://<hostname>/tor/keys/all.z
 
-   The network-status documents published by hosts with fingerprints
-   <F1>,<F2>,<F3> should be available at:
-      http://<hostname>/tor/status/fp/<F1>+<F2>+<F3>.z
-
-   The most recent network-status documents from all known authorities,
-   concatenated, should be available at:
-         http://<hostname>/tor/status/all.z
+   The key certificate for this server (if it is an authority) should be
+   available at:
+      http://<hostname>/tor/keys/authority.z
 
    The most recent descriptor for a server whose identity key has a
    fingerprint of <F> should be available at:
@@ -1130,6 +1175,20 @@ $Id$
    should be available at:
       http://<hostname>/tor/server/all.z
 
+   Extra-info documents are available at the URLS
+      http://<hostname>/tor/extra/d/...
+      http://<hostname>/tor/extra/fp/...
+      http://<hostname>/tor/extra/all[.z]
+      http://<hostname>/tor/extra/authority[.z]
+         (As for /tor/server/ URLs: supports fetching extra-info
+         documents by their digest, by the fingerprint of their servers,
+         or all at once. When serving by fingerprint, we serve the
+         extra-info that corresponds to the descriptor we would serve by
+         that fingerprint. Only directory authorities of version
+         0.2.0.1-alpha or later are guaranteed to support the first
+         three classes of URLs.  Caches may support them, and MUST
+         support them if they have advertised "caches-extra-info".)
+
    For debugging, directories SHOULD expose non-compressed objects at URLs like
    the above, but without the final ".z".
    Clients MUST handle compressed concatenated information in two forms:
@@ -1149,45 +1208,22 @@ $Id$
 
 5.1. Downloading network-status documents
 
-   Each client maintains an ordered list of directory authorities.
-   Insofar as possible, clients SHOULD all use the same ordered list.
+   Each client maintains a list of directory authorities.  Insofar as
+   possible, clients SHOULD all use the same list.
 
-   For each network-status document a client has, it keeps track of its
-   publication time *and* the time when the client retrieved it.  Clients
-   consider a network-status document "live" if it was published within the
-   last 24 hours.
+   Clients try to have a live consensus network-status document at all times.
+   A network-status document is "live" if the time in its valid-until field
+   has not passed.
 
-   Clients try to have a live network-status document hours from *every*
-   authority, and try to periodically get new network-status documents from
-   each authority in rotation as follows:
+   If a client is missing a live network-status document, it tries to fetch
+   it from a directory cache (or from an authority if it knows no caches).
+   On failure, the client waits briefly, then tries that network-status
+   document again from another cache.  The client does not build circuits
+   until it has a live network-status consensus document, and it has
+   descriptors for more than 1/4 of the routers that it believes are running.
 
-   If a client is missing a live network-status document for any
-   authority, it tries to fetch it from a directory cache.  On failure,
-   the client waits briefly, then tries that network-status document
-   again from another cache.  The client does not build circuits until it
-   has live network-status documents from more than half the authorities
-   it trusts, and it has descriptors for more than 1/4 of the routers
-   that it believes are running.
-
-   If the most recently _retrieved_ network-status document is over 30
-   minutes old, the client attempts to download a network-status document.
-   When choosing which documents to download, clients treat their list of
-   directory authorities as a circular ring, and begin with the authority
-   appearing immediately after the authority for their most recently
-   retrieved network-status document.  If this attempt fails, the client
-   retries at other caches several times, before moving on to the next
-   network-status document in sequence.
-
-   Clients discard all network-status documents over 24 hours old.
-
-   If enough mirrors (currently 4) claim not to have a given network status,
-   we stop trying to download that authority's network-status, until we
-   download a new network-status that makes us believe that the authority in
-   question is running.  Clients should wait a little longer after each
-   failure.
-
-   Clients SHOULD try to batch as many network-status requests as possible
-   into each HTTP GET.
+ [XXXX handling clock skew at client side?]
+ [XXXX fall-back to most recent?]
 
    (Note: clients can and should pick caches based on the network-status
    information they have: once they have first fetched network-status info
@@ -1198,12 +1234,7 @@ $Id$
 
    Clients try to have the best descriptor for each router.  A descriptor is
    "best" if:
-      * It is the most recently published descriptor listed for that router
-        by at least two network-status documents.
-        OR,
-      * No descriptor for that router is listed by two or more
-        network-status documents, and it is the most recently published
-        descriptor listed by any network-status document.
+      * It is listed in the consensus network-status document.
 
    Periodically (currently every 10 seconds) clients check whether there are
    any "downloadable" descriptors.  A descriptor is downloadable if:
@@ -1228,24 +1259,21 @@ $Id$
    thereafter.)  Periodically (currently once an hour) clients reset the
    failure count.
 
-   No descriptors are downloaded until the client has downloaded more than
-   half of the network-status documents.
-
    Clients retain the most recent descriptor they have downloaded for each
    router so long as it is not too old (currently, 48 hours), OR so long as
-   it is recommended by at least one networkstatus AND no "better"
-   descriptor has been downloaded.  [Versions of Tor before 0.1.2.3-alpha
-   would discard descriptors simply for being published too far in the past.]
-   [The code seems to discard descriptors in all cases after they're 5
-   days old. True? -RD]
+   no better descriptor has been downloaded for the same router.
+
+   [Versions of Tor before 0.1.2.3-alpha would discard descriptors simply for
+   being published too far in the past.]  [The code seems to discard
+   descriptors in all cases after they're 5 days old. True? -RD]
 
 5.3. Managing downloads
 
-   When a client has no live network-status documents, it downloads
-   network-status documents from a randomly chosen authority.  In all other
-   cases, the client downloads from mirrors randomly chosen from among those
-   believed to be V2 directory servers.  (This information comes from the
-   network-status documents; see 6 below.)
+   When a client has no consensus network-status document, it downloads it
+   from a randomly chosen authority.  In all other cases, the client
+   downloads from caches randomly chosen from among those believed to be V2
+   directory servers.  (This information comes from the network-status
+   documents; see 6 below.)
 
    When downloading multiple router descriptors, the client chooses multiple
    mirrors so that:
@@ -1267,31 +1295,12 @@ $Id$
 
 6.1. Choosing routers for circuits.
 
-   Tor implementations only pay attention to "live" network-status documents.
-   A network status is "live" if it is the most recently downloaded network
-   status document for a given directory server, and the server is a
-   directory server trusted by the client, and the network-status document is
-   no more than 1 day old.
-
-   For time-sensitive information, Tor implementations focus on "recent"
-   network-status documents.  A network status is "recent" if it is live, and
-   if it was published in the last 60 minutes.  If there are fewer
-   than 3 such documents, the most recently published 3 are "recent."  If
-   there are fewer than 3 in all, all are "recent.")
-
    Circuits SHOULD NOT be built until the client has enough directory
-   information: network-statuses (or failed attempts to download
-   network-statuses) for all authorities, network-statuses for at more than
-   half of the authorites, and descriptors for at least 1/4 of the servers
-   believed to be running.
+   information: a live consensus network status [XXXX fallback?]  and
+   descriptors for at least 1/4 of the servers believed to be running.
 
-   A server is "listed" if it is included by more than half of the live
-   network status documents.  Clients SHOULD NOT use unlisted servers.
-
-   Clients believe the flags "Valid", "Exit", "Fast", "Guard", "Stable", and
-   "V2Dir" about a given router when they are asserted by more than half of
-   the live network-status documents.  Clients believe the flag "Running" if
-   it is listed by more than half of the recent network-status documents.
+   A server is "listed" if it is included by the consensus network-status
+   document.  Clients SHOULD NOT use unlisted servers.
 
    These flags are used as follows:
 
@@ -1312,6 +1321,8 @@ $Id$
        caches.
 
 6.2. Managing naming
+
+   [XXXX rewrite for v3]
 
    In order to provide human-memorable names for individual server
    identities, some directory servers bind names to IDs.  Clients handle
@@ -1340,11 +1351,8 @@ $Id$
 
 6.3. Software versions
 
-   An implementation of Tor SHOULD warn when it has fetched (or has
-   attempted to fetch and failed four consecutive times) a network-status
-   for each authority, and it is running a software version
-   not listed on more than half of the live "Versioning" network-status
-   documents.
+   An implementation of Tor SHOULD warn when it has fetched a consensus
+   network-status, and it is running a software version not listed.
 
 6.4. Warning about a router's status.
 
@@ -1353,10 +1361,8 @@ $Id$
    warn the operator that it is either using the wrong key or is using
    an already claimed nickname.
 
-   If a router has fetched (or attempted to fetch and failed four
-   consecutive times) a network-status for every authority, and at
-   least one of the authorities is "Naming", and no live "Naming"
-   authorities publish a binding for the router's nickname, the
+   If a router has fetched a consensus document,, and the
+   authorities do not publish a binding for the router's nickname, the
    router MAY remind the operator that the chosen nickname is not
    bound to this key at the authorities, and suggest contacting the
    authority operators.
@@ -1380,7 +1386,8 @@ $Id$
 
 7. Standards compliance
 
-   All clients and servers MUST support HTTP 1.0.
+   All clients and servers MUST support HTTP 1.0.  Clients and servers MAY
+   support later versions of HTTP as well.
 
 7.1. HTTP headers
 
@@ -1403,5 +1410,33 @@ $Id$
 
   XXX We should write down what return codes dirservers send in what situations.
 
-8. Backward compatibility and migration plans
+9. Backward compatibility and migration plans
+
+  Until Tor versions before 0.1.1.x are completely obsolete, directory
+  authorities should generate, and mirrors should download and cache, v1
+  directories and running-routers lists, and allow old clients to download
+  them.  These documents and the rules for retrieving, serving, and caching
+  them are described in dir-spec-v1.txt.
+
+  Until Tor versions before 0.2.0.x are completely obsolete, directory
+  authorities should generate, mirrors should download and cache, v2
+  network-status documents, and allow old clients to download them.
+  Additionally, all directory servers and caches should download, store, and
+  serve any router descriptor that is required because of v2 network-status
+  documents. These documents and the rules for retrieving, serving, and
+  caching them are described in dir-spec-v1.txt.
+
+A. Consensus-negotiation timeline.
+
+
+   Period begins: this is the Published time.
+     Everybody sends votes
+   Reconciliation: everybody tries to fetch missing votes.
+     consensus may exist at this point.
+   End of voting period:
+     everyone swaps signatures.
+   Now it's okay for caches to download
+     Now it's okay for clients to download.
+
+   Valid-after/valid-until switchover
 
