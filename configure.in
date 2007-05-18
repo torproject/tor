@@ -616,7 +616,7 @@ if test x$enable_gcc_warnings = xyes; then
 #endif]), have_gcc4=yes, have_gcc4=no)
 
   AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC_MINOR__ < 2)
+#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 2)
 #error
 #endif]), have_gcc42=yes, have_gcc42=no)
 
