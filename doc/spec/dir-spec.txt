@@ -417,7 +417,7 @@ $Id$
 
        [Any number]
 
-       These lines describe the rules that an OR follows when
+       These lines describe an "exit policy": the rules that an OR follows when
        deciding whether to allow a new stream to a given address.  The
        'exitpattern' syntax is described below.  The rules are considered in
        order; if no rule matches, the address will be accepted.  For clarity,
@@ -570,7 +570,8 @@ $Id$
    port ::= an integer between 1 and 65535, inclusive.
 
       [Some implementations incorrectly generate ports with value 0.
-       Implementations SHOULD accept this, and SHOULD NOT generate it.]
+       Implementations SHOULD accept this, and SHOULD NOT generate it.
+       Connections to port 0 are never permitted.]
 
    addrspec ::= "*" | ip4spec | ip6spec
    ipv4spec ::= ip4 | ip4 "/" num_ip4_bits | ip4 "/" ip4mask

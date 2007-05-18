@@ -611,7 +611,7 @@ see tor-design.pdf.
 
    where  ADDRESS can be a DNS hostname, or an IPv4 address in
    dotted-quad format, or an IPv6 address surrounded by square brackets;
-   and where PORT is encoded in decimal.
+   and where PORT is a decimal integer between 1 and 65535, inclusive.
 
    [What is the [00] for? -NM]
    [It's so the payload is easy to parse out with string funcs -RD]
