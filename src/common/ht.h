@@ -122,8 +122,9 @@ ht_string_hash(const char *s)
   name##_HT_FIND(const struct name *head, struct type *elm)             \
   {                                                                     \
     struct type **p;                                                    \
+    struct name *h = (struct name *) head;                              \
     _HT_SET_HASH(elm, field, hashfn);                                   \
-    p = _##name##_HT_FIND_P((struct name *)head, elm);                  \
+    p = _##name##_HT_FIND_P(h, elm);                                    \
     return p ? *p : NULL;                                               \
   }                                                                     \
   /* Insert the element 'elm' into the table 'head'.  Do not call this  \
