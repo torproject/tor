@@ -1885,6 +1885,8 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
     sd = signed_descriptor_from_routerinfo(ri);
     smartlist_add(rl->old_routers, sd);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
+    if (!tor_digest_is_zero(sd->extra_info_digest))
+      digestmap_set(rl->desc_by_eid_map, sd->extra_info_digest, sd);
   } else {
     ri_tmp = digestmap_remove(rl->desc_digest_map,
                               ri->cache_info.signed_descriptor_digest);
