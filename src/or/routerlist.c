@@ -5052,6 +5052,7 @@ routerlist_assert_ok(routerlist_t *rl)
     tor_assert(sd);
     tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
                        sd->extra_info_digest, DIGEST_LEN));
+    iter = digestmap_iter_next(rl->extra_info_map, iter);
   }
 }
 
