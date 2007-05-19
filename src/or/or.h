@@ -3094,6 +3094,7 @@ routerinfo_t *router_find_exact_exit_enclave(const char *address,
                                              uint16_t port);
 
 #define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
+
 #define ROUTER_MAX_DECLARED_BANDWIDTH INT32_MAX
 int router_is_unreliable(routerinfo_t *router, int need_uptime,
                          int need_capacity, int need_guard);
@@ -3131,7 +3132,6 @@ void extrainfo_free(extrainfo_t *extrainfo);
 void routerstatus_free(routerstatus_t *routerstatus);
 void networkstatus_free(networkstatus_t *networkstatus);
 void routerlist_free_all(void);
-routerinfo_t *routerinfo_copy(const routerinfo_t *router);
 void router_set_status(const char *digest, int up);
 void routerlist_remove_old_routers(void);
 void networkstatus_list_clean(time_t now);
