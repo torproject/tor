@@ -15,6 +15,8 @@ const char routerlist_c_id[] =
 
 #include "or.h"
 
+// #define DEBUG_ROUTERLIST
+
 /****************************************************************************/
 
 /* static function prototypes */
@@ -1764,7 +1766,9 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   smartlist_add(rl->routers, ri);
   ri->routerlist_index = smartlist_len(rl->routers) - 1;
   router_dir_info_changed();
-  // routerlist_assert_ok(rl);
+#ifdef DEBUG_ROUTERLIST
+  routerlist_assert_ok(rl);
+#endif
   routerlist_check_bug_417();
 }
 
@@ -1810,6 +1814,9 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
     extrainfo_free(ei_tmp);
 
  done:
+#ifdef DEBUG_ROUTERLIST
+  routerlist_assert_ok(rl);
+#endif
   routerlist_check_bug_417();
   return r;
 }
@@ -1838,7 +1845,9 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
   } else {
     routerinfo_free(ri);
   }
-  // routerlist_assert_ok(rl);
+#ifdef DEBUG_ROUTERLIST
+  routerlist_assert_ok(rl);
+#endif
   routerlist_check_bug_417();
 }
 
@@ -1892,7 +1901,9 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
       digestmap_remove(rl->desc_by_eid_map, ri->cache_info.extra_info_digest);
     routerinfo_free(ri);
   }
-  // routerlist_assert_ok(rl);
+#ifdef DEBUG_ROUTERLIST
+  routerlist_assert_ok(rl);
+#endif
   routerlist_check_bug_417();
 }
 
@@ -1924,7 +1935,9 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
 
   signed_descriptor_free(sd);
   routerlist_check_bug_417();
-  // routerlist_assert_ok(rl);
+#ifdef DEBUG_ROUTERLIST
+  routerlist_assert_ok(rl);
+#endif
 }
 
 /** Remove <b>ri_old</b> from the routerlist <b>rl</b>, and replace it with
@@ -1970,11 +1983,17 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   digestmap_set(rl->desc_digest_map,
           ri_new->cache_info.signed_descriptor_digest, &(ri_new->cache_info));
 
+  if (!tor_digest_is_zero(ri_new->cache_info.signed_descriptor_digest))
+    digestmap_set(rl->desc_by_eid_map, ri_new->cache_info.extra_info_digest,
+                  ri_new);
+
   if (make_old && get_options()->DirPort &&
       ri_old->purpose == ROUTER_PURPOSE_GENERAL) {
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri_old);
     smartlist_add(rl->old_routers, sd);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
+    if (!tor_digest_is_zero(sd->extra_info_digest))
+      digestmap_set(rl->desc_by_eid_map, sd->extra_info_digest, sd);
   } else {
     if (memcmp(ri_old->cache_info.signed_descriptor_digest,
                ri_new->cache_info.signed_descriptor_digest,
@@ -1997,7 +2016,9 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                        ri_old->cache_info.extra_info_digest);
     routerinfo_free(ri_old);
   }
-  // routerlist_assert_ok(rl);
+#ifdef DEBUG_ROUTERLIST
+  routerlist_assert_ok(rl);
+#endif
   routerlist_check_bug_417();
 }
 
