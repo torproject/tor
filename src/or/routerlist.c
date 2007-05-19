@@ -1780,31 +1780,28 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   int r = 0;
   routerinfo_t *ri = digestmap_get(rl->identity_map,
                                    ei->cache_info.identity_digest);
+  signed_descriptor_t *sd;
   extrainfo_t *ei_tmp;
   routerlist_check_bug_417();
-  if (!ri || routerinfo_incompatible_with_extrainfo(ri,ei)) {
-    int found = 0;
-    if (ei->pending_sig || ei->bad_sig) {
-      extrainfo_free(ei);
-      goto done;
-    }
-    /* The signature checks out; let's see if one of the old routers
-     * matches. */
-    SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd, {
-        if (!memcmp(ei->cache_info.identity_digest,
-                    sd->identity_digest, DIGEST_LEN) &&
-            !memcmp(ei->cache_info.signed_descriptor_digest,
-                    sd->extra_info_digest, DIGEST_LEN) &&
-            sd->published_on == ei->cache_info.published_on) {
-          found = 1;
-          break;
-        }
-      });
-    if (!found) {
-      extrainfo_free(ei);
-      goto done;
-    }
+
+  if (!ri) {
+    /* This router is unknown; we can't even verify the signature. Give up.*/
+    goto done;
   }
+  if (routerinfo_incompatible_with_extrainfo(ri, ei)) {
+    if (ei->bad_sig) /* If the signature didn't check, it's just wrong. */
+      goto done;
+    sd = digestmap_get(rl->desc_by_eid_map,
+                       ei->cache_info.signed_descriptor_digest);
+    if (!sd ||
+        memcmp(sd->identity_digest, ei->cache_info.identity_digest,
+               DIGEST_LEN) ||
+        sd->published_on != ei->cache_info.published_on)
+      goto done;
+  }
+
+  /* Okay, if we make it here, we definitely have a router corresponding to
+   * this extrainfo. */
 
   ei_tmp = digestmap_set(rl->extra_info_map,
                          ei->cache_info.signed_descriptor_digest,
@@ -1814,6 +1811,9 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
     extrainfo_free(ei_tmp);
 
  done:
+  if (r == 0)
+    extrainfo_free(ei);
+
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
 #endif
@@ -4861,6 +4861,10 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei)
 
     tor_free(ei->pending_sig);
   }
+
+  if (memcmp(ei->cache_info.signed_descriptor_digest,
+             ri->cache_info.extra_info_digest, DIGEST_LEN))
+    return 1; /* Digest doesn't match declared value. */
 
   if (ei->cache_info.published_on < ei->cache_info.published_on)
     return 1;
