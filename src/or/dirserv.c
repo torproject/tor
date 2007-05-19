@@ -1612,7 +1612,7 @@ generate_v2_networkstatus(void)
   in.s_addr = htonl(addr);
   tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
 
-  format_iso_time(published, time(NULL));
+  format_iso_time(published, now);
 
   client_versions = format_versions_list(options->RecommendedClientVersions);
   server_versions = format_versions_list(options->RecommendedServerVersions);
@@ -1786,11 +1786,11 @@ generate_v2_networkstatus(void)
 
   if (the_v2_networkstatus)
     cached_dir_decref(the_v2_networkstatus);
-  the_v2_networkstatus = new_cached_dir(status, time(NULL));
+  the_v2_networkstatus = new_cached_dir(status, now);
   status = NULL; /* So it doesn't get double-freed. */
   the_v2_networkstatus_is_dirty = 0;
   router_set_networkstatus(the_v2_networkstatus->dir,
-                           time(NULL), NS_GENERATED, NULL);
+                           now, NS_GENERATED, NULL);
   r = the_v2_networkstatus;
  done:
   tor_free(client_versions);
