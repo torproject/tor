@@ -1085,18 +1085,36 @@ test_smartlist(void)
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
-  /* Test smartlist sorting. */
+  /* Test swapping, shuffling, and sorting. */
   smartlist_split_string(sl, "the,onion,router,by,arma,and,nickm", ",", 0, 0);
   test_eq(7, smartlist_len(sl));
   smartlist_sort(sl, _compare_strs);
   cp = smartlist_join_strings(sl, ",", 0, NULL);
   test_streq(cp,"and,arma,by,nickm,onion,router,the");
   tor_free(cp);
+  smartlist_swap(sl, 1, 5);
+  cp = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp,"and,router,by,nickm,onion,arma,the");
+  tor_free(cp);
+  smartlist_shuffle(sl);
+  test_eq(7, smartlist_len(sl));
+  test_assert(smartlist_string_isin(sl, "and"));
+  test_assert(smartlist_string_isin(sl, "router"));
+  test_assert(smartlist_string_isin(sl, "by"));
+  test_assert(smartlist_string_isin(sl, "nickm"));
+  test_assert(smartlist_string_isin(sl, "onion"));
+  test_assert(smartlist_string_isin(sl, "arma"));
+  test_assert(smartlist_string_isin(sl, "the"));
 
+
+  /* Test bsearch. */
+  smartlist_sort(sl, _compare_strs);
   test_streq("nickm", smartlist_bsearch(sl, "zNicKM",
                                         _compare_without_first_ch));
   test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
   test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
+
+
 
   /* Test reverse() and pop_last() */
   smartlist_reverse(sl);
