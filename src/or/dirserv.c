@@ -586,13 +586,19 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
              ri->nickname);
     *msg = "Not replacing router descriptor; no information has changed since "
       "the last one with this identity.";
-    routerinfo_free(ri);
     control_event_or_authdir_new_descriptor("DROPPED", desc, *msg);
+    routerinfo_free(ri);
     return 0;
   }
   if ((r = router_add_to_routerlist(ri, msg, 0, 0))<0) {
+#if 0
+    /* XXXX020 reinstate this code, but remember that it can't actually
+       work, since it is NOT kosher to look at ri or desc after
+       add_to_routerlist, _unless_ the descriptor is accepted.
+    */
     if (r < -1) /* unless the routerinfo was fine, just out-of-date */
       control_event_or_authdir_new_descriptor("REJECTED", desc, *msg);
+#endif
     return r == -1 ? 0 : -1;
   } else {
     smartlist_t *changed;
