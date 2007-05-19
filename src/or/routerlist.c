@@ -2662,6 +2662,31 @@ router_get_combined_status_by_digest(const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
+/** Return a newly allocated list of the local_routerstatus_t for all routers
+ * where we believe that the digest of their current descriptor is some digest
+ * listed in <b>digests</b>. */
+smartlist_t *
+router_get_combined_status_by_descriptor_digests(smartlist_t *digests)
+{
+  digestmap_t *map;
+  smartlist_t *result;
+
+  if (!routerstatus_list)
+    return NULL;
+
+  map = digestmap_new();
+  result = smartlist_create();
+  SMARTLIST_FOREACH(digests, const char *, d, digestmap_set(map, d, (void*)1));
+
+  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, lrs, {
+      if (digestmap_get(map, lrs->status.descriptor_digest))
+        smartlist_add(result, lrs);
+    });
+
+  digestmap_free(map, NULL);
+  return result;
+}
+
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
  * the corresponding local_routerstatus_t, or NULL if none exists.  Warn the
  * user if <b>warn_if_unnamed</b> is set, and they have specified a router by

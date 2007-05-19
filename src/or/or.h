@@ -2966,6 +2966,9 @@ void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
 local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
+smartlist_t *router_get_combined_status_by_descriptor_digests(
+                                                   smartlist_t *digests);
+
 routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 void update_networkstatus_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);

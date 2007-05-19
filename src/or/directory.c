@@ -2015,14 +2015,21 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
 static void
 dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
 {
-  char digest[DIGEST_LEN];
-  local_routerstatus_t *rs;
   time_t now = time(NULL);
   int server = server_mode(get_options()) && get_options()->DirPort;
+  smartlist_t *routerstatuses, *digests = smartlist_create();
+
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
-    base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
-    rs = router_get_combined_status_by_digest(digest);
+    char *d = tor_malloc(DIGEST_LEN);
+    base16_decode(d, DIGEST_LEN, cp, strlen(cp));
+    smartlist_add(digests, d);
+  });
+  routerstatuses = router_get_combined_status_by_descriptor_digests(digests);
+  SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
+  smartlist_free(digests);
+
+  SMARTLIST_FOREACH(routerstatuses, local_routerstatus_t *, rs, {
     if (!rs || rs->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;
     if (status_code != 503 || server)
@@ -2050,16 +2057,18 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code)
       }
     }
     if (rs->next_attempt_at == 0)
-      log_debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
-                cp, (int)rs->n_download_failures);
+      log_debug(LD_DIR, "dl failed %d time(s); I'll try again immediately.",
+                (int)rs->n_download_failures);
     else if (rs->next_attempt_at < TIME_MAX)
-      log_debug(LD_DIR, "%s failed %d time(s); I'll try again in %d seconds.",
-                cp, (int)rs->n_download_failures,
+      log_debug(LD_DIR, "dl failed %d time(s); I'll try again in %d seconds.",
+                (int)rs->n_download_failures,
                 (int)(rs->next_attempt_at-now));
     else
-      log_debug(LD_DIR, "%s failed %d time(s); Giving up for a while.",
-                cp, (int)rs->n_download_failures);
+      log_debug(LD_DIR, "dl failed %d time(s); Giving up for a while.",
+                (int)rs->n_download_failures);
   });
+
+  smartlist_free(routerstatuses);
 
   /* No need to relaunch descriptor downloads here: we already do it
    * every 10 seconds (DESCRIPTOR_RETRY_INTERVAL) in main.c. */

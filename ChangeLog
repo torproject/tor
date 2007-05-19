@@ -22,6 +22,8 @@ Changes in version 0.1.2.14 - 2007-0?-??
     - When we have k non-v2 authorities in our DirServer config,
       we ignored as many as k v2 authorities while updating our
       network-statuses.
+    - Correctly back-off from requesting router descriptors that we are
+      having a hard time downloading.
 
   o Minor features:
     - When routers publish SVN revisions in their router descriptors,
