@@ -488,12 +488,12 @@ $Id$
          used, and should still be recognized by new code until Tor 0.1.2.x
          is obsolete.]
 
-   "caches-extra-info" 0|1 NL
+   "caches-extra-info" NL
 
        [At most once.]
 
-       True if this router is a directory cache that provides extra-info
-       documents.  If absent, the value should be treated as false.
+       Present only if this router is a directory cache that provides
+       extra-info documents.
 
        [Versions before 0.2.0.1-alpha don't recognize this, and versions
         before 0.1.2.5-alpha will reject descriptors containing it unless
