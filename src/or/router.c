@@ -334,8 +334,7 @@ init_keys(void)
       log_err(LD_GENERAL,"Generated a routerinfo we couldn't parse.");
       return -1;
     }
-    if (dirserv_add_descriptor(ri, &m)
-        < 0) {
+    if (dirserv_add_descriptor(ri, &m) < 0) {
       log_err(LD_GENERAL,"Unable to add own descriptor to directory: %s",
               m?m:"<unknown error>");
       return -1;

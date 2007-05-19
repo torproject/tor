@@ -1608,6 +1608,10 @@ routerinfo_free(routerinfo_t *router)
     smartlist_free(router->declared_family);
   }
   addr_policy_free(router->exit_policy);
+
+  /* Remove once 414/417 is fixed. But I have a hunch... */
+  memset(router, 77, sizeof(routerinfo_t));
+
   tor_free(router);
 }
 
@@ -1619,6 +1623,9 @@ extrainfo_free(extrainfo_t *extrainfo)
     return;
   tor_free(extrainfo->cache_info.signed_descriptor_body);
   tor_free(extrainfo->pending_sig);
+
+  /* Remove once 414/417 is fixed. But I have a hunch... */
+  memset(extrainfo, 88, sizeof(extrainfo_t));
   tor_free(extrainfo);
 }
 
@@ -1627,6 +1634,9 @@ static void
 signed_descriptor_free(signed_descriptor_t *sd)
 {
   tor_free(sd->signed_descriptor_body);
+
+  /* Remove once 414/417 is fixed. But I have a hunch... */
+  memset(sd, 99, sizeof(signed_descriptor_t));
   tor_free(sd);
 }
 
@@ -1972,15 +1982,16 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
       /* digests don't match; digestmap_set didn't replace */
       digestmap_remove(rl->desc_digest_map,
                        ri_old->cache_info.signed_descriptor_digest);
-
-      ei_tmp = digestmap_remove(rl->extra_info_map,
-                                ri_old->cache_info.extra_info_digest);
-      if (ei_tmp) {
-        extrainfo_store_stats.bytes_dropped +=
-          ei_tmp->cache_info.signed_descriptor_len;
-        extrainfo_free(ei_tmp);
-      }
     }
+
+    ei_tmp = digestmap_remove(rl->extra_info_map,
+                              ri_old->cache_info.extra_info_digest);
+    if (ei_tmp) {
+      extrainfo_store_stats.bytes_dropped +=
+        ei_tmp->cache_info.signed_descriptor_len;
+      extrainfo_free(ei_tmp);
+    }
+
     if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest))
       digestmap_remove(rl->desc_by_eid_map,
                        ri_old->cache_info.extra_info_digest);
@@ -4951,6 +4962,11 @@ routerlist_assert_ok(routerlist_t *rl)
                         r->cache_info.signed_descriptor_digest);
     tor_assert(&(r->cache_info) == sd2);
     tor_assert(r->routerlist_index == r_sl_idx);
+    if (!tor_digest_is_zero(r->cache_info.extra_info_digest)) {
+      signed_descriptor_t *sd3 =
+        digestmap_get(rl->desc_by_eid_map, r->cache_info.extra_info_digest);
+      tor_assert(sd3 == &(r->cache_info));
+    }
   });
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
   {
@@ -4958,6 +4974,11 @@ routerlist_assert_ok(routerlist_t *rl)
     tor_assert(sd != &(r2->cache_info));
     sd2 = digestmap_get(rl->desc_digest_map, sd->signed_descriptor_digest);
     tor_assert(sd == sd2);
+    if (!tor_digest_is_zero(sd->extra_info_digest)) {
+      signed_descriptor_t *sd3 =
+        digestmap_get(rl->desc_by_eid_map, sd->extra_info_digest);
+      tor_assert(sd3 == sd);
+    }
   });
   iter = digestmap_iter_init(rl->identity_map);
   while (!digestmap_iter_done(iter)) {
@@ -4978,6 +4999,32 @@ routerlist_assert_ok(routerlist_t *rl)
     sd = _sd;
     tor_assert(!memcmp(sd->signed_descriptor_digest, d, DIGEST_LEN));
     iter = digestmap_iter_next(rl->desc_digest_map, iter);
+  }
+  iter = digestmap_iter_init(rl->desc_by_eid_map);
+  while (!digestmap_iter_done(iter)) {
+    const char *d;
+    void *_sd;
+    signed_descriptor_t *sd;
+    digestmap_iter_get(iter, &d, &_sd);
+    sd = _sd;
+    tor_assert(!memcmp(sd->extra_info_digest, d, DIGEST_LEN));
+    iter = digestmap_iter_next(rl->desc_by_eid_map, iter);
+  }
+  iter = digestmap_iter_init(rl->extra_info_map);
+  while (!digestmap_iter_done(iter)) {
+    const char *d;
+    void *_ei;
+    extrainfo_t *ei;
+    signed_descriptor_t *sd;
+    digestmap_iter_get(iter, &d, &_ei);
+    ei = _ei;
+    tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
+                       d, DIGEST_LEN));
+    sd = digestmap_get(rl->desc_by_eid_map,
+                       ei->cache_info.signed_descriptor_digest);
+    tor_assert(sd);
+    tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
+                       sd->extra_info_digest, DIGEST_LEN));
   }
 }
 
