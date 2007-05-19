@@ -1738,6 +1738,12 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
   routerinfo_t *ri_old;
   routerlist_check_bug_417();
+  {
+    /* XXXX020 remove this code once bug 417/404 is fixed. */
+    routerinfo_t *ri_generated = router_get_my_routerinfo();
+    tor_assert(ri_generated != ri);
+  }
+
   ri_old = digestmap_set(rl->identity_map, ri->cache_info.identity_digest, ri);
   tor_assert(!ri_old);
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
@@ -1805,6 +1811,11 @@ static void
 routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 {
   routerlist_check_bug_417();
+  {
+    /* XXXX020 remove this code once bug 417/404 is fixed. */
+    routerinfo_t *ri_generated = router_get_my_routerinfo();
+    tor_assert(ri_generated != ri);
+  }
   if (get_options()->DirPort &&
       ri->purpose == ROUTER_PURPOSE_GENERAL &&
       !digestmap_get(rl->desc_digest_map,
@@ -1921,6 +1932,11 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
   routerlist_check_bug_417();
+  {
+    /* XXXX020 remove this code once bug 417/404 is fixed. */
+    routerinfo_t *ri_generated = router_get_my_routerinfo();
+    tor_assert(ri_generated != ri_new);
+  }
   tor_assert(ri_old != ri_new);
   idx = _routerlist_find_elt(rl->routers, ri_old, idx);
   router_dir_info_changed();
