@@ -4856,8 +4856,8 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei)
   if (ei->bad_sig)
     return 1;
 
-  /* XXX020 below we should explain why this is strcmp and not strcasecmp,
-   * since it differs from how we usually compare nicknames. -RD */
+  /* The nickname must match exactly to have been generated at the same time
+   * by the same rotuer.  */
   if (strcmp(ri->nickname, ei->nickname) ||
       memcmp(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
              DIGEST_LEN))

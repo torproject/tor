@@ -562,6 +562,9 @@ dns_resolve(edge_connection_t *exitconn)
       if (!exitconn->_base.marked_for_close) {
         connection_free(TO_CONN(exitconn));
         //XXX020 ... and we just leak exitconn otherwise? -RD
+        // If it's marked for close, it's on closeable_connection_lst in
+        // main.c.  If it's on the closeable list, it will get freed from
+        // main.c. -NM
       }
       break;
     default:

@@ -385,11 +385,11 @@ mp_pool_clean(mp_pool_t *pool, int n)
 {
   mp_chunk_t *chunk, **first_to_free;
   if (n < 0) {
+    /* As said in the documentation, "negative n" means "leave an additional
+     * -n chunks". So replace n with a positive number. */
     n = pool->min_empty_chunks + (-n);
     if (n < pool->n_empty_chunks)
       pool->min_empty_chunks = n;
-    /* XXX020 don't we want some sort of return here, given the
-     * assert that follows? -RD */
   }
   ASSERT(n>=0);
 
