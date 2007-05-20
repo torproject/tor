@@ -3185,7 +3185,8 @@ void networkstatus_list_update_recent(time_t now);
 void router_reset_descriptor_download_failures(void);
 void router_reset_status_download_failures(void);
 int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
-int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei);
+int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
+                                           const char **msg);
 const char *esc_router_info(routerinfo_t *router);
 
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);

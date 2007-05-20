@@ -1106,15 +1106,12 @@ test_smartlist(void)
   test_assert(smartlist_string_isin(sl, "arma"));
   test_assert(smartlist_string_isin(sl, "the"));
 
-
   /* Test bsearch. */
   smartlist_sort(sl, _compare_strs);
   test_streq("nickm", smartlist_bsearch(sl, "zNicKM",
                                         _compare_without_first_ch));
   test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
   test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
-
-
 
   /* Test reverse() and pop_last() */
   smartlist_reverse(sl);

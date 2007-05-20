@@ -630,8 +630,7 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
     extrainfo_free(ei);
     return -1;
   }
-  if (routerinfo_incompatible_with_extrainfo(ri, ei)) {
-    *msg = "Router descriptor incompatible with extra-info descriptor";
+  if (routerinfo_incompatible_with_extrainfo(ri, ei, msg)) {
     extrainfo_free(ei);
     return -1;
   }

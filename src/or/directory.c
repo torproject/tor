@@ -1973,7 +1973,8 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       case -2:
       case -1:
       case 1:
-        log_notice(LD_DIRSERV,"Rejected router descriptor from %s.",
+        log_notice(LD_DIRSERV,
+                   "Rejected router descriptor or extra-info from %s.",
                    conn->_base.address);
         /* malformed descriptor, or something wrong */
         write_http_status_line(conn, 400, msg);

@@ -1802,7 +1802,7 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
     /* This router is unknown; we can't even verify the signature. Give up.*/
     goto done;
   }
-  if (routerinfo_incompatible_with_extrainfo(ri, ei)) {
+  if (routerinfo_incompatible_with_extrainfo(ri, ei, NULL)) {
     if (ei->bad_sig) /* If the signature didn't check, it's just wrong. */
       goto done;
     sd = digestmap_get(rl->desc_by_eid_map,
@@ -4029,7 +4029,8 @@ routerstatus_list_update_from_networkstatus(time_t now)
     if ((rs_old = router_get_combined_status_by_digest(lowest))) {
       if (!memcmp(rs_out->status.descriptor_digest,
                   most_recent->descriptor_digest, DIGEST_LEN)) {
-        rs_out->dl_status.n_download_failures = rs_old->dl_status.n_download_failures;
+        rs_out->dl_status.n_download_failures =
+          rs_old->dl_status.n_download_failures;
         rs_out->dl_status.next_attempt_at = rs_old->dl_status.next_attempt_at;
       }
       rs_out->name_lookup_warned = rs_old->name_lookup_warned;
@@ -4848,7 +4849,8 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
 
 /** DOCDOC */
 int
-routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei)
+routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
+                                       const char **msg)
 {
   tor_assert(ri);
   tor_assert(ei);
@@ -4860,8 +4862,10 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei)
    * by the same rotuer.  */
   if (strcmp(ri->nickname, ei->nickname) ||
       memcmp(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
-             DIGEST_LEN))
+             DIGEST_LEN)) {
+    if (msg) *msg = "Extrainfo nickname or identity did not match routerinfo";
     return 1; /* different servers */
+  }
 
   if (ei->pending_sig) {
     char signed_digest[128];
@@ -4871,20 +4875,26 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei)
                DIGEST_LEN)) {
       ei->bad_sig = 1;
       tor_free(ei->pending_sig);
+      if (msg) *msg = "Extrainfo signature bad, or signed with wrong key";
       return 1; /* Bad signature, or no match. */
     }
 
     tor_free(ei->pending_sig);
   }
 
-  if (memcmp(ei->cache_info.signed_descriptor_digest,
-             ri->cache_info.extra_info_digest, DIGEST_LEN))
-    return 1; /* Digest doesn't match declared value. */
-
-  if (ei->cache_info.published_on < ei->cache_info.published_on)
+  if (ei->cache_info.published_on < ei->cache_info.published_on) {
+    if (msg) *msg = "Extrainfo published time did not match routerdesc";
     return 1;
-  else if (ei->cache_info.published_on > ei->cache_info.published_on)
+  } else if (ei->cache_info.published_on > ei->cache_info.published_on) {
+    if (msg) *msg = "Extrainfo published time did not match routerdesc";
     return -1;
+  }
+
+  if (memcmp(ei->cache_info.signed_descriptor_digest,
+             ri->cache_info.extra_info_digest, DIGEST_LEN)) {
+    if (msg) *msg = "Extrainfo digest did not match value from routerdesc";
+    return 1; /* Digest doesn't match declared value. */
+  }
 
   return 0;
 }
