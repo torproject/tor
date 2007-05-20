@@ -68,7 +68,7 @@ static time_t time_of_last_signewnym = 0;
 static int signewnym_is_pending = 0;
 
 /** Array of all open connections.  The first n_conns elements are valid. */
-/*XXXX020 Should we just use a smartlist here? */
+/*XXXX020 Should we just use a smartlist here? -NM Sure. -RD */
 static connection_t *connection_array[MAXCONNECTIONS+1] =
         { NULL };
 /** List of connections that have been marked for close and need to be freed

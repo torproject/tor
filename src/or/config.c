@@ -3119,6 +3119,8 @@ options_init_from_torrc(int argc, char **argv)
 
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
     char vbuf[128];
+    // XXX020 below, tor_svn_revision will always be defined, right?
+    // So we can take out that check? Also in router.c. -RD
     if (tor_svn_revision != NULL && strlen(tor_svn_revision)) {
       tor_snprintf(vbuf, sizeof(vbuf), " (r%s)", tor_svn_revision);
     } else {

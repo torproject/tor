@@ -2142,7 +2142,8 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
   for (i = 0; table[i].t; ++i) {
     if (counts[table[i].v] < table[i].min_cnt) {
       log_warn(LD_DIR, "Parse error: missing %s element.", table[i].t);
-      tor_assert(0);
+      tor_assert(0); /* XXX020 is this assert a remote crash waiting to
+                      * happen? -RD */
       return -1;
     }
     if (counts[table[i].v] > table[i].max_cnt) {

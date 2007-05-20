@@ -559,8 +559,10 @@ dns_resolve(edge_connection_t *exitconn)
       }
       //circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
       exitconn->on_circuit = NULL;
-      if (!exitconn->_base.marked_for_close)
+      if (!exitconn->_base.marked_for_close) {
         connection_free(TO_CONN(exitconn));
+        //XXX020 ... and we just leak exitconn otherwise? -RD
+      }
       break;
     default:
       tor_assert(0);
