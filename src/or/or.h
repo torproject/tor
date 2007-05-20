@@ -1075,12 +1075,14 @@ typedef struct signed_descriptor_t {
   /** DOCDOC; routerinfo_t only: for the corresponding extrainfo. */
   download_status_t ei_dl_status;
   /** Where is the descriptor saved? */
-  saved_location_t saved_location;
+  saved_location_t saved_location ;
   /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
    * this descriptor in the corresponding file. */
   off_t saved_offset;
   /* DOCDOC */
   unsigned int do_not_cache : 1;
+  /* DOCDOC */
+  unsigned int is_extrainfo : 1;
 } signed_descriptor_t;
 
 /** Information about another onion router in the network. */

@@ -1195,6 +1195,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   }
 
   extrainfo = tor_malloc_zero(sizeof(extrainfo_t));
+  extrainfo->cache_info.is_extrainfo = 1;
   if (cache_copy)
     extrainfo->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
   extrainfo->cache_info.signed_descriptor_len = end-s;

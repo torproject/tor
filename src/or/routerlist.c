@@ -294,12 +294,13 @@ router_rebuild_store(int force, int extrainfo)
     extrainfo ? &routerlist->mmap_extrainfo : &routerlist->mmap_descriptors;
 
   routerlist_check_bug_417();
+  routerlist_assert_ok(routerlist);
 
   /* Don't save deadweight. */
   routerlist_remove_old_routers();
 
   log_info(LD_DIR, "Rebuilding %s cache",
-           extrainfo ? "Extra-info" : "router descriptor");
+           extrainfo ? "extra-info" : "router descriptor");
 
   options = get_options();
   fname_len = strlen(options->DataDirectory)+32;
@@ -370,6 +371,8 @@ router_rebuild_store(int force, int extrainfo)
   *mmap_ptr = tor_mmap_file(fname);
   if (! *mmap_ptr)
     log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
+
+  log_info(LD_DIR, "Reconstructing pointers into cache");
 
   offset = 0;
   SMARTLIST_FOREACH(signed_descriptors, signed_descriptor_t *, sd,
@@ -1553,17 +1556,28 @@ extrainfo_get_by_descriptor_digest(const char *digest)
 const char *
 signed_descriptor_get_body(signed_descriptor_t *desc)
 {
-  const char *r;
+  const char *r = NULL;
   size_t len = desc->signed_descriptor_len;
+  tor_mmap_t *mmap;
   tor_assert(len > 32);
-  if (desc->saved_location == SAVED_IN_CACHE && routerlist &&
-      routerlist->mmap_descriptors) {
-    tor_assert(desc->saved_offset + len <= routerlist->mmap_descriptors->size);
-    r = routerlist->mmap_descriptors->data + desc->saved_offset;
-  } else {
-    r = desc->signed_descriptor_body;
+  if (desc->saved_location == SAVED_IN_CACHE && routerlist) {
+    if (desc->is_extrainfo)
+      mmap = routerlist->mmap_extrainfo;
+    else
+      mmap = routerlist->mmap_descriptors;
+    if (mmap) {
+      tor_assert(desc->saved_offset + len <= mmap->size);
+      r = routerlist->mmap_descriptors->data + desc->saved_offset;
+    }
   }
+  if (!r) /* no mmap, or not in cache. */
+    r = desc->signed_descriptor_body;
+
   tor_assert(r);
+  if (memcmp("router ", r, 7) && memcmp("extra-info ", r, 11)) {
+    log_err(LD_DIR, "descriptor at %p begins with unexpected string %s",
+            desc, tor_strndup(r, 64));
+  }
   tor_assert(!memcmp("router ", r, 7) || !memcmp("extra-info ", r, 11));
 #if 0
   tor_assert(!memcmp("\n-----END SIGNATURE-----\n",
