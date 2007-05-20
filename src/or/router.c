@@ -1031,6 +1031,7 @@ router_rebuild_descriptor(int force)
 
   /* Now generate the extrainfo. */
   ei = tor_malloc_zero(sizeof(extrainfo_t));
+  ei->cache_info.is_extrainfo = 1;
   strlcpy(ei->nickname, get_options()->Nickname, sizeof(ei->nickname));
   ei->cache_info.published_on = ri->cache_info.published_on;
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,

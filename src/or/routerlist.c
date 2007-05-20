@@ -1798,6 +1798,12 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   extrainfo_t *ei_tmp;
   routerlist_check_bug_417();
 
+  {
+    /* XXXX020 remove this code once bug 417/404 is fixed. */
+    extrainfo_t *ei_generated = router_get_my_extrainfo();
+    tor_assert(ei_generated != ei);
+  }
+
   if (!ri) {
     /* This router is unknown; we can't even verify the signature. Give up.*/
     goto done;
