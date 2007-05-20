@@ -2026,7 +2026,6 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
         ei_tmp->cache_info.signed_descriptor_len;
       extrainfo_free(ei_tmp);
     }
-
     if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest))
       digestmap_remove(rl->desc_by_eid_map,
                        ri_old->cache_info.extra_info_digest);
