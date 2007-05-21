@@ -2517,9 +2517,6 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     return 0;
   }
 
-  if (source != NS_FROM_CACHE && trusted_dir)
-    trusted_dir->n_networkstatus_failures = 0;
-
   found = 0;
   for (i=0; i < smartlist_len(networkstatus_list); ++i) {
     networkstatus_t *old_ns = smartlist_get(networkstatus_list, i);
@@ -2566,6 +2563,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
       }
     }
   }
+
+  if (source != NS_FROM_CACHE && trusted_dir)
+    trusted_dir->n_networkstatus_failures = 0;
 
   if (!found)
     smartlist_add(networkstatus_list, ns);
