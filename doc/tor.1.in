@@ -545,7 +545,7 @@ resolved.  This helps trap accidental attempts to resolve URLs and so on.
 (Default: 0)
 .LP
 .TP
-\fBFastFirstHopPK \fR\fB0\fR|fB1\fR\fP
+\fBFastFirstHopPK \fR\fB0\fR|\fB1\fR\fP
 When this option is enabled and we aren't running as a server, Tor
 skips the public key step for the first hop of creating circuits.  This is
 safe since we have already used TLS to authenticate the server and to
