@@ -239,6 +239,7 @@ Things we'd like to do in 0.2.0.x:
   o Deprecations:
     o Remove v0 control protocol.
     - can we deprecate 'getinfo network-status'?
+    - can we deprecate the FastFirstHopPK config option?
 P - Packaging:
 P   - Can we switch to polipo? (Jun 1)
 P   - If we haven't replaced privoxy, lock down its configuration in all
