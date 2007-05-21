@@ -131,6 +131,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       try to use \ consistently on Windows and / consistently on Unix: it
       makes the log messages nicer.
     - Correctly report platform name on Windows 95 OSR2 and Windows 98 SE.
+    - Read resolv.conf files correctly on platforms where read() returns
+      partial results on small file reads.
 
   o Minor bugfixes (directory):
     - Correctly enforce that elements of directory objects do not appear

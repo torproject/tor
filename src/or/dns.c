@@ -1054,6 +1054,7 @@ configure_nameservers(int force)
   or_options_t *options;
   const char *conf_fname;
   struct stat st;
+  int r;
   options = get_options();
   conf_fname = options->ServerDNSResolvConfFile;
 #ifndef MS_WINDOWS
@@ -1078,9 +1079,9 @@ configure_nameservers(int force)
       evdns_clear_nameservers_and_suspend();
     }
     log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
-    if (evdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname)) {
-      log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers in '%s'",
-               conf_fname, conf_fname);
+    if ((r = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))) {
+      log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers in '%s' (%d)",
+               conf_fname, conf_fname, r);
       return -1;
     }
     if (evdns_count_nameservers() == 0) {
