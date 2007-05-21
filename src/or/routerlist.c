@@ -1567,7 +1567,7 @@ signed_descriptor_get_body(signed_descriptor_t *desc)
       mmap = routerlist->mmap_descriptors;
     if (mmap) {
       tor_assert(desc->saved_offset + len <= mmap->size);
-      r = routerlist->mmap_descriptors->data + desc->saved_offset;
+      r = mmap->data + desc->saved_offset;
     }
   }
   if (!r) /* no mmap, or not in cache. */
