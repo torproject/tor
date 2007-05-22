@@ -1532,19 +1532,15 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
 static int
 already_fetching_directory(int purpose)
 {
-  int i, n;
-  connection_t *conn;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == CONN_TYPE_DIR &&
         conn->purpose == purpose &&
         !conn->marked_for_close &&
         !router_digest_is_me(TO_DIR_CONN(conn)->identity_digest))
       return 1;
-  }
+  });
   return 0;
 }
 

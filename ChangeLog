@@ -76,6 +76,7 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       string: either fetch it directly if we're in an SVN checkout, do
       some magic to guess it if we're in an SVK checkout, or use
       the last-detected version if we're building from a .tar.gz.
+      Use this version consistently in log messages.
 
   o Minor features (logging):
     - Always prepend "Bug: " to any log message about a bug.
@@ -181,6 +182,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Make dns_resolve() handle attaching connections to circuits
       properly, so the caller doesn't have to.
     - Rename wants_to_read and wants_to_write to read/write_blocked_on_bw.
+    - Keep the connection array as a dynamic smartlist_t, rather than as
+      a fixed-sized array.  This is important, as the number of connections
+      is becoming increasingly decoupled from the number of sockets.
 
 
 Changes in version 0.1.2.13 - 2007-04-24

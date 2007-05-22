@@ -2676,7 +2676,7 @@ int connection_in_array(connection_t *conn);
 void add_connection_to_closeable_list(connection_t *conn);
 int connection_is_on_closeable_list(connection_t *conn);
 
-void get_connection_array(connection_t ***array, int *n);
+smartlist_t *get_connection_array(void);
 
 void connection_watch_events(connection_t *conn, short events);
 int connection_is_reading(connection_t *conn);

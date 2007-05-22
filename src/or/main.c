@@ -67,10 +67,8 @@ static time_t time_of_last_signewnym = 0;
 /** Is there a signewnym request we're currently waiting to handle? */
 static int signewnym_is_pending = 0;
 
-/** Array of all open connections.  The first n_conns elements are valid. */
-/*XXXX020 Should we just use a smartlist here? -NM Sure. -RD */
-static connection_t *connection_array[MAXCONNECTIONS+1] =
-        { NULL };
+/** Smartlist of all open connections. */
+static smartlist_t *connection_array = NULL;
 /** List of connections that have been marked for close and need to be freed
  * and removed from connection_array. */
 static smartlist_t *closeable_connection_lst = NULL;
@@ -78,8 +76,6 @@ static smartlist_t *closeable_connection_lst = NULL;
 static smartlist_t *active_linked_connection_lst = NULL;
 /** DOCDOC */
 static int called_loop_once = 0;
-
-static int n_conns=0; /**< Number of connections currently active. */
 
 /** We set this to 1 when we've opened a circuit, so we can print a log
  * entry to inform the user that Tor is working. */
@@ -164,13 +160,8 @@ connection_add(connection_t *conn)
   tor_assert(conn->s >= 0 || conn->linked);
 
   tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
-  if (n_conns >= MAXCONNECTIONS) {
-    log_warn(LD_BUG, "Unable to add a connection; MAXCONNECTIONS is set too "
-             "low.  This is a bug; tell the developers.");
-    return -1;
-  }
-  conn->conn_array_index = n_conns;
-  connection_array[n_conns] = conn;
+  conn->conn_array_index = smartlist_len(connection_array);
+  smartlist_add(connection_array, conn);
 
   conn->read_event = tor_malloc_zero(sizeof(struct event));
   conn->write_event = tor_malloc_zero(sizeof(struct event));
@@ -179,10 +170,9 @@ connection_add(connection_t *conn)
   event_set(conn->write_event, conn->s, EV_WRITE|EV_PERSIST,
             conn_write_callback, conn);
 
-  n_conns++;
-
   log_debug(LD_NET,"new conn type %s, socket %d, n_conns %d.",
-            conn_type_to_string(conn->type), conn->s, n_conns);
+            conn_type_to_string(conn->type), conn->s,
+            smartlist_len(connection_array));
 
   return 0;
 }
@@ -195,25 +185,26 @@ int
 connection_remove(connection_t *conn)
 {
   int current_index;
+  connection_t *tmp;
 
   tor_assert(conn);
-  tor_assert(n_conns>0);
 
   log_debug(LD_NET,"removing socket %d (type %s), n_conns now %d",
-            conn->s, conn_type_to_string(conn->type), n_conns-1);
+            conn->s, conn_type_to_string(conn->type),
+            smartlist_len(connection_array));
 
   tor_assert(conn->conn_array_index >= 0);
   current_index = conn->conn_array_index;
   connection_unregister_events(conn); /* This is redundant, but cheap. */
-  if (current_index == n_conns-1) { /* this is the end */
-    n_conns--;
+  if (current_index == smartlist_len(connection_array)-1) { /* at the end */
+    smartlist_del(connection_array, current_index);
     return 0;
   }
 
   /* replace this one with the one at the end */
-  n_conns--;
-  connection_array[current_index] = connection_array[n_conns];
-  connection_array[current_index]->conn_array_index = current_index;
+  smartlist_del(connection_array, current_index);
+  tmp = smartlist_get(connection_array, current_index);
+  tmp->conn_array_index = current_index;
 
   return 0;
 }
@@ -274,23 +265,17 @@ connection_is_on_closeable_list(connection_t *conn)
 int
 connection_in_array(connection_t *conn)
 {
-  int i;
-  for (i=0; i<n_conns; ++i) {
-    if (conn==connection_array[i])
-      return 1;
-  }
-  return 0;
+  return smartlist_isin(connection_array, conn);
 }
 
 /** Set <b>*array</b> to an array of all connections, and <b>*n</b>
  * to the length of the array. <b>*array</b> and <b>*n</b> must not
  * be modified.
  */
-void
-get_connection_array(connection_t ***array, int *n)
+smartlist_t *
+get_connection_array(void)
 {
-  *array = connection_array;
-  *n = n_conns;
+  return connection_array;
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
@@ -549,7 +534,7 @@ conn_close_if_marked(int i)
   connection_t *conn;
   int retval;
 
-  conn = connection_array[i];
+  conn = smartlist_get(connection_array, i);
   if (!conn->marked_for_close)
     return 0; /* nothing to see here, move along */
   assert_connection_ok(conn, time(NULL));
@@ -687,7 +672,7 @@ static void
 run_connection_housekeeping(int i, time_t now)
 {
   cell_t cell;
-  connection_t *conn = connection_array[i];
+  connection_t *conn = smartlist_get(connection_array, i);
   or_options_t *options = get_options();
   or_connection_t *or_conn;
 
@@ -1015,17 +1000,16 @@ run_scheduled_events(time_t now)
     circuit_build_needed_circs(now);
 
   /** 5. We do housekeeping for each connection... */
-  for (i=0;i<n_conns;i++) {
+  for (i=0;i<smartlist_len(connection_array);i++) {
     run_connection_housekeeping(i, now);
   }
   if (time_to_shrink_memory < now) {
-    for (i=0;i<n_conns;i++) {
-      connection_t *conn = connection_array[i];
-      if (conn->outbuf)
-        buf_shrink(conn->outbuf);
-      if (conn->inbuf)
-        buf_shrink(conn->inbuf);
-    }
+    SMARTLIST_FOREACH(connection_array, connection_t *, conn, {
+        if (conn->outbuf)
+          buf_shrink(conn->outbuf);
+        if (conn->inbuf)
+          buf_shrink(conn->inbuf);
+      });
     clean_cell_pool();
     buf_shrink_freelists();
     time_to_shrink_memory = now + MEM_SHRINK_INTERVAL;
@@ -1535,15 +1519,14 @@ dumpmemusage(int severity)
 static void
 dumpstats(int severity)
 {
-  int i;
-  connection_t *conn;
   time_t now = time(NULL);
   time_t elapsed;
 
   log(severity, LD_GENERAL, "Dumping stats:");
 
-  for (i=0;i<n_conns;i++) {
-    conn = connection_array[i];
+  SMARTLIST_FOREACH(connection_array, connection_t *, conn,
+  {
+    int i = conn_sl_idx;
     log(severity, LD_GENERAL,
         "Conn %d (socket %d) type %d (%s), state %d (%s), created %d secs ago",
         i, conn->s, conn->type, conn_type_to_string(conn->type),
@@ -1568,7 +1551,7 @@ dumpstats(int severity)
     }
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits
                                            * using this conn */
-  }
+  });
   log(severity, LD_NET,
       "Cells processed: "U64_FORMAT" padding\n"
       "                 "U64_FORMAT" create\n"
@@ -1686,6 +1669,8 @@ tor_init(int argc, char *argv[])
 {
   char buf[256];
   time_of_process_start = time(NULL);
+  if (!connection_array)
+    connection_array = smartlist_create();
   if (!closeable_connection_lst)
     closeable_connection_lst = smartlist_create();
   if (!active_linked_connection_lst)

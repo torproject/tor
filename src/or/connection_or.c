@@ -65,18 +65,15 @@ connection_or_remove_from_identity_map(or_connection_t *conn)
 void
 connection_or_clear_identity_map(void)
 {
-  int i, n;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i = 0; i < n; ++i) {
-    connection_t* conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == CONN_TYPE_OR) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       memset(or_conn->identity_digest, 0, DIGEST_LEN);
       or_conn->next_with_same_id = NULL;
     }
-  }
+  });
 
   if (orconn_identity_map) {
     digestmap_free(orconn_identity_map, NULL);

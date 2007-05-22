@@ -4169,17 +4169,15 @@ list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
 {
   const char *prefix = "d/";
   size_t p_len = strlen(prefix);
-  int i, n_conns;
-  connection_t **carray;
   smartlist_t *tmp = smartlist_create();
   int purpose =
     extrainfo ? DIR_PURPOSE_FETCH_EXTRAINFO : DIR_PURPOSE_FETCH_SERVERDESC;
+  smartlist_t *conns = get_connection_array();
 
   tor_assert(result);
-  get_connection_array(&carray, &n_conns);
 
-  for (i = 0; i < n_conns; ++i) {
-    connection_t *conn = carray[i];
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == CONN_TYPE_DIR &&
         conn->purpose == purpose &&
         !conn->marked_for_close) {
@@ -4188,7 +4186,7 @@ list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
         dir_split_resource_into_fingerprints(resource + p_len,
                                              tmp, NULL, 1, 0);
     }
-  }
+  });
   SMARTLIST_FOREACH(tmp, char *, d,
                     {
                       digestmap_set(result, d, (void*)1);

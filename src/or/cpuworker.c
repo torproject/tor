@@ -412,14 +412,10 @@ process_pending_task(connection_t *cpuworker)
 static void
 cull_wedged_cpuworkers(void)
 {
-  connection_t **carray;
-  connection_t *conn;
-  int n_conns, i;
   time_t now = time(NULL);
-
-  get_connection_array(&carray, &n_conns);
-  for (i = 0; i < n_conns; ++i) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (!conn->marked_for_close &&
         conn->type == CONN_TYPE_CPUWORKER &&
         conn->state == CPUWORKER_STATE_BUSY_ONION &&
@@ -430,7 +426,7 @@ cull_wedged_cpuworkers(void)
       num_cpuworkers--;
       connection_mark_for_close(conn);
     }
-  }
+  });
 }
 
 /** If cpuworker is defined, assert that he's idle, and use him. Else,

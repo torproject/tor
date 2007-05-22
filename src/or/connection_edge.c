@@ -343,22 +343,20 @@ compute_retry_timeout(edge_connection_t *conn)
 void
 connection_ap_expire_beginning(void)
 {
-  connection_t **carray;
   edge_connection_t *conn;
   circuit_t *circ;
-  int n, i;
   time_t now = time(NULL);
   or_options_t *options = get_options();
   int severity;
   int cutoff;
   int seconds_idle;
+  smartlist_t *conns = get_connection_array();
 
-  get_connection_array(&carray, &n);
-
-  for (i = 0; i < n; ++i) {
-    if (carray[i]->type != CONN_TYPE_AP)
+  SMARTLIST_FOREACH(conns, connection_t *, c,
+  {
+    if (c->type != CONN_TYPE_AP)
       continue;
-    conn = TO_EDGE_CONN(carray[i]);
+    conn = TO_EDGE_CONN(c);
     /* if it's an internal bridge connection, don't yell its status. */
     severity = (!conn->_base.addr && !conn->_base.port)
       ? LOG_INFO : LOG_NOTICE;
@@ -431,7 +429,7 @@ connection_ap_expire_beginning(void)
                                        END_STREAM_REASON_TIMEOUT)<0) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     }
-  } /* end for */
+  }); /* end foreach */
 }
 
 /** Tell any AP streams that are waiting for a new circuit to try again,
@@ -440,15 +438,10 @@ connection_ap_expire_beginning(void)
 void
 connection_ap_attach_pending(void)
 {
-  connection_t **carray;
-  connection_t *conn;
   edge_connection_t *edge_conn;
-  int n, i;
-
-  get_connection_array(&carray, &n);
-
-  for (i = 0; i < n; ++i) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
@@ -457,7 +450,7 @@ connection_ap_attach_pending(void)
     if (connection_ap_handshake_attach_circuit(edge_conn) < 0) {
       connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_CANT_ATTACH);
     }
-  }
+  });
 }
 
 /** A circuit failed to finish on its last hop <b>info</b>. If there
@@ -467,16 +460,12 @@ connection_ap_attach_pending(void)
 void
 circuit_discard_optional_exit_enclaves(extend_info_t *info)
 {
-  connection_t **carray;
-  connection_t *conn;
   edge_connection_t *edge_conn;
   routerinfo_t *r1, *r2;
-  int n, i;
 
-  get_connection_array(&carray, &n);
-
-  for (i = 0; i < n; ++i) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
         !conn->chosen_exit_optional)
@@ -492,7 +481,7 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
       conn->chosen_exit_optional = 0;
       tor_free(edge_conn->chosen_exit_name); /* clears it */
     }
-  }
+  });
 }
 
 /** The AP connection <b>conn</b> has just failed while attaching or

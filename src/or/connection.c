@@ -385,21 +385,19 @@ connection_free(connection_t *conn)
 void
 connection_free_all(void)
 {
-  int i, n;
-  connection_t **carray;
+  smartlist_t *conns = get_connection_array();
 
-  get_connection_array(&carray,&n);
   /* We don't want to log any messages to controllers. */
-  for (i=0;i<n;i++)
-    if (carray[i]->type == CONN_TYPE_CONTROL)
-      TO_CONTROL_CONN(carray[i])->event_mask = 0;
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+    if (conn->type == CONN_TYPE_CONTROL)
+      TO_CONTROL_CONN(conn)->event_mask = 0);
+
   control_update_global_event_mask();
 
   /* Unlink everything from the identity map. */
   connection_or_clear_identity_map();
 
-  for (i=0;i<n;i++)
-    _connection_free(carray[i]);
+  SMARTLIST_FOREACH(conns, connection_t *, conn, _connection_free(conn));
 
   if (outgoing_addrs) {
     SMARTLIST_FOREACH(outgoing_addrs, void*, addr, tor_free(addr));
@@ -583,15 +581,13 @@ _connection_mark_for_close(connection_t *conn, int line, const char *file)
 void
 connection_expire_held_open(void)
 {
-  connection_t **carray, *conn;
-  int n, i;
   time_t now;
+  smartlist_t *conns = get_connection_array();
 
   now = time(NULL);
 
-  get_connection_array(&carray, &n);
-  for (i = 0; i < n; ++i) {
-    conn = carray[i];
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     /* If we've been holding the connection open, but we haven't written
      * for 15 seconds...
      */
@@ -613,7 +609,7 @@ connection_expire_held_open(void)
         conn->hold_open_until_flushed = 0;
       }
     }
-  }
+  });
 }
 
 /** Bind a new non-blocking socket listening to
@@ -995,12 +991,11 @@ retry_listeners(int type, config_line_t *cfg,
                 smartlist_t *new_conns,
                 int never_open_conns)
 {
-  smartlist_t *launch = smartlist_create();
+  smartlist_t *launch = smartlist_create(), *conns;
   int free_launch_elts = 1;
+  int r;
   config_line_t *c;
-  int n_conn, i;
   connection_t *conn;
-  connection_t **carray;
   config_line_t *line;
 
   if (cfg && port_option) {
@@ -1020,9 +1015,9 @@ retry_listeners(int type, config_line_t *cfg,
                     log_fn(LOG_NOTICE, "#%s#%s", l->key, l->value));
   */
 
-  get_connection_array(&carray,&n_conn);
-  for (i=0; i < n_conn; ++i) {
-    conn = carray[i];
+  conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type != type || conn->marked_for_close)
       continue;
     if (force) {
@@ -1069,17 +1064,17 @@ retry_listeners(int type, config_line_t *cfg,
       if (free_launch_elts)
         config_free_lines(line);
     }
-  }
+  });
 
   /* Now open all the listeners that are configured but not opened. */
-  i = 0;
+  r = 0;
   if (!never_open_conns) {
     SMARTLIST_FOREACH(launch, config_line_t *, cfg_line,
       {
         conn = connection_create_listener(cfg_line->value,
                                           (uint16_t) port_option, type);
         if (!conn) {
-          i = -1;
+          r = -1;
         } else {
           if (new_conns)
             smartlist_add(new_conns, conn);
@@ -1093,7 +1088,7 @@ retry_listeners(int type, config_line_t *cfg,
   }
   smartlist_free(launch);
 
-  return i;
+  return r;
 }
 
 /** (Re)launch listeners for each port you should have open.  If
@@ -1416,10 +1411,8 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
 void
 connection_bucket_refill(int seconds_elapsed)
 {
-  int i, n;
-  connection_t *conn;
-  connection_t **carray;
   or_options_t *options = get_options();
+  smartlist_t *conns = get_connection_array();
   int relayrate, relayburst;
 
   if (options->RelayBandwidthRate) {
@@ -1452,10 +1445,8 @@ connection_bucket_refill(int seconds_elapsed)
                                   "global_relayed_write_bucket");
 
   /* refill the per-connection buckets */
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
-
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       if (connection_read_bucket_should_increase(or_conn)) {
@@ -1491,7 +1482,7 @@ connection_bucket_refill(int seconds_elapsed)
       conn->write_blocked_on_bw = 0;
       connection_start_writing(conn);
     }
-  }
+  });
 }
 
 /** Is the receiver bucket for connection <b>conn</b> low enough that we
@@ -2057,21 +2048,18 @@ _connection_write_to_buf_impl(const char *string, size_t len,
 or_connection_t *
 connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port)
 {
-  int i, n;
-  connection_t *conn;
   or_connection_t *best=NULL;
-  connection_t **carray;
+  smartlist_t *conns = get_connection_array();
 
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == CONN_TYPE_OR &&
         conn->addr == addr &&
         conn->port == port &&
         !conn->marked_for_close &&
         (!best || best->_base.timestamp_created < conn->timestamp_created))
       best = TO_OR_CONN(conn);
-  }
+  });
   return best;
 }
 
@@ -2082,20 +2070,16 @@ connection_get_by_type_addr_port_purpose(int type,
                                          uint32_t addr, uint16_t port,
                                          int purpose)
 {
-  int i, n;
-  connection_t *conn;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == type &&
         conn->addr == addr &&
         conn->port == port &&
         conn->purpose == purpose &&
         !conn->marked_for_close)
       return conn;
-  }
+  });
   return NULL;
 }
 
@@ -2105,20 +2089,16 @@ connection_get_by_type_addr_port_purpose(int type,
 edge_connection_t *
 connection_get_by_global_id(uint32_t id)
 {
-  int i, n;
-  connection_t *conn;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (CONN_IS_EDGE(conn) && TO_EDGE_CONN(conn)->global_identifier == id) {
       if (!conn->marked_for_close)
         return TO_EDGE_CONN(conn);
       else
         return NULL;
     }
-  }
+  });
   return NULL;
 }
 
@@ -2127,16 +2107,12 @@ connection_get_by_global_id(uint32_t id)
 connection_t *
 connection_get_by_type(int type)
 {
-  int i, n;
-  connection_t *conn;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == type && !conn->marked_for_close)
       return conn;
-  }
+  });
   return NULL;
 }
 
@@ -2146,16 +2122,12 @@ connection_get_by_type(int type)
 connection_t *
 connection_get_by_type_state(int type, int state)
 {
-  int i, n;
-  connection_t *conn;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == type && conn->state == state && !conn->marked_for_close)
       return conn;
-  }
+  });
   return NULL;
 }
 
@@ -2166,17 +2138,14 @@ connection_get_by_type_state(int type, int state)
 connection_t *
 connection_get_by_type_state_lastwritten(int type, int state)
 {
-  int i, n;
-  connection_t *conn, *best=NULL;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  connection_t *best = NULL;
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == type && conn->state == state && !conn->marked_for_close)
       if (!best || conn->timestamp_lastwritten < best->timestamp_lastwritten)
         best = conn;
-  }
+  });
   return best;
 }
 
@@ -2188,16 +2157,13 @@ connection_t *
 connection_get_by_type_state_rendquery(int type, int state,
                                        const char *rendquery)
 {
-  int i, n;
-  connection_t *conn;
-  connection_t **carray;
+  smartlist_t *conns = get_connection_array();
 
   tor_assert(type == CONN_TYPE_DIR ||
              type == CONN_TYPE_AP || type == CONN_TYPE_EXIT);
 
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == type &&
         !conn->marked_for_close &&
         (!state || state == conn->state)) {
@@ -2208,7 +2174,7 @@ connection_get_by_type_state_rendquery(int type, int state,
               !rend_cmp_service_ids(rendquery, TO_EDGE_CONN(conn)->rend_query))
         return conn;
     }
-  }
+  });
   return NULL;
 }
 
@@ -2217,18 +2183,14 @@ connection_get_by_type_state_rendquery(int type, int state,
 connection_t *
 connection_get_by_type_purpose(int type, int purpose)
 {
-  int i, n;
-  connection_t *conn;
-  connection_t **carray;
-
-  get_connection_array(&carray,&n);
-  for (i=0;i<n;i++) {
-    conn = carray[i];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
     if (conn->type == type &&
         !conn->marked_for_close &&
         (purpose == conn->purpose))
       return conn;
-  }
+  });
   return NULL;
 }
 
@@ -2511,17 +2473,15 @@ connection_dump_buffer_mem_stats(int severity)
   int n_conns_by_type[_CONN_TYPE_MAX+1];
   uint64_t total_alloc = 0;
   uint64_t total_used = 0;
-  int i, n;
-  connection_t **carray;
+  int i;
+  smartlist_t *conns = get_connection_array();
 
   memset(used_by_type, 0, sizeof(used_by_type));
   memset(alloc_by_type, 0, sizeof(alloc_by_type));
   memset(n_conns_by_type, 0, sizeof(n_conns_by_type));
 
-  get_connection_array(&carray,&n);
-
-  for (i=0; i<n; ++i) {
-    connection_t *c = carray[i];
+  SMARTLIST_FOREACH(conns, connection_t *, c,
+  {
     int tp = c->type;
     ++n_conns_by_type[tp];
     if (c->inbuf) {
@@ -2532,7 +2492,7 @@ connection_dump_buffer_mem_stats(int severity)
       used_by_type[tp] += buf_datalen(c->outbuf);
       alloc_by_type[tp] += buf_capacity(c->outbuf);
     }
-  }
+  });
   for (i=0; i <= _CONN_TYPE_MAX; ++i) {
     total_used += used_by_type[i];
     total_alloc += alloc_by_type[i];
@@ -2540,7 +2500,8 @@ connection_dump_buffer_mem_stats(int severity)
 
   log(severity, LD_GENERAL,
      "In buffers for %d connections: "U64_FORMAT" used/"U64_FORMAT" allocated",
-      n, U64_PRINTF_ARG(total_used), U64_PRINTF_ARG(total_alloc));
+      smartlist_len(conns),
+      U64_PRINTF_ARG(total_used), U64_PRINTF_ARG(total_alloc));
   for (i=_CONN_TYPE_MIN; i <= _CONN_TYPE_MAX; ++i) {
     if (!n_conns_by_type[i])
       continue;

@@ -433,17 +433,15 @@ rend_client_desc_here(const char *query)
   edge_connection_t *conn;
   rend_cache_entry_t *entry;
   time_t now = time(NULL);
-  int i, n_conns;
-  connection_t **carray;
 
-  get_connection_array(&carray, &n_conns);
-
-  for (i = 0; i < n_conns; ++i) {
-    if (carray[i]->type != CONN_TYPE_AP ||
-        carray[i]->state != AP_CONN_STATE_RENDDESC_WAIT ||
-        carray[i]->marked_for_close)
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, _conn,
+  {
+    if (_conn->type != CONN_TYPE_AP ||
+        _conn->state != AP_CONN_STATE_RENDDESC_WAIT ||
+        _conn->marked_for_close)
       continue;
-    conn = TO_EDGE_CONN(carray[i]);
+    conn = TO_EDGE_CONN(_conn);
     if (rend_cmp_service_ids(query, conn->rend_query))
       continue;
     assert_connection_ok(TO_CONN(conn), now);
@@ -470,7 +468,7 @@ rend_client_desc_here(const char *query)
                  "unavailable (try again later).", safe_str(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
     }
-  }
+  });
 }
 
 /** Return a newly allocated extend_info_t* for a randomly chosen introduction

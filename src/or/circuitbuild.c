@@ -1145,25 +1145,25 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
                                 int need_capacity)
 {
   int *n_supported;
-  int i, j;
+  int i;
   int n_pending_connections = 0;
-  connection_t **carray;
-  int n_connections;
+  smartlist_t *connections;
   int best_support = -1;
   int n_best_support=0;
   smartlist_t *sl, *preferredexits, *excludedexits;
   routerinfo_t *router;
   or_options_t *options = get_options();
 
-  get_connection_array(&carray, &n_connections);
+  connections = get_connection_array();
 
   /* Count how many connections are waiting for a circuit to be built.
    * We use this for log messages now, but in the future we may depend on it.
    */
-  for (i = 0; i < n_connections; ++i) {
-    if (ap_stream_wants_exit_attention(carray[i]))
+  SMARTLIST_FOREACH(connections, connection_t *, conn,
+  {
+    if (ap_stream_wants_exit_attention(conn))
       ++n_pending_connections;
-  }
+  });
 //  log_fn(LOG_DEBUG, "Choosing exit node; %d connections are pending",
 //         n_pending_connections);
   /* Now we count, for each of the routers in the directory, how many
@@ -1204,10 +1204,12 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       continue; /* skip routers that reject all */
     }
     n_supported[i] = 0;
-    for (j = 0; j < n_connections; ++j) { /* iterate over connections */
-      if (!ap_stream_wants_exit_attention(carray[j]))
+    /* iterate over connections */
+    SMARTLIST_FOREACH(connections, connection_t *, conn,
+    {
+      if (!ap_stream_wants_exit_attention(conn))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      if (connection_ap_can_use_exit(TO_EDGE_CONN(carray[j]), router)) {
+      if (connection_ap_can_use_exit(TO_EDGE_CONN(conn), router)) {
         ++n_supported[i];
 //        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
 //               router->nickname, i, n_supported[i]);
@@ -1215,7 +1217,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 //        log_fn(LOG_DEBUG,"%s (index %d) would reject this stream.",
 //               router->nickname, i);
       }
-    } /* End looping over connections. */
+    }); /* End looping over connections. */
     if (n_supported[i] > best_support) {
       /* If this router is better than previous ones, remember its index
        * and goodness, and start counting how many routers are this good. */

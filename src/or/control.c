@@ -175,25 +175,24 @@ log_severity_to_event(int severity)
 void
 control_update_global_event_mask(void)
 {
-  connection_t **conns;
-  int n_conns, i;
+  smartlist_t *conns = get_connection_array();
   event_mask_t old_mask, new_mask;
   old_mask = global_event_mask1short;
   old_mask |= global_event_mask1long;
 
   global_event_mask1short = 0;
   global_event_mask1long = 0;
-  get_connection_array(&conns, &n_conns);
-  for (i = 0; i < n_conns; ++i) {
-    if (conns[i]->type == CONN_TYPE_CONTROL &&
-        STATE_IS_OPEN(conns[i]->state)) {
-      control_connection_t *conn = TO_CONTROL_CONN(conns[i]);
+  SMARTLIST_FOREACH(conns, connection_t *, _conn,
+  {
+    if (_conn->type == CONN_TYPE_CONTROL &&
+        STATE_IS_OPEN(_conn->state)) {
+      control_connection_t *conn = TO_CONTROL_CONN(_conn);
       if (conn->use_long_names)
         global_event_mask1long |= conn->event_mask;
       else
         global_event_mask1short |= conn->event_mask;
     }
-  }
+  });
 
   new_mask = global_event_mask1short;
   new_mask |= global_event_mask1long;
@@ -206,12 +205,13 @@ control_update_global_event_mask(void)
    * fields. */
   if (! (old_mask & EVENT_STREAM_BANDWIDTH_USED) &&
       (new_mask & EVENT_STREAM_BANDWIDTH_USED)) {
-    for (i = 0; i < n_conns; ++i) {
-      if (conns[i]->type == CONN_TYPE_AP) {
-        edge_connection_t *conn = TO_EDGE_CONN(conns[i]);
-        conn->n_written = conn->n_read = 0;
+    SMARTLIST_FOREACH(conns, connection_t *, conn,
+    {
+      if (conn->type == CONN_TYPE_AP) {
+        edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+        edge_conn->n_written = edge_conn->n_read = 0;
       }
-    }
+    });
   }
 }
 
@@ -461,17 +461,15 @@ static void
 send_control_event_string(uint16_t event, event_format_t which,
                           const char *msg)
 {
-  connection_t **conns;
-  int n_conns, i;
-
+  smartlist_t *conns = get_connection_array();
   tor_assert(event >= _EVENT_MIN && event <= _EVENT_MAX);
 
-  get_connection_array(&conns, &n_conns);
-  for (i = 0; i < n_conns; ++i) {
-    if (conns[i]->type == CONN_TYPE_CONTROL &&
-        !conns[i]->marked_for_close &&
-        conns[i]->state == CONTROL_CONN_STATE_OPEN) {
-      control_connection_t *control_conn = TO_CONTROL_CONN(conns[i]);
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
+    if (conn->type == CONN_TYPE_CONTROL &&
+        !conn->marked_for_close &&
+        conn->state == CONTROL_CONN_STATE_OPEN) {
+      control_connection_t *control_conn = TO_CONTROL_CONN(conn);
       if (control_conn->use_long_names) {
         if (!(which & LONG_NAMES))
           continue;
@@ -501,7 +499,7 @@ send_control_event_string(uint16_t event, event_format_t which,
           connection_handle_write(TO_CONN(control_conn), 1);
       }
     }
-  }
+  });
 }
 
 /** Helper for send_control1_event and send_control1_event_extended:
@@ -1361,24 +1359,23 @@ getinfo_helper_events(control_connection_t *control_conn,
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
   } else if (!strcmp(question, "stream-status")) {
-    connection_t **conns;
-    int n_conns, i;
-    char buf[256];
+    smartlist_t *conns = get_connection_array();
     smartlist_t *status = smartlist_create();
-    get_connection_array(&conns, &n_conns);
-    for (i=0; i < n_conns; ++i) {
+    char buf[256];
+    SMARTLIST_FOREACH(conns, connection_t *, base_conn,
+    {
       const char *state;
       edge_connection_t *conn;
       char *s;
       size_t slen;
       circuit_t *circ;
       origin_circuit_t *origin_circ = NULL;
-      if (conns[i]->type != CONN_TYPE_AP ||
-          conns[i]->marked_for_close ||
-          conns[i]->state == AP_CONN_STATE_SOCKS_WAIT ||
-          conns[i]->state == AP_CONN_STATE_NATD_WAIT)
+      if (base_conn->type != CONN_TYPE_AP ||
+          base_conn->marked_for_close ||
+          base_conn->state == AP_CONN_STATE_SOCKS_WAIT ||
+          base_conn->state == AP_CONN_STATE_NATD_WAIT)
         continue;
-      conn = TO_EDGE_CONN(conns[i]);
+      conn = TO_EDGE_CONN(base_conn);
       switch (conn->_base.state)
         {
         case AP_CONN_STATE_CONTROLLER_WAIT:
@@ -1413,24 +1410,23 @@ getinfo_helper_events(control_connection_t *control_conn,
                          (unsigned long)origin_circ->global_identifier : 0ul,
                    buf);
       smartlist_add(status, s);
-    }
+    });
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
   } else if (!strcmp(question, "orconn-status")) {
-    connection_t **conns;
-    int n_conns, i;
+    smartlist_t *conns = get_connection_array();
     smartlist_t *status = smartlist_create();
-    get_connection_array(&conns, &n_conns);
-    for (i=0; i < n_conns; ++i) {
+    SMARTLIST_FOREACH(conns, connection_t *, base_conn,
+    {
       const char *state;
       char *s;
       char name[128];
       size_t slen;
       or_connection_t *conn;
-      if (conns[i]->type != CONN_TYPE_OR || conns[i]->marked_for_close)
+      if (base_conn->type != CONN_TYPE_OR || base_conn->marked_for_close)
         continue;
-      conn = TO_OR_CONN(conns[i]);
+      conn = TO_OR_CONN(base_conn);
       if (conn->_base.state == OR_CONN_STATE_OPEN)
         state = "CONNECTED";
       else if (conn->nickname)
@@ -1443,7 +1439,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%s %s", name, state);
       smartlist_add(status, s);
-    }
+    });
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
@@ -2846,28 +2842,26 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
 int
 control_event_stream_bandwidth_used(void)
 {
-  connection_t **carray;
-  edge_connection_t *conn;
-  int n, i;
-
   if (EVENT_IS_INTERESTING(EVENT_STREAM_BANDWIDTH_USED)) {
-    get_connection_array(&carray, &n);
+    smartlist_t *conns = get_connection_array();
+    edge_connection_t *edge_conn;
 
-    for (i = 0; i < n; ++i) {
-        if (carray[i]->type != CONN_TYPE_AP)
+    SMARTLIST_FOREACH(conns, connection_t *, conn,
+    {
+        if (conn->type != CONN_TYPE_AP)
           continue;
-        conn = TO_EDGE_CONN(carray[i]);
-        if (!conn->n_read && !conn->n_written)
+        edge_conn = TO_EDGE_CONN(conn);
+        if (!edge_conn->n_read && !edge_conn->n_written)
           continue;
 
         send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
                             "650 STREAM_BW %lu %lu %lu\r\n",
-                            (unsigned long)conn->global_identifier,
-                            (unsigned long)conn->n_read,
-                            (unsigned long)conn->n_written);
+                            (unsigned long)edge_conn->global_identifier,
+                            (unsigned long)edge_conn->n_read,
+                            (unsigned long)edge_conn->n_written);
 
-        conn->n_written = conn->n_read = 0;
-    }
+        edge_conn->n_written = edge_conn->n_read = 0;
+    });
   }
 
   return 0;
