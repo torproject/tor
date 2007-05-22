@@ -271,7 +271,6 @@ _compare_signed_descriptors_by_age(const void **_a, const void **_b)
 static int
 router_rebuild_store(int force, int extrainfo)
 {
-  size_t len = 0; /* XXX020 never used */
   or_options_t *options;
   size_t fname_len;
   smartlist_t *chunk_list = NULL;
@@ -394,7 +393,8 @@ router_rebuild_store(int force, int extrainfo)
   write_str_to_file(fname, "", 1);
 
   r = 0;
-  stats->store_len = len; /* XXX020 always 0 */
+  tor_assert(offset > 0);
+  stats->store_len = (size_t) offset;
   stats->journal_len = 0;
   stats->bytes_dropped = 0;
  done:
@@ -1827,8 +1827,11 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
                          ei->cache_info.signed_descriptor_digest,
                          ei);
   r = 1;
-  if (ei_tmp)
+  if (ei_tmp) {
+    extrainfo_store_stats.bytes_dropped +=
+      ei_tmp->cache_info.signed_descriptor_len;
     extrainfo_free(ei_tmp);
+  }
 
  done:
   if (r == 0)
@@ -2035,6 +2038,8 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest))
       digestmap_remove(rl->desc_by_eid_map,
                        ri_old->cache_info.extra_info_digest);
+    router_store_stats.bytes_ropped +=
+      ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
   }
 #ifdef DEBUG_ROUTERLIST

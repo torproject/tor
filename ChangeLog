@@ -159,6 +159,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - When choosing an entry guard for our circuit, avoid using guards
       that are in the same family as the chosen exit -- not just guards
       that are exactly the chosen exit. (Reported by lodger.)
+    - Don't rebuild the entire router store just because we got 32K of
+      routers.
 
   o Minor bugfixes (controller):
     - Make 'getinfo fingerprint' return a 551 error if we're not a
