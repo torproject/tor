@@ -393,7 +393,6 @@ router_rebuild_store(int force, int extrainfo)
   write_str_to_file(fname, "", 1);
 
   r = 0;
-  tor_assert(offset >= 0);
   stats->store_len = (size_t) offset;
   stats->journal_len = 0;
   stats->bytes_dropped = 0;
@@ -420,6 +419,7 @@ router_reload_router_list_impl(int extrainfo)
   const char *fname_base =
     extrainfo ? "cached-extrainfo" : "cached-routers";
   tor_mmap_t **mmap_ptr;
+  struct stat st;
 
   routerlist_check_bug_417();
 
@@ -443,21 +443,24 @@ router_reload_router_list_impl(int extrainfo)
     stats->store_len = (*mmap_ptr)->size;
     if (extrainfo)
       router_load_extrainfo_from_string((*mmap_ptr)->data,
+                                        (*mmap_ptr)->data+(*mmap_ptr)->size,
                                         SAVED_IN_CACHE, NULL);
     else
       router_load_routers_from_string((*mmap_ptr)->data,
+                                      (*mmap_ptr)->data+(*mmap_ptr)->size,
                                       SAVED_IN_CACHE, NULL);
   }
 
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
                options->DataDirectory, fname_base);
   if (file_status(fname) == FN_FILE)
-    contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, NULL);
+    contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
   if (contents) {
     if (extrainfo)
-      router_load_extrainfo_from_string(contents, SAVED_IN_JOURNAL, NULL);
+      router_load_extrainfo_from_string(contents, NULL,SAVED_IN_JOURNAL, NULL);
     else
-      router_load_routers_from_string(contents, SAVED_IN_JOURNAL, NULL);
+      router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL, NULL);
+    stats->journal_len = st.st_size;
     tor_free(contents);
   }
 
@@ -822,7 +825,6 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   /* First, add any routers with similar network addresses. */
   if (options->EnforceDistinctSubnets)
     routerlist_add_network_family(sl, router);
-
 
   if (router->declared_family) {
     /* Add every r such that router declares familyness with r, and r
@@ -2655,7 +2657,8 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
  * fingerprint from the list.
  */
 void
-router_load_routers_from_string(const char *s, saved_location_t saved_location,
+router_load_routers_from_string(const char *s, const char *eos,
+                                saved_location_t saved_location,
                                 smartlist_t *requested_fingerprints)
 {
   smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
@@ -2663,7 +2666,7 @@ router_load_routers_from_string(const char *s, saved_location_t saved_location,
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
 
-  router_parse_list_from_string(&s, routers, saved_location, 0);
+  router_parse_list_from_string(&s, eos, routers, saved_location, 0);
 
   routers_update_status_from_networkstatus(routers, !from_cache);
 
@@ -2705,7 +2708,7 @@ router_load_routers_from_string(const char *s, saved_location_t saved_location,
 
 /** DOCDOC */
 void
-router_load_extrainfo_from_string(const char *s,
+router_load_extrainfo_from_string(const char *s, const char *eos,
                                   saved_location_t saved_location,
                                   smartlist_t *requested_fingerprints)
 {
@@ -2713,7 +2716,7 @@ router_load_extrainfo_from_string(const char *s,
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
 
-  router_parse_list_from_string(&s, extrainfo_list, saved_location, 1);
+  router_parse_list_from_string(&s, eos, extrainfo_list, saved_location, 1);
 
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 

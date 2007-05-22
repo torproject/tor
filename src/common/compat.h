@@ -161,6 +161,13 @@ int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
 
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen)  ATTR_PURE ATTR_NONNULL((1,3));
+static const void *tor_memstr(const void *haystack, size_t hlen,
+                           const char *needle) ATTR_PURE ATTR_NONNULL((1,3));
+static INLINE const void *
+tor_memstr(const void *haystack, size_t hlen, const char *needle)
+{
+  return tor_memmem(haystack, hlen, needle, strlen(needle));
+}
 
 #define TOR_ISALPHA(c)   isalpha((int)(unsigned char)(c))
 #define TOR_ISALNUM(c)   isalnum((int)(unsigned char)(c))

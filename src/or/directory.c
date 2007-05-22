@@ -1248,9 +1248,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                   !strcmpstart(conn->requested_resource, "all"))) {
       /* as we learn from them, we remove them from 'which' */
       if (was_ei) {
-        router_load_extrainfo_from_string(body, SAVED_NOWHERE, which);
+        router_load_extrainfo_from_string(body, NULL, SAVED_NOWHERE, which);
       } else {
-        router_load_routers_from_string(body, SAVED_NOWHERE, which);
+        router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which);
         directory_info_has_arrived(now, 0);
       }
     }

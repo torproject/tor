@@ -529,7 +529,7 @@ dirserv_add_multiple_descriptors(const char *desc, const char **msg)
 
   s = desc;
   list = smartlist_create();
-  if (!router_parse_list_from_string(&s, list, SAVED_NOWHERE, 0)) {
+  if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 0)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         r_tmp = dirserv_add_descriptor(ri, &msg_out);
         if (r_tmp < r) {
@@ -542,7 +542,7 @@ dirserv_add_multiple_descriptors(const char *desc, const char **msg)
   smartlist_clear(list);
 
   s = desc;
-  if (!router_parse_list_from_string(&s, list, SAVED_NOWHERE, 1)) {
+  if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 1)) {
     SMARTLIST_FOREACH(list, extrainfo_t *, ei, {
         r_tmp = dirserv_add_extrainfo(ei, &msg_out);
         if (r_tmp < r) {

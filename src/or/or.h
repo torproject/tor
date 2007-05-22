@@ -3143,10 +3143,10 @@ void router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                         int from_cache, int from_fetch);
 int router_load_single_router(const char *s, uint8_t purpose,
                               const char **msg);
-void router_load_routers_from_string(const char *s,
+void router_load_routers_from_string(const char *s, const char *eos,
                                      saved_location_t saved_location,
                                      smartlist_t *requested_fingerprints);
-void router_load_extrainfo_from_string(const char *s,
+void router_load_extrainfo_from_string(const char *s, const char *eos,
                                        saved_location_t saved_location,
                                        smartlist_t *requested_fps);
 
@@ -3246,7 +3246,7 @@ int router_get_extrainfo_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
                                    crypto_pk_env_t *private_key);
-int router_parse_list_from_string(const char **s,
+int router_parse_list_from_string(const char **s, const char *eos,
                                   smartlist_t *dest,
                                   saved_location_t saved_location,
                                   int is_extrainfo);

@@ -418,6 +418,35 @@ eat_whitespace(const char *s)
   }
 }
 
+/** Return a pointer to the first char of s that is not whitespace and
+ * not a comment, or to the terminating NUL if no such character exists.
+ */
+const char *
+eat_whitespace_eos(const char *s, const char *eos)
+{
+  tor_assert(s);
+  tor_assert(eos && s <= eos);
+
+  while (s < eos) {
+    switch (*s) {
+    case '\0':
+    default:
+      return s;
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r':
+      ++s;
+      break;
+    case '#':
+      ++s;
+      while (s < eos && *s && *s != '\n')
+        ++s;
+    }
+  }
+  return s;
+}
+
 /** Return a pointer to the first char of s that is not a space or a tab,
  * or to the terminating NUL if no such character exists. */
 const char *

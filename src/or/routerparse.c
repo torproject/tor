@@ -831,7 +831,8 @@ check_signature_token(const char *digest,
  * Returns 0 on success and -1 on failure.
  */
 int
-router_parse_list_from_string(const char **s, smartlist_t *dest,
+router_parse_list_from_string(const char **s, const char *eos,
+                              smartlist_t *dest,
                               saved_location_t saved_location,
                               int want_extrainfo)
 {
@@ -847,8 +848,16 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
   tor_assert(dest);
 
   start = *s;
+  if (!eos)
+    eos = *s + strlen(*s);
+
+  tor_assert(eos >= *s);
+
   while (1) {
-    *s = eat_whitespace(*s);
+    *s = eat_whitespace_eos(*s, eos);
+    if ((eos - *s) < 32) /* make sure it's long enough. */
+      break;
+
     /* Don't start parsing the rest of *s unless it contains a router. */
     if (strcmpstart(*s, "extra-info ")==0) {
       have_extrainfo = 1;
@@ -856,8 +865,8 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
       have_extrainfo = 0;
     } else {
       /* skip junk. */
-      const char *ei = strstr(*s, "\nextra-info ");
-      const char *ri = strstr(*s, "\nrouter ");
+      const char *ei = tor_memstr(*s, eos-*s, "\nextra-info ");
+      const char *ri = tor_memstr(*s, eos-*s, "\nrouter ");
       if (ri && (!ei || ri < ei)) {
         have_extrainfo = 0;
         *s = ri + 1;
@@ -868,9 +877,9 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
         break;
       }
     }
-    end = strstr(*s, "\nrouter-signature");
+    end = tor_memstr(*s, eos-*s, "\nrouter-signature");
     if (end)
-      end = strstr(end, "\n-----END SIGNATURE-----\n");
+      end = tor_memstr(end, eos-*s, "\n-----END SIGNATURE-----\n");
     if (end)
       end += strlen("\n-----END SIGNATURE-----\n");
 
