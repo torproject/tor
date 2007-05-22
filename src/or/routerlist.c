@@ -393,7 +393,7 @@ router_rebuild_store(int force, int extrainfo)
   write_str_to_file(fname, "", 1);
 
   r = 0;
-  tor_assert(offset > 0);
+  tor_assert(offset >= 0);
   stats->store_len = (size_t) offset;
   stats->journal_len = 0;
   stats->bytes_dropped = 0;
