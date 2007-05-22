@@ -271,7 +271,7 @@ _compare_signed_descriptors_by_age(const void **_a, const void **_b)
 static int
 router_rebuild_store(int force, int extrainfo)
 {
-  size_t len = 0;
+  size_t len = 0; /* XXX020 never used */
   or_options_t *options;
   size_t fname_len;
   smartlist_t *chunk_list = NULL;
@@ -394,7 +394,7 @@ router_rebuild_store(int force, int extrainfo)
   write_str_to_file(fname, "", 1);
 
   r = 0;
-  stats->store_len = len;
+  stats->store_len = len; /* XXX020 always 0 */
   stats->journal_len = 0;
   stats->bytes_dropped = 0;
  done:
