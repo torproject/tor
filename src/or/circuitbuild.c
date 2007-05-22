@@ -2339,10 +2339,13 @@ choose_random_entry(cpath_build_state_t *state)
 {
   or_options_t *options = get_options();
   smartlist_t *live_entry_guards = smartlist_create();
+  smartlist_t *exit_family = smartlist_create();
   routerinfo_t *chosen_exit = build_state_get_exit_router(state);
   routerinfo_t *r = NULL;
   int need_uptime = state->need_uptime;
   int need_capacity = state->need_capacity;
+
+  routerlist_add_family(exit_family, chosen_exit);
 
   if (!entry_guards)
     entry_guards = smartlist_create();
@@ -2360,7 +2363,7 @@ choose_random_entry(cpath_build_state_t *state)
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       r = entry_is_live(entry, need_uptime, need_capacity, 0);
-      if (r && r != chosen_exit) {
+      if (r && !smartlist_isin(exit_family, r)) {
         smartlist_add(live_entry_guards, r);
         if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
           break; /* we have enough */
@@ -2397,6 +2400,7 @@ choose_random_entry(cpath_build_state_t *state)
 
   r = smartlist_choose(live_entry_guards);
   smartlist_free(live_entry_guards);
+  smartlist_free(exit_family);
   return r;
 }
 

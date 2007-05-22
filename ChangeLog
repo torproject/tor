@@ -156,6 +156,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Make the NodeFamilies config option work. (Reported by
       lodger -- it has never actually worked, even though we added it
       in Oct 2004.)
+    - When choosing an entry guard for our circuit, avoid using guards
+      that are in the same family as the chosen exit -- not just guards
+      that are exactly the chosen exit. (Reported by lodger.)
 
   o Minor bugfixes (controller):
     - Make 'getinfo fingerprint' return a 551 error if we're not a
