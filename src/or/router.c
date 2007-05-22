@@ -296,7 +296,6 @@ init_v3_authority_keys(const char *keydir)
     authority_cert_free(parsed);
 }
 
-
 /** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context. Return 0 on success,
  * or -1 if Tor should die.

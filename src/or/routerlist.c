@@ -5019,52 +5019,11 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
 /** Generate networkstatus lines for a single routerstatus_t object, and
  * return the result in a newly allocated string.  Used only by controller
  * interface (for now.) */
-/* XXXX This should eventually merge into generate_v2_networkstatus() */
 char *
 networkstatus_getinfo_helper_single(routerstatus_t *rs)
 {
-  char buf[192];
-  int r;
-  struct in_addr in;
-
-  int f_authority;
-  char published[ISO_TIME_LEN+1];
-  char ipaddr[INET_NTOA_BUF_LEN];
-  char identity64[BASE64_DIGEST_LEN+1];
-  char digest64[BASE64_DIGEST_LEN+1];
-
-  format_iso_time(published, rs->published_on);
-  digest_to_base64(identity64, rs->identity_digest);
-  digest_to_base64(digest64, rs->descriptor_digest);
-  in.s_addr = htonl(rs->addr);
-  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
-
-  f_authority = router_digest_is_trusted_dir(rs->identity_digest);
-
-  r = tor_snprintf(buf, sizeof(buf),
-                   "r %s %s %s %s %s %d %d\n"
-                   "s%s%s%s%s%s%s%s%s%s%s\n",
-                   rs->nickname,
-                   identity64,
-                   digest64,
-                   published,
-                   ipaddr,
-                   (int)rs->or_port,
-                   (int)rs->dir_port,
-
-                   f_authority?" Authority":"",
-                   rs->is_bad_exit?" BadExit":"",
-                   rs->is_exit?" Exit":"",
-                   rs->is_fast?" Fast":"",
-                   rs->is_possible_guard?" Guard":"",
-                   rs->is_named?" Named":"",
-                   rs->is_stable?" Stable":"",
-                   rs->is_running?" Running":"",
-                   rs->is_valid?" Valid":"",
-                   rs->is_v2_dir?" V2Dir":"");
-  if (r<0)
-    log_warn(LD_BUG, "Not enough space in buffer.");
-
+  char buf[256];
+  routerstatus_format_entry(buf, sizeof(buf), rs, NULL);
   return tor_strdup(buf);
 }
 

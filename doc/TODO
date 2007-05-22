@@ -188,7 +188,7 @@ Things we'd like to do in 0.2.0.x:
       - Detect correct version of libraries.
       o Run autoupdate
     - Refactor networkstatus generation:
-      - Use networkstatus_getinfo_helper_single() as base of
+      o Use networkstatus_getinfo_helper_single() as base of
         networkstatus generation; eliminate duplicate code.
       - Include "v" line in getinfo values.
   - Features:

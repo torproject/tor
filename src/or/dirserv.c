@@ -1570,6 +1570,77 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   smartlist_free(bandwidths_excluding_exits);
 }
 
+/** DOCDOC */
+int
+routerstatus_format_entry(char *buf, size_t buf_len,
+                          routerstatus_t *rs, const char *platform)
+{
+  int r;
+  struct in_addr in;
+
+  int f_authority;
+  char published[ISO_TIME_LEN+1];
+  char ipaddr[INET_NTOA_BUF_LEN];
+  char identity64[BASE64_DIGEST_LEN+1];
+  char digest64[BASE64_DIGEST_LEN+1];
+
+  format_iso_time(published, rs->published_on);
+  digest_to_base64(identity64, rs->identity_digest);
+  digest_to_base64(digest64, rs->descriptor_digest);
+  in.s_addr = htonl(rs->addr);
+  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
+
+  f_authority = router_digest_is_trusted_dir(rs->identity_digest);
+
+  r = tor_snprintf(buf, buf_len,
+                   "r %s %s %s %s %s %d %d\n"
+                   "s%s%s%s%s%s%s%s%s%s%s\n",
+                   rs->nickname,
+                   identity64,
+                   digest64,
+                   published,
+                   ipaddr,
+                   (int)rs->or_port,
+                   (int)rs->dir_port,
+
+                   f_authority?" Authority":"",
+                   rs->is_bad_exit?" BadExit":"",
+                   rs->is_exit?" Exit":"",
+                   rs->is_fast?" Fast":"",
+                   rs->is_possible_guard?" Guard":"",
+                   rs->is_named?" Named":"",
+                   rs->is_stable?" Stable":"",
+                   rs->is_running?" Running":"",
+                   rs->is_valid?" Valid":"",
+                   rs->is_v2_dir?" V2Dir":"");
+  if (r<0) {
+    log_warn(LD_BUG, "Not enough space in buffer.");
+    return -1;
+  }
+  if (platform && !strcmpstart(platform, "Tor ")) {
+    const char *eos = find_whitespace(platform+4);
+    if (eos && !strcmpstart(eos, " (r")) {
+      /* XXXX020 Unify this logic with the other version extraction
+       * logic */
+      eos = find_whitespace(eos+1);
+    }
+    if (eos) {
+      char *p = tor_strndup(platform, eos-platform);
+      size_t ln = strlen(buf);
+      buf += ln;
+      buf_len -= ln;
+      if (tor_snprintf(buf, buf_len, "opt v %s\n", p)<0) {
+        tor_free(p);
+        log_warn(LD_BUG, "Unable to print router version.");
+        return -1;
+      }
+      tor_free(p);
+    }
+  }
+
+  return 0;
+}
+
 /** For v2 authoritative directories only: replace the contents of
  * <b>the_v2_networkstatus</b> with a newly generated network status
  * object. */
@@ -1684,91 +1755,56 @@ generate_v2_networkstatus(void)
     if (ri->cache_info.published_on >= cutoff) {
       /* Already set by compute_performance_thresholds. */
       int f_exit = ri->is_exit;
+      routerstatus_t rs;
       /* These versions dump connections with idle live circuits
          sometimes. D'oh!*/
       int unstable_version =
         tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") &&
         !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
-      int f_stable = ri->is_stable =
+      memset(&rs, 0, sizeof(rs));
+
+      rs.is_stable = ri->is_stable =
         router_is_active(ri, now) &&
         !dirserv_thinks_router_is_unreliable(now, ri, 1, 0) &&
         !unstable_version;
-      int f_fast = ri->is_fast =
+      rs.is_fast = ri->is_fast =
         router_is_active(ri, now) &&
         !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
-      int f_running = ri->is_running; /* computed above */
+      rs.is_running = ri->is_running; /* computed above */
+      /*
       int f_authority = router_digest_is_trusted_dir(
                                       ri->cache_info.identity_digest);
-      int f_named = naming && ri->is_named;
-      int f_valid = ri->is_valid;
-      int f_guard = f_fast && f_stable &&
+      */
+      rs.is_named = naming && ri->is_named;
+      rs.is_valid = ri->is_valid;
+      rs.is_possible_guard = rs.is_fast && rs.is_stable &&
         (!f_exit || exits_can_be_guards) &&
         router_get_advertised_bandwidth(ri) >=
           (exits_can_be_guards ? guard_bandwidth_including_exits :
                                  guard_bandwidth_excluding_exits);
-      int f_bad_exit = listbadexits && ri->is_bad_exit;
+      rs.is_bad_exit = listbadexits && ri->is_bad_exit;
       /* 0.1.1.9-alpha is the first version to support fetch by descriptor
        * hash. */
-      int f_v2_dir = ri->dir_port &&
+      rs.is_v2_dir = ri->dir_port &&
         tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
-      char identity64[BASE64_DIGEST_LEN+1];
-      char digest64[BASE64_DIGEST_LEN+1];
 
       if (!strcasecmp(ri->nickname, UNNAMED_ROUTER_NICKNAME))
-        f_named = 0;
+        rs.is_named = 0;
 
-      format_iso_time(published, ri->cache_info.published_on);
+      rs.published_on = ri->cache_info.published_on;
+      memcpy(rs.identity_digest, ri->cache_info.identity_digest, DIGEST_LEN);
+      memcpy(rs.descriptor_digest, ri->cache_info.signed_descriptor_digest,
+             DIGEST_LEN);
+      rs.addr = ri->addr;
+      strlcpy(rs.nickname, ri->nickname, sizeof(rs.nickname));
+      rs.or_port = ri->or_port;
+      rs.dir_port = ri->dir_port;
 
-      digest_to_base64(identity64, ri->cache_info.identity_digest);
-      digest_to_base64(digest64, ri->cache_info.signed_descriptor_digest);
-
-      in.s_addr = htonl(ri->addr);
-      tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
-
-      if (tor_snprintf(outp, endp-outp,
-                       "r %s %s %s %s %s %d %d\n"
-                       "s%s%s%s%s%s%s%s%s%s%s\n",
-                       ri->nickname,
-                       identity64,
-                       digest64,
-                       published,
-                       ipaddr,
-                       ri->or_port,
-                       ri->dir_port,
-                       f_authority?" Authority":"",
-                       f_bad_exit?" BadExit":"",
-                       f_exit?" Exit":"",
-                       f_fast?" Fast":"",
-                       f_guard?" Guard":"",
-                       f_named?" Named":"",
-                       f_stable?" Stable":"",
-                       f_running?" Running":"",
-                       f_valid?" Valid":"",
-                       f_v2_dir?" V2Dir":"")<0) {
-                       /* when adding more flags, remember to change
-                        * the #defines at the top of this function. */
+      if (routerstatus_format_entry(outp, endp-outp, &rs, ri->platform) < 0) {
         log_warn(LD_BUG, "Unable to print router status.");
         goto done;
       }
       outp += strlen(outp);
-      if (ri->platform && !strcmpstart(ri->platform, "Tor ")) {
-        const char *eos = find_whitespace(ri->platform+4);
-        if (eos && !strcmpstart(eos, " (r")) {
-          /* XXXX020 Unify this logic with the other version extraction
-           * logic */
-          eos = find_whitespace(eos+1);
-        }
-        if (eos) {
-          char *platform = tor_strndup(ri->platform, eos-(ri->platform));
-          if (tor_snprintf(outp, endp-outp,
-                           "opt v %s\n", platform)<0) {
-            log_warn(LD_BUG, "Unable to print router version.");
-            goto done;
-          }
-          tor_free(platform);
-          outp += strlen(outp);
-        }
-      }
     }
   });
 

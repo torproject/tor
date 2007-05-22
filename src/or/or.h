@@ -1204,7 +1204,6 @@ typedef struct routerstatus_t {
                                * an exit node. */
   unsigned int is_bad_directory:1; /**< Do we think this directory is junky,
                                     * underpowered, or otherwise useless? */
-
   /** True iff we know version info for this router. (i.e., a "v" entry was
    * included.)  We'll replace all these with a big tor_version_t or a char[]
    * if the number of traits we care about ever becomes incredibly big. */
@@ -2636,6 +2635,8 @@ int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
 int dirserv_would_reject_router(routerstatus_t *rs);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
+int routerstatus_format_entry(char *buf, size_t buf_len,
+                              routerstatus_t *rs, const char *platform);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 
