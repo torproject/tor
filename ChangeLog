@@ -24,6 +24,8 @@ Changes in version 0.1.2.14 - 2007-0?-??
       network-statuses.
     - Correctly back-off from requesting router descriptors that we are
       having a hard time downloading.
+    - Read resolv.conf files correctly on platforms where read() returns
+      partial results on small file reads.
 
   o Minor features:
     - When routers publish SVN revisions in their router descriptors,
