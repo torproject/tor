@@ -26,6 +26,9 @@ Changes in version 0.1.2.14 - 2007-0?-??
       having a hard time downloading.
     - Read resolv.conf files correctly on platforms where read() returns
       partial results on small file reads.
+    - Don't rebuild the entire router store every time we get 32K of
+      routers: rebuild it when the journal gets very large, or when
+      the gaps in the store get very large.
 
   o Minor features:
     - When routers publish SVN revisions in their router descriptors,

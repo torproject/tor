@@ -241,7 +241,6 @@ _compare_routers_by_age(const void **_a, const void **_b)
 static int
 router_rebuild_store(int force)
 {
-  size_t len = 0;
   or_options_t *options;
   size_t fname_len;
   smartlist_t *chunk_list = NULL;
@@ -337,7 +336,8 @@ router_rebuild_store(int force)
   write_str_to_file(fname, "", 1);
 
   r = 0;
-  router_store_len = len;
+  tor_assert(offset >= 0);
+  router_store_len = (size_t) offset;
   router_journal_len = 0;
   router_bytes_dropped = 0;
  done:
@@ -1715,6 +1715,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
       digestmap_remove(rl->desc_digest_map,
                        ri_old->cache_info.signed_descriptor_digest);
     }
+    router_bytes_dropped += ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
   }
   // routerlist_assert_ok(rl);
