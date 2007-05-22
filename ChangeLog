@@ -116,6 +116,9 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
 
   o Minor features (other):
     - More unit tests.
+    - Make the NodeFamilies config option work. (Reported by
+      lodger -- it has never actually worked, even though we added it
+      in Oct 2004.)
 
   o Removed features:
     - Removed support for the old binary "version 0" controller protocol.

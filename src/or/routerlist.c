@@ -823,23 +823,23 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   if (options->EnforceDistinctSubnets)
     routerlist_add_network_family(sl, router);
 
-  if (!router->declared_family)
-    return;
 
-  /* Add every r such that router declares familyness with r, and r
-   * declares familyhood with router. */
-  SMARTLIST_FOREACH(router->declared_family, const char *, n,
-    {
-      if (!(r = router_get_by_nickname(n, 0)))
-        continue;
-      if (!r->declared_family)
-        continue;
-      SMARTLIST_FOREACH(r->declared_family, const char *, n2,
-        {
-          if (router_nickname_matches(router, n2))
-            smartlist_add(sl, r);
-        });
-    });
+  if (router->declared_family) {
+    /* Add every r such that router declares familyness with r, and r
+     * declares familyhood with router. */
+    SMARTLIST_FOREACH(router->declared_family, const char *, n,
+      {
+        if (!(r = router_get_by_nickname(n, 0)))
+          continue;
+        if (!r->declared_family)
+          continue;
+        SMARTLIST_FOREACH(r->declared_family, const char *, n2,
+          {
+            if (router_nickname_matches(router, n2))
+              smartlist_add(sl, r);
+          });
+      });
+  }
 
   /* If the user declared any families locally, honor those too. */
   for (cl = get_options()->NodeFamilies; cl; cl = cl->next) {
