@@ -113,6 +113,7 @@ void configure_libevent_logging(void);
 void suppress_libevent_log_msg(const char *msg);
 void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
+void log_set_application_name(const char *name);
 
 /* Outputs a message to stdout */
 void _log(int severity, uint32_t domain, const char *format, ...)

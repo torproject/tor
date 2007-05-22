@@ -697,6 +697,25 @@ set_options(or_options_t *new_val, char **msg)
   return 0;
 }
 
+extern const char tor_svn_revision[]; /* from main.c */
+
+/** Return the current Tor version, possibly */
+const char *
+get_version(void)
+{
+  static char *version = NULL;
+  if (version == NULL) {
+    if (strlen(tor_svn_revision)) {
+      size_t len = strlen(VERSION)+strlen(tor_svn_revision)+8;
+      version = tor_malloc(len);
+      tor_snprintf(version, len, "%s (r%s)", VERSION, tor_svn_revision);
+    } else {
+      version = tor_strdup(VERSION);
+    }
+  }
+  return version;
+}
+
 /** Release all memory and resources held by global configuration structures.
  */
 void
@@ -3080,8 +3099,6 @@ check_nickname_list(const char *lst, const char *name, char **msg)
   return r;
 }
 
-extern const char tor_svn_revision[]; /* from main.c */
-
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
  * validate them for consistency, then take actions based on them.
@@ -3118,13 +3135,7 @@ options_init_from_torrc(int argc, char **argv)
   }
 
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
-    char vbuf[128];
-    if (strlen(tor_svn_revision)) {
-      tor_snprintf(vbuf, sizeof(vbuf), " (r%s)", tor_svn_revision);
-    } else {
-      vbuf[0] = 0;
-    }
-    printf("Tor version %s%s.\n",VERSION,vbuf);
+    printf("Tor version %s.\n",get_version());
     if (argc > 2 && (!strcmp(argv[2],"--version"))) {
       print_svn_version();
     }
@@ -4311,7 +4322,10 @@ or_state_save(time_t now)
 
   global_state->LastWritten = time(NULL);
   tor_free(global_state->TorVersion);
-  global_state->TorVersion = tor_strdup("Tor " VERSION);
+  len = strlen(get_version())+8;
+  global_state->TorVersion = tor_malloc(len);
+  tor_snprintf(global_state->TorVersion, len, "Tor %s", get_version());
+
   state = config_dump(&state_format, global_state, 1, 0);
   len = strlen(state)+256;
   contents = tor_malloc(len);

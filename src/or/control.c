@@ -1184,7 +1184,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
 {
   (void) conn;
   if (!strcmp(question, "version")) {
-    *answer = tor_strdup(VERSION);
+    *answer = tor_strdup(get_version());
   } else if (!strcmp(question, "config-file")) {
     *answer = tor_strdup(get_torrc_fname());
   } else if (!strcmp(question, "info/names")) {
@@ -2301,8 +2301,9 @@ connection_control_process_inbuf(control_connection_t *conn)
     char buf[128];
     set_uint16(buf+2, htons(0x0000)); /* type == error */
     set_uint16(buf+4, htons(0x0001)); /* code == internal error */
-    strlcpy(buf+6, "The v0 control protocol no longer supported in "VERSION"; "
-            "use Tor 0.1.2.x or upgrade your controller", sizeof(buf)-6);
+    strlcpy(buf+6, "The v0 control protocol is not supported by Tor 0.2.0.x "
+            "and later; use Tor 0.1.2.x or upgrade your controller",
+            sizeof(buf)-6);
     body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
     set_uint16(buf+0, htons(body_len));
     connection_write_to_buf(buf, 4+body_len, TO_CONN(conn));

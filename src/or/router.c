@@ -1249,17 +1249,7 @@ extern const char tor_svn_revision[]; /* from main.c */
 void
 get_platform_str(char *platform, size_t len)
 {
-  char svn_version_buf[128];
-  if (!strcmpend(VERSION, "-dev") && strlen(tor_svn_revision)) {
-    tor_snprintf(svn_version_buf, sizeof(svn_version_buf), " (r%s)",
-                 tor_svn_revision);
-  } else {
-    svn_version_buf[0] = 0;
-  }
-
-  tor_snprintf(platform, len, "Tor %s%s on %s",
-               VERSION, svn_version_buf, get_uname());
-  return;
+  tor_snprintf(platform, len, "Tor %s on %s", get_version(), get_uname());
 }
 
 /* XXX need to audit this thing and count fenceposts. maybe

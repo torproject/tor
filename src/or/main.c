@@ -1684,11 +1684,15 @@ handle_signals(int is_parent)
 static int
 tor_init(int argc, char *argv[])
 {
+  char buf[256];
   time_of_process_start = time(NULL);
   if (!closeable_connection_lst)
     closeable_connection_lst = smartlist_create();
   if (!active_linked_connection_lst)
     active_linked_connection_lst = smartlist_create();
+  /* Have the log set up with our application name. */
+  tor_snprintf(buf, sizeof(buf), "Tor %s", get_version());
+  log_set_application_name(buf);
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
@@ -1700,7 +1704,7 @@ tor_init(int argc, char *argv[])
   add_temp_log();
 
   log(LOG_NOTICE, LD_GENERAL, "Tor v%s. This is experimental software. "
-      "Do not rely on it for strong anonymity. (Running on %s)",VERSION,
+      "Do not rely on it for strong anonymity. (Running on %s)",get_version(),
       get_uname());
 
   if (network_init()<0) {

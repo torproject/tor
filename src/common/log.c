@@ -88,6 +88,17 @@ int _log_global_min_severity = LOG_NOTICE;
 static void delete_log(logfile_t *victim);
 static void close_log(logfile_t *victim);
 
+/** DOCDOC */
+static char *appname = NULL;
+
+/** DOCDOC */
+void
+log_set_application_name(const char *name)
+{
+  tor_free(appname);
+  appname = name ? tor_strdup(name) : NULL;
+}
+
 /** Helper: Write the standard prefix for log lines to a
  * <b>buf_len</b> character buffer in <b>buf</b>.
  */
@@ -140,8 +151,13 @@ log_tor_version(logfile_t *lf, int reset)
      * need to log again. */
     return 0;
   n = _log_prefix(buf, sizeof(buf), LOG_NOTICE);
-  tor_snprintf(buf+n, sizeof(buf)-n,
-               "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
+  if (appname) {
+    tor_snprintf(buf+n, sizeof(buf)-n,
+                 "%s opening %slog file.\n", appname, is_new?"new ":"");
+  } else {
+    tor_snprintf(buf+n, sizeof(buf)-n,
+                 "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
+  }
   if (fputs(buf, lf->file) == EOF ||
       fflush(lf->file) == EOF) /* error */
     return -1; /* failed */

@@ -2223,6 +2223,7 @@ int set_options(or_options_t *new_val, char **msg);
 void config_free_all(void);
 const char *safe_str(const char *address);
 const char *escaped_safe_str(const char *address);
+const char *get_version(void);
 
 int config_get_lines(char *string, config_line_t **result);
 void config_free_lines(config_line_t *front);
