@@ -76,7 +76,7 @@ Things we'd like to do in 0.2.0.x:
           - Serve list as needed.
           o Avoid double-checking signatures every time we get a vote.
           - Warn about expired stuff.
-        - Code to generate votes
+        o Code to generate votes
         - Code to generate consensus from a list of votes
         - Add a signature to a consensus.
         - Code to check signatures on a consensus

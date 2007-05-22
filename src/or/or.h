@@ -2994,6 +2994,8 @@ time_t get_onion_key_set_at(void);
 void set_identity_key(crypto_pk_env_t *k);
 crypto_pk_env_t *get_identity_key(void);
 int identity_key_is_set(void);
+authority_cert_t *get_my_v3_authority_cert(void);
+crypto_pk_env_t *get_my_v3_authority_signing_key(void);
 void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last);
 void rotate_onion_key(void);
 crypto_pk_env_t *init_key_from_file(const char *fname);
@@ -3258,6 +3260,7 @@ int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
 int router_get_networkstatus_v2_hash(const char *s, char *digest);
+int router_get_networkstatus_v3_hash(const char *s, char *digest);
 int router_get_extrainfo_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,

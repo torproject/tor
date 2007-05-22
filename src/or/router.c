@@ -122,6 +122,20 @@ identity_key_is_set(void)
   return identitykey != NULL;
 }
 
+/** DOCDOC */
+authority_cert_t *
+get_my_v3_authority_cert(void)
+{
+  return authority_key_certificate;
+}
+
+/** DOCDOC */
+crypto_pk_env_t *
+get_my_v3_authority_signing_key(void)
+{
+  return authority_signing_key;
+}
+
 /** Replace the previous onion key with the current onion key, and generate
  * a new previous onion key.  Immediately after calling this function,
  * the OR should:

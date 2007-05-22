@@ -352,7 +352,8 @@ static addr_policy_t *router_parse_addr_policy(directory_token_t *tok);
 static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 
 static int router_get_hash_impl(const char *s, char *digest,
-                                const char *start_str, const char *end_str);
+                                const char *start_str, const char *end_str,
+                                char end_char);
 static void token_free(directory_token_t *tok);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *find_first_by_keyword(smartlist_t *s,
@@ -377,7 +378,7 @@ int
 router_get_dir_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "signed-directory","\ndirectory-signature");
+                              "signed-directory","\ndirectory-signature",'\n');
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the first router in
@@ -387,7 +388,7 @@ int
 router_get_router_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "router ","\nrouter-signature");
+                              "router ","\nrouter-signature", '\n');
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the running-routers
@@ -397,7 +398,7 @@ int
 router_get_runningrouters_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "network-status","\ndirectory-signature");
+                              "network-status","\ndirectory-signature", '\n');
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the network-status
@@ -406,7 +407,18 @@ int
 router_get_networkstatus_v2_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                            "network-status-version","\ndirectory-signature");
+                              "network-status-version","\ndirectory-signature",
+                              '\n');
+}
+
+/** Set <b>digest</b> to the SHA-1 digest of the hash of the network-status
+ * string in <b>s</b>.  Return 0 on success, -1 on failure. */
+int
+router_get_networkstatus_v3_hash(const char *s, char *digest)
+{
+  return router_get_hash_impl(s,digest,
+                              "network-status-version","\ndirectory-signature",
+                              ' ');
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the extrainfo
@@ -414,7 +426,7 @@ router_get_networkstatus_v2_hash(const char *s, char *digest)
 int
 router_get_extrainfo_hash(const char *s, char *digest)
 {
-  return router_get_hash_impl(s,digest,"extra-info","\nrouter-signature");
+  return router_get_hash_impl(s,digest,"extra-info","\nrouter-signature",'\n');
 }
 
 /** Helper: used to generate signatures for routers, directories and
@@ -1317,7 +1329,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     goto err;
   }
   if (router_get_hash_impl(s, digest, "dir-key-certificate-version",
-                           "\ndir-key-certification") < 0)
+                           "\ndir-key-certification", '\n') < 0)
     goto err;
   tok = smartlist_get(tokens, 0);
   if (tok->tp != K_DIR_KEY_CERTIFICATE_VERSION || strcmp(tok->args[0], "3")) {
@@ -2215,8 +2227,8 @@ find_all_exitpolicy(smartlist_t *s)
 }
 
 /** Compute the SHA-1 digest of the substring of <b>s</b> taken from the first
- * occurrence of <b>start_str</b> through the first newline after the first
- * subsequent occurrence of <b>end_str</b>; store the 20-byte result in
+ * occurrence of <b>start_str</b> through the first instance of c after the
+ * first subsequent occurrence of <b>end_str</b>; store the 20-byte result in
  * <b>digest</b>; return 0 on success.
  *
  * If no such substring exists, return -1.
@@ -2224,7 +2236,7 @@ find_all_exitpolicy(smartlist_t *s)
 static int
 router_get_hash_impl(const char *s, char *digest,
                      const char *start_str,
-                     const char *end_str)
+                     const char *end_str, char end_c)
 {
   char *start, *end;
   start = strstr(s, start_str);
@@ -2243,7 +2255,7 @@ router_get_hash_impl(const char *s, char *digest,
     log_warn(LD_DIR,"couldn't find end of hashed material \"%s\"",end_str);
     return -1;
   }
-  end = strchr(end+strlen(end_str), '\n');
+  end = strchr(end+strlen(end_str), end_c);
   if (!end) {
     log_warn(LD_DIR,"couldn't find EOL");
     return -1;
