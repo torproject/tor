@@ -38,6 +38,11 @@ static crypto_pk_env_t *lastonionkey=NULL;
 static crypto_pk_env_t *identitykey=NULL;
 /** Digest of identitykey. */
 static char identitykey_digest[DIGEST_LEN];
+/** Signing key used for v3 directory material; only set for authorities. */
+static crypto_pk_env_t *authority_signing_key = NULL;
+/** Key certificate to authenticate v3 directory material; only set for
+ * authorities. */
+static authority_cert_t *authority_key_certificate = NULL;
 
 /** Replace the current onion key with <b>k</b>.  Does not affect lastonionkey;
  * to update onionkey correctly, call rotate_onion_key().
@@ -170,46 +175,48 @@ rotate_onion_key(void)
   log_warn(LD_GENERAL, "Couldn't rotate onion key.");
 }
 
-/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist,
- * create a new RSA key and save it in <b>fname</b>.  Return the read/created
- * key, or NULL on error.
- */
-crypto_pk_env_t *
-init_key_from_file(const char *fname)
+/** DOCDOC */
+static crypto_pk_env_t *
+init_key_from_file_impl(const char *fname, int generate, int severity)
 {
   crypto_pk_env_t *prkey = NULL;
   FILE *file = NULL;
 
   if (!(prkey = crypto_new_pk_env())) {
-    log_err(LD_GENERAL,"Error constructing key");
+    log(severity, LD_GENERAL,"Error constructing key");
     goto error;
   }
 
   switch (file_status(fname)) {
     case FN_DIR:
     case FN_ERROR:
-      log_err(LD_FS,"Can't read key from \"%s\"", fname);
+      log(severity, LD_FS,"Can't read key from \"%s\"", fname);
       goto error;
     case FN_NOENT:
-      log_info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.",
-               fname);
-      if (crypto_pk_generate_key(prkey)) {
-        log_err(LD_GENERAL,"Error generating onion key");
-        goto error;
-      }
-      if (crypto_pk_check_key(prkey) <= 0) {
-        log_err(LD_GENERAL,"Generated key seems invalid");
-        goto error;
-      }
-      log_info(LD_GENERAL, "Generated key seems valid");
-      if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
-        log_err(LD_FS,"Couldn't write generated key to \"%s\".", fname);
-        goto error;
+      if (generate) {
+        log_info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.",
+                 fname);
+        if (crypto_pk_generate_key(prkey)) {
+          log(severity, LD_GENERAL,"Error generating onion key");
+          goto error;
+        }
+        if (crypto_pk_check_key(prkey) <= 0) {
+          log(severity, LD_GENERAL,"Generated key seems invalid");
+          goto error;
+        }
+        log_info(LD_GENERAL, "Generated key seems valid");
+        if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
+          log(severity, LD_FS,
+              "Couldn't write generated key to \"%s\".", fname);
+          goto error;
+        }
+      } else {
+        log_info(LD_GENERAL, "No key found in \"%s\"", fname);
       }
       return prkey;
     case FN_FILE:
       if (crypto_pk_read_private_key_from_filename(prkey, fname)) {
-        log_err(LD_GENERAL,"Error loading private key.");
+        log(severity, LD_GENERAL,"Error loading private key.");
         goto error;
       }
       return prkey;
@@ -224,6 +231,71 @@ init_key_from_file(const char *fname)
     fclose(file);
   return NULL;
 }
+
+/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist,
+ * create a new RSA key and save it in <b>fname</b>.  Return the read/created
+ * key, or NULL on error.
+ */
+crypto_pk_env_t *
+init_key_from_file(const char *fname)
+{
+  return init_key_from_file_impl(fname, 1, LOG_ERR);
+}
+
+/** DOCDOC; XXXX020 maybe move to dirserv.c */
+static void
+init_v3_authority_keys(const char *keydir)
+{
+  char *fname = NULL, *cert = NULL;
+  const char *eos = NULL;
+  size_t fname_len = strlen(keydir) + 64;
+  crypto_pk_env_t *signing_key = NULL;
+  authority_cert_t *parsed = NULL;
+
+  fname = tor_malloc(fname_len);
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"authority_signing_key",
+               keydir);
+  signing_key = init_key_from_file_impl(fname, 0, LOG_INFO);
+  if (!signing_key) {
+    log_warn(LD_DIR, "No version 3 directory key found in %s", fname);
+    goto done;
+  }
+  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"authority_certificate",
+               keydir);
+  cert = read_file_to_str(fname, 0, NULL);
+  if (!cert) {
+    log_warn(LD_DIR, "Signing key found, but no certificate found in %s",
+               fname);
+    goto done;
+  }
+  parsed = authority_cert_parse_from_string(cert, &eos);
+  if (!parsed) {
+    log_warn(LD_DIR, "Unable to parse certificate in %s", fname);
+    goto done;
+  }
+  if (crypto_pk_cmp_keys(signing_key, parsed->signing_key) != 0) {
+    log_warn(LD_DIR, "Stored signing key does not match signing key in "
+             "certificate");
+    goto done;
+  }
+  parsed->cache_info.signed_descriptor_body = cert;
+  parsed->cache_info.signed_descriptor_len = eos-cert;
+  cert = NULL;
+
+  authority_key_certificate = parsed;
+  authority_signing_key = signing_key;
+  parsed = NULL;
+  signing_key = NULL;
+
+ done:
+  tor_free(fname);
+  tor_free(cert);
+  if (signing_key)
+    crypto_free_pk_env(signing_key);
+  if (parsed)
+    authority_cert_free(parsed);
+}
+
 
 /** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context. Return 0 on success,
@@ -282,6 +354,11 @@ init_keys(void)
   prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_identity_key(prkey);
+
+  /* 1b. Read v3 directory authority key/cert information. */
+  if (authdir_mode(options) && options->V3AuthoritativeDir)
+    init_v3_authority_keys(keydir);
+
   /* 2. Read onion key.  Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),
              "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key",datadir);
@@ -1592,6 +1669,10 @@ router_free_all(void)
     routerinfo_free(desc_routerinfo);
   if (desc_extrainfo)
     extrainfo_free(desc_extrainfo);
+  if (authority_signing_key)
+    crypto_free_pk_env(authority_signing_key);
+  if (authority_key_certificate)
+    authority_cert_free(authority_key_certificate);
 
   if (warned_nonexistent_family) {
     SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));

@@ -1381,8 +1381,8 @@ append_bytes_to_file(const char *fname, const char *str, size_t len,
 /** Read the contents of <b>filename</b> into a newly allocated
  * string; return the string on success or NULL on failure.
  *
- * If <b>size_out</b> is provided, store the length of the result in
- * <b>size_out</b>.
+ * If <b>stat_out</b> is provided, store the result of stat()ing the
+ * file into <b>stat_out</b>.
  *
  * If <b>flags</b> &amp; RFTS_BIN, open the file in binary mode.
  * If <b>flags</b> &amp; RFTS_IGNORE_MISSING, don't warn if the file

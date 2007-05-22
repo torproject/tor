@@ -56,7 +56,7 @@ N   . Document transport and natdport
 
 Things we'd like to do in 0.2.0.x:
   - Proposals:
-    . 101: Voting on the Tor Directory System
+    . 101: Voting on the Tor Directory System (plus 103)
       o Prepare ASAP for new voting formats
         o Don't flip out with warnings when voting-related URLs are
           uploaded/downloaded.
@@ -68,16 +68,21 @@ Things we'd like to do in 0.2.0.x:
           o Parse key certificates
           - Parse votes and consensuses
           - Unit tests for above
-        - Code to manage key certificates
-          - Cache on disk
-          - Download as needed
+        . Code to manage key certificates
+          o Generate certificates
+          o Authorities load certificates
+          o Clients cache certificates on disk
+          - Download as needed.
           - Serve list as needed.
-          - Avoid double-checking signatures every time we get a vote.
+          o Avoid double-checking signatures every time we get a vote.
+          - Warn about expired stuff.
         - Code to generate votes
         - Code to generate consensus from a list of votes
         - Add a signature to a consensus.
         - Code to check signatures on a consensus
         - Push/pull documents as appropriate.
+        o Have clients know which authorities are v3 authorities, and what
+          their keys are.
       - Start caching consensus documents once authorities make them
       - Start downloading and using consensus documents once caches serve them
     . 104: Long and Short Router Descriptors (by Jun 1)
@@ -98,8 +103,8 @@ Things we'd like to do in 0.2.0.x:
     - 105: Version negotiation for the Tor protocol (finalize by Jun 1)
     - 108: Base "Stable" Flag on Mean Time Between Failures
     - 109: No more than one server per IP address
-    - 103: Splitting identity key from regularly used signing key
-      - Merge with 101 into a new dir-spec.txt
+    o 103: Splitting identity key from regularly used signing key
+      o Merge with 101 into a new dir-spec.txt
     - 113: Simplifying directory authority administration
     - 110: prevent infinite-length circuits (phase one)
       - servers should recognize relay_extend cells and pass them

@@ -1289,16 +1289,19 @@ authority_cert_free(authority_cert_t *cert)
 /** Parse a key certificate from <b>s</b>; point <b>end-of-string</b> to
  * the first character after the certificate. */
 authority_cert_t *
-authority_cert_parse_from_string(const char *s, char **end_of_string)
+authority_cert_parse_from_string(const char *s, const char **end_of_string)
 {
   authority_cert_t *cert = NULL;
   smartlist_t *tokens = NULL;
   char digest[DIGEST_LEN];
   directory_token_t *tok;
   char fp_declared[DIGEST_LEN];
-
-  char *eos = strstr(s, "\n-----END SIGNATURE-----\n");
+  char *eos;
   size_t len;
+  trusted_dir_server_t *ds;
+
+  s = eat_whitespace(s);
+  eos = strstr(s, "\n-----END SIGNATURE-----\n");
   if (! eos) {
     log_warn(LD_DIR, "No end-of-signature found on key certificate");
     return NULL;
@@ -1324,6 +1327,7 @@ authority_cert_parse_from_string(const char *s, char **end_of_string)
   }
 
   cert = tor_malloc_zero(sizeof(authority_cert_t));
+  memcpy(cert->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
   tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY);
   tor_assert(tok && tok->key);
@@ -1371,11 +1375,20 @@ authority_cert_parse_from_string(const char *s, char **end_of_string)
     goto err;
   }
 
-  /* XXXXX This doesn't check whether the key is an authority. IS that what we
-   * want? */
-  if (check_signature_token(digest, tok, cert->identity_key, 0,
-                            "key certificate")) {
-    goto err;
+  /* If we already have this cert, don't bother checking the signature. */
+  ds = trusteddirserver_get_by_v3_auth_digest(
+                                     cert->cache_info.identity_digest);
+  if (ds && ds->v3_cert &&
+      ds->v3_cert->cache_info.signed_descriptor_len == len &&
+      ds->v3_cert->cache_info.signed_descriptor_body &&
+      ! memcmp(s, ds->v3_cert->cache_info.signed_descriptor_body, len)) {
+    log_debug(LD_DIR, "We already checked the signature on this certificate;"
+              " no need to do so again.");
+  } else {
+    if (check_signature_token(digest, tok, cert->identity_key, 0,
+                              "key certificate")) {
+      goto err;
+    }
   }
 
   cert->cache_info.signed_descriptor_len = len;
@@ -1383,7 +1396,10 @@ authority_cert_parse_from_string(const char *s, char **end_of_string)
   memcpy(cert->cache_info.signed_descriptor_body, s, len);
   cert->cache_info.signed_descriptor_body[len] = 0;
   cert->cache_info.saved_location = SAVED_NOWHERE;
-  *end_of_string = eos;
+
+  if (end_of_string) {
+    *end_of_string = eat_whitespace(eos);
+  }
   return cert;
  err:
   authority_cert_free(cert);

@@ -261,6 +261,7 @@ static config_var_t _option_vars[] = {
   VAR("User",                STRING,   User,                 NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
+  VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   VAR("VirtualAddrNetwork",  STRING,   VirtualAddrNetwork,   "127.192.0.0/10"),
   VAR("__AllDirActionsPrivate",BOOL,   AllDirActionsPrivate, "0"),
@@ -1047,6 +1048,7 @@ options_act(or_options_t *old_options)
       if (dns_reset())
         return -1;
     }
+    /* XXXX020 init_keys() again if v3authoritativedir is newly set. */
   }
 
   /* Check if we need to parse and add the EntryNodes config option. */
@@ -2346,6 +2348,8 @@ parse_authority_type_from_list(smartlist_t *list, authority_type_t *auth,
       *auth |= V1_AUTHORITY | V2_AUTHORITY;
     else if (!strcasecmp(string, "v2"))
       *auth |= V2_AUTHORITY;
+    else if (!strcasecmp(string, "v3"))
+      *auth |= V3_AUTHORITY;
     else if (!strcasecmp(string, "bridge"))
       *auth |= BRIDGE_AUTHORITY;
     else if (!strcasecmp(string, "hidserv"))
@@ -2580,6 +2584,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "extra-info documents. Setting DownloadExtraInfo.");
       options->DownloadExtraInfo = 1;
     }
+    /* XXXX020 Check that at least one of Bridge/HS/V1/V2/V2{AoritativeDir}
+     * is set. */
   }
 
   if (options->AuthoritativeDir && !options->DirPort)
@@ -3588,6 +3594,7 @@ parse_dir_server_line(const char *line, int validate_only)
   char *addrport=NULL, *address=NULL, *nickname=NULL, *fingerprint=NULL;
   uint16_t dir_port = 0, or_port = 0;
   char digest[DIGEST_LEN];
+  char v3_digest[DIGEST_LEN];
   authority_type_t type = V2_AUTHORITY;
   int is_not_hidserv_authority = 0, is_not_v2_authority = 0;
 
@@ -3625,6 +3632,15 @@ parse_dir_server_line(const char *line, int validate_only)
       if (!ok)
         log_warn(LD_CONFIG, "Invalid orport '%s' on DirServer line.",
                  portstring);
+    } else if (!strcasecmpstart(flag, "v3ident=")) {
+      char *idstr = flag + strlen("v3ident=");
+      if (strlen(idstr) != HEX_DIGEST_LEN ||
+          base16_decode(v3_digest, DIGEST_LEN, idstr, HEX_DIGEST_LEN)<0) {
+        log_warn(LD_CONFIG, "Bad v3 identity digest '%s' on DirServer line",
+                 flag);
+      } else {
+        type |= V3_AUTHORITY;
+      }
     } else {
       log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirServer line",
                flag);

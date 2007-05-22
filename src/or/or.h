@@ -1334,9 +1334,10 @@ typedef enum {
   NO_AUTHORITY      = 0,
   V1_AUTHORITY      = 1 << 0,
   V2_AUTHORITY      = 1 << 1,
-  HIDSERV_AUTHORITY = 1 << 2,
-  BRIDGE_AUTHORITY  = 1 << 3,
-  EXTRAINFO_CACHE   = 1 << 4,  /* not precisely an authority type. */
+  V3_AUTHORITY      = 1 << 2,
+  HIDSERV_AUTHORITY = 1 << 3,
+  BRIDGE_AUTHORITY  = 1 << 4,
+  EXTRAINFO_CACHE   = 1 << 5,  /* not precisely an authority type. */
 } authority_type_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u
@@ -1758,6 +1759,8 @@ typedef struct {
                            * for version 1 directories? */
   int V2AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 2 directories? */
+  int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
+                           * for version 3 directories? */
   int HSAuthoritativeDir; /**< Boolean: does this an authoritative directory
                            * handle hidden service requests? */
   int HSAuthorityRecordStats; /**< Boolean: does this HS authoritative
@@ -3057,6 +3060,9 @@ typedef struct trusted_dir_server_t {
   uint16_t dir_port; /**< Directory port. */
   uint16_t or_port; /**< OR port: Used for tunneling connections. */
   char digest[DIGEST_LEN]; /**< Digest of identity key. */
+  char v3_identity_digest[DIGEST_LEN]; /**< Digest of v3 (authority only,
+                                        * high-security) identity key. */
+
   unsigned int is_running:1; /**< True iff we think this server is running. */
 
   /** True iff this server has accepted the most recent server descriptor
@@ -3065,6 +3071,8 @@ typedef struct trusted_dir_server_t {
 
   /** DOCDOC */
   authority_type_t type;
+
+  authority_cert_t *v3_cert; /**< V3 key certificate for this authority */
 
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
@@ -3087,6 +3095,8 @@ routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
                                              int fascistfirewall,
                                              int retry_if_no_servers);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(
+     const char *digest);
+trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(
      const char *digest);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
@@ -3197,6 +3207,10 @@ int getinfo_helper_networkstatus(control_connection_t *conn,
 void routerlist_assert_ok(routerlist_t *rl);
 void routerlist_check_bug_417(void);
 
+int trusted_dirs_reload_certs(void);
+int trusted_dirs_load_certs_from_string(const char *contents, int from_store);
+void trusted_dirs_flush_certs_to_disk(void);
+
 /********************************* routerparse.c ************************/
 
 #define MAX_STATUS_TAG_LEN 32
@@ -3278,7 +3292,7 @@ networkstatus_t *networkstatus_parse_from_string(const char *s);
 
 void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_parse_from_string(const char *s,
-                                                   char **end_of_string);
+                                                   const char **end_of_string);
 
 #endif
 

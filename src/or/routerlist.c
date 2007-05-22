@@ -49,6 +49,8 @@ static void router_dir_info_changed(void);
 /** Global list of a trusted_dir_server_t object for each trusted directory
  * server. */
 static smartlist_t *trusted_dir_servers = NULL;
+/** DOCDOC */
+static int trusted_dir_servers_certs_changed = 0;
 
 /** Global list of all of the routers that we know about. */
 static routerlist_t *routerlist = NULL;
@@ -161,6 +163,89 @@ router_reload_networkstatus(void)
   routers_update_all_from_networkstatus(time(NULL));
   routerlist_check_bug_417();
   return 0;
+}
+
+/** DOCDOC */
+int
+trusted_dirs_reload_certs(void)
+{
+  char filename[512];
+  char *contents;
+  int r;
+
+  tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-certs",
+               get_options()->DataDirectory);
+  contents = read_file_to_str(filename, 0, NULL);
+  if (!contents)
+    return -1;
+  r = trusted_dirs_load_certs_from_string(contents, 1);
+  tor_free(contents);
+  return r;
+}
+
+/** DOCDOC */
+int
+trusted_dirs_load_certs_from_string(const char *contents, int from_store)
+{
+  trusted_dir_server_t *ds;
+  const char *s, *eos;
+
+  for (s = contents; *s; s = eos) {
+    authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
+    if (!cert)
+      break;
+    ds = trusteddirserver_get_by_v3_auth_digest(
+                                       cert->cache_info.identity_digest);
+    if (!ds) {
+      log_info(LD_DIR, "Found cached certificate whose key didn't match "
+               "any v3 authority we recognized; skipping.");
+      authority_cert_free(cert);
+      continue;
+    }
+
+    if (ds->v3_cert) {
+      if (ds->v3_cert->expires < cert->expires) {
+        authority_cert_free(ds->v3_cert);
+      } else {
+        authority_cert_free(cert);
+        continue;
+      }
+    }
+
+    cert->cache_info.signed_descriptor_body = tor_strndup(s, eos-s);
+    cert->cache_info.signed_descriptor_len = eos-s;
+    ds->v3_cert = cert;
+    if (!from_store)
+      trusted_dir_servers_certs_changed = 1;
+  }
+  return 0;
+}
+
+/** DOCDOC */
+void
+trusted_dirs_flush_certs_to_disk(void)
+{
+  char filename[512];
+  smartlist_t *chunks = smartlist_create();
+
+  tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-certs",
+               get_options()->DataDirectory);
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+  {
+      if (ds->v3_cert) {
+        sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
+        c->bytes = ds->v3_cert->cache_info.signed_descriptor_body;
+        c->len = ds->v3_cert->cache_info.signed_descriptor_len;
+        smartlist_add(chunks, c);
+      }
+  });
+  if (write_chunks_to_file(filename, chunks, 0)) {
+    log_warn(LD_FS, "Error writing certificates to disk.");
+  }
+  SMARTLIST_FOREACH(chunks, sized_chunk_t *, c, tor_free(c));
+  smartlist_free(chunks);
+
+  trusted_dir_servers_certs_changed = 0;
 }
 
 /* Router descriptor storage.
@@ -567,6 +652,24 @@ router_get_trusteddirserver_by_digest(const char *digest)
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
        if (!memcmp(ds->digest, digest, DIGEST_LEN))
+         return ds;
+     });
+
+  return NULL;
+}
+
+/** Return the trusted_dir_server_t for the directory authority whose identity
+ * key hashes to <b>digest</b>, or NULL if no such authority is known.
+ */
+trusted_dir_server_t *
+trusteddirserver_get_by_v3_auth_digest(const char *digest)
+{
+  if (!trusted_dir_servers)
+    return NULL;
+
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+     {
+       if (!memcmp(ds->v3_identity_digest, digest, DIGEST_LEN))
          return ds;
      });
 
@@ -3477,6 +3580,8 @@ add_trusted_dir_server(const char *nickname, const char *address,
 static void
 trusted_dir_server_free(trusted_dir_server_t *ds)
 {
+  if (ds->v3_cert)
+    authority_cert_free(ds->v3_cert);
   tor_free(ds->nickname);
   tor_free(ds->description);
   tor_free(ds->address);
