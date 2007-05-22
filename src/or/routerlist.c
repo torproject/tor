@@ -2038,7 +2038,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest))
       digestmap_remove(rl->desc_by_eid_map,
                        ri_old->cache_info.extra_info_digest);
-    router_store_stats.bytes_ropped +=
+    router_store_stats.bytes_dropped +=
       ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
   }
