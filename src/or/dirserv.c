@@ -1742,7 +1742,7 @@ generate_networkstatus_opinion(int v2)
     contact = "(none)";
 
   if (versioning) {
-    size_t v_len = 32+strlen(client_versions)+strlen(server_versions);
+    size_t v_len = 64+strlen(client_versions)+strlen(server_versions);
     version_lines = tor_malloc(v_len);
     tor_snprintf(version_lines, v_len,
                  "client-versions %s\nserver-versions %s\n",
@@ -1768,7 +1768,7 @@ generate_networkstatus_opinion(int v2)
                "published %s\n"
                "dir-options%s%s%s\n"
                "%s" /* client version line, server version line. */
-               "dir-signing-key\n%s\n",
+               "dir-signing-key\n%s",
                hostname, ipaddr, (int)options->DirPort,
                fingerprint,
                contact,
