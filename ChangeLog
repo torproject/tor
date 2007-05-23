@@ -1,4 +1,9 @@
-Changes in version 0.1.2.14 - 2007-0?-??
+Changes in version 0.1.2.14 - 2007-05-23
+  o Directory authority changes:
+    - Two directory authorities (moria1 and moria2) just moved to new
+      IP addresses. This change will particularly affect those who serve
+      or use hidden services.
+
   o Major bugfixes:
     - If a directory server runs out of space in the connection table
       as it's processing a begin_dir request, it will free the exit stream
@@ -20,7 +25,7 @@ Changes in version 0.1.2.14 - 2007-0?-??
     - Actually set the purpose correctly for descriptors inserted with
       purpose=controller.
     - When we have k non-v2 authorities in our DirServer config,
-      we ignored as many as k v2 authorities while updating our
+      we ignored the last k authorities in the list when updating our
       network-statuses.
     - Correctly back-off from requesting router descriptors that we are
       having a hard time downloading.
