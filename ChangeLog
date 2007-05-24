@@ -41,6 +41,8 @@ Changes in version 0.1.2.14 - 2007-05-23
     - When routers publish SVN revisions in their router descriptors,
       authorities now include those versions correctly in networkstatus
       documents.
+    - Warn when using a version of libevent before 1.3b to run a server on
+      OSX or BSD: these versions interact badly with userspace threads.
 
 
 Changes in version 0.1.2.13 - 2007-04-24
