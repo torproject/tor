@@ -259,18 +259,37 @@ buf_shrink_freelists(void)
   for (j = 0; j < 2; ++j) {
     free_mem_list_t *list = j ? &free_mem_list_16k : &free_mem_list_4k;
     if (list->lowwater > list->slack) {
-      int i;
+      int i, n_to_skip, n_to_free;
+      char **ptr;
       log_info(LD_GENERAL, "We haven't used %d/%d allocated %d-byte buffer "
                "memory chunks since the last call; freeing all but %d of them",
                list->lowwater, list->len, (int)list->chunksize, list->slack);
+      /* Skip over the slack and non-lowwater entries */
+      n_to_free = list->lowwater - list->slack;
+      n_to_skip = list->len - n_to_free;
+      for (ptr = &list->list, i = 0; i < n_to_skip; ++i) {
+        char *mem = *ptr;
+        tor_assert(mem);
+        ptr = (char**)mem;
+      }
+      /* And free the remaining entries. */
+      for (i = 0; i < n_to_free; ++i) {
+        char *mem = *ptr;
+        tor_assert(mem);
+        *ptr = *(char**)mem;
+        tor_free(mem);
+        --list->len;
+      }
+#if 0
+      /* XXXX020 Put this code back if the above gives us nasty segfaults. */
       for (i = list->slack; i < list->lowwater; ++i) {
-        /* XXXX we should really free the last few entries, not the first. */
         char *mem = list->list;
         tor_assert(mem);
         list->list = *(char**)mem;
         tor_free(mem);
         --list->len;
       }
+#endif
     }
     list->lowwater = list->len;
   }
