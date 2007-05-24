@@ -48,6 +48,7 @@ conn_type_to_string(int type)
     case CONN_TYPE_AP_TRANS_LISTENER:
       return "Transparent pf/netfilter listener";
     case CONN_TYPE_AP_NATD_LISTENER: return "Transparent natd listener";
+    case CONN_TYPE_AP_DNS_LISTENER: return "DNS listener";
     case CONN_TYPE_AP: return "Socks";
     case CONN_TYPE_DIR_LISTENER: return "Directory listener";
     case CONN_TYPE_DIR: return "Directory";
@@ -74,6 +75,7 @@ conn_state_to_string(int type, int state)
     case CONN_TYPE_AP_LISTENER:
     case CONN_TYPE_AP_TRANS_LISTENER:
     case CONN_TYPE_AP_NATD_LISTENER:
+    case CONN_TYPE_AP_DNS_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
     case CONN_TYPE_CONTROL_LISTENER:
       if (state == LISTENER_STATE_READY)
@@ -239,6 +241,9 @@ connection_unregister_events(connection_t *conn)
     if (event_del(conn->write_event))
       log_warn(LD_BUG, "Error removing write event for %d", conn->s);
     tor_free(conn->write_event);
+  }
+  if (conn->dns_server_port) {
+    dnsserv_close_listener(conn);
   }
 }
 
@@ -491,6 +496,12 @@ connection_about_to_close_connection(connection_t *conn)
                  " set end_reason.",
                  conn->marked_for_close_file, conn->marked_for_close);
       }
+      if (edge_conn->dns_server_request) {
+        log_warn(LD_BUG,"Closing stream (marked at %s:%d) without having"
+                 " replied to DNS request.",
+                 conn->marked_for_close_file, conn->marked_for_close);
+        dnsserv_reject_request(edge_conn);
+      }
       control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED,
                                   edge_conn->end_reason);
       circ = circuit_get_by_edge_conn(edge_conn);
@@ -632,6 +643,7 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
 #ifndef MS_WINDOWS
   int one=1;
 #endif
+  int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
 
   memset(&listenaddr,0,sizeof(struct sockaddr_in));
   if (parse_addr_port(LOG_WARN, listenaddress, &address, &addr, &usePort)<0) {
@@ -658,7 +670,9 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
     return NULL;
   }
 
-  s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
+  s = tor_open_socket(PF_INET,
+                      is_tcp ? SOCK_STREAM : SOCK_DGRAM,
+                      is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
   if (s < 0) {
     log_warn(LD_NET,"Socket creation failed.");
     goto err;
@@ -683,11 +697,13 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
     goto err;
   }
 
-  if (listen(s,SOMAXCONN) < 0) {
-    log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
-             tor_socket_strerror(tor_socket_errno(s)));
-    tor_close_socket(s);
-    goto err;
+  if (is_tcp) {
+    if (listen(s,SOMAXCONN) < 0) {
+      log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
+               tor_socket_strerror(tor_socket_errno(s)));
+      tor_close_socket(s);
+      goto err;
+    }
   }
 
   set_socket_nonblocking(s);
@@ -708,7 +724,12 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
             conn_type_to_string(type), usePort);
 
   conn->state = LISTENER_STATE_READY;
-  connection_start_reading(conn);
+  if (is_tcp) {
+    connection_start_reading(conn);
+  } else {
+    tor_assert(type == CONN_TYPE_AP_DNS_LISTENER);
+    dnsserv_configure_listener(conn);
+  }
 
   return conn;
 
@@ -1125,6 +1146,10 @@ retry_all_listeners(int force, smartlist_t *replaced_conns,
                       options->NatdPort, "127.0.0.1", force,
                       replaced_conns, new_conns, 0)<0)
     return -1;
+  if (retry_listeners(CONN_TYPE_AP_DNS_LISTENER, options->DNSListenAddress,
+                      options->DNSPort, "127.0.0.1", force,
+                      replaced_conns, new_conns, 0)<0)
+    return -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1", force,
@@ -1535,6 +1560,10 @@ connection_handle_read(connection_t *conn)
       return connection_handle_listener_read(conn, CONN_TYPE_DIR);
     case CONN_TYPE_CONTROL_LISTENER:
       return connection_handle_listener_read(conn, CONN_TYPE_CONTROL);
+    case CONN_TYPE_AP_DNS_LISTENER:
+      /* This should never happen; eventdns.c handles the reads here. */
+      tor_fragile_assert();
+      return 0;
   }
 
 loop_again:

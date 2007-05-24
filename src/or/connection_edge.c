@@ -30,7 +30,6 @@ static smartlist_t *redirect_exit_list = NULL;
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
 static int connection_ap_process_natd(edge_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
-static int hostname_is_noconnect_address(const char *address);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -1920,6 +1919,11 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
   char buf[384];
   size_t replylen;
 
+  if (conn->dns_server_request) {
+    dnsserv_resolved(conn, answer_type, answer_len, answer, ttl);
+    return;
+  }
+
   if (ttl >= 0) {
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
       uint32_t a = ntohl(get_uint32(answer));
@@ -2551,7 +2555,7 @@ failed:
 
 /** Check if the address is of the form "y.noconnect"
  */
-static int
+int
 hostname_is_noconnect_address(const char *address)
 {
   return ! strcasecmpend(address, ".noconnect");

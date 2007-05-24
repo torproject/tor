@@ -7,7 +7,7 @@ bin_PROGRAMS = tor
 tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
-	cpuworker.c directory.c dirserv.c dns.c hibernate.c main.c \
+	cpuworker.c directory.c dirserv.c dns.c dnsserv.c hibernate.c main.c \
 	onion.c policies.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	eventdns.c \
@@ -23,7 +23,7 @@ tor_LDADD = ../common/libor.a ../common/libor-crypto.a \
 test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
-	cpuworker.c directory.c dirserv.c dns.c hibernate.c main.c \
+	cpuworker.c directory.c dirserv.c dns.c dnsserv.c hibernate.c main.c \
 	onion.c policies.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	eventdns.c \

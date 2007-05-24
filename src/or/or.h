@@ -237,7 +237,9 @@ typedef enum {
 /** Type for sockets listening for transparent connections redirected by
  * natd. */
 #define CONN_TYPE_AP_NATD_LISTENER 14
-#define _CONN_TYPE_MAX 14
+/** Type for sockets listening for DNS requests. */
+#define CONN_TYPE_AP_DNS_LISTENER 15
+#define _CONN_TYPE_MAX 15
 
 #define CONN_IS_EDGE(x) \
   ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
@@ -813,6 +815,9 @@ typedef struct connection_t {
    * read_event should be made active with libevent. */
   unsigned int active_on_link:1;
 
+  /* XXXX020 move this into a subtype!!! */
+  struct evdns_server_port *dns_server_port;
+
 } connection_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
@@ -904,6 +909,9 @@ typedef struct edge_connection_t {
    * a new circuit. We keep track because the timeout is longer if we've
    * already retried several times. */
   uint8_t num_socks_retries;
+
+  /** DOCDOC */
+  struct evdns_server_request *dns_server_request;
 
 } edge_connection_t;
 
@@ -1728,6 +1736,8 @@ typedef struct {
   config_line_t *TransListenAddress;
   /** Addresses to bind for listening for transparent natd connections */
   config_line_t *NatdListenAddress;
+  /** Addresses to bind for listening for SOCKS connections. */
+  config_line_t *DNSListenAddress;
   /** Addresses to bind for listening for OR connections. */
   config_line_t *ORListenAddress;
   /** Addresses to bind for listening for directory connections. */
@@ -1752,6 +1762,7 @@ typedef struct {
   int NatdPort; /**< Port to listen on for transparent natd connections. */
   int ControlPort; /**< Port to listen on for control connections. */
   int DirPort; /**< Port to listen on for directory connections. */
+  int DNSPort; /**< Port to listen on for DNS requests. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory
@@ -2403,6 +2414,7 @@ void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
 int connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                                origin_circuit_t *circ,
                                                crypt_path_t *cpath);
+int hostname_is_noconnect_address(const char *address);
 
 void set_exit_redirects(smartlist_t *lst);
 typedef enum hostname_type_t {
@@ -2654,6 +2666,17 @@ int dns_resolve(edge_connection_t *exitconn);
 void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
 void dns_reset_correctness_checks(void);
+
+/********************************* dnsserv.c ************************/
+
+void dnsserv_configure_listener(connection_t *conn);
+void dnsserv_close_listener(connection_t *conn);
+void dnsserv_resolved(edge_connection_t *conn,
+                      int answer_type,
+                      size_t answer_len,
+                      const char *answer,
+                      int ttl);
+void dnsserv_reject_request(edge_connection_t *conn);
 
 /********************************* hibernate.c **********************/
 

@@ -155,6 +155,8 @@ static config_var_t _option_vars[] = {
   VAR("DirPort",             UINT,     DirPort,              "0"),
   OBSOLETE("DirPostPeriod"),
   VAR("DirServer",           LINELIST, DirServers,           NULL),
+  VAR("DNSPort",             UINT,     DNSPort,              "0"),
+  VAR("DNSListenAddress",    LINELIST, DNSListenAddress,     NULL),
   VAR("DownloadExtraInfo",   BOOL,     DownloadExtraInfo,    "0"),
   VAR("EnforceDistinctSubnets", BOOL,  EnforceDistinctSubnets,"1"),
   VAR("EntryNodes",          STRING,   EntryNodes,           NULL),
@@ -2415,6 +2417,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->DirPort == 0 && options->DirListenAddress != NULL)
     REJECT("DirPort must be defined if DirListenAddress is defined.");
 
+  if (options->DNSPort == 0 && options->DNSListenAddress != NULL)
+    REJECT("DirPort must be defined if DirListenAddress is defined.");
+
   if (options->ControlPort == 0 && options->ControlListenAddress != NULL)
     REJECT("ControlPort must be defined if ControlListenAddress is defined.");
 
@@ -2522,6 +2527,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->SocksPort < 0 || options->SocksPort > 65535)
     REJECT("SocksPort option out of bounds.");
+
+  if (options->DNSPort < 0 || options->DNSPort > 65535)
+    REJECT("DNSPort option out of bounds.");
 
   if (options->TransPort < 0 || options->TransPort > 65535)
     REJECT("TransPort option out of bounds.");

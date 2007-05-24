@@ -195,7 +195,13 @@ Things we'd like to do in 0.2.0.x:
   - Features:
     - Traffic priorities (by Jun 1)
       - Ability to prioritize own traffic over relayed traffic.
-    - Implement a DNS proxy
+    o Implement a DNS proxy
+      o Make a listener type.
+      o Hook into connection_edge logic.
+      o Hook into evdns_server_* logic
+      - Actually send back a useful answer.
+      - Make i
+      - Document.
     - Add a way to request DNS resolves from the controller.
     - A better UI for authority ops.
       - Follow weasel's proposal, crossed with mixminion dir config format
