@@ -3159,16 +3159,7 @@ router_get_combined_status_by_descriptor_digest(const char *digest)
 {
   if (!routerstatus_by_desc_digest_map)
     return NULL;
-#if 0
-  /* XXXX020 this could conceivably be critical path when a whole lot
-   * of descriptors fail.  Maybe we should use a digest map instead.*/
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, lrs,
-                    if (!memcmp(lrs->status.descriptor_digest, digest))
-                      return lrs);
-  return NULL;
-#else
   return digestmap_get(routerstatus_by_desc_digest_map, digest);
-#endif
 }
 
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
@@ -4875,7 +4866,6 @@ router_reset_descriptor_download_failures(void)
     rs->dl_status.n_download_failures = 0;
     rs->dl_status.next_attempt_at = 0;
   });
-  /* XXXX020 reset extrainfo dl status too. */
   tor_assert(networkstatus_list);
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
      SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
@@ -4884,6 +4874,19 @@ router_reset_descriptor_download_failures(void)
            rs->need_to_mirror = 1;
        }));
   last_routerdesc_download_attempted = 0;
+  if (!routerlist)
+    return;
+  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+  {
+    ri->cache_info.ei_dl_status.n_download_failures = 0;
+    ri->cache_info.ei_dl_status.next_attempt_at = 0;
+  });
+  SMARTLIST_FOREACH(routerlist->old_routers, signed_descriptor_t *, sd,
+  {
+    sd->ei_dl_status.n_download_failures = 0;
+    sd->ei_dl_status.next_attempt_at = 0;
+  });
+
 }
 
 /** Any changes in a router descriptor's publication time larger than this are
