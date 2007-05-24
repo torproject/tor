@@ -753,7 +753,7 @@ hibernate_soft_limit_reached(void)
  * reached. Puts us into "loose hibernation": we don't accept new
  * connections, but we continue handling old ones. */
 static void
-hibernate_begin(int new_state, time_t now)
+hibernate_begin(hibernate_state_t new_state, time_t now)
 {
   connection_t *conn;
   or_options_t *options = get_options();
@@ -797,7 +797,7 @@ hibernate_begin(int new_state, time_t now)
 
 /** Called when we've been hibernating and our timeout is reached. */
 static void
-hibernate_end(int new_state)
+hibernate_end(hibernate_state_t new_state)
 {
   tor_assert(hibernate_state == HIBERNATE_STATE_LOWBANDWIDTH ||
              hibernate_state == HIBERNATE_STATE_DORMANT);
