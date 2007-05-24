@@ -2328,8 +2328,10 @@ choose_random_entry(cpath_build_state_t *state)
   int need_uptime = state->need_uptime;
   int need_capacity = state->need_capacity;
 
-  smartlist_add(exit_family, chosen_exit);
-  routerlist_add_family(exit_family, chosen_exit);
+  if (chosen_exit) {
+    smartlist_add(exit_family, chosen_exit);
+    routerlist_add_family(exit_family, chosen_exit);
+  }
 
   if (!entry_guards)
     entry_guards = smartlist_create();
