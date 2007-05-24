@@ -34,11 +34,9 @@ static int the_v2_networkstatus_is_dirty = 1;
 static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
-/* Should be static; exposed for testing */
-/* XXXX020 not actually tested. */
 struct authdir_config_t;
-int add_fingerprint_to_dir(const char *nickname, const char *fp,
-                           struct authdir_config_t *list);
+static int add_fingerprint_to_dir(const char *nickname, const char *fp,
+                                  struct authdir_config_t *list);
 static uint32_t dirserv_router_get_status(const routerinfo_t *router,
                                           const char **msg);
 static uint32_t
@@ -75,8 +73,7 @@ typedef struct authdir_config_t {
 } authdir_config_t;
 
 /** Should be static; exposed for testing. */
-/* XXXX020 not actually tested. */
-authdir_config_t *fingerprint_list = NULL;
+static authdir_config_t *fingerprint_list = NULL;
 
 /** Allocate and return a new, empty, authdir_config_t. */
 static authdir_config_t *
@@ -621,6 +618,7 @@ static int
 dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 {
   routerinfo_t *ri;
+  int r;
   tor_assert(msg);
   *msg = NULL;
 
@@ -630,9 +628,9 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
     extrainfo_free(ei);
     return -1;
   }
-  if (routerinfo_incompatible_with_extrainfo(ri, ei, msg)) {
+  if ((r = routerinfo_incompatible_with_extrainfo(ri, ei, msg))) {
     extrainfo_free(ei);
-    return -1;
+    return r < 0 ? 0 : -1;
   }
   router_add_extrainfo_to_routerlist(ei, msg, 0, 0);
   return 2;

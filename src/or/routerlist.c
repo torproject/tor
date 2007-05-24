@@ -4964,7 +4964,8 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
   return 1;
 }
 
-/** DOCDOC */
+/** DOCDOC  Returns 1 for "reject with message"; -1 for "reject silently",
+ * 0 for "accept". */
 int
 routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
                                        const char **msg)
@@ -4972,8 +4973,10 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
   tor_assert(ri);
   tor_assert(ei);
 
-  if (ei->bad_sig)
+  if (ei->bad_sig) {
+    if (msg) *msg = "Extrainfo signature was bad, or signed with wrong key.";
     return 1;
+  }
 
   /* The nickname must match exactly to have been generated at the same time
    * by the same rotuer.  */
@@ -4999,10 +5002,10 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
     tor_free(ei->pending_sig);
   }
 
-  if (ei->cache_info.published_on < ei->cache_info.published_on) {
+  if (ei->cache_info.published_on < ri->cache_info.published_on) {
     if (msg) *msg = "Extrainfo published time did not match routerdesc";
     return 1;
-  } else if (ei->cache_info.published_on > ei->cache_info.published_on) {
+  } else if (ei->cache_info.published_on > ri->cache_info.published_on) {
     if (msg) *msg = "Extrainfo published time did not match routerdesc";
     return -1;
   }
