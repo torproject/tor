@@ -20,6 +20,8 @@ Changes in version 0.1.2.14 - 2007-05-23
     - If all of our dirservers have given us bad or no networkstatuses
       lately, then stop hammering them once per minute even when we
       think they're failed. Fixes another part of bug 422.
+    - Tighten router parsing rules.
+    - Avoid segfaults when reading from mmaped descriptor file.
 
   o Minor bugfixes:
     - Actually set the purpose correctly for descriptors inserted with

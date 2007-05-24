@@ -158,6 +158,7 @@ uint64_t tor_parse_uint64(const char *s, int base, uint64_t min,
                          uint64_t max, int *ok, char **next);
 const char *hex_str(const char *from, size_t fromlen) ATTR_NONNULL((1));
 const char *eat_whitespace(const char *s) ATTR_PURE;
+const char *eat_whitespace_eos(const char *s, const char *eos) ATTR_PURE;
 const char *eat_whitespace_no_nl(const char *s) ATTR_PURE;
 const char *find_whitespace(const char *s) ATTR_PURE;
 int tor_mem_is_zero(const char *mem, size_t len) ATTR_PURE;

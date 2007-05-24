@@ -2943,7 +2943,7 @@ int router_add_to_routerlist(routerinfo_t *router, const char **msg,
                              int from_cache, int from_fetch);
 int router_load_single_router(const char *s, uint8_t purpose,
                               const char **msg);
-void router_load_routers_from_string(const char *s,
+void router_load_routers_from_string(const char *s, size_t len,
                                      saved_location_t saved_location,
                                      smartlist_t *requested_fingerprints);
 typedef enum {
@@ -3024,6 +3024,7 @@ int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s,
+                                  const char *eos,
                                   smartlist_t *dest,
                                   saved_location_t saved_location);
 int router_parse_routerlist_from_directory(const char *s,

@@ -163,6 +163,8 @@ static void token_free(directory_token_t *tok);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *find_first_by_keyword(smartlist_t *s,
                                                 directory_keyword keyword);
+static directory_token_t *find_last_by_keyword(smartlist_t *s,
+                                                directory_keyword keyword);
 static int tokenize_string(const char *start, const char *end,
                            smartlist_t *out, where_syntax where);
 static directory_token_t *get_next_token(const char **s, where_syntax where);
@@ -641,7 +643,8 @@ check_directory_signature(const char *digest,
  * Returns 0 on success and -1 on failure.
  */
 int
-router_parse_list_from_string(const char **s, smartlist_t *dest,
+router_parse_list_from_string(const char **s, const char *eos,
+                              smartlist_t *dest,
                               saved_location_t saved_location)
 {
   routerinfo_t *router;
@@ -652,19 +655,25 @@ router_parse_list_from_string(const char **s, smartlist_t *dest,
   tor_assert(dest);
 
   start = *s;
+  if (!eos)
+    eos = *s + strlen(*s);
+
   while (1) {
-    *s = eat_whitespace(*s);
+    *s = eat_whitespace_eos(*s, eos);
+    if (eos - *s < 32) /* not long enough to hold a descriptor. */
+      break;
+
     /* Don't start parsing the rest of *s unless it contains a router. */
     if (strcmpstart(*s, "router ")!=0)
       break;
-    if ((end = strstr(*s+1, "\nrouter "))) {
+    if ((end = tor_memstr(*s+1, eos-(*s+1), "\nrouter "))) {
       cp = end;
       end++;
-    } else if ((end = strstr(*s+1, "\ndirectory-signature"))) {
+    } else if ((end = tor_memstr(*s+1, eos-(*s+1), "\ndirectory-signature"))) {
       cp = end;
       end++;
     } else {
-      cp = end = *s+strlen(*s);
+      cp = end = eos;
     }
 
     while (cp > *s && (!*cp || TOR_ISSPACE(*cp)))
@@ -938,7 +947,12 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR, "Missing router signature");
     goto err;
   }
-  if (strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
+  if (tok != find_last_by_keyword(tokens, K_ROUTER_SIGNATURE)) {
+    log_warn(LD_DIR, "Multiple signatures on one router. That's not ok.");
+    goto err;
+  }
+  if (!tok->object_type ||
+      strcmp(tok->object_type, "SIGNATURE") || tok->object_size != 128) {
     log_warn(LD_DIR, "Bad object type or length on router signature");
     goto err;
   }
@@ -1637,7 +1651,7 @@ get_next_token(const char **s, where_syntax where)
   }
   *s = eat_whitespace(*s);
   if (strcmpstart(*s, "-----BEGIN ")) {
-    goto done_tokenizing;
+    goto check_obj;
   }
   obstart = *s;
   *s += 11; /* length of "-----BEGIN ". */
@@ -1673,6 +1687,7 @@ get_next_token(const char **s, where_syntax where)
     }
     *s += i+6;
   }
+ check_obj:
   switch (o_syn)
     {
     case NO_OBJ:
@@ -1733,6 +1748,17 @@ find_first_by_keyword(smartlist_t *s, directory_keyword keyword)
 {
   SMARTLIST_FOREACH(s, directory_token_t *, t, if (t->tp == keyword) return t);
   return NULL;
+}
+
+/** Find the last token in <b>s</b> whose keyword is <b>keyword</b>; return
+ * NULL if no such keyword is found.
+ */
+static directory_token_t *
+find_last_by_keyword(smartlist_t *s, directory_keyword keyword)
+{
+  directory_token_t *last = NULL;
+  SMARTLIST_FOREACH(s, directory_token_t *, t, if (t->tp == keyword) last = t);
+  return last;
 }
 
 /** Return a newly allocated smartlist of all accept or reject tokens in

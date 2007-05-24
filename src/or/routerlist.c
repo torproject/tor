@@ -373,6 +373,7 @@ router_reload_router_list(void)
   if (routerlist->mmap_descriptors) {
     router_store_len = routerlist->mmap_descriptors->size;
     router_load_routers_from_string(routerlist->mmap_descriptors->data,
+                                    routerlist->mmap_descriptors->size,
                                     SAVED_IN_CACHE, NULL);
   }
 
@@ -381,7 +382,7 @@ router_reload_router_list(void)
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, NULL);
   if (contents) {
-    router_load_routers_from_string(contents,
+    router_load_routers_from_string(contents, strlen(contents),
                                     SAVED_IN_JOURNAL, NULL);
     tor_free(contents);
   }
@@ -2302,7 +2303,8 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
  * fingerprint from the list.
  */
 void
-router_load_routers_from_string(const char *s, saved_location_t saved_location,
+router_load_routers_from_string(const char *s, size_t len,
+                                saved_location_t saved_location,
                                 smartlist_t *requested_fingerprints)
 {
   smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
@@ -2310,7 +2312,7 @@ router_load_routers_from_string(const char *s, saved_location_t saved_location,
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
 
-  router_parse_list_from_string(&s, routers, saved_location);
+  router_parse_list_from_string(&s, s+len, routers, saved_location);
 
   routers_update_status_from_networkstatus(routers, !from_cache);
 
