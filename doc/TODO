@@ -83,6 +83,7 @@ Things we'd like to do in 0.2.0.x:
         - Push/pull documents as appropriate.
         o Have clients know which authorities are v3 authorities, and what
           their keys are.
+          - While we're at it, let v3 authorities have fqdns lines.
       - Start caching consensus documents once authorities make them
       - Start downloading and using consensus documents once caches serve them
     . 104: Long and Short Router Descriptors (by Jun 1)

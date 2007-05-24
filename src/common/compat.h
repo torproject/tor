@@ -96,6 +96,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #if defined(__GNUC__) && __GNUC__ >= 3
 #define ATTR_NORETURN __attribute__((noreturn))
 #define ATTR_PURE __attribute__((pure))
+#define ATTR_CONST __attribute__((const))
 #define ATTR_MALLOC __attribute__((malloc))
 #define ATTR_NORETURN __attribute__((noreturn))
 #define ATTR_NONNULL(x) __attribute__((nonnull x))
@@ -108,6 +109,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #else
 #define ATTR_NORETURN
 #define ATTR_PURE
+#define ATTR_CONST
 #define ATTR_MALLOC
 #define ATTR_NORETURN
 #define ATTR_NONNULL(x)

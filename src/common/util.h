@@ -142,6 +142,10 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 /** Macro: true if two values have different boolean values. */
 #define bool_neq(a,b) (!(a)!=!(b))
 
+/* Math functions */
+int tor_log2(uint64_t u64) ATTR_CONST;
+uint64_t round_to_power_of_2(uint64_t u64);
+
 /* String manipulation */
 
 /** Allowable characters in a hexadecimal string. */

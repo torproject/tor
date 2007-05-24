@@ -214,6 +214,54 @@ _tor_free(void *mem)
 }
 
 /* =====
+ * Math
+ * ===== */
+
+/** Returns floor(log2(u64)).  If u64 is 0, (incorrectly) returns 0. */
+int
+tor_log2(uint64_t u64)
+{
+  int r = 0;
+  if (u64 >= (U64_LITERAL(1)<<32)) {
+    u64 >>= 32;
+    r = 32;
+  }
+  if (u64 >= (U64_LITERAL(1)<<16)) {
+    u64 >>= 16;
+    r += 16;
+  }
+  if (u64 >= (U64_LITERAL(1)<<8)) {
+    u64 >>= 8;
+    r += 8;
+  }
+  if (u64 >= (U64_LITERAL(1)<<4)) {
+    u64 >>= 4;
+    r += 4;
+  }
+  if (u64 >= (U64_LITERAL(1)<<2)) {
+    u64 >>= 2;
+    r += 2;
+  }
+  if (u64 >= (U64_LITERAL(1)<<1)) {
+    u64 >>= 1;
+    r += 1;
+  }
+  return r;
+}
+
+/** Return the power of 2 closest to <b>u64</b>. */
+uint64_t
+round_to_power_of_2(uint64_t u64)
+{
+  int lg2 = tor_log2(u64);
+  uint64_t low = U64_LITERAL(1) << lg2, high = U64_LITERAL(1) << (lg2+1);
+  if (high - u64 < u64 - low)
+    return high;
+  else
+    return low;
+}
+
+/* =====
  * String manipulation
  * ===== */
 

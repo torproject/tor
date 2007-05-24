@@ -946,6 +946,26 @@ test_util(void)
   tor_gettimeofday(&end);
   /* We might've timewarped a little. */
   test_assert(tv_udiff(&start, &end) >= -5000);
+
+  /* Test tor_log2(). */
+  test_eq(tor_log2(64), 6);
+  test_eq(tor_log2(65), 6);
+  test_eq(tor_log2(63), 5);
+  test_eq(tor_log2(1), 0);
+  test_eq(tor_log2(2), 1);
+  test_eq(tor_log2(3), 1);
+  test_eq(tor_log2(4), 2);
+  test_eq(tor_log2(5), 2);
+  test_eq(tor_log2(U64_LITERAL(40000000000000000)), 55);
+  test_eq(tor_log2(UINT64_MAX), 63);
+
+  /* Test round_to_power_of_2 */
+  test_eq(round_to_power_of_2(120), 128);
+  test_eq(round_to_power_of_2(128), 128);
+  test_eq(round_to_power_of_2(130), 128);
+  test_eq(round_to_power_of_2(U64_LITERAL(40000000000000000)),
+          U64_LITERAL(1)<<55);
+  test_eq(round_to_power_of_2(0), 2);
 }
 
 static void

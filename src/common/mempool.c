@@ -361,17 +361,23 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
   /* Now we figure out how many items fit in each chunk.  We need to fit at
    * least 2 items per chunk. No chunk can be more than MAX_CHUNK bytes long,
    * or less than MIN_CHUNK. */
-  /* XXXX020 Try a bit harder here: we want to be a bit less than a power of
-     2, not a bit over. */
   if (chunk_capacity > MAX_CHUNK)
     chunk_capacity = MAX_CHUNK;
-  if (chunk_capacity < alloc_size * 2 + CHUNK_OVERHEAD)
-    chunk_capacity = alloc_size * 2 + CHUNK_OVERHEAD;
+  /* Try to be around a power of 2 in size, since that's what allocators like
+   * handing out. 512K-1 byte is a lot better than 512K+1 byte. */
+  chunk_capacity = (size_t) round_to_power_of_2(chunk_capacity);
+  while (chunk_capacity < alloc_size * 2 + CHUNK_OVERHEAD)
+    chunk_capacity *= 2;
   if (chunk_capacity < MIN_CHUNK)
     chunk_capacity = MIN_CHUNK;
 
   pool->new_chunk_capacity = (chunk_capacity-CHUNK_OVERHEAD) / alloc_size;
   pool->item_alloc_size = alloc_size;
+
+  log_debug(LD_MM, "Capacity is %lu, item size is %lu, alloc size is %lu",
+            (unsigned long)pool->new_chunk_capacity,
+            (unsigned long)pool->item_alloc_size,
+            (unsigned long)(pool->new_chunk_capacity*pool->item_alloc_size));
 
   return pool;
 }
