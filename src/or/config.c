@@ -2734,6 +2734,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
   if (check_nickname_list(options->MyFamily, "MyFamily", msg))
     return -1;
+
+  if (options->NodeFamilies)
+    COMPLAIN("NodeFamily config option is broken in this version of Tor.");
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
     if (check_nickname_list(cl->value, "NodeFamily", msg))
       return -1;

@@ -417,13 +417,6 @@ but never attach a new stream to a circuit that is too old.
 (Default: 10 minutes)
 .LP
 .TP
-\fBNodeFamily \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-The named Tor servers constitute a "family" of similar or co-administered
-servers, so never use any two of them in the same circuit. Defining a
-NodeFamily is only needed when a server doesn't list the family itself
-(with MyFamily). This option can be used multiple times.
-.LP
-.TP
 \fBEnforceDistinctSubnets \fR\fB0\fR|\fB1\fR\fP
 If 1, Tor will not put two servers whose IP addresses are "too
 close" on the same circuit.  Currently, two addresses are
