@@ -1467,7 +1467,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       if (router_hex_digest_matches(router, nickname))
         return router;
       else
-        best_match = router; // XXXX NM not exactly right.
+        best_match = router; // XXXX020 NM not exactly right.
     }
   });
 

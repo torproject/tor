@@ -100,7 +100,7 @@ int has_completed_circuit=0;
 
 SERVICE_STATUS service_status;
 SERVICE_STATUS_HANDLE hStatus;
-/* XXXX This 'backup argv' and 'backup argc' business is an ugly hack. This
+/* XXXX020 This 'backup argv' and 'backup argc' business is an ugly hack. This
  * is a job for arguments, not globals. */
 static char **backup_argv;
 static int backup_argc;
@@ -510,7 +510,7 @@ conn_write_callback(int fd, short events, void *_conn)
           edge_conn->end_reason = END_STREAM_REASON_INTERNAL;
         conn->edge_has_sent_end = 1;
       }
-      /* XXX do we need a close-immediate here, so we don't try to flush? */
+      /* XXX020 do we need a close-immediate here, so we don't try to flush? */
       connection_mark_for_close(conn);
     }
   }
@@ -583,7 +583,7 @@ conn_close_if_marked(int i)
         LOG_FN_CONN(conn, (LOG_INFO,LD_NET,
                            "Holding conn (fd %d) open for more flushing.",
                            conn->s));
-      /* XXX should we reset timestamp_lastwritten here? */
+      /* XXX020 should we reset timestamp_lastwritten here? */
       return 0;
     }
     if (connection_wants_to_flush(conn)) {
@@ -902,7 +902,7 @@ run_scheduled_events(time_t now)
   if (time_to_fetch_directory < now) {
     /* Only caches actually need to fetch directories now. */
     if (options->DirPort && !authdir_mode_v1(options)) {
-      /* XXX actually, we should only do this if we want to advertise
+      /* XXX020 actually, we should only do this if we want to advertise
        * our dirport. not simply if we configured one. -RD */
       if (any_trusted_dir_is_v1_authority())
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
@@ -1380,7 +1380,7 @@ do_main_loop(void)
 
     /* refilling buckets and sending cells happens at the beginning of the
      * next iteration of the loop, inside prepare_for_poll()
-     * XXXX No longer so.
+     * XXXX020 No longer so; fix comment.
      */
   }
 }
@@ -1483,7 +1483,7 @@ signal_callback(int fd, short events, void *arg)
             "Rate limiting NEWNYM request: delaying by %d second(s)",
             (int)(MAX_SIGNEWNYM_RATE+time_of_last_signewnym-now));
       } else {
-        /* XXX refactor someday: these two calls are in
+        /* XXX020 refactor someday: these two calls are in
          * run_scheduled_events() above too, and they should be in just
          * one place. */
         circuit_expire_all_dirty_circs();
@@ -1775,7 +1775,10 @@ tor_cleanup(void)
     or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */
     or_state_save(time(NULL));
   }
-  tor_free_all(0); /* move tor_free_all back into the ifdef below later. XXX*/
+  tor_free_all(0); /* We could move tor_free_all back into the ifdef below
+                      later, if it makes shutdown unacceptably slow.  But for
+                      now, leave it here: it's helped us catch bugs in the
+                      past. */
   crypto_global_cleanup();
 #ifdef USE_DMALLOC
   dmalloc_log_unfreed();

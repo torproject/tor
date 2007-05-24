@@ -565,6 +565,8 @@ dns_resolve(edge_connection_t *exitconn)
         // If it's marked for close, it's on closeable_connection_lst in
         // main.c.  If it's on the closeable list, it will get freed from
         // main.c. -NM
+        // "<armadev> If that's true, there are other bugs arond, where we
+        //  don't check if it's marked, and will end up double-freeing."
       }
       break;
     default:
@@ -814,6 +816,7 @@ dns_cancel_pending_resolve(const char *address)
 
   if (!resolve->pending_connections) {
     /* XXX this should never trigger, but sometimes it does */
+    /* XXXX020 is the above still true? -NM */
     log_warn(LD_BUG,
              "Address %s is pending but has no pending connections!",
              escaped_safe_str(address));
@@ -940,7 +943,7 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
   assert_resolve_ok(resolve);
 
   if (resolve->state != CACHE_STATE_PENDING) {
-    /* XXXX Maybe update addr? or check addr for consistency? Or let
+    /* XXXX020 Maybe update addr? or check addr for consistency? Or let
      * VALID replace FAILED? */
     int is_test_addr = is_test_address(address);
     if (!is_test_addr)

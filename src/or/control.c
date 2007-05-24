@@ -876,7 +876,9 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
       else if (!strcasecmp(ev, "GUARD"))
         event_code = EVENT_GUARD;
       else if (!strcasecmp(ev, "GUARDS")) {
-        /* XXX tolerate buggy spec in 0.1.2.5-alpha through 0.1.2.10-rc */
+        /* XXXX021 This check is here to tolerate the controllers that
+         * depended on the buggy spec in 0.1.2.5-alpha through 0.1.2.10-rc.
+         * Once those versions are obsolete, stop supporting this. */
         log_warn(LD_CONTROL, "Controller used obsolete 'GUARDS' event name; "
                  "use GUARD instead.");
         event_code = EVENT_GUARD;
@@ -3083,7 +3085,7 @@ control_event_networkstatus_changed(smartlist_t *statuses)
       smartlist_add(strs, s);
     });
   smartlist_add(strs, tor_strdup("\r\n.\r\n"));
-  /* XXX the above strdup has an extra \r\n in it, resulting in
+  /* XXX020 the above strdup has an extra \r\n in it, resulting in
    * a blank line in the NS output. Can we remove it, or is that
    * bad since the output of networkstatus_getinfo_helper_single()
    * only adds \n, not \r\n? */

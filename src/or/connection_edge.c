@@ -1884,7 +1884,7 @@ connection_ap_make_bridge(char *address, uint16_t port,
                   digest, DIGEST_LEN);
   }
 
-  conn->_base.address = tor_strdup("(local bridge)"); /*XXXX020 no "bridge"*/
+  conn->_base.address = tor_strdup("(local link)");
   conn->_base.addr = 0;
   conn->_base.port = 0;
 
@@ -2445,7 +2445,7 @@ int
 connection_edge_is_rendezvous_stream(edge_connection_t *conn)
 {
   tor_assert(conn);
-  if (*conn->rend_query) /* XXX */
+  if (*conn->rend_query) /* XXX */ /* XXXX Why is this XXX? -NM */
     return 1;
   return 0;
 }

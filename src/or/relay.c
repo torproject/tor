@@ -358,7 +358,8 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
   } else { /* incoming cell */
     or_circuit_t *or_circ;
     if (CIRCUIT_IS_ORIGIN(circ)) {
-      /* XXXX RD This is a bug, right? */
+      /* We should never package an _incoming_ cell from the circuit
+       * origin; that means we messed up somewhere. */
       log_warn(LD_BUG,"incoming relay cell at origin circuit. Dropping.");
       assert_circuit_ok(circ);
       return 0; /* just drop it */
