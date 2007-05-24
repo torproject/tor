@@ -748,20 +748,24 @@ strmap_set(strmap_t *map, const char *key, void *val)
   }
 }
 
+#define OPTIMIZED_DIGESTMAP_SET
+
 /** Like strmap_set() above but for digestmaps. */
 void *
 digestmap_set(digestmap_t *map, const char *key, void *val)
 {
-  /* XXXX We spend up to 5% of our time in this function. We should tighten
-   * it up... but not on the 0.1.2.x series; the HT code has historically
-   * been finicky and fragile. */
+#ifndef OPTIMIZED_DIGESTMAP_SET
   digestmap_entry_t *resolve;
+#else
+  digestmap_entry_t **resolve_ptr;
+#endif
   digestmap_entry_t search;
   void *oldval;
   tor_assert(map);
   tor_assert(key);
   tor_assert(val);
   memcpy(&search.key, key, DIGEST_LEN);
+#ifndef OPTIMIZED_DIGESTMAP_SET
   resolve = HT_FIND(digestmap_impl, &map->head, &search);
   if (resolve) {
     oldval = resolve->val;
@@ -774,6 +778,33 @@ digestmap_set(digestmap_t *map, const char *key, void *val)
     HT_INSERT(digestmap_impl, &map->head, resolve);
     return NULL;
   }
+#else
+  /* XXXX020 We spend up to 5% of our time in this function, so the code
+   * below is meant to optimize the check/alloc/set cycle by avoiding the
+   * two trips to the hash table that we do in the unoptimized code above.
+   * (Each of HT_INSERT and HT_FIND calls HT_SET_HASH and HT_FIND_P.)
+   *
+   * Unfortunately, doing this requires us to poke around inside hash-table
+   * internals.  It would be nice to avoid that. */
+  if (!map->head.hth_table ||
+      map->head.hth_n_entries >= map->head.hth_load_limit)
+    digestmap_impl_HT_GROW((&map->head), map->head.hth_n_entries+1);
+  _HT_SET_HASH(&search, node, digestmap_entry_hash);
+  resolve_ptr = _digestmap_impl_HT_FIND_P(&map->head, &search);
+  if (*resolve_ptr) {
+    oldval = (*resolve_ptr)->val;
+    (*resolve_ptr)->val = val;
+    return oldval;
+  } else {
+    digestmap_entry_t *newent = tor_malloc_zero(sizeof(digestmap_entry_t));
+    memcpy(newent->key, key, DIGEST_LEN);
+    newent->val = val;
+    newent->node.hte_hash = search.node.hte_hash;
+    *resolve_ptr = newent;
+    ++map->head.hth_n_entries;
+    return NULL;
+  }
+#endif
 }
 
 /** Return the current value associated with <b>key</b>, or NULL if no
