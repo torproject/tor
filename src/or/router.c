@@ -1149,10 +1149,9 @@ router_rebuild_descriptor(int force)
   }
   ri->cache_info.signed_descriptor_len =
     strlen(ri->cache_info.signed_descriptor_body);
-  /* XXXX020 router_get_router_hash??? */
-  crypto_digest(ri->cache_info.signed_descriptor_digest,
-                ri->cache_info.signed_descriptor_body,
-                ri->cache_info.signed_descriptor_len);
+
+  router_get_router_hash(ri->cache_info.signed_descriptor_body,
+                         ri->cache_info.signed_descriptor_digest);
 
   tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL));
 
