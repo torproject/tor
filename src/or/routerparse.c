@@ -227,8 +227,7 @@ static token_rule_t netstatus_token_table[] = {
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
-  /* XXXX should dir-signing-key really have ARGS? */
-  T1( "dir-signing-key",     K_DIR_SIGNING_KEY,     ARGS,    NEED_KEY_1024 ),
+  T1( "dir-signing-key",     K_DIR_SIGNING_KEY,  NO_ARGS,    NEED_KEY_1024 ),
   T1( "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
   T1( "network-status-version", K_NETWORK_STATUS_VERSION,
                                                     GE(1),   NO_OBJ ),
@@ -1034,7 +1033,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
   router->bandwidthcapacity =
     tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
-  /* XXX we don't error-check these values? -RD */
+  /* XXXX020 we don't error-check these values? -RD */
 
   if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
     tor_assert(tok->n_args >= 1);
