@@ -4134,9 +4134,6 @@ check_libevent_version(const char *m, int server)
         v,m);
     badness = "SLOW";
   }
-  /* XXXX012 if libevent 1.3b comes out before 0.1.2.x, and it works,
-   * recomment an upgrade to everybody on BSD or OSX or anywhere with
-   * that flavor of pthreads. */
   if (badness) {
     control_event_general_status(LOG_WARN,
         "BAD_LIBEVENT VERSION=%s METHOD=%s BADNESS=%s RECOVERED=NO",
