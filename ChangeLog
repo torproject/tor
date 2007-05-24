@@ -1,16 +1,26 @@
-Changes in version 0.1.2.14 - 2007-05-23
+Changes in version 0.1.2.14 - 2007-05-24
   o Directory authority changes:
     - Two directory authorities (moria1 and moria2) just moved to new
       IP addresses. This change will particularly affect those who serve
       or use hidden services.
 
-  o Major bugfixes:
+  o Major bugfixes (crashes):
     - If a directory server runs out of space in the connection table
       as it's processing a begin_dir request, it will free the exit stream
       but leave it attached to the circuit, leading to unpredictable
       behavior. (Reported by seeess, fixes bug 425.)
     - Fix a bug in dirserv_remove_invalid() that would cause authorities
       to corrupt memory under some really unlikely scenarios.
+    - Tighten router parsing rules. (Bugs reported by Benedikt Boss.)
+    - Avoid segfaults when reading from mmaped descriptor file. (Reported
+      by lodger.)
+
+  o Major bugfixes (security):
+    - When choosing an entry guard for our circuit, avoid using guards
+      that are in the same family as the chosen exit -- not just guards
+      that are exactly the chosen exit. (Reported by lodger.)
+
+  o Major bugfixes (resource management):
     - If a directory authority is down, skip it when deciding where to get
       networkstatus objects or descriptors. Otherwise we keep asking
       every 10 seconds forever. Fixes bug 384.
@@ -20,8 +30,6 @@ Changes in version 0.1.2.14 - 2007-05-23
     - If all of our dirservers have given us bad or no networkstatuses
       lately, then stop hammering them once per minute even when we
       think they're failed. Fixes another part of bug 422.
-    - Tighten router parsing rules.
-    - Avoid segfaults when reading from mmaped descriptor file.
 
   o Minor bugfixes:
     - Actually set the purpose correctly for descriptors inserted with
