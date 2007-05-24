@@ -598,7 +598,7 @@ typedef enum {
   /* Note: we compare these, so it's important that "old" precede everything,
    * and that "other" come last. */
   LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_12A,
-  LE_13, LE_13A,
+  LE_13, LE_13A, LE_13B,
   LE_OTHER
 } le_version_t;
 static le_version_t decode_libevent_version(void);
@@ -4034,6 +4034,7 @@ static const struct {
   { "1.2a", LE_12A },
   { "1.3",  LE_13 },
   { "1.3a", LE_13A },
+  { "1.3b", LE_13B },
   { NULL, LE_OTHER }
 };
 
@@ -4060,10 +4061,11 @@ decode_libevent_version(void)
 static void
 check_libevent_version(const char *m, int server)
 {
-  int buggy = 0, iffy = 0, slow = 0;
+  int buggy = 0, iffy = 0, slow = 0, thread_unsafe = 0;
   le_version_t version;
   const char *v = event_get_version();
   const char *badness = NULL;
+  const char *sad_os = "";
 
   version = decode_libevent_version();
 
@@ -4096,7 +4098,26 @@ check_libevent_version(const char *m, int server)
       buggy = 1;
   }
 
-  if (buggy) {
+  /* Libevent versions before 1.3b do very badly on operating systems with
+   * user-space threading implementations. */
+#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
+  if (server && version < LE_13B) {
+    thread_unsafe = 1;
+    sad_os = "BSD variants"
+  }
+#elif defined(__APPLE__) || defined(__darwin__)
+  if (server && version < LE_13B) {
+    thread_unsafe = 1;
+    sad_os = "Mac OS X";
+  }
+#endif
+
+  if (thread_unsafe) {
+    log(LOG_WARN, LD_GENERAL,
+        "Libevent version %s often crashes when running a Tor server with %s. "
+        "Please use the latest version of libevent (1.3b or later)",v,sad_os);
+    badness = "BROKEN";
+  } else if (buggy) {
     log(LOG_WARN, LD_GENERAL,
         "There are known bugs in using %s with libevent %s. "
         "Please use the latest version of libevent.", m, v);
