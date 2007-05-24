@@ -1708,7 +1708,7 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 	if (server_request_free(req))
 		return 0;
 
-	if (req->port->pending_replies)
+	if (port->pending_replies)
 		server_port_flush(port);
 
 	return 0;
@@ -1797,7 +1797,8 @@ server_port_free(struct evdns_server_port *port)
 	}
 	(void) event_del(&port->event);
 	CLEAR(&port->event);
-	// XXXX actually free the port? -NM
+	// XXXX020 actually free the port? -NM
+	// XXXX yes, and fix up evdns_close_server_port to dtrt. -NM
 }
 
 // exported function
@@ -1807,6 +1808,17 @@ evdns_server_request_drop(struct evdns_server_request *_req)
 	struct server_request *req = TO_SERVER_REQUEST(_req);
 	server_request_free(req);
 	return 0;
+}
+
+// exported function
+int
+evdns_server_request_get_requesting_addr(struct evdns_server_request *_req, struct sockaddr *sa, socklen_t addr_len)
+{
+	struct server_request *req = TO_SERVER_REQUEST(_req);
+	if (addr_len < req->addrlen)
+		return -1;
+	memcpy(sa, &(req->addr), req->addrlen);
+	return req->addrlen;
 }
 
 #undef APPEND16

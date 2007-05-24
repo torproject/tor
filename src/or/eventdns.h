@@ -323,6 +323,9 @@ int evdns_server_request_add_aaaa_reply(struct evdns_server_request *req, const 
 int evdns_server_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *inaddr_name, const char *hostname, int ttl);
 int evdns_server_request_add_cname_reply(struct evdns_server_request *req, const char *name, const char *cname, int ttl);
 
+struct sockaddr;
+int evdns_server_request_get_requesting_addr(struct evdns_server_request *req, struct sockaddr *sa, socklen_t addr_len);
+
 int evdns_server_request_respond(struct evdns_server_request *req, int err);
 int evdns_server_request_drop(struct evdns_server_request *req);
 
