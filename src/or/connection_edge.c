@@ -1947,6 +1947,7 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
 
   if (conn->dns_server_request) {
     dnsserv_resolved(conn, answer_type, answer_len, answer, ttl);
+    conn->socks_request->has_finished = 1; /* DOCDOC */
     return;
   }
 
