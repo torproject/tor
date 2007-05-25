@@ -90,10 +90,10 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     return;
   }
 
-  /* XXXX020 Handle .onion and .exit. */
   /* XXXX020 Send a stream event to the controller. */
 
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP));
+  conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
   if (q->type == EVDNS_TYPE_A)
     conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
   else
@@ -103,8 +103,6 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
           sizeof(conn->socks_request->address));
 
   conn->dns_server_request = req;
-
-  /* XXXX need to set state ?? */
 
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.", q->name);
   connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);

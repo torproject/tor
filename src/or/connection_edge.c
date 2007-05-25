@@ -669,7 +669,7 @@ addressmap_rewrite(char *address, size_t maxlen)
       return (rewrites > 0); /* done, no rewrite needed */
 
     cp = tor_strdup(escaped_safe_str(ent->new_address));
-    log_notice(LD_APP, "Addressmap: rewriting %s to %s",
+    log_info(LD_APP, "Addressmap: rewriting %s to %s",
              escaped_safe_str(address), cp);
     tor_free(cp);
     strlcpy(address, ent->new_address, maxlen);
@@ -1945,12 +1945,6 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
   char buf[384];
   size_t replylen;
 
-  if (conn->dns_server_request) {
-    dnsserv_resolved(conn, answer_type, answer_len, answer, ttl);
-    conn->socks_request->has_finished = 1; /* DOCDOC */
-    return;
-  }
-
   if (ttl >= 0) {
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
       uint32_t a = ntohl(get_uint32(answer));
@@ -1964,6 +1958,12 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                         conn->chosen_exit_name, ttl);
       tor_free(cp);
     }
+  }
+
+  if (conn->dns_server_request) {
+    dnsserv_resolved(conn, answer_type, answer_len, answer, ttl);
+    conn->socks_request->has_finished = 1; /* DOCDOC */
+    return;
   }
 
   if (conn->socks_request->socks_version == 4) {
