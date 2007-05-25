@@ -1,3 +1,8 @@
+Changes in version 0.1.2.15 - 2007-0?-??
+  o Fixes:
+    - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
+
+
 Changes in version 0.1.2.14 - 2007-05-25
   o Directory authority changes:
     - Two directory authorities (moria1 and moria2) just moved to new
