@@ -36,7 +36,7 @@ directory_send_command(dir_connection_t *conn,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
-static int purpose_is_private(uint8_t purpose);
+static int purpose_needs_anonymity(uint8_t purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(
@@ -71,7 +71,7 @@ static void note_request(const char *key, size_t bytes);
 /** Return true iff the directory purpose 'purpose' must use an
  * anonymous connection to a directory. */
 static int
-purpose_is_private(uint8_t purpose)
+purpose_needs_anonymity(uint8_t purpose)
 {
   if (get_options()->AllDirActionsPrivate)
     return 1;
@@ -169,7 +169,7 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
         log_info(LD_DIR, "Uploading an extrainfo (length %d)",
                  (int) extrainfo_len);
       }
-      post_via_tor = purpose_is_private(purpose) ||
+      post_via_tor = purpose_needs_anonymity(purpose) ||
               !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
       directory_initiate_command_routerstatus(rs, purpose, post_via_tor,
                                               NULL, payload, upload_len);
@@ -194,7 +194,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
   int prefer_authority = server_mode(options) && options->DirPort != 0;
-  int directconn = !purpose_is_private(purpose);
+  int directconn = !purpose_needs_anonymity(purpose);
   authority_type_t type;
 
   /* FFFF we could break this switch into its own function, and call
@@ -276,7 +276,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
                "While fetching directory info, "
                "no running dirservers known. Will try again later. "
                "(purpose %d)", purpose);
-    if (!purpose_is_private(purpose)) {
+    if (!purpose_needs_anonymity(purpose)) {
       /* remember we tried them all and failed. */
       directory_all_unreachable(time(NULL));
     }
