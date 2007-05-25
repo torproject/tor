@@ -1,4 +1,4 @@
-Changes in version 0.1.2.14 - 2007-05-24
+Changes in version 0.1.2.14 - 2007-05-25
   o Directory authority changes:
     - Two directory authorities (moria1 and moria2) just moved to new
       IP addresses. This change will particularly affect those who serve
@@ -16,7 +16,7 @@ Changes in version 0.1.2.14 - 2007-05-24
       by lodger.)
 
   o Major bugfixes (security):
-    - When choosing an entry guard for our circuit, avoid using guards
+    - When choosing an entry guard for a circuit, avoid using guards
       that are in the same family as the chosen exit -- not just guards
       that are exactly the chosen exit. (Reported by lodger.)
 
