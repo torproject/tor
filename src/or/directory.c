@@ -297,7 +297,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
 void
 directory_initiate_command_routerstatus(routerstatus_t *status,
                                         uint8_t purpose,
-                                        int private_connection,
+                                        int anonymized_connection,
                                         const char *resource,
                                         const char *payload,
                                         size_t payload_len)
@@ -317,7 +317,7 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                              status->or_port, status->dir_port,
                              status->version_supports_begindir,
                              status->identity_digest,
-                             purpose, private_connection, resource,
+                             purpose, anonymized_connection, resource,
                              payload, payload_len);
 }
 
@@ -437,13 +437,13 @@ directory_initiate_command(const char *address, uint32_t addr,
                            uint16_t or_port, uint16_t dir_port,
                            int supports_begindir,
                            const char *digest, uint8_t purpose,
-                           int private_connection, const char *resource,
+                           int anonymized_connection, const char *resource,
                            const char *payload, size_t payload_len)
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
   int want_to_tunnel = options->TunnelDirConns && supports_begindir &&
-                       !private_connection && or_port &&
+                       !anonymized_connection && or_port &&
                        fascist_firewall_allows_address_or(addr, or_port);
 
   tor_assert(address);
@@ -451,8 +451,8 @@ directory_initiate_command(const char *address, uint32_t addr,
   tor_assert(dir_port);
   tor_assert(digest);
 
-  log_debug(LD_DIR, "private %d, want_to_tunnel %d.",
-            private_connection, want_to_tunnel);
+  log_debug(LD_DIR, "anonymized %d, want_to_tunnel %d.",
+            anonymized_connection, want_to_tunnel);
 
   switch (purpose) {
     case DIR_PURPOSE_FETCH_DIR:
@@ -497,7 +497,7 @@ directory_initiate_command(const char *address, uint32_t addr,
   /* give it an initial state */
   conn->_base.state = DIR_CONN_STATE_CONNECTING;
 
-  if (!private_connection && !want_to_tunnel) {
+  if (!anonymized_connection && !want_to_tunnel) {
     /* then we want to connect directly */
 
     conn->dirconn_direct = 1;
@@ -534,7 +534,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     linked_conn =
       connection_ap_make_bridge(conn->_base.address, conn->_base.port,
                                 digest,
-                                private_connection ?
+                                anonymized_connection ?
                                   SOCKS_COMMAND_CONNECT :
                                   SOCKS_COMMAND_CONNECT_DIR);
     if (!linked_conn) {

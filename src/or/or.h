@@ -2572,7 +2572,7 @@ void directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                   int retry_if_no_servers);
 void directory_initiate_command_routerstatus(routerstatus_t *status,
                                              uint8_t purpose,
-                                             int private_connection,
+                                             int anonymized_connection,
                                              const char *resource,
                                              const char *payload,
                                              size_t payload_len);
@@ -2589,7 +2589,8 @@ void directory_initiate_command(const char *address, uint32_t addr,
                                 uint16_t or_port, uint16_t dir_port,
                                 int supports_begindir,
                                 const char *digest, uint8_t purpose,
-                                int private_connection, const char *resource,
+                                int anonymized_connection,
+                                const char *resource,
                                 const char *payload, size_t payload_len);
 
 int dir_split_resource_into_fingerprints(const char *resource,
