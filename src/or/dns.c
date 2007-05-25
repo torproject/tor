@@ -541,6 +541,7 @@ dns_resolve(edge_connection_t *exitconn)
           send_resolved_hostname_cell(exitconn, hostname);
         else
           send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
+        exitconn->on_circuit = NULL;
       } else {
         exitconn->next_stream = oncirc->n_streams;
         oncirc->n_streams = exitconn;
