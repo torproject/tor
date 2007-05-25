@@ -195,11 +195,14 @@ TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $TOR_LIB_WS32], [
 dnl Now check for particular libevent functions.
 save_LIBS="$LIBS"
 save_LDFLAGS="$LDFLAGS"
+save_CPPFLAGS="$CPPFLAGS"
 LIBS="-levent $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LIBS"
+CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
 AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
+CPPFLAGS="$save_CPPFLAGS"
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
@@ -638,6 +641,8 @@ if test x$enable_gcc_warnings = xyes; then
 # CFLAGS="$CFLAGS -Winline"
 
 fi
+
+CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_zlib"
 
 AC_CONFIG_FILES([Makefile tor.spec contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile doc/spec/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh])
 AC_OUTPUT

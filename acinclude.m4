@@ -174,13 +174,13 @@ if test -z "$CROSS_COMPILE"; then
   ]) dnl end cache check check for extra options.
 
   if test "$tor_cv_library_$1_linker_option" != "(none)" ; then
-    TOR_LDFLAGS_$1="$tor_cv_library_$1_linker_option"
+    TOR_LDFLAGS_$1="$TOR_LDFLAGS_$1 $tor_cv_library_$1_linker_option"
   fi
 fi # cross-compile
 
 LIBS="$tor_saved_LIBS"
 LDFLAGS="$tor_saved_LDFLAGS"
-CPPFLAGS="$TOR_CPPFLAGS_$1 $tor_saved_CPPFLAGS"
+CPPFLAGS="$tor_saved_CPPFLAGS"
 
 ]) dnl end defun
 
