@@ -4124,7 +4124,7 @@ check_libevent_version(const char *m, int server)
 #if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
   if (server && version < LE_13B) {
     thread_unsafe = 1;
-    sad_os = "BSD variants"
+    sad_os = "BSD variants";
   }
 #elif defined(__APPLE__) || defined(__darwin__)
   if (server && version < LE_13B) {
