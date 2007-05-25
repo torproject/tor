@@ -365,8 +365,6 @@ connection_free(connection_t *conn)
     conn->linked_conn = NULL;
   }
   if (connection_speaks_cells(conn)) {
-    if (conn->state == OR_CONN_STATE_OPEN)
-      directory_set_dirty();
     if (!tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest)) {
       connection_or_remove_from_identity_map(TO_OR_CONN(conn));
     }
