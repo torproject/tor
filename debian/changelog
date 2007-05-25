@@ -1,3 +1,9 @@
+tor (0.1.2.14-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 25 May 2007 21:49:20 +0200
+
 tor (0.1.2.13-3) unstable; urgency=low
 
   * Always give a shell (/bin/sh) when we use su(1) in our init script
