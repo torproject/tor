@@ -130,6 +130,12 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - More unit tests.
     - Warn when using a version of libevent before 1.3b to run a server on
       OSX or BSD: these versions interact badly with userspace threads.
+    - Add a new AutomapHostsOnResolve option: when it is enabled, any
+      resolve request for hosts matching a given pattern causes Tor to
+      generate an internal virtual address mapping for that host.  This
+      allows DNSPort to work sensibly with hidden service users.  By
+      default, .exit and .onion addresses are remapped; the list of
+      patterns can be reconfigured with AutomapHostsSuffixes.
 
   o Removed features:
     - Removed support for the old binary "version 0" controller protocol.

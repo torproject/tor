@@ -669,7 +669,7 @@ addressmap_rewrite(char *address, size_t maxlen)
       return (rewrites > 0); /* done, no rewrite needed */
 
     cp = tor_strdup(escaped_safe_str(ent->new_address));
-    log_info(LD_APP, "Addressmap: rewriting %s to %s",
+    log_notice(LD_APP, "Addressmap: rewriting %s to %s",
              escaped_safe_str(address), cp);
     tor_free(cp);
     strlcpy(address, ent->new_address, maxlen);
@@ -1009,7 +1009,7 @@ addressmap_get_virtual_address(int type)
 
       ++next_virtual_addr;
       --available;
-      log_notice(LD_CONFIG, "%d addrs available", (int)available);
+      log_info(LD_CONFIG, "%d addrs available", (int)available);
       if (! --available) {
         log_warn(LD_CONFIG, "Ran out of virtual addresses!");
         return NULL;
@@ -1067,6 +1067,7 @@ addressmap_register_virtual_address(int type, char *new_address)
 
   tor_free(*addrp);
   *addrp = addressmap_get_virtual_address(type);
+  log_info(LD_APP, "Registering map from %s to %s", *addrp, new_address);
   addressmap_register(*addrp, new_address, 2);
 
 #if 0
@@ -1081,7 +1082,7 @@ addressmap_register_virtual_address(int type, char *new_address)
     tor_assert(!strcasecmp(*addrp,
                            (type == RESOLVED_TYPE_IPV4) ?
                            vent->ipv4_address : vent->hostname_address));
-    log_fn(LOG_INFO, "Map from %s to %s okay.",
+    log_info(LD_APP, "Map from %s to %s okay.",
            safe_str(*addrp),safe_str(new_address));
   }
 #endif
@@ -1176,11 +1177,33 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 {
   socks_request_t *socks = conn->socks_request;
   hostname_type_t addresstype;
+  or_options_t *options = get_options();
+  struct in_addr addr_tmp;
+  int automap = 0;
 
   tor_strlower(socks->address); /* normalize it */
   log_debug(LD_APP,"Client asked for %s:%d",
             safe_str(socks->address),
             socks->port);
+
+  if (socks->command == SOCKS_COMMAND_RESOLVE &&
+      !tor_inet_aton(socks->address, &addr_tmp) &&
+      options->AutomapHostsOnResolve && options->AutomapHostsSuffixes) {
+    SMARTLIST_FOREACH(options->AutomapHostsSuffixes, const char *, cp,
+                      if (!strcasecmpend(socks->address, cp)) {
+                        automap = 1;
+                        break;
+                      });
+    if (automap) {
+      const char *new_addr;
+      new_addr = addressmap_register_virtual_address(
+                              RESOLVED_TYPE_IPV4, tor_strdup(socks->address));
+      tor_assert(new_addr);
+      log_info(LD_APP, "Automapping %s to %s",
+               escaped_safe_str(socks->address), safe_str(new_addr));
+      strlcpy(socks->address, new_addr, sizeof(socks->address));
+    }
+  }
 
   if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
     if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address))) {
@@ -1192,15 +1215,15 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                  END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
       return 0;
     }
-  } else {
-    /* For address map controls, remap the address */
+  } else if (!automap) {
+    /* For address map controls, remap the address. */
     if (addressmap_rewrite(socks->address, sizeof(socks->address))) {
       control_event_stream_status(conn, STREAM_EVENT_REMAP,
                                   REMAP_STREAM_SOURCE_CACHE);
     }
   }
 
-  if (address_is_in_virtual_range(socks->address)) {
+  if (!automap && address_is_in_virtual_range(socks->address)) {
     /* This address was probably handed out by client_dns_get_unmapped_address,
      * but the mapping was discarded for some reason.  We *don't* want to send
      * the address through Tor; that's likely to fail, and may leak
@@ -1229,6 +1252,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     /* foo.exit -- modify conn->chosen_exit_node to specify the exit
      * node, and conn->address to hold only the address portion.*/
     char *s = strrchr(socks->address,'.');
+    tor_assert(!automap);
     if (s) {
       if (s[1] != '\0') {
         conn->chosen_exit_name = tor_strdup(s+1);
@@ -1294,8 +1318,10 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
         return 0;
       }
+      tor_assert(!automap);
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
     } else if (socks->command == SOCKS_COMMAND_CONNECT) {
+      tor_assert(!automap);
       if (socks->port == 0) {
         log_notice(LD_APP,"Application asked to connect to port 0. Refusing.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
@@ -1340,7 +1366,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     /* it's a hidden-service request */
     rend_cache_entry_t *entry;
     int r;
-
+    tor_assert(!automap);
     if (SOCKS_COMMAND_IS_RESOLVE(socks->command)) {
       /* if it's a resolve request, fail it right now, rather than
        * building all the circuits and then realizing it won't work. */

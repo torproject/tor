@@ -67,6 +67,8 @@ static config_abbrev_t _option_abbrevs[] = {
   PLURAL(StrictExitNode),
   { "l", "Log", 1, 0},
   { "AllowUnverifiedNodes", "AllowInvalidNodes", 0, 0},
+  { "AutomapHostSuffixes", "AutomapHostsSuffixes", 0, 0},
+  { "AutomapHostOnResolve", "AutomapHostsOnResolve", 0, 0},
   { "BandwidthRateBytes", "BandwidthRate", 0, 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0, 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
@@ -133,6 +135,8 @@ static config_var_t _option_vars[] = {
   VAR("AuthDirRejectUnlisted",BOOL,    AuthDirRejectUnlisted,"0"),
   VAR("AuthDirListBadExits", BOOL,     AuthDirListBadExits,  "0"),
   VAR("AuthoritativeDirectory",BOOL,   AuthoritativeDir,     "0"),
+  VAR("AutomapHostsOnResolve",BOOL,    AutomapHostsOnResolve,"0"),
+  VAR("AutomapHostsSuffixes",CSV,      AutomapHostsSuffixes, ".onion,.exit"),
   VAR("AvoidDiskWrites",     BOOL,     AvoidDiskWrites,      "0"),
   VAR("BandwidthBurst",      MEMUNIT,  BandwidthBurst,       "6 MB"),
   VAR("BandwidthRate",       MEMUNIT,  BandwidthRate,        "3 MB"),
@@ -2908,6 +2912,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->PreferTunneledDirConns && !options->TunnelDirConns)
     REJECT("Must set TunnelDirConns if PreferTunneledDirConns is set.");
+
+  if (options->AutomapHostsSuffixes) {
+    SMARTLIST_FOREACH(options->AutomapHostsSuffixes, char *, suf,
+    {
+      size_t len = strlen(suf);
+      if (len && suf[len-1] == '.')
+        suf[len-1] = '\0';
+    });
+  }
 
   return 0;
 #undef REJECT

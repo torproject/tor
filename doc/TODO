@@ -199,8 +199,8 @@ Things we'd like to do in 0.2.0.x:
       o Make a listener type.
       o Hook into connection_edge logic.
       o Hook into evdns_server_* logic
-      - Actually send back a useful answer.
-      - Make i
+      o Actually send back a useful answer.
+      o Make it handle .onion and .exit correctly.
       - Document.
     - Add a way to request DNS resolves from the controller.
     - A better UI for authority ops.

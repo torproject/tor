@@ -1822,6 +1822,8 @@ typedef struct {
   int TrackHostExitsExpire; /**< Number of seconds until we expire an
                              * addressmap */
   config_line_t *AddressMap; /**< List of address map directives. */
+  int AutomapHostsOnResolve; /**< DOCDOC */
+  smartlist_t *AutomapHostsSuffixes; /**< DOCDOC */
   int RendPostPeriod; /**< How often do we post each rendezvous service
                        * descriptor? Remember to publish them independently. */
   int KeepalivePeriod; /**< How often do we send padding cells to keep
