@@ -1209,9 +1209,11 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
   if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
     if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address))) {
+      char *result = tor_strdup(socks->address);
+      /* remember _what_ is supposed to have been resolved. */
+      strlcpy(socks->address, orig_address, sizeof(socks->address));
       connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_HOSTNAME,
-                                             strlen(socks->address),
-                                             socks->address, -1);
+                                             strlen(result), result, -1);
       connection_mark_unattached_ap(conn,
                                  END_STREAM_REASON_DONE |
                                  END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -1363,7 +1365,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                    conn, circ, cpath) < 0) ||
         (!circ &&
          connection_ap_handshake_attach_circuit(conn) < 0)) {
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);//xxxdup
       return -1;
     }
     return 0;
@@ -1847,16 +1849,30 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
   } else {
     struct in_addr in;
     uint32_t a;
+    size_t len = strlen(ap_conn->socks_request->address);
+    char c = 0;
+    if (!strcasecmpend(ap_conn->socks_request->address, ".in-addr.arpa")) {
+      c = ap_conn->socks_request->address[len-13];
+      ap_conn->socks_request->address[len-13] = '\0';
+    }
     if (tor_inet_aton(ap_conn->socks_request->address, &in) == 0) {
       connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
       return -1;
     }
-    a = ntohl(in.s_addr);
-    tor_snprintf(inaddr_buf, sizeof(inaddr_buf), "%d.%d.%d.%d.in-addr.arpa",
-                 (int)(uint8_t)((a    )&0xff),
-                 (int)(uint8_t)((a>>8 )&0xff),
-                 (int)(uint8_t)((a>>16)&0xff),
-                 (int)(uint8_t)((a>>24)&0xff));
+    /* DOCDOC */
+    if (c) {
+      /* this path happens on DNS. Can we unify? XXXX020 */
+      ap_conn->socks_request->address[len-13] = c;
+      strlcpy(inaddr_buf, ap_conn->socks_request->address, sizeof(inaddr_buf));
+    } else {
+      /* this path happens on tor-resolve. Can we unify? XXXX020 */
+      a = ntohl(in.s_addr);
+      tor_snprintf(inaddr_buf, sizeof(inaddr_buf), "%d.%d.%d.%d.in-addr.arpa",
+                   (int)(uint8_t)((a    )&0xff),
+                   (int)(uint8_t)((a>>8 )&0xff),
+                   (int)(uint8_t)((a>>16)&0xff),
+                   (int)(uint8_t)((a>>24)&0xff));
+    }
     string_addr = inaddr_buf;
     payload_len = strlen(inaddr_buf)+1;
     tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
