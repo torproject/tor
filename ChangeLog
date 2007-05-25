@@ -35,28 +35,6 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       in the network. Implements proposal 107, suggested by Kevin Bauer
       and Damon McCoy.
 
-  o Crash fixes:
-    - If a directory server runs out of space in the connection table
-      as it's processing a begin_dir request, it will free the exit stream
-      but leave it attached to the circuit, leading to unpredictable
-      behavior. (Reported by seeess, fixes bug 425.)
-    - Fix a bug in dirserv_remove_invalid() that would cause authorities
-      to corrupt memory under some really unlikely scenarios.
-
-  o Major bugfixes:
-    - If a directory authority is down, skip it when deciding where to get
-      networkstatus objects or descriptors. Otherwise we keep asking
-      every 10 seconds forever. Fixes bug 384.
-    - Count it as a failure if we fetch a valid network-status but we 
-      don't want to keep it. Otherwise we'll keep fetching it and keep
-      not wanting to keep it. Fixes part of bug 422.
-    - If all of our dirservers have given us bad or no networkstatuses 
-      lately, then stop hammering them once per minute even when we
-      think they're failed. Fixes another part of bug 422.
-    - Back off correctly when downloading servers.  (Previously, we would
-      never actually increment the failure count for descriptors we were in
-      the process of retrieving.)
-
   o Minor fixes (resource management):
     - Count the number of open sockets separately from the number
       of active connection_t objects. This will let us avoid underusing
@@ -128,8 +106,6 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
 
   o Minor features (other):
     - More unit tests.
-    - Warn when using a version of libevent before 1.3b to run a server on
-      OSX or BSD: these versions interact badly with userspace threads.
     - Add a new AutomapHostsOnResolve option: when it is enabled, any
       resolve request for hosts matching a given pattern causes Tor to
       generate an internal virtual address mapping for that host.  This
@@ -151,17 +127,12 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       try to use \ consistently on Windows and / consistently on Unix: it
       makes the log messages nicer.
     - Correctly report platform name on Windows 95 OSR2 and Windows 98 SE.
-    - Read resolv.conf files correctly on platforms where read() returns
-      partial results on small file reads.
 
   o Minor bugfixes (directory):
     - Correctly enforce that elements of directory objects do not appear
       more often than they are allowed to appear.
     - When we are reporting the DirServer line we just parsed, we were
       logging the second stanza of the key fingerprint, not the first.
-    - When we have k non-v2 authorities in our DirServer config,
-      we ignored the last k authorities in the list when updating our
-      network-statuses.
 
   o Minor bugfixes (other):
     - Stop allowing hibernating servers to be "stable" or "fast".
@@ -172,15 +143,10 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Add even more asserts to hunt down bug 417.
     - On Windows, we were preventing other processes from reading
       cached-routers while Tor was running.  (Reported by janbar)
-    - Build without verbose warnings even on (not-yet-released) gcc 4.2
+    - Build without verbose warnings even on (not-yet-released) gcc 4.2.
     - Make the NodeFamilies config option work. (Reported by
       lodger -- it has never actually worked, even though we added it
       in Oct 2004.)
-    - When choosing an entry guard for our circuit, avoid using guards
-      that are in the same family as the chosen exit -- not just guards
-      that are exactly the chosen exit. (Reported by lodger.)
-    - Don't rebuild the entire router store just because we got 32K of
-      routers.
 
   o Minor bugfixes (controller):
     - Make 'getinfo fingerprint' return a 551 error if we're not a
@@ -189,8 +155,6 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Fix a typo in an error message when extendcircuit fails that
       caused us to not follow the \r\n-based delimiter protocol. Reported
       by daejees.
-    - Actually set the purpose correctly for descriptors inserted with
-      purpose=controller.
 
   o Code simplifications and refactoring:
     - Stop passing around circuit_t and crypt_path_t pointers that are
@@ -204,6 +168,61 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Keep the connection array as a dynamic smartlist_t, rather than as
       a fixed-sized array.  This is important, as the number of connections
       is becoming increasingly decoupled from the number of sockets.
+
+
+Changes in version 0.1.2.14 - 2007-05-25
+  o Directory authority changes:
+    - Two directory authorities (moria1 and moria2) just moved to new
+      IP addresses. This change will particularly affect those who serve
+      or use hidden services.
+
+  o Major bugfixes (crashes):
+    - If a directory server runs out of space in the connection table
+      as it's processing a begin_dir request, it will free the exit stream
+      but leave it attached to the circuit, leading to unpredictable
+      behavior. (Reported by seeess, fixes bug 425.)
+    - Fix a bug in dirserv_remove_invalid() that would cause authorities
+      to corrupt memory under some really unlikely scenarios.
+    - Tighten router parsing rules. (Bugs reported by Benedikt Boss.)
+    - Avoid segfaults when reading from mmaped descriptor file. (Reported
+      by lodger.)
+
+  o Major bugfixes (security):
+    - When choosing an entry guard for a circuit, avoid using guards
+      that are in the same family as the chosen exit -- not just guards
+      that are exactly the chosen exit. (Reported by lodger.)
+
+  o Major bugfixes (resource management):
+    - If a directory authority is down, skip it when deciding where to get
+      networkstatus objects or descriptors. Otherwise we keep asking
+      every 10 seconds forever. Fixes bug 384.
+    - Count it as a failure if we fetch a valid network-status but we
+      don't want to keep it. Otherwise we'll keep fetching it and keep
+      not wanting to keep it. Fixes part of bug 422.
+    - If all of our dirservers have given us bad or no networkstatuses
+      lately, then stop hammering them once per minute even when we
+      think they're failed. Fixes another part of bug 422.
+
+  o Minor bugfixes:
+    - Actually set the purpose correctly for descriptors inserted with
+      purpose=controller.
+    - When we have k non-v2 authorities in our DirServer config,
+      we ignored the last k authorities in the list when updating our
+      network-statuses.
+    - Correctly back-off from requesting router descriptors that we are
+      having a hard time downloading.
+    - Read resolv.conf files correctly on platforms where read() returns
+      partial results on small file reads.
+    - Don't rebuild the entire router store every time we get 32K of
+      routers: rebuild it when the journal gets very large, or when
+      the gaps in the store get very large.
+
+  o Minor features:
+    - When routers publish SVN revisions in their router descriptors,
+      authorities now include those versions correctly in networkstatus
+      documents.
+    - Warn when using a version of libevent before 1.3b to run a server on
+      OSX or BSD: these versions interact badly with userspace threads.
 
 
 Changes in version 0.1.2.13 - 2007-04-24
