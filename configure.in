@@ -51,7 +51,15 @@ if test x$enable_threads = x; then
         AC_MSG_NOTICE([You are running OpenBSD or NetBSD; I am assuming that
 getaddrinfo is not threadsafe here, so I will disable threads.])
         enable_threads="no"
-    fi ;;
+     else
+        # This was an inadvertant default up through 0.1.2.14; in 0.2.0.x,
+	# it's getting some testing, but for now, best leave threads off
+	# unless the user urns them on.
+        AC_MSG_NOTICE([You are running OpenBSD or NetBSD; Tor 0.1.2.x hasn't
+been tested with threads on these platforms, so I'm turning them off.  You
+can enable threads by passing --enable-threads to the configure script.])
+        enable_threads="no"
+     fi ;;
     *-*-solaris* )
      # Don't try multithreading on solaris -- cpuworkers seem to lock.
      AC_MSG_NOTICE([You are running Solaris; Sometimes threading makes
