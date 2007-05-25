@@ -1180,8 +1180,10 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   or_options_t *options = get_options();
   struct in_addr addr_tmp;
   int automap = 0;
+  char orig_address[MAX_SOCKS_ADDR_LEN];
 
   tor_strlower(socks->address); /* normalize it */
+  strlcpy(orig_address, socks->address, sizeof(orig_address));
   log_debug(LD_APP,"Client asked for %s:%d",
             safe_str(socks->address),
             socks->port);
@@ -1310,7 +1312,10 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         return -1;
       }
       if (tor_inet_aton(socks->address, &in)) { /* see if it's an IP already */
-        answer = in.s_addr; /* leave it in network order */
+        /* leave it in network order */
+        answer = in.s_addr;
+        /* remember _what_ is supposed to have been resolved. */
+        strlcpy(socks->address, orig_address, sizeof(socks->address));
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
                                                (char*)&answer,-1);
         connection_mark_unattached_ap(conn,
