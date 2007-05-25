@@ -214,7 +214,7 @@ static token_rule_t extrainfo_token_table[] = {
 /** List of tokens allowable in the body part of v2 and v3 networkstatus
  * documents. */
 static token_rule_t rtrstatus_token_table[] = {
-  T1( "r",                   K_R,                   GE(8),    NO_OBJ ),
+  T1( "r",                   K_R,                   GE(8),   NO_OBJ ),
   T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
   T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
@@ -234,7 +234,7 @@ static token_rule_t netstatus_token_table[] = {
   T1( "dir-source",          K_DIR_SOURCE,          GE(3),   NO_OBJ ),
   T01("dir-options",         K_DIR_OPTIONS,         ARGS,    NO_OBJ ),
   T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
-  T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS,    NO_OBJ ),
+  T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS, NO_OBJ ),
 
   END_OF_TABLE
 };
@@ -269,7 +269,7 @@ static token_rule_t dir_token_table[] = {
  * footers. */
 #define CERTIFICATE_MEMBERS                                                  \
   T1("dir-key-certificate-version", K_DIR_KEY_CERTIFICATE_VERSION,           \
-                                                 GE(1),       NO_OBJ ),      \
+                                                     GE(1),       NO_OBJ ),  \
   T1("dir-identity-key", K_DIR_IDENTITY_KEY,         NO_ARGS,     NEED_KEY ),\
   T1("dir-key-published",K_DIR_KEY_PUBLISHED,        CONCAT_ARGS, NO_OBJ),   \
   T1("dir-key-expires",  K_DIR_KEY_EXPIRES,          CONCAT_ARGS, NO_OBJ),   \
@@ -979,7 +979,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
   tokens = smartlist_create();
   if (tokenize_string(s,end,tokens,routerdesc_token_table)) {
-    log_warn(LD_DIR, "Error tokeninzing router descriptor.");
+    log_warn(LD_DIR, "Error tokenizing router descriptor.");
     goto err;
   }
 
@@ -1199,7 +1199,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   }
   tokens = smartlist_create();
   if (tokenize_string(s,end,tokens,extrainfo_token_table)) {
-    log_warn(LD_DIR, "Error tokeninzing router descriptor.");
+    log_warn(LD_DIR, "Error tokenizing router descriptor.");
     goto err;
   }
 

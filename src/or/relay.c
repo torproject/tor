@@ -1483,7 +1483,8 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 /** DOCDOC */
 static int total_cells_allocated = 0;
 
-#ifdef ENABLE_CELL_POOL
+#ifdef ENABLE_CELL_POOL /* Defined in ./configure. True by default. */
+/* XXX020 make cell pools the only option once we know they work? -RD */
 static mp_pool_t *cell_pool = NULL;
 /** Allocate structures to hold cells. */
 void
@@ -1678,7 +1679,7 @@ prev_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 }
 
 /** Add <b>circ</b> to the list of circuits with pending cells on
- * <b>conn</b>.   No effect if <b>circ</b> is already unlinked. */
+ * <b>conn</b>.  No effect if <b>circ</b> is already unlinked. */
 void
 make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn)
 {

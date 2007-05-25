@@ -120,6 +120,9 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 /** Pack the cell_t host-order structure <b>src</b> into network-order
  * in the buffer <b>dest</b>. See tor-spec.txt for details about the
  * wire format.
+ *
+ * Note that this function doesn't touch <b>dst</b>-\>next: the caller
+ * should set it or clear it as appropriate.
  */
 void
 cell_pack(packed_cell_t *dst, const cell_t *src)

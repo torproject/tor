@@ -503,7 +503,7 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
 
 /** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
- * If resolve failed, unlink exitconn if needed, free it, and return -1.
+ * If resolve failed, free exitconn and return -1.
  *
  * (For EXIT_PURPOSE_RESOLVE connections, send back a RESOLVED error cell
  * on returning -1.  For EXIT_PURPOSE_CONNECT connections, there's no
@@ -548,6 +548,7 @@ dns_resolve(edge_connection_t *exitconn)
       }
       break;
     case 0:
+      /* add it into the linked list of resolving_streams on this circuit */
       exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
       exitconn->next_stream = oncirc->resolving_streams;
       oncirc->resolving_streams = exitconn;
@@ -558,7 +559,6 @@ dns_resolve(edge_connection_t *exitconn)
         send_resolved_cell(exitconn,
              (r == -1) ? RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT);
       }
-      //circuit_detach_stream(TO_CIRCUIT(oncirc), exitconn);
       exitconn->on_circuit = NULL;
       if (!exitconn->_base.marked_for_close) {
         connection_free(TO_CONN(exitconn));
@@ -583,8 +583,9 @@ dns_resolve(edge_connection_t *exitconn)
  *     - linking connections to n_streams/resolving_streams,
  *     - sending resolved cells if we have an answer/error right away,
  *
- * Returns -2 on a transient error.  Sets *<b>hostname_out</b> to a newly
- * allocated string holding a cached reverse DNS value, if any.
+ * Return -2 on a transient error. If it's a reverse resolve and it's
+ * successful, sets *<b>hostname_out</b> to a newly allocated string
+ * holding the cached reverse DNS value.
  */
 static int
 dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
@@ -1209,7 +1210,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
 }
 
 /** For eventdns: start resolving as necessary to find the target for
- * <b>exitconn</b>.  Returns -1 on error, -2 on transient errror,
+ * <b>exitconn</b>.  Returns -1 on error, -2 on transient error,
  * 0 on "resolve launched." */
 static int
 launch_resolve(edge_connection_t *exitconn)

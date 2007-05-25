@@ -570,7 +570,7 @@ addressmap_ent_free(void *_ent)
   tor_free(ent);
 }
 
-/** Free storage held by a virtaddress_entry_t* entry in <b>ent</b> */
+/** Free storage held by a virtaddress_entry_t* entry in <b>ent</b>. */
 static void
 addressmap_virtaddress_ent_free(void *_ent)
 {
@@ -580,7 +580,7 @@ addressmap_virtaddress_ent_free(void *_ent)
   tor_free(ent);
 }
 
-/** Free storage held by a virtaddress_entry_t* entry in <b>ent</b> */
+/** Free storage held by a virtaddress_entry_t* entry in <b>ent</b>. */
 static void
 addressmap_virtaddress_remove(const char *address, addressmap_entry_t *ent)
 {
@@ -2094,8 +2094,9 @@ connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
   return;
 }
 
-/** A relay 'begin' cell has arrived, and either we are an exit hop
- * for the circuit, or we are the origin and it is a rendezvous begin.
+/** A relay 'begin' or 'begin_dir' cell has arrived, and either we are
+ * an exit hop for the circuit, or we are the origin and it is a
+ * rendezvous begin.
  *
  * Launch a new exit connection and initialize things appropriately.
  *
@@ -2273,7 +2274,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   /* send it off to the gethostbyname farm */
   switch (dns_resolve(n_stream)) {
-    case 1: /* resolve worked */
+    case 1: /* resolve worked; now n_stream is attached to circ. */
       assert_circuit_ok(circ);
       log_debug(LD_EXIT,"about to call connection_exit_connect().");
       connection_exit_connect(n_stream);
@@ -2282,12 +2283,11 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       end_payload[0] = END_STREAM_REASON_RESOLVEFAILED;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);
-      /* n_stream got detached and freed. don't touch it. */
+      /* n_stream got freed. don't touch it. */
       break;
     case 0: /* resolve added to pending list */
-      /* add it into the linked list of resolving_streams on this circuit */
       assert_circuit_ok(circ);
-      ;
+      break;
   }
   return 0;
 }
@@ -2466,6 +2466,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
     return 0;
   }
 
+  /* link exitconn to circ, now that we know we can use it. */
   exitconn->next_stream = circ->n_streams;
   circ->n_streams = exitconn;
 

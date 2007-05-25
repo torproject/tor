@@ -215,7 +215,7 @@ connection_new(int type)
   return conn;
 }
 
-/** Create a link between <b>conn_a</b> and <b>conn_b</b> */
+/** Create a link between <b>conn_a</b> and <b>conn_b</b>. */
 void
 connection_link_connections(connection_t *conn_a, connection_t *conn_b)
 {

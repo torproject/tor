@@ -687,7 +687,7 @@ getinfo_helper_policies(control_connection_t *conn,
   return 0;
 }
 
-/** Release all storage held by <b>p</b> */
+/** Release all storage held by <b>p</b>. */
 void
 addr_policy_free(addr_policy_t *p)
 {

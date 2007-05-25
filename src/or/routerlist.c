@@ -1780,7 +1780,7 @@ _extrainfo_free(void *e)
   extrainfo_free(e);
 }
 
-/** Free all storage held by a routerlist <b>rl</b> */
+/** Free all storage held by a routerlist <b>rl</b>. */
 void
 routerlist_free(routerlist_t *rl)
 {
@@ -3567,7 +3567,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   router_dir_info_changed();
 }
 
-/** Free storage held in <b>ds</b> */
+/** Free storage held in <b>ds</b>. */
 static void
 trusted_dir_server_free(trusted_dir_server_t *ds)
 {
@@ -4982,7 +4982,7 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
   }
 
   /* The nickname must match exactly to have been generated at the same time
-   * by the same rotuer.  */
+   * by the same router. */
   if (strcmp(ri->nickname, ei->nickname) ||
       memcmp(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
              DIGEST_LEN)) {

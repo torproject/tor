@@ -2081,7 +2081,7 @@ get_default_nickname(void)
   return out;
 }
 
-/** Release storage held by <b>options</b> */
+/** Release storage held by <b>options</b>. */
 static void
 config_free(config_format_t *fmt, void *options)
 {

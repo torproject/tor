@@ -14,7 +14,7 @@
  *
  *     Generally, a memory pool is an allocation strategy optimized for large
  *     numbers of identically-sized objects.  Rather than the elaborate arena
- *     and coalescing strategeis you need to get good performance for a
+ *     and coalescing strategies you need to get good performance for a
  *     general-purpose malloc(), pools use a series of large memory "chunks",
  *     each of which is carved into a bunch of smaller "items" or
  *     "allocations".
@@ -33,7 +33,7 @@
  *
  *     I wrote this after looking at 3 or 4 other pooling allocators, but
  *     without copying.  The strategy this most resembles (which is funny,
- *     since that's the one I looked at longest ago) the pool allocator
+ *     since that's the one I looked at longest ago) is the pool allocator
  *     underlying Python's obmalloc code.  Major differences from obmalloc's
  *     pools are:
  *       - We don't even try to be threadsafe.
@@ -93,7 +93,7 @@
 /** Largest type that we need to ensure returned memory items are aligned to.
  * Change this to "double" if we need to be safe for structs with doubles. */
 #define ALIGNMENT_TYPE void *
-/** Increment that we need to align allocated  */
+/** Increment that we need to align allocated. */
 #define ALIGNMENT sizeof(ALIGNMENT_TYPE)
 /** Largest memory chunk that we should allocate. */
 #define MAX_CHUNK (8*(1L<<20))
@@ -128,14 +128,14 @@ struct mp_chunk_t {
   unsigned long magic; /**< Must be MP_CHUNK_MAGIC if this chunk is valid. */
   mp_chunk_t *next; /**< The next free, used, or full chunk in sequence. */
   mp_chunk_t *prev; /**< The previous free, used, or full chunk in sequence. */
-  mp_pool_t *pool; /**< The pool that this chunk is part of */
+  mp_pool_t *pool; /**< The pool that this chunk is part of. */
   /** First free item in the freelist for this chunk.  Note that this may be
    * NULL even if this chunk is not at capacity: if so, the free memory at
    * next_mem has not yet been carved into items.
    */
   mp_allocated_t *first_free;
-  int n_allocated; /**< Number of currently allocated items in this chunk */
-  int capacity; /**< Largest number of items that can be fit into this chunk */
+  int n_allocated; /**< Number of currently allocated items in this chunk. */
+  int capacity; /**< Largest number of items that can be fit into this chunk. */
   size_t mem_size; /**< Number of usable bytes in mem. */
   char *next_mem; /**< Pointer into part of <b>mem</b> not yet carved up. */
   char mem[1]; /**< Storage for this chunk. (Not actual size.) */
@@ -383,7 +383,7 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
 }
 
 /** If there are more than <b>n</b> empty chunks in <b>pool</b>, free the
- * excess ones that have been empty for the longest.   (If <b>n</b> is less
+ * excess ones that have been empty for the longest.  (If <b>n</b> is less
  * than zero, free only empty chunks that were not used since the last
  * call to mp_pool_clean(), leaving only -<b>n</b>.) */
 void
