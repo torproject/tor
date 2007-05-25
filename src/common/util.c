@@ -1952,7 +1952,7 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
  * <b>buf</b>.
  */
 int
-tor_inet_ntoa(struct in_addr *in, char *buf, size_t buf_len)
+tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len)
 {
   uint32_t a = ntohl(in->s_addr);
   return tor_snprintf(buf, buf_len, "%d.%d.%d.%d",

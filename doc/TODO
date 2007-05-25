@@ -238,6 +238,12 @@ Things we'd like to do in 0.2.0.x:
     - Let controller set router flags for authority to transmit, and for
       client to use.
     - Support relaying streams to ipv6.
+      - Internal code support for ipv6:
+        o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
+        - Most address variables need to become sockaddrs.
+        - Teach resolving code how to handle ipv6.
+        - Teach exit policies about ipv6 (consider ipv4/ipv6 interaction!)
+        - ...
     - Let servers decide to support BEGIN_DIR but not DirPort.
     - Tor should bind its ports before dropping privs, so users don't
       have to do the ipchains dance.

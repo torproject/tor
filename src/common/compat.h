@@ -32,6 +32,9 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
+#ifdef HAVE_CTYPE_H
+#include <ctype.h>
+#endif
 #include <stdarg.h>
 
 #ifndef NULL_REP_IS_ZERO_BYTES
@@ -241,8 +244,17 @@ int get_n_open_sockets(void);
 typedef int socklen_t;
 #endif
 
+#ifndef HAVE_STRUCT_IN6_ADDR
+struct in6_addr
+{
+  uint8_t s6_addr[16];
+};
+#endif
+
 struct in_addr;
 int tor_inet_aton(const char *cp, struct in_addr *addr) ATTR_NONNULL((1,2));
+const char *tor_inet_ntop(int af, const void *src, char *dst, size_t len);
+int tor_inet_pton(int af, const char *src, void *dst);
 int tor_lookup_hostname(const char *name, uint32_t *addr) ATTR_NONNULL((1,2));
 void set_socket_nonblocking(int socket);
 int tor_socketpair(int family, int type, int protocol, int fd[2]);

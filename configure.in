@@ -152,7 +152,7 @@ dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull ftello getaddrinfo localtime_r gmtime_r memmem strtok_r)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull ftello getaddrinfo localtime_r gmtime_r memmem strtok_r inet_pton inet_ntop)
 
 if test $enable_threads = "yes"; then
   AC_CHECK_HEADERS(pthread.h)

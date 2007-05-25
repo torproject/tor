@@ -807,6 +807,167 @@ tor_inet_aton(const char *c, struct in_addr* addr)
 #endif
 }
 
+/** DOCDOC */
+const char *
+tor_inet_ntop(int af, const void *src, char *dst, size_t len)
+{
+#ifdef HAVE_INET_NTOP
+  return inet_ntop(af,src,dst,(socklen_t)len);
+#else
+  /* XXXX needs testing. !!!! */
+  if (af == AF_INET) {
+    if (tor_inet_ntoa(src, dst, len) < 0)
+      return NULL;
+    else
+      return dst;
+  } else if (af == AF_INET6) {
+    const struct in6_addr *addr = src;
+    char buf[64], *cp;
+    int longestGapLen = 0, longestGapPos = -1, i,
+      curGapPos = -1, curGapLen = 0;
+    uint16_t words[8];
+    for (i = 0; i < 8; ++i) {
+      words[i] = (((uint16_t)addr->s6_addr[2*i])<<8) + addr->s6_addr[2*i+1];
+    }
+    if (words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
+        words[4] == 0 && (words[5] == 0 || words[5] == 0xffff) && words[6]) {
+      /* This is an IPv4 address. */
+      tor_snprintf(buf, sizeof(buf), "::%x:%d.%d.%d.%d", words[5],
+                   addr->s6_addr[12], addr->s6_addr[13],
+                   addr->s6_addr[14], addr->s6_addr[15]);
+      if (strlen(buf) > len)
+        return NULL;
+      strlcpy(dst, buf, len);
+      return dst;
+    }
+    i = 0;
+    while (i < 8) {
+      if (words[i] == 0) {
+        curGapPos = i++;
+        curGapLen = 1;
+        while (i<8 && words[i] == 0) {
+          ++i; ++curGapLen;
+        }
+        if (curGapLen > longestGapLen) {
+          longestGapPos = curGapPos;
+          longestGapLen = curGapLen;
+        }
+      } else {
+        ++i;
+      }
+    }
+    cp = buf;
+    for (i = 0; i < 8; ++i) {
+      if (words[i] == 0 && longestGapPos == i) {
+        *cp++ = ':';
+        *cp++ = ':';
+        while (i < 8 && words[i] == 0)
+          ++i;
+        --i; /* to compensate for loop increment. */
+      } else {
+        tor_snprintf(cp, sizeof(buf)-(cp-buf), "%x", (unsigned)words[i]);
+        cp += strlen(cp);
+        if (i != 7)
+          *cp++ = ':';
+      }
+    }
+    if (strlen(buf) > len)
+      return NULL;
+    strlcpy(dst, buf, len);
+    return dst;
+  } else {
+    return NULL;
+  }
+#endif
+}
+
+/** DOCDOC */
+int
+tor_inet_pton(int af, const char *src, void *dst)
+{
+#ifdef HAVE_INET_PTON
+  return inet_pton(af, src, dst);
+#else
+  /* XXXX needs testing. !!!! */
+  if (af == AF_INET) {
+    return tor_inet_aton(src, dst);
+  } else if (af == AF_INET6) {
+    struct in6_addr *out = dst;
+    uint16_t words[8];
+    struct in_addr in;
+    int gapPos = -1, i, setWords=0;
+    const char *dot = strchr(src, '.');
+    const char *eow; /* end of words. */
+    if (dot == src)
+      return 0;
+    else if (!dot)
+      eow = src+strlen(src);
+    else {
+      uint32_t a;
+      for (eow = dot-1; eow >= src && TOR_ISDIGIT(*eow); --eow)
+        ;
+      ++eow;
+
+      if (inet_aton(eow, &in) != 1)
+        return 0;
+      a = ntohl(in.s_addr);
+      words[6] = a >> 16;
+      words[7] = a & 0xFFFF;
+      setWords += 2;
+    }
+
+    i = 0;
+    while (src < eow) {
+      if (i > 7)
+        return 0;
+      if (TOR_ISXDIGIT(*src)) {
+        char *next;
+        int r = strtol(src, &next, 16);
+        if (next > 4+src)
+          return 0;
+        if (next == src)
+          return 0;
+        if (r<0 || r>65536)
+          return 0;
+
+        words[i++] = (uint16_t)r;
+        setWords++;
+        src = next;
+        if (*src != ':')
+          return 0;
+        ++src;
+      } else if (*src == ':' && i > 0 && gapPos==-1) {
+        gapPos = i;
+        ++src;
+      } else if (*src == ':' && i == 0 && src[1] == ':') {
+        gapPos = i;
+        src += 2;
+      } else {
+        return 0;
+      }
+    }
+
+    if (setWords > 8 || (setWords < 8 && gapPos == -1))
+      return 0;
+
+    if (gapPos >= 0) {
+      int gapLen = 8 - setWords;
+      memmove(&words[gapPos+gapLen], &words[gapPos],
+              sizeof(uint16_t)*(8-gapPos));
+    }
+    for (i = 0; i < 8; ++i) {
+      out->s6_addr[2*i  ] = words[i] >> 8;
+      out->s6_addr[2*i+1] = words[i] & 0xff;
+    }
+
+    return 1;
+  } else {
+    return -1;
+  }
+#endif
+}
+
+
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
  * *addr to the proper IP address, in network byte order.  Returns 0
  * on success, -1 on failure; 1 on transient failure.
