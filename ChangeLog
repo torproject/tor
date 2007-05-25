@@ -121,6 +121,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       whether the current version is recommended, and whether any versions
       are good, and how many authorities agree. (Patch from shibz.)
 
+  o Minor features (tor-resolve):
+    - Add an "-F" option to force a resolve for a .onion address.  Thanks
+      to the AutomapHostsOnResolve option, this is no longer a completely
+      silly thing to do.
+
   o Minor features (other):
     - More unit tests.
     - Warn when using a version of libevent before 1.3b to run a server on

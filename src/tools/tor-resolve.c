@@ -259,7 +259,8 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
 static void
 usage(void)
 {
-  puts("Syntax: tor-resolve [-4] [-v] [-x] hostname [sockshost:socksport]");
+  puts("Syntax: tor-resolve [-4] [-v] [-x] [-F] "
+       "hostname [sockshost:socksport]");
   exit(1);
 }
 
@@ -269,7 +270,7 @@ main(int argc, char **argv)
 {
   uint32_t sockshost;
   uint16_t socksport;
-  int isSocks4 = 0, isVerbose = 0, isReverse = 0;
+  int isSocks4 = 0, isVerbose = 0, isReverse = 0, force = 0;
   char **arg;
   int n_args;
   struct in_addr a;
@@ -296,6 +297,8 @@ main(int argc, char **argv)
       isSocks4 = 0;
     else if (!strcmp("-x", arg[0]))
       isReverse = 1;
+    else if (!strcmp("-F", arg[0]))
+      force = 1;
     else {
       fprintf(stderr, "Unrecognized flag '%s'\n", arg[0]);
       usage();
@@ -331,7 +334,7 @@ main(int argc, char **argv)
     usage();
   }
 
-  if (!strcasecmpend(arg[0], ".onion")) {
+  if (!strcasecmpend(arg[0], ".onion") && !force) {
     fprintf(stderr,
        "%s is a hidden service; those don't have IP addresses.\n\n"
        "To connect to a hidden service, you need to send the hostname\n"
