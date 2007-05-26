@@ -144,6 +144,7 @@ TOR_DEFINE_CODEPATH($tor_cv_library_$1_dir, $1)
 if test -z "$CROSS_COMPILE"; then
   AC_CACHE_CHECK([whether we need extra options to link $1],
                  tor_cv_library_$1_linker_option, [
+   orig_LDFLAGS="$LDFLAGS"
    runs=no
    linked_with=nothing
    if test -d "$tor_cv_library_$1_dir/lib"; then
@@ -154,9 +155,9 @@ if test -z "$CROSS_COMPILE"; then
    for tor_tryextra in "(none)" "-Wl,-R$tor_trydir" "-R$tor_trydir" \
                        "-Wl,-rpath,$tor_trydir" ; do
      if test "$tor_tryextra" = "(none)"; then
-       LDFLAGS="$tor_saved_LDFLAGS"
+       LDFLAGS="$orig_LDFLAGS"
      else
-       LDFLAGS="$tor_tryextra $tor_saved_LDFLAGS"
+       LDFLAGS="$tor_tryextra $orig_LDFLAGS"
      fi
      AC_RUN_IFELSE(AC_LANG_PROGRAM([$5], [$6]),
                    [runnable=yes], [runnable=no])
@@ -169,7 +170,7 @@ if test -z "$CROSS_COMPILE"; then
    if test "$runnable" = no; then
      AC_MSG_ERROR([Found linkable $1 in $tor_cv_library_$1_dir, but it does not seem to run, even with -R. Maybe specify another using $7}])
    fi
-   LDFLAGS="$tor_saved_LDFLAGS"
+   LDFLAGS="$orig_LDFLAGS"
   ]) dnl end cache check check for extra options.
 
   if test "$tor_cv_library_$1_linker_option" != "(none)" ; then
