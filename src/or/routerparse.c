@@ -676,6 +676,11 @@ router_parse_list_from_string(const char **s, const char *eos,
       cp = end = eos;
     }
 
+    /* Start by backing up a character.  If we were at eos, we'll now point
+     * to a valid character. If we were at a \nrouter or \ndirectory-signature,
+     * we'll back up to before the \n. */
+    --cp;
+
     while (cp > *s && (!*cp || TOR_ISSPACE(*cp)))
       --cp;
     /* cp now points to the last non-space character in this descriptor. */

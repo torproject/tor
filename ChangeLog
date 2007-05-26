@@ -1,6 +1,8 @@
 Changes in version 0.1.2.15 - 2007-0?-??
   o Fixes:
     - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
+    - Try even harder not to dereference the first character after
+      an mmap(). (Bug reported by lodger)
 
 
 Changes in version 0.1.2.14 - 2007-05-25
