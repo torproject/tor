@@ -3184,7 +3184,13 @@ options_init_from_torrc(int argc, char **argv)
         log(LOG_WARN, LD_CONFIG, "Duplicate -f options on command line.");
         tor_free(fname);
       }
+#ifdef MS_WINDOWS
+      /* XXX one day we might want to extend expand_filename to work
+       * under Windows as well. */
       fname = tor_strdup(argv[i+1]);
+#else
+      fname = expand_filename(argv[i+1]);
+#endif
       using_default_torrc = 0;
       ++i;
     } else if (!strcmp(argv[i],"--ignore-missing-torrc")) {

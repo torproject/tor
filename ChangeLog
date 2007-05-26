@@ -112,6 +112,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       allows DNSPort to work sensibly with hidden service users.  By
       default, .exit and .onion addresses are remapped; the list of
       patterns can be reconfigured with AutomapHostsSuffixes.
+    - If Tor is invoked from something that isn't a shell (e.g. Vidalia),
+      now we expand "-f ~/.tor/torrc" correctly. Suggested by Matt Edman.
 
   o Removed features:
     - Removed support for the old binary "version 0" controller protocol.
