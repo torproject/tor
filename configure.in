@@ -181,7 +181,7 @@ AC_CHECK_TYPE(u_int16_t, unsigned short)
 AC_CHECK_TYPE(u_int8_t, unsigned char)
 
 tor_libevent_pkg_redhat="libevent"
-tor_libevent_pkg_debian="libevent"
+tor_libevent_pkg_debian="libevent-dev"
 tor_libevent_devpkg_redhat="libevent-devel"
 tor_libevent_devpkg_debian="libevent-dev"
 
