@@ -818,14 +818,17 @@ check_signature_token(const char *digest,
                                 tok->object_size)
       != DIGEST_LEN) {
     log_warn(LD_DIR, "Error reading %s: invalid signature.", doctype);
+    tor_free(signed_digest);
     return -1;
   }
   log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
             hex_str(signed_digest,4));
   if (memcmp(digest, signed_digest, DIGEST_LEN)) {
     log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
+    tor_free(signed_digest);
     return -1;
   }
+  tor_free(signed_digest);
   return 0;
 }
 
