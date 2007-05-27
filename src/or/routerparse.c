@@ -953,7 +953,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
   if (tok != find_last_by_keyword(tokens, K_ROUTER_SIGNATURE)) {
-    log_warn(LD_DIR, "Multiple signatures on one router. That's not ok.");
+    log_warn(LD_DIR, "Multiple signatures on one router. Ignoring.");
     goto err;
   }
   if (!tok->object_type ||
