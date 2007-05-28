@@ -1960,7 +1960,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
 
   if (authdir_mode_handles_descs(options) &&
       !strcmp(url,"/tor/")) { /* server descriptor post */
-    const char *msg;
+    const char *msg = NULL;
     int r = dirserv_add_multiple_descriptors(body, &msg);
     tor_assert(msg);
     if (r > 0)
