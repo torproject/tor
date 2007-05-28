@@ -32,4 +32,5 @@ Proposals by number:
 111  Prioritizing local traffic over relayed traffic [OPEN]
 112  Bring Back Pathlen Coin Weight [OPEN]
 113  Simplifying directory authority administration [OPEN]
+114  Distributed Storage for Tor Hidden Service Descriptors [OPEN]
 

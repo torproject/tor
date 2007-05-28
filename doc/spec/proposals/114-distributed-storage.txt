@@ -1,0 +1,415 @@
+Filename: 114-distributed-storage.txt
+Title: Distributed Storage for Tor Hidden Service Descriptors
+Version: $Revision$
+Last-Modified: $Date$
+Author: Karsten Loesing
+Created: 13-May-2007
+Status: Open
+
+Change history:
+
+  13-May-2007  Initial proposal
+  14-May-2007  Added changes suggested by Lasse Overlier
+
+Overview:
+
+  The basic idea of this proposal is to distribute the tasks of storing and
+  serving hidden service descriptors from currently three authoritative
+  directory nodes among a large subset of all onion routers. The two reasons
+  to do this are better scalability and improved security properties. Further,
+  this proposal suggests changes to the hidden service descriptor format to
+  prevent from new security threads coming from decentralization and to gain
+  even better security properties.
+
+Motivation:
+
+  The current design of hidden services exhibits the following performance and
+  security problems:
+
+  First, the three hidden service authoritative directories constitute a
+  performance bottleneck in the system. The directory nodes are responsible
+  for storing and serving all hidden service descriptors. At the moment there
+  are about 1000 descriptors at a time, but this number is assumed to increase
+  in the future. Further, there is no replication protocol for descriptors
+  between the three directory nodes, so that hidden services must ensure the
+  availability of their descriptors by manually publishing them on all
+  directory nodes. Whenever a fourth or fifth hidden service authoritative
+  directory was added, hidden services would need to maintain an equally
+  increasing number of replicas. These scalability issues have an impact on
+  the current usage of hidden services and put an even higher burden on the
+  development of new kinds of applications for hidden services that might
+  require to store even bigger numbers of descriptors.
+
+  Second, besides of posing a limitation to scalability, storing all hidden
+  service descriptors on three directory nodes also constitutes a security
+  risk. The directory node operators could easily analyze the publish and fetch
+  requests to derive information on service activity and usage and read the
+  descriptor contents to determine which onion routers work as introduction
+  points for a given hidden service and needed to be attacked or threatened to
+  shut it down. Furthermore, the contents of a hidden service descriptor offer
+  only minimal security properties to the hidden service. Whoever gets aware
+  of the service ID can easily find out whether the service is active at the
+  moment and which introduction points it has. This applies to (former)
+  clients, (former) introduction points, and of course to the directory nodes.
+  It requires only to request the descriptor for the given service ID which
+  can be performed by anyone anonymously.
+
+  This proposal suggests two major changes to approach the described
+  performance and security problems:
+
+  The first change affects the storage location for hidden service
+  descriptors. Descriptors are distributed among a large subset of all onion
+  router instead of three fixed directory nodes. Each storing node is
+  responsible for a subset of descriptors for a limited time only. It is not
+  able to choose which descriptors it stores at a certain time, because this
+  is determined by its onion ID which is hard to change frequently and in time
+  (only routers which are stable for a given time are accepted as storing
+  nodes). In order to resist single node failures and untrustworthy nodes,
+  descriptors are replicated among a certain number of storing nodes. A simple
+  replication protocol makes sure that descriptors don't get lost when the
+  node population changes. Therefore, a storing node periodically requests the
+  descriptors from its siblings. Connections to storing nodes are established
+  by extending existing circuits by one hop to the storing node. This also
+  ensures that contents are encrypted. The effect of this first change is that
+  the probability that a single node operator learns about a certain hidden
+  service is very small and that it is very hard to track a service over time,
+  even when it collaborates with other node operators.
+
+  The second change concerns the content of hidden service descriptors.
+  Obviously, security problems cannot be solved only by decentralizing
+  storage; in fact, they could also get worse if done without caution. At
+  first, a descriptor ID needs to change periodically in order to be stored on
+  changing nodes over time. Next, the descriptor ID needs to be computable only
+  for the service's clients, but should be unpredictable for all other nodes.
+  Further, the storing node needs to be able to verify that the hidden service
+  is the true originator of the descriptor with the given ID even though it is
+  not a client. Finally, a storing node shall only learn as few information as
+  necessary by storing a descriptor, because it might not be as trustworthy as
+  a directory node; for example it does not need to know the list of
+  introduction points. Therefore, a second key is applied that is only known
+  to the hidden service provider and its clients and that is not included in
+  the descriptor. It is used to calculate descriptor IDs and to encrypt the
+  introduction points. This second key can either be given to all clients
+  together with the hidden service ID, or to a group or a single client as
+  authentication token. In the future this second key could be the result of
+  some key agreement protocol between the hidden service and one or more
+  clients. A new text-based format is proposed for descriptors instead of an
+  extension of the existing binary format for reasons of future extensibility.
+
+Design:
+
+  The proposed design is described by the changes that are necessary to the
+  current design. Changes are grouped by content, rather than by affected
+  specification documents.
+
+  All nodes:
+
+    All nodes can combine the network lists received from all directory nodes
+    to one routing list containing only those nodes that store and serve
+    hidden service descriptors and which are contained in the majority of
+    network lists. A node only trusts its own routing list and never learns
+    about routing information from other nodes. This list should only be
+    created on demand by those nodes that are involved in the new hidden
+    service protocol, i.e. hidden service directory node, hidden service
+    provider, and hidden service client.
+
+    All nodes that are involved in the new hidden service protocol calculate
+    the clock skew between their local time and the times of directory
+    authorities. If the clock skew exceeds 1 minute (as opposed to 30 minutes
+    as in the current implementation), the user is warned upon performing the
+    first operation that is related to hidden services. However, the local
+    time is not adjusted automatically to prevent attacks based on false times
+    from directory authorities.
+
+  Hidden service directory nodes:
+
+    Every onion router can decide whether it wants to store and serve hidden
+    service descriptors by setting a new config option HiddenServiceDirectory
+    0|1 to 1. This option should be 1 by default for those onion routers that
+    have their directory port open, because the smaller the group of storing
+    nodes is, the poorer the security properties are.
+
+    HS directory nodes include the fact that they store and serve hidden
+    service descriptors in router descriptors that they send to directory
+    authorities.
+
+    HS directory nodes accept publish and fetch requests for hidden service
+    descriptors and store/retrieve them to/from their local memory. (It is not
+    necessary to make descriptors persistent, because after disconnecting, the
+    onion router would not be accepted as storing node anyway, because it is
+    not stable.) All requests and replies are formatted as HTTP messages.
+    Requests are directed to the router's directory port and are contained
+    within BEGIN_DIR cells. A HS directory node stores a descriptor only, when
+    it thinks that it is responsible for storing that descriptor based on its
+    own routing table. Every HS directory node is responsible for the
+    descriptor IDs in the interval of its n-th predecessor in the ID circle up
+    to its own ID (n denotes the number of replicas).
+
+    A HS directory node replicates descriptors for which it is responsible by
+    downloading them from other HS directory nodes. Therefore, it checks its
+    routing table periodically every 10 minutes for changes. Whenever it
+    realizes that a predecessor has left the network, it establishes a
+    connection to the new n-th predecessor and requests its stored descriptors
+    in the interval of its (n+1)-th predecessor and the requested n-th
+    predecessor. Whenever it realizes that a new onion router has joined with
+    an ID higher than its former n-th predecessor, it adds it to its
+    predecessors and discards all descriptors in the interval of its (n+1)-th
+    and its n-th predecessor.
+
+  Authoritative directory nodes:
+
+    Directory nodes include a new flag for routers that decided to provide
+    storage for hidden service descriptors and that are stable for a given
+    time. The requirement to be stable prevents a node from frequently
+    changing its onion key to become responsible for a freely chosen
+    identifier.
+
+  Hidden service provider:
+
+    When setting up the hidden service at introduction points, a hidden service
+    provider does not pass its own public key, but the public key of a freshly
+    generated key pair. It also includes this public key in the hidden service
+    descriptor together with the other introduction point information. The
+    reason is that the introduction point does not need to know for which
+    hidden service it works, and should not know it to prevent it from
+    tracking the hidden service's activity.
+
+    Hidden service providers publishes a new descriptor whenever its content
+    changes or a new publication period starts for this descriptor. If the
+    current publication period would only last for less than 60 minutes, the
+    hidden service provider publishes both, a current descriptor and one for
+    the next period. Publication is performed by sending the descriptor to all
+    hidden service directories that are responsible for keeping replicas for
+    the descriptor ID.
+
+  Hidden service client:
+
+    Instead of downloading descriptors from a hidden service authoritative
+    directory, a hidden service client downloads it from a randomly chosen
+    hidden service directory that is responsible for keeping replica for the
+    descriptor ID.
+
+    When contacting an introduction point, the client does not use the
+    public key of the hidden service provider, but the freshly-generated public
+    key that is included in the hidden service descriptor.
+
+  Hidden service descriptor:
+
+    The descriptor ID needs to change periodically in order for the descriptor
+    to be stored on changing nodes over time. It further may only be computable
+    by a hidden service provider and all of his clients to prevent unauthorized
+    nodes from tracking the service activity by periodically checking whether
+    there is a descriptor for this service. Finally, the hidden service
+    directory needs to be able to verify that the hidden service provider is
+    the true originator of the descriptor with the given ID. Therefore, the
+    ID is derived from the public key of the hidden service provider, the
+    current time period, and a shared secret between hidden service provider
+    and clients. Only the hidden service provider and the clients are able to
+    generate future IDs, but together with the descriptor content the hidden
+    service directory is able to verify its origin. The formula for calculating
+    a descriptor ID is as follows:
+
+      descriptor-id = h(permanent-id + h(time-period + cookie))
+
+    "permanent-id" is the hashed value of the public key of the hidden service
+    provider, "time-period" is a periodically changing value, e.g. the current
+    date, and "cookie" is a shared secret between the hidden service provider
+    and its clients. (The "time-period" should be constructed in a way that
+    periods do not change at the same moment for all descriptors by including
+    the "permanent-id" in the construction.) Amonst other things, the
+    descriptor contains the public key of the hidden service provider, the
+    value of h(time-period + cookie), and the signature of the descriptor
+    content with the private key of the hidden service provider.
+
+    The introduction points that are included in the descriptor are encrypted
+    using a key that is derived from the same shared key that is used to
+    generate the descriptor ID. [usage of a derived key as encryption key
+    instead of the shared key itself suggested by LO]
+
+    A new text-based format is proposed for descriptors instead of an
+    extension of the existing binary format for reasons of future
+    extensibility.
+
+    The complete hidden service descriptor format looks like this:
+
+      {
+        descriptor-id = h(permanent-id + h(time-period + cookie))
+        permanent-public-key   (with permanent-id = h(permanent-public-key))
+        h(time-period + cookie)
+        timestamp
+        {
+          list of (introduction point IP, port, public service key)
+        } encrypted with h(time-period + cookie + 'introduction')
+      } signed with permanent-private-key
+
+    A hidden service directory can verify that a descriptor was created by the
+    hidden service provider by checking if the descriptor-id corresponds to
+    the permanent-public-key and if the signature can be verified with the
+    permanent-public-key.
+
+    A client can download the descriptor by creating the same descriptor-id
+    and verify its origin by performing the same operations as the hidden
+    service directory.
+
+Security implications:
+
+  The security implications of the proposed changes are grouped by the roles
+  of nodes that could perform attacks or on which attacks could be performed.
+
+  Attacks by authoritative directory nodes
+
+    Authoritative directory nodes are not anymore the single places in the
+    network that know about a hidden service's activity and introduction
+    points. Thus, they cannot perform attacks using this information, e.g.
+    track a hidden service's activity or usage pattern or attack its
+    introduction points. Formerly, it would only require a single corrupted
+    authoritative directory operator to perform such an attack.
+
+  Attacks by hidden service directory nodes
+
+    A hidden service directory node could misuse a stored descriptor to track
+    a hidden service's activity and usage pattern by clients. Though there is
+    no countermeasure against this kind of attack, it is very expensive to
+    track a certain hidden service over time. An attacker would need to run a
+    large number of stable onion routers that work as hidden service directory
+    nodes to have a good probability to become responsible for its changing
+    descriptor IDs. For each period, the probability is:
+
+      1-(N-c choose r)/(N choose r) for N-c>=r and 1 else with N as total
+      number of hidden service directories, c as compromised nodes, and r as
+      number of replicas
+
+    The hidden service directory nodes could try to make a certain hidden
+    service unavailable to its clients. Therefore, they could discard all
+    stored descriptors for that hidden service and reply to clients that there
+    is no descriptor for the given ID or return an old or false descriptor
+    content. The client would detect a false descriptor, because it could not
+    contain a correct signature. But an old content or an empty reply could
+    confuse the client. Therefore, the countermeasure is to replicate
+    descriptors among a small number of hidden service directories, e.g. 5. 
+    The probability of a group of collaborating nodes to make a hidden service
+    completely unavailable is in each period:
+
+      (c choose r)/(N choose r) for c>=r and N>=r, and 0 else with N as total
+      number of hidden service directories, c as compromised nodes, and r as
+      number of replicas
+
+    A hidden service directory could try to find out which introduction points
+    are working on behalf of a hidden service. In contrast to the previous
+    design, this is not possible anymore, because this information is encrypted
+    to the clients of a hidden service.
+
+  Attacks on hidden service directory nodes
+
+    An anonymous attacker could try to swamp a hidden service directory with
+    false descriptors for a given descriptor ID. This is prevented by requiring
+    that descriptors are signed.
+
+    Anonymous attackers could swamp a hidden service directory with correct
+    descriptors for non-existing hidden services. There is no countermeasure
+    against this attack. However, the creation of valid descriptors is more
+    expensive than verification and storage in local memory. This should make
+    this kind of attack unattractive.
+
+  Attacks by introduction points
+
+    Current or former introduction points could try to gain information on the
+    hidden service they serve. But due to the fresh key pair that is used by
+    the hidden service, this attack is not possible anymore.
+
+  Attacks by clients
+
+    Current or former clients could track a hidden service's activity, attack
+    its introduction points, or determine the responsible hidden service
+    directory nodes and attack them. There is nothing that could prevent them
+    from doing so, because honest clients need the full descriptor content to
+    establish a connection to the hidden service. At the moment, the only
+    countermeasure against dishonest clients is to change the secret cookie
+    and pass it only to the honest clients.
+
+Specification:
+
+  The proposed changes affect multiple sections in several specification
+  documents that are only mentioned in the following. The detailed
+  specification will follow as soon as the design decision above are final.
+
+  dir-spec-v2.txt
+
+    2.1  The router descriptor format needs to include an additional flag to
+    denote that a router is a hidden service directory.
+
+    3  The network status format needs to be extended by a new status flag to
+    denote that a router is a hidden service directory.
+
+    4  The sections on directory caches need to be extended by new sections for
+    the operation of hidden service directories, including replication of
+    descriptors.
+
+  rend-spec.txt
+
+    1.2  The new descriptor format needs to be added.
+
+    1.3  Instead of Bob's public key, the hidden service provider uses a
+    freshly generated public key for every introduction point.
+
+    1.4  Bob's OP does not upload his service descriptor to the authoritative
+    directories, but to the hidden service directories.
+
+    1.6  Alice's OP downloads the service descriptors similarly as Bob
+    published them in 1.4.
+
+    1.8  Alice uses the public key that is included in the descriptor instead
+    of Bob's permanent service key.
+
+  tor-spec.txt
+
+    6.2.1  Directory streams need to be used for connections to hidden service
+    directories.
+
+Compatibility:
+
+  The proposed design is meant to replace the current design for hidden service
+  descriptors and their storage in the long run.
+
+  There should be a first transition phase in which both, the current design
+  and the proposed design are served in parallel. Onion routers should start
+  serving as hidden service directories, and hidden service providers and
+  clients should make use of the new design if both sides support it. But
+  hidden service providers should continue publishing descriptors of the
+  current format, and authoritative directories should store and serve these
+  descriptors.
+
+  After the first transition phase, hidden service providers should stop
+  publishing descriptors on authoritative directories, and hidden service
+  clients should not try to fetch descriptors from the authoritative
+  directories. However, the authoritative directories should continue serving
+  hidden service descriptors for a second transition phase.
+
+  After the second transition phase, the authoritative directories should stop
+  serving hidden service descriptors.
+
+Implementation:
+
+  There are three key lengths that might need some discussion:
+
+    1) desciptor-id, formerly known as onion address: It is generated by OPs
+       internally and used for storing and looking up descriptors. There is no
+       need to remember a descriptor-id for a human. In order to reduce
+       the success rate of collisions it could be extended to 256 bits instead
+       of 80 bits. This requires a secure hash function with an output of 256
+       instead of 160 bits, e.g. SHA-256. [extending the descriptor-id length
+       from 80 to 256 bits suggested by LO]
+
+    2) permanent-id: This is the first half of the onion address that a client
+       passes to his OP. The onion address should be easy to memorize.
+       Therefore, the overall length of an onion address should not be
+       extended over the existing 80 bits, so that 40 bits is the maximum
+       length of the permanent-id. However, the question remains open, if an
+       onion address of 40+40=80 bits can generate a descriptor-id with enough
+       entropy to justify 256 instead of 80 bits. Otherwise, the onion address
+       would need to be extended to 128, 160, 224, or 256 bits, making it
+       harder to memorize for human-beings.
+
+    3) cookie: This is the second half of the onion address that is passed to
+       an OP. It should have the same size as permanent-id.
+
