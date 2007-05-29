@@ -12,6 +12,9 @@ const char dnsserv_c_id[] =
 #include "or.h"
 #include "eventdns.h"
 
+/* Helper function: called by evdns whenever the client sends a request to our
+ * DNSPort.  We need to eventually answer the request <b>req</b>.
+ */
 static void
 evdns_server_callback(struct evdns_server_request *req, void *_data)
 {
@@ -23,11 +26,13 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   int addrlen;
   uint32_t ipaddr;
   int err = DNS_ERR_NONE;
+  char *q_name;
 
   tor_assert(req);
   tor_assert(_data == NULL);
   log_info(LD_APP, "Got a new DNS request!");
 
+  /* First, check whether the requesting address matches our SOCKSPolicy. */
   if ((addrlen = evdns_server_request_get_requesting_addr(req,
                                 (struct sockaddr*)&addr, sizeof(addr))) < 0) {
     log_warn(LD_APP, "Couldn't get requesting address.");
@@ -49,6 +54,11 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     evdns_server_request_respond(req, DNS_ERR_REFUSED);
     return;
   }
+
+  /* Now, let's find the first actual question of a type we can answer in this
+   * DNS request.  It makes us a little noncompliant to act like this; we
+   * should fix that eventually if it turns out to make a difference for
+   * anybody. */
   if (req->nquestions == 0) {
     log_info(LD_APP, "No questions in DNS request; sending back nil reply.");
     evdns_server_request_respond(req, 0);
@@ -76,22 +86,27 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     return;
   }
   if (q->type == EVDNS_TYPE_A) {
+    /* Refuse any attempt to resolve a noconnect address, right now. */
     if (hostname_is_noconnect_address(q->name)) {
       err = DNS_ERR_REFUSED;
     }
   } else {
     tor_assert(q->type == EVDNS_TYPE_PTR);
   }
+
+  /* Make sure the name isn't too long: This should be impossible, I think. */
   if (err == DNS_ERR_NONE && strlen(q->name) > MAX_SOCKS_ADDR_LEN-1)
     err = DNS_ERR_FORMAT;
 
   if (err != DNS_ERR_NONE) {
+    /* We got an error?  Then send back an answer immediately; we're done. */
     evdns_server_request_respond(req, err);
     return;
   }
 
   /* XXXX020 Send a stream event to the controller. */
 
+  /* Make a new dummy AP connection, and attach the request to it. */
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP));
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
   if (q->type == EVDNS_TYPE_A)
@@ -104,20 +119,36 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
 
   conn->dns_server_request = req;
 
-  log_info(LD_APP, "Passing request for %s to rewrite_and_attach.", q->name);
+  /* Now, throw the connection over to get rewritten (which will answer it
+  * immediately if it's in the cache, or completely bogus, or automapped),
+  * and then attached to a circuit. */
+  log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
+           escaped_safe_str(q->name));
+  q_name = tor_strdup(q->name); /* q could be freed in rewrite_and_attach */
   connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
-  /* Now the connection is marked if it was bad. */
+  /* Now, the connection is marked if it was bad. */
 
-  log_info(LD_APP, "Passed request for %s to rewrite_and_attach.", q->name);
+  log_info(LD_APP, "Passed request for %s to rewrite_and_attach.",
+           escaped_safe_str(q_name));
+  tor_free(q_name);
 }
 
+/** If there is a pending request on <b>conn</b> that's waiting for an answer,
+ * send back an error and free the request. */
 void
 dnsserv_reject_request(edge_connection_t *conn)
 {
-  evdns_server_request_respond(conn->dns_server_request, DNS_ERR_SERVERFAILED);
-  conn->dns_server_request = NULL;
+  if (conn->dns_server_request) {
+    evdns_server_request_respond(conn->dns_server_request,
+                                 DNS_ERR_SERVERFAILED);
+    conn->dns_server_request = NULL;
+  }
 }
 
+/** Tell the dns request waiting for an answer on <b>conn</b> that we have an
+ * answer of type <b>answer_type</b> (RESOLVE_TYPE_IPV4/IPV6/ERR), of length
+ * <b>answer_len</b>, in <b>answer</b>, with TTL <b>ttl</b>.  Doesn't do
+ * any caching; that's handled elsewhere. */
 void
 dnsserv_resolved(edge_connection_t *conn,
                  int answer_type,
@@ -130,10 +161,13 @@ dnsserv_resolved(edge_connection_t *conn,
   if (!req)
     return;
 
-  /* XXXX Re-do. */
+  /* XXXX020 Re-do; this is dumb. */
   if (ttl < 60)
     ttl = 60;
 
+  /* The evdns interface is: add a bunch of reply items (corresponding to one
+   * or more of the questions in the request); then, call
+   * evdns_server_request_respond. */
   if (answer_type == RESOLVED_TYPE_IPV6) {
     log_info(LD_APP, "Got an IPv6 answer; that's not implemented.");
     err = DNS_ERR_NOTIMPL;
@@ -150,26 +184,36 @@ dnsserv_resolved(edge_connection_t *conn,
                                        (char*)answer, ttl);
     tor_free(ans);
   } else {
-    err = DNS_ERR_SERVERFAILED;
+    err = DNS_ERR_SERVERFAILED; /* Really? Not noent? */
   }
 
   evdns_server_request_respond(req, err);
   conn->dns_server_request = NULL;
 }
 
+/* Set up the evdns server port for the UDP socket on <b>conn</b>, which
+ * must be an AP_DNS_LISTENER */
 void
 dnsserv_configure_listener(connection_t *conn)
 {
   tor_assert(conn);
   tor_assert(conn->s);
+  tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
 
   evdns_add_server_port(conn->s, 0, evdns_server_callback, NULL);
 }
 
+/** Free the evdns server port for <b>conn</b>, which must be an
+ * AP_DNS_LISTENER. */
 void
 dnsserv_close_listener(connection_t *conn)
 {
-  evdns_close_server_port(conn->dns_server_port);
-  conn->dns_server_port = NULL;
+  tor_assert(conn);
+  tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
+
+  if (conn->dns_server_port) {
+    evdns_close_server_port(conn->dns_server_port);
+    conn->dns_server_port = NULL;
+  }
 }
 

@@ -2277,7 +2277,12 @@ connection_state_is_connecting(connection_t *conn)
   return 0;
 }
 
-/** DOCDOC */
+/* XXXX020 move this into main.c */
+/** Return true iff <b>conn</b> is linked conn, and reading from the conn
+ * linked to it would be good and feasible.  (Reading is "feasible" if the
+ * other conn exists and has data in its outbuf, and is "good" if we have our
+ * reading_from_linked_conn flag set and the other conn has its
+ * writing_to_linked_conn flag set.)*/
 int
 connection_should_read_from_linked_conn(connection_t *conn)
 {
@@ -2630,7 +2635,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 
       tor_assert(edge_conn->socks_request);
       if (conn->state == AP_CONN_STATE_OPEN) {
-        tor_assert(edge_conn->socks_request->has_finished);
+        tor_assert(edge_conn->socks_request->has_finished != 0);
         if (!conn->marked_for_close) {
           tor_assert(edge_conn->cpath_layer);
           assert_cpath_layer_ok(edge_conn->cpath_layer);

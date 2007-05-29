@@ -78,8 +78,8 @@ extern INLINE void smartlist_set(smartlist_t *sl, int idx, void *val) {
 #define smartlist_set(sl, idx, val) ((sl)->list[idx] = (val))
 #endif
 
-// void smartlist_swap(smartlist_t *sl, int idx1, int idx2);
-/**DOCDOC*/
+/** Exchange the elements at indices <b>idx1</b> and <b>idx2</b> of the
+ * smartlist <b>sl</b>. */
 static INLINE void smartlist_swap(smartlist_t *sl, int idx1, int idx2)
 {
   if (idx1 != idx2) {

@@ -557,9 +557,9 @@ dirserv_add_multiple_descriptors(const char *desc, const char **msg)
   return r <= 2 ? r : 2;
 }
 
-/** Parse the server descriptor at <b>desc</b> and maybe insert it into the
- * list of server descriptors. Set *<b>msg</b> to a message that should be
- * passed back to the origin of this descriptor. DOCDOC no longer parses.
+/** Examine the parsed server descriptor in <b>ri</b> and maybe insert it into
+ * the list of server descriptors. Set *<b>msg</b> to a message that should be
+ * passed back to the origin of this descriptor.
  *
  * Return 2 if descriptor is well-formed and accepted;
  *  1 if well-formed and accepted but origin should hear *msg;
@@ -616,7 +616,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
   }
 }
 
-/** DOCDOC */
+/** As dirserv_add_descriptor, but for an extrainfo_t <b>ei</b>. */
 static int
 dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 {
@@ -1575,7 +1575,11 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   smartlist_free(bandwidths_excluding_exits);
 }
 
-/** DOCDOC */
+/** Helper: write the router-status information in <b>rs</b> into <b>buf</b>,
+ * which has at least <b>buf_len</b> free characters.  Do NUL-termination.
+ * Use the same format as in network-status documents.  If <b>platform</b> is
+ * non-NULL, add a "v" line for the platform.  Return 0 on success, -1 on
+ * failure. */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
                           routerstatus_t *rs, const char *platform)
@@ -1646,7 +1650,8 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   return 0;
 }
 
-/** DOCDOC */
+/** Helper for sorting: compare two routerinfos by their identity
+ * digest. */
 static int
 _compare_routerinfo_by_id_digest(const void **a, const void **b)
 {
@@ -1656,9 +1661,11 @@ _compare_routerinfo_by_id_digest(const void **a, const void **b)
                 DIGEST_LEN);
 }
 
-/** For v2 authoritative directories only: replace the contents of
- * <b>the_v2_networkstatus</b> with a newly generated network status
- * object. DOCDOC v2*/
+/** For v2 and v3 authoritative directories only: If <b>v2</b> is set, replace
+ * the contents of <b>the_v2_networkstatus</b> with a newly generated network
+ * status object.  If <b>v2</b> is zero, replace the contents of
+ * <b>the_v3_networkstatus_vote</b> with a newly generated consensus vote
+ * object. */
 static cached_dir_t *
 generate_networkstatus_opinion(int v2)
 {

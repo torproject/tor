@@ -49,7 +49,9 @@ static void router_dir_info_changed(void);
 /** Global list of a trusted_dir_server_t object for each trusted directory
  * server. */
 static smartlist_t *trusted_dir_servers = NULL;
-/** DOCDOC */
+/** True iff the key certificate in at least one member of
+ * <b>trusted_dir_server_t</b> has changed since we last flushed the
+ * certificates to disk. */
 static int trusted_dir_servers_certs_changed = 0;
 
 /** Global list of all of the routers that we know about. */
@@ -62,7 +64,8 @@ static smartlist_t *networkstatus_list = NULL;
 /** Global list of local_routerstatus_t for each router, known or unknown.
  * Kept sorted by digest. */
 static smartlist_t *routerstatus_list = NULL;
-/** DOCDOC */
+/** Map from descriptor digest to a member of routerstatus_list: used to
+ * update download status when a download fails. */
 static digestmap_t *routerstatus_by_desc_digest_map = NULL;
 
 /** Map from lowercase nickname to digest of named server, if any. */
@@ -165,7 +168,8 @@ router_reload_networkstatus(void)
   return 0;
 }
 
-/** DOCDOC */
+/** Reload the cached v3 key certificates from the cached-certs file in
+ * the data directory. Return 0 on success, -1 on failure. */
 int
 trusted_dirs_reload_certs(void)
 {
@@ -183,7 +187,11 @@ trusted_dirs_reload_certs(void)
   return r;
 }
 
-/** DOCDOC */
+/** Load a bunch of new key certificates from the string <b>contents</b>.  If
+ * <b>from_store</b> is true, the certificates are from the cache, and we
+ * don't need to flush them to disk.  If <b>from_store</b> is false, we need
+ * to flush any changed certificates to disk.  Return 0 on success, -1 on
+ * failure. */
 int
 trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 {
@@ -206,7 +214,10 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
     if (ds->v3_cert) {
       if (ds->v3_cert->expires < cert->expires) {
         authority_cert_free(ds->v3_cert);
+        ds->v3_cert = NULL; /* redundant, but let's be safe. */
       } else {
+        /* This also covers the case where the certificate is the same
+         * as the one we have. */
         authority_cert_free(cert);
         continue;
       }
@@ -221,7 +232,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
   return 0;
 }
 
-/** DOCDOC */
+/** Save all v3 key certifiacates to the cached-certs file. */
 void
 trusted_dirs_flush_certs_to_disk(void)
 {
@@ -260,19 +271,21 @@ trusted_dirs_flush_certs_to_disk(void)
  * On startup, we read both files.
  */
 
-/** DOCDOC */
+/** Information about disk space usage in a cached-routers or cached-extrainfo
+ * file and its associcated journal. */
 typedef struct store_stats_t {
   /** The size of the router log, in bytes. */
   size_t journal_len;
   /** The size of the router store, in bytes. */
   size_t store_len;
-  /** Total bytes dropped since last rebuild. */
+  /** Total bytes dropped since last rebuild: this is space currently
+   * used in the cache and the journal that could be freed by a rebuild. */
   size_t bytes_dropped;
 } store_stats_t;
 
-/** DOCDOC */
+/** Disk usage for cached-routers and cached-routers.new */
 static store_stats_t router_store_stats = { 0, 0, 0 };
-/** DOCDOC */
+/** Disk usage for cached-extrainfo and cached-extrainfo.new */
 static store_stats_t extrainfo_store_stats = { 0, 0, 0 };
 
 /** Helper: return 1 iff the router log is so big we want to rebuild the
@@ -351,7 +364,8 @@ _compare_signed_descriptors_by_age(const void **_a, const void **_b)
  * replace the router store with the routers currently in our routerlist, and
  * clear the journal.  Return 0 on success, -1 on failure.
  *
- * DOCDOC extrainfo
+ * If <b>extrainfo</b> is true, rebuild the extrainfo store; else rebuild the
+ * router descriptor store.
  */
 static int
 router_rebuild_store(int force, int extrainfo)
@@ -492,7 +506,9 @@ router_rebuild_store(int force, int extrainfo)
   return r;
 }
 
-/** DOCDOC */
+/** Helper: Reload a cache file and its associated journal, setting metadata
+ * appropriately.  If <b>extrainfo</b> is true, reload the extrainfo store;
+ * else reload the router descriptor store. */
 static int
 router_reload_router_list_impl(int extrainfo)
 {
@@ -1632,8 +1648,9 @@ router_get_by_descriptor_digest(const char *digest)
   return digestmap_get(routerlist->desc_digest_map, digest);
 }
 
-/** Return the router in our routerlist whose 20-byte descriptor
- * is <b>digest</b>.  Return NULL if no such router is known. */
+/** Return the signed descriptor for the router in our routerlist whose
+ * 20-byte extra-info digest is <b>digest</b>.  Return NULL if no such router
+ * is known. */
 signed_descriptor_t *
 router_get_by_extrainfo_digest(const char *digest)
 {
@@ -1644,7 +1661,9 @@ router_get_by_extrainfo_digest(const char *digest)
   return digestmap_get(routerlist->desc_by_eid_map, digest);
 }
 
-/** DOCDOC */
+/** Return the signed descriptor for the extrainfo_t in our routerlist whose
+ * extra-info-digest is <b>digest</b>. Return NULL if no such extra-info
+ * document is known. */
 signed_descriptor_t *
 extrainfo_get_by_descriptor_digest(const char *digest)
 {
@@ -1736,7 +1755,7 @@ routerinfo_free(routerinfo_t *router)
   tor_free(router);
 }
 
-/** DOCDOC */
+/** Release all storage held by <b>extrainfo</b> */
 void
 extrainfo_free(extrainfo_t *extrainfo)
 {
@@ -1745,8 +1764,8 @@ extrainfo_free(extrainfo_t *extrainfo)
   tor_free(extrainfo->cache_info.signed_descriptor_body);
   tor_free(extrainfo->pending_sig);
 
-  /* Remove once 414/417 is fixed. But I have a hunch... */
-  memset(extrainfo, 88, sizeof(extrainfo_t));
+  /* XXXX020 remove this once more bugs go away. */
+  memset(extrainfo, 88, sizeof(extrainfo_t)); /* debug bad memory usage */
   tor_free(extrainfo);
 }
 
@@ -1756,8 +1775,8 @@ signed_descriptor_free(signed_descriptor_t *sd)
 {
   tor_free(sd->signed_descriptor_body);
 
-  /* Remove once 414/417 is fixed. But I have a hunch... */
-  memset(sd, 99, sizeof(signed_descriptor_t));
+  /* XXXX020 remove this once more bugs go away. */
+  memset(sd, 99, sizeof(signed_descriptor_t)); /* Debug bad mem usage */
   tor_free(sd);
 }
 
@@ -1773,7 +1792,7 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
   return sd;
 }
 
-/** DOCDOC */
+/** Helper: free the storage held by the extrainfo_t in <b>e</b>. */
 static void
 _extrainfo_free(void *e)
 {
@@ -1891,8 +1910,9 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   routerlist_check_bug_417();
 }
 
-/** DOCDOC
- * Returns true if actually inserted. */
+/** Adds the extrainfo_t <b>ei</b> to the routerlist <b>rl</b>, if there is a
+ * corresponding router in rl-\>routers or rl-\>old_routers.  Return true iff
+ * we actually inserted <b>ei</b>.  Free <b>ei</b> if it isn't inserted. */
 static int
 extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
 {
@@ -2037,7 +2057,9 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
   routerlist_check_bug_417();
 }
 
-/** DOCDOC */
+/** Remove a signed_descriptor_t <b>sd</b> from <b>rl</b>-\>old_routers, and
+ * adjust <b>rl</b> as appropriate.  <b>idx</i> is -1, or the index of
+ * <b>sd</b>. */
 static void
 routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
 {
@@ -2455,7 +2477,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   return 0;
 }
 
-/** DOCDOC */
+/** Insert <b>ei</b> into the routerlist, or free it. Other arguments are
+ * as for router_add_to_routerlist(). */
 void
 router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                    int from_cache, int from_fetch)
@@ -2809,7 +2832,9 @@ router_load_routers_from_string(const char *s, const char *eos,
   smartlist_free(changed);
 }
 
-/** DOCDOC */
+/** Parse one or more extrainfos from <b>s</b> (ending immediately before
+ * <b>eos</b> if <b>eos</b> is present).  Other arguments are as for
+ * router_load_routers_from_string(). */
 void
 router_load_extrainfo_from_string(const char *s, const char *eos,
                                   saved_location_t saved_location,
@@ -3142,8 +3167,8 @@ networkstatus_find_entry(networkstatus_t *ns, const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
-/** Return the consensus view of the status of the router whose digest is
- * <b>digest</b>, or NULL if we don't know about any such router. */
+/** Return the consensus view of the status of the router whose identity
+ * digest is <b>digest</b>, or NULL if we don't know about any such router. */
 local_routerstatus_t *
 router_get_combined_status_by_digest(const char *digest)
 {
@@ -3153,7 +3178,9 @@ router_get_combined_status_by_digest(const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
-/** DOCDOC */
+/** Return the consensus view of the status of the router whose current
+ * <i>descriptor</i> digest is <b>digest</b>, or NULL if no such router is
+ * known. */
 local_routerstatus_t *
 router_get_combined_status_by_descriptor_digest(const char *digest)
 {
@@ -4258,8 +4285,9 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
   router_dir_info_changed();
 }
 
-/** For every router descriptor we are currently downloading by descriptor
- * digest, set result[d] to 1. DOCDOC extrainfo */
+/** For every router descriptor (or extra-info document if <b>extrainfo</b> is
+ * true) we are currently downloading by descriptor digest, set result[d] to
+ * (void*)1. */
 static void
 list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
 {
@@ -4681,7 +4709,9 @@ update_router_descriptor_downloads(time_t now)
   }
 }
 
-/** DOCDOC */
+/** Return true iff <b>sd</b> is the descriptor for a router descriptor that
+ * has an extrainfo that we don't currently have, are not currently
+ * downloading, and have not recently tried to download. */
 static INLINE int
 should_download_extrainfo(signed_descriptor_t *sd,
                           const routerlist_t *rl,
@@ -4689,13 +4719,14 @@ should_download_extrainfo(signed_descriptor_t *sd,
                           time_t now)
 {
   const char *d = sd->extra_info_digest;
-  return (!tor_digest_is_zero(d) &&
+  return (!sd->is_extrainfo &&
+          !tor_digest_is_zero(d) &&
           sd->ei_dl_status.next_attempt_at <= now &&
           !digestmap_get(rl->extra_info_map, d) &&
           !digestmap_get(pending, d));
 }
 
-/** DOCDOC */
+/** Laucnch extrainfo downloads as needed. */
 void
 update_extrainfo_downloads(time_t now)
 {
@@ -4967,8 +4998,12 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
   return 1;
 }
 
-/** DOCDOC  Returns 1 for "reject with message"; -1 for "reject silently",
- * 0 for "accept". */
+/** Check whether <b>ri</b> is a router compatible with the extrainfo document
+ * <b>ei</b>.  If no router is compatible with <b>ei</b>, <b>ei</b> should be
+ * dropped.  Return 0 for "compatible", return 1 for "reject, and inform
+ * whoever uploaded <b>ei</b>, and return -1 for "reject silently.".  If
+ * <b>msg</b> is present, set *<b>msg</b> to a description of the
+ * incompatibility (if any). */
 int
 routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
                                        const char **msg)

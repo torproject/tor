@@ -28,6 +28,7 @@ static void conn_write_callback(int fd, short event, void *_conn);
 static void signal_callback(int fd, short events, void *arg);
 static void second_elapsed_callback(int fd, short event, void *args);
 static int conn_close_if_marked(int i);
+static void connection_start_reading_from_linked_conn(connection_t *conn);
 
 /********* START VARIABLES **********/
 
@@ -72,9 +73,12 @@ static smartlist_t *connection_array = NULL;
 /** List of connections that have been marked for close and need to be freed
  * and removed from connection_array. */
 static smartlist_t *closeable_connection_lst = NULL;
-/** DOCDOC */
+/** List of linked connections that are currently reading data into their
+ * inbuf from their partner's outbuf. */
 static smartlist_t *active_linked_connection_lst = NULL;
-/** DOCDOC */
+/** Flag: Set to true iff we entered the current libevent main loop via
+ * <b>loop_once</b>. If so, there's no need to trigger a loopexit in order
+ * to handle linked connections. */
 static int called_loop_once = 0;
 
 /** We set this to 1 when we've opened a circuit, so we can print a log
@@ -395,8 +399,10 @@ connection_start_writing(connection_t *conn)
   }
 }
 
-/** DOCDOC*/
-void
+/** Helper: Tell the main loop to begin reading bytes into <b>conn</b> from
+ * its linked connection, if it is not doing so already.  Called by
+ * connection_start_reading and connection_start_writing as appropriate. */
+static void
 connection_start_reading_from_linked_conn(connection_t *conn)
 {
   tor_assert(conn);
@@ -418,7 +424,9 @@ connection_start_reading_from_linked_conn(connection_t *conn)
   }
 }
 
-/** DOCDOC*/
+/** Tell the main loop to stop reading bytes into <b>conn</b> from its linked
+ * connection, if is currently doing so.  Called by connection_stop_reading,
+ * connection_stop_writing, and connection_read. */
 void
 connection_stop_reading_from_linked_conn(connection_t *conn)
 {
@@ -1298,7 +1306,7 @@ do_main_loop(void)
     }
   }
 
-  /* DOCDOC */
+  /* Set up the packed_cell_t memory pool. */
   init_cell_pool();
 
   /* Set up our buckets */

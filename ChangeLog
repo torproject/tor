@@ -22,12 +22,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       logging information that would be very useful to an attacker.
     - Start work implementing proposal 103: Add a standalone tool to
       generate key certificates.
-    - Initial implementation of a client-side DNS proxy feature to replace
-      the need for dns-proxy-tor:  Just set "DNSPort 9999", and Tor will
-      now listen for DNS requests on port 9999, use the Tor network to
-      resolve them anonymously, and send the reply back like a regular DNS
-      server.  The code is still buggy, undocumented, and only implements
-      a subset of DNS.
+    - A client-side DNS proxy feature to replace the need for dns-proxy-tor:
+      Just set "DNSPort 9999", and Tor will now listen for DNS requests on
+      port 9999, use the Tor network to resolve them anonymously, and send
+      the reply back like a regular DNS server.  The code is still only
+      implements a subset of DNS.
 
   o Security fixes:
     - Directory authorities now call routers stable if they have an

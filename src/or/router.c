@@ -44,6 +44,11 @@ static crypto_pk_env_t *authority_signing_key = NULL;
  * authorities. */
 static authority_cert_t *authority_key_certificate = NULL;
 
+/* (Note that v3 authorities also have a separate "authority identity key",
+ * but this key is never actually loaded by the Tor process.  Instead, it's
+ * used by tor-gencert to sign new signing keys and make new key
+ * certificates. */
+
 /** Replace the current onion key with <b>k</b>.  Does not affect lastonionkey;
  * to update onionkey correctly, call rotate_onion_key().
  */
@@ -122,14 +127,16 @@ identity_key_is_set(void)
   return identitykey != NULL;
 }
 
-/** DOCDOC */
+/** Return the key certificate for this v3 (voting) authority, or NULL
+ * if we have no such certificate. */
 authority_cert_t *
 get_my_v3_authority_cert(void)
 {
   return authority_key_certificate;
 }
 
-/** DOCDOC */
+/** Return the v3 signing key for this v3 (voting) authority, or NULL
+ * if we have no such key. */
 crypto_pk_env_t *
 get_my_v3_authority_signing_key(void)
 {
@@ -189,9 +196,13 @@ rotate_onion_key(void)
   log_warn(LD_GENERAL, "Couldn't rotate onion key.");
 }
 
-/** DOCDOC */
-static crypto_pk_env_t *
-init_key_from_file_impl(const char *fname, int generate, int severity)
+/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist
+ * and <b>generate</b> is true, create a new RSA key and save it in
+ * <b>fname</b>.  Return the read/created key, or NULL on error.  Log all
+ * errors at level <b>severity</b>.
+ */
+crypto_pk_env_t *
+init_key_from_file(const char *fname, int generate, int severity)
 {
   crypto_pk_env_t *prkey = NULL;
   FILE *file = NULL;
@@ -246,17 +257,9 @@ init_key_from_file_impl(const char *fname, int generate, int severity)
   return NULL;
 }
 
-/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist,
- * create a new RSA key and save it in <b>fname</b>.  Return the read/created
- * key, or NULL on error.
- */
-crypto_pk_env_t *
-init_key_from_file(const char *fname)
-{
-  return init_key_from_file_impl(fname, 1, LOG_ERR);
-}
-
-/** DOCDOC; XXXX020 maybe move to dirserv.c */
+/** Load the v3 (voting) authority signing key and certificate from
+ * <b>keydir</b>, if they are present. */
+/* XXXX020 maybe move to dirserv.c */
 static void
 init_v3_authority_keys(const char *keydir)
 {
@@ -269,7 +272,7 @@ init_v3_authority_keys(const char *keydir)
   fname = tor_malloc(fname_len);
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"authority_signing_key",
                keydir);
-  signing_key = init_key_from_file_impl(fname, 0, LOG_INFO);
+  signing_key = init_key_from_file(fname, 0, LOG_INFO);
   if (!signing_key) {
     log_warn(LD_DIR, "No version 3 directory key found in %s", fname);
     goto done;
@@ -364,7 +367,7 @@ init_keys(void)
   tor_snprintf(keydir,sizeof(keydir),
                "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_id_key",datadir);
   log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir);
-  prkey = init_key_from_file(keydir);
+  prkey = init_key_from_file(keydir, 1, LOG_ERR);
   if (!prkey) return -1;
   set_identity_key(prkey);
 
@@ -376,7 +379,7 @@ init_keys(void)
   tor_snprintf(keydir,sizeof(keydir),
              "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key",datadir);
   log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir);
-  prkey = init_key_from_file(keydir);
+  prkey = init_key_from_file(keydir, 1, LOG_ERR);
   if (!prkey) return -1;
   set_onion_key(prkey);
   if (state->LastRotatedOnionKey > 100) { /* allow for some parsing slop. */
@@ -393,7 +396,7 @@ init_keys(void)
   tor_snprintf(keydir,sizeof(keydir),
          "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key.old",datadir);
   if (file_status(keydir) == FN_FILE) {
-    prkey = init_key_from_file(keydir);
+    prkey = init_key_from_file(keydir, 1, LOG_ERR);
     if (prkey)
       lastonionkey = prkey;
   }
@@ -844,7 +847,7 @@ router_is_clique_mode(routerinfo_t *router)
 
 /** My routerinfo. */
 static routerinfo_t *desc_routerinfo = NULL;
-/** DOCDOC */
+/** My extrainfo */
 static extrainfo_t *desc_extrainfo = NULL;
 /** Since when has our descriptor been "clean"?  0 if we need to regenerate it
  * now. */
@@ -966,7 +969,8 @@ router_get_my_descriptor(void)
   return body;
 }
 
-/** DOCDOC */
+/* Return the extrainfo document for this OR, or NULL if we have none.
+ * Rebuilt it (and the server descriptor) if necessary. */
 extrainfo_t *
 router_get_my_extrainfo(void)
 {
@@ -1001,10 +1005,9 @@ router_pick_published_address(or_options_t *options, uint32_t *addr)
   return 0;
 }
 
-/** If <b>force</b> is true, or our descriptor is out-of-date, rebuild
- * a fresh routerinfo and signed server descriptor for this OR.
+/** If <b>force</b> is true, or our descriptor is out-of-date, rebuild a fresh
+ * routerinfo, signed server descriptor, and extra-info document for this OR.
  * Return 0 on success, -1 on temporary error.
- * DOCDOC extrainfo.
  */
 int
 router_rebuild_descriptor(int force)
@@ -1541,7 +1544,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   return written+1;
 }
 
-/** DOCDOC */
+/** Write the contents of <b>extrainfo</b> to the <b>maxlen</b>-byte string
+ * <b>s</b>, signing them with <b>ident_key</b>.  Return 0 on success,
+ * negative on failure. */
 int
 extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
                          crypto_pk_env_t *ident_key)

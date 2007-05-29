@@ -910,7 +910,8 @@ typedef struct edge_connection_t {
    * already retried several times. */
   uint8_t num_socks_retries;
 
-  /** DOCDOC */
+  /** If this is a DNSPort connection, this field holds the pending DNS
+   * request that we're going to try to answer.  */
   struct evdns_server_request *dns_server_request;
 
 } edge_connection_t;
@@ -1057,7 +1058,8 @@ typedef enum {
   SAVED_IN_JOURNAL
 } saved_location_t;
 
-/** DOCDOC */
+/** Information about our plans for retrying downloads for a downloadable
+ * object. */
 typedef struct download_status_t {
   time_t next_attempt_at; /**< When should we try downloading this descriptor
                            * again? */
@@ -1078,18 +1080,19 @@ typedef struct signed_descriptor_t {
   char identity_digest[DIGEST_LEN];
   /** Declared publication time of the descriptor */
   time_t published_on;
-  /** DOCDOC; routerinfo_t only. */
+  /** For routerdescs only: digest of the corresponding extrainfo. */
   char extra_info_digest[DIGEST_LEN];
-  /** DOCDOC; routerinfo_t only: for the corresponding extrainfo. */
+  /** For routerdescs only: Status of downloading the corresponding
+   * extrainfo. */
   download_status_t ei_dl_status;
   /** Where is the descriptor saved? */
   saved_location_t saved_location ;
   /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
    * this descriptor in the corresponding file. */
   off_t saved_offset;
-  /* DOCDOC */
+  /* If true, we do not ever try to save this object in the cache. */
   unsigned int do_not_cache : 1;
-  /* DOCDOC */
+  /* If true, this item is meant to represent an extrainfo. */
   unsigned int is_extrainfo : 1;
 } signed_descriptor_t;
 
@@ -1124,7 +1127,8 @@ typedef struct {
                                   * hibernating */
   unsigned int has_old_dnsworkers:1; /**< Whether the router is using
                                       * dnsworker code. */
-  unsigned int caches_extra_info:1; /**< DOCDOC */
+  unsigned int caches_extra_info:1; /**< Whether the router caches and serves
+                                     * extrainfo documents. */
 
   /* local info */
   unsigned int is_running:1; /**< As far as we know, is this OR currently
@@ -1179,7 +1183,7 @@ typedef struct extrainfo_t {
   /** If present, we didn't have the right key to verify this extra-info,
    * so this is a copy of the signature in the document. */
   char *pending_sig;
-  /** DOCDOC */
+  /** Length of pending_sig. */
   size_t pending_sig_len;
 } extrainfo_t;
 
@@ -1296,10 +1300,12 @@ typedef struct {
   /** Map from server descriptor digest to a signed_descriptor_t from
    * routers or old_routers. */
   digestmap_t *desc_digest_map;
-  /** Map from extra-info digest to a signed_descriptor_t.  Only for
+  /** Map from extra-info digest to an extrainfo_t.  Only exists for
    * routers in routers or old_routers. */
   digestmap_t *extra_info_map;
-  /** DOCDOC */
+  /** Map from extra-info digests to a signed_descriptor_t for a router
+   * descriptor having that extra-info digest.  Only exists for
+   * routers in routers or old_routers. */
   digestmap_t *desc_by_eid_map;
   /** List of routerinfo_t for all currently live routers we know. */
   smartlist_t *routers;
@@ -1328,7 +1334,8 @@ typedef struct extend_info_t {
   crypto_pk_env_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
 
-/** DOCDOC */
+/** Certificate for v3 directory protocol: binds long-term authority identity
+ * keys to medium-term authority signing keys. */
 typedef struct authority_cert_t {
   signed_descriptor_t cache_info;
   crypto_pk_env_t *identity_key;
@@ -1336,7 +1343,8 @@ typedef struct authority_cert_t {
   time_t expires;
 } authority_cert_t;
 
-/** DOCDOC */
+/** Bitfield enum type listing types of directory authority/directory
+ * server.  */
 typedef enum {
   NO_AUTHORITY      = 0,
   V1_AUTHORITY      = 1 << 0,
@@ -1822,8 +1830,12 @@ typedef struct {
   int TrackHostExitsExpire; /**< Number of seconds until we expire an
                              * addressmap */
   config_line_t *AddressMap; /**< List of address map directives. */
-  int AutomapHostsOnResolve; /**< DOCDOC */
-  smartlist_t *AutomapHostsSuffixes; /**< DOCDOC */
+  int AutomapHostsOnResolve; /**< If true, when we get a resolve request for a
+                              * hostname ending with one of the suffixes in
+                              * <b>AutomapHostsSuffixes</b>, map it to a
+                              * virtual address. */
+  smartlist_t *AutomapHostsSuffixes; /**< List of suffixes for
+                                      * <b>AutomapHostsOnResolve</b>. */
   int RendPostPeriod; /**< How often do we post each rendezvous service
                        * descriptor? Remember to publish them independently. */
   int KeepalivePeriod; /**< How often do we send padding cells to keep
@@ -2029,7 +2041,9 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 #define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
                                      (c)==SOCKS_COMMAND_RESOLVE_PTR)
 
-/** State of a SOCKS request from a user to an OP */
+/** State of a SOCKS request from a user to an OP.  Also used to encode other
+ * information for non-socks user request (such as those on TransPort and
+ * DNSPort) */
 struct socks_request_t {
   /** Which version of SOCKS did the client use? One of "0, 4, 5" -- where
    * 0 means that no socks handshake ever took place, and this is just a
@@ -2043,10 +2057,12 @@ struct socks_request_t {
                                     * socks5 socks reply. We use this for the
                                     * two-stage socks5 handshake.
                                     */
-  int has_finished; /**< Has the SOCKS handshake finished? */
   char address[MAX_SOCKS_ADDR_LEN]; /**< What address did the client ask to
-                                       connect to? */
+                                       connect to/resolve? */
   uint16_t port; /**< What port did the client ask to connect to? */
+  unsigned has_finished : 1; /**< Has the SOCKS handshake finished? Used to
+                              * make sure we send back a socks reply for
+                              * every connection. */
 };
 
 /* all the function prototypes go here */
@@ -2718,7 +2734,6 @@ void connection_stop_writing(connection_t *conn);
 void connection_start_writing(connection_t *conn);
 
 void connection_stop_reading_from_linked_conn(connection_t *conn);
-void connection_start_reading_from_linked_conn(connection_t *conn);
 
 void directory_all_unreachable(time_t now);
 void directory_info_has_arrived(time_t now, int from_cache);
@@ -3024,7 +3039,8 @@ authority_cert_t *get_my_v3_authority_cert(void);
 crypto_pk_env_t *get_my_v3_authority_signing_key(void);
 void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last);
 void rotate_onion_key(void);
-crypto_pk_env_t *init_key_from_file(const char *fname);
+crypto_pk_env_t *init_key_from_file(const char *fname, int generate,
+                                    int severity);
 int init_keys(void);
 
 int check_whether_orport_reachable(void);
@@ -3098,7 +3114,7 @@ typedef struct trusted_dir_server_t {
    * we tried to upload to it. */
   unsigned int has_accepted_serverdesc:1;
 
-  /** DOCDOC */
+  /** What kind of authority is this? (Bitfield.) */
   authority_type_t type;
 
   authority_cert_t *v3_cert; /**< V3 key certificate for this authority */

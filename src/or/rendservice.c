@@ -350,7 +350,7 @@ rend_service_load_keys(void)
                s->directory);
       return -1;
     }
-    s->private_key = init_key_from_file(fname);
+    s->private_key = init_key_from_file(fname, 1, LOG_ERR);
     if (!s->private_key)
       return -1;
 

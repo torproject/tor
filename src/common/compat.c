@@ -807,7 +807,14 @@ tor_inet_aton(const char *c, struct in_addr* addr)
 #endif
 }
 
-/** DOCDOC */
+/** Given <b>af</b>==AF_INET and <b>src</b> a struct in_addr, or
+ * <b>af</b>==AF_INET6 and <b>src</b> a struct in6_addr, try to format the
+ * address and store it in the <b>len</b>-byte buffer <b>dst</b>.  Returns
+ * <b>dst</b> on success, NULL on failure.
+ *
+ * (Like inet_ntop(af,src,dst,len), but works on platforms that don't have it:
+ * Tor sometimes needs to format ipv6 addresses even on platforms without ipv6
+ * support.) */
 const char *
 tor_inet_ntop(int af, const void *src, char *dst, size_t len)
 {
@@ -881,7 +888,15 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
 #endif
 }
 
-/** DOCDOC */
+/** Given <b>af</b>==AF_INET or <b>af</b>==AF_INET6, and a string <b>src</b>
+ * encoding an IPv4 address or IPv6 address correspondingly, try to parse the
+ * address and store the result in <b>dst</b> (which must have space for a
+ * struct in_addr or a struct in6_addr, as appropriate).  Return 1 on success,
+ * 0 on a bad parse, and -1 on a bad <b>af</b>.
+ *
+ * (Like inet_pton(af,src,dst) but works on platforms that don't have it: Tor
+ * sometimes needs to format ipv6 addresses even on platforms without ipv6
+ * support.) */
 int
 tor_inet_pton(int af, const char *src, void *dst)
 {

@@ -1480,7 +1480,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 #define assert_active_circuits_ok_paranoid(conn)
 #endif
 
-/** DOCDOC */
+/** The total number of cells we have allocated from the memory pool. */
 static int total_cells_allocated = 0;
 
 #ifdef ENABLE_CELL_POOL /* Defined in ./configure. True by default. */

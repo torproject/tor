@@ -498,8 +498,9 @@ mp_pool_assert_ok(mp_pool_t *pool)
 }
 
 #ifdef TOR
+/** Dump information about <b>pool</b>'s memory usage to the Tor log at level
+ * <b>severity</b>. */
 /*FFFF uses Tor logging functions. */
-/**DOCDOC*/
 void
 mp_pool_log_status(mp_pool_t *pool, int severity)
 {

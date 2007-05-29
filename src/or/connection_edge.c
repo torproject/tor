@@ -1851,7 +1851,12 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
     uint32_t a;
     size_t len = strlen(ap_conn->socks_request->address);
     char c = 0;
+    /* XXXX020 This logic is a little ugly: we check for an in-addr.arpa ending
+     * on the address.  If we have one, the address is already in the right
+     * order, so we'll leave it alone later.  Otherwise, we reverse it and
+     * turn it into an in-addr.arpa address. */
     if (!strcasecmpend(ap_conn->socks_request->address, ".in-addr.arpa")) {
+      /* Temporarily truncate the address, so we can give it to inet_aton. */
       c = ap_conn->socks_request->address[len-13];
       ap_conn->socks_request->address[len-13] = '\0';
     }
@@ -1859,7 +1864,6 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
       connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
       return -1;
     }
-    /* DOCDOC */
     if (c) {
       /* this path happens on DNS. Can we unify? XXXX020 */
       ap_conn->socks_request->address[len-13] = c;
@@ -1893,13 +1897,12 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
   return 0;
 }
 
-/** Make an AP connection_t, do a socketpair and attach one side
- * to the conn, connection_add it, initialize it to circuit_wait,
+/** Make an AP connection_t, make a new linked connection pair, and attach
+ * one side to the conn, connection_add it, initialize it to circuit_wait,
  * and call connection_ap_handshake_attach_circuit(conn) on it.
  *
- * Return the other end of the socketpair, or -1 if error.
+ * Return the other end of the linked connection pair, or -1 if error.
  *
- * DOCDOC The above is now wrong; we use links.
  * DOCDOC start_reading
  */
 edge_connection_t *
@@ -1982,8 +1985,9 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
   }
 
   if (conn->dns_server_request) {
+    /* We had a request on our DNS port: answer it. */
     dnsserv_resolved(conn, answer_type, answer_len, answer, ttl);
-    conn->socks_request->has_finished = 1; /* DOCDOC */
+    conn->socks_request->has_finished = 1;
     return;
   }
 
@@ -2430,13 +2434,11 @@ connection_exit_connect(edge_connection_t *edge_conn)
 }
 
 /** Given an exit conn that should attach to us as a directory server, open a
- * bridge connection with a socketpair, create a new directory conn, and join
- * them together.  Return 0 on success (or if there was an error we could send
- * back an end cell for).  Return -(some circuit end reason) if the circuit
- * needs to be torn down.  Either connects <b>exitconn<b/>, frees it,
- * or marks it, as appropriate.
- *
- * DOCDOC no longer uses socketpair
+ * bridge connection with a linked connection pir, create a new directory
+ * conn, and join them together.  Return 0 on success (or if there was an
+ * error we could send back an end cell for).  Return -(some circuit end
+ * reason) if the circuit needs to be torn down.  Either connects
+ * <b>exitconn<b/>, frees it, or marks it, as appropriate.
  */
 static int
 connection_exit_connect_dir(edge_connection_t *exitconn)

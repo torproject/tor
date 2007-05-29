@@ -108,7 +108,9 @@ authority_type_to_string(authority_type_t auth)
   return result;
 }
 
-/* DOCDOC  */
+/** Return true iff <b>identity_digest</b> is the digest of a router we
+ * believe to support extrainfo downloads.  (If <b>is_authority</b> we do
+ * additional checking that's only valid for authorities.) */
 int
 router_supports_extrainfo(const char *identity_digest, int is_authority)
 {
@@ -130,7 +132,7 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
   return 0;
 }
 
-/** Start a connection to every suitable directory server, using
+/** Start a connection to every suitable directory authority, using
  * connection purpose 'purpose' and uploading the payload 'payload'
  * (length 'payload_len').  The purpose should be one of
  * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
@@ -138,7 +140,11 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
  * <b>type</b> specifies what sort of dir authorities (V1, V2,
  * HIDSERV, BRIDGE) we should upload to.
  *
- * DOCDOC extrainfo_len is in addition to payload_len.
+ * If <b>extrainfo_len</b> is nonzero, the first <b>payload_len</b> bytes of
+ * <b>payload</b> hold a router descriptor, and the next <b>extrainfo_len</b>
+ * bytes of <b>payload</b> hold an extra-info document.  Upload the descriptor
+ * to all authorities, and the extra-info document to all authorities that
+ * support it.
  */
 void
 directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
@@ -2118,10 +2124,9 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
   });
 }
 
-/** Called when one or more routerdesc fetches have failed (with uppercase
- * fingerprints listed in <b>failed</b>).
- *
- * DOCDOC was_extrainfo */
+/** Called when one or more routerdesc (or extrainfo, if <b>was_extrainfo</b>)
+ * fetches have failed (with uppercase fingerprints listed in
+ * <b>failed</b>). */
 static void
 dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
                                int was_extrainfo)

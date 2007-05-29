@@ -88,10 +88,15 @@ int _log_global_min_severity = LOG_NOTICE;
 static void delete_log(logfile_t *victim);
 static void close_log(logfile_t *victim);
 
-/** DOCDOC */
+/** Name of the application: used to generate the message we write at the
+ * start of each new log. */
 static char *appname = NULL;
 
-/** DOCDOC */
+/** Set the "application name" for the logs to <b>name</b>: we'll use this
+ * name in the message we write when starting up, and at the start of each new
+ * log.
+ *
+ * Tor uses this string to write the version number to the log file. */
 void
 log_set_application_name(const char *name)
 {
