@@ -554,6 +554,16 @@ dirserv_add_multiple_descriptors(const char *desc, const char **msg)
   n_parsed += smartlist_len(list);
   smartlist_free(list);
 
+  if (! *msg) {
+    if (!n_parsed) {
+      *msg = "No descriptors found in your POST.";
+      if (r > -1)
+        r = -1;
+    } else {
+      *msg = "(no message)";
+    }
+  }
+
   return r <= 2 ? r : 2;
 }
 
