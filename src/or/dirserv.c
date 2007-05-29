@@ -1845,8 +1845,7 @@ generate_networkstatus_opinion(int v2)
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
-      /* Already set by compute_performance_thresholds. */
-      int f_exit = ri->is_exit;
+
       routerstatus_t rs;
       /* These versions dump connections with idle live circuits
          sometimes. D'oh!*/
@@ -1855,6 +1854,9 @@ generate_networkstatus_opinion(int v2)
         !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
       memset(&rs, 0, sizeof(rs));
 
+
+      /* Already set by compute_performance_thresholds. */
+      rs.is_exit = ri->is_exit;
       rs.is_stable = ri->is_stable =
         router_is_active(ri, now) &&
         !dirserv_thinks_router_is_unreliable(now, ri, 1, 0) &&
@@ -1870,7 +1872,7 @@ generate_networkstatus_opinion(int v2)
       rs.is_named = naming && ri->is_named;
       rs.is_valid = ri->is_valid;
       rs.is_possible_guard = rs.is_fast && rs.is_stable &&
-        (!f_exit || exits_can_be_guards) &&
+        (!rs.is_exit || exits_can_be_guards) &&
         router_get_advertised_bandwidth(ri) >=
           (exits_can_be_guards ? guard_bandwidth_including_exits :
                                  guard_bandwidth_excluding_exits);
