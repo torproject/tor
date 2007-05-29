@@ -135,6 +135,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - When we are reporting the DirServer line we just parsed, we were
       logging the second stanza of the key fingerprint, not the first.
 
+  o Minor bugfixes (logging):
+    - When we hit an EOF on a log (probably because we're shutting down),
+      don't try to remove the log from the list: just mark it as
+      unusable.  (Bulletproofs against bug 222.)
+
   o Minor bugfixes (other):
     - Stop allowing hibernating servers to be "stable" or "fast".
     - Check return values from pthread_mutex functions.

@@ -35,6 +35,7 @@ typedef struct logfile_t {
   struct logfile_t *next; /**< Next logfile_t in the linked list. */
   char *filename; /**< Filename to open. */
   FILE *file; /**< Stream to receive log messages. */
+  int seems_dead; /**< Boolean: true if the stream seems to be kaput. */
   int needs_close; /**< Boolean: true if the stream gets closed on shutdown. */
   int min_loglevel; /**< Lowest severity level to send to this stream. */
   int max_loglevel; /**< Highest severity level to send to this stream. */
@@ -247,6 +248,10 @@ logv(int severity, uint32_t domain, const char *funcname, const char *format,
       lf = lf->next;
       continue;
     }
+    if (lf->seems_dead) {
+      lf = lf->next;
+      continue;
+    }
 
     if (!formatted) {
       end_of_prefix =
@@ -268,13 +273,11 @@ logv(int severity, uint32_t domain, const char *funcname, const char *format,
     }
     if (fputs(buf, lf->file) == EOF ||
         fflush(lf->file) == EOF) { /* error */
-      /* don't log the error! Blow away this log entry and continue. */
-      logfile_t *victim = lf;
-      lf = victim->next;
-      delete_log(victim);
-    } else {
-      lf = lf->next;
+      /* don't log the error! mark this log entry to be blown away, and
+       * continue. */
+      lf->seems_dead = 1;
     }
+    lf = lf->next;
   }
 }
 
