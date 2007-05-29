@@ -2658,23 +2658,14 @@ resolv_conf_parse_line(char *const start, int flags) {
 #define NEXT_TOKEN strtok_r(NULL, delims, &strtok_state)
 
 	char *const first_token = strtok_r(start, delims, &strtok_state);
-	if (!first_token) {
-		log(EVDNS_LOG_WARN,"No token.");
-		return;
-	}
-
-
-	log(EVDNS_LOG_WARN,"Token is %s; flags is %d", first_token, flags);
+	if (!first_token) return;
 
 	if (!strcmp(first_token, "nameserver") && (flags & DNS_OPTION_NAMESERVERS)) {
 		const char *const nameserver = NEXT_TOKEN;
 		struct in_addr ina;
 
-		log(EVDNS_LOG_WARN,"Parsed nameserver %s", nameserver);
-
 		if (inet_aton(nameserver, &ina)) {
 			// address is valid
-			log(EVDNS_LOG_WARN,"Liked it.");
 			evdns_nameserver_add(ina.s_addr);
 		}
 	} else if (!strcmp(first_token, "domain") && (flags & DNS_OPTION_SEARCH)) {
