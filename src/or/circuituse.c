@@ -536,8 +536,9 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
     }
   }
 
-  log_err(LD_BUG,"edge conn not in circuit's list?");
-  tor_assert(0); /* should never get here */
+  log_warn(LD_BUG,"Edge connection not in circuit's list.");
+  /* Don't give an error here; it's harmless. */
+  // tor_fragile_assert();
 }
 
 /** Find each circuit that has been unused for too long, or dirty

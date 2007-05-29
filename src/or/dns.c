@@ -536,30 +536,42 @@ dns_resolve(edge_connection_t *exitconn)
   r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
   switch (r) {
     case 1:
+      /* We got an answer without a lookup.  (Either the answer was
+       * cached, or it was obvious (like an IP address).)*/
       if (is_resolve) {
+        /* Send the answer back right now, and detach. */
         if (hostname)
           send_resolved_hostname_cell(exitconn, hostname);
         else
           send_resolved_cell(exitconn, RESOLVED_TYPE_IPV4);
         exitconn->on_circuit = NULL;
       } else {
+        /* Add to the n_streams list; the calling function will send back a
+         * connected cell. */
         exitconn->next_stream = oncirc->n_streams;
         oncirc->n_streams = exitconn;
       }
       break;
     case 0:
-      /* add it into the linked list of resolving_streams on this circuit */
+      /* The request is pending: add the connection into the linked list of
+       * resolving_streams on this circuit. */
       exitconn->_base.state = EXIT_CONN_STATE_RESOLVING;
       exitconn->next_stream = oncirc->resolving_streams;
       oncirc->resolving_streams = exitconn;
       break;
     case -2:
     case -1:
+      /* The request failed before it could start: cancel this connection,
+       * and stop everybody waiting forthe same connection. */
       if (is_resolve) {
         send_resolved_cell(exitconn,
              (r == -1) ? RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT);
       }
+
       exitconn->on_circuit = NULL;
+
+      dns_cancel_pending_resolve(exitconn->_base.address);
+
       if (!exitconn->_base.marked_for_close) {
         connection_free(TO_CONN(exitconn));
         //XXX020 ... and we just leak exitconn otherwise? -RD
@@ -838,6 +850,7 @@ dns_cancel_pending_resolve(const char *address)
     assert_connection_ok(TO_CONN(pendconn), 0);
     tor_assert(pendconn->_base.s == -1);
     if (!pendconn->_base.marked_for_close) {
+      /* XXXX020 RESOURCELIMIT?  Not RESOLVEFAILED??? */
       connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT);
     }
     circ = circuit_get_by_edge_conn(pendconn);
@@ -1247,8 +1260,8 @@ launch_resolve(edge_connection_t *exitconn)
     log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
              escaped_safe_str(addr), r);
     r = evdns_err_is_transient(r) ? -2 : -1;
-    dns_cancel_pending_resolve(addr); /* also sends end and frees */
-    tor_free(addr);
+    tor_free(addr); /* There is no evdns request in progress; stop
+                     * addr from getting leaked. */
   }
   return r;
 }
