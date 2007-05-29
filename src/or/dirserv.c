@@ -523,6 +523,7 @@ dirserv_add_multiple_descriptors(const char *desc, const char **msg)
   smartlist_t *list;
   const char *s;
   int n_parsed = 0;
+  tor_assert(msg);
 
   s = desc;
   list = smartlist_create();

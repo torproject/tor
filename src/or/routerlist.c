@@ -2462,7 +2462,7 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
 {
   int inserted;
   (void)from_fetch;
-  (void)msg;
+  if (msg) *msg = NULL;
 
   inserted = extrainfo_insert(router_get_routerlist(), ei);
 
