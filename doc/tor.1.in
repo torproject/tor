@@ -981,7 +981,9 @@ Configure a virtual port VIRTPORT for a hidden service.  You may use this
 option multiple times; each time applies to the service using the most recent
 hiddenservicedir.  By default, this option maps the virtual port to the
 same port on 127.0.0.1.  You may override the target port, address, or both
-by specifying a target of addr, port, or addr:port.
+by specifying a target of addr, port, or addr:port.  You may also have
+multiple lines with the same VIRTPORT: when a user connects to that VIRTPORT,
+one of the TARGETs from those lines will be chosen at random.
 .LP
 .TP
 \fBHiddenServiceNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP

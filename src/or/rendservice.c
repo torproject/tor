@@ -1157,9 +1157,9 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
                                       origin_circuit_t *circ)
 {
   rend_service_t *service;
-  int i;
-  rend_service_port_config_t *p;
   char serviceid[REND_SERVICE_ID_LEN+1];
+  smartlist_t *matching_ports;
+  rend_service_port_config_t *chosen_port;
 
   tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   log_debug(LD_REND,"beginning to hunt for addr/port");
@@ -1172,13 +1172,19 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
              serviceid, circ->_base.n_circ_id);
     return -1;
   }
-  for (i = 0; i < smartlist_len(service->ports); ++i) {
-    p = smartlist_get(service->ports, i);
+  matching_ports = smartlist_create();
+  SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,
+  {
     if (conn->_base.port == p->virtual_port) {
-      conn->_base.addr = p->real_addr;
-      conn->_base.port = p->real_port;
-      return 0;
+      smartlist_add(matching_ports, p);
     }
+  });
+  chosen_port = smartlist_choose(matching_ports);
+  smartlist_free(matching_ports);
+  if (chosen_port) {
+    conn->_base.addr = chosen_port->real_addr;
+    conn->_base.port = chosen_port->real_port;
+    return 0;
   }
   log_info(LD_REND, "No virtual port mapping exists for port %d on service %s",
            conn->_base.port,serviceid);

@@ -103,6 +103,12 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       to the AutomapHostsOnResolve option, this is no longer a completely
       silly thing to do.
 
+  o Minor features (hidden services):
+    - Allow multiple HiddenServeicePort directives with the same virtual
+      port; when they occur, the user is sent round-robin to one
+      of the target ports chosen at random.  Partially fixes bug 393 by
+      adding limited ad-hoc round-robining.
+
   o Minor features (other):
     - More unit tests.
     - Add a new AutomapHostsOnResolve option: when it is enabled, any
