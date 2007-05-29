@@ -3016,6 +3016,8 @@ evdns_shutdown(int fail_requests)
 		if (server->socket >= 0)
 			CLOSE_SOCKET(server->socket);
 		(void) event_del(&server->event);
+		if (server->state == 0)
+			(void) event_del(&server->timeout_event);
 		CLEAR(server);
 		free(server);
 		if (server_next == server_head)
