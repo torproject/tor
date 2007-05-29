@@ -905,11 +905,15 @@ router_parse_list_from_string(const char **s, const char *eos,
       extrainfo = extrainfo_parse_entry_from_string(*s, end,
                                        saved_location != SAVED_IN_CACHE,
                                        rl->identity_map);
+      if (!extrainfo)
+        continue;
       signed_desc = &extrainfo->cache_info;
       elt = extrainfo;
     } else if (!have_extrainfo && !want_extrainfo) {
       router = router_parse_entry_from_string(*s, end,
                                           saved_location != SAVED_IN_CACHE);
+      if (!router)
+        continue;
       signed_desc = &router->cache_info;
       elt = router;
     } else {
