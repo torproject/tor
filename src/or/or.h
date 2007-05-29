@@ -2357,7 +2357,6 @@ connection_t *connection_get_by_type_state_rendquery(int type, int state,
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);
 int connection_state_is_connecting(connection_t *conn);
-int connection_should_read_from_linked_conn(connection_t *conn);
 
 char *alloc_http_authenticator(const char *authenticator);
 

@@ -29,6 +29,7 @@ static void signal_callback(int fd, short events, void *arg);
 static void second_elapsed_callback(int fd, short event, void *args);
 static int conn_close_if_marked(int i);
 static void connection_start_reading_from_linked_conn(connection_t *conn);
+static int connection_should_read_from_linked_conn(connection_t *conn);
 
 /********* START VARIABLES **********/
 
@@ -397,6 +398,23 @@ connection_start_writing(connection_t *conn)
                conn->s,
                tor_socket_strerror(tor_socket_errno(conn->s)));
   }
+}
+
+/** Return true iff <b>conn</b> is linked conn, and reading from the conn
+ * linked to it would be good and feasible.  (Reading is "feasible" if the
+ * other conn exists and has data in its outbuf, and is "good" if we have our
+ * reading_from_linked_conn flag set and the other conn has its
+ * writing_to_linked_conn flag set.)*/
+static int
+connection_should_read_from_linked_conn(connection_t *conn)
+{
+  if (conn->linked && conn->reading_from_linked_conn) {
+    if (! conn->linked_conn ||
+        (conn->linked_conn->writing_to_linked_conn &&
+         buf_datalen(conn->linked_conn->outbuf)))
+      return 1;
+  }
+  return 0;
 }
 
 /** Helper: Tell the main loop to begin reading bytes into <b>conn</b> from
