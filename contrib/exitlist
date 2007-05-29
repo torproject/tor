@@ -58,6 +58,7 @@ import re
 import getopt
 import socket
 import struct
+import time
 
 assert sys.version_info >= (2,2)
 
@@ -196,10 +197,12 @@ class Policy:
         return True
 
 class Server:
-    def __init__(self, name, ip, policy):
+    def __init__(self, name, ip, policy, published, fingerprint):
         self.name = name
         self.ip = ip
         self.policy = policy
+        self.published = published
+        self.fingerprint = fingerprint
 
 def uniq_sort(lst):
     d = {}
@@ -235,17 +238,34 @@ usage: cat ~/.tor/cached-routers* | %s [-v] [-x] [host:port [host:port [...]]]
     servers = []
     policy = []
     name = ip = None
+    published = 0
+    fp = ""
     for line in sys.stdin.xreadlines():
         if line.startswith('router '):
             if name:
-                servers.append(Server(name, ip, Policy.parseLines(policy)))
+                servers.append(Server(name, ip, Policy.parseLines(policy),
+                                      published, fp))
             _, name, ip, rest = line.split(" ", 3)
             policy = []
+            published = 0
+            fp = ""
+        elif line.startswith('fingerprint') or \
+                 line.startswith('opt fingerprint'):
+            elts = line.strip().split()
+            if elts[0] == 'opt': del elts[0]
+            assert elts[0] == 'fingerprint'
+            del elts[0]
+            fp = "".join(elts)
         elif line.startswith('accept ') or line.startswith('reject '):
             policy.append(line.strip())
+        elif line.startswith('published '):
+            date = time.strptime(line[len('published '):].strip(),
+                                 "%Y-%m-%d %H:%M:%S")
+            published = time.mktime(date)
 
     if name:
-        servers.append(Server(name, ip, Policy.parseLines(policy)))
+        servers.append(Server(name, ip, Policy.parseLines(policy), published,
+                              fp))
 
     targets = []
     for line in ADDRESSES_OF_INTEREST.split("\n"):
@@ -254,19 +274,32 @@ usage: cat ~/.tor/cached-routers* | %s [-v] [-x] [host:port [host:port [...]]]
         p = Pattern.parse(line)
         targets.append((p.ip, p.portMin))
 
-    accepters, rejecters = [], []
+    # remove all but the latest server of each IP/Nickname pair.
+    latest = {}
+    for s in servers:
+        if (not latest.has_key((s.fingerprint))
+            or s.published > latest[(s.fingerprint)]):
+            latest[s.fingerprint] = s
+    servers = latest.values()
+
+    accepters, rejecters = {}, {}
     for s in servers:
         for ip,port in targets:
             if s.policy.accepts(ip,port):
-                accepters.append(s)
+                accepters[s.ip] = s
                 break
         else:
-            rejecters.append(s)
+            rejecters[s.ip] = s
+
+    # If any server at IP foo accepts, the IP does not reject.
+    for k in accepters.keys():
+        if rejecters.has_key(k):
+            del rejecters[k]
 
     if INVERSE:
-        printlist = rejecters
+        printlist = rejecters.values()
     else:
-        printlist = accepters
+        printlist = accepters.values()
 
     ents = []
     if VERBOSE:

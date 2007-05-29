@@ -159,6 +159,11 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
     - Make the NodeFamilies config option work. (Reported by
       lodger -- it has never actually worked, even though we added it
       in Oct 2004.)
+    - In the exitlist script, only consider the most recently published
+      server descriptor for each server.  Also, when the user requests
+      a list of servers that _reject_ connections to a given address,
+      explicitly exclude the IPs that also have servers that accept
+      connections to that address.  (Resolves bug 405.)
 
   o Minor bugfixes (controller):
     - Make 'getinfo fingerprint' return a 551 error if we're not a
