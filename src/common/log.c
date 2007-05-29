@@ -77,6 +77,8 @@ should_log_function_name(uint32_t domain, int severity)
   }
 }
 
+/* XXXX We should really have this protected by a mutex or something;
+ * XXXX see bug 222. */
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 #ifdef HAVE_SYSLOG_H
