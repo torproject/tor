@@ -908,7 +908,7 @@ tor_inet_pton(int af, const char *src, void *dst)
         ;
       ++eow;
 
-      if (inet_aton(eow, &in) != 1)
+      if (tor_inet_aton(eow, &in) != 1)
         return 0;
       a = ntohl(in.s_addr);
       words[6] = a >> 16;
