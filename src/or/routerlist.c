@@ -4547,6 +4547,11 @@ routerlist_assert_ok(routerlist_t *rl)
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
   {
     r2 = digestmap_get(rl->identity_map, r->cache_info.identity_digest);
+    if (r != r2) {
+      log_err(LD_BUG,
+              "fatal error: router at %p did not match router at %p. [%d]",
+              r, r2, r_sl_idx);
+    }
     tor_assert(r == r2);
     sd2 = digestmap_get(rl->desc_digest_map,
                         r->cache_info.signed_descriptor_digest);
