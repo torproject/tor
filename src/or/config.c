@@ -2322,13 +2322,18 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
  * Else return 0.
  */
 static int
-ensure_bandwidth_cap(uint64_t value, const char *desc, char **msg)
+ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
 {
   int r;
   char buf[1024];
-  if (value > ROUTER_MAX_DECLARED_BANDWIDTH) {
+  if (*value == ROUTER_MAX_DECLARED_BANDWIDTH) {
+    /* This handles an understandable special case where somebody says "2gb"
+     * whereas our actual maximum is 2gb-1 (INT_MAX) */
+    --*value;
+  }
+  if (*value > ROUTER_MAX_DECLARED_BANDWIDTH) {
     r = tor_snprintf(buf, sizeof(buf), "%s ("U64_FORMAT") must be at most %d",
-                     desc, U64_PRINTF_ARG(value),
+                     desc, U64_PRINTF_ARG(*value),
                      ROUTER_MAX_DECLARED_BANDWIDTH);
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
@@ -2761,19 +2766,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->KeepalivePeriod < 1)
     REJECT("KeepalivePeriod option must be positive.");
 
-  if (ensure_bandwidth_cap(options->BandwidthRate,
+  if (ensure_bandwidth_cap(&options->BandwidthRate,
                            "BandwidthRate", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(options->BandwidthBurst,
+  if (ensure_bandwidth_cap(&options->BandwidthBurst,
                            "BandwidthBurst", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(options->MaxAdvertisedBandwidth,
+  if (ensure_bandwidth_cap(&options->MaxAdvertisedBandwidth,
                            "MaxAdvertisedBandwidth", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(options->RelayBandwidthRate,
+  if (ensure_bandwidth_cap(&options->RelayBandwidthRate,
                            "RelayBandwidthRate", msg) < 0)
     return -1;
-  if (ensure_bandwidth_cap(options->RelayBandwidthBurst,
+  if (ensure_bandwidth_cap(&options->RelayBandwidthBurst,
                            "RelayBandwidthBurst", msg) < 0)
     return -1;
 

@@ -119,6 +119,8 @@ Changes in version 0.2.0.1-alpha - 2007-??-??
       patterns can be reconfigured with AutomapHostsSuffixes.
     - If Tor is invoked from something that isn't a shell (e.g. Vidalia),
       now we expand "-f ~/.tor/torrc" correctly. Suggested by Matt Edman.
+    - Treat "2gb" when given in torrc for a bandwidth as meaning 2gb, minus 1
+      byte: the actual maximum declared bandwidth.
 
   o Removed features:
     - Removed support for the old binary "version 0" controller protocol.
