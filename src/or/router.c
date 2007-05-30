@@ -949,9 +949,9 @@ router_rebuild_descriptor(int force)
   }
   ri->cache_info.signed_descriptor_len =
     strlen(ri->cache_info.signed_descriptor_body);
-  crypto_digest(ri->cache_info.signed_descriptor_digest,
-                ri->cache_info.signed_descriptor_body,
-                ri->cache_info.signed_descriptor_len);
+
+  router_get_router_hash(ri->cache_info.signed_descriptor_body,
+                         ri->cache_info.signed_descriptor_digest);
 
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
