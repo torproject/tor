@@ -1593,13 +1593,19 @@ _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 static void
 routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
+  {
+    /* XXXX remove this code once bug 404 is fixed. */
+    routerinfo_t *ri_generated = router_get_my_routerinfo();
+    tor_assert(ri_generated != ri);
+  }
+
   digestmap_set(rl->identity_map, ri->cache_info.identity_digest, ri);
   digestmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
                 &(ri->cache_info));
   smartlist_add(rl->routers, ri);
   ri->routerlist_index = smartlist_len(rl->routers) - 1;
   router_dir_info_changed();
-  // routerlist_assert_ok(rl);
+  routerlist_assert_ok(rl);
 }
 
 /** If we're a directory cache and routerlist <b>rl</b> doesn't have
@@ -1608,6 +1614,11 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 static void
 routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 {
+  {
+    /* XXXX remove this code once bug 404 is fixed. */
+    routerinfo_t *ri_generated = router_get_my_routerinfo();
+    tor_assert(ri_generated != ri);
+  }
   if (get_options()->DirPort &&
       !digestmap_get(rl->desc_digest_map,
                      ri->cache_info.signed_descriptor_digest)) {
@@ -1617,7 +1628,7 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
   } else {
     routerinfo_free(ri);
   }
-  // routerlist_assert_ok(rl);
+  routerlist_assert_ok(rl);
 }
 
 /** Remove an item <b>ri</b> from the routerlist <b>rl</b>, updating indices
@@ -1654,7 +1665,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
     router_bytes_dropped += ri->cache_info.signed_descriptor_len;
     routerinfo_free(ri);
   }
-  // routerlist_assert_ok(rl);
+  routerlist_assert_ok(rl);
 }
 
 /** DOCDOC */
@@ -1671,7 +1682,7 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   tor_assert(sd_tmp == sd);
   router_bytes_dropped += sd->signed_descriptor_len;
   signed_descriptor_free(sd);
-  // routerlist_assert_ok(rl);
+  routerlist_assert_ok(rl);
 }
 
 /** Remove <b>ri_old</b> from the routerlist <b>rl</b>, and replace it with
@@ -1683,6 +1694,11 @@ static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new, int idx, int make_old)
 {
+  {
+    /* XXXX remove this code once bug 404 is fixed. */
+    routerinfo_t *ri_generated = router_get_my_routerinfo();
+    tor_assert(ri_generated != ri_new);
+  }
   tor_assert(ri_old != ri_new);
   idx = _routerlist_find_elt(rl->routers, ri_old, idx);
   router_dir_info_changed();
@@ -1719,7 +1735,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     router_bytes_dropped += ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
   }
-  // routerlist_assert_ok(rl);
+  routerlist_assert_ok(rl);
 }
 
 /** Free all memory held by the routerlist module. */
