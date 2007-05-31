@@ -1,4 +1,6 @@
-Changes in version 0.2.0.1-alpha - 2007-??-??
+Changes in version 0.2.0.2-alpha - 2007-??-??
+
+Changes in version 0.2.0.1-alpha - 2007-06-01
   o Major features:
     - Change the way that Tor buffers data that it is waiting to write.
       Instead of queueing data cells in an enormous ring buffer for each
