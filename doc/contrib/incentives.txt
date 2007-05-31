@@ -290,7 +290,7 @@
    One could argue, though, that once those servers are over-congested,
    their bandwidth per circuit drops, which would in turn lower their
    reputation in the future. A question is whether this would overall
-   stablize.
+   stabilize.
 
    Another possible way is to keep a cap on reputation. In this way, a
    fraction of servers would have the same high reputation, thus balancing
@@ -347,7 +347,7 @@
    gets preferred treatment at each node. A node "spends" its value, which
    it earned a priori by providing service, to the next node by sending
    and receiving bytes. Once a node has overspent its values, the circuit
-   cannot stay as premium. It can either breaks or converts into a normal
+   cannot stay as premium. It either breaks or converts into a normal
    circuit. Each node also reserves a small portion of bandwidth for
    normal circuits to prevent starvation.
 
