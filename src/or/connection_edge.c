@@ -1365,7 +1365,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                    conn, circ, cpath) < 0) ||
         (!circ &&
          connection_ap_handshake_attach_circuit(conn) < 0)) {
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);//xxxdup
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       return -1;
     }
     return 0;

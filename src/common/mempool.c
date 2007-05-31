@@ -135,7 +135,7 @@ struct mp_chunk_t {
    */
   mp_allocated_t *first_free;
   int n_allocated; /**< Number of currently allocated items in this chunk. */
-  int capacity; /**< Largest number of items that can be fit into this chunk. */
+  int capacity; /**< Number of items that can be fit into this chunk. */
   size_t mem_size; /**< Number of usable bytes in mem. */
   char *next_mem; /**< Pointer into part of <b>mem</b> not yet carved up. */
   char mem[1]; /**< Storage for this chunk. (Not actual size.) */

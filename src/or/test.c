@@ -310,7 +310,6 @@ test_buffers(void)
   test_memeq(str, (char*)_buf_peek_raw_buffer(buf), 10); /* XXX Check rest. */
   test_eq(eof, 0);
 
-
   i = read_to_buf(s, 1024, buf, &eof);
   test_eq(i, 0);
   test_eq(buf_capacity(buf), MAX_BUF_SIZE);
@@ -1011,7 +1010,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     r = tor_inet_pton(AF_INET6, b, &a2);         \
     test_assert(r==1);                           \
     test_eq_ip6(&a1,&a2);                        \
-  } while(0)
+  } while (0)
 
 #define test_pton6_bad(a)                       \
   test_eq(0, tor_inet_pton(AF_INET6, a, &a1))

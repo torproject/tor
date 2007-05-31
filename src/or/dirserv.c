@@ -1862,7 +1862,6 @@ generate_networkstatus_opinion(int v2)
         !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
       memset(&rs, 0, sizeof(rs));
 
-
       /* Already set by compute_performance_thresholds. */
       rs.is_exit = ri->is_exit;
       rs.is_stable = ri->is_stable =

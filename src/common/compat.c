@@ -1002,7 +1002,6 @@ tor_inet_pton(int af, const char *src, void *dst)
 #endif
 }
 
-
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
  * *addr to the proper IP address, in network byte order.  Returns 0
  * on success, -1 on failure; 1 on transient failure.
