@@ -767,7 +767,7 @@ switch_id(const char *user, const char *group)
 
 #ifdef HAVE_PWD_H
 /** Allocate and return a string containing the home directory for the
- * user <b>username</b>. Only works on posix-like systems */
+ * user <b>username</b>. Only works on posix-like systems. */
 char *
 get_user_homedir(const char *username)
 {

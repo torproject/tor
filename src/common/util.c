@@ -1585,7 +1585,7 @@ parse_line_from_str(char *line, char **key_out, char **value_out)
   return line;
 }
 
-/** Expand any homedir prefix on 'filename'; return a newly allocated
+/** Expand any homedir prefix on <b>filename</b>; return a newly allocated
  * string. */
 char *
 expand_filename(const char *filename)
