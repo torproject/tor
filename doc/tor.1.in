@@ -602,6 +602,42 @@ Bind to this address to listen for NATD connections.
 (Default: 127.0.0.1).
 .LP
 .TP
+\fBAutomapHostsOnResolve\fP \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled, and we get a request to resolve an
+address that ends with one of the suffixes in
+\fBAutomapHostsSuffixes\fP, we map an unused virtual address to that
+address, and return the new virtual address.  This is handy for making
+.onion addresses work with applications that resolve an address and
+then connect to it.
+(Default: 0).
+.LP
+.TP
+\fBAutomapHostsSuffixes\fP \fR\fISUFFIX\fR,\fISUFFIX\fR,...\fP
+A comma-separated list of suffixes to use with \fBAutomapHostsOnResolve\fP.
+The "." suffix is equivalent to "all addresses."
+(Default: .exit,.onion).
+.LP
+.TP
+\fBDNSPort\fP \fR\fIPORT\fP
+If non-zero, Tor listens for UDP DNS requests on this port and resolves them
+anonymously.
+(Default: 0).
+.LP
+.TP
+\fBDNSListenAddress\fP \fR\fIIP\fR[:\fIPORT\fR]\fP
+Bind to this address to listen for DNS connections.
+(Default: 127.0.0.1).
+.LP
+.TP
+\fBDownloadExtraInfo\fP \fR\fB0\fR|\fB1\fR\fP
+If true, Tor downloads and caches "extra-info" documents.  These
+documents contain information about servers other than the information
+in their regular router descriptors.  Tor does not use this information for
+anything itself; to save bandwidth, leave this option turned off.
+(Default: 0).
+
+.LP
+.TP
 .SH SERVER OPTIONS
 .PP
 The following options are useful only for servers (that is, if \fBORPort\fP is non-zero):
