@@ -1252,7 +1252,7 @@ typedef struct local_routerstatus_t {
  * up? */
 #define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8
 
-/** Contents of a (v2 or later) network status object. */
+/** Contents of a v2 (non-consensus, non-vote) network status object. */
 typedef struct networkstatus_t {
   /** When did we receive the network-status document? */
   time_t received_on;
@@ -1292,6 +1292,32 @@ typedef struct networkstatus_t {
   smartlist_t *entries; /**< List of routerstatus_t*.   This list is kept
                          * sorted by identity_digest. */
 } networkstatus_t;
+
+/** DOCDOC */
+typedef struct ns_vote_routerstatus_t {
+  routerstatus_t status;
+  uint64_t flags;
+  char *version;
+} ns_vote_routerstatus_t;
+
+/** DOCDOC */
+typedef struct networkstatus_vote_t {
+  time_t published;
+  time_t valid_after;
+  time_t fresh_until;
+  time_t valid_until;
+  char *client_versions;
+  char *server_versions;
+  char **known_flags;
+  char identity_digest[DIGEST_LEN];
+  char *address;
+  uint32_t addr;
+  uint16_t dir_port;
+  uint16_t or_port;
+  struct authority_cert_t *cert;
+  char *contact;
+  smartlist_t *routerstatus_list;
+} networkstatus_vote_t;
 
 /** Contents of a directory of onion routers. */
 typedef struct {

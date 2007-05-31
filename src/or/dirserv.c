@@ -1810,20 +1810,22 @@ generate_networkstatus_opinion(int v2)
                  "vote-status vote\n"
                  "published %s\n"
                  "valid-after %s\n"
+                 "fresh-until %s\n"
                  "valid-until %s\n"
                  "%s" /* versions */
-                 "known-flags Authority Exit Fast Guard Stable "
-                               "Running Valid V2Dir%s%s\n"
-                 "dir-source %s %s %s %s %d\n"
+                 "known-flags Authority%s Exit Fast Guard%s Running Stable "
+                               "Valid V2Dir\n"
+                 "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n",
                  published,
                  published, /* XXXX020 should be valid-after*/
+                 published, /* XXXX020 should be fresh-until*/
                  published, /* XXXX020 should be valid-until*/
                  version_lines,
-                 naming ? " Named" : "",
                  listbadexits ? " BadExit" : "",
+                 naming ? " Named" : "",
                  options->Nickname, fingerprint, options->Address,
-                    ipaddr, (int)options->DirPort,
+                   ipaddr, (int)options->DirPort, (int)options->ORPort,
                  contact);
     outp = status + strlen(status);
     endp = status + len;

@@ -1448,15 +1448,17 @@ find_start_of_next_routerstatus(const char *s)
  * object in the string, and advance *<b>s</b> to just after the end of the
  * router status.  Return NULL and advance *<b>s</b> on error. */
 static routerstatus_t *
-routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
+routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
+                                     networkstatus_vote_t *vote,
+                                     uint64_t *flags_out)
 {
   const char *eos;
   routerstatus_t *rs = NULL;
   directory_token_t *tok;
   char timebuf[ISO_TIME_LEN+1];
   struct in_addr in;
-
   tor_assert(tokens);
+  tor_assert(bool_eq(flags_out, vote));
 
   eos = find_start_of_next_routerstatus(*s);
 
@@ -1511,7 +1513,18 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
   rs->or_port =(uint16_t) tor_parse_long(tok->args[6],10,0,65535,NULL,NULL);
   rs->dir_port = (uint16_t) tor_parse_long(tok->args[7],10,0,65535,NULL,NULL);
 
-  if ((tok = find_first_by_keyword(tokens, K_S))) {
+  tok = find_first_by_keyword(tokens, K_S);
+  if (tok && vote) {
+    int i, j;
+    for (i=0; i < tok->n_args; ++i) {
+      for (j=0; vote->known_flags[j]; ++j) {
+        if (!strcmp(tok->args[i], vote->known_flags[j])) {
+          *flags_out |= (1<<j);
+          break;
+        }
+      }
+    }
+  } else if (tok) {
     int i;
     for (i=0; i < tok->n_args; ++i) {
       if (!strcmp(tok->args[i], "Exit"))
@@ -1708,7 +1721,7 @@ networkstatus_parse_from_string(const char *s)
   smartlist_clear(tokens);
   while (!strcmpstart(s, "r ")) {
     routerstatus_t *rs;
-    if ((rs = routerstatus_parse_entry_from_string(&s, tokens)))
+    if ((rs = routerstatus_parse_entry_from_string(&s, tokens, NULL, NULL)))
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, _compare_routerstatus_entries);
