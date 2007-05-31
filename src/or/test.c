@@ -310,6 +310,7 @@ test_buffers(void)
   test_memeq(str, (char*)_buf_peek_raw_buffer(buf), 10); /* XXX Check rest. */
   test_eq(eof, 0);
 
+
   i = read_to_buf(s, 1024, buf, &eof);
   test_eq(i, 0);
   test_eq(buf_capacity(buf), MAX_BUF_SIZE);
@@ -966,6 +967,127 @@ test_util(void)
   test_eq(round_to_power_of_2(U64_LITERAL(40000000000000000)),
           U64_LITERAL(1)<<55);
   test_eq(round_to_power_of_2(0), 2);
+}
+
+static void
+_test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
+             const char *e2, int line)
+{
+  int i;
+  int ok = 1;
+  for (i = 0; i < 16; ++i) {
+    if (a->s6_addr[i] != b->s6_addr[i]) {
+      ok = 0;
+      break;
+    }
+  }
+  if (ok) {
+    printf("."); fflush(stdout);
+  } else {
+    char buf1[128], *cp1;
+    char buf2[128], *cp2;
+    have_failed = 1;
+    cp1 = buf1; cp2 = buf2;
+    for (i=0; i<16; ++i) {
+      tor_snprintf(cp1, sizeof(buf1)-(cp1-buf1), "%02x", a->s6_addr[i]);
+      tor_snprintf(cp2, sizeof(buf2)-(cp2-buf2), "%02x", b->s6_addr[i]);
+      cp1 += 2; cp2 += 2;
+      if ((i%2)==1 && i != 15) {
+        *cp1++ = ':';
+        *cp2++ = ':';
+      }
+    }
+    *cp1 = *cp2 = '\0';
+    printf("Line %d: assertion failed: (%s == %s)\n"
+           "      %s != %s\n", line, e1, e2, buf1, buf2);
+    fflush(stdout);
+  }
+}
+#define test_eq_ip6(a,b) _test_eq_ip6((a),(b),#a,#b,__LINE__)
+
+#define test_pton6_same(a,b) do {                 \
+    r = tor_inet_pton(AF_INET6, a, &a1);         \
+    test_assert(r==1);                           \
+    r = tor_inet_pton(AF_INET6, b, &a2);         \
+    test_assert(r==1);                           \
+    test_eq_ip6(&a1,&a2);                        \
+  } while(0)
+
+#define test_pton6_bad(a)                       \
+  test_eq(0, tor_inet_pton(AF_INET6, a, &a1))
+
+#define test_ntop6_reduces(a,b) do {                                    \
+    r = tor_inet_pton(AF_INET6, a, &a1);                                \
+    test_assert(r==1);                                                  \
+    test_streq(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), b);      \
+    r = tor_inet_pton(AF_INET6, b, &a2);                                \
+    test_assert(r==1);                                                  \
+    test_eq_ip6(&a1, &a2);                                              \
+  } while (0)
+
+static void
+test_ip6_helpers(void)
+{
+  char buf[64];
+  struct in6_addr a1, a2;
+  int r, i;
+  //  struct in_addr b1, b2;
+  /* Test tor_inet_ntop and tor_inet_pton: IPv6 */
+
+  /* === Test pton: valid af_inet6 */
+  /* Simple, valid parsing. */
+  r = tor_inet_pton(AF_INET6,
+                    "0102:0304:0506:0708:090A:0B0C:0D0E:0F10", &a1);
+  test_assert(r==1);
+  for (i=0;i<16;++i) { test_eq(i+1, (int)a1.s6_addr[i]); }
+  /* ipv4 ending. */
+  test_pton6_same("0102:0304:0506:0708:090A:0B0C:0D0E:0F10",
+                  "0102:0304:0506:0708:090A:0B0C:13.14.15.16");
+  /* shortened words. */
+  test_pton6_same("0001:0099:BEEF:0000:0123:FFFF:0001:0001",
+                  "1:99:BEEF:0:0123:FFFF:1:1");
+  /* zeros at the beginning */
+  test_pton6_same("0000:0000:0000:0000:0009:C0A8:0001:0001",
+                  "::9:c0a8:1:1");
+  test_pton6_same("0000:0000:0000:0000:0009:C0A8:0001:0001",
+                  "::9:c0a8:0.1.0.1");
+  /* zeros in the middle. */
+  test_pton6_same("fe80:0000:0000:0000:0202:1111:0001:0001",
+                  "fe80::202:1111:1:1");
+  /* zeros at the end. */
+  test_pton6_same("1000:0001:0000:0007:0000:0000:0000:0000",
+                  "1000:1:0:7::");
+
+  /* === Test ntop: af_inet6 */
+  test_ntop6_reduces("0:0:0:0:0:0:0:0", "::");
+
+  test_ntop6_reduces("0001:0099:BEEF:0000:0123:FFFF:0001:0001",
+                     "1:99:beef:0:123:ffff:1:1");
+
+  test_ntop6_reduces("0:0:0:0:0:0:c0a8:0101", "::192.168.1.1");
+  test_ntop6_reduces("0:0:0:0:0:ffff:c0a8:0101", "::ffff:192.168.1.1");
+  test_ntop6_reduces("0000:0000:0000:0000:0009:C0A8:0001:0001",
+                     "::9:c0a8:1:1");
+  test_ntop6_reduces("fe80:0000:0000:0000:0202:1111:0001:0001",
+                     "fe80::202:1111:1:1");
+  test_ntop6_reduces("1000:0001:0000:0007:0000:0000:0000:0000",
+                     "1000:1:0:7::");
+
+  /* === Test pton: invalid in6. */
+  test_pton6_bad("foobar.");
+  test_pton6_bad("55555::");
+  test_pton6_bad("9:-60::");
+  test_pton6_bad("1:2:33333:4:0002:3::");
+  // test_pton6_bad("1:2:3333:4:00002:3::"); //XXXX not bad.
+  test_pton6_bad("1:2:3333:4:fish:3::");
+  test_pton6_bad("1:2:3:4:5:6:7:8:9");
+  test_pton6_bad("1:2:3:4:5:6:7");
+  test_pton6_bad("1:2:3:4:5:6:1.2.3.4.5");
+  test_pton6_bad("1:2:3:4:5:6:1.2.3");
+  test_pton6_bad("::1.2.3");
+  test_pton6_bad("::1.2.3.4.5");
+  test_pton6_bad("99");
+  test_pton6_bad("");
 }
 
 static void
@@ -2277,6 +2399,7 @@ main(int c, char**v)
   test_crypto_dh();
   test_crypto_s2k();
   puts("\n========================= Util ============================");
+  test_ip6_helpers();
   test_gzip();
   test_util();
   test_smartlist();

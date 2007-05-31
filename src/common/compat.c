@@ -821,7 +821,6 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
 #ifdef HAVE_INET_NTOP
   return inet_ntop(af,src,dst,(socklen_t)len);
 #else
-  /* XXXX needs testing. !!!! */
   if (af == AF_INET) {
     if (tor_inet_ntoa(src, dst, len) < 0)
       return NULL;
@@ -839,9 +838,15 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
     if (words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
         words[4] == 0 && (words[5] == 0 || words[5] == 0xffff) && words[6]) {
       /* This is an IPv4 address. */
-      tor_snprintf(buf, sizeof(buf), "::%x:%d.%d.%d.%d", words[5],
-                   addr->s6_addr[12], addr->s6_addr[13],
-                   addr->s6_addr[14], addr->s6_addr[15]);
+      if (words[5] == 0) {
+        tor_snprintf(buf, sizeof(buf), "::%d.%d.%d.%d",
+                     addr->s6_addr[12], addr->s6_addr[13],
+                     addr->s6_addr[14], addr->s6_addr[15]);
+      } else {
+        tor_snprintf(buf, sizeof(buf), "::%x:%d.%d.%d.%d", words[5],
+                     addr->s6_addr[12], addr->s6_addr[13],
+                     addr->s6_addr[14], addr->s6_addr[15]);
+      }
       if (strlen(buf) > len)
         return NULL;
       strlcpy(dst, buf, len);
@@ -863,10 +868,14 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
         ++i;
       }
     }
+    if (longestGapLen<=1)
+      longestGapPos = -1;
+
     cp = buf;
     for (i = 0; i < 8; ++i) {
       if (words[i] == 0 && longestGapPos == i) {
-        *cp++ = ':';
+        if (i == 0)
+          *cp++ = ':';
         *cp++ = ':';
         while (i < 8 && words[i] == 0)
           ++i;
@@ -878,6 +887,7 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
           *cp++ = ':';
       }
     }
+    *cp = '\0';
     if (strlen(buf) > len)
       return NULL;
     strlcpy(dst, buf, len);
@@ -903,13 +913,11 @@ tor_inet_pton(int af, const char *src, void *dst)
 #ifdef HAVE_INET_PTON
   return inet_pton(af, src, dst);
 #else
-  /* XXXX needs testing. !!!! */
   if (af == AF_INET) {
     return tor_inet_aton(src, dst);
   } else if (af == AF_INET6) {
     struct in6_addr *out = dst;
     uint16_t words[8];
-    struct in_addr in;
     int gapPos = -1, i, setWords=0;
     const char *dot = strchr(src, '.');
     const char *eow; /* end of words. */
@@ -918,16 +926,25 @@ tor_inet_pton(int af, const char *src, void *dst)
     else if (!dot)
       eow = src+strlen(src);
     else {
-      uint32_t a;
+      int byte1,byte2,byte3,byte4;
+      char more;
       for (eow = dot-1; eow >= src && TOR_ISDIGIT(*eow); --eow)
         ;
       ++eow;
 
-      if (tor_inet_aton(eow, &in) != 1)
+      /* We use "scanf" because some platform inet_aton()s are too lax
+       * about IPv4 addresses of the form "1.2.3" */
+      if (sscanf(eow, "%d.%d.%d.%d%c", &byte1,&byte2,&byte3,&byte4,&more) != 4)
         return 0;
-      a = ntohl(in.s_addr);
-      words[6] = a >> 16;
-      words[7] = a & 0xFFFF;
+
+      if (byte1 > 255 || byte1 < 0 ||
+          byte2 > 255 || byte2 < 0 ||
+          byte3 > 255 || byte3 < 0 ||
+          byte4 > 255 || byte4 < 0)
+        return 0;
+
+      words[6] = (byte1<<8) | byte2;
+      words[7] = (byte3<<8) | byte4;
       setWords += 2;
     }
 
@@ -948,7 +965,7 @@ tor_inet_pton(int af, const char *src, void *dst)
         words[i++] = (uint16_t)r;
         setWords++;
         src = next;
-        if (*src != ':')
+        if (*src != ':' && src != eow)
           return 0;
         ++src;
       } else if (*src == ':' && i > 0 && gapPos==-1) {
@@ -966,9 +983,12 @@ tor_inet_pton(int af, const char *src, void *dst)
       return 0;
 
     if (gapPos >= 0) {
+      int nToMove = setWords - (dot ? 2 : 0) - gapPos;
       int gapLen = 8 - setWords;
+      tor_assert(nToMove >= 0);
       memmove(&words[gapPos+gapLen], &words[gapPos],
-              sizeof(uint16_t)*(8-gapPos));
+              sizeof(uint16_t)*nToMove);
+      memset(&words[gapPos], 0, sizeof(uint16_t)*gapLen);
     }
     for (i = 0; i < 8; ++i) {
       out->s6_addr[2*i  ] = words[i] >> 8;
