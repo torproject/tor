@@ -244,7 +244,8 @@ int get_n_open_sockets(void);
 typedef int socklen_t;
 #endif
 
-#ifndef HAVE_STRUCT_IN6_ADDR
+/* XXXX020 detect in6_addr correctly on ms_windows; this is a hack. */
+#if !defined(HAVE_STRUCT_IN6_ADDR) && !defined(MS_WINDOWS)
 struct in6_addr
 {
   uint8_t s6_addr[16];
