@@ -2326,7 +2326,7 @@ ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
 {
   int r;
   char buf[1024];
-  if (*value == ROUTER_MAX_DECLARED_BANDWIDTH) {
+  if (*value > ROUTER_MAX_DECLARED_BANDWIDTH) {
     /* This handles an understandable special case where somebody says "2gb"
      * whereas our actual maximum is 2gb-1 (INT_MAX) */
     --*value;
