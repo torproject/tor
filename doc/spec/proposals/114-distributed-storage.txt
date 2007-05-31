@@ -19,7 +19,7 @@ Overview:
   directory nodes among a large subset of all onion routers. The two reasons
   to do this are better scalability and improved security properties. Further,
   this proposal suggests changes to the hidden service descriptor format to
-  prevent from new security threads coming from decentralization and to gain
+  prevent new security threats coming from decentralization and to gain
   even better security properties.
 
 Motivation:
@@ -35,24 +35,24 @@ Motivation:
   between the three directory nodes, so that hidden services must ensure the
   availability of their descriptors by manually publishing them on all
   directory nodes. Whenever a fourth or fifth hidden service authoritative
-  directory was added, hidden services would need to maintain an equally
+  directory is added, hidden services will need to maintain an equally
   increasing number of replicas. These scalability issues have an impact on
   the current usage of hidden services and put an even higher burden on the
   development of new kinds of applications for hidden services that might
-  require to store even bigger numbers of descriptors.
+  require storing even bigger numbers of descriptors.
 
-  Second, besides of posing a limitation to scalability, storing all hidden
+  Second, besides posing a limitation to scalability, storing all hidden
   service descriptors on three directory nodes also constitutes a security
   risk. The directory node operators could easily analyze the publish and fetch
   requests to derive information on service activity and usage and read the
   descriptor contents to determine which onion routers work as introduction
-  points for a given hidden service and needed to be attacked or threatened to
+  points for a given hidden service and need to be attacked or threatened to
   shut it down. Furthermore, the contents of a hidden service descriptor offer
   only minimal security properties to the hidden service. Whoever gets aware
   of the service ID can easily find out whether the service is active at the
   moment and which introduction points it has. This applies to (former)
   clients, (former) introduction points, and of course to the directory nodes.
-  It requires only to request the descriptor for the given service ID which
+  It requires only to request the descriptor for the given service ID --- which
   can be performed by anyone anonymously.
 
   This proposal suggests two major changes to approach the described
@@ -60,7 +60,7 @@ Motivation:
 
   The first change affects the storage location for hidden service
   descriptors. Descriptors are distributed among a large subset of all onion
-  router instead of three fixed directory nodes. Each storing node is
+  routers instead of three fixed directory nodes. Each storing node is
   responsible for a subset of descriptors for a limited time only. It is not
   able to choose which descriptors it stores at a certain time, because this
   is determined by its onion ID which is hard to change frequently and in time
@@ -84,7 +84,7 @@ Motivation:
   for the service's clients, but should be unpredictable for all other nodes.
   Further, the storing node needs to be able to verify that the hidden service
   is the true originator of the descriptor with the given ID even though it is
-  not a client. Finally, a storing node shall only learn as few information as
+  not a client. Finally, a storing node should learn as little information as
   necessary by storing a descriptor, because it might not be as trustworthy as
   a directory node; for example it does not need to know the list of
   introduction points. Therefore, a second key is applied that is only known
@@ -103,24 +103,25 @@ Design:
   current design. Changes are grouped by content, rather than by affected
   specification documents.
 
-  All nodes:
+  Tor clients and servers:
 
-    All nodes can combine the network lists received from all directory nodes
-    to one routing list containing only those nodes that store and serve
-    hidden service descriptors and which are contained in the majority of
-    network lists. A node only trusts its own routing list and never learns
-    about routing information from other nodes. This list should only be
-    created on demand by those nodes that are involved in the new hidden
-    service protocol, i.e. hidden service directory node, hidden service
-    provider, and hidden service client.
+    All participants can combine the network status lists received from
+    all directory authorities to one routing list containing only those
+    servers that store and serve hidden service descriptors and which
+    are contained in the majority of network status lists. A participant
+    only trusts its own routing list and never learns about routing
+    information from other parties. This list should only be created
+    on demand by Tor clients and servers that are involved in the new
+    hidden service protocol, i.e. hidden service directory node, hidden
+    service provider, and hidden service client.
 
-    All nodes that are involved in the new hidden service protocol calculate
+    All parties that are involved in the new hidden service protocol calculate
     the clock skew between their local time and the times of directory
     authorities. If the clock skew exceeds 1 minute (as opposed to 30 minutes
     as in the current implementation), the user is warned upon performing the
     first operation that is related to hidden services. However, the local
-    time is not adjusted automatically to prevent attacks based on false times
-    from directory authorities.
+    time is not adjusted automatically, because then they would be open
+    to attacks based on false times from directory authorities.
 
   Hidden service directory nodes:
 
@@ -140,7 +141,7 @@ Design:
     onion router would not be accepted as storing node anyway, because it is
     not stable.) All requests and replies are formatted as HTTP messages.
     Requests are directed to the router's directory port and are contained
-    within BEGIN_DIR cells. A HS directory node stores a descriptor only, when
+    within BEGIN_DIR cells. A HS directory node stores a descriptor only when
     it thinks that it is responsible for storing that descriptor based on its
     own routing table. Every HS directory node is responsible for the
     descriptor IDs in the interval of its n-th predecessor in the ID circle up
@@ -162,8 +163,8 @@ Design:
     Directory nodes include a new flag for routers that decided to provide
     storage for hidden service descriptors and that are stable for a given
     time. The requirement to be stable prevents a node from frequently
-    changing its onion key to become responsible for a freely chosen
-    identifier.
+    changing its onion key to become responsible for an identifier it wants
+    to target.
 
   Hidden service provider:
 
@@ -175,10 +176,11 @@ Design:
     hidden service it works, and should not know it to prevent it from
     tracking the hidden service's activity.
 
-    Hidden service providers publishes a new descriptor whenever its content
+    Each hidden service provider publishes a new descriptor whenever
+    its content
     changes or a new publication period starts for this descriptor. If the
     current publication period would only last for less than 60 minutes, the
-    hidden service provider publishes both, a current descriptor and one for
+    hidden service provider publishes both a current descriptor and one for
     the next period. Publication is performed by sending the descriptor to all
     hidden service directories that are responsible for keeping replicas for
     the descriptor ID.
