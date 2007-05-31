@@ -990,7 +990,8 @@ dns_found_answer(const char *address, int is_reverse, uint32_t addr,
         /* This detach must happen after we send the end cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       } else {
-        send_resolved_cell(pendconn, RESOLVED_TYPE_ERROR);
+        send_resolved_cell(pendconn, outcome == DNS_RESOLVE_FAILED_PERMANENT ?
+                          RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT);
         /* This detach must happen after we send the resolved cell. */
         circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
       }

@@ -57,7 +57,8 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
     if (SOCKS_COMMAND_IS_CONNECT(conn->socks_request->command))
       connection_ap_handshake_socks_reply(conn, NULL, 0, endreason);
     else if (SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command))
-      connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
+      connection_ap_handshake_socks_resolved(conn,
+                                             RESOLVED_TYPE_ERROR_TRANSIENT,
                                              0, NULL, -1);
     else /* unknown or no handshake at all. send no response. */
       conn->socks_request->has_finished = 1;
@@ -1306,7 +1307,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         log_warn(LD_APP,"Address to be resolved is too large. Failing.");
         control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                     escaped(socks->address));
-        connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,
+        connection_ap_handshake_socks_resolved(conn,
+                                               RESOLVED_TYPE_ERROR_TRANSIENT,
                                                0,NULL,-1);
         connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_SOCKSPROTOCOL |

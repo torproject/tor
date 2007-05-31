@@ -32,6 +32,8 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   tor_assert(_data == NULL);
   log_info(LD_APP, "Got a new DNS request!");
 
+  req->flags |= 0x80; /* set RA */
+
   /* First, check whether the requesting address matches our SOCKSPolicy. */
   if ((addrlen = evdns_server_request_get_requesting_addr(req,
                                 (struct sockaddr*)&addr, sizeof(addr))) < 0) {
@@ -81,8 +83,8 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   }
   if (!q) {
     log_info(LD_APP, "None of the questions we got were ones we're willing "
-             "to support. Sending error.");
-    evdns_server_request_respond(req, DNS_ERR_NOTIMPL);
+             "to support. Sending NODATA.");
+    evdns_server_request_respond(req, DNS_ERR_NONE);
     return;
   }
   if (q->type == EVDNS_TYPE_A) {
@@ -183,8 +185,10 @@ dnsserv_resolved(edge_connection_t *conn,
                                        conn->socks_request->address,
                                        (char*)answer, ttl);
     tor_free(ans);
-  } else {
-    err = DNS_ERR_SERVERFAILED; /* Really? Not noent? */
+  } else if (answer_type == RESOLVED_TYPE_ERROR) {
+    err = DNS_ERR_NOTEXIST;
+  } else { /* answer_type == RESOLVED_TYPE_ERROR_TRANSIENT */
+    err = DNS_ERR_SERVERFAILED;
   }
 
   evdns_server_request_respond(req, err);
