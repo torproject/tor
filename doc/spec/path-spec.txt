@@ -316,9 +316,10 @@ of their choices.
   probability (N-C)/N of choosing a good entry and not being profiled.
 
   When guard nodes are enabled, Tor maintains an ordered list of entry nodes
-  as our chosen guards, and store this list persistently to disk.  If a Guard
+  as our chosen guards, and stores this list persistently to disk.  If a Guard
   node becomes unusable, rather than replacing it, Tor adds new guards to the
-  end of the list.  When it comes time to choose an entry, Tor chooses at
+  end of the list.  When choosing the first hop of a circuit, Tor
+  chooses at
   random from among the first NumEntryGuards (default 3) usable guards on the
   list.  If there are not at least 2 usable guards on the list, Tor adds
   routers until there are, or until there are no more usable routers to add.
