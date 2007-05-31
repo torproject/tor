@@ -2525,6 +2525,9 @@ int connection_control_finished_flushing(control_connection_t *conn);
 int connection_control_reached_eof(control_connection_t *conn);
 int connection_control_process_inbuf(control_connection_t *conn);
 
+#define EVENT_AUTHDIR_NEWDESCS 0x000D
+int control_event_is_interesting(int event);
+
 int control_event_circuit_status(origin_circuit_t *circ,
                                  circuit_status_event_t e, int reason);
 int control_event_stream_status(edge_connection_t *conn,
@@ -2540,7 +2543,8 @@ int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,
                                  time_t expires);
 int control_event_or_authdir_new_descriptor(const char *action,
-                                            signed_descriptor_t *desc,
+                                            const char *desc,
+                                            size_t desclen,
                                             const char *msg);
 int control_event_my_descriptor_changed(void);
 int control_event_networkstatus_changed(smartlist_t *statuses);

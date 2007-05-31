@@ -581,7 +581,8 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
 {
   int r;
   routerinfo_t *ri_old;
-  signed_descriptor_t *desc = &ri->cache_info;
+  char *desc = NULL;
+  size_t desclen = 0;
 
   /* Check whether this descriptor is semantically identical to the last one
    * from this server.  (We do this here and not in router_add_to_routerlist
@@ -596,23 +597,27 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
              ri->nickname);
     *msg = "Not replacing router descriptor; no information has changed since "
       "the last one with this identity.";
-    control_event_or_authdir_new_descriptor("DROPPED", desc, *msg);
+    control_event_or_authdir_new_descriptor("DROPPED",
+                         ri->cache_info.signed_descriptor_body,
+                         ri->cache_info.signed_descriptor_len, *msg);
     routerinfo_free(ri);
     return 0;
   }
+  if (control_event_is_interesting(EVENT_AUTHDIR_NEWDESCS)) {
+    /* Make a copy of desc, since router_add_to_routerlist might free
+     * ri and its associated signed_descriptor_t. */
+    desclen = ri->cache_info.signed_descriptor_len;
+    desc = tor_strndup(ri->cache_info.signed_descriptor_body, desclen);
+  }
+
   if ((r = router_add_to_routerlist(ri, msg, 0, 0))<0) {
-#if 0
-    /* XXXX020 reinstate this code, but remember that it can't actually
-       work, since it is NOT kosher to look at ri or desc after
-       add_to_routerlist, _unless_ the descriptor is accepted.
-    */
-    if (r < -1) /* unless the routerinfo was fine, just out-of-date */
-      control_event_or_authdir_new_descriptor("REJECTED", desc, *msg);
-#endif
+    if (r < -1 && desc) /* unless the routerinfo was fine, just out-of-date */
+      control_event_or_authdir_new_descriptor("REJECTED", desc, desclen, *msg);
+    tor_free(desc);
     return r == -1 ? 0 : -1;
   } else {
     smartlist_t *changed;
-    control_event_or_authdir_new_descriptor("ACCEPTED", desc, *msg);
+    control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);
 
     changed = smartlist_create();
     smartlist_add(changed, ri);
@@ -622,6 +627,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
       *msg =  ri->is_valid ? "Descriptor for valid server accepted" :
         "Descriptor for invalid server accepted";
     }
+    tor_free(desc);
     return r == 0 ? 2 : 1;
   }
 }

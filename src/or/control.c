@@ -35,7 +35,7 @@ const char control_c_id[] =
 #define EVENT_WARN_MSG         0x000A
 #define EVENT_ERR_MSG          0x000B
 #define EVENT_ADDRMAP          0x000C
-#define EVENT_AUTHDIR_NEWDESCS 0x000D
+// #define EVENT_AUTHDIR_NEWDESCS 0x000D
 #define EVENT_DESCCHANGED      0x000E
 #define EVENT_NS               0x000F
 #define EVENT_STATUS_CLIENT    0x0010
@@ -246,6 +246,16 @@ control_adjust_event_log_severity(void)
   change_callback_log_severity(event_to_log_severity(min_log_event),
                                event_to_log_severity(max_log_event),
                                control_event_logmsg);
+}
+
+/** Return true iff the event with code <b>c</b> is being sent to any current
+ * control connection.  This is useful if the amount of work needed to prepare
+ * to call the appropriate control_event_...() function is high.
+ */
+int
+control_event_is_interesting(int event)
+{
+  return EVENT_IS_INTERESTING(event);
 }
 
 /** Append a NUL-terminated string <b>s</b> to the end of
@@ -3032,7 +3042,7 @@ control_event_address_mapped(const char *from, const char *to, time_t expires)
  * been done with it, and also optionally give an explanation/reason. */
 int
 control_event_or_authdir_new_descriptor(const char *action,
-                                        signed_descriptor_t *desc,
+                                        const char *desc, size_t desclen,
                                         const char *msg)
 {
   char firstline[1024];
@@ -3050,8 +3060,7 @@ control_event_or_authdir_new_descriptor(const char *action,
                msg ? msg : "");
 
   /* Escape the server descriptor properly */
-  esclen = write_escaped_data(desc->signed_descriptor_body,
-                              desc->signed_descriptor_len, 1, &esc);
+  esclen = write_escaped_data(desc, desclen, 1, &esc);
 
   totallen = strlen(firstline) + esclen + 1;
   buf = tor_malloc(totallen);
