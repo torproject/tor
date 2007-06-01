@@ -39,41 +39,41 @@ noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 tor_main.o: micro-revision.i
 
 micro-revision.i: FORCE
-	@if test -d ../../.svn && test -x "`which svn 2>&1`" ; then	\
-	  svn info ../.. |              			\
+	@if test -d ../../.svn && test -x "`which svn 2>&1;true`" ; then \
+	  svn info ../.. |					\
 	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.tmp \
-	     || true;                                           \
-	elif test -x "`which svk 2>&1`" && test -d ~/.svk/local; then \
-          location=../..;                                       \
-          rev=x;                                                \
-          while test x$$rev = xx; do                            \
-            x=`svk info $$location |                            \
-              sed -n 's/^Mirrored From:.*, Rev\. \([0-9][0-9]*\)/\1/p'`; \
-            if test x$$x != x; then                             \
-              rev=$$x;                                          \
-              break;                                            \
-            else                                                \
-              loc=`svk info $$location |                        \
-                sed -n 's/^Copied From: \(.*\), Rev\. [0-9][0-9]*/\1/p'`; \
-              if test x$$loc = x; then                          \
-                break;                                          \
-              else                                              \
-                location=/$$loc;                                \
-              fi;                                               \
-            fi;                                                 \
-          done;                                                 \
-          if test x$$rev != x; then                             \
-            echo \"$$rev\" > micro-revision.tmp;                \
-          fi;                                                   \
-        fi;                                                     \
-	if test ! -f micro-revision.tmp ; then                  \
-	  if test ! -f micro-revision.i ; then                  \
-	    echo '""' > micro-revision.i;                       \
-	  fi;                                                   \
-	elif test ! -f micro-revision.i ||                      \
-          test x"`cat micro-revision.tmp`" != x"`cat micro-revision.i`"; then \
-	  mv micro-revision.tmp micro-revision.i;               \
-	fi
+	     || true;						\
+	elif test -x "`which svk 2>&1;true`" && test -d ~/.svk/local; then \
+	  location=../..;					\
+	  rev=x;						\
+	  while test x$$rev = xx; do				\
+	    x=`svk info $$location |				\
+	      sed -n 's/^Mirrored From:.*, Rev\. \([0-9][0-9]*\)/\1/p'`; \
+	    if test x$$x != x; then				\
+	      rev=$$x;						\
+	      break;						\
+	    else						\
+	      loc=`svk info $$location |			\
+		sed -n 's/^Copied From: \(.*\), Rev\. [0-9][0-9]*/\1/p'`; \
+	      if test x$$loc = x; then				\
+		break;						\
+	      else						\
+		location=/$$loc;				\
+	      fi;						\
+	    fi;							\
+	  done;							\
+	  if test x$$rev != x; then				\
+	    echo \"$$rev\" > micro-revision.tmp;		\
+	  fi;							\
+	fi;							\
+	if test ! -f micro-revision.tmp ; then			\
+	  if test ! -f micro-revision.i ; then			\
+	    echo '""' > micro-revision.i;			\
+	  fi;							\
+	elif test ! -f micro-revision.i ||			\
+	  test x"`cat micro-revision.tmp`" != x"`cat micro-revision.i`"; then \
+	  mv micro-revision.tmp micro-revision.i;		\
+	fi; true
 
 #Dummy target to ensure that micro-revision.i _always_ gets built.
 FORCE:
