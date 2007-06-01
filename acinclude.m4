@@ -45,19 +45,19 @@ h=""
 if test x$2 = xdevpkg; then
   h=" headers for"
 fi
-if test -f /etc/debian_version -a x"$tor_$1_$2_debian" != x; then
+if test -f /etc/debian_version && test x"$tor_$1_$2_debian" != x; then
   AC_WARN([On Debian, you can install$h $1 using "apt-get install $tor_$1_$2_debian"])
   if test x"$tor_$1_$2_debian" != x"$tor_$1_devpkg_debian"; then 
     AC_WARN([   You will probably need $tor_$1_devpkg_debian too.])
   fi 
 fi
-if test -f /etc/fedora-release -a x"$tor_$1_$2_redhat" != x; then
+if test -f /etc/fedora-release && test x"$tor_$1_$2_redhat" != x; then
   AC_WARN([On Fedora Core, you can install$h $1 using "yum install $tor_$1_$2_redhat"])
   if test x"$tor_$1_$2_redhat != x"$tor_$1_devpkg_redhat"; then 
     AC_WARN([   You will probably need $tor_$1_devpkg_redhat too.])
   fi 
 else
-  if test -f /etc/redhat-release -a x"$tor_$1_$2_redhat" != x; then
+  if test -f /etc/redhat-release && test x"$tor_$1_$2_redhat" != x; then
     AC_WARN([On most Redhat-based systems, you can get$h $1 by installing the $tor_$1_$2_redhat" RPM package])
     if test x"$tor_$1_$2_redhat" != x"$tor_$1_devpkg_redhat"; then 
       AC_WARN([   You will probably need $tor_$1_devpkg_redhat too.])
@@ -98,7 +98,7 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
     fi
 
     # Skip the directory if it isn't there.
-    if test ! -d "$tor_trydir" -a "$tor_trydir" != "(system)"; then
+    if test ! -d "$tor_trydir" && test "$tor_trydir" != "(system)"; then
       continue;
     fi
 

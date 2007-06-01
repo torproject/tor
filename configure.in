@@ -274,7 +274,7 @@ AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
 
 if test x$transparent = xtrue ; then
    transparent_ok=0
-   if test x$net_if_found = x1 -a x$net_pfvar_found = x1 ; then
+   if test x$net_if_found = x1 && test x$net_pfvar_found = x1 ; then
      transparent_ok=1
    fi
    if test x$linux_netfilter_ipv4 = x1 ; then
