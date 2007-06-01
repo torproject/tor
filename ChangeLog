@@ -1,7 +1,33 @@
 Changes in version 0.2.0.2-alpha - 2007-??-??
 
 Changes in version 0.2.0.1-alpha - 2007-06-01
-  o Major features:
+  o Major features, server usability:
+    - New config options RelayBandwidthRate and RelayBandwidthBurst:
+      a separate set of token buckets for relayed traffic. Right now
+      relayed traffic is defined as answers to directory requests, and
+      OR connections that don't have any local circuits on them.
+
+  o Major features, client usability:
+    - A client-side DNS proxy feature to replace the need for
+      dns-proxy-tor: Just set "DNSPort 9999", and Tor will now listen
+      for DNS requests on port 9999, use the Tor network to resolve them
+      anonymously, and send the reply back like a regular DNS server.
+      The code still only implements a subset of DNS.
+    - Make PreferTunneledDirConns and TunnelDirConns work even when
+      we have no cached directory info. This means Tor clients can now
+      do all of their connections protected by TLS.
+
+  o Major features, performance and efficiency:
+    - Directory authorities accept and serve "extra info" documents for
+      routers. These documents contain fields from router descriptors
+      that aren't usually needed, and that use a lot of excess
+      bandwidth. Once these fields are removed from router descriptors,
+      the bandwidth savings should be about 60%. [Partially implements
+      proposal 104.]
+    - Servers upload extra-info documents to any authority that accepts
+      them. Authorities (and caches that have been configured to download
+      extra-info documents) download them as needed. [Partially implements
+      proposal 104.]
     - Change the way that Tor buffers data that it is waiting to write.
       Instead of queueing data cells in an enormous ring buffer for each
       client->OR or OR->OR connection, we now queue cells on a separate
@@ -12,23 +38,13 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       efficiency, especially on platforms where malloc() is inefficient.
     - Stop reading on edge connections when their corresponding circuit
       buffers are full; start again as the circuits empty out.
-    - New config options RelayBandwidthRate and RelayBandwidthBurst:
-      a separate set of token buckets for relayed traffic. Right now
-      relayed traffic is defined as answers to directory requests, and
-      OR connections that don't have any local circuits on them.
-    - Make PreferTunneledDirConns and TunnelDirConns work even when
-      we have no cached directory info. This means Tor clients can now
-      do all of their connections protected by TLS.
+
+  o Major features, other:
     - Add an HSAuthorityRecordStats option that hidden service authorities
       can use to track statistics of overall hidden service usage without
       logging information that would be very useful to an attacker.
-    - Start work implementing proposal 103: Add a standalone tool to
-      generate key certificates.
-    - A client-side DNS proxy feature to replace the need for dns-proxy-tor:
-      Just set "DNSPort 9999", and Tor will now listen for DNS requests on
-      port 9999, use the Tor network to resolve them anonymously, and send
-      the reply back like a regular DNS server.  The code is still only
-      implements a subset of DNS.
+    - Start work implementing multi-level keys for directory authorities:
+      Add a standalone tool to generate key certificates. (Proposal 103.)
 
   o Security fixes:
     - Directory authorities now call routers stable if they have an
@@ -41,15 +57,14 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       of active connection_t objects. This will let us avoid underusing
       our allocated connection limit.
     - We no longer use socket pairs to link an edge connection to an
-      anonymous directory connection or a dirport test connection.
+      anonymous directory connection or a DirPort test connection.
       Instead, we track the link internally and transfer the data
       in-process. This saves two sockets per "linked" connection (at the
       client and at the server), and avoids the nasty Windows socketpair()
       workaround.
     - Keep unused 4k and 16k buffers on free lists, rather than wasting 8k
-      for every single inactive connection_t.
-    - Free items from the 4k/16k-buffer free lists when they haven't been
-      used for a while.
+      for every single inactive connection_t. Free items from the
+      4k/16k-buffer free lists when they haven't been used for a while.
 
   o Minor features (build):
     - Make autoconf search for libevent, openssl, and zlib consistently.
@@ -72,22 +87,12 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       buffer type.
 
   o Minor features (directory system):
-    - Directory authorities accept and serve "extra info" documents for
-      routers.  These documents contain fields from router descriptors
-      that aren't usually needed, and that use a lot of excess
-      bandwidth. Once these fields are removed from router descriptors,
-      the bandwidth savings should be about 60%. [Partially implements
-      proposal 104.]
-    - Directory authorities allow multiple router descriptors and/or extra
-      info documents to be uploaded in a single go.  This will make
-      implementing proposal 104 simpler.
     - New config option V2AuthoritativeDirectory that all directory
       authorities should set. This will let future authorities choose
       not to serve V2 directory information.
-    - Servers upload extra-info documents to any authority that accepts
-      them.  Authorities (and caches that have been configured to download
-      extra-info documents) download them as needed. [Partially implements
-      proposal 104.]
+    - Directory authorities allow multiple router descriptors and/or extra
+      info documents to be uploaded in a single go.  This will make
+      implementing proposal 104 simpler.
 
   o Minor features (controller):
     - Add a new config option __DisablePredictedCircuits designed for
@@ -99,11 +104,6 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
     - Implement "getinfo status/version/..." so a controller can tell
       whether the current version is recommended, and whether any versions
       are good, and how many authorities agree. (Patch from shibz.)
-
-  o Minor features (tor-resolve):
-    - Add an "-F" option to force a resolve for a .onion address.  Thanks
-      to the AutomapHostsOnResolve option, this is no longer a completely
-      silly thing to do.
 
   o Minor features (hidden services):
     - Allow multiple HiddenServeicePort directives with the same virtual
@@ -119,16 +119,19 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       allows DNSPort to work sensibly with hidden service users.  By
       default, .exit and .onion addresses are remapped; the list of
       patterns can be reconfigured with AutomapHostsSuffixes.
+    - Add an "-F" option to tor-resolve to force a resolve for a .onion
+      address. Thanks to the AutomapHostsOnResolve option, this is no
+      longer a completely silly thing to do.
     - If Tor is invoked from something that isn't a shell (e.g. Vidalia),
       now we expand "-f ~/.tor/torrc" correctly. Suggested by Matt Edman.
-    - Treat "2gb" when given in torrc for a bandwidth as meaning 2gb, minus 1
-      byte: the actual maximum declared bandwidth.
+    - Treat "2gb" when given in torrc for a bandwidth as meaning 2gb,
+      minus 1 byte: the actual maximum declared bandwidth.
 
   o Removed features:
     - Removed support for the old binary "version 0" controller protocol.
       This has been deprecated since 0.1.1, and warnings have been issued
-      since 0.1.2.  When we encounter a v0 control message, we now send back
-      an error and close the connection.
+      since 0.1.2.  When we encounter a v0 control message, we now send
+      back an error and close the connection.
     - Remove the old "dns worker" server DNS code: it hasn't been default
       since 0.1.2.2-alpha, and all the servers seem to be using the new
       eventdns code.
@@ -151,23 +154,23 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       unusable.  (Bulletproofs against bug 222.)
 
   o Minor bugfixes (other):
+    - In the exitlist script, only consider the most recently published
+      server descriptor for each server. Also, when the user requests
+      a list of servers that _reject_ connections to a given address,
+      explicitly exclude the IPs that also have servers that accept
+      connections to that address. (Resolves bug 405.)
     - Stop allowing hibernating servers to be "stable" or "fast".
+    - On Windows, we were preventing other processes from reading
+      cached-routers while Tor was running.  (Reported by janbar)
+    - Make the NodeFamilies config option work. (Reported by
+      lodger -- it has never actually worked, even though we added it
+      in Oct 2004.)
     - Check return values from pthread_mutex functions.
     - Don't save non-general-purpose router descriptors to the disk cache,
       because we have no way of remembering what their purpose was when
       we restart.
     - Add even more asserts to hunt down bug 417.
-    - On Windows, we were preventing other processes from reading
-      cached-routers while Tor was running.  (Reported by janbar)
     - Build without verbose warnings even on (not-yet-released) gcc 4.2.
-    - Make the NodeFamilies config option work. (Reported by
-      lodger -- it has never actually worked, even though we added it
-      in Oct 2004.)
-    - In the exitlist script, only consider the most recently published
-      server descriptor for each server.  Also, when the user requests
-      a list of servers that _reject_ connections to a given address,
-      explicitly exclude the IPs that also have servers that accept
-      connections to that address.  (Resolves bug 405.)
 
   o Minor bugfixes (controller):
     - Make 'getinfo fingerprint' return a 551 error if we're not a
@@ -180,14 +183,14 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
   o Code simplifications and refactoring:
     - Stop passing around circuit_t and crypt_path_t pointers that are
       implicit in other procedure arguments.
-    - Drop the old code to choke directory connections when the corresponding
-      OR connections got full: thanks to the cell queue feature, OR conns
-      don't get full any more.
+    - Drop the old code to choke directory connections when the
+      corresponding OR connections got full: thanks to the cell queue
+      feature, OR conns don't get full any more.
     - Make dns_resolve() handle attaching connections to circuits
       properly, so the caller doesn't have to.
     - Rename wants_to_read and wants_to_write to read/write_blocked_on_bw.
     - Keep the connection array as a dynamic smartlist_t, rather than as
-      a fixed-sized array.  This is important, as the number of connections
+      a fixed-sized array. This is important, as the number of connections
       is becoming increasingly decoupled from the number of sockets.
 
 
