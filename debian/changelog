@@ -1,9 +1,14 @@
 tor (0.2.0.0-alpha-1~~pre.1) unstable; urgency=low
 
   * svn r10403.
-  * Forward port 06_add_compile_time_defaults.
+  * Forward port 06_add_compile_time_defaultsn, tetex-extra.
+  * teTeX is no more, long live TeX Live:
+    - remove build depends on tetex-bin, tetex-extra,
+    - add build depends on texlive-base-bin for dvips and bibtex,
+      texlive-latex-base for latex, and texlive-fonts-recommended for fonts
+      like ptmr7t.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 29 May 2007 23:06:11 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri,  1 Jun 2007 02:58:56 +0200
 
 tor (0.1.2.14-1) unstable; urgency=low
 
