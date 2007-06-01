@@ -474,7 +474,7 @@ addresses/ports.
 .TP
 \fBSocksPolicy \fR\fIpolicy\fR,\fIpolicy\fR,\fI...\fP
 Set an entrance policy for this server, to limit who can connect to the
-Socks ports.
+SocksPort and DNSPort ports.
 The policies have the same form as exit policies below.
 .LP
 .TP
