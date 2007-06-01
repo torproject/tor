@@ -1,9 +1,22 @@
 tor (0.2.0.0-alpha-1~~pre.1) unstable; urgency=low
 
-  * svn r10063.
+  * svn r10403.
   * Forward port 06_add_compile_time_defaults.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 30 Apr 2007 17:00:11 +0200
+ -- Peter Palfrader <weasel@debian.org>  Tue, 29 May 2007 23:06:11 +0200
+
+tor (0.1.2.14-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 25 May 2007 21:49:20 +0200
+
+tor (0.1.2.13-3) unstable; urgency=low
+
+  * Always give a shell (/bin/sh) when we use su(1) in our init script
+    (closes: #421465).
+
+ -- Peter Palfrader <weasel@debian.org>  Sun,  6 May 2007 14:44:11 +0200
 
 tor (0.1.2.13-2) unstable; urgency=low
 
