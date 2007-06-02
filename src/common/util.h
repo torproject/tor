@@ -198,6 +198,7 @@ int parse_rfc1123_time(const char *buf, time_t *t);
 void format_local_iso_time(char *buf, time_t t);
 void format_iso_time(char *buf, time_t t);
 int parse_iso_time(const char *buf, time_t *t);
+int parse_http_time(const char *buf, struct tm *tm);
 
 /* File helpers */
 int write_all(int fd, const char *buf, size_t count, int isSocket);

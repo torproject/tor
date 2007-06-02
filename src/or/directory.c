@@ -1633,9 +1633,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                              const char *body, size_t body_len)
 {
   size_t dlen;
-  const char *cp;
   char *url = NULL;
   or_options_t *options = get_options();
+  time_t if_modified_since = 0;
+  char *header;
+
   /* We ignore the body of a GET request. */
   (void)body;
   (void)body_len;
@@ -1647,6 +1649,15 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   if (parse_http_url(headers, &url) < 0) {
     write_http_status_line(conn, 400, "Bad request");
     return 0;
+  }
+  if ((header = http_get_header(headers, "If-Modified-Since: "))) {
+    struct tm tm;
+    if (parse_http_time(header, &tm) == 0) {
+      if_modified_since = tor_timegm(&tm);
+    }
+    /* The correct behavior on a malformed If-Modified-Since header is to
+     * act as if no If-Modified-Since header had been given. */
+    tor_free(header);
   }
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
 
@@ -1664,6 +1675,12 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       tor_free(url);
       return 0;
     }
+    if (d->published < if_modified_since) {
+      write_http_status_line(conn, 304, "Not modified");
+      tor_free(url);
+      return 0;
+    }
+
     dlen = deflated ? d->dir_z_len : d->dir_len;
 
     if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
@@ -1699,8 +1716,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   if (!strcmp(url,"/tor/running-routers") ||
       !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
     int deflated = !strcmp(url,"/tor/running-routers.z");
-    dlen = dirserv_get_runningrouters(&cp, deflated);
-    if (!dlen) { /* we failed to create/cache cp */
+    cached_dir_t *d = dirserv_get_runningrouters();
+    if (!d) {
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
       if (!already_fetching_directory(DIR_PURPOSE_FETCH_RUNNING_LIST))
@@ -1708,6 +1725,13 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       tor_free(url);
       return 0;
     }
+    if (d->published < if_modified_since) {
+      write_http_status_line(conn, 304, "Not modified");
+      tor_free(url);
+      return 0;
+    }
+    dlen = deflated ? d->dir_z_len : d->dir_len;
+
     if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
       log_info(LD_DIRSERV,
                "Client asked for running-routers, but we've been "
@@ -1722,7 +1746,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                  deflated?"application/octet-stream":"text/plain",
                  deflated?"deflate":"identity",
                  RUNNINGROUTERS_CACHE_LIFETIME);
-    connection_write_to_buf(cp, strlen(cp), TO_CONN(conn));
+    connection_write_to_buf(deflated ? d->dir_z : d->dir, dlen, TO_CONN(conn));
     return 0;
   }
 
@@ -1751,6 +1775,12 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       smartlist_free(dir_fps);
       return 0;
     }
+    if (dirserv_statuses_are_old(dir_fps, if_modified_since)) {
+      write_http_status_line(conn, 304, "Not modified");
+      smartlist_free(dir_fps);
+      return 0;
+    }
+
     dlen = dirserv_estimate_data_size(dir_fps, 0, deflated);
     if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
       log_info(LD_DIRSERV,

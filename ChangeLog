@@ -3,6 +3,12 @@ Changes in version 0.2.0.2-alpha - 2007-??-??
     - Fix an assertion failure related to servers without extra-info digests.
       Resolves bugs 441 and 442.
 
+  o Minor features (directory):
+    - Support "If-Modified-Since" when answering HTTP requests for
+      directories, running-routers documents, and network-status documents.
+      (There's no need to support it for router descriptors, since those
+      are downloaded by descriptor digest.)
+
   o Minor build issues:
     - Clear up some MIPSPro compiler warnings.
 

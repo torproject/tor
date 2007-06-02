@@ -1279,6 +1279,7 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
   }
 }
 
+#if 0
 /** Helper: If we're authoritative and <b>auth_src</b> is set, use
  * <b>auth_src</b>, otherwise use <b>cache_src</b>.  If we're using
  * <b>auth_src</b> and it's been <b>dirty</b> for at least
@@ -1313,6 +1314,7 @@ dirserv_get_obj(const char **out,
     return 0;
   }
 }
+#endif
 
 /** Return the most recently generated encoded signed v1 directory,
  * generating a new one as necessary.  If not a v1 authoritative directory
@@ -1418,10 +1420,10 @@ generate_runningrouters(void)
 /** Set *<b>rr</b> to the most recently generated encoded signed
  * running-routers list, generating a new one as necessary.  Return the
  * size of the directory on success, and 0 on failure. */
-size_t
-dirserv_get_runningrouters(const char **rr, int compress)
+cached_dir_t *
+dirserv_get_runningrouters(void)
 {
-  return dirserv_get_obj(rr, compress,
+  return dirserv_pick_cached_dir_obj(
                          &cached_runningrouters, &the_runningrouters,
                          runningrouters_is_dirty,
                          generate_runningrouters,
@@ -2245,6 +2247,25 @@ dirserv_test_reachability(int try_all)
   });
   if (!try_all) /* increment ctr */
     ctr = (ctr + 1) % 128;
+}
+
+/** Return true iff every networkstatus listed in <b>fps</b> is older
+ * than <b>cutoff</b>. */
+int
+dirserv_statuses_are_old(smartlist_t *fps, time_t cutoff)
+{
+  SMARTLIST_FOREACH(fps, const char *, digest,
+  {
+    cached_dir_t *d;
+    if (router_digest_is_me(digest) && the_v2_networkstatus)
+      d = the_v2_networkstatus;
+    else
+      d = digestmap_get(cached_v2_networkstatus, digest);
+    if (d && d->published > cutoff)
+      return 0;
+  });
+
+  return 1;
 }
 
 /** Return an approximate estimate of the number of bytes that will

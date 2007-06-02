@@ -2670,7 +2670,7 @@ int dirserv_dump_directory_to_string(char **dir_out,
                                      int complete);
 void directory_set_dirty(void);
 cached_dir_t *dirserv_get_directory(void);
-size_t dirserv_get_runningrouters(const char **rr, int compress);
+cached_dir_t *dirserv_get_runningrouters(void);
 void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
 void dirserv_set_cached_networkstatus_v2(const char *directory,
@@ -2693,6 +2693,7 @@ void dirserv_test_reachability(int try_all);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain);
 int dirserv_would_reject_router(routerstatus_t *rs);
+int dirserv_statuses_are_old(smartlist_t *fps, time_t cutoff);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
 int routerstatus_format_entry(char *buf, size_t buf_len,
