@@ -5,7 +5,7 @@
 ;
 !include "MUI.nsh"
 
-!define VERSION "0.2.0.1-alpha"
+!define VERSION "0.2.0.1-alpha-cvs"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "http://tor.eff.org/"
 
