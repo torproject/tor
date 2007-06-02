@@ -1,6 +1,6 @@
-tor (0.2.0.0-alpha-1~~pre.1) unstable; urgency=low
+tor (0.2.0.1-alpha-1) experimental; urgency=low
 
-  * svn r10403.
+  * New upstream version.
   * Forward port 06_add_compile_time_defaultsn, tetex-extra.
   * teTeX is no more, long live TeX Live:
     - remove build depends on tetex-bin, tetex-extra,
@@ -8,7 +8,7 @@ tor (0.2.0.0-alpha-1~~pre.1) unstable; urgency=low
       texlive-latex-base for latex, and texlive-fonts-recommended for fonts
       like ptmr7t.
 
- -- Peter Palfrader <weasel@debian.org>  Fri,  1 Jun 2007 02:58:56 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat,  2 Jun 2007 14:31:15 +0200
 
 tor (0.1.2.14-1) unstable; urgency=low
 
