@@ -561,7 +561,7 @@ router_reload_router_list_impl(int extrainfo)
       router_load_extrainfo_from_string(contents, NULL,SAVED_IN_JOURNAL, NULL);
     else
       router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL, NULL);
-    stats->journal_len = st.st_size;
+    stats->journal_len = (size_t) st.st_size;
     tor_free(contents);
   }
 

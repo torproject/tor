@@ -344,7 +344,7 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
 
   /* First, we figure out how much space to allow per item.  We'll want to
    * use make sure we have enough for the overhead plus the item size. */
-  alloc_size = STRUCT_OFFSET(mp_allocated_t, u.mem) + item_size;
+  alloc_size = (size_t)(STRUCT_OFFSET(mp_allocated_t, u.mem) + item_size);
   /* If the item_size is less than sizeof(next_free), we need to make
    * the allocation bigger. */
   if (alloc_size < sizeof(mp_allocated_t))

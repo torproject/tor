@@ -41,6 +41,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
     return;
   }
+  (void) addrlen;
   sa = (struct sockaddr*) &addr;
   if (sa->sa_family != AF_INET) {
     /* XXXX020 Handle IPV6 */

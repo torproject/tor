@@ -525,10 +525,8 @@ connection_edge_send_command(edge_connection_t *fromconn,
                              size_t payload_len)
 {
   /* XXXX NM Split this function into a separate versions per circuit type? */
-  crypt_path_t *cpath_layer;
   circuit_t *circ;
   tor_assert(fromconn);
-  cpath_layer = fromconn ? fromconn->cpath_layer : NULL;
   circ = fromconn->on_circuit;
 
   if (fromconn->_base.marked_for_close) {
@@ -1890,14 +1888,14 @@ void
 circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn)
 {
   cell_queue_t *queue;
-  int streams_blocked;
+  // int streams_blocked; // XXXX020 use this for something, or remove it.
   if (circ->n_conn == orconn) {
     queue = &circ->n_conn_cells;
-    streams_blocked = circ->streams_blocked_on_n_conn;
+    // streams_blocked = circ->streams_blocked_on_n_conn;
   } else {
     or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
     queue = &orcirc->p_conn_cells;
-    streams_blocked = circ->streams_blocked_on_p_conn;
+    // streams_blocked = circ->streams_blocked_on_p_conn;
   }
 
   if (queue->n)
