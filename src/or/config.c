@@ -704,7 +704,7 @@ set_options(or_options_t *new_val, char **msg)
   return 0;
 }
 
-extern const char tor_svn_revision[]; /* from main.c */
+extern const char tor_svn_revision[]; /* from tor_main.c */
 
 /** Return the current Tor version, possibly */
 const char *
