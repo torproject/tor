@@ -62,7 +62,7 @@ micro-revision.i: FORCE
 	      fi;						\
 	    fi;							\
 	  done;							\
-	  if test x$$rev != x; then				\
+	  if test x$$rev != xx; then				\
 	    echo \"$$rev\" > micro-revision.tmp;		\
 	  fi;							\
 	fi;							\
