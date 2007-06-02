@@ -2140,9 +2140,10 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   digestmap_set(rl->desc_digest_map,
           ri_new->cache_info.signed_descriptor_digest, &(ri_new->cache_info));
 
-  if (!tor_digest_is_zero(ri_new->cache_info.signed_descriptor_digest))
+  if (!tor_digest_is_zero(ri_new->cache_info.extra_info_digest)) {
     digestmap_set(rl->desc_by_eid_map, ri_new->cache_info.extra_info_digest,
                   ri_new);
+  }
 
   if (make_old && get_options()->DirPort &&
       ri_old->purpose == ROUTER_PURPOSE_GENERAL) {
@@ -2167,9 +2168,10 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
         ei_tmp->cache_info.signed_descriptor_len;
       extrainfo_free(ei_tmp);
     }
-    if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest))
+    if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest)) {
       digestmap_remove(rl->desc_by_eid_map,
                        ri_old->cache_info.extra_info_digest);
+    }
     router_store_stats.bytes_dropped +=
       ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
@@ -5181,6 +5183,8 @@ routerlist_assert_ok(routerlist_t *rl)
     signed_descriptor_t *sd;
     digestmap_iter_get(iter, &d, &_sd);
     sd = _sd;
+    tor_assert(!tor_digest_is_zero(d));
+    tor_assert(sd);
     tor_assert(!memcmp(sd->extra_info_digest, d, DIGEST_LEN));
     iter = digestmap_iter_next(rl->desc_by_eid_map, iter);
   }
