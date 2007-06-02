@@ -1,4 +1,11 @@
 Changes in version 0.2.0.2-alpha - 2007-??-??
+  o Major bugfixes on 0.2.0.1-alpha:
+    - Fix an assertion failure related to servers without extra-info digests.
+      Resolves bugs 441 and 442.
+
+  o Minor build issues:
+    - Clear up some MIPSPro compiler warnings.
+
 
 Changes in version 0.2.0.1-alpha - 2007-06-01
   o Major features, server usability:
