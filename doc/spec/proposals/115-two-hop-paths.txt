@@ -121,39 +121,61 @@ Practical Issues:
 
   Guard nodes:
 
-  Since guard nodes do rotate due to network failure, node upgrades and
-  other issues, if you amortize the risk a user is exposed to over any
-  reasonable duration of Tor usage (on the order of a year), it is the
-  same with or without guard nodes. Assuming an adversary has c%/n% of
-  network bandwidth, and guards rotate on average with period R,
+  Since guard nodes can rotate due to client relocation, network
+  failure, node upgrades and other issues, if you amortize the risk a
+  mobile, dialup, or otherwise intermittently connected user is exposed to
+  over any reasonable duration of Tor usage (on the order of a year), it
+  is the same with or without guard nodes. Assuming an adversary has
+  c%/n% of network bandwidth, and guards rotate on average with period R,
   statistically speaking, it's merely a question of if the user wishes
   their risk to be concentrated with probability c/n over an expected
   period of R*c, and probability 0 over an expected period of R*(n-c),
   versus a continuous risk of (c/n)^2. So statistically speaking, guards
   only create a time-tradeoff of risk over the long run for normal Tor
-  usage. They do not reduce risk for normal client usage long term.[3]
+  usage.  Rotating guards do not reduce risk for normal client usage long
+  term.[3]
 
-  Guard nodes do offer a measure of accountability of sorts. If a user
-  was using a small set of guard nodes, and then is suddenly apprehended
-  as a result of Tor usage, having a fixed set of entry points to suspect
-  is a lot better than suspecting the whole network.
+  On other other hand, assuming a more stable method of guard selection
+  and preservation is devised, or a more stable client side network than 
+  my own is typical (which rotates guards frequently due to network issues
+  and moving about), guard nodes provide a tradeoff in the form of c/n% of
+  the users being "sacrificial users" who are exposed to high risk O(c/n)
+  of identification, while the rest of the network is exposed to zero
+  risk.
 
-  It has been speculated that a set of guard nodes can be used to
-  fingerprint a user (presumably by a local adversary) when they move
-  about. However, it is precisely this activity of moving your laptop that
-  causes guards to be marked as down by the Tor client, which then chooses
-  new ones.
+  The nature of Tor makes it likely an adversary will take a "shock and
+  awe" approach to suppressing Tor by rounding up a few users whose
+  browsing activity has been observed to be made into examples of, in an
+  attempt to prove that Tor is not perfect.
 
-  All of this is not terribly relevant to this proposal, but worth bearing
-  in mind, since guard nodes do have a bit more ability to wreak
-  havoc with two hops than with three.
+  Since this "shock and awe" attack can be applied with or without guard
+  nodes, stable guard nodes do offer a measure of accountability of sorts.
+  If a user was using a small set of guard nodes and knows them well, and
+  then is suddenly apprehended as a result of Tor usage, having a fixed
+  set of entry points to suspect is a lot better than suspecting the whole
+  network. Conversely, it can also give non-apprehended users comfort
+  that they are likely to remain safe indefinitely with their set of (now
+  presumably trusted) guards. This is probably the most beneficial
+  property of reliable guards: they deter the adversary from mounting
+  "shock and awe" attacks because the surviving users will not
+  intimidated, but instead made more confident. Of course, guards need
+  to be made much more stable and users need to be encouraged to
+  know them for this properly to really take effect. It probably only
+  has any bearing on people with super stable connections who are
+  careful about preserving their state file between Tor upgrades.
 
-  Two hop paths allow malicious guards to get considerably more benefit
-  from failing circuits if they do not extend to their colluding peers for
-  the exit hop. Since guards can detect the number of hops in a path via
-  either timing or by statistical analysis of the exit policy of the 2nd
-  hop, they can perform this attack predominantly against 2 hop users
-  only.
+  This beneficial property of client vigilance also carries over to an
+  active adversary, except in this case instead of relying on the user
+  to remember their guard nodes and somehow communicate them after
+  apprehension, the code can alert them to the presence of an active
+  adversary before they are apprehended. But only if they use guard nodes.
+
+  So lets consider the active adversary: Two hop paths allow malicious
+  guards to get considerably more benefit from failing circuits if they do
+  not extend to their colluding peers for the exit hop. Since guards can
+  detect the number of hops in a path via either timing or by statistical
+  analysis of the exit policy of the 2nd hop, they can perform this attack
+  predominantly against 2 hop users.
 
   This can be addressed by completely abandoning an entry guard after a
   certain ratio of extend or general circuit failures with respect to
@@ -170,7 +192,8 @@ Practical Issues:
   worse. Without guard nodes, it becomes much more difficult for clients
   to become alerted to Tor entry points that are failing circuits to make
   sure that they only devote bandwidth to carry traffic for streams which
-  they observe both ends.
+  they observe both ends. Yet the rouge entry points are still able to
+  significantly increase their success rates by failing circuits.
 
   For this reason, guard nodes should remain enabled for 2 hop users,
   at least until an IP-independent, undetectable guard scanner can
@@ -284,7 +307,7 @@ Migration:
   Phase 5: Make radiobutton in Vidalia, along with help entry
   that explains in layman's terms the risks involved.
 
-  Phase 6: Allow user to specify pathlength by HTTP URL suffix.
+  Phase 6: Allow user to specify path length by HTTP URL suffix.
 
 
 [1] http://p2pnet.net/story/11279
