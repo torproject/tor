@@ -2642,6 +2642,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     case CONN_TYPE_AP_NATD_LISTENER:
     case CONN_TYPE_DIR_LISTENER:
     case CONN_TYPE_CONTROL_LISTENER:
+    case CONN_TYPE_AP_DNS_LISTENER:
       tor_assert(conn->state == LISTENER_STATE_READY);
       break;
     case CONN_TYPE_OR:

@@ -1,3 +1,9 @@
+Changes in version 0.2.0.3-alpha - 2007-??-??
+  o Minor bugfixes ():
+    - Fix a crash when DNSPort is set more than once. (Patch from Robert
+      Hogan.)
+
+
 Changes in version 0.2.0.2-alpha - 2007-06-02
   o Major bugfixes on 0.2.0.1-alpha:
     - Fix an assertion failure related to servers without extra-info digests.
