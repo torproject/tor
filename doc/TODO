@@ -202,6 +202,7 @@ Things we'd like to do in 0.2.0.x:
       o Actually send back a useful answer.
       o Make it handle .onion and .exit correctly.
       - Document.
+      - Handle TCP DNS requests too?
     - Add a way to request DNS resolves from the controller.
     - A better UI for authority ops.
       - Follow weasel's proposal, crossed with mixminion dir config format
