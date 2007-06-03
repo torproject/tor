@@ -246,7 +246,7 @@ Things we'd like to do in 0.2.0.x:
         - Teach exit policies about ipv6 (consider ipv4/ipv6 interaction!)
         - ...
     - Let servers decide to support BEGIN_DIR but not DirPort.
-    - Tor should bind its ports before dropping privs, so users don't
+    o Tor should bind its ports before dropping privs, so users don't
       have to do the ipchains dance.
     - Blocking-resistance.
     - It would be potentially helpful to https requests on the OR port by

@@ -1,5 +1,10 @@
 Changes in version 0.2.0.3-alpha - 2007-??-??
-  o Minor bugfixes ():
+  o Minor features:
+    - Create listener connections before we setuid to the configured User and
+      Group.  This way, you can choose port values under 1024, start Tor as
+      root, and have Tor bind those ports before it changes to another UID.
+
+  o Minor bugfixes (dns):
     - Fix a crash when DNSPort is set more than once. (Patch from Robert
       Hogan.)
 

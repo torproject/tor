@@ -804,9 +804,34 @@ options_act_reversible(or_options_t *old_options, char **msg)
   int r = -1;
   int logs_marked = 0;
 
+  /* Daemonize _first_, since we only want to open most of this stuff in
+   * the subprocess. */
   if (running_tor && options->RunAsDaemon) {
     /* No need to roll back, since you can't change the value. */
     start_daemon();
+  }
+
+  /* We need to set the connection limit before we can open the listeners. */
+  options->_ConnLimit =
+    set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
+  if (options->_ConnLimit < 0) {
+    *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
+    goto rollback;
+  }
+  set_conn_limit = 1;
+
+  /* Set up libevent.  (We need to do this before we can register the
+   * listeners as listeners.) */
+  if (running_tor && !libevent_initialized) {
+    init_libevent();
+    libevent_initialized = 1;
+  }
+
+  /* Launch the listeners.  (We do this before we setuid, so we can bind to
+   * ports under 1024.) */
+  if (retry_all_listeners(0, replaced_listeners, new_listeners) < 0) {
+    *msg = tor_strdup("Failed to bind one of the listener ports.");
+    goto rollback;
   }
 
   /* Setuid/setgid as appropriate */
@@ -817,12 +842,6 @@ options_act_reversible(or_options_t *old_options, char **msg)
                         "See logs for details.");
       goto done;
     }
-  }
-
-  /* Set up libevent. */
-  if (running_tor && !libevent_initialized) {
-    init_libevent();
-    libevent_initialized = 1;
   }
 
   /* Ensure data directory is private; create if possible. */
@@ -840,19 +859,6 @@ options_act_reversible(or_options_t *old_options, char **msg)
    * we don't run Tor itself. */
   if (options->command != CMD_RUN_TOR)
     goto commit;
-
-  options->_ConnLimit =
-    set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
-  if (options->_ConnLimit < 0) {
-    *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
-    goto rollback;
-  }
-  set_conn_limit = 1;
-
-  if (retry_all_listeners(0, replaced_listeners, new_listeners) < 0) {
-    *msg = tor_strdup("Failed to bind one of the listener ports.");
-    goto rollback;
-  }
 
   mark_logs_temp(); /* Close current logs once new logs are open. */
   logs_marked = 1;
