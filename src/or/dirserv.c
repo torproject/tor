@@ -1279,43 +1279,6 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
   }
 }
 
-#if 0
-/** Helper: If we're authoritative and <b>auth_src</b> is set, use
- * <b>auth_src</b>, otherwise use <b>cache_src</b>.  If we're using
- * <b>auth_src</b> and it's been <b>dirty</b> for at least
- * DIR_REGEN_SLACK_TIME seconds, call <b>regenerate</b>() to make a fresh one.
- * Yields the compressed version of the directory object if <b>compress</b> is
- * set; otherwise return the uncompressed version.  (In either case, sets
- * *<b>out</b> and returns the size of the buffer in *<b>out</b>.)
- *
- * Use <b>auth_type</b> to help determine whether we're authoritative for
- * this kind of object.
- **/
-static size_t
-dirserv_get_obj(const char **out,
-                int compress,
-                cached_dir_t *cache_src,
-                cached_dir_t *auth_src,
-                time_t dirty, cached_dir_t *(*regenerate)(void),
-                const char *name,
-                authority_type_t auth_type)
-{
-  cached_dir_t *d = dirserv_pick_cached_dir_obj(
-      cache_src, auth_src,
-      dirty, regenerate, name, auth_type);
-
-  if (!d)
-    return 0;
-  *out = compress ? d->dir_z : d->dir;
-  if (*out) {
-    return compress ? d->dir_z_len : d->dir_len;
-  } else {
-    /* not yet available. */
-    return 0;
-  }
-}
-#endif
-
 /** Return the most recently generated encoded signed v1 directory,
  * generating a new one as necessary.  If not a v1 authoritative directory
  * may return NULL if no directory is yet cached. */
