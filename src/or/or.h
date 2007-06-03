@@ -1294,11 +1294,11 @@ typedef struct networkstatus_t {
 } networkstatus_t;
 
 /** DOCDOC */
-typedef struct ns_vote_routerstatus_t {
+typedef struct vote_routerstatus_t {
   routerstatus_t status;
   uint64_t flags;
   char *version;
-} ns_vote_routerstatus_t;
+} vote_routerstatus_t;
 
 /** DOCDOC */
 typedef struct networkstatus_vote_t {
@@ -1306,16 +1306,24 @@ typedef struct networkstatus_vote_t {
   time_t valid_after;
   time_t fresh_until;
   time_t valid_until;
+  int vote_seconds;
+  int dist_seconds;
+
   char *client_versions;
   char *server_versions;
-  char **known_flags;
+  char **known_flags; /* NULL-terminated */
+
+  char *nickname;
   char identity_digest[DIGEST_LEN];
   char *address;
   uint32_t addr;
   uint16_t dir_port;
   uint16_t or_port;
+
   struct authority_cert_t *cert;
+
   char *contact;
+
   smartlist_t *routerstatus_list;
 } networkstatus_vote_t;
 
@@ -2701,6 +2709,10 @@ int routerstatus_format_entry(char *buf, size_t buf_len,
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 
+/********************************* dirvote.c ************************/
+
+void networkstatus_vote_free(networkstatus_vote_t *ns);
+
 /********************************* dns.c ***************************/
 
 int dns_init(void);
@@ -3365,6 +3377,7 @@ void assert_addr_policy_ok(addr_policy_t *t);
 void dump_distinct_digest_count(int severity);
 
 networkstatus_t *networkstatus_parse_from_string(const char *s);
+networkstatus_vote_t *networkstatus_parse_vote_from_string(const char *s);
 
 void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_parse_from_string(const char *s,

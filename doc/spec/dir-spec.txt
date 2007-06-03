@@ -704,13 +704,25 @@ $Id$
 
         [Exactly once.]
 
-        The start of the Interval for this vote.
+        The start of the Interval for this vote. XXXX
+
+    "fresh-until" SP YYYY-MM-DD SP HH:MM:SS NL
+
+        [Exactly once.]
+
+        XXXX
 
     "valid-until" SP YYYY-MM-DD SP HH:MM:SS NL
 
         [Exactly once.]
 
-        The end of the Interval for this vote, plus CONSENSUS_DELAY.
+        The end of the Interval for this vote. XXXX
+
+    "voting-delay" SP VoteSeconds SP DistSeconds NL
+
+        [Exactly once.]
+
+        XXXX
 
     "client-versions" SP VersionList NL
 
@@ -968,6 +980,7 @@ $Id$
         The digest of the consensus being signed.
 
     "valid-after" SP YYYY-MM-DD SP HH:MM:SS NL
+    "fresh-until" SP YYYY-MM-DD SP HH:MM:SS NL
     "valid-until" SP YYYY-MM-DD SP HH:MM:SS NL
 
         [As in the consensus]

@@ -67,7 +67,11 @@ typedef enum {
   K_DIR_KEY_CERTIFICATION,
 
   K_VOTE_STATUS,
+  K_VALID_AFTER,
+  K_FRESH_UNTIL,
   K_VALID_UNTIL,
+  K_VOTING_DELAY,
+
   K_KNOWN_FLAGS,
   K_VOTE_DIGEST,
   K_CONSENSUS_DIGEST,
@@ -110,7 +114,7 @@ typedef enum {
 } obj_syntax;
 
 #define AT_START 1
-#define AT_END 1
+#define AT_END 2
 
 /** Determines the parsing rules for a single token type. */
 typedef struct token_rule_t {
@@ -152,9 +156,9 @@ typedef struct token_rule_t {
 /** An item that must appear exactly once */
 #define T1(s,t,a,o)   { s, t, a, o, 1, 1, 0 }
 /** An item that must appear exactly once, at the start of the document */
-#define T1_START(s,t,a,o)   { s, t, a, o, 1, 1, 0, AT_START }
+#define T1_START(s,t,a,o)   { s, t, a, o, 1, 1, AT_START }
 /** An item that must appear exactly once, at the end of the document */
-#define T1_END(s,t,a,o)   { s, t, a, o, 1, 1, 0, AT_END }
+#define T1_END(s,t,a,o)   { s, t, a, o, 1, 1, AT_END }
 /** An item that must appear one or more times */
 #define T1N(s,t,a,o)  { s, t, a, o, 1, INT_MAX, 0 }
 /** An item that must appear no more than once */
@@ -229,7 +233,7 @@ static token_rule_t netstatus_token_table[] = {
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T1( "dir-signing-key",     K_DIR_SIGNING_KEY,  NO_ARGS,    NEED_KEY_1024 ),
   T1( "fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
-  T1( "network-status-version", K_NETWORK_STATUS_VERSION,
+  T1_START("network-status-version", K_NETWORK_STATUS_VERSION,
                                                     GE(1),   NO_OBJ ),
   T1( "dir-source",          K_DIR_SOURCE,          GE(3),   NO_OBJ ),
   T01("dir-options",         K_DIR_OPTIONS,         ARGS,    NO_OBJ ),
@@ -283,16 +287,15 @@ static token_rule_t dir_key_certificate_table[] = {
   END_OF_TABLE
 };
 
-#if 0
-/* XXXX This stuff is commented out for now so we can avoid warnings about
- * unused variables. */
-
-static token_rule_t status_vote_table[] = {
+static token_rule_t networkstatus_vote_token_table[] = {
   T1("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
   T1("vote-status",            K_VOTE_STATUS,      GE(1),       NO_OBJ ),
   T1("published",              K_PUBLISHED,        CONCAT_ARGS, NO_OBJ ),
+  T1("valid-after",            K_VALID_AFTER,      CONCAT_ARGS, NO_OBJ ),
+  T1("fresh-until",            K_FRESH_UNTIL,      CONCAT_ARGS, NO_OBJ ),
   T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
+  T1("voting-delay",           K_VOTING_DELAY,     GE(2),       NO_OBJ ),
   T1("known-flags",            K_KNOWN_FLAGS,      CONCAT_ARGS, NO_OBJ ),
   T( "fingerprint",            K_FINGERPRINT,      CONCAT_ARGS, NO_OBJ ),
 
@@ -309,12 +312,18 @@ static token_rule_t status_vote_table[] = {
   END_OF_TABLE
 };
 
+#if 0
+/* XXXX This stuff is commented out for now so we can avoid warnings about
+ * unused variables. */
+
 static token_rule_t status_consensus_table[] = {
   T1("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
   T1("vote-status",            K_VOTE_STATUS,      GE(1),       NO_OBJ ),
-  T1("published",              K_PUBLISHED,        CONCAT_ARGS, NO_OBJ ),
+  T1("valid-after",            K_VALID_AFTER,      CONCAT_ARGS, NO_OBJ ),
+  T1("fresh-until",            K_FRESH_UNTIL,      CONCAT_ARGS, NO_OBJ ),
   T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
+  T1("voting-delay",           K_VOTING_DELAY,     GE(2),       NO_OBJ ),
 
   CERTIFICATE_MEMBERS
 
@@ -335,13 +344,13 @@ static token_rule_t status_consensus_table[] = {
 
   END_OF_TABLE
 };
+#endif
 
-static token_rule_t vote_footer_token_table[] = {
-  T01("consensus-digest",    K_CONSENSUS_DIGEST,    EQ(1),   NO_OBJ ),
+static token_rule_t networkstatus_vote_footer_token_table[] = {
   T(  "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
   END_OF_TABLE
 };
-#endif
+
 
 #undef T
 
@@ -1450,7 +1459,7 @@ find_start_of_next_routerstatus(const char *s)
 static routerstatus_t *
 routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
                                      networkstatus_vote_t *vote,
-                                     uint64_t *flags_out)
+                                     vote_routerstatus_t *vote_rs)
 {
   const char *eos;
   routerstatus_t *rs = NULL;
@@ -1458,7 +1467,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
   char timebuf[ISO_TIME_LEN+1];
   struct in_addr in;
   tor_assert(tokens);
-  tor_assert(bool_eq(flags_out, vote));
+  tor_assert(bool_eq(vote, vote_rs));
 
   eos = find_start_of_next_routerstatus(*s);
 
@@ -1473,7 +1482,11 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
   tok = find_first_by_keyword(tokens, K_R);
   tor_assert(tok);
   tor_assert(tok->n_args >= 8);
-  rs = tor_malloc_zero(sizeof(routerstatus_t));
+  if (vote_rs) {
+    rs = &vote_rs->status;
+  } else {
+    rs = tor_malloc_zero(sizeof(routerstatus_t));
+  }
 
   if (!is_legal_nickname(tok->args[0])) {
     log_warn(LD_DIR,
@@ -1516,10 +1529,11 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
   tok = find_first_by_keyword(tokens, K_S);
   if (tok && vote) {
     int i, j;
+    vote_rs->flags = 0;
     for (i=0; i < tok->n_args; ++i) {
       for (j=0; vote->known_flags[j]; ++j) {
         if (!strcmp(tok->args[i], vote->known_flags[j])) {
-          *flags_out |= (1<<j);
+          vote_rs->flags |= (1<<j);
           break;
         }
       }
@@ -1561,6 +1575,10 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
       rs->version_supports_begindir =
         tor_version_as_new_as(tok->args[0], "0.2.0.0-alpha-dev (r10070)");
     }
+    if (vote_rs) {
+      vote_rs->version = tok->args[0];
+      tok->args[0] = NULL; /* suppress free() */
+    }
   }
 
   if (!strcasecmp(rs->nickname, UNNAMED_ROUTER_NICKNAME))
@@ -1568,7 +1586,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
 
   goto done;
  err:
-  if (rs)
+  if (rs && !vote_rs)
     routerstatus_free(rs);
   rs = NULL;
  done:
@@ -1597,7 +1615,7 @@ _free_duplicate_routerstatus_entry(void *e)
   routerstatus_free(e);
 }
 
-/** Given a versioned (v2 or later) network-status object in <b>s</b>, try to
+/** Given a v2 network-status object in <b>s</b>, try to
  * parse it and return the result.  Return NULL on failure.  Check the
  * signature of the network status, but do not (yet) check the signing key for
  * authority.
@@ -1629,7 +1647,12 @@ networkstatus_parse_from_string(const char *s)
   memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
   tok = find_first_by_keyword(tokens, K_NETWORK_STATUS_VERSION);
-  tor_assert(tok);
+  tor_assert(tok && tok->n_args >= 1);
+  if (strcmp(tok->args[0], "2")) {
+    log_warn(LD_BUG, "Got a non-v2 networkstatus. Version was "
+             "%s", escaped(tok->args[0]));
+    goto err;
+  }
 
   tok = find_first_by_keyword(tokens, K_DIR_SOURCE);
   tor_assert(tok);
@@ -1761,6 +1784,200 @@ networkstatus_parse_from_string(const char *s)
 
   return ns;
 }
+
+/** DOCDOC */
+networkstatus_vote_t *
+networkstatus_parse_vote_from_string(const char *s)
+{
+  smartlist_t *tokens = smartlist_create();
+  smartlist_t *rs_tokens = NULL, *footer_tokens = NULL;
+  networkstatus_vote_t *ns = NULL;
+  char ns_digest[DIGEST_LEN], declared_identity[DIGEST_LEN],
+    declared_digest[DIGEST_LEN];
+  const char *cert, *end_of_cert = NULL, *end_of_header, *end_of_footer;
+  directory_token_t *tok;
+  int ok;
+  struct in_addr in;
+
+  if (router_get_networkstatus_v3_hash(s, ns_digest)) {
+    log_warn(LD_DIR, "Unable to compute digest of network-status");
+    goto err;
+  }
+
+  end_of_header = find_start_of_next_routerstatus(s);
+  if (tokenize_string(s, end_of_header, tokens,
+                      networkstatus_vote_token_table)) {
+    log_warn(LD_DIR, "Error tokenizing network-status vote header.");
+    goto err;
+  }
+
+  ns = tor_malloc_zero(sizeof(networkstatus_vote_t));
+  if (!(cert = strstr(s, "\ndir-key-certificate-version")))
+    goto err;
+  ++cert;
+  ns->cert = authority_cert_parse_from_string(cert, &end_of_cert);
+  if (!ns->cert || !end_of_cert || end_of_cert > end_of_header)
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_VOTE_STATUS);
+  tor_assert(tok);
+  tor_assert(tok->n_args);
+  if (strcmp(tok->args[0], "vote")) {
+    log_warn(LD_DIR, "Unrecognized vote status %s in network-status vote.",
+             escaped(tok->args[0]));
+    goto err;
+  }
+
+  tok = find_first_by_keyword(tokens, K_PUBLISHED);
+  if (parse_iso_time(tok->args[0], &ns->published))
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_VALID_AFTER);
+  if (parse_iso_time(tok->args[0], &ns->valid_after))
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_FRESH_UNTIL);
+  if (parse_iso_time(tok->args[0], &ns->fresh_until))
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_VALID_UNTIL);
+  if (parse_iso_time(tok->args[0], &ns->valid_until))
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_VOTING_DELAY);
+  tor_assert(tok->n_args >= 2);
+  ns->vote_seconds =
+    (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &ok, NULL);
+  if (!ok)
+    goto err;
+  ns->dist_seconds =
+    (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &ok, NULL);
+  if (!ok)
+    goto err;
+
+  if ((tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS))) {
+    ns->client_versions = tok->args[0];
+    tok->args[0] = NULL;
+  }
+  if ((tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS))) {
+    ns->server_versions = tok->args[0];
+    tok->args[0] = NULL;
+  }
+
+  tok = find_first_by_keyword(tokens, K_KNOWN_FLAGS);
+  ns->known_flags = tor_malloc(sizeof(char*)*(tok->n_args+1));
+  memcpy(ns->known_flags, tok->args, sizeof(char*)*(tok->n_args));
+  ns->known_flags[tok->n_args] = NULL;
+  tok->n_args = 0; /* suppress free of args members, but not of args itself. */
+
+  tok = find_first_by_keyword(tokens, K_DIR_SOURCE);
+  tor_assert(tok);
+  tor_assert(tok->n_args >= 5);
+  ns->nickname = tor_strdup(tok->args[0]);
+  if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
+      base16_decode(ns->identity_digest, sizeof(ns->identity_digest),
+                    tok->args[1], HEX_DIGEST_LEN) < 0) {
+    log_warn(LD_DIR, "Error decoding identity digest %s in "
+             "network-status vote.", escaped(tok->args[1]));
+    goto err;
+  }
+  ns->address = tor_strdup(tok->args[2]);
+  if (!tor_inet_aton(tok->args[3], &in)) {
+    log_warn(LD_DIR, "Error decoding IP address %s in network-status vote.",
+             escaped(tok->args[3]));
+    goto err;
+  }
+  ns->dir_port = (uint64_t)
+    (int) tor_parse_long(tok->args[4], 10, 0, 65535, &ok, NULL);
+  if (!ok)
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_CONTACT);
+  if (tok) {
+    ns->contact = tor_strdup(tok->args[0]);
+  }
+
+  /* Parse routerstatus lines. */
+  rs_tokens = smartlist_create();
+  s = end_of_header;
+  ns->routerstatus_list = smartlist_create();
+  while (!strcmpstart(s, "r ")) {
+    vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+    if (routerstatus_parse_entry_from_string(&s, tokens, ns, rs))
+      smartlist_add(ns->routerstatus_list, rs);
+    else {
+      tor_free(rs->version);
+      tor_free(rs);
+    }
+  }
+
+  /* Parse footer; check signature. */
+  footer_tokens = smartlist_create();
+  end_of_footer = s + strlen(s);
+  if (tokenize_string(s, end_of_footer, footer_tokens,
+                      networkstatus_vote_footer_token_table)) {
+    log_warn(LD_DIR, "Error tokenizing network-status vote footer.");
+    goto err;
+  }
+  if (!(tok = find_first_by_keyword(footer_tokens, K_DIRECTORY_SIGNATURE))) {
+    log_warn(LD_DIR, "No signature on network-status vote.");
+    goto err;
+  }
+  tor_assert(tok->n_args >= 2);
+  if (strlen(tok->args[0]) != HEX_DIGEST_LEN ||
+      base16_decode(declared_identity, sizeof(ns->identity_digest),
+                    tok->args[0], HEX_DIGEST_LEN) < 0) {
+    log_warn(LD_DIR, "Error decoding declared identity %s in "
+             "network-status vote.", escaped(tok->args[1]));
+    goto err;
+  }
+  if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
+      base16_decode(declared_digest, sizeof(ns->identity_digest),
+                    tok->args[1], HEX_DIGEST_LEN) < 0) {
+    log_warn(LD_DIR, "Error decoding declared digest %s in "
+             "network-status vote.", escaped(tok->args[1]));
+    goto err;
+  }
+  if (memcmp(declared_identity, ns->cert->cache_info.identity_digest,
+             DIGEST_LEN)) {
+    log_warn(LD_DIR, "Digest mismatch between declared and actual on "
+             "network-status vote.");
+    goto err;
+  }
+  if (memcmp(declared_digest, ns_digest, DIGEST_LEN)) {
+    log_warn(LD_DIR, "Digest mismatch between declared and actual on "
+             "network-status vote.");
+    goto err;
+  }
+  if (check_signature_token(ns_digest, tok, ns->cert->signing_key, 0,
+                            "network-status vote"))
+    goto err;
+
+  /* XXXX020 check dates for plausibility.  ??? */
+
+  goto done;
+ err:
+  if (ns)
+    networkstatus_vote_free(ns);
+  ns = NULL;
+ done:
+  if (tokens) {
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    smartlist_free(tokens);
+  }
+  if (rs_tokens) {
+    SMARTLIST_FOREACH(rs_tokens, directory_token_t *, t, token_free(t));
+    smartlist_free(rs_tokens);
+  }
+  if (footer_tokens) {
+    SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_free(t));
+    smartlist_free(footer_tokens);
+  }
+
+
+  return ns;
+}
+
 
 /** Parse the addr policy in the string <b>s</b> and return it.  If
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
