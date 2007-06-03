@@ -811,27 +811,29 @@ options_act_reversible(or_options_t *old_options, char **msg)
     start_daemon();
   }
 
-  /* We need to set the connection limit before we can open the listeners. */
-  options->_ConnLimit =
-    set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
-  if (options->_ConnLimit < 0) {
-    *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
-    goto rollback;
-  }
-  set_conn_limit = 1;
+  if (running_tor) {
+    /* We need to set the connection limit before we can open the listeners. */
+    options->_ConnLimit =
+      set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
+    if (options->_ConnLimit < 0) {
+      *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
+      goto rollback;
+    }
+    set_conn_limit = 1;
 
-  /* Set up libevent.  (We need to do this before we can register the
-   * listeners as listeners.) */
-  if (running_tor && !libevent_initialized) {
-    init_libevent();
-    libevent_initialized = 1;
-  }
+    /* Set up libevent.  (We need to do this before we can register the
+     * listeners as listeners.) */
+    if (running_tor && !libevent_initialized) {
+      init_libevent();
+      libevent_initialized = 1;
+    }
 
-  /* Launch the listeners.  (We do this before we setuid, so we can bind to
-   * ports under 1024.) */
-  if (retry_all_listeners(0, replaced_listeners, new_listeners) < 0) {
-    *msg = tor_strdup("Failed to bind one of the listener ports.");
-    goto rollback;
+    /* Launch the listeners.  (We do this before we setuid, so we can bind to
+     * ports under 1024.) */
+    if (retry_all_listeners(0, replaced_listeners, new_listeners) < 0) {
+      *msg = tor_strdup("Failed to bind one of the listener ports.");
+      goto rollback;
+    }
   }
 
   /* Setuid/setgid as appropriate */
@@ -857,7 +859,7 @@ options_act_reversible(or_options_t *old_options, char **msg)
 
   /* Bail out at this point if we're not going to be a client or server:
    * we don't run Tor itself. */
-  if (options->command != CMD_RUN_TOR)
+  if (!running_tor)
     goto commit;
 
   mark_logs_temp(); /* Close current logs once new logs are open. */
