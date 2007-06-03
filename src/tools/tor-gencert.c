@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/objects.h>
@@ -354,6 +357,9 @@ main(int argc, char **argv)
     fprintf(stderr, "Couldn't seed RNG.\n");
     goto done;
   }
+  /* Make sure that files are made private. */
+  umask(0700);
+
   if (parse_commandline(argc, argv))
     goto done;
   if (load_identity_key())
