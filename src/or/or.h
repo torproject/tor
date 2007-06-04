@@ -1300,9 +1300,28 @@ typedef struct vote_routerstatus_t {
   char *version;
 } vote_routerstatus_t;
 
-/** DOCDOC */
+/* DOCDOC */
+typedef struct networkstatus_voter_info_t {
+  char *nickname;
+  char identity_digest[DIGEST_LEN];
+  char *address;
+  uint32_t addr;
+  uint16_t dir_port;
+  uint16_t or_port;
+  char *contact;
+  char vote_digest[DIGEST_LEN]; /* consensus only. */
+  char signing_key_digest[DIGEST_LEN]; /* This part is _not_ signed. */
+
+  char *pending_signature;
+  int pending_signature_len;
+  int bad_signature;
+} networkstatus_voter_info_t;
+
+/*XXXX020 rename to networkstatus_t once it works. */
+/** DOCDOC is vote or consensus. */
 typedef struct networkstatus_vote_t {
-  time_t published;
+  int is_vote;
+  time_t published; /* vote only. */
   time_t valid_after;
   time_t fresh_until;
   time_t valid_until;
@@ -1313,20 +1332,12 @@ typedef struct networkstatus_vote_t {
   char *server_versions;
   char **known_flags; /* NULL-terminated */
 
-  char *nickname;
-  char identity_digest[DIGEST_LEN];
-  char *address;
-  uint32_t addr;
-  uint16_t dir_port;
-  uint16_t or_port;
+  smartlist_t *voters; /* list of networkstatus_voter_info_t */
 
-  struct authority_cert_t *cert;
+  struct authority_cert_t *cert; /* vote only. */
 
-  char *contact;
-
-  char vote_digest[DIGEST_LEN];
-
-  smartlist_t *routerstatus_list;
+  smartlist_t *routerstatus_list; /* holds vote_routerstatus_t if is_vote,
+                                   * otherwise just routerstatus_t. */
 } networkstatus_vote_t;
 
 /** Contents of a directory of onion routers. */
@@ -2718,6 +2729,9 @@ void networkstatus_vote_free(networkstatus_vote_t *ns);
 char *networkstatus_compute_consensus(smartlist_t *votes,
                                       crypto_pk_env_t *identity_key,
                                       crypto_pk_env_t *signing_key);
+networkstatus_voter_info_t *networkstatus_get_voter_by_id(
+                                       networkstatus_vote_t *vote,
+                                       const char *identity);
 
 /********************************* dns.c ***************************/
 
@@ -3383,7 +3397,8 @@ void assert_addr_policy_ok(addr_policy_t *t);
 void dump_distinct_digest_count(int severity);
 
 networkstatus_t *networkstatus_parse_from_string(const char *s);
-networkstatus_vote_t *networkstatus_parse_vote_from_string(const char *s);
+networkstatus_vote_t *networkstatus_parse_vote_from_string(const char *s,
+                                                           int is_vote);
 
 void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_parse_from_string(const char *s,

@@ -66,7 +66,7 @@ Things we'd like to do in 0.2.0.x:
       - Get authorities voting
         . Implement parsing for new document formats
           o Parse key certificates
-          - Parse votes and consensuses
+          o Parse votes and consensuses
           - Unit tests for above
         . Code to manage key certificates
           o Generate certificates
@@ -77,7 +77,7 @@ Things we'd like to do in 0.2.0.x:
           o Avoid double-checking signatures every time we get a vote.
           - Warn about expired stuff.
         o Code to generate votes
-        - Code to generate consensus from a list of votes
+        o Code to generate consensus from a list of votes
         - Add a signature to a consensus.
         - Code to check signatures on a consensus
         - Push/pull documents as appropriate.

@@ -26,9 +26,15 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
       tor_free(ns->known_flags[i]);
     tor_free(ns->known_flags);
   }
-  tor_free(ns->nickname);
-  tor_free(ns->address);
-  tor_free(ns->contact);
+  if (ns->voters) {
+    SMARTLIST_FOREACH(ns->voters, networkstatus_voter_info_t *, voter,
+    {
+      tor_free(voter->nickname);
+      tor_free(voter->address);
+      tor_free(voter->contact);
+    });
+    smartlist_free(ns->voters);
+  }
   if (ns->cert)
     authority_cert_free(ns->cert);
 
@@ -44,6 +50,19 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
 
   memset(ns, 11, sizeof(*ns));
   tor_free(ns);
+}
+
+/** DOCDOC */
+networkstatus_voter_info_t *
+networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
+                              const char *identity)
+{
+  if (!vote || !vote->voters)
+    return NULL;
+  SMARTLIST_FOREACH(vote->voters, networkstatus_voter_info_t *, voter,
+    if (!memcmp(voter->identity_digest, identity, DIGEST_LEN))
+      return voter);
+  return NULL;
 }
 
 /** DOCDOC */
@@ -92,12 +111,23 @@ median_int(smartlist_t *ints)
   return *(time_t*)smartlist_get(ints, idx);
 }
 
+static networkstatus_voter_info_t *
+get_voter(const networkstatus_vote_t *vote)
+{
+  tor_assert(vote);
+  tor_assert(vote->is_vote);
+  tor_assert(vote->voters);
+  tor_assert(smartlist_len(vote->voters) == 1);
+  return smartlist_get(vote->voters, 0);
+}
+
 /** DOCDOC */
 static int
 _compare_votes_by_authority_id(const void **_a, const void **_b)
 {
   const networkstatus_vote_t *a = *_a, *b = *_b;
-  return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
+  return memcmp(get_voter(a)->identity_digest,
+                get_voter(b)->identity_digest, DIGEST_LEN);
 }
 
 /** DOCDOC */
@@ -193,7 +223,8 @@ compute_routerstatus_consensus(smartlist_t *votes)
       ++cur_n;
     } else {
       if (cur_n > most_n ||
-          (cur && cur_n == most_n && cur->status.published_on > most_published)) {
+          (cur && cur_n == most_n &&
+           cur->status.published_on > most_published)) {
         most = cur;
         most_n = cur_n;
         most_published = cur->status.published_on;
@@ -246,7 +277,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
   }
   /* XXXX020 somebody needs to check vote authority. It could be this
    * function, it could be somebody else. */
-
   flags = smartlist_create();
 
   /* Compute medians of time-related things, and figure out how many
@@ -363,20 +393,23 @@ networkstatus_compute_consensus(smartlist_t *votes,
     char ip[INET_NTOA_BUF_LEN];
     char fingerprint[HEX_DIGEST_LEN+1];
     char votedigest[HEX_DIGEST_LEN+1];
+    networkstatus_voter_info_t *voter = get_voter(v);
 
-    in.s_addr = htonl(v->addr);
+    in.s_addr = htonl(voter->addr);
     tor_inet_ntoa(&in, ip, sizeof(ip));
-    base16_encode(fingerprint, sizeof(fingerprint), v->identity_digest,
+    base16_encode(fingerprint, sizeof(fingerprint), voter->identity_digest,
                   DIGEST_LEN);
-    base16_encode(votedigest, sizeof(votedigest), v->vote_digest, DIGEST_LEN);
+    base16_encode(votedigest, sizeof(votedigest), voter->vote_digest,
+                  DIGEST_LEN);
 
     tor_snprintf(buf, sizeof(buf),
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n"
                  "vote-digest %s\n",
-                 v->nickname, fingerprint, v->address, ip, v->dir_port,
-                    v->or_port,
-                 v->contact,
+                 voter->nickname, fingerprint, voter->address, ip,
+                    voter->dir_port,
+                    voter->or_port,
+                 voter->contact,
                  votedigest);
     smartlist_add(chunks, tor_strdup(buf));
   });
@@ -564,19 +597,21 @@ networkstatus_compute_consensus(smartlist_t *votes,
   {
     char digest[DIGEST_LEN];
     char fingerprint[HEX_DIGEST_LEN+1];
-    char hex_digest[HEX_DIGEST_LEN+1];
+    char signing_key_fingerprint[HEX_DIGEST_LEN+1];
+
     char buf[4096];
     smartlist_add(chunks, tor_strdup("directory-signature "));
 
     /* Compute the hash of the chunks. */
     hash_list_members(digest, chunks);
 
-    /* Get hex stuff as needed. */
-    base16_encode(hex_digest, sizeof(hex_digest), digest, DIGEST_LEN);
+    /* Get the fingerprints */
     crypto_pk_get_fingerprint(identity_key, fingerprint, 0);
+    crypto_pk_get_fingerprint(signing_key, signing_key_fingerprint, 0);
 
     /* add the junk that will go at the end of the line. */
-    tor_snprintf(buf, sizeof(buf), "%s %s\n", hex_digest, fingerprint);
+    tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
+                 signing_key_fingerprint);
     /* And the signature. */
     /* XXXX020 check return */
     router_append_dirobj_signature(buf, sizeof(buf), digest, signing_key);
@@ -593,3 +628,4 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   return result;
 }
+

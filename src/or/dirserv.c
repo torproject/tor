@@ -1897,19 +1897,19 @@ generate_networkstatus_opinion(int v2)
     }
     outp += strlen(outp);
   } else {
-    char hex_digest[HEX_DIGEST_LEN+1];
-    if (tor_snprintf(outp, endp-outp, "directory-signature %s ",
-                     fingerprint)<0) {
+    char signing_key_fingerprint[FINGERPRINT_LEN+1];
+    if (tor_snprintf(outp, endp-outp, "directory-signature ")<0) {
       log_warn(LD_BUG, "Unable to start signature line.");
       goto done;
     }
-    if (router_get_networkstatus_v3_hash(status, digest)<0) {
-      log_warn(LD_BUG, "Unable to hash network status vote");
+    outp += strlen(outp);
+
+    if (crypto_pk_get_fingerprint(private_key, signing_key_fingerprint, 0)<0) {
+      log_warn(LD_BUG, "Unable to get fingerprint for signing key");
       goto done;
     }
-    base16_encode(hex_digest, sizeof(hex_digest), digest, DIGEST_LEN);
-    outp += strlen(outp);
-    if (tor_snprintf(outp, endp-outp, "%s\n", hex_digest)<0) {
+    if (tor_snprintf(outp, endp-outp, "%s %s\n", fingerprint,
+                     signing_key_fingerprint)<0) {
       log_warn(LD_BUG, "Unable to end signature line.");
       goto done;
     }

@@ -759,10 +759,10 @@ $Id$
         [Exactly once, at start]
 
         Describes this authority.  The nickname is a convenient identifier
-        for the authority.  The identity is an uppercase hex fingerprint of the
-        authority's current identity key.  The address is the server's
-        hostname.  The IP is the server's current IP address, and dirport
-        is its current directory port.
+        for the authority.  The identity is an uppercase hex fingerprint of
+        the authority's current (v3 authority) identity key.  The address is
+        the server's hostname.  The IP is the server's current IP address,
+        and dirport is its current directory port. XXXXorport
 
     "contact" SP string NL
 
@@ -787,13 +787,6 @@ $Id$
         [At most once.]
 
         As in the authority section of a vote.
-
-    "fingerprint" SP fingerprint NL
-
-        [Exactly once.]
-
-        An upper-case hex fingerprint, without spaces, of the authority's
-        current identity key.
 
     "vote-digest" SP digest NL
 
@@ -861,17 +854,16 @@ $Id$
    The signature section contains the following item, which appears
    Exactly Once for a vote, and At Least Once for a consensus.
 
-    "directory-signature" SP identity SP digest NL Signature
+    "directory-signature" SP identity SP signing-key-digest NL Signature
 
         This is a signature of the status document, with the initial item
         "network-status-version", and the signature item
-        "directory-signature", using the signing key.  (In this case, we
-        take the hash through the _space_ after directory-signature, not
-        the newline: this ensures that all authorities sign the same
-        thing.)  "identity" is the hex-encoded digest of the authority
-        identity key of the signing authority, and "digest" is the
-        hex-encoded digest of the current authority signing key of the
-        signing authority.
+        "directory-signature", using the signing key.  (In this case, we take
+        the hash through the _space_ after directory-signature, not the
+        newline: this ensures that all authorities sign the same thing.)
+        "identity" is the hex-encoded digest of the authority identity key of
+        the signing authority, and "signing-key-digest" is the hex-encoded
+        digest of the current authority signing key of the signing authority.
 
 3.3. Deciding how to vote.
 
