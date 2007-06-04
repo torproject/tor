@@ -566,7 +566,6 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   s = tor_malloc(len+1);
   memcpy(s, cp, len);
   s[len]='\0';
-  /* XXXX020 make this file get created with mode 600. */
   r = write_str_to_file(fname, s, 0);
   BIO_free(bio);
   tor_free(s);

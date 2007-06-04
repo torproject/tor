@@ -1371,7 +1371,9 @@ check_private_dir(const char *dirname, cpd_check_t check)
 /** Create a file named <b>fname</b> with the contents <b>str</b>.  Overwrite
  * the previous <b>fname</b> if possible.  Return 0 on success, -1 on failure.
  *
- * This function replaces the old file atomically, if possible.
+ * This function replaces the old file atomically, if possible.  This
+ * function, and all other functions in util.c that create files, create them
+ * with mode 0600.
  */
 int
 write_str_to_file(const char *fname, const char *str, int bin)

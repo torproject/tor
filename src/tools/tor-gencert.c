@@ -9,6 +9,8 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <openssl/evp.h>
 #include <openssl/pem.h>
@@ -149,6 +151,7 @@ load_identity_key(void)
   FILE *f;
 
   if (make_new_id) {
+    int fd;
     RSA *key;
     if (status != FN_NOENT) {
       log_err(LD_GENERAL, "--create-identity-key was specified, but %s "
@@ -168,8 +171,15 @@ load_identity_key(void)
       return 1;
     }
 
-    if (!(f = fopen(identity_key_file, "w"))) {
-      log_err(LD_GENERAL, "Couldn't open %s for writing: %s",
+    if ((fd = open(identity_key_file, O_CREAT|O_EXCL|O_WRONLY, 0400))<0) {
+      log_err(LD_GENERAL, "Couldn't fdopen %s for writing: %s",
+              identity_key_file, strerror(errno));
+      return 1;
+    }
+
+    if (!(f = fdopen(fd, "w"))) {
+      close(fd);
+      log_err(LD_GENERAL, "Couldn't fdopen %s for writing: %s",
               identity_key_file, strerror(errno));
       return 1;
     }
@@ -214,6 +224,7 @@ load_identity_key(void)
 static int
 generate_signing_key(void)
 {
+  int fd;
   FILE *f;
   RSA *key;
   log_notice(LD_GENERAL, "Generating %d-bit RSA signing key.",
@@ -229,8 +240,15 @@ generate_signing_key(void)
     return 1;
   }
 
-  if (!(f = fopen(signing_key_file, "w"))) {
-    log_err(LD_GENERAL, "Couldn't open %s for reading: %s",
+  if ((fd = open(signing_key_file, O_CREAT|O_EXCL|O_WRONLY, 0600))<0) {
+    log_err(LD_GENERAL, "Couldn't open %s for writing: %s",
+            signing_key_file, strerror(errno));
+    return 1;
+  }
+
+  if (!(f = fdopen(fd, "w"))) {
+    close(fd);
+    log_err(LD_GENERAL, "Couldn't open %s for writing: %s",
             signing_key_file, strerror(errno));
     return 1;
   }
@@ -358,7 +376,7 @@ main(int argc, char **argv)
     goto done;
   }
   /* Make sure that files are made private. */
-  umask(0700);
+  umask(0077);
 
   if (parse_commandline(argc, argv))
     goto done;
