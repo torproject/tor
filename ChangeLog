@@ -9,6 +9,11 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Fix a crash when DNSPort is set more than once. (Patch from Robert
       Hogan.)
 
+  o Minor bugfixes (hidden services):
+    - Stop tearing down the whole circuit when the user asks for a
+      connection to a port that the hidden service didn't configure.
+      Resolves bug 444.
+
 
 Changes in version 0.2.0.2-alpha - 2007-06-02
   o Major bugfixes on 0.2.0.1-alpha:

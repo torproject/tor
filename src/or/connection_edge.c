@@ -2235,8 +2235,6 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);
       connection_free(TO_CONN(n_stream));
-      /* knock the whole thing down, somebody screwed up */
-      circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
       tor_free(address);
       return 0;
     }
