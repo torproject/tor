@@ -161,6 +161,8 @@ compare_votes(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
     return r;
   if ((r = (b->status.published_on - a->status.published_on)))
     return r;
+  if ((r = strcmp(b->status.nickname, a->status.nickname)))
+    return r;
   if ((r = (((int)b->status.or_port) - ((int)a->status.or_port))))
     return r;
   if ((r = (((int)b->status.dir_port) - ((int)a->status.dir_port))))
@@ -212,13 +214,25 @@ compute_routerstatus_consensus(smartlist_t *votes)
   return most;
 }
 
+/** DOCDOC */
+static void
+hash_list_members(char *digest_out, smartlist_t *lst)
+{
+  crypto_digest_env_t *d = crypto_new_digest_env();
+  SMARTLIST_FOREACH(lst, const char *, cp,
+                    crypto_digest_add_bytes(d, cp, strlen(cp)));
+  crypto_digest_get_digest(d, digest_out, DIGEST_LEN);
+  crypto_free_digest_env(d);
+}
 
 /** DOCDOC */
 char *
-networkstatus_compute_consensus(smartlist_t *votes)
+networkstatus_compute_consensus(smartlist_t *votes,
+                                crypto_pk_env_t *identity_key,
+                                crypto_pk_env_t *signing_key)
 {
-  int n_rs=0;
   smartlist_t *chunks;
+  char *result = NULL;
 
   time_t valid_after, fresh_until, valid_until;
   int vote_seconds, dist_seconds;
@@ -249,7 +263,6 @@ networkstatus_compute_consensus(smartlist_t *votes)
     int j;
     SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
     {
-      n_rs += smartlist_len(v->routerstatus_list);
       smartlist_add(va_times, &v->valid_after);
       smartlist_add(fu_times, &v->fresh_until);
       smartlist_add(vu_times, &v->valid_until);
@@ -385,12 +398,16 @@ networkstatus_compute_consensus(smartlist_t *votes)
                          * about flags[f]. */
     int **flag_map; /* flag_map[j][b] is an index f such that flag_map[f]
                      * is the same flag as votes[j]->known_flags[b]. */
+    int *named_flag;
 
     index = tor_malloc_zero(sizeof(int)*smartlist_len(votes));
     size = tor_malloc_zero(sizeof(int)*smartlist_len(votes));
     n_voter_flags = tor_malloc_zero(sizeof(int) * smartlist_len(votes));
     n_flag_voters = tor_malloc_zero(sizeof(int) * smartlist_len(flags));
     flag_map = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
+    named_flag = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
+    for (i = 0; i < smartlist_len(votes); ++i)
+      named_flag[i] = -1;
     SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
     {
       for (i = 0; v->known_flags[i]; ++i) {
@@ -398,6 +415,8 @@ networkstatus_compute_consensus(smartlist_t *votes)
         tor_assert(p >= 0);
         flag_map[v_sl_idx][i] = p;
         ++n_flag_voters[p];
+        if (!strcmp(v->known_flags[i], "Named"))
+          named_flag[v_sl_idx] = i;
         /* XXXX020 somebody needs to make sure that there are no duplicate
          * entries in anybody's flag list. */
       }
@@ -413,6 +432,8 @@ networkstatus_compute_consensus(smartlist_t *votes)
       routerstatus_t rs_out;
       const char *lowest_id = NULL;
       const char *chosen_version;
+      const char *chosen_name = NULL;
+      int naming_conflict = 0;
       int n_listing = 0;
       int i;
       char buf[256];
@@ -454,8 +475,13 @@ networkstatus_compute_consensus(smartlist_t *votes)
         for (i = 0; i < n_voter_flags[v_sl_idx]; ++i) {
           if (rs->flags & (U64_LITERAL(1) << i))
             ++flag_counts[flag_map[v_sl_idx][i]];
-          /* XXXX020 named is special. */
         }
+        if (rs->flags & (U64_LITERAL(1) << named_flag[v_sl_idx])) {
+          if (chosen_name && strcmp(chosen_name, rs->status.nickname))
+            naming_conflict = 1;
+          chosen_name = rs->status.nickname;
+        }
+
       });
 
       /* We don't include this router at all unless more than half of
@@ -475,16 +501,24 @@ networkstatus_compute_consensus(smartlist_t *votes)
       rs_out.dir_port = rs->status.dir_port;
       rs_out.or_port = rs->status.or_port;
 
+      if (chosen_name && !naming_conflict) {
+        strlcpy(rs_out.nickname, chosen_name, sizeof(rs_out.nickname));
+      } else {
+        strlcpy(rs_out.nickname, rs->status.nickname, sizeof(rs_out.nickname));
+      }
+
       /* Set the flags. */
       smartlist_add(chosen_flags, (char*)"s"); /* for the start of the line. */
       SMARTLIST_FOREACH(flags, const char *, fl,
       {
-        if (flag_counts[fl_sl_idx] > n_flag_voters[fl_sl_idx]/2)
-          smartlist_add(chosen_flags, (char*)fl);
-        /* XXXX020 named is special. */
+        if (strcmp(fl, "Named")) {
+          if (flag_counts[fl_sl_idx] > n_flag_voters[fl_sl_idx]/2)
+            smartlist_add(chosen_flags, (char*)fl);
+        } else {
+          if (!naming_conflict && flag_counts[fl_sl_idx])
+            smartlist_add(chosen_flags, (char*)"Named");
+        }
       });
-
-      /* XXXX020 set the nickname! */
 
       /* Pick the version. */
       if (smartlist_len(versions)) {
@@ -503,7 +537,7 @@ networkstatus_compute_consensus(smartlist_t *votes)
                     smartlist_join_strings(chosen_flags, " ", 0, NULL));
       /*     Now the version line. */
       if (chosen_version) {
-        /* XXXX020 fails on very big version. */
+        /* XXXX020 fails on very long version string */
         tor_snprintf(buf, sizeof(buf), "\nv %s\n", chosen_version);
         smartlist_add(chunks, tor_strdup(buf));
       } else {
@@ -526,14 +560,36 @@ networkstatus_compute_consensus(smartlist_t *votes)
     smartlist_free(versions);
   }
 
-  /* Concatenate everything. */
-
   /* Add a signature. */
+  {
+    char digest[DIGEST_LEN];
+    char fingerprint[HEX_DIGEST_LEN+1];
+    char hex_digest[HEX_DIGEST_LEN+1];
+    char buf[4096];
+    smartlist_add(chunks, tor_strdup("directory-signature "));
 
-  /* Free everything. */
+    /* Compute the hash of the chunks. */
+    hash_list_members(digest, chunks);
+
+    /* Get hex stuff as needed. */
+    base16_encode(hex_digest, sizeof(hex_digest), digest, DIGEST_LEN);
+    crypto_pk_get_fingerprint(identity_key, fingerprint, 0);
+
+    /* add the junk that will go at the end of the line. */
+    tor_snprintf(buf, sizeof(buf), "%s %s\n", hex_digest, fingerprint);
+    /* And the signature. */
+    /* XXXX020 check return */
+    router_append_dirobj_signature(buf, sizeof(buf), digest, signing_key);
+    smartlist_add(chunks, tor_strdup(buf));
+  }
+
+  result = smartlist_join_strings(chunks, "", 0, NULL);
 
   tor_free(client_versions);
   tor_free(server_versions);
+  smartlist_free(flags);
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
 
-  return NULL;
+  return result;
 }

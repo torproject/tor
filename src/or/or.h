@@ -2715,7 +2715,9 @@ void cached_dir_decref(cached_dir_t *d);
 /********************************* dirvote.c ************************/
 
 void networkstatus_vote_free(networkstatus_vote_t *ns);
-char *networkstatus_compute_consensus(smartlist_t *votes);
+char *networkstatus_compute_consensus(smartlist_t *votes,
+                                      crypto_pk_env_t *identity_key,
+                                      crypto_pk_env_t *signing_key);
 
 /********************************* dns.c ***************************/
 
