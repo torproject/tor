@@ -1324,6 +1324,8 @@ typedef struct networkstatus_vote_t {
 
   char *contact;
 
+  char vote_digest[DIGEST_LEN];
+
   smartlist_t *routerstatus_list;
 } networkstatus_vote_t;
 
@@ -2705,13 +2707,15 @@ int dirserv_statuses_are_old(smartlist_t *fps, time_t cutoff);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
 int routerstatus_format_entry(char *buf, size_t buf_len,
-                              routerstatus_t *rs, const char *platform);
+                              routerstatus_t *rs, const char *platform,
+                              int first_line_only);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 
 /********************************* dirvote.c ************************/
 
 void networkstatus_vote_free(networkstatus_vote_t *ns);
+char *networkstatus_compute_consensus(smartlist_t *votes);
 
 /********************************* dns.c ***************************/
 

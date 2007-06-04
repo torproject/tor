@@ -303,7 +303,7 @@ static token_rule_t networkstatus_vote_token_table[] = {
 
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
-  T1( "dir-source",          K_DIR_SOURCE,      GE(3),       NO_OBJ ),
+  T1( "dir-source",          K_DIR_SOURCE,      GE(6),       NO_OBJ ),
   T1( "dir-options",         K_DIR_OPTIONS,     ARGS,        NO_OBJ ),
   T1( "known-flags",         K_KNOWN_FLAGS,     CONCAT_ARGS, NO_OBJ ),
   T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
@@ -350,7 +350,6 @@ static token_rule_t networkstatus_vote_footer_token_table[] = {
   T(  "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
   END_OF_TABLE
 };
-
 
 #undef T
 
@@ -1798,6 +1797,7 @@ networkstatus_parse_vote_from_string(const char *s)
   directory_token_t *tok;
   int ok;
   struct in_addr in;
+  int i;
 
   if (router_get_networkstatus_v3_hash(s, ns_digest)) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
@@ -1872,7 +1872,7 @@ networkstatus_parse_vote_from_string(const char *s)
 
   tok = find_first_by_keyword(tokens, K_DIR_SOURCE);
   tor_assert(tok);
-  tor_assert(tok->n_args >= 5);
+  tor_assert(tok->n_args >= 6);
   ns->nickname = tor_strdup(tok->args[0]);
   if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
       base16_decode(ns->identity_digest, sizeof(ns->identity_digest),
@@ -1889,6 +1889,10 @@ networkstatus_parse_vote_from_string(const char *s)
   }
   ns->dir_port = (uint64_t)
     (int) tor_parse_long(tok->args[4], 10, 0, 65535, &ok, NULL);
+  if (!ok)
+    goto err;
+  ns->or_port = (uint64_t)
+    (int) tor_parse_long(tok->args[5], 10, 0, 65535, &ok, NULL);
   if (!ok)
     goto err;
 
@@ -1908,6 +1912,16 @@ networkstatus_parse_vote_from_string(const char *s)
     else {
       tor_free(rs->version);
       tor_free(rs);
+    }
+  }
+  for (i = 1; i < smartlist_len(ns->routerstatus_list); ++i) {
+    vote_routerstatus_t *a = smartlist_get(ns->routerstatus_list, i-1);
+    vote_routerstatus_t *b = smartlist_get(ns->routerstatus_list, i);
+    if (memcmp(a->status.identity_digest, b->status.identity_digest,
+               DIGEST_LEN) >= 0) {
+      log_warn(LD_DIR, "Vote networkstatus entries not sorted by identity "
+               "digest");
+      goto err;
     }
   }
 
@@ -1938,6 +1952,7 @@ networkstatus_parse_vote_from_string(const char *s)
              "network-status vote.", escaped(tok->args[1]));
     goto err;
   }
+  memcpy(ns->vote_digest, declared_digest, DIGEST_LEN);
   if (memcmp(declared_identity, ns->cert->cache_info.identity_digest,
              DIGEST_LEN)) {
     log_warn(LD_DIR, "Digest mismatch between declared and actual on "
@@ -1974,10 +1989,8 @@ networkstatus_parse_vote_from_string(const char *s)
     smartlist_free(footer_tokens);
   }
 
-
   return ns;
 }
-
 
 /** Parse the addr policy in the string <b>s</b> and return it.  If
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or

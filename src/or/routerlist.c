@@ -3718,7 +3718,7 @@ compute_recommended_versions(time_t now, int client,
       } else {
         if (n_seen > n_versioning/2 && current)
           smartlist_add(recommended, current);
-        n_seen = 0;
+        n_seen = 0; /* XXXX020 shouldn't this be 1? */
         current = cp;
       }
     });
@@ -5071,7 +5071,7 @@ char *
 networkstatus_getinfo_helper_single(routerstatus_t *rs)
 {
   char buf[256];
-  routerstatus_format_entry(buf, sizeof(buf), rs, NULL);
+  routerstatus_format_entry(buf, sizeof(buf), rs, NULL, 0);
   return tor_strdup(buf);
 }
 

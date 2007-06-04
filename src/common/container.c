@@ -196,6 +196,18 @@ smartlist_string_isin(const smartlist_t *sl, const char *element)
   return 0;
 }
 
+/** DOCDOC */
+int
+smartlist_string_pos(const smartlist_t *sl, const char *element)
+{
+  int i;
+  if (!sl) return -1;
+  for (i=0; i < sl->num_used; i++)
+    if (strcmp((const char*)sl->list[i],element)==0)
+      return i;
+  return -1;
+}
+
 /** Return true iff <b>sl</b> has some element E such that
  * !strcasecmp(E,<b>element</b>)
  */

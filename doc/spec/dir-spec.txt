@@ -754,12 +754,12 @@ $Id$
    The authority section of a vote contains the following items, followed
    in turn by the authority's current key certificate:
 
-    "dir-source" SP nickname SP identity SP address SP IP SP dirport NL
+    "dir-source" SP nickname SP identity SP address SP IP SP dirport SP orport NL
 
         [Exactly once, at start]
 
         Describes this authority.  The nickname is a convenient identifier
-        for the authority.  The identity is a hex fingerprint of the
+        for the authority.  The identity is an uppercase hex fingerprint of the
         authority's current identity key.  The address is the server's
         hostname.  The IP is the server's current IP address, and dirport
         is its current directory port.
@@ -772,11 +772,11 @@ $Id$
         server's administrator.  Administrators should include at least an
         email address and a PGP fingerprint.
 
-   The authority section of a consensus contains groups the following
-   items, in the order given, with one group for each authority that
-   contributed to the consensus:
+   The authority section of a consensus contains groups the following items,
+   in the order given, with one group for each authority that contributed to
+   the consensus, with groups sorted by authority identity digest:
 
-    "dir-source" SP nickname SP address SP IP SP dirport NL
+    "dir-source" SP nickname SP identity SP address SP IP SP dirport SP orport NL
 
         [Exactly once, at start]
 
@@ -792,15 +792,15 @@ $Id$
 
         [Exactly once.]
 
-        A hex fingerprint, without spaces, of the authority's current
-        identity key.
+        An upper-case hex fingerprint, without spaces, of the authority's
+        current identity key.
 
     "vote-digest" SP digest NL
 
         [Exactly once.]
 
         A digest of the vote from the authority that contributed to this
-        consensus.
+        consensus. (Hex, upper-case.)
 
    Each router status entry contains the following items.  Router status
    entries are sorted in ascending order by identity digest.
@@ -961,6 +961,9 @@ $Id$
      We use whatever descriptor digest is attested to by the most
      authorities among the voters, breaking ties in favor of the one with
      the most recent publication time.
+
+     (XXXX what to do about version, published time, IP, orport, dirport,
+       nickname, version?)
 
      The signatures at the end of the document appear are sorted in
      ascending order by identity digest.

@@ -1563,10 +1563,12 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
  * failure. */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
-                          routerstatus_t *rs, const char *platform)
+                          routerstatus_t *rs, const char *platform,
+                          int first_line_only)
 {
   int r;
   struct in_addr in;
+  char *cp;
 
   int f_authority;
   char published[ISO_TIME_LEN+1];
@@ -1583,16 +1585,24 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   f_authority = router_digest_is_trusted_dir(rs->identity_digest);
 
   r = tor_snprintf(buf, buf_len,
-                   "r %s %s %s %s %s %d %d\n"
-                   "s%s%s%s%s%s%s%s%s%s%s\n",
+                   "r %s %s %s %s %s %d %d\n",
                    rs->nickname,
                    identity64,
                    digest64,
                    published,
                    ipaddr,
                    (int)rs->or_port,
-                   (int)rs->dir_port,
-                   /* These must stay in alphabetical order. */
+                   (int)rs->dir_port);
+  if (r<0) {
+    log_warn(LD_BUG, "Not enough space in buffer.");
+    return -1;
+  }
+  if (first_line_only)
+    return 0;
+  cp = buf + strlen(buf);
+  r = tor_snprintf(cp, buf_len - (cp-buf),
+                   "s%s%s%s%s%s%s%s%s%s%s\n",
+                  /* These must stay in alphabetical order. */
                    f_authority?" Authority":"",
                    rs->is_bad_exit?" BadExit":"",
                    rs->is_exit?" Exit":"",
@@ -1866,7 +1876,8 @@ generate_networkstatus_opinion(int v2)
       rs.or_port = ri->or_port;
       rs.dir_port = ri->dir_port;
 
-      if (routerstatus_format_entry(outp, endp-outp, &rs, ri->platform) < 0) {
+      if (routerstatus_format_entry(outp, endp-outp, &rs,
+                                    ri->platform, 0) < 0) {
         log_warn(LD_BUG, "Unable to print router status.");
         goto done;
       }
