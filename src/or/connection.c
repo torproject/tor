@@ -995,9 +995,9 @@ connection_connect(connection_t *conn, const char *address,
  * connection binding to each one.  Otherwise, create a single
  * connection binding to the address <b>default_addr</b>.)
  *
- * Only relaunch the listeners of this type if the number of existing
- * connections is not as configured (e.g., because one died), or if the
- * existing connections do not match those configured.
+ * Only launch the listeners of this type that are not already open, and
+ * only close listeners that are no longer wanted.  Existing listeners
+ * that are still configured are not touched.
  *
  * Add all old conns that should be closed to <b>replaced_conns</b>.
  * Add all new connections to <b>new_conns</b>.
@@ -1100,8 +1100,9 @@ retry_listeners(int type, config_line_t *cfg,
   return r;
 }
 
-/** (Re)launch listeners for each port you should have open.  Only relaunch
- * listeners when we have the wrong number of connections for a given type.
+/** Launch listeners for each port you should have open.  Only launch
+ * listeners who are not already open, and only close listeners we no longer
+ * want.
  *
  * Add all old conns that should be closed to <b>replaced_conns</b>.
  * Add all new connections to <b>new_conns</b>.
