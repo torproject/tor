@@ -219,6 +219,8 @@ Things we'd like to do in 0.2.0.x:
         after the bridge? Open research question; let's say no for 0.2.0
         unless we learn otherwise.
       - Ask all directory questions to bridge via BEGIN_DIR.
+N     - Do the ""Descriptor purposes: how to tell them apart" section of
+        http://archives.seul.org/or/dev/May-2007/msg00008.html
     - Bridges operators (rudimentary version) (By Jun 1)
       - Ability to act as dir cache without a dir port.
       - Bridges publish to bridge authorities
