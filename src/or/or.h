@@ -2341,7 +2341,7 @@ void connection_expire_held_open(void);
 
 int connection_connect(connection_t *conn, const char *address, uint32_t addr,
                        uint16_t port);
-int retry_all_listeners(int force, smartlist_t *replaced_conns,
+int retry_all_listeners(smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
 int connection_bucket_write_limit(connection_t *conn);

@@ -995,17 +995,16 @@ connection_connect(connection_t *conn, const char *address,
  * connection binding to each one.  Otherwise, create a single
  * connection binding to the address <b>default_addr</b>.)
  *
- * If <b>force</b> is true, close and re-open all listener connections.
- * Otherwise, only relaunch the listeners of this type if the number of
- * existing connections is not as configured (e.g., because one died),
- * or if the existing connections do not match those configured.
+ * Only relaunch the listeners of this type if the number of existing
+ * connections is not as configured (e.g., because one died), or if the
+ * existing connections do not match those configured.
  *
  * Add all old conns that should be closed to <b>replaced_conns</b>.
  * Add all new connections to <b>new_conns</b>.
  */
 static int
 retry_listeners(int type, config_line_t *cfg,
-                int port_option, const char *default_addr, int force,
+                int port_option, const char *default_addr,
                 smartlist_t *replaced_conns,
                 smartlist_t *new_conns,
                 int never_open_conns)
@@ -1039,15 +1038,6 @@ retry_listeners(int type, config_line_t *cfg,
   {
     if (conn->type != type || conn->marked_for_close)
       continue;
-    if (force) {
-      /* It's a listener, and we're relaunching all listeners of this
-       * type. Close this one. */
-      log_notice(LD_NET, "Force-closing listener %s on %s:%d",
-             conn_type_to_string(type), conn->address, conn->port);
-      connection_close_immediate(conn);
-      connection_mark_for_close(conn);
-      continue;
-    }
     /* Okay, so this is a listener.  Is it configured? */
     line = NULL;
     SMARTLIST_FOREACH(launch, config_line_t *, wanted,
@@ -1110,47 +1100,45 @@ retry_listeners(int type, config_line_t *cfg,
   return r;
 }
 
-/** (Re)launch listeners for each port you should have open.  If
- * <b>force</b> is true, close and relaunch all listeners. If <b>force</b>
- * is false, then only relaunch listeners when we have the wrong number of
- * connections for a given type.
+/** (Re)launch listeners for each port you should have open.  Only relaunch
+ * listeners when we have the wrong number of connections for a given type.
  *
  * Add all old conns that should be closed to <b>replaced_conns</b>.
  * Add all new connections to <b>new_conns</b>.
  */
 int
-retry_all_listeners(int force, smartlist_t *replaced_conns,
+retry_all_listeners(smartlist_t *replaced_conns,
                     smartlist_t *new_conns)
 {
   or_options_t *options = get_options();
 
   if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
-                      options->ORPort, "0.0.0.0", force,
+                      options->ORPort, "0.0.0.0",
                       replaced_conns, new_conns, options->ClientOnly)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
-                      options->DirPort, "0.0.0.0", force,
+                      options->DirPort, "0.0.0.0",
                       replaced_conns, new_conns, 0)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksListenAddress,
-                      options->SocksPort, "127.0.0.1", force,
+                      options->SocksPort, "127.0.0.1",
                       replaced_conns, new_conns, 0)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_TRANS_LISTENER, options->TransListenAddress,
-                      options->TransPort, "127.0.0.1", force,
+                      options->TransPort, "127.0.0.1",
                       replaced_conns, new_conns, 0)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NatdListenAddress,
-                      options->NatdPort, "127.0.0.1", force,
+                      options->NatdPort, "127.0.0.1",
                       replaced_conns, new_conns, 0)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_DNS_LISTENER, options->DNSListenAddress,
-                      options->DNSPort, "127.0.0.1", force,
+                      options->DNSPort, "127.0.0.1",
                       replaced_conns, new_conns, 0)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
-                      options->ControlPort, "127.0.0.1", force,
+                      options->ControlPort, "127.0.0.1",
                       replaced_conns, new_conns, 0)<0)
     return -1;
 
