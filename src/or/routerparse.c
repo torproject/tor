@@ -1801,6 +1801,7 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
   }
 
   ns = tor_malloc_zero(sizeof(networkstatus_vote_t));
+  memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
   if (is_vote) {
     const char *end_of_cert = NULL;
@@ -2036,6 +2037,7 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
       if (check_signature_token(ns_digest, tok, ns->cert->signing_key, 0,
                                 "network-status vote"))
         goto err;
+      v->good_signature = 1;
     } else {
       v->pending_signature = tor_memdup(tok->object_body,
                                         tok->object_size);

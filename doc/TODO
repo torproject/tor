@@ -79,7 +79,7 @@ Things we'd like to do in 0.2.0.x:
         o Code to generate votes
         o Code to generate consensus from a list of votes
         - Add a signature to a consensus.
-        - Code to check signatures on a consensus
+        o Code to check signatures on a consensus
         - Push/pull documents as appropriate.
         o Have clients know which authorities are v3 authorities, and what
           their keys are.

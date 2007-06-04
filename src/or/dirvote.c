@@ -293,6 +293,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     int j;
     SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
     {
+      tor_assert(v->is_vote);
       smartlist_add(va_times, &v->valid_after);
       smartlist_add(fu_times, &v->fresh_until);
       smartlist_add(vu_times, &v->valid_until);
@@ -627,5 +628,66 @@ networkstatus_compute_consensus(smartlist_t *votes,
   smartlist_free(chunks);
 
   return result;
+}
+
+/** DOCDOC */
+int
+networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
+{
+  int n_good = 0;
+  int n_missing_key = 0;
+  int n_bad = 0;
+  int n_unknown = 0;
+
+  tor_assert(! consensus->is_vote);
+
+  SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, voter,
+  {
+    trusted_dir_server_t *ds =
+      trusteddirserver_get_by_v3_auth_digest(voter->identity_digest);
+    if (!ds) {
+      ++n_unknown;
+      continue;
+    }
+    if (voter->pending_signature) {
+      char d[DIGEST_LEN];
+      char *signed_digest;
+      size_t signed_digest_len;
+      tor_assert(!voter->good_signature && !voter->bad_signature);
+      if (!ds->v3_cert) {
+        ++n_missing_key;
+        continue;
+      }
+      /*XXXX020 check return*/
+      crypto_pk_get_digest(ds->v3_cert->signing_key, d);
+      if (memcmp(voter->signing_key_digest, d, DIGEST_LEN)) {
+        ++n_missing_key;
+        continue;
+      }
+      signed_digest_len = crypto_pk_keysize(ds->v3_cert->signing_key);
+      signed_digest = tor_malloc(signed_digest_len);
+      if (crypto_pk_public_checksig(ds->v3_cert->signing_key,
+                                signed_digest,
+                                voter->pending_signature,
+                                voter->pending_signature_len) != DIGEST_LEN ||
+          memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
+        log_warn(LD_DIR, "Got a bad signature."); /*XXXX020 say more*/
+        voter->bad_signature = 1;
+      } else {
+        voter->good_signature = 1;
+      }
+      tor_free(voter->pending_signature);
+    }
+    if (voter->good_signature)
+      ++n_good;
+    else if (voter->bad_signature)
+      ++n_bad;
+    else
+      tor_assert(0);
+  });
+
+  /* XXXX020 actually use the result. */
+
+  return 0;
 }
 

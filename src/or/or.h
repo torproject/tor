@@ -1314,7 +1314,8 @@ typedef struct networkstatus_voter_info_t {
 
   char *pending_signature;
   int pending_signature_len;
-  int bad_signature;
+  unsigned int bad_signature : 1;
+  unsigned int good_signature : 1;
 } networkstatus_voter_info_t;
 
 /*XXXX020 rename to networkstatus_t once it works. */
@@ -1335,6 +1336,8 @@ typedef struct networkstatus_vote_t {
   smartlist_t *voters; /* list of networkstatus_voter_info_t */
 
   struct authority_cert_t *cert; /* vote only. */
+
+  char networkstatus_digest[DIGEST_LEN];
 
   smartlist_t *routerstatus_list; /* holds vote_routerstatus_t if is_vote,
                                    * otherwise just routerstatus_t. */
@@ -2732,6 +2735,7 @@ char *networkstatus_compute_consensus(smartlist_t *votes,
 networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        networkstatus_vote_t *vote,
                                        const char *identity);
+int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus);
 
 /********************************* dns.c ***************************/
 
