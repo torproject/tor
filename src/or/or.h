@@ -790,6 +790,7 @@ typedef struct connection_t {
                                  * could write? */
   time_t timestamp_created; /**< When was this connection_t created? */
 
+  /* XXXX020 make this ipv6-capable */
   uint32_t addr; /**< IP of the other side of the connection; used to identify
                   * routers, along with port. */
   uint16_t port; /**< If non-zero, port  on the other end
@@ -804,6 +805,7 @@ typedef struct connection_t {
                   * strdup into this, because free_connection frees it. */
   /** Annother connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
+
   /* XXXX020 NM move these up to the other 1-bit flags. */
   unsigned int linked:1; /**< True if there is, or has been, a linked_conn. */
   /** True iff we'd like to be notified about read events from the
@@ -1019,6 +1021,8 @@ typedef enum {
 typedef struct addr_policy_t {
   addr_policy_action_t policy_type; /**< What to do when the policy matches.*/
   char *string; /**< String representation of this rule. */
+
+  /* XXXX020 make this ipv6-capable */
   uint32_t addr; /**< Base address to accept or reject. */
   uint32_t msk; /**< Accept/reject all addresses <b>a</b> such that
                  * a &amp; msk == <b>addr</b> &amp; msk . */
@@ -1727,6 +1731,8 @@ static INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 /** An entry specifying a set of addresses and ports that should be remapped
  * to another address and port before exiting this exit node. */
 typedef struct exit_redirect_t {
+  /* XXXX020 make this whole mess ipv6-capable.  (Does anybody use it? */
+
   uint32_t addr;
   uint32_t mask;
   uint16_t port_min;
