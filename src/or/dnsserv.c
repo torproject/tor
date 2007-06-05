@@ -110,7 +110,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   /* XXXX020 Send a stream event to the controller. */
 
   /* Make a new dummy AP connection, and attach the request to it. */
-  conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP));
+  conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
   if (q->type == EVDNS_TYPE_A)
     conn->socks_request->command = SOCKS_COMMAND_RESOLVE;

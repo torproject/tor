@@ -1916,7 +1916,7 @@ connection_ap_make_bridge(char *address, uint16_t port,
   log_notice(LD_APP,"Making internal anonymized tunnel to %s:%d ...",
              safe_str(address),port); /* XXXX020 Downgrade back to info. */
 
-  conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP));
+  conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
   conn->_base.linked = 1; /* so that we can add it safely below. */
 
   /* populate conn->socks_request */
@@ -2210,7 +2210,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   }
 
   log_debug(LD_EXIT,"Creating new exit connection.");
-  n_stream = TO_EDGE_CONN(connection_new(CONN_TYPE_EXIT));
+  n_stream = TO_EDGE_CONN(connection_new(CONN_TYPE_EXIT, AF_INET));
   n_stream->_base.purpose = EXIT_PURPOSE_CONNECT;
 
   n_stream->stream_id = rh.stream_id;
@@ -2316,7 +2316,7 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
    * resolved; but if we didn't store them in a connection like this,
    * the housekeeping in dns.c would get way more complicated.)
    */
-  dummy_conn = TO_EDGE_CONN(connection_new(CONN_TYPE_EXIT));
+  dummy_conn = TO_EDGE_CONN(connection_new(CONN_TYPE_EXIT, AF_INET));
   dummy_conn->stream_id = rh.stream_id;
   dummy_conn->_base.address = tor_strndup(cell->payload+RELAY_HEADER_SIZE,
                                           rh.length);
@@ -2450,7 +2450,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 
   exitconn->_base.state = EXIT_CONN_STATE_OPEN;
 
-  dirconn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR));
+  dirconn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR, AF_INET));
 
   dirconn->_base.addr = 0x7f000001;
   dirconn->_base.port = 0;

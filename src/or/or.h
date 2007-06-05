@@ -56,6 +56,9 @@
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
+#ifdef HAVE_SYS_UN_H
+#include <sys/un.h>
+#endif
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
@@ -791,6 +794,9 @@ typedef struct connection_t {
   time_t timestamp_created; /**< When was this connection_t created? */
 
   /* XXXX020 make this ipv6-capable */
+  int sa_family; /**< Address family of this connection's socket.  Usually
+                  * AF_INET, but it can also be AF_UNIX, or in the future
+                  * AF_INET6 */
   uint32_t addr; /**< IP of the other side of the connection; used to identify
                   * routers, along with port. */
   uint16_t port; /**< If non-zero, port  on the other end
@@ -1825,6 +1831,8 @@ typedef struct {
   int TransPort;
   int NatdPort; /**< Port to listen on for transparent natd connections. */
   int ControlPort; /**< Port to listen on for control connections. */
+  config_line_t * ControlSocket; /**< Unix Domain Socket to listen on
+                                  * for control connections. */
   int DirPort; /**< Port to listen on for directory connections. */
   int DNSPort; /**< Port to listen on for DNS requests. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
@@ -2347,7 +2355,7 @@ or_options_t *options_new(void);
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 
-connection_t *connection_new(int type);
+connection_t *connection_new(int type, int sa_family);
 void connection_link_connections(connection_t *conn_a, connection_t *conn_b);
 void connection_unregister_events(connection_t *conn);
 void connection_free(connection_t *conn);

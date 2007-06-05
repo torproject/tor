@@ -490,7 +490,7 @@ directory_initiate_command(const char *address, uint32_t addr,
       tor_assert(0);
   }
 
-  conn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR));
+  conn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR, AF_INET));
 
   /* set up conn so it's got all the data we need to remember */
   conn->_base.addr = addr;

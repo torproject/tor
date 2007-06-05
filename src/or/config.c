@@ -149,6 +149,7 @@ static config_var_t _option_vars[] = {
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("ControlListenAddress",LINELIST, ControlListenAddress, NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
+  VAR("ControlSocket",       LINELIST, ControlSocket,        NULL),
   VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
   OBSOLETE("DebugLogFile"),
@@ -810,6 +811,14 @@ options_act_reversible(or_options_t *old_options, char **msg)
     /* No need to roll back, since you can't change the value. */
     start_daemon();
   }
+
+#ifndef HAVE_SYS_UN_H
+  if (options->ControlSocket) {
+    *msg = tor_strdup("Unix domain sockets (ControlSocket) not supported"
+                      " on this OS/with this build.");
+    goto rollback;
+  }
+#endif
 
   if (running_tor) {
     /* We need to set the connection limit before we can open the listeners. */

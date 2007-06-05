@@ -14,8 +14,9 @@ const char connection_c_id[] =
 
 #include "or.h"
 
-static connection_t *connection_create_listener(const char *listenaddress,
-                                                uint16_t listenport, int type);
+static connection_t *connection_create_listener(
+                               struct sockaddr *listensockaddr, int type,
+                               char* address);
 static int connection_init_accepted_conn(connection_t *conn,
                                          uint8_t listener_type);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
@@ -156,7 +157,7 @@ conn_state_to_string(int type, int state)
  * Initialize conn's timestamps to now.
  */
 connection_t *
-connection_new(int type)
+connection_new(int type, int sa_family)
 {
   static uint32_t n_connections_allocated = 1;
   connection_t *conn;
@@ -194,6 +195,7 @@ connection_new(int type)
   conn->conn_array_index = -1; /* also default to 'not used' */
 
   conn->type = type;
+  conn->sa_family = sa_family;
   if (!connection_is_listener(conn)) { /* listeners never use their buf */
     conn->inbuf = buf_new();
     conn->outbuf = buf_new();
@@ -293,6 +295,17 @@ _connection_free(connection_t *conn)
   if (!connection_is_listener(conn)) {
     buf_free(conn->inbuf);
     buf_free(conn->outbuf);
+  } else {
+    if (conn->sa_family == AF_UNIX) {
+      /* For now only control ports can be unix domain sockets
+       * and listeners at the same time */
+      tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
+
+      if (unlink(conn->address) < 0 && errno != ENOENT) {
+        log_warn(LD_NET, "Could not unlink %s: %s", conn->address,
+                         strerror(errno));
+      }
+    }
   }
 
   tor_free(conn->address);
@@ -621,43 +634,96 @@ connection_expire_held_open(void)
   });
 }
 
-/** Bind a new non-blocking socket listening to
- * <b>listenaddress</b>:<b>listenport</b>, and add this new connection
- * (of type <b>type</b>) to the connection array.
+/** Create an AF_INET listenaddr struct.
+ * <b>listenaddress</b> provides the host and optionally the port information
+ * for the new structure.  If no port is provided in <b>listenaddress</b> then
+ * <b>listenport</b> is used.
  *
- * If <b>listenaddress</b> includes a port, we bind on that port;
- * otherwise, we use listenport.
+ * If not NULL <b>readable_addrress</b> will contain a copy of the host part of
+ * <b>listenaddress</b>.
+ *
+ * The listenaddr struct has to be freed by the caller.
  */
-static connection_t *
-connection_create_listener(const char *listenaddress, uint16_t listenport,
-                           int type)
-{
-  struct sockaddr_in listenaddr; /* where to bind */
-  char *address = NULL;
-  connection_t *conn;
-  uint16_t usePort;
+static struct sockaddr_in *
+create_inet_sockaddr(const char *listenaddress, uint16_t listenport,
+                     char **readable_address) {
+  struct sockaddr_in *listenaddr = NULL;
   uint32_t addr;
-  int s; /* the socket we're going to make */
-#ifndef MS_WINDOWS
-  int one=1;
-#endif
-  int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
+  uint16_t usePort = 0;
 
-  memset(&listenaddr,0,sizeof(struct sockaddr_in));
-  if (parse_addr_port(LOG_WARN, listenaddress, &address, &addr, &usePort)<0) {
+  if (parse_addr_port(LOG_WARN,
+                      listenaddress, readable_address, &addr, &usePort)<0) {
     log_warn(LD_CONFIG,
              "Error parsing/resolving ListenAddress %s", listenaddress);
-    return NULL;
+    goto err;
   }
-
   if (usePort==0)
     usePort = listenport;
-  listenaddr.sin_addr.s_addr = htonl(addr);
-  listenaddr.sin_family = AF_INET;
-  listenaddr.sin_port = htons((uint16_t) usePort);
 
-  log_notice(LD_NET, "Opening %s on %s:%d",
-             conn_type_to_string(type), address, usePort);
+  listenaddr = tor_malloc_zero(sizeof(struct sockaddr_in));
+  listenaddr->sin_addr.s_addr = htonl(addr);
+  listenaddr->sin_family = AF_INET;
+  listenaddr->sin_port = htons((uint16_t) usePort);
+
+  return listenaddr;
+
+ err:
+  tor_free(listenaddr);
+  return NULL;
+}
+
+#ifdef HAVE_SYS_UN_H
+/** Create an AF_UNIX listenaddr struct.
+ * <b>listenaddress</b> provides the path to the unix socket.
+ *
+ * Eventually <b>listenaddress</b> will also optionally contain user, group,
+ * and file permissions for the new socket.  But not yet. XXX
+ * Also, since we do not create the socket here the information doesn't help
+ * here.
+ *
+ * If not NULL <b>readable_addrress</b> will contain a copy of the path part of
+ * <b>listenaddress</b>.
+ *
+ * The listenaddr struct has to be freed by the caller.
+ */
+static struct sockaddr_un *
+create_unix_sockaddr(const char *listenaddress, char **readable_address)
+{
+  struct sockaddr_un *sockaddr = NULL;
+
+  sockaddr = tor_malloc_zero(sizeof(struct sockaddr_un));
+  sockaddr->sun_family = AF_UNIX;
+  strncpy(sockaddr->sun_path, listenaddress, sizeof(sockaddr->sun_path));
+
+  if (readable_address)
+    *readable_address = tor_strdup(listenaddress);
+
+  return sockaddr;
+}
+#else
+static struct sockaddr *
+create_unix_sockaddr(const char *listenaddress, char **readable_address)
+{
+  log_fn(LOG_ERR, LD_BUG,
+         "Unix domain sockets not supported, yet we tried to create one.");
+  assert(0);
+};
+#endif /* HAVE_SYS_UN_H */
+
+/** Bind a new non-blocking socket listening to the socket described
+ * by <b>listensockaddr</b>.
+ *
+ * <b>address</b> is only used for logging purposes and to add the information
+ * to the conn.
+ */
+static connection_t *
+connection_create_listener(struct sockaddr *listensockaddr, int type,
+  char* address)
+{
+  connection_t *conn;
+  int s; /* the socket we're going to make */
+  uint16_t usePort = 0;
+  int start_reading = 0;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
     int n_conns = get_n_open_sockets();
@@ -668,48 +734,105 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
     return NULL;
   }
 
-  s = tor_open_socket(PF_INET,
-                      is_tcp ? SOCK_STREAM : SOCK_DGRAM,
-                      is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
-  if (s < 0) {
-    log_warn(LD_NET,"Socket creation failed.");
-    goto err;
-  }
+  if (listensockaddr->sa_family == AF_INET) {
+    int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
+#ifndef MS_WINDOWS
+    int one=1;
+#endif
+    if (is_tcp)
+      start_reading = 1;
+
+    usePort = ntohs( (uint16_t)
+                     ((struct sockaddr_in *)listensockaddr)->sin_port);
+
+    log_notice(LD_NET, "Opening %s on %s:%d",
+               conn_type_to_string(type), address, usePort);
+
+    s = tor_open_socket(PF_INET,
+                        is_tcp ? SOCK_STREAM : SOCK_DGRAM,
+                        is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
+    if (s < 0) {
+      log_warn(LD_NET,"Socket creation failed.");
+      goto err;
+    }
 
 #ifndef MS_WINDOWS
-  /* REUSEADDR on normal places means you can rebind to the port
-   * right after somebody else has let it go. But REUSEADDR on win32
-   * means you can bind to the port _even when somebody else
-   * already has it bound_. So, don't do that on Win32. */
-  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
+    /* REUSEADDR on normal places means you can rebind to the port
+     * right after somebody else has let it go. But REUSEADDR on win32
+     * means you can bind to the port _even when somebody else
+     * already has it bound_. So, don't do that on Win32. */
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
 #endif
 
-  if (bind(s,(struct sockaddr *)&listenaddr,sizeof(listenaddr)) < 0) {
-    const char *helpfulhint = "";
-    int e = tor_socket_errno(s);
-    if (ERRNO_IS_EADDRINUSE(e))
-      helpfulhint = ". Is Tor already running?";
-    log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
-             tor_socket_strerror(e), helpfulhint);
-    tor_close_socket(s);
-    goto err;
-  }
+    if (bind(s,listensockaddr,sizeof(struct sockaddr_in)) < 0) {
+      const char *helpfulhint = "";
+      int e = tor_socket_errno(s);
+      if (ERRNO_IS_EADDRINUSE(e))
+        helpfulhint = ". Is Tor already running?";
+      log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
+               tor_socket_strerror(e), helpfulhint);
+      tor_close_socket(s);
+      goto err;
+    }
 
-  if (is_tcp) {
+    if (is_tcp) {
+      if (listen(s,SOMAXCONN) < 0) {
+        log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
+                 tor_socket_strerror(tor_socket_errno(s)));
+        tor_close_socket(s);
+        goto err;
+      }
+    }
+#ifdef HAVE_SYS_UN_H
+  } else if (listensockaddr->sa_family == AF_UNIX) {
+    int len;
+    start_reading = 1;
+
+    /* For now only control ports can be unix domain sockets
+     * and listeners at the same time */
+    tor_assert(type == CONN_TYPE_CONTROL_LISTENER);
+
+    log_notice(LD_NET, "Opening %s on %s",
+               conn_type_to_string(type), address);
+
+    if (unlink(address) < 0 && errno != ENOENT) {
+      log_warn(LD_NET, "Could not unlink %s: %s", address,
+                       strerror(errno));
+      goto err;
+    }
+    s = tor_open_socket(AF_UNIX, SOCK_STREAM, 0);
+    if (s < 0) {
+      log_warn(LD_NET,"Socket creation failed: %s.", strerror(errno));
+      goto err;
+    }
+
+    len = strlen(((struct sockaddr_un *)listensockaddr)->sun_path) +
+          sizeof(((struct sockaddr_un *)listensockaddr)->sun_family);
+    if (bind(s, listensockaddr, len) == -1) {
+      log_warn(LD_NET,"Bind to %s failed: %s.", address,
+               tor_socket_strerror(tor_socket_errno(s)));
+      goto err;
+    }
+
     if (listen(s,SOMAXCONN) < 0) {
-      log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
+      log_warn(LD_NET, "Could not listen on %s: %s", address,
                tor_socket_strerror(tor_socket_errno(s)));
       tor_close_socket(s);
       goto err;
     }
+#endif /* HAVE_SYS_UN_H */
+  } else {
+      log_err(LD_BUG,"Got unexpected address family %d.",
+              listensockaddr->sa_family);
+      tor_assert(0);
   }
 
   set_socket_nonblocking(s);
 
-  conn = connection_new(type);
+  conn = connection_new(type, listensockaddr->sa_family);
+  conn->sa_family = listensockaddr->sa_family;
   conn->s = s;
-  conn->address = address;
-  address = NULL;
+  conn->address = tor_strdup(address);
   conn->port = usePort;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
@@ -722,7 +845,7 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
             conn_type_to_string(type), usePort);
 
   conn->state = LISTENER_STATE_READY;
-  if (is_tcp) {
+  if (start_reading) {
     connection_start_reading(conn);
   } else {
     tor_assert(type == CONN_TYPE_AP_DNS_LISTENER);
@@ -732,7 +855,6 @@ connection_create_listener(const char *listenaddress, uint16_t listenport,
   return conn;
 
  err:
-  tor_free(address);
   return NULL;
 }
 
@@ -801,55 +923,75 @@ connection_handle_listener_read(connection_t *conn, int new_type)
 
   set_socket_nonblocking(news);
 
-  if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_INFO)<0) {
-    log_info(LD_NET,
-             "accept() returned a strange address; trying getsockname().");
-    remotelen=256;
-    memset(addrbuf, 0, sizeof(addrbuf));
-    if (getsockname(news, (struct sockaddr*)addrbuf, &remotelen)<0) {
-      int e = tor_socket_errno(news);
-      log_warn(LD_NET, "getsockname() for new connection failed: %s",
-               tor_socket_strerror(e));
-    } else {
-      if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen,
-                            LOG_WARN) < 0) {
-        log_warn(LD_NET,"Something's wrong with this conn. Closing it.");
+  tor_assert(((struct sockaddr*)addrbuf)->sa_family == conn->sa_family);
+
+  if (conn->sa_family == AF_INET) {
+    if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_INFO)<0) {
+      log_info(LD_NET,
+               "accept() returned a strange address; trying getsockname().");
+      remotelen=256;
+      memset(addrbuf, 0, sizeof(addrbuf));
+      if (getsockname(news, (struct sockaddr*)addrbuf, &remotelen)<0) {
+        int e = tor_socket_errno(news);
+        log_warn(LD_NET, "getsockname() for new connection failed: %s",
+                 tor_socket_strerror(e));
+      } else {
+        if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen,
+                              LOG_WARN) < 0) {
+          log_warn(LD_NET,"Something's wrong with this conn. Closing it.");
+          tor_close_socket(news);
+          return 0;
+        }
+      }
+    }
+    memcpy(&remote, addrbuf, sizeof(struct sockaddr_in));
+
+    /* process entrance policies here, before we even create the connection */
+    if (new_type == CONN_TYPE_AP) {
+      /* check sockspolicy to see if we should accept it */
+      if (socks_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
+        tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
+        log_notice(LD_APP,
+                   "Denying socks connection from untrusted address %s.",
+                   tmpbuf);
         tor_close_socket(news);
         return 0;
       }
     }
-  }
-  memcpy(&remote, addrbuf, sizeof(struct sockaddr_in));
-
-  /* process entrance policies here, before we even create the connection */
-  if (new_type == CONN_TYPE_AP) {
-    /* check sockspolicy to see if we should accept it */
-    if (socks_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
-      tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
-      log_notice(LD_APP,"Denying socks connection from untrusted address %s.",
-                 tmpbuf);
-      tor_close_socket(news);
-      return 0;
+    if (new_type == CONN_TYPE_DIR) {
+      /* check dirpolicy to see if we should accept it */
+      if (dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
+        tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
+        log_notice(LD_DIRSERV,"Denying dir connection from address %s.",
+                   tmpbuf);
+        tor_close_socket(news);
+        return 0;
+      }
     }
-  }
-  if (new_type == CONN_TYPE_DIR) {
-    /* check dirpolicy to see if we should accept it */
-    if (dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
-      tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
-      log_notice(LD_DIRSERV,"Denying dir connection from address %s.",
-                 tmpbuf);
-      tor_close_socket(news);
-      return 0;
-    }
-  }
 
-  newconn = connection_new(new_type);
-  newconn->s = news;
+    newconn = connection_new(new_type, conn->sa_family);
+    newconn->s = news;
 
-  /* remember the remote address */
-  newconn->addr = ntohl(remote.sin_addr.s_addr);
-  newconn->port = ntohs(remote.sin_port);
-  newconn->address = tor_dup_addr(newconn->addr);
+    /* remember the remote address */
+    newconn->addr = ntohl(remote.sin_addr.s_addr);
+    newconn->port = ntohs(remote.sin_port);
+    newconn->address = tor_dup_addr(newconn->addr);
+
+  } else if (conn->sa_family == AF_UNIX) {
+    /* For now only control ports can be unix domain sockets
+     * and listeners at the same time */
+    tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
+
+    newconn = connection_new(new_type, conn->sa_family);
+    newconn->s = news;
+
+    /* remember the remote address -- do we have anything sane to put here? */
+    newconn->addr = 0;
+    newconn->port = 1;
+    newconn->address = tor_strdup(conn->address);
+  } else {
+    tor_assert(0);
+  };
 
   if (connection_add(newconn) < 0) { /* no space, forget it */
     connection_free(newconn);
@@ -1007,7 +1149,8 @@ retry_listeners(int type, config_line_t *cfg,
                 int port_option, const char *default_addr,
                 smartlist_t *replaced_conns,
                 smartlist_t *new_conns,
-                int never_open_conns)
+                int never_open_conns,
+                int sa_family)
 {
   smartlist_t *launch = smartlist_create(), *conns;
   int free_launch_elts = 1;
@@ -1015,6 +1158,8 @@ retry_listeners(int type, config_line_t *cfg,
   config_line_t *c;
   connection_t *conn;
   config_line_t *line;
+
+  tor_assert(sa_family == AF_INET || sa_family == AF_UNIX);
 
   if (cfg && port_option) {
     for (c = cfg; c; c = c->next) {
@@ -1036,7 +1181,9 @@ retry_listeners(int type, config_line_t *cfg,
   conns = get_connection_array();
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
-    if (conn->type != type || conn->marked_for_close)
+    if (conn->type != type ||
+        conn->sa_family != sa_family ||
+        conn->marked_for_close)
       continue;
     /* Okay, so this is a listener.  Is it configured? */
     line = NULL;
@@ -1044,15 +1191,28 @@ retry_listeners(int type, config_line_t *cfg,
       {
         char *address=NULL;
         uint16_t port;
-        if (!parse_addr_port(LOG_WARN, wanted->value, &address, NULL, &port)) {
-          int addr_matches = !strcasecmp(address, conn->address);
-          tor_free(address);
-          if (! port)
-            port = port_option;
-          if (port == conn->port && addr_matches) {
-            line = wanted;
+        switch (sa_family) {
+          case AF_INET:
+            if (!parse_addr_port(LOG_WARN,
+                                 wanted->value, &address, NULL, &port)) {
+              int addr_matches = !strcasecmp(address, conn->address);
+              tor_free(address);
+              if (! port)
+                port = port_option;
+              if (port == conn->port && addr_matches) {
+                line = wanted;
+                break;
+              }
+            }
             break;
-          }
+          case AF_UNIX:
+            if (!strcasecmp(wanted->value, conn->address)) {
+              line = wanted;
+              break;
+            }
+            break;
+          default:
+            tor_assert(0);
         }
       });
     if (! line) {
@@ -1080,8 +1240,31 @@ retry_listeners(int type, config_line_t *cfg,
   if (!never_open_conns) {
     SMARTLIST_FOREACH(launch, config_line_t *, cfg_line,
       {
-        conn = connection_create_listener(cfg_line->value,
-                                          (uint16_t) port_option, type);
+        char *address = NULL;
+        struct sockaddr *listensockaddr;
+
+        switch (sa_family) {
+          case AF_INET:
+            listensockaddr = (struct sockaddr *)
+                             create_inet_sockaddr(cfg_line->value,
+                                                  (uint16_t) port_option,
+                                                  &address);
+            break;
+          case AF_UNIX:
+            listensockaddr = (struct sockaddr *)
+                             create_unix_sockaddr(cfg_line->value,
+                                                  &address);
+            break;
+          default:
+            tor_assert(0);
+        }
+
+        if (listensockaddr) {
+          conn = connection_create_listener(listensockaddr, type, address);
+          tor_free(address);
+        } else
+          conn = NULL;
+
         if (!conn) {
           r = -1;
         } else {
@@ -1115,32 +1298,45 @@ retry_all_listeners(smartlist_t *replaced_conns,
 
   if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
                       options->ORPort, "0.0.0.0",
-                      replaced_conns, new_conns, options->ClientOnly)<0)
+                      replaced_conns, new_conns, options->ClientOnly,
+                      AF_INET)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
                       options->DirPort, "0.0.0.0",
-                      replaced_conns, new_conns, 0)<0)
+                      replaced_conns, new_conns, 0,
+                      AF_INET)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksListenAddress,
                       options->SocksPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0)<0)
+                      replaced_conns, new_conns, 0,
+                      AF_INET)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_TRANS_LISTENER, options->TransListenAddress,
                       options->TransPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0)<0)
+                      replaced_conns, new_conns, 0,
+                      AF_INET)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NatdListenAddress,
                       options->NatdPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0)<0)
+                      replaced_conns, new_conns, 0,
+                      AF_INET)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_DNS_LISTENER, options->DNSListenAddress,
                       options->DNSPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0)<0)
+                      replaced_conns, new_conns, 0,
+                      AF_INET)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1",
-                      replaced_conns, new_conns, 0)<0)
+                      replaced_conns, new_conns, 0,
+                      AF_INET)<0)
+    return -1;
+  if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
+                      options->ControlSocket,
+                      options->ControlSocket ? 1 : 0, NULL,
+                      replaced_conns, new_conns, 0,
+                      AF_UNIX)<0)
     return -1;
 
   return 0;

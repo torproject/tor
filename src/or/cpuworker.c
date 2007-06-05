@@ -339,7 +339,7 @@ spawn_cpuworker(void)
   tor_free(fdarray);
 #endif
 
-  conn = connection_new(CONN_TYPE_CPUWORKER);
+  conn = connection_new(CONN_TYPE_CPUWORKER, AF_UNIX);
 
   set_socket_nonblocking(fd);
 

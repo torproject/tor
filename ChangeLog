@@ -6,6 +6,11 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - tor-gencert creates all files as readable to the file creator only, and
       write-protects the authority identity key.
 
+  o Minor feature (controller):
+    - You can now use the ControlSocket option to tell Tor to listen for
+      controller connections on Unix domain sockets on systems that support
+      them.  (Patch from Peter Palfrader.)
+
   o Minor bugfixes (dns):
     - Fix a crash when DNSPort is set more than once. (Patch from Robert
       Hogan.)
