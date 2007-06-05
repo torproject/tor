@@ -259,6 +259,8 @@ N     - Design/implement the "local-status" or something like it, from the
       from something that isn't their published address.
     - Audit how much RAM we're using for buffers and cell pools; try to
       trim down a lot.
+    - Accept \n as end of lines in the control protocol in addition to \r\n.
+    - Base relative control socket paths in datadir.
   o Deprecations:
     o Remove v0 control protocol.
     - can we deprecate 'getinfo network-status'?
