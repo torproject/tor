@@ -121,6 +121,11 @@ This directive can be specified multiple times to bind to multiple
 addresses/ports.
 .LP
 .TP
+\fBControlSocket \fR\fIPath\fP
+Like ControlPort, but listens on a Unix domain socket, rather than a TCP
+socket.  (Unix and Unix-like systems only.)
+.LP
+.TP
 \fBHashedControlPassword \fR\fIhashed_password\fP
 Don't allow any connections on the control port except when the other process
 knows the password whose one-way hash is \fIhashed_password\fP.  You can
