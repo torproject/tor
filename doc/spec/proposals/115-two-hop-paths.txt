@@ -11,7 +11,15 @@ Supersedes: 112
 Overview:
 
   The idea is that users should be able to choose if they would like
-  to have either two or three hop paths through the tor network.
+  to have either two or three hop paths through the tor network. 
+
+  Let us be clear: the users who would choose this option should be
+  those that are concerned with IP obfuscation only: ie they would 
+  not be targets of a resource-intensive multi-node hack. It is often
+  said that these users should find some other network to use other 
+  than Tor. This is a foolish suggestion: more users improves security
+  of everyone, and the current small userbase size is a critical 
+  hindrance to anonymity, as is discussed below.
 
   This value should be modifiable from the controller, and should be
   available from Vidalia.
@@ -46,7 +54,7 @@ Motivation:
   but are obviously from a certain institution, location or circumstance,
   it is also dangerous to use Tor for risk of being accused of having
   something significant enough to hide to be willing to put up with
-  the horrible performance.
+  the horrible performance as opposed to using some weaker alternative.
 
   There are many ways to improve the speed problem, and of course we
   should and will implement as many as we can. Johannes's GSoC project
@@ -58,6 +66,61 @@ Motivation:
   Tor experience but also reduces their load on the Tor network by 33%,
   and can be done in less than 10 lines of code (not counting various
   security enhancements). That's not just Win-Win, it's Win-Win-Win.
+
+
+Who will enable this option?
+
+  This is the crux of the proposal. Admittedly, there is some anonymity
+  loss and some degree of decreased investment required on the part of
+  the adversary to attack 2 hop users versus 3 hop users, even if it is
+  minimal and limited mostly to up-front costs and false positives.
+
+  The key questions are:
+
+  1. Are these users in a class such that their risk is significantly
+     less than the amount of this anonymity loss?
+
+  2. Are these users able to identify themselves?
+
+  Many many users of Tor are not at risk for an adversary capturing c/n
+  nodes of the network just to see what they do. These users use Tor to
+  circumvent aggressive content filters, or simply to keep their IP out of
+  marketing and search engine databases. Most content filters have no
+  interest in running Tor nodes to catch violators, and marketers
+  certainly would never consider such a thing, both on a cost basis and a
+  legal one.
+
+  In a sense, this represents an alternate threat model against these
+  users who are not at risk for Tor's normal threat model.
+
+  It should be evident to these users that they fall into this class. All
+  that should be needed is a radio button
+
+   * "I use Tor for local content filter circumvention and/or IP obfuscation, 
+      not anonymity. Speed is more important to me than high anonymity. 
+      No one will make considerable efforts to determine my real IP."
+   * "I use Tor for anonymity and/or national-level, legally enforced 
+      censorship. It is possible effort will be taken to identify 
+      me, including but not limited to network surveillance. I need more 
+      protection."
+ 
+  and then some explanation in the help for exactly what this means, and
+  the risks involved with eliminating the adversary's need for timing
+  attacks with respect to false positives. Ultimately, the decision is a
+  simple one that can be made without this information, however. The user
+  does not need Paul Syverson to instruct them on the deep magic of Onion
+  Routing to make this decision. They just need to know why they use Tor.
+  If they use it just to stay out of marketing databases and/or bypass a
+  local content filter, two hops is plenty.  This is likely the vast
+  majority of Tor users, and many non-users we would like to bring on 
+  board.
+
+  So, having established this class of users, let us now go on to
+  examine theoretical and practical risks we place them at, and determine
+  if these risks violate the users needs, or introduce additional risk 
+  to node operators who may be subject to requests from law enforcement
+  to track users who need 3 hops, but use 2 because they enjoy the
+  thrill of russian roulette.
 
 
 Theoretical Argument:
@@ -200,6 +263,49 @@ Practical Issues:
   be created. TorFlow can scan for failing guards, but after a while, 
   its unique behavior gives away the fact that its IP is a scanner and 
   it can be given selective service.
+  
+  Consideration of risks for node operators:
+
+  There is a serious risk for two hop users in the form of guard
+  profiling. If an adversary running an exit node notices that a
+  particular site is always visited from a fixed previous hop, it is
+  likely that this is a two hop user using a certain guard, which could be
+  monitored to determine their identity. Thus, for the protection of both
+  2 hop users and node operators, 2 hop users should limit their guard
+  duration to a sufficient number of days to verify reliability of a node,
+  but not much more. This duration can be determined experimentally by
+  TorFlow.
+
+  Considering a Tor client builds on average 144 circuits/day (10
+  minutes per circuit), if the adversary owns c/n% of exits on the
+  network, they can expect to see 144*c/n circuits from this user, or
+  about 14 minutes of usage per day per percentage of network penetration.
+  Since it will take several occurrences of user-identifiable exit content
+  from the same predecessor hop for the adversary to have any confidence
+  this is a 2 hop user, it is very unlikely that any sort of demands made
+  upon the predecessor node would guaranteed to be effective (ie it
+  actually was a guard), let alone executed in time to apprehend the user
+  before they rotated guards.
+
+  The reverse risk also warrants consideration. If a malicious guard has
+  orders to surveil Mike Perry, it can determine Mike Perry is using two
+  hops by observing his tendency to choose a 2nd hop with a viable exit
+  policy. This can be done relatively quickly, unfortunately, and 
+  probably indicates Mike Perry should spend some of his time building
+  real 3 hop circuits through the same guards, to require them to at
+  least wait for him to actually use Tor to determine his style of
+  operation, rather than collect this information from his passive
+  building patterns.
+
+  However, to actively determine where Mike Perry is going, the guard
+  will need to require logging ahead of time at multiple exit nodes that
+  he may use over the course of the few days while he is at that guard,
+  and correlate the usage times of the exit node with Mike Perry's
+  activity at that guard for the few days he uses it. At this point, the
+  adversary is mounting a scale and method of attack (widespread logging,
+  timing attacks) that works pretty much just as effectively against 3
+  hops, so exit node operators are exposed to no additional danger than
+  they otherwise normally are.
 
 
 Why not fix Pathlen=2?:
@@ -227,47 +333,15 @@ Why not fix Pathlen=2?:
   for this reason.
 
 
-Who will enable this option?
-
-  This is the crux of the proposal. Admittedly, there is some anonymity
-  loss and some degree of decreased investment required on the part of
-  the adversary to attack 2 hop users versus 3 hop users, even if it is
-  minimal and limited mostly to up-front costs and false positives.
-
-  The key questions are:
-
-  1. Are these users in a class such that their risk is significantly
-     less than the amount of this anonymity loss?
-
-  2. Are these users able to identify themselves?
-
-  Many many users of Tor are not at risk for an adversary capturing c/n
-  nodes of the network just to see what they do. These users use Tor to
-  circumvent aggressive content filters, or simply to keep their IP out of
-  marketing and search engine databases. Most content filters have no
-  interest in running Tor nodes to catch violators, and marketers
-  certainly would never consider such a thing, both on a cost basis and a
-  legal one.
-
-  In a sense, this represents an alternate threat model against these
-  users who are not at risk for Tor's normal threat model.
-
-  It should be evident to these users that they fall into this class. All
-  that should be needed is a radio button
-
-   * "I use Tor for censorship resistance and IP obfuscation, not anonymity.
-      Speed is more important to me than high anonymity."
-   * "I use Tor for anonymity. I need more protection at the cost of speed."
- 
-  and then some explanation in the help for exactly what this means, and
-  the risks involved with eliminating the adversary's need for timing
-  attacks with respect to false positives.
-
-
 Implementation:
 
   new_route_len() can be modified directly with a check of the
-  Pathlen option.
+  Pathlen option. However, circuit construction logic should be
+  altered so that both 2 hop and 3 hop users build the same types of
+  circuits, and the option should ultimately govern circuit selection,
+  not construction. This improves coverage against guard nodes being
+  able to passively profile users who aren't even using Tor.
+  PathlenCoinWeight, anyone? :)
 
   The exit policy hack is a bit more tricky. compare_addr_to_addr_policy
   needs to return an alternate ADDR_POLICY_ACCEPTED_WILDCARD or
@@ -295,14 +369,17 @@ Migration:
   Phase 1: Adjust exit policy checks if Pathlen is set. Modify
   new_route_len() to obey a 'Pathlen' config option.
 
-  Phase 2: Implement leaky circuit ability.
+  Phase 2: Implement leaky circuit ability, and 2-3 hop circuit
+  selection logic.
 
   Phase 3: Experiment to determine the proper ratio of circuit
   failures used to expire garbage or malicious guards via TorFlow
   (pending Bug #440 backport+adoption).
 
   Phase 4: Implement guard expiration code to kick off failure-prone
-  guards and warn the user.
+  guards and warn the user. Cap 2 hop guard duration to a proper number
+  of days determined sufficient to establish guard reliability (to be
+  determined by TorFlow).
 
   Phase 5: Make radiobutton in Vidalia, along with help entry
   that explains in layman's terms the risks involved.
