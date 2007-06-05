@@ -1365,7 +1365,7 @@ router_choose_random_node(const char *preferred,
     if (excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
 
-    if (need_capacity)
+    if (need_capacity || need_guard)
       choice = routerlist_sl_choose_by_bandwidth(sl, weight_for_exit);
     else
       choice = smartlist_choose(sl);
