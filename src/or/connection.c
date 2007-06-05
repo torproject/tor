@@ -428,7 +428,7 @@ connection_about_to_close_connection(connection_t *conn)
   edge_connection_t *edge_conn;
   time_t now = time(NULL);
 
-  assert(conn->marked_for_close);
+  tor_assert(conn->marked_for_close);
 
   if (CONN_IS_EDGE(conn)) {
     if (!conn->edge_has_sent_end) {
