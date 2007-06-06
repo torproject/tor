@@ -14,12 +14,12 @@ Overview:
   to have either two or three hop paths through the tor network. 
 
   Let us be clear: the users who would choose this option should be
-  those that are concerned with IP obfuscation only: ie they would 
-  not be targets of a resource-intensive multi-node hack. It is often
-  said that these users should find some other network to use other 
-  than Tor. This is a foolish suggestion: more users improves security
-  of everyone, and the current small userbase size is a critical 
-  hindrance to anonymity, as is discussed below.
+  those that are concerned with IP obfuscation only: ie they would not be
+  targets of a resource-intensive multi-node attack. It is sometimes said
+  that these users should find some other network to use other than Tor.
+  This is a foolish suggestion: more users improves security of everyone,
+  and the current small userbase size is a critical hindrance to
+  anonymity, as is discussed below and in [1].
 
   This value should be modifiable from the controller, and should be
   available from Vidalia.
@@ -62,10 +62,10 @@ Motivation:
   will still provide benefit independent of this proposal.
 
   However, reducing the path length to 2 for those who do not need the
-  (questionable) extra anonymity 3 hops provide not only improves their
-  Tor experience but also reduces their load on the Tor network by 33%,
-  and can be done in less than 10 lines of code (not counting various
-  security enhancements). That's not just Win-Win, it's Win-Win-Win.
+  extra anonymity 3 hops provide not only improves their Tor experience
+  but also reduces their load on the Tor network by 33%, and should
+  increase adoption of Tor by a good deal. That's not just Win-Win, it's
+  Win-Win-Win.
 
 
 Who will enable this option?
@@ -111,7 +111,7 @@ Who will enable this option?
   does not need Paul Syverson to instruct them on the deep magic of Onion
   Routing to make this decision. They just need to know why they use Tor.
   If they use it just to stay out of marketing databases and/or bypass a
-  local content filter, two hops is plenty.  This is likely the vast
+  local content filter, two hops is plenty. This is likely the vast
   majority of Tor users, and many non-users we would like to bring on 
   board.
 
@@ -195,7 +195,7 @@ Practical Issues:
   period of R*c, and probability 0 over an expected period of R*(n-c),
   versus a continuous risk of (c/n)^2. So statistically speaking, guards
   only create a time-tradeoff of risk over the long run for normal Tor
-  usage.  Rotating guards do not reduce risk for normal client usage long
+  usage. Rotating guards do not reduce risk for normal client usage long
   term.[3]
 
   On other other hand, assuming a more stable method of guard selection
@@ -208,7 +208,7 @@ Practical Issues:
 
   The nature of Tor makes it likely an adversary will take a "shock and
   awe" approach to suppressing Tor by rounding up a few users whose
-  browsing activity has been observed to be made into examples of, in an
+  browsing activity has been observed to be made into examples, in an
   attempt to prove that Tor is not perfect.
 
   Since this "shock and awe" attack can be applied with or without guard
@@ -221,11 +221,9 @@ Practical Issues:
   presumably trusted) guards. This is probably the most beneficial
   property of reliable guards: they deter the adversary from mounting
   "shock and awe" attacks because the surviving users will not
-  intimidated, but instead made more confident. Of course, guards need
-  to be made much more stable and users need to be encouraged to
-  know them for this properly to really take effect. It probably only
-  has any bearing on people with super stable connections who are
-  careful about preserving their state file between Tor upgrades.
+  intimidated, but instead made more confident. Of course, guards need to
+  be made much more stable and users need to be encouraged to know their
+  guards for this property to really take effect. 
 
   This beneficial property of client vigilance also carries over to an
   active adversary, except in this case instead of relying on the user
@@ -255,7 +253,7 @@ Practical Issues:
   worse. Without guard nodes, it becomes much more difficult for clients
   to become alerted to Tor entry points that are failing circuits to make
   sure that they only devote bandwidth to carry traffic for streams which
-  they observe both ends. Yet the rouge entry points are still able to
+  they observe both ends. Yet the rogue entry points are still able to
   significantly increase their success rates by failing circuits.
 
   For this reason, guard nodes should remain enabled for 2 hop users,
@@ -280,22 +278,21 @@ Practical Issues:
   minutes per circuit), if the adversary owns c/n% of exits on the
   network, they can expect to see 144*c/n circuits from this user, or
   about 14 minutes of usage per day per percentage of network penetration.
-  Since it will take several occurrences of user-identifiable exit content
+  Since it will take several occurrences of user-linkable exit content
   from the same predecessor hop for the adversary to have any confidence
   this is a 2 hop user, it is very unlikely that any sort of demands made
   upon the predecessor node would guaranteed to be effective (ie it
-  actually was a guard), let alone executed in time to apprehend the user
-  before they rotated guards.
+  actually was a guard), let alone be executed in time to apprehend the 
+  user before they rotated guards.
 
   The reverse risk also warrants consideration. If a malicious guard has
   orders to surveil Mike Perry, it can determine Mike Perry is using two
   hops by observing his tendency to choose a 2nd hop with a viable exit
-  policy. This can be done relatively quickly, unfortunately, and 
-  probably indicates Mike Perry should spend some of his time building
-  real 3 hop circuits through the same guards, to require them to at
-  least wait for him to actually use Tor to determine his style of
-  operation, rather than collect this information from his passive
-  building patterns.
+  policy. This can be done relatively quickly, unfortunately, and
+  indicates Mike Perry should spend some of his time building real 3 hop
+  circuits through the same guards, to require them to at least wait for
+  him to actually use Tor to determine his style of operation, rather than
+  collect this information from his passive building patterns.
 
   However, to actively determine where Mike Perry is going, the guard
   will need to require logging ahead of time at multiple exit nodes that
@@ -366,25 +363,23 @@ Implementation:
 
 Migration:
 
-  Phase 1: Adjust exit policy checks if Pathlen is set. Modify
-  new_route_len() to obey a 'Pathlen' config option.
+  Phase 1: Adjust exit policy checks if Pathlen is set, implement leaky
+  circuit ability, and 2-3 hop circuit selection logic governed by
+  Pathlen.
 
-  Phase 2: Implement leaky circuit ability, and 2-3 hop circuit
-  selection logic.
-
-  Phase 3: Experiment to determine the proper ratio of circuit
+  Phase 2: Experiment to determine the proper ratio of circuit
   failures used to expire garbage or malicious guards via TorFlow
   (pending Bug #440 backport+adoption).
 
-  Phase 4: Implement guard expiration code to kick off failure-prone
+  Phase 3: Implement guard expiration code to kick off failure-prone
   guards and warn the user. Cap 2 hop guard duration to a proper number
   of days determined sufficient to establish guard reliability (to be
   determined by TorFlow).
 
-  Phase 5: Make radiobutton in Vidalia, along with help entry
+  Phase 4: Make radiobutton in Vidalia, along with help entry
   that explains in layman's terms the risks involved.
 
-  Phase 6: Allow user to specify path length by HTTP URL suffix.
+  Phase 5: Allow user to specify path length by HTTP URL suffix.
 
 
 [1] http://p2pnet.net/story/11279
