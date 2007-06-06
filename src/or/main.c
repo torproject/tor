@@ -1282,21 +1282,6 @@ do_hup(void)
      * configuration options. */
     cpuworkers_rotate();
     dns_reset();
-#if 0
-    const char *descriptor;
-    char keydir[512];
-    /* Write out a fresh descriptor, but leave old one on failure. */
-    router_rebuild_descriptor(1);
-    descriptor = router_get_my_descriptor();
-    if (descriptor) {
-      tor_snprintf(keydir,sizeof(keydir),"%s"PATH_SEPARATOR"router.desc",
-                   options->DataDirectory);
-      log_info(LD_OR,"Saving descriptor to \"%s\"...",keydir);
-      if (write_str_to_file(keydir, descriptor, 0)) {
-        return 0;
-      }
-    }
-#endif
   }
   return 0;
 }

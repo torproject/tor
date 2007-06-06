@@ -2764,15 +2764,6 @@ assert_connection_ok(connection_t *conn, time_t now)
     assert_buf_ok(conn->outbuf);
   }
 
-  /* XXXX Fix this; no longer so.*/
-#if 0
-  if (conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR)
-    tor_assert(!conn->pkey);
-  /* pkey is set if we're a dir client, or if we're an OR in state OPEN
-   * connected to another OR.
-   */
-#endif
-
   if (conn->chosen_exit_optional) {
     tor_assert(conn->type == CONN_TYPE_AP);
     tor_assert((TO_EDGE_CONN(conn))->chosen_exit_name);

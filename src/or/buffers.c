@@ -280,16 +280,6 @@ buf_shrink_freelists(void)
         tor_free(mem);
         --list->len;
       }
-#if 0
-      /* XXXX020 Put this code back if the above gives us nasty segfaults. */
-      for (i = list->slack; i < list->lowwater; ++i) {
-        char *mem = list->list;
-        tor_assert(mem);
-        list->list = *(char**)mem;
-        tor_free(mem);
-        --list->len;
-      }
-#endif
     }
     list->lowwater = list->len;
   }
