@@ -179,10 +179,10 @@ typedef struct token_rule_t {
 static token_rule_t routerdesc_token_table[] = {
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
-  T1( "router",              K_ROUTER,              GE(5),   NO_OBJ ),
+  T1_START( "router",              K_ROUTER,              GE(5),   NO_OBJ ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
-  T1( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
+  T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T01("uptime",              K_UPTIME,              GE(1),   NO_OBJ ),
   T01("fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
@@ -205,12 +205,12 @@ static token_rule_t routerdesc_token_table[] = {
 
 /** List of tokens allowable in extra-info documents. */
 static token_rule_t extrainfo_token_table[] = {
-  T1( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
+  T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
-  T1( "extra-info",          K_EXTRA_INFO,          GE(2),   NO_OBJ ),
+  T1_START( "extra-info",          K_EXTRA_INFO,          GE(2),   NO_OBJ ),
 
   END_OF_TABLE
 };

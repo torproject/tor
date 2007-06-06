@@ -1024,16 +1024,6 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     test_eq_ip6(&a1, &a2);                                              \
   } while (0)
 
-#define test_ntop6_reduces2(a,b,c) do {                                 \
-    r = tor_inet_pton(AF_INET6, a, &a1);                                \
-    test_assert(r==1);                                                  \
-    test_assert(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)));        \
-    test_assert(!strcmp(buf, b) || !strcmp(buf, c));                    \
-    r = tor_inet_pton(AF_INET6, b, &a2);                                \
-    test_assert(r==1);                                                  \
-    test_eq_ip6(&a1, &a2);                                              \
-  } while (0)
-
 static void
 test_ip6_helpers(void)
 {

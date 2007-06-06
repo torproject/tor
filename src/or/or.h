@@ -250,14 +250,6 @@ typedef enum {
 /** State for any listener connection. */
 #define LISTENER_STATE_READY 0
 
-#define _DNSWORKER_STATE_MIN 1
-/** State for a connection to a dnsworker process that's idle. */
-#define DNSWORKER_STATE_IDLE 1
-/** State for a connection to a dnsworker process that's resolving a
- * hostname. */
-#define DNSWORKER_STATE_BUSY 2
-#define _DNSWORKER_STATE_MAX 2
-
 #define _CPUWORKER_STATE_MIN 1
 /** State for a connection to a cpuworker process that's idle. */
 #define CPUWORKER_STATE_IDLE 1
