@@ -599,7 +599,9 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
 
   for (n=0; n<b->num_maxes_set; ++n,++i) {
     uint64_t total;
-    while (i >= NUM_TOTALS) i -= NUM_TOTALS;
+    if (i >= NUM_TOTALS)
+      i -= NUM_TOTALS;
+    tor_assert(i < NUM_TOTALS);
     /* Round the bandwidth used down to the nearest 1k. */
     total = b->totals[i] & ~0x3ff;
     if (n==(b->num_maxes_set-1))
@@ -1473,7 +1475,9 @@ hs_usage_format_history(char *buf, size_t len, uint32_t *data)
     i = current_period->next_idx;
   }
   for (n = 0; n < current_period->num_set; ++n,++i) {
-    while (i >= NUM_TOTALS_HS_USAGE) i -= NUM_TOTALS_HS_USAGE;
+    if (i >= NUM_TOTALS_HS_USAGE)
+      i -= NUM_TOTALS_HS_USAGE;
+    tor_assert(i < NUM_TOTALS_HS_USAGE);
     if (n == (current_period->num_set-1))
       tor_snprintf(cp, len-(cp-buf), "%d", data[i]);
     else
