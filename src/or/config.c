@@ -2762,12 +2762,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
   }
 
-#if 0
-  if (options->SocksPort >= 1 &&
-      (options->PathlenCoinWeight < 0.0 || options->PathlenCoinWeight >= 1.0))
-    REJECT("PathlenCoinWeight option must be >=0.0 and <1.0.");
-#endif
-
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
     log(LOG_WARN,LD_CONFIG,"RendPostPeriod option must be at least %d seconds."
         " Clipping.", MIN_REND_POST_PERIOD);
