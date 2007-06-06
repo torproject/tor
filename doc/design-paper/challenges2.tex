@@ -152,11 +152,11 @@ see both the connection's source and destination.  Later requests use a new
 circuit, to complicate long-term linkability between different actions by
 a single user.
 
-Tor also helps servers hide their locations while
-providing services such as web publishing or instant
-messaging.  Using ``rendezvous points'', other Tor users can
-connect to these authenticated hidden services, neither one learning the
-other's network identity.
+%Tor also helps servers hide their locations while
+%providing services such as web publishing or instant
+%messaging.  Using ``rendezvous points'', other Tor users can
+%connect to these authenticated hidden services, neither one learning the
+%other's network identity.
 
 Tor attempts to anonymize the transport layer, not the application layer.
 This approach is useful for applications such as SSH
@@ -170,17 +170,22 @@ IP packets; it only anonymizes TCP streams and DNS requests.
 %connections via SOCKS
 %(but see Section~\ref{subsec:tcp-vs-ip}).
 
-Most node operators do not want to allow arbitrary TCP traffic. % to leave
+%Most node operators do not want to allow arbitrary TCP traffic. % to leave
 %their server.
-To address this, Tor provides \emph{exit policies} so
-each exit node can block the IP addresses and ports it is unwilling to allow.
-Tor nodes advertise their exit policies to the directory servers, so that
-client can tell which nodes will support their connections.
-
-As of this writing, the Tor network has grown to around nine hundred nodes
-on four continents, with a total average load exceeding 100 MB/s and
-a total capacity exceeding %1Gbit/s. 
-\\***What's the current capacity? -PFS***\\
+%To address this, Tor provides \emph{exit policies} so
+%each exit node can block the IP addresses and ports it is unwilling to allow.
+%Tor nodes advertise their exit policies to the directory servers, so that
+%client can tell which nodes will support their connections.
+%
+%***Covered in 3.4*** Matt Edman via -PFS
+%
+%As of this writing, the Tor network has grown to around nine hundred nodes
+%on four continents, with a total average load exceeding 100 MB/s and
+%a total capacity exceeding %1Gbit/s. 
+%\\***What's the current capacity? -PFS***\\
+%
+%***Covered in intro*** Matt Edman via -PFS
+%
 %Appendix A
 %shows a graph of the number of working nodes over time, as well as a
 %graph of the number of bytes being handled by the network over time.
@@ -271,7 +276,7 @@ complicating factors:
   permit connections to their favorite services.
 We demonstrated the severity of these problems in experiments on the
 live Tor network in 2006~\cite{hsattack} and introduced \emph{entry
-  guards} as a means to curtail them.  By choosing entry nodes from
+  guards} as a means to curtail them.  By choosing entry guards from
 a small persistent subset, it becomes difficult for an adversary to
 increase the number of circuits observed entering the network from any
 given client simply by causing
@@ -286,6 +291,9 @@ numerous connections or by watching compromised nodes over time.% (See
 % deprecate these attacks if we can't demonstrate that they don't work, since
 % in case they *do* turn out to work well against Tor, we'll look pretty
 % foolish. -NM
+%
+% Matt suggests maybe cutting the following paragraph -PFS
+%
 More powerful attacks may exist. In \cite{hintz-pet02} it was
 shown that an attacker who can catalog data volumes of popular
 responder destinations (say, websites with consistent data volumes) may not
@@ -377,13 +385,13 @@ means the Tor network can be safely operated and used by a wide variety
 of mutually distrustful users, providing sustainability and security.
 %than some previous attempts at anonymizing networks.
 
-No organization can achieve this security on its own.  If a single
-corporation or government agency were to build a private network to
-protect its operations, any connections entering or leaving that network
-would be obviously linkable to the controlling organization.  The members
-and operations of that agency would be easier, not harder, to distinguish.
+%No organization can achieve this security on its own.  If a single
+%corporation or government agency were to build a private network to
+%protect its operations, any connections entering or leaving that network
+%would be obviously linkable to the controlling organization.  The members
+%and operations of that agency would be easier, not harder, to distinguish.
 
-Instead, to protect our networks from traffic analysis, we must
+To protect our networks from traffic analysis, we must
 collaboratively blend the traffic from many organizations and private
 citizens, so that an eavesdropper can't tell which users are which,
 and who is looking for what information.  %By bringing more users onto
@@ -443,6 +451,9 @@ for example Tarzan~\cite{tarzan:ccs02} and
 MorphMix~\cite{morphmix:fc04}, have been proposed in the literature but
 have not been fielded. These systems differ somewhat
 in threat model and presumably practical resistance to threats.
+%
+% Matt suggests cutting some or all of the rest of this paragraph. -PFS
+%
 Note that MorphMix differs from Tor only in
 node discovery and circuit setup; so Tor's architecture is flexible
 enough to contain a MorphMix experiment. Recently, 
@@ -488,12 +499,13 @@ and secure
 \emph{others} will find it, in order to get the protection of a larger
 anonymity set. Thus we might supplement the adage ``usability is a security
 parameter''~\cite{back01} with a new one: ``perceived usability is a
-security parameter.'' From here we can better understand the effects
-of publicity on security: the more convincing your
-advertising, the more likely people will believe you have users, and thus
-the more users you will attract. Perversely, over-hyped systems (if they
-are not too broken) may be a better choice than modestly promoted ones,
-if the hype attracts more users~\cite{usability-network-effect}.
+security parameter.''~\cite{usability-network-effect}.
+% From here we can better understand the effects
+%of publicity on security: the more convincing your
+%advertising, the more likely people will believe you have users, and thus
+%the more users you will attract. Perversely, over-hyped systems (if they
+%are not too broken) may be a better choice than modestly promoted ones,
+%if the hype attracts more users~\cite{usability-network-effect}.
 
 %So it follows that we should come up with ways to accurately communicate
 %the available security levels to the user, so she can make informed
@@ -534,13 +546,12 @@ Therefore, since under this threat
 model the number of concurrent users does not seem to have much impact
 on the anonymity provided, we suggest that JAP's anonymity meter is not
 accurately communicating security levels to its users.
-}
 
 On the other hand, while the number of active concurrent users may not
 matter as much as we'd like, it still helps to have some other users
 on the network, in particular different types of users.
 We investigate this issue next.
-
+}
 \subsection{Reputability and perceived social value}
 Another factor impacting the network's security is its reputability:
 the perception of its social value based on its current user base. If Alice is
@@ -565,18 +576,20 @@ shut down has difficulty attracting and keeping adequate nodes.
 Second, a disreputable network is more vulnerable to legal and
 political attacks, since it will attract fewer supporters.
 
+\workingnote{
 While people therefore have an incentive for the network to be used for
 ``more reputable'' activities than their own, there are still trade-offs
 involved when it comes to anonymity. To follow the above example, a
 network used entirely by cancer survivors might welcome file sharers
 onto the network, though of course they'd prefer a wider
 variety of users.
-
+}
 Reputability becomes even more tricky in the case of privacy networks,
 since the good uses of the network (such as publishing by journalists in
 dangerous countries) are typically kept private, whereas network abuses
 or other problems tend to be more widely publicized.
 
+\workingnote{
 The impact of public perception on security is especially important
 during the bootstrapping phase of the network, where the first few
 widely publicized uses of the network can dictate the types of users it
@@ -592,7 +605,7 @@ such attacks.% (see Section~\ref{subsec:tcp-vs-ip}).
 But aside from this, we also decided that it would probably be poor
 precedent to encourage such use---even legal use that improves
 national security---and managed to dissuade them.
-
+}
 %% "outside of academia, jap has just lost, permanently".  (That is,
 %% even though the crime detection issues are resolved and are unlikely
 %% to go down the same way again, public perception has not been kind.)
@@ -649,10 +662,8 @@ that they are willing to donate to the network, at no additional monetary
 cost to them.  Features to limit bandwidth have been essential to adoption.
 Also useful has been a ``hibernation'' feature that allows a Tor node that
 wants to provide high bandwidth, but no more than a certain amount in a
-giving billing cycle, to become dormant once its bandwidth is exhausted, and
-to reawaken at a random offset into the next billing cycle.  This feature has
-interesting policy implications, however; see
-the next section below.
+given billing cycle, to become dormant once its bandwidth is exhausted, and
+to reawaken at a random offset into the next billing cycle.
 Exit policies help to limit administrative costs by limiting the frequency of
 abuse complaints (see Section~\ref{subsec:tor-and-blacklists}).
 % We discuss
@@ -750,11 +761,14 @@ to allow individual Tor nodes to block access to specific IP/port ranges.
 This approach aims to make operators more willing to run Tor by allowing
 them to prevent their nodes from being used for abusing particular
 services.  For example, by default Tor nodes block SMTP (port 25),
-to avoid the issue of spam. Note that for spammers, Tor would be 
+to avoid the issue of spam. 
+\workingnote{
+Note that for spammers, Tor would be 
 a step back, a much less effective means of distributing spam than
 those currently available. This is thus primarily an unmistakable
 answer to those confused about Internet communication who might raise
 spam as an issue.
+}
 
 Exit policies are useful, but they are insufficient: if not all nodes
 block a given service, that service may try to block Tor instead.
@@ -789,7 +803,9 @@ Various schemes for escrowing anonymous posts until they are reviewed
 by editors would both prevent abuse and remove incentives for attempts
 to abuse. Further, pseudonymous reputation tracking of posters through Tor
 would allow those who establish adequate reputation to post without
-escrow. Software to support pseudonymous access via Tor designed precisely
+escrow. 
+\workingnote{
+Software to support pseudonymous access via Tor designed precisely
 to interact with Wikipedia's access mechanism has even been developed
 and proposed to Wikimedia by Jason Holt~\cite{nym}, but has not been taken up.
 
@@ -807,6 +823,7 @@ affects Tor nodes running in middleman mode (disallowing all exits) when
 those nodes are blacklisted too.
 % Perception of Tor as an abuse vector
 %is also partly driven by multiple base-rate fallacies~\cite{axelsson00}.
+}
 
 Problems of abuse occur mainly with services such as IRC networks and
 Wikipedia, which rely on IP blocking to ban abusive users.  While at first
@@ -819,7 +836,9 @@ ongoing abuse difficult.  Although the system is imperfect, it works
 tolerably well for them in practice.
 
 Of course, we would prefer that legitimate anonymous users be able to
-access abuse-prone services.  One conceivable approach would require
+access abuse-prone services. 
+\workingnote{
+ One conceivable approach would require
 would-be IRC users, for instance, to register accounts if they want to
 access the IRC network from Tor.  In practice this would not
 significantly impede abuse if creating new accounts were easily automatable;
@@ -830,7 +849,7 @@ impose cost with Reverse Turing Tests, but this step may not deter all
 abusers.  Freedom used blind signatures to limit
 the number of pseudonyms for each paying account, but Tor has neither the
 ability nor the desire to collect payment.
-
+}
 We stress that as far as we can tell, most Tor uses are not
 abusive. Most services have not complained, and others are actively
 working to find ways besides banning to cope with the abuse. For example,
@@ -840,7 +859,7 @@ when they labelled all users coming from Tor IPs as ``anonymous users,''
 removing the ability of the abusers to blend in, the abuse stopped.
 This is an illustration of how simple technical mechanisms can remove
 the ability to abuse anonymously without undermining the ability
-to communicate anonymous and can thus remove the incentive to attempt
+to communicate anonymously and can thus remove the incentive to attempt
 abusing in this way.
 
 %The use of squishy IP-based ``authentication'' and ``authorization''
