@@ -1,3 +1,10 @@
+                    This file lists the authors for Tor,
+        a free software project to provide anonymity on the Internet.
+
+       For more information about Tor, see http://www.torproject.org/.
+
+             If you got this file as a part of a larger bundle,
+        there are probably other authors that you should be aware of.
 
 Main authors:
 -------------
@@ -27,7 +34,7 @@ Jason Holt <jason@lunkwill.org> contributed patches to the instructions
 and the man page.
 
 Peter Palfrader <peter@palfrader.org> maintains everything that's
-debian-specific.
+debian-specific, and has written other useful features.
 
 Aaron Turner <aturner@netscreen.com> contributed the first version of
 the tor.sh initscripts shell script.
