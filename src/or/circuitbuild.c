@@ -2274,10 +2274,8 @@ static void
 entry_guards_prepend_from_config(void)
 {
   or_options_t *options = get_options();
-  smartlist_t *entry_routers = smartlist_create();
-  smartlist_t *old_entry_guards_on_list = smartlist_create();
-  smartlist_t *old_entry_guards_not_on_list = smartlist_create();
-  smartlist_t *entry_fps = smartlist_create();
+  smartlist_t *entry_routers, *entry_fps;
+  smartlist_t *old_entry_guards_on_list, *old_entry_guards_not_on_list;
   tor_assert(entry_guards);
 
   should_add_entry_nodes = 0;
@@ -2292,6 +2290,11 @@ entry_guards_prepend_from_config(void)
 
   log_info(LD_CIRC,"Adding configured EntryNodes '%s'.",
            options->EntryNodes);
+
+  entry_routers = smartlist_create();
+  entry_fps = smartlist_create();
+  old_entry_guards_on_list = smartlist_create();
+  old_entry_guards_not_on_list = smartlist_create();
 
   /* Split entry guards into those on the list and those not. */
   add_nickname_list_to_smartlist(entry_routers, options->EntryNodes, 0);
