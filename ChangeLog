@@ -6,6 +6,9 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - tor-gencert creates all files as readable to the file creator only, and
       write-protects the authority identity key.
 
+  o Deprecated features:
+    - RedirectExits is now deprecated.
+
   o Minor feature (controller):
     - You can now use the ControlSocket option to tell Tor to listen for
       controller connections on Unix domain sockets on systems that support
