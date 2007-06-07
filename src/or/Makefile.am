@@ -41,11 +41,15 @@ noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 tor_main.o: micro-revision.i
 
 micro-revision.i: FORCE
-	@if test -d ../../.svn && test -x "`which svn 2>&1;true`" ; then \
+	@svkdir=$$SVKROOT; \
+	if test "x$$svkdir" = x ; then \
+	  svkdir=$$HOME/.svk; \
+	fi; \
+	if test -d ../../.svn && test -x "`which svn 2>&1;true`" ; then \
 	  svn info ../.. |					\
 	  sed -n 's/^Revision: \([0-9][0-9]*\).*/"\1"/p' > micro-revision.tmp \
 	     || true;						\
-	elif test -x "`which svk 2>&1;true`" && test -d ~/.svk/local; then \
+	elif test -x "`which svk 2>&1;true`" && test -d $$svkdir/local; then \
 	  location=../..;					\
 	  rev=x;						\
 	  while test x$$rev = xx; do				\
