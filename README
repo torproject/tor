@@ -1,4 +1,22 @@
+Tor protects your privacy on the internet by hiding the connection
+between your Internet address and the services you use.  We believe
+Tor is reasonably secure, but please ensure you read the
+instructions and configure it properly.
 
-Tor is an implementation of Onion Routing. You can read more
-at http://tor.eff.org/
+To build Tor from source:
+        ./configure; make; make install
 
+Home page:
+        http://www.torproject.org/
+
+Download new versions:
+        http://www.torproject.org/download.html
+
+Documentation, including links to installation and setup instructions:
+        http://www.torproject.org/documentation.html
+
+Making applications work with Tor:
+        http://wiki.noreply.org/noreply/TheOnionRouter/TorifyHOWTO
+
+Frequently Asked Questions:
+        http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ
