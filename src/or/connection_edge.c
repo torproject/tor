@@ -2562,6 +2562,11 @@ set_exit_redirects(smartlist_t *lst)
     SMARTLIST_FOREACH(redirect_exit_list, exit_redirect_t *, p, tor_free(p));
     smartlist_free(redirect_exit_list);
   }
+  if (lst && smartlist_len(lst)) {
+    log_warn(LD_GENERAL,
+             "The RedirectExit option is deprecated; it will go away in a "
+             "future version of Tor.");
+  }
   redirect_exit_list = lst;
 }
 

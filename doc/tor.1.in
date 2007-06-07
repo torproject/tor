@@ -765,6 +765,7 @@ a Tor controller that handles directory publishing for you.
 .LP
 .TP
 \fBRedirectExit \fR\fIpattern target\fP
+THIS OPTION IS DEPRECATED.  It will go away in a future version of Tor.
 Whenever an outgoing connection tries to connect to one of a given set
 of addresses, connect to \fItarget\fP (an \fIaddress:port\fP pair) instead.
 The address
