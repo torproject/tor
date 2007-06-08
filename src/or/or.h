@@ -786,9 +786,9 @@ typedef struct connection_t {
   time_t timestamp_created; /**< When was this connection_t created? */
 
   /* XXXX020 make this ipv6-capable */
-  int sa_family; /**< Address family of this connection's socket.  Usually
-                  * AF_INET, but it can also be AF_UNIX, or in the future
-                  * AF_INET6 */
+  int socket_family; /**< Address family of this connection's socket.  Usually
+                      * AF_INET, but it can also be AF_UNIX, or in the future
+                      * AF_INET6 */
   uint32_t addr; /**< IP of the other side of the connection; used to identify
                   * routers, along with port. */
   uint16_t port; /**< If non-zero, port  on the other end
@@ -2347,7 +2347,7 @@ or_options_t *options_new(void);
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 
-connection_t *connection_new(int type, int sa_family);
+connection_t *connection_new(int type, int socket_family);
 void connection_link_connections(connection_t *conn_a, connection_t *conn_b);
 void connection_unregister_events(connection_t *conn);
 void connection_free(connection_t *conn);

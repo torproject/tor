@@ -157,7 +157,7 @@ conn_state_to_string(int type, int state)
  * Initialize conn's timestamps to now.
  */
 connection_t *
-connection_new(int type, int sa_family)
+connection_new(int type, int socket_family)
 {
   static uint32_t n_connections_allocated = 1;
   connection_t *conn;
@@ -195,7 +195,7 @@ connection_new(int type, int sa_family)
   conn->conn_array_index = -1; /* also default to 'not used' */
 
   conn->type = type;
-  conn->sa_family = sa_family;
+  conn->socket_family = socket_family;
   if (!connection_is_listener(conn)) { /* listeners never use their buf */
     conn->inbuf = buf_new();
     conn->outbuf = buf_new();
@@ -296,7 +296,7 @@ _connection_free(connection_t *conn)
     buf_free(conn->inbuf);
     buf_free(conn->outbuf);
   } else {
-    if (conn->sa_family == AF_UNIX) {
+    if (conn->socket_family == AF_UNIX) {
       /* For now only control ports can be unix domain sockets
        * and listeners at the same time */
       tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
@@ -830,7 +830,7 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
   set_socket_nonblocking(s);
 
   conn = connection_new(type, listensockaddr->sa_family);
-  conn->sa_family = listensockaddr->sa_family;
+  conn->socket_family = listensockaddr->sa_family;
   conn->s = s;
   conn->address = tor_strdup(address);
   conn->port = usePort;
@@ -923,9 +923,9 @@ connection_handle_listener_read(connection_t *conn, int new_type)
 
   set_socket_nonblocking(news);
 
-  tor_assert(((struct sockaddr*)addrbuf)->sa_family == conn->sa_family);
+  tor_assert(((struct sockaddr*)addrbuf)->sa_family == conn->socket_family);
 
-  if (conn->sa_family == AF_INET) {
+  if (conn->socket_family == AF_INET) {
     if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_INFO)<0) {
       log_info(LD_NET,
                "accept() returned a strange address; trying getsockname().");
@@ -969,7 +969,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       }
     }
 
-    newconn = connection_new(new_type, conn->sa_family);
+    newconn = connection_new(new_type, conn->socket_family);
     newconn->s = news;
 
     /* remember the remote address */
@@ -977,12 +977,12 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     newconn->port = ntohs(remote.sin_port);
     newconn->address = tor_dup_addr(newconn->addr);
 
-  } else if (conn->sa_family == AF_UNIX) {
+  } else if (conn->socket_family == AF_UNIX) {
     /* For now only control ports can be unix domain sockets
      * and listeners at the same time */
     tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
 
-    newconn = connection_new(new_type, conn->sa_family);
+    newconn = connection_new(new_type, conn->socket_family);
     newconn->s = news;
 
     /* remember the remote address -- do we have anything sane to put here? */
@@ -1150,7 +1150,7 @@ retry_listeners(int type, config_line_t *cfg,
                 smartlist_t *replaced_conns,
                 smartlist_t *new_conns,
                 int never_open_conns,
-                int sa_family)
+                int socket_family)
 {
   smartlist_t *launch = smartlist_create(), *conns;
   int free_launch_elts = 1;
@@ -1159,7 +1159,7 @@ retry_listeners(int type, config_line_t *cfg,
   connection_t *conn;
   config_line_t *line;
 
-  tor_assert(sa_family == AF_INET || sa_family == AF_UNIX);
+  tor_assert(socket_family == AF_INET || socket_family == AF_UNIX);
 
   if (cfg && port_option) {
     for (c = cfg; c; c = c->next) {
@@ -1182,7 +1182,7 @@ retry_listeners(int type, config_line_t *cfg,
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
     if (conn->type != type ||
-        conn->sa_family != sa_family ||
+        conn->socket_family != socket_family ||
         conn->marked_for_close)
       continue;
     /* Okay, so this is a listener.  Is it configured? */
@@ -1191,7 +1191,7 @@ retry_listeners(int type, config_line_t *cfg,
       {
         char *address=NULL;
         uint16_t port;
-        switch (sa_family) {
+        switch (socket_family) {
           case AF_INET:
             if (!parse_addr_port(LOG_WARN,
                                  wanted->value, &address, NULL, &port)) {
@@ -1243,7 +1243,7 @@ retry_listeners(int type, config_line_t *cfg,
         char *address = NULL;
         struct sockaddr *listensockaddr;
 
-        switch (sa_family) {
+        switch (socket_family) {
           case AF_INET:
             listensockaddr = (struct sockaddr *)
                              create_inet_sockaddr(cfg_line->value,
