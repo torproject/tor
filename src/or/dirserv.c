@@ -1583,13 +1583,12 @@ version_from_platform(const char *platform)
  * DOCDOC new arguments */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
-                          routerstatus_t *rs, const char *platform,
+                          routerstatus_t *rs, const char *version,
                           int first_line_only)
 {
   int r;
   struct in_addr in;
   char *cp;
-  char *v;
 
   int f_authority;
   char published[ISO_TIME_LEN+1];
@@ -1639,13 +1638,11 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     return -1;
   }
 
-  if (platform && (v = version_from_platform(platform))) {
-    if (tor_snprintf(buf, buf_len, "opt v %s\n", v)<0) {
-      tor_free(v);
+  if (version) {
+    if (tor_snprintf(buf, buf_len, "opt v %s\n", version)<0) {
       log_warn(LD_BUG, "Unable to print router version.");
       return -1;
     }
-    tor_free(v);
   }
 
   return 0;
@@ -1956,7 +1953,6 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 
   SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
   {
-    /* XXXX020 ri->platform!!!.  Also, version-from-platform. */
     if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
                                   vrs->version, 0) < 0) {
       log_warn(LD_BUG, "Unable to print router status.");
@@ -2165,18 +2161,19 @@ generate_networkstatus_opinion(int v2)
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
-
       routerstatus_t rs;
+      char *version = version_from_platform(ri->platform);
 
       set_routerstatus_from_routerinfo(&rs, ri, now,
                                        naming, exits_can_be_guards,
                                        listbadexits);
 
-      if (routerstatus_format_entry(outp, endp-outp, &rs,
-                                    ri->platform, 0) < 0) {
+      if (routerstatus_format_entry(outp, endp-outp, &rs, version, 0)) {
         log_warn(LD_BUG, "Unable to print router status.");
+        tor_free(version);
         goto done;
       }
+      tor_free(version);
       outp += strlen(outp);
     }
   });
