@@ -1287,22 +1287,6 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   return extrainfo;
 }
 
-/** Free storage held in <b>cert</b>. */
-void
-authority_cert_free(authority_cert_t *cert)
-{
-  if (!cert)
-    return;
-
-  tor_free(cert->cache_info.signed_descriptor_body);
-  if (cert->signing_key)
-    crypto_free_pk_env(cert->signing_key);
-  if (cert->identity_key)
-    crypto_free_pk_env(cert->identity_key);
-
-  tor_free(cert);
-}
-
 /** Parse a key certificate from <b>s</b>; point <b>end-of-string</b> to
  * the first character after the certificate. */
 authority_cert_t *
@@ -1515,14 +1499,13 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
 
   tok = find_first_by_keyword(tokens, K_S);
   if (tok && vote) {
-    int i, j;
+    int i;
     vote_rs->flags = 0;
     for (i=0; i < tok->n_args; ++i) {
-      for (j=0; vote->known_flags[j]; ++j) {
-        if (!strcmp(tok->args[i], vote->known_flags[j])) {
-          vote_rs->flags |= (1<<j);
-          break;
-        }
+      int p = smartlist_string_pos(vote->known_flags, tok->args[i]);
+      if (p >= 0) {
+        vote_rs->flags |= (1<<p);
+        break;
       }
     }
   } else if (tok) {
@@ -1869,9 +1852,9 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
   }
 
   tok = find_first_by_keyword(tokens, K_KNOWN_FLAGS);
-  ns->known_flags = tor_malloc(sizeof(char*)*(tok->n_args+1));
-  memcpy(ns->known_flags, tok->args, sizeof(char*)*(tok->n_args));
-  ns->known_flags[tok->n_args] = NULL;
+  ns->known_flags = smartlist_create();
+  for (i = 0; i < tok->n_args; ++i)
+    smartlist_add(ns->known_flags, tok->args[i]);
   tok->n_args = 0; /* suppress free of args members, but not of args itself. */
 
   ns->voters = smartlist_create();

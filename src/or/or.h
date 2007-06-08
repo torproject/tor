@@ -1333,7 +1333,7 @@ typedef struct networkstatus_vote_t {
 
   char *client_versions;
   char *server_versions;
-  char **known_flags; /* NULL-terminated */
+  smartlist_t *known_flags;
 
   smartlist_t *voters; /* list of networkstatus_voter_info_t */
 
@@ -2743,6 +2743,9 @@ networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        const char *identity);
 int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus);
 
+void authority_cert_free(authority_cert_t *cert);
+authority_cert_t *authority_cert_dup(authority_cert_t *cert);
+
 /********************************* dns.c ***************************/
 
 int dns_init(void);
@@ -3410,7 +3413,6 @@ networkstatus_t *networkstatus_parse_from_string(const char *s);
 networkstatus_vote_t *networkstatus_parse_vote_from_string(const char *s,
                                                            int is_vote);
 
-void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_parse_from_string(const char *s,
                                                    const char **end_of_string);
 

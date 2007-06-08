@@ -15,16 +15,14 @@ const char dirvote_c_id[] =
 void
 networkstatus_vote_free(networkstatus_vote_t *ns)
 {
-  int i;
   if (!ns)
     return;
 
   tor_free(ns->client_versions);
   tor_free(ns->server_versions);
   if (ns->known_flags) {
-    for (i=0; ns->known_flags[i]; ++i)
-      tor_free(ns->known_flags[i]);
-    tor_free(ns->known_flags);
+    SMARTLIST_FOREACH(ns->known_flags, char *, c, tor_free(c));
+    smartlist_free(ns->known_flags);
   }
   if (ns->voters) {
     SMARTLIST_FOREACH(ns->voters, networkstatus_voter_info_t *, voter,
@@ -317,8 +315,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add_all(combined_server_versions, sv);
         smartlist_free(sv); /* elements get freed later. */
       }
-      for (j=0; v->known_flags[j]; ++j)
-        smartlist_add(flags, tor_strdup(v->known_flags[j]));
+      SMARTLIST_FOREACH(v->known_flags, const char *, cp,
+                        smartlist_add(flags, tor_strdup(cp)));
     });
     valid_after = median_time(va_times);
     fresh_until = median_time(fu_times);
@@ -444,18 +442,18 @@ networkstatus_compute_consensus(smartlist_t *votes,
       named_flag[i] = -1;
     SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
     {
-      for (i = 0; v->known_flags[i]; ++i) {
-        int p = smartlist_string_pos(flags, v->known_flags[i]);
+      SMARTLIST_FOREACH(v->known_flags, const char *, fl,
+      {
+        int p = smartlist_string_pos(flags, fl);
         tor_assert(p >= 0);
-        flag_map[v_sl_idx][i] = p;
+        flag_map[v_sl_idx][fl_sl_idx] = p;
         ++n_flag_voters[p];
-        if (!strcmp(v->known_flags[i], "Named"))
-          named_flag[v_sl_idx] = i;
+        if (!strcmp(fl, "Named"))
+          named_flag[v_sl_idx] = fl_sl_idx;
         /* XXXX020 somebody needs to make sure that there are no duplicate
          * entries in anybody's flag list. */
-      }
-      tor_assert(!v->known_flags[i]);
-      n_voter_flags[v_sl_idx] = i;
+      });
+      n_voter_flags[v_sl_idx] = smartlist_len(v->known_flags);
       size[v_sl_idx] = smartlist_len(v->routerstatus_list);
     });
 
@@ -691,3 +689,37 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
   return 0;
 }
 
+/** Free storage held in <b>cert</b>. */
+void
+authority_cert_free(authority_cert_t *cert)
+{
+  if (!cert)
+    return;
+
+  tor_free(cert->cache_info.signed_descriptor_body);
+  if (cert->signing_key)
+    crypto_free_pk_env(cert->signing_key);
+  if (cert->identity_key)
+    crypto_free_pk_env(cert->identity_key);
+
+  tor_free(cert);
+}
+
+/** DOCDOC */
+authority_cert_t *
+authority_cert_dup(authority_cert_t *cert)
+{
+  authority_cert_t *out = tor_malloc(sizeof(authority_cert_t));
+  tor_assert(cert);
+
+  memcpy(out, cert, sizeof(authority_cert_t));
+  /* Now copy pointed-to things. */
+  out->cache_info.signed_descriptor_body =
+    tor_strndup(cert->cache_info.signed_descriptor_body,
+                cert->cache_info.signed_descriptor_len);
+  out->cache_info.saved_location = SAVED_NOWHERE;
+  out->identity_key = crypto_pk_dup_key(cert->identity_key);
+  out->signing_key = crypto_pk_dup_key(cert->signing_key);
+
+  return out;
+}

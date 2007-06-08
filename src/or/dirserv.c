@@ -1556,11 +1556,31 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   smartlist_free(bandwidths_excluding_exits);
 }
 
+/** DOCDOC */
+static char *
+version_from_platform(const char *platform)
+{
+  if (platform && !strcmpstart(platform, "Tor ")) {
+    const char *eos = find_whitespace(platform+4);
+    if (eos && !strcmpstart(eos, " (r")) {
+      /* XXXX020 Unify this logic with the other version extraction
+       * logic */
+      eos = find_whitespace(eos+1);
+    }
+    if (eos) {
+      return tor_strndup(platform, eos-platform);
+    }
+  }
+  return NULL;
+}
+
+
 /** Helper: write the router-status information in <b>rs</b> into <b>buf</b>,
  * which has at least <b>buf_len</b> free characters.  Do NUL-termination.
  * Use the same format as in network-status documents.  If <b>platform</b> is
  * non-NULL, add a "v" line for the platform.  Return 0 on success, -1 on
- * failure. */
+ * failure.
+ * DOCDOC new arguments */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
                           routerstatus_t *rs, const char *platform,
@@ -1569,6 +1589,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   int r;
   struct in_addr in;
   char *cp;
+  char *v;
 
   int f_authority;
   char published[ISO_TIME_LEN+1];
@@ -1617,25 +1638,14 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     log_warn(LD_BUG, "Not enough space in buffer.");
     return -1;
   }
-  if (platform && !strcmpstart(platform, "Tor ")) {
-    const char *eos = find_whitespace(platform+4);
-    if (eos && !strcmpstart(eos, " (r")) {
-      /* XXXX020 Unify this logic with the other version extraction
-       * logic */
-      eos = find_whitespace(eos+1);
+
+  if (platform && (v = version_from_platform(platform))) {
+    if (tor_snprintf(buf, buf_len, "opt v %s\n", v)<0) {
+      tor_free(v);
+      log_warn(LD_BUG, "Unable to print router version.");
+      return -1;
     }
-    if (eos) {
-      char *p = tor_strndup(platform, eos-platform);
-      size_t ln = strlen(buf);
-      buf += ln;
-      buf_len -= ln;
-      if (tor_snprintf(buf, buf_len, "opt v %s\n", p)<0) {
-        tor_free(p);
-        log_warn(LD_BUG, "Unable to print router version.");
-        return -1;
-      }
-      tor_free(p);
-    }
+    tor_free(v);
   }
 
   return 0;
@@ -1650,6 +1660,379 @@ _compare_routerinfo_by_id_digest(const void **a, const void **b)
   return memcmp(first->cache_info.identity_digest,
                 second->cache_info.identity_digest,
                 DIGEST_LEN);
+}
+
+/** DOCDOC */
+static void
+set_routerstatus_from_routerinfo(routerstatus_t *rs,
+                                 routerinfo_t *ri, time_t now,
+                                 int naming, int exits_can_be_guards,
+                                 int listbadexits)
+{
+  int unstable_version =
+    tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") &&
+    !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
+  memset(rs, 0, sizeof(routerstatus_t));
+
+  /* Already set by compute_performance_thresholds. */
+  rs->is_exit = ri->is_exit;
+  rs->is_stable = ri->is_stable =
+    router_is_active(ri, now) &&
+    !dirserv_thinks_router_is_unreliable(now, ri, 1, 0) &&
+    !unstable_version;
+  rs->is_fast = ri->is_fast =
+    router_is_active(ri, now) &&
+    !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
+  rs->is_running = ri->is_running; /* computed above */
+  /*
+    int f_authority = router_digest_is_trusted_dir(
+    ri->cache_info.identity_digest);
+  */
+  rs->is_named = naming && ri->is_named;
+  rs->is_valid = ri->is_valid;
+  rs->is_possible_guard = rs->is_fast && rs->is_stable &&
+    (!rs->is_exit || exits_can_be_guards) &&
+    router_get_advertised_bandwidth(ri) >=
+    (exits_can_be_guards ? guard_bandwidth_including_exits :
+     guard_bandwidth_excluding_exits);
+  rs->is_bad_exit = listbadexits && ri->is_bad_exit;
+  /* 0.1.1.9-alpha is the first version to support fetch by descriptor
+   * hash. */
+  rs->is_v2_dir = ri->dir_port &&
+    tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
+
+  if (!strcasecmp(ri->nickname, UNNAMED_ROUTER_NICKNAME))
+    rs->is_named = 0;
+
+  rs->published_on = ri->cache_info.published_on;
+  memcpy(rs->identity_digest, ri->cache_info.identity_digest, DIGEST_LEN);
+  memcpy(rs->descriptor_digest, ri->cache_info.signed_descriptor_digest,
+         DIGEST_LEN);
+  rs->addr = ri->addr;
+  strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
+  rs->or_port = ri->or_port;
+  rs->dir_port = ri->dir_port;
+}
+
+/** DOCDOC */
+static networkstatus_vote_t *
+generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
+                                authority_cert_t *cert)
+{
+  or_options_t *options = get_options();
+  networkstatus_vote_t *v3_out = NULL;
+  uint32_t addr;
+  char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
+  const char *contact;
+  smartlist_t *routers, *routerstatuses;
+  char identity_digest[DIGEST_LEN];
+  char signing_key_digest[DIGEST_LEN];
+  int naming = options->NamingAuthoritativeDir;
+  int listbadexits = options->AuthDirListBadExits;
+  int exits_can_be_guards;
+  routerlist_t *rl = router_get_routerlist();
+  time_t now = time(NULL);
+  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
+  networkstatus_voter_info_t *voter = NULL;
+
+  /* check that everything is deallocated XXXX020 */
+
+  tor_assert(private_key);
+  tor_assert(cert);
+
+  if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
+    log_warn(LD_NET, "Couldn't resolve my hostname");
+    return NULL;
+  }
+  if (crypto_pk_get_digest(private_key, signing_key_digest)<0) {
+    log_err(LD_BUG, "Error computing signing key digest");
+    return NULL;
+  }
+  if (crypto_pk_get_digest(cert->identity_key, identity_digest)<0) {
+    log_err(LD_BUG, "Error computing identity key digest");
+    return NULL;
+  }
+
+  if (options->VersioningAuthoritativeDir) {
+    client_versions = format_versions_list(options->RecommendedClientVersions);
+    server_versions = format_versions_list(options->RecommendedServerVersions);
+  }
+
+  contact = get_options()->ContactInfo;
+  if (!contact)
+    contact = "(none)";
+
+  /* precompute this part, since we need it to decide what "stable"
+   * means. */
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+    ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
+  });
+
+  dirserv_compute_performance_thresholds(rl);
+
+  /* XXXX We should take steps to keep this from oscillating if
+   * total_exit_bandwidth is close to total_bandwidth/3. */
+  exits_can_be_guards = total_exit_bandwidth >= (total_bandwidth / 3);
+
+  routers = smartlist_create();
+  smartlist_add_all(routers, rl->routers);
+  smartlist_sort(routers, _compare_routerinfo_by_id_digest);
+
+  routerstatuses = smartlist_create();
+
+  SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
+    if (ri->cache_info.published_on >= cutoff) {
+      routerstatus_t *rs;
+      vote_routerstatus_t *vrs;
+
+      vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+      rs = &vrs->status;
+      set_routerstatus_from_routerinfo(rs, ri, now,
+                                       naming, exits_can_be_guards,
+                                       listbadexits);
+
+      vrs->version = version_from_platform(ri->platform);
+      smartlist_add(routerstatuses, vrs);
+    }
+  });
+  smartlist_free(routers);
+
+  tor_assert(v3_out);
+  memset(v3_out, 0, sizeof(networkstatus_vote_t));
+  v3_out->is_vote = 1;
+  v3_out->published = time(NULL);
+  v3_out->valid_after = time(NULL); /* XXXX020 not right. */
+  v3_out->fresh_until = time(NULL); /* XXXX020 not right. */
+  v3_out->valid_until = time(NULL); /* XXXX020 not right. */
+  v3_out->vote_seconds = 600; /* XXXX020 not right. */
+  v3_out->dist_seconds = 600; /* XXXX020 not right. */
+
+  v3_out->client_versions = client_versions;
+  v3_out->server_versions = server_versions;
+  v3_out->known_flags = smartlist_create();
+  smartlist_split_string(v3_out->known_flags,
+                "Authority Exit Fast Guard Running Stable Valid V2Dir",
+                0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (listbadexits)
+    smartlist_add(v3_out->known_flags, tor_strdup("BadExit"));
+  if (naming)
+    smartlist_add(v3_out->known_flags, tor_strdup("Named"));
+  smartlist_sort_strings(v3_out->known_flags);
+
+  voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
+  voter->nickname = tor_strdup(options->Nickname);
+  memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);
+  voter->address = hostname;
+  voter->addr = addr;
+  voter->dir_port = options->DirPort;
+  voter->or_port = options->ORPort;
+  voter->contact = tor_strdup(contact);
+  memcpy(voter->signing_key_digest, signing_key_digest, DIGEST_LEN);
+  v3_out->voters = smartlist_create();
+  smartlist_add(v3_out->voters, voter);
+  v3_out->cert = authority_cert_dup(cert);
+  /* ????? networkstatus_digest is unset. */
+  v3_out->routerstatus_list = routerstatuses;
+
+  return v3_out;
+}
+
+static char *
+format_networkstatus_vote(crypto_pk_env_t *private_key,
+                          networkstatus_vote_t *v3_ns)
+{
+/** Longest status flag name that we generate. */
+#define LONGEST_STATUS_FLAG_NAME_LEN 9
+/** Maximum number of status flags we'll apply to one router. */
+#define N_STATUS_FLAGS 10
+/** Amount of space to allocate for each entry. (r line and s line.) */
+#define RS_ENTRY_LEN                                                    \
+  ( /* first line */                                                    \
+   MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
+   5*2 /* ports */ + 10 /* punctuation */ +                             \
+   /* second line */                                                    \
+   (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
+
+  size_t len;
+  char *status = NULL, *client_versions = NULL, *server_versions = NULL;
+  char *outp, *endp;
+  // or_options_t *options = get_options();
+  char fingerprint[FINGERPRINT_LEN+1];
+  char ipaddr[INET_NTOA_BUF_LEN];
+  char digest[DIGEST_LEN];
+  struct in_addr in;
+  uint32_t addr;
+  routerlist_t *rl = router_get_routerlist();
+  // time_t now = time(NULL);
+  // time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
+  /*
+  int naming = options->NamingAuthoritativeDir;
+  int listbadexits = options->AuthDirListBadExits;
+  int exits_can_be_guards;
+  */
+  char *version_lines = NULL;
+  networkstatus_voter_info_t *voter;
+  /* XXX check that everything gets freed */
+
+  tor_assert(private_key);
+
+  voter = smartlist_get(v3_ns->voters, 0);
+
+  addr = voter->addr;
+  in.s_addr = htonl(addr);
+  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
+
+  base16_encode(fingerprint, sizeof(fingerprint),
+                v3_ns->cert->cache_info.identity_digest, DIGEST_LEN);
+  client_versions = v3_ns->client_versions;
+  server_versions = v3_ns->server_versions;
+
+  if (client_versions || server_versions) {
+    size_t v_len = 64;
+    char *cp;
+    if (client_versions)
+      v_len += strlen(client_versions);
+    if (client_versions)
+      v_len += strlen(server_versions);
+    version_lines = tor_malloc(v_len);
+    cp = version_lines;
+    if (client_versions) {
+      tor_snprintf(cp, v_len-(cp-version_lines),
+                   "client-versions %s\n", client_versions);
+      cp += strlen(cp);
+    }
+    if (server_versions)
+      tor_snprintf(cp, v_len-(cp-version_lines),
+                   "server-versions %s\n", server_versions);
+  } else {
+    version_lines = tor_strdup("");
+  }
+
+  len = 8192;
+  len += strlen(version_lines);
+  len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
+  len += v3_ns->cert->cache_info.signed_descriptor_len;
+
+  status = tor_malloc(len);
+  {
+    char published[ISO_TIME_LEN+1];
+    char va[ISO_TIME_LEN+1];
+    char fu[ISO_TIME_LEN+1];
+    char vu[ISO_TIME_LEN+1];
+    char *flags = smartlist_join_strings(v3_ns->known_flags, " ", 0, NULL);
+    authority_cert_t *cert = v3_ns->cert;
+    format_iso_time(published, v3_ns->published);
+    format_iso_time(va, v3_ns->valid_after);
+    format_iso_time(fu, v3_ns->fresh_until);
+    format_iso_time(vu, v3_ns->valid_until);
+
+    tor_assert(cert);
+    tor_snprintf(status, len,
+                 "network-status-version 3\n"
+                 "vote-status vote\n"
+                 "published %s\n"
+                 "valid-after %s\n"
+                 "fresh-until %s\n"
+                 "valid-until %s\n"
+                 "%s" /* versions */
+                 "known-flags %s"
+                 "dir-source %s %s %s %s %d %d\n"
+                 "contact %s\n",
+                 published, va, fu, vu,
+                 version_lines,
+                 flags,
+                 voter->nickname, fingerprint, voter->address,
+                   ipaddr, voter->dir_port, voter->or_port, voter->contact);
+
+    tor_free(flags);
+    outp = status + strlen(status);
+    endp = status + len;
+    tor_assert(outp + cert->cache_info.signed_descriptor_len < endp);
+    memcpy(outp, cert->cache_info.signed_descriptor_body,
+           cert->cache_info.signed_descriptor_len);
+
+    outp += cert->cache_info.signed_descriptor_len;
+  }
+
+  SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
+  {
+    /* XXXX020 ri->platform!!!.  Also, version-from-platform. */
+    if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
+                                  vrs->version, 0) < 0) {
+      log_warn(LD_BUG, "Unable to print router status.");
+      goto err;
+    }
+    outp += strlen(outp);
+  });
+
+  {
+    char signing_key_fingerprint[FINGERPRINT_LEN+1];
+    if (tor_snprintf(outp, endp-outp, "directory-signature ")<0) {
+      log_warn(LD_BUG, "Unable to start signature line.");
+      goto err;
+    }
+    outp += strlen(outp);
+
+    if (crypto_pk_get_fingerprint(private_key, signing_key_fingerprint, 0)<0) {
+      log_warn(LD_BUG, "Unable to get fingerprint for signing key");
+      goto err;
+    }
+    if (tor_snprintf(outp, endp-outp, "%s %s\n", fingerprint,
+                     signing_key_fingerprint)<0) {
+      log_warn(LD_BUG, "Unable to end signature line.");
+      goto err;
+    }
+    outp += strlen(outp);
+  }
+
+  note_crypto_pk_op(SIGN_DIR);
+  if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
+    log_warn(LD_BUG, "Unable to sign router status.");
+    goto err;
+  }
+
+  goto done;
+
+ err:
+  tor_free(status);
+ done:
+  tor_free(version_lines);
+  return status;
+}
+
+static cached_dir_t *
+generate_v3_networkstatus(void)
+{
+  crypto_pk_env_t *key = get_my_v3_authority_signing_key();
+  authority_cert_t *cert = get_my_v3_authority_cert();
+  networkstatus_vote_t *ns;
+  char *status;
+  time_t now = time(NULL);
+
+  if (!cert || !key) {
+    log_warn(LD_NET, "Didn't find key/certificate to generate v3 vote");
+    return NULL;
+  }
+
+  if (!(ns = generate_networkstatus_vote_obj(key, cert)))
+    return NULL;
+
+  status = format_networkstatus_vote(key, ns);
+  networkstatus_vote_free(ns);
+  if (!status)
+    return NULL;
+
+  {
+    cached_dir_t **ns_ptr =
+      &the_v3_networkstatus_vote;
+    if (*ns_ptr)
+      cached_dir_decref(*ns_ptr);
+    *ns_ptr = new_cached_dir(status, now);
+    status = NULL; /* So it doesn't get double-freed. */
+    router_set_networkstatus((*ns_ptr)->dir, now, NS_GENERATED, NULL);
+  }
+
+  return the_v3_networkstatus_vote;
 }
 
 /** For v2 and v3 authoritative directories only: If <b>v2</b> is set, replace
@@ -1693,20 +2076,13 @@ generate_networkstatus_opinion(int v2)
   int listbadexits = options->AuthDirListBadExits;
   int exits_can_be_guards;
   const char *contact;
-  authority_cert_t *cert = NULL;
   char *version_lines = NULL;
   smartlist_t *routers = NULL;
 
-  if (v2) {
-    private_key = get_identity_key();
-  } else {
-    private_key = get_my_v3_authority_signing_key();
-    cert = get_my_v3_authority_cert();
-    if (!private_key || !cert) {
-      log_warn(LD_NET, "Didn't find key/certificate to generate v3 vote");
-      goto done;
-    }
-  }
+  if (!v2)
+    return generate_v3_networkstatus();
+
+  private_key = get_identity_key();
 
   if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
     log_warn(LD_NET, "Couldn't resolve my hostname");
@@ -1726,14 +2102,9 @@ generate_networkstatus_opinion(int v2)
     goto done;
   }
 
-  if (v2) {
-    if (crypto_pk_get_fingerprint(private_key, fingerprint, 0)<0) {
-      log_err(LD_BUG, "Error computing fingerprint");
-      goto done;
-    }
-  } else {
-    base16_encode(fingerprint, sizeof(fingerprint),
-                  cert->cache_info.identity_digest, DIGEST_LEN);
+  if (crypto_pk_get_fingerprint(private_key, fingerprint, 0)<0) {
+    log_err(LD_BUG, "Error computing fingerprint");
+    goto done;
   }
 
   contact = get_options()->ContactInfo;
@@ -1753,13 +2124,9 @@ generate_networkstatus_opinion(int v2)
   len = 4096+strlen(client_versions)+strlen(server_versions);
   len += identity_pkey_len*2;
   len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
-  if (!v2) {
-    len += cert->cache_info.signed_descriptor_len;
-  }
 
   status = tor_malloc(len);
-  if (v2) {
-    tor_snprintf(status, len,
+  tor_snprintf(status, len,
                "network-status-version 2\n"
                "dir-source %s %s %d\n"
                "fingerprint %s\n"
@@ -1777,38 +2144,8 @@ generate_networkstatus_opinion(int v2)
                versioning ? " Versions" : "",
                version_lines,
                identity_pkey);
-    outp = status + strlen(status);
-    endp = status + len;
-  } else {
-    tor_snprintf(status, len,
-                 "network-status-version 3\n"
-                 "vote-status vote\n"
-                 "published %s\n"
-                 "valid-after %s\n"
-                 "fresh-until %s\n"
-                 "valid-until %s\n"
-                 "%s" /* versions */
-                 "known-flags Authority%s Exit Fast Guard%s Running Stable "
-                               "Valid V2Dir\n"
-                 "dir-source %s %s %s %s %d %d\n"
-                 "contact %s\n",
-                 published,
-                 published, /* XXXX020 should be valid-after*/
-                 published, /* XXXX020 should be fresh-until*/
-                 published, /* XXXX020 should be valid-until*/
-                 version_lines,
-                 listbadexits ? " BadExit" : "",
-                 naming ? " Named" : "",
-                 options->Nickname, fingerprint, options->Address,
-                   ipaddr, (int)options->DirPort, (int)options->ORPort,
-                 contact);
-    outp = status + strlen(status);
-    endp = status + len;
-    tor_assert(outp + cert->cache_info.signed_descriptor_len < endp);
-    memcpy(outp, cert->cache_info.signed_descriptor_body,
-           cert->cache_info.signed_descriptor_len);
-    outp += cert->cache_info.signed_descriptor_len;
-  }
+  outp = status + strlen(status);
+  endp = status + len;
 
   /* precompute this part, since we need it to decide what "stable"
    * means. */
@@ -1830,51 +2167,10 @@ generate_networkstatus_opinion(int v2)
     if (ri->cache_info.published_on >= cutoff) {
 
       routerstatus_t rs;
-      /* These versions dump connections with idle live circuits
-         sometimes. D'oh!*/
-      int unstable_version =
-        tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") &&
-        !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
-      memset(&rs, 0, sizeof(rs));
 
-      /* Already set by compute_performance_thresholds. */
-      rs.is_exit = ri->is_exit;
-      rs.is_stable = ri->is_stable =
-        router_is_active(ri, now) &&
-        !dirserv_thinks_router_is_unreliable(now, ri, 1, 0) &&
-        !unstable_version;
-      rs.is_fast = ri->is_fast =
-        router_is_active(ri, now) &&
-        !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
-      rs.is_running = ri->is_running; /* computed above */
-      /*
-      int f_authority = router_digest_is_trusted_dir(
-                                      ri->cache_info.identity_digest);
-      */
-      rs.is_named = naming && ri->is_named;
-      rs.is_valid = ri->is_valid;
-      rs.is_possible_guard = rs.is_fast && rs.is_stable &&
-        (!rs.is_exit || exits_can_be_guards) &&
-        router_get_advertised_bandwidth(ri) >=
-          (exits_can_be_guards ? guard_bandwidth_including_exits :
-                                 guard_bandwidth_excluding_exits);
-      rs.is_bad_exit = listbadexits && ri->is_bad_exit;
-      /* 0.1.1.9-alpha is the first version to support fetch by descriptor
-       * hash. */
-      rs.is_v2_dir = ri->dir_port &&
-        tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
-
-      if (!strcasecmp(ri->nickname, UNNAMED_ROUTER_NICKNAME))
-        rs.is_named = 0;
-
-      rs.published_on = ri->cache_info.published_on;
-      memcpy(rs.identity_digest, ri->cache_info.identity_digest, DIGEST_LEN);
-      memcpy(rs.descriptor_digest, ri->cache_info.signed_descriptor_digest,
-             DIGEST_LEN);
-      rs.addr = ri->addr;
-      strlcpy(rs.nickname, ri->nickname, sizeof(rs.nickname));
-      rs.or_port = ri->or_port;
-      rs.dir_port = ri->dir_port;
+      set_routerstatus_from_routerinfo(&rs, ri, now,
+                                       naming, exits_can_be_guards,
+                                       listbadexits);
 
       if (routerstatus_format_entry(outp, endp-outp, &rs,
                                     ri->platform, 0) < 0) {
@@ -1885,36 +2181,16 @@ generate_networkstatus_opinion(int v2)
     }
   });
 
-  if (v2) {
-    if (tor_snprintf(outp, endp-outp, "directory-signature %s\n",
-                     get_options()->Nickname)<0) {
-      log_warn(LD_BUG, "Unable to write signature line.");
-      goto done;
-    }
-    if (router_get_networkstatus_v2_hash(status, digest)<0) {
-      log_warn(LD_BUG, "Unable to hash network status");
-      goto done;
-    }
-    outp += strlen(outp);
-  } else {
-    char signing_key_fingerprint[FINGERPRINT_LEN+1];
-    if (tor_snprintf(outp, endp-outp, "directory-signature ")<0) {
-      log_warn(LD_BUG, "Unable to start signature line.");
-      goto done;
-    }
-    outp += strlen(outp);
-
-    if (crypto_pk_get_fingerprint(private_key, signing_key_fingerprint, 0)<0) {
-      log_warn(LD_BUG, "Unable to get fingerprint for signing key");
-      goto done;
-    }
-    if (tor_snprintf(outp, endp-outp, "%s %s\n", fingerprint,
-                     signing_key_fingerprint)<0) {
-      log_warn(LD_BUG, "Unable to end signature line.");
-      goto done;
-    }
-    outp += strlen(outp);
+  if (tor_snprintf(outp, endp-outp, "directory-signature %s\n",
+                   get_options()->Nickname)<0) {
+    log_warn(LD_BUG, "Unable to write signature line.");
+    goto done;
   }
+  if (router_get_networkstatus_v2_hash(status, digest)<0) {
+    log_warn(LD_BUG, "Unable to hash network status");
+    goto done;
+  }
+  outp += strlen(outp);
 
   note_crypto_pk_op(SIGN_DIR);
   if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
@@ -1923,14 +2199,12 @@ generate_networkstatus_opinion(int v2)
   }
 
   {
-    cached_dir_t **ns_ptr =
-      v2 ? &the_v2_networkstatus : &the_v3_networkstatus_vote;
+    cached_dir_t **ns_ptr = &the_v2_networkstatus;
     if (*ns_ptr)
       cached_dir_decref(*ns_ptr);
     *ns_ptr = new_cached_dir(status, now);
     status = NULL; /* So it doesn't get double-freed. */
-    if (v2)
-      the_v2_networkstatus_is_dirty = 0;
+    the_v2_networkstatus_is_dirty = 0;
     router_set_networkstatus((*ns_ptr)->dir, now, NS_GENERATED, NULL);
     r = *ns_ptr;
   }
