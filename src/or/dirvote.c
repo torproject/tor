@@ -450,8 +450,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
         ++n_flag_voters[p];
         if (!strcmp(fl, "Named"))
           named_flag[v_sl_idx] = fl_sl_idx;
-        /* XXXX020 somebody needs to make sure that there are no duplicate
-         * entries in anybody's flag list. */
       });
       n_voter_flags[v_sl_idx] = smartlist_len(v->known_flags);
       size[v_sl_idx] = smartlist_len(v->routerstatus_list);

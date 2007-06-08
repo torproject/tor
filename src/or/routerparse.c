@@ -1505,7 +1505,10 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
       int p = smartlist_string_pos(vote->known_flags, tok->args[i]);
       if (p >= 0) {
         vote_rs->flags |= (1<<p);
-        break;
+      } else {
+        log_warn(LD_DIR, "Flags line had a flag %s not listed in known_flags.",
+                 escaped(tok->args[i]));
+        goto err;
       }
     }
   } else if (tok) {
@@ -1768,7 +1771,7 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
   directory_token_t *tok;
   int ok;
   struct in_addr in;
-  int i;
+  int i, inorder;
 
   if (router_get_networkstatus_v3_hash(s, ns_digest)) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
@@ -1853,9 +1856,17 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
 
   tok = find_first_by_keyword(tokens, K_KNOWN_FLAGS);
   ns->known_flags = smartlist_create();
-  for (i = 0; i < tok->n_args; ++i)
+  inorder = 1;
+  for (i = 0; i < tok->n_args; ++i) {
     smartlist_add(ns->known_flags, tok->args[i]);
+    if (i>0 && strcmp(tok->args[i-1], tok->args[i])>= 0)
+      inorder = 0;
+  }
   tok->n_args = 0; /* suppress free of args members, but not of args itself. */
+  if (!inorder) {
+    log_warn(LD_DIR, "known-flags not in order");
+    goto err;
+  }
 
   ns->voters = smartlist_create();
 
