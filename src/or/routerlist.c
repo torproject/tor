@@ -3235,7 +3235,7 @@ compute_recommended_versions(time_t now, int client,
       } else {
         if (n_seen > n_versioning/2 && current)
           smartlist_add(recommended, current);
-        n_seen = 0;
+        n_seen = 1;
         current = cp;
       }
     });
