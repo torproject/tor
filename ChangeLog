@@ -21,7 +21,11 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Minor bugfixes (hidden services):
     - Stop tearing down the whole circuit when the user asks for a
       connection to a port that the hidden service didn't configure.
-      Resolves bug 444.
+      Resolves bug 444.  [Bugfix on 0.1.2.x]
+
+  o Minor bugfixes (versioning):
+    - Stop under-counting the number of authorities that recommend each
+      version. [Bugfix on 0.1.2.x]
 
 
 Changes in version 0.2.0.2-alpha - 2007-06-02

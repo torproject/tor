@@ -3712,12 +3712,19 @@ compute_recommended_versions(time_t now, int client,
       if (current && !strcmp(cp, current)) {
         ++n_seen;
       } else {
-        if (n_seen > n_versioning/2 && current)
+        if (current)
+          log_info(LD_DIR,"version %s is recommended by %d authorities",
+                    current, n_seen);
+        if (n_seen > n_versioning/2 && current) {
           smartlist_add(recommended, current);
-        n_seen = 0; /* XXXX020 shouldn't this be 1? */
+        }
+        n_seen = 1;
         current = cp;
       }
     });
+  if (current)
+    log_info(LD_DIR,"version %s is recommended by %d authorities",
+             current, n_seen);
   if (n_seen > n_versioning/2 && current)
     smartlist_add(recommended, current);
 
