@@ -6,6 +6,10 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - tor-gencert creates all files as readable to the file creator only, and
       write-protects the authority identity key.
 
+  o Minor features (directory authority):
+    - Fail quickly and (relatively) harmlessly if we generate a network
+      status document that is somehow malformed.
+
   o Deprecated features:
     - RedirectExits is now deprecated.
 

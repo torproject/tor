@@ -1983,8 +1983,17 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 
   note_crypto_pk_op(SIGN_DIR);
   if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
-    log_warn(LD_BUG, "Unable to sign router status.");
+    log_warn(LD_BUG, "Unable to sign networkstatus vote.");
     goto err;
+  }
+
+  {
+    networkstatus_vote_t *v;
+    if (!(v = networkstatus_parse_vote_from_string(status, 1))) {
+      log_err(LD_BUG,"Generated a networkstatus vote we couldn't parse.");
+      goto err;
+    }
+    networkstatus_vote_free(v);
   }
 
   goto done;
@@ -2193,6 +2202,15 @@ generate_networkstatus_opinion(int v2)
   if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
     log_warn(LD_BUG, "Unable to sign router status.");
     goto done;
+  }
+
+  {
+    networkstatus_t *ns;
+    if (!(ns = networkstatus_parse_from_string(status))) {
+      log_err(LD_BUG,"Generated a networkstatus we couldn't parse.");
+      goto done;
+    }
+    networkstatus_free(ns);
   }
 
   {

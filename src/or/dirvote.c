@@ -623,6 +623,17 @@ networkstatus_compute_consensus(smartlist_t *votes,
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
 
+  {
+    networkstatus_vote_t *c;
+    if (!(c = networkstatus_parse_vote_from_string(result, 0))) {
+      log_err(LD_BUG,"Generated a networkstatus consensus we couldn't "
+              "parse.");
+      tor_free(result);
+      return NULL;
+    }
+    networkstatus_vote_free(c);
+  }
+
   return result;
 }
 
