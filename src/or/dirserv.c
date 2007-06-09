@@ -515,7 +515,8 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
 /** As for dirserv_add_descriptor, but accepts multiple documents, and
  * returns the most severe error that occurred for any one of them. */
 int
-dirserv_add_multiple_descriptors(const char *desc, const char **msg)
+dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
+                                 const char **msg)
 {
   int r=100; /* higher than any actual return value. */
   int r_tmp;
@@ -530,6 +531,17 @@ dirserv_add_multiple_descriptors(const char *desc, const char **msg)
   if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 0)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
+
+        /* Assign the purpose.
+         * XXX020 Perhaps this should get pushed into
+         * router_parse_list_from_string()? Also, tie it somehow into
+         * router_load_single_router()? Lastly, does extrainfo_t want
+         * a purpose field too, or can we just piggyback off the one
+         * in routerinfo_t? */
+        ri->purpose = purpose;
+        if (purpose != ROUTER_PURPOSE_GENERAL)
+          ri->cache_info.do_not_cache = 1;
+
         r_tmp = dirserv_add_descriptor(ri, &msg_out);
         if (r_tmp < r) {
           r = r_tmp;
@@ -544,6 +556,11 @@ dirserv_add_multiple_descriptors(const char *desc, const char **msg)
   if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 1)) {
     SMARTLIST_FOREACH(list, extrainfo_t *, ei, {
         msg_out = NULL;
+
+        /* XXX020 see above note on purpose fields */
+        if (purpose != ROUTER_PURPOSE_GENERAL)
+          ei->cache_info.do_not_cache = 1;
+
         r_tmp = dirserv_add_extrainfo(ei, &msg_out);
         if (r_tmp < r) {
           r = r_tmp;
@@ -842,7 +859,7 @@ list_server_status(smartlist_t *routers, char **router_status_out,
   or_options_t *options = get_options();
   /* We include v2 dir auths here too, because they need to answer
    * controllers. Eventually we'll deprecate this whole function. */
-  int authdir = authdir_mode_handles_descs(options);
+  int authdir = authdir_mode_publishes_statuses(options);
   tor_assert(router_status_out);
 
   rs_entries = smartlist_create();
@@ -1260,8 +1277,9 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
   or_options_t *options = get_options();
   int authority = (auth_type == V1_AUTHORITY && authdir_mode_v1(options)) ||
                   (auth_type == V2_AUTHORITY && authdir_mode_v2(options));
+  /* XXX020 eventually use authdir_mode_publishes_statuses() here */
 
-  if (!authority || authdir_mode_bridge(options)) { /* XXX020 */
+  if (!authority || authdir_mode_bridge(options)) {
     return cache_src;
   } else {
     /* We're authoritative. */

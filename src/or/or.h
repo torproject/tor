@@ -2684,7 +2684,8 @@ int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
-int dirserv_add_multiple_descriptors(const char *desc, const char **msg);
+int dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
+                                     const char **msg);
 int dirserv_add_descriptor(routerinfo_t *ri, const char **msg);
 int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
                                         const char *question, char **answer);
@@ -3127,6 +3128,8 @@ int authdir_mode(or_options_t *options);
 int authdir_mode_v1(or_options_t *options);
 int authdir_mode_v2(or_options_t *options);
 int authdir_mode_handles_descs(or_options_t *options);
+int authdir_mode_publishes_statuses(or_options_t *options);
+int authdir_mode_tests_reachability(or_options_t *options);
 int authdir_mode_bridge(or_options_t *options);
 int clique_mode(or_options_t *options);
 int server_mode(or_options_t *options);

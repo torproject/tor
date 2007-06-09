@@ -714,11 +714,29 @@ authdir_mode_v2(or_options_t *options)
   return authdir_mode(options) && options->V2AuthoritativeDir != 0;
 }
 /** Return true iff we are an authoritative directory server that
- * handles descriptors -- including receiving posts, creating directories,
- * and testing reachability.
+ * is willing to receive or serve descriptors on its dirport.
  */
 int
 authdir_mode_handles_descs(or_options_t *options)
+{
+  return authdir_mode_v1(options) || authdir_mode_v2(options) ||
+         authdir_mode_bridge(options);
+}
+/** Return true iff we are an authoritative directory server that
+ * publishes its own network statuses.
+ */
+int
+authdir_mode_publishes_statuses(or_options_t *options)
+{
+  if (authdir_mode_bridge(options))
+    return 0;
+  return authdir_mode_v1(options) || authdir_mode_v2(options);
+}
+/** Return true iff we are an authoritative directory server that
+ * tests reachability of the descriptors it learns about.
+ */
+int
+authdir_mode_tests_reachability(or_options_t *options)
 {
   return authdir_mode_v1(options) || authdir_mode_v2(options);
 }
@@ -735,7 +753,7 @@ authdir_mode_bridge(or_options_t *options)
 int
 clique_mode(or_options_t *options)
 {
-  return authdir_mode_handles_descs(options);
+  return authdir_mode_tests_reachability(options);
 }
 
 /** Return true iff we are trying to be a server.

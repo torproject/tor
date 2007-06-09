@@ -1997,7 +1997,9 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   if (authdir_mode_handles_descs(options) &&
       !strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg = NULL;
-    int r = dirserv_add_multiple_descriptors(body, &msg);
+    uint8_t purpose = authdir_mode_bridge(options) ?
+                      ROUTER_PURPOSE_CONTROLLER : ROUTER_PURPOSE_GENERAL;
+    int r = dirserv_add_multiple_descriptors(body, purpose, &msg);
     tor_assert(msg);
     if (r > 0)
       dirserv_get_directory(); /* rebuild and write to disk */

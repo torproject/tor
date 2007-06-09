@@ -3713,7 +3713,8 @@ parse_dir_server_line(const char *line, int validate_only)
 
   fingerprint = smartlist_join_strings(items, "", 0, NULL);
   if (strlen(fingerprint) != HEX_DIGEST_LEN) {
-    log_warn(LD_CONFIG, "Key digest for DirServer is wrong length.");
+    log_warn(LD_CONFIG, "Key digest for DirServer is wrong length %d.",
+             (int)strlen(fingerprint));
     goto err;
   }
   if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {

@@ -916,7 +916,7 @@ run_scheduled_events(time_t now)
   if (accounting_is_enabled(options))
     accounting_run_housekeeping(now);
 
-  if (now % 10 == 0 && (authdir_mode_handles_descs(options)) &&
+  if (now % 10 == 0 && (authdir_mode_tests_reachability(options)) &&
       !we_are_hibernating()) {
     /* try to determine reachability of the other Tor servers */
     dirserv_test_reachability(0);
@@ -1329,7 +1329,7 @@ do_main_loop(void)
   }
   directory_info_has_arrived(time(NULL),1);
 
-  if (authdir_mode_handles_descs(get_options())) {
+  if (authdir_mode_tests_reachability(get_options())) {
     /* the directory is already here, run startup things */
     dirserv_test_reachability(1);
   }
