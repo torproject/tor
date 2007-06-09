@@ -2103,7 +2103,7 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 struct socks_request_t {
   /** Which version of SOCKS did the client use? One of "0, 4, 5" -- where
    * 0 means that no socks handshake ever took place, and this is just a
-   * stub connection (e.g. see connection_ap_make_bridge()). */
+   * stub connection (e.g. see connection_ap_make_link()). */
   char socks_version;
   int command; /**< What is this stream's goal? One from the above list. */
   size_t replylen; /**< Length of <b>reply</b>. */
@@ -2439,8 +2439,8 @@ int connection_edge_finished_connecting(edge_connection_t *conn);
 int connection_ap_handshake_send_begin(edge_connection_t *ap_conn);
 int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn);
 
-edge_connection_t  *connection_ap_make_bridge(char *address, uint16_t port,
-                                              const char *digest, int command);
+edge_connection_t  *connection_ap_make_link(char *address, uint16_t port,
+                                            const char *digest, int command);
 void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
                                          size_t replylen,
                                          int endreason);
@@ -2679,8 +2679,6 @@ int router_supports_extrainfo(const char *identity_digest, int is_authority);
 #define UNNAMED_ROUTER_NICKNAME "Unnamed"
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);
-void connection_dirserv_unlink_from_bridge(dir_connection_t *dir_conn);
-void connection_dirserv_stop_blocking_all_on_or_conn(or_connection_t *or_conn);
 
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_load_fingerprint_file(void);

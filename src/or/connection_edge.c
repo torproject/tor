@@ -357,7 +357,7 @@ connection_ap_expire_beginning(void)
     if (c->type != CONN_TYPE_AP)
       continue;
     conn = TO_EDGE_CONN(c);
-    /* if it's an internal bridge connection, don't yell its status. */
+    /* if it's an internal linked connection, don't yell its status. */
     severity = (!conn->_base.addr && !conn->_base.port)
       ? LOG_INFO : LOG_NOTICE;
     seconds_idle = now - conn->_base.timestamp_lastread;
@@ -1908,13 +1908,13 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
  * DOCDOC start_reading
  */
 edge_connection_t *
-connection_ap_make_bridge(char *address, uint16_t port,
-                          const char *digest, int command)
+connection_ap_make_link(char *address, uint16_t port,
+                        const char *digest, int command)
 {
   edge_connection_t *conn;
 
-  log_notice(LD_APP,"Making internal anonymized tunnel to %s:%d ...",
-             safe_str(address),port); /* XXXX020 Downgrade back to info. */
+  log_info(LD_APP,"Making internal anonymized tunnel to %s:%d ...",
+           safe_str(address),port);
 
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
   conn->_base.linked = 1; /* so that we can add it safely below. */
@@ -1952,7 +1952,7 @@ connection_ap_make_bridge(char *address, uint16_t port,
     return NULL;
   }
 
-  log_info(LD_APP,"... AP bridge created and connected.");
+  log_info(LD_APP,"... application connection created and linked.");
   return conn;
 }
 

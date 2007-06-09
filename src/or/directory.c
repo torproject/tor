@@ -538,20 +538,20 @@ directory_initiate_command(const char *address, uint32_t addr,
      */
     conn->dirconn_direct = 0;
     linked_conn =
-      connection_ap_make_bridge(conn->_base.address, conn->_base.port,
-                                digest,
-                                anonymized_connection ?
-                                  SOCKS_COMMAND_CONNECT :
-                                  SOCKS_COMMAND_CONNECT_DIR);
+      connection_ap_make_link(conn->_base.address, conn->_base.port,
+                              digest,
+                              anonymized_connection ?
+                                SOCKS_COMMAND_CONNECT :
+                                SOCKS_COMMAND_CONNECT_DIR);
     if (!linked_conn) {
-      log_warn(LD_NET,"Making AP bridge to dirserver failed.");
+      log_warn(LD_NET,"Making tunnel to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
     connection_link_connections(TO_CONN(conn), TO_CONN(linked_conn));
 
     if (connection_add(TO_CONN(conn)) < 0) {
-      log_warn(LD_NET,"Unable to add AP bridge to dirserver.");
+      log_warn(LD_NET,"Unable to add connection for link to dirserver.");
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
