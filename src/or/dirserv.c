@@ -183,7 +183,7 @@ dirserv_load_fingerprint_file(void)
   log_info(LD_GENERAL,
            "Reloading approved fingerprints from \"%s\"...", fname);
 
-  cf = read_file_to_str(fname, 0, NULL);
+  cf = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
   if (!cf) {
     if (options->NamingAuthoritativeDir) {
       log_warn(LD_FS, "Cannot open fingerprint file '%s'. Failing.", fname);
