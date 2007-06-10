@@ -1816,7 +1816,7 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
 }
 
 /** Check whether the entry guard <b>e</b> is usable, given the directory
- * authorities' opinion about the rouer (stored in <b>ri</b>) and the user's
+ * authorities' opinion about the router (stored in <b>ri</b>) and the user's
  * configuration (in <b>options</b>). Set <b>e</b>-&gt;bad_since
  * accordingly. Return true iff the entry guard's status changes. */
 static int
@@ -2620,32 +2620,5 @@ getinfo_helper_entry_guards(control_connection_t *conn,
     smartlist_free(sl);
   }
   return 0;
-}
-
-typedef struct {
-  uint32_t addr;
-  uint16_t port;
-  char identity[DIGEST_LEN];
-} bridge_info_t;
-
-#if 0
-/** A list of known bridges. */
-static smartlist_t *bridge_list = NULL;
-/** A value of 1 means that the bridge_list list has changed
- * and those changes need to be flushed to disk. */
-static int bridge_list_dirty = 0;
-#endif
-
-void
-clear_bridge_list(void)
-{
-}
-
-void
-bridge_add_from_config(uint32_t addr, uint16_t port, char *digest)
-{
-  (void)addr;
-  (void)port;
-  (void)digest;
 }
 

@@ -2210,9 +2210,6 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
                                 const char *question, char **answer);
 void entry_guards_free_all(void);
 
-void clear_bridge_list(void);
-void bridge_add_from_config(uint32_t addr, uint16_t port, char *digest);
-
 /********************************* circuitlist.c ***********************/
 
 circuit_t * _circuit_get_global_list(void);

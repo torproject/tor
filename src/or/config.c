@@ -952,7 +952,6 @@ options_act(or_options_t *old_options)
     add_default_trusted_dirservers();
   }
 
-  clear_bridge_list();
   if (options->Bridges) {
     for (cl = options->Bridges; cl; cl = cl->next) {
       if (parse_bridge_line(cl->value, 0)<0) {
@@ -3607,7 +3606,7 @@ parse_bridge_line(const char *line, int validate_only)
     log_debug(LD_DIR, "Bridge at %s:%d (%s)", address,
               (int)port,
               fingerprint ? fingerprint : "no key listed");
-    bridge_add_from_config(addr, port, fingerprint ? digest : NULL);
+//    bridge_add_from_config(addr, port, fingerprint ? digest : NULL);
   }
 
   r = 0;
