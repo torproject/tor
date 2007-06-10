@@ -2126,6 +2126,11 @@ test_dir_format(void)
 }
 
 static void
+test_v3_networkstatus(void)
+{
+}
+
+static void
 test_policies(void)
 {
   addr_policy_t *policy, *policy2;
@@ -2412,6 +2417,7 @@ main(int c, char**v)
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");
   test_dir_format();
+  test_v3_networkstatus();
   puts("\n========================= Policies ===================");
   test_policies();
   puts("\n========================= Rendezvous functionality ========");

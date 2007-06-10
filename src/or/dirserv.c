@@ -1655,9 +1655,10 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     log_warn(LD_BUG, "Not enough space in buffer.");
     return -1;
   }
+  cp += strlen(cp);
 
   if (version) {
-    if (tor_snprintf(buf, buf_len, "opt v %s\n", version)<0) {
+    if (tor_snprintf(cp, buf_len - (cp-buf), "opt v %s\n", version)<0) {
       log_warn(LD_BUG, "Unable to print router version.");
       return -1;
     }
