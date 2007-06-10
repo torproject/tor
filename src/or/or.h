@@ -934,6 +934,9 @@ typedef struct dir_connection_t {
     DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
     DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS
   } dir_spool_src : 3;
+  /** If we're fetching descriptors, what router purpose shall we assign
+   * to them? */
+  uint8_t router_purpose;
   /** List of fingerprints for networkstatuses or desriptors to be spooled. */
   smartlist_t *fingerprint_stack;
   /** A cached_dir_t object that we're currently spooling out */
@@ -1850,6 +1853,10 @@ typedef struct {
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
 
+  /** Boolean: if we know the bridge's digest, should we get new
+   * descriptors from the bridge authorities or from the bridge itself? */
+  int UpdateBridgesFromAuthority;
+
   int AvoidDiskWrites; /**< Boolean: should we never cache things to disk?
                         * Not used yet. */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
@@ -2209,6 +2216,10 @@ int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 int getinfo_helper_entry_guards(control_connection_t *conn,
                                 const char *question, char **answer);
 void entry_guards_free_all(void);
+
+void clear_bridge_list(void);
+void bridge_add_from_config(uint32_t addr, uint16_t port, char *digest);
+void learn_bridge_descriptors(void);
 
 /********************************* circuitlist.c ***********************/
 
@@ -2640,10 +2651,11 @@ char *authority_type_to_string(authority_type_t auth);
 void directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
                                   const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
-void directory_get_from_dirserver(uint8_t purpose, const char *resource,
+void directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
                                   int retry_if_no_servers);
 void directory_initiate_command_routerstatus(routerstatus_t *status,
-                                             uint8_t purpose,
+                                             uint8_t dir_purpose,
+                                             uint8_t router_purpose,
                                              int anonymized_connection,
                                              const char *resource,
                                              const char *payload,
@@ -2659,8 +2671,8 @@ int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_request_failed(dir_connection_t *conn);
 void directory_initiate_command(const char *address, uint32_t addr,
                                 uint16_t or_port, uint16_t dir_port,
-                                int supports_begindir,
-                                const char *digest, uint8_t purpose,
+                                int supports_begindir, const char *digest,
+                                uint8_t dir_purpose, uint8_t router_purpose,
                                 int anonymized_connection,
                                 const char *resource,
                                 const char *payload, size_t payload_len);
@@ -3202,6 +3214,7 @@ typedef struct trusted_dir_server_t {
 } trusted_dir_server_t;
 
 int router_reload_router_list(void);
+int get_n_authorities(authority_type_t type);
 int router_reload_networkstatus(void);
 smartlist_t *router_get_trusted_dir_servers(void);
 routerstatus_t *router_pick_directory_server(int requireother,
@@ -3274,7 +3287,8 @@ int router_load_single_router(const char *s, uint8_t purpose,
                               const char **msg);
 void router_load_routers_from_string(const char *s, const char *eos,
                                      saved_location_t saved_location,
-                                     smartlist_t *requested_fingerprints);
+                                     smartlist_t *requested_fingerprints,
+                                     uint8_t purpose);
 void router_load_extrainfo_from_string(const char *s, const char *eos,
                                        saved_location_t saved_location,
                                        smartlist_t *requested_fps);

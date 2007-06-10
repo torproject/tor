@@ -109,7 +109,7 @@ static int have_warned_about_new_version = 0;
 
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
-static INLINE int
+INLINE int
 get_n_authorities(authority_type_t type)
 {
   int n = 0;
@@ -549,7 +549,8 @@ router_reload_router_list_impl(int extrainfo)
     else
       router_load_routers_from_string((*mmap_ptr)->data,
                                       (*mmap_ptr)->data+(*mmap_ptr)->size,
-                                      SAVED_IN_CACHE, NULL);
+                                      SAVED_IN_CACHE, NULL,
+                                      ROUTER_PURPOSE_GENERAL);
   }
 
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
@@ -560,7 +561,8 @@ router_reload_router_list_impl(int extrainfo)
     if (extrainfo)
       router_load_extrainfo_from_string(contents, NULL,SAVED_IN_JOURNAL, NULL);
     else
-      router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL, NULL);
+      router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL, NULL,
+                                      ROUTER_PURPOSE_GENERAL);
     stats->journal_len = (size_t) st.st_size;
     tor_free(contents);
   }
@@ -2788,7 +2790,8 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
 void
 router_load_routers_from_string(const char *s, const char *eos,
                                 saved_location_t saved_location,
-                                smartlist_t *requested_fingerprints)
+                                smartlist_t *requested_fingerprints,
+                                uint8_t purpose)
 {
   smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
   char fp[HEX_DIGEST_LEN+1];
@@ -2820,6 +2823,10 @@ router_load_routers_from_string(const char *s, const char *eos,
         continue;
       }
     }
+
+    ri->purpose = purpose;
+    if (purpose != ROUTER_PURPOSE_GENERAL)
+      ri->cache_info.do_not_cache = 1;
 
     if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0)
       smartlist_add(changed, ri);
@@ -3340,6 +3347,10 @@ update_networkstatus_cache_downloads(time_t now)
          if (connection_get_by_type_addr_port_purpose(
                 CONN_TYPE_DIR, ds->addr, ds->dir_port,
                 DIR_PURPOSE_FETCH_NETWORKSTATUS)) {
+           /* XXX020 the above dir_port won't be accurate if we're
+            * doing a tunneled conn. In that case it should be or_port.
+            * How to guess from here? Maybe make the function less general
+            * and have it know that it's looking for dir conns. -RD */
            /* We are already fetching this one. */
            continue;
          }
@@ -3348,6 +3359,7 @@ update_networkstatus_cache_downloads(time_t now)
          strlcat(resource, ".z", sizeof(resource));
          directory_initiate_command_routerstatus(
                &ds->fake_status.status, DIR_PURPOSE_FETCH_NETWORKSTATUS,
+               ROUTER_PURPOSE_GENERAL,
                0, /* Not private */
                resource,
                NULL, 0 /* No payload. */);
@@ -4365,6 +4377,7 @@ initiate_descriptor_downloads(routerstatus_t *source,
   if (source) {
     /* We know which authority we want. */
     directory_initiate_command_routerstatus(source, purpose,
+                                            ROUTER_PURPOSE_GENERAL,
                                             0, /* not private */
                                             resource, NULL, 0);
   } else {

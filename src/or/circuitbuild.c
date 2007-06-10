@@ -2622,3 +2622,79 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   return 0;
 }
 
+typedef struct {
+  uint32_t addr;
+  uint16_t port;
+  char identity[DIGEST_LEN];
+} bridge_info_t;
+
+/** A list of known bridges. */
+static smartlist_t *bridge_list = NULL;
+
+/** Initialize the bridge list to empty, creating it if needed. */
+void
+clear_bridge_list(void)
+{
+  if (!bridge_list)
+    bridge_list = smartlist_create();
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, b, tor_free(b));
+  smartlist_clear(bridge_list);
+}
+
+/** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
+ * is set, it tells us the identity key too. */
+void
+bridge_add_from_config(uint32_t addr, uint16_t port, char *digest)
+{
+  bridge_info_t *b = tor_malloc_zero(sizeof(bridge_info_t));
+  b->addr = addr;
+  b->port = port;
+  if (digest)
+    memcpy(b->identity, digest, DIGEST_LEN);
+  if (!bridge_list)
+    bridge_list = smartlist_create();
+  smartlist_add(bridge_list, b);
+}
+
+/** For each bridge in our list for which we don't currently have a
+ * descriptor, fetch a new copy of its descriptor -- either directly
+ * from the bridge or via a bridge authority. */
+void
+learn_bridge_descriptors(void)
+{
+  char address_buf[INET_NTOA_BUF_LEN+1];
+  struct in_addr in;
+  or_options_t *options = get_options();
+  int num_bridge_auths = get_n_authorities(BRIDGE_AUTHORITY);
+
+  if (!bridge_list)
+    return;
+
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
+    {
+      if (router_get_by_digest(bridge->identity))
+        continue; /* we've already got one. great. */
+      in.s_addr = htonl(bridge->addr);
+      tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
+
+      if (tor_digest_is_zero(bridge->identity) ||
+          !options->UpdateBridgesFromAuthority ||
+          !num_bridge_auths) {
+        if (!connection_get_by_type_addr_port_purpose(
+            CONN_TYPE_DIR, bridge->addr, bridge->port,
+            DIR_PURPOSE_FETCH_SERVERDESC)) {
+          /* we need to ask the bridge itself for its descriptor. */
+          directory_initiate_command(address_buf, bridge->addr,
+                                     bridge->port, 0,
+                                     1, bridge->identity,
+                                     DIR_PURPOSE_FETCH_SERVERDESC,
+                                     ROUTER_PURPOSE_BRIDGE,
+                                     0, "authority", NULL, 0);
+        }
+      } else {
+        /* we have a digest and we want to ask an authority. */
+        // XXX
+      }
+    });
+}
+

@@ -177,7 +177,9 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
       }
       post_via_tor = purpose_needs_anonymity(purpose) ||
               !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
-      directory_initiate_command_routerstatus(rs, purpose, post_via_tor,
+      directory_initiate_command_routerstatus(rs, purpose,
+                                              ROUTER_PURPOSE_GENERAL,
+                                              post_via_tor,
                                               NULL, payload, upload_len);
     });
   if (!found) {
@@ -194,18 +196,18 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
  * down, mark them up and try again.
  */
 void
-directory_get_from_dirserver(uint8_t purpose, const char *resource,
+directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
                              int retry_if_no_servers)
 {
   routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
   int prefer_authority = server_mode(options) && options->DirPort != 0;
-  int directconn = !purpose_needs_anonymity(purpose);
+  int directconn = !purpose_needs_anonymity(dir_purpose);
   authority_type_t type;
 
   /* FFFF we could break this switch into its own function, and call
    * it elsewhere in directory.c. -RD */
-  switch (purpose) {
+  switch (dir_purpose) {
     case DIR_PURPOSE_FETCH_EXTRAINFO:
       type = EXTRAINFO_CACHE | V2_AUTHORITY;
       break;
@@ -221,7 +223,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
       type = HIDSERV_AUTHORITY;
       break;
     default:
-      log_warn(LD_BUG, "Unexpected purpose %d", (int)purpose);
+      log_warn(LD_BUG, "Unexpected purpose %d", (int)dir_purpose);
       return;
   }
 
@@ -240,13 +242,13 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
                                         retry_if_no_servers);
       if (!rs) {
         const char *which;
-        if (purpose == DIR_PURPOSE_FETCH_DIR)
+        if (dir_purpose == DIR_PURPOSE_FETCH_DIR)
           which = "directory";
-        else if (purpose == DIR_PURPOSE_FETCH_RUNNING_LIST)
+        else if (dir_purpose == DIR_PURPOSE_FETCH_RUNNING_LIST)
           which = "status list";
-        else if (purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
+        else if (dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
           which = "network status";
-        else // if (purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
+        else // if (dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
           which = "server descriptors";
         log_info(LD_DIR,
                  "No router found for %s; falling back to dirserver list",
@@ -260,7 +262,7 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   }
   if (!directconn) {
     /* Never use fascistfirewall; we're going via Tor. */
-    if (purpose == DIR_PURPOSE_FETCH_RENDDESC) {
+    if (dir_purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask hidserv authorities, any of them will do */
       rs = router_pick_trusteddirserver(HIDSERV_AUTHORITY, 0, 0,
                                         retry_if_no_servers);
@@ -275,24 +277,29 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
   }
 
   if (rs)
-    directory_initiate_command_routerstatus(rs, purpose, !directconn,
+    directory_initiate_command_routerstatus(rs, dir_purpose,
+                                            ROUTER_PURPOSE_GENERAL,
+                                            !directconn,
                                             resource, NULL, 0);
   else {
     log_notice(LD_DIR,
                "While fetching directory info, "
                "no running dirservers known. Will try again later. "
-               "(purpose %d)", purpose);
-    if (!purpose_needs_anonymity(purpose)) {
+               "(purpose %d)", dir_purpose);
+    if (!purpose_needs_anonymity(dir_purpose)) {
       /* remember we tried them all and failed. */
       directory_all_unreachable(time(NULL));
     }
   }
 }
 
-/** Launch a new connection to the directory server <b>status</b> to upload or
- * download a server or rendezvous descriptor. <b>purpose</b> determines what
+/** Launch a new connection to the directory server <b>status</b> to
+ * upload or download a server or rendezvous
+ * descriptor. <b>dir_purpose</b> determines what
  * kind of directory connection we're launching, and must be one of
- * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}.
+ * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}. <b>router_purpose</b>
+ * specifies the descriptor purposes we have in mind (currently only
+ * used for FETCH_DIR).
  *
  * When uploading, <b>payload</b> and <b>payload_len</b> determine the content
  * of the HTTP post.  Otherwise, <b>payload</b> should be NULL.
@@ -302,7 +309,8 @@ directory_get_from_dirserver(uint8_t purpose, const char *resource,
  */
 void
 directory_initiate_command_routerstatus(routerstatus_t *status,
-                                        uint8_t purpose,
+                                        uint8_t dir_purpose,
+                                        uint8_t router_purpose,
                                         int anonymized_connection,
                                         const char *resource,
                                         const char *payload,
@@ -323,7 +331,8 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                              status->or_port, status->dir_port,
                              status->version_supports_begindir,
                              status->identity_digest,
-                             purpose, anonymized_connection, resource,
+                             dir_purpose, router_purpose,
+                             anonymized_connection, resource,
                              payload, payload_len);
 }
 
@@ -441,8 +450,8 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
 void
 directory_initiate_command(const char *address, uint32_t addr,
                            uint16_t or_port, uint16_t dir_port,
-                           int supports_begindir,
-                           const char *digest, uint8_t purpose,
+                           int supports_begindir, const char *digest,
+                           uint8_t dir_purpose, uint8_t router_purpose,
                            int anonymized_connection, const char *resource,
                            const char *payload, size_t payload_len)
 {
@@ -460,7 +469,7 @@ directory_initiate_command(const char *address, uint32_t addr,
   log_debug(LD_DIR, "anonymized %d, want_to_tunnel %d.",
             anonymized_connection, want_to_tunnel);
 
-  switch (purpose) {
+  switch (dir_purpose) {
     case DIR_PURPOSE_FETCH_DIR:
       log_debug(LD_DIR,"initiating directory fetch");
       break;
@@ -498,7 +507,8 @@ directory_initiate_command(const char *address, uint32_t addr,
   conn->_base.address = tor_strdup(address);
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
 
-  conn->_base.purpose = purpose;
+  conn->_base.purpose = dir_purpose;
+  conn->router_purpose = router_purpose;
 
   /* give it an initial state */
   conn->_base.state = DIR_CONN_STATE_CONNECTING;
@@ -524,7 +534,7 @@ directory_initiate_command(const char *address, uint32_t addr,
         /* fall through */
       case 0:
         /* queue the command on the outbuf */
-        directory_send_command(conn, purpose, 1, resource,
+        directory_send_command(conn, dir_purpose, 1, resource,
                                payload, payload_len);
         connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
         /* writable indicates finish, readable indicates broken link,
@@ -557,7 +567,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     }
     conn->_base.state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
-    directory_send_command(conn, purpose, 0, resource,
+    directory_send_command(conn, dir_purpose, 0, resource,
                            payload, payload_len);
     connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
     connection_start_reading(TO_CONN(linked_conn));
@@ -1256,7 +1266,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       if (was_ei) {
         router_load_extrainfo_from_string(body, NULL, SAVED_NOWHERE, which);
       } else {
-        router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which);
+        router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
+                                        conn->router_purpose);
         directory_info_has_arrived(now, 0);
       }
     }

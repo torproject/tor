@@ -614,6 +614,7 @@ consider_testing_reachability(int test_or, int test_dir)
                                me->or_port, me->dir_port,
                                0, me->cache_info.identity_digest,
                                DIR_PURPOSE_FETCH_SERVERDESC,
+                               ROUTER_PURPOSE_GENERAL,
                                1, "authority", NULL, 0);
 
     control_event_server_status(LOG_NOTICE,
