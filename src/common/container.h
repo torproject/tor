@@ -222,7 +222,7 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
   }                                                                     \
   static INLINE valtype* prefix##remove(maptype *map, const char *key)  \
   {                                                                     \
-    return (valtype*)digestmap_get((digestmap_t*)map, key);             \
+    return (valtype*)digestmap_remove((digestmap_t*)map, key);          \
   }                                                                     \
   static INLINE void prefix##free(maptype *map, void (*free_val)(void*)) \
   {                                                                     \
