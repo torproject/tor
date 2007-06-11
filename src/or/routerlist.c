@@ -1903,10 +1903,10 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   smartlist_add(rl->routers, ri);
   ri->routerlist_index = smartlist_len(rl->routers) - 1;
   router_dir_info_changed();
+  routerlist_check_bug_417();
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
 #endif
-  routerlist_check_bug_417();
 }
 
 /** Adds the extrainfo_t <b>ei</b> to the routerlist <b>rl</b>, if there is a
@@ -1961,10 +1961,10 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   if (r == 0)
     extrainfo_free(ei);
 
+  routerlist_check_bug_417();
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
 #endif
-  routerlist_check_bug_417();
   return r;
 }
 
@@ -1994,10 +1994,10 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
   } else {
     routerinfo_free(ri);
   }
+  routerlist_check_bug_417();
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
 #endif
-  routerlist_check_bug_417();
 }
 
 /** Remove an item <b>ri</b> from the routerlist <b>rl</b>, updating indices
@@ -2052,10 +2052,10 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
       digestmap_remove(rl->desc_by_eid_map, ri->cache_info.extra_info_digest);
     routerinfo_free(ri);
   }
+  routerlist_check_bug_417();
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
 #endif
-  routerlist_check_bug_417();
 }
 
 /** Remove a signed_descriptor_t <b>sd</b> from <b>rl</b>-\>old_routers, and
@@ -2174,10 +2174,10 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
       ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
   }
+  routerlist_check_bug_417();
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
 #endif
-  routerlist_check_bug_417();
 }
 
 /** Free all memory held by the routerlist module. */
