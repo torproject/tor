@@ -1351,17 +1351,17 @@ typedef struct networkstatus_vote_t {
 /** Contents of a directory of onion routers. */
 typedef struct {
   /** Map from server identity digest to a member of routers. */
-  digestmap_t *identity_map;
+  struct digest_ri_map_t *identity_map;
   /** Map from server descriptor digest to a signed_descriptor_t from
    * routers or old_routers. */
-  digestmap_t *desc_digest_map;
+  struct digest_sd_map_t *desc_digest_map;
   /** Map from extra-info digest to an extrainfo_t.  Only exists for
    * routers in routers or old_routers. */
-  digestmap_t *extra_info_map;
+  struct digest_ei_map_t *extra_info_map;
   /** Map from extra-info digests to a signed_descriptor_t for a router
    * descriptor having that extra-info digest.  Only exists for
    * routers in routers or old_routers. */
-  digestmap_t *desc_by_eid_map;
+  struct digest_sd_map_t *desc_by_eid_map;
   /** List of routerinfo_t for all currently live routers we know. */
   smartlist_t *routers;
   /** List of signed_descriptor_t for older router descriptors we're

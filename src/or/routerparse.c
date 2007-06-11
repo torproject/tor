@@ -900,9 +900,10 @@ router_parse_list_from_string(const char **s, const char *eos,
 
     if (have_extrainfo && want_extrainfo) {
       routerlist_t *rl = router_get_routerlist();
+      /* XXXX020 fix this cast to digestmap_t* */
       extrainfo = extrainfo_parse_entry_from_string(*s, end,
                                        saved_location != SAVED_IN_CACHE,
-                                       rl->identity_map);
+                                       (digestmap_t*)rl->identity_map);
       if (extrainfo) {
         signed_desc = &extrainfo->cache_info;
         elt = extrainfo;
