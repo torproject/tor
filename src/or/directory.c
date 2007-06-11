@@ -1561,8 +1561,6 @@ already_fetching_directory(int purpose)
   return 0;
 }
 
-#undef INSTRUMENT_DOWNLOADS
-
 #ifdef INSTRUMENT_DOWNLOADS
 /** Map used to keep track of how much data we've up/downloaded in what kind
  * of request.  Maps from request type to pointer to uint64_t. */
