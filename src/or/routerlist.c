@@ -2140,7 +2140,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
 
   if (!tor_digest_is_zero(ri_new->cache_info.extra_info_digest)) {
     digestmap_set(rl->desc_by_eid_map, ri_new->cache_info.extra_info_digest,
-                  ri_new);
+                  &ri_new->cache_info);
   }
 
   if (make_old && get_options()->DirPort &&
