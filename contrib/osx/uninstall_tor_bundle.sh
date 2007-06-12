@@ -33,10 +33,8 @@
 ##	(ie "Tor", "torstartup", ...) the list should be new-line-delimited.
 PACKAGE_LIST_SRC=./package_list.txt
 
-
 ### this is the name of the user created in the install process of Tor
 TOR_USER=_tor
-
 
 ### these should be constant across all osX installs (so leave them be)
 STARTUP_ITEMS_DIR=/Library/StartupItems
@@ -44,7 +42,6 @@ PKG_RCPT_BASE_DIR=/Library/Receipts
 BOM_INTERMEDIATE_DIR=Contents/Resources
 INFO_INTERMEDIATE_DIR=$BOM_INTERMEDIATE_DIR/English.lproj
 TEMP_BOM_CONTENTS=/tmp/tor_uninst_scratch
-
 
 ### make sure the script is being run as root, barf if not
 if [ "`whoami`" != "root" ]; then
@@ -128,9 +125,11 @@ done < $PACKAGE_LIST_SRC
 
 ## nuke the user created by the install process.
 echo ". Removing created user $TOR_USER"
-#niutil -destroy . /users/$TOR_USER
-dscl . -delete /users/$TOR_USER
-
+if [ -x /usr/bin/dscl ]; then
+   dscl . -delete /users/$TOR_USER
+else
+   niutil -destroy . /users/$TOR_USER
+fi
 
 ## clean up
 echo ". Cleaning up"
