@@ -504,10 +504,10 @@ $Id$
 
        [At most once]
 
-       "Digest" is a hex-encoded digest (using upper-case characters)
-       of the router's extra-info document, as signed in the router's
-       extra-info.  (If this field is absent, the router is not uploading
-       a corresponding extra-info document.)
+       "Digest" is a hex-encoded digest (using upper-case characters) of the
+       router's extra-info document, as signed in the router's extra-info
+       (that is, not including the signature).  (If this field is absent, the
+       router is not uploading a corresponding extra-info document.)
 
        [Versions before 0.2.0.1-alpha don't recognize this, and versions
         before 0.1.2.5-alpha will reject descriptors containing it unless
@@ -793,7 +793,8 @@ $Id$
         [Exactly once.]
 
         A digest of the vote from the authority that contributed to this
-        consensus. (Hex, upper-case.)
+        consensus, as signed (that is, not including the signature).
+        (Hex, upper-case.)
 
    Each router status entry contains the following items.  Router status
    entries are sorted in ascending order by identity digest.
@@ -805,8 +806,9 @@ $Id$
 
         "Nickname" is the OR's nickname.  "Identity" is a hash of its
         identity key, encoded in base64, with trailing equals sign(s)
-        removed.  "Digest" is a hash of its most recent descriptor (as
-        signed), encoded in base64 as "identity".  "Publication" is the
+        removed.  "Digest" is a hash of its most recent descriptor as
+        signed (that is, not including the signature), encoded in base64 as
+        "identity".  "Publication" is the
         publication time of its most recent descriptor, in the form
         YYYY-MM-DD HH:MM:SS, in GMT.  "IP" is its current IP address;
         ORPort is its current OR port, "DirPort" is it's current directory
