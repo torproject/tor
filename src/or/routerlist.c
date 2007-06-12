@@ -5158,11 +5158,30 @@ routerlist_assert_ok(routerlist_t *rl)
                     r->cache_info.signed_descriptor_digest);
     tor_assert(&(r->cache_info) == sd2);
     tor_assert(r->routerlist_index == r_sl_idx);
+#if 0
+    /* XXXX020.
+     *
+     *   Hoo boy.  We need to fix this one, and the fix is a bit tricky, so
+     * commenting this out is just a band-aid.
+     *
+     *   The problem is that, although well-behaved router descriptors
+     * should never have the same value for their extra_info_digest, it's
+     * possible for ill-behaved routers to claim whatever they like there.
+     *
+     *   The real answer is to trash desc_by_eid_map and instead have
+     * something that indicates for a given extra-info digest we want,
+     * what its download status is.  We'll do that as a part of routerlist
+     * refactoring once consensus directories are in.  For now,
+     * this rep violation is probably harmless: an adversary can make us
+     * reset our retry count for an extrainfo, but that's not the end
+     * of the world.
+     */
     if (!tor_digest_is_zero(r->cache_info.extra_info_digest)) {
       signed_descriptor_t *sd3 =
         sdmap_get(rl->desc_by_eid_map, r->cache_info.extra_info_digest);
       tor_assert(sd3 == &(r->cache_info));
     }
+#endif
   });
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
   {
@@ -5170,11 +5189,14 @@ routerlist_assert_ok(routerlist_t *rl)
     tor_assert(sd != &(r2->cache_info));
     sd2 = sdmap_get(rl->desc_digest_map, sd->signed_descriptor_digest);
     tor_assert(sd == sd2);
+#if 0
+    /* XXXX020 see above. */
     if (!tor_digest_is_zero(sd->extra_info_digest)) {
       signed_descriptor_t *sd3 =
         sdmap_get(rl->desc_by_eid_map, sd->extra_info_digest);
       tor_assert(sd3 == sd);
     }
+#endif
   });
 
   iter = digestmap_iter_init((digestmap_t*)rl->identity_map);
@@ -5221,9 +5243,11 @@ routerlist_assert_ok(routerlist_t *rl)
                        d, DIGEST_LEN));
     sd = sdmap_get(rl->desc_by_eid_map,
                    ei->cache_info.signed_descriptor_digest);
-    tor_assert(sd);
-    tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
-                       sd->extra_info_digest, DIGEST_LEN));
+    // tor_assert(sd); // XXXX020 see above
+    if (sd) {
+      tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
+                         sd->extra_info_digest, DIGEST_LEN));
+    }
     iter = digestmap_iter_next((digestmap_t*)rl->extra_info_map, iter);
   }
 }
