@@ -1,0 +1,335 @@
+\documentclass{llncs}
+
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{epsfig}
+
+\setlength{\textwidth}{5.9in}
+\setlength{\textheight}{8.4in}
+\setlength{\topmargin}{.5cm}
+\setlength{\oddsidemargin}{1cm}
+\setlength{\evensidemargin}{1cm}
+
+\newenvironment{tightlist}{\begin{list}{$\bullet$}{
+  \setlength{\itemsep}{0mm}
+    \setlength{\parsep}{0mm}
+    %  \setlength{\labelsep}{0mm}
+    %  \setlength{\labelwidth}{0mm}
+    %  \setlength{\topsep}{0mm}
+    }}{\end{list}}
+
+
+\newcommand{\workingnote}[1]{}        % The version that hides the note.
+%\newcommand{\workingnote}[1]{(**#1)}   % The version that makes the note visible.
+
+
+\begin{document}
+
+\title{Design challenges and social factors in deploying low-latency anonymity}
+% Could still use a better title -PFS
+
+\author{Roger Dingledine\inst{1} \and
+Nick Mathewson\inst{1} \and
+Paul Syverson\inst{2}}
+\institute{The Free Haven Project \email{<\{arma,nickm\}@freehaven.net>} \and
+Naval Research Laboratory \email{<syverson@itd.nrl.navy.mil>}}
+
+\maketitle
+\pagestyle{plain}
+
+\begin{abstract}
+  There are many unexpected or unexpectedly difficult obstacles to
+  deploying anonymous communications.  We describe Tor (\emph{the}
+  onion routing), how to use it, our design philosophy, and some of
+  the challenges that we have faced and continue to face in building,
+  deploying, and sustaining a scalable, distributed, low-latency
+  anonymity network.
+\end{abstract}
+
+\section{Introduction}
+This article describes Tor, a widely-used low-latency general-purpose
+anonymous communication system, and discusses some unexpected
+challenges arising from our experiences deploying Tor.  We will tell
+you how to use it, who uses it, how it works, why we designed it the
+way we did, and why this makes it usable and stable.
+
+Tor is an overlay network for anonymizing TCP streams over the
+Internet~\cite{tor-design}.  Tor works on the real-world Internet,
+requires no special privileges or kernel modifications, requires
+little synchronization or coordination between nodes, and provides a
+reasonable trade-off between anonymity, usability, and efficiency.
+
+Since deployment in October 2003 the public Tor network has grown to
+over nine hundred volunteer-operated nodes worldwide and over 100
+megabytes average traffic per second from hundreds of thousands of
+concurrent users. 
+
+\section{Tor Design and Design Philosophy: Distributed Trust and Usability}
+
+Tor enables users to connect to Internet sites without revealing their
+logical or physical locations to those sites or to observers.  It
+enables hosts to be publicly accessible yet have similar protection
+against location through its \emph{location-hidden services}.
+
+To connect to a remote server via Tor, the client software learns
+a %signed
+list of Tor nodes from several central \emph{directory servers} via a
+voting protocol to avoid dependence on or complete trust in any one of
+them, and incrementally creates a private pathway or \emph{circuit} of
+encrypted connections through authenticated Tor nodes on the network,
+negotiating a separate set of encryption keys for each hop along the
+circuit.  The circuit is extended one node at a time, and each node
+along the way knows only the immediately previous and following nodes
+in the circuit, so no individual Tor node knows the complete path that
+each fixed-sized data packet (or \emph{cell}) will take.  Thus,
+neither an eavesdropper nor a compromised node can see both the
+connection's source and destination.  Later requests use a new
+circuit to complicate long-term linkability between different actions
+by a single user.
+
+Tor attempts to anonymize the transport layer, not the application
+layer.  Thus, applications such as SSH can provide
+authenticated communication that is hidden by Tor from outside observers.
+When anonymity from communication partners is desired,
+application-level protocols that transmit identifying
+information need additional scrubbing proxies, such as
+Privoxy~\cite{privoxy} for HTTP\@.  Furthermore, Tor does not relay
+arbitrary IP packets; it only anonymizes TCP streams and DNS requests.
+
+Tor, the third generation of deployed onion-routing
+designs~\cite{or-ih96,or-jsac98,tor-design}, was researched, developed,
+and deployed by the Naval Research Laboratory and the Free Haven
+Project under ONR and DARPA funding for secure government
+communications.  Since 2005, continuing work by Free Haven has also
+been funded by the Omidyar Network, the Electronic Frontier Foundation
+for maintaining civil liberties of ordinary citizens online, and the
+International Broadcasting Bureau and Reporters without Borders to
+combat blocking and censorship on the Internet. This diversity of
+funding fits Tor's overall philosophy: a wide variety of interests
+helps maintain both the stability and the security of the network.
+
+Usability is also a central goal. Downloading and installing Tor is
+easy. Simply go to\\
+http://www.tor.freehaven.net and download.  Tor comes with install
+wizards and a GUI for major operating systems: GNU/Linux, OS X, and
+Windows. It also runs on various flavors of BSD and UNIX\@. Basic
+instructions, documentation, FAQs, etc.\ are available in many
+languages. The Tor GUI Vidalia makes server configuration easy, e.g.,
+choosing how much bandwidth to allocate to Tor, exit policy choices,
+etc. And, the GUI Torbutton allows Firefox users a one-click toggle of
+whether browsing goes through Tor or not.  Tor is easily configured by
+a site administrator to run at either individual desktops or just at a
+site firewall or combinations of these.
+
+The ideal Tor network would be practical, useful and anonymous. When
+trade-offs arise between these properties, Tor's research strategy has
+been to remain useful enough to attract many users, and practical
+enough to support them.  Only subject to these constraints do we try
+to maximize anonymity.  Tor thus differs from other deployed systems
+for traffic analysis resistance in its security and flexibility.  Mix
+networks such as
+% Mixmaster~\cite{mixmaster-spec} or its successor 
+Mixminion~\cite{minion-design} gain the highest degrees of practical
+anonymity at the expense of introducing highly variable delays, making
+them unsuitable for applications such as web browsing.  Commercial
+single-hop proxies~\cite{anonymizer} can provide good performance, but
+a single-point compromise can expose all users' traffic, and a
+single-point eavesdropper can perform traffic analysis on the entire
+network.  Also, their proprietary implementations place any
+infrastructure that depends on these single-hop solutions at the mercy
+of their providers' financial health as well as network security.
+There are numerous other designs for distributed anonymous low-latency
+communication~\cite{crowds-tissec,web-mix,freedom21-security,i2p,tarzan:ccs02,morphmix:fc04}.
+Some have been deployed or even commercialized; some exist only on
+paper. Though each has something unique to offer, we feel Tor has
+advantages over each of them that make it a superior choice for most
+users and applications. For example, unlike purely P2P designs we
+neither limit ordinary users to content and services available only
+within our network nor require them to take on responsibility for
+connections outside the network, unless they separately choose to run
+server nodes.
+
+Our defense lies in having a diverse enough set of nodes to prevent
+most real-world adversaries from being in the right places to attack
+users, by distributing each transaction over several nodes in the
+network.  This ``distributed trust'' approach means the Tor network
+can be safely operated and used by a wide variety of mutually
+distrustful users, providing sustainability and security.
+
+The Tor network has a broad range of users making it difficult for
+eavesdroppers to track them or profile interests. These include
+ordinary citizens concerned about their privacy, corporations who
+don't want to reveal information to their competitors, and law
+enforcement and government intelligence agencies who need to do
+operations on the Internet without being noticed.  Naturally,
+organizations will not want to depend on others for their security.
+If most participating providers are reliable, Tor tolerates some
+hostile infiltration of the network.
+
+This distribution of trust is central to the Tor philosophy and
+pervades Tor at all levels: Onion routing has been open source since
+the mid-nineties (mistrusting users can inspect the code themselves);
+Tor is free software (anyone could take up the development of Tor from
+the current team); anyone can use Tor without license or charge, (which
+encourages a broad userbase with diverse interests); Tor is designed to be
+usable (also promotes a large, diverse userbase); and configurable (so
+users can easily set up and run server nodes); the Tor
+infrastructure is run by volunteers (it is not dependent on the
+economic viability or business strategy of any company) who are
+scattered around the globe (not completely under the jurisdiction of
+any single country); ongoing development and deployment has been
+funded by diverse sources (development does not fully depend on
+funding from any one source or even funding for any one primary
+purpose or sources in any one jurisdiction). All of these contribute
+to Tor's resilience and sustainability.
+
+
+\section{Social challenges}
+
+Many of the issues the Tor project needs to address extend beyond
+system design and technology development. In particular, the Tor
+project's \emph{image} with respect to its users and the rest of the
+Internet impacts the security it can provide.  With this image issue
+in mind, this section discusses the Tor user base and Tor's
+interaction with other services on the Internet.
+
+\subsection{Communicating security}
+
+Usability for anonymity systems contributes to their security, because
+usability affects the possible anonymity set~\cite{econymics,back01}.
+Conversely, an unusable system attracts few users and thus can't
+provide much anonymity.
+
+This phenomenon has a second-order effect: knowing this, users should
+choose which anonymity system to use based in part on how usable and
+secure \emph{others} will find it, in order to get the protection of a
+larger anonymity set. Thus we might supplement the adage ``usability
+is a security parameter''~\cite{back01} with a new one: ``perceived
+usability is a security parameter.''~\cite{usability-network-effect}.
+
+
+
+\subsection{Reputability and perceived social value}
+Another factor impacting the network's security is its reputability,
+the perception of its social value based on its current user base. If
+Alice is the only user who has ever downloaded the software, it might
+be socially accepted, but she's not getting much anonymity. Add a
+thousand activists, and she's anonymous, but everyone thinks she's an
+activist too.  Add a thousand diverse citizens (cancer survivors,
+people concerned about identity theft, law enforcement agents, and so
+on) and now she's harder to profile.
+
+Furthermore, the network's reputability affects its operator base:
+more people are willing to run a service if they believe it will be
+used by human rights workers than if they believe it will be used
+exclusively for disreputable ends.  This effect becomes stronger if
+node operators themselves think they will be associated with their
+users' ends.
+
+So the more cancer survivors on Tor, the better for the human rights
+activists. The more malicious hackers, the worse for the normal
+users. Thus, reputability is an anonymity issue for two
+reasons. First, it impacts the sustainability of the network: a
+network that's always about to be shut down has difficulty attracting
+and keeping adequate nodes.  Second, a disreputable network is more
+vulnerable to legal and political attacks, since it will attract fewer
+supporters.
+
+Reputability becomes even more tricky in the case of privacy networks,
+since the good uses of the network (such as publishing by journalists
+in dangerous countries, protecting road warriors from profiling and
+potential physical harm, tracking of criminals by law enforcement,
+protecting corporate research interests, etc.) are typically kept private,
+whereas network abuses or other problems tend to be more widely
+publicized.
+
+
+\subsection{Abuse}
+\label{subsec:tor-and-blacklists}
+
+For someone willing to be antisocial or even break the law, Tor is
+usually a poor choice to hide bad behavior. For example, Tor nodes are
+publicly identified, unlike the million-node botnets that are now
+common on the Internet. Nonetheless, we always expected that,
+alongside legitimate users, Tor would also attract troublemakers who
+exploit Tor to abuse services on the Internet with vandalism, rude
+mail, and so on.  \emph{Exit policies} have allowed individual nodes
+to block access to specific IP/port ranges.  This approach aims to
+make operators more willing to run Tor by allowing them to prevent
+their nodes from being used for abusing particular services.  For
+example, by default Tor nodes block SMTP (port 25), to avoid the issue
+of spam.
+
+Exit policies are useful but insufficient: if not all nodes block a
+given service, that service may try to block Tor instead.  While being
+blockable is important to being good netizens, we would like to
+encourage services to allow anonymous access. Services should not need
+to decide between blocking legitimate anonymous use and allowing
+unlimited abuse.  Nonetheless, blocking IP addresses is a
+course-grained solution~\cite{netauth}: entire appartment buildings,
+campuses, and even countries sometimes share a single IP address.
+Also, whether intended or not, such blocking supports repression of
+free speech. In many locations where Internet access of various kinds
+is censored or even punished by imprisonment, Tor is a path both to
+the outside world and to others inside.  Blocking posts from Tor makes
+the job of censoring authorities easier.  This is a loss for both Tor
+and services that block, such as Wikipedia: we don't want to compete
+for (or divvy up) the NAT-protected entities of the world.  This is
+also unfortunate because there are relatively simple technical
+solutions~\cite{nym}.  Various schemes for escrowing anonymous posts
+until they are reviewed by editors would both prevent abuse and remove
+incentives for attempts to abuse. Further, pseudonymous reputation
+tracking of posters through Tor would allow those who establish
+adequate reputation to post without escrow~\cite{nym,nymble}.
+
+We stress that as far as we can tell, most Tor uses are not
+abusive. Most services have not complained, and others are actively
+working to find ways besides banning to cope with the abuse. For
+example, the Freenode IRC network had a problem with a coordinated
+group of abusers joining channels and subtly taking over the
+conversation; but when they labelled all users coming from Tor IP
+addresses as ``anonymous users,'' removing the ability of the abusers
+to blend in, the abuse stopped.  This is an illustration of how simple
+technical mechanisms can remove the ability to abuse anonymously
+without undermining the ability to communicate anonymously and can
+thus remove the incentive to attempt abusing in this way.
+
+
+
+\section{The Future}
+\label{sec:conclusion}
+
+Tor is the largest and most diverse low-latency anonymity network
+available, but we are still in the early stages. Several major
+questions remain.
+
+First, will our volunteer-based approach to sustainability continue to
+work as well in the long term as it has the first several years?
+Besides node operation, Tor research, deployment, maintainance, and
+development is increasingly done by volunteers: package maintenance
+for various OSes, document translation, GUI design and implementation,
+live CDs, specification of new design changes, etc.\
+%
+Second, Tor is only one of many components that preserve privacy
+online.  For applications where it is desirable to keep identifying
+information out of application traffic, someone must build more and
+better protocol-aware proxies that are usable by ordinary people.
+%
+Third, we need to maintain a reputation for social good, and learn how to
+coexist with the variety of Internet services and their established
+authentication mechanisms. We can't just keep escalating the blacklist
+standoff forever.
+%
+Fourth, the current Tor architecture hardly scales even to handle
+current user demand. We must deploy designs and incentives to further
+encourage clients to relay traffic too, without thereby trading away
+too much anonymity or other properties.
+
+These are difficult and open questions. Yet choosing not to solve them
+means leaving most users to a less secure network or no anonymizing
+network at all.
+
+\bibliographystyle{plain} \bibliography{tor-design}
+
+\end{document}
+
