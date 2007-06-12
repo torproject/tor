@@ -230,7 +230,21 @@ directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
   if (!options->FetchServerDescriptors && type != HIDSERV_AUTHORITY)
     return;
 
-  if (directconn) {
+  if (directconn && options->UseBridges) {
+    /* want to pick a bridge for which we have a descriptor. */
+    routerinfo_t *ri = choose_random_entry(NULL);
+    if (ri) {
+      directory_initiate_command(ri->address, ri->addr,
+                                 ri->or_port, 0,
+                                 1, ri->cache_info.identity_digest,
+                                 dir_purpose,
+                                 ROUTER_PURPOSE_GENERAL,
+                                 0, resource, NULL, 0);
+    } else
+      log_notice(LD_DIR, "Ignoring directory request, since no bridge "
+                         "nodes are available yet.");
+    return;
+  } else if (directconn) {
     if (prefer_authority) {
       /* only ask authdirservers, and don't ask myself */
       rs = router_pick_trusteddirserver(type, 1, 1,
@@ -259,8 +273,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
           directconn = 0; /* last resort: try routing it via Tor */
       }
     }
-  }
-  if (!directconn) {
+  } else { /* !directconn */
     /* Never use fascistfirewall; we're going via Tor. */
     if (dir_purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask hidserv authorities, any of them will do */
@@ -463,7 +476,7 @@ directory_initiate_command(const char *address, uint32_t addr,
 
   tor_assert(address);
   tor_assert(addr);
-  tor_assert(dir_port);
+  tor_assert(or_port || dir_port);
   tor_assert(digest);
 
   log_debug(LD_DIR, "anonymized %d, want_to_tunnel %d.",
@@ -1221,7 +1234,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     smartlist_t *which = NULL;
     int n_asked_for = 0;
     log_info(LD_DIR,"Received %s (size %d) from server '%s:%d'",
-             was_ei ? "server info" : "extra server info",
+             was_ei ? "extra server info" : "server info",
              (int)body_len, conn->_base.address, conn->_base.port);
     if (was_ei)
       note_request(was_compressed?"dl/extra.z":"dl/extra", orig_len);
@@ -1255,13 +1268,15 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return dir_okay ? 0 : -1;
     }
-    /* Learn the routers, assuming we requested by fingerprint or "all".
-     * Right now, we only use "authority" to fetch ourself, so we don't want
-     * to risk replacing ourself with a router running at the addr:port we
-     * think we have.
+    /* Learn the routers, assuming we requested by fingerprint or "all"
+     * or "authority". (We use "authority" to fetch our own descriptor for
+     * testing, and to fetch bridge descriptors for bootstrapping.)
      */
+    /* XXX020 We now risk replacing ourself with a router running at
+     * the addr:port we think we have. Might want to check more carefully. */
     if (which || (conn->requested_resource &&
-                  !strcmpstart(conn->requested_resource, "all"))) {
+                  (!strcmpstart(conn->requested_resource, "all") ||
+                   !strcmpstart(conn->requested_resource, "authority")))) {
       /* as we learn from them, we remove them from 'which' */
       if (was_ei) {
         router_load_extrainfo_from_string(body, NULL, SAVED_NOWHERE, which);

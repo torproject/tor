@@ -192,13 +192,12 @@ $Id$
    corresponding roughly to "status votes" above.  They would compute the
    result of the vote on the client side.
 
-   Authorities used sign documents using the same private keys they used
+   Authorities used to sign documents using the same private keys they used
    for their roles as routers.  This forced them to keep these extremely
    sensitive keys in memory unencrypted.
 
    All of the information in extra-info documents used to be kept in the
    main descriptors.
-
 
 1.2. Document meta-format
 

@@ -55,7 +55,6 @@ static int onion_extend_cpath(origin_circuit_t *circ);
 static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
-static routerinfo_t *choose_random_entry(cpath_build_state_t *state);
 static void entry_guards_changed(void);
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
@@ -1581,10 +1580,10 @@ choose_good_middle_server(uint8_t purpose,
 /** Pick a good entry server for the circuit to be built according to
  * <b>state</b>.  Don't reuse a chosen exit (if any), don't use this
  * router (if we're an OR), and respect firewall settings; if we're
- * using entry_guards, return one.
+ * configured to use entry guards, return one.
  *
- * If <b>state</b> is NULL, we're choosing routers to serve as entry
- * nodes, not for any particular circuit.
+ * If <b>state</b> is NULL, we're choosing a router to serve as an entry
+ * guard, not for any particular circuit.
  */
 static routerinfo_t *
 choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
@@ -1721,49 +1720,62 @@ onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
   return 0;
 }
 
+/** Allocate a new extend_info object based on the various arguments. */
+extend_info_t *
+extend_info_alloc(const char *nickname, const char *digest,
+                  crypto_pk_env_t *onion_key,
+                  uint32_t addr, uint16_t port)
+{
+  extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
+  memcpy(info->identity_digest, digest, DIGEST_LEN);
+  if (nickname)
+    strlcpy(info->nickname, nickname, sizeof(info->nickname));
+  else {
+    /* make one up */
+  }
+  if (onion_key)
+    info->onion_key = crypto_pk_dup_key(onion_key);
+  info->addr = addr;
+  info->port = port;
+  return info;
+}
+
 /** Allocate and return a new extend_info_t that can be used to build a
  * circuit to or through the router <b>r</b>. */
 extend_info_t *
 extend_info_from_router(routerinfo_t *r)
 {
-  extend_info_t *info;
   tor_assert(r);
-  info = tor_malloc_zero(sizeof(extend_info_t));
-  strlcpy(info->nickname, r->nickname, sizeof(info->nickname));
-  memcpy(info->identity_digest, r->cache_info.identity_digest, DIGEST_LEN);
-  info->onion_key = crypto_pk_dup_key(r->onion_pkey);
-  info->addr = r->addr;
-  info->port = r->or_port;
-  info->router_purpose = r->purpose;
-  return info;
+  return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
+                           r->onion_pkey, r->addr, r->or_port);
 }
 
+#if 0
 /** What router purpose is <b>digest</b>?
  * It's a general purpose router unless it's on our bridges list.
  */
 static uint8_t
 get_router_purpose_from_digest(char *digest)
 {
-  (void)digest;
-  return ROUTER_PURPOSE_GENERAL; /* XXX020 */
+  if (digest_is_a_bridge(digest))
+    return ROUTER_PURPOSE_BRIDGE;
+  return ROUTER_PURPOSE_GENERAL;
 }
+#endif
 
+#if 0
 /** Allocate and return a new extend_info_t that can be used to build a
  * circuit to or through the router <b>r</b>. */
 extend_info_t *
 extend_info_from_routerstatus(routerstatus_t *s)
 {
-  extend_info_t *info;
   tor_assert(s);
-  info = tor_malloc_zero(sizeof(extend_info_t));
-  strlcpy(info->nickname, s->nickname, sizeof(info->nickname));
-  memcpy(info->identity_digest, s->identity_digest, DIGEST_LEN);
-  info->onion_key = NULL; /* routerstatus doesn't know this */
-  info->addr = s->addr;
-  info->port = s->or_port;
-  info->router_purpose = get_router_purpose_from_digest(info->identity_digest);
-  return info;
+  /* routerstatus doesn't know onion_key; leave it NULL */
+  return extend_info_alloc(s->nickname, s->identity_digest,
+                           NULL, s->addr, s->or_port);
+//                      get_router_purpose_from_digest(s->identity_digest));
 }
+#endif
 
 /** Release storage held by an extend_info_t struct. */
 void
@@ -1834,7 +1846,9 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
     reason = "unlisted";
   else if (!ri->is_running)
     reason = "down";
-  else if (!ri->is_possible_guard &&
+  else if (options->UseBridges && ri->purpose != ROUTER_PURPOSE_BRIDGE)
+    reason = "not a bridge";
+  else if (!options->UseBridges && !ri->is_possible_guard &&
            !router_nickname_is_in_list(ri, options->EntryNodes))
     reason = "not recommended as a guard";
   else if (router_nickname_is_in_list(ri, options->ExcludeNodes))
@@ -1908,6 +1922,10 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
     return NULL;
   r = router_get_by_digest(e->identity);
   if (!r)
+    return NULL;
+  if (get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_BRIDGE)
+    return NULL;
+  if (!get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_GENERAL)
     return NULL;
   if (router_is_unreliable(r, need_uptime, need_capacity, 0))
     return NULL;
@@ -2337,18 +2355,33 @@ entry_guards_prepend_from_config(void)
   entry_guards_changed();
 }
 
-/** Pick a live (up and listed) entry guard from entry_guards, and
- * make sure not to pick this circuit's exit. */
-static routerinfo_t *
+/** Return 1 if we're fine adding arbitrary routers out of the
+ * directory to our entry guard list. Else return 0. */
+static int
+can_grow_entry_list(or_options_t *options)
+{
+  if (options->StrictEntryNodes)
+    return 0;
+  if (options->UseBridges)
+    return 0;
+  return 1;
+}
+
+/** Pick a live (up and listed) entry guard from entry_guards. If
+ * <b>state</b> is non-NULL, this is for a specific circuit --
+ * make sure not to pick this circuit's exit or any node in the
+ * exit's family. If <b>state</b> is NULL, we're looking for a random
+ * guard (likely a bridge). */
+routerinfo_t *
 choose_random_entry(cpath_build_state_t *state)
 {
   or_options_t *options = get_options();
   smartlist_t *live_entry_guards = smartlist_create();
   smartlist_t *exit_family = smartlist_create();
-  routerinfo_t *chosen_exit = build_state_get_exit_router(state);
+  routerinfo_t *chosen_exit = state?build_state_get_exit_router(state) : NULL;
   routerinfo_t *r = NULL;
-  int need_uptime = state->need_uptime;
-  int need_capacity = state->need_capacity;
+  int need_uptime = state ? state->need_uptime : 0;
+  int need_capacity = state ? state->need_capacity : 0;
 
   if (chosen_exit) {
     smartlist_add(exit_family, chosen_exit);
@@ -2361,7 +2394,7 @@ choose_random_entry(cpath_build_state_t *state)
   if (should_add_entry_nodes)
     entry_guards_prepend_from_config();
 
-  if (!options->StrictEntryNodes &&
+  if (can_grow_entry_list(options) &&
       (! entry_guards ||
        smartlist_len(entry_guards) < options->NumEntryGuards))
     pick_entry_guards();
@@ -2383,7 +2416,7 @@ choose_random_entry(cpath_build_state_t *state)
    * using him.
    * (We might get 2 live-but-crummy entry guards, but so be it.) */
   if (smartlist_len(live_entry_guards) < 2) {
-    if (!options->StrictEntryNodes) {
+    if (can_grow_entry_list(options)) {
       /* still no? try adding a new entry then */
       /* XXX if guard doesn't imply fast and stable, then we need
        * to tell add_an_entry_guard below what we want, or it might
@@ -2403,7 +2436,7 @@ choose_random_entry(cpath_build_state_t *state)
       need_capacity = 0;
       goto retry;
     }
-    /* live_entry_guards will be empty below. Oh well, we tried. */
+    /* live_entry_guards may be empty below. Oh well, we tried. */
   }
 
   r = smartlist_choose(live_entry_guards);
@@ -2641,6 +2674,18 @@ clear_bridge_list(void)
   smartlist_clear(bridge_list);
 }
 
+/** Return 1 if <b>digest</b> is one of our known bridges. */
+int
+identity_digest_is_a_bridge(const char *digest)
+{
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
+    {
+      if (!memcmp(bridge->identity, digest, DIGEST_LEN))
+        return 1;
+    });
+  return 0;
+}
+
 /** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
  * is set, it tells us the identity key too. */
 void
@@ -2660,7 +2705,7 @@ bridge_add_from_config(uint32_t addr, uint16_t port, char *digest)
  * descriptor, fetch a new copy of its descriptor -- either directly
  * from the bridge or via a bridge authority. */
 void
-learn_bridge_descriptors(void)
+fetch_bridge_descriptors(void)
 {
   char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
@@ -2696,5 +2741,43 @@ learn_bridge_descriptors(void)
         // XXX
       }
     });
+}
+
+/** We just learned a descriptor for a bridge. See if that
+ * digest is in our entry guard list, and add it if not. */
+void
+learned_bridge_descriptor(routerinfo_t *ri)
+{
+  tor_assert(ri);
+  tor_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
+  if (get_options()->UseBridges) {
+    ri->is_running = 1;
+    add_an_entry_guard(ri);
+    log_notice(LD_DIR, "new bridge descriptor '%s'", ri->nickname);
+  }
+}
+
+/** Return 1 if any of our entry guards have descriptors that
+ * are marked with purpose 'bridge'. Else return 0.
+ *
+ * We use this function to decide if we're ready to start building
+ * circuits through our bridges, or if we need to wait until the
+ * directory "server/authority" requests finish. */
+int
+any_bridge_descriptors_known(void)
+{
+  return choose_random_entry(NULL)!=NULL ? 1 : 0;
+#if 0
+  routerinfo_t *ri;
+  if (!entry_guards)
+    entry_guards = smartlist_create();
+  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
+    {
+      ri = router_get_by_digest(e->identity);
+      if (ri && ri->purpose == ROUTER_PURPOSE_BRIDGE)
+        return 1;
+    });
+  return 0;
+#endif
 }
 

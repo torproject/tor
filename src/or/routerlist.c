@@ -2340,7 +2340,7 @@ router_set_status(const char *digest, int up)
  *
  * This function should be called *after*
  * routers_update_status_from_networkstatus; subsequently, you should call
- * router_rebuild_store and control_event_descriptors_changed.
+ * router_rebuild_store and routerlist_descriptors_added.
  */
 int
 router_add_to_routerlist(routerinfo_t *router, const char **msg,
@@ -2387,7 +2387,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     /* Only check the descriptor digest against the network statuses when
      * we are receiving in response to a fetch. */
 
-    if (!signed_desc_digest_is_recognized(&router->cache_info)) {
+    if (!signed_desc_digest_is_recognized(&router->cache_info) &&
+        !identity_digest_is_a_bridge(router->cache_info.identity_digest)) {
       /* We asked for it, so some networkstatus must have listed it when we
        * did.  Save it if we're a cache in case somebody else asks for it. */
       log_info(LD_DIR,
@@ -2725,6 +2726,19 @@ routerlist_remove_old_routers(void)
   digestmap_free(retain, NULL);
 }
 
+/** We just added a new descriptor that isn't of purpose
+ * ROUTER_PURPOSE_GENERAL. Take whatever extra steps we need. */
+static void
+routerlist_descriptors_added(smartlist_t *sl)
+{
+  tor_assert(sl);
+  control_event_descriptors_changed(sl);
+  SMARTLIST_FOREACH(sl, routerinfo_t *, ri,
+    if (ri->purpose == ROUTER_PURPOSE_BRIDGE)
+      learned_bridge_descriptor(ri);
+  );
+}
+
 /**
  * Code to parse a single router descriptor and insert it into the
  * routerlist.  Return -1 if the descriptor was ill-formed; 0 if the
@@ -2753,7 +2767,7 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
     return -1;
   }
   ri->purpose = purpose;
-  if (purpose != ROUTER_PURPOSE_GENERAL)
+  if (ri->purpose != ROUTER_PURPOSE_GENERAL)
     ri->cache_info.do_not_cache = 1;
   if (router_is_me(ri)) {
     log_warn(LD_DIR, "Router's identity key matches mine; dropping.");
@@ -2774,7 +2788,7 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
     smartlist_free(lst);
     return 0;
   } else {
-    control_event_descriptors_changed(lst);
+    routerlist_descriptors_added(lst);
     smartlist_free(lst);
     log_debug(LD_DIR, "Added router to list");
     return 1;
@@ -2837,7 +2851,7 @@ router_load_routers_from_string(const char *s, const char *eos,
   });
 
   if (smartlist_len(changed))
-    control_event_descriptors_changed(changed);
+    routerlist_descriptors_added(changed);
 
   routerlist_assert_ok(routerlist);
   router_rebuild_store(0, 0);
@@ -3272,6 +3286,7 @@ router_get_combined_status_by_nickname(const char *nickname,
   return best;
 }
 
+#if 0
 /** Find a routerstatus_t that corresponds to <b>hexdigest</b>, if
  * any. Prefer ones that belong to authorities. */
 routerstatus_t *
@@ -3290,6 +3305,7 @@ routerstatus_get_by_hexdigest(const char *hexdigest)
     return &(rs->status);
   return NULL;
 }
+#endif
 
 /** Return true iff any networkstatus includes a descriptor whose digest
  * is that of <b>desc</b>. */
@@ -3503,11 +3519,26 @@ update_networkstatus_client_downloads(time_t now)
   smartlist_free(missing);
 }
 
+/** Return 1 if there's a reason we shouldn't try any directory
+ * fetches yet (e.g. we demand bridges and none are yet known).
+ * Else return 0. */
+int
+should_delay_dir_fetches(or_options_t *options)
+{
+  if (options->UseBridges && !any_bridge_descriptors_known()) {
+    log_notice(LD_DIR, "delaying dir fetches");
+    return 1;
+  }
+  return 0;
+}
+
 /** Launch requests for networkstatus documents as appropriate. */
 void
 update_networkstatus_downloads(time_t now)
 {
   or_options_t *options = get_options();
+  if (should_delay_dir_fetches(options))
+    return;
   if (options->DirPort)
     update_networkstatus_cache_downloads(now);
   else
@@ -4729,6 +4760,8 @@ void
 update_router_descriptor_downloads(time_t now)
 {
   or_options_t *options = get_options();
+  if (should_delay_dir_fetches(options))
+    return;
   if (options->DirPort) {
     update_router_descriptor_cache_downloads(now);
   } else {
@@ -4753,7 +4786,7 @@ should_download_extrainfo(signed_descriptor_t *sd,
           !digestmap_get(pending, d));
 }
 
-/** Laucnch extrainfo downloads as needed. */
+/** Launch extrainfo downloads as needed. */
 void
 update_extrainfo_downloads(time_t now)
 {
@@ -4763,6 +4796,8 @@ update_extrainfo_downloads(time_t now)
   digestmap_t *pending;
   int i;
   if (! options->DownloadExtraInfo)
+    return;
+  if (should_delay_dir_fetches(options))
     return;
 
   pending = digestmap_new();
@@ -4852,6 +4887,12 @@ update_router_have_minimum_dir_info(void)
   }
   routerlist_remove_old_routers();
   networkstatus_list_clean(now);
+
+  if (should_delay_dir_fetches(get_options())) {
+    log_notice(LD_DIR, "no bridge descs known yet");
+    res = 0;
+    goto done;
+  }
 
   n_authorities = get_n_v2_authorities();
   n_ns = smartlist_len(networkstatus_list);

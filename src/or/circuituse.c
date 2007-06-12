@@ -1034,18 +1034,22 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
                     want_onehop, conn->chosen_exit_name);
           if (want_onehop && conn->chosen_exit_name[0] == '$') {
             /* We're asking for a one-hop circuit to a router that
-             * we don't have a routerinfo about. Hope we have a
-             * routerstatus or equivalent. */
-            routerstatus_t *s =
-              routerstatus_get_by_hexdigest(conn->chosen_exit_name+1);
-            if (s) {
-              extend_info = extend_info_from_routerstatus(s);
-            } else {
-              log_warn(LD_APP,
-                       "Requested router '%s' is not known. Closing.",
-                       conn->chosen_exit_name);
+             * we don't have a routerinfo about. Make up an extend_info. */
+            char digest[DIGEST_LEN];
+            char *hexdigest = conn->chosen_exit_name+1;
+            struct in_addr in;
+            if (strlen(hexdigest) < HEX_DIGEST_LEN ||
+                base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN)<0) {
+              log_info(LD_DIR, "Broken exit digest on tunnel conn. Closing.");
               return -1;
             }
+            if (!tor_inet_aton(conn->socks_request->address, &in)) {
+              log_info(LD_DIR, "Broken address on tunnel conn. Closing.");
+              return -1;
+            }
+            extend_info = extend_info_alloc(conn->chosen_exit_name+1,
+                                            digest, NULL, ntohl(in.s_addr),
+                                            conn->socks_request->port);
           } else {
             /* We will need an onion key for the router, and we
              * don't have one. Refuse or relax requirements. */

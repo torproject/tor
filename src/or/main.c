@@ -884,6 +884,8 @@ run_scheduled_events(time_t now)
 
   if (time_to_reset_descriptor_failures < now) {
     router_reset_descriptor_download_failures();
+    if (options->UseBridges)
+      fetch_bridge_descriptors(); /* XXX get this its own retry schedule -RD */
     time_to_reset_descriptor_failures =
       now + DESCRIPTOR_FAILURE_RESET_INTERVAL;
   }
@@ -951,6 +953,7 @@ run_scheduled_events(time_t now)
      * and the rend cache. */
     rep_history_clean(now - options->RephistTrackTime);
     rend_cache_clean();
+    /* XXX020 we only clean this stuff if DirPort is set?! -RD */
  }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old

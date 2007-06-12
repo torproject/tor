@@ -1384,7 +1384,7 @@ typedef struct extend_info_t {
                                           * display. */
   char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
   uint16_t port; /**< OR port. */
-  uint8_t router_purpose; /**< General, controller, or bridge. */
+//  uint8_t router_purpose; /**< General, controller, or bridge. */
   uint32_t addr; /**< IP address in host order. */
   crypto_pk_env_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
@@ -2200,8 +2200,11 @@ int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
 int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
+extend_info_t *extend_info_alloc(const char *nickname, const char *digest,
+                                 crypto_pk_env_t *onion_key,
+                                 uint32_t addr, uint16_t port);
 extend_info_t *extend_info_from_router(routerinfo_t *r);
-extend_info_t *extend_info_from_routerstatus(routerstatus_t *s);
+//extend_info_t *extend_info_from_routerstatus(routerstatus_t *s);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);
 routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
@@ -2211,15 +2214,19 @@ void entry_guards_compute_status(void);
 int entry_guard_register_connect_status(const char *digest, int succeeded,
                                         time_t now);
 void entry_nodes_should_be_added(void);
-void entry_guards_update_state(or_state_t *state);
+routerinfo_t *choose_random_entry(cpath_build_state_t *state);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
+void entry_guards_update_state(or_state_t *state);
 int getinfo_helper_entry_guards(control_connection_t *conn,
                                 const char *question, char **answer);
 void entry_guards_free_all(void);
 
 void clear_bridge_list(void);
+int identity_digest_is_a_bridge(const char *digest);
 void bridge_add_from_config(uint32_t addr, uint16_t port, char *digest);
-void learn_bridge_descriptors(void);
+void fetch_bridge_descriptors(void);
+void learned_bridge_descriptor(routerinfo_t *ri);
+int any_bridge_descriptors_known(void);
 
 /********************************* circuitlist.c ***********************/
 
@@ -3315,7 +3322,8 @@ local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
 local_routerstatus_t *router_get_combined_status_by_descriptor_digest(
                                                           const char *digest);
 
-routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
+//routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
+int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);
 void update_extrainfo_downloads(time_t now);
