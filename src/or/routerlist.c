@@ -532,7 +532,7 @@ router_reload_router_list_impl(int extrainfo)
   mmap_ptr =
     extrainfo ? &routerlist->mmap_extrainfo : &routerlist->mmap_descriptors;
 
-  router_store_stats.journal_len = router_store_stats.store_len = 0;
+  stats->journal_len = stats->store_len = 0;
 
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s",
                options->DataDirectory, fname_base);
