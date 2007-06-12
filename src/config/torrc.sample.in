@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 8 October 2006 for Tor 0.1.2.3-alpha.
+## Last updated 12 June 2007 for Tor 0.2.0.3-alpha.
 ## (May or may not work for older or newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -89,10 +89,11 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## The IP or FQDN for your server. Leave commented out and Tor will guess.
 #Address noname.example.com
 
-## Define these to limit your bandwidth usage. Note that BandwidthRate
-## must be at least 20 KB.
-#BandwidthRate 100 KB      # Throttle traffic to 100KB/s (800Kbps)
-#BandwidthBurst 200 KB     # But allow bursts up to 200KB/s (1600Kbps)
+## Define these to limit the bandwidth usage of relayed (server)
+## traffic. Your own traffic is still unthrottled.
+## Note that RelayBandwidthRate must be at least 20 KB.
+#RelayBandwidthRate 100 KB      # Throttle traffic to 100KB/s (800Kbps)
+#RelayBandwidthBurst 200 KB     # But allow bursts up to 200KB/s (1600Kbps)
 
 ## Contact info to be published in the directory, so we can contact you
 ## if your server is misconfigured or something else goes wrong.

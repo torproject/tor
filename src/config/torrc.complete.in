@@ -373,14 +373,14 @@
 
 ## If you set NoPublish 1, Tor will act as a server if you have an
 ## ORPort defined, but it will not publish its descriptor to the
-## dirservers.  This option is useful if you’re testing out your
-## server, or if you’re using alternate dirservers (e.g. for other
+## dirservers.  This option is useful if you're testing out your
+## server, or if you're using alternate dirservers (e.g. for other
 ## Tor networks such as Blossom).  (Default: 0)
 #NoPublish 0|1
 
 ## How many processes to use at once for decrypting onionskins.
 ## (Default: 1)
-NumCPUs num
+#NumCPUs num
 
 ## Advertise this port to listen for connections from Tor clients
 ## and servers.
@@ -403,7 +403,7 @@ NumCPUs num
 ## being considered.
 #RedirectExit pattern target
 
-## When we get a SIGINT and we’re a server, we begin shutting
+## When we get a SIGINT and we're a server, we begin shutting
 ## down: we close listeners and start refusing new circuits.  After
 ## NUM seconds, we exit. If we get a second SIGINT, we exit imme-
 ## diately.  (Default: 30 seconds)
@@ -413,6 +413,16 @@ NumCPUs num
 ## descriptors to the directory servers.  This information is also
 ## uploaded whenever it changes.  (Default: 20 minutes)
 #DirPostPeriod N seconds|minutes|hours|days|weeks
+
+## A token bucket limits the average relayed bandwidth (server
+## traffic only, not client traffic) on this node to the specified
+## number of bytes per second.
+#RelayBandwidthRate N bytes|KB|MB|GB|TB
+
+## Limit the maximum token bucket size (also known as the burst) for
+## relayed traffic (server traffic only, not client traffic) to the
+## given number of bytes.
+#RelayBandwidthBurst N bytes|KB|MB|GB|TB
 
 ## Never send more than the specified number of bytes in a given
 ## accounting period, or receive more than that number in the
@@ -484,7 +494,7 @@ NumCPUs num
 ## If set to 1, Tor tries to build circuits through all of the
 ## servers it knows about, so it can tell which are up and which
 ## are down.  This option is only useful for authoritative direc-
-## tories, so you probably don’t want to use it.
+## tories, so you probably don't want to use it.
 #RunTesting 0|1
 
 ## Section 5: Hidden Service Options (clients and servers)
@@ -516,3 +526,4 @@ NumCPUs num
 ## information is also uploaded whenever it changes. 
 ## (Default: 20 minutes)
 #RendPostPeriod N seconds|minutes|hours|days|weeks
+#
