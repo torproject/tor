@@ -413,7 +413,8 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
 /** Read a PEM-encoded private key from the string <b>s</b> into <b>env</b>.
  * Return 0 on success, -1 on failure.
  */
-static int
+/* Used here, and used for testing. */
+int
 crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
                                        const char *s)
 {
