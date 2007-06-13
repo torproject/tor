@@ -732,3 +732,4 @@ authority_cert_dup(authority_cert_t *cert)
 
   return out;
 }
+

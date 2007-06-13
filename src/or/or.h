@@ -2747,6 +2747,12 @@ int routerstatus_format_entry(char *buf, size_t buf_len,
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 
+#ifdef DIRSERV_PRIVATE
+char *
+format_networkstatus_vote(crypto_pk_env_t *private_key,
+                          networkstatus_vote_t *v3_ns);
+#endif
+
 /********************************* dirvote.c ************************/
 
 void networkstatus_vote_free(networkstatus_vote_t *ns);

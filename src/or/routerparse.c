@@ -296,7 +296,7 @@ static token_rule_t networkstatus_vote_token_table[] = {
   T1("fresh-until",            K_FRESH_UNTIL,      CONCAT_ARGS, NO_OBJ ),
   T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
   T1("voting-delay",           K_VOTING_DELAY,     GE(2),       NO_OBJ ),
-  T1("known-flags",            K_KNOWN_FLAGS,      CONCAT_ARGS, NO_OBJ ),
+  T1("known-flags",            K_KNOWN_FLAGS,      ARGS,        NO_OBJ ),
   T( "fingerprint",            K_FINGERPRINT,      CONCAT_ARGS, NO_OBJ ),
 
   CERTIFICATE_MEMBERS
@@ -304,7 +304,6 @@ static token_rule_t networkstatus_vote_token_table[] = {
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T1( "dir-source",          K_DIR_SOURCE,      GE(6),       NO_OBJ ),
-  T1( "dir-options",         K_DIR_OPTIONS,     ARGS,        NO_OBJ ),
   T1( "known-flags",         K_KNOWN_FLAGS,     CONCAT_ARGS, NO_OBJ ),
   T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
   T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS, NO_OBJ ),
@@ -1842,7 +1841,7 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
   if (!ok)
     goto err;
   ns->dist_seconds =
-    (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &ok, NULL);
+    (int) tor_parse_long(tok->args[1], 10, 0, INT_MAX, &ok, NULL);
   if (!ok)
     goto err;
 
@@ -1860,8 +1859,10 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
   inorder = 1;
   for (i = 0; i < tok->n_args; ++i) {
     smartlist_add(ns->known_flags, tok->args[i]);
-    if (i>0 && strcmp(tok->args[i-1], tok->args[i])>= 0)
+    if (i>0 && strcmp(tok->args[i-1], tok->args[i])>= 0) {
+      log_warn(LD_DIR, "%s >= %s", tok->args[i-1], tok->args[i]);
       inorder = 0;
+    }
   }
   tok->n_args = 0; /* suppress free of args members, but not of args itself. */
   if (!inorder) {
@@ -1895,6 +1896,7 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
                  escaped(tok->args[3]));
         goto err;
       }
+      voter->addr = ntohl(in.s_addr);
       voter->dir_port = (uint64_t)
         (int) tor_parse_long(tok->args[4], 10, 0, 65535, &ok, NULL);
       if (!ok)
@@ -2039,6 +2041,7 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
       v->pending_signature_len = tok->object_size;
     }
   });
+  /* XXXX020 enforce: vote must have at least one signature. */
 
   /* XXXX020 check dates for plausibility.  ??? */
 
@@ -2456,7 +2459,7 @@ get_next_token(const char **s, token_rule_t *table)
     *s = next;
   } else {
     tok->object_body = tor_malloc(next-*s); /* really, this is too much RAM. */
-    i = base64_decode(tok->object_body, 256, *s, next-*s);
+    i = base64_decode(tok->object_body, next-*s, *s, next-*s);
     if (i<0) {
       RET_ERR("Malformed object: bad base64-encoded data");
     }

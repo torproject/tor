@@ -29,6 +29,8 @@ const char tor_svn_revision[] = "";
  * are typically file-private. */
 #define CONFIG_PRIVATE
 #define CONTROL_PRIVATE
+#define CRYPTO_PRIVATE
+#define DIRSERV_PRIVATE
 #define MEMPOOL_PRIVATE
 #define ROUTER_PRIVATE
 
@@ -2125,9 +2127,157 @@ test_dir_format(void)
                                    "Tor 0.2.1.0-dev (r99)"));
 }
 
+extern const char AUTHORITY_CERT_1[];
+extern const char AUTHORITY_IDKEY_1[];
+extern const char AUTHORITY_SIGNKEY_1[];
+extern const char AUTHORITY_CERT_2[];
+extern const char AUTHORITY_IDKEY_2[];
+extern const char AUTHORITY_SIGNKEY_2[];
+
 static void
 test_v3_networkstatus(void)
 {
+  authority_cert_t *cert1, *cert2;//, *cert_tmp;
+  crypto_pk_env_t *id_skey_1, *id_skey_2;
+  crypto_pk_env_t *sign_skey_1, *sign_skey_2;
+
+  time_t now = time(NULL);
+  networkstatus_voter_info_t *voter;
+  networkstatus_vote_t *vote, *v1;
+  vote_routerstatus_t *vrs;
+  routerstatus_t *rs;
+  char *v1_text, *cp;
+
+  add_stream_log(LOG_NOTICE, LOG_ERR, "", stdout);
+
+  /* Parse certificates and keys. */
+  cert1 = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
+  test_assert(cert1);
+  cert2 = authority_cert_parse_from_string(AUTHORITY_CERT_2, NULL);
+  test_assert(cert2);
+  id_skey_1 = crypto_new_pk_env();
+  id_skey_2 = crypto_new_pk_env();
+  sign_skey_1 = crypto_new_pk_env();
+  sign_skey_2 = crypto_new_pk_env();
+
+  test_assert(!crypto_pk_read_private_key_from_string(id_skey_1,
+                                                      AUTHORITY_IDKEY_1));
+  test_assert(!crypto_pk_read_private_key_from_string(id_skey_2,
+                                                      AUTHORITY_IDKEY_2));
+  test_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
+                                                      AUTHORITY_SIGNKEY_1));
+  test_assert(!crypto_pk_read_private_key_from_string(sign_skey_2,
+                                                      AUTHORITY_SIGNKEY_2));
+
+  test_assert(!crypto_pk_cmp_keys(id_skey_1, cert1->identity_key));
+  test_assert(!crypto_pk_cmp_keys(sign_skey_1, cert1->signing_key));
+  test_assert(!crypto_pk_cmp_keys(id_skey_2, cert2->identity_key));
+  test_assert(!crypto_pk_cmp_keys(sign_skey_2, cert2->signing_key));
+
+  /*
+   * Set up a vote; generate it; try to parse it.
+   */
+  vote = tor_malloc_zero(sizeof(networkstatus_vote_t));
+  vote->is_vote = 1;
+  vote->published = now;
+  vote->valid_after = now+100;
+  vote->fresh_until = now+200;
+  vote->valid_until = now+300;
+  vote->vote_seconds = 100;
+  vote->dist_seconds = 200;
+  vote->client_versions = tor_strdup("0.1.2.14,0.1.2.15");
+  vote->server_versions = tor_strdup("0.1.2.14,0.1.2.15,0.1.2.16");
+  vote->known_flags = smartlist_create();
+  smartlist_split_string(vote->known_flags,
+                     "Authority Exit Fast Guard Running Stable V2Dir Valid",
+                     0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  vote->voters = smartlist_create();
+  voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
+  voter->nickname = tor_strdup("Voter1");
+  voter->address = tor_strdup("1.2.3.4");
+  voter->addr = 0x01020304;
+  voter->dir_port = 80;
+  voter->or_port = 9000;
+  voter->contact = tor_strdup("voter1@example.com");
+  crypto_pk_get_digest(id_skey_1, voter->identity_digest);
+  smartlist_add(vote->voters, voter);
+  vote->cert = authority_cert_dup(cert1);
+  vote->routerstatus_list = smartlist_create();
+  /* add the first routerstatus. */
+  vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+  rs = &vrs->status;
+  vrs->version = tor_strdup("0.1.2.14");
+  rs->published_on = now-1500;
+  strlcpy(rs->nickname, "router2", sizeof(rs->nickname));
+  memset(rs->identity_digest, 3, DIGEST_LEN);
+  memset(rs->descriptor_digest, 11, DIGEST_LEN);
+  rs->addr = 0x99008801;
+  rs->or_port = 443;
+  rs->dir_port = 8000;
+  /* all flags cleared */
+  smartlist_add(vote->routerstatus_list, vrs);
+  /* add the second routerstatus. */
+  vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+  rs = &vrs->status;
+  vrs->version = tor_strdup("0.2.0.5");
+  rs->published_on = now-1000;
+  strlcpy(rs->nickname, "router1", sizeof(rs->nickname));
+  memset(rs->identity_digest, 5, DIGEST_LEN);
+  memset(rs->descriptor_digest, 2, DIGEST_LEN);
+  rs->addr = 0x99009901;
+  rs->or_port = 443;
+  rs->dir_port = 0;
+  rs->is_exit = rs->is_stable = rs->is_fast = rs->is_running =
+    rs->is_v2_dir = rs->is_possible_guard = 1;
+  // rs->named = rs->is_bad_exit = rs->is_bad_directory = 1;
+  smartlist_add(vote->routerstatus_list, vrs);
+
+  /* dump the vote and try to parse it. */
+  v1_text = format_networkstatus_vote(sign_skey_1, vote);
+  test_assert(v1_text);
+  v1 = networkstatus_parse_vote_from_string(v1_text, 1);
+  test_assert(v1);
+
+  /* Make sure the parsed thing was right. */
+  test_eq(v1->is_vote, 1);
+  test_eq(v1->published, vote->published);
+  test_eq(v1->valid_after, vote->valid_after);
+  test_eq(v1->fresh_until, vote->fresh_until);
+  test_eq(v1->valid_until, vote->valid_until);
+  test_eq(v1->vote_seconds, vote->vote_seconds);
+  test_eq(v1->dist_seconds, vote->dist_seconds);
+  test_streq(v1->client_versions, vote->client_versions);
+  test_streq(v1->server_versions, vote->server_versions);
+  test_assert(v1->voters && smartlist_len(v1->voters));
+  voter = smartlist_get(v1->voters, 0);
+  test_streq(voter->nickname, "Voter1");
+  test_streq(voter->address, "1.2.3.4");
+  test_eq(voter->addr, 0x01020304);
+  test_eq(voter->dir_port, 80);
+  test_eq(voter->or_port, 9000);
+  test_streq(voter->contact, "voter1@example.com");
+  test_assert(v1->cert);
+  test_assert(!crypto_pk_cmp_keys(id_skey_1, v1->cert->identity_key));
+  test_assert(!crypto_pk_cmp_keys(sign_skey_1, v1->cert->signing_key));
+  cp = smartlist_join_strings(v1->known_flags, ":", 0, NULL);
+  test_streq(cp, "Authority:Exit:Fast:Guard:Running:Stable:V2Dir:Valid");
+  tor_free(cp);
+  test_eq(smartlist_len(v1->routerstatus_list), 2);
+  /*XXXX020 test contents of v1->routerstatus_list. */
+
+  /* XXXXX020 Generate 2 more votes */
+
+  /* XXXXX020 compute, write, and parse a consensus. */
+
+  tor_free(v1_text);
+  networkstatus_vote_free(vote);
+  networkstatus_vote_free(v1);
+  crypto_free_pk_env(id_skey_1);
+  crypto_free_pk_env(id_skey_2);
+  crypto_free_pk_env(sign_skey_1);
+  crypto_free_pk_env(sign_skey_2);
+  authority_cert_free(cert1);
+  authority_cert_free(cert2);
 }
 
 static void

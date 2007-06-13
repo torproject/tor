@@ -5,6 +5,7 @@
 const char dirserv_c_id[] =
   "$Id$";
 
+#define DIRSERV_PRIVATE
 #include "or.h"
 
 /**
@@ -1592,7 +1593,6 @@ version_from_platform(const char *platform)
   return NULL;
 }
 
-
 /** Helper: write the router-status information in <b>rs</b> into <b>buf</b>,
  * which has at least <b>buf_len</b> free characters.  Do NUL-termination.
  * Use the same format as in network-status documents.  If <b>platform</b> is
@@ -1827,7 +1827,7 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   v3_out->server_versions = server_versions;
   v3_out->known_flags = smartlist_create();
   smartlist_split_string(v3_out->known_flags,
-                "Authority Exit Fast Guard Running Stable Valid V2Dir",
+                "Authority Exit Fast Guard Running Stable V2Dir Valid",
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (listbadexits)
     smartlist_add(v3_out->known_flags, tor_strdup("BadExit"));
@@ -1853,8 +1853,9 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   return v3_out;
 }
 
-static char *
-format_networkstatus_vote(crypto_pk_env_t *private_key,
+/* private DOCDOC */
+char *
+format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                           networkstatus_vote_t *v3_ns)
 {
 /** Longest status flag name that we generate. */
@@ -1890,7 +1891,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
   networkstatus_voter_info_t *voter;
   /* XXX check that everything gets freed */
 
-  tor_assert(private_key);
+  tor_assert(private_signing_key);
 
   voter = smartlist_get(v3_ns->voters, 0);
 
@@ -1950,11 +1951,13 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
                  "valid-after %s\n"
                  "fresh-until %s\n"
                  "valid-until %s\n"
+                 "voting-delay %d %d\n"
                  "%s" /* versions */
-                 "known-flags %s"
+                 "known-flags %s\n"
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n",
                  published, va, fu, vu,
+                 v3_ns->vote_seconds, v3_ns->dist_seconds,
                  version_lines,
                  flags,
                  voter->nickname, fingerprint, voter->address,
@@ -1988,7 +1991,8 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
     }
     outp += strlen(outp);
 
-    if (crypto_pk_get_fingerprint(private_key, signing_key_fingerprint, 0)<0) {
+    if (crypto_pk_get_fingerprint(private_signing_key,
+                                  signing_key_fingerprint, 0)<0) {
       log_warn(LD_BUG, "Unable to get fingerprint for signing key");
       goto err;
     }
@@ -2000,8 +2004,11 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
     outp += strlen(outp);
   }
 
+  if (router_get_networkstatus_v3_hash(status, digest)<0)
+    goto err;
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
+  if (router_append_dirobj_signature(outp,endp-outp,digest,
+                                     private_signing_key)<0) {
     log_warn(LD_BUG, "Unable to sign networkstatus vote.");
     goto err;
   }
@@ -2009,7 +2016,8 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
   {
     networkstatus_vote_t *v;
     if (!(v = networkstatus_parse_vote_from_string(status, 1))) {
-      log_err(LD_BUG,"Generated a networkstatus vote we couldn't parse.");
+      log_err(LD_BUG,"Generated a networkstatus vote we couldn't parse: "
+              "<<%s>>", status);
       goto err;
     }
     networkstatus_vote_free(v);
