@@ -1649,8 +1649,8 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                    rs->is_named?" Named":"",
                    rs->is_stable?" Stable":"",
                    rs->is_running?" Running":"",
-                   rs->is_valid?" Valid":"",
-                   rs->is_v2_dir?" V2Dir":"");
+                   rs->is_v2_dir?" V2Dir":"",
+                   rs->is_valid?" Valid":"");
   if (r<0) {
     log_warn(LD_BUG, "Not enough space in buffer.");
     return -1;

@@ -2210,7 +2210,7 @@ test_v3_networkstatus(void)
   rs->published_on = now-1500;
   strlcpy(rs->nickname, "router2", sizeof(rs->nickname));
   memset(rs->identity_digest, 3, DIGEST_LEN);
-  memset(rs->descriptor_digest, 11, DIGEST_LEN);
+  memset(rs->descriptor_digest, 78, DIGEST_LEN);
   rs->addr = 0x99008801;
   rs->or_port = 443;
   rs->dir_port = 8000;
@@ -2223,13 +2223,12 @@ test_v3_networkstatus(void)
   rs->published_on = now-1000;
   strlcpy(rs->nickname, "router1", sizeof(rs->nickname));
   memset(rs->identity_digest, 5, DIGEST_LEN);
-  memset(rs->descriptor_digest, 2, DIGEST_LEN);
+  memset(rs->descriptor_digest, 77, DIGEST_LEN);
   rs->addr = 0x99009901;
   rs->or_port = 443;
   rs->dir_port = 0;
   rs->is_exit = rs->is_stable = rs->is_fast = rs->is_running =
-    rs->is_v2_dir = rs->is_possible_guard = 1;
-  // rs->named = rs->is_bad_exit = rs->is_bad_directory = 1;
+    rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
   smartlist_add(vote->routerstatus_list, vrs);
 
   /* dump the vote and try to parse it. */
@@ -2263,7 +2262,34 @@ test_v3_networkstatus(void)
   test_streq(cp, "Authority:Exit:Fast:Guard:Running:Stable:V2Dir:Valid");
   tor_free(cp);
   test_eq(smartlist_len(v1->routerstatus_list), 2);
-  /*XXXX020 test contents of v1->routerstatus_list. */
+  /* Check the first routerstatus. */
+  vrs = smartlist_get(v1->routerstatus_list, 0);
+  rs = &vrs->status;
+  test_streq(vrs->version, "0.1.2.14");
+  test_eq(rs->published_on, now-1500);
+  test_streq(rs->nickname, "router2");
+  test_memeq(rs->identity_digest,
+             "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+             DIGEST_LEN);
+  test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
+  test_eq(rs->addr, 0x099008801);
+  test_eq(rs->or_port, 443);
+  test_eq(rs->dir_port, 8000);
+  test_eq(vrs->flags, U64_LITERAL(0));
+  /* Check the second routerstatus. */
+  vrs = smartlist_get(v1->routerstatus_list, 1);
+  rs = &vrs->status;
+  test_streq(vrs->version, "0.2.0.5");
+  test_eq(rs->published_on, now-1000);
+  test_streq(rs->nickname, "router1");
+  test_memeq(rs->identity_digest,
+             "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+             DIGEST_LEN);
+  test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
+  test_eq(rs->addr, 0x099009901);
+  test_eq(rs->or_port, 443);
+  test_eq(rs->dir_port, 0);
+  test_eq(vrs->flags, U64_LITERAL(254)); // all flags except "authority."
 
   /* XXXXX020 Generate 2 more votes */
 
