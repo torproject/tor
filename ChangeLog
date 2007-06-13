@@ -25,6 +25,9 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Minor bugfixes (dns):
     - Fix a crash when DNSPort is set more than once. (Patch from Robert
       Hogan.) [Bugfix on 0.2.0.2-alpha]
+    - Add DNSPort connections to the global connection list, so that we
+      can time them out correctly. (Bug found by mwenge) [Bugfix on
+      0.2.0.2-alpha]
 
   o Minor bugfixes (hidden services):
     - Stop tearing down the whole circuit when the user asks for a

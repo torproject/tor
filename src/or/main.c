@@ -162,18 +162,23 @@ int
 connection_add(connection_t *conn)
 {
   tor_assert(conn);
-  tor_assert(conn->s >= 0 || conn->linked);
+  tor_assert(conn->s >= 0 ||
+             conn->linked ||
+             (conn->type == CONN_TYPE_AP &&
+              TO_EDGE_CONN(conn)->dns_server_request));
 
   tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
   conn->conn_array_index = smartlist_len(connection_array);
   smartlist_add(connection_array, conn);
 
-  conn->read_event = tor_malloc_zero(sizeof(struct event));
-  conn->write_event = tor_malloc_zero(sizeof(struct event));
-  event_set(conn->read_event, conn->s, EV_READ|EV_PERSIST,
-            conn_read_callback, conn);
-  event_set(conn->write_event, conn->s, EV_WRITE|EV_PERSIST,
-            conn_write_callback, conn);
+  if (conn->s >= 0) {
+    conn->read_event = tor_malloc_zero(sizeof(struct event));
+    conn->write_event = tor_malloc_zero(sizeof(struct event));
+    event_set(conn->read_event, conn->s, EV_READ|EV_PERSIST,
+              conn_read_callback, conn);
+    event_set(conn->write_event, conn->s, EV_WRITE|EV_PERSIST,
+              conn_write_callback, conn);
+  }
 
   log_debug(LD_NET,"new conn type %s, socket %d, n_conns %d.",
             conn_type_to_string(conn->type), conn->s,

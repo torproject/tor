@@ -122,6 +122,8 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
 
   conn->dns_server_request = req;
 
+  connection_add(TO_CONN(conn));
+
   /* Now, throw the connection over to get rewritten (which will answer it
   * immediately if it's in the cache, or completely bogus, or automapped),
   * and then attached to a circuit. */
