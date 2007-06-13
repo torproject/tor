@@ -176,12 +176,13 @@ void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 
 #ifdef CRYPTO_PRIVATE
 /* Prototypes for private functions only used by tortls.c and crypto.c */
-typedef struct rsa_st RSA;
-typedef struct evp_pkey_st EVP_PKEY;
-typedef struct dh_st DH;
-crypto_pk_env_t *_crypto_new_pk_env_rsa(RSA *rsa);
-EVP_PKEY *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env, int private);
-DH *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
+struct rsa_st;
+struct evp_pkey_st;
+struct dh_st;
+crypto_pk_env_t *_crypto_new_pk_env_rsa(struct rsa_st *rsa);
+struct evp_pkey_st *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env,
+                                                int private);
+struct dh_st *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 /* Prototypes for private functions only used by crypto.c and test.c*/
 int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
                                            const char *s);
