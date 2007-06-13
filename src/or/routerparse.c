@@ -1883,6 +1883,8 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
       if (voter)
         smartlist_add(ns->voters, voter);
       voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
+      if (is_vote)
+        memcpy(voter->vote_digest, ns_digest, DIGEST_LEN);
 
       voter->nickname = tor_strdup(tok->args[0]);
       if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||

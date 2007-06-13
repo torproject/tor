@@ -2389,6 +2389,7 @@ test_v3_networkstatus(void)
   test_assert(consensus_text);
   consensus = networkstatus_parse_vote_from_string(consensus_text, 0);
   test_assert(consensus);
+  // log_notice(LD_GENERAL, "<<%s>>", consensus_text);
 
   /* XXXX020 check consensus contents. */
 
