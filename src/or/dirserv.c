@@ -1608,7 +1608,6 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   struct in_addr in;
   char *cp;
 
-  int f_authority;
   char published[ISO_TIME_LEN+1];
   char ipaddr[INET_NTOA_BUF_LEN];
   char identity64[BASE64_DIGEST_LEN+1];
@@ -1619,8 +1618,6 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   digest_to_base64(digest64, rs->descriptor_digest);
   in.s_addr = htonl(rs->addr);
   tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
-
-  f_authority = router_digest_is_trusted_dir(rs->identity_digest);
 
   r = tor_snprintf(buf, buf_len,
                    "r %s %s %s %s %s %d %d\n",
@@ -1641,7 +1638,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   r = tor_snprintf(cp, buf_len - (cp-buf),
                    "s%s%s%s%s%s%s%s%s%s%s\n",
                   /* These must stay in alphabetical order. */
-                   f_authority?" Authority":"",
+                   rs->is_authority?" Authority":"",
                    rs->is_bad_exit?" BadExit":"",
                    rs->is_exit?" Exit":"",
                    rs->is_fast?" Fast":"",
@@ -1689,6 +1686,8 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") &&
     !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
   memset(rs, 0, sizeof(routerstatus_t));
+
+  rs->is_authority = router_digest_is_trusted_dir(rs->identity_digest);
 
   /* Already set by compute_performance_thresholds. */
   rs->is_exit = ri->is_exit;

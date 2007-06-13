@@ -1534,6 +1534,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
         rs->is_bad_exit = 1;
       else if (!strcmp(tok->args[i], "BadDirectory"))
         rs->is_bad_directory = 1;
+      else if (!strcmp(tok->args[i], "Authority"))
+        rs->is_authority = 1;
     }
   }
   if ((tok = find_first_by_keyword(tokens, K_V))) {

@@ -37,11 +37,16 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
     authority_cert_free(ns->cert);
 
   if (ns->routerstatus_list) {
-    SMARTLIST_FOREACH(ns->routerstatus_list, vote_routerstatus_t *, rs,
-    {
-      tor_free(rs->version);
-      tor_free(rs);
-    });
+    if (ns->is_vote) {
+      SMARTLIST_FOREACH(ns->routerstatus_list, vote_routerstatus_t *, rs,
+      {
+        tor_free(rs->version);
+        tor_free(rs);
+      });
+    } else {
+      SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+                        tor_free(rs));
+    }
 
     smartlist_free(ns->routerstatus_list);
   }
@@ -442,6 +447,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       named_flag[i] = -1;
     SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
     {
+      flag_map[v_sl_idx] = tor_malloc_zero(
+                           sizeof(int)*smartlist_len(v->known_flags));
       SMARTLIST_FOREACH(v->known_flags, const char *, fl,
       {
         int p = smartlist_string_pos(flags, fl);
