@@ -171,7 +171,7 @@ connection_add(connection_t *conn)
   conn->conn_array_index = smartlist_len(connection_array);
   smartlist_add(connection_array, conn);
 
-  if (conn->s >= 0) {
+  if (conn->s >= 0 || conn->linked) {
     conn->read_event = tor_malloc_zero(sizeof(struct event));
     conn->write_event = tor_malloc_zero(sizeof(struct event));
     event_set(conn->read_event, conn->s, EV_READ|EV_PERSIST,
