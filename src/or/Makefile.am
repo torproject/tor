@@ -29,7 +29,7 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	onion.c policies.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	eventdns.c \
-	test.c
+	test_data.c test.c
 
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
