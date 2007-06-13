@@ -2128,20 +2128,16 @@ test_dir_format(void)
 }
 
 extern const char AUTHORITY_CERT_1[];
-extern const char AUTHORITY_IDKEY_1[];
 extern const char AUTHORITY_SIGNKEY_1[];
 extern const char AUTHORITY_CERT_2[];
-extern const char AUTHORITY_IDKEY_2[];
 extern const char AUTHORITY_SIGNKEY_2[];
 extern const char AUTHORITY_CERT_3[];
-extern const char AUTHORITY_IDKEY_3[];
 extern const char AUTHORITY_SIGNKEY_3[];
 
 static void
 test_v3_networkstatus(void)
 {
   authority_cert_t *cert1, *cert2, *cert3;
-  crypto_pk_env_t *id_skey_1, *id_skey_2, *id_skey_3;
   crypto_pk_env_t *sign_skey_1, *sign_skey_2, *sign_skey_3;
 
   time_t now = time(NULL);
@@ -2161,19 +2157,10 @@ test_v3_networkstatus(void)
   test_assert(cert2);
   cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3, NULL);
   test_assert(cert3);
-  id_skey_1 = crypto_new_pk_env();
-  id_skey_2 = crypto_new_pk_env();
-  id_skey_3 = crypto_new_pk_env();
   sign_skey_1 = crypto_new_pk_env();
   sign_skey_2 = crypto_new_pk_env();
   sign_skey_3 = crypto_new_pk_env();
 
-  test_assert(!crypto_pk_read_private_key_from_string(id_skey_1,
-                                                      AUTHORITY_IDKEY_1));
-  test_assert(!crypto_pk_read_private_key_from_string(id_skey_2,
-                                                      AUTHORITY_IDKEY_2));
-  test_assert(!crypto_pk_read_private_key_from_string(id_skey_3,
-                                                      AUTHORITY_IDKEY_3));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
                                                       AUTHORITY_SIGNKEY_1));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_2,
@@ -2181,9 +2168,7 @@ test_v3_networkstatus(void)
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_3,
                                                       AUTHORITY_SIGNKEY_3));
 
-  test_assert(!crypto_pk_cmp_keys(id_skey_1, cert1->identity_key));
   test_assert(!crypto_pk_cmp_keys(sign_skey_1, cert1->signing_key));
-  test_assert(!crypto_pk_cmp_keys(id_skey_2, cert2->identity_key));
   test_assert(!crypto_pk_cmp_keys(sign_skey_2, cert2->signing_key));
 
   /*
@@ -2211,7 +2196,7 @@ test_v3_networkstatus(void)
   voter->dir_port = 80;
   voter->or_port = 9000;
   voter->contact = tor_strdup("voter1@example.com");
-  crypto_pk_get_digest(id_skey_1, voter->identity_digest);
+  crypto_pk_get_digest(cert1->identity_key, voter->identity_digest);
   smartlist_add(vote->voters, voter);
   vote->cert = authority_cert_dup(cert1);
   vote->routerstatus_list = smartlist_create();
@@ -2282,7 +2267,6 @@ test_v3_networkstatus(void)
   test_eq(voter->or_port, 9000);
   test_streq(voter->contact, "voter1@example.com");
   test_assert(v1->cert);
-  test_assert(!crypto_pk_cmp_keys(id_skey_1, v1->cert->identity_key));
   test_assert(!crypto_pk_cmp_keys(sign_skey_1, v1->cert->signing_key));
   cp = smartlist_join_strings(v1->known_flags, ":", 0, NULL);
   test_streq(cp, "Authority:Exit:Fast:Guard:Running:Stable:V2Dir:Valid");
@@ -2332,7 +2316,7 @@ test_v3_networkstatus(void)
   voter->nickname = tor_strdup("Voter2");
   voter->address = tor_strdup("2.3.4.5");
   voter->addr = 0x02030405;
-  crypto_pk_get_digest(id_skey_2, voter->identity_digest);
+  crypto_pk_get_digest(cert2->identity_key, voter->identity_digest);
   smartlist_add(vote->known_flags, tor_strdup("MadeOfCheese"));
   smartlist_add(vote->known_flags, tor_strdup("MadeOfTin"));
   smartlist_sort_strings(vote->known_flags);
@@ -2369,7 +2353,7 @@ test_v3_networkstatus(void)
   voter->nickname = tor_strdup("Voter3");
   voter->address = tor_strdup("3.4.5.6");
   voter->addr = 0x03040506;
-  crypto_pk_get_digest(id_skey_3, voter->identity_digest);
+  crypto_pk_get_digest(cert3->identity_key, voter->identity_digest);
   vrs = smartlist_get(vote->routerstatus_list, 0);
   smartlist_del_keeporder(vote->routerstatus_list, 0);
   tor_free(vrs->version);
@@ -2385,7 +2369,8 @@ test_v3_networkstatus(void)
   smartlist_add(votes, v1);
   smartlist_add(votes, v2);
   consensus_text = networkstatus_compute_consensus(votes,
-                                                   id_skey_3, sign_skey_3);
+                                                   cert3->identity_key,
+                                                   sign_skey_3);
   test_assert(consensus_text);
   consensus = networkstatus_parse_vote_from_string(consensus_text, 0);
   test_assert(consensus);
@@ -2400,9 +2385,6 @@ test_v3_networkstatus(void)
   networkstatus_vote_free(v1);
   networkstatus_vote_free(v2);
   networkstatus_vote_free(v3);
-  crypto_free_pk_env(id_skey_1);
-  crypto_free_pk_env(id_skey_2);
-  crypto_free_pk_env(id_skey_3);
   crypto_free_pk_env(sign_skey_1);
   crypto_free_pk_env(sign_skey_2);
   crypto_free_pk_env(sign_skey_3);
