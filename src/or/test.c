@@ -31,6 +31,7 @@ const char tor_svn_revision[] = "";
 #define CONTROL_PRIVATE
 #define CRYPTO_PRIVATE
 #define DIRSERV_PRIVATE
+#define DIRVOTE_PRIVATE
 #define MEMPOOL_PRIVATE
 #define ROUTER_PRIVATE
 
@@ -2296,7 +2297,7 @@ test_v3_networkstatus(void)
              "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
              DIGEST_LEN);
   test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
-  test_eq(rs->addr, 0x099008801);
+  test_eq(rs->addr, 0x99008801);
   test_eq(rs->or_port, 443);
   test_eq(rs->dir_port, 8000);
   test_eq(vrs->flags, U64_LITERAL(0));
@@ -2310,7 +2311,7 @@ test_v3_networkstatus(void)
              "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
              DIGEST_LEN);
   test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
-  test_eq(rs->addr, 0x099009901);
+  test_eq(rs->addr, 0x99009901);
   test_eq(rs->or_port, 443);
   test_eq(rs->dir_port, 0);
   test_eq(vrs->flags, U64_LITERAL(254)); // all flags except "authority."
@@ -2338,7 +2339,8 @@ test_v3_networkstatus(void)
   smartlist_del_keeporder(vote->routerstatus_list, 2);
   tor_free(vrs->version);
   tor_free(vrs);
-  /* XXXX020 set some flags in router0 */
+  vrs = smartlist_get(vote->routerstatus_list, 0);
+  vrs->status.is_fast = 1;
   /* generate and parse. */
   v2_text = format_networkstatus_vote(sign_skey_2, vote);
   test_assert(v2_text);
@@ -2372,7 +2374,9 @@ test_v3_networkstatus(void)
   smartlist_del_keeporder(vote->routerstatus_list, 0);
   tor_free(vrs->version);
   tor_free(vrs);
-  /* XXXX020 clear some flags in the remaining entry. */
+  vrs = smartlist_get(vote->routerstatus_list, 0);
+  memset(vrs->status.descriptor_digest, (int)'Z', DIGEST_LEN);
+
   v3_text = format_networkstatus_vote(sign_skey_3, vote);
   test_assert(v3_text);
   v3 = networkstatus_parse_vote_from_string(v3_text, 1);
@@ -2388,7 +2392,8 @@ test_v3_networkstatus(void)
   test_assert(consensus_text);
   con = networkstatus_parse_vote_from_string(consensus_text, 0);
   test_assert(con);
-  // log_notice(LD_GENERAL, "<<%s>>", consensus_text);
+  log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
+             v1_text, v2_text, v3_text);
 
   /* Check consensus contents. */
   test_assert(!con->is_vote);
@@ -2419,9 +2424,64 @@ test_v3_networkstatus(void)
 
   test_assert(!con->cert);
   test_eq(2, smartlist_len(con->routerstatus_list));
-  /* XXXX020 test routerstatus_list contents */
+  /* There should be two listed routers: one with identity 3, one with
+   * identity 5. */
+  /* This one showed up in 2 digests. */
+  rs = smartlist_get(con->routerstatus_list, 0);
+  test_memeq(rs->identity_digest,
+             "\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3\x3",
+             DIGEST_LEN);
+  test_memeq(rs->descriptor_digest, "NNNNNNNNNNNNNNNNNNNN", DIGEST_LEN);
+  test_assert(!rs->is_authority);
+  test_assert(!rs->is_exit);
+  test_assert(!rs->is_fast);
+  test_assert(!rs->is_possible_guard);
+  test_assert(!rs->is_stable);
+  test_assert(!rs->is_running);
+  test_assert(!rs->is_v2_dir);
+  test_assert(!rs->is_valid);
+  test_assert(!rs->is_named);
+  /* XXXX020 check version */
 
-  /* XXXX020 Check signatures */
+  rs = smartlist_get(con->routerstatus_list, 1);
+  /* This one showed up in 3 digests. Twice with ID 'M', once with 'Z'.  */
+  test_memeq(rs->identity_digest,
+             "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5",
+             DIGEST_LEN);
+  test_streq(rs->nickname, "router1");
+  test_memeq(rs->descriptor_digest, "MMMMMMMMMMMMMMMMMMMM", DIGEST_LEN);
+  test_eq(rs->published_on, now-1000);
+  test_eq(rs->addr, 0x99009901);
+  test_eq(rs->or_port, 443);
+  test_eq(rs->dir_port, 0);
+  test_assert(!rs->is_authority);
+  test_assert(rs->is_exit);
+  test_assert(rs->is_fast);
+  test_assert(rs->is_possible_guard);
+  test_assert(rs->is_stable);
+  test_assert(rs->is_running);
+  test_assert(rs->is_v2_dir);
+  test_assert(rs->is_valid);
+  test_assert(!rs->is_named);
+  /* XXXX020 check version */
+
+  /* Check signatures.  the first voter hasn't got one.  The second one
+   * does: validate it. */
+  voter = smartlist_get(con->voters, 0);
+  test_assert(!voter->pending_signature);
+  test_assert(!voter->good_signature);
+  test_assert(!voter->bad_signature);
+
+  voter = smartlist_get(con->voters, 1);
+  test_assert(voter->pending_signature);
+  test_assert(!voter->good_signature);
+  test_assert(!voter->bad_signature);
+  test_assert(!networkstatus_check_voter_signature(con,
+                                               smartlist_get(con->voters, 1),
+                                               cert3));
+  test_assert(!voter->pending_signature);
+  test_assert(voter->good_signature);
+  test_assert(!voter->bad_signature);
 
   /* XXXX020 frob with detached signatures */
 

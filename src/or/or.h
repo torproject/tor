@@ -2768,6 +2768,12 @@ int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus);
 void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 
+#ifdef DIRVOTE_PRIVATE
+int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
+                                        networkstatus_voter_info_t *voter,
+                                        authority_cert_t *cert);
+#endif
+
 /********************************* dns.c ***************************/
 
 int dns_init(void);

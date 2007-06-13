@@ -5,6 +5,7 @@
 const char dirvote_c_id[] =
   "$Id$";
 
+#define DIRVOTE_PRIVATE
 #include "or.h"
 
 /**
@@ -347,9 +348,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_free(lst);
     }
 
-    /* XXXX020 we list any flag that _any_ dirserver lists.  possible
-     *  problem.
-     */
     smartlist_sort_strings(flags);
     smartlist_uniq_strings(flags);
 
@@ -537,6 +535,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       memcpy(rs_out.identity_digest, lowest_id, DIGEST_LEN);
       memcpy(rs_out.descriptor_digest, rs->status.descriptor_digest,
              DIGEST_LEN);
+      rs_out.addr = rs->status.addr;
       rs_out.published_on = rs->status.published_on;
       rs_out.dir_port = rs->status.dir_port;
       rs_out.or_port = rs->status.or_port;
@@ -648,6 +647,37 @@ networkstatus_compute_consensus(smartlist_t *votes,
 }
 
 /** DOCDOC */
+/* private */
+int
+networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
+                                    networkstatus_voter_info_t *voter,
+                                    authority_cert_t *cert)
+{
+  char d[DIGEST_LEN];
+  char *signed_digest;
+  size_t signed_digest_len;
+  /*XXXX020 check return*/
+  crypto_pk_get_digest(cert->signing_key, d);
+  if (memcmp(voter->signing_key_digest, d, DIGEST_LEN)) {
+    return -1;
+  }
+  signed_digest_len = crypto_pk_keysize(cert->signing_key);
+  signed_digest = tor_malloc(signed_digest_len);
+  if (crypto_pk_public_checksig(cert->signing_key,
+                                signed_digest,
+                                voter->pending_signature,
+                                voter->pending_signature_len) != DIGEST_LEN ||
+      memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
+    log_warn(LD_DIR, "Got a bad signature."); /*XXXX020 say more*/
+    voter->bad_signature = 1;
+  } else {
+    voter->good_signature = 1;
+  }
+  tor_free(voter->pending_signature);
+  return 0;
+}
+
+/** DOCDOC */
 int
 networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
 {
@@ -655,6 +685,7 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
   int n_missing_key = 0;
   int n_bad = 0;
   int n_unknown = 0;
+  int n_no_signature = 0;
 
   tor_assert(! consensus->is_vote);
 
@@ -667,40 +698,20 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
       continue;
     }
     if (voter->pending_signature) {
-      char d[DIGEST_LEN];
-      char *signed_digest;
-      size_t signed_digest_len;
       tor_assert(!voter->good_signature && !voter->bad_signature);
-      if (!ds->v3_cert) {
+      if (!ds->v3_cert ||
+          networkstatus_check_voter_signature(consensus, voter,
+                                              ds->v3_cert) < 0) {
         ++n_missing_key;
         continue;
       }
-      /*XXXX020 check return*/
-      crypto_pk_get_digest(ds->v3_cert->signing_key, d);
-      if (memcmp(voter->signing_key_digest, d, DIGEST_LEN)) {
-        ++n_missing_key;
-        continue;
-      }
-      signed_digest_len = crypto_pk_keysize(ds->v3_cert->signing_key);
-      signed_digest = tor_malloc(signed_digest_len);
-      if (crypto_pk_public_checksig(ds->v3_cert->signing_key,
-                                signed_digest,
-                                voter->pending_signature,
-                                voter->pending_signature_len) != DIGEST_LEN ||
-          memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
-        log_warn(LD_DIR, "Got a bad signature."); /*XXXX020 say more*/
-        voter->bad_signature = 1;
-      } else {
-        voter->good_signature = 1;
-      }
-      tor_free(voter->pending_signature);
     }
     if (voter->good_signature)
       ++n_good;
     else if (voter->bad_signature)
       ++n_bad;
     else
-      tor_assert(0);
+      ++n_no_signature;
   });
 
   /* XXXX020 actually use the result. */
