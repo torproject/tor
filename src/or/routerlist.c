@@ -113,7 +113,7 @@ static int have_warned_about_new_version = 0;
 
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
-INLINE int
+int
 get_n_authorities(authority_type_t type)
 {
   int n = 0;
