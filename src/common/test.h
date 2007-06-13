@@ -51,9 +51,9 @@ extern int have_failed;
 
 #define test_eq_type(tp, fmt, expr1, expr2) \
   STMT_BEGIN                                                            \
-  tp v1=(tp)(expr1);                                                    \
-  tp v2=(tp)(expr2);                                                    \
-  if (v1==v2) { printf("."); fflush(stdout); } else {                   \
+  tp _test_v1=(tp)(expr1);                                              \
+  tp _test_v2=(tp)(expr2);                                              \
+  if (_test_v1==_test_v2) { printf("."); fflush(stdout); } else {       \
     have_failed = 1;                                                    \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"      \
            "      "fmt "!="fmt"\n",                                     \
@@ -61,7 +61,7 @@ extern int have_failed;
              __LINE__,                                                  \
              PRETTY_FUNCTION,                                           \
              #expr1, #expr2,                                            \
-             v1, v2);                                                   \
+           _test_v1, _test_v2);                                         \
     return;                                                             \
   } STMT_END
 
@@ -73,9 +73,9 @@ extern int have_failed;
 
 #define test_neq_type(tp, fmt, expr1, expr2)                            \
   STMT_BEGIN                                                            \
-  tp v1=(tp)(expr1);                                                    \
-  tp v2=(tp)(expr2);                                                    \
-  if (v1!=v2) { printf("."); fflush(stdout); } else {                   \
+  tp _test_v1=(tp)(expr1);                                              \
+  tp _test_v2=(tp)(expr2);                                              \
+  if (_test_v1!=_test_v2) { printf("."); fflush(stdout); } else {       \
     have_failed = 1;                                                    \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"      \
            "      ("fmt" == "fmt")\n",                                  \
@@ -83,7 +83,7 @@ extern int have_failed;
            __LINE__,                                                    \
            PRETTY_FUNCTION,                                             \
            #expr1, #expr2,                                              \
-             v1, v2);                                                   \
+           _test_v1, _test_v2);                                         \
     return;                                                             \
   } STMT_END
 
@@ -95,8 +95,8 @@ extern int have_failed;
 
 #define test_streq(expr1, expr2)                                \
   STMT_BEGIN                                                    \
-    const char *v1=(expr1), *v2=(expr2);                        \
-    if (!strcmp(v1,v2)) { printf("."); fflush(stdout); } else { \
+    const char *_test_v1=(expr1), *_test_v2=(expr2);                        \
+    if (!strcmp(_test_v1,_test_v2)) { printf("."); fflush(stdout); } else { \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"\
            "      (\"%s\" != \"%s\")\n",                        \
@@ -104,14 +104,14 @@ extern int have_failed;
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2,                                           \
-      v1, v2);                                                  \
+      _test_v1, _test_v2);                                      \
     return;                                                     \
   } STMT_END
 
 #define test_strneq(expr1, expr2)                               \
   STMT_BEGIN                                                    \
-    const char *v1=(expr1), *v2=(expr2);                        \
-    if (strcmp(v1,v2)) { printf("."); fflush(stdout); } else {  \
+    const char *_test_v1=(expr1), *_test_v2=(expr2);                        \
+    if (strcmp(_test_v1,_test_v2)) { printf("."); fflush(stdout); } else {  \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n"\
            "      (\"%s\" == \"%s\")\n",                        \
@@ -119,14 +119,15 @@ extern int have_failed;
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2,                                           \
-      v1, v2);                                                  \
+      _test_v1, _test_v2);                                      \
     return;                                                     \
   } STMT_END
 
 #define test_memeq(expr1, expr2, len)                           \
   STMT_BEGIN                                                    \
-    const void *v1=(expr1), *v2=(expr2);                        \
-    if (!memcmp(v1,v2,(len))) { printf("."); fflush(stdout); } else {\
+    const void *_test_v1=(expr1), *_test_v2=(expr2);            \
+    if (!memcmp(_test_v1,_test_v2,(len))) {                     \
+      printf("."); fflush(stdout); } else {                     \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n", \
       _SHORT_FILE_,                                             \
@@ -138,8 +139,10 @@ extern int have_failed;
 
 #define test_memneq(expr1, expr2, len)                          \
   STMT_BEGIN                                                    \
-    void *v1=(expr1), *v2=(expr2);                              \
-    if (memcmp(v1,v2,(len))) { printf("."); fflush(stdout); } else {\
+   void *_test_v1=(expr1), *_test_v2=(expr2);                   \
+   if (memcmp(_test_v1,_test_v2,(len))) {                       \
+     printf("."); fflush(stdout);                               \
+   } else {                                                     \
     have_failed = 1;                                            \
     printf("\nFile %s: line %d (%s): Assertion failed: (%s!=%s)\n", \
       _SHORT_FILE_,                                             \
