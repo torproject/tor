@@ -344,10 +344,10 @@ generate_certificate(void)
                           (unsigned char*)signature,
                           EVP_PKEY_get1_RSA(identity_key),
                           RSA_PKCS1_PADDING);
-  strlcat(buf, "-----BEGIN_SIGNATURE-----\n", sizeof(buf));
+  strlcat(buf, "-----BEGIN SIGNATURE-----\n", sizeof(buf));
   signed_len = strlen(buf);
   base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r);
-  strlcat(buf, "-----END_SIGNATURE-----\n", sizeof(buf));
+  strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
 
   if (!(f = fopen(certificate_file, "w"))) {
     log_err(LD_GENERAL, "Couldn't open %s for writing: %s",
