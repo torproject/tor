@@ -347,6 +347,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_free(lst);
     }
 
+    /* XXXX020 we list any flag that _any_ dirserver lists.  possible
+     *  problem.
+     */
     smartlist_sort_strings(flags);
     smartlist_uniq_strings(flags);
 

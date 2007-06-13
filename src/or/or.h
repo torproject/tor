@@ -1315,7 +1315,7 @@ typedef struct networkstatus_voter_info_t {
   uint16_t dir_port;
   uint16_t or_port;
   char *contact;
-  char vote_digest[DIGEST_LEN]; /* consensus only. */
+  char vote_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN]; /* This part is _not_ signed. */
 
   char *pending_signature;

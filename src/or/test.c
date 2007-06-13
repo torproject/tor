@@ -2135,6 +2135,20 @@ extern const char AUTHORITY_CERT_3[];
 extern const char AUTHORITY_SIGNKEY_3[];
 
 static void
+test_same_voter(networkstatus_voter_info_t *v1,
+                networkstatus_voter_info_t *v2)
+{
+  test_streq(v1->nickname, v2->nickname);
+  test_memeq(v1->identity_digest, v2->identity_digest, DIGEST_LEN);
+  test_streq(v1->address, v2->address);
+  test_eq(v1->addr, v2->addr);
+  test_eq(v1->dir_port, v2->dir_port);
+  test_eq(v1->or_port, v2->or_port);
+  test_streq(v1->contact, v2->contact);
+  test_memeq(v1->vote_digest, v2->vote_digest, DIGEST_LEN);
+}
+
+static void
 test_v3_networkstatus(void)
 {
   authority_cert_t *cert1, *cert2, *cert3;
@@ -2142,7 +2156,7 @@ test_v3_networkstatus(void)
 
   time_t now = time(NULL);
   networkstatus_voter_info_t *voter;
-  networkstatus_vote_t *vote, *v1, *v2, *v3, *consensus;
+  networkstatus_vote_t *vote, *v1, *v2, *v3, *con;
   vote_routerstatus_t *vrs;
   routerstatus_t *rs;
   char *v1_text, *v2_text, *v3_text, *consensus_text, *cp;
@@ -2195,7 +2209,7 @@ test_v3_networkstatus(void)
   voter->addr = 0x01020304;
   voter->dir_port = 80;
   voter->or_port = 9000;
-  voter->contact = tor_strdup("voter1@example.com");
+  voter->contact = tor_strdup("voter@example.com");
   crypto_pk_get_digest(cert1->identity_key, voter->identity_digest);
   smartlist_add(vote->voters, voter);
   vote->cert = authority_cert_dup(cert1);
@@ -2265,7 +2279,7 @@ test_v3_networkstatus(void)
   test_eq(voter->addr, 0x01020304);
   test_eq(voter->dir_port, 80);
   test_eq(voter->or_port, 9000);
-  test_streq(voter->contact, "voter1@example.com");
+  test_streq(voter->contact, "voter@example.com");
   test_assert(v1->cert);
   test_assert(!crypto_pk_cmp_keys(sign_skey_1, v1->cert->signing_key));
   cp = smartlist_join_strings(v1->known_flags, ":", 0, NULL);
@@ -2339,7 +2353,7 @@ test_v3_networkstatus(void)
   /* 1023 - authority(1) - madeofcheese(16) - madeoftin(32) */
   test_eq(vrs->flags, U64_LITERAL(974));
 
-  /* XXXX Generate third vote. */
+  /* Generate the third vote. */
   vote->published = now;
   vote->fresh_until = now+203;
   vote->dist_seconds = 250;
@@ -2372,19 +2386,55 @@ test_v3_networkstatus(void)
                                                    cert3->identity_key,
                                                    sign_skey_3);
   test_assert(consensus_text);
-  consensus = networkstatus_parse_vote_from_string(consensus_text, 0);
-  test_assert(consensus);
+  con = networkstatus_parse_vote_from_string(consensus_text, 0);
+  test_assert(con);
   // log_notice(LD_GENERAL, "<<%s>>", consensus_text);
 
-  /* XXXX020 check consensus contents. */
+  /* Check consensus contents. */
+  test_assert(!con->is_vote);
+  test_eq(con->published, 0); /* this field only appears in votes. */
+  test_eq(con->valid_after, now+100);
+  test_eq(con->fresh_until, now+203); /* median */
+  test_eq(con->valid_until, now+300);
+  test_eq(con->vote_seconds, 100);
+  test_eq(con->dist_seconds, 250); /* median */
+  test_streq(con->client_versions, "0.1.2.14");
+  test_streq(con->server_versions, "0.1.2.15,0.1.2.16");
+  cp = smartlist_join_strings(v2->known_flags, ":", 0, NULL);
+  test_streq(cp, "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
+             "Running:Stable:V2Dir:Valid");
+  tor_free(cp);
+  test_eq(3, smartlist_len(con->voters));
+  /* The voter id digests should be in this order. */
+  test_assert(memcmp(cert2->cache_info.identity_digest,
+                     cert3->cache_info.identity_digest,DIGEST_LEN)<0);
+  test_assert(memcmp(cert3->cache_info.identity_digest,
+                     cert1->cache_info.identity_digest,DIGEST_LEN)<0);
+  test_same_voter(smartlist_get(con->voters, 0),
+                  smartlist_get(v2->voters, 0));
+  test_same_voter(smartlist_get(con->voters, 1),
+                  smartlist_get(v3->voters, 0));
+  test_same_voter(smartlist_get(con->voters, 2),
+                  smartlist_get(v1->voters, 0));
 
+  test_assert(!con->cert);
+  test_eq(2, smartlist_len(con->routerstatus_list));
+  /* XXXX020 test routerstatus_list contents */
+
+  /* XXXX020 Check signatures */
+
+  /* XXXX020 frob with detached signatures */
+
+  smartlist_free(votes);
   tor_free(v1_text);
   tor_free(v2_text);
   tor_free(v3_text);
+  tor_free(consensus_text);
   networkstatus_vote_free(vote);
   networkstatus_vote_free(v1);
   networkstatus_vote_free(v2);
   networkstatus_vote_free(v3);
+  networkstatus_vote_free(con);
   crypto_free_pk_env(sign_skey_1);
   crypto_free_pk_env(sign_skey_2);
   crypto_free_pk_env(sign_skey_3);
