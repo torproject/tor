@@ -76,9 +76,15 @@ a %signed
 list of Tor nodes from several central \emph{directory servers} via a
 voting protocol to avoid dependence on or complete trust in any one of
 them, and incrementally creates a private pathway or \emph{circuit} of
-encrypted connections through authenticated Tor nodes on the network,
+encrypted connections through authenticated Tor nodes on the network
+whose public keys were obtained form the directory servers,
 negotiating a separate set of encryption keys for each hop along the
-circuit.  The circuit is extended one node at a time, and each node
+circuit. The nodes in the circuit are chosen at random by the client
+subject to a preference for higher performing nodes to allocate
+resources effectively and with a client-chosen preferred set of first
+nodes called \emph{entry guards} to complicate profiling attacks by
+internal adversaries~\cite{hs-attack}.
+The circuit is extended one node at a time, and each node
 along the way knows only the immediately previous and following nodes
 in the circuit, so no individual Tor node knows the complete path that
 each fixed-sized data packet (or \emph{cell}) will take.  Thus,
@@ -148,7 +154,13 @@ users and applications. For example, unlike purely P2P designs we
 neither limit ordinary users to content and services available only
 within our network nor require them to take on responsibility for
 connections outside the network, unless they separately choose to run
-server nodes.
+server nodes. Nonetheless because we support low-latency interactive
+communications, end-to-end \emph{traffic correlation}
+attacks~\cite{danezis:pet2004,defensive-dropping,SS03,hs-attack,bauer:tr2007}
+allow an attacker who can observe both ends of a communication to
+correlate packet timing and volume, quickly linking the initiator to
+her destination.
+
 
 Our defense lies in having a diverse enough set of nodes to prevent
 most real-world adversaries from being in the right places to attack
