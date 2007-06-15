@@ -1804,7 +1804,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       smartlist_free(dir_fps);
       return 0;
     }
-    if (dirserv_statuses_are_old(dir_fps, if_modified_since)) {
+    if (dirserv_remove_old_statuses(dir_fps, if_modified_since)) {
       write_http_status_line(conn, 304, "Not modified");
       /* no need to free dir_fps's elements, since
        * dirserv_statuses_are_old() already did. */

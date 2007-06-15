@@ -2545,7 +2545,7 @@ dirserv_test_reachability(int try_all)
  * Return 1 if no keys remain, else return 0.
  */
 int
-dirserv_statuses_are_old(smartlist_t *fps, time_t cutoff)
+dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
 {
   SMARTLIST_FOREACH(fps, char *, digest,
   {

@@ -2739,7 +2739,7 @@ void dirserv_test_reachability(int try_all);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain);
 int dirserv_would_reject_router(routerstatus_t *rs);
-int dirserv_statuses_are_old(smartlist_t *fps, time_t cutoff);
+int dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
 int routerstatus_format_entry(char *buf, size_t buf_len,
