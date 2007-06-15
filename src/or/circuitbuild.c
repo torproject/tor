@@ -424,6 +424,8 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
         if (circ->n_addr != or_conn->_base.addr ||
             circ->n_port != or_conn->_base.port)
           continue;
+        /* now teach circ the right identity_digest */
+        memcpy(circ->n_conn_id_digest, or_conn->identity_digest, DIGEST_LEN);
       } else {
         /* We expected a key. See if it's the right one. */
         if (memcmp(or_conn->identity_digest,
