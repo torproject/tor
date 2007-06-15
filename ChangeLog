@@ -21,6 +21,9 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Minor bugfixes (directory):
     - Fix another crash bug related to extra-info caching.  (Bug found by
       Peter Palfrader.) [Bugfix on 0.2.0.2-alpha]
+    - Directories no longer return a "304 not modified" when they don't
+      have the networkstatus the client asked for. Also fix a memory
+      leak when returning 304 not modified. [Bugfixes on 0.2.0.2-alpha]
 
   o Minor bugfixes (dns):
     - Fix a crash when DNSPort is set more than once. (Patch from Robert

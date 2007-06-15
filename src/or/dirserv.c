@@ -2538,29 +2538,31 @@ dirserv_test_reachability(int try_all)
     ctr = (ctr + 1) % 128;
 }
 
-/** Return true iff every networkstatus listed in <b>fps</b> is older
- * than <b>cutoff</b>. */
+/** Remove from <b>fps</b> every networkstatus key where both
+ * a) we have a networkstatus document and
+ * b) it is not newer than <b>cutoff</b>.
+ *
+ * Return 1 if no keys remain, else return 0.
+ */
 int
 dirserv_statuses_are_old(smartlist_t *fps, time_t cutoff)
 {
-  SMARTLIST_FOREACH(fps, const char *, digest,
+  SMARTLIST_FOREACH(fps, char *, digest,
   {
     cached_dir_t *d;
     if (router_digest_is_me(digest) && the_v2_networkstatus)
       d = the_v2_networkstatus;
     else
       d = digestmap_get(cached_v2_networkstatus, digest);
-    if (d && d->published > cutoff)
-      return 0;
-    /* XXX020 The above is causing my dir cache to send "304 Not modified"
-     * to clients that never specified an If-Modified-Since header. That's
-     * because d isn't defined for the networkstatus the client is asking
-     * for, so we end up returning 1. Perhaps the right fix above is
-     * "if (!d || d->published >= cutoff)"? -RD
-     */
+    if (d && d->published <= cutoff) {
+      tor_free(digest);
+      SMARTLIST_DEL_CURRENT(fps, digest);
+    }
   });
 
-  return 1;
+  if (smartlist_len(fps))
+    return 0; /* some items were not here or were not old */
+  return 1; /* all items were here and old */
 }
 
 /** Return an approximate estimate of the number of bytes that will
