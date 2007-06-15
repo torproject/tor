@@ -2388,7 +2388,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
      * we are receiving in response to a fetch. */
 
     if (!signed_desc_digest_is_recognized(&router->cache_info) &&
-        !identity_digest_is_a_bridge(router->cache_info.identity_digest)) {
+        !routerinfo_is_a_bridge(router)) {
       /* We asked for it, so some networkstatus must have listed it when we
        * did.  Save it if we're a cache in case somebody else asks for it. */
       log_info(LD_DIR,

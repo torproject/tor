@@ -218,7 +218,7 @@ circuit_add(circuit_t *circ)
   }
 }
 
-/** Append to <b>out</b> the number of circuits in state OR_WAIT, waiting for
+/** Append to <b>out</b> all circuits in state OR_WAIT waiting for
  * the given connection. */
 void
 circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
@@ -234,11 +234,18 @@ circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
     if (circ->marked_for_close)
       continue;
     tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
-    if (!circ->n_conn &&
-        !memcmp(or_conn->identity_digest, circ->n_conn_id_digest,
-                DIGEST_LEN)) {
-      smartlist_add(out, circ);
+    if (tor_digest_is_zero(circ->n_conn_id_digest)) {
+      /* Look at addr/port. This is an unkeyed connection. */
+      if (circ->n_addr != or_conn->_base.addr ||
+          circ->n_port != or_conn->_base.port)
+        continue;
+    } else {
+      /* We expected a key. See if it's the right one. */
+      if (memcmp(or_conn->identity_digest,
+                 circ->n_conn_id_digest, DIGEST_LEN))
+        continue;
     }
+    smartlist_add(out, circ);
   });
 }
 

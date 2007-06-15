@@ -655,6 +655,17 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
     conn->circ_id_type = CIRC_ID_TYPE_NEITHER;
   }
 
+  if (started_here && tor_digest_is_zero(conn->identity_digest)) {
+    memcpy(conn->identity_digest, digest_rcvd, DIGEST_LEN);
+    conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
+    conn->nickname[0] = '$';
+    base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
+                  conn->identity_digest, DIGEST_LEN);
+    log_info(LD_OR, "Connected to router %s at %s:%d without knowing "
+                    "its key. Hoping for the best.",
+                    conn->nickname, conn->_base.address, conn->_base.port);
+  }
+
   if (started_here) {
     int as_advertised = 1;
     tor_assert(has_cert);

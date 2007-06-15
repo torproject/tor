@@ -2223,7 +2223,7 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
 void entry_guards_free_all(void);
 
 void clear_bridge_list(void);
-int identity_digest_is_a_bridge(const char *digest);
+int routerinfo_is_a_bridge(routerinfo_t *ri);
 void bridge_add_from_config(uint32_t addr, uint16_t port, char *digest);
 void fetch_bridge_descriptors(void);
 void learned_bridge_descriptor(routerinfo_t *ri);

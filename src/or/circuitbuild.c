@@ -413,13 +413,23 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
 
   SMARTLIST_FOREACH(pending_circs, circuit_t *, circ,
     {
-      /* This check is redundant wrt get_all_pending_on_or_conn, but I'm
+      /* These checks are redundant wrt get_all_pending_on_or_conn, but I'm
        * leaving them in in case it's possible for the status of a circuit to
        * change as we're going down the list. */
       if (circ->marked_for_close || circ->n_conn ||
-          circ->state != CIRCUIT_STATE_OR_WAIT ||
-          memcmp(or_conn->identity_digest, circ->n_conn_id_digest, DIGEST_LEN))
+          circ->state != CIRCUIT_STATE_OR_WAIT)
         continue;
+      if (tor_digest_is_zero(circ->n_conn_id_digest)) {
+        /* Look at addr/port. This is an unkeyed connection. */
+        if (circ->n_addr != or_conn->_base.addr ||
+            circ->n_port != or_conn->_base.port)
+          continue;
+      } else {
+        /* We expected a key. See if it's the right one. */
+        if (memcmp(or_conn->identity_digest,
+                   circ->n_conn_id_digest, DIGEST_LEN))
+          continue;
+      }
       if (!status) { /* or_conn failed; close circ */
         log_info(LD_CIRC,"or_conn failed. Closing circ.");
         circuit_mark_for_close(circ, END_CIRC_REASON_OR_CONN_CLOSED);
@@ -2670,6 +2680,7 @@ clear_bridge_list(void)
   smartlist_clear(bridge_list);
 }
 
+#if 0
 /** Return 1 if <b>digest</b> is one of our known bridges. */
 int
 identity_digest_is_a_bridge(const char *digest)
@@ -2677,6 +2688,24 @@ identity_digest_is_a_bridge(const char *digest)
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
     {
       if (!memcmp(bridge->identity, digest, DIGEST_LEN))
+        return 1;
+    });
+  return 0;
+}
+#endif
+
+/** Return 1 if <b>ri</b> is one of our known bridges (either by
+ * comparing keys if possible, else by comparing addr/port). */
+int
+routerinfo_is_a_bridge(routerinfo_t *ri)
+{
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
+    {
+      if (tor_digest_is_zero(bridge->identity) &&
+          bridge->addr == ri->addr && bridge->port == ri->or_port)
+        return 1;
+      if (!memcmp(bridge->identity, ri->cache_info.identity_digest,
+                  DIGEST_LEN))
         return 1;
     });
   return 0;
