@@ -1958,16 +1958,16 @@ num_live_entry_guards(void)
   return n;
 }
 
-/** Return 1 if <b>digest</b> matches the identity of any node
- * in the entry_guards list. Else return 0. */
-static INLINE int
+/** If <b>digest</b> matches the identity of any node in the
+ * entry_guards list, return that node. Else return NULL. */
+static INLINE entry_guard_t *
 is_an_entry_guard(const char *digest)
 {
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
                     if (!memcmp(digest, entry->identity, DIGEST_LEN))
-                      return 1;
+                      return entry;
                    );
-  return 0;
+  return NULL;
 }
 
 /** Dump a description of our list of entry guards to the log at level
@@ -2032,15 +2032,19 @@ control_event_guard_deferred(void)
  * already in our entry_guards list, put it at the *beginning*.
  * Else, put the one we pick at the end of the list. */
 static routerinfo_t *
-add_an_entry_guard(routerinfo_t *chosen)
+add_an_entry_guard(routerinfo_t *chosen, int reset_status)
 {
   routerinfo_t *router;
   entry_guard_t *entry;
 
   if (chosen) {
     router = chosen;
-    if (is_an_entry_guard(router->cache_info.identity_digest))
+    entry = is_an_entry_guard(router->cache_info.identity_digest);
+    if (entry) {
+      if (reset_status)
+        entry->bad_since = 0;
       return NULL;
+    }
   } else {
     router = choose_good_entry_server(CIRCUIT_PURPOSE_C_GENERAL, NULL);
     if (!router)
@@ -2071,7 +2075,7 @@ pick_entry_guards(void)
   tor_assert(entry_guards);
 
   while (num_live_entry_guards() < options->NumEntryGuards) {
-    if (!add_an_entry_guard(NULL))
+    if (!add_an_entry_guard(NULL, 0))
       break;
     changed = 1;
   }
@@ -2346,7 +2350,7 @@ entry_guards_prepend_from_config(void)
   smartlist_add_all(entry_guards, old_entry_guards_on_list);
   /* Next, the rest of EntryNodes */
   SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri, {
-    add_an_entry_guard(ri);
+    add_an_entry_guard(ri, 0);
   });
   /* Finally, the remaining EntryNodes, unless we're strict */
   if (options->StrictEntryNodes) {
@@ -2429,7 +2433,7 @@ choose_random_entry(cpath_build_state_t *state)
       /* XXX if guard doesn't imply fast and stable, then we need
        * to tell add_an_entry_guard below what we want, or it might
        * be a long time til we get it. -RD */
-      r = add_an_entry_guard(NULL);
+      r = add_an_entry_guard(NULL, 0);
       if (r) {
         smartlist_add(live_entry_guards, r);
         entry_guards_changed();
@@ -2780,7 +2784,7 @@ learned_bridge_descriptor(routerinfo_t *ri)
   if (get_options()->UseBridges) {
     int first = !any_bridge_descriptors_known();
     ri->is_running = 1;
-    add_an_entry_guard(ri);
+    add_an_entry_guard(ri, 1);
     log_notice(LD_DIR, "new bridge descriptor '%s'", ri->nickname);
     if (first)
       routerlist_retry_directory_downloads(time(NULL));
