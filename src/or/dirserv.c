@@ -2552,6 +2552,12 @@ dirserv_statuses_are_old(smartlist_t *fps, time_t cutoff)
       d = digestmap_get(cached_v2_networkstatus, digest);
     if (d && d->published > cutoff)
       return 0;
+    /* XXX020 The above is causing my dir cache to send "304 Not modified"
+     * to clients that never specified an If-Modified-Since header. That's
+     * because d isn't defined for the networkstatus the client is asking
+     * for, so we end up returning 1. Perhaps the right fix above is
+     * "if (!d || d->published >= cutoff)"? -RD
+     */
   });
 
   return 1;
