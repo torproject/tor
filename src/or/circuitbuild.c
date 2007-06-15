@@ -1728,11 +1728,7 @@ extend_info_alloc(const char *nickname, const char *digest,
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
   memcpy(info->identity_digest, digest, DIGEST_LEN);
-  if (nickname)
-    strlcpy(info->nickname, nickname, sizeof(info->nickname));
-  else {
-    /* make one up */
-  }
+  strlcpy(info->nickname, nickname, sizeof(info->nickname));
   if (onion_key)
     info->onion_key = crypto_pk_dup_key(onion_key);
   info->addr = addr;
@@ -2751,9 +2747,12 @@ learned_bridge_descriptor(routerinfo_t *ri)
   tor_assert(ri);
   tor_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
   if (get_options()->UseBridges) {
+    int first = !any_bridge_descriptors_known();
     ri->is_running = 1;
     add_an_entry_guard(ri);
     log_notice(LD_DIR, "new bridge descriptor '%s'", ri->nickname);
+    if (first)
+      routerlist_retry_directory_downloads(time(NULL));
   }
 }
 

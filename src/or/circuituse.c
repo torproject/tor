@@ -969,10 +969,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       log_notice(LD_APP|LD_DIR,
                  "Application request when we're believed to be "
                  "offline. Optimistically trying directory fetches again.");
-      router_reset_status_download_failures();
-      router_reset_descriptor_download_failures();
-      update_networkstatus_downloads(time(NULL));
-      update_router_descriptor_downloads(time(NULL));
+      routerlist_retry_directory_downloads(time(NULL));
     }
     /* the stream will be dealt with when router_have_minimum_dir_info becomes
      * 1, or when all directory attempts fail and directory_all_unreachable()

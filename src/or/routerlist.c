@@ -3545,6 +3545,17 @@ update_networkstatus_downloads(time_t now)
     update_networkstatus_client_downloads(now);
 }
 
+/** Clear all our timeouts for fetching v2 directory stuff, and then
+ * give it all a try again. */
+void
+routerlist_retry_directory_downloads(time_t now)
+{
+  router_reset_status_download_failures();
+  router_reset_descriptor_download_failures();
+  update_networkstatus_downloads(now);
+  update_router_descriptor_downloads(now);
+}
+
 /** Return 1 if all running sufficiently-stable routers will reject
  * addr:port, return 0 if any might accept it. */
 int

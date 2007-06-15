@@ -1269,14 +1269,17 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       return dir_okay ? 0 : -1;
     }
     /* Learn the routers, assuming we requested by fingerprint or "all"
-     * or "authority". (We use "authority" to fetch our own descriptor for
-     * testing, and to fetch bridge descriptors for bootstrapping.)
-     */
-    /* XXX020 We now risk replacing ourself with a router running at
-     * the addr:port we think we have. Might want to check more carefully. */
+     * or "authority".
+     *
+     * We use "authority" to fetch our own descriptor for
+     * testing, and to fetch bridge descriptors for bootstrapping. Ignore
+     * the output of "authority" requests unless we are using bridges,
+     * since otherwise they'll be the response from reachability tests,
+     * and we don't really want to add that to our routerlist. */
     if (which || (conn->requested_resource &&
                   (!strcmpstart(conn->requested_resource, "all") ||
-                   !strcmpstart(conn->requested_resource, "authority")))) {
+                   (!strcmpstart(conn->requested_resource, "authority") &&
+                    get_options()->UseBridges)))) {
       /* as we learn from them, we remove them from 'which' */
       if (was_ei) {
         router_load_extrainfo_from_string(body, NULL, SAVED_NOWHERE, which);
@@ -1694,7 +1697,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                  "don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
-      if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR))
+      if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR) &&
+          !should_delay_dir_fetches(options))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
       tor_free(url);
       return 0;
@@ -1744,7 +1748,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     if (!d) {
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
-      if (!already_fetching_directory(DIR_PURPOSE_FETCH_RUNNING_LIST))
+      if (!already_fetching_directory(DIR_PURPOSE_FETCH_RUNNING_LIST) &&
+          !should_delay_dir_fetches(options))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
       tor_free(url);
       return 0;

@@ -937,7 +937,8 @@ run_scheduled_events(time_t now)
     if (options->DirPort && !authdir_mode_v1(options)) {
       /* XXX020 actually, we should only do this if we want to advertise
        * our dirport. not simply if we configured one. -RD */
-      if (any_trusted_dir_is_v1_authority())
+      if (any_trusted_dir_is_v1_authority() &&
+          !should_delay_dir_fetches(options))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
     }
 /** How often do we (as a cache) fetch a new V1 directory? */
@@ -947,7 +948,7 @@ run_scheduled_events(time_t now)
 
   /* Caches need to fetch running_routers; directory clients don't. */
   if (options->DirPort && time_to_fetch_running_routers < now) {
-    if (!authdir_mode_v1(options)) {
+    if (!authdir_mode_v1(options) && !should_delay_dir_fetches(options)) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
     }
 /** How often do we (as a cache) fetch a new V1 runningrouters document? */
@@ -959,7 +960,7 @@ run_scheduled_events(time_t now)
     rep_history_clean(now - options->RephistTrackTime);
     rend_cache_clean();
     /* XXX020 we only clean this stuff if DirPort is set?! -RD */
- }
+  }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */

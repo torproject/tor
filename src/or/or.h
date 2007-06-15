@@ -3338,6 +3338,7 @@ local_routerstatus_t *router_get_combined_status_by_descriptor_digest(
 //routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);
+void routerlist_retry_directory_downloads(time_t now);
 void update_router_descriptor_downloads(time_t now);
 void update_extrainfo_downloads(time_t now);
 void routers_update_all_from_networkstatus(time_t now);
