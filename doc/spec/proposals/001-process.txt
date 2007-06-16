@@ -1,7 +1,7 @@
 Filename: 001-process.txt
 Title: The Tor Proposal Process
-Version: $Revision: 11537 $
-Last-Modified: $Date: 2007-01-26T19:04:29.998860Z $
+Version: $Revision$
+Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 30-Jan-2007
 Status: Meta

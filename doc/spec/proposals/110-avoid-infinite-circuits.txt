@@ -1,7 +1,7 @@
 Filename: 1xx-avoid-infinite-circuits.txt
 Title: Avoiding infinite length circuits
-Version:
-Last-Modified:
+Version: $Revision$
+Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 13-Mar-2007
 Status: Open

@@ -1,7 +1,7 @@
 Filename: 107-uptime-sanity-checking.txt
 Title: Uptime Sanity Checking
-Version:
-Last-Modified:
+Version: $Revision$
+Last-Modified: $Date$
 Author: Kevin Bauer & Damon McCoy
 Created: 8-March-2007
 Status: Closed
