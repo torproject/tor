@@ -2386,7 +2386,7 @@ test_v3_networkstatus(void)
   smartlist_add(votes, v3);
   smartlist_add(votes, v1);
   smartlist_add(votes, v2);
-  consensus_text = networkstatus_compute_consensus(votes,
+  consensus_text = networkstatus_compute_consensus(votes, 3,
                                                    cert3->identity_key,
                                                    sign_skey_3);
   test_assert(consensus_text);

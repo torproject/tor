@@ -197,6 +197,8 @@ compare_votes(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
     return r;
   if ((r = strcmp(b->status.nickname, a->status.nickname)))
     return r;
+  if ((r = (((int)b->status.addr) - ((int)a->status.addr))))
+    return r;
   if ((r = (((int)b->status.or_port) - ((int)a->status.or_port))))
     return r;
   if ((r = (((int)b->status.dir_port) - ((int)a->status.dir_port))))
@@ -263,6 +265,7 @@ hash_list_members(char *digest_out, smartlist_t *lst)
 /** DOCDOC */
 char *
 networkstatus_compute_consensus(smartlist_t *votes,
+                                int total_authorities,
                                 crypto_pk_env_t *identity_key,
                                 crypto_pk_env_t *signing_key)
 {
@@ -273,7 +276,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   int vote_seconds, dist_seconds;
   char *client_versions = NULL, *server_versions = NULL;
   smartlist_t *flags;
-  int total_authorities = smartlist_len(votes); /*XXXX020 not right. */
+  tor_assert(total_authorities >= smartlist_len(votes));
 
   if (!smartlist_len(votes)) {
     log_warn(LD_DIR, "Can't compute a consensus from no votes.");
@@ -516,7 +519,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         }
         if (rs->flags & (U64_LITERAL(1) << named_flag[v_sl_idx])) {
           if (chosen_name && strcmp(chosen_name, rs->status.nickname))
-            naming_conflict = 1;
+            naming_conflict = 1; /* XXXX020 warn? */
           chosen_name = rs->status.nickname;
         }
 

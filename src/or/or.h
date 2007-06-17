@@ -2758,6 +2758,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 
 void networkstatus_vote_free(networkstatus_vote_t *ns);
 char *networkstatus_compute_consensus(smartlist_t *votes,
+                                      int total_authorities,
                                       crypto_pk_env_t *identity_key,
                                       crypto_pk_env_t *signing_key);
 networkstatus_voter_info_t *networkstatus_get_voter_by_id(
