@@ -19,7 +19,7 @@ $Id$
        103  Splitting identity key from regularly used signing key
        104  Long and Short Router Descriptors
 
-   AS OF 18 MAY 2007, THIS SPECIFICATION HAS NOT YET BEEN COMPLETELY
+   AS OF 14 JUNE 2007, THIS SPECIFICATION HAS NOT YET BEEN COMPLETELY
    IMPLEMENTED, OR COMPLETELY COMPLETED.
 
    XXX when to download certificates.
@@ -35,19 +35,17 @@ $Id$
    The Version 1 Directory protocol
    --------------------------------
 
-   [XXX say which versions added what.]
-
-   Early versions of Tor introduced "Directory authorities": servers that
-   served signed "directory" documents containing a list of signed "router
-   descriptors", along with short summary of the status of each router.
-   Thus, clients could get up-to-date information on the state of the
-   network automatically, and be certain that they list they were getting
+   Early versions of Tor (0.0.2) introduced "Directory authorities": servers
+   that served signed "directory" documents containing a list of signed
+   "router descriptors", along with short summary of the status of each
+   router.  Thus, clients could get up-to-date information on the state of
+   the network automatically, and be certain that they list they were getting
    was attested by a trusted directory authority.
 
-   Later versions added directory caches, which download directories from
-   the authorities and serve them to clients.  Non-caches fetch from the
-   caches in preference to fetching from the authorities, thus distributing
-   bandwidth requirements.
+   Later versions (0.0.8) added directory caches, which download
+   directories from the authorities and serve them to clients.  Non-caches
+   fetch from the caches in preference to fetching from the authorities, thus
+   distributing bandwidth requirements.
 
    Also added during the version 1 directory protocol were "router status"
    documents: short documents that listed only the up/down status of the
@@ -695,7 +693,7 @@ $Id$
 
     "published" SP YYYY-MM-DD SP HH:MM:SS NL
 
-        [Exactly once for votes; Does not occur in consensuses.]
+        [Exactly once for votes; does not occur in consensuses.]
 
         The publication time for this status document (if a vote).
 
@@ -753,7 +751,8 @@ $Id$
    The authority section of a vote contains the following items, followed
    in turn by the authority's current key certificate:
 
-    "dir-source" SP nickname SP identity SP address SP IP SP dirport SP orport NL
+    "dir-source" SP nickname SP identity SP address SP IP SP dirport SP
+       orport NL
 
         [Exactly once, at start]
 
@@ -775,7 +774,8 @@ $Id$
    in the order given, with one group for each authority that contributed to
    the consensus, with groups sorted by authority identity digest:
 
-    "dir-source" SP nickname SP identity SP address SP IP SP dirport SP orport NL
+    "dir-source" SP nickname SP identity SP address SP IP SP dirport SP
+       orport NL
 
         [Exactly once, at start]
 
@@ -931,10 +931,13 @@ $Id$
    Given a set of votes, authorities compute the contents of the consensus
    document as follows:
 
-     The "valid-after" is the latest of all valid-after times on the votes.
+     The "valid-after", "valid-until", and "fresh-until" times are taken as
+     the median of the respective values from all the votes.
 
-     The "valid-until" is the earliest of all valid-until times on the
-     votes.
+     The times in the "voting-delay" line are taken as the median of the
+     VoteSeconds and DistSeconds times in the votes.
+
+     Known-flags is the union of all flags known by any voter.
 
     "client-versions" and "server-versions" are sorted in ascending
      order; A version is recommended in the consensus if it is recommended
@@ -946,19 +949,30 @@ $Id$
      authorities. These groups are sorted by the digests of the
      authorities identity keys, in ascending order.
 
-     A router status entry is included in the result if it is included by more
-     than half of the authorities (total authorities, not just those whose
-     votes we have).  A router entry has a flag set if it is included by
-     more than half of the authorities who care about that flag.  Two
-     router entries are "the same" if they have the same identity digest.
-     We use whatever descriptor digest is attested to by the most
-     authorities among the voters, breaking ties in favor of the one with
-     the most recent publication time.
+     A router status entry:
+        * is included in the result if some router status entry with the same
+          identity is included by more than half of the authorities (total
+          authorities, not just those whose votes we have).
 
-     (XXXX what to do about version, published time, IP, orport, dirport,
-       nickname, version?)
+        * For any given identity, we include at most one router status entry.
 
-     The signatures at the end of the document appear are sorted in
+        * A router entry has a flag set if that is included by more than half
+          of the authorities who care about that flag.
+
+        * Two router entries are "the same" if they have the same
+          <descriptor digest, published time, nickname, IP, ports> tuple.
+          We choose the tuple for a given router as whichever tuple appears
+          for that router in the most votes.  We break ties in favor of
+          the more recently published.
+
+        * The Named flag appears if it is included for this routerstatus by
+          _any_ authority, and if all authorities that list it list the same
+          nickname.
+
+        * The version is given as whichever version is listed by the most
+          voters, with ties decided in favor of more recent versions.
+
+     The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.
 
 3.4. Detached signatures
@@ -981,7 +995,7 @@ $Id$
 
         [As in the consensus]
 
-    "directory signature"
+    "directory-signature"
 
         [As in the consensus; the signature object is the same as in the
         consensus document.]
