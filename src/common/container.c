@@ -663,10 +663,10 @@ smartlist_uniq_digests(smartlist_t *sl)
   } prefix ## entry_t;                                    \
   struct maptype {                                        \
     HT_HEAD(prefix ## impl, prefix ## entry_t) head;      \
-  };
+  }
 
-DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_);
-DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
+DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_)
+DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_)
 
 /** Helper: compare strmap_entry_t objects by key value. */
 static INLINE int
@@ -698,14 +698,14 @@ digestmap_entry_hash(const digestmap_entry_t *a)
 }
 
 HT_PROTOTYPE(strmap_impl, strmap_entry_t, node, strmap_entry_hash,
-             strmap_entries_eq);
+             strmap_entries_eq)
 HT_GENERATE(strmap_impl, strmap_entry_t, node, strmap_entry_hash,
-            strmap_entries_eq, 0.6, malloc, realloc, free);
+            strmap_entries_eq, 0.6, malloc, realloc, free)
 
 HT_PROTOTYPE(digestmap_impl, digestmap_entry_t, node, digestmap_entry_hash,
-             digestmap_entries_eq);
+             digestmap_entries_eq)
 HT_GENERATE(digestmap_impl, digestmap_entry_t, node, digestmap_entry_hash,
-            digestmap_entries_eq, 0.6, malloc, realloc, free);
+            digestmap_entries_eq, 0.6, malloc, realloc, free)
 
 /** Constructor to create a new empty map from strings to void*'s.
  */

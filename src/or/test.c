@@ -1408,7 +1408,7 @@ test_threads(void)
   /* Skip this test if we aren't threading. We should be threading most
    * everywhere by now. */
   if (1)
-    return 0;
+    return;
 #endif
   _thread_test_mutex = tor_mutex_new();
   _thread_test_start1 = tor_mutex_new();
@@ -1520,7 +1520,7 @@ test_gzip(void)
     test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                    GZIP_METHOD));
     test_assert(buf2);
-    test_assert(!memcmp(buf2, "\037\213", 2)); /* Gztip magic. */
+    test_assert(!memcmp(buf2, "\037\213", 2)); /* Gzip magic. */
     test_assert(detect_compression_method(buf2, len1) == GZIP_METHOD);
 
     test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,

@@ -1,6 +1,11 @@
 /* Copyright 2007 Nick Mathewson */
 /* See LICENSE for licensing information */
 /* $Id$ */
+#if 1
+/* Tor dependencies */
+#include "orconfig.h"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 

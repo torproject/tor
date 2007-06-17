@@ -128,9 +128,9 @@ cached_resolve_hash(cached_resolve_t *a)
 }
 
 HT_PROTOTYPE(cache_map, cached_resolve_t, node, cached_resolve_hash,
-             cached_resolves_eq);
+             cached_resolves_eq)
 HT_GENERATE(cache_map, cached_resolve_t, node, cached_resolve_hash,
-            cached_resolves_eq, 0.6, malloc, realloc, free);
+            cached_resolves_eq, 0.6, malloc, realloc, free)
 
 /** Initialize the DNS cache. */
 static void
