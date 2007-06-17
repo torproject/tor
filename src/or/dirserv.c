@@ -1575,7 +1575,9 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   smartlist_free(bandwidths_excluding_exits);
 }
 
-/** DOCDOC */
+/** Given a platform string as in a routerinfo_t (possibly null), return a
+ * newly allocated version string for a networkstatus document, or NULL if the
+ * platform doesn't give a Tor version. */
 static char *
 version_from_platform(const char *platform)
 {

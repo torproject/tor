@@ -12,7 +12,7 @@ const char dirvote_c_id[] =
  * \file dirvote.c
  **/
 
-/** DOCDOC */
+/** Clear all storage held in <b>ns</b>. */
 void
 networkstatus_vote_free(networkstatus_vote_t *ns)
 {
@@ -56,7 +56,9 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
   tor_free(ns);
 }
 
-/** DOCDOC */
+/** Return the voter info from <b>vote</b> for the voter whose identity digest
+ * is <b>identity</b>, or NULL if no such voter is associated with
+ * <b>vote</b>. */
 networkstatus_voter_info_t *
 networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
                               const char *identity)
@@ -69,7 +71,7 @@ networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
   return NULL;
 }
 
-/** DOCDOC */
+/** Helper for sorting a list of time_t* */
 static int
 _compare_times(const void **_a, const void **_b)
 {
@@ -82,7 +84,7 @@ _compare_times(const void **_a, const void **_b)
     return 0;
 }
 
-/** DOCDOC */
+/** Helper for sorting a list of int* */
 static int
 _compare_ints(const void **_a, const void **_b)
 {
@@ -95,26 +97,30 @@ _compare_ints(const void **_a, const void **_b)
     return 0;
 }
 
-/** DOCDOC */
+/** Given a list of one or more time_t*, return the (low) median. */
 static time_t
 median_time(smartlist_t *times)
 {
   int idx;
+  tor_assert(smartlist_len(times));
   smartlist_sort(times, _compare_times);
   idx = (smartlist_len(times)-1)/2;
   return *(time_t*)smartlist_get(times, idx);
 }
 
-/** DOCDOC */
+/** Given a list of one or more int*, return the (low) median. */
 static int
 median_int(smartlist_t *ints)
 {
   int idx;
+  tor_assert(smartlist_len(ints));
   smartlist_sort(ints, _compare_ints);
   idx = (smartlist_len(ints)-1)/2;
   return *(time_t*)smartlist_get(ints, idx);
 }
 
+/** Given a vote <b>vote</b> (not a consensus!), return its associated
+ * networkstatus_voter_info_t.*/
 static networkstatus_voter_info_t *
 get_voter(const networkstatus_vote_t *vote)
 {
@@ -125,7 +131,8 @@ get_voter(const networkstatus_vote_t *vote)
   return smartlist_get(vote->voters, 0);
 }
 
-/** DOCDOC */
+/** Helper for sorting networkstatus_vote_t votes (not consensuses) by the
+ * hash of their voters' identity digests. */
 static int
 _compare_votes_by_authority_id(const void **_a, const void **_b)
 {
@@ -134,7 +141,8 @@ _compare_votes_by_authority_id(const void **_a, const void **_b)
                 get_voter(b)->identity_digest, DIGEST_LEN);
 }
 
-/** DOCDOC */
+/** Given a sorted list of strings <b>in</b>, add every member to <b>out</b>
+ * that occurs more than <b>min</b> times. */
 static void
 get_frequent_members(smartlist_t *out, smartlist_t *in, int min)
 {
@@ -155,7 +163,8 @@ get_frequent_members(smartlist_t *out, smartlist_t *in, int min)
     smartlist_add(out, cur);
 }
 
-/** DOCDOC */
+/** Given a sorted list of strings <b>lst</b>, return the member that appears
+ * most.  Break ties in favor of later-occuring members. */
 static const char *
 get_most_frequent_member(smartlist_t *lst)
 {
@@ -185,11 +194,16 @@ get_most_frequent_member(smartlist_t *lst)
   return most_frequent;
 }
 
-/** DOCDOC */
+/** Return 0 if and only if <b>a</b> and <b>b</b> are routerstatuses
+ * that come from the same routerinfo, with the same derived elements.
+ */
 static int
-compare_votes(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
+compare_vote_rs(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
 {
   int r;
+  if ((r = memcmp(a->status.identity_digest, b->status.identity_digest,
+                  DIGEST_LEN)))
+    return r;
   if ((r = memcmp(a->status.descriptor_digest, b->status.descriptor_digest,
                   DIGEST_LEN)))
     return r;
@@ -206,15 +220,18 @@ compare_votes(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
   return 0;
 }
 
-/** DOCDOC */
+/** Helper for sorting routerlists based on compare_vote_rs. */
 static int
-_compare_votes(const void **_a, const void **_b)
+_compare_vote_rs(const void **_a, const void **_b)
 {
   const vote_routerstatus_t *a = *_a, *b = *_b;
-  return compare_votes(a,b);
+  return compare_vote_rs(a,b);
 }
 
-/** DOCDOC */
+/** Given a list of vote_routerstatus_t, all for the same router identity,
+ * return whichever is most frequent, breaking ties in favor of more
+ * recently published vote_routerstatus_t.
+ */
 static vote_routerstatus_t *
 compute_routerstatus_consensus(smartlist_t *votes)
 {
@@ -222,10 +239,10 @@ compute_routerstatus_consensus(smartlist_t *votes)
   int most_n = 0, cur_n = 0;
   time_t most_published = 0;
 
-  smartlist_sort(votes, _compare_votes);
+  smartlist_sort(votes, _compare_vote_rs);
   SMARTLIST_FOREACH(votes, vote_routerstatus_t *, rs,
   {
-    if (cur && !compare_votes(cur, rs)) {
+    if (cur && !compare_vote_rs(cur, rs)) {
       ++cur_n;
     } else {
       if (cur_n > most_n ||
@@ -251,7 +268,8 @@ compute_routerstatus_consensus(smartlist_t *votes)
   return most;
 }
 
-/** DOCDOC */
+/** Given a list of strings in <b>lst</b>, set the DIGEST_LEN-byte digest at
+ * <b>digest_out</b> to the hash of the concatenation of those strings. */
 static void
 hash_list_members(char *digest_out, smartlist_t *lst)
 {
@@ -262,7 +280,11 @@ hash_list_members(char *digest_out, smartlist_t *lst)
   crypto_free_digest_env(d);
 }
 
-/** DOCDOC */
+/** Given a list of vote networkstatus_vote_t in <b>votes</b>, our public
+ * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
+ * and the number of <b>total_authorities</b> that we believe exist in our
+ * voting quorum, generate the text of a new v3 consensus vote, and return the
+ * value in a newly allocated string. */
 char *
 networkstatus_compute_consensus(smartlist_t *votes,
                                 int total_authorities,
@@ -649,8 +671,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
   return result;
 }
 
-/** DOCDOC */
-/* private */
+/** Check whether the pending_signature on <b>voter</b> is correctly signed by
+ * the signing key of <b>cert</b>. Return -1 if <b>cert</b> doesn't match the
+ * signing key; otherwise set the good_signature or bad_signature flag on
+ * <b>voter</b>, and return 0. */
+/* (private; exposed for testing.) */
 int
 networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
                                     networkstatus_voter_info_t *voter,
@@ -738,7 +763,8 @@ authority_cert_free(authority_cert_t *cert)
   tor_free(cert);
 }
 
-/** DOCDOC */
+/** Allocate and return a new authority_cert_t with the same contents as
+ * <b>cert</b>. */
 authority_cert_t *
 authority_cert_dup(authority_cert_t *cert)
 {

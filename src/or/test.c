@@ -2392,8 +2392,8 @@ test_v3_networkstatus(void)
   test_assert(consensus_text);
   con = networkstatus_parse_vote_from_string(consensus_text, 0);
   test_assert(con);
-  log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
-             v1_text, v2_text, v3_text);
+  //log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
+  //           v1_text, v2_text, v3_text);
 
   /* Check consensus contents. */
   test_assert(!con->is_vote);
