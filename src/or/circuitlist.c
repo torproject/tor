@@ -60,10 +60,10 @@ _orconn_circid_entry_hash(orconn_circid_circuit_map_t *a)
 static HT_HEAD(orconn_circid_map, orconn_circid_circuit_map_t)
      orconn_circid_circuit_map = HT_INITIALIZER();
 HT_PROTOTYPE(orconn_circid_map, orconn_circid_circuit_map_t, node,
-             _orconn_circid_entry_hash, _orconn_circid_entries_eq);
+             _orconn_circid_entry_hash, _orconn_circid_entries_eq)
 HT_GENERATE(orconn_circid_map, orconn_circid_circuit_map_t, node,
             _orconn_circid_entry_hash, _orconn_circid_entries_eq, 0.6,
-            malloc, realloc, free);
+            malloc, realloc, free)
 
 /** The most recently returned entry from circuit_get_by_circid_orconn;
  * used to improve performance when many cells arrive in a row from the
