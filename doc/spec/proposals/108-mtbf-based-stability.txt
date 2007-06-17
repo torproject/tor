@@ -46,12 +46,24 @@ Issues:
 
 Alternative:
 
-   "A router's Stability shall be defined as the sum of $alpha ^ d$ for every
+   "A router's Stability shall be defined as the sum of $\alpha ^ d$ for every
    $d$ such that the router was not observed to be unavailable $d$ days ago."
 
-   This allows a simpler implementation: every day, we multiply yesterday's
-   Stability by alpha, and if the router was running for all of today, we add
-   1.
+   This allows a simpler implementation: every day, we multiply
+   yesterday's Stability by alpha, and if the router was observed to be
+   available every time we looked today, we add 1.
+
+   Instead of "day", we could pick an arbitrary time unit.  We should
+   pick alpha to be high enough that long-term stability counts, but low
+   enough that the distant past is eventually forgotten.  Something
+   between .8 and .95 seems right.
+
+   (By requiring that routers be up for an entire day to get their
+   stability increased, instead of counting fractions of a day, we
+   capture the notion that stability is more like "probability of being
+   staying up for the next hour" than it is like "probability of being
+   up at some randomly chosen time over the next hour."  The former
+   notion of stability is far more relevant for long-lived circuits.)
 
 Limitations:
 
@@ -59,3 +71,14 @@ Limitations:
    tell whether a router is up or down.  So long as these aren't terribly
    wrong, and so long as they aren't significantly biased, we should be able
    to use them to estimate stability pretty well.
+
+   Probing approaches like the above could miss short incidents of
+   downtime.  If we use the router's declared uptime, we could detect
+   these: but doing so would penalize routers who reported their uptime
+   accurately.
+
+Implementation:
+
+   For now, the easiest way to store this information at authorities
+   would probably be in some kind of periodically flushed flat file.
+   Later, we could move to Berkeley db or something if we really had to.
