@@ -425,7 +425,7 @@ get_escaped_string(const char *start, size_t in_len_max,
  * but it will always end with a CRLF sequence.
  *
  * Currently the length of the message is limited to 1024 (including the
- * ending \n\r\0. */
+ * ending \r\n\0. */
 static void
 connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
 {
@@ -2636,6 +2636,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
                             int reason_code)
 {
   char reason_buf[64];
+  char addrport_buf[64];
   const char *status;
   circuit_t *circ;
   origin_circuit_t *origin_circ = NULL;
@@ -2698,15 +2699,25 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
       break;
     }
   }
+
+  if (tp == STREAM_EVENT_NEW) {
+    tor_snprintf(addrport_buf,sizeof(addrport_buf), "%sSOURCE_ADDR=%s:%d",
+                 strlen(reason_buf) ? " " : "",
+                 TO_CONN(conn)->address, TO_CONN(conn)->port );
+  } else {
+    addrport_buf[0] = '\0';
+  }
+
   circ = circuit_get_by_edge_conn(conn);
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
   send_control_event_extended(EVENT_STREAM_STATUS, ALL_NAMES,
-                        "650 STREAM %lu %s %lu %s@%s\r\n",
+                        "650 STREAM %lu %s %lu %s@%s%s\r\n",
                         (unsigned long)conn->global_identifier, status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
-                        buf, reason_buf);
+                        buf, reason_buf, addrport_buf);
+
   /* XXX need to specify its intended exit, etc? */
 
   return 0;

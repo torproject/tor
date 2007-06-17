@@ -835,7 +835,8 @@ $Id$
 
       "650" SP "STREAM" SP StreamID SP StreamStatus SP CircID SP Target
           [SP "REASON=" Reason [ SP "REMOTE_REASON=" Reason ]]
-          [SP "SOURCE=" Source] CRLF
+          [SP "SOURCE=" Source] [ SP "SOURCE_ADDR=" Address ":" Port ]
+          CRLF
 
       StreamStatus =
                "NEW"          / ; New request to connect
@@ -878,6 +879,11 @@ $Id$
    the Tor client decided to remap the address because of a cached
    answer, and "EXIT" is given if the remote node we queried gave us
    the new address as a response.
+
+   The "SOURCE_ADDR" field is included with NEW and NEWRESOLVE events if
+   extended events are enabled.  It indicates the address that requested
+   the connection, and can be (e.g.) used to look up the requesting
+   program.
 
 4.1.3. OR Connection status changed
 

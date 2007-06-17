@@ -10,6 +10,10 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Fail quickly and (relatively) harmlessly if we generate a network
       status document that is somehow malformed.
 
+  o Minor features (controller):
+    - Add a SOURCE_ADDR field to STREAM NEW events so that controllers can
+      match requests to applications. (Patch from Robert Hogan.)
+
   o Deprecated features:
     - RedirectExits is now deprecated.
 
