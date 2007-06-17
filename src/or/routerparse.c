@@ -2282,12 +2282,13 @@ token_free(directory_token_t *tok)
 }
 
 #define RET_ERR(msg)                                               \
-  do {                                                             \
+  STMT_BEGIN                                                       \
     if (tok) token_free(tok);                                      \
     tok = tor_malloc_zero(sizeof(directory_token_t));              \
     tok->tp = _ERR;                                                \
     tok->error = tor_strdup(msg);                                  \
-    goto done_tokenizing; } while (0)
+    goto done_tokenizing;                                          \
+  STMT_END
 
 static INLINE directory_token_t *
 token_check_object(const char *kwd,
@@ -2346,12 +2347,13 @@ get_next_token(const char **s, token_rule_t *table)
   const char *kwd = "";
 
 #define RET_ERR(msg)                                               \
-  do {                                                             \
+  STMT_BEGIN                                                       \
     if (tok) token_free(tok);                                      \
     tok = tor_malloc_zero(sizeof(directory_token_t));              \
     tok->tp = _ERR;                                                \
     tok->error = tor_strdup(msg);                                  \
-    goto done_tokenizing; } while (0)
+    goto done_tokenizing;                                          \
+  STMT_END
 
   tok = tor_malloc_zero(sizeof(directory_token_t));
   tok->tp = _ERR;

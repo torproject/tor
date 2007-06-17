@@ -40,18 +40,21 @@ const char buffers_c_id[] =
 /** Initialize the sentinel values on <b>m</b> (a value of buf-&gt;mem), which
  * has <b>ln</b> useful bytes. */
 #define SET_GUARDS(m, ln) \
-  do { set_uint32((m)-4,START_MAGIC); set_uint32((m)+ln,END_MAGIC); } while (0)
+  STMT_BEGIN                         \
+    set_uint32((m)-4,START_MAGIC);   \
+    set_uint32((m)+ln,END_MAGIC);    \
+  STMT_END
 #else
 #define RAW_MEM(m) (m)
 #define GUARDED_MEM(m) (m)
 #define ALLOC_LEN(ln) (ln)
-#define SET_GUARDS(m,ln) do {} while (0)
+#define SET_GUARDS(m,ln) STMT_NIL
 #endif
 
 #ifdef PARANOIA
-#define check() do { assert_buf_ok(buf); } while (0)
+#define check() STMT_BEGIN assert_buf_ok(buf); STMT_END
 #else
-#define check() do { } while (0)
+#define check() STMT_NIL
 #endif
 
 #ifdef NOINLINE

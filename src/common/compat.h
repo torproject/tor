@@ -120,6 +120,21 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define PREDICT_UNLIKELY(exp) (exp)
 #endif
 
+/* Ways to declare macros. */
+#define STMT_NIL (void)0
+#ifdef __GNUC__
+#define STMT_BEGIN (void) ({
+#define STMT_END })
+#else
+#if defined(sun) || defined(__sun__)
+#define STMT_BEGIN if (1) {
+#define STMT_END } else STMT_NIL
+#else
+#define STMT_BEGIN do {
+#define STMT_END } while(0)
+#endif
+#endif
+
 /* ===== String compatibility */
 #ifdef MS_WINDOWS
 /* Windows names string functions differently from most other platforms. */
@@ -339,9 +354,9 @@ void tor_mutex_free(tor_mutex_t *m);
 unsigned long tor_get_thread_id(void);
 #else
 #define tor_mutex_new() ((tor_mutex_t*)tor_malloc(sizeof(int)))
-#define tor_mutex_acquire(m) do { } while (0)
-#define tor_mutex_release(m) do { } while (0)
-#define tor_mutex_free(m) do { tor_free(m); } while (0)
+#define tor_mutex_acquire(m) STMT_NIL
+#define tor_mutex_release(m) STMT_NIL
+#define tor_mutex_free(m) STMT_BEGIN tor_free(m); STMT_END
 #define tor_get_thread_id() (1UL)
 #endif
 

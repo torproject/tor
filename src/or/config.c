@@ -552,11 +552,11 @@ typedef struct {
 
 /** Macro: assert that <b>cfg</b> has the right magic field for format
  * <b>fmt</b>. */
-#define CHECK(fmt, cfg) do {                                            \
+#define CHECK(fmt, cfg) STMT_BEGIN                                      \
     tor_assert(fmt && cfg);                                             \
     tor_assert((fmt)->magic ==                                          \
                *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
-  } while (0)
+  STMT_END
 
 static void config_line_append(config_line_t **lst,
                                const char *key, const char *val);
@@ -2419,8 +2419,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   const char *uname = get_uname();
   char buf[1024];
 #define REJECT(arg) \
-  do { *msg = tor_strdup(arg); return -1; } while (0)
-#define COMPLAIN(arg) do { log(LOG_WARN, LD_CONFIG, arg); } while (0)
+  STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
+#define COMPLAIN(arg) STMT_BEGIN log(LOG_WARN, LD_CONFIG, arg); STMT_END
 
   tor_assert(msg);
   *msg = NULL;

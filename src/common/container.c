@@ -665,8 +665,8 @@ smartlist_uniq_digests(smartlist_t *sl)
     HT_HEAD(prefix ## impl, prefix ## entry_t) head;      \
   }
 
-DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_)
-DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_)
+DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_);
+DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
 
 /** Helper: compare strmap_entry_t objects by key value. */
 static INLINE int

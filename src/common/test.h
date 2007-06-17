@@ -16,9 +16,6 @@
 #include <stdio.h>
 #include "compat.h"
 
-#define STMT_BEGIN  do {
-#define STMT_END    } while (0)
-
 #ifdef __GNUC__
 #define PRETTY_FUNCTION __PRETTY_FUNCTION__
 #else

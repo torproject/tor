@@ -1965,7 +1965,7 @@ nt_service_loadlibrary(void)
     goto err;
   }
 
-#define LOAD(f) do {                                                    \
+#define LOAD(f) STMT_BEGIN                                              \
     if (!(fn = GetProcAddress(library, #f))) {                          \
       log_err(LD_BUG,                                                   \
               "Couldn't find %s in advapi32.dll! We probably got the "  \
@@ -1974,7 +1974,7 @@ nt_service_loadlibrary(void)
     } else {                                                            \
       service_fns.f ## _fn = fn;                                        \
     }                                                                   \
-  } while (0)
+  STMT_END
 
   LOAD(ChangeServiceConfig2A);
   LOAD(CloseServiceHandle);

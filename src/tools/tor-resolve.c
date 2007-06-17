@@ -41,8 +41,8 @@
 
 #define RESPONSE_LEN_4 8
 #define log_sock_error(act, _s)                                         \
-  do { log_fn(LOG_ERR, LD_NET, "Error while %s: %s", act,              \
-              tor_socket_strerror(tor_socket_errno(_s))); } while (0)
+  STMT_BEGIN log_fn(LOG_ERR, LD_NET, "Error while %s: %s", act,         \
+              tor_socket_strerror(tor_socket_errno(_s))); STMT_END
 
 static void usage(void) ATTR_NORETURN;
 

@@ -103,7 +103,7 @@ static int dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
 static void _assert_cache_ok(void);
 #define assert_cache_ok() _assert_cache_ok()
 #else
-#define assert_cache_ok() do {} while (0)
+#define assert_cache_ok() STMT_NIL
 #endif
 static void assert_resolve_ok(cached_resolve_t *resolve);
 

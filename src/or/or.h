@@ -2576,14 +2576,14 @@ void control_adjust_event_log_severity(void);
  * Stmt must not contain any return or goto statements.
  */
 #define CONN_LOG_PROTECT(conn, stmt)                                    \
-  do {                                                                  \
+  STMT_BEGIN                                                            \
     int _log_conn_is_control = (conn && conn->type == CONN_TYPE_CONTROL); \
     if (_log_conn_is_control)                                           \
       disable_control_logging();                                        \
-    do {stmt;} while (0);                                               \
+  STMT_BEGIN stmt; STMT_END;                                            \
     if (_log_conn_is_control)                                           \
       enable_control_logging();                                         \
-  } while (0)
+  STMT_END
 
 /** Log information about the connection <b>conn</b>, protecting it as with
  * CONN_LOG_PROTECT. Example:

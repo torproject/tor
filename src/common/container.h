@@ -159,24 +159,24 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
  * </pre>
  */
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
-  do {                                                          \
+  STMT_BEGIN                                                    \
     int var ## _sl_idx, var ## _sl_len=(sl)->num_used;          \
     type var;                                                   \
     for (var ## _sl_idx = 0; var ## _sl_idx < var ## _sl_len;   \
          ++var ## _sl_idx) {                                    \
       var = (sl)->list[var ## _sl_idx];                         \
       cmd;                                                      \
-    } } while (0)
+    } STMT_END
 
 /** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
  * with the variable <b>var</b>, remove the current element in a way that
  * won't confuse the loop. */
 #define SMARTLIST_DEL_CURRENT(sl, var)          \
-  do {                                          \
+  STMT_BEGIN                                    \
     smartlist_del(sl, var ## _sl_idx);          \
     --var ## _sl_idx;                           \
     --var ## _sl_len;                           \
-  } while (0);
+  STMT_END
 
 #define DECLARE_MAP_FNS(maptype, keytype, prefix)                       \
   typedef struct maptype maptype;                                       \

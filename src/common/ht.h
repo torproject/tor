@@ -79,9 +79,7 @@ ht_string_hash(const char *s)
 }
 
 #define _HT_SET_HASH(elm, field, hashfn)        \
-  do {                                          \
-    (elm)->field.hte_hash = hashfn(elm);        \
-  } while (0)
+    (elm)->field.hte_hash = hashfn(elm)
 
 #define HT_FOREACH(x, name, head)                 \
   for ((x) = HT_START(name, head);                \

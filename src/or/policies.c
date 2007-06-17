@@ -220,7 +220,7 @@ authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 }
 
 #define REJECT(arg) \
-  do { *msg = tor_strdup(arg); goto err; } while (0)
+  STMT_BEGIN *msg = tor_strdup(arg); goto err; STMT_END
 
 /** Config helper: If there's any problem with the policy configuration
  * options in <b>options</b>, return -1 and set <b>msg</b> to a newly

@@ -1007,25 +1007,25 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
 }
 #define test_eq_ip6(a,b) _test_eq_ip6((a),(b),#a,#b,__LINE__)
 
-#define test_pton6_same(a,b) do {                 \
+#define test_pton6_same(a,b) STMT_BEGIN          \
     r = tor_inet_pton(AF_INET6, a, &a1);         \
     test_assert(r==1);                           \
     r = tor_inet_pton(AF_INET6, b, &a2);         \
     test_assert(r==1);                           \
     test_eq_ip6(&a1,&a2);                        \
-  } while (0)
+  STMT_END
 
 #define test_pton6_bad(a)                       \
   test_eq(0, tor_inet_pton(AF_INET6, a, &a1))
 
-#define test_ntop6_reduces(a,b) do {                                    \
+#define test_ntop6_reduces(a,b) STMT_BEGIN                              \
     r = tor_inet_pton(AF_INET6, a, &a1);                                \
     test_assert(r==1);                                                  \
     test_streq(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), b);      \
     r = tor_inet_pton(AF_INET6, b, &a2);                                \
     test_assert(r==1);                                                  \
     test_eq_ip6(&a1, &a2);                                              \
-  } while (0)
+  STMT_END
 
 static void
 test_ip6_helpers(void)

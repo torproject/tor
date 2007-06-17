@@ -47,14 +47,14 @@
 
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
-#define tor_assert(expr) do {                                           \
+#define tor_assert(expr) STMT_BEGIN                                     \
     if (PREDICT_UNLIKELY(IS_FALSE_AS_INT(expr))) {                      \
       log(LOG_ERR, LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.", \
           _SHORT_FILE_, __LINE__, __func__, #expr);                     \
       fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",      \
               _SHORT_FILE_, __LINE__, __func__, #expr);                 \
       abort();                                                          \
-    } } while (0)
+    } STMT_END
 #endif
 
 #ifdef USE_DMALLOC
@@ -83,19 +83,19 @@ void _tor_free(void *mem);
 #ifdef USE_DMALLOC
 extern int dmalloc_free(const char *file, const int line, void *pnt,
                         const int func_id);
-#define tor_free(p) do { \
+#define tor_free(p) STMT_BEGIN \
     if (PREDICT_LIKELY((p)!=NULL)) {                \
       dmalloc_free(_SHORT_FILE_, __LINE__, (p), 0); \
       (p)=NULL;                                     \
     }                                               \
-  } while (0)
+  STMT_END
 #else
-#define tor_free(p) do {                                       \
+#define tor_free(p) STMT_BEGIN                                 \
     if (PREDICT_LIKELY((p)!=NULL)) {                           \
       free(p);                                                 \
       (p)=NULL;                                                \
     }                                                          \
-  } while (0)
+  STMT_END
 #endif
 
 #define tor_malloc(size)       _tor_malloc(size DMALLOC_ARGS)
