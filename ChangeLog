@@ -37,6 +37,9 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Add DNSPort connections to the global connection list, so that we
       can time them out correctly. (Bug found by mwenge) [Bugfix on
       0.2.0.2-alpha]
+    - Fix eventdns.c behavior on Solaris: It is critical to include
+      orconfig.h _before_ sys/types.h, so that we can get the expected
+      definition of _FILE_OFFSET_BITS.  [Bugfix on 0.1.2.x]
 
   o Minor bugfixes (hidden services):
     - Stop tearing down the whole circuit when the user asks for a
