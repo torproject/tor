@@ -23,6 +23,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   struct evdns_server_question *q = NULL;
   struct sockaddr_storage addr;
   struct sockaddr *sa;
+  struct sockaddr_in *sin;
   int addrlen;
   uint32_t ipaddr;
   int err = DNS_ERR_NONE;
@@ -49,9 +50,10 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
     return;
   } else {
-    struct sockaddr_in *sin = (struct sockaddr_in*)&addr;
+    sin = (struct sockaddr_in*)&addr;
     ipaddr = ntohl(sin->sin_addr.s_addr);
   }
+
   if (!socks_policy_permits_address(ipaddr)) {
     log_warn(LD_APP, "Rejecting DNS request from disallowed IP.");
     evdns_server_request_respond(req, DNS_ERR_REFUSED);
@@ -112,6 +114,11 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   /* Make a new dummy AP connection, and attach the request to it. */
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
+
+  TO_CONN(conn)->addr = ntohl(sin->sin_addr.s_addr);
+  TO_CONN(conn)->port = ntohs(sin->sin_port);
+  TO_CONN(conn)->address = tor_dup_addr(TO_CONN(conn)->addr);
+
   if (q->type == EVDNS_TYPE_A)
     conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
   else

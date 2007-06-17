@@ -13,6 +13,8 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Minor features (controller):
     - Add a SOURCE_ADDR field to STREAM NEW events so that controllers can
       match requests to applications. (Patch from Robert Hogan.)
+    - Report address and port correctly on connections to DNSPort. (Patch
+      from Robert Hogan.)
 
   o Deprecated features:
     - RedirectExits is now deprecated.
