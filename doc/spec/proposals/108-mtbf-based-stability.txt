@@ -29,22 +29,16 @@ Spec changes:
    known to drop circuits stupidly. (0.1.1.10-alpha through 0.1.1.16-rc
    are stupid this way.)
 
-   Stability shall be defined as the mean length of the runs observed by a
-   given directory authority.  A run begins when an authority decides
-   that the server is Running, and ends when the authority decides that
-   the server is not Running.  In-progress runs are counted when
-   measuring Stability.
+   Stability shall be defined as the weighted mean length of the runs
+   observed by a given directory authority.  A run begins when an authority
+   decides that the server is Running, and ends when the authority decides
+   that the server is not Running.  In-progress runs are counted when
+   measuring Stability.  When calculating the mean, runs are weighted by
+   $\alpha ^ t$, where $t$ is time elapsed since the end of the run, and
+   $0 < \alpha < 1$.  Time when an authority is down do not count to the
+   length of the run.
 
-Issues:
-
-   How do you define a clipped MTBF?  If the current month begins with one
-   day at the end of a one-year uptime, and then has 29 days of uptime, do we
-   average one day and 29 days?  Or do we average one year and 29 days?  Or
-   take 29 days on its own and discard the year?
-
-   Surely somebody has done this kinds of thing before.
-
-Alternative:
+Rejected Alternative:
 
    "A router's Stability shall be defined as the sum of $\alpha ^ d$ for every
    $d$ such that the router was not observed to be unavailable $d$ days ago."
@@ -82,3 +76,13 @@ Implementation:
    For now, the easiest way to store this information at authorities
    would probably be in some kind of periodically flushed flat file.
    Later, we could move to Berkeley db or something if we really had to.
+
+   For each router, an authority will need to store:
+     The router ID.
+     Whether the router is up.
+     The time when the current run started, if the router is up.
+     The weighted sum length of all previous runs.
+     The time at which the weighted sum length was last weighted down.
+
+   Servers should probe at random intervals to test whether servers are
+   running.
