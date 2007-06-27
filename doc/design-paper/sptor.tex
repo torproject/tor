@@ -71,20 +71,22 @@ logical or physical locations to those sites or to observers.  It
 enables hosts to be publicly accessible yet have similar protection
 against location through its \emph{location-hidden services}.
 
-To connect to a remote server via Tor, the client software learns
+To connect to a remote server via Tor the client software first learns
 a %signed
 list of Tor nodes from several central \emph{directory servers} via a
-voting protocol to avoid dependence on or complete trust in any one of
-them, and incrementally creates a private pathway or \emph{circuit} of
-encrypted connections through authenticated Tor nodes on the network
-whose public keys were obtained form the directory servers,
-negotiating a separate set of encryption keys for each hop along the
+voting protocol (to avoid dependence on or complete trust in any one
+of these servers). It then incrementally creates a private pathway or
+\emph{circuit} across the network. This circuit consists of
+encrypted connections through authenticated Tor nodes
+whose public keys were obtained from the directory servers. The client
+software negotiates a separate set of encryption keys for each hop along the
 circuit. The nodes in the circuit are chosen at random by the client
 subject to a preference for higher performing nodes to allocate
 resources effectively and with a client-chosen preferred set of first
 nodes called \emph{entry guards} to complicate profiling attacks by
 internal adversaries~\cite{hs-attack}.
-The circuit is extended one node at a time, and each node
+The circuit is extended one node at a time, tunneling extensions
+through already established portions of the circuit, and each node
 along the way knows only the immediately previous and following nodes
 in the circuit, so no individual Tor node knows the complete path that
 each fixed-sized data packet (or \emph{cell}) will take.  Thus,
