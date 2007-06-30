@@ -1403,7 +1403,8 @@ static void
 test_threads(void)
 {
   char *s1, *s2;
-  int done = 0;
+  int done = 0, timedout = 0;
+  time_t started;
 #ifndef TOR_IS_MULTITHREADED
   /* Skip this test if we aren't threading. We should be threading most
    * everywhere by now. */
@@ -1422,15 +1423,25 @@ test_threads(void)
   spawn_func(_thread_test_func, s2);
   tor_mutex_release(_thread_test_start2);
   tor_mutex_release(_thread_test_start1);
+  started = time(NULL);
   while (!done) {
     tor_mutex_acquire(_thread_test_mutex);
     strmap_assert_ok(_thread_test_strmap);
     if (strmap_get(_thread_test_strmap, "thread 1") &&
-        strmap_get(_thread_test_strmap, "thread 2"))
+        strmap_get(_thread_test_strmap, "thread 2")) {
       done = 1;
+    } else if (time(NULL) > started + 10) {
+      timedout = done = 1;
+    }
     tor_mutex_release(_thread_test_mutex);
   }
   tor_mutex_free(_thread_test_mutex);
+
+  if (timedout) {
+    test_assert(strmap_get(_thread_test_strmap, "thread 1"));
+    test_assert(strmap_get(_thread_test_strmap, "thread 2"));
+    test_assert(!timedout);
+  }
 
   /* different thread IDs. */
   test_assert(strcmp(strmap_get(_thread_test_strmap, "thread 1"),
