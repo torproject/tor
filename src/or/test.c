@@ -2775,16 +2775,26 @@ main(int c, char**v)
   test_crypto();
   test_crypto_dh();
   test_crypto_s2k();
-  puts("\n========================= Util ============================");
+  puts("\n========================= Util ============================"
+       "\n--IPv6");
   test_ip6_helpers();
+  puts("\n--gzip");
   test_gzip();
+  puts("\n--util");
   test_util();
+  puts("\n--smartlist");
   test_smartlist();
+  puts("\n--mempool");
   test_mempool();
+  puts("\n--strmap");
   test_strmap();
+  puts("\n--control formats");
   test_control_formats();
+  puts("\n--pqueue");
   test_pqueue();
+  puts("\n--mmap");
   test_mmap();
+  puts("\n--threads");
   test_threads();
   puts("\n========================= Onion Skins =====================");
   test_onion_handshake();
