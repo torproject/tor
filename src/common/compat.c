@@ -1439,7 +1439,7 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
 #endif
 #endif
 
-#ifdef USE_WIN32_THREADS
+#if defined(USE_WIN32_THREADS) && 0
 /** A generic lock structure for multithreaded builds. */
 struct tor_mutex_t {
   HANDLE handle;
@@ -1483,6 +1483,42 @@ tor_mutex_release(tor_mutex_t *m)
   if (!r) {
     log_warn(LD_GENERAL, "Failed to release mutex: %d", (int) GetLastError());
   }
+}
+unsigned long
+tor_get_thread_id(void)
+{
+  return (unsigned long)GetCurrentThreadId();
+}
+#elif defined(USE_WIN32_THREADS)
+/** A generic lock structure for multithreaded builds. */
+struct tor_mutex_t {
+  CRITICAL_SECTION mutex;
+};
+tor_mutex_t *
+tor_mutex_new(void)
+{
+  void *r
+  m = tor_malloc_zero(sizeof(tor_mutex_t));
+  r = InitializeCriticalSection(&m->mutex);
+  tor_assert(r != NULL);
+  return m;
+}
+void
+tor_mutex_free(tor_mutex_t *m)
+{
+  DeleteCriticalSection(&m->mutex);
+  tor_free(m);
+}
+void
+tor_mutex_acquire(tor_mutex_t *m)
+{
+  tor_assert(m);
+  EnterCriticalSection(&m->mutex);
+}
+void
+tor_mutex_release(tor_mutex_t *m)
+{
+  LeaveCriticalSection(&m->mutex);
 }
 unsigned long
 tor_get_thread_id(void)
@@ -1561,6 +1597,142 @@ struct tor_mutex_t {
   int _unused;
 };
 #endif
+
+/* Condition stuff. DOCDOC */
+#ifdef USE_PTHREADS
+struct tor_cond_t {
+  pthread_cond_t cond;
+};
+tor_cond_t *
+tor_cond_new(void)
+{
+  tor_cond_t *cond = tor_malloc_zero(sizeof(tor_cond_t));
+  if (pthread_cond_init(&cond->cond, NULL)) {
+    tor_free(cond);
+    return NULL;
+  }
+  return cond;
+}
+void
+tor_conf_free(tor_cond_t *cond)
+{
+  tor_assert(cond);
+  if (pthread_cond_destroy(&cond->cond)) {
+    log_warn(LD_GENERAL,"Error freeing condition: %s", strerror(errno));
+    return;
+  }
+  tor_free(cond);
+}
+int
+tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex)
+{
+  return pthread_cond_wait(&cond->cond, &mutex->mutex) ? -1 : 0;
+}
+void
+tor_cond_signal_one(tor_cond_t *cond)
+{
+  pthread_cond_signal(&cond->cond);
+}
+void
+tor_cond_signal_all(tor_cond_t *cond)
+{
+  pthread_cond_broadcast(&cond->cond);
+}
+void
+tor_threads_init(void)
+{
+}
+#elif defined(USE_WIN32_THREADS)
+static DWORD cond_event_tls_index;
+struct tor_cond_t {
+  CRITICAL_SECTION mutex;
+  smartlist_t *events;
+};
+tor_cond_t *
+tor_cond_new(void)
+{
+  tor_cond_t *cond = tor_malloc_zero(sizeof(tor_cond_t));
+  if (!InitializeCriticalSection(&cond->mutex)) {
+    tor_free(cond);
+    return NULL;
+  }
+  cond->events = smartlist_create();
+  return cond;
+}
+void
+tor_cond_free(tor_cond_t *cond)
+{
+  tor_assert(cond);
+  DeleteCriticalSection(&cond->mutex);
+  /* XXXX020 notify? */
+  smartlist_free(cond->events);
+  tor_free(cond);
+}
+void
+tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex)
+{
+  HANDLE event;
+  int r;
+  tor_assert(cond);
+  tor_assert(mutex);
+  event = TlsGetValue(cond_event_tls_index);
+  if (!event) {
+    event = CreateEvent(0, FALSE, FALSE, NULL);
+    TlsSetValue(cond_event_tls_index, event);
+  }
+  EnterCriticalSection(&cond->mutex);
+
+  tor_assert(WaitForSingleObject(event, 0) == WAIT_TIMEOUT);
+  tor_assert(!smartlist_isin(cond->events, event));
+  smartlist_add(cond->events, event);
+
+  LeaveCriticalSection(&cond->mutex);
+
+  tor_mutex_release(mutex);
+  r = WaitForSingleObject(event, INFINITE);
+  tor_mutex_acquire(mutex);
+
+  switch (r) {
+    case WAIT_OBJECT_0: /* we got the mutex normally. */
+      break;
+    case WAIT_ABANDONED: /* holding thread exited. */
+    case WAIT_TIMEOUT: /* Should never happen. */
+      tor_assert(0);
+      break;
+    case WAIT_FAILED:
+      log_warn(LD_GENERAL, "Failed to acquire mutex: %d",(int) GetLastError());
+  }
+}
+void
+tor_cond_signal_one(tor_cond_t *cond)
+{
+  HANDLE event;
+  tor_assert(cond);
+
+  EnterCriticalSection(&cond->mutex);
+
+  if ((event = smartlist_pop_last(cond->events))
+    SetEvent(event);
+
+  LeaveCriticalSection(&cond->mutex);
+}
+void
+tor_cond_signal_all(tor_cond_t *cond)
+{
+  tor_assert(cond);
+
+  EnterCriticalSection(&cond->mutex);
+  SMARTLIST_FOREACH(cond->events, HANDLE, event, SetEvent(event));
+  smartlist_clear(cond->events);
+  LeaveCriticalSection(&cond->mutex);
+}
+void
+tor_threads_init(void)
+{
+  cond_event_tls_index = TlsAlloc();
+}
+#endif
+
 
 /**
  * On Windows, WSAEWOULDBLOCK is not always correct: when you see it,

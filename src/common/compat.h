@@ -360,6 +360,16 @@ unsigned long tor_get_thread_id(void);
 #define tor_get_thread_id() (1UL)
 #endif
 
+#ifdef TOR_IS_MULTITHREADED
+typedef struct tor_cond_t tor_cond_t;
+tor_cond_t *tor_cond_new(void);
+void tor_conf_free(tor_cond_t *cond);
+int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex);
+void tor_cond_signal_one(tor_cond_t *cond);
+void tor_cond_signal_all(tor_cond_t *cond);
+void tor_threads_init(void);
+#endif
+
 /* Platform-specific helpers. */
 #ifdef MS_WINDOWS
 char *format_win32_error(DWORD err);
