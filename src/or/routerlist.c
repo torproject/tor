@@ -2126,7 +2126,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     smartlist_set(rl->routers, idx, ri_new);
     ri_old->routerlist_index = -1;
     ri_new->routerlist_index = idx;
-    tor_assert( _routerlist_find_elt(rl->routers, ri_old, 0) == -1 );
+    tor_assert( _routerlist_find_elt(rl->routers, ri_old, -1) == -1 );
   } else {
     log_warn(LD_BUG, "Appending entry from routerlist_replace.");
     routerlist_insert(rl, ri_new);
