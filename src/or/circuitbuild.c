@@ -2418,6 +2418,13 @@ choose_random_entry(cpath_build_state_t *state)
       r = entry_is_live(entry, need_uptime, need_capacity, 0);
       if (r && !smartlist_isin(exit_family, r)) {
         smartlist_add(live_entry_guards, r);
+        if (!entry->made_contact) {
+          /* Always start with the first not-yet-contacted entry
+           * guard. Otherwise we might add several new ones, pick
+           * the second new one, and now we've expanded our entry
+           * guard list without needing to. */
+          goto choose_and_finish;
+        }
         if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
           break; /* we have enough */
       }
@@ -2451,6 +2458,7 @@ choose_random_entry(cpath_build_state_t *state)
     /* live_entry_guards may be empty below. Oh well, we tried. */
   }
 
+ choose_and_finish:
   r = smartlist_choose(live_entry_guards);
   smartlist_free(live_entry_guards);
   smartlist_free(exit_family);
