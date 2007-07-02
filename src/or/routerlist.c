@@ -1867,7 +1867,7 @@ routerlist_is_overfull(routerlist_t *rl)
 static INLINE int
 _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 {
-  tor_assert(idx < sl->num_used);
+  tor_assert(idx < smartlist_len(sl));
   if (idx < 0 || smartlist_get(sl, idx) != ri) {
     idx = -1;
     SMARTLIST_FOREACH(sl, routerinfo_t *, r,
@@ -2422,7 +2422,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          router->cache_info.identity_digest);
   if (old_router) {
     int pos = old_router->routerlist_index;
-    tor_assert(0 <= pos && pos < routerlist->routers->num_used);
+    tor_assert(0 <= pos && pos < smartlist_len(routerlist->routers));
     tor_assert(smartlist_get(routerlist->routers, pos) == old_router);
 
     if (router->cache_info.published_on <=
