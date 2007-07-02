@@ -881,9 +881,9 @@ $Id$
    the new address as a response.
 
    The "SOURCE_ADDR" field is included with NEW and NEWRESOLVE events if
-   extended events are enabled.  It indicates the address that requested
-   the connection, and can be (e.g.) used to look up the requesting
-   program.
+   extended events are enabled.  It indicates the address and port
+   that requested the connection, and can be (e.g.) used to look up the
+   requesting program.
 
 4.1.3. OR Connection status changed
 

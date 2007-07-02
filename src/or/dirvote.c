@@ -71,7 +71,7 @@ networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
   return NULL;
 }
 
-/** Helper for sorting a list of time_t* */
+/** Helper for sorting a list of time_t*. */
 static int
 _compare_times(const void **_a, const void **_b)
 {
@@ -84,7 +84,7 @@ _compare_times(const void **_a, const void **_b)
     return 0;
 }
 
-/** Helper for sorting a list of int* */
+/** Helper for sorting a list of int*. */
 static int
 _compare_ints(const void **_a, const void **_b)
 {
@@ -164,7 +164,7 @@ get_frequent_members(smartlist_t *out, smartlist_t *in, int min)
 }
 
 /** Given a sorted list of strings <b>lst</b>, return the member that appears
- * most.  Break ties in favor of later-occuring members. */
+ * most.  Break ties in favor of later-occurring members. */
 static const char *
 get_most_frequent_member(smartlist_t *lst)
 {
