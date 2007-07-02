@@ -1867,15 +1867,17 @@ routerlist_is_overfull(routerlist_t *rl)
 static INLINE int
 _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 {
-  tor_assert(idx < smartlist_len(sl));
-  if (idx < 0 || smartlist_get(sl, idx) != ri) {
+  if (idx < 0) {
     idx = -1;
     SMARTLIST_FOREACH(sl, routerinfo_t *, r,
                       if (r == ri) {
                         idx = r_sl_idx;
                         break;
                       });
-  }
+  } else {
+    tor_assert(idx < smartlist_len(sl));
+    tor_assert(smartlist_get(sl, idx) == ri);
+  };
   return idx;
 }
 
