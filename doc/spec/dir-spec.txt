@@ -324,20 +324,24 @@ $Id$
    descriptor.
 
    In lines that take multiple arguments, extra arguments SHOULD be
-   accepted and ignored.
+   accepted and ignored.  Many of the nonterminals below are defined in
+   section 2.3.
 
      "router" nickname address ORPort SOCKSPort DirPort NL
 
        [At start, exactly once.]
 
-       Indicates the beginning of a router descriptor.  "address" must be an
-       IPv4 address in dotted-quad format. The last three numbers indicate
-       the TCP ports at which this OR exposes functionality. ORPort is a port
-       at which this OR accepts TLS connections for the main OR protocol;
+       Indicates the beginning of a router descriptor.  "nickname" must be a
+       valid router nickname as specified in 2.3.  "address" must be an IPv4
+       address in dotted-quad format.  The last three numbers indicate the
+       TCP ports at which this OR exposes functionality. ORPort is a port at
+       which this OR accepts TLS connections for the main OR protocol;
        SOCKSPort is deprecated and should always be 0; and DirPort is the
        port at which this OR accepts directory-related HTTP connections.  If
        any port is not supported, the value 0 is given instead of a port
-       number.
+       number.  (At least one of DirPort and ORPort SHOULD be set;
+       authorities MAY reject any descriptor with both DirPort and ORPort of
+       0.)
 
     "bandwidth" bandwidth-avg bandwidth-burst bandwidth-observed NL
 
@@ -471,14 +475,14 @@ $Id$
         [At most once]
 
         Declare whether this version of Tor is using the newer enhanced
-        dns logic.  Versions of Tor without eventdns SHOULD NOT be used for
-        reverse hostname lookups.
+        dns logic.  Versions of Tor with this field set to false SHOULD NOT
+        be used for reverse hostname lookups.
 
         [All versions of Tor before 0.1.2.2-alpha should be assumed to have
          this option set to 0 if it is not present.  All Tor versions at
          0.1.2.2-alpha or later should be assumed to have this option set to
          1 if it is not present.  Until 0.1.2.1-alpha-dev, this option was
-         not generated, even when eventdns was in use.  Versions of Tor
+         not generated, even when the new DNS code was in use.  Versions of Tor
          before 0.1.2.1-alpha-dev did not parse this option, so it should be
          marked "opt".  The dnsworker logic has been removed, so this option
          should not be used by new server code.  However, it can still be
