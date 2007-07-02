@@ -55,21 +55,21 @@ void smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2);
 #ifdef DEBUG_SMARTLIST
 /** Return the number of items in sl.
  */
-extern INLINE int smartlist_len(const smartlist_t *sl) ATTR_PURE;
-extern INLINE int smartlist_len(const smartlist_t *sl) {
+static INLINE int smartlist_len(const smartlist_t *sl) ATTR_PURE;
+static INLINE int smartlist_len(const smartlist_t *sl) {
   tor_assert(sl);
   return (sl)->num_used;
 }
 /** Return the <b>idx</b>th element of sl.
  */
-extern INLINE void *smartlist_get(const smartlist_t *sl, int idx) ATTR_PURE;
-extern INLINE void *smartlist_get(const smartlist_t *sl, int idx) {
+static INLINE void *smartlist_get(const smartlist_t *sl, int idx) ATTR_PURE;
+static INLINE void *smartlist_get(const smartlist_t *sl, int idx) {
   tor_assert(sl);
   tor_assert(idx>=0);
   tor_assert(sl->num_used > idx);
   return sl->list[idx];
 }
-extern INLINE void smartlist_set(smartlist_t *sl, int idx, void *val) {
+static INLINE void smartlist_set(smartlist_t *sl, int idx, void *val) {
   tor_assert(sl);
   tor_assert(idx>=0);
   tor_assert(sl->num_used > idx);
