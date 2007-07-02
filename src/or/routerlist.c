@@ -1867,6 +1867,7 @@ routerlist_is_overfull(routerlist_t *rl)
 static INLINE int
 _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 {
+  tor_assert(idx < sl->num_used);
   if (idx < 0 || smartlist_get(sl, idx) != ri) {
     idx = -1;
     SMARTLIST_FOREACH(sl, routerinfo_t *, r,
@@ -2125,6 +2126,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     smartlist_set(rl->routers, idx, ri_new);
     ri_old->routerlist_index = -1;
     ri_new->routerlist_index = idx;
+    tor_assert( _routerlist_find_elt(rl->routers, ri_old, 0) == -1 );
   } else {
     log_warn(LD_BUG, "Appending entry from routerlist_replace.");
     routerlist_insert(rl, ri_new);
@@ -2420,6 +2422,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          router->cache_info.identity_digest);
   if (old_router) {
     int pos = old_router->routerlist_index;
+    tor_assert(0 <= pos && pos < routerlist->routers->num_used);
     tor_assert(smartlist_get(routerlist->routers, pos) == old_router);
 
     if (router->cache_info.published_on <=
