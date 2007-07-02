@@ -1368,18 +1368,24 @@ static strmap_t *_thread_test_strmap = NULL;
 
 static void _thread_test_func(void* _s) ATTR_NORETURN;
 
+static int t1_count = 0;
+static int t2_count = 0;
+
 static void
 _thread_test_func(void* _s)
 {
   char *s = _s;
-  int i;
+  int i, *count;
   tor_mutex_t *m;
   char buf[64];
   char *cp;
-  if (!strcmp(s, "thread 1"))
+  if (!strcmp(s, "thread 1")) {
     m = _thread_test_start1;
-  else
+    count = &t1_count;
+  } else {
     m = _thread_test_start2;
+    count = &t2_count;
+  }
   tor_mutex_acquire(m);
 
   tor_snprintf(buf, sizeof(buf), "%lu", tor_get_thread_id());
@@ -1388,6 +1394,7 @@ _thread_test_func(void* _s)
   for (i=0; i<100000; ++i) {
     tor_mutex_acquire(_thread_test_mutex);
     strmap_set(_thread_test_strmap, "last to run", cp);
+    ++*count;
     tor_mutex_release(_thread_test_mutex);
   }
   tor_mutex_acquire(_thread_test_mutex);
@@ -1438,6 +1445,7 @@ test_threads(void)
   tor_mutex_free(_thread_test_mutex);
 
   if (timedout) {
+    printf("\nTimed out: %d %d", t1_count, t2_count);
     test_assert(strmap_get(_thread_test_strmap, "thread 1"));
     test_assert(strmap_get(_thread_test_strmap, "thread 2"));
     test_assert(!timedout);
