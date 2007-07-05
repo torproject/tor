@@ -4,4 +4,4 @@ aclocal && \
 	autoheader && \
 	autoconf && \
 	automake --add-missing --copy && \
-	if test x$NOCONF = x ; then ./configure; fi
+	if test x$NOCONF = x ; then ./configure "$@"; fi
