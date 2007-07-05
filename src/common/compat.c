@@ -1439,7 +1439,7 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
 #endif
 #endif
 
-#ifdef USE_WIN32_THREADS
+#if defined(USE_WIN32_THREADS) && 0
 /** A generic lock structure for multithreaded builds. */
 struct tor_mutex_t {
   HANDLE handle;
