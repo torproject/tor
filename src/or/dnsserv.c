@@ -109,8 +109,6 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     return;
   }
 
-  /* XXXX020 Send a stream event to the controller. */
-
   /* Make a new dummy AP connection, and attach the request to it. */
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
@@ -130,6 +128,8 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   conn->dns_server_request = req;
 
   connection_add(TO_CONN(conn));
+
+  control_event_stream_status(TO_CONN(conn), STREAM_EVENT_NEW, 0);
 
   /* Now, throw the connection over to get rewritten (which will answer it
   * immediately if it's in the cache, or completely bogus, or automapped),

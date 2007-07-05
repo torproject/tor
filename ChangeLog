@@ -19,10 +19,12 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Deprecated features:
     - RedirectExits is now deprecated.
 
-  o Minor feature (controller):
+  o Minor features (controller):
     - You can now use the ControlSocket option to tell Tor to listen for
       controller connections on Unix domain sockets on systems that support
       them.  (Patch from Peter Palfrader.)
+    - STREAM NEW events are generated for DNSPort requests and for tunneled
+      directory connections. (Patch from Robert Hogan.)
 
   o Minor bugfixes (directory):
     - Fix another crash bug related to extra-info caching.  (Bug found by

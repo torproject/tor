@@ -1946,6 +1946,8 @@ connection_ap_make_link(char *address, uint16_t port,
 
   conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
 
+  control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
+
   /* attaching to a dirty circuit is fine */
   if (connection_ap_handshake_attach_circuit(conn) < 0) {
     connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
