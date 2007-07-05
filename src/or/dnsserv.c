@@ -129,7 +129,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
 
   connection_add(TO_CONN(conn));
 
-  control_event_stream_status(TO_CONN(conn), STREAM_EVENT_NEW, 0);
+  control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
 
   /* Now, throw the connection over to get rewritten (which will answer it
   * immediately if it's in the cache, or completely bogus, or automapped),
