@@ -39,7 +39,7 @@ $Id$
    that served signed "directory" documents containing a list of signed
    "router descriptors", along with short summary of the status of each
    router.  Thus, clients could get up-to-date information on the state of
-   the network automatically, and be certain that they list they were getting
+   the network automatically, and be certain that the list they were getting
    was attested by a trusted directory authority.
 
    Later versions (0.0.8) added directory caches, which download
@@ -95,9 +95,10 @@ $Id$
    issues:
 
       * A great deal of bandwidth used to transmit router descriptors was
-        used by two fields that are not actually used by Tor routers.  We
-        save about 60% by moving them into a separate document that most
-        clients do not fetch or use.
+        used by two fields that are not actually used by Tor routers
+        (namely read-history and write-history).  We save about 60% by
+        moving them into a separate document that most clients do not
+        fetch or use.
 
       * It was possible under certain perverse circumstances for clients
         to download an unusual set of network status documents, thus
@@ -203,7 +204,7 @@ $Id$
   following lightweight extensible information format.
 
   The highest level object is a Document, which consists of one or more
-  Items.  Every Item begins with a KeywordLine, followed by one or more
+  Items.  Every Item begins with a KeywordLine, followed by zero or more
   Objects. A KeywordLine begins with a Keyword, optionally followed by
   whitespace and more non-newline characters, and ends with a newline.  A
   Keyword is a sequence of one or more characters in the set [A-Za-z0-9-].
@@ -979,7 +980,7 @@ $Id$
      The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.
 
-3.4. Detached signatures
+3.5. Detached signatures
 
    Assuming full connectivity, every authority should compute and sign the
    same consensus directory in each period.  Therefore, it isn't necessary to
