@@ -131,7 +131,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define STMT_END } else STMT_NIL
 #else
 #define STMT_BEGIN do {
-#define STMT_END } while(0)
+#define STMT_END } while (0)
 #endif
 #endif
 

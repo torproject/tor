@@ -16,6 +16,11 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Report address and port correctly on connections to DNSPort. (Patch
       from Robert Hogan.)
 
+  o Performance improvements (win32):
+    - Use Critical Sections rather than Mutexes for synchronizing threads
+      on win32; Mutexes are heavier-weight, and designed for synchronizing
+      between processes.
+
   o Deprecated features:
     - RedirectExits is now deprecated.
 
