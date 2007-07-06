@@ -101,6 +101,7 @@ const char compat_c_id[] =
 
 #include "log.h"
 #include "util.h"
+#include "container.h"
 
 /* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY
@@ -1497,8 +1498,8 @@ struct tor_mutex_t {
 tor_mutex_t *
 tor_mutex_new(void)
 {
-  void *r
-  m = tor_malloc_zero(sizeof(tor_mutex_t));
+  void *r;
+  tor_mutex_t *m = tor_malloc_zero(sizeof(tor_mutex_t));
   r = InitializeCriticalSection(&m->mutex);
   tor_assert(r != NULL);
   return m;
