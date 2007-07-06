@@ -2359,6 +2359,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   int authdir = authdir_mode(get_options());
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
+  /* This has side effects, so do it before we start the real work */
+  int have_dir_info = router_have_minimum_dir_info();
 
   routerlist_check_bug_417();
   tor_assert(msg);
@@ -2454,7 +2456,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
           old_router->num_unreachable_notifications;
       }
       if (authdir && !from_cache && !from_fetch &&
-          router_have_minimum_dir_info() &&
+          have_dir_info &&
           dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL))) {
         if (router->num_unreachable_notifications >= 3) {
           unreachable = 1;
