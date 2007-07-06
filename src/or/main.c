@@ -1698,6 +1698,8 @@ tor_init(int argc, char *argv[])
   /* Have the log set up with our application name. */
   tor_snprintf(buf, sizeof(buf), "Tor %s", get_version());
   log_set_application_name(buf);
+  /* Initialize threading. */
+  tor_threads_init();
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
