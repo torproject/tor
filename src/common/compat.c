@@ -1498,10 +1498,8 @@ struct tor_mutex_t {
 tor_mutex_t *
 tor_mutex_new(void)
 {
-  void *r;
   tor_mutex_t *m = tor_malloc_zero(sizeof(tor_mutex_t));
-  r = InitializeCriticalSection(&m->mutex);
-  tor_assert(r != NULL);
+  InitializeCriticalSection(&m->mutex);
   return m;
 }
 void
@@ -1653,10 +1651,7 @@ tor_cond_t *
 tor_cond_new(void)
 {
   tor_cond_t *cond = tor_malloc_zero(sizeof(tor_cond_t));
-  if (!InitializeCriticalSection(&cond->mutex)) {
-    tor_free(cond);
-    return NULL;
-  }
+  InitializeCriticalSection(&cond->mutex);
   cond->events = smartlist_create();
   return cond;
 }
@@ -1669,7 +1664,7 @@ tor_cond_free(tor_cond_t *cond)
   smartlist_free(cond->events);
   tor_free(cond);
 }
-void
+int
 tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex)
 {
   HANDLE event;
@@ -1703,6 +1698,7 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex)
     case WAIT_FAILED:
       log_warn(LD_GENERAL, "Failed to acquire mutex: %d",(int) GetLastError());
   }
+  return 0;
 }
 void
 tor_cond_signal_one(tor_cond_t *cond)
@@ -1712,7 +1708,7 @@ tor_cond_signal_one(tor_cond_t *cond)
 
   EnterCriticalSection(&cond->mutex);
 
-  if ((event = smartlist_pop_last(cond->events))
+  if ((event = smartlist_pop_last(cond->events)))
     SetEvent(event);
 
   LeaveCriticalSection(&cond->mutex);
