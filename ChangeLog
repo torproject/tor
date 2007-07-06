@@ -31,6 +31,10 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - STREAM NEW events are generated for DNSPort requests and for tunneled
       directory connections. (Patch from Robert Hogan.)
 
+  o Major bugfixes (directory):
+    - Fix a crash bug in directory authorities when we re-number the
+      routerlist while inserting a new router. [Bugfix on 0.1.2.x]
+
   o Minor bugfixes (directory):
     - Fix another crash bug related to extra-info caching.  (Bug found by
       Peter Palfrader.) [Bugfix on 0.2.0.2-alpha]

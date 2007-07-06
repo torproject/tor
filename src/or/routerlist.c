@@ -2423,6 +2423,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   old_router = rimap_get(routerlist->identity_map,
                          router->cache_info.identity_digest);
   if (old_router) {
+    int have_min_info = router_have_minimum_dir_info(); /* can mess with pos,
+                                                         * so call it now.*/
     int pos = old_router->routerlist_index;
     tor_assert(0 <= pos && pos < smartlist_len(routerlist->routers));
     tor_assert(smartlist_get(routerlist->routers, pos) == old_router);
@@ -2452,10 +2454,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         router->num_unreachable_notifications =
           old_router->num_unreachable_notifications;
       }
-      if (authdir && !from_cache && !from_fetch &&
-          router_have_minimum_dir_info() &&
-          dirserv_thinks_router_is_blatantly_unreachable(router,
-                                                         time(NULL))) {
+      if (authdir && !from_cache && !from_fetch && have_min_info &&
+          dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL))) {
         if (router->num_unreachable_notifications >= 3) {
           unreachable = 1;
           log_notice(LD_DIR, "Notifying server '%s' that it's unreachable. "
