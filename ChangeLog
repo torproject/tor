@@ -5,7 +5,8 @@ Changes in version 0.1.2.15 - 2007-0?-??
       an mmap(). (Bug reported by lodger)
     - Count the number of authorities that recommend each version
       correctly.  Previously, we were under-counting by 1.
-
+    - Fix a crash bug in directory authorities when we re-number the
+      routerlist while inserting a new router.
 
 Changes in version 0.1.2.14 - 2007-05-25
   o Directory authority changes:

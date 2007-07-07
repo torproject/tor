@@ -1692,15 +1692,19 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
  * index as ri_old, if possible.  ri is freed as appropriate. */
 static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
-                   routerinfo_t *ri_new, int idx, int make_old)
+                   routerinfo_t *ri_new)
 {
+  int idx;
   {
     /* XXXX remove this code once bug 404 is fixed. */
     routerinfo_t *ri_generated = router_get_my_routerinfo();
     tor_assert(ri_generated != ri_new);
   }
   tor_assert(ri_old != ri_new);
-  idx = _routerlist_find_elt(rl->routers, ri_old, idx);
+  idx = ri_old->routerlist_index;
+  tor_assert(0 <= idx && idx < smartlist_len(rl->routers));
+  tor_assert(smartlist_get(rl->routers, idx) == ri_old);
+
   router_dir_info_changed();
   if (idx >= 0) {
     smartlist_set(rl->routers, idx, ri_new);
@@ -1720,7 +1724,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   digestmap_set(rl->desc_digest_map,
           ri_new->cache_info.signed_descriptor_digest, &(ri_new->cache_info));
 
-  if (make_old && get_options()->DirPort) {
+  if (get_options()->DirPort) {
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri_old);
     smartlist_add(rl->old_routers, sd);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
@@ -1898,6 +1902,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   int authdir = get_options()->AuthoritativeDir;
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
+  /* This has side effects, so do it before we start the real work */
+  int have_dir_info = router_have_minimum_dir_info();
 
   tor_assert(msg);
 
@@ -1965,9 +1971,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   old_router = digestmap_get(routerlist->identity_map,
                              router->cache_info.identity_digest);
   if (old_router) {
-    int pos = old_router->routerlist_index;
-    tor_assert(smartlist_get(routerlist->routers, pos) == old_router);
-
     if (router->cache_info.published_on <=
         old_router->cache_info.published_on) {
       /* Same key, but old */
@@ -1994,9 +1997,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
           old_router->num_unreachable_notifications;
       }
       if (authdir && !from_cache && !from_fetch &&
-          router_have_minimum_dir_info() &&
-          dirserv_thinks_router_is_blatantly_unreachable(router,
-                                                         time(NULL))) {
+          have_dir_info &&
+          dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL))) {
         if (router->num_unreachable_notifications >= 3) {
           unreachable = 1;
           log_notice(LD_DIR, "Notifying server '%s' that it's unreachable. "
@@ -2011,7 +2013,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
           router->num_unreachable_notifications++;
         }
       }
-      routerlist_replace(routerlist, old_router, router, pos, 1);
+      routerlist_replace(routerlist, old_router, router);
       if (!from_cache) {
         router_append_to_journal(&router->cache_info);
       }
