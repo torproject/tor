@@ -1702,10 +1702,14 @@ connection_ap_process_natd(edge_connection_t *conn)
   }
 
   daddr = tbuf = &tmp_buf[0] + 6; /* after end of "[DEST " */
-  while (*tbuf != '\0' && *tbuf != ' ')
-    tbuf++;
-  *tbuf = '\0';
-  tbuf++;
+  if (!(tbuf = strchr(tbuf, ' '))) {
+    log_warn(LD_APP,"Natd handshake was ill-formed; closing. The client "
+             "said: %s",
+             escaped(tmp_buf));
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_INVALID_NATD_DEST);
+    return -1;
+  }
+  *tbuf++ = '\0';
 
   /* pretend that a socks handshake completed so we don't try to
    * send a socks reply down a natd conn */

@@ -66,6 +66,10 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
       never choose any guards past it. This way we don't expand our
       guard list unless we need to. [Bugfix in 0.1.2.x]
 
+  o Security fixes (BSD natd support):
+    - Fix a possible buffer overrun when using BSD natd support.  Bug found
+      by croup.
+
 
 Changes in version 0.2.0.2-alpha - 2007-06-02
   o Major bugfixes on 0.2.0.1-alpha:
