@@ -11,33 +11,35 @@ Change history:
   13-May-2007  Initial proposal
   14-May-2007  Added changes suggested by Lasse Overlier
   30-May-2007  Changed descriptor format, key length discussion, typos
+  09-Jul-2007  Incorporated suggestions by Roger, added status of specification
+               and implementation for upcoming GSoC mid-term evaluation
 
 Overview:
 
   The basic idea of this proposal is to distribute the tasks of storing and
   serving hidden service descriptors from currently three authoritative
-  directory nodes among a large subset of all onion routers. The two reasons
-  to do this are better scalability and improved security properties. Further,
+  directory nodes among a large subset of all onion routers. The two reasons to
+  do this are better scalability and improved security properties. Further,
   this proposal suggests changes to the hidden service descriptor format to
-  prevent new security threats coming from decentralization and to gain
-  even better security properties.
-
+  prevent new security threats coming from decentralization and to gain even
+  better security properties.
+  
 Motivation:
 
   The current design of hidden services exhibits the following performance and
   security problems:
 
   First, the three hidden service authoritative directories constitute a
-  performance bottleneck in the system. The directory nodes are responsible
-  for storing and serving all hidden service descriptors. At the moment there
-  are about 1000 descriptors at a time, but this number is assumed to increase
-  in the future. Further, there is no replication protocol for descriptors
-  between the three directory nodes, so that hidden services must ensure the
+  performance bottleneck in the system. The directory nodes are responsible for
+  storing and serving all hidden service descriptors. At the moment there are
+  about 1000 descriptors at a time, but this number is assumed to increase in
+  the future. Further, there is no replication protocol for descriptors between
+  the three directory nodes, so that hidden services must ensure the
   availability of their descriptors by manually publishing them on all
   directory nodes. Whenever a fourth or fifth hidden service authoritative
   directory is added, hidden services will need to maintain an equally
-  increasing number of replicas. These scalability issues have an impact on
-  the current usage of hidden services and put an even higher burden on the
+  increasing number of replicas. These scalability issues have an impact on the
+  current usage of hidden services and put an even higher burden on the
   development of new kinds of applications for hidden services that might
   require storing even bigger numbers of descriptors.
 
@@ -48,48 +50,52 @@ Motivation:
   descriptor contents to determine which onion routers work as introduction
   points for a given hidden service and need to be attacked or threatened to
   shut it down. Furthermore, the contents of a hidden service descriptor offer
-  only minimal security properties to the hidden service. Whoever gets aware
-  of the service ID can easily find out whether the service is active at the
+  only minimal security properties to the hidden service. Whoever gets aware of
+  the service ID can easily find out whether the service is active at the
   moment and which introduction points it has. This applies to (former)
   clients, (former) introduction points, and of course to the directory nodes.
-  It requires only to request the descriptor for the given service ID --- which
+  It requires only to request the descriptor for the given service ID, which
   can be performed by anyone anonymously.
 
   This proposal suggests two major changes to approach the described
   performance and security problems:
 
-  The first change affects the storage location for hidden service
-  descriptors. Descriptors are distributed among a large subset of all onion
-  routers instead of three fixed directory nodes. Each storing node is
-  responsible for a subset of descriptors for a limited time only. It is not
-  able to choose which descriptors it stores at a certain time, because this
-  is determined by its onion ID which is hard to change frequently and in time
-  (only routers which are stable for a given time are accepted as storing
-  nodes). In order to resist single node failures and untrustworthy nodes,
-  descriptors are replicated among a certain number of storing nodes. A simple
-  replication protocol makes sure that descriptors don't get lost when the
-  node population changes. Therefore, a storing node periodically requests the
-  descriptors from its siblings. Connections to storing nodes are established
-  by extending existing circuits by one hop to the storing node. This also
-  ensures that contents are encrypted. The effect of this first change is that
-  the probability that a single node operator learns about a certain hidden
-  service is very small and that it is very hard to track a service over time,
-  even when it collaborates with other node operators.
-
+  The first change affects the storage location for hidden service descriptors.
+  Descriptors are distributed among a large subset of all onion routers instead
+  of three fixed directory nodes. Each storing node is responsible for a subset
+  of descriptors for a limited time only. It is not able to choose which
+  descriptors it stores at a certain time, because this is determined by its
+  onion ID which is hard to change frequently and in time (only routers which
+  are stable for a given time are accepted as storing nodes). In order to
+  resist single node failures and untrustworthy nodes, descriptors are
+  replicated among a certain number of storing nodes. A first replication
+  protocol makes sure that descriptors don't get lost when the node population
+  changes; therefore, a storing node periodically requests the descriptors from
+  its siblings. A second replication protocol distributes descriptors among
+  non-consecutive nodes of the ID ring to prevent a group of adversaries from
+  generating new onion keys until they have consecutive IDs to create a 'black
+  hole' in the ring and make random services unavailable. Connections to
+  storing nodes are established by extending existing circuits by one hop to
+  the storing node. This also ensures that contents are encrypted. The effect
+  of this first change is that the probability that a single node operator
+  learns about a certain hidden service is very small and that it is very hard
+  to track a service over time, even when it collaborates with other node
+  operators.
+  
   The second change concerns the content of hidden service descriptors.
-  Obviously, security problems cannot be solved only by decentralizing
-  storage; in fact, they could also get worse if done without caution. At
-  first, a descriptor ID needs to change periodically in order to be stored on
-  changing nodes over time. Next, the descriptor ID needs to be computable only
-  for the service's clients, but should be unpredictable for all other nodes.
-  Further, the storing node needs to be able to verify that the hidden service
-  is the true originator of the descriptor with the given ID even though it is
-  not a client. Finally, a storing node should learn as little information as
+  Obviously, security problems cannot be solved only by decentralizing storage;
+  in fact, they could also get worse if done without caution. At first, a
+  descriptor ID needs to change periodically in order to be stored on changing
+  nodes over time. Next, the descriptor ID needs to be computable only for the
+  service's clients, but should be unpredictable for all other nodes. Further,
+  the storing node needs to be able to verify that the hidden service is the
+  true originator of the descriptor with the given ID even though it is not a
+  client. Finally, a storing node should learn as little information as
   necessary by storing a descriptor, because it might not be as trustworthy as
   a directory node; for example it does not need to know the list of
-  introduction points. Therefore, a second key is applied that is only known
-  to the hidden service provider and its clients and that is not included in
-  the descriptor. It is used to calculate descriptor IDs and to encrypt the
+  introduction points. Therefore, a second key is applied that is only known to
+  the hidden service provider and its clients and that is not included in the
+  descriptor. It is used to calculate descriptor IDs and to encrypt the
   introduction points. This second key can either be given to all clients
   together with the hidden service ID, or to a group or a single client as
   authentication token. In the future this second key could be the result of
@@ -99,166 +105,465 @@ Motivation:
 
 Design:
 
-  The proposed design is described by the changes that are necessary to the
-  current design. Changes are grouped by content, rather than by affected
-  specification documents.
+  The proposed design is described by the required changes to the current
+  design. These requirements are grouped by content, rather than by affected
+  specification documents or code files, and numbered for reference below.
 
-  Tor clients and servers:
+  Hidden service clients, servers, and directories:
 
-    All participants can combine the network status lists received from
-    all directory authorities to one routing list containing only those
-    servers that store and serve hidden service descriptors and which
-    are contained in the majority of network status lists. A participant
-    only trusts its own routing list and never learns about routing
-    information from other parties. This list should only be created
-    on demand by Tor clients and servers that are involved in the new
-    hidden service protocol, i.e. hidden service directory node, hidden
-    service provider, and hidden service client.
+  /1/ Create routing list
 
-    All parties that are involved in the new hidden service protocol calculate
-    the clock skew between their local time and the times of directory
-    authorities. If the clock skew exceeds 1 minute (as opposed to 30 minutes
-    as in the current implementation), the user is warned upon performing the
-    first operation that is related to hidden services. However, the local
-    time is not adjusted automatically, because then they would be open
-    to attacks based on false times from directory authorities.
+    All participants can filter the consensus status document received from the
+    directory authorities to one routing list containing only those servers
+    that store and serve hidden service descriptors and which are running for
+    at least 24 hours. A participant only trusts its own routing list and never
+    learns about routing information from other parties.
+
+    - rend-spec.txt, section 1.4: Added description of how to obtain a routing
+      list of hidden service directories.
+
+    - routerparse.c: Changed routerstatus_parse_entry_from_string to parse the
+      "HSDir" flag in vote and consensus status documents.
+    - routerlist.c: Changed router_get_routerlist() to initialize routing list.
+    - or.h: Added hs_dirs member to routerlist_t.
+
+      [July 9: Specified and running, though the routing list is compiled for
+       each request anew.]
+
+  /2/ Determine responsible hidden service directory
+
+    All participants can determine the hidden service directory that is
+    responsible for storing and serving a given ID, as well as the hidden
+    service directories that replicate its content. Every hidden service
+    directory is responsible for the descriptor IDs in the interval from
+    its predecessor, exclusive, to its own ID, inclusive. Further, a hidden
+    service directory holds replicas for its n predecessors, where n denotes
+    the number of consecutive replicas. (requires /1/)
+    
+    - rend-spec.txt, section 1.4: Added description of how to determine the
+      responsible node(s) for a given descriptor ID.
+
+    - routerlist.c: Added get_responsible_hs_dir() to determine the router that
+      is responsible for a given descriptor ID.
+    - container.h: Added prototype for smartlist_digest_next_circular().
+    - container.c: Added implementation for smartlist_digest_next_circular().
+
+      [July 9: Specified and running.]
+    
+  Hidden service clients and providers:
+
+  /3/ Send tunneled HTTP request to hidden service directory in BEGIN_DIR cell
+
+    - rend-spec.txt, section 1.4: Added the requirement that requests need to
+      be sent via Tor.
+    - rend-spec.txt, section 1.6: Added the requirement that requests need to
+      be sent via Tor.
+
+    [July 9: Pending]
 
   Hidden service directory nodes:
 
-    Every onion router can decide whether it wants to store and serve hidden
-    service descriptors by setting a new config option HiddenServiceDirectory
-    0|1 to 1. This option should be 1 by default for those onion routers that
-    have their directory port open, because the smaller the group of storing
-    nodes is, the poorer the security properties are.
+  /4/ Process tunneled HTTP request in BEGIN_DIR cell
 
-    HS directory nodes include the fact that they store and serve hidden
-    service descriptors in router descriptors that they send to directory
-    authorities.
+    - rend-spec.txt, section 3.2: Added the requirement that requests need to
+      be contained within BEGIN_DIR cells.
+    - rend-spec.txt, section 3.3: Added the requirement that requests need to
+      be contained within BEGIN_DIR cells.
+  
+    [July 9: Pending]
+    
+  /5/ Advertise hidden service directory functionality
 
-    HS directory nodes accept publish and fetch requests for hidden service
-    descriptors and store/retrieve them to/from their local memory. (It is not
-    necessary to make descriptors persistent, because after disconnecting, the
-    onion router would not be accepted as storing node anyway, because it is
-    not stable.) All requests and replies are formatted as HTTP messages.
-    Requests are directed to the router's directory port and are contained
-    within BEGIN_DIR cells. A HS directory node stores a descriptor only when
-    it thinks that it is responsible for storing that descriptor based on its
-    own routing table. Every HS directory node is responsible for the
-    descriptor IDs in the interval of its n-th predecessor in the ID circle up
-    to its own ID (n denotes the number of replicas).
+    Every onion router that has its directory port open can decide whether it
+    wants to store and serve hidden service descriptors by setting a new config
+    option "HSDir" 0|1 to 1. An onion router with this config option being set
+    includes the flag "hidden-service-dir" in its router descriptors that it
+    sends to directory authorities.
 
-    A HS directory node replicates descriptors for which it is responsible by
-    downloading them from other HS directory nodes. Therefore, it checks its
-    routing table periodically every 10 minutes for changes. Whenever it
-    realizes that a predecessor has left the network, it establishes a
-    connection to the new n-th predecessor and requests its stored descriptors
-    in the interval of its (n+1)-th predecessor and the requested n-th
-    predecessor. Whenever it realizes that a new onion router has joined with
-    an ID higher than its former n-th predecessor, it adds it to its
-    predecessors and discards all descriptors in the interval of its (n+1)-th
-    and its n-th predecessor.
+    - tor.1.in: Added the config option HSDir.
+    - dir-spec.txt, section 2.1: Added the flag hidden-service-dir to the
+      router descriptor format.
+    - rend-spec.txt, section 3.1: Added process of configuring a hidden service
+      directory.
+
+    - router.c: Changed router_dump_router_to_string() to include the
+      hidden-service-dir flag in a router descriptor if configured.
+    - or.h: Added HSDir to or_options_t.
+    - config.c: Added config option HSDir.
+
+      [July 9: Specified and running.]
+      
+  /6/ Accept v2 publish requests, parse and store v2 descriptors
+
+    Hidden service directory nodes accept publish requests for hidden service
+    descriptors and store them to their local memory. (It is not necessary to
+    make descriptors persistent, because after disconnecting, the onion router
+    would not be accepted as storing node anyway, because it has not been
+    running for at least 24 hours.) All requests and replies are formatted as
+    HTTP messages. Requests are directed to the router's directory port and are
+    contained within BEGIN_DIR cells. A hidden service directory node stores a
+    descriptor only when it thinks that it is responsible for storing that
+    descriptor based on its own routing table. Every hidden service directory
+    node is responsible for the descriptor IDs in the interval of its n-th
+    predecessor in the ID circle up to its own ID (n denotes the number of
+    consecutive replicas). (requires /1/ and /4/)
+
+    - rend-spec.txt, section 1.2: Added the new v2 hidden service descriptor
+      format.
+    - rend-spec.txt, section 3.2: Added the acceptance of v2 publish requests.
+
+    - routerparse.c: Added rend_parse_v2_service_descriptor() to parse a v2
+      hidden service descriptor.
+    - routerparse.c: Added desc_token_table[] to parse v2 hidden service
+      descriptors.
+    - routerparse.c: Added 8 keywords to directory_keyword to parse v2 hidden
+      service descriptors.
+    - rendcommon.c: Added rend_cache_store_v2_dir() to allow a hidden service
+      directory to store a v2 descriptor in the local cache under its
+      descriptor ID instead of its service ID.
+    - rendcommon.c: Moved the parsing part from rend_cache_store() to the new
+      function rend_cache_store_parse() to reuse it for v2 descriptors.
+    - or.h: Added constant REND_DESC_ID_V2_LEN to reflect that v2 descriptor
+      IDs are longer than v0/1 onion addresses.
+
+      [July 9: Base version specified and running; no checking of published
+       descriptors, tunneling over BEGIN_DIR cells not yet implemented.]
+
+  /7/ Accept v2 fetch requests
+
+    Same as /6/, but with fetch requests for hidden service descriptors.
+    (requires /4/)
+
+    - rend-spec.txt, section 3.3: Added the processing of v2 fetch requests.
+
+    - rendcommon.c: Added rend_cache_lookup_v2_dir() to allow a hidden service
+      directory to look up a v2 descriptor in the local cache under its
+      descriptor ID instead of its service ID.
+    - or.h: Added constant REND_DESC_ID_V2_LEN to reflect that v2 descriptor
+      IDs are longer than v0/1 onion addresses.
+
+      [July 9: Base version specified and running; tunneling over BEGIN_DIR
+       cells not yet implemented.]
+
+  /8/ Replicate descriptors with neighbors
+
+    A hidden service directory node replicates descriptors from its two
+    predecessors by downloading them once an hour. Further, it checks its
+    routing table periodically for changes. Whenever it realizes that a
+    predecessor has left the network, it establishes a connection to the new
+    n-th predecessor and requests its stored descriptors in the interval of its
+    (n+1)-th predecessor and the requested n-th predecessor. Whenever it
+    realizes that a new onion router has joined with an ID higher than its
+    former n-th predecessor, it adds it to its predecessors and discards all
+    descriptors in the interval of its (n+1)-th and its n-th predecessor.
+    (requires /1/)
+
+    - rend-spec.txt, section 3.3: Added the replication of v2 descriptors.
+
+      [July 9: To some extend specified, but not yet implemented.]
 
   Authoritative directory nodes:
 
-    Directory nodes include a new flag for routers that decided to provide
-    storage for hidden service descriptors and that are stable for a given
-    time. The requirement to be stable prevents a node from frequently
-    changing its onion key to become responsible for an identifier it wants
-    to target.
+  /9/ Confirm a router's hidden service directory functionality
+
+    Directory nodes include a new flag "HSDir" for routers that decided to
+    provide storage for hidden service descriptors and that are running for at
+    least 24 hours. The last requirement prevents a node from frequently
+    changing its onion key to become responsible for an identifier it wants to
+    target.
+
+    - dir-spec.txt, section 3.2: Added the status flag "HSDir" to the vote and
+      consensus status document format.
+    - dir-spec.txt, section 3.3: Added a rule for how an authority decides
+      whether a router is assigned the flag "HSDir".
+    - rend-spec.txt, section 3.1: Added the decision on whether an onion router
+      is confirmed to act as hidden service directory or not.
+
+    - routerparse.c: Changed router_parse_entry_from_string() to parse the
+      "hidden-service-dir" flag in router descriptors.
+    - routerparse.c: Added an entry to routerdesc_token_table[] to parse the
+      "hidden-service-directory" flag in router descriptors.
+    - routerparse.c: Added 1 keyword to directory_keyword to parse the
+      "hidden-service-dir" flag in router descriptors.
+    - or.h: Added is_hs_dir member to routerinfo_t and to routerstatus_t.
+    - dirserv.c: Changed routerstatus_format_entry() to include the "HSDir"
+      flag in vote and consensus status documents.
+    - dirserv.c: Changed set_routerstatus_from_routerinfo() to set the "HSDir"
+      flag.
+
+      [July 9: Base version specified and running in which all nodes that have
+       the hidden-service-dir flag set in their router descriptor get the
+       HSDir flag, not only those which are running for at least 24 hours.]
 
   Hidden service provider:
 
-    When setting up the hidden service at introduction points, a hidden service
-    provider does not pass its own public key, but the public key of a freshly
-    generated key pair. It also includes this public key in the hidden service
-    descriptor together with the other introduction point information. The
-    reason is that the introduction point does not need to know for which
-    hidden service it works, and should not know it to prevent it from
-    tracking the hidden service's activity.
+  /10/ Configure v2 hidden service
 
-    Each hidden service provider publishes a new descriptor whenever
-    its content
-    changes or a new publication period starts for this descriptor. If the
-    current publication period would only last for less than 60 minutes, the
+    Each hidden service provider that has set the config option
+    "PublishV2HidServDescriptors" 0|1 to 1 is configured to publish v2
+    descriptors and conform to the v2 connection establishment protocol. When
+    configuring a hidden service, a hidden service provider checks if it has
+    already created a random secret_cookie and a hostname2 file; if not, it
+    creates both of them. (requires /2/)
+
+    - tor.1.in: Added the config option PublishV2HidServDescriptors.
+    - tor.1.in: Added the files hostname2 and secret_cookie.
+    - rend-spec.txt, section 1.1: Added requirement to create secret_cookie and
+      hostname2 file.
+
+    - rendservice.c: Added rend_get_hostname2() to assemble a v2 onion address.
+    - rendservice.c: Changed rend_service_load_keys() to write a secret_cookie
+      and a hostname2 file.
+    - rendservice.c: Extended rend_service_t by a member secret_cookie.
+    - or.h: Added PublishV2HidServDescriptors to or_options_t.
+    - config.c: Added config option PublishV2HidServDescriptors.
+
+      [July 9: Specified and running.]
+
+  /11/ Establish introduction points with fresh key
+
+    If configured to publish only v2 descriptors and no v0/v1 descriptors any
+    more, a hidden service provider that is setting up the hidden service at
+    introduction points does not pass its own public key, but the public key
+    of a freshly generated key pair. It also includes these fresh public keys
+    in the hidden service descriptor together with the other introduction point
+    information. The reason is that the introduction point does not need to and
+    therefore should not know for which hidden service it works, so as to
+    prevent it from tracking the hidden service's activity. (If a hidden
+    service provider supports both, v0/v1 and v2 descriptors, v0/v1 clients
+    rely on the fact that all introduction points accept the same public key,
+    so that this new feature cannot be used.)
+
+    - rend-spec.txt, section 1.3: Instead of Bob's public key, the hidden
+      service provider uses a freshly generated public key for every
+      introduction point.
+
+      [July 9: Specified, but not yet implemented.]
+
+  /12/ Encode v2 descriptors and send v2 publish requests
+
+    If configured to publish v2 descriptors, a hidden service provider
+    publishes a new descriptor whenever its content changes or a new
+    publication period starts for this descriptor. If the current publication
+    period would only last for less than 60 minutes (= 2 x 30 minutes to allow
+    the server to be 30 minutes behind and the client 30 minutes ahead), the
     hidden service provider publishes both a current descriptor and one for
     the next period. Publication is performed by sending the descriptor to all
     hidden service directories that are responsible for keeping replicas for
-    the descriptor ID.
+    the descriptor ID. This includes two non-consecutive replicas that are
+    stored at 3 consecutive nodes each. (requires /1/ and /3/)
+
+    - rend-spec.txt, section 1.2: Added the new v2 hidden service descriptor
+      format.
+    - rend-spec.txt, section 1.4: Bob's OP does not only upload v0/v1 service
+      descriptors to the authoritative directories, but also v2 service
+      descriptors to the hidden service directories.
+
+    - rendservice.c: Changed upload_service_descriptor() to upload v2 hidden
+      service descriptors, if configured.
+    - rendservice.c: Changed rend_consider_services_upload() to also initiate
+      the upload of v2 descriptors, if configured.
+    - rendservice.c: Extended rend_service_t by a member secret_cookie.
+    - rendcommon.c: Added rend_compute_v2_descriptor_fields() to prepare the
+      encoding of a v2 descriptor.
+    - rendcommon.c: Added rend_encode_v2_descriptor() to encode a v2
+      descriptor.
+    - or.h: Added 7 new members to rend_service_descriptor_t to store
+      v2-specific information.
+    - or.h: Added constant DIR_PURPOSE_UPLOAD_RENDDESC_V2.
+    - directory.c: Added directory_post_to_hs_dir().
+    - directory.c: Changed directory_initiate_command() to also recognize v2
+      publish requests.
+    - directory.c: Changed directory_send_command() to also prepare v2 publish
+      requests.
+    - directory.c: Changed directory_handle_command_post() to handle v2 publish
+      requests.
+    - crypto.c: Added implementation for crypto_cipher_encrypt_cbc().
+
+      [July 9: Base version specified and running; yet, replication is not
+       implemented, republication does not depend on publication periods, yet.]
 
   Hidden service client:
 
-    Instead of downloading descriptors from a hidden service authoritative
-    directory, a hidden service client downloads it from a randomly chosen
-    hidden service directory that is responsible for keeping replica for the
-    descriptor ID.
+  /13/ Send v2 fetch requests
 
-    When contacting an introduction point, the client does not use the
-    public key of the hidden service provider, but the freshly-generated public
-    key that is included in the hidden service descriptor.
+    A hidden service client that has set the config option
+    "FetchV2HidServDescriptors" 0|1 to 1 handles SOCKS requests for v2 onion
+    addresses by requesting a v2 descriptor from a randomly chosen hidden
+    service directory that is responsible for keeping replica for the
+    descriptor ID. In total there are six replicas of which the first and the
+    last three are stored on consecutive nodes. The probability of picking one
+    of the three consecutive replicas is 1/6, 2/6, and 3/6 to incorporate the
+    fact that the availability will be the highest on the node with next higher
+    ID. A hidden service client relies on the hidden service provider to store
+    two sets of descriptors to compensate clock skew between service and
+    client. (requires /1/, /2/, and /3/)
 
+    - tor.1.in: Added the config option FetchV2HidServDescriptors.
+    - rend-spec.txt, section 1.5: Added the new v2 onion address format.
+    - rend-spec.txt, section 1.6: Alice's OP downloads the service descriptors
+      similarly as Bob's OP uploaded them in 1.4.
+
+    - rendcommon.c: Changed rend_cache_lookup_entry to enable it to also lookup
+      v2 descriptors.
+    - rendcommon.c: Added rend_compute_desc_id() to generate v2 descriptor IDs
+      from v2 onion addresses.
+    - rendcommon.c: Changed rend_valid_service_id() to also consider v2 onion
+      addresses as valid and return the version number of the request (1 or 2).
+    - rendclient.c: Added rend_client_refetch_v2_renddesc() to fetch v2 service
+      descriptors using the secret cookie.
+    - rendclient.c: Changed rend_client_remove_intro_point() to copy the secret
+      cookie if the local descriptor has expired or there are no introduction
+      points left.
+    - or.h: Added FetchV2HidServDescriptors to or_options_t.
+    - or.h: Added constant REND_DESC_ID_V2_LEN to reflect that v2 descriptor
+      IDs are longer than v0/1 onion addresses.
+    - or.h: Added constant DIR_PURPOSE_FETCH_RENDDESC_V2.
+    - directory.c: Added directory_get_from_hs_dir().
+    - directory.c: Changed directory_initiate_command() to also recognize v2
+      fetch requests.
+    - directory.c: Changed directory_send_command() to also prepare v2 fetch
+      requests.
+    - directory.c: Changed directory_handle_command_get() to handle v2 fetch
+      requests.
+    - connection_edge.c: Changed connection_ap_handshake_rewrite_and_attach()
+      to fetch v2 service descriptors.
+    - connection_edge.c: Changed parse_extended_hostname() to accept both,
+      current and v2 onion addresses.
+    - config.c: Added config options FetchV2HidServDescriptors.
+
+      [July 9: Base version specified and running in which only one node is
+       responsible for a specific descriptor ID.]
+
+  /14/ Process v2 fetch reply and parse v2 descriptors
+
+    A hidden service client that has sent a request for a v2 descriptor can
+    parse it and store it to the local cache of rendezvous service descriptors.
+
+    - rend-spec.txt, section 1.2: Added the new v2 hidden service descriptor
+      format.
+    - rend-spec.txt, section 1.6: Alice's OP parses the reply received from the
+      hidden service directory.
+
+    - routerparse.c: Added rend_parse_v2_service_descriptor() to parse a v2
+      hidden service descriptor.
+    - routerparse.c: Added rend_decrypt_introduction_points() to decrypt and
+      parse the list of introduction points.
+    - routerparse.c: Added ipo_token_table[] to parse the decrypted
+      introduction points of v2 hidden service descriptors.
+    - routerparse.c: Added desc_token_table[] to parse v2 hidden service
+      descriptors.
+    - routerparse.c: Added 8 to directory_keyword to parse v2 hidden service
+      descriptors, and 5 to parse the decrypted list of introduction points.
+    - rendcommon.c: Added rend_cache_store_v2_client() to parse a v2 descriptor
+      and parse the encrypted list of introduction points.
+    - or.h: Added secret_cookie to edge_connection_t, to dir_connection_t, and
+      to origin_circuit_t to be able to decrypt introduction points when
+      receiving a v2 descriptor.
+    - or.h: Added 7 new members to rend_service_descriptor_t to store
+      v2-specific information.
+    - directory.c: Changed connection_dir_client_reached_eof() to also parse v2
+      fetch replies.
+    - crypto.c: Added implementation for crypto_cipher_decrypt_cbc().
+
+      [July 9: Specified and running.]
+
+  /15/ Establish connection to v2 hidden service
+
+    A hidden service client can establish a connection to a hidden service
+    using a v2 descriptor. This includes using the secret cookie for decrypting
+    the introduction points contained in the descriptor. When contacting an
+    introduction point, the client does not use the public key of the hidden
+    service provider, but the freshly-generated public key that is included in
+    the hidden service descriptor. Whether or not a fresh key is used instead
+    of the key of the hidden service depends on the available protocol versions
+    that are included in the descriptor; by this, connection establishment is
+    to a certain extend decoupled from fetching the descriptor.
+
+    - rend-spec.txt, section 1.8: Alice uses the public key that is included in
+      the descriptor instead of Bob's permanent service key.
+
+    - rendclient.c: Changed rend_client_introduction_acked() to copy the secret
+      cookie in case the introduction point denied the request.
+    - rendclient.c: Changed rend_client_remove_intro_point() to copy the secret
+      cookie if the local descriptor has expired or there are no introduction
+      points left.
+    - or.h: Added secret_cookie to edge_connection_t, to dir_connection_t, and
+      to origin_circuit_t to be able to decrypt introduction points when
+      receiving a v2 descriptor.
+    - or.h: Added 7 new members to rend_service_descriptor_t to store
+      v2-specific information.
+    - circuitlist.c: Changed _circuit_mark_for_close() to pass the secret
+      cookie to rend_client_remove_intro_point() when an intro circ has failed.
+    - circuituse.c: Changed circuit_get_open_circ_or_launch() to fetch a v2
+      descriptor with the secret cookie, if no descriptor is available, or copy
+      the secret cookie to the circuit, in case it dies later, so that it can
+      be used to fetch a new descriptor.
+
+      [July 9: Base version specified and running, but without fresh key.]
+      
   Hidden service descriptor:
 
-    The descriptor ID needs to change periodically in order for the descriptor
-    to be stored on changing nodes over time. It further may only be computable
-    by a hidden service provider and all of his clients to prevent unauthorized
-    nodes from tracking the service activity by periodically checking whether
-    there is a descriptor for this service. Finally, the hidden service
-    directory needs to be able to verify that the hidden service provider is
-    the true originator of the descriptor with the given ID. Therefore, the
-    ID is derived from the public key of the hidden service provider, the
-    current time period, and a shared secret between hidden service provider
-    and clients. Only the hidden service provider and the clients are able to
-    generate future IDs, but together with the descriptor content the hidden
-    service directory is able to verify its origin. The formula for calculating
-    a descriptor ID is as follows:
+  (Requirements concerning the descriptor format are contained in /6/ and /7/.)
+  
+    The new v2 hidden service descriptor format looks like this:
 
-      descriptor-id = h(permanent-id + h(time-period + cookie))
+      onion-address = h(public-key) + cookie
+      descriptor-id = h(h(public-key) + h(time-period + cookie))
+      descriptor-content = {
+        descriptor-id,
+        version,
+        public-key,
+        h(time-period + cookie),
+        timestamp,
+        protocol-versions,
+        { introduction-points } encrypted with cookie
+      } signed with private-key
 
-    "permanent-id" is the hashed value of the public key of the hidden service
-    provider, "time-period" is a periodically changing value, e.g. the current
-    date, and "cookie" is a shared secret between the hidden service provider
-    and its clients. (The "time-period" should be constructed in a way that
-    periods do not change at the same moment for all descriptors by including
-    the "permanent-id" in the construction.) Amongst other things, the
-    descriptor contains the public key of the hidden service provider, the
-    value of h(time-period + cookie), and the signature of the descriptor
-    content with the private key of the hidden service provider.
-
-    The introduction points that are included in the descriptor are encrypted
-    using a key that is derived from the same shared key that is used to
-    generate the descriptor ID. [correction to use another key than
-    h(time-period + cookie) as encryption key for introduction points made by
-    LO]
-
-    A new text-based format is proposed for descriptors instead of an
-    extension of the existing binary format for reasons of future
-    extensibility.
-
-    The complete hidden service descriptor format looks like this:
-
-      {
-        descriptor-id = h(permanent-id + h(time-period + cookie))
-        permanent-public-key   (with permanent-id = h(permanent-public-key))
-        h(time-period + cookie)
-        timestamp
-        {
-          list of intro points (ID, IP, onion port, onion key, service key)
-        } encrypted with cookie
-      } signed with permanent-private-key
-
+    The "descriptor-id" needs to change periodically in order for the
+    descriptor to be stored on changing nodes over time. It may only be
+    computable by a hidden service provider and all of his clients to prevent
+    unauthorized nodes from tracking the service activity by periodically
+    checking whether there is a descriptor for this service. Finally, the
+    hidden service directory needs to be able to verify that the hidden service
+    provider is the true originator of the descriptor with the given ID.
+    
+    Therefore, "descriptor-id" is derived from the "public-key" of the hidden
+    service provider, the current "time-period" which changes every 24 hours,
+    and a secret "cookie" shared between hidden service provider and clients.
+    (The "time-period" is constructed in a way that time periods do not change
+    at the same moment for all descriptors by deriving a value between 0:00 and
+    23:59 hours from "public-key" and making the descriptors of this hidden
+    service provider expire at that time of the day.) The "descriptor-id" is
+    defined to be 160 bits long. [extending the "descriptor-id" length
+    suggested by LO]
+    
+    Only the hidden service provider and the clients are able to generate
+    future "descriptor-ID"s. Hence, the "onion-address" is extended from now 
+    the hash value of "public-key" by the secret "cookie". The "public-key" is
+    determined to be 80 bits long, whereas the "cookie" is dimensioned to be
+    120 bits long. This makes a total of 200 bits or 40 base32 chars, which is
+    quite a lot to handle for a human, but necessary to provide sufficient
+    protection against an adversary from generating a key pair with same
+    "public-key" hash or guessing the "cookie".
+    
     A hidden service directory can verify that a descriptor was created by the
-    hidden service provider by checking if the descriptor-id corresponds to
-    the permanent-public-key and if the signature can be verified with the
-    permanent-public-key.
+    hidden service provider by checking if the "descriptor-id" corresponds to
+    the "public-key" and if the signature can be verified with the
+    "public-key".
 
-    A client can download the descriptor by creating the same descriptor-id
-    and verify its origin by performing the same operations as the hidden
-    service directory.
+    The "introduction-points" that are included in the descriptor are encrypted
+    using the same "cookie" that is shared between hidden service provider and
+    clients. [correction to use another key than h(time-period + cookie) as
+    encryption key for introduction points made by LO]
+
+    A new text-based format is proposed for descriptors instead of an extension
+    of the existing binary format for reasons of future extensibility.
 
 Security implications:
 
-  The security implications of the proposed changes are grouped by the roles
-  of nodes that could perform attacks or on which attacks could be performed.
+  The security implications of the proposed changes are grouped by the roles of
+  nodes that could perform attacks or on which attacks could be performed.
 
   Attacks by authoritative directory nodes
 
@@ -271,12 +576,12 @@ Security implications:
 
   Attacks by hidden service directory nodes
 
-    A hidden service directory node could misuse a stored descriptor to track
-    a hidden service's activity and usage pattern by clients. Though there is
-    no countermeasure against this kind of attack, it is very expensive to
-    track a certain hidden service over time. An attacker would need to run a
-    large number of stable onion routers that work as hidden service directory
-    nodes to have a good probability to become responsible for its changing
+    A hidden service directory node could misuse a stored descriptor to track a
+    hidden service's activity and usage pattern by clients. Though there is no
+    countermeasure against this kind of attack, it is very expensive to track a
+    certain hidden service over time. An attacker would need to run a large
+    number of stable onion routers that work as hidden service directory nodes
+    to have a good probability to become responsible for its changing
     descriptor IDs. For each period, the probability is:
 
       1-(N-c choose r)/(N choose r) for N-c>=r and 1 else with N as total
@@ -290,8 +595,8 @@ Security implications:
     content. The client would detect a false descriptor, because it could not
     contain a correct signature. But an old content or an empty reply could
     confuse the client. Therefore, the countermeasure is to replicate
-    descriptors among a small number of hidden service directories, e.g. 5. 
-    The probability of a group of collaborating nodes to make a hidden service
+    descriptors among a small number of hidden service directories. The
+    probability of a group of collaborating nodes to make a hidden service
     completely unavailable is in each period:
 
       (c choose r)/(N choose r) for c>=r and N>=r, and 0 else with N as total
@@ -328,47 +633,8 @@ Security implications:
     directory nodes and attack them. There is nothing that could prevent them
     from doing so, because honest clients need the full descriptor content to
     establish a connection to the hidden service. At the moment, the only
-    countermeasure against dishonest clients is to change the secret cookie
-    and pass it only to the honest clients.
-
-Specification:
-
-  The proposed changes affect multiple sections in several specification
-  documents that are only mentioned in the following. The detailed
-  specification will follow as soon as the design decisions above are final.
-
-  dir-spec-v2.txt
-
-    2.1  The router descriptor format needs to include an additional flag to
-    denote that a router is a hidden service directory.
-
-    3  The network status format needs to be extended by a new status flag to
-    denote that a router is a hidden service directory.
-
-    4  The sections on directory caches need to be extended by new sections for
-    the operation of hidden service directories, including replication of
-    descriptors.
-
-  rend-spec.txt
-
-    1.2  The new descriptor format needs to be added.
-
-    1.3  Instead of Bob's public key, the hidden service provider uses a
-    freshly generated public key for every introduction point.
-
-    1.4  Bob's OP does not upload his service descriptor to the authoritative
-    directories, but to the hidden service directories.
-
-    1.6  Alice's OP downloads the service descriptors similarly as Bob
-    published them in 1.4.
-
-    1.8  Alice uses the public key that is included in the descriptor instead
-    of Bob's permanent service key.
-
-  tor-spec.txt
-
-    6.2.1  Directory streams need to be used for connections to hidden service
-    directories.
+    countermeasure against dishonest clients is to change the secret cookie and
+    pass it only to the honest clients.
 
 Compatibility:
 
@@ -378,43 +644,297 @@ Compatibility:
   There should be a first transition phase in which both, the current design
   and the proposed design are served in parallel. Onion routers should start
   serving as hidden service directories, and hidden service providers and
-  clients should make use of the new design if both sides support it. But
-  hidden service providers should continue publishing descriptors of the
-  current format, and authoritative directories should store and serve these
-  descriptors.
+  clients should make use of the new design if both sides support it. Hidden
+  service providers should be allowed to publish descriptors of the current
+  format in parallel, and authoritative directories should continue storing and
+  serving these descriptors.
 
   After the first transition phase, hidden service providers should stop
   publishing descriptors on authoritative directories, and hidden service
   clients should not try to fetch descriptors from the authoritative
   directories. However, the authoritative directories should continue serving
-  hidden service descriptors for a second transition phase.
+  hidden service descriptors for a second transition phase. As of this point,
+  all v2 config options should be set to a default value of 1.
 
   After the second transition phase, the authoritative directories should stop
   serving hidden service descriptors.
 
+Specification:
+
+  The proposed changes affect multiple sections in several specification
+  documents that are only mentioned in the following. (As for now, all changes
+  to specification documents are limited to the SVN branch 114-dist-storage.)
+
+  tor.1.in
+
+    Added the config options HSDir (/5/), PublishV2HidServDescriptors (/10/),
+    and FetchV2HidServDescriptors (/13/).
+
+    Added the files hostname2 and secret_cookie (/10/).
+
+  dir-spec.txt
+
+    2.1  Added the flag hidden-service-dir to the router descriptor format
+    (/5/).
+
+    3.2  Added the status flag HSDir to the vote and consensus status
+    document format (/9/).
+
+    3.3  Added a rule for how an authority decides whether a router is assigned
+    the flag HSDir (/9/).
+
+  rend-spec.txt
+
+    0.4  Added history
+
+    1.1  Added requirement to create secret_cookie and hostname2 file (/10/).
+
+    1.2  Added the new v2 hidden service descriptor format (/6/, /12/ and
+    /14/).
+
+    1.3  Instead of Bob's public key, the hidden service provider uses a
+    freshly generated public key for every introduction point (/11/).
+
+    1.4  Added description of how to obtain a routing list of hidden service
+    directories (/1/).
+
+    1.4  Added description of how to determine the responsible node(s) for a
+    given descriptor ID (/2/).
+
+    1.4  Bob's OP does not only upload v0/v1 service descriptors to the
+    authoritative directories, but also v2 service descriptors to the hidden
+    service directories (/12/).
+
+    1.4  Added the requirement that requests need to be sent via Tor (/3/).
+
+    1.5  Added the new v2 onion address format (/13/).
+
+    1.6  Added the requirement that requests need to be sent via Tor (/3/).
+
+    1.6  Alice's OP downloads the service descriptors similarly as Bob's OP
+    uploaded them in 1.4 (/13/).
+ 
+    1.6  Alice's OP parses the reply received from the hidden service directory
+    (/14/).
+
+    1.8  Alice uses the public key that is included in the descriptor instead
+    of Bob's permanent service key (/15/).
+
+    3.1: Added process of configuring a hidden service directory (/5/).
+
+    3.1: Added the decision on whether an onion router is confirmed to act as
+    hidden service directory or not (/9/).
+
+    3.2: Added the requirement that requests need to be contained within
+    BEGIN_DIR cells (/4/).
+
+    3.2: Added the acceptance of v2 publish requests (/6/).
+
+    3.3: Added the requirement that requests need to be contained within
+    BEGIN_DIR cells (/4/).
+  
+    3.3: Added the processing of v2 fetch requests (/7/).
+
+    3.3: Added the replication of v2 descriptors (/8/).
+
 Implementation:
 
-  There are three key lengths that might need some discussion:
+  The proposed changes affect the following changes in the source code. (As for
+  now, all changes to code are limited to the SVN branch 114-dist-storage.)
 
-    1) descriptor-id, formerly known as onion address: It is generated by OPs
-       internally and used for storing and looking up descriptors. There is no
-       need to remember a descriptor-id for a human. In order to reduce
-       the success rate of collisions it could be extended to the full output
-       of SHA-1 of 160 bits instead of 80 bits. [extending the descriptor-id
-       length suggested by LO]
+  container.h
 
-    2) permanent-id: This is the first part of the onion address that a client
-       passes to his OP. The overall onion address should be easy to memorize.
-       Therefore, its overall length should only be extended from the existing
-       80 bits to as few bits as necessary. The length of the permanent-id has
-       an influence on the probability that an adversary creates an own key
-       pair that leads to the same descriptor-id in a given time-period as an
-       honest service's key. 32 bits should provide sufficient protection to
-       avoid collisions, given the fact that key generation is expensive and
-       the attack needed to be performed for every time-period.
+    Added prototype for smartlist_digest_next_circular() (/2/).
 
-    3) cookie: This is the second part of the onion address that is passed to
-       an OP. In order to provide confidentiality of introduction points, this
-       secret key should have 128 bits. In total, this leads to an onion
-       address of 160 bits instead of the current 80 bits.
+  container.c
 
+    Added implementation for smartlist_digest_next_circular() (/2/).
+
+  crypto.h
+
+    Added 3 prototypes according to the changes in crypto.c (various
+    requirements).
+
+  crypto.c
+
+    Added implementation for crypto_cipher_encrypt_cbc() (/12/).
+
+    Added implementation for crypto_cipher_decrypt_cbc() (/14/).
+
+    Added implementation for base32_decode() (various requirements).
+
+  circuitlist.c
+
+    Changed _circuit_mark_for_close() to pass the secret cookie to
+    rend_client_remove_intro_point() when an intro circ has failed (/15/).
+
+  circuituse.c
+
+    Changed circuit_get_open_circ_or_launch() to fetch a v2 descriptor with the
+    secret cookie, if no descriptor is available, or copy the secret cookie to
+    the circuit, in case it dies later, so that it can be used to fetch a new
+    descriptor (/15/).
+
+  config.c
+
+    Added config options FetchV2HidServDescriptors (/13/), HSDir (/5/), and
+    PublishV2HidServDescriptors (/10/).
+
+  connection_edge.c
+
+    Changed connection_ap_handshake_rewrite_and_attach() to fetch v2 service
+    descriptors (/13/).
+
+    Changed parse_extended_hostname() to accept both, current and v2 onion
+    addresses (/13/).
+
+  directory.c
+
+    Added directory_post_to_hs_dir() (/12/).
+
+    Added directory_get_from_hs_dir() (/13/).
+
+    Changed directory_initiate_command() to also recognize v2 publish (/12/)
+    and fetch (/13/) requests.
+
+    Changed directory_send_command() to also prepare v2 publish (/12/) and
+    fetch (/13/) requests.
+
+    Changed connection_dir_client_reached_eof() to also parse v2 fetch replies
+    (/14/).
+
+    Changed directory_handle_command_get() to handle v2 fetch requests (/13/).
+
+    Changed directory_handle_command_post() to handle v2 publish requests
+    (/12/).
+
+  dirserv.c
+
+    Changed routerstatus_format_entry() to include the "HSDir" flag in vote and
+    consensus status documents (/9/).
+
+    Changed set_routerstatus_from_routerinfo() to set the "HSDir" flag (/9/).
+
+  or.h
+
+    Added constants DIR_PURPOSE_UPLOAD_RENDDESC_V2 (/12/) and
+    DIR_PURPOSE_FETCH_RENDDESC_V2 (/13/).
+
+    Added constant REND_DESC_ID_V2_LEN to reflect that v2 descriptor IDs are
+    longer than v0/1 onion addresses (/6/, /7/, and /13/).
+
+    Added rend_version and secret_cookie to edge_connection_t, to
+    dir_connection_t, and to origin_circuit_t to be able to decrypt
+    introduction points when receiving a v2 descriptor (/14/ and /15/).
+
+    Added is_hs_dir member to routerinfo_t and to routerstatus_t (/9/).
+
+    Added hs_dirs member to routerlist_t (/1/).
+
+    Added FetchV2HidServDescriptors (/13/), HSDir (/5/), and
+    PublishV2HidServDescriptors (/10/) to or_options_t.
+
+    Added 7 new members to rend_service_descriptor_t to store v2-specific
+    information (/12/, /14/, and /15/).
+
+    Added 11 prototypes and changed the signature of 1 according to the
+    changes in .c files (various requirements).
+
+  rendclient.c
+
+    Changed rend_client_introduction_acked() to copy the secret cookie in case
+    the introduction point denied the request (/15/).
+
+    Added rend_client_refetch_v2_renddesc() to fetch v2 service descriptors
+    using the secret cookie (/13/).
+
+    Changed rend_client_remove_intro_point() to copy the secret cookie if the
+    local descriptor has expired or there are no introduction points left (/13/
+    and /15/).
+
+  rendcommon.c
+
+    Added rend_compute_v2_descriptor_fields() to prepare the encoding of a v2
+    descriptor (/12/).
+
+    Added rend_compute_desc_id() to generate v2 descriptor IDs from v2 onion
+    addresses (/13/).
+
+    Added rend_encode_v2_descriptor() to encode a v2 descriptor (/12/).
+
+    Changed rend_valid_service_id() to also consider v2 onion addresses as
+    valid and return the version number of the request (1 or 2) (/13/).
+
+    Changed rend_cache_lookup_entry to enable it to also lookup v2 descriptors
+    (/13/).
+
+    Added rend_cache_lookup_v2_dir() to allow a hidden service directory to
+    look up a v2 descriptor in the local cache under its descriptor ID instead
+    of its service ID (/7/).
+
+    Moved the parsing part from rend_cache_store() to the new function
+    rend_cache_store_parse() to reuse it for v2 descriptors (/6/).
+
+    Added rend_cache_store_v2_client() to parse a v2 descriptor and parse the
+    encrypted list of introduction points (/14/).
+
+    Added rend_cache_store_v2_dir() to allow a hidden service directory to
+    store a v2 descriptor in the local cache under its descriptor ID instead of
+    its service ID (/6/).
+
+  rendservice.c
+
+    Extended rend_service_t by a member secret_cookie (/10/ and /12/).
+
+    Added rend_get_hostname2() to assemble a v2 onion address (/10/).
+
+    Changed rend_service_load_keys() to write a secret_cookie and a hostname2
+    file (/10/).
+
+    Changed upload_service_descriptor() to upload v2 hidden service
+    descriptors, if configured (/12/).
+
+    Changed rend_consider_services_upload() to also initiate the upload of v2
+    descriptors, if configured (/12/).
+
+  router.c
+
+    Changed router_dump_router_to_string() to include the "hidden-service-dir"
+    flag in a router descriptor if configured (/5/).
+
+  routerlist.c
+
+    Changed router_get_routerlist() to initialize routing list (/1/).
+
+    Added get_responsible_hs_dir() to determine the router that is responsible
+    for a given descriptor ID (/2/).
+
+  routerparse.c
+
+    Added 14 keywords to directory_keyword; 1 to parse the "hidden-service-dir"
+    flag in router descriptors (/9/), 8 to parse v2 hidden service descriptors
+    (/6/ and /14/), and 5 to parse the decrypted list of introduction points
+    (/14/).
+
+    Added an entry to routerdesc_token_table[] to parse the
+    "hidden-service-directory" flag in router descriptors (/9/).
+
+    Added desc_token_table[] to parse v2 hidden service descriptors (/6/ and
+    /14/).
+
+    Added ipo_token_table[] to parse the decrypted introduction points of v2
+    hidden service descriptors (/14/).
+
+    Changed router_parse_entry_from_string() to parse the "hidden-service-dir"
+    flag in router descriptors (/9/).
+
+    Changed routerstatus_parse_entry_from_string to parse the "HSDir" flag in
+    vote and consensus status documents (/1/).
+
+    Added rend_parse_v2_service_descriptor() to parse a v2 hidden service
+    descriptor (/6/ and /14/).
+
+    Added rend_decrypt_introduction_points() to decrypt and parse the list of
+    introduction points (/14/).
+
+ 
