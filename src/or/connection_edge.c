@@ -59,7 +59,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
     else if (SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command))
       connection_ap_handshake_socks_resolved(conn,
                                              RESOLVED_TYPE_ERROR_TRANSIENT,
-                                             0, NULL, -1);
+                                             0, NULL, -1, -1);
     else /* unknown or no handshake at all. send no response. */
       conn->socks_request->has_finished = 1;
   }
@@ -655,23 +655,30 @@ addressmap_free_all(void)
  * more rewrites; but don't get into an infinite loop.
  * Don't write more than maxlen chars into address.  Return true if the
  * address changed; false otherwise.
+ * DOCDOC expires_out
  */
 int
-addressmap_rewrite(char *address, size_t maxlen)
+addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
 {
   addressmap_entry_t *ent;
   int rewrites;
   char *cp;
+  time_t expires = TIME_MAX;
 
   for (rewrites = 0; rewrites < 16; rewrites++) {
     ent = strmap_get(addressmap, address);
 
-    if (!ent || !ent->new_address)
+    if (!ent || !ent->new_address) {
+      if (expires_out)
+        *expires_out = expires;
       return (rewrites > 0); /* done, no rewrite needed */
+    }
 
     cp = tor_strdup(escaped_safe_str(ent->new_address));
     log_info(LD_APP, "Addressmap: rewriting %s to %s",
              escaped_safe_str(address), cp);
+    if (ent->expires > 1 && ent->expires < expires)
+      expires = ent->expires;
     tor_free(cp);
     strlcpy(address, ent->new_address, maxlen);
   }
@@ -679,14 +686,17 @@ addressmap_rewrite(char *address, size_t maxlen)
            "Loop detected: we've rewritten %s 16 times! Using it as-is.",
            escaped_safe_str(address));
   /* it's fine to rewrite a rewrite, but don't loop forever */
+  if (expires_out)
+    *expires_out = TIME_MAX;
   return 1;
 }
 
 /** If we have a cached reverse DNS entry for the address stored in the
  * <b>maxlen</b>-byte buffer <b>address</b> (typically, a dotted quad) then
- * rewrite to the cached value and return 1.  Otherwise return 0. */
+ * rewrite to the cached value and return 1.  Otherwise return 0.
+ * DOCDOC expires_out */
 static int
-addressmap_rewrite_reverse(char *address, size_t maxlen)
+addressmap_rewrite_reverse(char *address, size_t maxlen, time_t *expires_out)
 {
   size_t len = maxlen + 16;
   char *s = tor_malloc(len), *cp;
@@ -702,6 +712,10 @@ addressmap_rewrite_reverse(char *address, size_t maxlen)
     strlcpy(address, ent->new_address, maxlen);
     r = 1;
   }
+
+  if (expires_out)
+    *expires_out = (ent && ent->expires > 1) ? ent->expires : TIME_MAX;
+
   tor_free(s);
   return r;
 }
@@ -765,7 +779,7 @@ addressmap_register(const char *address, char *new_address, time_t expires)
 
   log_info(LD_CONFIG, "Addressmap: (re)mapped '%s' to '%s'",
            safe_str(address), safe_str(ent->new_address));
-  control_event_address_mapped(address, ent->new_address, expires);
+  control_event_address_mapped(address, ent->new_address, expires, NULL);
 }
 
 /** An attempt to resolve <b>address</b> failed at some OR.
@@ -1182,6 +1196,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   struct in_addr addr_tmp;
   int automap = 0;
   char orig_address[MAX_SOCKS_ADDR_LEN];
+  time_t map_expires = TIME_MAX;
 
   tor_strlower(socks->address); /* normalize it */
   strlcpy(orig_address, socks->address, sizeof(orig_address));
@@ -1209,12 +1224,14 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   }
 
   if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
-    if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address))) {
+    if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address),
+                                   &map_expires)) {
       char *result = tor_strdup(socks->address);
       /* remember _what_ is supposed to have been resolved. */
       strlcpy(socks->address, orig_address, sizeof(socks->address));
       connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_HOSTNAME,
-                                             strlen(result), result, -1);
+                                             strlen(result), result, -1,
+                                             map_expires);
       connection_mark_unattached_ap(conn,
                                  END_STREAM_REASON_DONE |
                                  END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -1222,7 +1239,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     }
   } else if (!automap) {
     /* For address map controls, remap the address. */
-    if (addressmap_rewrite(socks->address, sizeof(socks->address))) {
+    if (addressmap_rewrite(socks->address, sizeof(socks->address),
+                           &map_expires)) {
       control_event_stream_status(conn, STREAM_EVENT_REMAP,
                                   REMAP_STREAM_SOURCE_CACHE);
     }
@@ -1309,7 +1327,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                     escaped(socks->address));
         connection_ap_handshake_socks_resolved(conn,
                                                RESOLVED_TYPE_ERROR_TRANSIENT,
-                                               0,NULL,-1);
+                                               0,NULL,-1,TIME_MAX);
         connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_SOCKSPROTOCOL |
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -1321,7 +1339,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         /* remember _what_ is supposed to have been resolved. */
         strlcpy(socks->address, orig_address, sizeof(socks->address));
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
-                                               (char*)&answer,-1);
+                                               (char*)&answer,-1,map_expires);
         connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_DONE |
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -1382,7 +1400,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       log_warn(LD_APP,
                "Resolve requests to hidden services not allowed. Failing.");
       connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_ERROR,
-                                             0,NULL,-1);
+                                             0,NULL,-1,TIME_MAX);
       connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_SOCKSPROTOCOL |
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -1962,17 +1980,52 @@ connection_ap_make_link(char *address, uint16_t port,
   return conn;
 }
 
+/** DOCDOC */
+static void
+tell_controller_about_resolved_result(edge_connection_t *conn,
+                                      int answer_type,
+                                      size_t answer_len,
+                                      const char *answer,
+                                      int ttl,
+                                      time_t expires)
+{
+
+  if (ttl >= 0 && (answer_type == RESOLVED_TYPE_IPV4 ||
+                   answer_type == RESOLVED_TYPE_HOSTNAME)) {
+    return; /* we already told the controller. */
+  } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len >= 4) {
+    struct in_addr in;
+    char buf[INET_NTOA_BUF_LEN];
+    in.s_addr = get_uint32(answer);
+    tor_inet_ntoa(&in, buf, sizeof(buf));
+    control_event_address_mapped(conn->socks_request->address,
+                                 buf, expires, NULL);
+  } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len <256) {
+    char *cp = tor_strndup(answer, answer_len);
+    control_event_address_mapped(conn->socks_request->address,
+                                 cp, expires, NULL);
+    tor_free(cp);
+  } else {
+    control_event_address_mapped(conn->socks_request->address,
+                                 "<error>",
+                                 time(NULL)+ttl,
+                                 "error=yes");
+  }
+}
+
 /** Send an answer to an AP connection that has requested a DNS lookup
  * via SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6|HOSTNAME) or
  * -1 for unreachable; the answer should be in the format specified
  * in the socks extensions document.
+ * DOCDOC expires
  **/
 void
 connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                        int answer_type,
                                        size_t answer_len,
                                        const char *answer,
-                                       int ttl)
+                                       int ttl,
+                                       time_t expires)
 {
   char buf[384];
   size_t replylen;
@@ -1992,11 +2045,21 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
     }
   }
 
-  if (conn->dns_server_request) {
-    /* We had a request on our DNS port: answer it. */
-    dnsserv_resolved(conn, answer_type, answer_len, answer, ttl);
-    conn->socks_request->has_finished = 1;
-    return;
+  if (conn->is_dns_request) {
+    if (conn->dns_server_request) {
+      /* We had a request on our DNS port: answer it. */
+      dnsserv_resolved(conn, answer_type, answer_len, answer, ttl);
+      conn->socks_request->has_finished = 1;
+      return;
+    } else {
+      /* This must be a request from the controller. We already sent
+       * a mapaddress if there's a ttl. */
+      tell_controller_about_resolved_result(conn, answer_type, answer_len,
+                                            answer, ttl, expires);
+      conn->socks_request->has_finished = 1;
+      return;
+    }
+    /* XXXX020 are we freeing conn anywhere? */
   }
 
   if (conn->socks_request->socks_version == 4) {

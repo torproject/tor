@@ -759,7 +759,8 @@ connection_edge_process_end_not_open(
         }
         /* rewrite it to an IP if we learned one. */
         if (addressmap_rewrite(conn->socks_request->address,
-                               sizeof(conn->socks_request->address))) {
+                               sizeof(conn->socks_request->address),
+                               NULL)) {
           control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
         }
         if (conn->_base.chosen_exit_optional) {
@@ -946,7 +947,8 @@ connection_edge_process_relay_cell_not_open(
                    answer_type,
                    cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
                    cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
-                   ttl);
+                   ttl,
+                   -1);
     if (answer_type == RESOLVED_TYPE_IPV4) {
       uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
       remap_event_helper(conn, addr);

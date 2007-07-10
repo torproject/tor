@@ -112,6 +112,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   /* Make a new dummy AP connection, and attach the request to it. */
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
+  conn->is_dns_request = 1;
 
   TO_CONN(conn)->addr = ntohl(sin->sin_addr.s_addr);
   TO_CONN(conn)->port = ntohs(sin->sin_port);
@@ -149,57 +150,24 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
  * controller.  We need to eventually answer the request <b>req</b>.
  */
 void
-dnsserv_launch_request(const char *name)
+dnsserv_launch_request(const char *name, int reverse)
 {
   edge_connection_t *conn;
-  struct evdns_server_request *server_req;
-  struct in_addr in;
   char *q_name;
-  int i;
-  int is_ip_address;
 
   /* Make a new dummy AP connection, and attach the request to it. */
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
 
-  is_ip_address = tor_inet_aton(name, &in);
-
-  if (!is_ip_address)
-    conn->socks_request->command = SOCKS_COMMAND_RESOLVE_CONTROL;
+  if (reverse)
+    conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
   else
-    conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR_CONTROL;
+    conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
+
+  conn->is_dns_request = 1;
 
   strlcpy(conn->socks_request->address, name,
           sizeof(conn->socks_request->address));
-
-  server_req = malloc(sizeof(struct evdns_server_request));
-  if (server_req == NULL) return;
-  memset(server_req, 0, sizeof(struct evdns_server_request));
-
-  server_req->flags = 0;
-  server_req->nquestions = 0;
-
-  server_req->questions = malloc(sizeof(struct evdns_server_question *) * 1);
-  if (server_req->questions == NULL)
-    return;
-
-  for ( i = 0; i < 1; ++i) {
-    struct evdns_server_question *q;
-    int namelen;
-    namelen = strlen(name);
-    q = malloc(sizeof(struct evdns_server_question) + namelen);
-    if (!q)
-        return;
-    if (!is_ip_address)
-      q->type = EVDNS_TYPE_A;
-    else
-      q->type = EVDNS_TYPE_PTR;
-    q->class = EVDNS_CLASS_INET;
-    memcpy(q->name, name, namelen+1);
-    server_req->questions[server_req->nquestions++] = q;
-  }
-
-  conn->dns_server_request = server_req;
 
   connection_add(TO_CONN(conn));
 
@@ -295,6 +263,7 @@ dnsserv_resolved(edge_connection_t *conn,
 
   if (!SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
     evdns_server_request_respond(req, err);
+
 
   conn->dns_server_request = NULL;
 }

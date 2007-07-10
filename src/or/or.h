@@ -910,6 +910,9 @@ typedef struct edge_connection_t {
    * already retried several times. */
   uint8_t num_socks_retries;
 
+  /** True iff this connection is for a dns request only. */
+  unsigned int is_dns_request : 1;
+
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */
   struct evdns_server_request *dns_server_request;
@@ -2465,7 +2468,8 @@ void connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
                                             const char *answer,
-                                            int ttl);
+                                            int ttl,
+                                            time_t expires);
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);
@@ -2487,7 +2491,7 @@ void addressmap_clean(time_t now);
 void addressmap_clear_configured(void);
 void addressmap_clear_transient(void);
 void addressmap_free_all(void);
-int addressmap_rewrite(char *address, size_t maxlen);
+int addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out);
 int addressmap_have_mapping(const char *address);
 void addressmap_register(const char *address, char *new_address,
                          time_t expires);
@@ -2614,7 +2618,7 @@ int control_event_stream_bandwidth_used(void);
 void control_event_logmsg(int severity, unsigned int domain, const char *msg);
 int control_event_descriptors_changed(smartlist_t *routers);
 int control_event_address_mapped(const char *from, const char *to,
-                                 time_t expires);
+                                 time_t expires, const char *error);
 int control_event_or_authdir_new_descriptor(const char *action,
                                             const char *desc,
                                             size_t desclen,
@@ -2801,7 +2805,7 @@ void dnsserv_resolved(edge_connection_t *conn,
                       const char *answer,
                       int ttl);
 void dnsserv_reject_request(edge_connection_t *conn);
-void dnsserv_launch_request(const char *name);
+void dnsserv_launch_request(const char *name, int is_reverse);
 
 /********************************* hibernate.c **********************/
 

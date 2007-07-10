@@ -683,6 +683,18 @@ $Id$
      stable releases after 0.1.2.2-alpha, the release where it was first
      available.)
 
+3.20. RESOLVE
+
+  The syntax is
+    "RESOLVE" *Option *Address CRLF
+    Option = "mode=reverse"
+    Address = a hostname or IPv4 address
+
+  This command launches a remote hostname lookup request for every specified
+  request (or reverse lookup if "mode=reverse" is specified).  Note that the
+  request is done in the background: to see the answers, your controller will
+  need to listen for ADDRMAP events; see 4.1.7 below.
+
 4. Replies
 
   Reply codes follow the same 3-character format as used by SMTP, with the
@@ -947,8 +959,8 @@ $Id$
 
   Expiry is expressed as the local time (rather than GMT).
 
-  [XXX We should rename this to ADDRESSMAP. -RD]
-    [Why? Surely it can't be worth the compatibility issues. -NM]
+  These events are generated when a new address mapping is entered in the
+  cache, or when the answer for a RESOLVE command is found.
 
 4.1.8. Descriptors uploaded to us in our role as authoritative dirserver
 

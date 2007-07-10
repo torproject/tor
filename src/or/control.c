@@ -2221,9 +2221,10 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
                        const char *body)
 {
   smartlist_t *args;
+  int is_reverse = 0;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
 
-  if (!(conn->event_mask & EVENT_ADDRMAP)) {
+  if (!(conn->event_mask & (1L<<EVENT_ADDRMAP))) {
     log_warn(LD_CONTROL, "Controller asked us to resolve an address, but "
              "isn't listening for ADDRMAP events.  It probably won't see "
              "the answer.");
@@ -2231,8 +2232,15 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   args = smartlist_create();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (smartlist_len(args) &&
+      !strcasecmp(smartlist_get(args, 0), "mode=reverse")) {
+    char *cp = smartlist_get(args, 0);
+    smartlist_del_keeporder(args, 0);
+    tor_free(cp);
+    is_reverse = 1;
+  }
   SMARTLIST_FOREACH(args, const char *, arg, {
-    evdns_server_control(arg);
+      dnsserv_launch_request(arg, is_reverse);
   });
 
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
@@ -3058,22 +3066,25 @@ control_event_descriptors_changed(smartlist_t *routers)
 }
 
 /** Called whenever an address mapping on <b>from<b> from changes to <b>to</b>.
- * <b>expires</b> values less than 3 are special; see connection_edge.c. */
+ * <b>expires</b> values less than 3 are special; see connection_edge.c.
+ * DOCDOC source. */
 int
-control_event_address_mapped(const char *from, const char *to, time_t expires)
+control_event_address_mapped(const char *from, const char *to, time_t expires,
+                             const char *error)
 {
   if (!EVENT_IS_INTERESTING(EVENT_ADDRMAP))
     return 0;
 
-  if (expires < 3)
-    send_control_event(EVENT_ADDRMAP, ALL_NAMES,
-                        "650 ADDRMAP %s %s NEVER\r\n", from, to);
+  if (expires < 3 || expires == TIME_MAX)
+    send_control_event_extended(EVENT_ADDRMAP, ALL_NAMES,
+                                "650 ADDRMAP %s %s NEVER@%s\r\n", from, to,
+                                error);
   else {
     char buf[ISO_TIME_LEN+1];
     format_local_iso_time(buf,expires);
-    send_control_event(EVENT_ADDRMAP, ALL_NAMES,
-                        "650 ADDRMAP %s %s \"%s\"\r\n",
-                        from, to, buf);
+    send_control_event_extended(EVENT_ADDRMAP, ALL_NAMES,
+                                "650 ADDRMAP %s %s \"%s\"@%s\r\n",
+                                from, to, buf, error);
   }
 
   return 0;

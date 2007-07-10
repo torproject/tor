@@ -165,7 +165,7 @@ connection_add(connection_t *conn)
   tor_assert(conn->s >= 0 ||
              conn->linked ||
              (conn->type == CONN_TYPE_AP &&
-              TO_EDGE_CONN(conn)->dns_server_request));
+              TO_EDGE_CONN(conn)->is_dns_request));
 
   tor_assert(conn->conn_array_index == -1); /* can only connection_add once */
   conn->conn_array_index = smartlist_len(connection_array);
