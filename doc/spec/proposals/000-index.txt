@@ -33,4 +33,7 @@ Proposals by number:
 112  Bring Back Pathlen Coin Weight [OPEN]
 113  Simplifying directory authority administration [OPEN]
 114  Distributed Storage for Tor Hidden Service Descriptors [OPEN]
+115  Two Hop Paths [OPEN]
+116  Two hop paths from entry guards [OPEN]
+117  IPv6 exits [OPEN]
 
