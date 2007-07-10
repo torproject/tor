@@ -221,49 +221,27 @@ dnsserv_resolved(edge_connection_t *conn,
    * or more of the questions in the request); then, call
    * evdns_server_request_respond. */
   if (answer_type == RESOLVED_TYPE_IPV6) {
-    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
-      handle_control_resolve_response(req->questions[0]->name,
-                                      "IPv6 not implemented");
-    else {
-      log_info(LD_APP, "Got an IPv6 answer; that's not implemented.");
-      err = DNS_ERR_NOTIMPL;
-    }
+    log_info(LD_APP, "Got an IPv6 answer; that's not implemented.");
+    err = DNS_ERR_NOTIMPL;
   } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4 &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
-    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
-      handle_control_resolve_response(req->questions[0]->name,
-                                      tor_dup_addr(ntohl(get_uint32(answer))));
-    else
-      evdns_server_request_add_a_reply(req,
-                                       conn->socks_request->address,
-                                       1, (char*)answer, ttl);
+    evdns_server_request_add_a_reply(req,
+                                     conn->socks_request->address,
+                                     1, (char*)answer, ttl);
   } else if (answer_type == RESOLVED_TYPE_HOSTNAME &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR) {
-    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
-      handle_control_resolve_response(req->questions[0]->name, answer);
-    else {
-      char *ans = tor_strndup(answer, answer_len);
-      evdns_server_request_add_ptr_reply(req, NULL,
+    char *ans = tor_strndup(answer, answer_len);
+    evdns_server_request_add_ptr_reply(req, NULL,
                                        conn->socks_request->address,
                                        (char*)answer, ttl);
-      tor_free(ans);
-    }
+    tor_free(ans);
   } else if (answer_type == RESOLVED_TYPE_ERROR) {
-    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
-      handle_control_resolve_response(req->questions[0]->name, "Unknown Host");
-    else
-      err = DNS_ERR_NOTEXIST;
+    err = DNS_ERR_NOTEXIST;
   } else { /* answer_type == RESOLVED_TYPE_ERROR_TRANSIENT */
-    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
-      handle_control_resolve_response(req->questions[0]->name,
-                                      "Temporary Error");
-    else
-      err = DNS_ERR_SERVERFAILED;
+    err = DNS_ERR_SERVERFAILED;
   }
 
-  if (!SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
-    evdns_server_request_respond(req, err);
-
+  evdns_server_request_respond(req, err);
 
   conn->dns_server_request = NULL;
 }

@@ -896,8 +896,6 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         event_code = EVENT_GUARD;
       } else if (!strcasecmp(ev, "STREAM_BW"))
         event_code = EVENT_STREAM_BANDWIDTH_USED;
-      else if (!strcasecmp(ev, "RESOLVED"))
-        event_code = EVENT_RESOLVED;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                  ev);
