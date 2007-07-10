@@ -2097,7 +2097,6 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
 
   /* *s might not end with \n, so we need to extend it with one. */
   len = strlen(s);
-  eos = s + len;
   cp = tmp = tor_malloc(len+2);
   for (idx = 0; idx < len; ++idx) {
     tmp[idx] = TOR_TOLOWER(s[idx]);
@@ -2113,6 +2112,7 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
     tor_free(tmp);
     cp = tmp = new_str;
   }
+  eos = cp + strlen(cp);
   tok = get_next_token(&cp, eos, routerdesc_token_table);
   if (tok->tp == _ERR) {
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
