@@ -505,6 +505,15 @@ eat_whitespace_no_nl(const char *s)
   return s;
 }
 
+/** DOCDOC */
+const char *
+eat_whitespace_eos_no_nl(const char *s, const char *eos)
+{
+  while (s < eos && (*s == ' ' || *s == '\t'))
+    ++s;
+  return s;
+}
+
 /** Return a pointer to the first char of s that is whitespace or <b>#</b>,
  * or to the terminating NUL if no such character exists.
  */
@@ -527,6 +536,29 @@ find_whitespace(const char *s)
     }
   }
 }
+
+/** DOCDOC */
+const char *
+find_whitespace_eos(const char *s, const char *eos)
+{
+  /* tor_assert(s); */
+  while (s < eos) {
+    switch (*s)
+    {
+    case '\0':
+    case '#':
+    case ' ':
+    case '\r':
+    case '\n':
+    case '\t':
+      return s;
+    default:
+      ++s;
+    }
+  }
+  return NULL;
+}
+
 
 /** Return true iff the 'len' bytes at 'mem' are all zero. */
 int

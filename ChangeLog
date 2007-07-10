@@ -38,6 +38,8 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Major bugfixes (directory):
     - Fix a crash bug in directory authorities when we re-number the
       routerlist while inserting a new router. [Bugfix on 0.1.2.x]
+    - Fix a crash bug when router descriptors end at a 4096-byte boundary
+      on disk. [Bugfix on 0.1.2.x]
 
   o Minor bugfixes (directory):
     - Fix another crash bug related to extra-info caching.  (Bug found by

@@ -356,13 +356,14 @@ static int tokenize_string(const char *start, const char *end,
                            smartlist_t *out,
                            token_rule_t *table);
 static directory_token_t *get_next_token(const char **s,
+                                         const char *eos,
                                          token_rule_t *table);
 static int check_signature_token(const char *digest,
                                  directory_token_t *tok,
                                  crypto_pk_env_t *pkey,
                                  int check_authority,
                                  const char *doctype);
-static crypto_pk_env_t *find_dir_signing_key(const char *str);
+static crypto_pk_env_t *find_dir_signing_key(const char *str, const char *eos);
 static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
@@ -612,7 +613,7 @@ router_parse_directory(const char *str)
   if (tok->tp != K_DIRECTORY_SIGNATURE) {
     log_warn(LD_DIR,"Expected a single directory signature"); goto err;
   }
-  declared_key = find_dir_signing_key(str);
+  declared_key = find_dir_signing_key(str, str+strlen(str));
   note_crypto_pk_op(VERIFY_DIR);
   if (check_signature_token(digest, tok, declared_key, 1, "directory")<0)
     goto err;
@@ -673,13 +674,14 @@ router_parse_runningrouters(const char *str)
   int r = -1;
   crypto_pk_env_t *declared_key = NULL;
   smartlist_t *tokens = NULL;
+  const char *eos = str + strlen(str);
 
   if (router_get_runningrouters_hash(str, digest)) {
     log_warn(LD_DIR, "Unable to compute digest of running-routers");
     goto err;
   }
   tokens = smartlist_create();
-  if (tokenize_string(str,str+strlen(str),tokens,dir_token_table)) {
+  if (tokenize_string(str,eos,tokens,dir_token_table)) {
     log_warn(LD_DIR, "Error tokenizing running-routers"); goto err;
   }
   tok = smartlist_get(tokens,0);
@@ -698,7 +700,7 @@ router_parse_runningrouters(const char *str)
     log_warn(LD_DIR, "Missing signature on running-routers");
     goto err;
   }
-  declared_key = find_dir_signing_key(str);
+  declared_key = find_dir_signing_key(str, eos);
   note_crypto_pk_op(VERIFY_DIR);
   if (check_signature_token(digest, tok, declared_key, 1, "running-routers")
       < 0)
@@ -723,21 +725,23 @@ router_parse_runningrouters(const char *str)
  * find the its dir-signing-key token (if any).  If this token is
  * present, extract and return the key.  Return NULL on failure. */
 static crypto_pk_env_t *
-find_dir_signing_key(const char *str)
+find_dir_signing_key(const char *str, const char *eos)
 {
   const char *cp;
   directory_token_t *tok;
   crypto_pk_env_t *key = NULL;
+  tor_assert(str);
+  tor_assert(eos);
 
   /* Is there a dir-signing-key in the directory? */
-  cp = strstr(str, "\nopt dir-signing-key");
+  cp = tor_memstr(str, eos-str, "\nopt dir-signing-key");
   if (!cp)
-    cp = strstr(str, "\ndir-signing-key");
+    cp = tor_memstr(str, eos-str, "\ndir-signing-key");
   if (!cp)
     return NULL;
   ++cp; /* Now cp points to the start of the token. */
 
-  tok = get_next_token(&cp, dir_token_table);
+  tok = get_next_token(&cp, eos, dir_token_table);
   if (!tok) {
     log_warn(LD_DIR, "Unparseable dir-signing-key token");
     return NULL;
@@ -2089,9 +2093,11 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
   char *tmp;
   addr_policy_t *r;
   size_t len, idx;
+  const char *eos;
 
   /* *s might not end with \n, so we need to extend it with one. */
   len = strlen(s);
+  eos = s + len;
   cp = tmp = tor_malloc(len+2);
   for (idx = 0; idx < len; ++idx) {
     tmp[idx] = TOR_TOLOWER(s[idx]);
@@ -2107,7 +2113,7 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
     tor_free(tmp);
     cp = tmp = new_str;
   }
-  tok = get_next_token(&cp, routerdesc_token_table);
+  tok = get_next_token(&cp, eos, routerdesc_token_table);
   if (tok->tp == _ERR) {
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
     goto err;
@@ -2337,7 +2343,7 @@ token_check_object(const char *kwd,
  * of tokens in <b>table</b>.
  */
 static directory_token_t *
-get_next_token(const char **s, token_rule_t *table)
+get_next_token(const char **s, const char *eos, token_rule_t *table)
 {
   const char *next, *obstart;
   int i, j, done, allocated;
@@ -2358,22 +2364,22 @@ get_next_token(const char **s, token_rule_t *table)
   tok = tor_malloc_zero(sizeof(directory_token_t));
   tok->tp = _ERR;
 
-  *s = eat_whitespace(*s);
+  *s = eat_whitespace_eos(*s, eos);
   if (!**s) {
     tok->tp = _EOF;
     return tok;
   }
-  next = find_whitespace(*s);
+  next = find_whitespace_eos(*s, eos);
   if (!next) {
     tok->error = tor_strdup("Unexpected EOF"); return tok;
   }
   /* It's a keyword... but which one? */
   if (!strncmp("opt", *s, next-*s)) {
     /* Skip past an "opt" at the start of the line. */
-    *s = eat_whitespace(next);
+    *s = eat_whitespace_eos(next, eos);
     next = NULL;
     if (**s)
-      next = find_whitespace(*s);
+      next = find_whitespace_eos(*s, eos);
     if (!**s || !next) {
       RET_ERR("opt without keyword");
     }
@@ -2395,14 +2401,14 @@ get_next_token(const char **s, token_rule_t *table)
         tok->args = tor_malloc(sizeof(char*));
         tok->args[0] = tor_strndup(*s,next-*s);
         tok->n_args = 1;
-        *s = eat_whitespace_no_nl(next+1);
+        *s = eat_whitespace_eos_no_nl(next+1, eos);
       } else {
         /* This keyword takes multiple arguments. */
         j = 0;
         done = (*next == '\n');
         allocated = 32;
         tok->args = tor_malloc(sizeof(char*)*32);
-        *s = eat_whitespace_no_nl(next);
+        *s = eat_whitespace_eos_no_nl(next, eos);
         while (**s != '\n' && !done) {
           next = find_whitespace(*s);
           if (*next == '\n')
@@ -2412,7 +2418,7 @@ get_next_token(const char **s, token_rule_t *table)
             tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
           }
           tok->args[j++] = tor_strndup(*s,next-*s);
-          *s = eat_whitespace_no_nl(next+1);
+          *s = eat_whitespace_eos_no_nl(next+1, eos);
         }
         tok->n_args = j;
       }
@@ -2429,17 +2435,17 @@ get_next_token(const char **s, token_rule_t *table)
   }
   if (tok->tp == _ERR) {
     tok->tp = K_OPT;
-    *s = eat_whitespace_no_nl(next);
+    *s = eat_whitespace_eos_no_nl(next, eos);
     next = strchr(*s,'\n');
     if (!next)
       RET_ERR("Unexpected EOF");
     tok->args = tor_malloc(sizeof(char*));
     tok->args[0] = tor_strndup(*s,next-*s);
     tok->n_args = 1;
-    *s = eat_whitespace_no_nl(next+1);
+    *s = eat_whitespace_eos_no_nl(next+1, eos);
     o_syn = OBJ_OK;
   }
-  *s = eat_whitespace(*s);
+  *s = eat_whitespace_eos(*s, eos);
   if (strcmpstart(*s, "-----BEGIN ")) {
     goto check_object;
   }
@@ -2451,14 +2457,17 @@ get_next_token(const char **s, token_rule_t *table)
   }
   tok->object_type = tor_strndup(*s, next-*s-5);
   *s = next+1;
-  next = strstr(*s, "-----END ");
+  next = tor_memstr(*s, eos-*s, "-----END ");
   if (!next) {
     RET_ERR("Malformed object: missing end line");
   }
   if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) {
     if (strcmpstart(next, "-----END RSA PUBLIC KEY-----\n"))
       RET_ERR("Malformed object: mismatched end line");
-    next = strchr(next,'\n')+1;
+    next = memchr(next, '\n', eos-next);
+    if (!next)
+      RET_ERR("Couldn't parse public key.");
+    ++next;
     tok->key = crypto_new_pk_env();
     if (crypto_pk_read_public_key_from_string(tok->key, obstart, next-obstart))
       RET_ERR("Couldn't parse public key.");
@@ -2505,14 +2514,14 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
   for (i = 0; i < _NIL; ++i)
     counts[i] = 0;
   while (*s < end && (!tok || tok->tp != _EOF)) {
-    tok = get_next_token(s, table);
+    tok = get_next_token(s, end, table);
     if (tok->tp == _ERR) {
       log_warn(LD_DIR, "parse error: %s", tok->error);
       return -1;
     }
     ++counts[tok->tp];
     smartlist_add(out, tok);
-    *s = eat_whitespace(*s);
+    *s = eat_whitespace_eos(*s, end);
   }
 
   for (i = 0; table[i].t; ++i) {
