@@ -2365,7 +2365,7 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
   tok->tp = _ERR;
 
   *s = eat_whitespace_eos(*s, eos);
-  if (!**s) {
+  if (*s == eos) {
     tok->tp = _EOF;
     return tok;
   }
@@ -2377,10 +2377,8 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
   if (!strncmp("opt", *s, next-*s)) {
     /* Skip past an "opt" at the start of the line. */
     *s = eat_whitespace_eos(next, eos);
-    next = NULL;
-    if (**s)
-      next = find_whitespace_eos(*s, eos);
-    if (!**s || !next) {
+    next = find_whitespace_eos(*s, eos);
+    if (!next) {
       RET_ERR("opt without keyword");
     }
   }
