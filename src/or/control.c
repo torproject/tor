@@ -133,6 +133,8 @@ static int handle_control_closestream(control_connection_t *conn, uint32_t len,
 static int handle_control_closecircuit(control_connection_t *conn,
                                        uint32_t len,
                                        const char *body);
+static int handle_control_resolve(control_connection_t *conn, uint32_t len,
+                                  const char *body);
 static int handle_control_usefeature(control_connection_t *conn,
                                      uint32_t len,
                                      const char *body);
@@ -894,6 +896,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         event_code = EVENT_GUARD;
       } else if (!strcasecmp(ev, "STREAM_BW"))
         event_code = EVENT_STREAM_BANDWIDTH_USED;
+      else if (!strcasecmp(ev, "RESOLVED"))
+        event_code = EVENT_RESOLVED;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                  ev);
@@ -2212,6 +2216,32 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+static int
+handle_control_resolve(control_connection_t *conn, uint32_t len,
+                       const char *body)
+{
+  smartlist_t *args;
+  (void) len; /* body is nul-terminated; it's safe to ignore the length */
+
+  if (!(conn->event_mask & EVENT_ADDRMAP)) {
+    log_warn(LD_CONTROL, "Controller asked us to resolve an address, but "
+             "isn't listening for ADDRMAP events.  It probably won't see "
+             "the answer.");
+  }
+  args = smartlist_create();
+  smartlist_split_string(args, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(args, const char *, arg, {
+    evdns_server_control(arg);
+  });
+
+  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+  smartlist_free(args);
+
+  send_control_done(conn);
+  return 0;
+}
+
 /** Called when we get a USEFEATURE command: parse the feature list, and
  * set up the control_connection's options properly. */
 static int
@@ -2441,6 +2471,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "USEFEATURE")) {
     if (handle_control_usefeature(conn, data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "RESOLVE")) {
+    if (handle_control_resolve(conn, data_len, args))
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",

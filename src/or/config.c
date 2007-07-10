@@ -2445,7 +2445,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("DirPort must be defined if DirListenAddress is defined.");
 
   if (options->DNSPort == 0 && options->DNSListenAddress != NULL)
-    REJECT("DirPort must be defined if DirListenAddress is defined.");
+    REJECT("DNSPort must be defined if DNSListenAddress is defined.");
 
   if (options->ControlPort == 0 && options->ControlListenAddress != NULL)
     REJECT("ControlPort must be defined if ControlListenAddress is defined.");

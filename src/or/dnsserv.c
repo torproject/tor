@@ -145,6 +145,78 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   tor_free(q_name);
 }
 
+/* Helper function: called whenever the client sends a resolve request to our
+ * controller.  We need to eventually answer the request <b>req</b>.
+ */
+void
+dnsserv_launch_request(const char *name)
+{
+  edge_connection_t *conn;
+  struct evdns_server_request *server_req;
+  struct in_addr in;
+  char *q_name;
+  int i;
+  int is_ip_address;
+
+  /* Make a new dummy AP connection, and attach the request to it. */
+  conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
+  conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
+
+  is_ip_address = tor_inet_aton(name, &in);
+
+  if (!is_ip_address)
+    conn->socks_request->command = SOCKS_COMMAND_RESOLVE_CONTROL;
+  else
+    conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR_CONTROL;
+
+  strlcpy(conn->socks_request->address, name,
+          sizeof(conn->socks_request->address));
+
+  server_req = malloc(sizeof(struct evdns_server_request));
+  if (server_req == NULL) return;
+  memset(server_req, 0, sizeof(struct evdns_server_request));
+
+  server_req->flags = 0;
+  server_req->nquestions = 0;
+
+  server_req->questions = malloc(sizeof(struct evdns_server_question *) * 1);
+  if (server_req->questions == NULL)
+    return;
+
+  for ( i = 0; i < 1; ++i) {
+    struct evdns_server_question *q;
+    int namelen;
+    namelen = strlen(name);
+    q = malloc(sizeof(struct evdns_server_question) + namelen);
+    if (!q)
+        return;
+    if (!is_ip_address)
+      q->type = EVDNS_TYPE_A;
+    else
+      q->type = EVDNS_TYPE_PTR;
+    q->class = EVDNS_CLASS_INET;
+    memcpy(q->name, name, namelen+1);
+    server_req->questions[server_req->nquestions++] = q;
+  }
+
+  conn->dns_server_request = server_req;
+
+  connection_add(TO_CONN(conn));
+
+  /* Now, throw the connection over to get rewritten (which will answer it
+  * immediately if it's in the cache, or completely bogus, or automapped),
+  * and then attached to a circuit. */
+  log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
+           escaped_safe_str(name));
+  q_name = tor_strdup(name); /* q could be freed in rewrite_and_attach */
+  connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
+  /* Now, the connection is marked if it was bad. */
+
+  log_info(LD_APP, "Passed request for %s to rewrite_and_attach.",
+           escaped_safe_str(q_name));
+  tor_free(q_name);
+}
+
 /** If there is a pending request on <b>conn</b> that's waiting for an answer,
  * send back an error and free the request. */
 void
@@ -181,27 +253,49 @@ dnsserv_resolved(edge_connection_t *conn,
    * or more of the questions in the request); then, call
    * evdns_server_request_respond. */
   if (answer_type == RESOLVED_TYPE_IPV6) {
-    log_info(LD_APP, "Got an IPv6 answer; that's not implemented.");
-    err = DNS_ERR_NOTIMPL;
+    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
+      handle_control_resolve_response(req->questions[0]->name,
+                                      "IPv6 not implemented");
+    else {
+      log_info(LD_APP, "Got an IPv6 answer; that's not implemented.");
+      err = DNS_ERR_NOTIMPL;
+    }
   } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4 &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
-    evdns_server_request_add_a_reply(req,
-                                     conn->socks_request->address,
-                                     1, (char*)answer, ttl);
+    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
+      handle_control_resolve_response(req->questions[0]->name,
+                                      tor_dup_addr(ntohl(get_uint32(answer))));
+    else
+      evdns_server_request_add_a_reply(req,
+                                       conn->socks_request->address,
+                                       1, (char*)answer, ttl);
   } else if (answer_type == RESOLVED_TYPE_HOSTNAME &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR) {
-    char *ans = tor_strndup(answer, answer_len);
-    evdns_server_request_add_ptr_reply(req, NULL,
+    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
+      handle_control_resolve_response(req->questions[0]->name, answer);
+    else {
+      char *ans = tor_strndup(answer, answer_len);
+      evdns_server_request_add_ptr_reply(req, NULL,
                                        conn->socks_request->address,
                                        (char*)answer, ttl);
-    tor_free(ans);
+      tor_free(ans);
+    }
   } else if (answer_type == RESOLVED_TYPE_ERROR) {
-    err = DNS_ERR_NOTEXIST;
+    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
+      handle_control_resolve_response(req->questions[0]->name, "Unknown Host");
+    else
+      err = DNS_ERR_NOTEXIST;
   } else { /* answer_type == RESOLVED_TYPE_ERROR_TRANSIENT */
-    err = DNS_ERR_SERVERFAILED;
+    if (SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
+      handle_control_resolve_response(req->questions[0]->name,
+                                      "Temporary Error");
+    else
+      err = DNS_ERR_SERVERFAILED;
   }
 
-  evdns_server_request_respond(req, err);
+  if (!SOCKS_COMMAND_IS_RESOLVE_CONTROL(conn->socks_request->command))
+    evdns_server_request_respond(req, err);
+
   conn->dns_server_request = NULL;
 }
 

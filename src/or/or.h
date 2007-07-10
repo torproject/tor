@@ -2095,6 +2095,7 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 #define SOCKS_COMMAND_RESOLVE       0xF0
 /** Please turn this IP address into an FQDN, privately. */
 #define SOCKS_COMMAND_RESOLVE_PTR   0xF1
+
 /** Please open an encrypted direct TCP connection to the directory port
  * of the Tor server specified by address:port. (In this case address:port
  * specifies the ORPort of the server.) */
@@ -2800,6 +2801,7 @@ void dnsserv_resolved(edge_connection_t *conn,
                       const char *answer,
                       int ttl);
 void dnsserv_reject_request(edge_connection_t *conn);
+void dnsserv_launch_request(const char *name);
 
 /********************************* hibernate.c **********************/
 
