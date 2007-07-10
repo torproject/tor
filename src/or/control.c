@@ -1483,6 +1483,8 @@ getinfo_helper_events(control_connection_t *control_conn,
      * to be a status GETINFO if there's a corresponding STATUS event. */
     if (!strcmp(question, "status/circuit-established")) {
       *answer = tor_strdup(has_completed_circuit ? "1" : "0");
+    } else if (!strcmp(question, "status/enough-dir-info")) {
+      *answer = tor_strdup(router_have_minimum_dir_info() ? "1" : "0");
     } else if (!strcmpstart(question, "status/version/")) {
       combined_version_status_t st;
       int is_server = server_mode(get_options());
@@ -1595,6 +1597,9 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("status/", events, NULL),
   DOC("status/circuit-established",
       "Whether we think client functionality is working."),
+  DOC("status/enough-dir-info",
+      "Whether we have enough up-to-date directory information to build "
+      "circuits."),
   /* DOCDOC specify status/version/ */
   DOC("status/version/recommended", "List of currently recommended versions."),
   DOC("status/version/current", "Status of the current version."),

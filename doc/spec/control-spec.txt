@@ -484,6 +484,7 @@ $Id$
       an empty string.
 
     "status/circuit-established"
+    "status/enough-dir-info"
     "status/..."
       These provide the current internal Tor values for various Tor
       states. See Section 4.1.10 for explanations. (Only a few of the
@@ -694,6 +695,8 @@ $Id$
   request (or reverse lookup if "mode=reverse" is specified).  Note that the
   request is done in the background: to see the answers, your controller will
   need to listen for ADDRMAP events; see 4.1.7 below.
+
+  [Added in Tor 0.2.0.3-alpha]
 
 4. Replies
 

@@ -17,6 +17,8 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
       from Robert Hogan.)
     - Add a RESOLVE command to launch hostname lookups. (Original patch
       from Robert Hogan.)
+    - Add GETINFO status/enough-dir-info to let controllers tell whether
+      Tor has downloaded sufficient directory information. (Patch from Tup.)
 
   o Performance improvements (win32):
     - Use Critical Sections rather than Mutexes for synchronizing threads
