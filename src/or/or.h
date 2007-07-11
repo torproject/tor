@@ -589,9 +589,9 @@ typedef enum {
 #define END_CIRC_REASON_NOSUCHSERVICE   12
 #define _END_CIRC_REASON_MAX            12
 
-/* OR this with the argument to circuit_mark_for_close, or
- * control_event_circuit_status to indicate that the reason came from a
- * destroy or truncate cell. */
+/** Bitwise-OR this with the argument to circuit_mark_for_close() or
+ * control_event_circuit_status() to indicate that the reason was
+ * passed through from a destroy or truncate cell. */
 #define END_CIRC_REASON_FLAG_REMOTE     512
 
 /** Length of 'y' portion of 'y.onion' URL. */
