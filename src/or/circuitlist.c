@@ -958,9 +958,9 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
                file, line, circ->purpose);
     }
     reason = END_CIRC_REASON_NONE;
-  } else if (CIRCUIT_IS_ORIGIN(circ) && reason < _END_CIRC_REASON_MIN) {
-    /* We don't send reasons when closing circuits at the origin, but we want
-     * to track them anyway so we can give them to the controller. */
+  }
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    /* We don't send reasons when closing circuits at the origin. */
     reason = END_CIRC_REASON_NONE;
   }
 
