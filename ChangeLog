@@ -15,6 +15,11 @@ Changes in version 0.1.2.15 - 2007-0?-??
     - Fix a possible buffer overrun when using BSD natd support.  Bug found
       by "Mr. Croup."
 
+  o Minor bugfixes (security):
+    - When sending destroy cells from a circuit's origin, don't include
+      the reason for tearing down the circuit. The spec says we didn't,
+      and now we actually don't. Reported by lodger.
+
   o Minor bugfixes (directory)
     - Count the number of authorities that recommend each version
       correctly.  Previously, we were under-counting by 1.

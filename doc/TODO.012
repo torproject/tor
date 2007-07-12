@@ -16,7 +16,7 @@ Backport items for 0.1.2:
   o r10643: eventdns.c behavior fix for solaris.
   - r10730: Don't choose guards after any never-connected-to guard. (??)
   o r10760: fix possible buffer overrun in old BSD natd code
-  - r10790: Don't include reasons in destroy cells from the origin.
+  o r10790: Don't include reasons in destroy cells from the origin.
   - Some fix for bug 455.
 
 
