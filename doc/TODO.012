@@ -6,9 +6,9 @@ Backport items for 0.1.2:
   o r10376, r10396: Fix segfaults in directory code
   o r10478: stop tearing down entire circuits because the user asked for
 	    a nonexistent hidden service port
-  - r10493: weight guard selection by bandwidth (??)
+  o r10493: weight guard selection by bandwidth
   o r10495: change an assert into a tor_assert
-  - r10521: fix an impossible (?) memory leak (??)
+  - r10521: fix an impossible^Wapparently real memory leak
   o r10524: make the LICENSE and AUTHORS files mention Tor.
   o r10563: use correct types with desc_digest_map.
   o r10566: build correctly on systems where size_t is bigger than ulong. 
