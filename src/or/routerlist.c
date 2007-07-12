@@ -1659,9 +1659,9 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
     smartlist_add(rl->old_routers, sd);
     digestmap_set(rl->desc_digest_map, sd->signed_descriptor_digest, sd);
   } else {
-    ri_tmp = digestmap_remove(rl->desc_digest_map,
+    signed_descriptor_t *sd_tmp = digestmap_remove(rl->desc_digest_map,
                               ri->cache_info.signed_descriptor_digest);
-    tor_assert(ri_tmp == ri);
+    tor_assert(sd_tmp == &ri->cache_info);
     router_bytes_dropped += ri->cache_info.signed_descriptor_len;
     routerinfo_free(ri);
   }
