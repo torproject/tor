@@ -1,0 +1,23 @@
+Backport items for 0.1.2:
+  - r10148: open cached-routers with FILE_SHARE_READ on win32.
+  o r10240,10242: avoid choosing family of exit as guard.
+  o r10248: handle lack of nul at end of mmaped data.
+  - r10346: Try even harder not to look at the first byte after an mmap.
+  - r10376, r10396: Fix segfaults in directory code
+  - r10478: stop tearing down entire circuits because the user asked for
+	    a nonexistent hidden service port
+  - r10493: weight guard selection by bandwidth (??)
+  o r10495: change an assert into a tor_assert
+  - r10521: fix an impossible (?) memory leak (??)
+  - r10524: make the LICENSE and AUTHORS files mention Tor.
+  o r10563: use correct types with desc_digest_map.
+  o r10566: build correctly on systems where size_t is bigger than ulong. 
+  - r10579: new addsysuser implementation for osx (??)
+  - r10643: eventdns.c behavior fix for solaris.
+  - r10730: Don't choose guards after any never-connected-to guard. (??)
+  - r10760: fix possible buffer overrun in old BSD natd code
+  - r10790: Don't include reasons in destroy cells from the origin.
+  - Some fix for bug 455.
+
+
+
