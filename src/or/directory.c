@@ -1853,7 +1853,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
 
   if (!strcmp(url,"/tor/")) { /* server descriptor post */
-    const char *msg;
+    const char *msg = NULL;
     int r = dirserv_add_descriptor(body, &msg);
     tor_assert(msg);
     if (r > 0)
