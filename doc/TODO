@@ -41,6 +41,18 @@ N   . Document transport and natdport
       - In a good HOWTO.
 
 Things we'd like to do in 0.2.0.x:
+      - Bug reports I've heard along that way that don't have enough
+        details to solve them yet.
+        - tup said that when he set FetchUselessDescriptors, after
+          24 or 48 hours he wasn't fetching any descriptors at all
+          anymore. This was in 0.2.0 but worked fine in 0.1.2.
+        - arma noticed that when his network went away and he tried
+          a new guard node and the connect() syscall failed to it,
+          the guard wasn't being marked as down. 0.2.0.x.
+        - after being without network for 12 hours, arma's tor decided
+          it couldn't fetch any network statuses, and never tried again
+          even when the network came back and arma clicked on things.
+          also 0.2.0.
       - Update dir-spec with decisions made on these issues:
         o clients don't log as loudly when they receive them
         o they don't count toward the 3-strikes rule
@@ -221,6 +233,8 @@ Things we'd like to do in 0.2.0.x:
         like the ones you have, ask a new bridge for its server/authority.
       . Ask all directory questions to bridge via BEGIN_DIR.
         - use the bridges for dir fetches even when our dirport is open.
+R     - drop 'authority' queries if they're to our own identity key; accept
+        them otherwise.
 N     - Design/implement the "local-status" or something like it, from the
         "Descriptor purposes: how to tell them apart" section of
         http://archives.seul.org/or/dev/May-2007/msg00008.html
