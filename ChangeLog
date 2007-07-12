@@ -11,6 +11,10 @@ Changes in version 0.1.2.15 - 2007-0?-??
       orconfig.h _before_ sys/types.h, so that we can get the expected
       definition of _FILE_OFFSET_BITS.  [Bugfix on 0.1.2.x]
 
+  o Major bugfixes (security):
+    - Fix a possible buffer overrun when using BSD natd support.  Bug found
+      by "Mr. Croup."
+
   o Minor bugfixes (directory)
     - Count the number of authorities that recommend each version
       correctly.  Previously, we were under-counting by 1.
