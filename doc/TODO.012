@@ -8,16 +8,19 @@ Backport items for 0.1.2:
 	    a nonexistent hidden service port
   o r10493: weight guard selection by bandwidth
   o r10495: change an assert into a tor_assert
-  - r10521: fix an impossible^Wapparently real memory leak
+  o r10521: fix an impossible^Wapparently real memory leak
   o r10524: make the LICENSE and AUTHORS files mention Tor.
   o r10563: use correct types with desc_digest_map.
   o r10566: build correctly on systems where size_t is bigger than ulong. 
-  - r10579: new addsysuser implementation for osx (??)
   o r10643: eventdns.c behavior fix for solaris.
   - r10730: Don't choose guards after any never-connected-to guard. (??)
   o r10760: fix possible buffer overrun in old BSD natd code
   o r10790: Don't include reasons in destroy cells from the origin.
   - Some fix for bug 455.
+
+
+Backport for 0.1.2.x once better tested:
+  - r10579: new addsysuser implementation for osx (??)
 
 
 

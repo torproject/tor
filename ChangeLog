@@ -37,6 +37,7 @@ Changes in version 0.1.2.15 - 2007-0?-??
     - Fix a possible (but very unlikely) bug in picking routers by bandwidth.
       Add a log message to confirm that it is in fact unlikely. (Patch from
       lodger.)
+    - Backport a couple of memory leak fixes.
     - Backport miscellaneous cosmetic bugfixes.
 
 
