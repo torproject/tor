@@ -7,6 +7,11 @@ Changes in version 0.1.2.15 - 2007-0?-??
       correctly.  Previously, we were under-counting by 1.
     - Fix a crash bug in directory authorities when we re-number the
       routerlist while inserting a new router.
+    - Backport miscellaneous cosmetic bugfixes.
+    - Fix eventdns.c behavior on Solaris: It is critical to include
+      orconfig.h _before_ sys/types.h, so that we can get the expected
+      definition of _FILE_OFFSET_BITS.  [Bugfix on 0.1.2.x]
+
 
 Changes in version 0.1.2.14 - 2007-05-25
   o Directory authority changes:

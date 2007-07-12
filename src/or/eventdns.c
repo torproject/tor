@@ -32,10 +32,9 @@
  * Version: 0.1b
  */
 
-#include <sys/types.h>
 #include "eventdns_tor.h"
+#include <sys/types.h>
 //#define NDEBUG
-#include "../common/torint.h"
 
 #ifndef DNS_USE_CPU_CLOCK_FOR_ID
 #ifndef DNS_USE_GETTIMEOFDAY_FOR_ID
