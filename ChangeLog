@@ -1,16 +1,22 @@
 Changes in version 0.1.2.15 - 2007-0?-??
-  o Fixes:
+  o Major bugfixes (compilation):
     - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
+
+  o Major bugfixes (crashes):
     - Try even harder not to dereference the first character after
       an mmap(). (Bug reported by lodger)
-    - Count the number of authorities that recommend each version
-      correctly.  Previously, we were under-counting by 1.
     - Fix a crash bug in directory authorities when we re-number the
       routerlist while inserting a new router.
-    - Backport miscellaneous cosmetic bugfixes.
     - Fix eventdns.c behavior on Solaris: It is critical to include
       orconfig.h _before_ sys/types.h, so that we can get the expected
       definition of _FILE_OFFSET_BITS.  [Bugfix on 0.1.2.x]
+
+  o Minor bugfixes (directory)
+    - Count the number of authorities that recommend each version
+      correctly.  Previously, we were under-counting by 1.
+
+  o Minor bugfixes (misc)
+    - Backport miscellaneous cosmetic bugfixes.
 
 
 Changes in version 0.1.2.14 - 2007-05-25
