@@ -292,9 +292,9 @@ typedef uint32_t uintptr_t;
 
 #ifndef SIZE_T_MAX
 #if (SIZEOF_SIZE_T == 4)
-#define SIZE_T_MAX 0xfffffffful
+#define SIZE_T_MAX UINT32_MAX
 #elif (SIZEOF_SIZE_T == 8)
-#define SIZE_T_MAX 0xfffffffffffffffful
+#define SIZE_T_MAX UINT64_MAX
 #else
 #error "Can't define SIZE_T_MAX"
 #endif
