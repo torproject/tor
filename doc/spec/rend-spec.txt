@@ -123,9 +123,12 @@ $Id$
 
    The first time the OP provides an advertised service, it generates
    a public/private keypair (stored locally).  Periodically, the OP
-   generates a pair of service descriptors, one "V1" and one "V0".
+   generates and publishes a descriptor of type "V0". The V1 descriptor
+   format in 0.1.1.5-alpha-cvs is understood and accepted, but currently
+   no Tors generate them. The more complex V1 descriptor format below
+   is just speculation and has never been used.
 
-   The "V1" descriptor in 0.1.1.6-alpha contains:
+   A hypothetical "V1" descriptor contains:
 
          V     Format byte: set to 255               [1 octet]
          V     Version byte: set to 1                [1 octet]
