@@ -18,8 +18,9 @@ Overview:
 
   The basic idea of this proposal is to distribute the tasks of storing and
   serving hidden service descriptors from currently three authoritative
-  directory nodes among a large subset of all onion routers. The two reasons to
-  do this are better scalability and improved security properties. Further,
+  directory nodes among a large subset of all onion routers. The three
+  reasons to do this are better robustness (availability), better
+  scalability, and improved security properties. Further,
   this proposal suggests changes to the hidden service descriptor format to
   prevent new security threats coming from decentralization and to gain even
   better security properties.
@@ -41,7 +42,7 @@ Motivation:
   increasing number of replicas. These scalability issues have an impact on the
   current usage of hidden services and put an even higher burden on the
   development of new kinds of applications for hidden services that might
-  require storing even bigger numbers of descriptors.
+  require storing even more descriptors.
 
   Second, besides posing a limitation to scalability, storing all hidden
   service descriptors on three directory nodes also constitutes a security
@@ -98,7 +99,7 @@ Motivation:
   descriptor. It is used to calculate descriptor IDs and to encrypt the
   introduction points. This second key can either be given to all clients
   together with the hidden service ID, or to a group or a single client as
-  authentication token. In the future this second key could be the result of
+  an authentication token. In the future this second key could be the result of
   some key agreement protocol between the hidden service and one or more
   clients. A new text-based format is proposed for descriptors instead of an
   extension of the existing binary format for reasons of future extensibility.
@@ -567,7 +568,7 @@ Security implications:
 
   Attacks by authoritative directory nodes
 
-    Authoritative directory nodes are not anymore the single places in the
+    Authoritative directory nodes are no longer the single places in the
     network that know about a hidden service's activity and introduction
     points. Thus, they cannot perform attacks using this information, e.g.
     track a hidden service's activity or usage pattern or attack its
@@ -584,7 +585,8 @@ Security implications:
     to have a good probability to become responsible for its changing
     descriptor IDs. For each period, the probability is:
 
-      1-(N-c choose r)/(N choose r) for N-c>=r and 1 else with N as total
+      1-(N-c choose r)/(N choose r) for N-c>=r and 1 otherwise, with N
+      as total
       number of hidden service directories, c as compromised nodes, and r as
       number of replicas
 
@@ -595,11 +597,12 @@ Security implications:
     content. The client would detect a false descriptor, because it could not
     contain a correct signature. But an old content or an empty reply could
     confuse the client. Therefore, the countermeasure is to replicate
-    descriptors among a small number of hidden service directories. The
-    probability of a group of collaborating nodes to make a hidden service
+    descriptors among a small number of hidden service directories, e.g. 5.
+    The probability of a group of collaborating nodes to make a hidden service
     completely unavailable is in each period:
 
-      (c choose r)/(N choose r) for c>=r and N>=r, and 0 else with N as total
+      (c choose r)/(N choose r) for c>=r and N>=r, and 0 otherwise,
+      with N as total
       number of hidden service directories, c as compromised nodes, and r as
       number of replicas
 
