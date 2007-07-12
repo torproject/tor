@@ -13,7 +13,7 @@ Backport items for 0.1.2:
   o r10563: use correct types with desc_digest_map.
   o r10566: build correctly on systems where size_t is bigger than ulong. 
   o r10643: eventdns.c behavior fix for solaris.
-  - r10730: Don't choose guards after any never-connected-to guard. (??)
+  o r10730: Don't choose guards after any never-connected-to guard.
   o r10760: fix possible buffer overrun in old BSD natd code
   o r10790: Don't include reasons in destroy cells from the origin.
   - Some fix for bug 455.
