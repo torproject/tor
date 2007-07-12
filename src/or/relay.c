@@ -18,7 +18,8 @@ const char relay_c_id[] =
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
-                                       int cell_direction);
+                                            int cell_direction,
+                                            crypt_path_t *layer_hint);
 
 static int
 connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
@@ -164,7 +165,8 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
   }
 
   if (recognized) {
-    edge_connection_t *conn = relay_lookup_conn(circ, cell, cell_direction);
+    edge_connection_t *conn = relay_lookup_conn(circ, cell, cell_direction,
+                                                layer_hint);
     if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
       log_debug(LD_OR,"Sending away from origin.");
@@ -380,7 +382,8 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
  * attached to circ, return that conn, else return NULL.
  */
 static edge_connection_t *
-relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
+relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction,
+                  crypt_path_t *layer_hint)
 {
   edge_connection_t *tmpconn;
   relay_header_t rh;
@@ -398,7 +401,8 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction)
     for (tmpconn = TO_ORIGIN_CIRCUIT(circ)->p_streams; tmpconn;
          tmpconn=tmpconn->next_stream) {
       if (rh.stream_id == tmpconn->stream_id &&
-          !tmpconn->_base.marked_for_close) {
+          !tmpconn->_base.marked_for_close &&
+          tmpconn->cpath_layer == layer_hint) {
         log_debug(LD_APP,"found conn for stream %d.", rh.stream_id);
         return tmpconn;
       }

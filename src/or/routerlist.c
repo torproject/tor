@@ -1155,7 +1155,7 @@ router_get_advertised_bandwidth(routerinfo_t *router)
  *
  * If <b>for_exit</b>, we're picking an exit node: consider all nodes'
  * bandwidth equally regardless of their Exit status.  If not <b>for_exit</b>,
- * we're picking a non-exit node: weight exit-node's bandwidth downwards
+ * we're picking a non-exit node: weight exit-node's bandwidth less
  * depending on the smallness of the fraction of Exit-to-total bandwidth.
  */
 static void *
