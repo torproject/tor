@@ -24,6 +24,9 @@ Changes in version 0.1.2.15 - 2007-0?-??
     - When sending destroy cells from a circuit's origin, don't include
       the reason for tearing down the circuit. The spec says we didn't,
       and now we actually don't. Reported by lodger.
+    - Keep streamids from different exits on a circuit separate. This
+      bug may have allowed other routers on a given circuit to inject
+      cells into streams. Reported by lodger; fixes bug 446.
 
   o Minor bugfixes (directory)
     - Count the number of authorities that recommend each version
