@@ -16,6 +16,8 @@ Changes in version 0.1.2.15 - 2007-0?-??
       correctly.  Previously, we were under-counting by 1.
 
   o Minor bugfixes (misc)
+    - On Windows, we were preventing other processes from reading
+      cached-routers while Tor was running.  (Reported by janbar)
     - Backport miscellaneous cosmetic bugfixes.
 
 

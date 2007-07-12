@@ -1,5 +1,5 @@
 Backport items for 0.1.2:
-  - r10148: open cached-routers with FILE_SHARE_READ on win32.
+  o r10148: open cached-routers with FILE_SHARE_READ on win32.
   o r10240,10242: avoid choosing family of exit as guard.
   o r10248: handle lack of nul at end of mmaped data.
   - r10346: Try even harder not to look at the first byte after an mmap.
