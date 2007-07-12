@@ -15,6 +15,11 @@ Changes in version 0.1.2.15 - 2007-0?-??
     - Count the number of authorities that recommend each version
       correctly.  Previously, we were under-counting by 1.
 
+  o Minor bugfixes (hidden services):
+    - Stop tearing down the whole circuit when the user asks for a
+      connection to a port that the hidden service didn't configure.
+      Resolves bug 444.
+
   o Minor bugfixes (misc)
     - On Windows, we were preventing other processes from reading
       cached-routers while Tor was running.  (Reported by janbar)
