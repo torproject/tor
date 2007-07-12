@@ -41,6 +41,11 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Fix a crash bug when router descriptors end at a 4096-byte boundary
       on disk. [Bugfix on 0.1.2.x]
 
+  o Minor bugfixes (core protocol):
+    - When sending destroy cells from a circuit's origin, don't include
+      the reason for tearing down the circuit. The spec says we didn't,
+      and now we actually don't. Reported by lodger. [Bugfix on 0.1.2.x]
+
   o Minor bugfixes (directory):
     - Fix another crash bug related to extra-info caching.  (Bug found by
       Peter Palfrader.) [Bugfix on 0.2.0.2-alpha]
@@ -75,9 +80,6 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Security fixes (BSD natd support):
     - Fix a possible buffer overrun when using BSD natd support. Bug found
       by croup.
-    - When sending destroy cells from a circuit's origin, don't include
-      the reason for tearing down the circuit. The spec says we didn't,
-      and now we actually don't. Reported by lodger. [Bugfix on 0.1.2.x]
 
 
 Changes in version 0.2.0.2-alpha - 2007-06-02
@@ -271,6 +273,8 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       we restart.
     - Add even more asserts to hunt down bug 417.
     - Build without verbose warnings even on (not-yet-released) gcc 4.2.
+    - Fix a possible (but very unlikely) bug in picking routers by bandwidth.
+      Add a log message to confirm that it is in fact unlikely.
 
   o Minor bugfixes (controller):
     - Make 'getinfo fingerprint' return a 551 error if we're not a

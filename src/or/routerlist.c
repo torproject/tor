@@ -1294,6 +1294,12 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     if (tmp >= rand_bw)
       break;
   }
+  if (i == smartlist_len(sl)) {
+    /* This is possible due to round-off error. */
+    --i;
+    log_warn(LD_BUG, "Round-off error in computing bandwidth had an effect on "
+             " which router we chose.  Please tell the developers.");
+  }
   tor_free(bandwidths);
   return smartlist_get(sl, i);
 }
