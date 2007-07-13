@@ -78,7 +78,7 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
       guard list unless we need to. [Bugfix on 0.1.2.x]
 
   o Security fixes (BSD natd support):
-    - Fix a possible buffer overrun when using BSD natd support. Bug found
+    - Fix a possible buffer overrun when using BSD natd support.  Bug found
       by croup.
 
   o Security fixes (circuits):
