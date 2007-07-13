@@ -1,10 +1,10 @@
-Changes in version 0.1.2.15 - 2007-0?-??
+Changes in version 0.1.2.15 - 2007-07-??
   o Major bugfixes (compilation):
     - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
 
   o Major bugfixes (crashes):
     - Try even harder not to dereference the first character after
-      an mmap(). (Bug reported by lodger)
+      an mmap(). Reported by lodger.
     - Fix a crash bug in directory authorities when we re-number the
       routerlist while inserting a new router.
     - Fix eventdns.c behavior on Solaris: It is critical to include
@@ -12,15 +12,8 @@ Changes in version 0.1.2.15 - 2007-0?-??
       definition of _FILE_OFFSET_BITS.
 
   o Major bugfixes (security):
-    - Fix a possible buffer overrun when using BSD natd support.  Bug found
-      by "Mr. Croup."
-
-  o Minor bugfixes (guard nodes):
-    - If there's a never-before-connected-to guard node in our list,
-      never choose any guards past it. This way we don't expand our
-      guard list unless we need to.
-
-  o Minor bugfixes (security):
+    - Fix a possible buffer overrun when using BSD natd support.
+      Bug found by "Mr. Croup."
     - When sending destroy cells from a circuit's origin, don't include
       the reason for tearing down the circuit. The spec says we didn't,
       and now we actually don't. Reported by lodger.
@@ -28,7 +21,14 @@ Changes in version 0.1.2.15 - 2007-0?-??
       bug may have allowed other routers on a given circuit to inject
       cells into streams. Reported by lodger; fixes bug 446.
 
-  o Minor bugfixes (directory)
+  o Minor bugfixes (guard nodes):
+    - Weight guard selection by bandwidth, so that high-bandwidth nodes
+      don't get underused as guards.
+    - If there's a never-before-connected-to guard node in our list,
+      never choose any guards past it. This way we don't expand our
+      guard list unless we need to.
+
+  o Minor bugfixes (directory):
     - Count the number of authorities that recommend each version
       correctly.  Previously, we were under-counting by 1.
 
@@ -37,14 +37,12 @@ Changes in version 0.1.2.15 - 2007-0?-??
       connection to a port that the hidden service didn't configure.
       Resolves bug 444.
 
-  o Minor bugfixes (misc)
-    - Weight guard selection by bandwidth, so that high-bandwidth nodes
-      don't get underused as guards.
+  o Minor bugfixes (misc):
     - On Windows, we were preventing other processes from reading
-      cached-routers while Tor was running.  (Reported by janbar)
-    - Fix a possible (but very unlikely) bug in picking routers by bandwidth.
-      Add a log message to confirm that it is in fact unlikely. (Patch from
-      lodger.)
+      cached-routers while Tor was running. Reported by janbar.
+    - Fix a possible (but very unlikely) bug in picking routers by
+      bandwidth. Add a log message to confirm that it is in fact
+      unlikely. Patch from lodger.
     - Backport a couple of memory leak fixes.
     - Backport miscellaneous cosmetic bugfixes.
 
