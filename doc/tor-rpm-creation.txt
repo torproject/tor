@@ -53,3 +53,14 @@ The "target_os" parameter:
 This parameter controls the target operating system.  Normally, this is
 only "linux".  If you wish to build rpms for a non-linux operating
 system, you can replace "linux" with your operating system.
+
+The process used to create the distributed rpms is as follows:
+
+Download and Extract the latest tor source code from https://tor.eff.org/.
+In the Tor directory:
+./configure --enable-eventdns --enable-static --disable-shared
+make dist-rpm
+
+You should have at least two, maybe three, rpms.  There should be the binary
+i386.rpm, a src.rpm, and on redhat/centos machines, a debuginfo.rpm.
+

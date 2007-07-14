@@ -113,7 +113,7 @@ Extract Tor:
 Type "tar zxf latest-tor-alpha.tar.gz"
 
 cd tor-<version>
-Type "./configure --enable-static --disable-shared"
+Type "./configure --enable-eventdns --enable-static --disable-shared"
 Type "make"
 
 You now have a tor.exe in src/or/.  This is Tor.

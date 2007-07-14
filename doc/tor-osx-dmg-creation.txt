@@ -48,7 +48,7 @@ file privoxyosx_setup_3.0.6.zip
 do a configure with these parameters:
      CONFDIR=/Library/Tor ./configure --prefix=/Library/Tor \
      --bindir=/Library/Tor --sysconfdir=/Library  \
-     --enable-static --disable-shared
+     --enable-eventdns --enable-static --disable-shared
 
 3) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.
