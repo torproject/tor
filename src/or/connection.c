@@ -1261,6 +1261,7 @@ retry_listeners(int type, config_line_t *cfg,
 
         if (listensockaddr) {
           conn = connection_create_listener(listensockaddr, type, address);
+          tor_free(listensockaddr);
           tor_free(address);
         } else
           conn = NULL;
@@ -1271,7 +1272,7 @@ retry_listeners(int type, config_line_t *cfg,
           if (new_conns)
             smartlist_add(new_conns, conn);
         }
-    });
+      });
   }
 
   if (free_launch_elts) {
