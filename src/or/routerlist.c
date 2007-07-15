@@ -501,6 +501,7 @@ router_rebuild_store(int force, int extrainfo)
   if (signed_descriptors)
     smartlist_free(signed_descriptors);
   tor_free(fname);
+  tor_free(fname_tmp);
   SMARTLIST_FOREACH(chunk_list, sized_chunk_t *, c, tor_free(c));
   smartlist_free(chunk_list);
 
