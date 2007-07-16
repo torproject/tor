@@ -403,6 +403,21 @@ strcmpstart(const char *s1, const char *s2)
   return strncmp(s1, s2, n);
 }
 
+/** Compare the s1_len-byte string <b>s1</b> with <b>s2</b>,
+ * without depending on a terminating nul in s1.  Sorting order is first by
+ * length, then lexically; return values are as for strcmp.
+ */
+int
+strcmp_len(const char *s1, const char *s2, size_t s1_len)
+{
+  size_t s2_len = strlen(s2);
+  if (s1_len < s2_len)
+    return -1;
+  if (s1_len > s2_len)
+    return 1;
+  return memcmp(s1, s2, s2_len);
+}
+
 /** Compares the first strlen(s2) characters of s1 with s2.  Returns as for
  * strcasecmp.
  */
@@ -505,7 +520,8 @@ eat_whitespace_no_nl(const char *s)
   return s;
 }
 
-/** DOCDOC */
+/** As eat_whitespace_no_nl, but stop at <b>eos</b> whether we have
+ * found a non-whitespace character or not. */
 const char *
 eat_whitespace_eos_no_nl(const char *s, const char *eos)
 {
@@ -537,7 +553,8 @@ find_whitespace(const char *s)
   }
 }
 
-/** DOCDOC */
+/** As find_whitespace, but stop at <b>eos</b> whether we have found a
+ * whitespace or not. */
 const char *
 find_whitespace_eos(const char *s, const char *eos)
 {
@@ -556,9 +573,8 @@ find_whitespace_eos(const char *s, const char *eos)
       ++s;
     }
   }
-  return NULL;
+  return s;
 }
-
 
 /** Return true iff the 'len' bytes at 'mem' are all zero. */
 int

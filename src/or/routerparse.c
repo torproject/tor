@@ -2345,8 +2345,8 @@ token_check_object(const char *kwd,
 static directory_token_t *
 get_next_token(const char **s, const char *eos, token_rule_t *table)
 {
-  const char *next, *obstart;
-  int i, j, done, allocated;
+  const char *next, *eol, *obstart;
+  int i, j, allocated, obname_len;
   directory_token_t *tok;
   obj_syntax o_syn = NO_OBJ;
   char ebuf[128];
@@ -2364,61 +2364,55 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
   tok = tor_malloc_zero(sizeof(directory_token_t));
   tok->tp = _ERR;
 
-  *s = eat_whitespace_eos(*s, eos);
-  if (*s == eos) {
-    tok->tp = _EOF;
-    return tok;
-  }
-  next = find_whitespace_eos(*s, eos);
-  if (!next) {
-    tok->error = tor_strdup("Unexpected EOF"); return tok;
-  }
-  /* It's a keyword... but which one? */
-  if (!strncmp("opt", *s, next-*s)) {
+  /* Set *s to first token, eol to end-of-line, next to after first token */
+  *s = eat_whitespace_eos(*s, eos); /* eat multi-line whitespace */
+  eol = memchr(*s, '\n', eos-*s);
+  if (!eol)
+    eol = eos;
+  next = find_whitespace_eos(*s, eol);
+
+  if (!strcmp_len(*s, "opt", next-*s)) {
     /* Skip past an "opt" at the start of the line. */
-    *s = eat_whitespace_eos(next, eos);
-    next = find_whitespace_eos(*s, eos);
-    if (!next) {
-      RET_ERR("opt without keyword");
-    }
+    *s = eat_whitespace_eos_no_nl(next, eol);
+    next = find_whitespace_eos(*s, eol);
+  } else if (*s == eos) {  /* If no "opt", and end-of-line, line is invalid */
+    RET_ERR("Unexpected EOF");
   }
+
   /* Search the table for the appropriate entry.  (I tried a binary search
    * instead, but it wasn't any faster.) */
   for (i = 0; table[i].t ; ++i) {
-    if (!strncmp(table[i].t, *s, next-*s)) {
+    if (!strcmp_len(*s, table[i].t, next-*s)) {
       /* We've found the keyword. */
       kwd = table[i].t;
       tok->tp = table[i].v;
       o_syn = table[i].os;
-      if (table[i].concat_args) {
-        /* The keyword takes the line as a single argument */
-        *s = eat_whitespace_no_nl(next);
-        next = strchr(*s, '\n');
-        if (!next)
-          RET_ERR("Unexpected EOF");
-        tok->args = tor_malloc(sizeof(char*));
-        tok->args[0] = tor_strndup(*s,next-*s);
-        tok->n_args = 1;
-        *s = eat_whitespace_eos_no_nl(next+1, eos);
-      } else {
-        /* This keyword takes multiple arguments. */
-        j = 0;
-        done = (*next == '\n');
-        allocated = 32;
-        tok->args = tor_malloc(sizeof(char*)*32);
-        *s = eat_whitespace_eos_no_nl(next, eos);
-        while (**s != '\n' && !done) {
-          next = find_whitespace(*s);
-          if (*next == '\n')
-            done = 1;
-          if (j == allocated) {
-            allocated *= 2;
-            tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
+      *s = eat_whitespace_eos_no_nl(next, eol);
+      next = find_whitespace_eos(*s, eol);
+      if (1 || *s < eol) { /* make sure there are arguments to store */
+        /* XXXX020 actually, we go ahead whether there are arguments or not,
+         * so that tok->args is always set if we want arguments. */
+        if (table[i].concat_args) {
+          /* The keyword takes the line as a single argument */
+          tok->args = tor_malloc(sizeof(char*));
+          tok->args[0] = tor_strndup(*s,eol-*s); /* Grab everything on line */
+          tok->n_args = 1;
+        } else {
+          /* This keyword takes multiple arguments. */
+          j = 0;
+          allocated = 16;
+          tok->args = tor_malloc(sizeof(char*)*allocated);
+          while (*s < eol) { /* While not at eol, store the next token */
+            if (j == allocated) {
+              allocated *= 2;
+              tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
+            }
+            tok->args[j++] = tor_strndup(*s, next-*s);
+            *s = eat_whitespace_eos_no_nl(next, eol); /* eat intra-line ws */
+            next = find_whitespace_eos(*s, eol); /* find end of token at *s */
           }
-          tok->args[j++] = tor_strndup(*s,next-*s);
-          *s = eat_whitespace_eos_no_nl(next+1, eos);
+          tok->n_args = j;
         }
-        tok->n_args = j;
       }
       if (tok->n_args < table[i].min_args) {
         tor_snprintf(ebuf, sizeof(ebuf), "Too few arguments to %s", kwd);
@@ -2427,63 +2421,63 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
         tor_snprintf(ebuf, sizeof(ebuf), "Too many arguments to %s", kwd);
         RET_ERR(ebuf);
       }
-
       break;
     }
   }
-  if (tok->tp == _ERR) {
+
+  if (tok->tp == _ERR) { /* No keyword matched; call it an "opt". */
     tok->tp = K_OPT;
-    *s = eat_whitespace_eos_no_nl(next, eos);
-    next = strchr(*s,'\n');
-    if (!next)
-      RET_ERR("Unexpected EOF");
     tok->args = tor_malloc(sizeof(char*));
-    tok->args[0] = tor_strndup(*s,next-*s);
+    tok->args[0] = tor_strndup(*s, eol-*s);
     tok->n_args = 1;
-    *s = eat_whitespace_eos_no_nl(next+1, eos);
     o_syn = OBJ_OK;
   }
-  *s = eat_whitespace_eos(*s, eos);
-  if (strcmpstart(*s, "-----BEGIN ")) {
+
+  /* Check whether there's an object present */
+  *s = eat_whitespace_eos(eol, eos);  /* Scan from end of first line */
+  eol = memchr(*s, '\n', eos-*s);
+  if (!eol || eol-*s<11 || strcmpstart(*s, "-----BEGIN ")) /* No object. */
     goto check_object;
-  }
-  obstart = *s;
-  *s += 11; /* length of "-----BEGIN ". */
-  next = strchr(*s, '\n');
-  if (next-*s < 6 || strcmpstart(next-5, "-----\n")) {
+
+  obstart = *s; /* Set obstart to start of object spec */
+  if (*s+11 >= eol-5 || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
+      strcmp_len(eol-5, "-----", 5)) {          /* nuls or invalid endings */
     RET_ERR("Malformed object: bad begin line");
   }
-  tok->object_type = tor_strndup(*s, next-*s-5);
-  *s = next+1;
+  tok->object_type = tor_strndup(*s+11, eol-*s-16);
+  obname_len = eol-*s-16; /* store objname length here to avoid a strlen() */
+  *s = eol+1;    /* Set *s to possible start of object data (could be eos) */
+
+  /* Go to the end of the object */
   next = tor_memstr(*s, eos-*s, "-----END ");
   if (!next) {
-    RET_ERR("Malformed object: missing end line");
+    RET_ERR("Malformed object: missing object end line");
   }
-  if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) {
-    if (strcmpstart(next, "-----END RSA PUBLIC KEY-----\n"))
-      RET_ERR("Malformed object: mismatched end line");
-    next = memchr(next, '\n', eos-next);
-    if (!next)
-      RET_ERR("Couldn't parse public key.");
-    ++next;
+  eol = memchr(next, '\n', eos-next);
+  if (!eol)  /* end-of-line marker, or eos if there's no '\n' */
+    eol = eos;
+  /* Validate the ending tag, which should be 9 + NAME + 5 + eol */
+  if (eol-next != 9+obname_len+5 ||
+      strcmp_len(next+9, tok->object_type, obname_len) ||
+      strcmp_len(eol-5, "-----", 5)) {
+    snprintf(ebuf, sizeof(ebuf), "Malformed object: mismatched end tag %s",
+             tok->object_type);
+    ebuf[sizeof(ebuf)-1] = '\0';
+    RET_ERR(ebuf);
+  }
+  if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a key... */
     tok->key = crypto_new_pk_env();
-    if (crypto_pk_read_public_key_from_string(tok->key, obstart, next-obstart))
+    if (crypto_pk_read_public_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse public key.");
-    *s = next;
-  } else {
+  } else { /* If it's something else, try to base64-decode it */
+    int r;
     tok->object_body = tor_malloc(next-*s); /* really, this is too much RAM. */
-    i = base64_decode(tok->object_body, next-*s, *s, next-*s);
-    if (i<0) {
+    r = base64_decode(tok->object_body, next-*s, *s, next-*s);
+    if (r<0)
       RET_ERR("Malformed object: bad base64-encoded data");
-    }
-    tok->object_size = i;
-    *s = next + 9; /* length of "-----END ". */
-    i = strlen(tok->object_type);
-    if (strncmp(*s, tok->object_type, i) || strcmpstart(*s+i, "-----\n")) {
-      RET_ERR("Malformed object: mismatched end tag");
-    }
-    *s += i+6;
+    tok->object_size = r;
   }
+  *s = eol;
 
  check_object:
   tok = token_check_object(kwd, tok, o_syn);

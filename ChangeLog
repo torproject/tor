@@ -42,7 +42,9 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Fix a crash bug in directory authorities when we re-number the
       routerlist while inserting a new router. [Bugfix on 0.1.2.x]
     - Fix a crash bug when router descriptors end at a 4096-byte boundary
-      on disk. [Bugfix on 0.1.2.x]
+      on disk.  [Bugfix on 0.1.2.x]
+    - Rewrite directory tokenization code to never run off the end of
+      a string.  Fixes bug 455. Patch from croup. [Bugfix on 0.1.2.x]
 
   o Minor bugfixes (core protocol):
     - When sending destroy cells from a circuit's origin, don't include

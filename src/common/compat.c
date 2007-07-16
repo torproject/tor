@@ -1730,7 +1730,6 @@ tor_threads_init(void)
 }
 #endif
 
-
 /**
  * On Windows, WSAEWOULDBLOCK is not always correct: when you see it,
  * you need to ask the socket for its actual errno.  Also, you need to
