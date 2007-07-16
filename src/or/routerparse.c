@@ -892,7 +892,7 @@ router_parse_list_from_string(const char **s, const char *eos,
     }
     end = tor_memstr(*s, eos-*s, "\nrouter-signature");
     if (end)
-      end = tor_memstr(end, eos-*s, "\n-----END SIGNATURE-----\n");
+      end = tor_memstr(end, eos-end, "\n-----END SIGNATURE-----\n");
     if (end)
       end += strlen("\n-----END SIGNATURE-----\n");
 
