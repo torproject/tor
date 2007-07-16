@@ -926,9 +926,8 @@ connection_handle_listener_read(connection_t *conn, int new_type)
 
   set_socket_nonblocking(news);
 
-  if (options->ConstrainedSockets) {
-    set_constrained_socket_buffers (news, options->ConstrainedSockSize);
-  }
+  if (options->ConstrainedSockets)
+    set_constrained_socket_buffers(news, (int)options->ConstrainedSockSize);
 
   tor_assert(((struct sockaddr*)addrbuf)->sa_family == conn->socket_family);
 
@@ -1103,9 +1102,8 @@ connection_connect(connection_t *conn, const char *address,
 
   set_socket_nonblocking(s);
 
-  if (options->ConstrainedSockets) {
-    set_constrained_socket_buffers (s, options->ConstrainedSockSize);
-  }
+  if (options->ConstrainedSockets)
+    set_constrained_socket_buffers(s, (int)options->ConstrainedSockSize);
 
   memset(&dest_addr,0,sizeof(dest_addr));
   dest_addr.sin_family = AF_INET;
@@ -2561,17 +2559,17 @@ client_check_address_changed(int sock)
 static void
 set_constrained_socket_buffers(int sock, int size)
 {
-  if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char *)&size, sizeof(size)) < 0) {
+  void *sz = (void*)&size;
+  if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, sz, sizeof(size)) < 0) {
     int e = tor_socket_errno(sock);
-    log_warn(LD_NET, "setsockopt() to constrain send buffer to %d bytes failed: %s",
-             size, tor_socket_strerror(e));
+    log_warn(LD_NET, "setsockopt() to constrain send "
+             "buffer to %d bytes failed: %s", size, tor_socket_strerror(e));
   }
-  if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char *)&size, sizeof(size)) < 0) {
+  if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, sz, sizeof(size)) < 0) {
     int e = tor_socket_errno(sock);
-    log_warn(LD_NET, "setsockopt() to constrain recv buffer to %d bytes failed: %s",
-             size, tor_socket_strerror(e));
+    log_warn(LD_NET, "setsockopt() to constrain recv "
+             "buffer to %d bytes failed: %s", size, tor_socket_strerror(e));
   }
-  return;
 }
 
 /** Process new bytes that have arrived on conn-\>inbuf.

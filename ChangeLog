@@ -5,6 +5,8 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
       root, and have Tor bind those ports before it changes to another UID.
     - tor-gencert creates all files as readable to the file creator only, and
       write-protects the authority identity key.
+    - New ConstrainedSockets option to set SO_SNDBUF and SO_RCVBUF on TCP
+      sockets.  (Patch from coderman.)
 
   o Minor features (directory authority):
     - Fail quickly and (relatively) harmlessly if we generate a network

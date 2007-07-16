@@ -1749,8 +1749,8 @@ typedef struct exit_redirect_t {
 } exit_redirect_t;
 
 /* limits for TCP send and recv buffer size used for constrained sockets */
-#define MIN_TCPSOCK_BUFFER 2048
-#define MAX_TCPSOCK_BUFFER 262144  /* 256k */
+#define MIN_CONSTRAINED_TCP_BUFFER 2048
+#define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
 
 /** A linked list of lines in a config file. */
 typedef struct config_line_t {
@@ -1894,7 +1894,7 @@ typedef struct {
   config_line_t *ReachableDirAddresses; /**< IP:ports for Dir conns. */
 
   int ConstrainedSockets; /**< Shrink xmit and recv socket buffers. */
-  int ConstrainedSockSize; /**< Size of constrained buffers. */
+  uint64_t ConstrainedSockSize; /**< Size of constrained buffers. */
 
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */

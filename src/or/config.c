@@ -147,7 +147,7 @@ static config_var_t _option_vars[] = {
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ConnLimit",           UINT,     ConnLimit,            "1000"),
   VAR("ConstrainedSockets",  BOOL,     ConstrainedSockets,   "0"),
-  VAR("ConstrainedSockSize", UINT,     ConstrainedSockSize,  "8192"),
+  VAR("ConstrainedSockSize", MEMUNIT,  ConstrainedSockSize,  "8192"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("ControlListenAddress",LINELIST, ControlListenAddress, NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
@@ -2935,13 +2935,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->ConstrainedSockets) {
     /* If the user wants to constrain socket buffer use, make sure the desired
      * limit is between MIN|MAX_TCPSOCK_BUFFER in k increments. */
-    if (options->ConstrainedSockSize < MIN_TCPSOCK_BUFFER ||
-        options->ConstrainedSockSize > MAX_TCPSOCK_BUFFER ||
-        options->ConstrainedSockSize % 1024 ) {
+    if (options->ConstrainedSockSize < MIN_CONSTRAINED_TCP_BUFFER ||
+        options->ConstrainedSockSize > MAX_CONSTRAINED_TCP_BUFFER ||
+        options->ConstrainedSockSize % 1024) {
       r = tor_snprintf(buf, sizeof(buf),
           "ConstrainedSockSize is invalid.  Must be a value between %d and %d "
           "in 1024 byte increments.",
-          MIN_TCPSOCK_BUFFER, MAX_TCPSOCK_BUFFER);
+          MIN_CONSTRAINED_TCP_BUFFER, MAX_CONSTRAINED_TCP_BUFFER);
       *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
