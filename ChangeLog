@@ -29,8 +29,10 @@ Changes in version 0.1.2.15 - 2007-07-??
       guard list unless we need to.
 
   o Minor bugfixes (directory):
-    - Count the number of authorities that recommend each version
-      correctly.  Previously, we were under-counting by 1.
+    - Correctly count the number of authorities that recommend each
+      version. Previously, we were under-counting by 1.
+    - Fix a potential crash bug when we load many server descriptors at
+      once and some of them make others of them obsolete. Fixes bug 458.
 
   o Minor bugfixes (hidden services):
     - Stop tearing down the whole circuit when the user asks for a

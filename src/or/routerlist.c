@@ -2364,12 +2364,12 @@ router_load_routers_from_string(const char *s, size_t len,
       }
     }
 
-    if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0)
+    if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0) {
       smartlist_add(changed, ri);
+      control_event_descriptors_changed(changed);
+      smartlist_clear(changed);
+    }
   });
-
-  if (smartlist_len(changed))
-    control_event_descriptors_changed(changed);
 
   routerlist_assert_ok(routerlist);
   router_rebuild_store(0);
