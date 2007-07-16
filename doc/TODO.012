@@ -17,7 +17,7 @@ Backport items for 0.1.2:
   o r10760: fix possible buffer overrun in old BSD natd code
   o r10790: Don't include reasons in destroy cells from the origin.
   - Some fix for bug 455.
-  - r10830 if nick thinks it's a real fix
+  o r10830 if nick thinks it's a real fix
   - r10835 if nick thinks it's a real fix
 
 

@@ -344,6 +344,7 @@ router_rebuild_store(int force)
   smartlist_free(old_routers);
   smartlist_free(routers);
   tor_free(fname);
+  tor_free(fname_tmp);
   SMARTLIST_FOREACH(chunk_list, sized_chunk_t *, c, tor_free(c));
   smartlist_free(chunk_list);
   return r;
