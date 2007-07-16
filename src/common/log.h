@@ -104,7 +104,7 @@ int add_syslog_log(int loglevelMin, int loglevelMax);
 int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb);
 int get_min_log_level(void);
 void switch_logs_debug(void);
-void close_logs(void);
+void logs_free_all(void);
 void add_temp_log(void);
 void close_temp_logs(void);
 void rollback_log_changes(void);

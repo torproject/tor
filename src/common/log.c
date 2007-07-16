@@ -361,9 +361,9 @@ _log_err(uint32_t domain, const char *format, ...)
 }
 #endif
 
-/** Close all open log files. */
+/** Close all open log files, and free other static memory. */
 void
-close_logs(void)
+logs_free_all(void)
 {
   logfile_t *victim, *next;
   next = logfiles;
@@ -375,6 +375,7 @@ close_logs(void)
     tor_free(victim->filename);
     tor_free(victim);
   }
+  tor_free(appname);
 }
 
 /** Remove and free the log entry <b>victim</b> from the linked-list

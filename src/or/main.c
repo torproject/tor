@@ -1741,10 +1741,13 @@ tor_init(int argc, char *argv[])
 }
 
 /** Free all memory that we might have allocated somewhere.
- * Helps us find the real leaks with dmalloc and the like.
+ * If <b>postfork</b>, we are a worker process and we want to free
+ * only the parts of memory that we won't touch. If !<b>postfork</b>,
+ * Tor is shutting down and we should free everything.
  *
- * Also valgrind should then report 0 reachable in its
- * leak report */
+ * Helps us find the real leaks with dmalloc and the like. Also valgrind
+ * should then report 0 reachable in its leak report (in an ideal world --
+ * in practice libevent, ssl, libc etc never quite free everything). */
 void
 tor_free_all(int postfork)
 {
@@ -1772,13 +1775,14 @@ tor_free_all(int postfork)
   free_cell_pool();
   tor_tls_free_all();
   /* stuff in main.c */
+  smartlist_free(connection_array);
   smartlist_free(closeable_connection_lst);
   smartlist_free(active_linked_connection_lst);
   tor_free(timeout_event);
   /* Stuff in util.c */
   escaped(NULL);
   if (!postfork) {
-    close_logs(); /* free log strings. do this last so logs keep working. */
+    logs_free_all(); /* free log strings. do this last so logs keep working. */
   }
 }
 
