@@ -10,6 +10,9 @@ Changes in version 0.1.2.15 - 2007-07-??
     - Fix eventdns.c behavior on Solaris: It is critical to include
       orconfig.h _before_ sys/types.h, so that we can get the expected
       definition of _FILE_OFFSET_BITS.
+    - When the cached-routers file is an even multiple of the page size,
+      don't run off the end and crash.  (Fixes bug 455; based on idea
+      from croup.)
 
   o Major bugfixes (security):
     - Fix a possible buffer overrun when using BSD natd support.

@@ -649,6 +649,8 @@ router_parse_list_from_string(const char **s, const char *eos,
 {
   routerinfo_t *router;
   const char *end, *cp, *start;
+  char *buf;
+  size_t buf_len;
 
   tor_assert(s);
   tor_assert(*s);
@@ -690,14 +692,23 @@ router_parse_list_from_string(const char **s, const char *eos,
     /* cp now points to the first \n before the last non-blank line in this
      * descriptor */
 
+    if (eos - cp < 25) /* not long enough to hold an "end signature" */
+      break;
+
     if (strcmpstart(cp, "\n-----END SIGNATURE-----\n")) {
       log_info(LD_DIR, "Ignoring truncated router descriptor.");
       *s = end;
       continue;
     }
 
-    router = router_parse_entry_from_string(*s, end,
+    /* router_parse_entry_from_string isn't necessarily safe if the string
+     * is non-NUL-terminated.  This fix is a workaround for the stable
+     * series only;  */
+    buf_len = end-*s;
+    buf = tor_strndup(*s, buf_len); /* nul-terminates the copy. */
+    router = router_parse_entry_from_string(buf, buf+buf_len,
                                             saved_location != SAVED_IN_CACHE);
+    tor_free(buf);
 
     if (!router) {
       log_warn(LD_DIR, "Error reading router; skipping");
