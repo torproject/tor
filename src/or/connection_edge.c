@@ -617,14 +617,14 @@ addressmap_ent_remove(const char *address, addressmap_entry_t *ent)
 void
 addressmap_clear_configured(void)
 {
-  addressmap_get_mappings(NULL, 0, 0);
+  addressmap_get_mappings(NULL, 0, 0, 0);
 }
 
 /** Remove all entries from the addressmap that are set to expire, ever. */
 void
 addressmap_clear_transient(void)
 {
-  addressmap_get_mappings(NULL, 2, TIME_MAX);
+  addressmap_get_mappings(NULL, 2, TIME_MAX, 0);
 }
 
 /** Clean out entries from the addressmap cache that were
@@ -633,7 +633,7 @@ addressmap_clear_transient(void)
 void
 addressmap_clean(time_t now)
 {
-  addressmap_get_mappings(NULL, 2, now);
+  addressmap_get_mappings(NULL, 2, now, 0);
 }
 
 /** Free all the elements in the addressmap, and free the addressmap
@@ -1136,12 +1136,13 @@ address_is_invalid_destination(const char *address, int client)
 
 /** Iterate over all address mappings which have expiry times between
  * min_expires and max_expires, inclusive.  If sl is provided, add an
- * "old-addr new-addr" string to sl for each mapping.  If sl is NULL,
- * remove the mappings.
+ * "old-addr new-addr expiry" string to sl for each mapping, omitting
+ * the expiry time if want_expiry is false. If sl is NULL, remove the
+ * mappings.
  */
 void
 addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
-                        time_t max_expires)
+                        time_t max_expires, int want_expiry)
 {
    strmap_iter_t *iter;
    const char *key;
@@ -1160,9 +1161,20 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
          addressmap_ent_remove(key, val);
          continue;
        } else if (val->new_address) {
-         size_t len = strlen(key)+strlen(val->new_address)+2;
+         size_t len = strlen(key)+strlen(val->new_address)+ISO_TIME_LEN+5;
          char *line = tor_malloc(len);
-         tor_snprintf(line, len, "%s %s", key, val->new_address);
+         if (want_expiry) {
+           if (val->expires < 3 || val->expires == TIME_MAX)
+             tor_snprintf(line, len, "%s %s NEVER", key, val->new_address);
+           else {
+             char time[ISO_TIME_LEN+1];
+             format_local_iso_time(time, val->expires);
+             tor_snprintf(line, len, "%s %s \"%s\"", key, val->new_address,
+                          time);
+           }
+         } else {
+           tor_snprintf(line, len, "%s %s", key, val->new_address);
+         }
          smartlist_add(sl, line);
        }
      }

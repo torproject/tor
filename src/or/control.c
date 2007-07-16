@@ -1457,22 +1457,28 @@ getinfo_helper_events(control_connection_t *control_conn,
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
-  } else if (!strcmpstart(question, "addr-mappings/")) {
+  } else if (!strcmpstart(question, "addr-mappings/") ||
+             !strcmpstart(question, "address-mappings/")) {
+    /* XXXX020 Warn about deprecated addr-mappings variant?  Or wait for
+     * 0.2.1.x? */
     time_t min_e, max_e;
     smartlist_t *mappings;
-    if (!strcmp(question, "addr-mappings/all")) {
+    int want_expiry = !strcmpstart(question, "address-mappings/");
+    question += strlen(want_expiry ? "address-mappings/"
+                                   : "addr-mappings/");
+    if (!strcmp(question, "all")) {
       min_e = 0; max_e = TIME_MAX;
-    } else if (!strcmp(question, "addr-mappings/cache")) {
+    } else if (!strcmp(question, "cache")) {
       min_e = 2; max_e = TIME_MAX;
-    } else if (!strcmp(question, "addr-mappings/config")) {
+    } else if (!strcmp(question, "config")) {
       min_e = 0; max_e = 0;
-    } else if (!strcmp(question, "addr-mappings/control")) {
+    } else if (!strcmp(question, "control")) {
       min_e = 1; max_e = 1;
     } else {
       return 0;
     }
     mappings = smartlist_create();
-    addressmap_get_mappings(mappings, min_e, max_e);
+    addressmap_get_mappings(mappings, min_e, max_e, want_expiry);
     *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
@@ -1587,11 +1593,20 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("circuit-status", events, "List of current circuits originating here."),
   ITEM("stream-status", events,"List of current streams."),
   ITEM("orconn-status", events, "A list of current OR connections."),
+  PREFIX("address-mappings/", events, NULL),
+  DOC("address-mappings/all", "Current address mappings."),
+  DOC("address-mappings/cache", "Current cached DNS replies."),
+  DOC("address-mappings/config",
+      "Current address mappings from configuration."),
+  DOC("address-mappings/control", "Current address mappings from controller."),
   PREFIX("addr-mappings/", events, NULL),
-  DOC("addr-mappings/all", "Current address mappings."),
-  DOC("addr-mappings/cache", "Current cached DNS replies."),
-  DOC("addr-mappings/config", "Current address mappings from configuration."),
-  DOC("addr-mappings/control", "Current address mappings from controller."),
+  DOC("addr-mappings/all", "Current address mappings without expiry times."),
+  DOC("addr-mappings/cache",
+      "Current cached DNS replies without expiry times."),
+  DOC("addr-mappings/config",
+      "Current address mappings from configuration without expiry times."),
+  DOC("addr-mappings/control",
+      "Current address mappings from controller without expiry times."),
   PREFIX("status/", events, NULL),
   DOC("status/circuit-established",
       "Whether we think client functionality is working."),

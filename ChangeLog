@@ -21,6 +21,14 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
       from Robert Hogan.)
     - Add GETINFO status/enough-dir-info to let controllers tell whether
       Tor has downloaded sufficient directory information. (Patch from Tup.)
+    - You can now use the ControlSocket option to tell Tor to listen for
+      controller connections on Unix domain sockets on systems that support
+      them.  (Patch from Peter Palfrader.)
+    - STREAM NEW events are generated for DNSPort requests and for tunneled
+      directory connections. (Patch from Robert Hogan.)
+    - New GETINFO address-mappings/* command to get address mappings with
+      expiry information.  addr-mappings/* is now deprecated.
+      (Patch from Tup.)
 
   o Performance improvements (win32):
     - Use Critical Sections rather than Mutexes for synchronizing threads
@@ -29,13 +37,6 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
 
   o Deprecated features:
     - RedirectExits is now deprecated.
-
-  o Minor features (controller):
-    - You can now use the ControlSocket option to tell Tor to listen for
-      controller connections on Unix domain sockets on systems that support
-      them.  (Patch from Peter Palfrader.)
-    - STREAM NEW events are generated for DNSPort requests and for tunneled
-      directory connections. (Patch from Robert Hogan.)
 
   o Major bugfixes (directory):
     - Fix a crash bug in directory authorities when we re-number the

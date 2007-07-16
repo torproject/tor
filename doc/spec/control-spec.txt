@@ -377,16 +377,22 @@ $Id$
       space-separated list of LongName, each preceded by a "!" if it is
       believed to be not running.)
 
-    "addr-mappings/all"
-    "addr-mappings/config"
-    "addr-mappings/cache"
-    "addr-mappings/control" -- a \r\n-separated list of address
-      mappings, each in the form of "from-address to-address".
+    "address-mappings/all"
+    "address-mappings/config"
+    "address-mappings/cache"
+    "address-mappings/control" -- a \r\n-separated list of address
+      mappings, each in the form of "from-address to-address expiry".
       The 'config' key returns those address mappings set in the
       configuration; the 'cache' key returns the mappings in the
       client-side DNS cache; the 'control' key returns the mappings set
       via the control interface; the 'all' target returns the mappings
       set through any mechanism.
+      Expiry is formatted as with ADDRMAP events; see section 4.1.7.
+      First introduced in 0.2.0.3-alpha.
+
+    "addr-mappings/*" -- as for address-mappings/*, but without the
+      expiry portion of the value.  Use of this value is deprecated
+      since 0.2.0.3-alpha; use address-mappings instead.
 
     "address" -- the best guess at our external IP address. If we
       have no guess, return a 551 error. (Added in 0.1.2.2-alpha)
