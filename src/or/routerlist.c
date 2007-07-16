@@ -2337,7 +2337,10 @@ router_set_status(const char *digest, int up)
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
  * older entries (if any) with the same key.  Note: Callers should not hold
  * their pointers to <b>router</b> if this function fails; <b>router</b>
- * will either be inserted into the routerlist or freed.
+ * will either be inserted into the routerlist or freed. Similarly, even
+ * if this call succeeds, they should not hold their pointers to
+ * <b>router</b> after subsequent calls with other routerinfo's -- they
+ * might cause the original routerinfo to get freed.
  *
  * Returns >= 0 if the router was added; less than 0 if it was not.
  *
@@ -2863,12 +2866,12 @@ router_load_routers_from_string(const char *s, const char *eos,
     if (purpose != ROUTER_PURPOSE_GENERAL)
       ri->cache_info.do_not_cache = 1;
 
-    if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0)
+    if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0) {
       smartlist_add(changed, ri);
+      routerlist_descriptors_added(changed);
+      smartlist_clear(changed);
+    }
   });
-
-  if (smartlist_len(changed))
-    routerlist_descriptors_added(changed);
 
   routerlist_assert_ok(routerlist);
   router_rebuild_store(0, 0);

@@ -3013,7 +3013,7 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
 
 /** Called whenever we receive new router descriptors: tell any
  * interested control connections.  <b>routers</b> is a list of
- * DIGEST_LEN-byte identity digests.
+ * routerinfo_t's.
  */
 int
 control_event_descriptors_changed(smartlist_t *routers)
