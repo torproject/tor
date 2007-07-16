@@ -146,6 +146,8 @@ static config_var_t _option_vars[] = {
   VAR("CircuitIdleTimeout",  INTERVAL, CircuitIdleTimeout,   "1 hour"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ConnLimit",           UINT,     ConnLimit,            "1000"),
+  VAR("ConstrainedSockets",  BOOL,     ConstrainedSockets,   "0"),
+  VAR("ConstrainedSockSize", UINT,     ConstrainedSockSize,  "8192"),
   VAR("ContactInfo",         STRING,   ContactInfo,          NULL),
   VAR("ControlListenAddress",LINELIST, ControlListenAddress, NULL),
   VAR("ControlPort",         UINT,     ControlPort,          "0"),
@@ -330,6 +332,11 @@ static config_var_description_t options_description[] = {
   { "BandwidthBurst", "Limit the maximum token buffer size (also known as "
     "burst) to the given number of bytes." },
   { "ConnLimit", "Maximum number of simultaneous sockets allowed." },
+  { "ConstrainedSockets", "Shrink tx and rx buffers for sockets to avoid "
+    "system limits on vservers and related environments.  See man page for "
+    "more information regarding this option." },
+  { "ConstrainedSockSize", "Limit socket buffers to this size when "
+    "ConstrainedSockets is enabled." },
   /*  ControlListenAddress */
   { "ControlPort", "If set, Tor will accept connections from the same machine "
     "(localhost only) on this port, and allow those connections to control "
@@ -2922,6 +2929,29 @@ options_validate(or_options_t *old_options, or_options_t *options,
     for (cl = options->Bridges; cl; cl = cl->next) {
       if (parse_bridge_line(cl->value, 1)<0)
         REJECT("Bridge line did not parse. See logs for details.");
+    }
+  }
+
+  if (options->ConstrainedSockets) {
+    /* If the user wants to constrain socket buffer use, make sure the desired
+     * limit is between MIN|MAX_TCPSOCK_BUFFER in k increments. */
+    if (options->ConstrainedSockSize < MIN_TCPSOCK_BUFFER ||
+        options->ConstrainedSockSize > MAX_TCPSOCK_BUFFER ||
+        options->ConstrainedSockSize % 1024 ) {
+      r = tor_snprintf(buf, sizeof(buf),
+          "ConstrainedSockSize is invalid.  Must be a value between %d and %d "
+          "in 1024 byte increments.",
+          MIN_TCPSOCK_BUFFER, MAX_TCPSOCK_BUFFER);
+      *msg = tor_strdup(r >= 0 ? buf : "internal error");
+      return -1;
+    }
+    if (options->DirPort) {
+      /* Providing cached directory entries while system TCP buffers are scarce
+       * will exacerbate the socket errors.  Suggest that this be disabled. */
+      COMPLAIN("You have requested constrained socket buffers while also "
+               "serving directory entries via DirPort.  It is strongly "
+               "suggested that you disable serving directory requests when "
+               "system TCP buffer resources are scarce.");
     }
   }
 

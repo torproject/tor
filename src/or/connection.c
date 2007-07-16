@@ -28,6 +28,7 @@ static int connection_reached_eof(connection_t *conn);
 static int connection_read_to_buf(connection_t *conn, int *max_to_read);
 static int connection_process_inbuf(connection_t *conn, int package_partial);
 static void client_check_address_changed(int sock);
+static void set_constrained_socket_buffers(int sock, int size);
 
 static uint32_t last_interface_ip = 0;
 static smartlist_t *outgoing_addrs = NULL;
@@ -898,6 +899,8 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   /* length of the remote address. Must be whatever accept() needs. */
   socklen_t remotelen = 256;
   char tmpbuf[INET_NTOA_BUF_LEN];
+  or_options_t *options = get_options();
+
   tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
 
@@ -922,6 +925,10 @@ connection_handle_listener_read(connection_t *conn, int new_type)
             news,conn->s);
 
   set_socket_nonblocking(news);
+
+  if (options->ConstrainedSockets) {
+    set_constrained_socket_buffers (news, options->ConstrainedSockSize);
+  }
 
   tor_assert(((struct sockaddr*)addrbuf)->sa_family == conn->socket_family);
 
@@ -1095,6 +1102,10 @@ connection_connect(connection_t *conn, const char *address,
   }
 
   set_socket_nonblocking(s);
+
+  if (options->ConstrainedSockets) {
+    set_constrained_socket_buffers (s, options->ConstrainedSockSize);
+  }
 
   memset(&dest_addr,0,sizeof(dest_addr));
   dest_addr.sin_family = AF_INET;
@@ -2538,6 +2549,29 @@ client_check_address_changed(int sock)
     /* Okay, now change our keys. */
     ip_address_changed(1);
   }
+}
+
+/** Some systems have limited system buffers for recv and xmit on
+ * sockets allocated in a virtual server or similar environment. For a Tor
+ * server this can produce the "Error creating network socket: No buffer
+ * space available" error once all available TCP buffer space is consumed.
+ * This method will attempt to constrain the buffers allocated for the socket
+ * to the desired size to stay below system TCP buffer limits.
+ */
+static void
+set_constrained_socket_buffers(int sock, int size)
+{
+  if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char *)&size, sizeof(size)) < 0) {
+    int e = tor_socket_errno(sock);
+    log_warn(LD_NET, "setsockopt() to constrain send buffer to %d bytes failed: %s",
+             size, tor_socket_strerror(e));
+  }
+  if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (const char *)&size, sizeof(size)) < 0) {
+    int e = tor_socket_errno(sock);
+    log_warn(LD_NET, "setsockopt() to constrain recv buffer to %d bytes failed: %s",
+             size, tor_socket_strerror(e));
+  }
+  return;
 }
 
 /** Process new bytes that have arrived on conn-\>inbuf.
