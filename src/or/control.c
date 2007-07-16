@@ -284,7 +284,7 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
 {
   size_t sz_out = len+8;
   char *outp;
-  const char *end;
+  const char *start = data, *end;
   int i;
   int start_of_line;
   for (i=0; i<(int)len; ++i) {
@@ -296,7 +296,7 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
   start_of_line = 1;
   while (data < end) {
     if (*data == '\n') {
-      if (translate_newlines)
+      if (translate_newlines && data > start && data[-1] != '\r')
         *outp++ = '\r';
       start_of_line = 1;
     } else if (*data == '.') {
@@ -1363,9 +1363,9 @@ getinfo_helper_events(control_connection_t *control_conn,
 
       slen = strlen(path)+strlen(state)+20;
       s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s %s",
+      tor_snprintf(s, slen, "%lu %s%s%s",
                    (unsigned long)TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                   state, path);
+                   state, *path ? " " : "", path);
       smartlist_add(status, s);
       tor_free(path);
     }
