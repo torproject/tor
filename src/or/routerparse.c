@@ -1551,7 +1551,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
     } else {
       rs->version_supports_begindir =
         tor_version_as_new_as(tok->args[0], "0.1.2.2-alpha");
-      rs->version_supports_begindir =
+      rs->version_supports_extrainfo_upload =
         tor_version_as_new_as(tok->args[0], "0.2.0.0-alpha-dev (r10070)");
     }
     if (vote_rs) {

@@ -50,6 +50,10 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Directories no longer return a "304 not modified" when they don't
       have the networkstatus the client asked for. Also fix a memory
       leak when returning 304 not modified. [Bugfixes on 0.2.0.2-alpha]
+    - We had accidentally labelled 0.1.2.x directory servers as not
+      suitable for begin_dir requests, and had labelled no directory
+      servers as suitable for uploading extra-info documents. [Bugfix
+      on 0.2.0.1-alpha]
 
   o Minor bugfixes (dns):
     - Fix a crash when DNSPort is set more than once. (Patch from Robert
