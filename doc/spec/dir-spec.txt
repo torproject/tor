@@ -297,6 +297,29 @@ $Id$
    The "Digest" of a document, unless stated otherwise, is its digest *as
    signed by this signature scheme*.
 
+1.4. Voting timeline
+
+   Every consensus document has a "valid-after" (VA) time, a "fresh-until"
+   (FU) time and a "valid-until" (VU) time.  VA MUST precede FU, which MUST
+   in turn precede VU.  Times are chosen so that every consensus will be
+   "fresh" until the next consensus becomes valid, and "valid" for a while
+   after.  At least 2 or 3 consensuses should be valid at any given time.
+
+   The timeline for a given consensus is as follows:
+
+   VA-DistSeconds-VoteSeconds: The authorities exchange votes.
+
+   VA-DistSeconds: The authorities calculate the consensus and exchange
+   signatures.
+
+   VA: All authorities have a multiply signed consensus.
+
+   VA ... FU: Caches download the consensus.
+
+   FU: The consensus is no long the freshest consensus.
+
+   VU: The consensus is no longer valid.
+
 2. Router operation and formats
 
    ORs SHOULD generate a new router descriptor and a new extra-info
@@ -696,6 +719,14 @@ $Id$
         The status MUST be "vote" or "consensus", depending on the type of
         the document.
 
+    "consensus-methods" SP IntegerList NL
+
+        [Exactly once for votes; does not occur in consensuses.]
+
+        A space-separated list of supported methods for generating
+        consensuses from votes.  See section 3.4.1 for details.  Method "1"
+        MUST be included.
+
     "published" SP YYYY-MM-DD SP HH:MM:SS NL
 
         [Exactly once for votes; does not occur in consensuses.]
@@ -706,25 +737,34 @@ $Id$
 
         [Exactly once.]
 
-        The start of the Interval for this vote. XXXX
+        The start of the Interval for this vote.  Before this time, the
+        consensus document produced from this vote should not be used.
+        See 1.4 for voting timeline information.
 
     "fresh-until" SP YYYY-MM-DD SP HH:MM:SS NL
 
         [Exactly once.]
 
-        XXXX
+        The time at which the next consensus should be produced; before this
+        time, there is no point in downloading another consensus, since there
+        won't be a new one.  See 1.4 for voting timeline information.
 
     "valid-until" SP YYYY-MM-DD SP HH:MM:SS NL
 
         [Exactly once.]
 
-        The end of the Interval for this vote. XXXX
+        The end of the Interval for this vote.  After this time, the
+        consensus produced by this vote should not be used.  See 1.4 for
+        voting timeline information.
 
     "voting-delay" SP VoteSeconds SP DistSeconds NL
 
         [Exactly once.]
 
-        XXXX
+        VoteSeconds is the number of seconds that we will allow to collect
+        votes from all authorities; DistSeconds is the number of seconds
+        we'll allow to collect signatures from all authorities. See 1.4 for
+        voting timeline information.
 
     "client-versions" SP VersionList NL
 
@@ -980,6 +1020,22 @@ $Id$
      The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.
 
+3.4.1. Forward compatibility
+
+   Future versions of Tor will need to include new information in the
+   consensus documents, but it is important that all authorities (or at least
+   half) generate and sign the same signed consensus.
+
+   To achieve this, authorities list in their votes their supported methods
+   for generating consensuses from votes.  The method described above and
+   implemented in Tor 0.2.0.x is "1".  Later methods will be assigned higher
+   numbers.
+
+   Before generating a consensus, an authority must decide which consensus
+   method to use.  To do this, it looks for the highest version number
+   supported by more than 2/3 of the authorities.  If it supports this
+   method, then it uses it.  Otherwise, it falls back to method 1.
+
 3.5. Detached signatures
 
    Assuming full connectivity, every authority should compute and sign the
@@ -1061,17 +1117,15 @@ $Id$
    merged with the second-to-last period.
 
    An authority SHOULD publish its vote immediately at the start of each voting
-   period.  It does this by making it available at
+   period (minus VoteSeconds+DistSeconds).  It does this by making it
+   available at
      http://<hostname>/tor/status-vote/current/authority.z
    and sending it in an HTTP POST request to each other authority at the URL
      http://<hostname>/tor/post/vote
 
-   (Note that this requires the authority to settle upon and finalize its
-   vote slightly before the start of the voting period.)
-
-   If, VOTING_DELAY minutes after the voting period has begun, an authority
+   If, at the start of the voting period, minus DistSeconds, an authority
    does not have a current statement from another authority, the first
-   authority retrieves the other's statement.
+   authority downloads the other's statement.
 
    Once an authority has a vote from another authority, it makes it available
    at
@@ -1080,9 +1134,15 @@ $Id$
 
    The consensus status, along with as many signatures as the server
    currently knows, should be available at
-      http://<hostname>/tor/status-vote/current/consensus.z
+      http://<hostname>/tor/status-vote/next/consensus.z
    All of the detached signatures it knows for consensus status should be
    available at:
+      http://<hostname>/tor/status-vote/next/consensus-signatures.z
+
+   Once there are enough signatures, or once the voting period starts,
+   these documents are available at
+      http://<hostname>/tor/status-vote/current/consensus.z
+   and
       http://<hostname>/tor/status-vote/current/consensus-signatures.z
 
    Once an authority has computed and signed a consensus network status, it
@@ -1095,17 +1155,17 @@ $Id$
    [XXX possible future features include support for downloading old
     consensuses.]
 
-   [XXX Constants: VOTING_DELAY, CONSENSUS_DELAY]
-
-
 4.3. Downloading consensus status documents (caches only)
 
-   All directory servers (authorities and caches) try to keep a fresh
-   set of network-status consensus documents to serve to clients.  Every
-   15 minutes, or whenever the valid-until field on its most current
-   consensus is about to expire
-
-[XXXX finish this section]
+   All directory servers (authorities and caches) try to keep a recent
+   network-status consensus document to serve to clients.  A cache ALWAYS
+   downloads a network-status consensus if any of the following are true:
+     - The cache has no consensus document.
+     - The cache's consensus document is no longer valid.
+   Otherwise, the cache downloads a new consensus document at a randomly
+   chosen time after its current consensus stops being fresh.  (This time is
+   chosen at random to avoid swarming the authorities at the start of each
+   period.)
 
 4.4. Downloading and storing router descriptors (authorities and caches)
 
@@ -1251,13 +1311,11 @@ $Id$
    until it has a live network-status consensus document, and it has
    descriptors for more than 1/4 of the routers that it believes are running.
 
- [XXXX handling clock skew at client side?]
- [XXXX fall-back to most recent?]
-
    (Note: clients can and should pick caches based on the network-status
    information they have: once they have first fetched network-status info
    from an authority, they should not need to go to the authority directly
    again.)
+
 
 5.2. Downloading and storing router descriptors
 

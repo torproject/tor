@@ -1948,6 +1948,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status vote\n"
+                 "consensus-methods 1\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
