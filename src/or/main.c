@@ -1046,7 +1046,7 @@ run_scheduled_events(time_t now)
           buf_shrink(conn->inbuf);
       });
     clean_cell_pool();
-    buf_shrink_freelists();
+    buf_shrink_freelists(0);
     time_to_shrink_memory = now + MEM_SHRINK_INTERVAL;
   }
 
@@ -1767,6 +1767,7 @@ tor_free_all(int postfork)
   circuit_free_all();
   entry_guards_free_all();
   connection_free_all();
+  buf_shrink_freelists(1);
   policies_free_all();
   if (!postfork) {
     config_free_all();

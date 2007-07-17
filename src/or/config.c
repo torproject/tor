@@ -715,21 +715,22 @@ set_options(or_options_t *new_val, char **msg)
 
 extern const char tor_svn_revision[]; /* from tor_main.c */
 
+static char *_version = NULL;
+
 /** Return the current Tor version, possibly */
 const char *
 get_version(void)
 {
-  static char *version = NULL;
-  if (version == NULL) {
+  if (_version == NULL) {
     if (strlen(tor_svn_revision)) {
       size_t len = strlen(VERSION)+strlen(tor_svn_revision)+8;
-      version = tor_malloc(len);
-      tor_snprintf(version, len, "%s (r%s)", VERSION, tor_svn_revision);
+      _version = tor_malloc(len);
+      tor_snprintf(_version, len, "%s (r%s)", VERSION, tor_svn_revision);
     } else {
-      version = tor_strdup(VERSION);
+      _version = tor_strdup(VERSION);
     }
   }
-  return version;
+  return _version;
 }
 
 /** Release all memory and resources held by global configuration structures.
@@ -746,6 +747,7 @@ config_free_all(void)
     global_state = NULL;
   }
   tor_free(torrc_fname);
+  tor_free(_version);
 }
 
 /** If options->SafeLogging is on, return a not very useful string,

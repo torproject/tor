@@ -254,9 +254,10 @@ buf_get_initial_mem(buf_t *buf, size_t sz)
 }
 
 /** Remove elements from the freelists that haven't been needed since the
- * last call to this function. */
+ * last call to this function. If <b>free_all</b>, we're exiting and we
+ * should clear the whole lists. */
 void
-buf_shrink_freelists(void)
+buf_shrink_freelists(int free_all)
 {
   int j;
   for (j = 0; j < 2; ++j) {
@@ -267,8 +268,10 @@ buf_shrink_freelists(void)
       log_info(LD_GENERAL, "We haven't used %d/%d allocated %d-byte buffer "
                "memory chunks since the last call; freeing all but %d of them",
                list->lowwater, list->len, (int)list->chunksize, list->slack);
-      /* Skip over the slack and non-lowwater entries */
-      n_to_free = list->lowwater - list->slack;
+      if (free_all) /* Free every one of them */
+        n_to_free = list->len;
+      else /* Skip over the slack and non-lowwater entries */
+        n_to_free = list->lowwater - list->slack;
       n_to_skip = list->len - n_to_free;
       for (ptr = &list->list, i = 0; i < n_to_skip; ++i) {
         char *mem = *ptr;
