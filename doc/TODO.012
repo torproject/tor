@@ -18,7 +18,7 @@ Backport items for 0.1.2:
   o r10790: Don't include reasons in destroy cells from the origin.
   o Some fix for bug 455.
   o r10830 if nick thinks it's a real fix
-  - r10835 if nick thinks it's a real fix
+  X r10835 (no need to backport i think, the code is way different)
 
 
 Backport for 0.1.2.x once better tested:
