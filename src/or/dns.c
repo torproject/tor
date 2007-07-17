@@ -536,8 +536,8 @@ dns_resolve(edge_connection_t *exitconn)
   r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
   switch (r) {
     case 1:
-      /* We got an answer without a lookup.  (Either the answer was
-       * cached, or it was obvious (like an IP address).)*/
+      /* We got an answer without a lookup -- either the answer was
+       * cached, or it was obvious (like an IP address). */
       if (is_resolve) {
         /* Send the answer back right now, and detach. */
         if (hostname)
@@ -562,7 +562,7 @@ dns_resolve(edge_connection_t *exitconn)
     case -2:
     case -1:
       /* The request failed before it could start: cancel this connection,
-       * and stop everybody waiting forthe same connection. */
+       * and stop everybody waiting for the same connection. */
       if (is_resolve) {
         send_resolved_cell(exitconn,
              (r == -1) ? RESOLVED_TYPE_ERROR : RESOLVED_TYPE_ERROR_TRANSIENT);
@@ -578,7 +578,7 @@ dns_resolve(edge_connection_t *exitconn)
         // If it's marked for close, it's on closeable_connection_lst in
         // main.c.  If it's on the closeable list, it will get freed from
         // main.c. -NM
-        // "<armadev> If that's true, there are other bugs arond, where we
+        // "<armadev> If that's true, there are other bugs around, where we
         //  don't check if it's marked, and will end up double-freeing."
       }
       break;
@@ -822,9 +822,12 @@ dns_cancel_pending_resolve(const char *address)
   strlcpy(search.address, address, sizeof(search.address));
 
   resolve = HT_FIND(cache_map, &cache_root, &search);
-  if (!resolve || resolve->state != CACHE_STATE_PENDING) {
-    log_notice(LD_BUG,"Address %s is not pending. Dropping.",
-               escaped_safe_str(address));
+  if (!resolve)
+    return;
+
+  if(resolve->state != CACHE_STATE_PENDING) {
+    log_notice(LD_BUG,"Address %s is not pending (state %d). Dropping.",
+               escaped_safe_str(address), resolve->state);
     return;
   }
 
