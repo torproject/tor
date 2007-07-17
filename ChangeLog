@@ -39,24 +39,14 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - RedirectExits is now deprecated.
 
   o Major bugfixes (directory):
-    - Fix a crash bug in directory authorities when we re-number the
-      routerlist while inserting a new router. [Bugfix on 0.1.2.x]
     - Fix a crash bug when router descriptors end at a 4096-byte boundary
       on disk.  [Bugfix on 0.1.2.x]
     - Rewrite directory tokenization code to never run off the end of
       a string.  Fixes bug 455. Patch from croup. [Bugfix on 0.1.2.x]
 
-  o Minor bugfixes (core protocol):
-    - When sending destroy cells from a circuit's origin, don't include
-      the reason for tearing down the circuit. The spec says we didn't,
-      and now we actually don't. Reported by lodger. [Bugfix on 0.1.2.x]
-
   o Minor bugfixes (directory):
     - Fix another crash bug related to extra-info caching.  (Bug found by
       Peter Palfrader.) [Bugfix on 0.2.0.2-alpha]
-    - Fix a potential crash bug when we load many server descriptors at
-      once and some of them make others of them obsolete. Fixes bug
-      458. [Bugfix on 0.1.2.x]
     - Directories no longer return a "304 not modified" when they don't
       have the networkstatus the client asked for. Also fix a memory
       leak when returning 304 not modified. [Bugfixes on 0.2.0.2-alpha]
@@ -67,33 +57,6 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Add DNSPort connections to the global connection list, so that we
       can time them out correctly. (Bug found by mwenge) [Bugfix on
       0.2.0.2-alpha]
-    - Fix eventdns.c behavior on Solaris: It is critical to include
-      orconfig.h _before_ sys/types.h, so that we can get the expected
-      definition of _FILE_OFFSET_BITS.  [Bugfix on 0.1.2.x]
-
-  o Minor bugfixes (hidden services):
-    - Stop tearing down the whole circuit when the user asks for a
-      connection to a port that the hidden service didn't configure.
-      Resolves bug 444.  [Bugfix on 0.1.2.x]
-
-  o Minor bugfixes (versioning):
-    - Stop under-counting the number of authorities that recommend each
-      version. [Bugfix on 0.1.2.x]
-
-  o Minor bugfixes (guard nodes):
-    - If there's a never-before-connected-to guard node in our list,
-      never choose any guards past it. This way we don't expand our
-      guard list unless we need to. [Bugfix on 0.1.2.x]
-
-  o Security fixes (BSD natd support):
-    - Fix a possible buffer overrun when using BSD natd support.  Bug found
-      by croup.
-
-  o Security fixes (circuits):
-    - Keep streamids from different exits on a circuit separate. This
-      bug may have allowed other routers on a given circuit to inject
-      cells into streams. Reported by lodger; fixes bug 446. [Bugfix
-      on 0.1.2.x]
 
 
 Changes in version 0.2.0.2-alpha - 2007-06-02
