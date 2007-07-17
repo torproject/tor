@@ -63,6 +63,60 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
       0.2.0.2-alpha]
 
 
+Changes in version 0.1.2.15 - 2007-07-17
+  o Major bugfixes (compilation):
+    - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
+
+  o Major bugfixes (crashes):
+    - Try even harder not to dereference the first character after
+      an mmap(). Reported by lodger.
+    - Fix a crash bug in directory authorities when we re-number the
+      routerlist while inserting a new router.
+    - When the cached-routers file is an even multiple of the page size,
+      don't run off the end and crash. (Fixes bug 455; based on idea
+      from croup.)
+    - Fix eventdns.c behavior on Solaris: It is critical to include
+      orconfig.h _before_ sys/types.h, so that we can get the expected
+      definition of _FILE_OFFSET_BITS.
+
+  o Major bugfixes (security):
+    - Fix a possible buffer overrun when using BSD natd support. Bug
+      found by croup.
+    - When sending destroy cells from a circuit's origin, don't include
+      the reason for tearing down the circuit. The spec says we didn't,
+      and now we actually don't. Reported by lodger.
+    - Keep streamids from different exits on a circuit separate. This
+      bug may have allowed other routers on a given circuit to inject
+      cells into streams. Reported by lodger; fixes bug 446.
+    - If there's a never-before-connected-to guard node in our list,
+      never choose any guards past it. This way we don't expand our
+      guard list unless we need to.
+
+  o Minor bugfixes (guard nodes):
+    - Weight guard selection by bandwidth, so that low-bandwidth nodes
+      don't get overused as guards.
+
+  o Minor bugfixes (directory):
+    - Correctly count the number of authorities that recommend each
+      version. Previously, we were under-counting by 1.
+    - Fix a potential crash bug when we load many server descriptors at
+      once and some of them make others of them obsolete. Fixes bug 458.
+
+  o Minor bugfixes (hidden services):
+    - Stop tearing down the whole circuit when the user asks for a
+      connection to a port that the hidden service didn't configure.
+      Resolves bug 444.
+
+  o Minor bugfixes (misc):
+    - On Windows, we were preventing other processes from reading
+      cached-routers while Tor was running. Reported by janbar.
+    - Fix a possible (but very unlikely) bug in picking routers by
+      bandwidth. Add a log message to confirm that it is in fact
+      unlikely. Patch from lodger.
+    - Backport a couple of memory leak fixes.
+    - Backport miscellaneous cosmetic bugfixes.
+
+
 Changes in version 0.2.0.2-alpha - 2007-06-02
   o Major bugfixes on 0.2.0.1-alpha:
     - Fix an assertion failure related to servers without extra-info digests.
