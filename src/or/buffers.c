@@ -262,16 +262,19 @@ buf_shrink_freelists(int free_all)
   int j;
   for (j = 0; j < 2; ++j) {
     free_mem_list_t *list = j ? &free_mem_list_16k : &free_mem_list_4k;
-    if (list->lowwater > list->slack) {
+    if (list->lowwater > list->slack || free_all) {
       int i, n_to_skip, n_to_free;
       char **ptr;
-      log_info(LD_GENERAL, "We haven't used %d/%d allocated %d-byte buffer "
+      if (free_all) { /* Free every one of them */
+        log_info(LD_GENERAL, "Freeing all %d elements from %d-byte freelist.",
+                 list->len, (int)list->chunksize);
+        n_to_free = list->len;
+      } else { /* Skip over the slack and non-lowwater entries */
+        log_info(LD_GENERAL, "We haven't used %d/%d allocated %d-byte buffer "
                "memory chunks since the last call; freeing all but %d of them",
                list->lowwater, list->len, (int)list->chunksize, list->slack);
-      if (free_all) /* Free every one of them */
-        n_to_free = list->len;
-      else /* Skip over the slack and non-lowwater entries */
         n_to_free = list->lowwater - list->slack;
+      }
       n_to_skip = list->len - n_to_free;
       for (ptr = &list->list, i = 0; i < n_to_skip; ++i) {
         char *mem = *ptr;

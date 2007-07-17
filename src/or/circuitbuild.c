@@ -2083,17 +2083,6 @@ pick_entry_guards(void)
     entry_guards_changed();
 }
 
-/** Release all storage held by the list of entry guards. */
-void
-entry_guards_free_all(void)
-{
-  if (entry_guards) {
-    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, tor_free(e));
-    smartlist_free(entry_guards);
-    entry_guards = NULL;
-  }
-}
-
 /** How long (in seconds) do we allow an entry guard to be nonfunctional,
  * unlisted, excluded, or otherwise nonusable before we give up on it? */
 #define ENTRY_GUARD_REMOVE_AFTER (30*24*60*60)
@@ -2821,5 +2810,20 @@ any_bridge_descriptors_known(void)
     });
   return 0;
 #endif
+}
+
+/** Release all storage held by the list of entry guards and related
+ * memory structs. */
+void
+entry_guards_free_all(void)
+{
+  if (entry_guards) {
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, tor_free(e));
+    smartlist_free(entry_guards);
+    entry_guards = NULL;
+  }
+  clear_bridge_list();
+  smartlist_free(bridge_list);
+  bridge_list = NULL;
 }
 
