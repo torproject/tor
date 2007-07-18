@@ -37,8 +37,8 @@ N   . Document transport and natdport
       - In a good HOWTO.
 
 Things we'd like to do in 0.2.0.x:
-      - Bug reports I've heard along that way that don't have enough
-        details to solve them yet.
+      - Bug reports Roger has heard along that way that don't have enough
+        details/attention to solve them yet.
         - tup said that when he set FetchUselessDescriptors, after
           24 or 48 hours he wasn't fetching any descriptors at all
           anymore. This was in 0.2.0 but worked fine in 0.1.2.
@@ -49,6 +49,12 @@ Things we'd like to do in 0.2.0.x:
           it couldn't fetch any network statuses, and never tried again
           even when the network came back and arma clicked on things.
           also 0.2.0.
+        - phobos says relaybandwidth* sometimes don't do what we expect.
+          http://interloper.org/tmp/2007-06-bw-usage.png
+        - this notion of authorities notifying servers that they're
+          unreachable is bunk -- it's leftover from the time when all
+          servers ran 24/7. now it triggers every time a server goes
+          away and then returns before the old descriptor has expired.
       - Update dir-spec with decisions made on these issues:
         o clients don't log as loudly when they receive them
         o they don't count toward the 3-strikes rule
