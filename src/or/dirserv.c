@@ -693,7 +693,8 @@ directory_remove_invalid(void)
     if (r & FP_REJECT) {
       log_info(LD_DIRSERV, "Router '%s' is now rejected: %s",
                ent->nickname, msg?msg:"");
-      routerlist_remove(rl, ent, i--, 0);
+      routerlist_remove(rl, ent, 0);
+      i--;
       changed = 1;
       continue;
     }

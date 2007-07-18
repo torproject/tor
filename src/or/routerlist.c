@@ -2021,14 +2021,15 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
  * If <b>make_old</b> is true, instead of deleting the router, we try adding
  * it to rl-&gt;old_routers. */
 void
-routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
+routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old)
 {
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
+  int idx = ri->routerlist_index;
+  tor_assert(0 <= idx && idx < smartlist_len(rl->routers));
+  tor_assert(smartlist_get(rl->routers, idx) == ri);
+
   routerlist_check_bug_417();
-  idx = _routerlist_find_elt(rl->routers, ri, idx);
-  if (idx < 0)
-    return;
   ri->routerlist_index = -1;
   smartlist_del(rl->routers, idx);
   if (idx < smartlist_len(rl->routers)) {
@@ -2080,9 +2081,9 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   signed_descriptor_t *sd_tmp;
   extrainfo_t *ei_tmp;
   routerlist_check_bug_417();
-  idx = _routerlist_find_elt(rl->old_routers, sd, idx);
-  if (idx < 0)
-    return;
+  tor_assert(0 <= idx && idx < smartlist_len(rl->old_routers));
+  tor_assert(smartlist_get(rl->old_routers, idx) == sd);
+
   smartlist_del(rl->old_routers, idx);
   sd_tmp = sdmap_remove(rl->desc_digest_map,
                         sd->signed_descriptor_digest);
@@ -2692,7 +2693,8 @@ routerlist_remove_old_routers(void)
         log_info(LD_DIR,
                  "Forgetting obsolete (too old) routerinfo for router '%s'",
                  router->nickname);
-        routerlist_remove(routerlist, router, i--, 1);
+        routerlist_remove(routerlist, router, 1);
+        i--;
       }
     }
   }

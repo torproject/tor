@@ -3303,8 +3303,7 @@ routerlist_t *router_get_routerlist(void);
 void routerlist_reset_warnings(void);
 void routerlist_free(routerlist_t *routerlist);
 void dump_routerlist_mem_usage(int severity);
-void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx,
-                       int make_old);
+void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old);
 void routerinfo_free(routerinfo_t *router);
 void extrainfo_free(extrainfo_t *extrainfo);
 
