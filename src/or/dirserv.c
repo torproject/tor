@@ -1752,6 +1752,7 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   networkstatus_voter_info_t *voter = NULL;
+  vote_timing_t timing;
 
   /* check that everything is deallocated XXXX020 */
 
@@ -1818,12 +1819,15 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   tor_assert(v3_out);
   memset(v3_out, 0, sizeof(networkstatus_vote_t));
   v3_out->is_vote = 1;
-  v3_out->published = time(NULL);
-  v3_out->valid_after = time(NULL); /* XXXX020 not right. */
-  v3_out->fresh_until = time(NULL); /* XXXX020 not right. */
-  v3_out->valid_until = time(NULL); /* XXXX020 not right. */
-  v3_out->vote_seconds = 600; /* XXXX020 not right. */
-  v3_out->dist_seconds = 600; /* XXXX020 not right. */
+  dirvote_get_preferred_voting_intervals(&timing);
+  v3_out->published = now;
+  v3_out->valid_after =
+    dirvote_get_start_of_next_interval(now, timing.vote_interval);
+  v3_out->fresh_until = v3_out->valid_after + timing.vote_interval;
+  v3_out->valid_until = v3_out->valid_after +
+    (timing.vote_interval * timing.n_intervals_valid);
+  v3_out->vote_seconds = timing.vote_delay;
+  v3_out->dist_seconds = timing.dist_delay;
 
   v3_out->client_versions = client_versions;
   v3_out->server_versions = server_versions;

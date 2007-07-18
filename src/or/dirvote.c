@@ -10,7 +10,12 @@ const char dirvote_c_id[] =
 
 /**
  * \file dirvote.c
+ * \brief Functions to compute directory consensus, and schedule voting.
  **/
+
+/* =====
+ * Voting and consensus generation
+ * ===== */
 
 /** Clear all storage held in <b>ns</b>. */
 void
@@ -747,6 +752,10 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
   return 0;
 }
 
+/* =====
+ * Certificate functions
+ * ===== */
+
 /** Free storage held in <b>cert</b>. */
 void
 authority_cert_free(authority_cert_t *cert)
@@ -781,5 +790,79 @@ authority_cert_dup(authority_cert_t *cert)
   out->signing_key = crypto_pk_dup_key(cert->signing_key);
 
   return out;
+}
+
+/* =====
+ * Vote scheduling
+ * ===== */
+
+/** DOCDOC */
+void
+dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out)
+{
+  tor_assert(timing_out);
+
+  /* XXXX020 make these configurable. */
+  timing_out->vote_interval = 3600;
+  timing_out->n_intervals_valid = 3;
+  timing_out->vote_delay = 300;
+  timing_out->dist_delay = 300;
+}
+
+/** DOCDOC */
+time_t
+dirvote_get_start_of_next_interval(time_t now, int interval)
+{
+  struct tm tm;
+  time_t midnight_today;
+  time_t midnight_tomorrow;
+  time_t next;
+
+  tor_gmtime_r(&now, &tm);
+  tm.tm_hour = 0;
+  tm.tm_min = 0;
+  tm.tm_sec = 0;
+
+  midnight_today = tor_timegm(&tm);
+  midnight_tomorrow = midnight_today + (24*60*60);
+
+  next = midnight_today + ((now-midnight_today)/interval + 1)*interval;
+
+  if (next > midnight_tomorrow)
+    next = midnight_tomorrow;
+
+  return next;
+}
+
+/** DOCDOC */
+static struct {
+  time_t voting_starts;
+  time_t voting_ends;
+  time_t interval_starts;
+} voting_schedule;
+
+/** DOCDOC */
+void
+dirvote_recalculate_timing(time_t now)
+{
+  int interval, vote_delay, dist_delay;
+  time_t start;
+  networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
+
+  if (consensus) {
+    /* XXXX020 sanity-check these somewhere! */
+    interval = consensus->fresh_until - consensus->valid_after;
+    vote_delay = consensus->vote_seconds;
+    vote_delay = consensus->dist_seconds;
+  } else {
+    /* XXXX020 is this correct according the the spec? */
+    interval = 3600;
+    vote_delay = dist_delay = 300;
+  }
+
+  start = voting_schedule.interval_starts =
+    dirvote_get_start_of_next_interval(now,interval);
+  voting_schedule.voting_ends = start - vote_delay;
+  voting_schedule.voting_starts = start - vote_delay - dist_delay;
 }
 

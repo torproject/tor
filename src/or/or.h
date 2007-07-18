@@ -2782,6 +2782,17 @@ int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus);
 void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 
+/** DOCDOC */
+typedef struct vote_timing_t {
+  int vote_interval;
+  int n_intervals_valid;
+  int vote_delay;
+  int dist_delay;
+} vote_timing_t;
+void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
+time_t dirvote_get_start_of_next_interval(time_t now, int interval);
+void dirvote_recalculate_timing(time_t now);
+
 #ifdef DIRVOTE_PRIVATE
 int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
                                         networkstatus_voter_info_t *voter,
@@ -3348,6 +3359,10 @@ networkstatus_t *networkstatus_get_by_digest(const char *digest);
 local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
 local_routerstatus_t *router_get_combined_status_by_descriptor_digest(
                                                           const char *digest);
+
+/* for consensuses. */
+networkstatus_vote_t *networkstatus_get_latest_consensus(void);
+networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);
 
 //routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 int should_delay_dir_fetches(or_options_t *options);

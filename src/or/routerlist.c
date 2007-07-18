@@ -65,6 +65,9 @@ static routerlist_t *routerlist = NULL;
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
 
+/** DOCDOC */
+static networkstatus_vote_t *current_consensus = NULL;
+
 /** Global list of local_routerstatus_t for each router, known or unknown.
  * Kept sorted by digest. */
 static smartlist_t *routerstatus_list = NULL;
@@ -3724,6 +3727,22 @@ networkstatus_get_by_digest(const char *digest)
         return ns;
     });
   return NULL;
+}
+
+/** DOCDOC */
+networkstatus_vote_t *
+networkstatus_get_latest_consensus(void)
+{
+  return current_consensus;
+}
+
+/** DOCDOC */
+networkstatus_vote_t *
+networkstatus_get_live_consensus(time_t now)
+{
+  /* XXXX020 check for liveness */
+  (void)now;
+  return current_consensus;
 }
 
 /** We believe networkstatuses more recent than this when they tell us that
