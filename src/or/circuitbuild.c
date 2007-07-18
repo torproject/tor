@@ -2739,6 +2739,7 @@ fetch_bridge_descriptors(void)
   struct in_addr in;
   or_options_t *options = get_options();
   int num_bridge_auths = get_n_authorities(BRIDGE_AUTHORITY);
+  int ask_bridge_directly;
 
   if (!bridge_list)
     return;
@@ -2750,9 +2751,20 @@ fetch_bridge_descriptors(void)
       in.s_addr = htonl(bridge->addr);
       tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
 
-      if (tor_digest_is_zero(bridge->identity) ||
-          !options->UpdateBridgesFromAuthority ||
-          !num_bridge_auths) {
+      ask_bridge_directly = tor_digest_is_zero(bridge->identity) ||
+                            !options->UpdateBridgesFromAuthority ||
+                            !num_bridge_auths;
+
+      if (ask_bridge_directly &&
+          !fascist_firewall_allows_address_or(bridge->addr, bridge->port)) {
+        log_notice(LD_DIR, "Bridge at '%s:%d' isn't reachable by our "
+                   "firewall policy. %s.", address_buf, bridge->port,
+                   num_bridge_auths ? "Asking bridge authority instead" :
+                                      "Skipping");
+        ask_bridge_directly = 0;
+      }
+
+      if (ask_bridge_directly) {
         if (!connection_get_by_type_addr_port_purpose(
             CONN_TYPE_DIR, bridge->addr, bridge->port,
             DIR_PURPOSE_FETCH_SERVERDESC)) {
