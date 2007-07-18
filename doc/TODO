@@ -238,7 +238,7 @@ N     - Design/implement the "local-status" or something like it, from the
           manually listed in the torrc.
           D and some mechanism for specifying that we want to stop using
             a given bridge in this cache.
-      - timeout and retry schedules for fetching bridge descriptors
+      o timeout and retry schedules for fetching bridge descriptors
       - give extend_info_t a router_purpose again
       o react faster to download networkstatuses after the first bridge
         descriptor arrives
@@ -247,7 +247,7 @@ N     - Design/implement the "local-status" or something like it, from the
     - Bridges operators (rudimentary version)
       - Ability to act as dir cache without a dir port.
       o Bridges publish to bridge authorities
-      - Fix BEGIN_DIR so that you connect to bridge of which you only
+      o Fix BEGIN_DIR so that you connect to bridge of which you only
         know IP (and optionally fingerprint), and then use BEGIN_DIR to learn
         more about it.
       - look at server_mode() and decide if it always applies to bridges too.

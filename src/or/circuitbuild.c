@@ -2668,6 +2668,7 @@ typedef struct {
   uint32_t addr;
   uint16_t port;
   char identity[DIGEST_LEN];
+  download_status_t fetch_status;
 } bridge_info_t;
 
 /** A list of known bridges. */
@@ -2697,21 +2698,28 @@ identity_digest_is_a_bridge(const char *digest)
 }
 #endif
 
-/** Return 1 if <b>ri</b> is one of our known bridges (either by
- * comparing keys if possible, else by comparing addr/port). */
-int
-routerinfo_is_a_bridge(routerinfo_t *ri)
+/** Return a bridge pointer if <b>ri</b> is one of our known bridges
+ * (either by comparing keys if possible, else by comparing addr/port).
+ * Else return NULL. */
+static bridge_info_t *
+routerinfo_get_configured_bridge(routerinfo_t *ri)
 {
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
     {
       if (tor_digest_is_zero(bridge->identity) &&
           bridge->addr == ri->addr && bridge->port == ri->or_port)
-        return 1;
+        return bridge;
       if (!memcmp(bridge->identity, ri->cache_info.identity_digest,
                   DIGEST_LEN))
-        return 1;
+        return bridge;
     });
-  return 0;
+  return NULL;
+}
+
+int
+routerinfo_is_a_configured_bridge(routerinfo_t *ri)
+{
+  return routerinfo_get_configured_bridge(ri) ? 1 : 0;
 }
 
 /** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
@@ -2729,11 +2737,34 @@ bridge_add_from_config(uint32_t addr, uint16_t port, char *digest)
   smartlist_add(bridge_list, b);
 }
 
+/** Schedule the next fetch for <b>bridge</b>, based on
+ * some retry schedule. */
+static void
+bridge_fetch_status_increment(bridge_info_t *bridge, time_t now)
+{
+  switch (bridge->fetch_status.n_download_failures) {
+    case 0: bridge->fetch_status.next_attempt_at = now+60*15; break;
+    case 1: bridge->fetch_status.next_attempt_at = now+60*15; break;
+    default: bridge->fetch_status.next_attempt_at = now+60*60; break;
+  }
+  if (bridge->fetch_status.n_download_failures < 10)
+    bridge->fetch_status.n_download_failures++;
+}
+
+/** We just got a new descriptor for <b>bridge</b>. Reschedule the
+ * next fetch for a long time from <b>now</b>. */
+static void
+bridge_fetch_status_arrived(bridge_info_t *bridge, time_t now)
+{
+  bridge->fetch_status.next_attempt_at = now+60*60;
+  bridge->fetch_status.n_download_failures = 0;
+}
+
 /** For each bridge in our list for which we don't currently have a
  * descriptor, fetch a new copy of its descriptor -- either directly
  * from the bridge or via a bridge authority. */
 void
-fetch_bridge_descriptors(void)
+fetch_bridge_descriptors(time_t now)
 {
   char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
@@ -2746,8 +2777,12 @@ fetch_bridge_descriptors(void)
 
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
     {
-      if (router_get_by_digest(bridge->identity))
-        continue; /* we've already got one. great. */
+      if (bridge->fetch_status.next_attempt_at >= now)
+        continue; /* don't bother, no need to retry yet */
+
+     /* schedule another fetch as if this one failed, in case it does */
+      bridge_fetch_status_increment(bridge, now);
+
       in.s_addr = htonl(bridge->addr);
       tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
 
@@ -2792,16 +2827,22 @@ learned_bridge_descriptor(routerinfo_t *ri)
   tor_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
   if (get_options()->UseBridges) {
     int first = !any_bridge_descriptors_known();
+    bridge_info_t *bridge = routerinfo_get_configured_bridge(ri);
+    time_t now = time(NULL);
     ri->is_running = 1;
+
+    /* it's here; schedule its re-fetch for a long time from now. */
+    bridge_fetch_status_arrived(bridge, now);
+
     add_an_entry_guard(ri, 1);
     log_notice(LD_DIR, "new bridge descriptor '%s'", ri->nickname);
     if (first)
-      routerlist_retry_directory_downloads(time(NULL));
+      routerlist_retry_directory_downloads(now);
   }
 }
 
 /** Return 1 if any of our entry guards have descriptors that
- * are marked with purpose 'bridge'. Else return 0.
+ * are marked with purpose 'bridge' and are running. Else return 0.
  *
  * We use this function to decide if we're ready to start building
  * circuits through our bridges, or if we need to wait until the
@@ -2810,19 +2851,30 @@ int
 any_bridge_descriptors_known(void)
 {
   return choose_random_entry(NULL)!=NULL ? 1 : 0;
+}
+
 #if 0
+/** Return 1 if we have at least one descriptor for a bridge and
+ * all descriptors we know are down. Else return 0. */
+int
+all_bridges_down(void)
+{
   routerinfo_t *ri;
+  int any_known = 0;
   if (!entry_guards)
     entry_guards = smartlist_create();
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
       ri = router_get_by_digest(e->identity);
-      if (ri && ri->purpose == ROUTER_PURPOSE_BRIDGE)
-        return 1;
+      if (ri && ri->purpose == ROUTER_PURPOSE_BRIDGE) {
+        any_known = 1;
+        if (ri->is_running)
+          return 0; /* some bridge is both known and running */
+      }
     });
-  return 0;
-#endif
+  return any_known;
 }
+#endif
 
 /** Release all storage held by the list of entry guards and related
  * memory structs. */

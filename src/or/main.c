@@ -881,16 +881,16 @@ run_scheduled_events(time_t now)
 
   if (time_to_try_getting_descriptors < now) {
     /* XXXX  Maybe we should do this every 10sec when not enough info,
-     * and every 60sec when we have enough info -NM */
+     * and every 60sec when we have enough info -NM Great idea -RD */
     update_router_descriptor_downloads(now);
     update_extrainfo_downloads(now);
+    if (options->UseBridges)
+      fetch_bridge_descriptors(now);
     time_to_try_getting_descriptors = now + DESCRIPTOR_RETRY_INTERVAL;
   }
 
   if (time_to_reset_descriptor_failures < now) {
     router_reset_descriptor_download_failures();
-    if (options->UseBridges)
-      fetch_bridge_descriptors(); /* XXX get this its own retry schedule -RD */
     time_to_reset_descriptor_failures =
       now + DESCRIPTOR_FAILURE_RESET_INTERVAL;
   }

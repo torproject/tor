@@ -2231,14 +2231,15 @@ int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 void entry_guards_update_state(or_state_t *state);
 int getinfo_helper_entry_guards(control_connection_t *conn,
                                 const char *question, char **answer);
-void entry_guards_free_all(void);
 
 void clear_bridge_list(void);
-int routerinfo_is_a_bridge(routerinfo_t *ri);
+int routerinfo_is_a_configured_bridge(routerinfo_t *ri);
 void bridge_add_from_config(uint32_t addr, uint16_t port, char *digest);
-void fetch_bridge_descriptors(void);
+void fetch_bridge_descriptors(time_t now);
 void learned_bridge_descriptor(routerinfo_t *ri);
 int any_bridge_descriptors_known(void);
+
+void entry_guards_free_all(void);
 
 /********************************* circuitlist.c ***********************/
 
