@@ -1283,7 +1283,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
 
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
-  for (i=0; i < smartlist_len(sl); i++) {
+  for (i=0; i < smartlist_len(sl) && tmp < rand_bw; i++) {
     if (statuses) {
       status = smartlist_get(sl, i);
       is_exit = status->is_exit;
@@ -1295,11 +1295,10 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       tmp += ((uint64_t)(bandwidths[i] * exit_weight));
     else
       tmp += bandwidths[i];
-    if (tmp >= rand_bw)
-      break;
   }
-  if (i == smartlist_len(sl)) {
+  if (tmp < rand_bw) {
     /* This is possible due to round-off error. */
+    tor_assert(i == smartlist_len(sl));
     --i;
     log_warn(LD_BUG, "Round-off error in computing bandwidth had an effect on "
              " which router we chose.  Please tell the developers.");
@@ -2570,8 +2569,8 @@ static void
 routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
                                              digestmap_t *retain)
 {
-  int i, n = hi-lo+1, n_extra;
-  int n_rmv = 0;
+  int i, n = hi-lo+1;
+  unsigned n_extra, n_rmv = 0;
   struct duration_idx_t *lifespans;
   uint8_t *rmv, *must_keep;
   smartlist_t *lst = routerlist->old_routers;
@@ -2587,9 +2586,12 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
 #endif
 
   /* Check whether we need to do anything at all. */
-  n_extra = n - max_descriptors_per_router();
-  if (n_extra <= 0)
-    return;
+  {
+    int mdpr = max_descriptors_per_router();
+    if (n <= mdpr)
+      return;
+    n_extra = n - mdpr;
+  }
 
   lifespans = tor_malloc_zero(sizeof(struct duration_idx_t)*n);
   rmv = tor_malloc_zero(sizeof(uint8_t)*n);
