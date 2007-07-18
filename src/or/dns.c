@@ -825,7 +825,7 @@ dns_cancel_pending_resolve(const char *address)
   if (!resolve)
     return;
 
-  if(resolve->state != CACHE_STATE_PENDING) {
+  if (resolve->state != CACHE_STATE_PENDING) {
     log_notice(LD_BUG,"Address %s is not pending (state %d). Dropping.",
                escaped_safe_str(address), resolve->state);
     return;
