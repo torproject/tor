@@ -1842,7 +1842,7 @@ is_internal_IP(uint32_t ip, int for_listening)
 int
 tor_addr_is_internal(const tor_addr_t *addr, int for_listening)
 {
-  uint32_t iph4;
+  uint32_t iph4 = 0;
   uint32_t iph6[4];
   sa_family_t v_family;
   v_family = IN_FAMILY(addr);
