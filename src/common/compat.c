@@ -819,9 +819,6 @@ tor_inet_aton(const char *c, struct in_addr* addr)
 const char *
 tor_inet_ntop(int af, const void *src, char *dst, size_t len)
 {
-#ifdef HAVE_INET_NTOP
-  return inet_ntop(af,src,dst,(socklen_t)len);
-#else
   if (af == AF_INET) {
     if (tor_inet_ntoa(src, dst, len) < 0)
       return NULL;
@@ -896,7 +893,6 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
   } else {
     return NULL;
   }
-#endif
 }
 
 /** Given <b>af</b>==AF_INET or <b>af</b>==AF_INET6, and a string <b>src</b>
@@ -911,9 +907,6 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
 int
 tor_inet_pton(int af, const char *src, void *dst)
 {
-#ifdef HAVE_INET_PTON
-  return inet_pton(af, src, dst);
-#else
   if (af == AF_INET) {
     return tor_inet_aton(src, dst);
   } else if (af == AF_INET6) {
@@ -1000,7 +993,6 @@ tor_inet_pton(int af, const char *src, void *dst)
   } else {
     return -1;
   }
-#endif
 }
 
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
