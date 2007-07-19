@@ -854,13 +854,14 @@ test_util(void)
   buf[0] = (char)1;
   test_assert(!tor_mem_is_zero(buf, 10));
 
-  /* Test inet_ntoa */
+  /* Test inet_ntop */
   {
-    char tmpbuf[INET_NTOA_BUF_LEN];
+    char tmpbuf[TOR_ADDR_BUF_LEN];
+    const char *ip = "176.192.208.224";
     struct in_addr in;
-    tor_inet_aton("18.244.0.188",&in);
-    tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
-    test_streq(tmpbuf, "18.244.0.188");
+    tor_inet_pton(AF_INET, ip, &in);
+    tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf));
+    test_streq(tmpbuf, ip);
   }
 
   /* Test 'escaped' */
@@ -1027,12 +1028,67 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     test_eq_ip6(&a1, &a2);                                              \
   STMT_END
 
+/*XXXX020 make this macro give useful output on failure, and follow the
+ * conventions of the other test macros.  */
+#define test_internal_ip(a,b) STMT_BEGIN             \
+    r = tor_inet_pton(AF_INET6, a, &t1.sa6.sin6_addr); \
+    test_assert(r==1);                               \
+    t1.sa6.sin6_family = AF_INET6;                   \
+    r = tor_addr_is_internal(&t1, b);                \
+    test_assert(r==1);                               \
+  STMT_END
+
+/*XXXX020 make this macro give useful output on failure, and follow the
+ * conventions of the other test macros.  */
+#define test_external_ip(a,b) STMT_BEGIN             \
+    r = tor_inet_pton(AF_INET6, a, &t1.sa6.sin6_addr); \
+    test_assert(r==1);                               \
+    t1.sa6.sin6_family = AF_INET6;                   \
+    r = tor_addr_is_internal(&t1, b);                \
+    test_assert(r==0);                               \
+  STMT_END
+
+/*XXXX020 make this macro give useful output on failure, and follow the
+ * conventions of the other test macros.  */
+#define test_addr_convert6(a,b) STMT_BEGIN           \
+    tor_inet_pton(AF_INET6, a, &t1.sa6.sin6_addr);   \
+    tor_inet_pton(AF_INET6, b, &t2.sa6.sin6_addr);   \
+    t1.sa6.sin6_family = AF_INET6;                   \
+    t2.sa6.sin6_family = AF_INET6;                   \
+  STMT_END
+
+/*XXXX020 make this macro give useful output on failure, and follow the
+ * conventions of the other test macros. */
+#define test_addr_parse(xx) STMT_BEGIN                                \
+    r=tor_addr_parse_mask_ports(xx, &t1, &mask, &port1, &port2);      \
+    t2.sa6.sin6_family = AF_INET6;                                    \
+    p1=tor_inet_ntop(AF_INET6, &t1.sa6.sin6_addr, bug, sizeof(bug));  \
+  STMT_END
+
+/*XXXX020 make this macro give useful output on failure, and follow the
+ * conventions of the other test macros. */
+#define test_addr_parse_check(ip1, ip2, ip3, ip4, mm, pt1, pt2) STMT_BEGIN  \
+    test_assert(r>=0);                                     \
+    test_eq(htonl(ip1), IN6_ADDR(&t1)->s6_addr32[0]);      \
+    test_eq(htonl(ip2), IN6_ADDR(&t1)->s6_addr32[1]);      \
+    test_eq(htonl(ip3), IN6_ADDR(&t1)->s6_addr32[2]);      \
+    test_eq(htonl(ip4), IN6_ADDR(&t1)->s6_addr32[3]);      \
+    test_eq(mask, mm);                                     \
+    test_eq(port1, pt1);                                   \
+    test_eq(port2, pt2);                                   \
+  STMT_END
+
 static void
 test_ip6_helpers(void)
 {
-  char buf[64];
+  char buf[TOR_ADDR_BUF_LEN], bug[TOR_ADDR_BUF_LEN];
   struct in6_addr a1, a2;
+  tor_addr_t t1, t2;
   int r, i;
+  uint16_t port1, port2;
+  maskbits_t mask;
+  const char *p1;
+
   //  struct in_addr b1, b2;
   /* Test tor_inet_ntop and tor_inet_pton: IPv6 */
 
@@ -1066,8 +1122,13 @@ test_ip6_helpers(void)
   test_ntop6_reduces("0001:0099:BEEF:0006:0123:FFFF:0001:0001",
                      "1:99:beef:6:123:ffff:1:1");
 
-  test_ntop6_reduces("0:0:0:0:0:0:c0a8:0101", "::192.168.1.1");
+  //test_ntop6_reduces("0:0:0:0:0:0:c0a8:0101", "::192.168.1.1");
   test_ntop6_reduces("0:0:0:0:0:ffff:c0a8:0101", "::ffff:192.168.1.1");
+  test_ntop6_reduces("002:0:0000:0:3::4", "2::3:0:0:4");
+  test_ntop6_reduces("0:0::3", "::3");
+  test_ntop6_reduces("008:0::0", "8::");
+  test_ntop6_reduces("0:0:0:0:0:ffff::1", "::ffff:0.0.0.1");
+  test_ntop6_reduces("abcd:0:0:0:0:0:7f00::", "abcd::7f00:0");
   test_ntop6_reduces("0000:0000:0000:0000:0009:C0A8:0001:0001",
                      "::9:c0a8:1:1");
   test_ntop6_reduces("fe80:0000:0000:0000:0202:1111:0001:0001",
@@ -1080,7 +1141,7 @@ test_ip6_helpers(void)
   test_pton6_bad("55555::");
   test_pton6_bad("9:-60::");
   test_pton6_bad("1:2:33333:4:0002:3::");
-  // test_pton6_bad("1:2:3333:4:00002:3::"); //XXXX not bad.
+  //test_pton6_bad("1:2:3333:4:00002:3::");// BAD, but glibc doesn't say so.
   test_pton6_bad("1:2:3333:4:fish:3::");
   test_pton6_bad("1:2:3:4:5:6:7:8:9");
   test_pton6_bad("1:2:3:4:5:6:7");
@@ -1090,6 +1151,130 @@ test_ip6_helpers(void)
   test_pton6_bad("::1.2.3.4.5");
   test_pton6_bad("99");
   test_pton6_bad("");
+  test_pton6_bad("1::2::3:4");
+  test_pton6_bad("a:::b:c");
+  test_pton6_bad(":::a:b:c");
+  test_pton6_bad("a:b:c:::");
+
+  /* test internal checking */
+  test_external_ip("fbff:ffff::2:7", 0);
+  test_internal_ip("fc01::2:7", 0);
+  test_internal_ip("fdff:ffff::f:f", 0);
+  test_external_ip("fe00::3:f", 0);
+
+  test_external_ip("fe7f:ffff::2:7", 0);
+  test_internal_ip("fe80::2:7", 0);
+  test_internal_ip("febf:ffff::f:f", 0);
+
+  test_internal_ip("fec0::2:7:7", 0);
+  test_internal_ip("feff:ffff::e:7:7", 0);
+  test_external_ip("ff00::e:7:7", 0);
+
+  test_internal_ip("::", 0);
+  test_internal_ip("::1", 0);
+  test_internal_ip("::1", 1);
+  test_internal_ip("::", 0);
+  test_external_ip("::", 1);
+  test_external_ip("::2", 0);
+  test_external_ip("2001::", 0);
+  test_external_ip("ffff::", 0);
+
+  test_external_ip("::ffff:0.0.0.0", 1);
+  test_internal_ip("::ffff:0.0.0.0", 0);
+  test_internal_ip("::ffff:0.255.255.255", 0);
+  test_external_ip("::ffff:1.0.0.0", 0);
+
+  test_external_ip("::ffff:9.255.255.255", 0);
+  test_internal_ip("::ffff:10.0.0.0", 0);
+  test_internal_ip("::ffff:10.255.255.255", 0);
+  test_external_ip("::ffff:11.0.0.0", 0);
+
+  test_external_ip("::ffff:126.255.255.255", 0);
+  test_internal_ip("::ffff:127.0.0.0", 0);
+  test_internal_ip("::ffff:127.255.255.255", 0);
+  test_external_ip("::ffff:128.0.0.0", 0);
+
+  test_external_ip("::ffff:172.15.255.255", 0);
+  test_internal_ip("::ffff:172.16.0.0", 0);
+  test_internal_ip("::ffff:172.31.255.255", 0);
+  test_external_ip("::ffff:172.32.0.0", 0);
+
+  test_external_ip("::ffff:192.167.255.255", 0);
+  test_internal_ip("::ffff:192.168.0.0", 0);
+  test_internal_ip("::ffff:192.168.255.255", 0);
+  test_external_ip("::ffff:192.169.0.0", 0);
+
+  test_external_ip("::ffff:169.253.255.255", 0);
+  test_internal_ip("::ffff:169.254.0.0", 0);
+  test_internal_ip("::ffff:169.254.255.255", 0);
+  test_external_ip("::ffff:169.255.0.0", 0);
+
+  /* tor_addr_compare(tor_addr_t x2) */
+  test_addr_convert6("ffff::", "ffff::0");
+  test_assert(tor_addr_compare(&t1, &t2) == 0);
+  test_addr_convert6("0::3:2:1", "0::ffff:0.3.2.1");
+  test_assert(tor_addr_compare(&t1, &t2) > 0);
+  test_addr_convert6("0::2:2:1", "0::ffff:0.3.2.1");
+  test_assert(tor_addr_compare(&t1, &t2) > 0);
+  test_addr_convert6("0::ffff:0.3.2.1", "0::0:0:0");
+  test_assert(tor_addr_compare(&t1, &t2) < 0);
+  test_addr_convert6("0::ffff:5.2.2.1", "::ffff:6.0.0.0");
+  test_assert(tor_addr_compare(&t1, &t2) < 0); /* XXXX wrong. */
+  tor_addr_parse_mask_ports("[::ffff:2.3.4.5]", &t1, NULL, NULL, NULL);
+  tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);
+  test_assert(tor_addr_compare(&t1, &t2) == 0);
+  tor_addr_parse_mask_ports("[::ffff:2.3.4.4]", &t1, NULL, NULL, NULL);
+  tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);
+  test_assert(tor_addr_compare(&t1, &t2) < 0);
+
+  /* XXXX020 test compare_masked */
+
+  /* test tor_addr_parse_mask_ports */
+  test_addr_parse("[::f]/17:47-95");
+  test_addr_parse_check(0, 0, 0, 0x0000000f, 17, 47, 95);
+  //test_addr_parse("[::fefe:4.1.1.7/120]:999-1000");
+  //test_addr_parse_check("::fefe:401:107", 120, 999, 1000);
+  test_addr_parse("[::ffff:4.1.1.7]/120:443");
+  test_addr_parse_check(0, 0, 0x0000ffff, 0x04010107, 120, 443, 443);
+  test_addr_parse("[abcd:2::44a:0]:2-65000");
+  test_addr_parse_check(0xabcd0002, 0, 0, 0x044a0000, 128, 2, 65000);
+
+  r=tor_addr_parse_mask_ports("[fefef::]/112", &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("efef::/112", &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[f:f:f:f:f:f:f:f::]", &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[::f:f:f:f:f:f:f:f]", &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("[f:f:f:f:f:f:f:f:f]", &t1, NULL, NULL, NULL);
+  test_assert(r == -1);
+  /* Test for V4-mapped address with mask < 96.  (arguably not valid) */
+  r=tor_addr_parse_mask_ports("[::ffff:1.1.2.2/33]", &t1, &mask, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("1.1.2.2/33", &t1, &mask, NULL, NULL);
+  test_assert(r == -1);
+  r=tor_addr_parse_mask_ports("1.1.2.2/31", &t1, &mask, NULL, NULL);
+  test_assert(r == AF_INET);
+  r=tor_addr_parse_mask_ports("[efef::]/112", &t1, &mask, &port1, &port2);
+  test_assert(r == AF_INET6);
+  test_assert(port1 == 1);
+  test_assert(port2 == 65535);
+
+  /* make sure inet address lengths >= max */
+  test_assert(INET_NTOA_BUF_LEN >= sizeof("255.255.255.255"));
+  test_assert(TOR_ADDR_BUF_LEN >=
+              sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"));
+
+  test_assert(sizeof(tor_addr_t) >= sizeof(struct sockaddr_in6));
+
+  /* get interface addresses */
+  r = get_interface_address6(0, AF_INET, &t1);
+  i = get_interface_address6(0, AF_INET6, &t2);
+  tor_inet_ntop(AF_INET, &t1.sa.sin_addr, buf, sizeof(buf));
+  printf("\nv4 address: %s  (family=%i)", buf, IN_FAMILY(&t1));
+  tor_inet_ntop(AF_INET6, &t2.sa6.sin6_addr, buf, sizeof(buf));
+  printf("\nv6 address: %s  (family=%i)", buf, IN_FAMILY(&t2));
 }
 
 static void
@@ -1915,7 +2100,7 @@ test_dir_format(void)
   ex1.next = &ex2;
   ex2.policy_type = ADDR_POLICY_REJECT;
   ex2.addr = 18 << 24;
-  ex2.msk = 0xFF000000u;
+  ex2.msk = 0xff000000u;
   ex2.prt_min = ex2.prt_max = 24;
   ex2.next = NULL;
   r2.address = tor_strdup("1.1.1.1");
@@ -2526,12 +2711,14 @@ static void
 test_policies(void)
 {
   addr_policy_t *policy, *policy2;
+  tor_addr_t tar;
   config_line_t line;
 
   policy = router_parse_addr_policy_from_string("reject 192.168.0.0/16:*",-1);
   test_eq(NULL, policy->next);
   test_eq(ADDR_POLICY_REJECT, policy->policy_type);
-  test_eq(0xc0a80000u, policy->addr);
+  tor_addr_from_ipv4(&tar, 0xc0a80000u);
+  test_assert(policy->addr == 0xc0a80000u);
   test_eq(0xffff0000u, policy->msk);
   test_eq(1, policy->prt_min);
   test_eq(65535, policy->prt_max);

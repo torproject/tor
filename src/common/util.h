@@ -254,10 +254,24 @@ int parse_addr_and_port_range(const char *s, uint32_t *addr_out,
                               uint32_t *mask_out, uint16_t *port_min_out,
                               uint16_t *port_max_out);
 int addr_mask_get_bits(uint32_t mask);
-#define INET_NTOA_BUF_LEN 16
 int tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len);
 char *tor_dup_addr(uint32_t addr) ATTR_MALLOC;
 int get_interface_address(int severity, uint32_t *addr);
+
+int get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr);
+int tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2);
+int tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
+                            maskbits_t mask);
+int tor_addr_is_v4(const tor_addr_t *addr);
+int tor_addr_is_internal(const tor_addr_t *ip, int for_listening) ATTR_PURE;
+int tor_addr_parse_mask_ports(const char *s,
+                              tor_addr_t *addr_out, maskbits_t *mask_out,
+                              uint16_t *port_min_out, uint16_t *port_max_out);
+const char * tor_addr_to_str(char *dest, const tor_addr_t *addr, int len);
+int tor_addr_from_str(tor_addr_t *addr, const char *src);
+void tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src);
+void tor_addr_from_ipv4(tor_addr_t *dest, uint32_t v4addr);
+int tor_addr_is_null(const tor_addr_t *addr);
 
 /* Process helpers */
 void start_daemon(void);

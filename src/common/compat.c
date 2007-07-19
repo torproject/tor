@@ -1004,7 +1004,7 @@ tor_inet_pton(int af, const char *src, void *dst)
 }
 
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
- * *addr to the proper IP address, in network byte order.  Returns 0
+ * *<b>addr</b> to the proper IP address, in host byte order.  Returns 0
  * on success, -1 on failure; 1 on transient failure.
  *
  * (This function exists because standard windows gethostbyname
@@ -1013,37 +1013,89 @@ tor_inet_pton(int af, const char *src, void *dst)
 int
 tor_lookup_hostname(const char *name, uint32_t *addr)
 {
+  tor_addr_t myaddr;
+  int ret;
+
+  if ((ret = tor_addr_lookup(name, AF_INET, &myaddr)))
+    return ret;
+
+  if (IN_FAMILY(&myaddr) == AF_INET) {
+    *addr = IPV4IPh(&myaddr);
+    return ret;
+  }
+
+  return -1;
+}
+
+/** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
+ * *<b>addr</b> to the proper IP address and family.
+ * Return 0 on success, -1 on failure; 1 on transient failure.
+ * DOCDOC family argument.
+ */
+int
+tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
+{
   /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
    * something.
    */
   struct in_addr iaddr;
+  struct in6_addr iaddr6;
   tor_assert(name);
   tor_assert(addr);
+  tor_assert(family == AF_INET || family == AF_UNSPEC);
+  memset(addr, 0, sizeof(addr)); /* Clear the extraneous fields. */
   if (!*name) {
     /* Empty address is an error. */
     return -1;
-  } else if (tor_inet_aton(name, &iaddr)) {
-    /* It's an IP. */
-    memcpy(addr, &iaddr.s_addr, 4);
+  } else if (tor_inet_pton(AF_INET, name, &iaddr)) {
+    /* It's an IPv4 IP. */
+    addr->sa.sin_family = AF_INET;
+    memcpy(&addr->sa.sin_addr, &iaddr, sizeof(struct in_addr));
+    return 0;
+  } else if (tor_inet_pton(AF_INET6, name, &iaddr6)) {
+    addr->sa6.sin6_family = AF_INET6;
+    memcpy(&addr->sa6.sin6_addr, &iaddr6, sizeof(struct in6_addr));
     return 0;
   } else {
 #ifdef HAVE_GETADDRINFO
     int err;
     struct addrinfo *res=NULL, *res_p;
+    struct addrinfo *best=NULL;
     struct addrinfo hints;
     int result = -1;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = PF_INET;
+    hints.ai_family = family;
     hints.ai_socktype = SOCK_STREAM;
     err = getaddrinfo(name, NULL, &hints, &res);
     if (!err) {
+      best = NULL;
       for (res_p = res; res_p; res_p = res_p->ai_next) {
-        if (res_p->ai_family == AF_INET) {
-          struct sockaddr_in *sin = (struct sockaddr_in *)res_p->ai_addr;
-          memcpy(addr, &sin->sin_addr, 4);
-          result = 0;
+        if (family == AF_UNSPEC) {
+          if (res_p->ai_family == AF_INET) {
+            best = res_p;
+            break;
+          } else if (res_p->ai_family == AF_INET6 && !best) {
+            best = res_p;
+          }
+        } else if (family == res_p->ai_family) {
+          best = res_p;
           break;
         }
+      }
+      if (!best)
+        best = res;
+      if (best->ai_family == AF_INET) {
+        addr->sa.sin_family = AF_INET;
+        memcpy(&addr->sa.sin_addr,
+               &((struct sockaddr_in*)best->ai_addr)->sin_addr,
+               sizeof(struct in_addr));
+        result = 0;
+      } else if (best->ai_family == AF_INET6) {
+        addr->sa6.sin6_family = AF_INET6;
+        memcpy(&addr->sa6.sin6_addr,
+               &((struct sockaddr_in6*)best->ai_addr)->sin6_addr,
+               sizeof(struct in6_addr));
+        result = 0;
       }
       freeaddrinfo(res);
       return result;
@@ -1074,14 +1126,19 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
 #else
     err = h_errno;
 #endif
-#endif
+#endif /* endif HAVE_GETHOSTBYNAME_R_6_ARG. */
     if (ent) {
-      /* break to remind us if we move away from IPv4 */
-      tor_assert(ent->h_length == 4);
-      memcpy(addr, ent->h_addr, 4);
+      addr->sa.sin_family = ent->h_addrtype;
+      if (ent->h_addrtype == AF_INET) {
+        memcpy(addr->sa.sin_addr, ent->h_addr, sizeof(struct in_addr));
+      } else if (ent->h_addrtype == AF_INET6) {
+        memcpy(addr->sa.sin6_addr, ent->h_addr, sizeof(struct in6_addr));
+      } else {
+        tor_assert(0)  /* gethostbyname() returned a bizarre addrtype */
+      }
       return 0;
     }
-    memset(addr, 0, 4);
+    memset(addr, 0, sizeof(tor_addr_t)); /* XXXX020 is this redundant? */
 #ifdef MS_WINDOWS
     return (err == WSATRY_AGAIN) ? 1 : -1;
 #else

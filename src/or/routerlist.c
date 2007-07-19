@@ -3643,7 +3643,6 @@ add_trusted_dir_server(const char *nickname, const char *address,
       return;
     }
     hostname = tor_strdup(address);
-    a = ntohl(a);
   }
 
   ent = tor_malloc_zero(sizeof(trusted_dir_server_t));

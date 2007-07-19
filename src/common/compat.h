@@ -36,6 +36,15 @@
 #include <ctype.h>
 #endif
 #include <stdarg.h>
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_NETINET_IN6_H
+#include <netinet/in6.h>
+#endif
 
 #ifndef NULL_REP_IS_ZERO_BYTES
 #error "It seems your platform does not represent NULL as zero. We can't cope."
@@ -263,11 +272,88 @@ typedef int socklen_t;
 #if !defined(HAVE_STRUCT_IN6_ADDR) && !defined(MS_WINDOWS)
 struct in6_addr
 {
-  uint8_t s6_addr[16];
+  union {
+    uint8_t u6_addr8[16];
+    uint16_t u6_addr16[8];
+    uint32_t u6_addr32[4];
+  } in6_u;
+#define s6_addr   in6_u.u6_addr8
+#define s6_addr16 in6_u.u6_addr16
+#define s6_addr32 in6_u.u6_addr32
 };
 #endif
 
+#if !defined(HAVE_STRUCT_SOCKADDR_IN6)
+struct sockaddr_in6 {
+  uint16_t sin6_family; /* XXXX020 right size???? */
+  uint16_t sin6_port;
+  // uint32_t sin6_flowinfo;
+  struct in6_addr sin6_addr;
+  // uint32_t sin6_scope_id;
+};
+#endif
+
+typedef uint8_t maskbits_t;
 struct in_addr;
+typedef union tor_addr_t
+{
+  /* XXXX020 There are extra fields in sockaddr_in and sockaddr_in6 that
+   * make this union waste space.  Do we care? */
+  struct sockaddr_in sa;
+  struct sockaddr_in6 sa6;
+} tor_addr_t;
+
+/* XXXX020 rename these. */
+static INLINE uint32_t IPV4IP(const tor_addr_t *a);
+static INLINE uint32_t IPV4IPh(const tor_addr_t *a);
+static INLINE uint32_t IPV4MAPh(const tor_addr_t *a);
+static INLINE uint16_t IN_FAMILY(const tor_addr_t *a);
+static INLINE const struct in_addr *IN_ADDR(const tor_addr_t *a);
+static INLINE const struct in6_addr *IN6_ADDR(const tor_addr_t *a);
+static INLINE uint16_t IN_PORT(const tor_addr_t *a);
+
+static INLINE uint32_t
+IPV4IP(const tor_addr_t *a)
+{
+  return a->sa.sin_addr.s_addr;
+}
+static INLINE uint32_t IPV4IPh(const tor_addr_t *a)
+{
+  /*XXXX020 remove this function */
+  return ntohl(IPV4IP(a));
+}
+static INLINE uint32_t
+IPV4MAPh(const tor_addr_t *a)
+{
+  return ntohl(a->sa6.sin6_addr.s6_addr32[3]);
+}
+static INLINE uint16_t
+IN_FAMILY(const tor_addr_t *a)
+{
+  return a->sa.sin_family;
+}
+static INLINE const struct in_addr *
+IN_ADDR(const tor_addr_t *a)
+{
+  return &a->sa.sin_addr;
+}
+static INLINE const struct in6_addr *
+IN6_ADDR(const tor_addr_t *a)
+{
+  return &a->sa6.sin6_addr;
+}
+static INLINE uint16_t
+IN_PORT(const tor_addr_t *a)
+{
+  if (IN_FAMILY(a) == AF_INET)
+    return a->sa.sin_port;
+  else
+    return a->sa6.sin6_port;
+}
+
+#define INET_NTOA_BUF_LEN 16 /* 255.255.255.255 */
+#define TOR_ADDR_BUF_LEN 46 /* ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255 */
+
 int tor_inet_aton(const char *cp, struct in_addr *addr) ATTR_NONNULL((1,2));
 const char *tor_inet_ntop(int af, const void *src, char *dst, size_t len);
 int tor_inet_pton(int af, const char *src, void *dst);
@@ -275,6 +361,9 @@ int tor_lookup_hostname(const char *name, uint32_t *addr) ATTR_NONNULL((1,2));
 void set_socket_nonblocking(int socket);
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
 int network_init(void);
+
+int tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr_out);
+
 /* For stupid historical reasons, windows sockets have an independent
  * set of errnos, and an independent way to get them.  Also, you can't
  * always believe WSAEWOULDBLOCK.  Use the macros below to compare
