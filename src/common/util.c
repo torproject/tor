@@ -2000,6 +2000,32 @@ addr_mask_get_bits(uint32_t mask)
   return -1;
 }
 
+/** Compare two addresses <b>a1</b> and <b>a2</b> for equality under a
+ *  etmask of <b>mbits</b> bits.  Return -1, 0, or 1.
+ *
+ * XXXX020Temporary function to allow masks as bitcounts everywhere.  This
+ * will be replaced with an IPv6-aware version as soon as 32-bit addresses are
+ * no longer passed around.
+ */
+int
+addr_mask_cmp_bits(uint32_t a1, uint32_t a2, maskbits_t bits)
+{
+  if (bits > 32)
+    bits = 32;
+  else if (bits == 0)
+    return 0;
+
+  a1 >>= (32-bits);
+  a2 >>= (32-bits);
+
+  if (a1 < a2)
+    return -1;
+  else if (a1 > a2)
+    return 1;
+  else
+    return 0;
+}
+
 /** Parse a string <b>s</b> in the format of (*|port(-maxport)?)?, setting the
  * various *out pointers as appropriate.  Return 0 on success, -1 on failure.
  */
@@ -2058,7 +2084,7 @@ parse_port_range(const char *port, uint16_t *port_min_out,
  */
 int
 parse_addr_and_port_range(const char *s, uint32_t *addr_out,
-                          uint32_t *mask_out, uint16_t *port_min_out,
+                          maskbits_t *maskbits_out, uint16_t *port_min_out,
                           uint16_t *port_max_out)
 {
   char *address;
@@ -2068,7 +2094,7 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
 
   tor_assert(s);
   tor_assert(addr_out);
-  tor_assert(mask_out);
+  tor_assert(maskbits_out);
   tor_assert(port_min_out);
   tor_assert(port_max_out);
 
@@ -2098,9 +2124,9 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
 
   if (!mask) {
     if (strcmp(address,"*")==0)
-      *mask_out = 0;
+      *maskbits_out = 0;
     else
-      *mask_out = 0xFFFFFFFFu;
+      *maskbits_out = 32;
   } else {
     endptr = NULL;
     bits = (int) strtol(mask, &endptr, 10);
@@ -2111,9 +2137,16 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
                  "Bad number of mask bits on address range; rejecting.");
         goto err;
       }
-      *mask_out = ~((1u<<(32-bits))-1);
+      *maskbits_out = bits;
     } else if (tor_inet_aton(mask, &in) != 0) {
-      *mask_out = ntohl(in.s_addr);
+      bits = addr_mask_get_bits(ntohl(in.s_addr));
+      if (bits < 0) {
+        log_warn(LD_GENERAL,
+                 "Mask %s on address range isn't a prefix; dropping",
+                 escaped(mask));
+        goto err;
+      }
+      *maskbits_out = bits;
     } else {
       log_warn(LD_GENERAL,
                "Malformed mask %s on address range; rejecting.",
@@ -2351,7 +2384,7 @@ tor_addr_is_null(const tor_addr_t *addr)
 {
   tor_assert(addr);
 
-  switch(IN_FAMILY(addr)) {
+  switch (IN_FAMILY(addr)) {
     case AF_INET6:
       if (!IN6_ADDR(addr)->s6_addr32[0] && !IN6_ADDR(addr)->s6_addr32[1] &&
           !IN6_ADDR(addr)->s6_addr32[2] && !IN6_ADDR(addr)->s6_addr32[3])
@@ -2457,38 +2490,32 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
     return 0;
 
   if (v_family[0] == AF_INET) { /* Real or mapped IPv4 */
-#if 0
     if (mbits >= 32) {
       masked_a = ip4a;
       masked_b = ip4b;
+    } else if (mbits == 0) {
+      return 0;
     } else {
-      masked_a = ip4a & (0xfffffffful << (32-mbits));
-      masked_b = ip4b & (0xfffffffful << (32-mbits));
+      masked_a = ip4a >> (32-mbits);
+      masked_b = ip4b >> (32-mbits);
     }
-#endif
-    if (mbits > 32)
-      mbits = 32;
-    masked_a = ip4a >> (32-mbits);
-    masked_b = ip4b >> (32-mbits);
     if (masked_a < masked_b)
       return -1;
     else if (masked_a > masked_b)
       return 1;
     return 0;
   } else if (v_family[0] == AF_INET6) { /* Real IPv6 */
-    maskbits_t lmbits;
     const uint32_t *a1 = IN6_ADDR(addr1)->s6_addr32;
     const uint32_t *a2 = IN6_ADDR(addr2)->s6_addr32;
     for (idx = 0; idx < 4; ++idx) {
-      if (!mbits)
+      uint32_t masked_a = ntohl(a1[idx]);
+      uint32_t masked_b = ntohl(a2[idx]);
+      if (!mbits) {
         return 0; /* Mask covers both addresses from here on */
-      else if (mbits > 32)
-        lmbits = 32;
-      else
-        lmbits = mbits;
-
-      masked_a = ntohl(a1[idx]) >> (32-lmbits);
-      masked_b = ntohl(a2[idx]) >> (32-lmbits);
+      } else if (mbits < 32) {
+        masked_a >>= (32-mbits);
+        masked_b >>= (32-mbits);
+      }
 
       if (masked_a > masked_b)
         return 1;
@@ -2499,25 +2526,6 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
         return 0;
       mbits -= 32;
     }
-#if 0
-    for (idx = 0; idx < 4; ++idx) {
-      if (mbits <= 32*idx) /* Mask covers both addresses from here on */
-        return 0;
-      if (mbits >= 32*(idx+1)) { /* Mask doesn't affect these 32 bits */
-        lmbits = 32;
-      } else {
-        lmbits = mbits % 32;
-      }
-      masked_a = ntohl(IN6_ADDR(addr1).s6_addr32[idx]) &
-                 (0xfffffffful << (32-lmbits));
-      masked_b = ntohl(IN6_ADDR(addr2).s6_addr32[idx]) &
-                 (0xfffffffful << (32-lmbits));
-      if (masked_a > masked_b)
-        return 1;
-      if (masked_a < masked_b)
-        return -1;
-    }
-#endif
     return 0;
   }
 

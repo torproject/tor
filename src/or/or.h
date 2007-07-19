@@ -1028,8 +1028,9 @@ typedef struct addr_policy_t {
 
   /* XXXX020 make this ipv6-capable */
   uint32_t addr; /**< Base address to accept or reject. */
-  uint32_t msk; /**< Accept/reject all addresses <b>a</b> such that
-                 * a &amp; msk == <b>addr</b> &amp; msk . */
+  maskbits_t maskbits; /**< Accept/reject all addresses <b>a</b> such that the
+                 * first <b>maskbits</b> bits of <b>a</b> match
+                 * <b>addr</b>. */
   uint16_t prt_min; /**< Lowest port number to accept/reject. */
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 
@@ -1739,9 +1740,9 @@ typedef struct exit_redirect_t {
   /* XXXX020 make this whole mess ipv6-capable.  (Does anybody use it? */
 
   uint32_t addr;
-  uint32_t mask;
   uint16_t port_min;
   uint16_t port_max;
+  maskbits_t maskbits;
 
   uint32_t addr_dest;
   uint16_t port_dest;

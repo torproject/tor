@@ -2095,12 +2095,12 @@ test_dir_format(void)
   ex1.policy_type = ADDR_POLICY_ACCEPT;
   ex1.string = NULL;
   ex1.addr = 0;
-  ex1.msk = 0;
+  ex1.maskbits = 0;
   ex1.prt_min = ex1.prt_max = 80;
   ex1.next = &ex2;
   ex2.policy_type = ADDR_POLICY_REJECT;
   ex2.addr = 18 << 24;
-  ex2.msk = 0xff000000u;
+  ex2.maskbits = 8;
   ex2.prt_min = ex2.prt_max = 24;
   ex2.next = NULL;
   r2.address = tor_strdup("1.1.1.1");
@@ -2719,7 +2719,7 @@ test_policies(void)
   test_eq(ADDR_POLICY_REJECT, policy->policy_type);
   tor_addr_from_ipv4(&tar, 0xc0a80000u);
   test_assert(policy->addr == 0xc0a80000u);
-  test_eq(0xffff0000u, policy->msk);
+  test_eq(16, policy->maskbits);
   test_eq(1, policy->prt_min);
   test_eq(65535, policy->prt_max);
   test_streq("reject 192.168.0.0/16:*", policy->string);

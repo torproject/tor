@@ -2092,7 +2092,7 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
 {
   directory_token_t *tok = NULL;
   const char *cp;
-  char *tmp;
+  char *tmp = NULL;
   addr_policy_t *r;
   size_t len, idx;
   const char *eos;
@@ -2175,7 +2175,7 @@ router_parse_addr_policy(directory_token_t *tok)
   newe->policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
     : ADDR_POLICY_ACCEPT;
 
-  if (parse_addr_and_port_range(arg, &newe->addr, &newe->msk,
+  if (parse_addr_and_port_range(arg, &newe->addr, &newe->maskbits,
                                 &newe->prt_min, &newe->prt_max))
     goto policy_read_failed;
 
@@ -2229,7 +2229,7 @@ router_parse_addr_policy_private(directory_token_t *tok)
                  tok->tp == K_REJECT ? "reject" : "accept",
                  private_nets[net], arg);
     if (parse_addr_and_port_range((*nextp)->string + 7,
-                                  &(*nextp)->addr, &(*nextp)->msk,
+                                  &(*nextp)->addr, &(*nextp)->maskbits,
                                   &(*nextp)->prt_min, &(*nextp)->prt_max)) {
       log_warn(LD_BUG, "Couldn't parse an address range we generated!");
       return NULL;
@@ -2253,7 +2253,7 @@ assert_addr_policy_ok(addr_policy_t *t)
     tor_assert(t2);
     tor_assert(t2->policy_type == t->policy_type);
     tor_assert(t2->addr == t->addr);
-    tor_assert(t2->msk == t->msk);
+    tor_assert(t2->maskbits == t->maskbits);
     tor_assert(t2->prt_min == t->prt_min);
     tor_assert(t2->prt_max == t->prt_max);
     tor_assert(!strcmp(t2->string, t->string));

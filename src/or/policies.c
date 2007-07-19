@@ -63,10 +63,6 @@ parse_addr_policy(config_line_t *cfg, addr_policy_t **dest,
       log_debug(LD_CONFIG,"Adding new entry '%s'",ent);
       *nextp = router_parse_addr_policy_from_string(ent, assume_action);
       if (*nextp) {
-        if (addr_mask_get_bits((*nextp)->msk)<0) {
-          log_warn(LD_CONFIG, "Address policy element '%s' can't be expressed "
-                   "as a bit prefix.", ent);
-        }
         /* Advance nextp to the end of the policy. */
         while (*nextp)
           nextp = &((*nextp)->next);
@@ -308,7 +304,7 @@ cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
     return r;
   if ((r=((int)a->addr - (int)b->addr)))
     return r;
-  if ((r=((int)a->msk - (int)b->msk)))
+  if ((r=((int)a->maskbits - (int)b->maskbits)))
     return r;
   if ((r=((int)a->prt_min - (int)b->prt_min)))
     return r;
@@ -371,7 +367,7 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
       if ((port >= tmpe->prt_min && port <= tmpe->prt_max) ||
            (!port && tmpe->prt_min<=1 && tmpe->prt_max>=65535)) {
         /* The port definitely matches. */
-        if (tmpe->msk == 0) {
+        if (tmpe->maskbits == 0) {
           match = 1;
         } else {
           maybe = 1;
@@ -382,7 +378,7 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
       }
     } else {
       /* Address is known */
-      if ((addr & tmpe->msk) == (tmpe->addr & tmpe->msk)) {
+      if (!addr_mask_cmp_bits(addr, tmpe->addr, tmpe->maskbits)) {
         if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
           /* Exact match for the policy */
           match = 1;
@@ -420,11 +416,11 @@ addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
 {
   /* We can ignore accept/reject, since "accept *:80, reject *:80" reduces
    * to "accept *:80". */
-  if (a->msk & ~b->msk) {
-    /* There's a wildcard bit in b->msk that's not a wildcard in a. */
+  if (a->maskbits > b->maskbits) {
+    /* a has more fixed bits than b; it can't possibly cover b. */
     return 0;
   }
-  if ((a->addr & a->msk) != (b->addr & a->msk)) {
+  if (addr_mask_cmp_bits(a->addr, b->addr, a->maskbits)) {
     /* There's a fixed bit in a that's set differently in b. */
     return 0;
   }
@@ -438,11 +434,16 @@ addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
 static int
 addr_policy_intersects(addr_policy_t *a, addr_policy_t *b)
 {
+  maskbits_t minbits;
   /* All the bits we care about are those that are set in both
    * netmasks.  If they are equal in a and b's networkaddresses
    * then the networks intersect.  If there is a difference,
    * then they do not. */
-  if (((a->addr ^ b->addr) & a->msk & b->msk) != 0)
+  if (a->maskbits < b->maskbits)
+    minbits = a->maskbits;
+  else
+    minbits = b->maskbits;
+  if (addr_mask_cmp_bits(a->addr, b->addr, minbits))
     return 0;
   if (a->prt_max < b->prt_min || b->prt_max < a->prt_min)
     return 0;
@@ -470,7 +471,7 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
 
   /* Step one: find a *:* entry and cut off everything after it. */
   for (ap=*dest; ap; ap=ap->next) {
-    if (ap->msk == 0 && ap->prt_min <= 1 && ap->prt_max >= 65535) {
+    if (ap->maskbits == 0 && ap->prt_min <= 1 && ap->prt_max >= 65535) {
       /* This is a catch-all line -- later lines are unreachable. */
       if (ap->next) {
         addr_policy_free(ap->next);
@@ -581,7 +582,7 @@ exit_policy_is_general_exit(addr_policy_t *policy)
     for ( ; p; p = p->next) {
       if (p->prt_min > ports[i] || p->prt_max < ports[i])
         continue; /* Doesn't cover our port. */
-      if ((p->msk & 0x00fffffful) != 0)
+      if (p->maskbits > 8)
         continue; /* Narrower than a /8. */
       if ((p->addr & 0xff000000ul) == 0x7f000000ul)
         continue; /* 127.x */
@@ -605,7 +606,7 @@ policy_is_reject_star(addr_policy_t *p)
       return 0;
     else if (p->policy_type == ADDR_POLICY_REJECT &&
              p->prt_min <= 1 && p->prt_max == 65535 &&
-             p->msk == 0)
+             p->maskbits == 0)
       return 1;
   }
   return 1;
@@ -626,24 +627,15 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy)
   /* write accept/reject 1.2.3.4 */
   result = tor_snprintf(buf, buflen, "%s %s",
             policy->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
-            policy->msk == 0 ? "*" : addrbuf);
+            policy->maskbits == 0 ? "*" : addrbuf);
   if (result < 0)
     return -1;
   written += strlen(buf);
-  /* If the mask is 0xffffffff, we don't need to give it.  If the mask is 0,
+  /* If the maskbits is 32 we don't need to give it.  If the mask is 0,
    * we already wrote "*". */
-  if (policy->msk != 0xFFFFFFFFu && policy->msk != 0) {
-    int n_bits = addr_mask_get_bits(policy->msk);
-    if (n_bits >= 0) {
-      if (tor_snprintf(buf+written, buflen-written, "/%d", n_bits)<0)
-        return -1;
-    } else {
-      /* Write "/255.255.0.0" */
-      in.s_addr = htonl(policy->msk);
-      tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
-      if (tor_snprintf(buf+written, buflen-written, "/%s", addrbuf)<0)
-        return -1;
-    }
+  if (policy->maskbits < 32 && policy->maskbits > 0) {
+    if (tor_snprintf(buf+written, buflen-written, "/%d", policy->maskbits)<0)
+      return -1;
     written += strlen(buf+written);
   }
   if (policy->prt_min <= 1 && policy->prt_max == 65535) {

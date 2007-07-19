@@ -917,8 +917,7 @@ client_dns_set_reverse_addressmap(const char *address, const char *v,
  * These options are configured by parse_virtual_addr_network().
  */
 static uint32_t virtual_addr_network = 0x7fc00000u;
-static uint32_t virtual_addr_netmask = 0xffc00000u;
-static int virtual_addr_netmask_bits = 10;
+static maskbits_t virtual_addr_netmask_bits = 10;
 static uint32_t next_virtual_addr    = 0x7fc00000u;
 
 /** Read a netmask of the form 127.192.0.0/10 from "val", and check whether
@@ -930,24 +929,17 @@ int
 parse_virtual_addr_network(const char *val, int validate_only,
                            char **msg)
 {
-  uint32_t addr, mask;
+  uint32_t addr;
   uint16_t port_min, port_max;
-  int bits;
+  maskbits_t bits;
 
-  if (parse_addr_and_port_range(val, &addr, &mask, &port_min, &port_max)) {
+  if (parse_addr_and_port_range(val, &addr, &bits, &port_min, &port_max)) {
     if (msg) *msg = tor_strdup("Error parsing VirtualAddressNetwork");
     return -1;
   }
 
   if (port_min != 1 || port_max != 65535) {
     if (msg) *msg = tor_strdup("Can't specify ports on VirtualAddressNetwork");
-    return -1;
-  }
-
-  bits = addr_mask_get_bits(mask);
-  if (bits < 0) {
-    if (msg) *msg = tor_strdup("VirtualAddressNetwork must have a mask that "
-                               "can be expressed as a prefix");
     return -1;
   }
 
@@ -960,11 +952,10 @@ parse_virtual_addr_network(const char *val, int validate_only,
   if (validate_only)
     return 0;
 
-  virtual_addr_network = addr & mask;
-  virtual_addr_netmask = mask;
+  virtual_addr_network = addr & (0xfffffffful << (32-bits));
   virtual_addr_netmask_bits = bits;
 
-  if ((next_virtual_addr & mask) != addr)
+  if (addr_mask_cmp_bits(next_virtual_addr, addr, bits))
     next_virtual_addr = addr;
 
   return 0;
@@ -983,7 +974,8 @@ address_is_in_virtual_range(const char *address)
     return 1;
   } else if (tor_inet_aton(address, &in)) {
     uint32_t addr = ntohl(in.s_addr);
-    if ((addr & virtual_addr_netmask) == virtual_addr_network)
+    if (!addr_mask_cmp_bits(addr, virtual_addr_network,
+                            virtual_addr_netmask_bits))
       return 1;
   }
   return 0;
@@ -1029,7 +1021,8 @@ addressmap_get_virtual_address(int type)
         log_warn(LD_CONFIG, "Ran out of virtual addresses!");
         return NULL;
       }
-      if ((next_virtual_addr & virtual_addr_netmask) != virtual_addr_network)
+      if (!addr_mask_cmp_bits(next_virtual_addr, virtual_addr_network,
+                              virtual_addr_netmask_bits))
         next_virtual_addr = virtual_addr_network;
     }
     return tor_strdup(buf);
@@ -2452,7 +2445,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
   if (redirect_exit_list) {
     SMARTLIST_FOREACH(redirect_exit_list, exit_redirect_t *, r,
     {
-      if ((addr&r->mask)==(r->addr&r->mask) &&
+      if (!addr_mask_cmp_bits(addr, r->addr, r->maskbits) &&
           (r->port_min <= port) && (port <= r->port_max)) {
         struct in_addr in;
         if (r->is_redirect) {

@@ -3562,8 +3562,8 @@ parse_redirect_line(smartlist_t *result, config_line_t *line, char **msg)
     *msg = tor_strdup("Wrong number of elements in RedirectExit line");
     goto err;
   }
-  if (parse_addr_and_port_range(smartlist_get(elements,0),&r->addr,&r->mask,
-                                &r->port_min,&r->port_max)) {
+  if (parse_addr_and_port_range(smartlist_get(elements,0),&r->addr,
+                                &r->maskbits,&r->port_min,&r->port_max)) {
     *msg = tor_strdup("Error parsing source address in RedirectExit line");
     goto err;
   }

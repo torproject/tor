@@ -1,4 +1,9 @@
 Changes in version 0.2.0.3-alpha - 2007-??-??
+  o Removed features:
+    - Stop allowing address masks that do not correspond to bit prefixes.
+      We have warned about these for a really long time; now it's time
+      to reject them. (Patch from croup.)
+
   o Minor features:
     - Create listener connections before we setuid to the configured User and
       Group.  This way, you can choose port values under 1024, start Tor as
