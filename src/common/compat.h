@@ -42,8 +42,8 @@
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#ifdef HAVE_NETINET_IN6_H
-#include <netinet/in6.h>
+#ifdef HAVE_NETINET6_IN6_H
+#include <netinet6/in6.h>
 #endif
 
 #ifndef NULL_REP_IS_ZERO_BYTES
@@ -283,8 +283,9 @@ struct in6_addr
 };
 #endif
 
-#if defined(__APPLE__) || defined(__darwin__)
-/* OSX seems not to define these. */
+#if defined(__APPLE__) || defined(__darwin__) || defined(__FreeBSD__) \
+    || defined (__NetBSD__) || defined(__OpenBSD__)
+/* Many BSD variants seem not to define these. */
 #ifndef s6_addr16
 #define s6_addr16 __u6_addr.__u6_addr16
 #endif

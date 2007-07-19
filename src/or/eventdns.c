@@ -104,7 +104,7 @@
 #endif
 
 #ifdef HAVE_NETINET_IN6_H
-#include <netinet/in6.h>
+#include <netinet6/in6.h>
 #endif
 
 #ifdef WIN32
