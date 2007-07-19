@@ -853,7 +853,7 @@ dirvote_recalculate_timing(time_t now)
     /* XXXX020 sanity-check these somewhere! */
     interval = consensus->fresh_until - consensus->valid_after;
     vote_delay = consensus->vote_seconds;
-    vote_delay = consensus->dist_seconds;
+    dist_delay = consensus->dist_seconds;
   } else {
     /* XXXX020 is this correct according the the spec? */
     interval = 3600;
