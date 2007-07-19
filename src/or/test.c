@@ -1125,7 +1125,7 @@ test_ip6_helpers(void)
   //test_ntop6_reduces("0:0:0:0:0:0:c0a8:0101", "::192.168.1.1");
   test_ntop6_reduces("0:0:0:0:0:ffff:c0a8:0101", "::ffff:192.168.1.1");
   test_ntop6_reduces("002:0:0000:0:3::4", "2::3:0:0:4");
-  test_ntop6_reduces("0:0::1:3", "::1:3");
+  test_ntop6_reduces("0:0::1:0:3", "::1:0:3");
   test_ntop6_reduces("008:0::0", "8::");
   test_ntop6_reduces("0:0:0:0:0:ffff::1", "::ffff:0.0.0.1");
   test_ntop6_reduces("abcd:0:0:0:0:0:7f00::", "abcd::7f00:0");
