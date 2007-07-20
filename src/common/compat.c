@@ -834,7 +834,8 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
       words[i] = (((uint16_t)addr->s6_addr[2*i])<<8) + addr->s6_addr[2*i+1];
     }
     if (words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
-        words[4] == 0 && (words[5] == 0 || words[5] == 0xffff) && words[6]) {
+        words[4] == 0 && ((words[5] == 0 && (words[6] || words[7])) ||
+                          (words[5] == 0xffff))) {
       /* This is an IPv4 address. */
       if (words[5] == 0) {
         tor_snprintf(buf, sizeof(buf), "::%d.%d.%d.%d",
@@ -965,7 +966,7 @@ tor_inet_pton(int af, const char *src, void *dst)
       } else if (*src == ':' && i > 0 && gapPos==-1) {
         gapPos = i;
         ++src;
-      } else if (*src == ':' && i == 0 && src[1] == ':') {
+      } else if (*src == ':' && i == 0 && src[1] == ':' && gapPos==-1) {
         gapPos = i;
         src += 2;
       } else {
@@ -973,7 +974,9 @@ tor_inet_pton(int af, const char *src, void *dst)
       }
     }
 
-    if (setWords > 8 || (setWords < 8 && gapPos == -1))
+    if (setWords > 8 ||
+        (setWords == 8 && gapPos != -1) ||
+        (setWords < 8 && gapPos == -1))
       return 0;
 
     if (gapPos >= 0) {
