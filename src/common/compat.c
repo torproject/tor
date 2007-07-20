@@ -834,7 +834,7 @@ tor_inet_ntop(int af, const void *src, char *dst, size_t len)
       words[i] = (((uint16_t)addr->s6_addr[2*i])<<8) + addr->s6_addr[2*i+1];
     }
     if (words[0] == 0 && words[1] == 0 && words[2] == 0 && words[3] == 0 &&
-        words[4] == 0 && ((words[5] == 0 && (words[6] || words[7])) ||
+        words[4] == 0 && ((words[5] == 0 && words[6] && words[7]) ||
                           (words[5] == 0xffff))) {
       /* This is an IPv4 address. */
       if (words[5] == 0) {
