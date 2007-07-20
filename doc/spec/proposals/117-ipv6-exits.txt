@@ -44,12 +44,12 @@ Contents
    the addendum.
 
    When Tor is started on a host it should check for the presence of a
-   global unicast address, [2000::]/3, and if present include the
-   default IPv6 exit policies and any user specified IPv6 exit policies.
+   global unicast IPv6 address and if present include the default IPv6
+   exit policies and any user specified IPv6 exit policies.
 
-   If a user provides IPv6 exit policies but no global unicast address
-   is available Tor should generate a warning and not publish the IPv6
-   policy in the router descriptor.
+   If a user provides IPv6 exit policies but no global unicast IPv6
+   address is available Tor should generate a warning and not publish the
+   IPv6 policies in the router descriptor.
 
    It should be noted that IPv4 mapped IPv6 addresses are not valid exit
    destinations.  This mechanism is mainly used to interoperate with
@@ -270,21 +270,31 @@ Contents
    IPv4 preference.  Should more explicit control be available, through
    either configuration directives or control commands?
 
-   This can be worked around by resolving names and then CONNECTing to
-   an IPv4 or IPv6 address as desired, however, not all client
-   applications may have this option available.
+   Many applications support a inet6-only or prefer-family type option
+   that provides the user manual control over address preference.  This
+   could be provided as a Tor configuration option.
 
-3.3. Support for IPv6 only clients
+   An explicit preference is still possible by resolving names and then
+   CONNECTing to an IPv4 or IPv6 address as desired, however, not all
+   client applications may have this option available.
 
-   It may be useful to support IPv6 only clients using IPv4 mapped IPv6
-   addresses.  This would require transparent DNS proxy using IPv6
-   transport and the ability to map A record responses into IPv4 mapped
-   IPv6 addresses.  The transparent TCP proxy would thus need to detect
-   these mapped addresses and connect to the desired IPv4 host.
+3.3. Support for IPv6 only transparent proxy clients
 
-   The relative lack of any IPv6 only hosts or applications makes this a
-   lot of work for very little gain.  Is there a compelling reason to
-   support this capability?
+   It may be useful to support IPv6 only transparent proxy clients using
+   IPv4 mapped IPv6 like addresses.  This would require transparent DNS
+   proxy using IPv6 transport and the ability to map A record responses
+   into IPv4 mapped IPv6 like addresses in the manner described in the
+   "NAT-PT" RFC for a traditional Basic-NAT-PT with DNS-ALG.  The
+   transparent TCP proxy would thus need to detect these mapped addresses
+   and connect to the desired IPv4 host.
+
+   The IPv6 prefix used for this purpose must not be the actual IPv4
+   mapped IPv6 address prefix, though the manner in which IPv4 addresses
+   are embedded in IPv6 addresses would be the same.
+
+   The lack of any IPv6 only hosts which would use this transparent proxy
+   method makes this a lot of work for very little gain.  Is there a
+   compelling reason to support this NAT-PT like capability?
 
 3.4. IPv6 DNS and older Tor routers
 
@@ -299,6 +309,21 @@ Contents
    routers that can resolve IPv6 addresses even if they can't exit such
    traffic.
 
+   There was also concern expressed about the ability of existing clients
+   to cope with new RELAY_RESOLVE responses that contain IPv6 addresses.
+   If this breaks backward compatibility, a new request type may be
+   necessary, like RELAY_RESOLVE6, or some other mechanism of indicating
+   the ability to parse IPv6 responses when making the request.
+
+3.5. IPv4 and IPv6 bindings in MAPADDRESS
+
+   It may be troublesome to try and support two distinct address mappings
+   for the same name in the existing MAPADDRESS implementation.  If this
+   cannot be accommodated then the behavior should replace existing
+   mappings with the new address regardless of family.  A warning when
+   this occurs would be useful to assist clients who encounter problems
+   when both an IPv4 and IPv6 application are using MAPADDRESS for the
+   same names concurrently, causing lost connections for one of them.
 
 4. Addendum
 
@@ -358,3 +383,5 @@ Contents
    'INTERNET PROTOCOL VERSION 6 ADDRESS SPACE'
    http://www.iana.org/assignments/ipv6-address-space
 
+   'Network Address Translation - Protocol Translation (NAT-PT)'
+   http://www.ietf.org/rfc/rfc2766.txt
