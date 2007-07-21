@@ -47,6 +47,12 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Deprecated features:
     - RedirectExits is now deprecated.
 
+  o Security fixes:
+    - Directory authorities now call routers Fast if their bandwidth is
+      at least 100KB/s, and consider their bandwidth adequate to be a
+      Guard if it is at least 250KB/s. This fix complements proposal
+      107. [Bugfix on 0.1.2.x]
+
   o Major bugfixes (directory):
     - Fix a crash bug when router descriptors end at a 4096-byte boundary
       on disk.  [Bugfix on 0.1.2.x]
@@ -191,7 +197,7 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       Add a standalone tool to generate key certificates. (Proposal 103.)
 
   o Security fixes:
-    - Directory authorities now call routers stable if they have an
+    - Directory authorities now call routers Stable if they have an
       uptime of at least 30 days, even if that's not the median uptime
       in the network. Implements proposal 107, suggested by Kevin Bauer
       and Damon McCoy.

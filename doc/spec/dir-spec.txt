@@ -938,19 +938,19 @@ $Id$
    it successfully within the last 30 minutes.
 
    "Stable" -- A router is 'Stable' if it is active, and either its
-   uptime is at least the median uptime for known active routers, or
+   uptime is at least the median uptime for known active routers or
    its uptime is at least 30 days. Routers are never called stable if
    they are running a version of Tor known to drop circuits stupidly.
    (0.1.1.10-alpha through 0.1.1.16-rc are stupid this way.)
 
    "Fast" -- A router is 'Fast' if it is active, and its bandwidth is
-   in the top 7/8ths for known active routers.
+   either in the top 7/8ths for known active routers or at least 100KB/s.
 
    "Guard" -- A router is a possible 'Guard' if it is 'Stable' and its
-   bandwidth is above median for known active routers. If the total
-   bandwidth of active non-BadExit Exit servers is less than one third
-   of the total bandwidth of all active servers, no Exit is listed as
-   a Guard.
+   bandwidth is either above median for known active routers or at least
+   250KB/s. If the total bandwidth of active non-BadExit Exit servers
+   is less than one third of the total bandwidth of all active servers,
+   no Exit is listed as a Guard.
 
    "Authority" -- A router is called an 'Authority' if the authority
    generating the network-status document believes it is an authority.

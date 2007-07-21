@@ -1437,6 +1437,12 @@ should_generate_v2_networkstatus(void)
  * network using allegedly high-uptime nodes, displacing all the
  * current guards. */
 #define UPTIME_TO_GUARANTEE_STABLE (3600*24*30)
+/** Similarly, we protect sufficiently fast nodes from being pushed
+ * out of the set of Fast nodes. */
+#define BANDWIDTH_TO_GUARANTEE_FAST (100*1024)
+/** Similarly, every node with sufficient bandwidth can be considered
+ * for Guard status. */
+#define BANDWIDTH_TO_GUARANTEE_GUARD (250*1024)
 
 /* Thresholds for server performance: set by
  * dirserv_compute_performance_thresholds, and used by
@@ -1475,9 +1481,11 @@ dirserv_thinks_router_is_unreliable(time_t now,
         (unsigned)uptime < UPTIME_TO_GUARANTEE_STABLE)
       return 1;
   }
-  if (need_capacity &&
-      router_get_advertised_bandwidth(router) < fast_bandwidth)
-    return 1;
+  if (need_capacity) {
+    uint32_t bw = router_get_advertised_bandwidth(router);
+    if (bw < fast_bandwidth && bw < BANDWIDTH_TO_GUARANTEE_FAST)
+      return 1;
+  }
   return 0;
 }
 
@@ -1710,9 +1718,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_valid = ri->is_valid;
   rs->is_possible_guard = rs->is_fast && rs->is_stable &&
     (!rs->is_exit || exits_can_be_guards) &&
-    router_get_advertised_bandwidth(ri) >=
-    (exits_can_be_guards ? guard_bandwidth_including_exits :
-     guard_bandwidth_excluding_exits);
+    (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
+     router_get_advertised_bandwidth(ri) >=
+     (exits_can_be_guards ? guard_bandwidth_including_exits :
+      guard_bandwidth_excluding_exits));
   rs->is_bad_exit = listbadexits && ri->is_bad_exit;
   /* 0.1.1.9-alpha is the first version to support fetch by descriptor
    * hash. */
