@@ -2716,6 +2716,7 @@ routerinfo_get_configured_bridge(routerinfo_t *ri)
   return NULL;
 }
 
+/** Return 1 if <b>ri</b> is one of our known bridges, else 0. */
 int
 routerinfo_is_a_configured_bridge(routerinfo_t *ri)
 {
@@ -2809,7 +2810,7 @@ fetch_bridge_descriptors(time_t now)
                                      1, bridge->identity,
                                      DIR_PURPOSE_FETCH_SERVERDESC,
                                      ROUTER_PURPOSE_BRIDGE,
-                                     0, "authority", NULL, 0);
+                                     0, "authority.z", NULL, 0);
         }
       } else {
         /* we have a digest and we want to ask an authority. */

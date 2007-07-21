@@ -615,7 +615,7 @@ consider_testing_reachability(int test_or, int test_dir)
                                0, me->cache_info.identity_digest,
                                DIR_PURPOSE_FETCH_SERVERDESC,
                                ROUTER_PURPOSE_GENERAL,
-                               1, "authority", NULL, 0);
+                               1, "authority.z", NULL, 0);
 
     control_event_server_status(LOG_NOTICE,
                                 "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
