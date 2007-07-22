@@ -1786,8 +1786,7 @@ tor_free_all(int postfork)
   smartlist_free(closeable_connection_lst);
   smartlist_free(active_linked_connection_lst);
   tor_free(timeout_event);
-  /* Stuff in util.c */ 
-  esc_router_info(NULL);
+  /* Stuff in util.c */
   if (!postfork) {
     escaped(NULL);
     esc_router_info(NULL);
