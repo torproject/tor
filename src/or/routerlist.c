@@ -1283,7 +1283,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
 
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
-  for (i=0; i < smartlist_len(sl) && tmp < rand_bw; i++) {
+  for (i=0; i < smartlist_len(sl); i++) {
     if (statuses) {
       status = smartlist_get(sl, i);
       is_exit = status->is_exit;
@@ -1295,10 +1295,11 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       tmp += ((uint64_t)(bandwidths[i] * exit_weight));
     else
       tmp += bandwidths[i];
+    if (tmp >= rand_bw)
+      break;
   }
-  if (tmp < rand_bw) {
+  if (i == smartlist_len(sl)) {
     /* This is possible due to round-off error. */
-    tor_assert(i == smartlist_len(sl));
     --i;
     log_warn(LD_BUG, "Round-off error in computing bandwidth had an effect on "
              " which router we chose.  Please tell the developers.");
