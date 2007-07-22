@@ -5391,15 +5391,19 @@ routerlist_check_bug_417(void)
  * THIS FUNCTION IS NOT REENTRANT.  Don't call it from outside the main
  * thread.  Also, each call invalidates the last-returned value, so don't
  * try log_warn(LD_GENERAL, "%s %s", esc_router_info(a), esc_router_info(b));
+ *
+ * If <b>router</b> is NULL, it just frees its internal memory and returns.
  */
 const char *
 esc_router_info(routerinfo_t *router)
 {
-  static char *info;
+  static char *info=NULL;
   char *esc_contact, *esc_platform;
   size_t len;
   if (info)
     tor_free(info);
+  if (!router)
+    return NULL; /* we're exiting; just free the memory we use */
 
   esc_contact = esc_for_log(router->contact_info);
   esc_platform = esc_for_log(router->platform);

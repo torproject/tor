@@ -1784,6 +1784,7 @@ tor_free_all(int postfork)
   tor_free(timeout_event);
   /* Stuff in util.c */
   escaped(NULL);
+  esc_router_info(NULL);
   if (!postfork) {
     logs_free_all(); /* free log strings. do this last so logs keep working. */
   }
