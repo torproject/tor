@@ -1072,7 +1072,8 @@ circuit_get_unhandled_ports(time_t now)
   int i;
 
   for (i = 0; i < smartlist_len(source); ++i) {
-    tmp = tor_malloc(sizeof(uint16_t));
+    /*XXXX020 some of these are leaked somewhere.. fix that. */
+    tmp = tor_malloc(sizeof(uint16_t)); 
     memcpy(tmp, smartlist_get(source, i), sizeof(uint16_t));
     smartlist_add(dest, tmp);
   }

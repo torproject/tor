@@ -1763,6 +1763,7 @@ tor_free_all(int postfork)
   routerlist_free_all();
   addressmap_free_all();
   set_exit_redirects(NULL); /* free the registered exit redirects */
+  esc_router_info(NULL); /* free a static field */
   dirserv_free_all();
   rend_service_free_all();
   rend_cache_free_all();
