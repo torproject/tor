@@ -1763,7 +1763,6 @@ tor_free_all(int postfork)
   routerlist_free_all();
   addressmap_free_all();
   set_exit_redirects(NULL); /* free the registered exit redirects */
-  esc_router_info(NULL); /* free a static field */
   dirserv_free_all();
   rend_service_free_all();
   rend_cache_free_all();
@@ -1787,10 +1786,11 @@ tor_free_all(int postfork)
   smartlist_free(closeable_connection_lst);
   smartlist_free(active_linked_connection_lst);
   tor_free(timeout_event);
-  /* Stuff in util.c */
-  escaped(NULL);
+  /* Stuff in util.c */ 
   esc_router_info(NULL);
   if (!postfork) {
+    escaped(NULL);
+    esc_router_info(NULL);
     logs_free_all(); /* free log strings. do this last so logs keep working. */
   }
 }
