@@ -1249,6 +1249,10 @@ do_hup(void)
 {
   or_options_t *options = get_options();
 
+#ifdef USE_DMALLOC
+  dmalloc_log_stats();
+#endif
+
   log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL), get_or_state());
