@@ -36,7 +36,7 @@ directory_send_command(dir_connection_t *conn,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
-static int purpose_needs_anonymity(uint8_t purpose);
+static int purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(
@@ -71,16 +71,18 @@ static void note_request(const char *key, size_t bytes);
 /** Return true iff the directory purpose 'purpose' must use an
  * anonymous connection to a directory. */
 static int
-purpose_needs_anonymity(uint8_t purpose)
+purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 {
   if (get_options()->AllDirActionsPrivate)
     return 1;
-  if (purpose == DIR_PURPOSE_FETCH_DIR ||
-      purpose == DIR_PURPOSE_UPLOAD_DIR ||
-      purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
-      purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
-      purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-      purpose == DIR_PURPOSE_FETCH_EXTRAINFO)
+  if (router_purpose == ROUTER_PURPOSE_BRIDGE)
+    return 1; /* if we have to ask, better make it anonymous */
+  if (dir_purpose == DIR_PURPOSE_FETCH_DIR ||
+      dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
+      dir_purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
+      dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
+      dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+      dir_purpose == DIR_PURPOSE_FETCH_EXTRAINFO)
     return 0;
   return 1;
 }
@@ -147,7 +149,8 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
  * support it.
  */
 void
-directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
+directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
+                             authority_type_t type,
                              const char *payload,
                              size_t payload_len, size_t extrainfo_len)
 {
@@ -167,7 +170,7 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
         continue;
 
       found = 1; /* at least one authority of this type was listed */
-      if (purpose == DIR_PURPOSE_UPLOAD_DIR)
+      if (dir_purpose == DIR_PURPOSE_UPLOAD_DIR)
         ds->has_accepted_serverdesc = 0;
 
       if (extrainfo_len && router_supports_extrainfo(ds->digest, 1)) {
@@ -175,10 +178,10 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
         log_info(LD_DIR, "Uploading an extrainfo (length %d)",
                  (int) extrainfo_len);
       }
-      post_via_tor = purpose_needs_anonymity(purpose) ||
+      post_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose) ||
               !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
-      directory_initiate_command_routerstatus(rs, purpose,
-                                              ROUTER_PURPOSE_GENERAL,
+      directory_initiate_command_routerstatus(rs, dir_purpose,
+                                              router_purpose,
                                               post_via_tor,
                                               NULL, payload, upload_len);
     });
@@ -191,29 +194,33 @@ directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
 }
 
 /** Start a connection to a random running directory server, using
- * connection purpose 'purpose' and requesting 'resource'.
+ * connection purpose <b>dir_purpose</b>, intending to fetch descriptors
+ * of purpose <b>router_purpose</b>, and requesting <b>resource</b>.
  * If <b>retry_if_no_servers</b>, then if all the possible servers seem
  * down, mark them up and try again.
  */
 void
-directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
-                             int retry_if_no_servers)
+directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
+                             const char *resource, int retry_if_no_servers)
 {
   routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
   int prefer_authority = server_mode(options) && options->DirPort != 0;
-  int directconn = !purpose_needs_anonymity(dir_purpose);
+  int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
   authority_type_t type;
 
   /* FFFF we could break this switch into its own function, and call
    * it elsewhere in directory.c. -RD */
   switch (dir_purpose) {
     case DIR_PURPOSE_FETCH_EXTRAINFO:
-      type = EXTRAINFO_CACHE | V2_AUTHORITY;
+      type = EXTRAINFO_CACHE |
+             (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
+                                                        V2_AUTHORITY);
       break;
     case DIR_PURPOSE_FETCH_NETWORKSTATUS:
     case DIR_PURPOSE_FETCH_SERVERDESC:
-      type = V2_AUTHORITY;
+      type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
+                                                        V2_AUTHORITY);
       break;
     case DIR_PURPOSE_FETCH_DIR:
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
@@ -230,21 +237,21 @@ directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
   if (!options->FetchServerDescriptors && type != HIDSERV_AUTHORITY)
     return;
 
-  if (directconn && options->UseBridges) {
-    /* want to pick a bridge for which we have a descriptor. */
+  if (!get_via_tor && options->UseBridges) {
+    /* want to ask a running bridge for which we have a descriptor. */
     routerinfo_t *ri = choose_random_entry(NULL);
     if (ri) {
       directory_initiate_command(ri->address, ri->addr,
                                  ri->or_port, 0,
                                  1, ri->cache_info.identity_digest,
                                  dir_purpose,
-                                 ROUTER_PURPOSE_GENERAL,
+                                 router_purpose,
                                  0, resource, NULL, 0);
     } else
       log_notice(LD_DIR, "Ignoring directory request, since no bridge "
                          "nodes are available yet.");
     return;
-  } else if (directconn) {
+  } else if (!get_via_tor) {
     if (prefer_authority) {
       /* only ask authdirservers, and don't ask myself */
       rs = router_pick_trusteddirserver(type, 1, 1,
@@ -270,10 +277,10 @@ directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
         rs = router_pick_trusteddirserver(type, 1, 1,
                                           retry_if_no_servers);
         if (!rs)
-          directconn = 0; /* last resort: try routing it via Tor */
+          get_via_tor = 1; /* last resort: try routing it via Tor */
       }
     }
-  } else { /* !directconn */
+  } else { /* get_via_tor */
     /* Never use fascistfirewall; we're going via Tor. */
     if (dir_purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask hidserv authorities, any of them will do */
@@ -291,15 +298,15 @@ directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
 
   if (rs)
     directory_initiate_command_routerstatus(rs, dir_purpose,
-                                            ROUTER_PURPOSE_GENERAL,
-                                            !directconn,
+                                            router_purpose,
+                                            get_via_tor,
                                             resource, NULL, 0);
   else {
     log_notice(LD_DIR,
                "While fetching directory info, "
                "no running dirservers known. Will try again later. "
                "(purpose %d)", dir_purpose);
-    if (!purpose_needs_anonymity(dir_purpose)) {
+    if (!purpose_needs_anonymity(dir_purpose, router_purpose)) {
       /* remember we tried them all and failed. */
       directory_all_unreachable(time(NULL));
     }
@@ -387,8 +394,8 @@ connection_dir_request_failed(dir_connection_t *conn)
       conn->_base.purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     log_info(LD_DIR, "Giving up on directory server at '%s:%d'; retrying",
              conn->_base.address, conn->_base.port);
-    directory_get_from_dirserver(conn->_base.purpose, NULL,
-                                 0 /* don't retry_if_no_servers */);
+    directory_get_from_dirserver(conn->_base.purpose, conn->router_purpose,
+                                 NULL, 0 /* don't retry_if_no_servers */);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
@@ -422,8 +429,8 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
     smartlist_t *trusted_dirs = router_get_trusted_dir_servers();
     SMARTLIST_FOREACH(trusted_dirs, trusted_dir_server_t *, ds,
                       ++ds->n_networkstatus_failures);
-    directory_get_from_dirserver(conn->_base.purpose, "all.z",
-                                 0 /* don't retry_if_no_servers */);
+    directory_get_from_dirserver(conn->_base.purpose, conn->router_purpose,
+                                 "all.z", 0 /* don't retry_if_no_servers */);
   } else if (!strcmpstart(conn->requested_resource, "fp/")) {
     /* We were trying to download by fingerprint; mark them all as having
      * failed, and possibly retry them later.*/
@@ -1699,7 +1706,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       /* try to get a new one now */
       if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR) &&
           !should_delay_dir_fetches(options))
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
+        directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR,
+                                     ROUTER_PURPOSE_GENERAL, NULL, 1);
       tor_free(url);
       return 0;
     }
@@ -1750,7 +1758,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       /* try to get a new one now */
       if (!already_fetching_directory(DIR_PURPOSE_FETCH_RUNNING_LIST) &&
           !should_delay_dir_fetches(options))
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
+        directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST,
+                                     ROUTER_PURPOSE_GENERAL, NULL, 1);
       tor_free(url);
       return 0;
     }

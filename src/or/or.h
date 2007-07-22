@@ -2670,10 +2670,11 @@ int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 /********************************* directory.c ***************************/
 
 char *authority_type_to_string(authority_type_t auth);
-void directory_post_to_dirservers(uint8_t purpose, authority_type_t type,
-                                  const char *payload,
+void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
+                                  authority_type_t type, const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
-void directory_get_from_dirserver(uint8_t dir_purpose, const char *resource,
+void directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
+                                  const char *resource,
                                   int retry_if_no_servers);
 void directory_initiate_command_routerstatus(routerstatus_t *status,
                                              uint8_t dir_purpose,

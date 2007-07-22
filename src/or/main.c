@@ -939,7 +939,8 @@ run_scheduled_events(time_t now)
        * our dirport. not simply if we configured one. -RD */
       if (any_trusted_dir_is_v1_authority() &&
           !should_delay_dir_fetches(options))
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR, NULL, 1);
+        directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR,
+                                     ROUTER_PURPOSE_GENERAL, NULL, 1);
     }
 /** How often do we (as a cache) fetch a new V1 directory? */
 #define V1_DIR_FETCH_PERIOD (6*60*60)
@@ -949,7 +950,8 @@ run_scheduled_events(time_t now)
   /* Caches need to fetch running_routers; directory clients don't. */
   if (options->DirPort && time_to_fetch_running_routers < now) {
     if (!authdir_mode_v1(options) && !should_delay_dir_fetches(options)) {
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST, NULL, 1);
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST,
+                                   ROUTER_PURPOSE_GENERAL, NULL, 1);
     }
 /** How often do we (as a cache) fetch a new V1 runningrouters document? */
 #define V1_RUNNINGROUTERS_FETCH_PERIOD (30*60)

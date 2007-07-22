@@ -261,7 +261,8 @@ rend_client_refetch_renddesc(const char *query)
              "already in progress.", escaped_safe_str(query));
   } else {
     /* not one already; initiate a dir rend desc lookup */
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_RENDDESC, query, 1);
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_RENDDESC,
+                                 ROUTER_PURPOSE_GENERAL, query, 1);
   }
 }
 

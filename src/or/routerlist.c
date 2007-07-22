@@ -3416,7 +3416,8 @@ update_networkstatus_cache_downloads(time_t now)
     /* (Check whether we're currently fetching network-status objects.) */
     if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
                                         DIR_PURPOSE_FETCH_NETWORKSTATUS))
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,"all.z",1);
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,
+                                   ROUTER_PURPOSE_GENERAL, "all.z",1);
   }
 }
 
@@ -3541,7 +3542,8 @@ update_networkstatus_client_downloads(time_t now)
         *cp++ = '+';
     });
   memcpy(cp, ".z", 3);
-  directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS, resource, 1);
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,
+                               ROUTER_PURPOSE_GENERAL, resource, 1);
   tor_free(resource);
   smartlist_free(missing);
 }
@@ -4469,13 +4471,13 @@ initiate_descriptor_downloads(routerstatus_t *source,
                                             0, /* not private */
                                             resource, NULL, 0);
   } else {
-    directory_get_from_dirserver(purpose, resource, 1);
+    directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource, 1);
   }
   tor_free(resource);
 }
 
 /** Clients don't download any descriptor this recent, since it will probably
- * not have propageted to enough caches. */
+ * not have propagated to enough caches. */
 #define ESTIMATED_PROPAGATION_TIME (10*60)
 
 /** Return 0 if this routerstatus is obsolete, too new, isn't

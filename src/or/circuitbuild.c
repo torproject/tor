@@ -1583,8 +1583,7 @@ choose_good_middle_server(uint8_t purpose,
            options->ExcludeNodes, excluded,
            state->need_uptime, state->need_capacity, 0,
            options->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0, 0);
-  if (preferred)
-    tor_free(preferred);
+  tor_free(preferred);
   smartlist_free(excluded);
   return choice;
 }
@@ -1885,8 +1884,8 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   return changed;
 }
 
-/** Return true iff enough time has passed since we last tried connect to the
- * unreachable guard <b>e</b> that we're willing to try again. */
+/** Return true iff enough time has passed since we last tried to connect
+ * to the unreachable guard <b>e</b> that we're willing to try again. */
 static int
 entry_is_time_to_retry(entry_guard_t *e, time_t now)
 {
@@ -1913,7 +1912,7 @@ entry_is_time_to_retry(entry_guard_t *e, time_t now)
  *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>;
  *   (This check is currently redundant with the Guard flag, but in
  *   the future that might change. Best to leave it in for now.)
- * - Allowed by our current ReachableAddresses config option; and
+ * - Allowed by our current ReachableORAddresses config option; and
  * - Currently thought to be reachable by us (unless assume_reachable
  *   is true).
  */
@@ -1937,8 +1936,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
     return NULL;
   if (router_is_unreliable(r, need_uptime, need_capacity, 0))
     return NULL;
-  if (firewall_is_fascist_or() &&
-      !fascist_firewall_allows_address_or(r->addr,r->or_port))
+  if (!fascist_firewall_allows_address_or(r->addr,r->or_port))
     return NULL;
   return r;
 }
@@ -2778,10 +2776,10 @@ fetch_bridge_descriptors(time_t now)
 
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
     {
-      if (bridge->fetch_status.next_attempt_at >= now)
+      if (bridge->fetch_status.next_attempt_at > now)
         continue; /* don't bother, no need to retry yet */
 
-     /* schedule another fetch as if this one failed, in case it does */
+      /* schedule another fetch as if this one will fail, in case it does */
       bridge_fetch_status_increment(bridge, now);
 
       in.s_addr = htonl(bridge->addr);
@@ -2813,8 +2811,18 @@ fetch_bridge_descriptors(time_t now)
                                      0, "authority.z", NULL, 0);
         }
       } else {
-        /* we have a digest and we want to ask an authority. */
-        // XXX
+        /* We have a digest and we want to ask an authority. We could
+         * combine all the requests into one, but that may give more
+         * hints to the bridge authority than we want to give. */
+        char resource[10 + HEX_DIGEST_LEN];
+        memcpy(resource, "fp/", 3);
+        base16_encode(resource+3, HEX_DIGEST_LEN+1,
+                      bridge->identity, DIGEST_LEN);
+        memcpy(resource+3+HEX_DIGEST_LEN, ".z", 3);
+        log_info(LD_DIR, "Fetching bridge info '%s' from bridge authority.",
+                 resource);
+        directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
+                ROUTER_PURPOSE_BRIDGE, resource, 1);
       }
     });
 }
