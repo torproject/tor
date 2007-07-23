@@ -131,16 +131,6 @@ Changes in version 0.1.2.15 - 2007-07-17
     - Backport a couple of memory leak fixes.
     - Backport miscellaneous cosmetic bugfixes.
 
-  o Security fixes (BSD natd support):
-    - Fix a possible buffer overrun when using BSD natd support. Bug found
-      by croup.
-
-  o Security fixes (circuits):
-    - Keep streamids from different exits on a circuit separate. This
-      bug may have allowed other routers on a given circuit to inject
-      cells into streams. Reported by lodger; fixes bug 446. [Bugfix
-      on 0.1.2.x]
-
 
 Changes in version 0.2.0.2-alpha - 2007-06-02
   o Major bugfixes on 0.2.0.1-alpha:
