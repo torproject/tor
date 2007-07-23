@@ -122,6 +122,14 @@ typedef int socklen_t;
 #include <stdio.h>
 #endif
 
+/* XXXX020 These are for debugging possible memory leaks. */
+#include "../common/util.h"
+#include "../common/compat.h"
+#define malloc(x) tor_malloc(x)
+#define realloc(x,y) tor_realloc((x),(y))
+#define free(x) tor_free(x)
+#define _free(x) _tor_free(x)
+
 #undef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
 
@@ -584,7 +592,7 @@ request_finished(struct request *const req, struct request **head) {
 	}
 
 	CLEAR(req);
-	free(req);
+	_free(req);
 
 	evdns_requests_pump_waiting_queue();
 }
@@ -2229,9 +2237,9 @@ request_new(int type, const char *name, int flags,
 	req->next = req->prev = NULL;
 
 	return req;
-err1:
+ err1:
 	CLEAR(req);
-	free(req);
+	_free(req);
 	return NULL;
 }
 
@@ -2360,10 +2368,10 @@ search_state_decref(struct search_state *const state) {
 		for (dom = state->head; dom; dom = next) {
 			next = dom->next;
 			CLEAR(dom);
-			free(dom);
+			_free(dom);
 		}
 		CLEAR(state);
-		free(state);
+		_free(state);
 	}
 }
 
@@ -2496,7 +2504,7 @@ search_request_new(int type, const char *const name, int flags, evdns_callback_t
 			char *const new_name = search_make_new(global_search_state, 0, name);
 						if (!new_name) return 1;
 			req = request_new(type, new_name, flags, user_callback, user_arg);
-			free(new_name);
+			_free(new_name);
 			if (!req) return 1;
 			req->search_index = 0;
 		}
