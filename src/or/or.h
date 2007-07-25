@@ -2812,7 +2812,8 @@ void dirvote_recalculate_timing(time_t now);
 /* invoked on timers and by outside triggers. */
 void dirvote_perform_vote(void);
 void dirvote_clear_pending_votes(void);
-struct pending_vote_t * dirvote_add_vote(char *vote_body,const char **msg_out);
+struct pending_vote_t * dirvote_add_vote(const char *vote_body,
+                                         const char **msg_out);
 int dirvote_compute_consensus(void);
 
 #ifdef DIRVOTE_PRIVATE

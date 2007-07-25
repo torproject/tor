@@ -885,8 +885,7 @@ dirvote_perform_vote(void)
   pending_vote_t *pending_vote;
   const char *msg = "";
 
-  if ((pending_vote = dirvote_add_vote(tor_memdup(new_vote->dir,
-                                                  new_vote->dir_len), &msg))) {
+  if ((pending_vote = dirvote_add_vote(new_vote->dir, &msg))) {
     log_warn(LD_DIR, "Couldn't store my own vote! (I told myself, '%s'.)",
              msg);
     return;
@@ -916,7 +915,7 @@ dirvote_clear_pending_votes(void)
 
 /** DOCDOC */
 pending_vote_t *
-dirvote_add_vote(char *vote_body, const char **msg_out)
+dirvote_add_vote(const char *vote_body, const char **msg_out)
 {
   networkstatus_vote_t *vote;
   networkstatus_voter_info_t *vi;
@@ -952,7 +951,8 @@ dirvote_add_vote(char *vote_body, const char **msg_out)
         if (v->vote->published < vote->published) {
           cached_dir_decref(v->vote_body);
           networkstatus_vote_free(v->vote);
-          v->vote_body = new_cached_dir(vote_body, vote->published);
+          v->vote_body = new_cached_dir(tor_strdup(vote_body),
+                                        vote->published);
           v->vote = vote;
           *msg_out = "ok";
           return v;
@@ -964,14 +964,14 @@ dirvote_add_vote(char *vote_body, const char **msg_out)
     });
 
   pending_vote = tor_malloc_zero(sizeof(pending_vote_t));
-  pending_vote->vote_body = new_cached_dir(vote_body, vote->published);
+  pending_vote->vote_body = new_cached_dir(tor_strdup(vote_body),
+                                           vote->published);
   pending_vote->vote = vote;
   smartlist_add(pending_vote_list, pending_vote);
 
   *msg_out = "ok";
   return pending_vote;
  err:
-  tor_free(vote_body);
   if (vote)
     networkstatus_vote_free(vote);
   if (!*msg_out)
@@ -1020,3 +1020,4 @@ dirvote_compute_consensus(void)
     smartlist_free(votes);
   return -1;
 }
+

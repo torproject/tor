@@ -35,7 +35,8 @@ static void directory_send_command(dir_connection_t *conn,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
-static int purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose);
+static int purpose_needs_anonymity(uint8_t dir_purpose,
+                                   uint8_t router_purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(
@@ -2112,7 +2113,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   if (authdir_mode_v3(options) &&
       !strcmp(url,"/tor/post/vote")) { /* server descriptor post */
     const char *msg = "OK";
-    if (dirserv_add_vote(body, &msg)) {
+    if (dirvote_add_vote(body, &msg)) {
       write_http_status_line(conn, 200, "Vote stored");
     } else {
       tor_assert(msg);
