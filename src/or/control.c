@@ -3159,7 +3159,7 @@ int
 control_event_networkstatus_changed(smartlist_t *statuses)
 {
   smartlist_t *strs;
-  char *s;
+  char *s, *esc = NULL;
   if (!EVENT_IS_INTERESTING(EVENT_NS) || !smartlist_len(statuses))
     return 0;
 
@@ -3171,17 +3171,14 @@ control_event_networkstatus_changed(smartlist_t *statuses)
       if (!s) continue;
       smartlist_add(strs, s);
     });
-  smartlist_add(strs, tor_strdup("\r\n.\r\n"));
-  /* XXX020 the above strdup has an extra \r\n in it, resulting in
-   * a blank line in the NS output. Can we remove it, or is that
-   * bad since the output of networkstatus_getinfo_helper_single()
-   * only adds \n, not \r\n? */
 
   s = smartlist_join_strings(strs, "", 0, NULL);
+  write_escaped_data(s, strlen(s), 1, &esc);
   SMARTLIST_FOREACH(strs, char *, cp, tor_free(cp));
   smartlist_free(strs);
-  send_control_event_string(EVENT_NS, ALL_NAMES|ALL_FORMATS, s);
   tor_free(s);
+  send_control_event_string(EVENT_NS, ALL_NAMES|ALL_FORMATS, esc);
+  tor_free(esc);
   return 0;
 }
 
