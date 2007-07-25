@@ -30,8 +30,7 @@ const char directory_c_id[] =
  * - connection_dir_finished_connecting(), called from
  *   connection_finished_connecting() in connection.c
  */
-static void
-directory_send_command(dir_connection_t *conn,
+static void directory_send_command(dir_connection_t *conn,
                        int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len);
 static int directory_handle_command(dir_connection_t *conn);

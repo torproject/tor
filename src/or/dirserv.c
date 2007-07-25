@@ -12,7 +12,7 @@ const char dirserv_c_id[] =
  * \file dirserv.c
  * \brief Directory server core implementation. Manages directory
  * contents and generates directories.
- **/
+ */
 
 /** How far in the future do we allow a router to get? (seconds) */
 #define ROUTER_ALLOW_SKEW (60*60*12)
@@ -772,11 +772,26 @@ void
 directory_set_dirty(void)
 {
   time_t now = time(NULL);
+  int set_v1_dirty;
 
-  if (!the_directory_is_dirty)
-    the_directory_is_dirty = now;
-  if (!runningrouters_is_dirty)
-    runningrouters_is_dirty = now;
+#ifdef FULL_V1_DIRECTORIES
+  set_v1_dirty = 1;
+#else
+  /* Regenerate stubs only every 8 hours. XXXX020 */
+#define STUB_REGENERATE_INTERVAL (8*60*60)
+  if (!the_directory || !the_runningrouters.dir)
+    set_v1_dirty = 1;
+  else if (the_directory->published < now - STUB_REGENERATE_INTERVAL ||
+           the_runningrouters.published < now - STUB_REGENERATE_INTERVAL)
+    set_v1_dirty = 1;
+#endif
+
+  if (set_v1_dirty) {
+    if (!the_directory_is_dirty)
+      the_directory_is_dirty = now;
+    if (!runningrouters_is_dirty)
+      runningrouters_is_dirty = now;
+  }
   if (!the_v2_networkstatus_is_dirty)
     the_v2_networkstatus_is_dirty = now;
 }
@@ -953,8 +968,12 @@ dirserv_dump_directory_to_string(char **dir_out,
   tor_assert(dir_out);
   *dir_out = NULL;
 
+#ifdef FULL_V1_DIRECTORIES
   if (list_server_status(rl->routers, &router_status, 0))
     return -1;
+#else
+  router_status = tor_strdup("");
+#endif
 
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
                                            &identity_pkey_len)<0) {
@@ -969,9 +988,11 @@ dirserv_dump_directory_to_string(char **dir_out,
 
   buf_len = 2048+strlen(recommended_versions)+
     strlen(router_status);
+#ifdef FULL_V1_DIRECTORIES
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
                     if (complete || router_is_active(ri, now))
                       buf_len += ri->cache_info.signed_descriptor_len+1);
+#endif
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
      function, though strictly speaking we shouldn't be able to exceed
@@ -992,6 +1013,7 @@ dirserv_dump_directory_to_string(char **dir_out,
   tor_free(identity_pkey);
 
   cp = buf + strlen(buf);
+#ifdef FULL_V1_DIRECTORIES
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
     {
       size_t len = ri->cache_info.signed_descriptor_len;
@@ -1006,6 +1028,7 @@ dirserv_dump_directory_to_string(char **dir_out,
       *cp++ = '\n'; /* add an extra newline in case somebody was depending on
                      * it. */
     });
+#endif
   *cp = '\0';
 
   /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
@@ -1360,9 +1383,13 @@ generate_runningrouters(void)
   size_t identity_pkey_len;
   routerlist_t *rl = router_get_routerlist();
 
+#ifdef FULL_V1_DIRECTORIES
   if (list_server_status(rl->routers, &router_status, 0)) {
     goto err;
   }
+#else
+  router_status = tor_strdup("");
+#endif
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
                                            &identity_pkey_len)<0) {
     log_warn(LD_BUG,"write identity_pkey to string failed!");

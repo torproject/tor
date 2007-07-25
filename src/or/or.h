@@ -154,6 +154,9 @@
 #define cell_t tor_cell_t
 #endif
 
+/** Undefine this when it's time to stop generating v1 directories. */
+#define FULL_V1_DIRECTORIES
+
 /** Length of longest allowable configured nickname. */
 #define MAX_NICKNAME_LEN 19
 /** Length of a router identity encoded as a hexadecimal digest, plus
