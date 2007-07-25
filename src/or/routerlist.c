@@ -1165,7 +1165,7 @@ router_get_advertised_bandwidth(routerinfo_t *router)
 static void *
 smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
 {
-  int i;
+  unsigned int i;
   routerinfo_t *router;
   routerstatus_t *status;
   int32_t *bandwidths;
@@ -1182,7 +1182,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   bandwidths = tor_malloc(sizeof(int32_t)*smartlist_len(sl));
 
   /* Iterate over all the routerinfo_t or routerstatus_t, and */
-  for (i = 0; i < smartlist_len(sl); ++i) {
+  for (i = 0; i < (unsigned)smartlist_len(sl); ++i) {
     /* first, learn what bandwidth we think i has */
     int is_known = 1;
     int32_t flags = 0;
@@ -1232,7 +1232,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       avg_fast = 40000;
       avg_slow = 20000;
     }
-    for (i=0; i<smartlist_len(sl); ++i) {
+    for (i=0; i<(unsigned)smartlist_len(sl); ++i) {
       int32_t bw = bandwidths[i];
       if (bw>=0)
         continue;
@@ -1283,7 +1283,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
 
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
-  for (i=0; i < smartlist_len(sl); i++) {
+  for (i=0; i < (unsigned)smartlist_len(sl); i++) {
     if (statuses) {
       status = smartlist_get(sl, i);
       is_exit = status->is_exit;
@@ -1298,7 +1298,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     if (tmp >= rand_bw)
       break;
   }
-  if (i == smartlist_len(sl)) {
+  if (i == (unsigned)smartlist_len(sl)) {
     /* This is possible due to round-off error. */
     --i;
     log_warn(LD_BUG, "Round-off error in computing bandwidth had an effect on "
