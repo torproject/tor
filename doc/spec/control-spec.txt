@@ -387,7 +387,8 @@ $Id$
       client-side DNS cache; the 'control' key returns the mappings set
       via the control interface; the 'all' target returns the mappings
       set through any mechanism.
-      Expiry is formatted as with ADDRMAP events; see section 4.1.7.
+      Expiry is formatted as with ADDRMAP events, except that "expiry" is
+      always a time in GMT or the string "NEVER"; see section 4.1.7.
       First introduced in 0.2.0.3-alpha.
 
     "addr-mappings/*" -- as for address-mappings/*, but without the
@@ -925,7 +926,7 @@ $Id$
 
   If extended events are enabled (see 3.19), optional reason and
   circuit counting information is provided for CLOSED and FAILED
-  events. 
+  events.
 
       Reason = "MISC" / "DONE" / "CONNECTREFUSED" /
                "IDENTITY" / "CONNECTRESET" / "TIMEOUT" / "NOROUTE" /
@@ -963,10 +964,17 @@ $Id$
 4.1.7. New Address mapping
 
   Syntax:
-     "650" SP "ADDRMAP" SP Address SP Address SP Expiry
+     "650" SP "ADDRMAP" SP Address SP Address SP Expiry SP Error SP GMTExpiry
      Expiry = DQUOTE ISOTime DQUOTE / "NEVER"
 
-  Expiry is expressed as the local time (rather than GMT).
+     Error = / "error=" ErrorCode
+     GMTExpiry = "EXPIRES=" DQUOTE IsoTime DQUOTE
+
+  Error and GMTExpiry are only provided if extended events are enabled.
+
+  Expiry is expressed as the local time (rather than GMT).  This is a bug,
+  left in for backward compatibility; new code should look at GMTExpiry
+  instead.
 
   These events are generated when a new address mapping is entered in the
   cache, or when the answer for a RESOLVE command is found.

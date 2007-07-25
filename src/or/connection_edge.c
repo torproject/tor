@@ -1161,7 +1161,7 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
              tor_snprintf(line, len, "%s %s NEVER", key, val->new_address);
            else {
              char time[ISO_TIME_LEN+1];
-             format_local_iso_time(time, val->expires);
+             format_iso_time(time, val->expires);
              tor_snprintf(line, len, "%s %s \"%s\"", key, val->new_address,
                           time);
            }

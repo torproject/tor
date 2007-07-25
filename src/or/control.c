@@ -3099,10 +3099,15 @@ control_event_address_mapped(const char *from, const char *to, time_t expires,
                                 error);
   else {
     char buf[ISO_TIME_LEN+1];
+    char buf2[ISO_TIME_LEN+1];
     format_local_iso_time(buf,expires);
+    format_iso_time(buf2,expires);
     send_control_event_extended(EVENT_ADDRMAP, ALL_NAMES,
-                                "650 ADDRMAP %s %s \"%s\"@%s\r\n",
-                                from, to, buf, error);
+                                "650 ADDRMAP %s %s \"%s\""
+                                "@%s%sEXPIRES=\"%s\"\r\n",
+                                from, to, buf,
+                                error, error?" ":"",
+                                buf2);
   }
 
   return 0;

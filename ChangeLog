@@ -77,6 +77,11 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
       can time them out correctly. (Bug found by mwenge) [Bugfix on
       0.2.0.2-alpha]
 
+  o Minor bugfixes (controller)
+    - Provide DNS expiry times in GMT, not in local time.  For backward
+      compatibility, ADDRMAP events only provide GMT expiry in an extended
+      field.  "GETINFO address-mappings" always does the right thing.
+
 
 Changes in version 0.1.2.15 - 2007-07-17
   o Major bugfixes (compilation):
