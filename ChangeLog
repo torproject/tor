@@ -76,6 +76,8 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Add DNSPort connections to the global connection list, so that we
       can time them out correctly. (Bug found by mwenge) [Bugfix on
       0.2.0.2-alpha]
+    - Fix a dangling reference that could lead to a crash when DNSPort is
+      changed or closed (Patch from Robert Hogan.) [Bugfix on 0.2.0.2-alpha]
 
   o Minor bugfixes (controller)
     - Provide DNS expiry times in GMT, not in local time.  For backward

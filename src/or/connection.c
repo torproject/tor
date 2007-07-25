@@ -2423,6 +2423,7 @@ connection_is_listener(connection_t *conn)
   if (conn->type == CONN_TYPE_OR_LISTENER ||
       conn->type == CONN_TYPE_AP_LISTENER ||
       conn->type == CONN_TYPE_AP_TRANS_LISTENER ||
+      conn->type == CONN_TYPE_AP_DNS_LISTENER ||
       conn->type == CONN_TYPE_AP_NATD_LISTENER ||
       conn->type == CONN_TYPE_DIR_LISTENER ||
       conn->type == CONN_TYPE_CONTROL_LISTENER)

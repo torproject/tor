@@ -255,7 +255,8 @@ dnsserv_configure_listener(connection_t *conn)
   tor_assert(conn->s);
   tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
 
-  evdns_add_server_port(conn->s, 0, evdns_server_callback, NULL);
+  conn->dns_server_port = evdns_add_server_port(conn->s, 0,
+                                                evdns_server_callback, NULL);
 }
 
 /** Free the evdns server port for <b>conn</b>, which must be an
