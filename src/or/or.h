@@ -368,9 +368,14 @@ typedef enum {
 /** A connection to a directory server: upload a rendezvous
  * descriptor. */
 #define DIR_PURPOSE_UPLOAD_RENDDESC 9
+/** A connection to a directory server: upload a v3 networkstatus vote. */
+#define DIR_PURPOSE_UPLOAD_VOTE 10
+/** A connection to a directory server: fetch a v3 networkstatus vote. */
+#define DIR_PURPOSE_FETCH_VOTE 11
+
 /** Purpose for connection at a directory server. */
-#define DIR_PURPOSE_SERVER 10
-#define _DIR_PURPOSE_MAX 10
+#define DIR_PURPOSE_SERVER 12
+#define _DIR_PURPOSE_MAX 12
 
 #define _EXIT_PURPOSE_MIN 1
 /** This exit stream wants to do an ordinary connect. */
@@ -2765,6 +2770,9 @@ int routerstatus_format_entry(char *buf, size_t buf_len,
                               int first_line_only);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
+cached_dir_t *new_cached_dir(char *s, time_t published);
+
+cached_dir_t *generate_v3_networkstatus(void);
 
 #ifdef DIRSERV_PRIVATE
 char *
@@ -2774,6 +2782,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 
 /********************************* dirvote.c ************************/
 
+/* vote manipulation */
 void networkstatus_vote_free(networkstatus_vote_t *ns);
 char *networkstatus_compute_consensus(smartlist_t *votes,
                                       int total_authorities,
@@ -2784,6 +2793,7 @@ networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        const char *identity);
 int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus);
 
+/* cert manipulation */
 void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 
@@ -2794,9 +2804,16 @@ typedef struct vote_timing_t {
   int vote_delay;
   int dist_delay;
 } vote_timing_t;
+/* vote scheduling */
 void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
 time_t dirvote_get_start_of_next_interval(time_t now, int interval);
 void dirvote_recalculate_timing(time_t now);
+
+/* invoked on timers and by outside triggers. */
+void dirvote_perform_vote(void);
+void dirvote_clear_pending_votes(void);
+struct pending_vote_t * dirvote_add_vote(char *vote_body,const char **msg_out);
+int dirvote_compute_consensus(void);
 
 #ifdef DIRVOTE_PRIVATE
 int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
@@ -3187,6 +3204,7 @@ void router_perform_bandwidth_test(int num_circs, time_t now);
 int authdir_mode(or_options_t *options);
 int authdir_mode_v1(or_options_t *options);
 int authdir_mode_v2(or_options_t *options);
+int authdir_mode_v3(or_options_t *options);
 int authdir_mode_handles_descs(or_options_t *options);
 int authdir_mode_publishes_statuses(or_options_t *options);
 int authdir_mode_tests_reachability(or_options_t *options);

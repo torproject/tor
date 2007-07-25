@@ -866,3 +866,157 @@ dirvote_recalculate_timing(time_t now)
   voting_schedule.voting_starts = start - vote_delay - dist_delay;
 }
 
+/** DOCDOC */
+typedef struct pending_vote_t {
+  cached_dir_t *vote_body;
+  networkstatus_vote_t *vote;
+} pending_vote_t;
+
+/** DOCDOC */
+static smartlist_t *pending_vote_list = NULL;
+/** DOCDOC */
+static char *pending_consensus_body = NULL;
+
+/** DOCDOC */
+void
+dirvote_perform_vote(void)
+{
+  cached_dir_t *new_vote = generate_v3_networkstatus();
+  pending_vote_t *pending_vote;
+  const char *msg = "";
+
+  if ((pending_vote = dirvote_add_vote(tor_memdup(new_vote->dir,
+                                                  new_vote->dir_len), &msg))) {
+    log_warn(LD_DIR, "Couldn't store my own vote! (I told myself, '%s'.)",
+             msg);
+    return;
+  }
+
+  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_VOTE,
+                               ROUTER_PURPOSE_GENERAL,
+                               V3_AUTHORITY,
+                               pending_vote->vote_body->dir,
+                               pending_vote->vote_body->dir_len, 0);
+}
+
+/** DOCDOC */
+void
+dirvote_clear_pending_votes(void)
+{
+  if (!pending_vote_list)
+    return;
+  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
+      cached_dir_decref(v->vote_body);
+      v->vote_body = NULL;
+      networkstatus_vote_free(v->vote);
+      tor_free(v);
+    });
+  smartlist_clear(pending_vote_list);
+}
+
+/** DOCDOC */
+pending_vote_t *
+dirvote_add_vote(char *vote_body, const char **msg_out)
+{
+  networkstatus_vote_t *vote;
+  networkstatus_voter_info_t *vi;
+  trusted_dir_server_t *ds;
+  pending_vote_t *pending_vote = NULL;
+  tor_assert(vote_body);
+  tor_assert(msg_out);
+
+  if (!pending_vote_list)
+    pending_vote_list = smartlist_create();
+  *msg_out = NULL;
+
+  vote = networkstatus_parse_vote_from_string(vote_body, 1);
+  if (!vote) {
+    *msg_out = "Unable to parse vote";
+    goto err;
+  }
+  tor_assert(smartlist_len(vote->voters) == 1);
+  vi = smartlist_get(vote->voters, 0);
+  tor_assert(vi->good_signature == 1);
+  ds = trusteddirserver_get_by_v3_auth_digest(vi->identity_digest);
+  if (!ds || !(ds->type & V3_AUTHORITY)) {
+    *msg_out = "Vote not from a recognized v3 authority";
+    goto err;
+  }
+  /* XXXX020 check times; make sure epochs match. */
+
+  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
+      if (! memcmp(v->vote->cert->cache_info.identity_digest,
+                   vote->cert->cache_info.identity_digest,
+                   DIGEST_LEN)) {
+        log_notice(LD_DIR, "We already have a pending vote from this dir");
+        if (v->vote->published < vote->published) {
+          cached_dir_decref(v->vote_body);
+          networkstatus_vote_free(v->vote);
+          v->vote_body = new_cached_dir(vote_body, vote->published);
+          v->vote = vote;
+          *msg_out = "ok";
+          return v;
+        } else {
+          *msg_out = "Already have a newer pending vote";
+          goto err;
+        }
+      }
+    });
+
+  pending_vote = tor_malloc_zero(sizeof(pending_vote_t));
+  pending_vote->vote_body = new_cached_dir(vote_body, vote->published);
+  pending_vote->vote = vote;
+  smartlist_add(pending_vote_list, pending_vote);
+
+  *msg_out = "ok";
+  return pending_vote;
+ err:
+  tor_free(vote_body);
+  if (vote)
+    networkstatus_vote_free(vote);
+  if (!*msg_out)
+    *msg_out = "Error adding vote";
+  /*XXXX020 free other fields */
+  return NULL;
+}
+
+/** DOCDOC */
+int
+dirvote_compute_consensus(void)
+{
+  /* Have we got enough votes to try? */
+  int n_votes, n_voters;
+  smartlist_t *votes = NULL;
+  char *consensus_body = NULL;
+  authority_cert_t *my_cert;
+
+  if (!pending_vote_list)
+    pending_vote_list = smartlist_create();
+
+  n_voters = get_n_authorities(V3_AUTHORITY);
+  n_votes = smartlist_len(pending_vote_list);
+  /* XXXX020 see if there are enough to go ahead. */
+
+  if (!(my_cert = get_my_v3_authority_cert())) {
+    log_warn(LD_DIR, "Can't generate consensus without a certificate.");
+    goto err;
+  }
+
+  votes = smartlist_create();
+  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v,
+                    smartlist_add(votes, v->vote));
+
+  consensus_body = networkstatus_compute_consensus(
+        votes, n_voters,
+        my_cert->identity_key,
+        get_my_v3_authority_signing_key());
+
+  tor_free(pending_consensus_body);
+  pending_consensus_body = consensus_body;
+
+  return 0;
+ err:
+  if (votes)
+    smartlist_free(votes);
+  return -1;
+}

@@ -78,6 +78,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
     return 1; /* if we have to ask, better make it anonymous */
   if (dir_purpose == DIR_PURPOSE_FETCH_DIR ||
       dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
+      dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
       dir_purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
       dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
       dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
@@ -501,6 +502,9 @@ directory_initiate_command(const char *address, uint32_t addr,
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       log_debug(LD_REND,"initiating hidden-service descriptor upload");
       break;
+    case DIR_PURPOSE_UPLOAD_VOTE:
+      log_debug(LD_OR,"initiating server vote upload");
+      break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       log_debug(LD_DIR,"initiating running-routers fetch");
       break;
@@ -684,6 +688,12 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(payload);
       httpcommand = "POST";
       url = tor_strdup("/tor/");
+      break;
+    case DIR_PURPOSE_UPLOAD_VOTE:
+      tor_assert(!resource);
+      tor_assert(payload);
+      httpcommand = "POST";
+      url = tor_strdup("/tor/post/vote");
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
       tor_assert(resource);
@@ -1359,6 +1369,30 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         log_warn(LD_GENERAL,
              "http status %d (%s) reason unexpected while uploading "
              "descriptor to server '%s:%d').",
+             status_code, escaped(reason), conn->_base.address,
+             conn->_base.port);
+        break;
+    }
+    /* return 0 in all cases, since we don't want to mark any
+     * dirservers down just because they don't like us. */
+  }
+
+  if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_VOTE) {
+    switch (status_code) {
+      case 200: {
+        log_notice(LD_DIR,"Uploaded a vote to dirserver %s:%d",
+                   conn->_base.address, conn->_base.port);
+        }
+        break;
+      case 400:
+        log_warn(LD_GENERAL,"http status 400 (%s) response after uploading "
+                 "vote to dirserver '%s:%d'. Please correct.",
+                 escaped(reason), conn->_base.address, conn->_base.port);
+        break;
+      default:
+        log_warn(LD_GENERAL,
+             "http status %d (%s) reason unexpected while uploading "
+             "vote to server '%s:%d').",
              status_code, escaped(reason), conn->_base.address,
              conn->_base.port);
         break;
@@ -2071,6 +2105,18 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 400, "Invalid service descriptor rejected");
     } else {
       write_http_status_line(conn, 200, "Service descriptor stored");
+    }
+    goto done;
+  }
+
+  if (authdir_mode_v3(options) &&
+      !strcmp(url,"/tor/post/vote")) { /* server descriptor post */
+    const char *msg = "OK";
+    if (dirserv_add_vote(body, &msg)) {
+      write_http_status_line(conn, 200, "Vote stored");
+    } else {
+      tor_assert(msg);
+      write_http_status_line(conn, 400, msg);
     }
     goto done;
   }

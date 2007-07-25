@@ -714,6 +714,14 @@ authdir_mode_v2(or_options_t *options)
 {
   return authdir_mode(options) && options->V2AuthoritativeDir != 0;
 }
+/** Return true iff we believe ourselves to be a v3 authoritative
+ * directory server.
+ */
+int
+authdir_mode_v3(or_options_t *options)
+{
+  return authdir_mode(options) && options->V3AuthoritativeDir != 0;
+}
 /** Return true iff we are an authoritative directory server that
  * is willing to receive or serve descriptors on its dirport.
  */

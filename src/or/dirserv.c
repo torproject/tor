@@ -1116,7 +1116,7 @@ cached_dir_decref(cached_dir_t *d)
 
 /** Allocate and return a new cached_dir_t containing the string <b>s</b>,
  * published at <b>published</b>. */
-static cached_dir_t *
+cached_dir_t *
 new_cached_dir(char *s, time_t published)
 {
   cached_dir_t *d = tor_malloc_zero(sizeof(cached_dir_t));
@@ -2075,7 +2075,9 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   return status;
 }
 
-static cached_dir_t *
+/** DOCDOC */
+/* XXXX020 possibly rename and relocate to dirvote.c? */
+cached_dir_t *
 generate_v3_networkstatus(void)
 {
   crypto_pk_env_t *key = get_my_v3_authority_signing_key();
