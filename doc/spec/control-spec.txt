@@ -62,14 +62,16 @@ $Id$
 
 2.3. Replies from Tor to the controller
 
-    Reply = *(MidReplyLine / DataReplyLine) EndReplyLine
+    Reply = SyncReply / AsyncReply
+    SyncReply = *(MidReplyLine / DataReplyLine) EndReplyLine
+    AsyncReply = *MidReplyLine EndReplyLine / DataReplyLine
 
-    MidReplyLine = "-" ReplyLine
-    DataReplyLine = "+" ReplyLine Data
-    EndReplyLine = SP ReplyLine
-    ReplyLine = StatusCode [ SP ReplyText ]  CRLF
+    MidReplyLine = StatusCode "-" ReplyLine
+    DataReplyLine = StatusCode "+" ReplyLine Data
+    EndReplyLine = StatusCode SP ReplyLine
+    ReplyLine = [ReplyText] CRLF
     ReplyText = XXXX
-    StatusCode = XXXX
+    StatusCode = 3DIGIT
 
   Specific replies are mentioned below in section 3, and described more fully
   in section 4.
