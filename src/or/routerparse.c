@@ -2046,9 +2046,9 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
         goto err;
       v->good_signature = 1;
     } else {
-      v->pending_signature = tor_memdup(tok->object_body,
+      v->signature = tor_memdup(tok->object_body,
                                         tok->object_size);
-      v->pending_signature_len = tok->object_size;
+      v->signature_len = tok->object_size;
     }
   });
   /* XXXX020 enforce: vote must have at least one signature. */

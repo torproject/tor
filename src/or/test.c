@@ -2672,18 +2672,18 @@ test_v3_networkstatus(void)
   /* Check signatures.  the first voter hasn't got one.  The second one
    * does: validate it. */
   voter = smartlist_get(con->voters, 0);
-  test_assert(!voter->pending_signature);
+  test_assert(!voter->signature);
   test_assert(!voter->good_signature);
   test_assert(!voter->bad_signature);
 
   voter = smartlist_get(con->voters, 1);
-  test_assert(voter->pending_signature);
+  test_assert(voter->signature);
   test_assert(!voter->good_signature);
   test_assert(!voter->bad_signature);
   test_assert(!networkstatus_check_voter_signature(con,
                                                smartlist_get(con->voters, 1),
                                                cert3));
-  test_assert(!voter->pending_signature);
+  test_assert(voter->signature);
   test_assert(voter->good_signature);
   test_assert(!voter->bad_signature);
 

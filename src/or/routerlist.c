@@ -266,6 +266,23 @@ trusted_dirs_flush_certs_to_disk(void)
   trusted_dir_servers_certs_changed = 0;
 }
 
+/** DOCDOC */
+authority_cert_t *
+authority_cert_get_by_digests(const char *id_digest,
+                              const char *sk_digest)
+{
+  char d[DIGEST_LEN];
+  trusted_dir_server_t *ds = trusteddirserver_get_by_v3_auth_digest(id_digest);
+
+  if (!ds || !ds->v3_cert)
+    return NULL;
+  crypto_pk_get_digest(ds->v3_cert->signing_key, d);
+  if (memcmp(d, sk_digest, DIGEST_LEN))
+    return NULL;
+
+  return ds->v3_cert;
+}
+
 /* Router descriptor storage.
  *
  * Routerdescs are stored in a big file, named "cached-routers".  As new

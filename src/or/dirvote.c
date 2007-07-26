@@ -698,15 +698,17 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
   signed_digest = tor_malloc(signed_digest_len);
   if (crypto_pk_public_checksig(cert->signing_key,
                                 signed_digest,
-                                voter->pending_signature,
-                                voter->pending_signature_len) != DIGEST_LEN ||
+                                voter->signature,
+                                voter->signature_len) != DIGEST_LEN ||
       memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
     log_warn(LD_DIR, "Got a bad signature."); /*XXXX020 say more*/
     voter->bad_signature = 1;
   } else {
     voter->good_signature = 1;
   }
-  tor_free(voter->pending_signature);
+  /* XXXX020 did anything rely on this?
+   * also, rename so it's no longer called "pending". */
+  // tor_free(voter->signature);
   return 0;
 }
 
@@ -730,7 +732,7 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
       ++n_unknown;
       continue;
     }
-    if (voter->pending_signature) {
+    if (voter->signature) {
       tor_assert(!voter->good_signature && !voter->bad_signature);
       if (!ds->v3_cert ||
           networkstatus_check_voter_signature(consensus, voter,
@@ -751,6 +753,93 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
 
   return 0;
 }
+
+/** DOCDOC */
+int
+networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
+                                       networkstatus_vote_t *src,
+                                       char **new_signatures_out)
+{
+  smartlist_t *added_signatures, *sigs;
+  int r;
+  tor_assert(target);
+  tor_assert(src);
+  tor_assert(! target->is_vote);
+  tor_assert(! src->is_vote);
+  tor_assert(new_signatures_out);
+
+  *new_signatures_out = NULL;
+
+  /* Are they the same consensus? */
+  if (memcmp(target->networkstatus_digest, src->networkstatus_digest,
+             DIGEST_LEN))
+    return -1;
+  if (target == src)
+    return 0;
+
+  added_signatures = smartlist_create();
+
+  /* For each voter in src... */
+  SMARTLIST_FOREACH(src->voters, networkstatus_voter_info_t *, src_voter,
+    {
+      networkstatus_voter_info_t *target_voter =
+        networkstatus_get_voter_by_id(target, src_voter->identity_digest);
+      authority_cert_t *cert;
+      /* If the target a doesn't know about this voter, then forget it. */
+      if (!target_voter)
+        continue;
+
+      /* If the target already has a good signature from this voter, then skip
+       * this one. */
+      if (target_voter->good_signature)
+        continue;
+
+      /* If this signature is no good, then skip. */
+      cert = authority_cert_get_by_digests(src_voter->identity_digest,
+                                           src_voter->signing_key_digest);
+      if (cert) {
+        networkstatus_check_voter_signature(target, src_voter, cert);
+      }
+      /* If this signature is good, then replace and add. */
+      if (src_voter->good_signature || !target_voter->signature) {
+        tor_free(target_voter->signature);
+        target_voter->signature =
+          tor_memdup(src_voter->signature, src_voter->signature_len);
+        memcpy(target_voter->signing_key_digest, src_voter->signing_key_digest,
+               DIGEST_LEN);
+        target_voter->signature_len = src_voter->signature_len;
+        target_voter->good_signature = 1;
+        target_voter->bad_signature = 0;
+        smartlist_add(added_signatures, target_voter);
+      }
+    });
+
+  sigs = smartlist_create();
+  SMARTLIST_FOREACH(added_signatures, networkstatus_voter_info_t *, v,
+    {
+      char buf[4096];
+      char sk[HEX_DIGEST_LEN+1];
+      char ik[HEX_DIGEST_LEN+1];
+      tor_assert(v->signature);
+
+      base16_encode(sk, sizeof(sk), v->signing_key_digest, DIGEST_LEN);
+      base16_encode(ik, sizeof(ik), v->identity_digest, DIGEST_LEN);
+      tor_snprintf(buf, sizeof(buf), "directory-signature %s %s\n"
+                   "-----BEGIN SIGNATURE-----", ik, sk);
+      smartlist_add(sigs, tor_strdup(buf));
+      base64_encode(buf, sizeof(buf), v->signature, v->signature_len);
+      strlcat(buf, "-----END SIGNATURE-----", sizeof(buf));
+      smartlist_add(sigs, tor_strdup(buf));
+    });
+
+  *new_signatures_out = smartlist_join_strings(sigs, "", 0, NULL);
+  SMARTLIST_FOREACH(sigs, char *, cp, tor_free(cp));
+  smartlist_free(sigs);
+  r = smartlist_len(added_signatures);
+  smartlist_free(added_signatures);
+  return r;
+}
+
 
 /* =====
  * Certificate functions
@@ -876,6 +965,8 @@ typedef struct pending_vote_t {
 static smartlist_t *pending_vote_list = NULL;
 /** DOCDOC */
 static char *pending_consensus_body = NULL;
+/** DOCDOC */
+static networkstatus_vote_t *pending_consensus = NULL;
 
 /** DOCDOC */
 void
@@ -988,6 +1079,7 @@ dirvote_compute_consensus(void)
   int n_votes, n_voters;
   smartlist_t *votes = NULL;
   char *consensus_body = NULL;
+  networkstatus_vote_t *consensus = NULL;
   authority_cert_t *my_cert;
 
   if (!pending_vote_list)
@@ -1011,13 +1103,26 @@ dirvote_compute_consensus(void)
         my_cert->identity_key,
         get_my_v3_authority_signing_key());
 
+  consensus = networkstatus_parse_vote_from_string(consensus_body, 0);
+  if (!consensus) {
+    log_warn(LD_DIR, "Couldn't parse consensus we generated!");
+    goto err;
+  }
+
   tor_free(pending_consensus_body);
   pending_consensus_body = consensus_body;
+
+  if (pending_consensus)
+    networkstatus_vote_free(pending_consensus);
+  pending_consensus = consensus;
 
   return 0;
  err:
   if (votes)
     smartlist_free(votes);
+  tor_free(consensus_body);
+  networkstatus_vote_free(consensus);
+
   return -1;
 }
 

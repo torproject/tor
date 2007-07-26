@@ -1330,8 +1330,8 @@ typedef struct networkstatus_voter_info_t {
   char vote_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN]; /* This part is _not_ signed. */
 
-  char *pending_signature;
-  int pending_signature_len;
+  char *signature;
+  int signature_len;
   unsigned int bad_signature : 1;
   unsigned int good_signature : 1;
 } networkstatus_voter_info_t;
@@ -2792,6 +2792,9 @@ networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        networkstatus_vote_t *vote,
                                        const char *identity);
 int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus);
+int networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
+                                           networkstatus_vote_t *src,
+                                           char **new_signatures_out);
 
 /* cert manipulation */
 void authority_cert_free(authority_cert_t *cert);
@@ -3272,6 +3275,7 @@ typedef struct trusted_dir_server_t {
   /** What kind of authority is this? (Bitfield.) */
   authority_type_t type;
 
+  /* XXXX020 this should be a list. */
   authority_cert_t *v3_cert; /**< V3 key certificate for this authority */
 
   int n_networkstatus_failures; /**< How many times have we asked for this
@@ -3299,6 +3303,8 @@ trusted_dir_server_t *router_get_trusteddirserver_by_digest(
      const char *digest);
 trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(
      const char *digest);
+authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
+                                                const char *sk_digest);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running);
