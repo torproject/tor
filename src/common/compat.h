@@ -284,7 +284,7 @@ struct in6_addr
 #endif
 
 #if defined(__APPLE__) || defined(__darwin__) || defined(__FreeBSD__) \
-    || defined (__NetBSD__) || defined(__OpenBSD__)
+    || defined(__NetBSD__) || defined(__OpenBSD__)
 /* Many BSD variants seem not to define these. */
 #ifndef s6_addr16
 #define s6_addr16 __u6_addr.__u6_addr16
