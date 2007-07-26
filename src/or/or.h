@@ -1408,6 +1408,7 @@ typedef struct authority_cert_t {
   signed_descriptor_t cache_info;
   crypto_pk_env_t *identity_key;
   crypto_pk_env_t *signing_key;
+  char signing_key_digest[DIGEST_LEN];
   time_t expires;
 } authority_cert_t;
 
@@ -3275,8 +3276,7 @@ typedef struct trusted_dir_server_t {
   /** What kind of authority is this? (Bitfield.) */
   authority_type_t type;
 
-  /* XXXX020 this should be a list. */
-  authority_cert_t *v3_cert; /**< V3 key certificate for this authority */
+  smartlist_t *v3_certs; /**< V3 key certificates for this authority */
 
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */

@@ -207,6 +207,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 
   for (s = contents; *s; s = eos) {
     authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
+    int found;
     if (!cert)
       break;
     ds = trusteddirserver_get_by_v3_auth_digest(
@@ -217,22 +218,28 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
       authority_cert_free(cert);
       continue;
     }
+    if (!ds->v3_certs)
+      ds->v3_certs = smartlist_create();
 
-    if (ds->v3_cert) {
-      if (ds->v3_cert->expires < cert->expires) {
-        authority_cert_free(ds->v3_cert);
-        ds->v3_cert = NULL; /* redundant, but let's be safe. */
-      } else {
-        /* This also covers the case where the certificate is the same
-         * as the one we have. */
-        authority_cert_free(cert);
-        continue;
-      }
-    }
+    SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, c,
+      {
+        if (memcmp(c->cache_info.signed_descriptor_digest,
+                   cert->cache_info.signed_descriptor_digest,
+                   DIGEST_LEN)) {
+          /* we already have this one. continue. */
+          authority_cert_free(cert);
+          found = 1;
+          break;
+        }
+      });
+
+    if (found)
+      continue;
 
     cert->cache_info.signed_descriptor_body = tor_strndup(s, eos-s);
     cert->cache_info.signed_descriptor_len = eos-s;
-    ds->v3_cert = cert;
+    smartlist_add(ds->v3_certs, cert);
+
     if (!from_store)
       trusted_dir_servers_certs_changed = 1;
   }
@@ -250,11 +257,14 @@ trusted_dirs_flush_certs_to_disk(void)
                get_options()->DataDirectory);
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
   {
-      if (ds->v3_cert) {
-        sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
-        c->bytes = ds->v3_cert->cache_info.signed_descriptor_body;
-        c->len = ds->v3_cert->cache_info.signed_descriptor_len;
-        smartlist_add(chunks, c);
+      if (ds->v3_certs) {
+        SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+          {
+            sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
+            c->bytes = cert->cache_info.signed_descriptor_body;
+            c->len = cert->cache_info.signed_descriptor_len;
+            smartlist_add(chunks, c);
+          });
       }
   });
   if (write_chunks_to_file(filename, chunks, 0)) {
@@ -271,16 +281,15 @@ authority_cert_t *
 authority_cert_get_by_digests(const char *id_digest,
                               const char *sk_digest)
 {
-  char d[DIGEST_LEN];
   trusted_dir_server_t *ds = trusteddirserver_get_by_v3_auth_digest(id_digest);
 
-  if (!ds || !ds->v3_cert)
+  if (!ds || !ds->v3_certs)
     return NULL;
-  crypto_pk_get_digest(ds->v3_cert->signing_key, d);
-  if (memcmp(d, sk_digest, DIGEST_LEN))
-    return NULL;
+  SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+    if (!memcmp(cert->signing_key_digest, sk_digest, DIGEST_LEN))
+      return cert; );
 
-  return ds->v3_cert;
+  return NULL;
 }
 
 /* Router descriptor storage.
@@ -3705,8 +3714,11 @@ add_trusted_dir_server(const char *nickname, const char *address,
 static void
 trusted_dir_server_free(trusted_dir_server_t *ds)
 {
-  if (ds->v3_cert)
-    authority_cert_free(ds->v3_cert);
+  if (ds->v3_certs) {
+    SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+                      authority_cert_free(cert));
+    smartlist_free(ds->v3_certs);
+  }
   tor_free(ds->nickname);
   tor_free(ds->description);
   tor_free(ds->address);

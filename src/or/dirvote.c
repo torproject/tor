@@ -726,18 +726,17 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
 
   SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, voter,
   {
-    trusted_dir_server_t *ds =
-      trusteddirserver_get_by_v3_auth_digest(voter->identity_digest);
-    if (!ds) {
-      ++n_unknown;
-      continue;
-    }
-    if (voter->signature) {
-      tor_assert(!voter->good_signature && !voter->bad_signature);
-      if (!ds->v3_cert ||
-          networkstatus_check_voter_signature(consensus, voter,
-                                              ds->v3_cert) < 0) {
-        ++n_missing_key;
+    if (!voter->good_signature && !voter->bad_signature && voter->signature) {
+      /* we can try to check the signature. */
+      authority_cert_t *cert =
+        authority_cert_get_by_digests(voter->identity_digest,
+                                      voter->signing_key_digest);
+      if (! cert) {
+        ++n_unknown;
+        continue;
+      }
+      if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
+        ++n_missing_key; /* XXXX020 what, really? */
         continue;
       }
     }
@@ -839,7 +838,6 @@ networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
   smartlist_free(added_signatures);
   return r;
 }
-
 
 /* =====
  * Certificate functions

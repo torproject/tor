@@ -1306,6 +1306,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   char *eos;
   size_t len;
   trusted_dir_server_t *ds;
+  int found;
 
   s = eat_whitespace(s);
   eos = strstr(s, "\n-----END SIGNATURE-----\n");
@@ -1340,6 +1341,8 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   tor_assert(tok && tok->key);
   cert->signing_key = tok->key;
   tok->key = NULL;
+  if (crypto_pk_get_digest(cert->signing_key, cert->signing_key_digest))
+    goto err;
 
   tok = find_first_by_keyword(tokens, K_DIR_IDENTITY_KEY);
   tor_assert(tok && tok->key);
@@ -1385,13 +1388,22 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   /* If we already have this cert, don't bother checking the signature. */
   ds = trusteddirserver_get_by_v3_auth_digest(
                                      cert->cache_info.identity_digest);
-  if (ds && ds->v3_cert &&
-      ds->v3_cert->cache_info.signed_descriptor_len == len &&
-      ds->v3_cert->cache_info.signed_descriptor_body &&
-      ! memcmp(s, ds->v3_cert->cache_info.signed_descriptor_body, len)) {
-    log_debug(LD_DIR, "We already checked the signature on this certificate;"
-              " no need to do so again.");
-  } else {
+  found = 0;
+  if (ds && ds->v3_certs) {
+    SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, c,
+      {
+        /* XXXX020 can we just compare signed_descriptor_digest ? */
+        if (c->cache_info.signed_descriptor_len == len &&
+            c->cache_info.signed_descriptor_body &&
+            !memcmp(s, c->cache_info.signed_descriptor_body, len)) {
+          log_debug(LD_DIR, "We already checked the signature on this "
+                    "certificate; no need to do so again.");
+          found = 1;
+          break;
+        }
+      });
+  }
+  if (!found) {
     if (check_signature_token(digest, tok, cert->identity_key, 0,
                               "key certificate")) {
       goto err;
