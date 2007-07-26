@@ -85,6 +85,12 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
       field.  "GETINFO address-mappings" always does the right thing.
     - Use CRLF line endings properly in NS events.
 
+  o Minor bugfixes (misc):
+    - Choose perfectly fairly among routers when choosing by bandwidth and
+      weighting by fraction of bandwidth provided by exits.  Previously,
+      we would choose with only approximate fairness, and correct ourselves
+      if we ran off the end of the list. [Bugfix on 0.1.2.x]
+
 
 Changes in version 0.1.2.15 - 2007-07-17
   o Major bugfixes (compilation):

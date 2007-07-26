@@ -1200,12 +1200,14 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   uint64_t rand_bw, tmp;
   double exit_weight;
   int n_unknown = 0;
+  bitarray_t *exit_bits;
 
   /* First count the total bandwidth weight, and make a list
    * of each value.  <0 means "unknown; no routerinfo."  We use the
    * bits of negative values to remember whether the router was fast (-x)&1
    * and whether it was an exit (-x)&2.  Yes, it's a hack. */
   bandwidths = tor_malloc(sizeof(int32_t)*smartlist_len(sl));
+  exit_bits = bitarray_init_zero(smartlist_len(sl));
 
   /* Iterate over all the routerinfo_t or routerstatus_t, and */
   for (i = 0; i < (unsigned)smartlist_len(sl); ++i) {
@@ -1230,6 +1232,8 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       is_exit = router->is_exit;
       this_bw = router_get_advertised_bandwidth(router);
     }
+    if (is_exit)
+      bitarray_set(exit_bits, i);
     /* if they claim something huge, don't believe it */
     if (this_bw > MAX_BELIEVABLE_BANDWIDTH)
       this_bw = MAX_BELIEVABLE_BANDWIDTH;
@@ -1293,8 +1297,18 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     uint64_t leftover = (total_exit_bw - total_nonexit_bw / 2);
     exit_weight = U64_TO_DBL(leftover) /
       U64_TO_DBL(leftover + total_nonexit_bw);
+#if 0
     total_bw =  total_nonexit_bw +
       DBL_TO_U64(exit_weight * U64_TO_DBL(total_exit_bw));
+#endif
+    total_bw = 0;
+    for (i=0; i < (unsigned)smartlist_len(sl); i++) {
+      is_exit = bitarray_is_set(exit_bits, i);
+      if (is_exit)
+        total_bw += ((uint64_t)(bandwidths[i] * exit_weight));
+      else
+        total_bw += bandwidths[i];
+    }
   }
   /*
   log_debug(LD_CIRC, "Total bw = "U64_FORMAT", total exit bw = "U64_FORMAT
@@ -1310,13 +1324,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
-    if (statuses) {
-      status = smartlist_get(sl, i);
-      is_exit = status->is_exit;
-    } else {
-      router = smartlist_get(sl, i);
-      is_exit = router->is_exit;
-    }
+    is_exit = bitarray_is_set(exit_bits, i);
     if (is_exit)
       tmp += ((uint64_t)(bandwidths[i] * exit_weight));
     else
@@ -1325,12 +1333,15 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       break;
   }
   if (i == (unsigned)smartlist_len(sl)) {
-    /* This is possible due to round-off error. */
+    /* This was once possible due to round-off error, but shouldn't be able
+     * to occur any longer. */
+    tor_fragile_assert();
     --i;
     log_warn(LD_BUG, "Round-off error in computing bandwidth had an effect on "
              " which router we chose.  Please tell the developers.");
   }
   tor_free(bandwidths);
+  tor_free(exit_bits);
   return smartlist_get(sl, i);
 }
 
