@@ -267,5 +267,49 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
     return digestmap_iter_done((digestmap_iter_t*)iter);                \
   }
 
+#if SIZEOF_INT == 4
+#define BITARRAY_SHIFT 5
+#define BITARRAY_MASK 31
+#elif SIZEOF_INT == 8
+#define BITARRAY_SHIFT 6
+#define BITARRAY_MASK 63
+#else
+#error "int is neither 4 nor 8 bites. I can't deal with that."
+#endif
+
+typedef unsigned int bitarray_t;
+/** Create a new bit array that can hold <b>n_bits</b> bits. */
+static INLINE bitarray_t *
+bitarray_init_zero(int n_bits)
+{
+  size_t sz = (n_bits+BITARRAY_MASK) & BITARRAY_MASK;
+  return tor_malloc_zero(sz*sizeof(unsigned int));
+}
+/** Free the bit array <b>ba</b>. */
+static INLINE void
+bitarray_free(bitarray_t *ba)
+{
+  tor_free(ba);
+}
+/** Set the <b>bit</b>th bit in <b>b</b> to 1. */
+static INLINE void
+bitarray_set(bitarray_t *b, int bit)
+{
+  b[bit >> BITARRAY_SHIFT] |= (1u << (bit & BITARRAY_MASK));
+}
+/** Set the <b>bit</b>th bit in <b>b</b> to 0. */
+static INLINE void
+bitarray_clear(bitarray_t *b, int bit)
+{
+  b[bit >> BITARRAY_SHIFT] &= ~ (1u << (bit & BITARRAY_MASK));
+}
+/** Return true iff <b>bit</b>th bit in <b>b</b> is nonzero.  NOTE: does
+ * not necessarily return 1 on true. */
+static INLINE unsigned int
+bitarray_is_set(bitarray_t *b, int bit)
+{
+  return b[bit >> BITARRAY_SHIFT] & (1u << (bit & BITARRAY_MASK));
+}
+
 #endif
 
