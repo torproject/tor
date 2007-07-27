@@ -207,7 +207,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 
   for (s = contents; *s; s = eos) {
     authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
-    int found;
+    int found = 0;
     if (!cert)
       break;
     ds = trusteddirserver_get_by_v3_auth_digest(
