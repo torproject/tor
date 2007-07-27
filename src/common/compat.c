@@ -679,14 +679,14 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
              strerror(errno));
     return -1;
   }
-  if (rlim.rlim_max < limit) {
+  if ((unsigned long)rlim.rlim_max < limit) {
     log_warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
              "limited to %lu. Please change your ulimit -n.",
              limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
-  most = (rlim.rlim_max > cap) ? cap : (unsigned) rlim.rlim_max;
-  if (most > rlim.rlim_cur) {
+  most = ((unsigned long)rlim.rlim_max > cap) ? cap : (unsigned) rlim.rlim_max;
+  if (most > (unsigned long)rlim.rlim_cur) {
     log_info(LD_NET,"Raising max file descriptors from %lu to %lu.",
              (unsigned long)rlim.rlim_cur, most);
   }

@@ -178,10 +178,11 @@ typedef struct free_mem_list_t {
 /** Freelists to hold 4k and 16k memory chunks.  This seems to be what
  * we use most. */
 static free_mem_list_t free_mem_list_4k = { NULL, 0, 0, 4096, 16, INT_MAX };
-static free_mem_list_t free_mem_list_16k = { NULL, 0, 0, 16384, 4, 128 };
+static free_mem_list_t free_mem_list_8k = { NULL, 0, 0, 8192 , 8, 128 };
+static free_mem_list_t free_mem_list_16k = { NULL, 0, 0, 16384, 4, 64 };
 
 /** Macro: True iff the size is one for which we keep a freelist. */
-#define IS_FREELIST_SIZE(sz) ((sz) == 4096 || (sz) == 16384)
+#define IS_FREELIST_SIZE(sz) ((sz) == 4096 || (sz) == 8192 || (sz) == 16384)
 
 /** Return the proper freelist for chunks of size <b>sz</b>, or fail
  * with an assertion. */
@@ -190,6 +191,8 @@ get_free_mem_list(size_t sz)
 {
   if (sz == 4096) {
     return &free_mem_list_4k;
+  } else if (sz == 8192) {
+    return &free_mem_list_8k;
   } else {
     tor_assert(sz == 16384);
     return &free_mem_list_16k;
