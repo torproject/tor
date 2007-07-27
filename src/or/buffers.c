@@ -196,6 +196,25 @@ get_free_mem_list(size_t sz)
   }
 }
 
+/** Write the sizes of the buffer freelists at log level <b>severity</b> */
+void
+buf_dump_freelist_sizes(int severity)
+{
+  size_t sz;
+  log(severity, LD_MM, "======= Buffer freelists.");
+  for (sz = 4096; sz <= 16384; sz *= 2) {
+    uint64_t total_size;
+    free_mem_list_t *lst;
+    if (!IS_FREELIST_SIZE(sz))
+      continue;
+    lst = get_free_mem_list(sz);
+    total_size = ((uint64_t)sz)*lst->len;
+    log(severity, LD_MM,
+        U64_FORMAT" bytes in %d %d-byte buffers. (low-water: %d)",
+        U64_PRINTF_ARG(total_size), lst->len, (int)sz, lst->lowwater);
+  }
+}
+
 /** Throw the memory from <b>buf</b> onto the appropriate freelist.
  * Return true if we added the memory, 0 if the freelist was full. */
 static int

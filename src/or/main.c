@@ -1542,6 +1542,7 @@ dumpmemusage(int severity)
       U64_PRINTF_ARG(rephist_total_alloc), rephist_total_num);
   dump_routerlist_mem_usage(severity);
   dump_cell_pool_usage(severity);
+  buf_dump_freelist_sizes(severity);
 }
 
 /** Write all statistics to the log, with log level 'severity'.  Called
