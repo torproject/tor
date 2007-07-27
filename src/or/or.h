@@ -1361,6 +1361,16 @@ typedef struct networkstatus_vote_t {
                                    * otherwise just routerstatus_t. */
 } networkstatus_vote_t;
 
+/* XXXX020 merge with networkstatus_vote_t ?? */
+/** DOCDOC */
+typedef struct ns_detached_signatures_t {
+  time_t valid_after;
+  time_t fresh_until;
+  time_t valid_until;
+  char networkstatus_digest[DIGEST_LEN];
+  smartlist_t *signatures; /* list of networkstatus_voter_info_t */
+} ns_detached_signatures_t;
+
 /** Contents of a directory of onion routers. */
 typedef struct {
   /** Map from server identity digest to a member of routers. */
@@ -2796,6 +2806,11 @@ int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus);
 int networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
                                            networkstatus_vote_t *src,
                                            char **new_signatures_out);
+int networkstatus_add_detached_signatures(networkstatus_vote_t *target,
+                                          ns_detached_signatures_t *sigs,
+                                          char **new_signatures_out);
+char *networkstatus_get_detached_signatures(networkstatus_vote_t *consensus);
+void ns_detached_signatures_free(ns_detached_signatures_t *s);
 
 /* cert manipulation */
 void authority_cert_free(authority_cert_t *cert);
@@ -3505,6 +3520,8 @@ void dump_distinct_digest_count(int severity);
 networkstatus_t *networkstatus_parse_from_string(const char *s);
 networkstatus_vote_t *networkstatus_parse_vote_from_string(const char *s,
                                                            int is_vote);
+ns_detached_signatures_t *networkstatus_parse_detached_signatures(
+                                          const char *s, const char *eos);
 
 authority_cert_t *authority_cert_parse_from_string(const char *s,
                                                    const char **end_of_string);

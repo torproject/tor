@@ -754,32 +754,21 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
 }
 
 /** DOCDOC */
-int
-networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
-                                       networkstatus_vote_t *src,
-                                       char **new_signatures_out)
+static int
+networkstatus_add_signatures_impl(networkstatus_vote_t *target,
+                                  smartlist_t *src_voter_list,
+                                  char **new_signatures_out)
 {
   smartlist_t *added_signatures, *sigs;
   int r;
   tor_assert(target);
-  tor_assert(src);
-  tor_assert(! target->is_vote);
-  tor_assert(! src->is_vote);
+  tor_assert(!target->is_vote);
   tor_assert(new_signatures_out);
-
-  *new_signatures_out = NULL;
-
-  /* Are they the same consensus? */
-  if (memcmp(target->networkstatus_digest, src->networkstatus_digest,
-             DIGEST_LEN))
-    return -1;
-  if (target == src)
-    return 0;
 
   added_signatures = smartlist_create();
 
   /* For each voter in src... */
-  SMARTLIST_FOREACH(src->voters, networkstatus_voter_info_t *, src_voter,
+  SMARTLIST_FOREACH(src_voter_list, networkstatus_voter_info_t *, src_voter,
     {
       networkstatus_voter_info_t *target_voter =
         networkstatus_get_voter_by_id(target, src_voter->identity_digest);
@@ -793,11 +782,13 @@ networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
       if (target_voter->good_signature)
         continue;
 
-      /* If this signature is no good, then skip. */
-      cert = authority_cert_get_by_digests(src_voter->identity_digest,
-                                           src_voter->signing_key_digest);
-      if (cert) {
-        networkstatus_check_voter_signature(target, src_voter, cert);
+      /* Try checking the signature if we haven't already. */
+      if (!src_voter->good_signature && !src_voter->bad_signature) {
+        cert = authority_cert_get_by_digests(src_voter->identity_digest,
+                                             src_voter->signing_key_digest);
+        if (cert) {
+          networkstatus_check_voter_signature(target, src_voter, cert);
+        }
       }
       /* If this signature is good, then replace and add. */
       if (src_voter->good_signature || !target_voter->signature) {
@@ -824,10 +815,10 @@ networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
       base16_encode(sk, sizeof(sk), v->signing_key_digest, DIGEST_LEN);
       base16_encode(ik, sizeof(ik), v->identity_digest, DIGEST_LEN);
       tor_snprintf(buf, sizeof(buf), "directory-signature %s %s\n"
-                   "-----BEGIN SIGNATURE-----", ik, sk);
+                   "-----BEGIN SIGNATURE-----\n", ik, sk);
       smartlist_add(sigs, tor_strdup(buf));
       base64_encode(buf, sizeof(buf), v->signature, v->signature_len);
-      strlcat(buf, "-----END SIGNATURE-----", sizeof(buf));
+      strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
       smartlist_add(sigs, tor_strdup(buf));
     });
 
@@ -837,6 +828,116 @@ networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
   r = smartlist_len(added_signatures);
   smartlist_free(added_signatures);
   return r;
+}
+
+/** DOCDOC */
+int
+networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
+                                       networkstatus_vote_t *src,
+                                       char **new_signatures_out)
+{
+  tor_assert(src);
+  tor_assert(! src->is_vote);
+
+  *new_signatures_out = NULL;
+
+  /* Are they the same consensus? */
+  if (memcmp(target->networkstatus_digest, src->networkstatus_digest,
+             DIGEST_LEN))
+    return -1;
+  if (target == src)
+    return 0;
+
+  return networkstatus_add_signatures_impl(target, src->voters,
+                                           new_signatures_out);
+}
+
+/** DOCDOC */
+int
+networkstatus_add_detached_signatures(networkstatus_vote_t *target,
+                                      ns_detached_signatures_t *sigs,
+                                      char **new_signatures_out)
+{
+  tor_assert(sigs);
+
+  *new_signatures_out = NULL;
+
+  /* Are they the same consensus? */
+  if (memcmp(target->networkstatus_digest, sigs->networkstatus_digest,
+             DIGEST_LEN))
+    return -1;
+
+  return networkstatus_add_signatures_impl(target, sigs->signatures,
+                                           new_signatures_out);
+}
+
+/** DOCDOC */
+char *
+networkstatus_get_detached_signatures(networkstatus_vote_t *consensus)
+{
+  smartlist_t *elements;
+  char buf[4096];
+  char *result = NULL;
+  tor_assert(consensus);
+  tor_assert(! consensus->is_vote);
+
+  elements = smartlist_create();
+
+  {
+    char va_buf[ISO_TIME_LEN+1], fu_buf[ISO_TIME_LEN+1],
+      vu_buf[ISO_TIME_LEN+1];
+    char d[HEX_DIGEST_LEN+1];
+
+    base16_encode(d, sizeof(d), consensus->networkstatus_digest, DIGEST_LEN);
+    format_iso_time(va_buf, consensus->valid_after);
+    format_iso_time(fu_buf, consensus->fresh_until);
+    format_iso_time(vu_buf, consensus->valid_until);
+
+    tor_snprintf(buf, sizeof(buf),
+                 "consensus-digest %s\n"
+                 "valid-after %s\n"
+                 "fresh-until %s\n"
+                 "valid-until %s\n", d, va_buf, fu_buf, vu_buf);
+    smartlist_add(elements, tor_strdup(buf));
+  }
+
+  SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, v,
+    {
+      char sk[HEX_DIGEST_LEN+1];
+      char id[HEX_DIGEST_LEN+1];
+      if (!v->signature || !v->good_signature)
+        continue;
+      base16_encode(sk, sizeof(sk), v->signing_key_digest, DIGEST_LEN);
+      base16_encode(id, sizeof(id), v->identity_digest, DIGEST_LEN);
+      tor_snprintf(buf, sizeof(buf),
+                   "directory-signature %s %s\n-----BEGIN SIGNATURE-----\n",
+                   id, sk);
+      smartlist_add(elements, tor_strdup(buf));
+      base64_encode(buf, sizeof(buf), v->signature, v->signature_len);
+      strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
+      smartlist_add(elements, tor_strdup(buf));
+    });
+
+  result = smartlist_join_strings(elements, "", 0, NULL);
+
+  SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
+  smartlist_free(elements);
+  return result;
+}
+
+/** DOCDOC */
+void
+ns_detached_signatures_free(ns_detached_signatures_t *s)
+{
+  if (s->signatures) {
+    SMARTLIST_FOREACH(s->signatures, networkstatus_voter_info_t *, v,
+      {
+        tor_free(v->signature);
+        tor_free(v);
+      });
+    smartlist_free(s->signatures);
+  }
+  tor_free(s);
 }
 
 /* =====

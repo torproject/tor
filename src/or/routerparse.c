@@ -340,6 +340,15 @@ static token_rule_t networkstatus_vote_footer_token_table[] = {
   END_OF_TABLE
 };
 
+static token_rule_t networkstatus_detached_signature_token_table[] = {
+  T1_START("consensus-digest", K_CONSENSUS_DIGEST, GE(1),       NO_OBJ ),
+  T1("valid-after",            K_VALID_AFTER,      CONCAT_ARGS, NO_OBJ ),
+  T1("fresh-until",            K_FRESH_UNTIL,      CONCAT_ARGS, NO_OBJ ),
+  T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
+  T( "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
+  END_OF_TABLE
+};
+
 #undef T
 
 /* static function prototypes */
@@ -2058,8 +2067,7 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
         goto err;
       v->good_signature = 1;
     } else {
-      v->signature = tor_memdup(tok->object_body,
-                                        tok->object_size);
+      v->signature = tor_memdup(tok->object_body, tok->object_size);
       v->signature_len = tok->object_size;
     }
   });
@@ -2093,6 +2101,97 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
   }
 
   return ns;
+}
+
+/** DOCDOC */
+ns_detached_signatures_t *
+networkstatus_parse_detached_signatures(const char *s, const char *eos)
+{
+  /* XXXX020 there is too much duplicate code here. */
+  directory_token_t *tok;
+
+  smartlist_t *tokens = smartlist_create();
+  ns_detached_signatures_t *sigs =
+    tor_malloc_zero(sizeof(ns_detached_signatures_t));
+
+  if (!eos)
+    eos = s + strlen(s);
+
+  if (tokenize_string(s, eos, tokens,
+                      networkstatus_detached_signature_token_table)) {
+    log_warn(LD_DIR, "Error tokenizing detached networkstatus signatures");
+    goto err;
+  }
+
+  tok = find_first_by_keyword(tokens, K_CONSENSUS_DIGEST);
+  if (strlen(tok->args[0]) != HEX_DIGEST_LEN)
+    goto err;
+  if (base16_decode(sigs->networkstatus_digest, DIGEST_LEN,
+                    tok->args[0], strlen(tok->args[0])) < 0)
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_VALID_AFTER);
+  if (parse_iso_time(tok->args[0], &sigs->valid_after))
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_FRESH_UNTIL);
+  if (parse_iso_time(tok->args[0], &sigs->fresh_until))
+    goto err;
+
+  tok = find_first_by_keyword(tokens, K_VALID_UNTIL);
+  if (parse_iso_time(tok->args[0], &sigs->valid_until))
+    goto err;
+
+  sigs->signatures = smartlist_create();
+  SMARTLIST_FOREACH(tokens, directory_token_t *, _tok,
+    {
+      char id_digest[DIGEST_LEN];
+      char sk_digest[DIGEST_LEN];
+      networkstatus_voter_info_t *voter;
+
+      tok = _tok;
+      if (tok->tp != K_DIRECTORY_SIGNATURE)
+        continue;
+      tor_assert(tok->n_args >= 2);
+
+      if (!tok->object_type ||
+          strcmp(tok->object_type, "SIGNATURE") ||
+          tok->object_size < 128 || tok->object_size > 512) {
+        log_warn(LD_DIR, "Bad object type or length on directory-signature");
+        goto err;
+      }
+
+      if (strlen(tok->args[0]) != HEX_DIGEST_LEN ||
+          base16_decode(id_digest, sizeof(id_digest),
+                        tok->args[0], HEX_DIGEST_LEN) < 0) {
+        log_warn(LD_DIR, "Error decoding declared identity %s in "
+                 "network-status vote.", escaped(tok->args[0]));
+        goto err;
+      }
+      if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
+          base16_decode(sk_digest, sizeof(sk_digest),
+                        tok->args[1], HEX_DIGEST_LEN) < 0) {
+        log_warn(LD_DIR, "Error decoding declared identity %s in "
+                 "network-status vote.", escaped(tok->args[1]));
+        goto err;
+      }
+
+      voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
+      memcpy(voter->identity_digest, id_digest, DIGEST_LEN);
+      memcpy(voter->signing_key_digest, sk_digest, DIGEST_LEN);
+      voter->signature = tor_memdup(tok->object_body, tok->object_size);
+      voter->signature_len = tok->object_size;
+
+      smartlist_add(sigs->signatures, voter);
+    });
+
+  goto done;
+ err:
+  ns_detached_signatures_free(sigs);
+  sigs = NULL;
+ done:
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  return NULL;
 }
 
 /** Parse the addr policy in the string <b>s</b> and return it.  If
