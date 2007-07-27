@@ -282,7 +282,7 @@ typedef unsigned int bitarray_t;
 static INLINE bitarray_t *
 bitarray_init_zero(int n_bits)
 {
-  size_t sz = (n_bits+BITARRAY_MASK) & BITARRAY_MASK;
+  size_t sz = (n_bits+BITARRAY_MASK) / (1u << BITARRAY_SHIFT);
   return tor_malloc_zero(sz*sizeof(unsigned int));
 }
 /** Free the bit array <b>ba</b>. */
