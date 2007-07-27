@@ -121,7 +121,7 @@ median_int(smartlist_t *ints)
   tor_assert(smartlist_len(ints));
   smartlist_sort(ints, _compare_ints);
   idx = (smartlist_len(ints)-1)/2;
-  return *(time_t*)smartlist_get(ints, idx);
+  return *(int*)smartlist_get(ints, idx);
 }
 
 /** Given a vote <b>vote</b> (not a consensus!), return its associated
