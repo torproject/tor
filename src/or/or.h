@@ -2836,6 +2836,7 @@ void dirvote_clear_pending_votes(void);
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
                                          const char **msg_out);
 int dirvote_compute_consensus(void);
+int dirvote_add_signatures(const char *detached_signatures_body);
 
 #ifdef DIRVOTE_PRIVATE
 int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,

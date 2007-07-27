@@ -1068,6 +1068,8 @@ static char *pending_consensus_body = NULL;
 static char *pending_consensus_signatures = NULL;
 /** DOCDOC */
 static networkstatus_vote_t *pending_consensus = NULL;
+/** DOCDOC */
+static smartlist_t *pending_consensus_signature_list = NULL;
 
 /** DOCDOC */
 void
@@ -1094,15 +1096,20 @@ dirvote_perform_vote(void)
 void
 dirvote_clear_pending_votes(void)
 {
-  if (!pending_vote_list)
-    return;
-  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
-      cached_dir_decref(v->vote_body);
-      v->vote_body = NULL;
-      networkstatus_vote_free(v->vote);
-      tor_free(v);
-    });
-  smartlist_clear(pending_vote_list);
+  if (pending_vote_list) {
+    SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
+        cached_dir_decref(v->vote_body);
+        v->vote_body = NULL;
+        networkstatus_vote_free(v->vote);
+        tor_free(v);
+      });
+    smartlist_clear(pending_vote_list);
+  }
+  if (pending_consensus_signature_list) {
+    SMARTLIST_FOREACH(pending_consensus_signature_list, char *, cp,
+                      tor_free(cp));
+    smartlist_clear(pending_consensus_signature_list);
+  }
 }
 
 /** DOCDOC */
@@ -1235,12 +1242,87 @@ dirvote_compute_consensus(void)
   return -1;
 }
 
+/** DOCDOC */
+static int
+dirvote_add_signatures_to_pending_consensus(
+                       const char *detached_signatures_body,
+                       const char **msg_out)
+{
+  ns_detached_signatures_t *sigs = NULL;
+  int r = -1;
+  char *new_signatures = NULL;
+  size_t siglen;
+
+  tor_assert(detached_signatures_body);
+  tor_assert(msg_out);
+
+  /* Only call if we have a pending consensus right now. */
+  tor_assert(pending_consensus);
+  tor_assert(pending_consensus_body);
+  tor_assert(pending_consensus_signatures);
+
+  *msg_out = NULL;
+
+  if (!(sigs = networkstatus_parse_detached_signatures(
+                               detached_signatures_body, NULL))) {
+    *msg_out = "Couldn't parse detached signatures.";
+    goto err;
+  }
+
+  r = networkstatus_add_detached_signatures(pending_consensus,
+                                            sigs,
+                                            &new_signatures);
+  if (new_signatures && (siglen = strlen(new_signatures)) && r >= 0) {
+    size_t siglen = strlen(new_signatures);
+    size_t len = strlen(pending_consensus_body);
+    pending_consensus_body = tor_realloc(pending_consensus_body,
+                                         len+siglen+1);
+    memcpy(pending_consensus_body+len, new_signatures, siglen+1);
+
+    len = strlen(pending_consensus_signatures);
+    pending_consensus_signatures = tor_realloc(pending_consensus_signatures,
+                                               len+siglen+1);
+    memcpy(pending_consensus_signatures+len, new_signatures, siglen+1);
+
+    log_info(LD_DIR, "Added %d new signatures to the pending consensus.", r);
+  }
+
+  *msg_out = "ok";
+  goto done;
+ err:
+  if (!msg_out)
+    *msg_out = "Unrecognized error while adding detached signatures.";
+ done:
+  tor_free(new_signatures);
+  if (sigs)
+    ns_detached_signatures_free(sigs);
+  return r;
+}
+
+/** DOCDOC */
+int
+dirvote_add_signatures(const char *detached_signatures_body)
+{
+  if (pending_consensus) {
+    const char *msg=NULL;
+    return dirvote_add_signatures_to_pending_consensus(
+                                         detached_signatures_body, &msg);
+  } else {
+    if (!pending_consensus_signature_list)
+      pending_consensus_signature_list = smartlist_create();
+    smartlist_add(pending_consensus_signature_list,
+                  tor_strdup(detached_signatures_body));
+    return 0;
+  }
+}
+
 /** Release all static storage held in dirvote.c */
 void
 dirvote_free_all(void)
 {
   dirvote_clear_pending_votes();
   if (pending_vote_list) {
+    /* now empty as a result of clear_pending_votes. */
     smartlist_free(pending_vote_list);
     pending_vote_list = NULL;
   }
@@ -1249,5 +1331,10 @@ dirvote_free_all(void)
   if (pending_consensus) {
     networkstatus_vote_free(pending_consensus);
     pending_consensus = NULL;
+  }
+  if (pending_consensus_signature_list) {
+    /* now empty as a result of clear_pending_votes. */
+    smartlist_free(pending_consensus_signature_list);
+    pending_consensus_signature_list = NULL;
   }
 }
