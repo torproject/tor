@@ -32,6 +32,13 @@ static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
 static int the_v2_networkstatus_is_dirty = 1;
 
+/** Most recently generated encoded signed v1 directory. (v1 auth dirservers
+ * only.) */
+static cached_dir_t *the_directory = NULL;
+
+/** For authoritative directories: the current (v1) network status. */
+static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
+
 static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
 static char *format_versions_list(config_line_t *ln);
@@ -962,8 +969,12 @@ dirserv_dump_directory_to_string(char **dir_out,
   char *buf = NULL;
   size_t buf_len;
   size_t identity_pkey_len;
-  routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
+#ifdef FULL_V1_DIRECTORIES
+  routerlist_t *rl = router_get_routerlist();
+#else
+  (void)complete;
+#endif
 
   tor_assert(dir_out);
   *dir_out = NULL;
@@ -1058,10 +1069,6 @@ dirserv_dump_directory_to_string(char **dir_out,
   tor_free(buf);
   return -1;
 }
-
-/** Most recently generated encoded signed v1 directory. (v1 auth dirservers
- * only.) */
-static cached_dir_t *the_directory = NULL;
 
 /* Used only by non-v1-auth dirservers: The v1 directory and
  * runningrouters we'll serve when requested. */
@@ -1365,9 +1372,6 @@ dirserv_regenerate_directory(void)
   return the_directory;
 }
 
-/** For authoritative directories: the current (v1) network status. */
-static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
-
 /** Only called by v1 auth dirservers.
  * Replace the current running-routers list with a newly generated one. */
 static cached_dir_t *
@@ -1381,7 +1385,9 @@ generate_runningrouters(void)
   crypto_pk_env_t *private_key = get_identity_key();
   char *identity_pkey; /* Identity key, DER64-encoded. */
   size_t identity_pkey_len;
+#ifdef FULL_V1_DIRECTORIES
   routerlist_t *rl = router_get_routerlist();
+#endif
 
 #ifdef FULL_V1_DIRECTORIES
   if (list_server_status(rl->routers, &router_status, 0)) {
