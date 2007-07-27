@@ -78,26 +78,44 @@ Things we'd like to do in 0.2.0.x:
         o Don't flip out with warnings when voting-related URLs are
           uploaded/downloaded.
       . Finalize proposal
-        . Merge 101 and 103 and dir-spec.txt into a new dir-spec.txt; fork
+        o Merge 101 and 103 and dir-spec.txt into a new dir-spec.txt; fork
           the existing one into dir-spec-v2.txt.
+        * Describe schedule in copious detail.
       - Get authorities voting
-        . Implement parsing for new document formats
+        o Implement parsing for new document formats
           o Parse key certificates
           o Parse votes and consensuses
-          - Unit tests for above
+          o Unit tests for above
         . Code to manage key certificates
           o Generate certificates
           o Authorities load certificates
           o Clients cache certificates on disk
+          * Learn new ones when they show up in votes.
+          * Forget ones that are very old.
           - Download as needed.
-          - Serve list as needed.
+          * Serve list as needed.
+          * Detect whether votes are really all for the same period.
           o Avoid double-checking signatures every time we get a vote.
           - Warn about expired stuff.
+          - Fix all XXXX020s in vote code
+          * Unit tests for detached signatures and signature manipulation.
         o Code to generate votes
         o Code to generate consensus from a list of votes
-        - Add a signature to a consensus.
+        o Add a signature to a consensus.
         o Code to check signatures on a consensus
         - Push/pull documents as appropriate.
+          . Push vote on voting
+            o Push vote
+            * Process vote when received
+              * Even if we get it before we start voting ourself.
+          * Push signature on forming consensus.
+            * Push signature
+            * Add signatures when received
+            * Queue received signatures before consensus is ready
+          - Pull votes and signatures if we don't get them.
+        * Serve and store consensuses.
+        - Cache votes and signatures on disk.
+        * Discard votes in advance of next voting period.
         o Have clients know which authorities are v3 authorities, and what
           their keys are.
           - While we're at it, let v3 authorities have fqdns lines.
