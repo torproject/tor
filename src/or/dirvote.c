@@ -1065,6 +1065,8 @@ static smartlist_t *pending_vote_list = NULL;
 /** DOCDOC */
 static char *pending_consensus_body = NULL;
 /** DOCDOC */
+static char *pending_consensus_signatures = NULL;
+/** DOCDOC */
 static networkstatus_vote_t *pending_consensus = NULL;
 
 /** DOCDOC */
@@ -1177,7 +1179,7 @@ dirvote_compute_consensus(void)
   /* Have we got enough votes to try? */
   int n_votes, n_voters;
   smartlist_t *votes = NULL;
-  char *consensus_body = NULL;
+  char *consensus_body = NULL, *signatures = NULL;
   networkstatus_vote_t *consensus = NULL;
   authority_cert_t *my_cert;
 
@@ -1207,9 +1209,16 @@ dirvote_compute_consensus(void)
     log_warn(LD_DIR, "Couldn't parse consensus we generated!");
     goto err;
   }
+  signatures = networkstatus_get_detached_signatures(consensus);
+  if (!signatures) {
+    log_warn(LD_DIR, "Couldn't extract signatures.");
+    goto err;
+  }
 
   tor_free(pending_consensus_body);
   pending_consensus_body = consensus_body;
+  tor_free(pending_consensus_signatures);
+  pending_consensus_signatures = signatures;
 
   if (pending_consensus)
     networkstatus_vote_free(pending_consensus);
@@ -1220,8 +1229,25 @@ dirvote_compute_consensus(void)
   if (votes)
     smartlist_free(votes);
   tor_free(consensus_body);
+  tor_free(signatures);
   networkstatus_vote_free(consensus);
 
   return -1;
 }
 
+/** Release all static storage held in dirvote.c */
+void
+dirvote_free_all(void)
+{
+  dirvote_clear_pending_votes();
+  if (pending_vote_list) {
+    smartlist_free(pending_vote_list);
+    pending_vote_list = NULL;
+  }
+  tor_free(pending_consensus_body);
+  tor_free(pending_consensus_signatures);
+  if (pending_consensus) {
+    networkstatus_vote_free(pending_consensus);
+    pending_consensus = NULL;
+  }
+}
