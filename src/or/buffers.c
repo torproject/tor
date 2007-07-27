@@ -281,9 +281,9 @@ buf_get_initial_mem(buf_t *buf, size_t sz)
 void
 buf_shrink_freelists(int free_all)
 {
-  int j;
-  for (j = 0; j < 2; ++j) {
-    free_mem_list_t *list = j ? &free_mem_list_16k : &free_mem_list_4k;
+  int list_elt_size;
+  for (list_elt_size = 4096; list_elt_size <= 16384; list_elt_size *= 2) {
+    free_mem_list_t *list = get_free_mem_list(list_elt_size);
     if (list->lowwater > list->slack || free_all) {
       int i, n_to_skip, n_to_free;
       char **ptr;
@@ -452,8 +452,16 @@ buf_shrink(buf_t *buf)
   size_t new_len;
 
   new_len = buf->len;
-  if (buf->datalen == 0 && buf->highwater == 0 &&
+  /* Actually, we ignore highwater here if we're going to throw it on the
+   * freelist, since it's way cheaper to use the freelist than to use (some)
+   * platform mallocs.
+   *
+   * DOCDOC If it turns out to be a good idea, add it to the doxygen for this
+   * function.
+   */
+  if (buf->datalen == 0 && // buf->highwater == 0 &&
       IS_FREELIST_SIZE(buf->len)) {
+    buf->highwater = 0;
     if (add_buf_mem_to_freelist(buf))
       return;
   }
