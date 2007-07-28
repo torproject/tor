@@ -189,7 +189,11 @@ of their choices.
    on the fraction of bandwidth available from non-Exit nodes.  Call the
    total clipped advertised bandwidth for Exit nodes under consideration E,
    and the total clipped advertised bandwidth for non-Exit nodes under
-   consideration N.  If E<N/2, we do not consider Exit-flagged nodes.
+   and the total clipped advertised bandwidth for all nodes under
+   consideration T.  If E<T/3, we do not consider Exit-flagged nodes.
+   Otherwise, we weight their bandwidth with the factor 1-T/(3E). This
+   ensures that bandwidth is evenly distributed over nodes in 3-hop paths.
+
    Otherwise, we weight their bandwidth with the factor (E-N/2)/(N+E-N/2) ==
    (2E - N)/(2E + N).  This ensures that bandwidth is evenly distributed over
    nodes in 3-hop paths.

@@ -1240,6 +1240,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   double exit_weight;
   int n_unknown = 0;
   bitarray_t *exit_bits;
+  int include_exits = 1;
 
   /* First count the total bandwidth weight, and make a list
    * of each value.  <0 means "unknown; no routerinfo."  We use the
@@ -1325,28 +1326,27 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     /* If we're choosing an exit node, exit bandwidth counts fully. */
     exit_weight = 1.0;
     total_bw = total_exit_bw + total_nonexit_bw;
-  } else if (total_exit_bw < total_nonexit_bw / 2) {
-    /* If we're choosing a relay and exits are greatly outnumbered, ignore
-     * them. */
-    exit_weight = 0.0;
-    total_bw = total_nonexit_bw;
   } else {
-    /* If we're choosing a relay and exits aren't outnumbered use the formula
-     * from path-spec. */
-    uint64_t leftover = (total_exit_bw - total_nonexit_bw / 2);
-    exit_weight = U64_TO_DBL(leftover) /
-      U64_TO_DBL(leftover + total_nonexit_bw);
-#if 0
-    total_bw =  total_nonexit_bw +
-      DBL_TO_U64(exit_weight * U64_TO_DBL(total_exit_bw));
-#endif
-    total_bw = 0;
-    for (i=0; i < (unsigned)smartlist_len(sl); i++) {
-      is_exit = bitarray_is_set(exit_bits, i);
-      if (is_exit)
-        total_bw += ((uint64_t)(bandwidths[i] * exit_weight));
-      else
-        total_bw += bandwidths[i];
+    double all_bw = U64_TO_DBL(total_exit_bw+total_nonexit_bw);
+    double exit_bw = U64_TO_DBL(total_exit_bw);
+    /*
+     * For detailed derivation of this formula, see
+     *   http://archives.seul.org/or/dev/Jul-2007/msg00056.html
+     */
+    exit_weight = 1.0 - all_bw/(3.0*exit_bw);
+    if (exit_weight <= 0.0) {
+      include_exits = 0;
+      exit_weight = 0.0;
+      total_bw = total_nonexit_bw;
+    } else {
+      total_bw = 0;
+      for (i=0; i < (unsigned)smartlist_len(sl); i++) {
+        is_exit = bitarray_is_set(exit_bits, i);
+        if (is_exit)
+          total_bw += ((uint64_t)(bandwidths[i] * exit_weight));
+        else
+          total_bw += bandwidths[i];
+      }
     }
   }
   /*
@@ -1364,9 +1364,10 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   tmp = 0;
   for (i=0; i < (unsigned)smartlist_len(sl); i++) {
     is_exit = bitarray_is_set(exit_bits, i);
-    if (is_exit)
-      tmp += ((uint64_t)(bandwidths[i] * exit_weight));
-    else
+    if (is_exit) {
+      if (include_exits)
+        tmp += ((uint64_t)(bandwidths[i] * exit_weight));
+    } else
       tmp += bandwidths[i];
     if (tmp >= rand_bw)
       break;

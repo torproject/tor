@@ -43,6 +43,9 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
   o Performance improvements:
     - Be more aggressive with freeing buffer RAM or putting it on the
       free lists.
+    - If exit bandwidth ever exceeds one third of total bandwidth, then
+      use the correct formula to weight exit nodes when choosing paths.
+      (Based on patch from Mike Perry.)
 
   o Performance improvements (win32):
     - Use Critical Sections rather than Mutexes for synchronizing threads
