@@ -243,6 +243,9 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
     if (!from_store)
       trusted_dir_servers_certs_changed = 1;
   }
+
+  trusted_dirs_flush_certs_to_disk();
+
   return 0;
 }
 
@@ -251,7 +254,12 @@ void
 trusted_dirs_flush_certs_to_disk(void)
 {
   char filename[512];
-  smartlist_t *chunks = smartlist_create();
+  smartlist_t *chunks;
+
+  if (!trusted_dir_servers_certs_changed)
+    return;
+
+  chunks = smartlist_create();
 
   tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-certs",
                get_options()->DataDirectory);
@@ -274,6 +282,35 @@ trusted_dirs_flush_certs_to_disk(void)
   smartlist_free(chunks);
 
   trusted_dir_servers_certs_changed = 0;
+}
+
+/** DOCDOC */
+static void
+trusted_dirs_remove_old_certs(void)
+{
+  /* Any certificate that has been superseded for more than 48 hours is
+   * irrelevant. */
+#define OLD_CERT_LIFETIME (48*60*60)
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+    {
+      authority_cert_t *newest = NULL;
+      if (!ds->v3_certs)
+        continue;
+      SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+          if (!newest || (cert->cache_info.published_on >
+                          newest->cache_info.published_on))
+            newest = cert);
+      SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+          if (newest && (newest->cache_info.published_on >
+                         cert->cache_info.published_on + OLD_CERT_LIFETIME)) {
+            SMARTLIST_DEL_CURRENT(ds->v3_certs, cert);
+            authority_cert_free(cert);
+            trusted_dir_servers_certs_changed = 1;
+          });
+    });
+#undef OLD_CERT_LIFETIME
+
+  trusted_dirs_flush_certs_to_disk();
 }
 
 /** DOCDOC */
@@ -622,9 +659,11 @@ int
 router_reload_router_list(void)
 {
   if (router_reload_router_list_impl(0))
-    return 1;
+    return -1;
   if (router_reload_router_list_impl(1))
-    return 1;
+    return -1;
+  if (trusted_dirs_reload_certs())
+    return -1;
   return 0;
 }
 
@@ -2697,6 +2736,9 @@ routerlist_remove_old_routers(void)
   routerinfo_t *router;
   signed_descriptor_t *sd;
   digestmap_t *retain;
+
+  trusted_dirs_remove_old_certs();
+
   if (!routerlist || !networkstatus_list)
     return;
 

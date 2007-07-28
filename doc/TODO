@@ -90,9 +90,10 @@ Things we'd like to do in 0.2.0.x:
           o Generate certificates
           o Authorities load certificates
           o Clients cache certificates on disk
-          * Learn new ones when they show up in votes.
-          * Forget ones that are very old.
+          o Learn new ones when they show up in votes.
+          o Forget ones that are very old.
           - Download as needed.
+          o Actually invoke trusted_dirs_flush_certs_to_disk()
           * Serve list as needed.
           * Detect whether votes are really all for the same period.
           o Avoid double-checking signatures every time we get a vote.

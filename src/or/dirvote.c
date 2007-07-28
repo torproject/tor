@@ -1140,6 +1140,15 @@ dirvote_add_vote(const char *vote_body, const char **msg_out)
     *msg_out = "Vote not from a recognized v3 authority";
     goto err;
   }
+  tor_assert(vote->cert);
+  if (!authority_cert_get_by_digests(vote->cert->cache_info.identity_digest,
+                                     vote->cert->signing_key_digest)) {
+    /* Hey, it's a new cert! */
+    trusted_dirs_load_certs_from_string(
+                               vote->cert->cache_info.signed_descriptor_body,
+                               0 /* from_store */);
+  }
+
   /* XXXX020 check times; make sure epochs match. */
 
   SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
