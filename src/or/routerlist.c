@@ -186,9 +186,9 @@ trusted_dirs_reload_certs(void)
 
   tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-certs",
                get_options()->DataDirectory);
-  contents = read_file_to_str(filename, 0, NULL);
+  contents = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   if (!contents)
-    return -1;
+    return 0;
   r = trusted_dirs_load_certs_from_string(contents, 1);
   tor_free(contents);
   return r;
