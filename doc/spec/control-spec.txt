@@ -76,6 +76,12 @@ $Id$
   Specific replies are mentioned below in section 3, and described more fully
   in section 4.
 
+  [Compatibility note:  versions of Tor before 0.2.0.3-alpha sometimes
+  generate AsyncReplies of the form "*(MidReplyLine / DataReplyLine)".
+  This is incorrect, but controllers that need to work with these
+  versions of Tor should be prepared to get multi-line AsyncReplies with
+  the final line (usually "650 OK") omitted.]
+
 2.4. General-use tokens
 
   ; Identifiers for servers.
