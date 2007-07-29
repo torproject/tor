@@ -1,22 +1,22 @@
 Changes in version 0.2.0.3-alpha - 2007-??-??
-  o Removed features:
-    - Stop allowing address masks that do not correspond to bit prefixes.
-      We have warned about these for a really long time; now it's time
-      to reject them. (Patch from croup.)
-
-  o Minor features:
-    - Create listener connections before we setuid to the configured User and
-      Group.  This way, you can choose port values under 1024, start Tor as
-      root, and have Tor bind those ports before it changes to another UID.
-    - tor-gencert creates all files as readable to the file creator only, and
-      write-protects the authority identity key.
+  o Major features:
+    - Create listener connections before we setuid to the configured
+      User and Group. Now you can choose port values under 1024, start
+      Tor as root, and have Tor bind those ports before it changes to
+      another UID.
     - New ConstrainedSockets option to set SO_SNDBUF and SO_RCVBUF on TCP
-      sockets.  (Patch from coderman.)
-    - When dumping memory usage, list bytes used in buffer memory free-lists.
+      sockets. Hopefully useful for Tor servers running on "vserver"
+      accounts. (Patch from coderman.)
 
-  o Minor features (directory authority):
-    - Fail quickly and (relatively) harmlessly if we generate a network
-      status document that is somehow malformed.
+  o Security fixes:
+    - Directory authorities now call routers Fast if their bandwidth is
+      at least 100KB/s, and consider their bandwidth adequate to be a
+      Guard if it is at least 250KB/s, no matter the medians. This fix
+      complements proposal 107. [Bugfix on 0.1.2.x]
+
+  o Major bugfixes (directory):
+    - Rewrite directory tokenization code to never run off the end of
+      a string. Fixes bug 455. Patch from croup. [Bugfix on 0.1.2.x]
 
   o Minor features (controller):
     - Add a SOURCE_ADDR field to STREAM NEW events so that controllers can
@@ -26,19 +26,27 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Add a RESOLVE command to launch hostname lookups. (Original patch
       from Robert Hogan.)
     - Add GETINFO status/enough-dir-info to let controllers tell whether
-      Tor has downloaded sufficient directory information. (Patch from Tup.)
+      Tor has downloaded sufficient directory information. (Patch
+      from Tup.)
     - You can now use the ControlSocket option to tell Tor to listen for
-      controller connections on Unix domain sockets on systems that support
-      them.  (Patch from Peter Palfrader.)
-    - STREAM NEW events are generated for DNSPort requests and for tunneled
-      directory connections. (Patch from Robert Hogan.)
-    - New GETINFO address-mappings/* command to get address mappings with
-      expiry information.  addr-mappings/* is now deprecated.
+      controller connections on Unix domain sockets on systems that
+      support them. (Patch from Peter Palfrader.)
+    - STREAM NEW events are generated for DNSPort requests and for
+      tunneled directory connections. (Patch from Robert Hogan.)
+    - New "GETINFO address-mappings/*" command to get address mappings
+      with expiry information. "addr-mappings/*" is now deprecated.
       (Patch from Tup.)
 
-  o Minor features (IPv6):
+  o Minor features (misc):
     - Merge in some (as-yet-unused) IPv6 address manipulation code. (Patch
       from croup.)
+    - The tor-gencert tool now creates all files as readable to the file
+      creator only, and write-protects the authority identity key.
+    - When dumping memory usage, list bytes used in buffer memory
+      free-lists.
+    - Directory authorities now fail quickly and (relatively) harmlessly
+      if they generate a network status document that is somehow
+      malformed.
 
   o Performance improvements:
     - Be more aggressive with freeing buffer RAM or putting it on the
@@ -46,29 +54,18 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - If exit bandwidth ever exceeds one third of total bandwidth, then
       use the correct formula to weight exit nodes when choosing paths.
       (Based on patch from Mike Perry.)
-
-  o Performance improvements (win32):
     - Use Critical Sections rather than Mutexes for synchronizing threads
       on win32; Mutexes are heavier-weight, and designed for synchronizing
       between processes.
 
-  o Deprecated features:
+  o Deprecated and removed features:
     - RedirectExits is now deprecated.
-
-  o Security fixes:
-    - Directory authorities now call routers Fast if their bandwidth is
-      at least 100KB/s, and consider their bandwidth adequate to be a
-      Guard if it is at least 250KB/s. This fix complements proposal
-      107. [Bugfix on 0.1.2.x]
-
-  o Major bugfixes (directory):
-    - Fix a crash bug when router descriptors end at a 4096-byte boundary
-      on disk.  [Bugfix on 0.1.2.x]
-    - Rewrite directory tokenization code to never run off the end of
-      a string.  Fixes bug 455. Patch from croup. [Bugfix on 0.1.2.x]
+    - Stop allowing address masks that do not correspond to bit prefixes.
+      We have warned about these for a really long time; now it's time
+      to reject them. (Patch from croup.)
 
   o Minor bugfixes (directory):
-    - Fix another crash bug related to extra-info caching.  (Bug found by
+    - Fix another crash bug related to extra-info caching. (Bug found by
       Peter Palfrader.) [Bugfix on 0.2.0.2-alpha]
     - Directories no longer return a "304 not modified" when they don't
       have the networkstatus the client asked for. Also fix a memory
@@ -82,21 +79,22 @@ Changes in version 0.2.0.3-alpha - 2007-??-??
     - Fix a crash when DNSPort is set more than once. (Patch from Robert
       Hogan.) [Bugfix on 0.2.0.2-alpha]
     - Add DNSPort connections to the global connection list, so that we
-      can time them out correctly. (Bug found by mwenge) [Bugfix on
-      0.2.0.2-alpha]
+      can time them out correctly. (Bug found by Robert Hogan.) [Bugfix
+      on 0.2.0.2-alpha]
     - Fix a dangling reference that could lead to a crash when DNSPort is
-      changed or closed (Patch from Robert Hogan.) [Bugfix on 0.2.0.2-alpha]
+      changed or closed (Patch from Robert Hogan.) [Bugfix on
+      0.2.0.2-alpha]
 
-  o Minor bugfixes (controller)
-    - Provide DNS expiry times in GMT, not in local time.  For backward
+  o Minor bugfixes (controller):
+    - Provide DNS expiry times in GMT, not in local time. For backward
       compatibility, ADDRMAP events only provide GMT expiry in an extended
-      field.  "GETINFO address-mappings" always does the right thing.
+      field. "GETINFO address-mappings" always does the right thing.
     - Use CRLF line endings properly in NS events.
 
   o Minor bugfixes (misc):
     - Choose perfectly fairly among routers when choosing by bandwidth and
-      weighting by fraction of bandwidth provided by exits.  Previously,
-      we would choose with only approximate fairness, and correct ourselves
+      weighting by fraction of bandwidth provided by exits. Previously, we
+      would choose with only approximate fairness, and correct ourselves
       if we ran off the end of the list. [Bugfix on 0.1.2.x]
 
 
