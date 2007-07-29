@@ -1255,6 +1255,7 @@ do_hup(void)
 
 #ifdef USE_DMALLOC
   dmalloc_log_stats();
+  dmalloc_log_changed(0, 1, 0, 0);
 #endif
 
   log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
@@ -1815,6 +1816,9 @@ tor_cleanup(void)
     or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */
     or_state_save(time(NULL));
   }
+#ifdef USE_DMALLOC
+  dmalloc_log_stats();
+#endif
   tor_free_all(0); /* We could move tor_free_all back into the ifdef below
                       later, if it makes shutdown unacceptably slow.  But for
                       now, leave it here: it's helped us catch bugs in the

@@ -44,6 +44,7 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
       creator only, and write-protects the authority identity key.
     - When dumping memory usage, list bytes used in buffer memory
       free-lists.
+    - When running with dmalloc, dump more stats on hup and exit.
     - Directory authorities now fail quickly and (relatively) harmlessly
       if they generate a network status document that is somehow
       malformed.
