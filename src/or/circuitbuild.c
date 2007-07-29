@@ -294,7 +294,7 @@ origin_circuit_init(uint8_t purpose, int onehop_tunnel,
   return circ;
 }
 
-/** Build a new circuit for <b>purpose</b>. If <b>info</b>
+/** Build a new circuit for <b>purpose</b>. If <b>exit</b>
  * is defined, then use that as your exit router, else choose a suitable
  * exit node.
  *
@@ -2860,17 +2860,19 @@ learned_bridge_descriptor(routerinfo_t *ri)
 int
 any_bridge_descriptors_known(void)
 {
+  tor_assert(get_options()->UseBridges);
   return choose_random_entry(NULL)!=NULL ? 1 : 0;
 }
 
-#if 0
 /** Return 1 if we have at least one descriptor for a bridge and
- * all descriptors we know are down. Else return 0. */
-int
-all_bridges_down(void)
+ * all descriptors we know are down. Else return 0. If <b>act</b> is
+ * 1, then mark the down bridges up; else just observe and report. */
+static int
+bridges_retry_helper(int act)
 {
   routerinfo_t *ri;
   int any_known = 0;
+  int any_running = 0;
   if (!entry_guards)
     entry_guards = smartlist_create();
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
@@ -2879,12 +2881,31 @@ all_bridges_down(void)
       if (ri && ri->purpose == ROUTER_PURPOSE_BRIDGE) {
         any_known = 1;
         if (ri->is_running)
-          return 0; /* some bridge is both known and running */
+          any_running = 1; /* some bridge is both known and running */
+        else if (act) { /* mark it for retry */
+          ri->is_running = 1;
+          e->can_retry = 1;
+          e->bad_since = 0;
+        }
       }
     });
-  return any_known;
+  return any_known && !any_running;
 }
-#endif
+
+/** Do we know any descriptors for our bridges, and are they all
+ * down? */
+int
+bridges_should_be_retried(void)
+{
+  return bridges_retry_helper(0);
+}
+
+/** Mark all down known bridges up. */
+void
+bridges_retry_all(void)
+{
+  bridges_retry_helper(1);
+}
 
 /** Release all storage held by the list of entry guards and related
  * memory structs. */

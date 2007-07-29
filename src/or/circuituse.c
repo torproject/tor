@@ -813,8 +813,9 @@ circuit_launch_by_router(uint8_t purpose, int onehop_tunnel,
   return circ;
 }
 
-/** Launch a new circuit with purpose <b>purpose</b> and exit node <b>info</b>
- * (or NULL to select a random exit node).  If <b>need_uptime</b> is true,
+/** Launch a new circuit with purpose <b>purpose</b> and exit node
+ * <b>extend_info</b> (or NULL to select a random exit node).
+ * If <b>need_uptime</b> is true,
  * choose among routers with high uptime.  If <b>need_capacity</b> is true,
  * choose among routers with high bandwidth.  If <b>internal</b> is true, the
  * last hop need not be an exit node. Return the newly allocated circuit on
@@ -942,6 +943,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   int check_exit_policy;
   int need_uptime, need_internal;
   int want_onehop;
+  or_options_t *options = get_options();
 
   tor_assert(conn);
   tor_assert(circp);
@@ -952,7 +954,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   want_onehop = conn->socks_request->command == SOCKS_COMMAND_CONNECT_DIR;
 
   need_uptime = (conn->socks_request->command == SOCKS_COMMAND_CONNECT) &&
-                smartlist_string_num_isin(get_options()->LongLivedPorts,
+                smartlist_string_num_isin(options->LongLivedPorts,
                                           conn->socks_request->port);
   need_internal = desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL;
 
@@ -966,10 +968,17 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
 
   if (!want_onehop && !router_have_minimum_dir_info()) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
-      log_notice(LD_APP|LD_DIR,
-                 "Application request when we're believed to be "
-                 "offline. Optimistically trying directory fetches again.");
-      routerlist_retry_directory_downloads(time(NULL));
+      if (options->UseBridges && bridges_should_be_retried()) {
+        log_notice(LD_APP|LD_DIR,
+                   "Application request when we're believed to be "
+                   "offline. Optimistically trying known bridges again.");
+        bridges_retry_all();
+      } else if (!options->UseBridges || any_bridge_descriptors_known()) {
+        log_notice(LD_APP|LD_DIR,
+                   "Application request when we're believed to be "
+                   "offline. Optimistically trying directory fetches again.");
+        routerlist_retry_directory_downloads(time(NULL));
+      }
     }
     /* the stream will be dealt with when router_have_minimum_dir_info becomes
      * 1, or when all directory attempts fail and directory_all_unreachable()
