@@ -94,7 +94,7 @@ Things we'd like to do in 0.2.0.x:
           o Forget ones that are very old.
           - Download as needed.
           o Actually invoke trusted_dirs_flush_certs_to_disk()
-          * Serve list as needed.
+          - Serve list as needed.
           * Detect whether votes are really all for the same period.
           o Avoid double-checking signatures every time we get a vote.
           - Warn about expired stuff.
@@ -107,12 +107,13 @@ Things we'd like to do in 0.2.0.x:
         - Push/pull documents as appropriate.
           . Push vote on voting
             o Push vote
-            * Process vote when received
-              * Even if we get it before we start voting ourself.
+            o Process vote when received
+              o Even if we get it before we start voting ourself.
           * Push signature on forming consensus.
-            * Push signature
-            * Add signatures when received
-            * Queue received signatures before consensus is ready
+            o Push signature
+            o Add signatures when received
+            o Queue received signatures before consensus is ready
+            * When consensus is ready, use queued signatures.
           - Pull votes and signatures if we don't get them.
         * Serve and store consensuses.
         - Cache votes and signatures on disk.

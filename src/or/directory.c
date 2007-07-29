@@ -80,6 +80,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
   if (dir_purpose == DIR_PURPOSE_FETCH_DIR ||
       dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
       dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
+      dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES ||
       dir_purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
       dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
       dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
@@ -506,6 +507,9 @@ directory_initiate_command(const char *address, uint32_t addr,
     case DIR_PURPOSE_UPLOAD_VOTE:
       log_debug(LD_OR,"initiating server vote upload");
       break;
+    case DIR_PURPOSE_UPLOAD_SIGNATURES:
+      log_debug(LD_OR,"initiating consensus signature upload");
+      break;
     case DIR_PURPOSE_FETCH_RUNNING_LIST:
       log_debug(LD_DIR,"initiating running-routers fetch");
       break;
@@ -691,6 +695,12 @@ directory_send_command(dir_connection_t *conn,
       url = tor_strdup("/tor/");
       break;
     case DIR_PURPOSE_UPLOAD_VOTE:
+      tor_assert(!resource);
+      tor_assert(payload);
+      httpcommand = "POST";
+      url = tor_strdup("/tor/post/vote");
+      break;
+    case DIR_PURPOSE_UPLOAD_SIGNATURES:
       tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
@@ -1386,7 +1396,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         }
         break;
       case 400:
-        log_warn(LD_GENERAL,"http status 400 (%s) response after uploading "
+        log_warn(LD_DIR,"http status 400 (%s) response after uploading "
                  "vote to dirserver '%s:%d'. Please correct.",
                  escaped(reason), conn->_base.address, conn->_base.port);
         break;
@@ -1394,6 +1404,30 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         log_warn(LD_GENERAL,
              "http status %d (%s) reason unexpected while uploading "
              "vote to server '%s:%d').",
+             status_code, escaped(reason), conn->_base.address,
+             conn->_base.port);
+        break;
+    }
+    /* return 0 in all cases, since we don't want to mark any
+     * dirservers down just because they don't like us. */
+  }
+
+  if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_SIGNATURES) {
+    switch (status_code) {
+      case 200: {
+        log_notice(LD_DIR,"Uploaded a signatures to dirserver %s:%d",
+                   conn->_base.address, conn->_base.port);
+        }
+        break;
+      case 400:
+        log_warn(LD_DIR,"http status 400 (%s) response after uploading "
+                 "signatures to dirserver '%s:%d'. Please correct.",
+                 escaped(reason), conn->_base.address, conn->_base.port);
+        break;
+      default:
+        log_warn(LD_GENERAL,
+             "http status %d (%s) reason unexpected while uploading "
+             "signatures to server '%s:%d').",
              status_code, escaped(reason), conn->_base.address,
              conn->_base.port);
         break;
@@ -2118,6 +2152,16 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
     } else {
       tor_assert(msg);
       write_http_status_line(conn, 400, msg);
+    }
+    goto done;
+  }
+
+  if (authdir_mode_v3(options) &&
+      !strcmp(url,"/tor/post/consensus-signature")) { /* sigs on consensus. */
+    if (dirvote_add_signatures(body)>=0) {
+      write_http_status_line(conn, 200, "Signatures stored");
+    } else {
+      write_http_status_line(conn, 400, "Unable to store signatures");
     }
     goto done;
   }

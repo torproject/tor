@@ -375,10 +375,12 @@ typedef enum {
 #define DIR_PURPOSE_UPLOAD_VOTE 10
 /** A connection to a directory server: fetch a v3 networkstatus vote. */
 #define DIR_PURPOSE_FETCH_VOTE 11
+/** A connection to a directory server: upload a v3 consensus signature */
+#define DIR_PURPOSE_UPLOAD_SIGNATURES 12
 
 /** Purpose for connection at a directory server. */
-#define DIR_PURPOSE_SERVER 12
-#define _DIR_PURPOSE_MAX 12
+#define DIR_PURPOSE_SERVER 13
+#define _DIR_PURPOSE_MAX 13
 
 #define _EXIT_PURPOSE_MIN 1
 /** This exit stream wants to do an ordinary connect. */
