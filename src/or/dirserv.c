@@ -1739,6 +1739,9 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
 
   /* XXX020 k n lg n memcmps could show up bigtime in profiling. If
    * they do, I suggest we just give authorities a free pass. -RD */
+  /* I think we're fine.  Remember, in nearly all cases, the addresses
+   * will be different and we'll never actually reach this point. -NM */
+
   first_is_auth =
     router_digest_is_trusted_dir(first->cache_info.identity_digest);
   second_is_auth =
