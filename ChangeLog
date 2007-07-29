@@ -91,6 +91,8 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
       compatibility, ADDRMAP events only provide GMT expiry in an extended
       field. "GETINFO address-mappings" always does the right thing.
     - Use CRLF line endings properly in NS events.
+    - Terminate multi-line control events properly. (Original patch from tup.)
+      [Bugfix on 0.1.2.x-alpha]
 
   o Minor bugfixes (misc):
     - Choose perfectly fairly among routers when choosing by bandwidth and

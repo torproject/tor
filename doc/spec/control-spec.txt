@@ -64,7 +64,7 @@ $Id$
 
     Reply = SyncReply / AsyncReply
     SyncReply = *(MidReplyLine / DataReplyLine) EndReplyLine
-    AsyncReply = *MidReplyLine EndReplyLine / DataReplyLine
+    AsyncReply = *(MidReplyLine / DataReplyLine) EndReplyLine
 
     MidReplyLine = StatusCode "-" ReplyLine
     DataReplyLine = StatusCode "+" ReplyLine Data
@@ -954,7 +954,7 @@ $Id$
   The syntax is:
      "650" SP Severity SP ReplyText
   or
-     "650+" Severity CRLF Data
+     "650+" Severity CRLF Data 650 SP "OK" CRLF
 
      Severity = "DEBUG" / "INFO" / "NOTICE" / "WARN"/ "ERR"
 
@@ -985,7 +985,7 @@ $Id$
 
   Syntax:
      "650" "+" "AUTHDIR_NEWDESCS" CRLF Action CRLF Message CRLF
-       Descriptor CRLF "." CRLF
+       Descriptor CRLF "." CRLF "650" SP "OK" CRLF
      Action = "ACCEPTED" / "DROPPED" / "REJECTED"
      Message = Text
 
@@ -1316,7 +1316,7 @@ $Id$
 4.1.12. Network status has changed
 
   Syntax:
-     "650" "+" "NS" CRLF  1*NetworkStatus "." CRLF
+     "650" "+" "NS" CRLF  1*NetworkStatus "." CRLF "650" SP "OK" CRLF
 
   [First added in 0.1.2.3-alpha]
 

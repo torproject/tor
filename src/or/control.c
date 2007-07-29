@@ -3145,8 +3145,9 @@ control_event_or_authdir_new_descriptor(const char *action,
   strlcpy(buf, firstline, totallen);
   strlcpy(buf+strlen(firstline), esc, totallen);
   send_control_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_NAMES|ALL_FORMATS,
-                             buf);
-
+                            buf);
+  send_control_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_NAMES|ALL_FORMATS,
+                            "650 OK\r\n");
   tor_free(esc);
   tor_free(buf);
 
@@ -3178,6 +3179,9 @@ control_event_networkstatus_changed(smartlist_t *statuses)
   smartlist_free(strs);
   tor_free(s);
   send_control_event_string(EVENT_NS, ALL_NAMES|ALL_FORMATS, esc);
+  send_control_event_string(EVENT_NS, ALL_NAMES|ALL_FORMATS,
+                            "650 OK\r\n");
+
   tor_free(esc);
   return 0;
 }
