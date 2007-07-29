@@ -18,6 +18,10 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
     - Directory authorities now never mark more than 3 servers per IP as
       Valid and Running.  (Implements proposal 109, by Kevin Bauer and
       Damon McCoy.)
+    - Minor change to organizationName and commonName generation procedures
+      in certificates, to invalidate some earlier censorware approaches.
+      This is not a long-term solution, but applying it will give us a bit of
+      time to look into the epidemiology of countermeasures as they spread.
 
   o Major bugfixes (directory):
     - Rewrite directory tokenization code to never run off the end of
