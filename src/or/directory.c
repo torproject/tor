@@ -1817,6 +1817,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     return 0;
   }
 
+
   if (!strcmp(url,"/tor/running-routers") ||
       !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
     int deflated = !strcmp(url,"/tor/running-routers.z");
@@ -1856,25 +1857,35 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     return 0;
   }
 
-  if (!strcmpstart(url,"/tor/status/")) {
-    /* v2 network status fetch. */
+  if (!strcmpstart(url,"/tor/status/")
+      || !strcmp(url, "/tor/status-vote/current/consensus")
+      || !strcmp(url, "/tor/status-vote/current/consensus.z")) {
+    /* v2 or v3 network status fetch. */
     size_t url_len = strlen(url);
     int deflated = !strcmp(url+url_len-2, ".z");
     smartlist_t *dir_fps = smartlist_create();
+    int is_v3 = !strcmpstart(url, "/tor/status-vote");
     const char *request_type = NULL;
     const char *key = url + strlen("/tor/status/");
     if (deflated)
       url[url_len-2] = '\0';
-    dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
-    if (!strcmpstart(key, "fp/"))
-      request_type = deflated?"/tor/status/fp.z":"/tor/status/fp";
-    else if (!strcmpstart(key, "authority"))
-      request_type = deflated?"/tor/status/authority.z":
-        "/tor/status/authority";
-    else if (!strcmpstart(key, "all"))
-      request_type = deflated?"/tor/status/all.z":"/tor/status/all";
-    else
-      request_type = "/tor/status/?";
+    if (!is_v3) {
+      dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
+      if (!strcmpstart(key, "fp/"))
+        request_type = deflated?"/tor/status/fp.z":"/tor/status/fp";
+      else if (!strcmpstart(key, "authority"))
+        request_type = deflated?"/tor/status/authority.z":
+          "/tor/status/authority";
+      else if (!strcmpstart(key, "all"))
+        request_type = deflated?"/tor/status/all.z":"/tor/status/all";
+      else
+        request_type = "/tor/status/?";
+    } else {
+      smartlist_add(dir_fps, tor_memdup("\0\0\0\0\0\0\0\0\0\0"
+                                        "\0\0\0\0\0\0\0\0\0\0", 20));
+      request_type = deflated?"v3.z":"v3";
+    }
+
     tor_free(url);
     if (!smartlist_len(dir_fps)) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Network status object unavailable");

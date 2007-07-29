@@ -2759,10 +2759,13 @@ int dirserv_dump_directory_to_string(char **dir_out,
 void directory_set_dirty(void);
 cached_dir_t *dirserv_get_directory(void);
 cached_dir_t *dirserv_get_runningrouters(void);
+cached_dir_t *dirserv_get_consensus(void);
 void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
 void dirserv_set_cached_networkstatus_v2(const char *directory,
                                          const char *identity,
+                                         time_t published);
+void dirserv_set_cached_networkstatus_v3(const char *consensus,
                                          time_t published);
 void dirserv_clear_old_networkstatuses(time_t cutoff);
 void dirserv_clear_old_v1_info(time_t now);
@@ -2837,6 +2840,7 @@ typedef struct vote_timing_t {
 void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
 time_t dirvote_get_start_of_next_interval(time_t now, int interval);
 void dirvote_recalculate_timing(time_t now);
+void dirvote_act(time_t now);
 
 /* invoked on timers and by outside triggers. */
 void dirvote_perform_vote(void);
@@ -2845,6 +2849,7 @@ struct pending_vote_t * dirvote_add_vote(const char *vote_body,
                                          const char **msg_out);
 int dirvote_compute_consensus(void);
 int dirvote_add_signatures(const char *detached_signatures_body);
+int dirvote_publish_consensus(void);
 
 #ifdef DIRVOTE_PRIVATE
 int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
@@ -3419,6 +3424,7 @@ local_routerstatus_t *router_get_combined_status_by_descriptor_digest(
 /* for consensuses. */
 networkstatus_vote_t *networkstatus_get_latest_consensus(void);
 networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);
+int networkstatus_set_current_consensus(const char *consensus);
 
 //routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 int should_delay_dir_fetches(or_options_t *options);

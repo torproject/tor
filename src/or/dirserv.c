@@ -1079,6 +1079,9 @@ static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
  * cached_dir_t. */
 static digestmap_t *cached_v2_networkstatus = NULL;
 
+/** DOCDOC */
+static cached_dir_t *cached_v3_networkstatus = NULL;
+
 /** Possibly replace the contents of <b>d</b> with the value of
  * <b>directory</b> published on <b>when</b>, unless <b>when</b> is older than
  * the last value, or too far in the future.
@@ -1243,6 +1246,17 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
     if (d)
       cached_dir_decref(d);
   }
+}
+
+/* DOCDOC */
+void
+dirserv_set_cached_networkstatus_v3(const char *networkstatus,
+                                    time_t published)
+{
+  if (cached_v3_networkstatus)
+    cached_dir_decref(cached_v3_networkstatus);
+  cached_v3_networkstatus = new_cached_dir(
+                                  tor_strdup(networkstatus), published);
 }
 
 /** Remove any v2 networkstatus from the directory cache that was published
@@ -1444,6 +1458,12 @@ dirserv_get_runningrouters(void)
                          runningrouters_is_dirty,
                          generate_runningrouters,
                          "v1 network status list", V1_AUTHORITY);
+}
+
+cached_dir_t *
+dirserv_get_consensus(void)
+{
+  return cached_v3_networkstatus;
 }
 
 /** For authoritative directories: the current (v2) network status. */
@@ -2909,7 +2929,9 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
       /* Add another networkstatus; start serving it. */
       char *fp = smartlist_pop_last(conn->fingerprint_stack);
       cached_dir_t *d;
-      if (router_digest_is_me(fp))
+      if (tor_digest_is_zero(fp)) /* XXXX020 document this "feature". */
+        d = cached_v3_networkstatus;
+      else if (router_digest_is_me(fp))
         d = the_v2_networkstatus;
       else
         d = digestmap_get(cached_v2_networkstatus, fp);

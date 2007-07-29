@@ -3832,6 +3832,32 @@ networkstatus_get_live_consensus(time_t now)
   return current_consensus;
 }
 
+int
+networkstatus_set_current_consensus(const char *consensus)
+{
+  networkstatus_vote_t *c;
+  /* Make sure it's parseable. */
+  c = networkstatus_parse_vote_from_string(consensus, 0);
+  if (!c)
+    return -1;
+
+  /* Make sure it's signed enough. */
+  if (networkstatus_check_consensus_signature(c)<0) {
+    networkstatus_vote_free(c);
+    return -1;
+  }
+
+  if (current_consensus)
+    networkstatus_vote_free(current_consensus);
+
+  current_consensus = c;
+
+  if (get_options()->DirPort)
+    dirserv_set_cached_networkstatus_v3(consensus, c->valid_after);
+
+  return 0;
+}
+
 /** We believe networkstatuses more recent than this when they tell us that
  * our server is broken, invalid, obsolete, etc. */
 #define SELF_OPINION_INTERVAL (90*60)

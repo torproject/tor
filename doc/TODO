@@ -95,29 +95,30 @@ Things we'd like to do in 0.2.0.x:
           - Download as needed.
           o Actually invoke trusted_dirs_flush_certs_to_disk()
           - Serve list as needed.
-          * Detect whether votes are really all for the same period.
           o Avoid double-checking signatures every time we get a vote.
           - Warn about expired stuff.
           - Fix all XXXX020s in vote code
-          * Unit tests for detached signatures and signature manipulation.
         o Code to generate votes
         o Code to generate consensus from a list of votes
+          * Detect whether votes are really all for the same period.
         o Add a signature to a consensus.
+          * Unit tests for detached signatures and signature manipulation.
         o Code to check signatures on a consensus
         - Push/pull documents as appropriate.
-          . Push vote on voting
+          o Push vote on voting
             o Push vote
             o Process vote when received
               o Even if we get it before we start voting ourself.
-          * Push signature on forming consensus.
+          o Push signature on forming consensus.
             o Push signature
             o Add signatures when received
             o Queue received signatures before consensus is ready
-            * When consensus is ready, use queued signatures.
+            o When consensus is ready, use queued signatures.
           - Pull votes and signatures if we don't get them.
-        * Serve and store consensuses.
+        o Serve consensuses.
+        - Store consensuses
         - Cache votes and signatures on disk.
-        * Discard votes in advance of next voting period.
+        o Discard votes in advance of next voting period.
         o Have clients know which authorities are v3 authorities, and what
           their keys are.
           - While we're at it, let v3 authorities have fqdns lines.
@@ -140,6 +141,9 @@ Things we'd like to do in 0.2.0.x:
       - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol
     - 108: Base "Stable" Flag on Mean Time Between Failures
+      - Track mtbf in rephist.c
+      - Record mtbf between invocations
+      - Base stable on mtbf.
     o 109: No more than one server per IP address
     o 103: Splitting identity key from regularly used signing key
       o Merge with 101 into a new dir-spec.txt

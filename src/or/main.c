@@ -1006,6 +1006,10 @@ run_scheduled_events(time_t now)
     update_networkstatus_downloads(now);
   }
 
+  /** 2c. Let directory voting happen. */
+  if (authdir_mode_v3(options))
+    dirvote_act(now);
+
   /** 3a. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
    *    We do this before step 4, so it can try building more if

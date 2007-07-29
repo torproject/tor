@@ -13,6 +13,10 @@ const char dirvote_c_id[] =
  * \brief Functions to compute directory consensus, and schedule voting.
  **/
 
+static int dirvote_add_signatures_to_pending_consensus(
+                       const char *detached_signatures_body,
+                       const char **msg_out);
+
 /* =====
  * Voting and consensus generation
  * ===== */
@@ -721,6 +725,7 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
   int n_bad = 0;
   int n_unknown = 0;
   int n_no_signature = 0;
+  int n_required = 1; /* XXXX020 This is completely wrong. */
 
   tor_assert(! consensus->is_vote);
 
@@ -748,9 +753,10 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
       ++n_no_signature;
   });
 
-  /* XXXX020 actually use the result. */
-
-  return 0;
+  if (n_good > n_required)
+    return 0;
+  else
+    return -1;
 }
 
 /** DOCDOC */
@@ -1027,7 +1033,13 @@ static struct {
   time_t voting_starts;
   time_t voting_ends;
   time_t interval_starts;
-} voting_schedule;
+
+  time_t discard_old_votes;
+
+  int have_voted;
+  int have_built_consensus;
+  int have_published_consensus;
+} voting_schedule = {0,0,0,0,0,0,0};
 
 /** DOCDOC */
 void
@@ -1036,6 +1048,8 @@ dirvote_recalculate_timing(time_t now)
   int interval, vote_delay, dist_delay;
   time_t start;
   networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
+
+  memset(&voting_schedule, 0, sizeof(voting_schedule));
 
   if (consensus) {
     /* XXXX020 sanity-check these somewhere! */
@@ -1052,6 +1066,39 @@ dirvote_recalculate_timing(time_t now)
     dirvote_get_start_of_next_interval(now,interval);
   voting_schedule.voting_ends = start - vote_delay;
   voting_schedule.voting_starts = start - vote_delay - dist_delay;
+
+  voting_schedule.discard_old_votes = start + 600; /* XXXX020 */
+}
+
+/** DOCDOC */
+void
+dirvote_act(time_t now)
+{
+  if (!voting_schedule.voting_starts)
+    dirvote_recalculate_timing(now);
+  if (voting_schedule.voting_starts < now && !voting_schedule.have_voted) {
+    dirvote_perform_vote();
+    voting_schedule.have_voted = 1;
+  }
+  /* XXXX020 after a couple minutes here, start trying to fetch votes. */
+  if (voting_schedule.voting_ends < now &&
+      !voting_schedule.have_built_consensus) {
+    dirvote_compute_consensus();
+    /* XXXX020 we will want to try again later if we haven't got enough
+     * votes yet. */
+    voting_schedule.have_built_consensus = 1;
+  }
+  if (voting_schedule.interval_starts < now &&
+      !voting_schedule.have_published_consensus) {
+    dirvote_publish_consensus();
+    /* XXXX020 we will want to try again later if we haven't got enough
+     * signatures yet. */
+    voting_schedule.have_published_consensus = 1;
+  }
+  if (voting_schedule.discard_old_votes < now) {
+    dirvote_clear_pending_votes();
+    dirvote_recalculate_timing(now);
+  }
 }
 
 /** DOCDOC */
@@ -1240,6 +1287,19 @@ dirvote_compute_consensus(void)
     networkstatus_vote_free(pending_consensus);
   pending_consensus = consensus;
 
+  if (pending_consensus_signature_list) {
+    /* we may have gotten signatures for this consensus before we built
+     * it ourself.  Add them now. */
+    SMARTLIST_FOREACH(pending_consensus_signature_list, char *, sig,
+      {
+        const char *msg = NULL;
+        dirvote_add_signatures_to_pending_consensus(sig, &msg);
+        /* XXXX020 log result. */
+        tor_free(sig);
+      });
+    smartlist_clear(pending_consensus_signature_list);
+  }
+
   return 0;
  err:
   if (votes)
@@ -1323,6 +1383,19 @@ dirvote_add_signatures(const char *detached_signatures_body)
                   tor_strdup(detached_signatures_body));
     return 0;
   }
+}
+
+/** DOCDOC */
+int
+dirvote_publish_consensus(void)
+{
+  /* Can we actually publish it yet? */
+  if (!pending_consensus ||
+      networkstatus_check_consensus_signature(pending_consensus)<0)
+    return -1;
+
+  networkstatus_set_current_consensus(pending_consensus_body);
+  return 0;
 }
 
 /** Release all static storage held in dirvote.c */

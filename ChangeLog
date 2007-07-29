@@ -10,6 +10,12 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
     - Be even more aggressive about separating local traffic from relayed
       traffic when RelayBandwidthRate is set. (Refines proposal 111.)
 
+  o Major features (experimental):
+    - First cut of code for directory authorities to vote on a common
+      network status document rather than each publishing their own
+      opinion.  This code needs more testing and more corner-case handling
+      before it's ready for use.
+
   o Security fixes:
     - Directory authorities now call routers Fast if their bandwidth is
       at least 100KB/s, and consider their bandwidth adequate to be a
