@@ -1,4 +1,4 @@
-Changes in version 0.2.0.3-alpha - 2007-??-??
+Changes in version 0.2.0.3-alpha - 2007-07-29
   o Major features:
     - Create listener connections before we setuid to the configured
       User and Group. Now you can choose port values under 1024, start
