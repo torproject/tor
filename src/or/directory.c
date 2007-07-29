@@ -1817,7 +1817,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     return 0;
   }
 
-
   if (!strcmp(url,"/tor/running-routers") ||
       !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
     int deflated = !strcmp(url,"/tor/running-routers.z");

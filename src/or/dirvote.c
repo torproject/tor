@@ -1420,3 +1420,4 @@ dirvote_free_all(void)
     pending_consensus_signature_list = NULL;
   }
 }
+
