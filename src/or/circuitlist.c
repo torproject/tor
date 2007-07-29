@@ -904,22 +904,6 @@ circuit_expire_all_dirty_circs(void)
   }
 }
 
-/** Return 1 if there are any origin circuits that use
- * <b>conn</b> as there first hop. Else return 0. */
-static int
-circuit_any_origin_circs_on_conn(or_connection_t *conn)
-{
-  circuit_t *circ;
-
-  for (circ=global_circuitlist; circ; circ = circ->next) {
-    if (CIRCUIT_IS_ORIGIN(circ) &&
-        !circ->marked_for_close &&
-        circ->n_conn == conn)
-      return 1;
-  }
-  return 0;
-}
-
 /** Mark <b>circ</b> to be closed next time we call
  * circuit_close_all_marked(). Do any cleanup needed:
  *   - If state is onionskin_pending, remove circ from the onion_pending
@@ -1044,12 +1028,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   circ->marked_for_close = line;
   circ->marked_for_close_file = file;
 
-  if (CIRCUIT_IS_ORIGIN(circ)) {
-    if (circ->n_conn && circ->n_conn->client_used) {
-      circ->n_conn->client_used =
-        circuit_any_origin_circs_on_conn(circ->n_conn);
-    }
-  } else {
+  if (!CIRCUIT_IS_ORIGIN(circ)) {
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
     if (or_circ->rend_splice) {
       if (!or_circ->rend_splice->_base.marked_for_close) {

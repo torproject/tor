@@ -505,6 +505,11 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
   log_debug(LD_OR,"delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
+  if (cell_direction == CELL_DIRECTION_OUT && circ->n_conn) {
+    /* if we're using relaybandwidthrate, this conn wants priority */
+    circ->n_conn->client_used = time(NULL);
+  }
+
   if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer)
       < 0) {
     log_warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");

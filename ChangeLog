@@ -7,6 +7,8 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
     - New ConstrainedSockets option to set SO_SNDBUF and SO_RCVBUF on TCP
       sockets. Hopefully useful for Tor servers running on "vserver"
       accounts. (Patch from coderman.)
+    - Be even more aggressive about separating local traffic from relayed
+      traffic when RelayBandwidthRate is set. (Refines proposal 111.)
 
   o Security fixes:
     - Directory authorities now call routers Fast if their bandwidth is

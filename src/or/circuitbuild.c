@@ -502,7 +502,7 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
   append_cell_to_circuit_queue(circ, circ->n_conn, &cell, CELL_DIRECTION_OUT);
 
   /* mark it so it gets better rate limiting treatment. */
-  circ->n_conn->client_used = 1;
+  circ->n_conn->client_used = time(NULL);
 
   return 0;
 }

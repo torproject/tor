@@ -1372,14 +1372,19 @@ extern int global_relayed_read_bucket, global_relayed_write_bucket;
  * tokens we just put in. */
 static int write_buckets_empty_last_second = 0;
 
+/** How many seconds of no active local circuits will make the
+ * connection revert to the "relayed" bandwidth class? */
+#define CLIENT_IDLE_TIME_FOR_PRIORITY 30
+
 /** Return 1 if <b>conn</b> should use tokens from the "relayed"
  * bandwidth rates, else 0. Currently, only OR conns with bandwidth
  * class 1, and directory conns that are serving data out, count.
  */
 static int
-connection_counts_as_relayed_traffic(connection_t *conn)
+connection_counts_as_relayed_traffic(connection_t *conn, time_t now)
 {
-  if (conn->type == CONN_TYPE_OR && !TO_OR_CONN(conn)->client_used)
+  if (conn->type == CONN_TYPE_OR &&
+      TO_OR_CONN(conn)->client_used + CLIENT_IDLE_TIME_FOR_PRIORITY < now)
     return 1;
   if (conn->type == CONN_TYPE_DIR && DIR_CONN_IS_SERVER(conn))
     return 1;
@@ -1441,7 +1446,7 @@ connection_bucket_read_limit(connection_t *conn)
     return conn_bucket>=0 ? conn_bucket : 1<<14;
   }
 
-  if (connection_counts_as_relayed_traffic(conn) &&
+  if (connection_counts_as_relayed_traffic(conn, time(NULL)) &&
       global_relayed_read_bucket <= global_read_bucket)
     global_bucket = global_relayed_read_bucket;
 
@@ -1463,7 +1468,7 @@ connection_bucket_write_limit(connection_t *conn)
     return conn->outbuf_flushlen;
   }
 
-  if (connection_counts_as_relayed_traffic(conn) &&
+  if (connection_counts_as_relayed_traffic(conn, time(NULL)) &&
       global_relayed_write_bucket <= global_write_bucket)
     global_bucket = global_relayed_write_bucket;
 
@@ -1536,7 +1541,7 @@ connection_buckets_decrement(connection_t *conn, time_t now,
   if (num_written > 0)
     rep_hist_note_bytes_written(num_written, now);
 
-  if (connection_counts_as_relayed_traffic(conn)) {
+  if (connection_counts_as_relayed_traffic(conn, now)) {
     global_relayed_read_bucket -= num_read;
     global_relayed_write_bucket -= num_written;
   }
@@ -1555,7 +1560,7 @@ connection_consider_empty_read_buckets(connection_t *conn)
 
   if (global_read_bucket <= 0) {
     reason = "global read bucket exhausted. Pausing.";
-  } else if (connection_counts_as_relayed_traffic(conn) &&
+  } else if (connection_counts_as_relayed_traffic(conn, time(NULL)) &&
              global_relayed_read_bucket <= 0) {
     reason = "global relayed read bucket exhausted. Pausing.";
   } else if (connection_speaks_cells(conn) &&
@@ -1579,7 +1584,7 @@ connection_consider_empty_write_buckets(connection_t *conn)
 
   if (global_write_bucket <= 0) {
     reason = "global write bucket exhausted. Pausing.";
-  } else if (connection_counts_as_relayed_traffic(conn) &&
+  } else if (connection_counts_as_relayed_traffic(conn, time(NULL)) &&
              global_relayed_write_bucket <= 0) {
     reason = "global relayed write bucket exhausted. Pausing.";
 #if 0
@@ -1632,6 +1637,7 @@ connection_bucket_refill(int seconds_elapsed)
   or_options_t *options = get_options();
   smartlist_t *conns = get_connection_array();
   int relayrate, relayburst;
+  time_t now = time(NULL);
 
   if (options->RelayBandwidthRate) {
     relayrate = (int)options->RelayBandwidthRate;
@@ -1678,7 +1684,7 @@ connection_bucket_refill(int seconds_elapsed)
 
     if (conn->read_blocked_on_bw == 1 /* marked to turn reading back on now */
         && global_read_bucket > 0 /* and we're allowed to read */
-        && (!connection_counts_as_relayed_traffic(conn) ||
+        && (!connection_counts_as_relayed_traffic(conn, now) ||
             global_relayed_read_bucket > 0) /* even if we're relayed traffic */
         && (!connection_speaks_cells(conn) ||
             conn->state != OR_CONN_STATE_OPEN ||
@@ -1692,7 +1698,7 @@ connection_bucket_refill(int seconds_elapsed)
 
     if (conn->write_blocked_on_bw == 1
         && global_write_bucket > 0 /* and we're allowed to write */
-        && (!connection_counts_as_relayed_traffic(conn) ||
+        && (!connection_counts_as_relayed_traffic(conn, now) ||
             global_relayed_write_bucket > 0)) {
             /* even if we're relayed traffic */
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,

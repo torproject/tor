@@ -845,9 +845,9 @@ typedef struct or_connection_t {
 
   tor_tls_t *tls; /**< TLS connection state. */
   int tls_error; /**< Last tor_tls error code. */
-  /** Whether we are using this conn for any client traffic. If we're
-   * not, we can rate limit it further. */
-  uint8_t client_used:1;
+  /** When we last used this conn for any client traffic. If not
+   * recent, we can rate limit it further. */
+  time_t client_used;
 
   circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
                                   * connection, which half of the space should

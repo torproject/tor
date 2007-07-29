@@ -118,20 +118,35 @@ Some options:
   (Gosh. How could UDP designs possibly be compatible with rate limiting
   with multiple bucket sizes?)
 
-  Option 4: ?
+  Option 4: put both classes of circuits over a single connection, and
+  keep track of the last time we read or wrote a high-priority cell. If
+  it's been less than N seconds, give the whole connection high priority,
+  else give the whole connection low priority.
+
+  Option 5: put both classes of circuits over a single connection, and
+  play a complex juggling game by periodically telling the remote side
+  what rate limits to set for that connection, so you end up giving
+  priority to the right connections but still stick to roughly your
+  intended bandwidthrate and relaybandwidthrate.
+
+  Option 6: ?
 
 Prognosis:
 
-  Of the above options, only option 2 can actually be built and achieve
-  what we want. So that's it by default, unless we can come up with
-  something better.
+  Nick really didn't like option 2 because of the partitioning questions.
 
-  In terms of implementation, it will be easy: just add a bit to
-  or_connection_t that specifies priority_traffic (used by the initiator
-  of the connection to ignore that connection when relaying a create
-  request), and another bit that specifies client_only (used by a
-  receiving Tor server so it can ignore that connection when sending
-  create requests).
+  I've put option 4 into place as of Tor 0.2.0.3-alpha.
 
-[Not writing the rest of the proposal until we sort out which option
-we'll take.]
+  In terms of implementation, it will be easy: just add a time_t to
+  or_connection_t that specifies client_used (used by the initiator
+  of the connection to rate limit it differently depending on how
+  recently the time_t was reset). We currently update client_used
+  in three places:
+    - command_process_relay_cell() when we receive a relay cell for
+      an origin circuit.
+    - relay_send_command_from_edge() when we send a relay cell for
+      an origin circuit.
+    - circuit_deliver_create_cell() when send a create cell.
+  We could probably remove the third case and it would still work,
+  but hey.
+

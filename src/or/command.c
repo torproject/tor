@@ -322,6 +322,12 @@ command_process_relay_cell(cell_t *cell, or_connection_t *conn)
     return;
   }
 
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    /* if we're a server and treating connections with recent local
+     * traffic better, then this is one of them. */
+    conn->client_used = time(NULL);
+  }
+
   if (!CIRCUIT_IS_ORIGIN(circ) &&
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id)
     direction = CELL_DIRECTION_OUT;
