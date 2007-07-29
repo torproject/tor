@@ -1728,6 +1728,7 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
 {
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   int first_is_auth, second_is_auth;
+  uint32_t bw_first, bw_second;
 
   /* we return -1 if first should appear before second... that is,
    * if first is a better router. */
@@ -1736,6 +1737,8 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
   else if (first->addr > second->addr)
     return 1;
 
+  /* XXX020 k n lg n memcmps could show up bigtime in profiling. If
+   * they do, I suggest we just give authorities a free pass. -RD */
   first_is_auth =
     router_digest_is_trusted_dir(first->cache_info.identity_digest);
   second_is_auth =
@@ -1751,12 +1754,17 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
   else if (!first->is_running && second->is_running)
     return 1;
 
-  else if (first->bandwidthrate > second->bandwidthrate)
-    return -1;
-  else if (first->bandwidthrate < second->bandwidthrate)
+  bw_first = router_get_advertised_bandwidth(first);
+  bw_second = router_get_advertised_bandwidth(second);
+
+  if (bw_first > bw_second)
+     return -1;
+  else if (bw_first < bw_second)
     return 1;
-  else
-    return 0;
+
+  /* They're equal! Compare by identity digest, so there's a
+   * deterministic order and we avoid flapping. */
+  return _compare_routerinfo_by_id_digest(a, b);
 }
 
 /** DOCDOC takes list of routerinfo */
