@@ -2260,7 +2260,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
 #else
   if (v_family == AF_INET6 && v4map) {
     v_family = AF_INET;
-    IN_ADDR(addr_out).s_addr = IN6_ADDR(addr_out).s6_addr32[3];
+    IN4_ADDR(addr_out).s_addr = IN6_ADDR(addr_out).s6_addr32[3];
   }
 #endif
 */
@@ -2391,7 +2391,7 @@ tor_addr_is_null(const tor_addr_t *addr)
         return 1;
       return 0;
     case AF_INET:
-      if (!IN_ADDR(addr)->s_addr)
+      if (!IN4_ADDR(addr)->s_addr)
         return 1;
       return 0;
     default:
@@ -2556,7 +2556,7 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, int len)
   tor_assert(addr && dest);
 
   if (IN_FAMILY(addr) == AF_INET) {
-    return tor_inet_ntop(AF_INET, IN_ADDR(addr), dest, len);
+    return tor_inet_ntop(AF_INET, IN4_ADDR(addr), dest, len);
   } else if (IN_FAMILY(addr) == AF_INET6) {
     return tor_inet_ntop(AF_INET6, IN6_ADDR(addr), dest, len);
   } else {
