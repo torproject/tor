@@ -3,6 +3,15 @@
 
   http://tor-buildbot.freehaven.net:8010/
 
+0.1. Useful command-lines that are non-trivial to reproduce but can
+help with tracking bugs or leaks.
+
+dmalloc -l ~/dmalloc.log
+(run the commands it tells you)
+./configure --with-dmalloc
+
+valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
+
 1. Coding conventions
 
 1.0. Whitespace and C conformance
