@@ -140,7 +140,7 @@ Things we'd like to do in 0.2.0.x:
       - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol
     - 108: Base "Stable" Flag on Mean Time Between Failures
-    - 109: No more than one server per IP address
+    o 109: No more than one server per IP address
     o 103: Splitting identity key from regularly used signing key
       o Merge with 101 into a new dir-spec.txt
     - 113: Simplifying directory authority administration

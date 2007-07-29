@@ -968,7 +968,13 @@ $Id$
    Directory server administrators may label some servers or IPs as
    blacklisted, and elect not to include them in their network-status lists.
 
-   Thus, the network-status list includes all non-blacklisted,
+   Authorities SHOULD 'disable' any servers in excess of 3 on any single
+   IP.  When there are more than 3 to choose from, authorities should first
+   prefer Running to non-Running, and then prefer high-bandwidth to
+   low-bandwidth.  To 'disable' a server, the authority *should* advertise
+   it without the Running or Valid flag.
+
+   Thus, the network-status vote includes all non-blacklisted,
    non-expired, non-superseded descriptors.
 
 3.4. Computing a consensus from a set of votes

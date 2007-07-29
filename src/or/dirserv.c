@@ -1719,6 +1719,61 @@ _compare_routerinfo_by_id_digest(const void **a, const void **b)
                 DIGEST_LEN);
 }
 
+/** DOCDOC
+ *
+ * sort first by addr, and then by descending order of usefulness.
+ **/
+static int
+_compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
+{
+  routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
+  /* we return -1 if first should appear before second... that is,
+   * if first is a better router. */
+  if (first->addr < second->addr)
+    return -1;
+  else if (first->addr > second->addr)
+    return 1;
+  else if (first->is_running && !second->is_running)
+    return -1;
+  else if (!first->is_running && second->is_running)
+    return 1;
+  else if (first->bandwidthrate > second->bandwidthrate)
+    return -1;
+  else if (first->bandwidthrate < second->bandwidthrate)
+    return 1;
+  else
+    return 0;
+}
+
+/** DOCDOC takes list of routerinfo */
+static digestmap_t *
+get_possible_sybil_list(const smartlist_t *routers)
+{
+  digestmap_t *omit_as_sybil;
+  smartlist_t *routers_by_ip = smartlist_create();
+  uint32_t last_addr;
+  int addr_count;
+  smartlist_add_all(routers_by_ip, routers);
+  smartlist_sort(routers_by_ip, _compare_routerinfo_by_ip_and_bw);
+  omit_as_sybil = digestmap_new();
+
+#define MAX_WITH_SAME_ADDR 3
+  last_addr = 0;
+  addr_count = 0;
+  SMARTLIST_FOREACH(routers_by_ip, routerinfo_t *, ri,
+    {
+      if (last_addr != ri->addr) {
+        last_addr = ri->addr;
+        addr_count = 1;
+      } else if (++addr_count > MAX_WITH_SAME_ADDR) {
+        digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+      }
+    });
+
+  smartlist_free(routers_by_ip);
+  return omit_as_sybil;
+}
+
 /** DOCDOC */
 static void
 set_routerstatus_from_routerinfo(routerstatus_t *rs,
@@ -1795,6 +1850,7 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   networkstatus_voter_info_t *voter = NULL;
   vote_timing_t timing;
+  digestmap_t *omit_as_sybil = NULL;
 
   /* check that everything is deallocated XXXX020 */
 
@@ -1838,6 +1894,7 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   routers = smartlist_create();
   smartlist_add_all(routers, rl->routers);
   smartlist_sort(routers, _compare_routerinfo_by_id_digest);
+  omit_as_sybil = get_possible_sybil_list(routers);
 
   routerstatuses = smartlist_create();
 
@@ -1852,11 +1909,18 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                        naming, exits_can_be_guards,
                                        listbadexits);
 
+      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
+        rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
+          rs->is_running = rs->is_named = rs->is_valid = rs->is_v2_dir =
+          rs->is_possible_guard = 0;
+      }
+
       vrs->version = version_from_platform(ri->platform);
       smartlist_add(routerstatuses, vrs);
     }
   });
   smartlist_free(routers);
+  digestmap_free(omit_as_sybil, NULL);
 
   tor_assert(v3_out);
   memset(v3_out, 0, sizeof(networkstatus_vote_t));
@@ -2161,6 +2225,7 @@ generate_networkstatus_opinion(int v2)
   const char *contact;
   char *version_lines = NULL;
   smartlist_t *routers = NULL;
+  digestmap_t *omit_as_sybil = NULL;
 
   if (!v2)
     return generate_v3_networkstatus();
@@ -2246,6 +2311,8 @@ generate_networkstatus_opinion(int v2)
   smartlist_add_all(routers, rl->routers);
   smartlist_sort(routers, _compare_routerinfo_by_id_digest);
 
+  omit_as_sybil = get_possible_sybil_list(routers);
+
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on >= cutoff) {
       routerstatus_t rs;
@@ -2254,6 +2321,12 @@ generate_networkstatus_opinion(int v2)
       set_routerstatus_from_routerinfo(&rs, ri, now,
                                        naming, exits_can_be_guards,
                                        listbadexits);
+
+      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
+        rs.is_authority = rs.is_exit = rs.is_stable = rs.is_fast =
+          rs.is_running = rs.is_named = rs.is_valid = rs.is_v2_dir =
+          rs.is_possible_guard = 0;
+      }
 
       if (routerstatus_format_entry(outp, endp-outp, &rs, version, 0)) {
         log_warn(LD_BUG, "Unable to print router status.");
@@ -2311,6 +2384,8 @@ generate_networkstatus_opinion(int v2)
   tor_free(identity_pkey);
   if (routers)
     smartlist_free(routers);
+  if (omit_as_sybil)
+    digestmap_free(omit_as_sybil, NULL);
   return r;
 }
 

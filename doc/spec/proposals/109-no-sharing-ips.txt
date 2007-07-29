@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Kevin Bauer & Damon McCoy
 Created: 9-March-2007
-Status: Accepted
+Status: Closed
 
 Overview:
   This document describes a solution to a Sybil attack vulnerability in the
@@ -34,14 +34,19 @@ Specification:
   For each IP address, each directory authority tracks the number of routers
   using that IP address, along with their total observed bandwidth.  If there
   are more than MAX_SERVERS_PER_IP servers at some IP, the authority should
-  "disable" all but MAX_SERVERS_PER_IP servers.  If the total observed
+  "disable" all but MAX_SERVERS_PER_IP servers.  When choosing which servers
+  to disable, the authority should first disable non-Running servers in
+  increasing order of observed bandwidth, and then should disable Running
+  servers in increasing order of bandwidth.
+
+  [[  We don't actually do this part here. -NM
+
+  If the total observed
   bandwidth of the remaining non-"disabled" servers exceeds MAX_BW_PER_IP,
   the authority should "disable" some of the remaining servers until only one
   server remains, or until the remaining observed bandwidth of non-"disabled"
-  servers is under MAX_BW_PER_IP.  When choosing which servers to disable,
-  the authority should first disable non-Running servers in increasing order
-  of observed bandwidth, and then should disable Running servers in
-  increasing order of bandwidth.
+  servers is under MAX_BW_PER_IP.
+  ]]
 
   Servers that are "disabled" MUST be marked as non-Valid and non-Running.
 

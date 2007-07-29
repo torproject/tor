@@ -13,6 +13,9 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
       at least 100KB/s, and consider their bandwidth adequate to be a
       Guard if it is at least 250KB/s, no matter the medians. This fix
       complements proposal 107. [Bugfix on 0.1.2.x]
+    - Directory authorities now never mark more than 3 servers per IP as
+      Valid and Running.  (Implements proposal 109, by Kevin Bauer and
+      Damon McCoy.)
 
   o Major bugfixes (directory):
     - Rewrite directory tokenization code to never run off the end of
