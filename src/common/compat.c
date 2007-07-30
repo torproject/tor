@@ -1023,9 +1023,12 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
 }
 
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
- * *<b>addr</b> to the proper IP address and family.
+ * *<b>addr</b> to the proper IP address and family. The <b>family</b>
+ * argument (which must be AF_INET, AF_INET6, or AF_UNSPEC) declares a
+ * <i>preferred</i> family, though another one may be returned if only one
+ * family is implemented for this address.
+ *
  * Return 0 on success, -1 on failure; 1 on transient failure.
- * DOCDOC family argument.
  */
 int
 tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)

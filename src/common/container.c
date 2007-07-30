@@ -196,7 +196,8 @@ smartlist_string_isin(const smartlist_t *sl, const char *element)
   return 0;
 }
 
-/** DOCDOC */
+/** If <b>element</b> is equal to an element of <b>sl</b>, return that
+ * element's index.  Otherwise, return -1. */
 int
 smartlist_string_pos(const smartlist_t *sl, const char *element)
 {

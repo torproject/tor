@@ -2170,9 +2170,14 @@ parse_addr_and_port_range(const char *s, uint32_t *addr_out,
  *  <b>addr_out</b>, a mask (if any) in <b>mask_out</b>, and port(s) (if any)
  *  in <b>port_min_out</b> and <b>port_max_out</b>.
  *
- * DOCDOC exact syntax.
+ * The syntax is:
+ *   Address OptMask OptPortRange
+ *   Address ::= IPv4Address / "[" IPv6Address "]" / "*"
+ *   OptMask ::= "/" Integer /
+ *   OptPortRange ::= ":*" / ":" Integer / ":" Integer "-" Integer /
  *
- *  - If mask, minport, or maxport are NULL, avoid storing those elements.
+ *  - If mask, minport, or maxport are NULL, we do not want these
+ *    options to be set; treat them as an error if present.
  *  - If the string has no mask, the mask is set to /32 (IPv4) or /128 (IPv6).
  *  - If the string has one port, it is placed in both min and max port
  *    variables.
@@ -2439,17 +2444,20 @@ tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src)
   memcpy(dest, src, sizeof(tor_addr_t));
 }
 
-/** DOCDOC */
+/** Given two addresses <b>addr1</b> and <b>addr2</b>, return 0 if the two
+ * addresses are equivalent under the mask mbits, less than 0 if addr1
+ * preceeds addr2, and greater than 0 otherwise.
+ *
+ * Different address families (IPv4 vs IPv6) are always considered unequal.
+ */
 int
 tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2)
 {
   return tor_addr_compare_masked(addr1, addr2, 128);
 }
 
-/** Given two addresses <b>addr1</b> and <b>addr2</b>, return 0 if the two
- * addresses are equivalent under the mask mbits, or nonzero if not.
- *
- * Different address families (IPv4 vs IPv6) are always considered unequal.
+/** As tor_addr_compare(), but only looks at the first <b>mask</b> bits of
+ * the address.
  *
  * Reduce over-specific masks (>128 for ipv6, >32 for ipv4) to 128 or 32.
  */
@@ -2463,6 +2471,11 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
   uint32_t masked_a, masked_b;
 
   tor_assert(addr1 && addr2);
+
+  /* XXXX020 this code doesn't handle mask bits right it's using v4-mapped v6
+   * addresses.  If I ask whether ::ffff:1.2.3.4 and ::ffff:1.2.7.8 are the
+   * same in the first 16 bits, it will say "yes."  That's not so intuitive.
+   */
 
   v_family[0] = IN_FAMILY(addr1);
   v_family[1] = IN_FAMILY(addr2);
@@ -2548,7 +2561,8 @@ tor_dup_addr(uint32_t addr)
 }
 
 /** Convert the tor_addr_t *<b>addr</b> into string form and store it in
- * <b>dest</b> (no more than <b>len</b> bytes). DOCDOC return value.
+ * <b>dest</b>, which can hold at least <b>len</b> bytes.  Returns <b>dest</b>
+ * on success, NULL on failure.
  */
 const char *
 tor_addr_to_str(char *dest, const tor_addr_t *addr, int len)
