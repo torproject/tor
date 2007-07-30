@@ -1427,7 +1427,7 @@ connection_bucket_round_robin(int base, int priority,
 
 /** How many bytes at most can we read onto this connection? */
 static int
-connection_bucket_read_limit(connection_t *conn)
+connection_bucket_read_limit(connection_t *conn, time_t now)
 {
   int base = connection_speaks_cells(conn) ?
                CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
@@ -1446,7 +1446,7 @@ connection_bucket_read_limit(connection_t *conn)
     return conn_bucket>=0 ? conn_bucket : 1<<14;
   }
 
-  if (connection_counts_as_relayed_traffic(conn, time(NULL)) &&
+  if (connection_counts_as_relayed_traffic(conn, now) &&
       global_relayed_read_bucket <= global_read_bucket)
     global_bucket = global_relayed_read_bucket;
 
@@ -1456,7 +1456,7 @@ connection_bucket_read_limit(connection_t *conn)
 
 /** How many bytes at most can we write onto this connection? */
 int
-connection_bucket_write_limit(connection_t *conn)
+connection_bucket_write_limit(connection_t *conn, time_t now)
 {
   int base = connection_speaks_cells(conn) ?
                CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
@@ -1468,7 +1468,7 @@ connection_bucket_write_limit(connection_t *conn)
     return conn->outbuf_flushlen;
   }
 
-  if (connection_counts_as_relayed_traffic(conn, time(NULL)) &&
+  if (connection_counts_as_relayed_traffic(conn, now) &&
       global_relayed_write_bucket <= global_write_bucket)
     global_bucket = global_relayed_write_bucket;
 
@@ -1632,12 +1632,11 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
 
 /** A second has rolled over; increment buckets appropriately. */
 void
-connection_bucket_refill(int seconds_elapsed)
+connection_bucket_refill(int seconds_elapsed, time_t now)
 {
   or_options_t *options = get_options();
   smartlist_t *conns = get_connection_array();
   int relayrate, relayburst;
-  time_t now = time(NULL);
 
   if (options->RelayBandwidthRate) {
     relayrate = (int)options->RelayBandwidthRate;
@@ -1847,7 +1846,8 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
 
   if (at_most == -1) { /* we need to initialize it */
     /* how many bytes are we allowed to read? */
-    at_most = connection_bucket_read_limit(conn);
+    /* XXXX020 too many calls to time(). Do they hurt? */
+    at_most = connection_bucket_read_limit(conn, time(NULL));
   }
 
   bytes_in_buf = buf_capacity(conn->inbuf) - buf_datalen(conn->inbuf);
@@ -2074,7 +2074,7 @@ connection_handle_write(connection_t *conn, int force)
   }
 
   max_to_write = force ? (int)conn->outbuf_flushlen
-    : connection_bucket_write_limit(conn);
+    : connection_bucket_write_limit(conn, now);
 
   if (connection_speaks_cells(conn) &&
       conn->state > OR_CONN_STATE_PROXY_READING) {

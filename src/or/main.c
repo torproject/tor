@@ -564,18 +564,20 @@ conn_close_if_marked(int i)
 {
   connection_t *conn;
   int retval;
+  time_t now;
 
   conn = smartlist_get(connection_array, i);
   if (!conn->marked_for_close)
     return 0; /* nothing to see here, move along */
-  assert_connection_ok(conn, time(NULL));
+  now = time(NULL);
+  assert_connection_ok(conn, now);
   assert_all_pending_dns_resolves_ok();
 
   log_debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
   if ((conn->s >= 0 || conn->linked_conn) && connection_wants_to_flush(conn)) {
     /* s == -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
-    int sz = connection_bucket_write_limit(conn);
+    int sz = connection_bucket_write_limit(conn, now);
     if (!conn->hold_open_until_flushed)
       log_info(LD_NET,
                "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "
@@ -1143,7 +1145,7 @@ second_elapsed_callback(int fd, short event, void *args)
   control_event_stream_bandwidth_used();
 
   if (seconds_elapsed > 0)
-    connection_bucket_refill(seconds_elapsed);
+    connection_bucket_refill(seconds_elapsed, now.tv_sec);
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 

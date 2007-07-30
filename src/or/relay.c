@@ -507,6 +507,7 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
 
   if (cell_direction == CELL_DIRECTION_OUT && circ->n_conn) {
     /* if we're using relaybandwidthrate, this conn wants priority */
+    /* XXXX020 the call to time() seems little too frequent */
     circ->n_conn->client_used = time(NULL);
   }
 

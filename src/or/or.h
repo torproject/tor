@@ -2422,10 +2422,10 @@ int connection_connect(connection_t *conn, const char *address, uint32_t addr,
 int retry_all_listeners(smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
-int connection_bucket_write_limit(connection_t *conn);
+int connection_bucket_write_limit(connection_t *conn, time_t now);
 int global_write_bucket_low(connection_t *conn, size_t attempt, int priority);
 void connection_bucket_init(void);
-void connection_bucket_refill(int seconds_elapsed);
+void connection_bucket_refill(int seconds_elapsed, time_t now);
 
 int connection_handle_read(connection_t *conn);
 
