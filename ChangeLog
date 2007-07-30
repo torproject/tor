@@ -4,7 +4,8 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
       are implemented. People can run bridge directory authorities;
       people can run bridges; and people can configure their Tor clients
       with a set of bridges to use as the first hop into the Tor network.
-      See http://archives for details.
+      See http://archives.seul.org/or/talk/Jul-2007/msg00249.html for
+      details.
     - Create listener connections before we setuid to the configured
       User and Group. Now non-Windows users can choose port values
       under 1024, start Tor as root, and have Tor bind those ports
