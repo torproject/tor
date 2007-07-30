@@ -756,6 +756,10 @@ config_free_all(void)
 const char *
 safe_str(const char *address)
 {
+  if (!address) { /* XXX020 eventually turn this into an assert */
+    log_warn(LD_BUG, "safe_str() called with NULL address.");
+    return "EMPTY";
+  }
   if (get_options()->SafeLogging)
     return "[scrubbed]";
   else
