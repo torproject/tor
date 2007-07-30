@@ -486,7 +486,13 @@ buf_remove_from_front(buf_t *buf, size_t n)
   if (buf->datalen) {
     buf->cur = _wrap_ptr(buf, buf->cur+n);
   } else {
-    buf->cur = buf->mem;
+    if (IS_FREELIST_SIZE(buf->len)) {
+      buf->highwater = 0;
+      if (add_buf_mem_to_freelist(buf))
+        return;
+    } else {
+      buf->cur = buf->mem;
+    }
   }
   check();
 }

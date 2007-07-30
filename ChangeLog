@@ -1,3 +1,10 @@
+Changes in version 0.2.0.4-alpha - 2007-??-??
+  o Minor features (performance):
+    - Be even more aggressive about releasing RAM from small
+      empty buffers. Thanks to our free-list code, this shouldn't be too
+      performance-intensive.
+
+
 Changes in version 0.2.0.3-alpha - 2007-07-29
   o Major features:
     - The first pieces of our "bridge" design for blocking-resistance
