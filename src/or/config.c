@@ -2634,7 +2634,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "extra-info documents. Setting DownloadExtraInfo.");
       options->DownloadExtraInfo = 1;
     }
-    /* XXXX020 Check that at least one of Bridge/HS/V1/V2/V2{AoritativeDir}
+    /* XXXX020 Check that at least one of Bridge/HS/V1/V2/V2{AuthoritativeDir}
      * is set. */
   }
 
