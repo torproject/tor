@@ -1962,7 +1962,7 @@ connection_ap_make_link(char *address, uint16_t port,
                   digest, DIGEST_LEN);
   }
 
-  conn->_base.address = tor_strdup("(local link)");
+  conn->_base.address = tor_strdup("(Tor_internal)");
   conn->_base.addr = 0;
   conn->_base.port = 0;
 
