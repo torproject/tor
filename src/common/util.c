@@ -213,6 +213,24 @@ _tor_free(void *mem)
   tor_free(mem);
 }
 
+/** DOCDOC */
+void
+tor_log_mallinfo(int severity)
+{
+#ifdef HAVE_MALLINFO
+  struct mallinfo mi;
+  memset(&mi, 0, sizeof(mi));
+  mi = mallinfo();
+  log(severity, LD_MM,
+      "mallinfo() said: arena=%d, ordblks=%d, smblks=%d, hblks=%d, "
+      "hblkhd=%d, usmblks=%d, fsmblks=%d, uordblks=%d, fordblks=%d, "
+      "keepcost=%d",
+      mi.arena, mi.ordblks, mi.smblks, mi.hblks,
+      mi.hblkhd, mi.usmblks, mi.fsmblks, mi.uordblks, mi.fordblks,
+      mi.keepcost);
+#endif
+}
+
 /* =====
  * Math
  * ===== */

@@ -1550,6 +1550,7 @@ dumpmemusage(int severity)
   dump_routerlist_mem_usage(severity);
   dump_cell_pool_usage(severity);
   buf_dump_freelist_sizes(severity);
+  tor_log_mallinfo(severity);
 }
 
 /** Write all statistics to the log, with log level 'severity'.  Called

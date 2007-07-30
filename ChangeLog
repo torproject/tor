@@ -3,11 +3,13 @@ Changes in version 0.2.0.4-alpha - 2007-??-??
     - Be even more aggressive about releasing RAM from small
       empty buffers. Thanks to our free-list code, this shouldn't be too
       performance-intensive.
-    - Disable sentiel-based debugging for buffer code: we squashed all
+    - Disable sentinel-based debugging for buffer code: we squashed all
       the bugs that this was supposed to detect a long time ago, and
       now its only effect is to change our buffer sizes from nice
       powers of two (which platform mallocs tend to like) to values
       siightly over powers of two (which make some platform mallocs sad).
+    - Log malloc statistics from mallinfo() on platforms where it
+      exists.
 
 
 Changes in version 0.2.0.3-alpha - 2007-07-29

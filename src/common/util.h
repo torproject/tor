@@ -23,6 +23,9 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif
 
 /* Replace assert() with a variant that sends failures to the log before
  * calling assert() normally.
@@ -104,6 +107,8 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define tor_strdup(s)          _tor_strdup(s DMALLOC_ARGS)
 #define tor_strndup(s, n)      _tor_strndup(s, n DMALLOC_ARGS)
 #define tor_memdup(s, n)       _tor_memdup(s, n DMALLOC_ARGS)
+
+void tor_log_mallinfo(int severity);
 
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
 #if defined(__GNUC__) && __GNUC__ > 3
