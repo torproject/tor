@@ -153,11 +153,11 @@ Things we'd like to do in 0.2.0.x:
         on just like relay cells
   - Refactoring:
     - Make resolves no longer use edge_connection_t unless they are actually
-      _on_ on a socks connection: have edge_connection_t and (say)
+      _on_ a socks connection: have edge_connection_t and (say)
       dns_request_t both extend an edge_stream_t, and have p_streams and
       n_streams both be linked lists of edge_stream_t.
     . Make cells get buffered on circuit, not on the or_conn.
-      O Implement cell queues
+      o Implement cell queues
       o Keep doubly-linked list of active circuits on each or_conn.
       o Put all relay data on the circuit cell queue, not on the outbuf.
       o Don't move them into the target conn until there is space on the
@@ -248,7 +248,7 @@ Things we'd like to do in 0.2.0.x:
     - A better UI for authority ops.
       - Follow weasel's proposal, crossed with mixminion dir config format
       - Write a proposal
-    - Bridges users (rudimentary version)
+    . Bridges users (rudimentary version)
       o Ability to specify bridges manually
       o Config option 'UseBridges' that bridge users can turn on.
         o uses bridges as first hop rather than entry guards.
@@ -272,7 +272,7 @@ N     - Design/implement the "local-status" or something like it, from the
       - give extend_info_t a router_purpose again
       o react faster to download networkstatuses after the first bridge
         descriptor arrives
-      - be more robust to bridges being marked as down and leaving us
+      o be more robust to bridges being marked as down and leaving us
         stranded without any known "running" bridges.
     - Bridges operators (rudimentary version)
       - Ability to act as dir cache without a dir port.
@@ -288,7 +288,7 @@ N     - Design/implement the "local-status" or something like it, from the
       D Should do reachability testing but only on the purpose==bridge
         descriptors we have.
     - Bridges
-      - Clients can ask bridge authorities for updates on known bridges.
+      o Clients can ask bridge authorities for updates on known bridges.
       - More TLS normalization work: make Tor less easily
         fingerprinted.
       - Directory system improvements
