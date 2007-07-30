@@ -2383,6 +2383,8 @@ parse_authority_type_from_list(smartlist_t *list, authority_type_t *auth,
 {
   tor_assert(auth);
   *auth = NO_AUTHORITY;
+  if (!list) /* empty list, answer is none */
+    return 0;
   SMARTLIST_FOREACH(list, const char *, string, {
     if (!strcasecmp(string, "v1"))
       *auth |= V1_AUTHORITY;
