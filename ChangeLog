@@ -1,20 +1,26 @@
 Changes in version 0.2.0.3-alpha - 2007-07-29
   o Major features:
+    - The first pieces of our "bridge" design for blocking-resistance
+      are implemented. People can run bridge directory authorities;
+      people can run bridges; and people can configure their Tor clients
+      with a set of bridges to use as the first hop into the Tor network.
+      See http://archives for details.
     - Create listener connections before we setuid to the configured
-      User and Group. Now you can choose port values under 1024, start
-      Tor as root, and have Tor bind those ports before it changes to
-      another UID.
-    - New ConstrainedSockets option to set SO_SNDBUF and SO_RCVBUF on TCP
-      sockets. Hopefully useful for Tor servers running on "vserver"
-      accounts. (Patch from coderman.)
+      User and Group. Now non-Windows users can choose port values
+      under 1024, start Tor as root, and have Tor bind those ports
+      before it changes to another UID. (Windows users could already
+      pick these ports.)
+    - Added a new ConstrainedSockets config option to set SO_SNDBUF and
+      SO_RCVBUF on TCP sockets. Hopefully useful for Tor servers running
+      on "vserver" accounts. (Patch from coderman.)
     - Be even more aggressive about separating local traffic from relayed
       traffic when RelayBandwidthRate is set. (Refines proposal 111.)
 
   o Major features (experimental):
-    - First cut of code for directory authorities to vote on a common
-      network status document rather than each publishing their own
-      opinion.  This code needs more testing and more corner-case handling
-      before it's ready for use.
+    - First cut of code for "v3 dir voting": directory authorities will
+      vote on a common network status document rather than each publishing
+      their own opinion. This code needs more testing and more corner-case
+      handling before it's ready for use.
 
   o Security fixes:
     - Directory authorities now call routers Fast if their bandwidth is
@@ -22,12 +28,13 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
       Guard if it is at least 250KB/s, no matter the medians. This fix
       complements proposal 107. [Bugfix on 0.1.2.x]
     - Directory authorities now never mark more than 3 servers per IP as
-      Valid and Running.  (Implements proposal 109, by Kevin Bauer and
+      Valid and Running. (Implements proposal 109, by Kevin Bauer and
       Damon McCoy.)
-    - Minor change to organizationName and commonName generation procedures
-      in certificates, to invalidate some earlier censorware approaches.
-      This is not a long-term solution, but applying it will give us a bit of
-      time to look into the epidemiology of countermeasures as they spread.
+    - Minor change to organizationName and commonName generation
+      procedures in TLS certificates during Tor handshakes, to invalidate
+      some earlier censorware approaches. This is not a long-term
+      solution, but applying it will give us a bit of time to look into
+      the epidemiology of countermeasures as they spread.
 
   o Major bugfixes (directory):
     - Rewrite directory tokenization code to never run off the end of
@@ -55,8 +62,9 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
   o Minor features (misc):
     - Merge in some (as-yet-unused) IPv6 address manipulation code. (Patch
       from croup.)
-    - The tor-gencert tool now creates all files as readable to the file
-      creator only, and write-protects the authority identity key.
+    - The tor-gencert tool for v3 directory authorities now creates all
+      files as readable to the file creator only, and write-protects
+      the authority identity key.
     - When dumping memory usage, list bytes used in buffer memory
       free-lists.
     - When running with dmalloc, dump more stats on hup and on exit.
@@ -64,12 +72,18 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
       if they generate a network status document that is somehow
       malformed.
 
-  o Performance improvements:
-    - Be more aggressive with freeing buffer RAM or putting it on the
-      free lists.
+  o Traffic load balancing improvements:
     - If exit bandwidth ever exceeds one third of total bandwidth, then
       use the correct formula to weight exit nodes when choosing paths.
       (Based on patch from Mike Perry.)
+    - Choose perfectly fairly among routers when choosing by bandwidth and
+      weighting by fraction of bandwidth provided by exits. Previously, we
+      would choose with only approximate fairness, and correct ourselves
+      if we ran off the end of the list. [Bugfix on 0.1.2.x]
+
+  o Performance improvements:
+    - Be more aggressive with freeing buffer RAM or putting it on the
+      memory free lists.
     - Use Critical Sections rather than Mutexes for synchronizing threads
       on win32; Mutexes are heavier-weight, and designed for synchronizing
       between processes.
@@ -106,16 +120,10 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
       compatibility, ADDRMAP events only provide GMT expiry in an extended
       field. "GETINFO address-mappings" always does the right thing.
     - Use CRLF line endings properly in NS events.
-    - Terminate multi-line control events properly. (Original patch from tup.)
-      [Bugfix on 0.1.2.x-alpha]
-    - Do not include spaces in SOURCE_ADDR fields in STREAM events. Resolves
-      bug 472.  [Bugfix on 0.2.0.x-alpha]
-
-  o Minor bugfixes (misc):
-    - Choose perfectly fairly among routers when choosing by bandwidth and
-      weighting by fraction of bandwidth provided by exits. Previously, we
-      would choose with only approximate fairness, and correct ourselves
-      if we ran off the end of the list. [Bugfix on 0.1.2.x]
+    - Terminate multi-line control events properly. (Original patch
+      from tup.) [Bugfix on 0.1.2.x-alpha]
+    - Do not include spaces in SOURCE_ADDR fields in STREAM
+      events. Resolves bug 472. [Bugfix on 0.2.0.x-alpha]
 
 
 Changes in version 0.1.2.15 - 2007-07-17
