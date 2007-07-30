@@ -654,8 +654,9 @@ addressmap_free_all(void)
 /** Look at address, and rewrite it until it doesn't want any
  * more rewrites; but don't get into an infinite loop.
  * Don't write more than maxlen chars into address.  Return true if the
- * address changed; false otherwise.
- * DOCDOC expires_out
+ * address changed; false otherwise.  Set *<b>expires_out</b> to the
+ * expiry time of the result, or to <b>time_max</b> if the result does
+ * not expire.
  */
 int
 addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
@@ -693,8 +694,9 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
 
 /** If we have a cached reverse DNS entry for the address stored in the
  * <b>maxlen</b>-byte buffer <b>address</b> (typically, a dotted quad) then
- * rewrite to the cached value and return 1.  Otherwise return 0.
- * DOCDOC expires_out */
+ * rewrite to the cached value and return 1.  Otherwise return 0.  Set
+ * *<b>expires_out</b> to the expiry time of the result, or to <b>time_max</b>
+ * if the result does not expire. */
 static int
 addressmap_rewrite_reverse(char *address, size_t maxlen, time_t *expires_out)
 {

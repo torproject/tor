@@ -1787,7 +1787,9 @@ networkstatus_parse_from_string(const char *s)
   return ns;
 }
 
-/** DOCDOC */
+/** Parse a v3 networkstatus vote (if <b>is_vote</b> is true) or a v3
+ * networkstatus consensus (if <b>is_vote</b> is false) from <b>s</b>, and
+ * return the result.  Return NULL on failure. */
 networkstatus_vote_t *
 networkstatus_parse_vote_from_string(const char *s, int is_vote)
 {
@@ -2103,7 +2105,8 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
   return ns;
 }
 
-/** DOCDOC */
+/** Parse a detached v3 networkstatus signature document between <b>s</b> and
+ * <b>eos</b> and return the result.  Return -1 on failure. */
 ns_detached_signatures_t *
 networkstatus_parse_detached_signatures(const char *s, const char *eos)
 {

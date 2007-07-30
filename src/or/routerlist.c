@@ -65,7 +65,7 @@ static routerlist_t *routerlist = NULL;
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
 
-/** DOCDOC */
+/** Most recently received v3 consensus network status. */
 static networkstatus_vote_t *current_consensus = NULL;
 
 /** Global list of local_routerstatus_t for each router, known or unknown.
@@ -284,12 +284,13 @@ trusted_dirs_flush_certs_to_disk(void)
   trusted_dir_servers_certs_changed = 0;
 }
 
-/** DOCDOC */
+/** Remove all v3 authority certificates that have been superseded for more
+ * than 48 hours.  (If the most recent cert was published more than 48 hours
+ * ago, then we aren't going to get any consensuses signed with older
+ * keys.) */
 static void
 trusted_dirs_remove_old_certs(void)
 {
-  /* Any certificate that has been superseded for more than 48 hours is
-   * irrelevant. */
 #define OLD_CERT_LIFETIME (48*60*60)
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
     {
@@ -313,7 +314,9 @@ trusted_dirs_remove_old_certs(void)
   trusted_dirs_flush_certs_to_disk();
 }
 
-/** DOCDOC */
+/** Return the v3 authority certificate with signing key matching
+ * <b>sk_digest</b>, for the authority with identity digest <b>id_digest</b>.
+ * Return NULL if no such authority is known. */
 authority_cert_t *
 authority_cert_get_by_digests(const char *id_digest,
                               const char *sk_digest)
@@ -3816,14 +3819,16 @@ networkstatus_get_by_digest(const char *digest)
   return NULL;
 }
 
-/** DOCDOC */
+/** Return the most recent consensus that we have downloaded, or NULL if we
+ * don't have one. */
 networkstatus_vote_t *
 networkstatus_get_latest_consensus(void)
 {
   return current_consensus;
 }
 
-/** DOCDOC */
+/** Return the most recent consensus that we have downloaded, or NULL if it is
+ * no longer live. */
 networkstatus_vote_t *
 networkstatus_get_live_consensus(time_t now)
 {

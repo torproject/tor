@@ -1613,7 +1613,6 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("status/enough-dir-info",
       "Whether we have enough up-to-date directory information to build "
       "circuits."),
-  /* DOCDOC specify status/version/ */
   DOC("status/version/recommended", "List of currently recommended versions."),
   DOC("status/version/current", "Status of the current version."),
   DOC("status/version/num-versioning", "Number of versioning authorities."),
