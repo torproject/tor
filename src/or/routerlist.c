@@ -3636,7 +3636,7 @@ int
 should_delay_dir_fetches(or_options_t *options)
 {
   if (options->UseBridges && !any_bridge_descriptors_known()) {
-    log_notice(LD_DIR, "delaying dir fetches");
+    log_info(LD_DIR, "delaying dir fetches");
     return 1;
   }
   return 0;
@@ -5054,7 +5054,7 @@ update_router_have_minimum_dir_info(void)
   networkstatus_list_clean(now);
 
   if (should_delay_dir_fetches(get_options())) {
-    log_notice(LD_DIR, "no bridge descs known yet");
+    log_notice(LD_DIR, "no known bridge descriptors running yet; stalling");
     res = 0;
     goto done;
   }
