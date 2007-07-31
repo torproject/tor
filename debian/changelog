@@ -22,6 +22,13 @@ tor (0.2.0.1-alpha-1) experimental; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Sat,  2 Jun 2007 14:31:15 +0200
 
+tor (0.1.2.15-1) unstable; urgency=low
+
+  * New upstream version.
+  * Change build-depends from tetex to texlive suite.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 19 Jul 2007 22:33:43 +0200
+
 tor (0.1.2.14-1) unstable; urgency=low
 
   * New upstream version.
