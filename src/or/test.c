@@ -1659,7 +1659,7 @@ test_threads(void)
     if (strmap_get(_thread_test_strmap, "thread 1") &&
         strmap_get(_thread_test_strmap, "thread 2")) {
       done = 1;
-    } else if (time(NULL) > started + 10) {
+    } else if (time(NULL) > started + 25) {
       timedout = done = 1;
     }
     tor_mutex_release(_thread_test_mutex);
