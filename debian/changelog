@@ -1,3 +1,10 @@
+tor (0.1.2.15-1) unstable; urgency=low
+
+  * New upstream version.
+  * Change build-depends from tetex to texlive suite.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 19 Jul 2007 22:33:43 +0200
+
 tor (0.1.2.14-1) unstable; urgency=low
 
   * New upstream version.
