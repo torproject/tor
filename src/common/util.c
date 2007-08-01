@@ -228,6 +228,8 @@ tor_log_mallinfo(int severity)
       mi.arena, mi.ordblks, mi.smblks, mi.hblks,
       mi.hblkhd, mi.usmblks, mi.fsmblks, mi.uordblks, mi.fordblks,
       mi.keepcost);
+#else
+  (void)severity;
 #endif
 }
 
