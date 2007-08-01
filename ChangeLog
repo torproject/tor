@@ -1,4 +1,8 @@
 Changes in version 0.2.0.4-alpha - 2007-??-??
+  o Major bugfixes (compilation):
+    - Fix win32 compilation: apparently IN_ADDR and IN6_ADDR are already
+      defined there.
+
   o Minor features (performance):
     - Be even more aggressive about releasing RAM from small
       empty buffers. Thanks to our free-list code, this shouldn't be too

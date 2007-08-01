@@ -319,8 +319,8 @@ static INLINE uint32_t IPV4IP(const tor_addr_t *a);
 static INLINE uint32_t IPV4IPh(const tor_addr_t *a);
 static INLINE uint32_t IPV4MAPh(const tor_addr_t *a);
 static INLINE uint16_t IN_FAMILY(const tor_addr_t *a);
-static INLINE const struct in_addr *IN4_ADDR(const tor_addr_t *a);
-static INLINE const struct in6_addr *IN6_ADDR(const tor_addr_t *a);
+static INLINE const struct in_addr *IN4_ADDRESS(const tor_addr_t *a);
+static INLINE const struct in6_addr *IN6_ADDRESS(const tor_addr_t *a);
 static INLINE uint16_t IN_PORT(const tor_addr_t *a);
 
 static INLINE uint32_t
@@ -344,12 +344,12 @@ IN_FAMILY(const tor_addr_t *a)
   return a->sa.sin_family;
 }
 static INLINE const struct in_addr *
-IN4_ADDR(const tor_addr_t *a)
+IN4_ADDRESS(const tor_addr_t *a)
 {
   return &a->sa.sin_addr;
 }
 static INLINE const struct in6_addr *
-IN6_ADDR(const tor_addr_t *a)
+IN6_ADDRESS(const tor_addr_t *a)
 {
   return &a->sa6.sin6_addr;
 }

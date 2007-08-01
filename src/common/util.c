@@ -1872,15 +1872,15 @@ tor_addr_is_internal(const tor_addr_t *addr, int for_listening)
   } else if (v_family == AF_INET6) {
     if (tor_addr_is_v4(addr)) { /* v4-mapped */
       v_family = AF_INET;
-      iph4 = ntohl(IN6_ADDR(addr)->s6_addr32[3]);
+      iph4 = ntohl(IN6_ADDRESS(addr)->s6_addr32[3]);
     }
   }
 
   if (v_family == AF_INET6) {
-    iph6[0] = ntohl(IN6_ADDR(addr)->s6_addr32[0]);
-    iph6[1] = ntohl(IN6_ADDR(addr)->s6_addr32[1]);
-    iph6[2] = ntohl(IN6_ADDR(addr)->s6_addr32[2]);
-    iph6[3] = ntohl(IN6_ADDR(addr)->s6_addr32[3]);
+    iph6[0] = ntohl(IN6_ADDRESS(addr)->s6_addr32[0]);
+    iph6[1] = ntohl(IN6_ADDRESS(addr)->s6_addr32[1]);
+    iph6[2] = ntohl(IN6_ADDRESS(addr)->s6_addr32[2]);
+    iph6[3] = ntohl(IN6_ADDRESS(addr)->s6_addr32[3]);
     if (for_listening && !iph6[0] && !iph6[1] && !iph6[2] && !iph6[3]) /* :: */
       return 0;
 
@@ -2278,14 +2278,14 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
 #ifdef ALWAYS_V6_MAP
   if (v_family == AF_INET) {
     v_family = AF_INET6;
-    IN_ADDR6(addr_out).s6_addr32[3] = IN6_ADDR(addr_out).s_addr;
-    memset(&IN6_ADDR(addr_out), 0, 10);
+    IN_ADDR6(addr_out).s6_addr32[3] = IN6_ADDRESS(addr_out).s_addr;
+    memset(&IN6_ADDRESS(addr_out), 0, 10);
     IN_ADDR6(addr_out).s6_addr16[5] = 0xffff;
   }
 #else
   if (v_family == AF_INET6 && v4map) {
     v_family = AF_INET;
-    IN4_ADDR(addr_out).s_addr = IN6_ADDR(addr_out).s6_addr32[3];
+    IN4_ADDRESS((addr_out).s_addr = IN6_ADDRESS(addr_out).s6_addr32[3];
   }
 #endif
 */
@@ -2392,9 +2392,9 @@ tor_addr_is_v4(const tor_addr_t *addr)
     return 1;
 
   if (IN_FAMILY(addr) == AF_INET6) { /* First two don't need to be ordered */
-    if ((IN6_ADDR(addr)->s6_addr32[0] == 0) &&
-        (IN6_ADDR(addr)->s6_addr32[1] == 0) &&
-        (ntohl(IN6_ADDR(addr)->s6_addr32[2]) == 0x0000ffffu))
+    if ((IN6_ADDRESS(addr)->s6_addr32[0] == 0) &&
+        (IN6_ADDRESS(addr)->s6_addr32[1] == 0) &&
+        (ntohl(IN6_ADDRESS(addr)->s6_addr32[2]) == 0x0000ffffu))
       return 1;
   }
 
@@ -2411,14 +2411,12 @@ tor_addr_is_null(const tor_addr_t *addr)
 
   switch (IN_FAMILY(addr)) {
     case AF_INET6:
-      if (!IN6_ADDR(addr)->s6_addr32[0] && !IN6_ADDR(addr)->s6_addr32[1] &&
-          !IN6_ADDR(addr)->s6_addr32[2] && !IN6_ADDR(addr)->s6_addr32[3])
-        return 1;
-      return 0;
+      return (!IN6_ADDRESS(addr)->s6_addr32[0] &&
+              !IN6_ADDRESS(addr)->s6_addr32[1] &&
+              !IN6_ADDRESS(addr)->s6_addr32[2] &&
+              !IN6_ADDRESS(addr)->s6_addr32[3]);
     case AF_INET:
-      if (!IN4_ADDR(addr)->s_addr)
-        return 1;
-      return 0;
+      return (!IN4_ADDRESS(addr)->s_addr);
     default:
       return 1;
   }
@@ -2538,8 +2536,8 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
       return 1;
     return 0;
   } else if (v_family[0] == AF_INET6) { /* Real IPv6 */
-    const uint32_t *a1 = IN6_ADDR(addr1)->s6_addr32;
-    const uint32_t *a2 = IN6_ADDR(addr2)->s6_addr32;
+    const uint32_t *a1 = IN6_ADDRESS(addr1)->s6_addr32;
+    const uint32_t *a2 = IN6_ADDRESS(addr2)->s6_addr32;
     for (idx = 0; idx < 4; ++idx) {
       uint32_t masked_a = ntohl(a1[idx]);
       uint32_t masked_b = ntohl(a2[idx]);
@@ -2590,9 +2588,9 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, int len)
   tor_assert(addr && dest);
 
   if (IN_FAMILY(addr) == AF_INET) {
-    return tor_inet_ntop(AF_INET, IN4_ADDR(addr), dest, len);
+    return tor_inet_ntop(AF_INET, IN4_ADDRESS(addr), dest, len);
   } else if (IN_FAMILY(addr) == AF_INET6) {
-    return tor_inet_ntop(AF_INET6, IN6_ADDR(addr), dest, len);
+    return tor_inet_ntop(AF_INET6, IN6_ADDRESS(addr), dest, len);
   } else {
     return NULL;
   }

@@ -1069,10 +1069,10 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
  * conventions of the other test macros. */
 #define test_addr_parse_check(ip1, ip2, ip3, ip4, mm, pt1, pt2) STMT_BEGIN  \
     test_assert(r>=0);                                     \
-    test_eq(htonl(ip1), IN6_ADDR(&t1)->s6_addr32[0]);      \
-    test_eq(htonl(ip2), IN6_ADDR(&t1)->s6_addr32[1]);      \
-    test_eq(htonl(ip3), IN6_ADDR(&t1)->s6_addr32[2]);      \
-    test_eq(htonl(ip4), IN6_ADDR(&t1)->s6_addr32[3]);      \
+    test_eq(htonl(ip1), IN6_ADDRESS(&t1)->s6_addr32[0]);   \
+    test_eq(htonl(ip2), IN6_ADDRESS(&t1)->s6_addr32[1]);   \
+    test_eq(htonl(ip3), IN6_ADDRESS(&t1)->s6_addr32[2]);   \
+    test_eq(htonl(ip4), IN6_ADDRESS(&t1)->s6_addr32[3]);   \
     test_eq(mask, mm);                                     \
     test_eq(port1, pt1);                                   \
     test_eq(port2, pt2);                                   \
