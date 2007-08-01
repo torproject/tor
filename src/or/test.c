@@ -1283,7 +1283,7 @@ test_smartlist(void)
   smartlist_t *sl;
   char *cp;
 
-  /* XXXX test sort_strings, sort_digests, uniq_strings, uniq_digests */
+  /* XXXX test sort_digests, uniq_strings, uniq_digests */
 
   /* Test smartlist add, del_keeporder, insert, get. */
   sl = smartlist_create();
@@ -2724,7 +2724,93 @@ test_v3_networkstatus(void)
   test_assert(voter->good_signature);
   test_assert(!voter->bad_signature);
 
-  /* XXXX020 frob with detached signatures */
+  {
+    char *consensus_text2, *consensus_text3;
+    networkstatus_vote_t *con2, *con3;
+    char *detached_text1, *addition1, *detached_text2, *addition2;
+    ns_detached_signatures_t *dsig1, *dsig2;
+    size_t sz;
+    /* Compute the other two signed consensuses. */
+    smartlist_shuffle(votes);
+    consensus_text2 = networkstatus_compute_consensus(votes, 3,
+                                                      cert2->identity_key,
+                                                      sign_skey_2);
+    smartlist_shuffle(votes);
+    consensus_text3 = networkstatus_compute_consensus(votes, 3,
+                                                      cert1->identity_key,
+                                                      sign_skey_1);
+    test_assert(consensus_text2);
+    test_assert(consensus_text3);
+    con2 = networkstatus_parse_vote_from_string(consensus_text2, 0);
+    con3 = networkstatus_parse_vote_from_string(consensus_text3, 0);
+    test_assert(con2);
+    test_assert(con3);
+
+    /* All three should have the same digest. */
+    test_memeq(con->networkstatus_digest, con2->networkstatus_digest,
+               DIGEST_LEN);
+    test_memeq(con->networkstatus_digest, con3->networkstatus_digest,
+               DIGEST_LEN);
+
+    /* Extract a detached signature from con3. */
+    detached_text1 = networkstatus_get_detached_signatures(con3);
+    tor_assert(detached_text1);
+    /* Try to parse it. */
+    dsig1 = networkstatus_parse_detached_signatures(detached_text1, NULL);
+    tor_assert(dsig1);
+
+    /* Are parsed values as expected? */
+    test_eq(dsig1->valid_after, con3->valid_after);
+    test_eq(dsig1->fresh_until, con3->fresh_until);
+    test_eq(dsig1->valid_until, con3->valid_until);
+    test_memeq(dsig1->networkstatus_digest, con3->networkstatus_digest,
+               DIGEST_LEN);
+    test_eq(1, smartlist_len(dsig1->signatures));
+    voter = smartlist_get(dsig1->signatures, 0);
+    test_memeq(voter->identity_digest, cert1->cache_info.identity_digest,
+               DIGEST_LEN);
+
+    /* Try adding it to con2. */
+    detached_text2 = networkstatus_get_detached_signatures(con2);
+    addition1 = NULL;
+    test_eq(1, networkstatus_add_detached_signatures(con2, dsig1, &addition1));
+    sz = strlen(detached_text2)+strlen(addition1)+1;
+    detached_text2 = tor_realloc(detached_text2, sz);
+    strlcat(detached_text2, addition1, sz);
+    //printf("\n<%s>\n", detached_text2);
+    dsig2 = networkstatus_parse_detached_signatures(detached_text2, NULL);
+    test_assert(dsig2);
+    /*
+    printf("\n");
+    SMARTLIST_FOREACH(dsig2->signatures, networkstatus_voter_info_t *, vi, {
+        char hd[64];
+        base16_encode(hd, sizeof(hd), vi->identity_digest, DIGEST_LEN);
+        printf("%s\n", hd);
+      });
+    */
+    test_eq(2, smartlist_len(dsig2->signatures));
+
+    /* Add to con. */
+    test_eq(2, networkstatus_add_detached_signatures(con, dsig2, &addition2));
+    /* Check signatures */
+    test_assert(!networkstatus_check_voter_signature(con,
+                                               smartlist_get(con->voters, 0),
+                                               cert2));
+    test_assert(!networkstatus_check_voter_signature(con,
+                                               smartlist_get(con->voters, 2),
+                                               cert1));
+
+    networkstatus_vote_free(con2);
+    networkstatus_vote_free(con3);
+    tor_free(consensus_text2);
+    tor_free(consensus_text3);
+    tor_free(detached_text1);
+    tor_free(detached_text2);
+    ns_detached_signatures_free(dsig1);
+    ns_detached_signatures_free(dsig2);
+    tor_free(addition1);
+    tor_free(addition2);
+  }
 
   smartlist_free(votes);
   tor_free(v1_text);

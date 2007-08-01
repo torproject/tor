@@ -884,6 +884,7 @@ networkstatus_get_detached_signatures(networkstatus_vote_t *consensus)
   smartlist_t *elements;
   char buf[4096];
   char *result = NULL;
+  int n_sigs = 0;
   tor_assert(consensus);
   tor_assert(! consensus->is_vote);
 
@@ -911,8 +912,9 @@ networkstatus_get_detached_signatures(networkstatus_vote_t *consensus)
     {
       char sk[HEX_DIGEST_LEN+1];
       char id[HEX_DIGEST_LEN+1];
-      if (!v->signature || !v->good_signature)
+      if (!v->signature) // XXXX020 || !v->good_signature)
         continue;
+      ++n_sigs;
       base16_encode(sk, sizeof(sk), v->signing_key_digest, DIGEST_LEN);
       base16_encode(id, sizeof(id), v->identity_digest, DIGEST_LEN);
       tor_snprintf(buf, sizeof(buf),
@@ -928,6 +930,8 @@ networkstatus_get_detached_signatures(networkstatus_vote_t *consensus)
 
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
+  if (!n_sigs)
+    tor_free(result);
   return result;
 }
 

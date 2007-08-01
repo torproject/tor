@@ -345,7 +345,7 @@ static token_rule_t networkstatus_detached_signature_token_table[] = {
   T1("valid-after",            K_VALID_AFTER,      CONCAT_ARGS, NO_OBJ ),
   T1("fresh-until",            K_FRESH_UNTIL,      CONCAT_ARGS, NO_OBJ ),
   T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
-  T( "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
+  T1N("directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
   END_OF_TABLE
 };
 
@@ -2127,23 +2127,35 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   }
 
   tok = find_first_by_keyword(tokens, K_CONSENSUS_DIGEST);
-  if (strlen(tok->args[0]) != HEX_DIGEST_LEN)
+  if (strlen(tok->args[0]) != HEX_DIGEST_LEN) {
+    log_warn(LD_DIR, "Wrong length on consensus-digest in detached "
+             "networkstatus signatures");
     goto err;
+  }
   if (base16_decode(sigs->networkstatus_digest, DIGEST_LEN,
-                    tok->args[0], strlen(tok->args[0])) < 0)
+                    tok->args[0], strlen(tok->args[0])) < 0) {
+    log_warn(LD_DIR, "Bad encoding on on consensus-digest in detached "
+             "networkstatus signatures");
     goto err;
+  }
 
   tok = find_first_by_keyword(tokens, K_VALID_AFTER);
-  if (parse_iso_time(tok->args[0], &sigs->valid_after))
+  if (parse_iso_time(tok->args[0], &sigs->valid_after)) {
+    log_warn(LD_DIR, "Bad valid-after in detached networkstatus signatures");
     goto err;
+  }
 
   tok = find_first_by_keyword(tokens, K_FRESH_UNTIL);
-  if (parse_iso_time(tok->args[0], &sigs->fresh_until))
+  if (parse_iso_time(tok->args[0], &sigs->fresh_until)) {
+    log_warn(LD_DIR, "Bad fresh-until in detached networkstatus signatures");
     goto err;
+  }
 
   tok = find_first_by_keyword(tokens, K_VALID_UNTIL);
-  if (parse_iso_time(tok->args[0], &sigs->valid_until))
+  if (parse_iso_time(tok->args[0], &sigs->valid_until)) {
+    log_warn(LD_DIR, "Bad valid-until in detached networkstatus signatures");
     goto err;
+  }
 
   sigs->signatures = smartlist_create();
   SMARTLIST_FOREACH(tokens, directory_token_t *, _tok,
@@ -2194,7 +2206,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   sigs = NULL;
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
-  return NULL;
+  return sigs;
 }
 
 /** Parse the addr policy in the string <b>s</b> and return it.  If
