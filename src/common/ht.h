@@ -382,6 +382,31 @@ ht_string_hash(const char *s)
     return 0;                                                           \
   }
 
+/** Implements an over-optimized "find and insert if absent" block;
+ * not meant for direct usage by typical code, or usage outside the critical
+ * path.*/
+#define _HT_FIND_OR_INSERT(name, field, hashfn, head, eltype, elm, var, y, n) \
+  {                                                                     \
+    struct name *_##var##_head = head;                                  \
+    eltype **var;                                                       \
+    if (!_##var##_head->hth_table ||                                    \
+        _##var##_head->hth_n_entries >= _##var##_head->hth_load_limit)  \
+      name##_HT_GROW(_##var##_head, _##var##_head->hth_n_entries+1);     \
+    _HT_SET_HASH((elm), field, hashfn);                                \
+    var = _##name##_HT_FIND_P(_##var##_head, (elm));                    \
+    if (*var) {                                                         \
+      y;                                                                \
+    } else {                                                            \
+      n;                                                                \
+    }                                                                   \
+  }
+#define _HT_FOI_INSERT(field, head, elm, newent, var)       \
+  {                                                         \
+    newent->field.hte_hash = (elm)->field.hte_hash;         \
+    *var = newent;                                          \
+    ++((head)->hth_n_entries);                              \
+  }
+
 /*
  * Copyright 2005, Nick Mathewson.  Implementation logic is adapted from code
  * by Cristopher Clark, retrofit to allow drop-in memory management, and to
