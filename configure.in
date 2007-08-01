@@ -609,7 +609,7 @@ else
   enable_gcc_warnings=no
 fi
 
-# Add some more warnings which we use in the cvs version but not in the
+# Add some more warnings which we use in development but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
 if test x$enable_gcc_warnings = xyes; then
 
