@@ -1383,15 +1383,11 @@ $Id$
 
 5.3. Backward compatibility with v0 control protocol.
 
-  For backward compatibility with the "version 0" control protocol, Tor checks
-  whether the third octet the first command is zero.  If it is, Tor
-  assumes that version 0 is in use.  This feature is deprecated, and will be
-  removed in the 0.1.3.x Tor development series.
+  For backward compatibility with the "version 0" control protocol,
+  Tor used to check whether the third octet of the first command is zero.
+  (If it was, Tor assumed that version 0 is in use.)
 
-  In order to detect which version of the protocol is supported controllers
-  should send the sequence [00 00 0D 0A].  This is a valid and unrecognized
-  command in both protocol versions, and implementations can detect which
-  error they have received.
+  This compatibility was removed in Tor 0.1.2.16 and 0.2.0.4-alpha.
 
 5.4. Options for use by controllers
 
