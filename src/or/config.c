@@ -2884,6 +2884,37 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->HashedControlPassword && options->CookieAuthentication)
     REJECT("Cannot set both HashedControlPassword and CookieAuthentication");
 
+  if (options->ControlListenAddress) {
+    int all_are_local = 1;
+    config_line_t *ln;
+    for (ln = options->ControlListenAddress; ln; ln = ln->next) {
+      if (strcmpstart(ln->value, "127."))
+        all_are_local = 0;
+    }
+    if (!all_are_local) {
+      if (!options->HashedControlPassword && !options->CookieAuthentication) {
+        log_warn(LD_CONFIG, "You have a ControlListenAddress set to accept "
+                 "connections from a non-local address.  This means that "
+                 "any program on the internet can reconfigure your Tor. "
+                 "That's so bad that I'm closing your ControlPort for you.");
+        options->ControlPort = 0;
+      } else {
+        log_warn(LD_CONFIG, "You have a ControlListenAddress set to accept "
+                 "connections from a non-local address.  This means that "
+                 "programs not running on your computer can reconfigure your "
+                 "Tor.  That's pretty bad!");
+      }
+    }
+  }
+
+  if (options->ControlPort && !options->HashedControlPassword &&
+      !options->CookieAuthentication) {
+    log_warn(LD_CONFIG, "ControlPort is open, but no authentication method "
+             "has been configured.  This means that any program on your "
+             "computer can reconfigure your Tor.  That's bad!  You should "
+             "upgrade your Tor controller as soon as possible.");
+  }
+
   if (options->UseEntryGuards && ! options->NumEntryGuards)
     REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
 
