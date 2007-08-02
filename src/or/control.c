@@ -1221,6 +1221,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
             "password?  If so, the standard requires that you put it in "
             "double quotes.\r\n", conn);
         tor_free(password);
+        connection_mark_for_close(TO_CONN(conn));
         return 0;
       }
       password_len = i/2;
@@ -1231,6 +1232,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       if (!get_escaped_string(body, len, &password, &password_len)) {
         connection_write_str_to_buf("551 Invalid quoted string.  You need "
             "to put the password in double quotes.\r\n", conn);
+        connection_mark_for_close(TO_CONN(conn));
         return 0;
       }
       used_quoted_string = 1;
@@ -1287,6 +1289,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n",
                              errstr);
   }
+  connection_mark_for_close(TO_CONN(conn));
   return 0;
  ok:
   log_info(LD_CONTROL, "Authenticated control connection (%d)", conn->_base.s);
@@ -2818,6 +2821,7 @@ connection_control_process_inbuf_v1(control_connection_t *conn)
   if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V1 &&
       strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
     connection_write_str_to_buf("514 Authentication required.\r\n", conn);
+    connection_mark_for_close(TO_CONN(conn));
     conn->incoming_cmd_cur_len = 0;
     goto again;
   }

@@ -1,3 +1,9 @@
+Changes in version 0.1.2.16 - 2007-08-01
+  o Major security fixes:
+    - Close immediately after missing authentication on control port;
+      do not allow multiple authentication attempts.
+
+
 Changes in version 0.1.2.15 - 2007-07-17
   o Major bugfixes (compilation):
     - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
