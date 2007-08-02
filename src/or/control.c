@@ -2443,8 +2443,7 @@ connection_control_process_inbuf(control_connection_t *conn)
       strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
     connection_write_str_to_buf("514 Authentication required.\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
-    conn->incoming_cmd_cur_len = 0;
-    goto again;
+    return 0;
   }
 
   if (!strcasecmp(conn->incoming_cmd, "SETCONF")) {
