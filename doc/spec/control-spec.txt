@@ -225,14 +225,18 @@ $Id$
      "AUTHENTICATE" [ SP 1*HEXDIG / QuotedString ] CRLF
 
   The server responds with "250 OK" on success or "515 Bad authentication" if
-  the authentication cookie is incorrect.
+  the authentication cookie is incorrect.  Tor closes the connection on an
+  authentication failure.
 
   The format of the 'cookie' is implementation-dependent; see 5.1 below for
   information on how the standard Tor implementation handles it.
 
   If Tor requires authentication and the controller has not yet sent an
   AUTHENTICATE message, Tor sends a "514 authentication required" reply to
-  any other kind of message.
+  any other kind of message, and then closes the connection.
+
+  (Versions of Tor before 0.1.2.16 and 0.2.0.4-alpha did not close the
+  connection after an authentication failure.)
 
 3.6. SAVECONF
 
