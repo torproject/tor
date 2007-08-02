@@ -294,9 +294,14 @@ struct in6_addr
 #endif
 #endif
 
-#if !defined(HAVE_STRUCT_SOCKADDR_IN6)
+#ifndef HAVE_SA_FAMILY_T
+typedef uint16_t sa_family_t;
+#endif
+
+/* XXXX020 detect sockaddr_in6 correctly on ms_windows; this is also a hack. */
+#if !defined(HAVE_STRUCT_SOCKADDR_IN6) && !defined(MS_WINDOWS)
 struct sockaddr_in6 {
-  uint16_t sin6_family; /* XXXX020 right size???? */
+  sa_family_t sin6_family;
   uint16_t sin6_port;
   // uint32_t sin6_flowinfo;
   struct in6_addr sin6_addr;

@@ -329,7 +329,7 @@ AC_CHECK_SIZEOF(size_t)
 
 AC_CHECK_TYPES([uint, u_char])
 
-AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, struct sockaddr_storage], , ,
+AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, struct sockaddr_storage, sa_family_t], , ,
 [#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -341,7 +341,19 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, struct sockaddr_storage], 
 #endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
-#endif])
+#endif
+#ifdef MS_WINDOWS
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
+#define WIN32_LEAN_AND_MEAN
+#if defined(_MSC_VER) && (_MSC_VER < 1300)
+#include <winsock.h>
+#else
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+#endif
+])
 
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [

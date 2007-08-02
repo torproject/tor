@@ -1,3 +1,8 @@
+Changes in version 0.2.0.5-alpha - 2007-??-??
+  o Major bugfixes (compilation):
+    - Try to fix win32 compilation again: Improve checking for ipv6 types.
+
+
 Changes in version 0.2.0.4-alpha - 2007-08-01
   o Major security fixes:
     - Close immediately after missing authentication on control port;
