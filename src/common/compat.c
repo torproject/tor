@@ -1128,11 +1128,11 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     if (ent) {
       addr->sa.sin_family = ent->h_addrtype;
       if (ent->h_addrtype == AF_INET) {
-        memcpy(addr->sa.sin_addr, ent->h_addr, sizeof(struct in_addr));
+        memcpy(&addr->sa.sin_addr, ent->h_addr, sizeof(struct in_addr));
       } else if (ent->h_addrtype == AF_INET6) {
-        memcpy(addr->sa.sin6_addr, ent->h_addr, sizeof(struct in6_addr));
+        memcpy(&addr->sa6.sin6_addr, ent->h_addr, sizeof(struct in6_addr));
       } else {
-        tor_assert(0)  /* gethostbyname() returned a bizarre addrtype */
+        tor_assert(0); /* gethostbyname() returned a bizarre addrtype */
       }
       return 0;
     }
