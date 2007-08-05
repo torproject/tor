@@ -102,6 +102,8 @@ Additional complexity:
 
 Acknowledgements:
 
-  This design has been kicking around since Christian Grothoff and I
-  came up with it at PET 2004.
+  This design has been kicking around since Christian Grothoff and I came
+  up with it at PET 2004. (Nathan Evans, Christian Grothoff's student,
+  is working on implementing a fix based on this design in the summer
+  2007 timeframe.)
 
