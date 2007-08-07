@@ -1,4 +1,4 @@
-Filename: 1xx-avoid-infinite-circuits.txt
+Filename: 110-avoid-infinite-circuits.txt
 Title: Avoiding infinite length circuits
 Version: $Revision$
 Last-Modified: $Date$
