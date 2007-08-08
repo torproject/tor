@@ -1,5 +1,3 @@
-CPPFLAGS += -I../common
-
 TESTS = test
 
 noinst_PROGRAMS = test

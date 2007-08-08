@@ -1,5 +1,3 @@
-CPPFLAGS += -I../common
-
 bin_PROGRAMS = tor-resolve tor-gencert
 
 tor_resolve_SOURCES = tor-resolve.c
