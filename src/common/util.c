@@ -68,6 +68,9 @@ const char util_c_id[] = "$Id$";
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#if defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
+#include <malloc.h>
+#endif
 
 #ifndef O_BINARY
 #define O_BINARY 0

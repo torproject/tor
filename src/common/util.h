@@ -23,9 +23,6 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
 
 /* Replace assert() with a variant that sends failures to the log before
  * calling assert() normally.
