@@ -1383,6 +1383,10 @@ $Id$
 
 5.3. Backward compatibility with v0 control protocol.
 
+  The 'version 0' control protocol was replaced in Tor 0.1.1.x.  Support was
+  removed in Tor 0.2.0.x.  Every non-obsolete version of Tor now supports the
+  version 1 control protocol.  
+
   For backward compatibility with the "version 0" control protocol,
   Tor used to check whether the third octet of the first command is zero.
   (If it was, Tor assumed that version 0 is in use.)
