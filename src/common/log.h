@@ -13,7 +13,7 @@
 #ifndef __LOG_H
 #define LOG_H_ID "$Id$"
 
-#include "../common/compat.h"
+#include "compat.h"
 
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>

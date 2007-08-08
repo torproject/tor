@@ -1,3 +1,5 @@
+CPPFLAGS += -I../common
+
 TESTS = test
 
 noinst_PROGRAMS = test
@@ -40,7 +42,7 @@ noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 
 tor_main.o: micro-revision.i
 
-micro-revision.i: FORCE
+micro-revision.i:
 	@svkdir=$$SVKROOT; \
 	if test "x$$svkdir" = x ; then \
 	  svkdir=$$HOME/.svk; \

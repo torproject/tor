@@ -17,12 +17,6 @@
 #include "compat.h"
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#ifdef HAVE_TIME_H
-#include <time.h>
-#endif
 
 /* Replace assert() with a variant that sends failures to the log before
  * calling assert() normally.

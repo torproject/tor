@@ -17,7 +17,6 @@ const char config_c_id[] = \
 #ifdef MS_WINDOWS
 #include <shlobj.h>
 #endif
-#include "../common/aes.h"
 
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
@@ -4556,8 +4555,9 @@ getinfo_helper_config(control_connection_t *conn,
   return 0;
 }
 
-#include "../common/ht.h"
-#include "../common/test.h"
+#include "aes.h"
+#include "ht.h"
+#include "test.h"
 
 extern const char aes_c_id[];
 extern const char compat_c_id[];

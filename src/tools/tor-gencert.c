@@ -27,10 +27,10 @@
 
 #define CRYPTO_PRIVATE
 
-#include "../common/compat.h"
-#include "../common/util.h"
-#include "../common/log.h"
-#include "../common/crypto.h"
+#include "compat.h"
+#include "util.h"
+#include "log.h"
+#include "crypto.h"
 
 #define IDENTITY_KEY_BITS 3072
 #define SIGNING_KEY_BITS 1024

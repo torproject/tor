@@ -10,7 +10,7 @@ AM_CONFIG_HEADER(orconfig.h)
 AC_CANONICAL_HOST
 
 if test -f /etc/redhat-release ; then
-    CFLAGS="$CFLAGS -I/usr/kerberos/include"
+    CPPFLAGS="$CPPFLAGS -I/usr/kerberos/include"
 fi
 
 AC_ARG_ENABLE(debug,

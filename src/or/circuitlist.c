@@ -12,8 +12,7 @@ const char circuitlist_c_id[] =
  **/
 
 #include "or.h"
-
-#include "../common/ht.h"
+#include "ht.h"
 
 /********* START VARIABLES **********/
 

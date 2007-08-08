@@ -12,8 +12,8 @@
  * \brief Headers for tortls.c
  **/
 
-#include "../common/crypto.h"
-#include "../common/compat.h"
+#include "crypto.h"
+#include "compat.h"
 
 /* Opaque structure to hold a TLS connection. */
 typedef struct tor_tls_t tor_tls_t;

@@ -12,8 +12,6 @@
  * \brief Macros used by unit tests.
  */
 
-#include <string.h>
-#include <stdio.h>
 #include "compat.h"
 
 #ifdef __GNUC__

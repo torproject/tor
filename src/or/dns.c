@@ -14,7 +14,7 @@ const char dns_c_id[] =
  **/
 
 #include "or.h"
-#include "../common/ht.h"
+#include "ht.h"
 #include "eventdns.h"
 
 /** Longest hostname we're willing to resolve. */

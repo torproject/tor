@@ -13,7 +13,7 @@ const char relay_c_id[] =
  **/
 
 #include "or.h"
-#include "../common/mempool.h"
+#include "mempool.h"
 
 static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
                 crypt_path_t **layer_hint, char *recognized);

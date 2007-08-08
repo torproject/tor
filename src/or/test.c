@@ -36,9 +36,9 @@ const char tor_svn_revision[] = "";
 #define ROUTER_PRIVATE
 
 #include "or.h"
-#include "../common/test.h"
-#include "../common/torgzip.h"
-#include "../common/mempool.h"
+#include "test.h"
+#include "torgzip.h"
+#include "mempool.h"
 
 int have_failed = 0;
 

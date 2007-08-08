@@ -8,7 +8,6 @@
 #define CONTAINER_H_ID \
   "$Id$"
 
-#include "compat.h"
 #include "util.h"
 
 /** A resizeable list of pointers, with associated helpful functionality.

@@ -20,27 +20,27 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
+// #include <stdio.h>
+// #include <stdlib.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
+//#ifdef HAVE_STRING_H
+//#include <string.h>
+//#endif
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
+//#ifdef HAVE_CTYPE_H
+//#include <ctype.h>
+//#endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
-#include "../common/torint.h"
+#include "torint.h"
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
@@ -53,21 +53,21 @@
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
+//#ifdef HAVE_SYS_SOCKET_H
+//#include <sys/socket.h>
+//#endif
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 #endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
+//#ifdef HAVE_SYS_TIME_H
+//#include <sys/time.h>
+//#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
+//#ifdef HAVE_NETINET_IN_H
+//#include <netinet/in.h>
+//#endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
@@ -91,6 +91,7 @@
 #define MAXCONNECTIONS 15000
 #endif
 
+#if 0
 #ifdef MS_WINDOWS
 /* No, we don't need to redefine FD_SETSIZE before including winsock:
  * we use libevent now, and libevent handles the select() stuff.  Yes,
@@ -107,6 +108,7 @@
 #include <ws2tcpip.h>
 #endif
 #endif
+#endif
 
 #ifdef MS_WINDOWS
 #include <io.h>
@@ -118,13 +120,13 @@
 
 #include <event.h>
 
-#include "../common/crypto.h"
-#include "../common/tortls.h"
-#include "../common/log.h"
-#include "../common/compat.h"
-#include "../common/container.h"
-#include "../common/util.h"
-#include "../common/torgzip.h"
+#include "crypto.h"
+#include "tortls.h"
+#include "log.h"
+#include "compat.h"
+#include "container.h"
+#include "util.h"
+#include "torgzip.h"
 
 /* These signals are defined to help control_signal_act work.
  */
