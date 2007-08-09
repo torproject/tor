@@ -1,4 +1,11 @@
 Changes in version 0.2.0.5-alpha - 2007-??-??
+  o Removed features:
+    - Version 1 directories are no longer generated in full.  Instead,
+      authorities generate and serve "stub" v1 directories that list no
+      servers.  This will stop Tor versions 0.1.0.x and earlier from working,
+      but (for security reasons) nobody should be running those versions
+      anyway.
+
   o Major bugfixes (compilation):
     - Try to fix win32 compilation again: Improve checking for ipv6 types.
     - Fix compile on platforms without getaddrinfo: bug found by Li-Hui

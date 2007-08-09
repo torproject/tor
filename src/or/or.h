@@ -157,7 +157,7 @@
 #endif
 
 /** Undefine this when it's time to stop generating v1 directories. */
-#define FULL_V1_DIRECTORIES
+// #define FULL_V1_DIRECTORIES
 /** Undefine this when it's time to stop includeing bandwidth info in router
  * descriptors. */
 #define INCLUDE_BW_INFO_IN_ROUTERDESCS
