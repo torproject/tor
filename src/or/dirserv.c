@@ -779,7 +779,7 @@ void
 directory_set_dirty(void)
 {
   time_t now = time(NULL);
-  int set_v1_dirty;
+  int set_v1_dirty=0;
 
 #ifdef FULL_V1_DIRECTORIES
   set_v1_dirty = 1;
