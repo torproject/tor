@@ -955,7 +955,7 @@ upload_service_descriptor(rend_service_t *service, int version)
   }
 
   /* Post it to the dirservers */
-  rend_get_service_id(service->private_key, serviceid);
+  rend_get_service_id(service->desc->pk, serviceid);
   log_info(LD_REND, "Sending publish request for hidden service %s",
              serviceid);
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC,
