@@ -791,6 +791,7 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
                                size_t request_len)
 {
   rend_service_t *service;
+  char serviceid[REND_SERVICE_ID_LEN+1];
   (void) request;
   (void) request_len;
 
@@ -807,6 +808,12 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
   }
   service->desc_is_dirty = time(NULL);
   circuit->_base.purpose = CIRCUIT_PURPOSE_S_INTRO;
+
+  base32_encode(serviceid, REND_SERVICE_ID_LEN + 1,
+                circuit->rend_pk_digest, 10);
+  log_info(LD_REND,
+           "Received INTRO_ESTABLISHED cell on circuit %d for service %s",
+           circuit->_base.n_circ_id, serviceid);
 
   return 0;
  err:
@@ -934,6 +941,7 @@ upload_service_descriptor(rend_service_t *service, int version)
 {
   char *desc;
   size_t desc_len;
+  char serviceid[REND_SERVICE_ID_LEN+1];
 
   /* Update the descriptor. */
   rend_service_update_descriptor(service);
@@ -947,6 +955,9 @@ upload_service_descriptor(rend_service_t *service, int version)
   }
 
   /* Post it to the dirservers */
+  rend_get_service_id(service->private_key, serviceid);
+  log_info(LD_REND, "Sending publish request for hidden service %s",
+             serviceid);
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC,
                                ROUTER_PURPOSE_GENERAL,
                                HIDSERV_AUTHORITY, desc, desc_len, 0);

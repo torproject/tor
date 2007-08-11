@@ -1471,6 +1471,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
+    log_info(LD_REND,"Uploaded rendezvous descriptor (status %d (%s))",
+             status_code, escaped(reason));
     switch (status_code) {
       case 200:
         log_info(LD_REND,
@@ -2002,6 +2004,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     int versioned = !strcmpstart(url,"/tor/rendezvous1/");
     const char *query = url+strlen("/tor/rendezvous/")+(versioned?1:0);
 
+    log_info(LD_REND, "Handling rendezvous descriptor get");
     switch (rend_cache_lookup_desc(query, versioned?-1:0, &descp, &desc_len)) {
       case 1: /* valid */
         write_http_response_header(conn, desc_len, "application/octet-stream",
@@ -2142,6 +2145,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   if (options->HSAuthoritativeDir &&
       !strcmpstart(url,"/tor/rendezvous/publish")) {
     /* rendezvous descriptor post */
+    log_info(LD_REND, "Handling rendezvous descriptor post.");
     if (rend_cache_store(body, body_len, 1) < 0) {
 //      char tmp[1024*2+1];
       log_fn(LOG_PROTOCOL_WARN, LD_DIRSERV,

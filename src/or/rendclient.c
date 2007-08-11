@@ -144,6 +144,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   payload_len = DIGEST_LEN + r;
   tor_assert(payload_len <= RELAY_PAYLOAD_SIZE); /* we overran something */
 
+  log_info(LD_REND, "Sending an INTRODUCE1 cell");
   if (relay_send_command_from_edge(0, TO_CIRCUIT(introcirc),
                                    RELAY_COMMAND_INTRODUCE1,
                                    payload, payload_len,
@@ -256,6 +257,7 @@ rend_client_refetch_renddesc(const char *query)
 {
   if (!get_options()->FetchHidServDescriptors)
     return;
+  log_info(LD_REND, "Fetching rendezvous descriptor for service %s", query);
   if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
     log_info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
              "already in progress.", escaped_safe_str(query));
@@ -382,6 +384,8 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
              (int)request_len);
     goto err;
   }
+
+  log_info(LD_REND,"Got RENDEZVOUS2 cell from hidden service.");
 
   /* first DH_KEY_LEN bytes are g^y from bob. Finish the dh handshake...*/
   tor_assert(circ->build_state);

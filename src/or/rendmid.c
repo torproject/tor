@@ -132,6 +132,9 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
   char serviceid[REND_SERVICE_ID_LEN+1];
   char nak_body[1];
 
+  log_info(LD_REND, "Received an INTRODUCE1 request on circuit %d",
+           circ->p_circ_id);
+
   if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
     log_warn(LD_PROTOCOL,
              "Rejecting INTRODUCE1 on non-OR or non-edge circuit %d.",
@@ -209,6 +212,9 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
 {
   char hexid[9];
   int reason = END_CIRC_REASON_TORPROTOCOL;
+
+  log_info(LD_REND, "Received an ESTABLISH_RENDEZVOUS request on circuit %d",
+           circ->p_circ_id);
 
   if (circ->_base.purpose != CIRCUIT_PURPOSE_OR || circ->_base.n_conn) {
     log_warn(LD_PROTOCOL,

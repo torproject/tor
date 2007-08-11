@@ -2297,7 +2297,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED) {
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
-    log_debug(LD_REND,"begin is for rendezvous. configuring stream.");
+    log_info(LD_REND,"begin is for rendezvous. configuring stream.");
     n_stream->_base.address = tor_strdup("(rendezvous)");
     n_stream->_base.state = EXIT_CONN_STATE_CONNECTING;
     strlcpy(n_stream->rend_query, origin_circ->rend_query,
