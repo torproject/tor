@@ -1,0 +1,101 @@
+             How to run an experimental v3 directory authority.
+
+                                 13 Aug 2007
+
+                                    NOTE:
+       This code is experimental, and for directory authorities only.
+      Please do not try to make it work right now without Nick's help.
+
+
+What we'll be doing:
+
+   We'll be setting up a couple of authorities to vote with each other.
+
+   (Later, we'll revise this document to explain how to add or remove
+   or operate a v3 voting authority.)
+
+
+The steps:
+
+0) Make sure you're running ntp, and that your time is correct.
+
+   Make sure you have Tor version at least r11083.
+
+   Make sure you can do this with 2 or more authorities.
+
+1) First, you'll need a certificate.  Run tor-gencert to generate one.
+   tor-gencert is in ./src/tools/.
+
+   Run tor-gencert in a separate, very secure directory.  The first time
+   you run it, you will need to run it with the --create-identity-key
+   option to make a v3 authority identity key.  Subsequent times, you
+   can just run it as-is.
+
+   tor-gencert will make 3 files:
+
+      authority_identity_key -- THIS IS VERY SECRET AND VERY SENSITIVE.
+        DO NOT LEAK IT.  DO NOT LOSE IT.
+
+      authority_signing_key -- A key for signing votes and v3 conensuses.
+
+      authority_certificate -- A document authenticating your signing key
+         with your identity-key.
+
+   You will need to rotate your signing key periodically.  The current
+   default lifetime is 1 year.  I'll probably take this down to a month or
+   two some time soon.  To rotate your key, run tor-gencert as before,
+   but without the --create-identity-key option.
+
+2) Copy authority_signing_key and authority_certificate to your Tor keys
+   directory.
+
+   For example if your data directory is /var/lib/tor/, you should run
+     cp authority_signing_key authority_certificate /var/lib/tor
+
+   You will need to repeat this every time you rotate your certificate.
+
+3) Tell Tor to be a v3 authority by adding this to your torrc:
+
+   V3AuthoritativeDirectory 1
+
+   Tell Tor to try voting every half hour by adding this to your torrc:
+
+   V3AuthVotingInterval 30 minutes
+
+4) Now you'll need to add DirServer lines to your Tor.  Right now, the
+   defaults are:
+
+    DirServer moria1 v1 orport=9001 128.31.0.34:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441
+    DirServer moria2 v1 orport=9002 128.31.0.34:9032 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF
+    DirServer tor26 v1 orport=443 86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D
+    DirServer lefkada orport=443 140.247.60.64:80 38D4 F5FC F7B1 0232 28B8 95EA 56ED E7D5 CCDC AF32
+    DirServer dizum 194.109.206.212:80 7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755
+
+   You will need to tell every Tor that is running a v3 authority about the
+   other v3 authorities.  To do this:
+
+     -- Add the default DirServer lines to your torrc... INCLUDING
+        THE AUTHORITIES THAT YOU ARE NOT TESTING WITH V3.
+
+     -- Find out every authority's v3 identity fingerprint.  It should
+        be in your authority_certificate file in a line like:
+
+        fingerprint 3041632465FA8847A98B2C5742108C72325532D9
+
+     -- To the DirServer line of every authority with a v3 identity, add
+        a v3ident=<fingerprint> item.  For example, if moria1's new v3
+        identity fingerprint is FOO, the moria1 dirserver line should now
+        be:
+
+    DirServer moria1 v1 orport=9001 v3ident=FOO 128.31.0.34:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441
+
+        The v3ident item must appear after the nickname and before the IP.
+
+ 5) Restart Tor and let me know what happens.  You might want to enable
+    coredumps.
+
+ 6) If it breaks very badly, or you're not going to be around to restart it,
+    disable v3 voting by setting V3AuthoritativeDirectory to 0.
+
+
+-- Nick
