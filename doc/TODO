@@ -82,71 +82,31 @@ Things we'd like to do in 0.2.0.x:
           the existing one into dir-spec-v2.txt.
         * Describe schedule in copious detail.
       - Get authorities voting
-        o Implement parsing for new document formats
-          o Parse key certificates
-          o Parse votes and consensuses
-          o Unit tests for above
         . Code to manage key certificates
-          o Generate certificates
-          o Authorities load certificates
-          o Clients cache certificates on disk
-          o Learn new ones when they show up in votes.
-          o Forget ones that are very old.
           - Download as needed.
-          o Actually invoke trusted_dirs_flush_certs_to_disk()
           - Serve list as needed.
           o Avoid double-checking signatures every time we get a vote.
           - Warn about expired stuff.
           - Fix all XXXX020s in vote code
-        o Code to generate votes
-        o Code to generate consensus from a list of votes
+        . Code to generate consensus from a list of votes
           * Detect whether votes are really all for the same period.
-        o Add a signature to a consensus.
-          * Unit tests for detached signatures and signature manipulation.
-        o Code to check signatures on a consensus
         - Push/pull documents as appropriate.
-          o Push vote on voting
-            o Push vote
-            o Process vote when received
-              o Even if we get it before we start voting ourself.
-          o Push signature on forming consensus.
-            o Push signature
-            o Add signatures when received
-            o Queue received signatures before consensus is ready
-            o When consensus is ready, use queued signatures.
           - Pull votes and signatures if we don't get them.
-        o Serve consensuses.
         - Store consensuses
         - Cache votes and signatures on disk.
-        o Discard votes in advance of next voting period.
         o Have clients know which authorities are v3 authorities, and what
           their keys are.
           - While we're at it, let v3 authorities have fqdns lines.
       - Start caching consensus documents once authorities make them
       - Start downloading and using consensus documents once caches serve them
     . 104: Long and Short Router Descriptors
-      . Finalize proposal
-      o Implement parsing for extra-info documents
-      o Have routers generate extra-info documents.
-      o Have have authorities accept them and serve them from specified URLs
-        o Implement directory-protocol side.
-        o Implement storage in memory
-        o Implement cache on disk.
-      o Have routers upload extra-info documents to authorities running
-        version 0.2.0.0-alpha-dev (r10070) or later.
-        o Implement, but make it option-controlled.
-        o Make it always-on once it seems to work.
-      o Implement option to download and cache extra-info documents.
-      o Improve the 'retry' logic on extra-info documents.
+      . Merge proposal
       - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol
     - 108: Base "Stable" Flag on Mean Time Between Failures
       - Track mtbf in rephist.c
       - Record mtbf between invocations
       - Base stable on mtbf.
-    o 109: No more than one server per IP address
-    o 103: Splitting identity key from regularly used signing key
-      o Merge with 101 into a new dir-spec.txt
     - 113: Simplifying directory authority administration
     - 110: prevent infinite-length circuits (phase one)
       - servers should recognize relay_extend cells and pass them
@@ -157,30 +117,10 @@ Things we'd like to do in 0.2.0.x:
       dns_request_t both extend an edge_stream_t, and have p_streams and
       n_streams both be linked lists of edge_stream_t.
     . Make cells get buffered on circuit, not on the or_conn.
-      o Implement cell queues
-      o Keep doubly-linked list of active circuits on each or_conn.
-      o Put all relay data on the circuit cell queue, not on the outbuf.
-      o Don't move them into the target conn until there is space on the
-        target conn's outbuf.
-      o When making a circuit active on a connection with an empty buf,
-        we need to "prime" the buffer, so that we can trigger the "I flushed
-        some" test.
-      X Change how directory-bridge-choking works: choke when circuit queue
-        is full, not when the orconn is "too full".
-        [No need to do this: the edge-connection choking will already take
-        care of this a bit, and rewriting the 'bridged connection' code
-        to not use socketpairs will give us even more control.]
-      . Do we switch to pool-allocation for cells?
-        o Implement pool-allocation
-        o Have Tor use it for packed cells.
-        o Document it.
-        o Do something smart with freeing unused chunks.
+      . Switch to pool-allocation for cells?
         - Benchmark pool-allocation vs straightforward malloc.
         - Adjust memory allocation logic in pools to favor a little less
           slack memory.
-      D Can we stop doing so many memcpys on cells?
-      o Also, only package data from exitconns when there is space on the
-        target OR conn's outbuf?  or when the circuit is not too full.
       - MAYBE kill stalled circuits rather than stalled connections; consider
         anonymity implications.
     - Move all status info out of routerinfo into local_routerstatus.  Make
@@ -189,29 +129,9 @@ Things we'd like to do in 0.2.0.x:
       router is this?"
     . Remove socketpair-based bridges conns, and the word "bridge".  (Use
       shared (or connected) buffers for communication, rather than sockets.)
-      o Design
-        o Pick a term.  The term is now "linked connection."
-        o Figure out how to ensure that handle_read is always called.
-          (Use event_active; keep active events in a list; use event_once
-          to make sure that we call the event base dispatch function enough.)
       . Implement
-        o Count connections and sockets separately
-        . Allow connections with s == -1
-        o Add a linked_conn field; it should get marked when we're marked.
-        o Add a function to move bytes from buffer to buffer.
-        o Have read_to_buf dtrt for linked connections
-        o Have handle_read dtrt for linked connections
-        o Have an activate/deactivate_linked_connection function.
-        o Have activated connections added to a list on first activation, and
-          that list made active before calls to event_loop.
-        o Have connections get deactivated when no more data to write on
-          linked conn outbuf.
-        o Handle closing connections properly.
-        o Actually create and use linked connections.
         - Handle rate-limiting on directory writes to linked directory
           connections in a more sensible manner.
-        o Rename want_to_read and want_to_write; they're actually about
-          being blocked, not about wanting to read/write.
         - Find more ways to test this.
     D Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
       online config documentation from a single source.
@@ -236,15 +156,8 @@ Things we'd like to do in 0.2.0.x:
   - Features:
     - Traffic priorities
       - Ability to prioritize own traffic over relayed traffic.
-    o Implement a DNS proxy
-      o Make a listener type.
-      o Hook into connection_edge logic.
-      o Hook into evdns_server_* logic
-      o Actually send back a useful answer.
-      o Make it handle .onion and .exit correctly.
-      - Document.
-      - Handle TCP DNS requests too?
-    o Add a way to request DNS resolves from the controller.
+    - DNS Proxy
+      - Document it
     - A better UI for authority ops.
       - Follow weasel's proposal, crossed with mixminion dir config format
       - Write a proposal
@@ -316,7 +229,6 @@ N     - Design/implement the "local-status" or something like it, from the
     - Accept \n as end of lines in the control protocol in addition to \r\n.
     - Base relative control socket paths in datadir.
   o Deprecations:
-    o Remove v0 control protocol.
     - can we deprecate 'getinfo network-status'?
     - can we deprecate the FastFirstHopPK config option?
 P - Packaging:
@@ -515,6 +427,8 @@ R - add d64 and fp64 along-side d and fp so people can paste status
         download directories/network-status, and a way to force a download.
       - Make everything work with hidden services
 
+Deferred from 0.2.0:
+  - Make a TCP DNSPort
 
 Future version:
   - servers might check certs for known-good ssl websites, and if they
