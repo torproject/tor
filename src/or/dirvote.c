@@ -1276,7 +1276,10 @@ dirvote_compute_consensus(void)
         votes, n_voters,
         my_cert->identity_key,
         get_my_v3_authority_signing_key());
-
+  if (!consensus_body) {
+    log_warn(LD_DIR, "Couldn't generate a consensus at all!");
+    goto err;
+  }
   consensus = networkstatus_parse_vote_from_string(consensus_body, 0);
   if (!consensus) {
     log_warn(LD_DIR, "Couldn't parse consensus we generated!");
