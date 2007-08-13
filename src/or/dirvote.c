@@ -1131,12 +1131,13 @@ dirvote_perform_vote(void)
 {
   cached_dir_t *new_vote = generate_v3_networkstatus();
   pending_vote_t *pending_vote;
+  int status;
   const char *msg = "";
 
   if (!new_vote)
     return;
 
-  if (!(pending_vote = dirvote_add_vote(new_vote->dir, &msg))) {
+  if (!(pending_vote = dirvote_add_vote(new_vote->dir, &msg, &status))) {
     log_warn(LD_DIR, "Couldn't store my own vote! (I told myself, '%s'.)",
              msg);
     return;
@@ -1171,7 +1172,7 @@ dirvote_clear_pending_votes(void)
 
 /** DOCDOC */
 pending_vote_t *
-dirvote_add_vote(const char *vote_body, const char **msg_out)
+dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 {
   networkstatus_vote_t *vote;
   networkstatus_voter_info_t *vi;
@@ -1179,6 +1180,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out)
   pending_vote_t *pending_vote = NULL;
   tor_assert(vote_body);
   tor_assert(msg_out);
+  tor_assert(status_out);
+  *status_out = 0;
 
   if (!pending_vote_list)
     pending_vote_list = smartlist_create();
@@ -1216,6 +1219,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out)
         if (!memcmp(vi_old->vote_digest, vi->vote_digest, DIGEST_LEN)) {
           /* Ah, it's the same vote. Not a problem. */
           log_info(LD_DIR, "Discarding a vote we already have.");
+          *status_out = 200;
           *msg_out = "ok";
           goto err;
         } else if (v->vote->published < vote->published) {
@@ -1240,7 +1244,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out)
                                            vote->published);
   pending_vote->vote = vote;
   smartlist_add(pending_vote_list, pending_vote);
-
+  if (!*status_out)
+    *status_out = 200;
   *msg_out = "ok";
   return pending_vote;
  err:
@@ -1248,6 +1253,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out)
     networkstatus_vote_free(vote);
   if (!*msg_out)
     *msg_out = "Error adding vote";
+  if (!*status_out)
+    *status_out = 400;
   /*XXXX020 free other fields */
   return NULL;
 }

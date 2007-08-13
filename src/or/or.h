@@ -2851,7 +2851,8 @@ void dirvote_act(time_t now);
 void dirvote_perform_vote(void);
 void dirvote_clear_pending_votes(void);
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
-                                         const char **msg_out);
+                                         const char **msg_out,
+                                         int *status_out);
 int dirvote_compute_consensus(void);
 int dirvote_add_signatures(const char *detached_signatures_body);
 int dirvote_publish_consensus(void);

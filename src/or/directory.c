@@ -2161,11 +2161,12 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   if (authdir_mode_v3(options) &&
       !strcmp(url,"/tor/post/vote")) { /* server descriptor post */
     const char *msg = "OK";
-    if (dirvote_add_vote(body, &msg)) {
-      write_http_status_line(conn, 200, "Vote stored");
+    int status;
+    if (dirvote_add_vote(body, &msg, &status)) {
+      write_http_status_line(conn, status, "Vote stored");
     } else {
       tor_assert(msg);
-      write_http_status_line(conn, 400, msg);
+      write_http_status_line(conn, status, msg);
     }
     goto done;
   }
