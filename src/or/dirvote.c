@@ -1212,8 +1212,15 @@ dirvote_add_vote(const char *vote_body, const char **msg_out)
       if (! memcmp(v->vote->cert->cache_info.identity_digest,
                    vote->cert->cache_info.identity_digest,
                    DIGEST_LEN)) {
-        log_notice(LD_DIR, "We already have a pending vote from this dir");
-        if (v->vote->published < vote->published) {
+        networkstatus_voter_info_t *vi_old = smartlist_get(v->vote->voters, 0);
+        if (!memcmp(vi_old->vote_digest, vi->vote_digest, DIGEST_LEN)) {
+          /* Ah, it's the same vote. Not a problem. */
+          log_info(LD_DIR, "Discarding a vote we already have.");
+          *msg_out = "ok";
+          goto err;
+        } else if (v->vote->published < vote->published) {
+          log_notice(LD_DIR, "Replacing an older pending vote from this "
+                     "directory.");
           cached_dir_decref(v->vote_body);
           networkstatus_vote_free(v->vote);
           v->vote_body = new_cached_dir(tor_strdup(vote_body),
