@@ -184,7 +184,7 @@ router_reload_consensus_networkstatus(void)
 
   tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-consensus",
                get_options()->DataDirectory);
-  s = read_file_to_str(filename, 0, NULL);
+  s = read_file_to_str(filename, RTFS_IGNORE_MISSING, NULL);
   if (!s)
     return 0;
 
