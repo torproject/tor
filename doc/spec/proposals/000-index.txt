@@ -36,4 +36,5 @@ Proposals by number:
 115  Two Hop Paths [OPEN]
 116  Two hop paths from entry guards [OPEN]
 117  IPv6 exits [OPEN]
+118  Advertising multiple ORPorts at once [RESEARCH]
 

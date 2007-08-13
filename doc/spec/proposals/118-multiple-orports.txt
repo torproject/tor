@@ -1,0 +1,55 @@
+Filename: 118-multiple-orports.txt
+Title: Advertising multiple ORPorts at once
+Version: $Revision$
+Last-Modified: $Date$
+Author: Nick Mathewson
+Created: 09-Jul-2007
+Status: Needs-Research
+
+Some notes follow. Please feel free to flesh them out, discard them,
+add in better ideas, etc.
+
+  - Some way to configure which address:port combinations to listen
+    on, and/or which to advertise.
+
+    (The best way to support lots of ports is to have your firewall
+    route all connections from those ports to Tor: this doesn't need
+    anywhere near as many listening sockets.  You only really want to
+    listen on tons and tons of ports if your firewalling doesn't
+    support this, or you don't have access to your local
+    iptables/ipf/whatever.  But if you want to do this with the
+    firewall, you need the ability to advertise ports you aren't
+    actually listening on.)
+
+    (Cat would also like to see some discussion of the effect this
+    is likely to have in environments that need to ban or limit Tor.
+    "Speaking only for myself, in an environment where I need to keep
+    a lid on Tor usage, having to chase port settings around makes it
+    more likely that I'm going to move from limiting Tor to just plain
+    banning it.")
+
+  - Some way to advertise in one's router descriptor which
+    address:port combinations you're listening on.  For backward
+    compatibility this should be a new line, not a change to the
+    format of an existing line.
+
+  - Possibly, some way to relay this information in network-status
+    documents.
+
+  - Some analysis of the impact on network-status and routerinfo
+    size.  My guess is "not much", but if it turns out to be a bit, we
+    should look into making the notation concise.
+
+  - What does this imply for self-testing of servers and testing by
+    authorities of servers?  What should the authorities do if one
+    addr:port works but one doesn't?
+
+  - Some way to pick which addr:port to use when you have a choice of
+    more than one addr:port.
+
+  - Some way to avoid having servers open lots and lots of connections
+    between them when they get extend cells to the same server on
+    different ports.
+
+  - How this all interacts with coderman's ipv6 stuff (proposal 117).
+
