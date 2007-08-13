@@ -2221,7 +2221,6 @@ generate_v3_networkstatus(void)
       cached_dir_decref(*ns_ptr);
     *ns_ptr = new_cached_dir(status, now);
     status = NULL; /* So it doesn't get double-freed. */
-    router_set_networkstatus((*ns_ptr)->dir, now, NS_GENERATED, NULL);
   }
 
   return the_v3_networkstatus_vote;

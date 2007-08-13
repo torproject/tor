@@ -1064,7 +1064,8 @@ dirvote_recalculate_timing(time_t now)
     dist_delay = consensus->dist_seconds;
   } else {
     /* XXXX020 is this correct according the the spec? */
-    interval = 3600;
+    /* XXXX020 drop this back down to 60 minutes, or whatever the spec says. */
+    interval = 1200;
     vote_delay = dist_delay = 300;
   }
 
@@ -1132,7 +1133,10 @@ dirvote_perform_vote(void)
   pending_vote_t *pending_vote;
   const char *msg = "";
 
-  if ((pending_vote = dirvote_add_vote(new_vote->dir, &msg))) {
+  if (!new_vote)
+    return;
+
+  if (!(pending_vote = dirvote_add_vote(new_vote->dir, &msg))) {
     log_warn(LD_DIR, "Couldn't store my own vote! (I told myself, '%s'.)",
              msg);
     return;
