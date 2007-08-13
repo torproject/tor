@@ -3418,7 +3418,9 @@ int router_exit_policy_rejects_all(routerinfo_t *router);
 
 void add_trusted_dir_server(const char *nickname, const char *address,
                             uint16_t dir_port, uint16_t or_port,
-                            const char *digest, authority_type_t type);
+                            const char *digest,
+                            const char *v3_auth_digest,
+                            authority_type_t type);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);

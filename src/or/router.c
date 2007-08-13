@@ -327,6 +327,7 @@ init_keys(void)
   const char *mydesc, *datadir;
   crypto_pk_env_t *prkey;
   char digest[20];
+  char v3_digest[20];
   char *cp;
   or_options_t *options = get_options();
   or_state_t *state = get_or_state();
@@ -364,8 +365,14 @@ init_keys(void)
   }
 
   /* 1a. Read v3 directory authority key/cert information. */
-  if (authdir_mode(options) && options->V3AuthoritativeDir)
+  memset(v3_digest, 0, sizeof(v3_digest));
+  if (authdir_mode(options) && options->V3AuthoritativeDir) {
     init_v3_authority_keys(keydir);
+    if (get_my_v3_authority_cert()) {
+      crypto_pk_get_digest(get_my_v3_authority_cert()->identity_key,
+                           v3_digest);
+    }
+  }
 
   /* 1. Read identity key. Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),
@@ -473,6 +480,7 @@ init_keys(void)
   crypto_pk_get_digest(get_identity_key(), digest);
   type = ((options->V1AuthoritativeDir ? V1_AUTHORITY : 0) |
           (options->V2AuthoritativeDir ? V2_AUTHORITY : 0) |
+          (options->V3AuthoritativeDir ? V3_AUTHORITY : 0) |
           (options->BridgeAuthoritativeDir ? BRIDGE_AUTHORITY : 0) |
           (options->HSAuthoritativeDir ? HIDSERV_AUTHORITY : 0));
 
@@ -481,6 +489,7 @@ init_keys(void)
                            (uint16_t)options->DirPort,
                            (uint16_t)options->ORPort,
                            digest,
+                           v3_digest,
                            type);
   }
   return 0; /* success */

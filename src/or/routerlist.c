@@ -3726,7 +3726,8 @@ router_exit_policy_rejects_all(routerinfo_t *router)
 void
 add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
-                       const char *digest, authority_type_t type)
+                       const char *digest, const char *v3_auth_digest,
+                       authority_type_t type)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
@@ -3761,6 +3762,8 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->is_running = 1;
   ent->type = type;
   memcpy(ent->digest, digest, DIGEST_LEN);
+  if (v3_auth_digest)
+    memcpy(ent->v3_identity_digest, v3_auth_digest, DIGEST_LEN);
 
   dlen = 64 + strlen(hostname) + (nickname?strlen(nickname):0);
   ent->description = tor_malloc(dlen);

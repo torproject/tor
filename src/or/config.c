@@ -3801,7 +3801,8 @@ parse_dir_server_line(const char *line, int validate_only)
     log_debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address,
               (int)dir_port,
               (char*)smartlist_get(items,0));
-    add_trusted_dir_server(nickname, address, dir_port, or_port, digest, type);
+    add_trusted_dir_server(nickname, address, dir_port, or_port, digest,
+                           v3_digest, type);
   }
 
   r = 0;
