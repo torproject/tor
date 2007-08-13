@@ -998,10 +998,12 @@ authority_cert_dup(authority_cert_t *cert)
 void
 dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out)
 {
+  or_options_t *options = get_options();
+
   tor_assert(timing_out);
 
-  /* XXXX020 make these configurable. */
-  timing_out->vote_interval = 3600;
+  timing_out->vote_interval = options->V3AuthVotingInterval;
+ /* XXXX020 make these configurable. */
   timing_out->n_intervals_valid = 3;
   timing_out->vote_delay = 300;
   timing_out->dist_delay = 300;

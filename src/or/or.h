@@ -2060,12 +2060,15 @@ typedef struct {
                                * support BEGIN_DIR, when possible. */
   int AllowNonRFC953Hostnames; /**< If true, we allow connections to hostnames
                                 * with weird characters. */
- /** If true, we try resolving hostnames with weird characters. */
+  /** If true, we try resolving hostnames with weird characters. */
   int ServerDNSAllowNonRFC953Hostnames;
 
   /** If true, we try to download extra-info documents (and we serve them,
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
+
+  /** DOCDOC */
+  int V3AuthVotingInterval;
 
 } or_options_t;
 
