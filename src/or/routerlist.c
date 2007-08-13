@@ -3868,11 +3868,14 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache)
   networkstatus_vote_t *c;
   /* Make sure it's parseable. */
   c = networkstatus_parse_vote_from_string(consensus, 0);
-  if (!c)
+  if (!c) {
+    log_warn(LD_DIR, "Unable to parse networkstatus consensus");
     return -1;
+  }
 
   /* Make sure it's signed enough. */
   if (networkstatus_check_consensus_signature(c)<0) {
+    log_warn(LD_DIR, "Not enough good signatures on networkstatus consensus");
     networkstatus_vote_free(c);
     return -1;
   }

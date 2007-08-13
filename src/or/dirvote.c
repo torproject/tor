@@ -1084,12 +1084,14 @@ dirvote_act(time_t now)
   if (!voting_schedule.voting_starts)
     dirvote_recalculate_timing(now);
   if (voting_schedule.voting_starts < now && !voting_schedule.have_voted) {
+    log_notice(LD_DIR, "Time to vote.");
     dirvote_perform_vote();
     voting_schedule.have_voted = 1;
   }
   /* XXXX020 after a couple minutes here, start trying to fetch votes. */
   if (voting_schedule.voting_ends < now &&
       !voting_schedule.have_built_consensus) {
+    log_notice(LD_DIR, "Time to compute a consensus.");
     dirvote_compute_consensus();
     /* XXXX020 we will want to try again later if we haven't got enough
      * votes yet. */
@@ -1097,12 +1099,14 @@ dirvote_act(time_t now)
   }
   if (voting_schedule.interval_starts < now &&
       !voting_schedule.have_published_consensus) {
+    log_notice(LD_DIR, "Time to publish the consensus.");
     dirvote_publish_consensus();
     /* XXXX020 we will want to try again later if we haven't got enough
      * signatures yet. */
     voting_schedule.have_published_consensus = 1;
   }
   if (voting_schedule.discard_old_votes < now) {
+    log_notice(LD_DIR, "Time to discard old votes consensus.");
     dirvote_clear_pending_votes();
     dirvote_recalculate_timing(now);
   }
@@ -1148,6 +1152,7 @@ dirvote_perform_vote(void)
                                V3_AUTHORITY,
                                pending_vote->vote_body->dir,
                                pending_vote->vote_body->dir_len, 0);
+  log_notice(LD_DIR, "Vote posted.");
 }
 
 /** DOCDOC */
@@ -1168,6 +1173,7 @@ dirvote_clear_pending_votes(void)
                       tor_free(cp));
     smartlist_clear(pending_consensus_signature_list);
   }
+  log_notice(LD_DIR, "Pending votes cleared.");
 }
 
 /** DOCDOC */
@@ -1327,6 +1333,7 @@ dirvote_compute_consensus(void)
     smartlist_clear(pending_consensus_signature_list);
   }
 
+  log_notice(LD_DIR, "Consensus computed.");
   return 0;
  err:
   if (votes)
@@ -1418,10 +1425,15 @@ dirvote_publish_consensus(void)
 {
   /* Can we actually publish it yet? */
   if (!pending_consensus ||
-      networkstatus_check_consensus_signature(pending_consensus)<0)
+      networkstatus_check_consensus_signature(pending_consensus)<0) {
+    log_warn(LD_DIR, "Not enough info to publish pending consensus");
     return -1;
+  }
 
-  networkstatus_set_current_consensus(pending_consensus_body, 0);
+  if (networkstatus_set_current_consensus(pending_consensus_body, 0))
+    log_warn(LD_DIR, "Error publishing consensus");
+  else
+    log_warn(LD_DIR, "Consensus published.");
   return 0;
 }
 
