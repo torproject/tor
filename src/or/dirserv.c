@@ -2723,6 +2723,8 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
     cached_dir_t *d;
     if (router_digest_is_me(digest) && the_v2_networkstatus)
       d = the_v2_networkstatus;
+    else if (tor_digest_is_zero(digest) && cached_v3_networkstatus)
+      d = cached_v3_networkstatus;
     else
       d = digestmap_get(cached_v2_networkstatus, digest);
     if (d && d->published <= cutoff) {
