@@ -1967,8 +1967,8 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   smartlist_free(routers);
   digestmap_free(omit_as_sybil, NULL);
 
-  tor_assert(v3_out);
-  memset(v3_out, 0, sizeof(networkstatus_vote_t));
+  v3_out = tor_malloc_zero(sizeof(networkstatus_vote_t));
+
   v3_out->is_vote = 1;
   dirvote_get_preferred_voting_intervals(&timing);
   v3_out->published = now;
