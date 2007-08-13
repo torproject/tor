@@ -15,8 +15,11 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
     - Store v3 consensus status consensuses on disk, and reload them
       on startup.
 
-  o Minor featuers (security):
+  o Minor features (security):
     - Warn about unsafe ControlPort configurations.
+
+  o Minor bugfixes (directory voting):
+    - Read v3 keys from the right location.
 
 
 Changes in version 0.2.0.4-alpha - 2007-08-01

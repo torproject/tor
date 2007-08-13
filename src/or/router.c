@@ -363,6 +363,10 @@ init_keys(void)
     return -1;
   }
 
+  /* 1a. Read v3 directory authority key/cert information. */
+  if (authdir_mode(options) && options->V3AuthoritativeDir)
+    init_v3_authority_keys(keydir);
+
   /* 1. Read identity key. Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),
                "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_id_key",datadir);
@@ -370,10 +374,6 @@ init_keys(void)
   prkey = init_key_from_file(keydir, 1, LOG_ERR);
   if (!prkey) return -1;
   set_identity_key(prkey);
-
-  /* 1b. Read v3 directory authority key/cert information. */
-  if (authdir_mode(options) && options->V3AuthoritativeDir)
-    init_v3_authority_keys(keydir);
 
   /* 2. Read onion key.  Make it if none is found. */
   tor_snprintf(keydir,sizeof(keydir),
