@@ -1353,6 +1353,9 @@ do_main_loop(void)
   if (router_reload_networkstatus()) {
     return -1;
   }
+  if (router_reload_consensus_networkstatus()) {
+    return -1;
+  }
   directory_info_has_arrived(time(NULL),1);
 
   if (authdir_mode_tests_reachability(get_options())) {

@@ -1400,7 +1400,7 @@ dirvote_publish_consensus(void)
       networkstatus_check_consensus_signature(pending_consensus)<0)
     return -1;
 
-  networkstatus_set_current_consensus(pending_consensus_body);
+  networkstatus_set_current_consensus(pending_consensus_body, 0);
   return 0;
 }
 

@@ -11,6 +11,10 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
     - Fix compile on platforms without getaddrinfo: bug found by Li-Hui
       Zhou.
 
+  o Minor features (directory voting):
+    - Store v3 consensus status consensuses on disk, and reload them
+      on startup.
+
   o Minor featuers (security):
     - Warn about unsafe ControlPort configurations.
 

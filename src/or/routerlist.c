@@ -175,6 +175,27 @@ router_reload_networkstatus(void)
   return 0;
 }
 
+/**DOCDOC */
+int
+router_reload_consensus_networkstatus(void)
+{
+  char filename[512];
+  char *s;
+
+  tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-consensus",
+               get_options()->DataDirectory);
+  s = read_file_to_str(filename, 0, NULL);
+  if (!s)
+    return 0;
+
+  if (networkstatus_set_current_consensus(s, 1)) {
+    log_warn(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
+             filename);
+  }
+  tor_free(s);
+  return 0;
+}
+
 /** Reload the cached v3 key certificates from the cached-certs file in
  * the data directory. Return 0 on success, -1 on failure. */
 int
@@ -3837,8 +3858,9 @@ networkstatus_get_live_consensus(time_t now)
   return current_consensus;
 }
 
+/** DOCDOC */
 int
-networkstatus_set_current_consensus(const char *consensus)
+networkstatus_set_current_consensus(const char *consensus, int from_cache)
 {
   networkstatus_vote_t *c;
   /* Make sure it's parseable. */
@@ -3856,6 +3878,15 @@ networkstatus_set_current_consensus(const char *consensus)
     networkstatus_vote_free(current_consensus);
 
   current_consensus = c;
+
+  if (!from_cache) {
+    or_options_t *options = get_options();
+    char filename[512];
+    tor_snprintf(filename, sizeof(filename),
+                 "%s"PATH_SEPARATOR"cached-consensus",
+                 options->DataDirectory);
+    write_str_to_file(filename, consensus, 0);
+  }
 
   if (get_options()->DirPort)
     dirserv_set_cached_networkstatus_v3(consensus, c->valid_after);
