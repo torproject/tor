@@ -15,6 +15,8 @@ const char routerlist_c_id[] =
 
 #include "or.h"
 
+// #define DEBUG_ROUTERLIST
+
 /****************************************************************************/
 
 /* static function prototypes */
@@ -1612,7 +1614,9 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
   smartlist_add(rl->routers, ri);
   ri->routerlist_index = smartlist_len(rl->routers) - 1;
   router_dir_info_changed();
+#ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
+#endif
 }
 
 /** If we're a directory cache and routerlist <b>rl</b> doesn't have
@@ -1635,7 +1639,9 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
   } else {
     routerinfo_free(ri);
   }
+#ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
+#endif
 }
 
 /** Remove an item <b>ri</b> from the routerlist <b>rl</b>, updating indices
@@ -1672,7 +1678,9 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int idx, int make_old)
     router_bytes_dropped += ri->cache_info.signed_descriptor_len;
     routerinfo_free(ri);
   }
+#ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
+#endif
 }
 
 /** DOCDOC */
@@ -1689,7 +1697,9 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   tor_assert(sd_tmp == sd);
   router_bytes_dropped += sd->signed_descriptor_len;
   signed_descriptor_free(sd);
+#ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
+#endif
 }
 
 /** Remove <b>ri_old</b> from the routerlist <b>rl</b>, and replace it with
@@ -1746,7 +1756,9 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     router_bytes_dropped += ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
   }
+#ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
+#endif
 }
 
 /** Free all memory held by the routerlist module. */

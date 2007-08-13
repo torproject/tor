@@ -1,3 +1,9 @@
+Changes in version 0.1.2.xx - 2007-xxxxx
+  o 
+    - Save on most routerlist_assert_ok() calls in routerlist.c,
+      thus greatly speeding up loading cached-routers from disk on
+      startup (backport from trunk).
+
 Changes in version 0.1.2.16 - 2007-08-01
   o Major security fixes:
     - Close immediately after missing authentication on control port;
