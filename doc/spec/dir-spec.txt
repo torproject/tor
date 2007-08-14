@@ -1505,7 +1505,29 @@ $Id$
 
 7.2. HTTP status codes
 
-  XXX We should write down what return codes dirservers send in what situations.
+  Tor delivers the following status codes.  Some were chosen without much
+  thought; other code SHOULD NOT rely on specific status codes yet.
+
+  200 -- the operation completed successfully
+      -- the user requested statuses or serverdescs, and none of the ones we
+         requested were found (0.2.0.4-alpha and earlier).
+
+  304 -- the client specified an if-modified-since time, and none of the
+         requested resources have changed since that time.
+
+  400 -- the request is malformed, or
+      -- the URL is for a malformed variation of one of the URLs we support,
+          or
+      -- the client tried to post to a non-authority, or
+      -- the authority rejected a malformed posted document, or
+
+  404 -- the requested document was not found.
+      -- the user requested statuses or serverdescs, and none of the ones we
+         requested were found (0.2.0.5-alpha and later).
+
+  503 -- we are declining the request in order to save bandwidth
+      -- user requested some items that we ordinarily generate or store,
+         but we do not have any available.
 
 9. Backward compatibility and migration plans
 
