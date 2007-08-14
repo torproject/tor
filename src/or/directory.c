@@ -704,7 +704,7 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
-      url = tor_strdup("/tor/post/vote");
+      url = tor_strdup("/tor/post/consensus-signature");
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
       tor_assert(resource);
