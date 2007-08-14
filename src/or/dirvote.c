@@ -1081,7 +1081,7 @@ dirvote_recalculate_timing(time_t now)
   voting_schedule.voting_ends = start - vote_delay;
   voting_schedule.voting_starts = start - vote_delay - dist_delay;
 
-  voting_schedule.discard_old_votes = start + 600; /* XXXX020 */
+  voting_schedule.discard_old_votes = start + 300; /* XXXX020 */
 }
 
 /** DOCDOC */
@@ -1180,6 +1180,13 @@ dirvote_clear_pending_votes(void)
                       tor_free(cp));
     smartlist_clear(pending_consensus_signature_list);
   }
+  tor_free(pending_consensus_body);
+  tor_free(pending_consensus_signatures);
+  if (pending_consensus) {
+    networkstatus_vote_free(pending_consensus);
+    pending_consensus = NULL;
+  }
+
   log_notice(LD_DIR, "Pending votes cleared.");
 }
 
@@ -1349,7 +1356,15 @@ dirvote_compute_consensus(void)
     smartlist_clear(pending_consensus_signature_list);
   }
 
-  log_notice(LD_DIR, "Consensus computed.");
+  log_notice(LD_DIR, "Consensus computed; uploading signature(s)");
+
+  directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_SIGNATURES,
+                               ROUTER_PURPOSE_GENERAL,
+                               V3_AUTHORITY,
+                               pending_consensus_signatures,
+                               strlen(pending_consensus_signatures), 0);
+  log_notice(LD_DIR, "Signature(s) posted.");
+
   return 0;
  err:
   if (votes)
@@ -1424,9 +1439,11 @@ dirvote_add_signatures(const char *detached_signatures_body)
 {
   if (pending_consensus) {
     const char *msg=NULL;
+    log_notice(LD_DIR, "Got a signature. Adding it to the pending consensus.");
     return dirvote_add_signatures_to_pending_consensus(
                                          detached_signatures_body, &msg);
   } else {
+    log_notice(LD_DIR, "Got a signature. Queueing it for the next consensus.");
     if (!pending_consensus_signature_list)
       pending_consensus_signature_list = smartlist_create();
     smartlist_add(pending_consensus_signature_list,
@@ -1450,6 +1467,7 @@ dirvote_publish_consensus(void)
     log_warn(LD_DIR, "Error publishing consensus");
   else
     log_warn(LD_DIR, "Consensus published.");
+
   return 0;
 }
 
