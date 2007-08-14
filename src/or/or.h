@@ -251,6 +251,8 @@ typedef enum {
 /** Type for sockets listening for DNS requests. */
 #define CONN_TYPE_AP_DNS_LISTENER 15
 #define _CONN_TYPE_MAX 15
+/* !!!! If _CONN_TYPE_MAX is ever over 15, we must grow the type field in
+ * connection_t. */
 
 #define CONN_IS_EDGE(x) \
   ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
@@ -390,6 +392,9 @@ typedef enum {
 /** This exit stream wants to do a resolve (either normal or reverse). */
 #define EXIT_PURPOSE_RESOLVE 2
 #define _EXIT_PURPOSE_MAX 2
+
+/* !!!! If any connection purpose is ever over over 15, we must grow the type
+ * field in connection_t. */
 
 /** Circuit state: I'm the origin, still haven't done all my handshakes. */
 #define CIRCUIT_STATE_BUILDING 0
@@ -756,13 +761,16 @@ typedef struct connection_t {
   uint32_t magic; /**< For memory debugging: must equal one of
                    * *_CONNECTION_MAGIC. */
 
-  uint8_t type; /**< What kind of connection is this? */
   uint8_t state; /**< Current state of this connection. */
-  uint8_t purpose; /**< Only used for DIR and EXIT types currently. */
+  uint8_t type:4; /**< What kind of connection is this? */
+  uint8_t purpose:4; /**< Only used for DIR and EXIT types currently. */
 
-  /* The next fields are all one-bit booleans. Some are only applicable
-   * to connection subtypes, but we hold them here anyway, to save space.
-   * (Currently, they all fit into a single byte.) */
+  /* The next fields are all one-bit booleans. Some are only applicable to
+   * connection subtypes, but we hold them here anyway, to save space.
+   * (Currently, they all fit into a single byte. If they ever need more than
+   * one byte, we can shave some bits off type, state, and purpose above, none
+   * of which is ever over 31.)
+   */
   unsigned read_blocked_on_bw:1; /**< Boolean: should we start reading again
                             * once the bandwidth throttler allows it? */
   unsigned write_blocked_on_bw:1; /**< Boolean: should we start writing again
@@ -784,6 +792,18 @@ typedef struct connection_t {
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
   unsigned int chosen_exit_optional:1;
+
+  /* For linked connections:
+   */
+  unsigned int linked:1; /**< True if there is, or has been, a linked_conn. */
+  /** True iff we'd like to be notified about read events from the
+   * linked conn. */
+  unsigned int reading_from_linked_conn:1;
+  /** True iff we're willing to write to the linked conn. */
+  unsigned int writing_to_linked_conn:1;
+  /** True iff we're currently able to read on the linked conn, and our
+   * read_event should be made active with libevent. */
+  unsigned int active_on_link:1;
 
   int s; /**< Our socket; -1 if this connection is closed, or has no
           * socket. */
@@ -818,17 +838,6 @@ typedef struct connection_t {
                   * strdup into this, because free_connection frees it. */
   /** Annother connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
-
-  /* XXXX020 NM move these up to the other 1-bit flags. */
-  unsigned int linked:1; /**< True if there is, or has been, a linked_conn. */
-  /** True iff we'd like to be notified about read events from the
-   * linked conn. */
-  unsigned int reading_from_linked_conn:1;
-  /** True iff we're willing to write to the linked conn. */
-  unsigned int writing_to_linked_conn:1;
-  /** True iff we're currently able to read on the linked conn, and our
-   * read_event should be made active with libevent. */
-  unsigned int active_on_link:1;
 
   /* XXXX020 move this into a subtype!!! */
   struct evdns_server_port *dns_server_port;
