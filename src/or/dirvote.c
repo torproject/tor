@@ -753,7 +753,12 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
       ++n_no_signature;
   });
 
-  if (n_good > n_required)
+  log_notice(LD_DIR,
+             "%d unknown, %d missing key, %d good, %d bad, %d no signature,"
+             "%d required", n_unknown, n_missing_key, n_good, n_bad,
+             n_no_signature, n_required);
+
+  if (n_good >= n_required)
     return 0;
   else
     return -1;
