@@ -55,7 +55,7 @@ Things we'd like to do in 0.2.0.x:
           unreachable is bunk -- it's leftover from the time when all
           servers ran 24/7. now it triggers every time a server goes
           away and then returns before the old descriptor has expired.
-      - Update dir-spec with decisions made on these issues:
+      o Update dir-spec with decisions made on these issues:
         o clients don't log as loudly when they receive them
         o they don't count toward the 3-strikes rule
           D But eventually, we give up after getting a lot of 503s.
@@ -67,8 +67,8 @@ Things we'd like to do in 0.2.0.x:
         D They can 503 client descriptor requests when they feel like it.
           How can they distinguish? Not implemented for now, maybe
           should abandon.
-        - describe our 302 not modified behaviors.
-        - and document a bit more -- e.g. it looks like we return an empty
+        o describe our 302 not modified behaviors.
+        o and document a bit more -- e.g. it looks like we return an empty
           200 OK when somebody asks us for a networkstatus and we don't
           have it?
 
@@ -84,7 +84,7 @@ Things we'd like to do in 0.2.0.x:
       - Get authorities voting
         . Code to manage key certificates
           - Download as needed.
-          - Serve list as needed.
+          o Serve list as needed.
           o Avoid double-checking signatures every time we get a vote.
           - Warn about expired stuff.
           - Fix all XXXX020s in vote code

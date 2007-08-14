@@ -1737,7 +1737,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                              const char *body, size_t body_len)
 {
   size_t dlen;
-  char *url = NULL;
+  char *url = NULL; /* XXX020 every exit point needs to free url. this
+                     * function should use 'goto done' for that. */
   or_options_t *options = get_options();
   time_t if_modified_since = 0;
   char *header;
@@ -2005,6 +2006,84 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       connection_dirserv_flushed_some(conn);
     }
     return 0;
+  }
+
+  if (!strcmpstart(url,"/tor/keys/")) {
+    smartlist_t *certs = smartlist_create();
+    int compressed;
+    ssize_t len = -1;
+    url += strlen("/tor/keys/");
+    compressed = !strcmpend(url, ".z");
+    if (compressed)
+      url[strlen(url)-2] = '\0';
+    if (!strcmp(url, "all")) {
+      SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                        trusted_dir_server_t *, ds,
+      {
+        if (!ds->v3_certs)
+          continue;
+        SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+                if (cert->cache_info.published_on >= if_modified_since)
+                  smartlist_add(certs, cert));
+      });
+    } else if (!strcmp(url, "authority")) {
+      authority_cert_t *cert = get_my_v3_authority_cert();
+      if (cert)
+        smartlist_add(certs, cert);
+    } else if (!strcmpstart(url, "fp/")) {
+      smartlist_t *fps = smartlist_create();
+      dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
+      SMARTLIST_FOREACH(fps, char *, d, {
+          authority_cert_t *c = authority_cert_get_newest_by_id(d);
+          if (c) smartlist_add(certs, c);
+          tor_free(d);
+      });
+      smartlist_free(fps);
+    } else if (!strcmpstart(url, "sk/")) {
+      smartlist_t *fps = smartlist_create();
+      dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
+      SMARTLIST_FOREACH(fps, char *, d, {
+          authority_cert_t *c = authority_cert_get_by_sk_digest(d);
+          if (c) smartlist_add(certs, c);
+          tor_free(d);
+      });
+      smartlist_free(fps);
+    } else {
+      write_http_status_line(conn, 400, "Bad request");
+      tor_free(url);
+      smartlist_free(certs);
+      return 0;
+    }
+    if (!smartlist_len(certs)) {
+      write_http_status_line(conn, 404, "Not found");
+      tor_free(url);
+      smartlist_free(certs);
+      return 0;
+    }
+    if (!compressed) {
+      len = 0;
+      SMARTLIST_FOREACH(certs, authority_cert_t *, c,
+                        len += c->cache_info.signed_descriptor_len);
+    }
+    write_http_response_header(conn, len,
+                           compressed?"application/octet-stream":"text/plain",
+                           compressed?"deflate":"identity",
+                           60*60);
+    if (compressed) {
+      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+      SMARTLIST_FOREACH(certs, authority_cert_t *, c,
+            connection_write_to_buf_zlib(c->cache_info.signed_descriptor_body,
+                                         c->cache_info.signed_descriptor_len,
+                                         conn, 0));
+      connection_write_to_buf_zlib("", 0, conn, 1);
+    } else {
+      SMARTLIST_FOREACH(certs, authority_cert_t *, c,
+            connection_write_to_buf(c->cache_info.signed_descriptor_body,
+                                    c->cache_info.signed_descriptor_len,
+                                    TO_CONN(conn)));
+    }
+    smartlist_free(certs);
+    tor_free(url);
   }
 
   if (options->HSAuthoritativeDir &&

@@ -3355,6 +3355,8 @@ trusted_dir_server_t *router_get_trusteddirserver_by_digest(
      const char *digest);
 trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(
      const char *digest);
+authority_cert_t *authority_cert_get_newest_by_id(const char *id_digest);
+authority_cert_t *authority_cert_get_by_sk_digest(const char *sk_digest);
 authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
                                                 const char *sk_digest);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);

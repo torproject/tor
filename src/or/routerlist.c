@@ -337,6 +337,41 @@ trusted_dirs_remove_old_certs(void)
   trusted_dirs_flush_certs_to_disk();
 }
 
+/** DOCDOC */
+authority_cert_t *
+authority_cert_get_newest_by_id(const char *id_digest)
+{
+  trusted_dir_server_t *ds = trusteddirserver_get_by_v3_auth_digest(id_digest);
+  authority_cert_t *best = NULL;
+  if (!ds || !ds->v3_certs)
+    return NULL;
+  SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+  {
+    if (!best || cert->cache_info.published_on > best->cache_info.published_on)
+      best = cert;
+  });
+  return best;
+}
+
+/** DOCDOC */
+authority_cert_t *
+authority_cert_get_by_sk_digest(const char *sk_digest)
+{
+  if (!trusted_dir_servers)
+    return NULL;
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+  {
+    if (!ds->v3_certs)
+      return NULL;
+    SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+    {
+      if (!memcmp(cert->signing_key_digest, sk_digest, DIGEST_LEN))
+        return cert;
+    });
+  });
+  return NULL;
+}
+
 /** Return the v3 authority certificate with signing key matching
  * <b>sk_digest</b>, for the authority with identity digest <b>id_digest</b>.
  * Return NULL if no such authority is known. */
