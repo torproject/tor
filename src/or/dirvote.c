@@ -803,8 +803,12 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
           networkstatus_check_voter_signature(target, src_voter, cert);
         }
       }
-      /* If this signature is good, then replace and add. */
-      if (src_voter->good_signature || !target_voter->signature) {
+      /* XXXX020 We want to add signatures for which we don't have the cert,
+       * pending the arrival of the cert information.  But this means we need
+       * to replace them if a better one comes along, and that's not
+       * implemented yet. */
+      /* If this signature is good, then add it. */
+      if (src_voter->good_signature) {
         tor_free(target_voter->signature);
         target_voter->signature =
           tor_memdup(src_voter->signature, src_voter->signature_len);
@@ -1325,6 +1329,9 @@ dirvote_compute_consensus(void)
     log_warn(LD_DIR, "Couldn't parse consensus we generated!");
     goto err;
   }
+  /* 'Check' our own signature, to mark it valid. */
+  networkstatus_check_consensus_signature(consensus);
+
   signatures = networkstatus_get_detached_signatures(consensus);
   if (!signatures) {
     log_warn(LD_DIR, "Couldn't extract signatures.");

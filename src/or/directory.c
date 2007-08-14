@@ -1415,7 +1415,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_SIGNATURES) {
     switch (status_code) {
       case 200: {
-        log_notice(LD_DIR,"Uploaded a signatures to dirserver %s:%d",
+        log_notice(LD_DIR,"Uploaded signature(s) to dirserver %s:%d",
                    conn->_base.address, conn->_base.port);
         }
         break;

@@ -2790,6 +2790,9 @@ test_v3_networkstatus(void)
     */
     test_eq(2, smartlist_len(dsig2->signatures));
 
+    /* Try adding to con2 twice; verify that nothing changes. */
+    test_eq(0, networkstatus_add_detached_signatures(con2, dsig1, &addition2));
+
     /* Add to con. */
     test_eq(2, networkstatus_add_detached_signatures(con, dsig2, &addition2));
     /* Check signatures */
