@@ -271,8 +271,12 @@ static config_var_t _option_vars[] = {
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
-  /* XXXX020 check this for sanity. */
+  /* XXXX020 check these for sanity. */
   VAR("V3AuthVotingInterval",INTERVAL, V3AuthVotingInterval, "1 hour"),
+  VAR("V3AuthVoteDelay",     INTERVAL, V3AuthVoteDelay, "5 minutes"),
+  VAR("V3AuthDistDelay",     INTERVAL, V3AuthDistDelay, "5 minutes"),
+  VAR("V3AuthNIntervalsValid", UINT,   V3AuthNIntervalsValid, "3"),
+
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   VAR("VirtualAddrNetwork",  STRING,   VirtualAddrNetwork,   "127.192.0.0/10"),
   VAR("__AllDirActionsPrivate",BOOL,   AllDirActionsPrivate, "0"),

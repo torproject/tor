@@ -2067,8 +2067,11 @@ typedef struct {
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
 
-  /** DOCDOC */
+  /** The length of time that we think a consensus should be  */
   int V3AuthVotingInterval;
+  int V3AuthVoteDelay;
+  int V3AuthDistDelay;
+  int V3AuthNIntervalsValid;
 
 } or_options_t;
 
@@ -3530,7 +3533,7 @@ int router_parse_directory(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
                                              int cache_copy);
 extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
-                                      int cache_copy, digestmap_t *routermap);
+                         int cache_copy, struct digest_ri_map_t *routermap);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
                                                     int assume_action);
 version_status_t tor_version_is_obsolete(const char *myversion,

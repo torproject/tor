@@ -914,10 +914,9 @@ router_parse_list_from_string(const char **s, const char *eos,
 
     if (have_extrainfo && want_extrainfo) {
       routerlist_t *rl = router_get_routerlist();
-      /* XXXX020 fix this cast to digestmap_t* */
       extrainfo = extrainfo_parse_entry_from_string(*s, end,
                                        saved_location != SAVED_IN_CACHE,
-                                       (digestmap_t*)rl->identity_map);
+                                       rl->identity_map);
       if (extrainfo) {
         signed_desc = &extrainfo->cache_info;
         elt = extrainfo;
@@ -1197,7 +1196,7 @@ router_parse_entry_from_string(const char *s, const char *end,
  */
 extrainfo_t *
 extrainfo_parse_entry_from_string(const char *s, const char *end,
-                                  int cache_copy, digestmap_t *routermap)
+                           int cache_copy, struct digest_ri_map_t *routermap)
 {
   extrainfo_t *extrainfo = NULL;
   char digest[128];
@@ -1265,7 +1264,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   }
 
   if (routermap &&
-      (router = digestmap_get(routermap,
+      (router = digestmap_get((digestmap_t*)routermap,
                               extrainfo->cache_info.identity_digest))) {
     key = router->identity_pkey;
   }
@@ -2517,30 +2516,28 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
       o_syn = table[i].os;
       *s = eat_whitespace_eos_no_nl(next, eol);
       next = find_whitespace_eos(*s, eol);
-      if (1 || *s < eol) { /* make sure there are arguments to store */
-        /* XXXX020 actually, we go ahead whether there are arguments or not,
-         * so that tok->args is always set if we want arguments. */
-        if (table[i].concat_args) {
-          /* The keyword takes the line as a single argument */
-          tok->args = tor_malloc(sizeof(char*));
-          tok->args[0] = tor_strndup(*s,eol-*s); /* Grab everything on line */
-          tok->n_args = 1;
-        } else {
-          /* This keyword takes multiple arguments. */
-          j = 0;
-          allocated = 16;
-          tok->args = tor_malloc(sizeof(char*)*allocated);
-          while (*s < eol) { /* While not at eol, store the next token */
-            if (j == allocated) {
-              allocated *= 2;
-              tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
-            }
-            tok->args[j++] = tor_strndup(*s, next-*s);
-            *s = eat_whitespace_eos_no_nl(next, eol); /* eat intra-line ws */
-            next = find_whitespace_eos(*s, eol); /* find end of token at *s */
+      /* We go ahead whether there are arguments or not, so that tok->args is
+       * always set if we want arguments. */
+      if (table[i].concat_args) {
+        /* The keyword takes the line as a single argument */
+        tok->args = tor_malloc(sizeof(char*));
+        tok->args[0] = tor_strndup(*s,eol-*s); /* Grab everything on line */
+        tok->n_args = 1;
+      } else {
+        /* This keyword takes multiple arguments. */
+        j = 0;
+        allocated = 16;
+        tok->args = tor_malloc(sizeof(char*)*allocated);
+        while (*s < eol) { /* While not at eol, store the next token */
+          if (j == allocated) {
+            allocated *= 2;
+            tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
           }
-          tok->n_args = j;
+          tok->args[j++] = tor_strndup(*s, next-*s);
+          *s = eat_whitespace_eos_no_nl(next, eol); /* eat intra-line ws */
+          next = find_whitespace_eos(*s, eol); /* find end of token at *s */
         }
+        tok->n_args = j;
       }
       if (tok->n_args < table[i].min_args) {
         tor_snprintf(ebuf, sizeof(ebuf), "Too few arguments to %s", kwd);

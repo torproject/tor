@@ -293,7 +293,10 @@ hash_list_members(char *digest_out, smartlist_t *lst)
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
  * voting quorum, generate the text of a new v3 consensus vote, and return the
- * value in a newly allocated string. */
+ * value in a newly allocated string.
+ *
+ * Note: this function DOES NOT check whether the votes are from
+ * recognized authorities.   (dirvote_add_vote does that.) */
 char *
 networkstatus_compute_consensus(smartlist_t *votes,
                                 int total_authorities,
@@ -313,8 +316,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
     log_warn(LD_DIR, "Can't compute a consensus from no votes.");
     return NULL;
   }
-  /* XXXX020 somebody needs to check vote authority. It could be this
-   * function, it could be somebody else. */
   flags = smartlist_create();
 
   /* Compute medians of time-related things, and figure out how many
@@ -455,10 +456,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   /* Add the actual router entries. */
   {
-    /* document these XXXX020 */
-    int *index;
-    int *size;
-    int *flag_counts;
+    int *index; /* index[j] is the current index into votes[j]. */
+    int *size; /* size[j] is the number of routerstatuses in votes[j]. */
+    int *flag_counts; /* The number of voters that list flag[j] for the
+                       * currently considered router. */
     int i;
     smartlist_t *matching_descs = smartlist_create();
     smartlist_t *chosen_flags = smartlist_create();
@@ -470,7 +471,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
                          * about flags[f]. */
     int **flag_map; /* flag_map[j][b] is an index f such that flag_map[f]
                      * is the same flag as votes[j]->known_flags[b]. */
-    int *named_flag;
+    int *named_flag; /* Index of the flag "Named" for votes[j] */
 
     index = tor_malloc_zero(sizeof(int)*smartlist_len(votes));
     size = tor_malloc_zero(sizeof(int)*smartlist_len(votes));
@@ -510,6 +511,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int i;
       char buf[256];
 
+      /* Of the next-to-be-considered digest in each voter, which is first? */
       SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v, {
         if (index[v_sl_idx] < size[v_sl_idx]) {
           rs = smartlist_get(v->routerstatus_list, index[v_sl_idx]);
@@ -549,8 +551,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
             ++flag_counts[flag_map[v_sl_idx][i]];
         }
         if (rs->flags & (U64_LITERAL(1) << named_flag[v_sl_idx])) {
-          if (chosen_name && strcmp(chosen_name, rs->status.nickname))
-            naming_conflict = 1; /* XXXX020 warn? */
+          if (chosen_name && strcmp(chosen_name, rs->status.nickname)) {
+            log_notice(LD_DIR, "Conflict on naming for router: %s vs %s",
+                       chosen_name, rs->status.nickname);
+            naming_conflict = 1;
+          }
           chosen_name = rs->status.nickname;
         }
 
@@ -610,12 +615,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
                     smartlist_join_strings(chosen_flags, " ", 0, NULL));
       /*     Now the version line. */
       if (chosen_version) {
-        /* XXXX020 fails on very long version string */
-        tor_snprintf(buf, sizeof(buf), "\nv %s\n", chosen_version);
-        smartlist_add(chunks, tor_strdup(buf));
-      } else {
-        smartlist_add(chunks, tor_strdup("\n"));
+        smartlist_add(chunks, tor_strdup("\nv "));
+        smartlist_add(chunks, tor_strdup(chosen_version));
       }
+      smartlist_add(chunks, tor_strdup("\n"));
 
       /* And the loop is over and we move on to the next router */
     }
@@ -653,8 +656,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
                  signing_key_fingerprint);
     /* And the signature. */
-    /* XXXX020 check return */
-    router_append_dirobj_signature(buf, sizeof(buf), digest, signing_key);
+    if (router_append_dirobj_signature(buf, sizeof(buf), digest,
+                                       signing_key)) {
+      log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
+      return NULL; /* This leaks, but it should never happen. */
+    }
     smartlist_add(chunks, tor_strdup(buf));
   }
 
@@ -680,7 +686,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   return result;
 }
 
-/** Check whether the pending_signature on <b>voter</b> is correctly signed by
+/** Check whether the signature on <b>voter</b> is correctly signed by
  * the signing key of <b>cert</b>. Return -1 if <b>cert</b> doesn't match the
  * signing key; otherwise set the good_signature or bad_signature flag on
  * <b>voter</b>, and return 0. */
@@ -693,11 +699,10 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
   char d[DIGEST_LEN];
   char *signed_digest;
   size_t signed_digest_len;
-  /*XXXX020 check return*/
-  crypto_pk_get_digest(cert->signing_key, d);
-  if (memcmp(voter->signing_key_digest, d, DIGEST_LEN)) {
+  if (crypto_pk_get_digest(cert->signing_key, d)<0)
     return -1;
-  }
+  if (memcmp(voter->signing_key_digest, d, DIGEST_LEN))
+    return -1;
   signed_digest_len = crypto_pk_keysize(cert->signing_key);
   signed_digest = tor_malloc(signed_digest_len);
   if (crypto_pk_public_checksig(cert->signing_key,
@@ -705,14 +710,11 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
                                 voter->signature,
                                 voter->signature_len) != DIGEST_LEN ||
       memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
-    log_warn(LD_DIR, "Got a bad signature."); /*XXXX020 say more*/
+    log_warn(LD_DIR, "Got a bad signature on a networkstatus vote");
     voter->bad_signature = 1;
   } else {
     voter->good_signature = 1;
   }
-  /* XXXX020 did anything rely on this?
-   * also, rename so it's no longer called "pending". */
-  // tor_free(voter->signature);
   return 0;
 }
 
@@ -725,7 +727,7 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
   int n_bad = 0;
   int n_unknown = 0;
   int n_no_signature = 0;
-  int n_required = 1; /* XXXX020 This is completely wrong. */
+  int n_required = get_n_authorities(V3_AUTHORITY)/2 + 1;
 
   tor_assert(! consensus->is_vote);
 
@@ -741,7 +743,7 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
         continue;
       }
       if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
-        ++n_missing_key; /* XXXX020 what, really? */
+        ++n_missing_key;
         continue;
       }
     }
@@ -754,7 +756,7 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
   });
 
   log_notice(LD_DIR,
-             "%d unknown, %d missing key, %d good, %d bad, %d no signature,"
+             "%d unknown, %d missing key, %d good, %d bad, %d no signature, "
              "%d required", n_unknown, n_missing_key, n_good, n_bad,
              n_no_signature, n_required);
 
@@ -1008,10 +1010,9 @@ dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out)
   tor_assert(timing_out);
 
   timing_out->vote_interval = options->V3AuthVotingInterval;
- /* XXXX020 make these configurable. */
-  timing_out->n_intervals_valid = 3;
-  timing_out->vote_delay = 300;
-  timing_out->dist_delay = 300;
+  timing_out->n_intervals_valid = options->V3AuthNIntervalsValid;
+  timing_out->vote_delay = options->V3AuthVoteDelay;
+  timing_out->dist_delay = options->V3AuthDistDelay;
 }
 
 /** DOCDOC */
@@ -1056,6 +1057,7 @@ static struct {
 void
 dirvote_recalculate_timing(time_t now)
 {
+  /*XXXX020 call this when inputs may have changed. */
   int interval, vote_delay, dist_delay;
   time_t start;
   networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
@@ -1266,7 +1268,6 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     *msg_out = "Error adding vote";
   if (!*status_out)
     *status_out = 400;
-  /*XXXX020 free other fields */
   return NULL;
 }
 
@@ -1286,7 +1287,10 @@ dirvote_compute_consensus(void)
 
   n_voters = get_n_authorities(V3_AUTHORITY);
   n_votes = smartlist_len(pending_vote_list);
-  /* XXXX020 see if there are enough to go ahead. */
+  if (n_votes <= n_voters/2) {
+    log_warn(LD_DIR, "We don't have enough votes to generate a consensus.");
+    goto err;
+  }
 
   if (!(my_cert = get_my_v3_authority_cert())) {
     log_warn(LD_DIR, "Can't generate consensus without a certificate.");
@@ -1326,15 +1330,18 @@ dirvote_compute_consensus(void)
   pending_consensus = consensus;
 
   if (pending_consensus_signature_list) {
+    int n_sigs = 0;
     /* we may have gotten signatures for this consensus before we built
      * it ourself.  Add them now. */
     SMARTLIST_FOREACH(pending_consensus_signature_list, char *, sig,
       {
         const char *msg = NULL;
-        dirvote_add_signatures_to_pending_consensus(sig, &msg);
-        /* XXXX020 log result. */
+        n_sigs += dirvote_add_signatures_to_pending_consensus(sig, &msg);
         tor_free(sig);
       });
+    if (n_sigs)
+      log_notice(LD_DIR, "Added %d pending signatures while building "
+                 "consensus.", n_sigs);
     smartlist_clear(pending_consensus_signature_list);
   }
 
