@@ -2713,11 +2713,12 @@ dirserv_test_reachability(int try_all)
  * a) we have a networkstatus document and
  * b) it is not newer than <b>cutoff</b>.
  *
- * Return 1 if no keys remain, else return 0.
+ * Return 1 if any items were present at all; else return 0.
  */
 int
 dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
 {
+  int found_any = 0;
   SMARTLIST_FOREACH(fps, char *, digest,
   {
     cached_dir_t *d;
@@ -2727,15 +2728,44 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
       d = cached_v3_networkstatus;
     else
       d = digestmap_get(cached_v2_networkstatus, digest);
-    if (d && d->published <= cutoff) {
+    if (!d)
+      continue;
+    found_any = 1;
+    if (d->published <= cutoff) {
       tor_free(digest);
       SMARTLIST_DEL_CURRENT(fps, digest);
     }
   });
 
-  if (smartlist_len(fps))
-    return 0; /* some items were not here or were not old */
-  return 1; /* all items were here and old */
+  return found_any;
+}
+
+/** DOCDOC */
+int
+dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src)
+{
+  SMARTLIST_FOREACH(fps, const char *, fp, {
+      switch (spool_src)
+      {
+        case DIR_SPOOL_EXTRA_BY_DIGEST:
+          if (extrainfo_get_by_descriptor_digest(fp)) return 1;
+          break;
+        case DIR_SPOOL_EXTRA_BY_FP: {
+          routerinfo_t *ri = router_get_by_digest(fp);
+          if (ri && extrainfo_get_by_descriptor_digest(
+                                      ri->cache_info.extra_info_digest))
+            return 1;
+          }
+          break;
+        case DIR_SPOOL_SERVER_BY_DIGEST:
+          if (router_get_by_descriptor_digest(fp)) return 1;
+          break;
+        case DIR_SPOOL_SERVER_BY_FP:
+          if (router_get_by_digest(fp)) return 1;
+          break;
+      }
+  });
+  return 0;
 }
 
 /** Return an approximate estimate of the number of bytes that will

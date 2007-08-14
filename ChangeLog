@@ -11,6 +11,10 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
     - Fix compile on platforms without getaddrinfo: bug found by Li-Hui
       Zhou.
 
+  o Minor features (directory servers):
+    - When somebody requests a list of statuses or servers, and we have
+      none of those, return a 404 rather than an empty 200.
+
   o Minor features (directory voting):
     - Store v3 consensus status consensuses on disk, and reload them
       on startup.
@@ -20,7 +24,7 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
 
   o Minor bugfixes (directory voting):
     - Read v3 keys from the right location.
-
+    - Numerous bugfixes to directory voting code.
 
 Changes in version 0.2.0.4-alpha - 2007-08-01
   o Major security fixes:

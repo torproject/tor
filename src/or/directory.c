@@ -1893,10 +1893,15 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       smartlist_free(dir_fps);
       return 0;
     }
-    if (dirserv_remove_old_statuses(dir_fps, if_modified_since)) {
+
+    if (!dirserv_remove_old_statuses(dir_fps, if_modified_since)) {
+      write_http_status_line(conn, 404, "Not found");
+      SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
+      smartlist_free(dir_fps);
+      return 0;
+    } else if (!smartlist_len(dir_fps)) {
       write_http_status_line(conn, 304, "Not modified");
-      /* no need to free dir_fps's elements, since
-       * dirserv_statuses_are_old() already did. */
+      SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
       smartlist_free(dir_fps);
       return 0;
     }
@@ -1972,6 +1977,13 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       conn->dir_spool_src =
         is_extra ? DIR_SPOOL_EXTRA_BY_FP : DIR_SPOOL_SERVER_BY_FP;
     tor_free(url_mem);
+
+    if (!dirserv_have_any_serverdesc(conn->fingerprint_stack,
+                                     conn->dir_spool_src)) {
+      res = -1;
+      msg = "Not found";
+    }
+
     if (res < 0)
       write_http_status_line(conn, 404, msg);
     else {

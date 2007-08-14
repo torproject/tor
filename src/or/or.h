@@ -2804,6 +2804,7 @@ int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain);
 int dirserv_would_reject_router(routerstatus_t *rs);
 int dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff);
+int dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
 int routerstatus_format_entry(char *buf, size_t buf_len,
