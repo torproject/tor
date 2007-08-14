@@ -760,10 +760,7 @@ config_free_all(void)
 const char *
 safe_str(const char *address)
 {
-  if (!address) { /* XXX020 eventually turn this into an assert */
-    log_warn(LD_BUG, "safe_str() called with NULL address.");
-    return "EMPTY";
-  }
+  tor_assert(address);
   if (get_options()->SafeLogging)
     return "[scrubbed]";
   else
@@ -2640,8 +2637,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "extra-info documents. Setting DownloadExtraInfo.");
       options->DownloadExtraInfo = 1;
     }
-    /* XXXX020 Check that at least one of Bridge/HS/V1/V2/V2{AuthoritativeDir}
-     * is set. */
+    if (!(options->BridgeAuthoritativeDir || options->HSAuthoritativeDir ||
+          options->V1AuthoritativeDir || options->V2AuthoritativeDir ||
+          options->V3AuthoritativeDir))
+      REJECT("AuthoritativeDir is set, but none of "
+             "(Bridge/HS/V1/V2/V3)AuthoriativeDir is set.");
   }
 
   if (options->AuthoritativeDir && !options->DirPort)
