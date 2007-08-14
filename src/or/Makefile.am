@@ -40,7 +40,7 @@ noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 
 tor_main.o: micro-revision.i
 
-micro-revision.i:
+micro-revision.i: FORCE
 	@svkdir=$$SVKROOT; \
 	if test "x$$svkdir" = x ; then \
 	  svkdir=$$HOME/.svk; \
