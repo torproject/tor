@@ -182,6 +182,8 @@ router_reload_consensus_networkstatus(void)
   char filename[512];
   char *s;
 
+  /* XXXX020 Suppress warnings if cached consensus is bad. */
+
   tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-consensus",
                get_options()->DataDirectory);
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
@@ -244,9 +246,9 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 
     SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, c,
       {
-        if (memcmp(c->cache_info.signed_descriptor_digest,
-                   cert->cache_info.signed_descriptor_digest,
-                   DIGEST_LEN)) {
+        if (!memcmp(c->cache_info.signed_descriptor_digest,
+                    cert->cache_info.signed_descriptor_digest,
+                    DIGEST_LEN)) {
           /* we already have this one. continue. */
           authority_cert_free(cert);
           found = 1;
