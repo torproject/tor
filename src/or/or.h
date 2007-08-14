@@ -2067,12 +2067,14 @@ typedef struct {
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
 
-  /** The length of time that we think a consensus should be  */
+  /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;
+  /** The length of time we think it will take to distribute votes */
   int V3AuthVoteDelay;
+  /** The length of time we think it will take to distribute signatures */
   int V3AuthDistDelay;
+  /** The number of intervals we think a consensus should be valid. */
   int V3AuthNIntervalsValid;
-
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

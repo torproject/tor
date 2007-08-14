@@ -1115,8 +1115,12 @@ $Id$
    minutes, 60 minutes, 90 minutes).  Voting intervals SHOULD be chosen to
    divide evenly into a 24-hour day.
 
-   Authorities MUST take pains to ensure that their clocks remain accurate,
-   for example by running NTP.
+   Authorities SHOULD act according to interval and delays in the
+   latest consensus.  Lacking a latest consensus, they SHOULD default to a
+   30-minute Interval, a 5 minute VotingDelay, and a 5 minute DistDelay.
+
+   Authorities MUST take pains to ensure that their clocks remain accurate
+   within a few seconds.  (Running NTP is usually sufficient.)
 
    The first voting period of each day begins at 00:00 (midnight) GMT.  If
    the last period of the day would be truncated by one-half or more, it is

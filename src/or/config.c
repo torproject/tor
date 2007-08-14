@@ -271,7 +271,6 @@ static config_var_t _option_vars[] = {
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
-  /* XXXX020 check these for sanity. */
   VAR("V3AuthVotingInterval",INTERVAL, V3AuthVotingInterval, "1 hour"),
   VAR("V3AuthVoteDelay",     INTERVAL, V3AuthVoteDelay, "5 minutes"),
   VAR("V3AuthDistDelay",     INTERVAL, V3AuthDistDelay, "5 minutes"),
@@ -1090,7 +1089,9 @@ options_act(or_options_t *old_options)
       if (dns_reset())
         return -1;
     }
-    /* XXXX020 init_keys() again if v3authoritativedir is newly set. */
+
+    if (options->V3AuthoritativeDir && !old_options->V3AuthoritativeDir)
+      init_keys();
   }
 
   /* Check if we need to parse and add the EntryNodes config option. */
@@ -2997,6 +2998,23 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "suggested that you disable serving directory requests when "
                "system TCP buffer resources are scarce.");
     }
+  }
+
+  if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
+      options->V3AuthVotingInterval/2) {
+    REJECT("V3AuthVoteDelay and V3AuthDistDelay must be no more than half "
+           "V3AuthVotingInterval");
+  }
+  if (options->V3AuthNIntervalsValid < 2) {
+    REJECT("V3AuthNIntervalsValid must be at least 2.");
+  }
+
+  if (options->V3AuthVotingInterval < 300) {
+    REJECT("V3AuthVotingInterval is insanely low.");
+  } else if (options->V3AuthVotingInterval > 24*60*60) {
+    REJECT("V3AuthVotingInterval is insanely high.");
+  } else if (((24*60*60) % options->V3AuthVotingInterval) != 0) {
+    COMPLAIN("V3AuthVotingInterval does not divide evenly into 24 hours.");
   }
 
   if (rend_config_services(options, 1) < 0)

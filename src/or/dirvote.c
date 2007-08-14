@@ -923,7 +923,7 @@ networkstatus_get_detached_signatures(networkstatus_vote_t *consensus)
     {
       char sk[HEX_DIGEST_LEN+1];
       char id[HEX_DIGEST_LEN+1];
-      if (!v->signature) // XXXX020 || !v->good_signature)
+      if (!v->signature || v->bad_signature)
         continue;
       ++n_sigs;
       base16_encode(sk, sizeof(sk), v->signing_key_digest, DIGEST_LEN);
@@ -1038,7 +1038,13 @@ dirvote_get_start_of_next_interval(time_t now, int interval)
 
   next = midnight_today + ((now-midnight_today)/interval + 1)*interval;
 
+  /* Intervals never cross midnight. */
   if (next > midnight_tomorrow)
+    next = midnight_tomorrow;
+
+  /* If the interval would only last half as long as it's supposed to, then
+   * skip over to the next day. */
+  if (next + interval/2 > midnight_tomorrow)
     next = midnight_tomorrow;
 
   return next;
@@ -1061,9 +1067,11 @@ static struct {
 void
 dirvote_recalculate_timing(time_t now)
 {
-  /*XXXX020 call this when inputs may have changed. */
+  /* XXXX020 call this when inputs may have changed (i.e., whenver we get a
+   * fresh consensus.) */
   int interval, vote_delay, dist_delay;
   time_t start;
+  time_t end;
   networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
 
   memset(&voting_schedule, 0, sizeof(voting_schedule));
@@ -1074,18 +1082,27 @@ dirvote_recalculate_timing(time_t now)
     vote_delay = consensus->vote_seconds;
     dist_delay = consensus->dist_seconds;
   } else {
-    /* XXXX020 is this correct according the the spec? */
-    /* XXXX020 drop this back down to 60 minutes, or whatever the spec says. */
+    /* XXXX020 drop this back down to 30 minutes. */
     interval = 1200;
     vote_delay = dist_delay = 300;
   }
 
+  tor_assert(interval > 0);
+
+  if (vote_delay + dist_delay > interval/2)
+    vote_delay = dist_delay = interval / 4;
+
   start = voting_schedule.interval_starts =
     dirvote_get_start_of_next_interval(now,interval);
+  end = dirvote_get_start_of_next_interval(start+1, interval);
+
+  tor_assert(end > start);
+
   voting_schedule.voting_ends = start - vote_delay;
   voting_schedule.voting_starts = start - vote_delay - dist_delay;
 
-  voting_schedule.discard_old_votes = start + 300; /* XXXX020 */
+  voting_schedule.discard_old_votes = start +
+    ((end-start) - vote_delay - dist_delay)/2 ;
 }
 
 /** DOCDOC */
