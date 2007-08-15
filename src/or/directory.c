@@ -1637,7 +1637,8 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
   connection_write_to_buf(tmp, strlen(tmp), TO_CONN(conn));
 }
 
-/** DOCDOC */
+/** As write_http_response_header_impl, but sets encoding and content-typed
+ * based on whether the response will be <b>deflated</b> or not. */
 static void
 write_http_response_header(dir_connection_t *conn, ssize_t length,
                            int deflated, int cache_lifetime)

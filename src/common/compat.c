@@ -1652,11 +1652,13 @@ struct tor_mutex_t {
 };
 #endif
 
-/* Condition stuff. DOCDOC */
+/* Conditions. */
 #ifdef USE_PTHREADS
+/** Cross-platform condtion implementation. */
 struct tor_cond_t {
   pthread_cond_t cond;
 };
+/** Return a newly allocated condition, with nobody waiting on it. */
 tor_cond_t *
 tor_cond_new(void)
 {
@@ -1667,6 +1669,7 @@ tor_cond_new(void)
   }
   return cond;
 }
+/** Release all resources held by <b>cond</b>. */
 void
 tor_conf_free(tor_cond_t *cond)
 {
@@ -1677,21 +1680,27 @@ tor_conf_free(tor_cond_t *cond)
   }
   tor_free(cond);
 }
+/** Wait until one of the tor_cond_signal functions is called on <b>cond</b>.
+ * All waiters on the condition must wait holding the same <b>mutex</b>.
+ * Returns 0 on success, negative on failure. */
 int
 tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex)
 {
   return pthread_cond_wait(&cond->cond, &mutex->mutex) ? -1 : 0;
 }
+/** Wake up one of the waiters on <b>cond</b>. */
 void
 tor_cond_signal_one(tor_cond_t *cond)
 {
   pthread_cond_signal(&cond->cond);
 }
+/** Wake up all of the waiters on <b>cond</b>. */
 void
 tor_cond_signal_all(tor_cond_t *cond)
 {
   pthread_cond_broadcast(&cond->cond);
 }
+/** Set up common structures for use by threading. */
 void
 tor_threads_init(void)
 {

@@ -216,7 +216,8 @@ _tor_free(void *mem)
   tor_free(mem);
 }
 
-/** DOCDOC */
+/** Call the platform malloc info function, and dump the results to the log at
+ * level <b>severity</b>.  If no such function exists, do nothing. */
 void
 tor_log_mallinfo(int severity)
 {

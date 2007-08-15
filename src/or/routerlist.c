@@ -3893,9 +3893,12 @@ networkstatus_get_latest_consensus(void)
 networkstatus_vote_t *
 networkstatus_get_live_consensus(time_t now)
 {
-  /* XXXX020 check for liveness */
-  (void)now;
-  return current_consensus;
+  if (current_consensus &&
+      current_consensus->valid_after <= now &&
+      now <= current_consensus->valid_until)
+    return current_consensus;
+  else
+    return NULL;
 }
 
 /** DOCDOC */

@@ -3086,8 +3086,10 @@ control_event_descriptors_changed(smartlist_t *routers)
 }
 
 /** Called whenever an address mapping on <b>from<b> from changes to <b>to</b>.
- * <b>expires</b> values less than 3 are special; see connection_edge.c.
- * DOCDOC source. */
+ * <b>expires</b> values less than 3 are special; see connection_edge.c.  If
+ * <b>error</b> is nonempty, it is an error code describing the failure
+ * mode of the mapping.
+ */
 int
 control_event_address_mapped(const char *from, const char *to, time_t expires,
                              const char *error)
