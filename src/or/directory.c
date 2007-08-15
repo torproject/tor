@@ -1582,7 +1582,7 @@ write_http_status_line(dir_connection_t *conn, int status,
  * If <b>cache_lifetime</b> is greater than 0, the content may be cached for
  * up to cache_lifetime seconds.  Otherwise, the content may not be cached. */
 static void
-write_http_response_header(dir_connection_t *conn, ssize_t length,
+write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
                            const char *type, const char *encoding,
                            int cache_lifetime)
 {
@@ -1635,6 +1635,17 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
   else
     tor_assert(0);
   connection_write_to_buf(tmp, strlen(tmp), TO_CONN(conn));
+}
+
+/** DOCDOC */
+static void
+write_http_response_header(dir_connection_t *conn, ssize_t length,
+                           int deflated, int cache_lifetime)
+{
+  write_http_response_header_impl(conn, length,
+                          deflated?"application/octet-stream":"text/plain",
+                          deflated?"deflate":"identity",
+                             cache_lifetime);
 }
 
 /** Helper function: return 1 if there are any dir conns of purpose
@@ -1737,11 +1748,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                              const char *body, size_t body_len)
 {
   size_t dlen;
-  char *url = NULL; /* XXX020 every exit point needs to free url. this
-                     * function should use 'goto done' for that. */
+  char *url, *url_mem, *header;
   or_options_t *options = get_options();
   time_t if_modified_since = 0;
-  char *header;
+  int deflated = 0;
+  size_t url_len;
 
   /* We ignore the body of a GET request. */
   (void)body;
@@ -1766,8 +1777,15 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
 
-  if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir.z")) { /* dir fetch */
-    int deflated = !strcmp(url,"/tor/dir.z");
+  url_mem = url;
+  url_len = strlen(url);
+  deflated = url_len > 2 && !strcmp(url+url_len-2, ".z");
+  if (deflated) {
+    url[url_len-2] = '\0';
+    url_len -= 2;
+  }
+
+  if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir")) { /* dir fetch */
     cached_dir_t *d = dirserv_get_directory();
 
     if (!d) {
@@ -1779,13 +1797,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
           !should_delay_dir_fetches(options))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR,
                                      ROUTER_PURPOSE_GENERAL, NULL, 1);
-      tor_free(url);
-      return 0;
+      goto done;
     }
     if (d->published < if_modified_since) {
       write_http_status_line(conn, 304, "Not modified");
-      tor_free(url);
-      return 0;
+      goto done;
     }
 
     dlen = deflated ? d->dir_z_len : d->dir_len;
@@ -1795,18 +1811,14 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                "Client asked for the mirrored directory, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
       write_http_status_line(conn, 503, "Directory busy, try again later");
-      tor_free(url);
-      return 0;
+      goto done;
     }
 
     note_request(url, dlen);
-    tor_free(url);
 
     log_debug(LD_DIRSERV,"Dumping %sdirectory to client.",
               deflated?"deflated ":"");
-    write_http_response_header(conn, dlen,
-                          deflated?"application/octet-stream":"text/plain",
-                          deflated?"deflate":"identity",
+    write_http_response_header(conn, dlen, deflated,
                           FULL_DIR_CACHE_LIFETIME);
     conn->cached_dir = d;
     conn->cached_dir_offset = 0;
@@ -1817,12 +1829,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     /* Prime the connection with some data. */
     conn->dir_spool_src = DIR_SPOOL_CACHED_DIR;
     connection_dirserv_flushed_some(conn);
-    return 0;
+    goto done;
   }
 
-  if (!strcmp(url,"/tor/running-routers") ||
-      !strcmp(url,"/tor/running-routers.z")) { /* running-routers fetch */
-    int deflated = !strcmp(url,"/tor/running-routers.z");
+  if (!strcmp(url,"/tor/running-routers")) { /* running-routers fetch */
     cached_dir_t *d = dirserv_get_runningrouters();
     if (!d) {
       write_http_status_line(conn, 503, "Directory unavailable");
@@ -1831,13 +1841,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
           !should_delay_dir_fetches(options))
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST,
                                      ROUTER_PURPOSE_GENERAL, NULL, 1);
-      tor_free(url);
-      return 0;
+      goto done;
     }
     if (d->published < if_modified_since) {
       write_http_status_line(conn, 304, "Not modified");
-      tor_free(url);
-      return 0;
+      goto done;
     }
     dlen = deflated ? d->dir_z_len : d->dir_len;
 
@@ -1846,31 +1854,22 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                "Client asked for running-routers, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
       write_http_status_line(conn, 503, "Directory busy, try again later");
-      tor_free(url);
-      return 0;
+      goto done;
     }
     note_request(url, dlen);
-    tor_free(url);
-    write_http_response_header(conn, dlen,
-                 deflated?"application/octet-stream":"text/plain",
-                 deflated?"deflate":"identity",
+    write_http_response_header(conn, dlen, deflated,
                  RUNNINGROUTERS_CACHE_LIFETIME);
     connection_write_to_buf(deflated ? d->dir_z : d->dir, dlen, TO_CONN(conn));
-    return 0;
+    goto done;
   }
 
   if (!strcmpstart(url,"/tor/status/")
-      || !strcmp(url, "/tor/status-vote/current/consensus")
-      || !strcmp(url, "/tor/status-vote/current/consensus.z")) {
+      || !strcmp(url, "/tor/status-vote/current/consensus")) {
     /* v2 or v3 network status fetch. */
-    size_t url_len = strlen(url);
-    int deflated = !strcmp(url+url_len-2, ".z");
     smartlist_t *dir_fps = smartlist_create();
     int is_v3 = !strcmpstart(url, "/tor/status-vote");
     const char *request_type = NULL;
     const char *key = url + strlen("/tor/status/");
-    if (deflated)
-      url[url_len-2] = '\0';
     if (!is_v3) {
       dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
       if (!strcmpstart(key, "fp/"))
@@ -1888,23 +1887,22 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       request_type = deflated?"v3.z":"v3";
     }
 
-    tor_free(url);
     if (!smartlist_len(dir_fps)) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Network status object unavailable");
       smartlist_free(dir_fps);
-      return 0;
+      goto done;
     }
 
     if (!dirserv_remove_old_statuses(dir_fps, if_modified_since)) {
       write_http_status_line(conn, 404, "Not found");
       SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
       smartlist_free(dir_fps);
-      return 0;
+      goto done;
     } else if (!smartlist_len(dir_fps)) {
       write_http_status_line(conn, 304, "Not modified");
       SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
       smartlist_free(dir_fps);
-      return 0;
+      goto done;
     }
 
     dlen = dirserv_estimate_data_size(dir_fps, 0, deflated);
@@ -1915,14 +1913,12 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 503, "Directory busy, try again later");
       SMARTLIST_FOREACH(dir_fps, char *, fp, tor_free(fp));
       smartlist_free(dir_fps);
-      return 0;
+      goto done;
     }
 
     // note_request(request_type,dlen);
     (void) request_type;
-    write_http_response_header(conn, -1,
-                 deflated?"application/octet_stream":"text/plain",
-                 deflated?"deflate":NULL,
+    write_http_response_header(conn, -1, deflated,
                  smartlist_len(dir_fps) == 1 ? NETWORKSTATUS_CACHE_LIFETIME:0);
     conn->fingerprint_stack = dir_fps;
     if (! deflated)
@@ -1931,22 +1927,17 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     /* Prime the connection with some data. */
     conn->dir_spool_src = DIR_SPOOL_NETWORKSTATUS;
     connection_dirserv_flushed_some(conn);
-
-    return 0;
+    goto done;
   }
 
   if (!strcmpstart(url,"/tor/status-vote/current/") ||
       !strcmpstart(url,"/tor/status-vote/next/")) {
-    char *url_mem = url;
-    size_t url_len = strlen(url);
-    int deflated = !strcmp(url+url_len-2, ".z");
+    /*XXXX020 implement if-modified-since and 503-rate-limiting */
     int current = 1;
     ssize_t body_len = 0;
     smartlist_t *items = smartlist_create();
     smartlist_t *dir_items = smartlist_create();
     int lifetime = 60; /* XXXX020 should actually use vote intervals. */
-    if (deflated)
-      url[url_len-2] = '\0';
     url += strlen("/tor/status-vote/");
     current = !strcmpstart(url, "current/");
     url = strchr(url, '/');
@@ -1981,17 +1972,14 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     }
     if (!smartlist_len(dir_items) && !smartlist_len(items)) {
       write_http_status_line(conn, 404, "Not found");
-      tor_free(url_mem);
-      return 0;
+      goto done;
     }
     SMARTLIST_FOREACH(items, const char *, item,
         if (!deflated)
           body_len += strlen(item));
     SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
                       body_len += deflated ? d->dir_z_len : d->dir_len);
-    write_http_response_header(conn, body_len ? body_len : -1,
-                 deflated?"application/octet_stream":"text/plain",
-                 deflated?"deflate":NULL,
+    write_http_response_header(conn, body_len ? body_len : -1, deflated,
                  lifetime);
 
     if (smartlist_len(items)) {
@@ -2010,22 +1998,16 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                                   deflated ? d->dir_z_len : d->dir_len,
                                   TO_CONN(conn)));
     }
-    tor_free(url_mem);
-    return 0;
+    goto done;
   }
 
   if (!strcmpstart(url,"/tor/server/") ||
       !strcmpstart(url,"/tor/extra/")) {
-    char *url_mem = url;
-    size_t url_len = strlen(url);
-    int deflated = !strcmp(url+url_len-2, ".z");
     int res;
     const char *msg;
     const char *request_type = NULL;
     int cache_lifetime = 0;
     int is_extra = !strcmpstart(url,"/tor/extra/");
-    if (deflated)
-      url[url_len-2] = '\0';
     url += is_extra ? strlen("/tor/extra/") : strlen("/tor/server/");
     conn->fingerprint_stack = smartlist_create();
     res = dirserv_get_routerdesc_fingerprints(conn->fingerprint_stack, url,
@@ -2056,7 +2038,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     else
       conn->dir_spool_src =
         is_extra ? DIR_SPOOL_EXTRA_BY_FP : DIR_SPOOL_SERVER_BY_FP;
-    tor_free(url_mem);
 
     if (!dirserv_have_any_serverdesc(conn->fingerprint_stack,
                                      conn->dir_spool_src)) {
@@ -2074,26 +2055,20 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                  "Client asked for server descriptors, but we've been "
                  "writing too many bytes lately. Sending 503 Dir busy.");
         write_http_status_line(conn, 503, "Directory busy, try again later");
-        return 0;
+        goto done;
       }
-      write_http_response_header(conn, -1,
-                     deflated?"application/octet_stream":"text/plain",
-                     deflated?"deflate":NULL, cache_lifetime);
+      write_http_response_header(conn, -1, deflated, cache_lifetime);
       if (deflated)
         conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
       /* Prime the connection with some data. */
       connection_dirserv_flushed_some(conn);
     }
-    return 0;
+    goto done;
   }
 
   if (!strcmpstart(url,"/tor/keys/")) {
     smartlist_t *certs = smartlist_create();
-    int compressed;
     ssize_t len = -1;
-    compressed = !strcmpend(url, ".z");
-    if (compressed)
-      url[strlen(url)-2] = '\0';
     if (!strcmp(url, "/tor/keys/all")) {
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                         trusted_dir_server_t *, ds,
@@ -2130,26 +2105,21 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       smartlist_free(fps);
     } else {
       write_http_status_line(conn, 400, "Bad request");
-      tor_free(url);
       smartlist_free(certs);
-      return 0;
+      goto done;
     }
     if (!smartlist_len(certs)) {
       write_http_status_line(conn, 404, "Not found");
-      tor_free(url);
       smartlist_free(certs);
-      return 0;
+      goto done;
     }
-    if (!compressed) {
+    if (!deflated) {
       len = 0;
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
                         len += c->cache_info.signed_descriptor_len);
     }
-    write_http_response_header(conn, len,
-                           compressed?"application/octet-stream":"text/plain",
-                           compressed?"deflate":"identity",
-                           60*60);
-    if (compressed) {
+    write_http_response_header(conn, len, deflated, 60*60);
+    if (deflated) {
       conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_write_to_buf_zlib(c->cache_info.signed_descriptor_body,
@@ -2163,7 +2133,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                                     TO_CONN(conn)));
     }
     smartlist_free(certs);
-    tor_free(url);
+    goto done;
   }
 
   if (options->HSAuthoritativeDir &&
@@ -2178,7 +2148,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     log_info(LD_REND, "Handling rendezvous descriptor get");
     switch (rend_cache_lookup_desc(query, versioned?-1:0, &descp, &desc_len)) {
       case 1: /* valid */
-        write_http_response_header(conn, desc_len, "application/octet-stream",
+        write_http_response_header_impl(conn, desc_len,
+                                   "application/octet-stream",
                                    NULL, 0);
         note_request("/tor/rendezvous?/", desc_len);
         /* need to send descp separately, because it may include nuls */
@@ -2200,29 +2171,25 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         write_http_status_line(conn, 400, "Bad request");
         break;
     }
-    tor_free(url);
-    return 0;
+    goto done;
   }
 
   if (!strcmpstart(url,"/tor/bytes.txt")) {
     char *bytes = directory_dump_request_log();
     size_t len = strlen(bytes);
-    write_http_response_header(conn, len, "text/plain", NULL, 0);
+    write_http_response_header(conn, len, 0, 0);
     connection_write_to_buf(bytes, len, TO_CONN(conn));
     tor_free(bytes);
-    tor_free(url);
-    return 0;
+    goto done;
   }
 
   if (!strcmp(url,"/tor/robots.txt")) { /* /robots.txt will have been
                                            rewritten to /tor/robots.txt */
     char robots[] = "User-agent: *\r\nDisallow: /\r\n";
     size_t len = strlen(robots);
-    write_http_response_header(conn, len, "text/plain", NULL,
-                               ROBOTS_CACHE_LIFETIME);
+    write_http_response_header(conn, len, 0, ROBOTS_CACHE_LIFETIME);
     connection_write_to_buf(robots, len, TO_CONN(conn));
-    tor_free(url);
-    return 0;
+    goto done;
   }
 
   if (!strcmp(url,"/tor/dir-all-weaselhack") &&
@@ -2237,22 +2204,23 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       log_warn(LD_BUG, "Error creating full v1 directory.");
       tor_free(new_directory);
       write_http_status_line(conn, 503, "Directory unavailable");
-      return 0;
+      goto done;
     }
 
     dlen = strlen(new_directory);
 
-    write_http_response_header(conn, dlen, "text/plain", "identity", 0);
+    write_http_response_header(conn, dlen, 0, 0);
 
     connection_write_to_buf(new_directory, dlen, TO_CONN(conn));
     tor_free(new_directory);
-    tor_free(url);
-    return 0;
+    goto done;
   }
 
   /* we didn't recognize the url */
   write_http_status_line(conn, 404, "Not found");
-  tor_free(url);
+
+ done:
+  tor_free(url_mem);
   return 0;
 }
 
