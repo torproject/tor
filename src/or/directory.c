@@ -2012,11 +2012,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     smartlist_t *certs = smartlist_create();
     int compressed;
     ssize_t len = -1;
-    url += strlen("/tor/keys/");
     compressed = !strcmpend(url, ".z");
     if (compressed)
       url[strlen(url)-2] = '\0';
-    if (!strcmp(url, "all")) {
+    if (!strcmp(url, "/tor/keys/all")) {
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                         trusted_dir_server_t *, ds,
       {
@@ -2026,22 +2025,24 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                 if (cert->cache_info.published_on >= if_modified_since)
                   smartlist_add(certs, cert));
       });
-    } else if (!strcmp(url, "authority")) {
+    } else if (!strcmp(url, "/tor/keys/authority")) {
       authority_cert_t *cert = get_my_v3_authority_cert();
       if (cert)
         smartlist_add(certs, cert);
-    } else if (!strcmpstart(url, "fp/")) {
+    } else if (!strcmpstart(url, "/tor/keys/fp/")) {
       smartlist_t *fps = smartlist_create();
-      dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
+      dir_split_resource_into_fingerprints(url+strlen("/tor/keys/fp/"),
+                                           fps, NULL, 1, 1);
       SMARTLIST_FOREACH(fps, char *, d, {
           authority_cert_t *c = authority_cert_get_newest_by_id(d);
           if (c) smartlist_add(certs, c);
           tor_free(d);
       });
       smartlist_free(fps);
-    } else if (!strcmpstart(url, "sk/")) {
+    } else if (!strcmpstart(url, "/tor/keys/sk/")) {
       smartlist_t *fps = smartlist_create();
-      dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
+      dir_split_resource_into_fingerprints(url+strlen("/tor/keys/sk/"),
+                                           fps, NULL, 1, 1);
       SMARTLIST_FOREACH(fps, char *, d, {
           authority_cert_t *c = authority_cert_get_by_sk_digest(d);
           if (c) smartlist_add(certs, c);
