@@ -27,7 +27,7 @@ Proposals by number:
 106  Checking fewer things during TLS handshakes [CLOSED]
 107  Uptime Sanity Checking [CLOSED]
 108  Base "Stable" Flag on Mean Time Between Failures [OPEN]
-109  No more than one server per IP address [ACCEPTED]
+109  No more than one server per IP address [CLOSED]
 110  Avoiding infinite length circuits [OPEN]
 111  Prioritizing local traffic over relayed traffic [OPEN]
 112  Bring Back Pathlen Coin Weight [OPEN]
@@ -37,4 +37,5 @@ Proposals by number:
 116  Two hop paths from entry guards [OPEN]
 117  IPv6 exits [OPEN]
 118  Advertising multiple ORPorts at once [RESEARCH]
-
+119  New PROTOCOLINFO command for controllers [OPEN]
+120  Suicide descriptors when Tor servers stop [OPEN]
