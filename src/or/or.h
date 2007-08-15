@@ -2881,6 +2881,11 @@ int dirvote_compute_consensus(void);
 int dirvote_add_signatures(const char *detached_signatures_body);
 int dirvote_publish_consensus(void);
 
+/* Item access */
+const char *dirvote_get_pending_consensus(void);
+const char *dirvote_get_pending_detached_signatures(void);
+const cached_dir_t *dirvote_get_vote(const char *id);
+
 #ifdef DIRVOTE_PRIVATE
 time_t median_time(smartlist_t *times);
 int median_int(smartlist_t *times);

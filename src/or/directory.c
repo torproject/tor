@@ -1935,6 +1935,85 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     return 0;
   }
 
+  if (!strcmpstart(url,"/tor/status-vote/current/") ||
+      !strcmpstart(url,"/tor/status-vote/next/")) {
+    char *url_mem = url;
+    size_t url_len = strlen(url);
+    int deflated = !strcmp(url+url_len-2, ".z");
+    int current = 1;
+    ssize_t body_len = 0;
+    smartlist_t *items = smartlist_create();
+    smartlist_t *dir_items = smartlist_create();
+    int lifetime = 60; /* XXXX020 should actually use vote intervals. */
+    if (deflated)
+      url[url_len-2] = '\0';
+    url += strlen("/tor/status-vote/");
+    current = !strcmpstart(url, "current/");
+    url = strchr(url, '/');
+    tor_assert(url);
+    ++url;
+    if (!strcmp(url, "consensus")) {
+      const char *item;
+      tor_assert(!current); /* we handle current consensus specially above,
+                             * since it wants to be spooled. */
+      if ((item = dirvote_get_pending_consensus()))
+        smartlist_add(items, (char*)item);
+    } else if (current && !strcmp(url, "consensus-signatures")) {
+      /* XXXX020 the spec says that we should implement
+       * currrent/consensus-signatures too.  Why? */
+      const char *item;
+      if ((item=dirvote_get_pending_detached_signatures()))
+        smartlist_add(items, (char*)item);
+    } else if (current && !strcmp(url, "authority")) {
+      const cached_dir_t *d;
+      if ((d=dirvote_get_vote(NULL)))
+        smartlist_add(dir_items, (cached_dir_t*)d);
+    } else if (current) {
+      const cached_dir_t *d;
+      smartlist_t *fps = smartlist_create();
+      dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
+      SMARTLIST_FOREACH(fps, char *, fp, {
+          if ((d = dirvote_get_vote(fp)))
+            smartlist_add(dir_items, (cached_dir_t*)d);
+          tor_free(fp);
+        });
+      smartlist_free(fps);
+    }
+    if (!smartlist_len(dir_items) && !smartlist_len(items)) {
+      write_http_status_line(conn, 404, "Not found");
+      tor_free(url_mem);
+      return 0;
+    }
+    SMARTLIST_FOREACH(items, const char *, item,
+        if (!deflated)
+          body_len += strlen(item));
+    SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
+                      body_len += deflated ? d->dir_z_len : d->dir_len);
+    write_http_response_header(conn, body_len ? body_len : -1,
+                 deflated?"application/octet_stream":"text/plain",
+                 deflated?"deflate":NULL,
+                 lifetime);
+
+    if (smartlist_len(items)) {
+      if (deflated) {
+        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+        SMARTLIST_FOREACH(items, const char *, c,
+                 connection_write_to_buf_zlib(c, strlen(c), conn, 0));
+        connection_write_to_buf_zlib("", 0, conn, 1);
+      } else {
+        SMARTLIST_FOREACH(items, const char *, c,
+                         connection_write_to_buf(c, strlen(c), TO_CONN(conn)));
+      }
+    } else {
+      SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
+          connection_write_to_buf(deflated ? d->dir_z : d->dir,
+                                  deflated ? d->dir_z_len : d->dir_len,
+                                  TO_CONN(conn)));
+    }
+    tor_free(url_mem);
+    return 0;
+  }
+
   if (!strcmpstart(url,"/tor/server/") ||
       !strcmpstart(url,"/tor/extra/")) {
     char *url_mem = url;

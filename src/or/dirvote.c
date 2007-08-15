@@ -1096,7 +1096,6 @@ dirvote_recalculate_timing(time_t now)
   memset(&voting_schedule, 0, sizeof(voting_schedule));
 
   if (consensus) {
-    /* XXXX020 sanity-check these somewhere! */
     interval = consensus->fresh_until - consensus->valid_after;
     vote_delay = consensus->vote_seconds;
     dist_delay = consensus->dist_seconds;
@@ -1603,5 +1602,42 @@ dirvote_free_all(void)
     smartlist_free(pending_consensus_signature_list);
     pending_consensus_signature_list = NULL;
   }
+}
+
+/* ====
+ * Access to pending items.
+ * ==== */
+
+/** DOCDOC */
+const char *
+dirvote_get_pending_consensus(void)
+{
+  return pending_consensus_body;
+}
+
+/** DOCDOC */
+const char *
+dirvote_get_pending_detached_signatures(void)
+{
+  return pending_consensus_signatures;
+}
+
+/** DOCDOC */
+const cached_dir_t *
+dirvote_get_vote(const char *id)
+{
+  if (!pending_vote_list)
+    return NULL;
+  if (id == NULL) {
+    authority_cert_t *c = get_my_v3_authority_cert();
+    if (c)
+      id = c->cache_info.identity_digest;
+    else
+      return NULL;
+  }
+  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, pv,
+       if (!memcmp(get_voter(pv->vote)->identity_digest, id, DIGEST_LEN))
+         return pv->vote_body);
+  return NULL;
 }
 
