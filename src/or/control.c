@@ -3343,7 +3343,8 @@ control_event_guard(const char *nickname, const char *digest,
 
 /** Choose a random authentication cookie and write it to disk.
  * Anybody who can read the cookie from disk will be considered
- * authorized to use the control connection. */
+ * authorized to use the control connection. Return -1 if we can't
+ * write the file, or 0 on success. */
 int
 init_cookie_authentication(int enabled)
 {
@@ -3354,13 +3355,19 @@ init_cookie_authentication(int enabled)
     return 0;
   }
 
+  /* We don't want to generate a new cookie every time we call
+   * options_act(). One should be enough. */
+  if (authentication_cookie_is_set)
+    return 0; /* all set */
+
   tor_snprintf(fname, sizeof(fname), "%s"PATH_SEPARATOR"control_auth_cookie",
                get_options()->DataDirectory);
   crypto_rand(authentication_cookie, AUTHENTICATION_COOKIE_LEN);
   authentication_cookie_is_set = 1;
   if (write_bytes_to_file(fname, authentication_cookie,
                           AUTHENTICATION_COOKIE_LEN, 1)) {
-    log_warn(LD_FS,"Error writing authentication cookie.");
+    log_warn(LD_FS,"Error writing authentication cookie to %s.",
+             escaped(fname));
     return -1;
   }
 

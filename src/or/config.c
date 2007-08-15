@@ -1039,7 +1039,10 @@ options_act(or_options_t *old_options)
   /* Update address policies. */
   policies_parse_from_options(options);
 
-  init_cookie_authentication(options->CookieAuthentication);
+  if (init_cookie_authentication(options->CookieAuthentication) < 0) {
+    log_warn(LD_CONFIG,"Error creating cookie authentication file.");
+    return -1;
+  }
 
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_keys()<0) {
