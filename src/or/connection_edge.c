@@ -992,6 +992,7 @@ addressmap_get_virtual_address(int type)
 {
   char buf[64];
   struct in_addr in;
+  tor_assert(addressmap);
 
   if (type == RESOLVED_TYPE_HOSTNAME) {
     char rand[10];
@@ -1013,8 +1014,10 @@ addressmap_get_virtual_address(int type)
       }
       in.s_addr = htonl(next_virtual_addr);
       tor_inet_ntoa(&in, buf, sizeof(buf));
-      if (!strmap_get(addressmap, buf))
+      if (!strmap_get(addressmap, buf)) {
+        ++next_virtual_addr;
         break;
+      }
 
       ++next_virtual_addr;
       --available;
@@ -1023,8 +1026,8 @@ addressmap_get_virtual_address(int type)
         log_warn(LD_CONFIG, "Ran out of virtual addresses!");
         return NULL;
       }
-      if (!addr_mask_cmp_bits(next_virtual_addr, virtual_addr_network,
-                              virtual_addr_netmask_bits))
+      if (addr_mask_cmp_bits(next_virtual_addr, virtual_addr_network,
+                             virtual_addr_netmask_bits))
         next_virtual_addr = virtual_addr_network;
     }
     return tor_strdup(buf);

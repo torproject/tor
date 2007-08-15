@@ -32,6 +32,8 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
       where no controller could authenticate. Now we exit.
     - If we require CookieAuthentication, stop generating a new cookie
       every time we change any piece of our config.
+    - Fix a bug with AutomapHostsOnResolve that would always cause the second
+      request to fail.  Bug reported by Kate.  Bugfix on 0.2.0.3-alpha.
 
 
 Changes in version 0.2.0.4-alpha - 2007-08-01
