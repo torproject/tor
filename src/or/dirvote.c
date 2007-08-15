@@ -16,6 +16,7 @@ const char dirvote_c_id[] =
 static int dirvote_add_signatures_to_pending_consensus(
                        const char *detached_signatures_body,
                        const char **msg_out);
+static char *list_v3_auth_ids(void); //XXXX020 nuke this.
 
 /* =====
  * Voting and consensus generation
@@ -1127,8 +1128,15 @@ dirvote_recalculate_timing(time_t now)
 void
 dirvote_act(time_t now)
 {
-  if (!voting_schedule.voting_starts)
+  if (!voting_schedule.voting_starts) {
+    char *keys = list_v3_auth_ids();
+    authority_cert_t *c = get_my_v3_authority_cert();
+    log_notice(LD_DIR, "Scheduling voting.  Known authority IDs are %s."
+               "Mine is %s.",
+               keys, hex_str(c->cache_info.identity_digest, DIGEST_LEN));
+    tor_free(keys);
     dirvote_recalculate_timing(now);
+  }
   if (voting_schedule.voting_starts < now && !voting_schedule.have_voted) {
     log_notice(LD_DIR, "Time to vote.");
     dirvote_perform_vote();
@@ -1152,7 +1160,7 @@ dirvote_act(time_t now)
     voting_schedule.have_published_consensus = 1;
   }
   if (voting_schedule.discard_old_votes < now) {
-    log_notice(LD_DIR, "Time to discard old votes consensus.");
+    log_notice(LD_DIR, "Time to discard old votes.");
     dirvote_clear_pending_votes();
     dirvote_recalculate_timing(now);
   }
@@ -1229,6 +1237,23 @@ dirvote_clear_pending_votes(void)
   log_notice(LD_DIR, "Pending votes cleared.");
 }
 
+/* XXXX020 delete me. */
+static char *
+list_v3_auth_ids(void)
+{
+  smartlist_t *known_v3_keys = smartlist_create();
+  char *keys;
+  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                    trusted_dir_server_t *, ds,
+       if (!tor_digest_is_zero(ds->v3_identity_digest))
+         smartlist_add(known_v3_keys,
+              tor_strdup(hex_str(ds->v3_identity_digest, DIGEST_LEN))));
+  keys = smartlist_join_strings(known_v3_keys, ", ", 0, NULL);
+  SMARTLIST_FOREACH(known_v3_keys, char *, cp, tor_free(cp));
+  smartlist_free(known_v3_keys);
+  return keys;
+}
+
 /** DOCDOC */
 pending_vote_t *
 dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
@@ -1256,6 +1281,14 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   tor_assert(vi->good_signature == 1);
   ds = trusteddirserver_get_by_v3_auth_digest(vi->identity_digest);
   if (!ds || !(ds->type & V3_AUTHORITY)) {
+    char *keys = list_v3_auth_ids();
+    log_warn(LD_DIR, "Got a vote from an authority with authority key ID %s. "
+             "This authority %s.  Known v3 key IDs are: %s",
+             hex_str(vi->identity_digest, DIGEST_LEN),
+             ds?"is not recognized":"is recognized, but is not listed as v3",
+             keys);
+    tor_free(keys);
+
     *msg_out = "Vote not from a recognized v3 authority";
     goto err;
   }
