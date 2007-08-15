@@ -783,13 +783,15 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
 static int
 networkstatus_add_signatures_impl(networkstatus_vote_t *target,
                                   smartlist_t *src_voter_list,
-                                  char **new_signatures_out)
+                                  char **new_signatures_out,
+                                  int *regenerate_out)
 {
   smartlist_t *added_signatures, *sigs;
   int r;
   tor_assert(target);
   tor_assert(!target->is_vote);
   tor_assert(new_signatures_out);
+  tor_assert(regenerate_out);
 
   added_signatures = smartlist_create();
 
@@ -816,12 +818,11 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
           networkstatus_check_voter_signature(target, src_voter, cert);
         }
       }
-      /* XXXX020 We want to add signatures for which we don't have the cert,
-       * pending the arrival of the cert information.  But this means we need
-       * to replace them if a better one comes along, and that's not
-       * implemented yet. */
-      /* If this signature is good, then add it. */
-      if (src_voter->good_signature) {
+      /* If this signature is good, or we don't have ay signature yet,
+       * then add it. */
+      if (src_voter->good_signature || !target_voter->signature) {
+        if (target_voter->signature)
+          *regenerate_out = 1;
         tor_free(target_voter->signature);
         target_voter->signature =
           tor_memdup(src_voter->signature, src_voter->signature_len);
@@ -864,7 +865,8 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
 int
 networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
                                        networkstatus_vote_t *src,
-                                       char **new_signatures_out)
+                                       char **new_signatures_out,
+                                       int *regenerate_out)
 {
   tor_assert(src);
   tor_assert(! src->is_vote);
@@ -879,14 +881,16 @@ networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
     return 0;
 
   return networkstatus_add_signatures_impl(target, src->voters,
-                                           new_signatures_out);
+                                           new_signatures_out,
+                                           regenerate_out);
 }
 
 /** DOCDOC */
 int
 networkstatus_add_detached_signatures(networkstatus_vote_t *target,
                                       ns_detached_signatures_t *sigs,
-                                      char **new_signatures_out)
+                                      char **new_signatures_out,
+                                      int *regenerate_out)
 {
   tor_assert(sigs);
 
@@ -898,7 +902,8 @@ networkstatus_add_detached_signatures(networkstatus_vote_t *target,
     return -1;
 
   return networkstatus_add_signatures_impl(target, sigs->signatures,
-                                           new_signatures_out);
+                                           new_signatures_out,
+                                           regenerate_out);
 }
 
 /** DOCDOC */
@@ -1420,7 +1425,7 @@ dirvote_add_signatures_to_pending_consensus(
                        const char **msg_out)
 {
   ns_detached_signatures_t *sigs = NULL;
-  int r = -1;
+  int r = -1, regenerate=0;
   char *new_signatures = NULL;
   size_t siglen;
 
@@ -1442,8 +1447,43 @@ dirvote_add_signatures_to_pending_consensus(
 
   r = networkstatus_add_detached_signatures(pending_consensus,
                                             sigs,
-                                            &new_signatures);
+                                            &new_signatures,
+                                            &regenerate);
+
+  // XXXX020 originally, this test was regenerate && r >= 0).  But one
+  // code path is simpler than 2.
   if (new_signatures && (siglen = strlen(new_signatures)) && r >= 0) {
+    /* XXXX This should really be its own function. */
+    char *new_detached =
+      networkstatus_get_detached_signatures(pending_consensus);
+    const char *src;
+    char *dst;
+    size_t new_consensus_len =
+      strlen(pending_consensus_body) + strlen(new_detached) + 1;
+    pending_consensus_body = tor_realloc(pending_consensus_body,
+                                         new_consensus_len);
+    dst = strstr(pending_consensus_body, "directory-signature ");
+    tor_assert(dst);
+    src = strstr(new_detached, "directory-signature ");
+    tor_assert(src);
+    strlcpy(dst, src, new_consensus_len - (dst-pending_consensus_body));
+
+    /* XXXX020 remove this once it fails to crash. */
+    {
+      ns_detached_signatures_t *sigs =
+        networkstatus_parse_detached_signatures(new_detached, NULL);
+      networkstatus_vote_t *v = networkstatus_parse_vote_from_string(
+                                                 pending_consensus_body, 0);
+      tor_assert(sigs);
+      ns_detached_signatures_free(sigs);
+      tor_assert(v);
+      networkstatus_vote_free(v);
+    }
+    tor_free(pending_consensus_signatures);
+    pending_consensus_signatures = new_detached;
+  }
+#if 0
+  else if (new_signatures && (siglen = strlen(new_signatures)) && r >= 0) {
     size_t siglen = strlen(new_signatures);
     size_t len = strlen(pending_consensus_body);
     pending_consensus_body = tor_realloc(pending_consensus_body,
@@ -1457,6 +1497,7 @@ dirvote_add_signatures_to_pending_consensus(
 
     log_info(LD_DIR, "Added %d new signatures to the pending consensus.", r);
   }
+#endif
 
   *msg_out = "ok";
   goto done;
