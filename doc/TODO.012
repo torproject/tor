@@ -3,6 +3,8 @@ Backport items for 0.1.2:
   - r10956: fix the math for exit bandwidth weighting
   - r10994: Disable SENTINELS checking in order to use less RAM in
     buffer allocation.
+  - r11117: cookie auth more usable
+  - disable v0 control protocol
 
 
 Backport for 0.1.2.x once better tested:
