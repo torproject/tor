@@ -3008,9 +3008,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("V3AuthVoteDelay and V3AuthDistDelay must be no more than half "
            "V3AuthVotingInterval");
   }
-  if (options->V3AuthNIntervalsValid < 2) {
+  if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS)
+    REJECT("V3AuthVoteDelay is way too low.");
+  if (options->V3AuthDistDelay < MIN_DIST_SECONDS)
+    REJECT("V3AuthDistDelay is way too low.");
+
+  if (options->V3AuthNIntervalsValid < 2)
     REJECT("V3AuthNIntervalsValid must be at least 2.");
-  }
 
   if (options->V3AuthVotingInterval < 300) {
     REJECT("V3AuthVotingInterval is insanely low.");

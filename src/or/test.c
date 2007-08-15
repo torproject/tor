@@ -2391,6 +2391,45 @@ test_same_voter(networkstatus_voter_info_t *v1,
 }
 
 static void
+test_dirvote_helpers(void)
+{
+  smartlist_t *sl = smartlist_create();
+  int a=12,b=24,c=25,d=60,e=77;
+  time_t v=99, w=150, x=700, y=1000, z=time(NULL);
+
+  test_assert(y<z);
+  smartlist_add(sl, &a);
+  test_eq(a, median_int(sl)); /* a */
+  smartlist_add(sl, &e);
+  smartlist_shuffle(sl);
+  test_eq(a, median_int(sl)); /* a,e */
+  smartlist_add(sl, &e);
+  smartlist_shuffle(sl);
+  test_eq(e, median_int(sl)); /* a,e,e */
+  smartlist_add(sl, &b);
+  test_eq(b, median_int(sl)); /* a,b,e,e */
+  smartlist_add(sl, &d);
+  smartlist_add(sl, &a);
+  smartlist_add(sl, &c);
+  smartlist_shuffle(sl);
+  test_eq(c, median_int(sl)); /* a,a,b,c,d,e,e */
+
+  smartlist_clear(sl);
+  smartlist_add(sl, &y);
+  test_eq(y, median_time(sl)); /*y*/
+  smartlist_add(sl, &w);
+  test_eq(w, median_time(sl)); /*w,y*/
+  smartlist_add(sl, &x);
+  test_eq(x, median_time(sl)); /*w,x,y*/
+  smartlist_add(sl, &v);
+  test_eq(w, median_time(sl)); /*v,w,x,y*/
+  smartlist_add(sl, &z);
+  test_eq(x, median_time(sl)); /*v,w,x,y,z*/
+
+  smartlist_free(sl);
+}
+
+static void
 test_v3_networkstatus(void)
 {
   authority_cert_t *cert1, *cert2, *cert3;
@@ -2433,9 +2472,9 @@ test_v3_networkstatus(void)
   vote = tor_malloc_zero(sizeof(networkstatus_vote_t));
   vote->is_vote = 1;
   vote->published = now;
-  vote->valid_after = now+100;
-  vote->fresh_until = now+200;
-  vote->valid_until = now+300;
+  vote->valid_after = now+1000;
+  vote->fresh_until = now+2000;
+  vote->valid_until = now+3000;
   vote->vote_seconds = 100;
   vote->dist_seconds = 200;
   vote->client_versions = tor_strdup("0.1.2.14,0.1.2.15");
@@ -2560,7 +2599,7 @@ test_v3_networkstatus(void)
   /* Generate second vote. It disagrees on some of the times,
    * and doesn't list versions, and knows some crazy flags */
   vote->published = now+1;
-  vote->fresh_until = now+205;
+  vote->fresh_until = now+3005;
   vote->dist_seconds = 300;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert2);
@@ -2598,7 +2637,7 @@ test_v3_networkstatus(void)
 
   /* Generate the third vote. */
   vote->published = now;
-  vote->fresh_until = now+203;
+  vote->fresh_until = now+2003;
   vote->dist_seconds = 250;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert3);
@@ -2639,9 +2678,9 @@ test_v3_networkstatus(void)
   /* Check consensus contents. */
   test_assert(!con->is_vote);
   test_eq(con->published, 0); /* this field only appears in votes. */
-  test_eq(con->valid_after, now+100);
-  test_eq(con->fresh_until, now+203); /* median */
-  test_eq(con->valid_until, now+300);
+  test_eq(con->valid_after, now+1000);
+  test_eq(con->fresh_until, now+2003); /* median */
+  test_eq(con->valid_until, now+3000);
   test_eq(con->vote_seconds, 100);
   test_eq(con->dist_seconds, 250); /* median */
   test_streq(con->client_versions, "0.1.2.14");
@@ -3130,6 +3169,8 @@ main(int c, char**v)
   test_mmap();
   puts("\n--threads");
   test_threads();
+  puts("\n--dirvote-helpers");
+  test_dirvote_helpers();
   puts("\n========================= Onion Skins =====================");
   test_onion_handshake();
   puts("\n========================= Directory Formats ===============");

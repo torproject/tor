@@ -2824,6 +2824,13 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 
 /********************************* dirvote.c ************************/
 
+/* XXXX020 enforce */
+/* XXXX020 document in dir-spec.txt */
+/*DOCDOC*/
+#define MIN_VOTE_SECONDS 20
+#define MIN_DIST_SECONDS 20
+#define MIN_VOTE_INTERVAL 300
+
 void dirvote_free_all(void);
 
 /* vote manipulation */
@@ -2873,6 +2880,8 @@ int dirvote_add_signatures(const char *detached_signatures_body);
 int dirvote_publish_consensus(void);
 
 #ifdef DIRVOTE_PRIVATE
+time_t median_time(smartlist_t *times);
+int median_int(smartlist_t *times);
 int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
                                         networkstatus_voter_info_t *voter,
                                         authority_cert_t *cert);

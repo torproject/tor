@@ -107,7 +107,7 @@ _compare_ints(const void **_a, const void **_b)
 }
 
 /** Given a list of one or more time_t*, return the (low) median. */
-static time_t
+/*static*/ time_t
 median_time(smartlist_t *times)
 {
   int idx;
@@ -118,7 +118,7 @@ median_time(smartlist_t *times)
 }
 
 /** Given a list of one or more int*, return the (low) median. */
-static int
+/*static*/ int
 median_int(smartlist_t *ints)
 {
   int idx;
@@ -364,6 +364,19 @@ networkstatus_compute_consensus(smartlist_t *votes,
     valid_until = median_time(vu_times);
     vote_seconds = median_int(votesec_list);
     dist_seconds = median_int(distsec_list);
+
+    /*
+    SMARTLIST_FOREACH(va_times, int*, i,
+                      printf("VA: %d\n", *i));
+    SMARTLIST_FOREACH(fu_times, int*, i,
+                      printf("FU: %d\n", *i));
+    printf("%d..%d\n", (int)valid_after, (int)valid_until);
+    */
+
+    tor_assert(valid_after+MIN_VOTE_INTERVAL <= fresh_until);
+    tor_assert(fresh_until+MIN_VOTE_INTERVAL <= valid_until);
+    tor_assert(vote_seconds >= MIN_VOTE_SECONDS);
+    tor_assert(dist_seconds >= MIN_DIST_SECONDS);
 
     for (j = 0; j < 2; ++j) {
       smartlist_t *lst =
@@ -1234,7 +1247,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     goto err;
   }
   tor_assert(smartlist_len(vote->voters) == 1);
-  vi = smartlist_get(vote->voters, 0);
+  vi = get_voter(vote);
   tor_assert(vi->good_signature == 1);
   ds = trusteddirserver_get_by_v3_auth_digest(vi->identity_digest);
   if (!ds || !(ds->type & V3_AUTHORITY)) {
@@ -1260,7 +1273,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
       if (! memcmp(v->vote->cert->cache_info.identity_digest,
                    vote->cert->cache_info.identity_digest,
                    DIGEST_LEN)) {
-        networkstatus_voter_info_t *vi_old = smartlist_get(v->vote->voters, 0);
+        networkstatus_voter_info_t *vi_old = get_voter(v->vote);
         if (!memcmp(vi_old->vote_digest, vi->vote_digest, DIGEST_LEN)) {
           /* Ah, it's the same vote. Not a problem. */
           log_info(LD_DIR, "Discarding a vote we already have.");

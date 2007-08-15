@@ -1874,6 +1874,22 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
     (int) tor_parse_long(tok->args[1], 10, 0, INT_MAX, &ok, NULL);
   if (!ok)
     goto err;
+  if (ns->valid_after + MIN_VOTE_INTERVAL > ns->fresh_until) {
+    log_warn(LD_DIR, "Vote/consensus freshness interval is too short");
+    goto err;
+  }
+  if (ns->valid_after + MIN_VOTE_INTERVAL*2 > ns->valid_until) {
+    log_warn(LD_DIR, "Vote/consensus liveness interval is too short");
+    goto err;
+  }
+  if (ns->vote_seconds < MIN_VOTE_SECONDS) {
+    log_warn(LD_DIR, "Vote seconds is too short");
+    goto err;
+  }
+  if (ns->dist_seconds < MIN_DIST_SECONDS) {
+    log_warn(LD_DIR, "Dist seconds is too short");
+    goto err;
+  }
 
   if ((tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS))) {
     ns->client_versions = tok->args[0];

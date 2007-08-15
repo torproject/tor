@@ -1979,6 +1979,9 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
     (timing.vote_interval * timing.n_intervals_valid);
   v3_out->vote_seconds = timing.vote_delay;
   v3_out->dist_seconds = timing.dist_delay;
+  tor_assert(v3_out->vote_seconds > 0);
+  tor_assert(v3_out->dist_seconds > 0);
+  tor_assert(timing.n_intervals_valid > 0);
 
   v3_out->client_versions = client_versions;
   v3_out->server_versions = server_versions;
