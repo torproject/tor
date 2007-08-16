@@ -17,6 +17,11 @@ Changes in version 0.1.2.xx - 2007-xxxxx
       weighting by fraction of bandwidth provided by exits.  Previously,
       we would choose with only approximate fairness, and correct ourselves
       if we ran off the end of the list.
+    - If we require CookieAuthentication but we fail to write the
+      cookie file, we would warn but not exit, and end up in a state
+      where no controller could authenticate. Now we exit.
+    - If we require CookieAuthentication, stop generating a new cookie
+      every time we change any piece of our config.
 
 
 Changes in version 0.1.2.16 - 2007-08-01
