@@ -166,7 +166,7 @@ compute the hash of a password by running "tor --hash-password
 If this option is set to 1, don't allow any connections on the control port
 except when the connecting process knows the contents of a file named
 "control_auth_cookie", which Tor will create in its data directory.  This
-authentication methods should only be used on systems with good filesystem
+authentication method should only be used on systems with good filesystem
 security. (Default: 0)
 .LP
 .TP
@@ -1181,7 +1181,10 @@ recording of statistics is enabled.
 .LP
 .TP
 .B \fIDataDirectory\fP/control_auth_cookie
-Used for cookie authentication with the controller. Regenerated on startup.  See control-spec.txt for details.  Only used when cookie authentication is enabled.
+Used for cookie authentication with the controller. Location can be
+overridden by the CookieAuthFile config option. Regenerated on startup.
+See control-spec.txt for details.  Only used when cookie authentication
+is enabled.
 .LP
 .TP
 .B \fIDataDirectory\fP/keys/*
