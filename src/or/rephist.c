@@ -20,6 +20,10 @@ static void hs_usage_init(void);
 uint64_t rephist_total_alloc=0;
 uint32_t rephist_total_num=0;
 
+#define STABILITY_EPSILON   0.0001
+#define STABILITY_ALPHA     0.9
+#define STABILITY_INTERVAL  (12*60*60)
+
 /** History of an OR-\>OR link. */
 typedef struct link_history_t {
   /** When did we start tracking this list? */
@@ -52,10 +56,17 @@ typedef struct or_history_t {
   time_t up_since;
   /** If nonzero, we have been unable to connect since this time. */
   time_t down_since;
+  /** DOCDOC */
+  unsigned long weighted_run_length;
+  time_t start_of_run;
+  double total_run_weights;
   /** Map from hex OR2 identity digest to a link_history_t for the link
    * from this OR to OR2. */
   digestmap_t *link_history_map;
 } or_history_t;
+
+/** DOCDOC */
+static time_t stability_last_downrated = 0;
 
 /** Map from hex OR identity digest to or_history_t. */
 static digestmap_t *history_map = NULL;
@@ -151,6 +162,42 @@ rep_hist_init(void)
   hs_usage_init();
 }
 
+/** DOCDOC */
+static void
+mark_or_down(or_history_t *hist, time_t when, int failed)
+{
+  if (hist->start_of_run) {
+    /*XXXX020 treat failure specially. */
+    long run_length = when - hist->start_of_run;
+    hist->weighted_run_length += run_length;
+    hist->total_run_weights += 1.0;
+    hist->start_of_run = 0;
+  }
+  if (hist->up_since) {
+    hist->uptime += (when - hist->up_since);
+    hist->up_since = 0;
+  }
+  if (failed && !hist->down_since) {
+    hist->down_since = when;
+  }
+}
+
+/** DOCDOC */
+static void
+mark_or_up(or_history_t *hist, time_t when)
+{
+  if (!hist->start_of_run) {
+    hist->start_of_run = when;
+  }
+  if (hist->down_since) {
+    hist->downtime += (when - hist->down_since);
+    hist->down_since = 0;
+  }
+  if (!hist->up_since) {
+    hist->up_since = when;
+  }
+}
+
 /** Remember that an attempt to connect to the OR with identity digest
  * <b>id</b> failed at <b>when</b>.
  */
@@ -162,12 +209,7 @@ rep_hist_note_connect_failed(const char* id, time_t when)
   if (!hist)
     return;
   ++hist->n_conn_fail;
-  if (hist->up_since) {
-    hist->uptime += (when - hist->up_since);
-    hist->up_since = 0;
-  }
-  if (!hist->down_since)
-    hist->down_since = when;
+  mark_or_down(hist, when, 1);
   hist->changed = when;
 }
 
@@ -182,12 +224,7 @@ rep_hist_note_connect_succeeded(const char* id, time_t when)
   if (!hist)
     return;
   ++hist->n_conn_ok;
-  if (hist->down_since) {
-    hist->downtime += (when - hist->down_since);
-    hist->down_since = 0;
-  }
-  if (!hist->up_since)
-    hist->up_since = when;
+  mark_or_up(hist, when);
   hist->changed = when;
 }
 
@@ -201,11 +238,7 @@ rep_hist_note_disconnect(const char* id, time_t when)
   hist = get_or_history(id);
   if (!hist)
     return;
-  ++hist->n_conn_ok;
-  if (hist->up_since) {
-    hist->uptime += (when - hist->up_since);
-    hist->up_since = 0;
-  }
+  mark_or_down(hist, when, 0);
   hist->changed = when;
 }
 
@@ -217,7 +250,7 @@ rep_hist_note_connection_died(const char* id, time_t when)
 {
   or_history_t *hist;
   if (!id) {
-    /* If conn has no nickname, it didn't complete its handshake, or something
+    /* If conn has no identity, it didn't complete its handshake, or something
      * went wrong.  Ignore it.
      */
     return;
@@ -225,13 +258,66 @@ rep_hist_note_connection_died(const char* id, time_t when)
   hist = get_or_history(id);
   if (!hist)
     return;
-  if (hist->up_since) {
-    hist->uptime += (when - hist->up_since);
-    hist->up_since = 0;
-  }
-  if (!hist->down_since)
-    hist->down_since = when;
+  mark_or_down(hist, when, 1);
   hist->changed = when;
+}
+
+/**DOCDOC*/
+time_t
+rep_hist_downrate_old_runs(time_t now)
+{
+  digestmap_iter_t *orhist_it;
+  const char *digest1;
+  or_history_t *hist;
+  void *hist_p;
+  double alpha = 1.0;
+
+  if (!history_map)
+    history_map = digestmap_new();
+  if (!stability_last_downrated)
+    stability_last_downrated = now;
+  if (stability_last_downrated + STABILITY_INTERVAL > now)
+    return stability_last_downrated + STABILITY_INTERVAL;
+
+  while (stability_last_downrated + STABILITY_INTERVAL < now) {
+    stability_last_downrated += STABILITY_INTERVAL;
+    alpha *= STABILITY_ALPHA;
+  }
+
+  for (orhist_it = digestmap_iter_init(history_map);
+       !digestmap_iter_done(orhist_it);
+       orhist_it = digestmap_iter_next(history_map,orhist_it)) {
+    digestmap_iter_get(orhist_it, &digest1, &hist_p);
+    hist = hist_p;
+
+    hist->weighted_run_length =
+      (unsigned long)(hist->weighted_run_length * alpha);
+    hist->total_run_weights *= alpha;
+  }
+
+  return stability_last_downrated + STABILITY_INTERVAL;
+}
+
+/**DOCDOC*/
+double
+rep_hist_get_stability(const char *id, time_t when)
+{
+  or_history_t *hist = get_or_history(id);
+  unsigned long total;
+  double total_weights;
+  if (!hist)
+    return 0.0;
+
+  total = hist->weighted_run_length;
+  total_weights = hist->total_run_weights;
+  if (hist->start_of_run) {
+    total += (when-hist->start_of_run);
+    total_weights += 1.0;
+  }
+  if (total_weights < STABILITY_EPSILON)
+    return 0.0;
+
+  return total / total_weights;
 }
 
 /** Remember that we successfully extended from the OR with identity

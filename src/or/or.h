@@ -3117,6 +3117,9 @@ void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);
 
+time_t rep_hist_downrate_old_runs(time_t now);
+double rep_hist_get_stability(const char *id, time_t when);
+
 void rep_hist_note_used_port(uint16_t port, time_t now);
 smartlist_t *rep_hist_get_predicted_ports(time_t now);
 void rep_hist_note_used_resolve(time_t now);
