@@ -1,4 +1,9 @@
 Changes in version 0.1.2.xx - 2007-xxxxx
+  o Removed features:
+    - We removed support for the old (v0) control protocol.  It has been
+      deprecated since Tor 0.1.1.1-alpha, and keeping it safe and secure
+      has been more of a headache than it's worth.
+
   o Minor bugfixes (performance):
     - Save on most routerlist_assert_ok() calls in routerlist.c,
       thus greatly speeding up loading cached-routers from disk on

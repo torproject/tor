@@ -341,17 +341,11 @@ typedef enum {
 #define DIR_CONN_IS_SERVER(conn) ((conn)->purpose == DIR_PURPOSE_SERVER)
 
 #define _CONTROL_CONN_STATE_MIN 1
-/** State for a control connection: Authenticated and accepting v0 commands. */
-#define CONTROL_CONN_STATE_OPEN_V0 1
 /** State for a control connection: Authenticated and accepting v1 commands. */
 #define CONTROL_CONN_STATE_OPEN_V1 2
-/** State for a control connection: Waiting for authentication; either
- * speaking v0 commands or waiting for evidence that it's a v1
- * connection. */
-#define CONTROL_CONN_STATE_NEEDAUTH_V0 3
 /** State for a control connection: Waiting for authentication; speaking
  * protocol v1. */
-#define CONTROL_CONN_STATE_NEEDAUTH_V1 4
+#define CONTROL_CONN_STATE_NEEDAUTH_V1 3
 #define _CONTROL_CONN_STATE_MAX 4
 
 #define _DIR_PURPOSE_MIN 1

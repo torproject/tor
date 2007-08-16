@@ -13,44 +13,13 @@ const char control_c_id[] =
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */
-#define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN_V0 ||          \
-                          (s) == CONTROL_CONN_STATE_OPEN_V1)
-/** Yield true iff <b>s</b> is the state of a control_connection_t that is
- * speaking the V0 protocol.
- */
-#define STATE_IS_V0(s) ((s) == CONTROL_CONN_STATE_NEEDAUTH_V0 ||        \
-                        (s) == CONTROL_CONN_STATE_OPEN_V0)
+#define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN_V1)
 
 /*
- * See control-spec.txt and control-spec-v0.txt for full details on
- * protocol(s).
+ * See control-spec.txt for full details on protocol.
  */
 
-/* Recognized version 0 message type codes; do not add new codes to this list.
- * Version 0 is dead; version 1 doesn't use codes. */
-#define CONTROL0_CMD_ERROR        0x0000
-#define CONTROL0_CMD_DONE         0x0001
-#define CONTROL0_CMD_SETCONF      0x0002
-#define CONTROL0_CMD_GETCONF      0x0003
-#define CONTROL0_CMD_CONFVALUE    0x0004
-#define CONTROL0_CMD_SETEVENTS    0x0005
-#define CONTROL0_CMD_EVENT        0x0006
-#define CONTROL0_CMD_AUTHENTICATE 0x0007
-#define CONTROL0_CMD_SAVECONF     0x0008
-#define CONTROL0_CMD_SIGNAL       0x0009
-#define CONTROL0_CMD_MAPADDRESS   0x000A
-#define CONTROL0_CMD_GETINFO      0x000B
-#define CONTROL0_CMD_INFOVALUE    0x000C
-#define CONTROL0_CMD_EXTENDCIRCUIT  0x000D
-#define CONTROL0_CMD_ATTACHSTREAM   0x000E
-#define CONTROL0_CMD_POSTDESCRIPTOR 0x000F
-#define CONTROL0_CMD_FRAGMENTHEADER 0x0010
-#define CONTROL0_CMD_FRAGMENT       0x0011
-#define CONTROL0_CMD_REDIRECTSTREAM 0x0012
-#define CONTROL0_CMD_CLOSESTREAM    0x0013
-#define CONTROL0_CMD_CLOSECIRCUIT   0x0014
-#define _CONTROL0_CMD_MAX_RECOGNIZED 0x0014
-
+#if 0
 /* Recognized version 0 error codes.  Do not expand. */
 #define ERR_UNSPECIFIED             0x0000
 #define ERR_INTERNAL                0x0001
@@ -65,6 +34,7 @@ const char control_c_id[] =
 #define ERR_NO_STREAM               0x000A
 #define ERR_NO_CIRC                 0x000B
 #define ERR_NO_ROUTER               0x000C
+#endif
 
 /* Recognized asynchronous event types.  It's okay to expand this list
  * because it is used both as a list of v0 event types, and as indices
@@ -95,33 +65,6 @@ const char control_c_id[] =
 #define _EVENT_MAX             0x0014
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
-/** Array mapping from message type codes to human-readable message
- * type names. Used for compatibility with version 0 of the control
- * protocol.  Do not add new items to this list. */
-static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
-  "error",
-  "done",
-  "setconf",
-  "getconf",
-  "confvalue",
-  "setevents",
-  "events",
-  "authenticate",
-  "saveconf",
-  "signal",
-  "mapaddress",
-  "getinfo",
-  "infovalue",
-  "extendcircuit",
-  "attachstream",
-  "postdescriptor",
-  "fragmentheader",
-  "fragment",
-  "redirectstream",
-  "closestream",
-  "closecircuit",
-};
-
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
  * connection is interested in events of type <b>e</b>.  We use this
  * so that we can decide to skip generating event messages that nobody
@@ -129,7 +72,6 @@ static const char * CONTROL0_COMMANDS[_CONTROL0_CMD_MAX_RECOGNIZED+1] = {
  * list to find out.
  **/
 typedef uint32_t event_mask_t;
-static event_mask_t global_event_mask0 = 0;
 static event_mask_t global_event_mask1long = 0;
 static event_mask_t global_event_mask1short = 0;
 
@@ -138,13 +80,12 @@ static int disable_log_messages = 0;
 
 /** Macro: true if any control connection is interested in events of type
  * <b>e</b>. */
-#define EVENT_IS_INTERESTING0(e) (global_event_mask0 & (1<<(e)))
 #define EVENT_IS_INTERESTING1(e) \
   ((global_event_mask1long|global_event_mask1short) & (1<<(e)))
 #define EVENT_IS_INTERESTING1L(e) (global_event_mask1long & (1<<(e)))
 #define EVENT_IS_INTERESTING1S(e) (global_event_mask1short & (1<<(e)))
 #define EVENT_IS_INTERESTING(e)                                         \
-  ((global_event_mask0|global_event_mask1short|global_event_mask1long)  \
+  ((global_event_mask1short|global_event_mask1long)                     \
    & (1<<(e)))
 
 /** If we're using cookie-type authentication, how long should our cookies be?
@@ -171,15 +112,7 @@ static void connection_printf_to_buf(control_connection_t *conn,
                                      int translate_newlines, char **out);
 /*static*/ size_t read_escaped_data(const char *data, size_t len,
                                     int translate_newlines,  char **out);
-static void send_control0_message(control_connection_t *conn, uint16_t type,
-                                 uint32_t len, const char *body);
 static void send_control_done(control_connection_t *conn);
-static void send_control_done2(control_connection_t *conn, const char *msg,
-                               size_t len);
-static void send_control0_error(control_connection_t *conn, uint16_t error,
-                               const char *message);
-static void send_control0_event(uint16_t event, uint32_t len,
-                                const char *body);
 static void send_control1_event(uint16_t event, event_format_t which,
                                 const char *format, ...)
   CHECK_PRINTF(3,4);
@@ -234,15 +167,6 @@ static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
 static void orconn_target_get_name(int long_names, char *buf, size_t len,
                                    or_connection_t *conn);
 
-/** Given a possibly invalid message type code <b>cmd</b>, return a
- * human-readable string equivalent. */
-static INLINE const char *
-control_cmd_to_string(uint16_t cmd)
-{
-  return (cmd<=_CONTROL0_CMD_MAX_RECOGNIZED) ?
-                      CONTROL0_COMMANDS[cmd] : "Unknown";
-}
-
 /** Given a control event code for a message event, return the corresponding
  * log severity. */
 static INLINE int
@@ -280,11 +204,9 @@ control_update_global_event_mask(void)
   connection_t **conns;
   int n_conns, i;
   event_mask_t old_mask, new_mask;
-  old_mask = global_event_mask0;
-  old_mask |= global_event_mask1short;
+  old_mask = global_event_mask1short;
   old_mask |= global_event_mask1long;
 
-  global_event_mask0 = 0;
   global_event_mask1short = 0;
   global_event_mask1long = 0;
   get_connection_array(&conns, &n_conns);
@@ -292,17 +214,14 @@ control_update_global_event_mask(void)
     if (conns[i]->type == CONN_TYPE_CONTROL &&
         STATE_IS_OPEN(conns[i]->state)) {
       control_connection_t *conn = TO_CONTROL_CONN(conns[i]);
-      if (STATE_IS_V0(conn->_base.state))
-        global_event_mask0 |= conn->event_mask;
-      else if (conn->use_long_names)
+      if (conn->use_long_names)
         global_event_mask1long |= conn->event_mask;
       else
         global_event_mask1short |= conn->event_mask;
     }
   }
 
-  new_mask = global_event_mask0;
-  new_mask |= global_event_mask1short;
+  new_mask = global_event_mask1short;
   new_mask |= global_event_mask1long;
 
   /* Handle the aftermath.  Set up the log callback to tell us only what
@@ -547,114 +466,11 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
   connection_write_to_buf(buf, len, TO_CONN(conn));
 }
 
-/** Send a message of type <b>type</b> containing <b>len</b> bytes
- * from <b>body</b> along the control connection <b>conn</b> */
-static void
-send_control0_message(control_connection_t *conn, uint16_t type, uint32_t len,
-                      const char *body)
-{
-  char buf[10];
-  tor_assert(conn);
-  tor_assert(STATE_IS_V0(conn->_base.state));
-  tor_assert(len || !body);
-  tor_assert(type <= _CONTROL0_CMD_MAX_RECOGNIZED);
-  if (len < 65536) {
-    set_uint16(buf, htons(len));
-    set_uint16(buf+2, htons(type));
-    connection_write_to_buf(buf, 4, TO_CONN(conn));
-    if (len)
-      connection_write_to_buf(body, len, TO_CONN(conn));
-  } else {
-    set_uint16(buf, htons(65535));
-    set_uint16(buf+2, htons(CONTROL0_CMD_FRAGMENTHEADER));
-    set_uint16(buf+4, htons(type));
-    set_uint32(buf+6, htonl(len));
-    connection_write_to_buf(buf, 10, TO_CONN(conn));
-    connection_write_to_buf(body, 65535-6, TO_CONN(conn));
-    len -= (65535-6);
-    body += (65535-6);
-    while (len) {
-      size_t chunklen = (len<65535)?len:65535;
-      set_uint16(buf, htons((uint16_t)chunklen));
-      set_uint16(buf+2, htons(CONTROL0_CMD_FRAGMENT));
-      connection_write_to_buf(buf, 4, TO_CONN(conn));
-      connection_write_to_buf(body, chunklen, TO_CONN(conn));
-      len -= chunklen;
-      body += chunklen;
-    }
-  }
-}
-
 /** Send a "DONE" message down the control connection <b>conn</b> */
 static void
 send_control_done(control_connection_t *conn)
 {
-  if (STATE_IS_V0(conn->_base.state)) {
-    send_control0_message(conn, CONTROL0_CMD_DONE, 0, NULL);
-  } else {
-    connection_write_str_to_buf("250 OK\r\n", conn);
-  }
-}
-
-/** Send a "DONE" message down the v0 control message <b>conn</b>, with body
- * as provided in the <b>len</b> bytes at <b>msg</b>.
- */
-static void
-send_control_done2(control_connection_t *conn, const char *msg, size_t len)
-{
-  if (len==0)
-    len = strlen(msg);
-  send_control0_message(conn, CONTROL0_CMD_DONE, len, msg);
-}
-
-/** Send an error message with error code <b>error</b> and body
- * <b>message</b> down the connection <b>conn</b> */
-static void
-send_control0_error(control_connection_t *conn, uint16_t error,
-                    const char *message)
-{
-  char buf[256];
-  size_t len;
-  set_uint16(buf, htons(error));
-  len = strlen(message);
-  tor_assert(len < (256-2));
-  memcpy(buf+2, message, len);
-  send_control0_message(conn, CONTROL0_CMD_ERROR, (uint16_t)(len+2), buf);
-}
-
-/** Send an 'event' message of event type <b>event</b>, containing
- * <b>len</b> bytes in <b>body</b> to every control connection that
- * is interested in it. */
-static void
-send_control0_event(uint16_t event, uint32_t len, const char *body)
-{
-  connection_t **conns;
-  int n_conns, i;
-  size_t buflen;
-  char *buf;
-
-  tor_assert(event >= _EVENT_MIN && event <= LAST_V0_EVENT);
-
-  buflen = len + 2;
-  buf = tor_malloc_zero(buflen);
-  set_uint16(buf, htons(event));
-  memcpy(buf+2, body, len);
-
-  get_connection_array(&conns, &n_conns);
-  for (i = 0; i < n_conns; ++i) {
-    if (conns[i]->type == CONN_TYPE_CONTROL &&
-        !conns[i]->marked_for_close &&
-        conns[i]->state == CONTROL_CONN_STATE_OPEN_V0) {
-      control_connection_t *control_conn = TO_CONTROL_CONN(conns[i]);
-      if (control_conn->event_mask & (1<<event)) {
-        send_control0_message(control_conn, CONTROL0_CMD_EVENT, buflen, buf);
-        if (event == EVENT_ERR_MSG)
-          connection_handle_write(TO_CONN(control_conn), 1);
-      }
-    }
-  }
-
-  tor_free(buf);
+  connection_write_str_to_buf("250 OK\r\n", conn);
 }
 
 /* Send an event to all v1 controllers that are listening for code
@@ -837,9 +653,8 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   config_line_t *lines=NULL;
   char *start = body;
   char *errstring = NULL;
-  int v0 = STATE_IS_V0(conn->_base.state);
 
-  if (!v0) {
+  if (1) {
     char *config;
     smartlist_t *entries = smartlist_create();
     /* We have a string, "body", of the format '(key(=val|="val")?)' entries
@@ -898,46 +713,30 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
       return 0;
     }
     tor_free(config);
-  } else {
-    if (config_get_lines(body, &lines) < 0) {
-      log_warn(LD_CONTROL,
-               "V0 controller gave us config lines we can't parse.");
-      send_control0_error(conn, ERR_SYNTAX, "Couldn't parse configuration");
-      return 0;
-    }
   }
 
   if ((r=options_trial_assign(lines, use_defaults,
                               clear_first, &errstring)) < 0) {
-    int v0_err;
     const char *msg;
     log_warn(LD_CONTROL,
              "Controller gave us config lines that didn't validate: %s.",
              errstring);
     switch (r) {
       case -1:
-        v0_err = ERR_UNRECOGNIZED_CONFIG_KEY;
         msg = "552 Unrecognized option";
         break;
       case -2:
-        v0_err = ERR_INVALID_CONFIG_VALUE;
         msg = "513 Unacceptable option value";
         break;
       case -3:
-        v0_err = ERR_INVALID_CONFIG_VALUE;
         msg = "553 Transition not allowed";
         break;
       case -4:
       default:
-        v0_err = ERR_INVALID_CONFIG_VALUE;
         msg = "553 Unable to set option";
         break;
     }
-    if (v0) {
-      send_control0_error(conn, v0_err, msg);
-    } else {
-      connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
-    }
+    connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
     config_free_lines(lines);
     tor_free(errstring);
     return 0;
@@ -962,8 +761,6 @@ handle_control_setconf(control_connection_t *conn, uint32_t len, char *body)
 static int
 handle_control_resetconf(control_connection_t *conn, uint32_t len, char *body)
 {
-  int v0 = STATE_IS_V0(conn->_base.state);
-  tor_assert(!v0);
   return control_setconf_helper(conn, len, body, 1, 1);
 }
 
@@ -979,31 +776,21 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
   char *msg = NULL;
   size_t msg_len;
   or_options_t *options = get_options();
-  int v0 = STATE_IS_V0(conn->_base.state);
 
   questions = smartlist_create();
   (void) body_len; /* body is nul-terminated; so we can ignore len. */
-  if (v0) {
-    smartlist_split_string(questions, body, "\n",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  } else {
-    smartlist_split_string(questions, body, " ",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  }
+  smartlist_split_string(questions, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   answers = smartlist_create();
   unrecognized = smartlist_create();
   SMARTLIST_FOREACH(questions, char *, q,
   {
     if (!option_is_recognized(q)) {
-      if (v0) {
-        send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, q);
-        goto done;
-      } else {
-        smartlist_add(unrecognized, q);
-      }
+      smartlist_add(unrecognized, q);
     } else {
       config_line_t *answer = option_get_assignment(options,q);
-      if (!v0 && !answer) {
+
+      if (!answer) {
         const char *name = option_get_canonical_name(q);
         size_t alen = strlen(name)+8;
         char *astr = tor_malloc(alen);
@@ -1015,11 +802,8 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
         config_line_t *next;
         size_t alen = strlen(answer->key)+strlen(answer->value)+8;
         char *astr = tor_malloc(alen);
-        if (v0)
-          tor_snprintf(astr, alen, "%s %s\n", answer->key, answer->value);
-        else
-          tor_snprintf(astr, alen, "250-%s=%s\r\n",
-                       answer->key, answer->value);
+        tor_snprintf(astr, alen, "250-%s=%s\r\n",
+                     answer->key, answer->value);
         smartlist_add(answers, astr);
 
         next = answer->next;
@@ -1031,11 +815,7 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
     }
   });
 
-  if (v0) {
-    msg = smartlist_join_strings(answers, "", 0, &msg_len);
-    send_control0_message(conn, CONTROL0_CMD_CONFVALUE,
-                          (uint16_t)msg_len, msg_len?msg:NULL);
-  } else {
+  if (1) {
     int i,len;
     if ((len = smartlist_len(unrecognized))) {
       for (i=0; i < len-1; ++i)
@@ -1056,7 +836,6 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
     }
   }
 
- done:
   if (answers) {
     SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
     smartlist_free(answers);
@@ -1080,24 +859,9 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
   uint16_t event_code;
   uint32_t event_mask = 0;
   unsigned int extended = 0;
+  (void)len;
 
-  if (STATE_IS_V0(conn->_base.state)) {
-    if (len % 2) {
-      send_control0_error(conn, ERR_SYNTAX,
-                          "Odd number of bytes in setevents message");
-      return 0;
-    }
-
-    for (; len; len -= 2, body += 2) {
-      event_code = ntohs(get_uint16(body));
-      if (event_code < _EVENT_MIN || event_code > LAST_V0_EVENT) {
-        send_control0_error(conn, ERR_UNRECOGNIZED_EVENT_CODE,
-                            "Unrecognized event code");
-        return 0;
-      }
-      event_mask |= (1 << event_code);
-    }
-  } else {
+  if (1) {
     smartlist_t *events = smartlist_create();
     smartlist_split_string(events, body, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -1206,10 +970,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   const char *errstr = NULL;
   char *password;
   size_t password_len;
-  if (STATE_IS_V0(conn->_base.state)) {
-    password = (char*)body;
-    password_len = len;
-  } else {
+  if (1) {
     if (TOR_ISXDIGIT(body[0])) {
       int i = 0;
       while (TOR_ISXDIGIT(body[i]))
@@ -1279,10 +1040,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   }
 
  err:
-  if (STATE_IS_V0(conn->_base.state))
-    send_control0_error(conn,ERR_REJECTED_AUTHENTICATION,
-                        "Authentication failed");
-  else {
+  if (1) {
     tor_free(password);
     if (!errstr)
       errstr = "Unknown reason.";
@@ -1294,12 +1052,8 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
  ok:
   log_info(LD_CONTROL, "Authenticated control connection (%d)", conn->_base.s);
   send_control_done(conn);
-  if (STATE_IS_V0(conn->_base.state))
-    conn->_base.state = CONTROL_CONN_STATE_OPEN_V0;
-  else {
-    conn->_base.state = CONTROL_CONN_STATE_OPEN_V1;
-    tor_free(password);
-  }
+  conn->_base.state = CONTROL_CONN_STATE_OPEN_V1;
+  tor_free(password);
   return 0;
 }
 
@@ -1312,11 +1066,7 @@ handle_control_saveconf(control_connection_t *conn, uint32_t len,
   (void) len;
   (void) body;
   if (options_save_current()<0) {
-    if (STATE_IS_V0(conn->_base.state))
-      send_control0_error(conn, ERR_INTERNAL,
-                          "Unable to write configuration to disk.");
-    else
-      connection_write_str_to_buf(
+    connection_write_str_to_buf(
         "551 Unable to write configuration to disk.\r\n", conn);
   } else {
     send_control_done(conn);
@@ -1332,27 +1082,8 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
                       const char *body)
 {
   int sig;
-  if (STATE_IS_V0(conn->_base.state)) {
-    if (len != 1) {
-      send_control0_error(conn, ERR_SYNTAX,
-                          "Body of SIGNAL command too long or too short.");
-      return 0;
-    } else {
-      sig = (uint8_t)body[0];
-      switch (sig)
-      {
-      case 1: sig = SIGHUP; break;
-      case 2: sig = SIGINT; break;
-      case 10: sig = SIGUSR1; break;
-      case 12: sig = SIGUSR2; break;
-      case 15: sig = SIGTERM; break;
-      case SIGNEWNYM: break;
-      default:
-        send_control0_error(conn, ERR_SYNTAX, "Unrecognized signal number.");
-        return 0;
-      }
-    }
-  } else {
+  (void)len;
+  if (1) {
     int n = 0;
     char *s;
     while (body[n] && ! TOR_ISSPACE(body[n]))
@@ -1399,37 +1130,26 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
   smartlist_t *reply;
   char *r;
   size_t sz;
-  int v0 = STATE_IS_V0(conn->_base.state);
   (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
 
   lines = smartlist_create();
   elts = smartlist_create();
   reply = smartlist_create();
-  if (v0)
-    smartlist_split_string(lines, body, "\n",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  else
-    smartlist_split_string(lines, body, " ",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  smartlist_split_string(lines, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH(lines, char *, line,
   {
     tor_strlower(line);
-    if (v0)
-      smartlist_split_string(elts, line, " ", 0, 2);
-    else
-      smartlist_split_string(elts, line, "=", 0, 2);
+    smartlist_split_string(elts, line, "=", 0, 2);
     if (smartlist_len(elts) == 2) {
       const char *from = smartlist_get(elts,0);
       const char *to = smartlist_get(elts,1);
       size_t anslen = strlen(line)+512;
       char *ans = tor_malloc(anslen);
       if (address_is_invalid_destination(to, 1)) {
-        if (!v0) {
-          tor_snprintf(ans, anslen,
-            "512-syntax error: invalid address '%s'", to);
-          smartlist_add(reply, ans);
-        } else
-          tor_free(ans); /* don't respond if v0 */
+        tor_snprintf(ans, anslen,
+                     "512-syntax error: invalid address '%s'", to);
+        smartlist_add(reply, ans);
         log_warn(LD_CONTROL,
                  "Skipping invalid argument '%s' in MapAddress msg", to);
       } else if (!strcmp(from, ".") || !strcmp(from, "0.0.0.0")) {
@@ -1437,38 +1157,27 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
               !strcmp(from,".") ? RESOLVED_TYPE_HOSTNAME : RESOLVED_TYPE_IPV4,
                tor_strdup(to));
         if (!address) {
-          if (!v0) {
-            tor_snprintf(ans, anslen,
-              "451-resource exhausted: skipping '%s'", line);
-            smartlist_add(reply, ans);
-          } else
-            tor_free(ans); /* don't respond if v0 */
+          tor_snprintf(ans, anslen,
+                       "451-resource exhausted: skipping '%s'", line);
+          smartlist_add(reply, ans);
           log_warn(LD_CONTROL,
                    "Unable to allocate address for '%s' in MapAddress msg",
                    safe_str(line));
         } else {
-          if (v0)
-            tor_snprintf(ans, anslen, "%s %s", address, to);
-          else
-            tor_snprintf(ans, anslen, "250-%s=%s", address, to);
+          tor_snprintf(ans, anslen, "250-%s=%s", address, to);
           smartlist_add(reply, ans);
         }
       } else {
         addressmap_register(from, tor_strdup(to), 1);
-        if (v0)
-          tor_snprintf(ans, anslen, "%s", line);
-        else
-          tor_snprintf(ans, anslen, "250-%s", line);
+        tor_snprintf(ans, anslen, "250-%s", line);
         smartlist_add(reply, ans);
       }
     } else {
-      if (!v0) {
-        size_t anslen = strlen(line)+256;
-        char *ans = tor_malloc(anslen);
-        tor_snprintf(ans, anslen, "512-syntax error: mapping '%s' is "
-                     "not of expected form 'foo=bar'.", line);
-        smartlist_add(reply, ans);
-      }
+      size_t anslen = strlen(line)+256;
+      char *ans = tor_malloc(anslen);
+      tor_snprintf(ans, anslen, "512-syntax error: mapping '%s' is "
+                   "not of expected form 'foo=bar'.", line);
+      smartlist_add(reply, ans);
       log_info(LD_CONTROL, "Skipping MapAddress '%s': wrong "
                            "number of items.", safe_str(line));
     }
@@ -1479,11 +1188,7 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
   smartlist_free(lines);
   smartlist_free(elts);
 
-  if (v0) {
-    r = smartlist_join_strings(reply, "\n", 1, &sz);
-    send_control_done2(conn,r,sz);
-    tor_free(r);
-  } else {
+  if (1) {
     if (smartlist_len(reply)) {
       ((char*)smartlist_get(reply,smartlist_len(reply)-1))[3] = ' ';
       r = smartlist_join_strings(reply, "\r\n", 1, &sz);
@@ -1943,34 +1648,21 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   smartlist_t *answers = NULL;
   smartlist_t *unrecognized = NULL;
   char *msg = NULL, *ans = NULL;
-  size_t msg_len;
-  int v0 = STATE_IS_V0(conn->_base.state);
   (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
 
   questions = smartlist_create();
-  if (v0)
-    smartlist_split_string(questions, body, "\n",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  else
-    smartlist_split_string(questions, body, " ",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  smartlist_split_string(questions, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   answers = smartlist_create();
   unrecognized = smartlist_create();
   SMARTLIST_FOREACH(questions, const char *, q,
   {
     if (handle_getinfo_helper(conn, q, &ans) < 0) {
-      if (v0)
-        send_control0_error(conn, ERR_INTERNAL, body);
-      else
-        connection_write_str_to_buf("551 Internal error\r\n", conn);
+      connection_write_str_to_buf("551 Internal error\r\n", conn);
       goto done;
     }
     if (!ans) {
-      if (v0) {
-        send_control0_error(conn, ERR_UNRECOGNIZED_CONFIG_KEY, body);
-        goto done;
-      } else
-        smartlist_add(unrecognized, (char*)q);
+      smartlist_add(unrecognized, (char*)q);
     } else {
       smartlist_add(answers, tor_strdup(q));
       smartlist_add(answers, ans);
@@ -1978,7 +1670,6 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   });
   if (smartlist_len(unrecognized)) {
     int i;
-    tor_assert(!v0);
     for (i=0; i < smartlist_len(unrecognized)-1; ++i)
       connection_printf_to_buf(conn,
                                "552-Unrecognized key \"%s\"\r\n",
@@ -1989,12 +1680,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
     goto done;
   }
 
-  if (v0) {
-    msg = smartlist_join_strings2(answers, "\0", 1, 1, &msg_len);
-    tor_assert(msg_len > 0); /* it will at least be terminated */
-    send_control0_message(conn, CONTROL0_CMD_INFOVALUE,
-                          msg_len, msg);
-  } else {
+  if (1) {
     int i;
     for (i = 0; i < smartlist_len(answers); i += 2) {
       char *k = smartlist_get(answers, i);
@@ -2062,35 +1748,14 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
                              const char *body)
 {
   smartlist_t *router_nicknames=NULL, *routers=NULL;
-  uint32_t circ_id;
   origin_circuit_t *circ = NULL;
-  int zero_circ, v0;
-  char reply[4];
+  int zero_circ;
   uint8_t intended_purpose = CIRCUIT_PURPOSE_C_GENERAL;
+  (void)len;
 
-  v0 = STATE_IS_V0(conn->_base.state);
   router_nicknames = smartlist_create();
 
-  if (v0) {
-    if (len<5) {
-      send_control0_error(conn, ERR_SYNTAX, "extendcircuit message too short");
-      goto done;
-    }
-    smartlist_split_string(router_nicknames, body+4, ",", 0, 0);
-    circ_id = ntohl(get_uint32(body));
-    if (!circ_id) {
-      /* start a new circuit */
-      zero_circ = 1;
-    } else {
-      circ = circuit_get_by_global_id(circ_id);
-      zero_circ = 0;
-      if (!circ) {
-        send_control0_error(conn, ERR_NO_CIRC,
-                            "No circuit found with given ID");
-        goto done;
-      }
-    }
-  } else { /* v1 */
+  if (1) {
     smartlist_t *args;
     args = smartlist_create();
     smartlist_split_string(args, body, " ",
@@ -2131,19 +1796,13 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   {
     routerinfo_t *r = router_get_by_nickname(n, 1);
     if (!r) {
-      if (v0)
-        send_control0_error(conn, ERR_NO_ROUTER, n);
-      else
-        connection_printf_to_buf(conn, "552 No such router \"%s\"\r\n", n);
+      connection_printf_to_buf(conn, "552 No such router \"%s\"\r\n", n);
       goto done;
     }
     smartlist_add(routers, r);
   });
   if (!smartlist_len(routers)) {
-    if (v0)
-      send_control0_error(conn, ERR_SYNTAX, "No router names provided");
-    else
-      connection_write_str_to_buf("512 No router names provided\r\n", conn);
+    connection_write_str_to_buf("512 No router names provided\r\n", conn);
     goto done;
   }
 
@@ -2165,10 +1824,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
     int err_reason = 0;
     if ((err_reason = circuit_handle_first_hop(circ)) < 0) {
       circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
-      if (v0)
-        send_control0_error(conn, ERR_INTERNAL, "couldn't start circuit");
-      else
-        connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
+      connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
       goto done;
     }
   } else {
@@ -2179,22 +1835,14 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
         log_info(LD_CONTROL,
                  "send_next_onion_skin failed; circuit marked for closing.");
         circuit_mark_for_close(TO_CIRCUIT(circ), -err_reason);
-        if (v0)
-          send_control0_error(conn, ERR_INTERNAL, "couldn't send onion skin");
-        else
-          connection_write_str_to_buf("551 Couldn't send onion skinr\n", conn);
+        connection_write_str_to_buf("551 Couldn't send onion skinr\n", conn);
         goto done;
       }
     }
   }
 
-  if (v0) {
-    set_uint32(reply, htonl(circ->global_identifier));
-    send_control_done2(conn, reply, sizeof(reply));
-  } else {
-    connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
-                             (unsigned long)circ->global_identifier);
-  }
+  connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
+                           (unsigned long)circ->global_identifier);
   if (zero_circ) /* send a 'launched' event, for completeness */
     control_event_circuit_status(circ, CIRC_EVENT_LAUNCHED, 0);
  done:
@@ -2269,29 +1917,9 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   edge_connection_t *ap_conn = NULL;
   origin_circuit_t *circ = NULL;
   int zero_circ;
+  (void)len;
 
-  if (STATE_IS_V0(conn->_base.state)) {
-    uint32_t conn_id;
-    uint32_t circ_id;
-    if (len < 8) {
-      send_control0_error(conn, ERR_SYNTAX, "attachstream message too short");
-      return 0;
-    }
-
-    conn_id = ntohl(get_uint32(body));
-    circ_id = ntohl(get_uint32(body+4));
-    zero_circ = circ_id == 0;
-
-    if (!(ap_conn = connection_get_by_global_id(conn_id))) {
-      send_control0_error(conn, ERR_NO_STREAM,
-                          "No connection found with given ID");
-      return 0;
-    }
-    if (circ_id && !(circ = circuit_get_by_global_id(circ_id))) {
-      send_control0_error(conn, ERR_NO_CIRC, "No circuit found with given ID");
-      return 0;
-    }
-  } else {
+  if (1) {
     smartlist_t *args;
     args = smartlist_create();
     smartlist_split_string(args, body, " ",
@@ -2322,14 +1950,9 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   if (ap_conn->_base.state != AP_CONN_STATE_CONTROLLER_WAIT &&
       ap_conn->_base.state != AP_CONN_STATE_CONNECT_WAIT &&
       ap_conn->_base.state != AP_CONN_STATE_RESOLVE_WAIT) {
-    if (STATE_IS_V0(conn->_base.state)) {
-      send_control0_error(conn, ERR_NO_STREAM,
-                          "Connection is not managed by controller.");
-    } else {
-      connection_write_str_to_buf(
+    connection_write_str_to_buf(
                           "555 Connection is not managed by controller.\r\n",
                           conn);
-    }
     return 0;
   }
 
@@ -2347,30 +1970,19 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   }
 
   if (circ && (circ->_base.state != CIRCUIT_STATE_OPEN)) {
-    if (STATE_IS_V0(conn->_base.state))
-      send_control0_error(conn, ERR_INTERNAL,
-                          "Refuse to attach stream to non-open, origin circ.");
-    else
-      connection_write_str_to_buf(
+    connection_write_str_to_buf(
                      "551 Can't attach stream to non-open, origin circuit\r\n",
                      conn);
     return 0;
   }
   if (circ && circuit_get_cpath_len(circ) < 2) {
-    if (STATE_IS_V0(conn->_base.state))
-      send_control0_error(conn, ERR_INTERNAL,
-                          "Refuse to attach stream to one-hop circuit.");
-    else
-      connection_write_str_to_buf(
+    connection_write_str_to_buf(
                      "551 Can't attach stream to one-hop circuit.\r\n",
                      conn);
     return 0;
   }
   if (connection_ap_handshake_rewrite_and_attach(ap_conn, circ) < 0) {
-    if (STATE_IS_V0(conn->_base.state))
-      send_control0_error(conn, ERR_INTERNAL, "Unable to attach stream.");
-    else
-      connection_write_str_to_buf("551 Unable to attach stream\r\n", conn);
+    connection_write_str_to_buf("551 Unable to attach stream\r\n", conn);
     return 0;
   }
   send_control_done(conn);
@@ -2384,13 +1996,10 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
                               const char *body)
 {
   char *desc;
-  int v0 = STATE_IS_V0(conn->_base.state);
   const char *msg=NULL;
   uint8_t purpose = ROUTER_PURPOSE_GENERAL;
 
-  if (v0)
-    desc = (char*)body;
-  else {
+  if (1) {
     char *cp = memchr(body, '\n', len);
     smartlist_t *args = smartlist_create();
     tor_assert(cp);
@@ -2415,25 +2024,18 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   switch (router_load_single_router(desc, purpose, &msg)) {
   case -1:
     if (!msg) msg = "Could not parse descriptor";
-    if (v0)
-      send_control0_error(conn,ERR_SYNTAX,msg);
-    else
-      connection_printf_to_buf(conn, "554 %s\r\n", msg);
+    connection_printf_to_buf(conn, "554 %s\r\n", msg);
     break;
   case 0:
     if (!msg) msg = "Descriptor not added";
-    if (v0)
-      send_control_done2(conn,msg,0);
-    else
-      connection_printf_to_buf(conn, "251 %s\r\n",msg);
+    connection_printf_to_buf(conn, "251 %s\r\n",msg);
     break;
   case 1:
     send_control_done(conn);
     break;
   }
 
-  if (!v0)
-    tor_free(desc);
+  tor_free(desc);
   return 0;
 }
 
@@ -2444,26 +2046,10 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
                               const char *body)
 {
   edge_connection_t *ap_conn = NULL;
-  uint32_t conn_id;
   char *new_addr = NULL;
   uint16_t new_port = 0;
-  if (STATE_IS_V0(conn->_base.state)) {
-    if (len < 6) {
-      send_control0_error(conn, ERR_SYNTAX,
-                          "redirectstream message too short");
-      return 0;
-    }
-    conn_id = ntohl(get_uint32(body));
-
-    if (!(ap_conn = connection_get_by_global_id(conn_id))
-        || ap_conn->_base.state != CONN_TYPE_AP
-        || ap_conn->socks_request) {
-      send_control0_error(conn, ERR_NO_STREAM,
-                          "No AP connection found with given ID");
-      return 0;
-    }
-    new_addr = tor_strdup(body+4);
-  } else {
+  (void)len;
+  if (1) {
     smartlist_t *args;
     args = smartlist_create();
     smartlist_split_string(args, body, " ",
@@ -2512,25 +2098,9 @@ handle_control_closestream(control_connection_t *conn, uint32_t len,
 {
   edge_connection_t *ap_conn=NULL;
   uint8_t reason=0;
+  (void)len;
 
-  if (STATE_IS_V0(conn->_base.state)) {
-    uint32_t conn_id;
-    if (len < 6) {
-      send_control0_error(conn, ERR_SYNTAX, "closestream message too short");
-      return 0;
-    }
-
-    conn_id = ntohl(get_uint32(body));
-    reason = *(uint8_t*)(body+4);
-
-    if (!(ap_conn = connection_get_by_global_id(conn_id))
-        || ap_conn->_base.state != CONN_TYPE_AP
-        || ap_conn->socks_request) {
-      send_control0_error(conn, ERR_NO_STREAM,
-                          "No AP connection found with given ID");
-      return 0;
-    }
-  } else {
+  if (1) {
     smartlist_t *args;
     int ok;
     args = smartlist_create();
@@ -2570,22 +2140,9 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
 {
   origin_circuit_t *circ = NULL;
   int safe = 0;
+  (void)len;
 
-  if (STATE_IS_V0(conn->_base.state)) {
-    uint32_t circ_id;
-    if (len < 5) {
-      send_control0_error(conn, ERR_SYNTAX, "closecircuit message too short");
-      return 0;
-    }
-    circ_id = ntohl(get_uint32(body));
-    safe = (*(uint8_t*)(body+4)) & 1;
-
-    if (!(circ = circuit_get_by_global_id(circ_id))) {
-      send_control0_error(conn, ERR_NO_CIRC,
-                          "No circuit found with given ID");
-      return 0;
-    }
-  } else {
+  if (1) {
     smartlist_t *args;
     args = smartlist_create();
     smartlist_split_string(args, body, " ",
@@ -2631,7 +2188,6 @@ handle_control_usefeature(control_connection_t *conn,
   int verbose_names = 0, extended_events = 0;
   int bad = 0;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
-  tor_assert(! STATE_IS_V0(conn->_base.state));
   args = smartlist_create();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -2670,52 +2226,6 @@ handle_control_usefeature(control_connection_t *conn,
   return 0;
 }
 
-/** Called when we get a v0 FRAGMENTHEADER or FRAGMENT command; try to append
- * the data to conn->incoming_cmd, setting conn->incoming_(type|len|cur_len)
- * as appropriate.  If the command is malformed, drop it and all pending
- * fragments and report failure.
- */
-static int
-handle_control_fragments(control_connection_t *conn, uint16_t command_type,
-                         uint32_t body_len, const char *body)
-{
-  if (command_type == CONTROL0_CMD_FRAGMENTHEADER) {
-    if (conn->incoming_cmd) {
-      log_warn(LD_CONTROL, "Dropping incomplete fragmented command; new "
-               "fragmented command was begun.");
-      tor_free(conn->incoming_cmd);
-    }
-    if (body_len < 6) {
-      send_control0_error(conn, ERR_SYNTAX, "FRAGMENTHEADER too short.");
-      return 0;
-    }
-    conn->incoming_cmd_type = ntohs(get_uint16(body));
-    conn->incoming_cmd_len = ntohl(get_uint32(body+2));
-    conn->incoming_cmd_cur_len = 0;
-    conn->incoming_cmd = tor_malloc(conn->incoming_cmd_len);
-    body += 6;
-    body_len -= 6;
-  } else if (command_type == CONTROL0_CMD_FRAGMENT) {
-    if (!conn->incoming_cmd) {
-      send_control0_error(conn, ERR_SYNTAX, "Out-of-place FRAGMENT");
-      return 0;
-    }
-  } else {
-    tor_assert(0);
-  }
-
-  if (conn->incoming_cmd_cur_len + body_len > conn->incoming_cmd_len) {
-    tor_free(conn->incoming_cmd);
-    send_control0_error(conn, ERR_SYNTAX,
-                       "Fragmented data exceeds declared length");
-    return 0;
-  }
-  memcpy(conn->incoming_cmd + conn->incoming_cmd_cur_len,
-         body, body_len);
-  conn->incoming_cmd_cur_len += body_len;
-  return 0;
-}
-
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(control_connection_t *conn)
@@ -2740,8 +2250,8 @@ connection_control_reached_eof(control_connection_t *conn)
 /** Called when data has arrived on a v1 control connection: Try to fetch
  * commands from conn->inbuf, and execute them.
  */
-static int
-connection_control_process_inbuf_v1(control_connection_t *conn)
+int
+connection_control_process_inbuf(control_connection_t *conn)
 {
   size_t data_len;
   int cmd_len;
@@ -2888,6 +2398,7 @@ connection_control_process_inbuf_v1(control_connection_t *conn)
   goto again;
 }
 
+#if 0
 /** Called when data has arrived on a v0 control connection: Try to fetch
  * commands from conn->inbuf, and execute them.
  */
@@ -3047,19 +2558,7 @@ connection_control_process_inbuf_v0(control_connection_t *conn)
   tor_free(body);
   goto again; /* There might be more data. */
 }
-
-/** Called when <b>conn</b> has received more bytes on its inbuf.
- */
-int
-connection_control_process_inbuf(control_connection_t *conn)
-{
-  tor_assert(conn);
-
-  if (STATE_IS_V0(conn->_base.state))
-    return connection_control_process_inbuf_v0(conn);
-  else
-    return connection_control_process_inbuf_v1(conn);
-}
+#endif
 
 /** Convert a numeric reason for destroying a circuit into a string for a
  * CIRCUIT event. */
@@ -3113,24 +2612,13 @@ int
 control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                              int reason_code)
 {
-  char *path=NULL, *msg;
+  char *path=NULL;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
 
-  if (EVENT_IS_INTERESTING0(EVENT_CIRCUIT_STATUS) ||
-      EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS))
+  if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS))
     path = circuit_list_path(circ,0);
-  if (EVENT_IS_INTERESTING0(EVENT_CIRCUIT_STATUS)) {
-    size_t path_len = strlen(path);
-    msg = tor_malloc(1+4+path_len+1); /* event, circid, path, NUL. */
-    msg[0] = (uint8_t) tp;
-    set_uint32(msg+1, htonl(circ->global_identifier));
-    strlcpy(msg+5,path,path_len+1);
-
-    send_control0_event(EVENT_CIRCUIT_STATUS, (uint32_t)(path_len+6), msg);
-    tor_free(msg);
-  }
   if (EVENT_IS_INTERESTING1(EVENT_CIRCUIT_STATUS)) {
     const char *status;
     char reason_buf[64];
@@ -3256,8 +2744,6 @@ int
 control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
                             int reason_code)
 {
-  char *msg;
-  size_t len;
   char buf[256];
   tor_assert(conn->socks_request);
 
@@ -3269,16 +2755,6 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
     return 0;
 
   write_stream_target_to_buf(conn, buf, sizeof(buf));
-  if (EVENT_IS_INTERESTING0(EVENT_STREAM_STATUS)) {
-    len = strlen(buf);
-    msg = tor_malloc(5+len+1);
-    msg[0] = (uint8_t) tp;
-    set_uint32(msg+1, htonl(conn->global_identifier));
-    strlcpy(msg+5, buf, len+1);
-
-    send_control0_event(EVENT_STREAM_STATUS, (uint32_t)(5+len+1), msg);
-    tor_free(msg);
-  }
   if (EVENT_IS_INTERESTING1(EVENT_STREAM_STATUS)) {
     char reason_buf[64];
     const char *status;
@@ -3438,19 +2914,11 @@ int
 control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
                              int reason)
 {
-  char buf[HEX_DIGEST_LEN+3]; /* status, dollar, identity, NUL */
-  size_t len;
   int ncircs = 0;
 
   if (!EVENT_IS_INTERESTING(EVENT_OR_CONN_STATUS))
     return 0;
 
-  if (EVENT_IS_INTERESTING0(EVENT_OR_CONN_STATUS)) {
-    buf[0] = (uint8_t)tp;
-    strlcpy(buf+1,conn->nickname ? conn->nickname : "",sizeof(buf)-1);
-    len = strlen(buf+1);
-    send_control0_event(EVENT_OR_CONN_STATUS, (uint32_t)(len+1), buf);
-  }
   if (EVENT_IS_INTERESTING1(EVENT_OR_CONN_STATUS)) {
     const char *status;
     char name[128];
@@ -3529,13 +2997,6 @@ control_event_stream_bandwidth_used(void)
 int
 control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 {
-  char buf[8];
-
-  if (EVENT_IS_INTERESTING0(EVENT_BANDWIDTH_USED)) {
-    set_uint32(buf, htonl(n_read));
-    set_uint32(buf+4, htonl(n_written));
-    send_control0_event(EVENT_BANDWIDTH_USED, 8, buf);
-  }
   if (EVENT_IS_INTERESTING1(EVENT_BANDWIDTH_USED)) {
     send_control1_event(EVENT_BANDWIDTH_USED, ALL_NAMES,
                         "650 BW %lu %lu\r\n",
@@ -3568,8 +3029,7 @@ enable_control_logging(void)
 void
 control_event_logmsg(int severity, uint32_t domain, const char *msg)
 {
-  int oldlog, event;
-
+  int event;
   if (disable_log_messages)
     return;
 
@@ -3580,23 +3040,6 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
     control_event_general_status(severity, "BUG REASON=\"%s\"", esc);
     --disable_log_messages;
     tor_free(esc);
-  }
-
-  oldlog = EVENT_IS_INTERESTING0(EVENT_LOG_OBSOLETE) &&
-    (severity == LOG_NOTICE || severity == LOG_WARN || severity == LOG_ERR);
-  event = log_severity_to_event(severity);
-
-  if (event<0 || !EVENT_IS_INTERESTING0(event))
-    event = 0;
-
-  if (oldlog || event) {
-    size_t len = strlen(msg);
-    ++disable_log_messages;
-    if (event)
-      send_control0_event(event, (uint32_t)(len+1), msg);
-    if (oldlog)
-      send_control0_event(EVENT_LOG_OBSOLETE, (uint32_t)(len+1), msg);
-    --disable_log_messages;
   }
 
   event = log_severity_to_event(severity);
@@ -3639,19 +3082,13 @@ control_event_descriptors_changed(smartlist_t *routers)
 
   if (!EVENT_IS_INTERESTING(EVENT_NEW_DESC))
     return 0;
-  if (EVENT_IS_INTERESTING0(EVENT_NEW_DESC) ||
-      EVENT_IS_INTERESTING1S(EVENT_NEW_DESC)) {
+  if (EVENT_IS_INTERESTING1S(EVENT_NEW_DESC)) {
     identities = smartlist_create();
     SMARTLIST_FOREACH(routers, routerinfo_t *, r,
     {
       base16_encode(buf,sizeof(buf),r->cache_info.identity_digest,DIGEST_LEN);
       smartlist_add(identities, tor_strdup(buf));
     });
-  }
-  if (EVENT_IS_INTERESTING0(EVENT_NEW_DESC)) {
-    msg = smartlist_join_strings(identities, ",", 0, &len);
-    send_control0_event(EVENT_NEW_DESC, len+1, msg);
-    tor_free(msg);
   }
   if (EVENT_IS_INTERESTING1S(EVENT_NEW_DESC)) {
     char *ids = smartlist_join_strings(identities, " ", 0, &len);
