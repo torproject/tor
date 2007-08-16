@@ -13,7 +13,7 @@ Backport for 0.1.2.x once better tested:
   - r10579: new addsysuser implementation for osx (??)
   - Some fix for bug 438 (??)
   - coderman's constrained socket buffers patch (r10843)
-  - r10964: control.c grammar conformance. could conceivably break
+  o r10964: control.c grammar conformance. could conceivably break
     old controllers that were relying on non-conformance.
 
 
