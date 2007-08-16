@@ -142,6 +142,7 @@ static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
                                       size_t len);
 static void orconn_target_get_name(int long_names, char *buf, size_t len,
                                    or_connection_t *conn);
+static char *get_cookie_file(void);
 
 /** Given a control event code for a message event, return the corresponding
  * log severity. */
@@ -2236,6 +2237,7 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** DOCDOC */
 static int
 handle_control_resolve(control_connection_t *conn, uint32_t len,
                        const char *body)
@@ -2267,6 +2269,72 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   smartlist_free(args);
 
   send_control_done(conn);
+  return 0;
+}
+
+/** DOCDOC */
+static int
+handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
+                            const char *body)
+{
+  const char *bad_arg = NULL;
+  smartlist_t *args;
+  (void)len;
+
+  conn->have_sent_protocolinfo = 1;
+  args = smartlist_create();
+  smartlist_split_string(args, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(args, const char *, arg, {
+      int ok;
+      tor_parse_long(arg, 10, 0, LONG_MAX, &ok, NULL);
+      if (!ok) {
+        bad_arg = arg;
+        break;
+      }
+    });
+  if (bad_arg) {
+    connection_printf_to_buf(conn, "513 No such version %s\r\n",
+                             escaped(bad_arg));
+    /* Don't tolerate bad arguments when not authenticated. */
+    if (!STATE_IS_OPEN(TO_CONN(conn)->state))
+      connection_mark_for_close(TO_CONN(conn));
+    goto done;
+  } else {
+    or_options_t *options = get_options();
+    int cookies = options->CookieAuthentication;
+    char *cfile = get_cookie_file();
+    char *esc_cfile = esc_for_log(cfile);
+    char *methods;
+    {
+      int passwd = (options->HashedControlPassword != NULL) &&
+        strlen(options->HashedControlPassword);
+      smartlist_t *mlist = smartlist_create();
+      if (cookies)
+        smartlist_add(mlist, (char*)"COOKIE");
+      if (passwd)
+        smartlist_add(mlist, (char*)"HASHEDPASSWORD");
+      if (!cookies && !passwd)
+        smartlist_add(mlist, (char*)"NULL");
+      methods = smartlist_join_strings(mlist, ",", 0, NULL);
+      smartlist_free(mlist);
+    }
+
+    connection_printf_to_buf(conn,
+                             "250+PROTOCOLINFO 1\r\n"
+                             "250-AUTH METHODS=%s%s%s\r\n"
+                             "250-VERSION Tor=%s\r\n"
+                             "250 OK\r\n",
+                             methods,
+                             cookies?" COOKIEFILE=":"",
+                             cookies?esc_cfile:"",
+                             escaped(VERSION));
+    tor_free(cfile);
+    tor_free(esc_cfile);
+  }
+ done:
+  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+  smartlist_free(args);
   return 0;
 }
 
@@ -2337,6 +2405,21 @@ connection_control_reached_eof(control_connection_t *conn)
 
   log_info(LD_CONTROL,"Control connection reached EOF. Closing.");
   connection_mark_for_close(TO_CONN(conn));
+  return 0;
+}
+
+/** Return true iff <b>cmd</b> is allowable (or at least forgivable) at this
+ * stage of the protocol. */
+static int
+is_valid_initial_command(control_connection_t *conn, const char *cmd)
+{
+  if (conn->_base.state == CONTROL_CONN_STATE_OPEN)
+    return 1;
+  if (!strcasecmp(cmd, "PROTOCOLINFO"))
+    return !conn->have_sent_protocolinfo;
+  if (!strcasecmp(cmd, "AUTHENTICATE") ||
+      !strcasecmp(cmd, "QUIT"))
+    return 1;
   return 0;
 }
 
@@ -2433,6 +2516,7 @@ connection_control_process_inbuf(control_connection_t *conn)
     --data_len;
   }
 
+  /* Quit is always valid. */
   if (!strcasecmp(conn->incoming_cmd, "QUIT")) {
     connection_write_str_to_buf("250 closing connection\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
@@ -2440,7 +2524,7 @@ connection_control_process_inbuf(control_connection_t *conn)
   }
 
   if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH &&
-      strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
+      !is_valid_initial_command(conn, conn->incoming_cmd)) {
     connection_write_str_to_buf("514 Authentication required.\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
     return 0;
@@ -2502,6 +2586,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "RESOLVE")) {
     if (handle_control_resolve(conn, data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "PROTOCOLINFO")) {
+    if (handle_control_protocolinfo(conn, data_len, args))
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
@@ -3343,6 +3430,17 @@ control_event_guard(const char *nickname, const char *digest,
   return 0;
 }
 
+/** DOCDOC */
+static char *
+get_cookie_file(void)
+{
+  const char *datadir = get_options()->DataDirectory;
+  size_t len = strlen(datadir)+64;
+  char *fname = tor_malloc(len);
+  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"control_auth_cookie", datadir);
+  return fname;
+}
+
 /** Choose a random authentication cookie and write it to disk.
  * Anybody who can read the cookie from disk will be considered
  * authorized to use the control connection. Return -1 if we can't
@@ -3350,8 +3448,7 @@ control_event_guard(const char *nickname, const char *digest,
 int
 init_cookie_authentication(int enabled)
 {
-  char fname[512];
-
+  char *fname;
   if (!enabled) {
     authentication_cookie_is_set = 0;
     return 0;
@@ -3362,17 +3459,18 @@ init_cookie_authentication(int enabled)
   if (authentication_cookie_is_set)
     return 0; /* all set */
 
-  tor_snprintf(fname, sizeof(fname), "%s"PATH_SEPARATOR"control_auth_cookie",
-               get_options()->DataDirectory);
+  fname = get_cookie_file();
   crypto_rand(authentication_cookie, AUTHENTICATION_COOKIE_LEN);
   authentication_cookie_is_set = 1;
   if (write_bytes_to_file(fname, authentication_cookie,
                           AUTHENTICATION_COOKIE_LEN, 1)) {
     log_warn(LD_FS,"Error writing authentication cookie to %s.",
              escaped(fname));
+    tor_free(fname);
     return -1;
   }
 
+  tor_free(fname);
   return 0;
 }
 

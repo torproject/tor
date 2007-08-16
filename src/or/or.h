@@ -994,6 +994,9 @@ typedef struct control_connection_t {
    * events as appropriate. */
   unsigned int use_extended_events:1;
 
+  /** True if we have sent a protocolinfo reply on this connection. */
+  unsigned int have_sent_protocolinfo:1;
+
   uint32_t incoming_cmd_len;
   uint32_t incoming_cmd_cur_len;
   char *incoming_cmd;

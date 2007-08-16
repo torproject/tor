@@ -26,6 +26,12 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
     - Read v3 keys from the right location.
     - Numerous bugfixes to directory voting code.
 
+  o Minor features (controller):
+    - Add a PROTOCOLINFO controller command.  Like AUTHENTICATE, it is valid
+      before any authentication has been received.  It tells a controller
+      what kind of authentication is expected, and what protocol is spoken.
+      Implements proposal 119.
+
   o Minor bugfixes (other):
     - If we require CookieAuthentication but we fail to write the
       cookie file, we would warn but not exit, and end up in a state

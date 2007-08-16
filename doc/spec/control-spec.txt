@@ -231,9 +231,11 @@ $Id$
   The format of the 'cookie' is implementation-dependent; see 5.1 below for
   information on how the standard Tor implementation handles it.
 
-  If Tor requires authentication and the controller has not yet sent an
-  AUTHENTICATE message, Tor sends a "514 authentication required" reply to
-  any other kind of message, and then closes the connection.
+  Before the client has authenticated, no command other than PROTOCOLINFO,
+  AUTHENTICATE, or QUIT is valid.  If the controller sends any other command,
+  or sends a malformed command, or sends an unsuccessful AUTHENTICATE
+  command, or sends PROTOCOLINFO more than once, Tor sends an error reply and
+  closes the connection.
 
   (Versions of Tor before 0.1.2.16 and 0.2.0.4-alpha did not close the
   connection after an authentication failure.)
@@ -732,6 +734,56 @@ $Id$
   need to listen for ADDRMAP events; see 4.1.7 below.
 
   [Added in Tor 0.2.0.3-alpha]
+
+3.21. PROTOCOLINFO
+
+  The syntax is:
+    "PROTOCOLINFO" *(SP PIVERSION) CRLF
+
+  The server reply format is:
+    "250+PROTOCOLINFO" SP PIVERSION CRLF *InfoLine "250 OK" CRLF
+
+    InfoLine = AuthLine / VersionLine / OtherLine
+
+     AuthLine = "250-AUTH" SP "METHODS=" AuthMethod *(",")AuthMethod
+                       *(SP "COOKIEFILE=" AuthCookieFile) CRLF
+     VersionLine = "250-VERSION" SP "Tor=" TorVersion [SP Arguments] CRLF
+
+     AuthMethod =
+      "NULL"           / ; No authentication is required
+      "HASHEDPASSWORD" / ; A controller must supply the original password
+      "COOKIE"         / ; A controller must supply the contents of a cookie
+
+     AuthCookieFile = QuotedString
+     TorVersion = QuotedString
+
+     OtherLine = "250-" Keyword [SP Arguments] CRLF
+
+    PIVERSION: 1*DIGIT
+
+  Tor MAY give its InfoLines in any order; controllers MUST ignore InfoLines
+  with keywords it does not recognize.  Controllers MUST ignore extraneous
+  data on any InfoLine.
+
+  PIVERSION is there in case we drastically change the syntax one day. For
+  now it should always be "1", for the controller protocol.  Controllers MAY
+  provide a list of the protocol versions they support; Tor MAY select a
+  version that the controller does not support.
+
+  AuthMethod is used to specify one or more control authentication
+  methods that Tor currently accepts.
+
+  AuthCookieFile specifies the absolute path and filename of the
+  authentication cookie that Tor is expecting and is provided iff
+  the METHODS field contains the method "COOKIE".  Controllers MUST handle
+  escape sequences inside this string.
+
+  The VERSION line contains the Tor version.
+
+  [Unlike other commands besides AUTHENTICATE, PROTOCOLINFO may be used (but
+  only once!) before AUTHENTICATE.]
+
+  [PROTOCOLINFO was not supported before Tor 0.2.0.5-alpha.]
 
 4. Replies
 
