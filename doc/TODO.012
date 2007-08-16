@@ -1,6 +1,6 @@
 Backport items for 0.1.2:
-  - r10939: Choose with complete fairness when exits are weighted.
-  - r10956: fix the math for exit bandwidth weighting
+  o r10939: Choose with complete fairness when exits are weighted.
+  o r10956: fix the math for exit bandwidth weighting
   o r10994: Disable SENTINELS checking in order to use less RAM in
     buffer allocation.
   - r11117: cookie auth more usable

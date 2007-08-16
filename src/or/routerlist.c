@@ -961,6 +961,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
   uint64_t rand_bw, tmp;
   double exit_weight;
   int n_unknown = 0;
+  int include_exits = 1;
 
   /* First count the total bandwidth weight, and make a list
    * of each value.  <0 means "unknown; no routerinfo."  We use the
@@ -1043,19 +1044,35 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     /* If we're choosing an exit node, exit bandwidth counts fully. */
     exit_weight = 1.0;
     total_bw = total_exit_bw + total_nonexit_bw;
-  } else if (total_exit_bw < total_nonexit_bw / 2) {
-    /* If we're choosing a relay and exits are greatly outnumbered, ignore
-     * them. */
-    exit_weight = 0.0;
-    total_bw = total_nonexit_bw;
   } else {
-    /* If we're choosing a relay and exits aren't outnumbered use the formula
-     * from path-spec. */
-    uint64_t leftover = (total_exit_bw - total_nonexit_bw / 2);
-    exit_weight = U64_TO_DBL(leftover) /
-      U64_TO_DBL(leftover + total_nonexit_bw);
-    total_bw =  total_nonexit_bw +
-      DBL_TO_U64(exit_weight * U64_TO_DBL(total_exit_bw));
+    double all_bw = U64_TO_DBL(total_exit_bw+total_nonexit_bw);
+    double exit_bw = U64_TO_DBL(total_exit_bw);
+    /*
+     * For detailed derivation of this formula, see
+     *   http://archives.seul.org/or/dev/Jul-2007/msg00056.html
+     */
+    exit_weight = 1.0 - all_bw/(3.0*exit_bw);
+    if (exit_weight <= 0.0) {
+      include_exits = 0;
+      exit_weight = 0.0;
+      total_bw = total_nonexit_bw;
+    } else {
+      include_exits = 1;
+      total_bw = 0;
+      for (i=0; i < smartlist_len(sl); i++) {
+        if (statuses) {
+          status = smartlist_get(sl, i);
+          is_exit = status->is_exit;
+        } else {
+          router = smartlist_get(sl, i);
+          is_exit = router->is_exit;
+        }
+        if (is_exit)
+          total_bw += ((uint64_t)(bandwidths[i] * exit_weight));
+        else
+          total_bw += bandwidths[i];
+      }
+    }
   }
   /*
   log_debug(LD_CIRC, "Total bw = "U64_FORMAT", total exit bw = "U64_FORMAT

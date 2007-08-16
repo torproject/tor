@@ -8,6 +8,15 @@ Changes in version 0.1.2.xx - 2007-xxxxx
       now its only effect is to change our buffer sizes from nice
       powers of two (which platform mallocs tend to like) to values
       slightly over powers of two (which make some platform mallocs sad).
+    - If exit bandwidth ever exceeds one third of total bandwidth, then
+      use the correct formula to weight exit nodes when choosing paths.
+      (Based on patch from Mike Perry.)
+
+  o Minor bugfixes (misc):
+    - Choose perfectly fairly among routers when choosing by bandwidth and
+      weighting by fraction of bandwidth provided by exits.  Previously,
+      we would choose with only approximate fairness, and correct ourselves
+      if we ran off the end of the list.
 
 
 Changes in version 0.1.2.16 - 2007-08-01
