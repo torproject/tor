@@ -2257,8 +2257,8 @@ connection_control_process_inbuf(control_connection_t *conn)
     char buf[128];
     set_uint16(buf+2, htons(0x0000)); /* type == error */
     set_uint16(buf+4, htons(0x0001)); /* code == internal error */
-    strlcpy(buf+6, "The v0 control protocol is not supported by Tor 0.2.0.x "
-            "and later; use Tor 0.1.2.x or upgrade your controller",
+    strlcpy(buf+6, "The v0 control protocol is not supported anymore. "
+            "Upgrade your controller.",
             sizeof(buf)-6);
     body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
     set_uint16(buf+0, htons(body_len));
@@ -3375,7 +3375,7 @@ control_event_guard(const char *nickname, const char *digest,
 /** Choose a random authentication cookie and write it to disk.
  * Anybody who can read the cookie from disk will be considered
  * authorized to use the control connection. Return -1 if we can't
- * write the file, or 0 on success */
+ * write the file, or 0 on success. */
 int
 init_cookie_authentication(int enabled)
 {
