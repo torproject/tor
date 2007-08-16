@@ -15,7 +15,7 @@ const char buffers_c_id[] =
 
 #include "or.h"
 
-#define SENTINELS
+#undef SENTINELS
 #undef CHECK_AFTER_RESIZE
 #undef PARANOIA
 #undef NOINLINE
