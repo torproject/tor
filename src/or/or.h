@@ -2022,6 +2022,8 @@ typedef struct {
                                 * the control system. */
   int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
                              * the control system? */
+  char *CookieAuthFile; /**< Location of a cookie authentication file. */
+  int CookieAuthFileGroupReadable; /**< Boolean: Is the CookieAuthFile g+r? */
   int LeaveStreamsUnattached; /**< Boolean: Does Tor attach new streams to
                           * circuits itself (0), or does it expect a controller
                           * to cope? (1) */

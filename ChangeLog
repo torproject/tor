@@ -31,6 +31,8 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
       before any authentication has been received.  It tells a controller
       what kind of authentication is expected, and what protocol is spoken.
       Implements proposal 119.
+    - Implement options to allow the controller to pick a new location for
+      the cookie authentication file, and to make it group-readable.
 
   o Minor bugfixes (other):
     - If we require CookieAuthentication but we fail to write the

@@ -3434,11 +3434,16 @@ control_event_guard(const char *nickname, const char *digest,
 static char *
 get_cookie_file(void)
 {
-  const char *datadir = get_options()->DataDirectory;
-  size_t len = strlen(datadir)+64;
-  char *fname = tor_malloc(len);
-  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"control_auth_cookie", datadir);
-  return fname;
+  or_options_t *options = get_options();
+  if (options->CookieAuthFile && strlen(options->CookieAuthFile)) {
+    return tor_strdup(options->CookieAuthFile);
+  } else {
+    const char *datadir = get_options()->DataDirectory;
+    size_t len = strlen(datadir)+64;
+    char *fname = tor_malloc(len);
+    tor_snprintf(fname, len, "%s"PATH_SEPARATOR"control_auth_cookie", datadir);
+    return fname;
+  }
 }
 
 /** Choose a random authentication cookie and write it to disk.
@@ -3469,6 +3474,13 @@ init_cookie_authentication(int enabled)
     tor_free(fname);
     return -1;
   }
+#ifndef MS_WINDOWS
+  if (get_options()->CookieAuthFileGroupReadable) {
+    if (chmod(fname, 0640)) {
+      log_warn(LD_FS,"Unable to make %s group-readable.", escaped(fname));
+    }
+  }
+#endif
 
   tor_free(fname);
   return 0;

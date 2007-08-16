@@ -170,6 +170,19 @@ authentication methods should only be used on systems with good filesystem
 security. (Default: 0)
 .LP
 .TP
+\fBCookieAuthFile \fR\fIPath\fP
+If set, this option overrides the default location and file name for Tor's
+cookie file.  (See CookieAuthentication above.)
+.LP
+.TP
+\fBCookieAuthFileGroupReadable \fR\fB0\fR|\fB1\R|\fIGroupName\fP
+If this option is set to 0, don't allow the filesystem group to read
+the cookie file.  If the option is set to 1, make the cookie file
+readable by the default GID.  [Making the file readable by other
+groups is not yet implemented; let us know if you need this for some
+reason.]  (Default: 0).
+.LP
+.TP
 \fBDataDirectory \fR\fIDIR\fP
 Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 .LP
