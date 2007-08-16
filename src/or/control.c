@@ -19,23 +19,6 @@ const char control_c_id[] =
  * See control-spec.txt for full details on protocol.
  */
 
-#if 0
-/* Recognized version 0 error codes.  Do not expand. */
-#define ERR_UNSPECIFIED             0x0000
-#define ERR_INTERNAL                0x0001
-#define ERR_UNRECOGNIZED_TYPE       0x0002
-#define ERR_SYNTAX                  0x0003
-#define ERR_UNRECOGNIZED_CONFIG_KEY 0x0004
-#define ERR_INVALID_CONFIG_VALUE    0x0005
-#define ERR_UNRECOGNIZED_EVENT_CODE 0x0006
-#define ERR_UNAUTHORIZED            0x0007
-#define ERR_REJECTED_AUTHENTICATION 0x0008
-#define ERR_RESOURCE_EXHAUSTED      0x0009
-#define ERR_NO_STREAM               0x000A
-#define ERR_NO_CIRC                 0x000B
-#define ERR_NO_ROUTER               0x000C
-#endif
-
 /* Recognized asynchronous event types.  It's okay to expand this list
  * because it is used both as a list of v0 event types, and as indices
  * into the bitfield to determine which controllers want which events.
@@ -2265,6 +2248,24 @@ connection_control_process_inbuf(control_connection_t *conn)
     conn->incoming_cmd = tor_malloc(1024);
     conn->incoming_cmd_len = 1024;
     conn->incoming_cmd_cur_len = 0;
+  }
+
+  if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V1 &&
+      peek_buf_has_control0_command(conn->_base.inbuf)) {
+    /* Detect v0 commands and send a "no more v0" message. */
+    size_t body_len;
+    char buf[128];
+    set_uint16(buf+2, htons(0x0000)); /* type == error */
+    set_uint16(buf+4, htons(0x0001)); /* code == internal error */
+    strlcpy(buf+6, "The v0 control protocol is not supported by Tor 0.2.0.x "
+            "and later; use Tor 0.1.2.x or upgrade your controller",
+            sizeof(buf)-6);
+    body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
+    set_uint16(buf+0, htons(body_len));
+    connection_write_to_buf(buf, 4+body_len, TO_CONN(conn));
+    connection_mark_for_close(TO_CONN(conn));
+    conn->_base.hold_open_until_flushed = 1;
+    return 0;
   }
 
  again:

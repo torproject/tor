@@ -1228,54 +1228,20 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
   }
 }
 
-/** If there is a complete version 0 control message waiting on buf, then store
- * its contents into *<b>type_out</b>, store its body's length into
- * *<b>len_out</b>, allocate and store a string for its body into
- * *<b>body_out</b>, and return 1.  (body_out will always be NUL-terminated,
- * even if the control message body doesn't end with NUL.)
- *
- * If there is not a complete control message waiting, return 0.
- *
- * Return -1 on error; return -2 on "seems to be control protocol v1."
- */
+/** Return 1 iff buf looks more like it has an (obsolete) v0 controller
+ * command on it than any valid v1 controller command. */
 int
-fetch_from_buf_control0(buf_t *buf, uint32_t *len_out, uint16_t *type_out,
-                        char **body_out, int check_for_v1)
+peek_buf_has_control0_command(buf_t *buf)
 {
-  uint32_t msglen;
-  uint16_t type;
-  char tmp[4];
-
-  tor_assert(buf);
-  tor_assert(len_out);
-  tor_assert(type_out);
-  tor_assert(body_out);
-
-  *len_out = 0;
-  *body_out = NULL;
-
-  if (buf->datalen < 4)
-    return 0;
-
-  peek_from_buf(tmp, 4, buf);
-
-  msglen = ntohs(get_uint16(tmp));
-  type = ntohs(get_uint16(tmp+2));
-  if (type > 255 && check_for_v1)
-    return -2;
-
-  if (buf->datalen < 4 + (unsigned)msglen)
-    return 0;
-
-  *len_out = msglen;
-  *type_out = type;
-  buf_remove_from_front(buf, 4);
-  if (msglen) {
-    *body_out = tor_malloc(msglen+1);
-    fetch_from_buf(*body_out, msglen, buf);
-    (*body_out)[msglen] = '\0';
+  if (buf->datalen >= 4) {
+    char header[4];
+    uint16_t cmd;
+    peek_from_buf(header, sizeof(header), buf);
+    cmd = ntohs(get_uint16(header+2));
+    if (cmd <= 0x14)
+      return 1; /* This is definitely not a v1 control command. */
   }
-  return 1;
+  return 0;
 }
 
 /** Helper: return a pointer to the first instance of <b>c</b> in the
