@@ -37,5 +37,5 @@ Proposals by number:
 116  Two hop paths from entry guards [OPEN]
 117  IPv6 exits [OPEN]
 118  Advertising multiple ORPorts at once [RESEARCH]
-119  New PROTOCOLINFO command for controllers [OPEN]
+119  New PROTOCOLINFO command for controllers [ACCEPTED]
 120  Suicide descriptors when Tor servers stop [OPEN]

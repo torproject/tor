@@ -4,14 +4,16 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 14-Aug-2007
-Status: Open
+Status: Accepted
 
 Overview:
 
   Here we describe how to help controllers locate the cookie
   authentication file when authenticating to Tor, so we can a) require
   authentication by default for Tor controllers and b) still keep
-  things usable.
+  things usable.  Also, we propose an extensible, general-purpose mechanism
+  for controllers to learn about a Tor instance's protocol and
+  authentication requirements before authenticating.
 
 The Problem:
 
@@ -43,7 +45,7 @@ The Problem:
   Cookie authentication seems most amenable to letting multiple controller
   applications interact with Tor. But that brings in yet another question:
   how does the controller guess where to look for the cookie file,
-  without first knowing what DataDirectory Tor it using?
+  without first knowing what DataDirectory Tor is using?
 
 Design:
 
@@ -52,32 +54,50 @@ Design:
   PROTOCOLINFO is sent as the first command, the second command must be
   either a successful AUTHENTICATE or a QUIT.
 
+  If the initial command sequence is not valid, Tor closes the connection.
 
 
 Spec:
 
+  C:  "PROTOCOLINFO" *(SP PIVERSION) CRLF
+  S:  "250+PROTOCOLINFO" SP PIVERSION CRLF *InfoLine "250 OK" CRLF
+
+    InfoLine = AuthLine / VersionLine / OtherLine
+
+     AuthLine = "250-AUTH" SP "METHODS=" AuthMethod *(",")AuthMethod
+                       *(SP "COOKIEFILE=" AuthCookieFile) CRLF
+     VersionLine = "250-VERSION" SP "Tor=" TorVersion [SP Arguments] CRLF
+
+     AuthMethod =
+      "NULL"           / ; No authentication is required
+      "HASHEDPASSWORD" / ; A controller must supply the original password
+      "COOKIE"         / ; A controller must supply the contents of a cookie
+
+     AuthCookieFile = QuotedString
+     TorVersion = QuotedString
+
+     OtherLine = "250-" Keyword [SP Arguments] CRLF
+
+  For example:
+
   C: PROTOCOLINFO CRLF
-  S: "250+PROTOCOLINFO" PIVERSION CRLF
-  S: "250-AUTH" SP "METHODS=" AuthMethod *("," AuthMethod)
-                 [SP "COOKIEFILE=" AuthCookieFile] CRLF
-  S: "250-VERSION" SP "Tor=" Version [...]
-  S: "250 OK"
+  S: "250+PROTOCOLINFO 1" CRLF
+  S: "250-AUTH Methods=HASHEDPASSWORD,COOKIE COOKIEFILE="/tor/cookie"" CRLF
+  S: "250-VERSION Tor=0.2.0.5-alpha" CRLF
+  S: "250 OK" CRLF
+
+  Tor MAY give its InfoLines in any order; controllers MUST ignore InfoLines
+  with keywords it does not recognize.  Controllers MUST ignore extraneous
+  data on any InfoLine.
 
   PIVERSION is there in case we drastically change the syntax one day. For
-  now it should always be "1".
-
-  [XXX Is there a better way to do PIVERSION? The above way seems bad,
-  since what do controllers do if they hear a 2 but don't know what to
-  do with it? -RD]
+  now it should always be "1", for the controller protocol.  Controllers MAY
+  provide a list of the protocol versions they support; Tor MAY select a
+  version that the controller does not support.
 
   Right now only two "topics" (AUTH and VERSION) are included, but more
   may be included in the future. Controllers must accept lines with
   unexpected topics.
-
-  AuthMethod =
-    "NULL"           / ; No authentication is required
-    "HASHEDPASSWORD" / ; A controller must supply the original password
-    "COOKIE"         / ; A controller must supply the contents of a cookie
 
   AuthCookieFile = QuotedString
 
@@ -85,14 +105,11 @@ Spec:
   methods that Tor currently accepts.
 
   AuthCookieFile specifies the absolute path and filename of the
-  authentication cookie that Tor is expecting and is provided only if
-  the METHODS field contains the method "COOKIE". This field MUST be
-  enclosed in DQUOTEs, since the absolute path to the cookie file may
-  contain spaces on some platforms.
+  authentication cookie that Tor is expecting and is provided iff
+  the METHODS field contains the method "COOKIE".  Controllers MUST handle
+  escape sequences inside this string.
 
-  The VERSION line contains the Tor version, in DQUOTES. In the future
-  it might also contain Link versions, Circuit versions, or others as
-  described in proposal 105.
+  The VERSION line contains the Tor version.
 
   [What else might we want to include that could be useful? -RD]
 
