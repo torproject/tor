@@ -6,7 +6,7 @@ Backport items for 0.1.2:
   o r11117: cookie auth more usable
   o disable v0 control protocol
   - r11138: PROTOCOLINFO support.
-  - r11141: CookieAuthFile and CookieAuthFileGroupReadable.
+  D r11141: CookieAuthFile and CookieAuthFileGroupReadable.
 
 
 Backport for 0.1.2.x once better tested:

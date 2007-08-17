@@ -27,7 +27,8 @@ Changes in version 0.1.2.17 - 2007-08-xx
       where no controller could authenticate. Now we exit.
     - If we require CookieAuthentication, stop generating a new cookie
       every time we change any piece of our config.
-    - Terminate multi-line control events properly. (Original patch from tup.)
+    - Terminate multi-line control events properly. (Original patch
+      from tup.)
 
 
 Changes in version 0.1.2.16 - 2007-08-01
