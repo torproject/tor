@@ -766,9 +766,9 @@ $Id$
   data on any InfoLine.
 
   PIVERSION is there in case we drastically change the syntax one day. For
-  now it should always be "1", for the controller protocol.  Controllers MAY
-  provide a list of the protocol versions they support; Tor MAY select a
-  version that the controller does not support.
+  now it should always be "1".  Controllers MAY provide a list of the
+  protocolinfo versions they support; Tor MAY select a version that the
+  controller does not support.
 
   AuthMethod is used to specify one or more control authentication
   methods that Tor currently accepts.
@@ -1447,7 +1447,7 @@ $Id$
 
   The 'version 0' control protocol was replaced in Tor 0.1.1.x.  Support was
   removed in Tor 0.2.0.x.  Every non-obsolete version of Tor now supports the
-  version 1 control protocol.  
+  version 1 control protocol.
 
   For backward compatibility with the "version 0" control protocol,
   Tor used to check whether the third octet of the first command is zero.
