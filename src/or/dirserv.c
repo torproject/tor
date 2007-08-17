@@ -53,8 +53,8 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
                         uint32_t addr, uint16_t or_port,
                         const char *platform, const char *contact,
                         const char **msg, int should_log);
-static int dirserv_thinks_router_is_reachable(routerinfo_t *router,
-                                              time_t now);
+static void dirserv_set_router_is_running(routerinfo_t *router,
+                                          time_t now);
 static void clear_cached_dir(cached_dir_t *d);
 
 static int dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
@@ -839,13 +839,23 @@ list_single_server_status(routerinfo_t *desc, int is_live)
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
  * or - We've found it reachable recently. */
-static int
-dirserv_thinks_router_is_reachable(routerinfo_t *router, time_t now)
+static void
+dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 {
+  int answer;
+
   if (router_is_me(router) && !we_are_hibernating())
-    return 1;
-  return get_options()->AssumeReachable ||
-         now < router->last_reachable + REACHABLE_TIMEOUT;
+    answer = 1;
+  else
+    answer = get_options()->AssumeReachable ||
+             now < router->last_reachable + REACHABLE_TIMEOUT;
+
+  if (router->is_running && !answer) {
+    /* it was running but now it's not. tell rephist. */
+    rep_hist_note_router_unreachable(router->cache_info.identity_digest, now);
+  }
+
+  router->is_running = answer;
 }
 
 /** Return 1 if we're confident that there's a problem with
@@ -892,7 +902,7 @@ list_server_status(smartlist_t *routers, char **router_status_out,
   {
     if (authdir) {
       /* Update router status in routerinfo_t. */
-      ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
+      dirserv_set_router_is_running(ri, now);
     }
     if (for_controller == 1 || ri->cache_info.published_on >= cutoff)
       smartlist_add(rs_entries, list_single_server_status(ri, ri->is_running));
@@ -1927,7 +1937,7 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   /* precompute this part, since we need it to decide what "stable"
    * means. */
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-    ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
+    dirserv_set_router_is_running(ri, now);
   });
 
   dirserv_compute_performance_thresholds(rl);
@@ -2345,7 +2355,7 @@ generate_networkstatus_opinion(int v2)
   /* precompute this part, since we need it to decide what "stable"
    * means. */
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-    ri->is_running = dirserv_thinks_router_is_reachable(ri, now);
+    dirserv_set_router_is_running(ri, now);
   });
 
   dirserv_compute_performance_thresholds(rl);
@@ -2649,6 +2659,7 @@ dirserv_orconn_tls_done(const char *address,
                         int as_advertised)
 {
   routerlist_t *rl = router_get_routerlist();
+  time_t now = time(NULL);
   tor_assert(address);
   tor_assert(digest_rcvd);
 
@@ -2659,7 +2670,8 @@ dirserv_orconn_tls_done(const char *address,
       /* correct digest. mark this router reachable! */
       log_info(LD_DIRSERV, "Found router %s to be reachable. Yay.",
                ri->nickname);
-      ri->last_reachable = time(NULL);
+      rep_hist_note_router_reachable(digest_rcvd, now);
+      ri->last_reachable = now;
       ri->num_unreachable_notifications = 0;
     }
   });
@@ -2677,9 +2689,8 @@ dirserv_orconn_tls_done(const char *address,
  * bit over 20 minutes).
  */
 void
-dirserv_test_reachability(int try_all)
+dirserv_test_reachability(time_t now, int try_all)
 {
-  time_t now = time(NULL);
   /* XXX decide what to do here; see or-talk thread "purging old router
    * information, revocation." -NM
    * We can't afford to mess with this in 0.1.2.x. The reason is that

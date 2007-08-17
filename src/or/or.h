@@ -2804,7 +2804,7 @@ void dirserv_orconn_tls_done(const char *address,
                              uint16_t or_port,
                              const char *digest_rcvd,
                              int as_advertised);
-void dirserv_test_reachability(int try_all);
+void dirserv_test_reachability(time_t now, int try_all);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain);
 int dirserv_would_reject_router(routerstatus_t *rs);
@@ -3116,6 +3116,9 @@ char *rep_hist_get_bandwidth_lines(int for_extrainfo);
 void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);
+
+void rep_hist_note_router_reachable(const char *id, time_t when);
+void rep_hist_note_router_unreachable(const char *id, time_t when);
 
 time_t rep_hist_downrate_old_runs(time_t now);
 double rep_hist_get_stability(const char *id, time_t when);

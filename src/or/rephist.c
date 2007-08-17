@@ -262,6 +262,24 @@ rep_hist_note_connection_died(const char* id, time_t when)
   hist->changed = when;
 }
 
+/** We have just decided that this router is reachable, meaning
+ * we will give it a "Running" flag for the next while. */
+void
+rep_hist_note_router_reachable(const char *id, time_t when)
+{
+  (void)id;
+  (void)when;
+}
+
+/** We have just decided that this router is unreachable, meaning
+ * we are taking away its "Running" flag. */
+void
+rep_hist_note_router_unreachable(const char *id, time_t when)
+{
+  (void)id;
+  (void)when;
+}
+
 /**DOCDOC*/
 time_t
 rep_hist_downrate_old_runs(time_t now)
@@ -1463,7 +1481,7 @@ hs_usage_write_service_related_observations_to_history(
   hs_usage_list_clear(h->list);
 }
 
-/** Advances to next observation period */
+/** Advances to next observation period. */
 static void
 hs_usage_advance_current_observation_period(void)
 {
@@ -1533,7 +1551,7 @@ hs_usage_note_publish_novel(const char *service_id, time_t now)
 }
 
 /** Adds the observation of being requested for a rendezvous service descriptor
-* in our role as HS authoritative directory. */
+ * in our role as HS authoritative directory. */
 void
 hs_usage_note_fetch_total(const char *service_id, time_t now)
 {
@@ -1541,15 +1559,15 @@ hs_usage_note_fetch_total(const char *service_id, time_t now)
 }
 
 /** Adds the observation of being requested for a rendezvous service descriptor
-* in our role as HS authoritative directory and being able to answer that
-* request successfully. */
+ * in our role as HS authoritative directory and being able to answer that
+ * request successfully. */
 void
 hs_usage_note_fetch_successful(const char *service_id, time_t now)
 {
   hs_usage_add_service_related_observation(fetch_successful, now, service_id);
 }
 
-/** Writes the given circular array to a string */
+/** Writes the given circular array to a string. */
 static size_t
 hs_usage_format_history(char *buf, size_t len, uint32_t *data)
 {
@@ -1574,7 +1592,7 @@ hs_usage_format_history(char *buf, size_t len, uint32_t *data)
 }
 
 /** Writes the complete usage history as hidden service authoritative directory
- * to a string */
+ * to a string. */
 static char *
 hs_usage_format_statistics(void)
 {

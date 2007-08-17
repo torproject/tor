@@ -929,7 +929,7 @@ run_scheduled_events(time_t now)
   if (now % 10 == 0 && (authdir_mode_tests_reachability(options)) &&
       !we_are_hibernating()) {
     /* try to determine reachability of the other Tor servers */
-    dirserv_test_reachability(0);
+    dirserv_test_reachability(now, 0);
   }
 
   /** 1d. DOCDOC */
@@ -1322,6 +1322,7 @@ static int
 do_main_loop(void)
 {
   int loop_result;
+  time_t now;
 
   /* initialize dns resolve map, spawn workers if needed */
   if (dns_init() < 0) {
@@ -1361,11 +1362,12 @@ do_main_loop(void)
   if (router_reload_consensus_networkstatus()) {
     return -1;
   }
-  directory_info_has_arrived(time(NULL),1);
+  now = time(NULL);
+  directory_info_has_arrived(now, 1);
 
   if (authdir_mode_tests_reachability(get_options())) {
     /* the directory is already here, run startup things */
-    dirserv_test_reachability(1);
+    dirserv_test_reachability(now, 1);
   }
 
   if (server_mode(get_options())) {
