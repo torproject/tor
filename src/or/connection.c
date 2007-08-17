@@ -705,6 +705,8 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address)
 static struct sockaddr *
 create_unix_sockaddr(const char *listenaddress, char **readable_address)
 {
+  (void)listenaddress;
+  (void)readable_address;
   log_fn(LOG_ERR, LD_BUG,
          "Unix domain sockets not supported, yet we tried to create one.");
   assert(0);

@@ -301,8 +301,8 @@ typedef uint16_t sa_family_t;
 #ifndef _MSC_VER
 /* Apparently, MSVC doesn't define s6_addr16 or s6_addr32. How dumb. */
 /* XXXX020 detect with autoconf. */
-#define S6_ADDR16(x) ((x).s6_addr16)
-#define S6_ADDR32(x) ((x).s6_addr32)
+#define S6_ADDR16(x) ((uint16_t*)(x).s6_addr16)
+#define S6_ADDR32(x) ((uint32_t*)(x).s6_addr32)
 #else
 #define S6_ADDR16(x) ((uint16_t*)((char*)&(x).s6_addr))
 #define S6_ADDR32(x) ((uint32_t*)((char*)&(x).s6_addr))
@@ -481,7 +481,7 @@ unsigned long tor_get_thread_id(void);
 #ifdef TOR_IS_MULTITHREADED
 typedef struct tor_cond_t tor_cond_t;
 tor_cond_t *tor_cond_new(void);
-void tor_conf_free(tor_cond_t *cond);
+void tor_cond_free(tor_cond_t *cond);
 int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex);
 void tor_cond_signal_one(tor_cond_t *cond);
 void tor_cond_signal_all(tor_cond_t *cond);

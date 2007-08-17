@@ -1671,7 +1671,7 @@ tor_cond_new(void)
 }
 /** Release all resources held by <b>cond</b>. */
 void
-tor_conf_free(tor_cond_t *cond)
+tor_cond_free(tor_cond_t *cond)
 {
   tor_assert(cond);
   if (pthread_cond_destroy(&cond->cond)) {

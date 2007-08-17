@@ -17,3 +17,7 @@ typedef unsigned char u_char;
 #define WIN32
 #endif
 
+/* XXXX020 These are for debugging possible memory leaks. */
+#include "util.h"
+#include "compat.h"
+
