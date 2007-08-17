@@ -268,13 +268,12 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
 
 #if SIZEOF_INT == 4
 #define BITARRAY_SHIFT 5
-#define BITARRAY_MASK 31
 #elif SIZEOF_INT == 8
 #define BITARRAY_SHIFT 6
-#define BITARRAY_MASK 63
 #else
 #error "int is neither 4 nor 8 bytes. I can't deal with that."
 #endif
+#define BITARRAY_MASK ((1u<<BITARRAY_SHIFT)-1)
 
 /** A random-access array of one-bit-wide elements. */
 typedef unsigned int bitarray_t;
