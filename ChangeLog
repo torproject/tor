@@ -12,6 +12,8 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
       do not define s6_addr16 or s6_addr32.
     - Fix compile on platforms without getaddrinfo: bug found by Li-Hui
       Zhou.
+    - Do not automatically run configure from autogen.sh.  This non-standard
+      behavior tended to annoy people who have built other programs.
 
   o Minor features (directory servers):
     - When somebody requests a list of statuses or servers, and we have
