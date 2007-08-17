@@ -166,13 +166,6 @@ rep_hist_init(void)
 static void
 mark_or_down(or_history_t *hist, time_t when, int failed)
 {
-  if (hist->start_of_run) {
-    /*XXXX020 treat failure specially. */
-    long run_length = when - hist->start_of_run;
-    hist->weighted_run_length += run_length;
-    hist->total_run_weights += 1.0;
-    hist->start_of_run = 0;
-  }
   if (hist->up_since) {
     hist->uptime += (when - hist->up_since);
     hist->up_since = 0;
@@ -186,9 +179,6 @@ mark_or_down(or_history_t *hist, time_t when, int failed)
 static void
 mark_or_up(or_history_t *hist, time_t when)
 {
-  if (!hist->start_of_run) {
-    hist->start_of_run = when;
-  }
   if (hist->down_since) {
     hist->downtime += (when - hist->down_since);
     hist->down_since = 0;
@@ -267,8 +257,10 @@ rep_hist_note_connection_died(const char* id, time_t when)
 void
 rep_hist_note_router_reachable(const char *id, time_t when)
 {
-  (void)id;
-  (void)when;
+  or_history_t *hist = get_or_history(id);
+  if (hist && !hist->start_of_run) {
+    hist->start_of_run = when;
+  }
 }
 
 /** We have just decided that this router is unreachable, meaning
@@ -276,8 +268,14 @@ rep_hist_note_router_reachable(const char *id, time_t when)
 void
 rep_hist_note_router_unreachable(const char *id, time_t when)
 {
-  (void)id;
-  (void)when;
+  or_history_t *hist = get_or_history(id);
+  if (hist && hist->start_of_run) {
+    /*XXXX020 treat failure specially. */
+    long run_length = when - hist->start_of_run;
+    hist->weighted_run_length += run_length;
+    hist->total_run_weights += 1.0;
+    hist->start_of_run = 0;
+  }
 }
 
 /**DOCDOC*/
@@ -316,18 +314,13 @@ rep_hist_downrate_old_runs(time_t now)
   return stability_last_downrated + STABILITY_INTERVAL;
 }
 
-/**DOCDOC*/
-double
-rep_hist_get_stability(const char *id, time_t when)
+/** DOCDOC */
+static double
+get_stability(or_history_t *hist, time_t when)
 {
-  or_history_t *hist = get_or_history(id);
-  unsigned long total;
-  double total_weights;
-  if (!hist)
-    return 0.0;
+  unsigned long total = hist->weighted_run_length;
+  double total_weights = hist->total_run_weights;
 
-  total = hist->weighted_run_length;
-  total_weights = hist->total_run_weights;
   if (hist->start_of_run) {
     total += (when-hist->start_of_run);
     total_weights += 1.0;
@@ -336,6 +329,17 @@ rep_hist_get_stability(const char *id, time_t when)
     return 0.0;
 
   return total / total_weights;
+}
+
+/**DOCDOC*/
+double
+rep_hist_get_stability(const char *id, time_t when)
+{
+  or_history_t *hist = get_or_history(id);
+  if (!hist)
+    return 0.0;
+
+  return get_stability(hist, when);
 }
 
 /** Remember that we successfully extended from the OR with identity
@@ -397,6 +401,8 @@ rep_hist_dump_stats(time_t now, int severity)
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
        orhist_it = digestmap_iter_next(history_map,orhist_it)) {
+    double s;
+    long stability;
     digestmap_iter_get(orhist_it, &digest1, &or_history_p);
     or_history = (or_history_t*) or_history_p;
 
@@ -408,16 +414,20 @@ rep_hist_dump_stats(time_t now, int severity)
     update_or_history(or_history, now);
     upt = or_history->uptime;
     downt = or_history->downtime;
+    s = get_stability(or_history, now);
+    stability = (long)s;
     if (upt+downt) {
       uptime = ((double)upt) / (upt+downt);
     } else {
       uptime=1.0;
     }
     log(severity, LD_GENERAL,
-        "OR %s [%s]: %ld/%ld good connections; uptime %ld/%ld sec (%.2f%%)",
+        "OR %s [%s]: %ld/%ld good connections; uptime %ld/%ld sec (%.2f%%); "
+        "wmtbf %lu:%lu:%lu",
         name1, hexdigest1,
         or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
-        upt, upt+downt, uptime*100.0);
+        upt, upt+downt, uptime*100.0,
+        stability/3600, (stability/60)%60, stability%60);
 
     if (!digestmap_isempty(or_history->link_history_map)) {
       strlcpy(buffer, "    Extend attempts: ", sizeof(buffer));
@@ -453,6 +463,7 @@ rep_hist_dump_stats(time_t now, int severity)
 void
 rep_history_clean(time_t before)
 {
+  int authority = authdir_mode(get_options());
   or_history_t *or_history;
   link_history_t *link_history;
   void *or_history_p, *link_history_p;
@@ -461,9 +472,14 @@ rep_history_clean(time_t before)
 
   orhist_it = digestmap_iter_init(history_map);
   while (!digestmap_iter_done(orhist_it)) {
+    int remove;
     digestmap_iter_get(orhist_it, &d1, &or_history_p);
     or_history = or_history_p;
-    if (or_history->changed < before) {
+
+    remove = authority ? (or_history->total_run_weights < STABILITY_EPSILON &&
+                          !or_history->start_of_run)
+                       : (or_history->changed < before);
+    if (remove) {
       orhist_it = digestmap_iter_next_rmv(history_map, orhist_it);
       free_or_history(or_history);
       continue;

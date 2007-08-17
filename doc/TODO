@@ -106,8 +106,8 @@ Things we'd like to do in 0.2.0.x:
     - 105: Version negotiation for the Tor protocol
     . 108: Base "Stable" Flag on Mean Time Between Failures
       o Track mtbf in rephist.c
-      - Do not delete old stability information if we're an authority.
-      - Make sure authorities call up/down functions as appropriate.
+      o Do not delete old stability information if we're an authority.
+      o Make sure authorities call up/down functions as appropriate.
       - Record mtbf between invocations
       - Base stable on mtbf.
     - 113: Simplifying directory authority administration
