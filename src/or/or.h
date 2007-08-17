@@ -3119,6 +3119,8 @@ void rep_history_clean(time_t before);
 
 void rep_hist_note_router_reachable(const char *id, time_t when);
 void rep_hist_note_router_unreachable(const char *id, time_t when);
+int rep_hist_record_mtbf_data(const char *filename);
+int rep_hist_load_mtbf_data(const char *filename, time_t now);
 
 time_t rep_hist_downrate_old_runs(time_t now);
 double rep_hist_get_stability(const char *id, time_t when);

@@ -71,7 +71,8 @@ static time_t stability_last_downrated = 0;
 /** Map from hex OR identity digest to or_history_t. */
 static digestmap_t *history_map = NULL;
 
-/** Return the or_history_t for the named OR, creating it if necessary. */
+/** Return the or_history_t for the OR with identity digest <b>id</b>,
+ * creating it if necessary. */
 static or_history_t *
 get_or_history(const char* id)
 {
@@ -270,7 +271,7 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
 {
   or_history_t *hist = get_or_history(id);
   if (hist && hist->start_of_run) {
-    /*XXXX020 treat failure specially. */
+    /*XXXX020 treat failure specially? */
     long run_length = when - hist->start_of_run;
     hist->weighted_run_length += run_length;
     hist->total_run_weights += 1.0;
@@ -499,6 +500,155 @@ rep_history_clean(time_t before)
     }
     orhist_it = digestmap_iter_next(history_map, orhist_it);
   }
+}
+
+/** DOCDOC */
+int
+rep_hist_record_mtbf_data(const char *filename)
+{
+  char buf[128];
+  char time_buf[ISO_TIME_LEN+1];
+  smartlist_t *lines;
+
+  digestmap_iter_t *orhist_it;
+  const char *digest;
+  void *or_history_p;
+  or_history_t *hist;
+
+  lines = smartlist_create();
+
+  smartlist_add(lines, tor_strdup("format 1\n"));
+
+  if (stability_last_downrated) {
+    format_iso_time(time_buf, stability_last_downrated);
+    tor_snprintf(buf, sizeof(buf), "last-downrated %s\n", time_buf);
+    smartlist_add(lines, tor_strdup(buf));
+  }
+  smartlist_add(lines, tor_strdup("data\n"));
+
+  for (orhist_it = digestmap_iter_init(history_map);
+       !digestmap_iter_done(orhist_it);
+       orhist_it = digestmap_iter_next(history_map,orhist_it)) {
+    char dbuf[HEX_DIGEST_LEN+1];
+    const char *t = NULL;
+    digestmap_iter_get(orhist_it, &digest, &or_history_p);
+    hist = (or_history_t*) or_history_p;
+
+    base16_encode(dbuf, sizeof(dbuf), digest, DIGEST_LEN);
+    if (hist->start_of_run) {
+      format_iso_time(time_buf, hist->start_of_run);
+      t = time_buf;
+    }
+    tor_snprintf(buf, sizeof(buf), "%s %lu %.5lf%s%s\n",
+                 dbuf, hist->weighted_run_length, hist->total_run_weights,
+                 t ? " S=" : "", t ? t : "");
+    smartlist_add(lines, tor_strdup(buf));
+  }
+
+  smartlist_add(lines, tor_strdup(".\n"));
+
+  {
+    size_t sz;
+    /* XXXX This isn't terribly efficient; line-at-a-time would be
+     * way faster. */
+    char *data = smartlist_join_strings(lines, "", 0, &sz);
+    int r = write_bytes_to_file(filename, data, sz, 0);
+
+    tor_free(data);
+    SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+    smartlist_free(lines);
+    return r;
+  }
+}
+
+/** DOCDOC */
+int
+rep_hist_load_mtbf_data(const char *filename, time_t now)
+{
+  /* XXXX won't handle being called while history is already populated. */
+  smartlist_t *lines;
+  const char *line = NULL;
+  int r=0, i;
+  time_t last_downrated = 0;
+
+  {
+    char *d = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+    if (!d)
+      return -1;
+    lines = smartlist_create();
+    smartlist_split_string(lines, d, "\n", SPLIT_SKIP_SPACE, 0);
+    tor_free(d);
+  }
+
+  if (smartlist_len(lines)<4 || strcmp(smartlist_get(lines, 0), "format 1")) {
+    log_warn(LD_GENERAL,"Unrecognized format in mtbf history file. Skipping.");
+    goto err;
+  }
+  for (i = 1; i < smartlist_len(lines); ++i) {
+    line = smartlist_get(lines, i);
+    if (!strcmp(line, "data"))
+      break;
+    if (!strcmpstart(line, "last-downrated ")) {
+      if (parse_iso_time(line+strlen("last-downrated "), &last_downrated)<0)
+        log_warn(LD_GENERAL,"Couldn't parse downrate time in mtbf "
+                 "history file.");
+    }
+    if (last_downrated > now)
+      last_downrated = now;
+  }
+  if (line && !strcmp(line, "data"))
+    ++i;
+
+  for (; i < smartlist_len(lines); ++i) {
+    char digest[DIGEST_LEN];
+    char hexbuf[HEX_DIGEST_LEN+1];
+    char timebuf[ISO_TIME_LEN+1];
+    time_t start_of_run = 0;
+    unsigned long wrl;
+    double trw;
+    int n;
+    or_history_t *hist;
+    line = smartlist_get(lines, i);
+    if (!strcmp(line, "."))
+      break;
+    /* XXXX020 audit the heck out of my scanf usage. */
+    n = sscanf(line, "%40s %lu %lf S=%10s %8s",
+               hexbuf, &wrl, &trw, timebuf, timebuf+11);
+    if (n != 3 && n != 5) {
+      log_warn(LD_GENERAL, "Couldn't scan line %s", escaped(line));
+      continue;
+    }
+    if (base16_decode(digest, DIGEST_LEN, hexbuf, HEX_DIGEST_LEN) < 0) {
+      log_warn(LD_GENERAL, "Couldn't hex string %s", escaped(hexbuf));
+      continue;
+    }
+    if (n == 5) {
+      timebuf[10] = ' ';
+      if (parse_iso_time(timebuf, &start_of_run)<0)
+        log_warn(LD_GENERAL, "Couldn't parse time %s", escaped(timebuf));
+    }
+    hist = get_or_history(digest);
+    if (!hist)
+      continue;
+    if (start_of_run > now)
+      start_of_run = now;
+    hist->start_of_run = start_of_run;
+    hist->weighted_run_length = wrl;
+    hist->total_run_weights = trw;
+    /* Subtract time in which */
+  }
+  if (strcmp(line, "."))
+    log_warn(LD_GENERAL, "Truncated MTBF file %s", escaped(filename));
+
+  stability_last_downrated = last_downrated;
+
+  goto done;
+ err:
+  r = -1;
+ done:
+  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+  smartlist_free(lines);
+  return r;
 }
 
 /** For how many seconds do we keep track of individual per-second bandwidth

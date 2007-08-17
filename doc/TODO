@@ -108,8 +108,9 @@ Things we'd like to do in 0.2.0.x:
       o Track mtbf in rephist.c
       o Do not delete old stability information if we're an authority.
       o Make sure authorities call up/down functions as appropriate.
-      - Record mtbf between invocations
-      - Base stable on mtbf.
+      o Record mtbf between invocations
+      - Base Stable on mtbf.
+      - Test mtbf logic.
     - 113: Simplifying directory authority administration
     - 110: prevent infinite-length circuits (phase one)
       - servers should recognize relay_extend cells and pass them
