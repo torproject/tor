@@ -298,6 +298,16 @@ struct in6_addr
 typedef uint16_t sa_family_t;
 #endif
 
+#ifndef _MSC_VER
+/* Apparently, MSVC doesn't define s6_addr16 or s6_addr32. How dumb. */
+/* XXXX020 detect with autoconf. */
+#define S6_ADDR16(x) ((x).s6_addr16)
+#define S6_ADDR32(x) ((x).s6_addr32)
+#else
+#define S6_ADDR16(x) ((uint16_t*)((char*)&(x).s6_addr))
+#define S6_ADDR32(x) ((uint32_t*)((char*)&(x).s6_addr))
+#endif
+
 /* XXXX020 detect sockaddr_in6 correctly on ms_windows; this is also a hack. */
 #if !defined(HAVE_STRUCT_SOCKADDR_IN6) && !defined(MS_WINDOWS)
 struct sockaddr_in6 {
@@ -366,6 +376,9 @@ IN_PORT(const tor_addr_t *a)
   else
     return a->sa6.sin6_port;
 }
+
+#define IN6_ADDRESS16(x) S6_ADDR16(*IN6_ADDRESS(x))
+#define IN6_ADDRESS32(x) S6_ADDR32(*IN6_ADDRESS(x))
 
 #define INET_NTOA_BUF_LEN 16 /* 255.255.255.255 */
 #define TOR_ADDR_BUF_LEN 46 /* ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255 */

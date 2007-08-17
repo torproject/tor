@@ -8,6 +8,8 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
 
   o Major bugfixes (compilation):
     - Try to fix win32 compilation again: Improve checking for ipv6 types.
+    - Try to fix MSVC compilation: build correctly on platforms that
+      do not define s6_addr16 or s6_addr32.
     - Fix compile on platforms without getaddrinfo: bug found by Li-Hui
       Zhou.
 
