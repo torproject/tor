@@ -38,6 +38,12 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
     - Implement options to allow the controller to pick a new location for
       the cookie authentication file, and to make it group-readable.
 
+  o Minor features (unit testing):
+    - Add command-line arguments to unit-test executable so that we can
+      invoke any chosen test from the command line rather than having to
+      run the whole test suite at once; and so that we can turn on logging
+      for the unit tests.
+
   o Minor bugfixes (other):
     - If we require CookieAuthentication but we fail to write the
       cookie file, we would warn but not exit, and end up in a state

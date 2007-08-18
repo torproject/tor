@@ -1079,7 +1079,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
   STMT_END
 
 static void
-test_ip6_helpers(void)
+test_util_ip6_helpers(void)
 {
   char buf[TOR_ADDR_BUF_LEN], bug[TOR_ADDR_BUF_LEN];
   struct in6_addr a1, a2;
@@ -1271,14 +1271,16 @@ test_ip6_helpers(void)
   /* get interface addresses */
   r = get_interface_address6(0, AF_INET, &t1);
   i = get_interface_address6(0, AF_INET6, &t2);
+#if 0
   tor_inet_ntop(AF_INET, &t1.sa.sin_addr, buf, sizeof(buf));
   printf("\nv4 address: %s  (family=%i)", buf, IN_FAMILY(&t1));
   tor_inet_ntop(AF_INET6, &t2.sa6.sin6_addr, buf, sizeof(buf));
   printf("\nv6 address: %s  (family=%i)", buf, IN_FAMILY(&t2));
+#endif
 }
 
 static void
-test_smartlist(void)
+test_util_smartlist(void)
 {
   smartlist_t *sl;
   char *cp;
@@ -1545,7 +1547,7 @@ test_smartlist(void)
 }
 
 static void
-test_bitarray(void)
+test_util_bitarray(void)
 {
   bitarray_t *ba;
   int i, j, ok=1;
@@ -1629,7 +1631,7 @@ _thread_test_func(void* _s)
 }
 
 static void
-test_threads(void)
+test_util_threads(void)
 {
   char *s1, *s2;
   int done = 0, timedout = 0;
@@ -1694,7 +1696,7 @@ _compare_strings_for_pqueue(const void *s1, const void *s2)
 }
 
 static void
-test_pqueue(void)
+test_util_pqueue(void)
 {
   smartlist_t *sl;
   int (*cmp)(const void *, const void*);
@@ -1748,7 +1750,7 @@ test_pqueue(void)
 }
 
 static void
-test_gzip(void)
+test_util_gzip(void)
 {
   char *buf1, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
   const char *ccp2;
@@ -1854,7 +1856,7 @@ test_gzip(void)
 }
 
 static void
-test_strmap(void)
+test_util_strmap(void)
 {
   strmap_t *map;
   strmap_iter_t *iter;
@@ -1933,7 +1935,7 @@ test_strmap(void)
 }
 
 static void
-test_mmap(void)
+test_util_mmap(void)
 {
   char *fname1 = tor_strdup(get_fname("mapped_1"));
   char *fname2 = tor_strdup(get_fname("mapped_2"));
@@ -1991,7 +1993,7 @@ test_mmap(void)
 }
 
 static void
-test_control_formats(void)
+test_util_control_formats(void)
 {
   char *out;
   const char *inp =
@@ -2391,7 +2393,7 @@ test_same_voter(networkstatus_voter_info_t *v1,
 }
 
 static void
-test_dirvote_helpers(void)
+test_util_dirvote_helpers(void)
 {
   smartlist_t *sl = smartlist_create();
   int a=12,b=24,c=25,d=60,e=77;
@@ -2442,8 +2444,6 @@ test_v3_networkstatus(void)
   routerstatus_t *rs;
   char *v1_text, *v2_text, *v3_text, *consensus_text, *cp;
   smartlist_t *votes = smartlist_create();
-
-  add_stream_log(LOG_NOTICE, LOG_ERR, "", stdout);//XXXX020 remove me.
 
   /* Parse certificates and keys. */
   cert1 = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
@@ -3066,7 +3066,7 @@ bench_aes(void)
 }
 
 static void
-test_mempool(void)
+test_util_mempool(void)
 {
   mp_pool_t *pool;
   smartlist_t *allocated;
@@ -3113,13 +3113,105 @@ test_mempool(void)
   smartlist_free(allocated);
 }
 
+#define ENT(x) { #x, test_ ## x, 0, 0 }
+#define SUBENT(x,y) { #x "/" #y, test_ ## x ## _ ## y, 1, 0 }
+
+static struct {
+  const char *test_name;
+  void (*test_fn)(void);
+  int is_subent;
+  int selected;
+} test_array[] = {
+  ENT(buffers),
+  ENT(crypto),
+  SUBENT(crypto, dh),
+  SUBENT(crypto, s2k),
+  ENT(util),
+  SUBENT(util, ip6_helpers),
+  SUBENT(util, gzip),
+  SUBENT(util, smartlist),
+  SUBENT(util, bitarray),
+  SUBENT(util, mempool),
+  SUBENT(util, strmap),
+  SUBENT(util, control_formats),
+  SUBENT(util, pqueue),
+  SUBENT(util, mmap),
+  SUBENT(util, threads),
+  SUBENT(util, dirvote_helpers),
+  ENT(onion_handshake),
+  ENT(dir_format),
+  ENT(v3_networkstatus),
+  ENT(policies),
+  ENT(rend_fns),
+  { NULL, NULL, 0, 0 },
+};
+
+static void syntax(void) ATTR_NORETURN;
+static void
+syntax(void)
+{
+  int i;
+  printf("Syntax:\n"
+         "  test [-v|--verbose] [--warn|--notice|--info|--debug]\n"
+         "       [testname...]\n"
+         "Recognized tests are:\n");
+  for (i = 0; test_array[i].test_name; ++i) {
+    printf("   %s\n", test_array[i].test_name);
+  }
+
+  exit(0);
+}
+
 int
 main(int c, char**v)
 {
   or_options_t *options = options_new();
   char *errmsg = NULL;
-  (void) c;
-  (void) v;
+  int i;
+  int verbose = 0, any_selected = 0;
+  int loglevel = LOG_ERR;
+
+  for (i = 1; i < c; ++i) {
+    if (!strcmp(v[i], "-v") || !strcmp(v[i], "--verbose"))
+      verbose++;
+    else if (!strcmp(v[i], "--warn"))
+      loglevel = LOG_WARN;
+    else if (!strcmp(v[i], "--notice"))
+      loglevel = LOG_NOTICE;
+    else if (!strcmp(v[i], "--info"))
+      loglevel = LOG_INFO;
+    else if (!strcmp(v[i], "--debug"))
+      loglevel = LOG_DEBUG;
+    else if (!strcmp(v[i], "--help") || !strcmp(v[i], "-h") || v[i][0] == '-')
+      syntax();
+    else {
+      int j, found=0;
+      for (j = 0; test_array[j].test_name; ++j) {
+        if (!strcmp(v[i], test_array[j].test_name) ||
+            (test_array[j].is_subent &&
+             !strcmpstart(test_array[j].test_name, v[i]) &&
+             test_array[j].test_name[strlen(v[i])] == '/') ||
+            (v[i][0] == '=' && !strcmp(v[i]+1, test_array[j].test_name))) {
+          test_array[j].selected = 1;
+          any_selected = 1;
+          found = 1;
+        }
+      }
+      if (!found) {
+        printf("Unknown test: %s\n", v[i]);
+        syntax();
+      }
+    }
+  }
+
+  if (!any_selected) {
+    for (i = 0; test_array[i].test_name; ++i) {
+      test_array[i].selected = 1;
+    }
+  }
+
+  add_stream_log(loglevel, LOG_ERR, "", stdout);
+
   options->command = CMD_RUN_UNITTESTS;
   rep_hist_init();
   network_init();
@@ -3143,47 +3235,16 @@ main(int c, char**v)
 
   printf("Running Tor unit tests on %s\n", get_uname());
 
-  puts("========================== Buffers =========================");
-  test_buffers();
-  puts("\n========================== Crypto ==========================");
-  // add_stream_log(LOG_DEBUG, LOG_ERR, "<stdout>", stdout);
-  test_crypto();
-  test_crypto_dh();
-  test_crypto_s2k();
-  puts("\n========================= Util ============================"
-       "\n--IPv6");
-  test_ip6_helpers();
-  puts("\n--gzip");
-  test_gzip();
-  puts("\n--util");
-  test_util();
-  puts("\n--smartlist");
-  test_smartlist();
-  puts("\n--bitarray");
-  test_bitarray();
-  puts("\n--mempool");
-  test_mempool();
-  puts("\n--strmap");
-  test_strmap();
-  puts("\n--control formats");
-  test_control_formats();
-  puts("\n--pqueue");
-  test_pqueue();
-  puts("\n--mmap");
-  test_mmap();
-  puts("\n--threads");
-  test_threads();
-  puts("\n--dirvote-helpers");
-  test_dirvote_helpers();
-  puts("\n========================= Onion Skins =====================");
-  test_onion_handshake();
-  puts("\n========================= Directory Formats ===============");
-  test_dir_format();
-  test_v3_networkstatus();
-  puts("\n========================= Policies ===================");
-  test_policies();
-  puts("\n========================= Rendezvous functionality ========");
-  test_rend_fns();
+  for (i = 0; test_array[i].test_name; ++i) {
+    if (!test_array[i].selected)
+      continue;
+    if (!test_array[i].is_subent) {
+      printf("\n============================== %s\n",test_array[i].test_name);
+    } else if (test_array[i].is_subent && verbose) {
+      printf("\n%s", test_array[i].test_name);
+    }
+    test_array[i].test_fn();
+  }
   puts("");
 
   if (have_failed)
