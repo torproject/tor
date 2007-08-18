@@ -27,7 +27,7 @@ Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
 Download openssl:
-http://www.openssl.org/source/openssl-0.9.8d.tar.gz
+http://www.openssl.org/source/openssl-0.9.8e.tar.gz
 
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
@@ -83,7 +83,7 @@ Type "make -f win32/Makefile.gcc"
 Done.
 
 
-Stage Four: Download, extract, and patch libevent-1.1b.
+Stage Four: Download, extract, and patch libevent-1.3b
 ------------------------------------------------------
 
 Download the latest libevent release:
@@ -92,14 +92,15 @@ http://www.monkey.org/~provos/libevent/
 Copy the libevent tarball into the "tor-mingw" directory.
 Type "cd tor-mingw"
 
-Extract libevent. 
+Extract libevent.
 
 Type "./configure --enable-static --disable-shared"
---------------------libevent 1.3b only---------------------------------------
+--------------------libevent 1.3b only-------------------------------------
 You need to manually edit the Makefile and remove all references to "sample".
 libevent 1.3b won't compile in mingw currently due to issues in event_test.c.
 Removing the "sample" directory and all references to it in Makefile create a
-completely valid libevent library.
+completely valid libevent library.  Libevent 1.3e and later should (with
+luck) not have this problem.  Libevent 1.3c and 1.3d won't work at all.
 -----------------------------------------------------------------------------
 Type "make"
 Type "make install"
