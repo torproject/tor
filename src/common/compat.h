@@ -338,6 +338,15 @@ static INLINE const struct in_addr *IN4_ADDRESS(const tor_addr_t *a);
 static INLINE const struct in6_addr *IN6_ADDRESS(const tor_addr_t *a);
 static INLINE uint16_t IN_PORT(const tor_addr_t *a);
 
+static INLINE const struct in6_addr *
+IN6_ADDRESS(const tor_addr_t *a)
+{
+  return &a->sa6.sin6_addr;
+}
+
+#define IN6_ADDRESS16(x) S6_ADDR16(*IN6_ADDRESS(x))
+#define IN6_ADDRESS32(x) S6_ADDR32(*IN6_ADDRESS(x))
+
 static INLINE uint32_t
 IPV4IP(const tor_addr_t *a)
 {
@@ -351,7 +360,7 @@ static INLINE uint32_t IPV4IPh(const tor_addr_t *a)
 static INLINE uint32_t
 IPV4MAPh(const tor_addr_t *a)
 {
-  return ntohl(a->sa6.sin6_addr.s6_addr32[3]);
+  return ntohl(IN6_ADDRESS32(a)[3]);
 }
 static INLINE uint16_t
 IN_FAMILY(const tor_addr_t *a)
@@ -363,11 +372,6 @@ IN4_ADDRESS(const tor_addr_t *a)
 {
   return &a->sa.sin_addr;
 }
-static INLINE const struct in6_addr *
-IN6_ADDRESS(const tor_addr_t *a)
-{
-  return &a->sa6.sin6_addr;
-}
 static INLINE uint16_t
 IN_PORT(const tor_addr_t *a)
 {
@@ -376,9 +380,6 @@ IN_PORT(const tor_addr_t *a)
   else
     return a->sa6.sin6_port;
 }
-
-#define IN6_ADDRESS16(x) S6_ADDR16(*IN6_ADDRESS(x))
-#define IN6_ADDRESS32(x) S6_ADDR32(*IN6_ADDRESS(x))
 
 #define INET_NTOA_BUF_LEN 16 /* 255.255.255.255 */
 #define TOR_ADDR_BUF_LEN 46 /* ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255 */
