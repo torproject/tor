@@ -46,6 +46,13 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
       every time we change any piece of our config.
     - Fix a bug with AutomapHostsOnResolve that would always cause the second
       request to fail.  Bug reported by Kate.  Bugfix on 0.2.0.3-alpha.
+    - When loading bandwidth history, do not believe any information in
+      the future.  Fixes bug 434.
+    - When loading entry guard information, do not believe any information
+      in the future.
+    - When we have our clock set far in the future and generate an onion key,
+      then re-set our clock to be correct, we should not stop the onion
+      key from getting rotated.
 
 
 Changes in version 0.2.0.4-alpha - 2007-08-01

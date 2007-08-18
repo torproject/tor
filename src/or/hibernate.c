@@ -696,6 +696,9 @@ read_bandwidth_usage(void)
     goto done;
   }
 
+  /* XXXX020 do something if the interval "starts" far in the future?
+   * or do we alrady handle that. */
+
   n_bytes_read_in_interval = n_read;
   n_bytes_written_in_interval = n_written;
   n_seconds_active_in_interval = n_seconds;

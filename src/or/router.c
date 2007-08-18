@@ -332,6 +332,7 @@ init_keys(void)
   or_options_t *options = get_options();
   or_state_t *state = get_or_state();
   authority_type_t type;
+  time_t now = time(NULL);
 
   if (!key_lock)
     key_lock = tor_mutex_new();
@@ -389,14 +390,17 @@ init_keys(void)
   prkey = init_key_from_file(keydir, 1, LOG_ERR);
   if (!prkey) return -1;
   set_onion_key(prkey);
-  if (state->LastRotatedOnionKey > 100) { /* allow for some parsing slop. */
+  if (state->LastRotatedOnionKey > 100 && state->LastRotatedOnionKey < now) {
+    /* We allow for some parsing slop, but we don't want to risk accepting
+     * values in the distant future.  If we did, we might never rotate the
+     * onion key. */
     onionkey_set_at = state->LastRotatedOnionKey;
   } else {
     /* We have no LastRotatedOnionKey set; either we just created the key
      * or it's a holdover from 0.1.2.4-alpha-dev or earlier.  In either case,
      * start the clock ticking now so that we will eventually rotate it even
      * if we don't stay up for a full MIN_ONION_KEY_LIFETIME. */
-    state->LastRotatedOnionKey = onionkey_set_at = time(NULL);
+    state->LastRotatedOnionKey = onionkey_set_at = now;
     or_state_mark_dirty(state, options->AvoidDiskWrites ? time(NULL)+3600 : 0);
   }
 

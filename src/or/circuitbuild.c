@@ -2465,6 +2465,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
   entry_guard_t *node = NULL;
   smartlist_t *new_entry_guards = smartlist_create();
   config_line_t *line;
+  time_t now = time(NULL);
 
   *msg = NULL;
   for (line = state->EntryGuards; line; line = line->next) {
@@ -2506,6 +2507,11 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         *msg = tor_strdup("Unable to parse entry nodes: "
                           "Bad time in EntryGuardDownSince/UnlistedSince");
         break;
+      }
+      if (when > now) {
+        /* It's a bad idea to believe info in the future: you can wind
+         * up with timeouts that aren't allowed to happen for years. */
+        continue;
       }
       if (strlen(line->value) >= ISO_TIME_LEN+ISO_TIME_LEN+1) {
         /* ignore failure */

@@ -993,7 +993,8 @@ rep_hist_load_state(or_state_t *state, char **err)
     s_values =  r?state->BWHistoryReadValues:state->BWHistoryWriteValues;
     if (s_values && s_begins >= now - NUM_SECS_BW_SUM_INTERVAL*NUM_TOTALS) {
       start = s_begins - s_interval*(smartlist_len(s_values));
-
+      if (start > now)
+        continue;
       b->cur_obs_time = start;
       b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
       SMARTLIST_FOREACH(s_values, char *, cp, {
@@ -1002,8 +1003,10 @@ rep_hist_load_state(or_state_t *state, char **err)
           all_ok=0;
           log_notice(LD_GENERAL, "Could not parse '%s' into a number.'", cp);
         }
-        add_obs(b, start, v);
-        start += NUM_SECS_BW_SUM_INTERVAL;
+        if (start < now) {
+          add_obs(b, start, v);
+          start += NUM_SECS_BW_SUM_INTERVAL;
+        }
       });
     }
 
