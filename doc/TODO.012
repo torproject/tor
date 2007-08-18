@@ -5,7 +5,7 @@ Backport items for 0.1.2:
     buffer allocation.
   o r11117: cookie auth more usable
   o disable v0 control protocol
-  - r11138: PROTOCOLINFO support.
+  o r11138: PROTOCOLINFO support.
   D r11141: CookieAuthFile and CookieAuthFileGroupReadable.
 
 

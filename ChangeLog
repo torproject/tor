@@ -4,6 +4,12 @@ Changes in version 0.1.2.17 - 2007-08-xx
       deprecated since Tor 0.1.1.1-alpha, and keeping it safe and secure
       has been more of a headache than it's worth.
 
+  o Minor features (controller):
+    - Add a PROTOCOLINFO controller command.  Like AUTHENTICATE, it is valid
+      before any authentication has been received.  It tells a controller
+      what kind of authentication is expected, and what protocol is spoken.
+      Implements proposal 119.
+
   o Minor bugfixes (performance):
     - Save on most routerlist_assert_ok() calls in routerlist.c,
       thus greatly speeding up loading cached-routers from disk on

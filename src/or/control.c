@@ -149,6 +149,7 @@ static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
                                       size_t len);
 static void orconn_target_get_name(int long_names, char *buf, size_t len,
                                    or_connection_t *conn);
+static char *get_cookie_file(void);
 
 /** Given a control event code for a message event, return the corresponding
  * log severity. */
@@ -2209,6 +2210,73 @@ handle_control_usefeature(control_connection_t *conn,
   return 0;
 }
 
+/** Called when we get a <b>protocolinfo</b> command on <b>conn</b>. */
+static int
+handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
+                            const char *body)
+{
+  const char *bad_arg = NULL;
+  smartlist_t *args;
+  (void)len;
+
+  conn->have_sent_protocolinfo = 1;
+  args = smartlist_create();
+  smartlist_split_string(args, body, " ",
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(args, const char *, arg, {
+      int ok;
+      tor_parse_long(arg, 10, 0, LONG_MAX, &ok, NULL);
+      if (!ok) {
+        bad_arg = arg;
+
+        break;
+      }
+    });
+  if (bad_arg) {
+    connection_printf_to_buf(conn, "513 No such version %s\r\n",
+                             escaped(bad_arg));
+    /* Don't tolerate bad arguments when not authenticated. */
+    if (!STATE_IS_OPEN(TO_CONN(conn)->state))
+      connection_mark_for_close(TO_CONN(conn));
+    goto done;
+  } else {
+    or_options_t *options = get_options();
+    int cookies = options->CookieAuthentication;
+    char *cfile = get_cookie_file();
+    char *esc_cfile = esc_for_log(cfile);
+    char *methods;
+    {
+      int passwd = (options->HashedControlPassword != NULL) &&
+        strlen(options->HashedControlPassword);
+      smartlist_t *mlist = smartlist_create();
+      if (cookies)
+        smartlist_add(mlist, (char*)"COOKIE");
+      if (passwd)
+        smartlist_add(mlist, (char*)"HASHEDPASSWORD");
+      if (!cookies && !passwd)
+        smartlist_add(mlist, (char*)"NULL");
+      methods = smartlist_join_strings(mlist, ",", 0, NULL);
+      smartlist_free(mlist);
+    }
+
+    connection_printf_to_buf(conn,
+                             "250+PROTOCOLINFO 1\r\n"
+                             "250-AUTH METHODS=%s%s%s\r\n"
+                             "250-VERSION Tor=%s\r\n"
+                             "250 OK\r\n",
+                             methods,
+                             cookies?" COOKIEFILE=":"",
+                             cookies?esc_cfile:"",
+                             escaped(VERSION));
+    tor_free(cfile);
+    tor_free(esc_cfile);
+  }
+ done:
+  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+  smartlist_free(args);
+  return 0;
+}
+
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(control_connection_t *conn)
@@ -2227,6 +2295,21 @@ connection_control_reached_eof(control_connection_t *conn)
 
   log_info(LD_CONTROL,"Control connection reached EOF. Closing.");
   connection_mark_for_close(TO_CONN(conn));
+  return 0;
+}
+
+/** Return true iff <b>cmd</b> is allowable (or at least forgivable) at this
+ * stage of the protocol. */
+static int
+is_valid_initial_command(control_connection_t *conn, const char *cmd)
+{
+  if (conn->_base.state == CONTROL_CONN_STATE_OPEN_V1)
+    return 1;
+  if (!strcasecmp(cmd, "PROTOCOLINFO"))
+    return !conn->have_sent_protocolinfo;
+  if (!strcasecmp(cmd, "AUTHENTICATE") ||
+      !strcasecmp(cmd, "QUIT"))
+    return 1;
   return 0;
 }
 
@@ -2323,6 +2406,7 @@ connection_control_process_inbuf(control_connection_t *conn)
     --data_len;
   }
 
+  /* Quit is always okay. */
   if (!strcasecmp(conn->incoming_cmd, "QUIT")) {
     connection_write_str_to_buf("250 closing connection\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
@@ -2330,7 +2414,7 @@ connection_control_process_inbuf(control_connection_t *conn)
   }
 
   if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V1 &&
-      strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
+      !is_valid_initial_command(conn, conn->incoming_cmd)) {
     connection_write_str_to_buf("514 Authentication required.\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
     return 0;
@@ -2390,6 +2474,9 @@ connection_control_process_inbuf(control_connection_t *conn)
   } else if (!strcasecmp(conn->incoming_cmd, "USEFEATURE")) {
     if (handle_control_usefeature(conn, data_len, args))
       return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "PROTOCOLINFO")) {
+    if (handle_control_protocolinfo(conn, data_len, args))
+      return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
                              conn->incoming_cmd);
@@ -2398,168 +2485,6 @@ connection_control_process_inbuf(control_connection_t *conn)
   conn->incoming_cmd_cur_len = 0;
   goto again;
 }
-
-#if 0
-/** Called when data has arrived on a v0 control connection: Try to fetch
- * commands from conn->inbuf, and execute them.
- */
-static int
-connection_control_process_inbuf_v0(control_connection_t *conn)
-{
-  uint32_t body_len;
-  uint16_t command_type;
-  char *body=NULL;
-  static int have_warned_about_v0_protocol = 0;
-
- again:
-  /* Try to suck a control message from the buffer. */
-  switch (fetch_from_buf_control0(conn->_base.inbuf, &body_len, &command_type,
-                          &body,
-                          conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V0))
-    {
-    case -2:
-      tor_free(body);
-      log_info(LD_CONTROL,
-               "Detected v1 control protocol on connection (fd %d)",
-               conn->_base.s);
-      conn->_base.state = CONTROL_CONN_STATE_NEEDAUTH_V1;
-      return connection_control_process_inbuf_v1(conn);
-    case -1:
-      tor_free(body);
-      log_warn(LD_CONTROL, "Error in control command. Failing.");
-      return -1;
-    case 0:
-      /* Control command not all here yet. Wait. */
-      return 0;
-    case 1:
-      /* We got a command. Process it. */
-      break;
-    default:
-      tor_assert(0);
-    }
-
-  if (!have_warned_about_v0_protocol) {
-    log_warn(LD_CONTROL, "An application has connected to us using the "
-             "version 0 control prototol, which has been deprecated since "
-             "Tor 0.1.1.1-alpha.  This protocol will not be supported by "
-             "future versions of Tor; please use the v1 control protocol "
-             "instead.");
-    have_warned_about_v0_protocol = 1;
-  }
-
-  /* We got a command.  If we need authentication, only authentication
-   * commands will be considered. */
-  if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH_V0 &&
-      command_type != CONTROL0_CMD_AUTHENTICATE) {
-    log_info(LD_CONTROL, "Rejecting '%s' command; authentication needed.",
-             control_cmd_to_string(command_type));
-    send_control0_error(conn, ERR_UNAUTHORIZED, "Authentication required");
-    tor_free(body);
-    goto again;
-  }
-
-  if (command_type == CONTROL0_CMD_FRAGMENTHEADER ||
-      command_type == CONTROL0_CMD_FRAGMENT) {
-    if (handle_control_fragments(conn, command_type, body_len, body))
-      return -1;
-    tor_free(body);
-    if (conn->incoming_cmd_cur_len != conn->incoming_cmd_len)
-      goto again;
-
-    command_type = conn->incoming_cmd_type;
-    body_len = conn->incoming_cmd_len;
-    body = conn->incoming_cmd;
-    conn->incoming_cmd = NULL;
-  } else if (conn->incoming_cmd) {
-    log_warn(LD_CONTROL, "Dropping incomplete fragmented command");
-    tor_free(conn->incoming_cmd);
-  }
-
-  /* Okay, we're willing to process the command. */
-  switch (command_type)
-    {
-    case CONTROL0_CMD_SETCONF:
-      if (handle_control_setconf(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_GETCONF:
-      if (handle_control_getconf(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_SETEVENTS:
-      if (handle_control_setevents(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_AUTHENTICATE:
-      if (handle_control_authenticate(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_SAVECONF:
-      if (handle_control_saveconf(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_SIGNAL:
-      if (handle_control_signal(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_MAPADDRESS:
-      if (handle_control_mapaddress(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_GETINFO:
-      if (handle_control_getinfo(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_EXTENDCIRCUIT:
-      if (handle_control_extendcircuit(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_ATTACHSTREAM:
-      if (handle_control_attachstream(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_POSTDESCRIPTOR:
-      if (handle_control_postdescriptor(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_REDIRECTSTREAM:
-      if (handle_control_redirectstream(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_CLOSESTREAM:
-      if (handle_control_closestream(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_CLOSECIRCUIT:
-      if (handle_control_closecircuit(conn, body_len, body))
-        return -1;
-      break;
-    case CONTROL0_CMD_ERROR:
-    case CONTROL0_CMD_DONE:
-    case CONTROL0_CMD_CONFVALUE:
-    case CONTROL0_CMD_EVENT:
-    case CONTROL0_CMD_INFOVALUE:
-      log_warn(LD_CONTROL, "Received client-only '%s' command; ignoring.",
-               control_cmd_to_string(command_type));
-      send_control0_error(conn, ERR_UNRECOGNIZED_TYPE,
-                         "Command type only valid from server to tor client");
-      break;
-    case CONTROL0_CMD_FRAGMENTHEADER:
-    case CONTROL0_CMD_FRAGMENT:
-      log_warn(LD_CONTROL,
-               "Recieved command fragment out of order; ignoring.");
-      send_control0_error(conn, ERR_SYNTAX, "Bad fragmentation on command.");
-    default:
-      log_warn(LD_CONTROL, "Received unrecognized command type %d; ignoring.",
-               (int)command_type);
-      send_control0_error(conn, ERR_UNRECOGNIZED_TYPE,
-                         "Unrecognized command type");
-      break;
-  }
-  tor_free(body);
-  goto again; /* There might be more data. */
-}
-#endif
 
 /** Convert a numeric reason for destroying a circuit into a string for a
  * CIRCUIT event. */
@@ -3372,6 +3297,17 @@ control_event_guard(const char *nickname, const char *digest,
   return 0;
 }
 
+/** DOCDOC */
+static char *
+get_cookie_file(void)
+{
+  const char *datadir = get_options()->DataDirectory;
+  size_t len = strlen(datadir)+64;
+  char *fname = tor_malloc(len);
+  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"control_auth_cookie", datadir);
+  return fname;
+}
+
 /** Choose a random authentication cookie and write it to disk.
  * Anybody who can read the cookie from disk will be considered
  * authorized to use the control connection. Return -1 if we can't
@@ -3379,7 +3315,7 @@ control_event_guard(const char *nickname, const char *digest,
 int
 init_cookie_authentication(int enabled)
 {
-  char fname[512];
+  char *fname;
 
   if (!enabled) {
     authentication_cookie_is_set = 0;
@@ -3389,17 +3325,18 @@ init_cookie_authentication(int enabled)
   if (authentication_cookie_is_set)
     return 0;
 
-  tor_snprintf(fname, sizeof(fname), "%s/control_auth_cookie",
-               get_options()->DataDirectory);
+  fname = get_cookie_file();
   crypto_rand(authentication_cookie, AUTHENTICATION_COOKIE_LEN);
   authentication_cookie_is_set = 1;
   if (write_bytes_to_file(fname, authentication_cookie,
                           AUTHENTICATION_COOKIE_LEN, 1)) {
     log_warn(LD_FS,"Error writing authentication cookie to %s.",
              escaped(fname));
+    tor_free(fname);
     return -1;
   }
 
+  tor_free(fname);
   return 0;
 }
 
