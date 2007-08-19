@@ -1,22 +1,16 @@
 ## Configuration file for a typical Tor user
-## Last updated 12 June 2007 for Tor 0.2.0.3-alpha.
-## (May or may not work for older or newer versions of Tor.)
+## Last updated 18 August 2007 for Tor 0.2.0.5-alpha.
+## (May or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
 ## that begin with just "#" are disabled commands: you can enable them
 ## by removing the "#" symbol.
 ##
-## See the man page, or http://tor.eff.org/tor-manual-cvs.html, for more
+## See the man page, or http://tor.eff.org/tor-manual-dev.html, for more
 ## options you can use in this file.
 ##
-## On Unix, Tor will look for this file in someplace like "~/.tor/torrc" or
-## "/etc/torrc"
-##
-## On Windows, Tor will look for the configuration file in someplace like
-## "Application Data\tor\torrc" or "Application Data\<username>\tor\torrc"
-##
-## With the default Mac OS X installer, Tor will look in ~/.tor/torrc or
-## /Library/Tor/torrc
+## Tor will look for this file in various places based on your platform:
+## http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#torrc
 
 
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
@@ -78,12 +72,11 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 
 ################ This section is just for servers #####################
 
-## NOTE: If you enable these, you should consider mailing the contents
-## of the "fingerprint" file to the tor-ops, so nobody else can pick
-## your nickname and use a different key. See
-## http://tor.eff.org/docs/tor-doc-server.html for details.
+## NOTE: If you enable these, you should consider mailing the contents of
+## the "fingerprint" file to the tor-ops, so we have contact info for you
+## in case we need it. See http://tor.eff.org/docs/tor-doc-server.html.
 
-## Required: A unique handle for your server.
+## A unique handle for your server.
 #Nickname ididnteditheconfig
 
 ## The IP or FQDN for your server. Leave commented out and Tor will guess.
@@ -92,8 +85,8 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## Define these to limit the bandwidth usage of relayed (server)
 ## traffic. Your own traffic is still unthrottled.
 ## Note that RelayBandwidthRate must be at least 20 KB.
-#RelayBandwidthRate 100 KB      # Throttle traffic to 100KB/s (800Kbps)
-#RelayBandwidthBurst 200 KB     # But allow bursts up to 200KB/s (1600Kbps)
+#RelayBandwidthRate 100 KBytes  # Throttle traffic to 100KB/s (800Kbps)
+#RelayBandwidthBurst 200 KBytes # But allow bursts up to 200KB/s (1600Kbps)
 
 ## Contact info to be published in the directory, so we can contact you
 ## if your server is misconfigured or something else goes wrong.
@@ -103,17 +96,16 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 
 ## Required: what port to advertise for Tor connections.
 #ORPort 9001
-## If you want to listen on a port other than the one advertised
+## If you need to listen on a port other than the one advertised
 ## in ORPort (e.g. to advertise 443 but bind to 9090), uncomment the
 ## line below too. You'll need to do ipchains or other port forwarding
 ## yourself to make this work.
 #ORListenAddress 0.0.0.0:9090
 
-## Uncomment this to mirror the directory for others. Please do
-## if you have enough bandwidth: see the bottom of
-## http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#LimitBandwidth
+## Uncomment this to mirror directory information for others. Please do
+## if you have enough bandwidth.
 #DirPort 9030 # what port to advertise for directory connections
-## If you want to listen on a port other than the one advertised
+## If you need to listen on a port other than the one advertised
 ## in DirPort (e.g. to advertise 80 but bind to 9091), uncomment the line
 ## below too. You'll need to do ipchains or other port forwarding yourself
 ## to make this work.
@@ -122,7 +114,8 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## Uncomment this if you run more than one Tor server, and add the
 ## nickname of each Tor server you control, even if they're on different
 ## networks. You declare it here so Tor clients can avoid using more than
-## one of your servers in a single circuit.
+## one of your servers in a single circuit. See
+## http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#MultipleServers
 #MyFamily nickname1,nickname2,...
 
 ## A comma-separated list of exit policies. They're considered first
