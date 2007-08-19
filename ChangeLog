@@ -18,6 +18,12 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
       non-standard behavior tended to annoy people who have built other
       programs.
 
+  o Major bugfixes (stream expiration):
+    - Expire application streams in all cases if they've been around
+      longer than SocksTimeout. Right now there are some cases where the
+      stream will live forever, demanding a new circuit every 15 seconds.
+      Bugfix on 0.1.2.7-alpha; fixes bug 454; reported by lodger.
+
   o Minor features (directory servers):
     - When somebody requests a list of statuses or servers, and we have
       none of those, return a 404 rather than an empty 200.

@@ -1259,6 +1259,16 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
 
   conn_age = time(NULL) - conn->_base.timestamp_created;
 
+  if (conn_age >= get_options()->SocksTimeout) {
+    int severity = (!conn->_base.addr && !conn->_base.port) ?
+                     LOG_INFO : LOG_NOTICE;
+    log_fn(severity, LD_APP,
+           "Tried for %d seconds to get a connection to %s:%d. Giving up.",
+           conn_age, safe_str(conn->socks_request->address),
+           conn->socks_request->port);
+    return -1;
+  }
+
   if (!connection_edge_is_rendezvous_stream(conn)) { /* we're a general conn */
     origin_circuit_t *circ=NULL;
 
