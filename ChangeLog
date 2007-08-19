@@ -57,6 +57,7 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
     - When we have our clock set far in the future and generate an
       onion key, then re-set our clock to be correct, we should not stop
       the onion key from getting rotated.
+    - Clean up torrc sample config file.
 
   o Minor bugfixes (on 0.2.0.x):
     - Fix a bug with AutomapHostsOnResolve that would always cause
