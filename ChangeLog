@@ -4,6 +4,13 @@ Changes in version 0.1.2.17 - 2007-08-xx
       deprecated since Tor 0.1.1.1-alpha, and keeping it safe and secure
       has been more of a headache than it's worth.
 
+  o Major bugfixes (stream expiration):
+    - Expire not-yet-successful application streams in all cases if
+      they've been around longer than SocksTimeout. Right now there are
+      some cases where the stream will live forever, demanding a new
+      circuit every 15 seconds. Bugfix on 0.1.2.7-alpha; fixes bug 454;
+      reported by lodger.
+
   o Minor features (controller):
     - Add a PROTOCOLINFO controller command. Like AUTHENTICATE, it
       is valid before any authentication has been received. It tells
