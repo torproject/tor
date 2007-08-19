@@ -1,17 +1,17 @@
 #!/bin/bash
-# Writen by Mike Perry 
+# Written by Mike Perry
 # Based on instructions from Dan Singletary's ADSL Bandwidth Management HOWTO
 # http://www.faqs.org/docs/Linux-HOWTO/ADSL-Bandwidth-Management-HOWTO.html
-# This script is Public Domain. 
+# This script is Public Domain.
 
 # The following configuration works well for a ~5Mbit tor node. It requires
-# that you place your Tor traffic on a seperate IP from the rest of your
+# that you place your Tor traffic on a separate IP from the rest of your
 # traffic.
 
 # BEGIN DEVICE PARAMETERS
 
 DEV=eth0
-BOX_IP=42.42.42.42 
+BOX_IP=42.42.42.42
 TOR_IP=43.43.43.43
 
 # Average ping to most places on the net, milliseconds
@@ -26,7 +26,7 @@ RTT_LATENCY=40
 # fairness no matter what the queing priority is.
 RATE_UP=5000
 
-# RATE_UP_TOR is the minimum speed your Tor connections will have. 
+# RATE_UP_TOR is the minimum speed your Tor connections will have.
 # They will have at least this much bandwidth for upload
 RATE_UP_TOR=1500
 
@@ -47,7 +47,7 @@ AVG_PKT=900
 # The queue size should be no larger than your bandwidth-delay
 # product. This is RT latency*bandwidth/MTU/2
 
-BDP=$(expr $RTT_LATENCY \* $RATE_UP / $AVG_PKT) 
+BDP=$(expr $RTT_LATENCY \* $RATE_UP / $AVG_PKT)
 
 # Further research indicates that the BDP calculations should use
 # RTT/sqrt(n) where n is the expected number of active connections..
@@ -82,8 +82,8 @@ iptables -t mangle -X TORSHAPER-OUT 2> /dev/null > /dev/null
 ip link set imq0 down 2> /dev/null > /dev/null
 rmmod imq 2> /dev/null > /dev/null
 
-if [ "$1" = "stop" ] 
-then 
+if [ "$1" = "stop" ]
+then
         echo "Shaping removed on $DEV."
         exit
 fi
@@ -121,7 +121,8 @@ iptables -t mangle -A TORSHAPER-OUT -s $TOR_IP -j MARK --set-mark 21
 
 # High prio for everything else
 # Don't bother to use BOX_IP. Box probably has other IPs too...
-#iptables -t mangle -A TORSHAPER-OUT -s $BOX_IP -j MARK --set-mark 20 
+#iptables -t mangle -A TORSHAPER-OUT -s $BOX_IP -j MARK --set-mark 20
 iptables -t mangle -A TORSHAPER-OUT -m mark --mark 0 -j MARK --set-mark 20
 
 echo "Outbound shaping added to $DEV.  Rate for Tor upload at least: ${RATE_UP_TOR}Kbyte/sec."
+
