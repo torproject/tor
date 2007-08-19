@@ -55,6 +55,8 @@ Things we'd like to do in 0.2.0.x:
           unreachable is bunk -- it's leftover from the time when all
           servers ran 24/7. now it triggers every time a server goes
           away and then returns before the old descriptor has expired.
+      - add a --quiet commandline option that suppresses logs. useful
+        for --hashed-password and maybe others.
       o Update dir-spec with decisions made on these issues:
         o clients don't log as loudly when they receive them
         o they don't count toward the 3-strikes rule
