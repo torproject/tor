@@ -36,7 +36,7 @@ Type "tar zxf openssl-0.9.8e.tar.gz"
 
 Make openssl libraries:
 Type "cd tor-mingw/openssl-0.9.8e/"
-Type "./Configure mingw"
+Type "./Configure -no-idea -no-rc5 -no-mdc2 mingw"
 Edit Makefile and remove the "test:" and "tests:" sections.
 Type "rm -rf ./test"
 Type "cd crypto/"
