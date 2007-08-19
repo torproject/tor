@@ -118,8 +118,6 @@
 #define snprintf _snprintf
 #endif
 
-#include <event.h>
-
 #include "crypto.h"
 #include "tortls.h"
 #include "log.h"
@@ -127,6 +125,8 @@
 #include "container.h"
 #include "util.h"
 #include "torgzip.h"
+
+#include <event.h>
 
 /* These signals are defined to help control_signal_act work.
  */
