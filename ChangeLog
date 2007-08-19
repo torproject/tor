@@ -13,11 +13,6 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
     - Fix compile on platforms without getaddrinfo: bug found by Li-Hui
       Zhou.
 
-  o Major bugfixes (compilation, 0.1.2.x):
-    - Do not automatically run configure from autogen.sh. This
-      non-standard behavior tended to annoy people who have built other
-      programs.
-
   o Major bugfixes (stream expiration):
     - Expire not-yet-successful application streams in all cases if
       they've been around longer than SocksTimeout. Right now there are
@@ -67,6 +62,9 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
       onion key, then re-set our clock to be correct, we should not stop
       the onion key from getting rotated.
     - Clean up torrc sample config file.
+    - Do not automatically run configure from autogen.sh. This
+      non-standard behavior tended to annoy people who have built other
+      programs.
 
   o Minor bugfixes (on 0.2.0.x):
     - Fix a bug with AutomapHostsOnResolve that would always cause
