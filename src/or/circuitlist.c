@@ -801,7 +801,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
 {
   circuit_t *_circ;
   origin_circuit_t *best=NULL;
-  or_options_t *options = get_options();
+//  or_options_t *options = get_options();
 
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
