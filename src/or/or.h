@@ -1186,8 +1186,8 @@ typedef struct {
 /** Tor should avoid using this router for circuit-building. */
 #define ROUTER_PURPOSE_CONTROLLER 1
 /** Tor should use this router only for bridge positions in circuits. */
-#define ROUTER_PURPOSE_BRIDGE 1
-  /*XXXX020 Should both of the above be 1? -NM */
+#define ROUTER_PURPOSE_BRIDGE 2
+
   uint8_t purpose; /** What positions in a circuit is this router good for? */
 
   /* The below items are used only by authdirservers for
