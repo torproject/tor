@@ -62,6 +62,8 @@ see tor-design.pdf.
    function.  We leave optional the "Label" parameter unset. (For OAEP
    padding, see ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
 
+   [Nick, what does "we leave optional the Label parameter unset" mean? -RD]
+
    For Diffie-Hellman, we use a generator (g) of 2.  For the modulus (p), we
    use the 1024-bit safe prime from rfc2409 section 6.2 whose hex
    representation is:
