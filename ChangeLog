@@ -1,19 +1,22 @@
-Changes in version 0.2.0.5-alpha - 2007-??-??
+Changes in version 0.2.0.5-alpha - 2007-08-19
   o Removed features:
-    - Version 1 directories are no longer generated in full.  Instead,
-      authorities generate and serve "stub" v1 directories that list no
-      servers.  This will stop Tor versions 0.1.0.x and earlier from working,
-      but (for security reasons) nobody should be running those versions
-      anyway.
+    - Version 1 directories are no longer generated in full. Instead,
+      authorities generate and serve "stub" v1 directories that list
+      no servers. This will stop Tor versions 0.1.0.x and earlier from
+      working, but (for security reasons) nobody should be running those
+      versions anyway.
 
-  o Major bugfixes (compilation):
-    - Try to fix win32 compilation again: Improve checking for ipv6 types.
-    - Try to fix MSVC compilation: build correctly on platforms that
-      do not define s6_addr16 or s6_addr32.
+  o Major bugfixes (compilation, 0.2.0.x):
+    - Try to fix Win32 compilation again: improve checking for IPv6 types.
+    - Try to fix MSVC compilation: build correctly on platforms that do
+      not define s6_addr16 or s6_addr32.
     - Fix compile on platforms without getaddrinfo: bug found by Li-Hui
       Zhou.
-    - Do not automatically run configure from autogen.sh.  This non-standard
-      behavior tended to annoy people who have built other programs.
+
+  o Major bugfixes (compilation, 0.1.2.x):
+    - Do not automatically run configure from autogen.sh. This
+      non-standard behavior tended to annoy people who have built other
+      programs.
 
   o Minor features (directory servers):
     - When somebody requests a list of statuses or servers, and we have
@@ -26,39 +29,41 @@ Changes in version 0.2.0.5-alpha - 2007-??-??
   o Minor features (security):
     - Warn about unsafe ControlPort configurations.
 
-  o Minor bugfixes (directory voting):
-    - Read v3 keys from the right location.
-    - Numerous bugfixes to directory voting code.
-
   o Minor features (controller):
-    - Add a PROTOCOLINFO controller command.  Like AUTHENTICATE, it is valid
-      before any authentication has been received.  It tells a controller
-      what kind of authentication is expected, and what protocol is spoken.
-      Implements proposal 119.
-    - Implement options to allow the controller to pick a new location for
-      the cookie authentication file, and to make it group-readable.
+    - Add a PROTOCOLINFO controller command. Like AUTHENTICATE, it
+      is valid before any authentication has been received. It tells
+      a controller what kind of authentication is expected, and what
+      protocol is spoken. Implements proposal 119.
+    - New config option CookieAuthFile to choose a new location for the
+      cookie authentication file, and config option
+      CookieAuthFileGroupReadable to make it group-readable.
 
   o Minor features (unit testing):
     - Add command-line arguments to unit-test executable so that we can
-      invoke any chosen test from the command line rather than having to
-      run the whole test suite at once; and so that we can turn on logging
-      for the unit tests.
+      invoke any chosen test from the command line rather than having
+      to run the whole test suite at once; and so that we can turn on
+      logging for the unit tests.
 
-  o Minor bugfixes (other):
+  o Minor bugfixes (on 0.1.2.x):
     - If we require CookieAuthentication but we fail to write the
       cookie file, we would warn but not exit, and end up in a state
       where no controller could authenticate. Now we exit.
     - If we require CookieAuthentication, stop generating a new cookie
       every time we change any piece of our config.
-    - Fix a bug with AutomapHostsOnResolve that would always cause the second
-      request to fail.  Bug reported by Kate.  Bugfix on 0.2.0.3-alpha.
     - When loading bandwidth history, do not believe any information in
       the future.  Fixes bug 434.
     - When loading entry guard information, do not believe any information
       in the future.
-    - When we have our clock set far in the future and generate an onion key,
-      then re-set our clock to be correct, we should not stop the onion
-      key from getting rotated.
+    - When we have our clock set far in the future and generate an
+      onion key, then re-set our clock to be correct, we should not stop
+      the onion key from getting rotated.
+
+  o Minor bugfixes (on 0.2.0.x):
+    - Fix a bug with AutomapHostsOnResolve that would always cause
+      the second request to fail. Bug reported by Kate. Bugfix on
+      0.2.0.3-alpha.
+    - Read v3 directory authority keys from the right location.
+    - Numerous bugfixes to directory voting code.
 
 
 Changes in version 0.2.0.4-alpha - 2007-08-01
