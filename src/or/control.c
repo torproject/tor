@@ -3174,7 +3174,7 @@ control_event_descriptors_changed(smartlist_t *routers)
 
 /** Called whenever an address mapping on <b>from<b> from changes to <b>to</b>.
  * <b>expires</b> values less than 3 are special; see connection_edge.c.  If
- * <b>error</b> is nonempty, it is an error code describing the failure
+ * <b>error</b> is non-NULL, it is an error code describing the failure
  * mode of the mapping.
  */
 int
@@ -3187,7 +3187,7 @@ control_event_address_mapped(const char *from, const char *to, time_t expires,
   if (expires < 3 || expires == TIME_MAX)
     send_control_event_extended(EVENT_ADDRMAP, ALL_NAMES,
                                 "650 ADDRMAP %s %s NEVER@%s\r\n", from, to,
-                                error);
+                                error?error:"");
   else {
     char buf[ISO_TIME_LEN+1];
     char buf2[ISO_TIME_LEN+1];
@@ -3197,7 +3197,7 @@ control_event_address_mapped(const char *from, const char *to, time_t expires,
                                 "650 ADDRMAP %s %s \"%s\""
                                 "@%s%sEXPIRES=\"%s\"\r\n",
                                 from, to, buf,
-                                error, error?" ":"",
+                                error?error:"", error?" ":"",
                                 buf2);
   }
 

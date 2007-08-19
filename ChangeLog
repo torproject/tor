@@ -65,6 +65,8 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
     - Fix a bug with AutomapHostsOnResolve that would always cause
       the second request to fail. Bug reported by Kate. Bugfix on
       0.2.0.3-alpha.
+    - Fix a bug in ADDRMAP controller replies that would sometimes
+      try to print a NULL. Patch from tup.
     - Read v3 directory authority keys from the right location.
     - Numerous bugfixes to directory voting code.
 
