@@ -787,7 +787,7 @@ circuit_get_intro_point(const char *digest)
                                      DIGEST_LEN);
 }
 
-/** Return a circuit that is open, has specified <b>purpose</b>,
+/** Return a circuit that is open, is CIRCUIT_PURPOSE_C_GENERAL,
  * has a timestamp_dirty value of 0, is uptime/capacity/internal
  * if required, and if info is defined, does not already use info
  * as any of its hops; or NULL if no circuit fits this description.
@@ -801,6 +801,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
 {
   circuit_t *_circ;
   origin_circuit_t *best=NULL;
+  or_options_t *options = get_options();
 
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
@@ -811,9 +812,17 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
     if (CIRCUIT_IS_ORIGIN(_circ) &&
         _circ->state == CIRCUIT_STATE_OPEN &&
         !_circ->marked_for_close &&
-        _circ->purpose == purpose &&
+        _circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         !_circ->timestamp_dirty) {
       origin_circuit_t *circ = TO_ORIGIN_CIRCUIT(_circ);
+#if 0 /* XXX here while roger investigates a reported RendNodes bug */
+      if (_circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
+          options->RendNodes) {
+        routerinfo_t *exit = build_state_get_exit_router(circ->build_state);
+        if (exit && !router_nickname_is_in_list(exit, options->RendNodes))
+          continue; /* not one of our allowed RendNodes */
+      }
+#endif
       if ((!need_uptime || circ->build_state->need_uptime) &&
           (!need_capacity || circ->build_state->need_capacity) &&
           (internal == circ->build_state->is_internal)) {

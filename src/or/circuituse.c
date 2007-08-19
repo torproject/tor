@@ -836,7 +836,7 @@ circuit_launch_by_extend_info(uint8_t purpose, int onehop_tunnel,
   if ((extend_info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
       purpose != CIRCUIT_PURPOSE_TESTING && !onehop_tunnel) {
     /* see if there are appropriate circs available to cannibalize. */
-    circ = circuit_find_to_cannibalize(CIRCUIT_PURPOSE_C_GENERAL, extend_info,
+    circ = circuit_find_to_cannibalize(purpose, extend_info,
                                        need_uptime, need_capacity, internal);
     if (circ) {
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d",
