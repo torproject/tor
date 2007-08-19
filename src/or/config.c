@@ -3823,6 +3823,13 @@ parse_dir_server_line(const char *line, int validate_only)
              (int)strlen(fingerprint));
     goto err;
   }
+  if (!strcmp(fingerprint, "E623F7625FBE0C87820F11EC5F6D5377ED816294")) {
+    /* a known bad fingerprint. refuse to use it. */
+    log_warn(LD_CONFIG, "Dangerous dirserver line. To correct, erase your "
+             "torrc file (%s), or reinstall Tor and use the default torrc.",
+             get_torrc_fname());
+    goto err;
+  }
   if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
     log_warn(LD_CONFIG, "Unable to decode DirServer key digest.");
     goto err;

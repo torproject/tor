@@ -28,6 +28,8 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
 
   o Minor features (security):
     - Warn about unsafe ControlPort configurations.
+    - Refuse to start with certain directory authority keys, and
+      encourage people using them to stop.
 
   o Minor features (controller):
     - Add a PROTOCOLINFO controller command. Like AUTHENTICATE, it
