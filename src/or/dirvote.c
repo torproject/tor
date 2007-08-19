@@ -1232,8 +1232,6 @@ dirvote_clear_pending_votes(void)
     networkstatus_vote_free(pending_consensus);
     pending_consensus = NULL;
   }
-
-  log_notice(LD_DIR, "Pending votes cleared.");
 }
 
 /* XXXX020 delete me. */
