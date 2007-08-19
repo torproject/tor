@@ -21,15 +21,15 @@ Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
 Download openssl:
-http://www.openssl.org/source/openssl-0.9.8d.tar.gz
+http://www.openssl.org/source/openssl-0.9.8e.tar.gz
 
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
 Type "cd tor-mingw/"
-Type "tar zxf openssl-0.9.8d.tar.gz"
+Type "tar zxf openssl-0.9.8e.tar.gz"
 
 Make openssl libraries:
-Type "cd tor-mingw/openssl-0.9.8d/"
+Type "cd tor-mingw/openssl-0.9.8e/"
 Type "./Configure mingw"
 Edit Makefile and remove the "test:" and "tests:" sections.
 Type "rm -rf ./test"
@@ -77,7 +77,7 @@ Type "make -f win32/Makefile.gcc"
 Done.
 
 
-Stage Four: Download, extract, and patch libevent-1.1b.
+Stage Four: Download, extract, and patch libevent-1.3b.
 ------------------------------------------------------
 
 Download libevent-1.3b:
