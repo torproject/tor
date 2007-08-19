@@ -3538,7 +3538,7 @@ typedef enum version_status_t {
   VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
                        * in its series, but later recommended versions exist.
                        */
-  VS_UNRECOMMENDED=4 /**< This version is not recommended (general case) */
+  VS_UNRECOMMENDED=4 /**< This version is not recommended (general case). */
 } version_status_t;
 
 typedef struct combined_version_status_t {
