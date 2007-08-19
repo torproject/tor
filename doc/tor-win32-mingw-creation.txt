@@ -32,10 +32,10 @@ http://www.openssl.org/source/openssl-0.9.8e.tar.gz
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
 Type "cd tor-mingw/"
-Type "tar zxf openssl-0.9.8d.tar.gz"
+Type "tar zxf openssl-0.9.8e.tar.gz"
 
 Make openssl libraries:
-Type "cd tor-mingw/openssl-0.9.8d/"
+Type "cd tor-mingw/openssl-0.9.8e/"
 Type "./Configure mingw"
 Edit Makefile and remove the "test:" and "tests:" sections.
 Type "rm -rf ./test"
@@ -86,7 +86,7 @@ Done.
 Stage Four: Download, extract, and patch libevent-1.3b
 ------------------------------------------------------
 
-Download the latest libevent release:
+Download the libevent 1.3b release:
 http://www.monkey.org/~provos/libevent/
 
 Copy the libevent tarball into the "tor-mingw" directory.
