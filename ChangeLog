@@ -1,29 +1,28 @@
 Changes in version 0.1.2.17 - 2007-08-xx
-  o Removed features:
-    - We removed support for the old (v0) control protocol.  It has been
+  o Removed features (security):
+    - We removed support for the old (v0) control protocol. It has been
       deprecated since Tor 0.1.1.1-alpha, and keeping it safe and secure
       has been more of a headache than it's worth.
 
   o Minor features (controller):
-    - Add a PROTOCOLINFO controller command.  Like AUTHENTICATE, it is valid
-      before any authentication has been received.  It tells a controller
-      what kind of authentication is expected, and what protocol is spoken.
-      Implements proposal 119.
+    - Add a PROTOCOLINFO controller command. Like AUTHENTICATE, it
+      is valid before any authentication has been received. It tells
+      a controller what kind of authentication is expected, and what
+      protocol is spoken. Implements proposal 119.
 
   o Minor bugfixes (performance):
-    - Save on most routerlist_assert_ok() calls in routerlist.c,
-      thus greatly speeding up loading cached-routers from disk on
-      startup (backport from trunk).
+    - Save on most routerlist_assert_ok() calls in routerlist.c, thus
+      greatly speeding up loading cached-routers from disk on startup.
     - Disable sentinel-based debugging for buffer code: we squashed all
-      the bugs that this was supposed to detect a long time ago, and
-      now its only effect is to change our buffer sizes from nice
-      powers of two (which platform mallocs tend to like) to values
-      slightly over powers of two (which make some platform mallocs sad).
-    - If exit bandwidth ever exceeds one third of total bandwidth, then
-      use the correct formula to weight exit nodes when choosing paths.
-      (Based on patch from Mike Perry.)
+      the bugs that this was supposed to detect a long time ago, and now
+      its only effect is to change our buffer sizes from nice powers of
+      two (which platform mallocs tend to like) to values slightly over
+      powers of two (which make some platform mallocs sad).
 
   o Minor bugfixes (misc):
+    - If exit bandwidth ever exceeds one third of total bandwidth, then
+      use the correct formula to weight exit nodes when choosing paths.
+      Based on patch from Mike Perry.
     - Choose perfectly fairly among routers when choosing by bandwidth and
       weighting by fraction of bandwidth provided by exits. Previously, we
       would choose with only approximate fairness, and correct ourselves
@@ -33,8 +32,8 @@ Changes in version 0.1.2.17 - 2007-08-xx
       where no controller could authenticate. Now we exit.
     - If we require CookieAuthentication, stop generating a new cookie
       every time we change any piece of our config.
-    - Terminate multi-line control events properly. (Original patch
-      from tup.)
+    - Terminate multi-line control events properly. Original patch
+      from tup.
 
 
 Changes in version 0.1.2.16 - 2007-08-01
