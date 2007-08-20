@@ -367,7 +367,7 @@ init_keys(void)
 
   /* 1a. Read v3 directory authority key/cert information. */
   memset(v3_digest, 0, sizeof(v3_digest));
-  if (authdir_mode(options) && options->V3AuthoritativeDir) {
+  if (authdir_mode_v3(options)) {
     init_v3_authority_keys(keydir);
     if (get_my_v3_authority_cert()) {
       crypto_pk_get_digest(get_my_v3_authority_cert()->identity_key,
@@ -735,14 +735,23 @@ authdir_mode_v3(or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
+/** DOCDOC */
+int
+authdir_mode_any_nonbridge(or_options_t *options)
+{
+  return authdir_mode(options) &&
+    (options->V1AuthoritativeDir ||
+     options->V2AuthoritativeDir ||
+     options->V3AuthoritativeDir);
+}
 /** Return true iff we are an authoritative directory server that
  * is willing to receive or serve descriptors on its dirport.
  */
 int
 authdir_mode_handles_descs(or_options_t *options)
 {
-  return authdir_mode_v1(options) || authdir_mode_v2(options) ||
-         authdir_mode_bridge(options);
+  return authdir_mode_any_nonbridge(options) ||
+    authdir_mode_bridge(options);
 }
 /** Return true iff we are an authoritative directory server that
  * publishes its own network statuses.
@@ -752,10 +761,7 @@ authdir_mode_publishes_statuses(or_options_t *options)
 {
   if (authdir_mode_bridge(options))
     return 0;
-  return authdir_mode(options) &&
-    (options->V1AuthoritativeDir ||
-     options->V2AuthoritativeDir ||
-     options->V3AuthoritativeDir);
+  return authdir_mode_any_nonbridge(options);
 }
 /** Return true iff we are an authoritative directory server that
  * tests reachability of the descriptors it learns about.
@@ -763,10 +769,7 @@ authdir_mode_publishes_statuses(or_options_t *options)
 int
 authdir_mode_tests_reachability(or_options_t *options)
 {
-  return authdir_mode(options) &&
-    (options->V1AuthoritativeDir ||
-     options->V2AuthoritativeDir ||
-     options->V3AuthoritativeDir);
+  return authdir_mode_any_nonbridge(options);
 }
 /** Return true iff we believe ourselves to be a bridge authoritative
  * directory server.

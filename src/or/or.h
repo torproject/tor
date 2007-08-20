@@ -3295,6 +3295,7 @@ int authdir_mode_handles_descs(or_options_t *options);
 int authdir_mode_publishes_statuses(or_options_t *options);
 int authdir_mode_tests_reachability(or_options_t *options);
 int authdir_mode_bridge(or_options_t *options);
+int authdir_mode_any_nonbridge(or_options_t *options);
 int clique_mode(or_options_t *options);
 int server_mode(or_options_t *options);
 int advertised_server_mode(void);
