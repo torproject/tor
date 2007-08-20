@@ -704,7 +704,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
                               clear_first, &errstring)) < 0) {
     const char *msg;
     log_warn(LD_CONTROL,
-             "Controller gave us config lines that didn't validate: %s.",
+             "Controller gave us config lines that didn't validate: %s",
              errstring);
     switch (r) {
       case -1:
