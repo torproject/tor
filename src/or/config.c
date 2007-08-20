@@ -1006,7 +1006,8 @@ options_act(or_options_t *old_options)
       return -1;
 
     /* XXXX020 make this conditional? */
-    rep_hist_load_mtbf_data(time(NULL));
+    if (options->command == CMD_RUN_TOR)
+      rep_hist_load_mtbf_data(time(NULL));
   }
 
   /* Bail out at this point if we're not going to be a client or server:
