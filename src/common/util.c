@@ -534,12 +534,12 @@ eat_whitespace_eos(const char *s, const char *eos)
   return s;
 }
 
-/** Return a pointer to the first char of s that is not a space or a tab,
- * or to the terminating NUL if no such character exists. */
+/** Return a pointer to the first char of s that is not a space or a tab
+ * or a \\r, or to the terminating NUL if no such character exists. */
 const char *
 eat_whitespace_no_nl(const char *s)
 {
-  while (*s == ' ' || *s == '\t')
+  while (*s == ' ' || *s == '\t' || *s == '\r')
     ++s;
   return s;
 }
@@ -549,7 +549,7 @@ eat_whitespace_no_nl(const char *s)
 const char *
 eat_whitespace_eos_no_nl(const char *s, const char *eos)
 {
-  while (s < eos && (*s == ' ' || *s == '\t'))
+  while (s < eos && (*s == ' ' || *s == '\t' || *s == '\r'))
     ++s;
   return s;
 }
