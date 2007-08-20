@@ -752,7 +752,10 @@ authdir_mode_publishes_statuses(or_options_t *options)
 {
   if (authdir_mode_bridge(options))
     return 0;
-  return authdir_mode_v1(options) || authdir_mode_v2(options);
+  return authdir_mode(options) &&
+    (options->V1AuthoritativeDir ||
+     options->V2AuthoritativeDir ||
+     options->V3AuthoritativeDir);
 }
 /** Return true iff we are an authoritative directory server that
  * tests reachability of the descriptors it learns about.

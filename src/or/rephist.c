@@ -519,11 +519,17 @@ rep_hist_record_mtbf_data(const char *filename)
 
   smartlist_add(lines, tor_strdup("format 1\n"));
 
+  format_iso_time(time_buf, time(NULL));
+  tor_snprintf(buf, sizeof(buf), "stored-at %s\n", time_buf);
+  smartlist_add(lines, tor_strdup(buf));
+
   if (stability_last_downrated) {
     format_iso_time(time_buf, stability_last_downrated);
     tor_snprintf(buf, sizeof(buf), "last-downrated %s\n", time_buf);
     smartlist_add(lines, tor_strdup(buf));
   }
+
+
   smartlist_add(lines, tor_strdup("data\n"));
 
   for (orhist_it = digestmap_iter_init(history_map);
