@@ -15,5 +15,6 @@ Backport for 0.1.2.x once better tested:
   - coderman's constrained socket buffers patch (r10843)
   o r10964: control.c grammar conformance. could conceivably break
     old controllers that were relying on non-conformance.
+  - some subset of r11229?
 
 
