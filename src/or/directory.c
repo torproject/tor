@@ -2207,12 +2207,12 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     char *result;
     size_t len;
     struct mallinfo mi;
-    memset(&mi, 0, sizeof(mi));
     smartlist_t *lines;
+    char tmp[256];
 
+    memset(&mi, 0, sizeof(mi));
     mi = mallinfo();
     lines = smartlist_create();
-    char tmp[256];
 
     ADD_MALLINFO_LINE(arena)
     ADD_MALLINFO_LINE(ordblks)
