@@ -429,19 +429,17 @@ init_keys(void)
       log_err(LD_GENERAL,"Error adding own fingerprint to approved set");
       return -1;
     }
-    if (!mydesc) {
-      log_err(LD_GENERAL,"Error initializing descriptor.");
-      return -1;
-    }
-    ri = router_parse_entry_from_string(mydesc, NULL, 1);
-    if (!ri) {
-      log_err(LD_GENERAL,"Generated a routerinfo we couldn't parse.");
-      return -1;
-    }
-    if (dirserv_add_descriptor(ri, &m) < 0) {
-      log_err(LD_GENERAL,"Unable to add own descriptor to directory: %s",
-              m?m:"<unknown error>");
-      return -1;
+    if (mydesc) {
+      ri = router_parse_entry_from_string(mydesc, NULL, 1);
+      if (!ri) {
+        log_err(LD_GENERAL,"Generated a routerinfo we couldn't parse.");
+        return -1;
+      }
+      if (dirserv_add_descriptor(ri, &m) < 0) {
+        log_err(LD_GENERAL,"Unable to add own descriptor to directory: %s",
+                m?m:"<unknown error>");
+        return -1;
+      }
     }
   }
 
