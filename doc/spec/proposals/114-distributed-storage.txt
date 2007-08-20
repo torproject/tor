@@ -186,11 +186,11 @@ Design:
 
     Every onion router that has its directory port open can decide whether it
     wants to store and serve hidden service descriptors by setting a new config
-    option "HSDir" 0|1 to 1. An onion router with this config option being set
-    includes the flag "hidden-service-dir" in its router descriptors that it
-    sends to directory authorities.
+    option "HidServDirectoryV2" 0|1 to 1. An onion router with this config
+    option being set includes the flag "hidden-service-dir" in its router
+    descriptors that it sends to directory authorities.
 
-    - tor.1.in: Added the config option HSDir.
+    - tor.1.in: Added the config option HidServDirectoryV2.
     - dir-spec.txt, section 2.1: Added the flag hidden-service-dir to the
       router descriptor format.
     - rend-spec.txt, section 3.1: Added process of configuring a hidden service
@@ -198,8 +198,8 @@ Design:
 
     - router.c: Changed router_dump_router_to_string() to include the
       hidden-service-dir flag in a router descriptor if configured.
-    - or.h: Added HSDir to or_options_t.
-    - config.c: Added config option HSDir.
+    - or.h: Added HidServDirectoryV2 to or_options_t.
+    - config.c: Added config option HidServDirectoryV2.
 
       [July 9: Specified and running.]
       
@@ -684,8 +684,8 @@ Specification:
 
   tor.1.in
 
-    Added the config options HSDir (/5/), PublishV2HidServDescriptors (/10/),
-    and FetchV2HidServDescriptors (/13/).
+    Added the config options HidServDirectoryV2 (/5/),
+    PublishV2HidServDescriptors (/10/), and FetchV2HidServDescriptors (/13/).
 
     Added the files hostname2 and secret_cookie (/10/).
 
@@ -794,8 +794,8 @@ Implementation:
 
   config.c
 
-    Added config options FetchV2HidServDescriptors (/13/), HSDir (/5/), and
-    PublishV2HidServDescriptors (/10/).
+    Added config options FetchV2HidServDescriptors (/13/),
+    HidServDirectoryV2 (/5/), and PublishV2HidServDescriptors (/10/).
 
   connection_edge.c
 
@@ -848,7 +848,7 @@ Implementation:
 
     Added hs_dirs member to routerlist_t (/1/).
 
-    Added FetchV2HidServDescriptors (/13/), HSDir (/5/), and
+    Added FetchV2HidServDescriptors (/13/), HidServDirectoryV2 (/5/), and
     PublishV2HidServDescriptors (/10/) to or_options_t.
 
     Added 7 new members to rend_service_descriptor_t to store v2-specific
