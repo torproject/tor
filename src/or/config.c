@@ -1006,12 +1006,7 @@ options_act(or_options_t *old_options)
       return -1;
 
     /* XXXX020 make this conditional? */
-    len = strlen(options->DataDirectory)+32;
-    fn = tor_malloc(len);
-    tor_snprintf(fn, len, "%s"PATH_SEPARATOR"router-stability",
-                 options->DataDirectory);
-    rep_hist_load_mtbf_data(fn, time(NULL));
-    tor_free(fn);
+    rep_hist_load_mtbf_data(time(NULL));
   }
 
   /* Bail out at this point if we're not going to be a client or server:

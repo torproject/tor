@@ -845,8 +845,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_add_entropy = 0;
   static time_t time_to_write_hs_statistics = 0;
   static time_t time_to_downrate_stability = 0;
-  /* XXXX020 this is way too low. */
-#define SAVE_STABILITY_INTERVAL (10*60)
+#define SAVE_STABILITY_INTERVAL (30*60)
   static time_t time_to_save_stability = 0;
   or_options_t *options = get_options();
   int i;
@@ -942,14 +941,9 @@ run_scheduled_events(time_t now)
     if (!time_to_save_stability)
       time_to_save_stability = now + SAVE_STABILITY_INTERVAL;
     if (time_to_save_stability < now) {
-      size_t len = strlen(options->DataDirectory)+32;
-      char *fn = tor_malloc(len);
-      tor_snprintf(fn, len, "%s"PATH_SEPARATOR"router-stability",
-                   options->DataDirectory);
-      if (rep_hist_record_mtbf_data(fn)<0) {
-        log_warn(LD_GENERAL, "Couldn't store mtbf data in %s", fn);
+      if (rep_hist_record_mtbf_data()<0) {
+        log_warn(LD_GENERAL, "Couldn't store mtbf data.");
       }
-      tor_free(fn);
 
       time_to_save_stability = now + SAVE_STABILITY_INTERVAL;
     }
@@ -1851,6 +1845,8 @@ tor_cleanup(void)
       accounting_record_bandwidth_usage(time(NULL), get_or_state());
     or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */
     or_state_save(time(NULL));
+    if (authdir_mode_tests_reachability(options))
+      rep_hist_record_mtbf_data();
   }
 #ifdef USE_DMALLOC
   dmalloc_log_stats();

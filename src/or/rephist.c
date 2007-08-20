@@ -503,8 +503,19 @@ rep_history_clean(time_t before)
 }
 
 /** DOCDOC */
+static char *
+get_mtbf_filename(void)
+{
+  const char *datadir = get_options()->DataDirectory;
+  size_t len = strlen(datadir)+32;
+  char *fn = tor_malloc(len);
+  tor_snprintf(fn, len, "%s"PATH_SEPARATOR"router-stability", datadir);
+  return fn;
+}
+
+/** DOCDOC */
 int
-rep_hist_record_mtbf_data(const char *filename)
+rep_hist_record_mtbf_data(void)
 {
   char buf[128];
   char time_buf[ISO_TIME_LEN+1];
@@ -528,7 +539,6 @@ rep_hist_record_mtbf_data(const char *filename)
     tor_snprintf(buf, sizeof(buf), "last-downrated %s\n", time_buf);
     smartlist_add(lines, tor_strdup(buf));
   }
-
 
   smartlist_add(lines, tor_strdup("data\n"));
 
@@ -557,10 +567,12 @@ rep_hist_record_mtbf_data(const char *filename)
     size_t sz;
     /* XXXX This isn't terribly efficient; line-at-a-time would be
      * way faster. */
+    char *filename = get_mtbf_filename();
     char *data = smartlist_join_strings(lines, "", 0, &sz);
     int r = write_bytes_to_file(filename, data, sz, 0);
 
     tor_free(data);
+    tor_free(filename);
     SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
     smartlist_free(lines);
     return r;
@@ -569,16 +581,18 @@ rep_hist_record_mtbf_data(const char *filename)
 
 /** DOCDOC */
 int
-rep_hist_load_mtbf_data(const char *filename, time_t now)
+rep_hist_load_mtbf_data(time_t now)
 {
   /* XXXX won't handle being called while history is already populated. */
   smartlist_t *lines;
   const char *line = NULL;
   int r=0, i;
-  time_t last_downrated = 0;
+  time_t last_downrated = 0, stored_at = 0;
 
   {
+    char *filename = get_mtbf_filename();
     char *d = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+    tor_free(filename);
     if (!d)
       return -1;
     lines = smartlist_create();
@@ -599,9 +613,20 @@ rep_hist_load_mtbf_data(const char *filename, time_t now)
         log_warn(LD_GENERAL,"Couldn't parse downrate time in mtbf "
                  "history file.");
     }
-    if (last_downrated > now)
-      last_downrated = now;
+    if (!strcmpstart(line, "stored-at ")) {
+      if (parse_iso_time(line+strlen("stored-at "), &stored_at)<0)
+        log_warn(LD_GENERAL,"Couldn't parse stored time in mtbf "
+                 "history file.");
+    }
   }
+  if (last_downrated > now)
+    last_downrated = now;
+
+  if (!stored_at) {
+    log_warn(LD_GENERAL, "No stored time recorded.");
+    goto err;
+  }
+
   if (line && !strcmp(line, "data"))
     ++i;
 
@@ -636,15 +661,19 @@ rep_hist_load_mtbf_data(const char *filename, time_t now)
     hist = get_or_history(digest);
     if (!hist)
       continue;
-    if (start_of_run > now)
-      start_of_run = now;
-    hist->start_of_run = start_of_run;
+
+    if (!start_of_run || start_of_run > stored_at) {
+      hist->start_of_run = 0;
+    } else {
+      long run_length = stored_at - start_of_run;
+      hist->start_of_run = now - run_length;
+    }
+
     hist->weighted_run_length = wrl;
     hist->total_run_weights = trw;
-    /* Subtract time in which */
   }
   if (strcmp(line, "."))
-    log_warn(LD_GENERAL, "Truncated MTBF file %s", escaped(filename));
+    log_warn(LD_GENERAL, "Truncated MTBF file.");
 
   stability_last_downrated = last_downrated;
 
