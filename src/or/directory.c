@@ -6,7 +6,7 @@ const char directory_c_id[] =
   "$Id$";
 
 #include "or.h"
-#if defined(EXPORTMEMINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
+#if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #include <malloc.h>
 #endif
 
@@ -2196,7 +2196,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
-#if defined(EXPORTMEMINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
+#if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #define ADD_MALLINFO_LINE(x) do {                               \
     tor_snprintf(tmp, sizeof(tmp), "%s %d\n", #x, mi.x);        \
     smartlist_add(lines, tor_strdup(tmp));                      \

@@ -16,7 +16,7 @@ Changes in version 0.2.0.6-alpha - 2007-??-??
       a descriptor immediately, e.g. because they don't know their
       address.
   o Minor features (misc):
-    - Optionally (if built with -DEXPORTMEMINFO) export the output
+    - Optionally (if built with -DEXPORTMALLINFO) export the output
       of mallinfo via http, as tor/mallinfo.txt.  Only accessible
       from localhost.
 
