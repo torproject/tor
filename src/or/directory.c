@@ -2193,30 +2193,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
-  if (!strcmp(url,"/tor/dir-all-weaselhack") &&
-      (conn->_base.addr == 0x7f000001ul) &&
-      authdir_mode_v2(options) &&
-      !authdir_mode_bridge(options)) {
-    /* until weasel rewrites his scripts at noreply */
-    char *new_directory=NULL;
-
-    if (dirserv_dump_directory_to_string(&new_directory,
-                                         get_identity_key(), 1)) {
-      log_warn(LD_BUG, "Error creating full v1 directory.");
-      tor_free(new_directory);
-      write_http_status_line(conn, 503, "Directory unavailable");
-      goto done;
-    }
-
-    dlen = strlen(new_directory);
-
-    write_http_response_header(conn, dlen, 0, 0);
-
-    connection_write_to_buf(new_directory, dlen, TO_CONN(conn));
-    tor_free(new_directory);
-    goto done;
-  }
-
   /* we didn't recognize the url */
   write_http_status_line(conn, 404, "Not found");
 
