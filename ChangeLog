@@ -1,8 +1,12 @@
 Changes in version 0.2.0.6-alpha - 2007-??-??
 
   o Minor bugfixes (bridges):
-    - Do not intermix bridge routers with controller-added routers.
+    - Do not intermix bridge routers with controller-added routers. (Bugfix
+      on 0.2.0.x)
 
+  o Minor bugfixes (network):
+    - Do not fail with an assert when accept() returns an unexpected address
+      family.  Addresses but does not wholly fix bug 483. (Bugfix on 0.2.0.x)
 
 Changes in version 0.2.0.5-alpha - 2007-08-19
   o Removed features:
