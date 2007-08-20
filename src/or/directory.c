@@ -2233,6 +2233,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     write_http_response_header(conn, len, 0, 0);
     connection_write_to_buf(result, len, TO_CONN(conn));
     tor_free(result);
+    goto done;
   }
 #endif
 
