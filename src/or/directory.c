@@ -6,6 +6,9 @@ const char directory_c_id[] =
   "$Id$";
 
 #include "or.h"
+#if defined(EXPORTMEMINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
+#include <malloc.h>
+#endif
 
 /**
  * \file directory.c
@@ -2192,6 +2195,46 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     connection_write_to_buf(robots, len, TO_CONN(conn));
     goto done;
   }
+
+#if defined(EXPORTMEMINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
+#define ADD_MALLINFO_LINE(x) do {                               \
+    tor_snprintf(tmp, sizeof(tmp), "%s %d\n", #x, mi.x);         \
+    smartlist_add(lines, tor_strdup(tmp));                      \
+  } while(0);
+
+  if (!strcmp(url,"/tor/mallinfo.txt") &&
+      (conn->_base.addr == 0x7f000001ul)) {
+    char *result;
+    size_t len;
+    struct mallinfo mi;
+    memset(&mi, 0, sizeof(mi));
+    smartlist_t *lines;
+
+    mi = mallinfo();
+    lines = smartlist_create();
+    char tmp[256];
+
+    ADD_MALLINFO_LINE(arena)
+    ADD_MALLINFO_LINE(ordblks)
+    ADD_MALLINFO_LINE(smblks)
+    ADD_MALLINFO_LINE(hblks)
+    ADD_MALLINFO_LINE(hblkhd)
+    ADD_MALLINFO_LINE(usmblks)
+    ADD_MALLINFO_LINE(fsmblks)
+    ADD_MALLINFO_LINE(uordblks)
+    ADD_MALLINFO_LINE(fordblks)
+    ADD_MALLINFO_LINE(keepcost)
+
+    result = smartlist_join_strings(lines, "", 0, NULL);
+    SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+    smartlist_free(lines);
+
+    len = strlen(result);
+    write_http_response_header(conn, len, 0, 0);
+    connection_write_to_buf(result, len, TO_CONN(conn));
+    tor_free(result);
+  }
+#endif
 
   /* we didn't recognize the url */
   write_http_status_line(conn, 404, "Not found");
