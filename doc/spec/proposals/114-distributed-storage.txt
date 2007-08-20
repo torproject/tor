@@ -15,6 +15,7 @@ Change history:
                and implementation for upcoming GSoC mid-term evaluation
   11-Aug-2007  Updated implementation statuses, included non-consecutive
                replication to descriptor format
+  20-Aug-2007  Renamed config option HSDir as HidServDirectoryV2
 
 Overview:
 
