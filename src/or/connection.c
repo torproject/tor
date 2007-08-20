@@ -931,7 +931,15 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(news, (int)options->ConstrainedSockSize);
 
-  tor_assert(((struct sockaddr*)addrbuf)->sa_family == conn->socket_family);
+  if (((struct sockaddr*)addrbuf)->sa_family != conn->socket_family) {
+    log_warn(LD_BUG, "A listener connection returned a socket with a "
+             "mismatched family. %s for addr_family %d gave us a socket "
+             "with address family %d.", conn_type_to_string(conn->type),
+             (int)conn->socket_family,
+             (int)((struct sockaddr*)addrbuf)->sa_family);
+    tor_close_socket(news);
+    return 0;
+  }
 
   if (conn->socket_family == AF_INET) {
     if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_INFO)<0) {
