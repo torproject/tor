@@ -2198,9 +2198,9 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
 #if defined(EXPORTMEMINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #define ADD_MALLINFO_LINE(x) do {                               \
-    tor_snprintf(tmp, sizeof(tmp), "%s %d\n", #x, mi.x);         \
+    tor_snprintf(tmp, sizeof(tmp), "%s %d\n", #x, mi.x);        \
     smartlist_add(lines, tor_strdup(tmp));                      \
-  } while(0);
+  }while(0);
 
   if (!strcmp(url,"/tor/mallinfo.txt") &&
       (conn->_base.addr == 0x7f000001ul)) {
