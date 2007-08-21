@@ -937,11 +937,21 @@ $Id$
    "Running" -- A router is 'Running' if the authority managed to connect to
    it successfully within the last 30 minutes.
 
+
    "Stable" -- A router is 'Stable' if it is active, and either its
-   uptime is at least the median uptime for known active routers or
-   its uptime is at least 30 days. Routers are never called stable if
+   Weighted MTBF is at least the median for known active routers or
+   its Weighted MTBF is at least 10 days. Routers are never called Stable if
    they are running a version of Tor known to drop circuits stupidly.
    (0.1.1.10-alpha through 0.1.1.16-rc are stupid this way.)
+
+        To calculate weighted MTBF, compute the weighted mean of the lengths
+        of all intervals when the router was observed to be up, weighting
+        intervals by $\alpha^n$, where $n$ is the amount of time that has
+        passed since the interval ended, and $\alpha$ is chosen so that
+        measurements over approximately one month old no longer influence the
+        weighted MTBF much.
+
+        [XXXX what happens when we have less than 4 days of MTBF info.]
 
    "Fast" -- A router is 'Fast' if it is active, and its bandwidth is
    either in the top 7/8ths for known active routers or at least 100KB/s.
