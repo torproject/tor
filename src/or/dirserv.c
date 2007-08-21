@@ -1500,6 +1500,9 @@ should_generate_v2_networkstatus(void)
  * network using allegedly high-uptime nodes, displacing all the
  * current guards. */
 #define UPTIME_TO_GUARANTEE_STABLE (3600*24*30)
+/* If a router's MTBF is at least this value, then it is always stable.
+ * See above. */
+#define MTBF_TO_GUARANTEE_STABLE (60*60*24*10)
 /** Similarly, we protect sufficiently fast nodes from being pushed
  * out of the set of Fast nodes. */
 #define BANDWIDTH_TO_GUARANTEE_FAST (100*1024)
@@ -1511,6 +1514,8 @@ should_generate_v2_networkstatus(void)
  * dirserv_compute_performance_thresholds, and used by
  * generate_v2_networkstatus */
 static uint32_t stable_uptime = 0; /* start at a safe value */
+static double stable_mtbf = 0.0;
+static int enough_mtbf_info = 0;
 static uint32_t fast_bandwidth = 0;
 static uint32_t guard_bandwidth_including_exits = 0;
 static uint32_t guard_bandwidth_excluding_exits = 0;
@@ -1539,10 +1544,20 @@ dirserv_thinks_router_is_unreliable(time_t now,
                                     int need_uptime, int need_capacity)
 {
   if (need_uptime) {
-    int uptime = real_uptime(router, now);
-    if ((unsigned)uptime < stable_uptime &&
-        (unsigned)uptime < UPTIME_TO_GUARANTEE_STABLE)
-      return 1;
+    if (!enough_mtbf_info) {
+      /* XXXX Once most authorities are on v3, we should change the rule from
+       * "use uptime if we don't have mtbf data" to "don't advertise Stable on
+       * v3 if we don't have enough mtbf data." */
+      int uptime = real_uptime(router, now);
+      if ((unsigned)uptime < stable_uptime &&
+          (unsigned)uptime < UPTIME_TO_GUARANTEE_STABLE)
+        return 1;
+    } else {
+      double mtbf =
+        rep_hist_get_stability(router->cache_info.identity_digest, now);
+      if (mtbf < stable_mtbf && mtbf < MTBF_TO_GUARANTEE_STABLE)
+        return 1;
+    }
   }
   if (need_capacity) {
     uint32_t bw = router_get_advertised_bandwidth(router);
@@ -1563,6 +1578,17 @@ _compare_uint32(const void **a, const void **b)
   return 0;
 }
 
+/** Helper: returns a tristate based on comparing **(double**)<b>a</b>
+ * to **(double**)<b>b</b>. */
+static int
+_compare_double(const void **a, const void **b)
+{
+  double first = **(double **)a, second = **(double **)b;
+  if (first < second) return -1;
+  if (first > second) return 1;
+  return 0;
+}
+
 /** Look through the routerlist, and assign the median uptime of running valid
  * servers to stable_uptime, and the relative bandwidth capacities to
  * fast_bandwidth and guard_bandwidth.  Set total_bandwidth to the total
@@ -1572,7 +1598,7 @@ _compare_uint32(const void **a, const void **b)
 static void
 dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
-  smartlist_t *uptimes, *bandwidths, *bandwidths_excluding_exits;
+  smartlist_t *uptimes, *mtbfs, *bandwidths, *bandwidths_excluding_exits;
   time_t now = time(NULL);
 
   /* initialize these all here, in case there are no routers */
@@ -1585,16 +1611,21 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   total_exit_bandwidth = 0;
 
   uptimes = smartlist_create();
+  mtbfs = smartlist_create();
   bandwidths = smartlist_create();
   bandwidths_excluding_exits = smartlist_create();
 
+  /* XXXX020 we should just use arrays and qsort.  */
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (router_is_active(ri, now)) {
       uint32_t *up = tor_malloc(sizeof(uint32_t));
       uint32_t *bw = tor_malloc(sizeof(uint32_t));
+      uint32_t *mtbf = tor_malloc(sizeof(double));
       ri->is_exit = exit_policy_is_general_exit(ri->exit_policy);
       *up = (uint32_t) real_uptime(ri, now);
       smartlist_add(uptimes, up);
+      *mtbf = rep_hist_get_stability(ri->cache_info.identity_digest, now);
+      smartlist_add(mtbfs, mtbf);
       *bw = router_get_advertised_bandwidth(ri);
       total_bandwidth += *bw;
       if (ri->is_exit && !ri->is_bad_exit) {
@@ -1609,12 +1640,18 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   });
 
   smartlist_sort(uptimes, _compare_uint32);
+  smartlist_sort(mtbfs, _compare_double);
   smartlist_sort(bandwidths, _compare_uint32);
   smartlist_sort(bandwidths_excluding_exits, _compare_uint32);
 
   if (smartlist_len(uptimes))
     stable_uptime = *(uint32_t*)smartlist_get(uptimes,
                                               smartlist_len(uptimes)/2);
+
+  if (smartlist_len(mtbfs))
+    stable_mtbf = *(double*)smartlist_get(mtbfs,
+                                          smartlist_len(mtbfs)/2);
+  enough_mtbf_info = rep_hist_have_measured_enough_stability();
 
   if (smartlist_len(bandwidths)) {
     fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
@@ -1640,9 +1677,11 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       (unsigned long)guard_bandwidth_excluding_exits);
 
   SMARTLIST_FOREACH(uptimes, uint32_t *, up, tor_free(up));
+  SMARTLIST_FOREACH(mtbfs, double *, mtbf, tor_free(mtbf));
   SMARTLIST_FOREACH(bandwidths, uint32_t *, bw, tor_free(bw));
   SMARTLIST_FOREACH(bandwidths_excluding_exits, uint32_t *, bw, tor_free(bw));
   smartlist_free(uptimes);
+  smartlist_free(mtbfs);
   smartlist_free(bandwidths);
   smartlist_free(bandwidths_excluding_exits);
 }

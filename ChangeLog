@@ -1,4 +1,10 @@
 Changes in version 0.2.0.6-alpha - 2007-??-??
+  o Major features (directory authorities):
+    - Track authorities by weighted mean-times-between-failures.  When we
+      have 4 or more days of data, use measured MTBF rather than declared
+      uptime to decide whether to call a router Stable.  Implements proposal
+      108.
+
   o Major bugfixes:
     - Handle unexpected whitespace better in malformed descriptors. Bug
       found using Benedikt Boss's new Tor fuzzer! Bugfix on 0.2.0.x.

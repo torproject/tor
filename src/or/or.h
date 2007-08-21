@@ -3124,6 +3124,7 @@ int rep_hist_load_mtbf_data(time_t now);
 
 time_t rep_hist_downrate_old_runs(time_t now);
 double rep_hist_get_stability(const char *id, time_t when);
+int rep_hist_have_measured_enough_stability(void);
 
 void rep_hist_note_used_port(uint16_t port, time_t now);
 smartlist_t *rep_hist_get_predicted_ports(time_t now);

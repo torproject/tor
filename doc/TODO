@@ -88,8 +88,7 @@ Things we'd like to do in 0.2.0.x:
           - Download as needed.
           o Serve list as needed.
           o Avoid double-checking signatures every time we get a vote.
-          - Warn about expired stuff.
-          - Fix all XXXX020s in vote code
+
         . Code to generate consensus from a list of votes
           * Detect whether votes are really all for the same period.
         . Push/pull documents as appropriate.
@@ -100,23 +99,34 @@ Things we'd like to do in 0.2.0.x:
         o Have clients know which authorities are v3 authorities, and what
           their keys are.
           - While we're at it, let v3 authorities have fqdns lines.
+        - Fix all XXXX020s in vote code
+      - Validate information properly.
+        - Warn if we get a vote with different authorities than we know.
+        - Don't count votes with a different valid-after when generating
+          the same consensus.
+        - Dump certificates with the wrong time.  Or just warn?
+        - Warn authority ops when their certs are nearly invalid.
+        - When checking a consensus, make sure that its times are plausible.
+        - Add a function that will eventually tell us about our clock skew.
+          For now, just require that authorities not be skewed.
       - Start caching consensus documents once authorities make them
       - Start downloading and using consensus documents once caches serve them
     . 104: Long and Short Router Descriptors
       o Merge proposal
       - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol
-    . 108: Base "Stable" Flag on Mean Time Between Failures
+    o 108: Base "Stable" Flag on Mean Time Between Failures
       o Track mtbf in rephist.c
       o Do not delete old stability information if we're an authority.
       o Make sure authorities call up/down functions as appropriate.
       o Record mtbf between invocations
-      - Base Stable on mtbf.
-      - Test mtbf logic.
+      o Base Stable on mtbf.
+      o Test mtbf logic.
     - 113: Simplifying directory authority administration
     - 110: prevent infinite-length circuits (phase one)
       - servers should recognize relay_extend cells and pass them
         on just like relay cells
+
   - Refactoring:
     - Make resolves no longer use edge_connection_t unless they are actually
       _on_ a socks connection: have edge_connection_t and (say)

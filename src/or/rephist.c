@@ -20,9 +20,18 @@ static void hs_usage_init(void);
 uint64_t rephist_total_alloc=0;
 uint32_t rephist_total_num=0;
 
+/** If the total weighted run count of all runs for a router ever falls
+ * below this amount, the router can be treated as having 0 MTBF. */
 #define STABILITY_EPSILON   0.0001
-#define STABILITY_ALPHA     0.9
+/** Value by which to discount all old intervals for MTBF purposses.  This
+ * is compounded every STABILITY_INTERVAL. */
+#define STABILITY_ALPHA     0.95
+/** Interval at which to discount all old intervals for MTBF purposes. */
 #define STABILITY_INTERVAL  (12*60*60)
+/* (This combination of ALPHA, INTERVAL, and EPSILON makes it so that an
+ * interval that just ended counts twice as much as one that ended a week ago,
+ * 20X as much as one that ended a month ago, and routers that have had no
+ * uptime data for about half a year will get forgotten.) */
 
 /** History of an OR-\>OR link. */
 typedef struct link_history_t {
@@ -56,17 +65,29 @@ typedef struct or_history_t {
   time_t up_since;
   /** If nonzero, we have been unable to connect since this time. */
   time_t down_since;
-  /** DOCDOC */
+
+
+  /* === For MTBF tracking: */
+  /** Weighted sum total of all times that this router has been online.
+   */
   unsigned long weighted_run_length;
+  /** If the router is now online (according to stability-checking rules),
+   * when did it come online? */
   time_t start_of_run;
+  /** Sum of weights for runs in weighted_run_length. */
   double total_run_weights;
+
   /** Map from hex OR2 identity digest to a link_history_t for the link
    * from this OR to OR2. */
   digestmap_t *link_history_map;
 } or_history_t;
 
-/** DOCDOC */
+/** When did we last multiply all routers' weighted_run_length and
+ * total_run_weights by STABILITY_ALPHA? */
 static time_t stability_last_downrated = 0;
+
+/**  */
+static time_t started_tracking_stability = 0;
 
 /** Map from hex OR identity digest to or_history_t. */
 static digestmap_t *history_map = NULL;
@@ -163,7 +184,9 @@ rep_hist_init(void)
   hs_usage_init();
 }
 
-/** DOCDOC */
+/** Helper: note that we are no longer connected to the router with history
+ * <b>hist</b>.  If <b>failed</b>, the connection failed; otherwise, it was
+ * closed correctly. */
 static void
 mark_or_down(or_history_t *hist, time_t when, int failed)
 {
@@ -176,7 +199,8 @@ mark_or_down(or_history_t *hist, time_t when, int failed)
   }
 }
 
-/** DOCDOC */
+/** Helper: note that we are connected to the router with history
+ * <b>hist</b>. */
 static void
 mark_or_up(or_history_t *hist, time_t when)
 {
@@ -259,6 +283,8 @@ void
 rep_hist_note_router_reachable(const char *id, time_t when)
 {
   or_history_t *hist = get_or_history(id);
+  if (!started_tracking_stability)
+    started_tracking_stability = time(NULL);
   if (hist && !hist->start_of_run) {
     hist->start_of_run = when;
   }
@@ -270,6 +296,8 @@ void
 rep_hist_note_router_unreachable(const char *id, time_t when)
 {
   or_history_t *hist = get_or_history(id);
+  if (!started_tracking_stability)
+    started_tracking_stability = time(NULL);
   if (hist && hist->start_of_run) {
     /*XXXX020 treat failure specially? */
     long run_length = when - hist->start_of_run;
@@ -279,7 +307,8 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
   }
 }
 
-/**DOCDOC*/
+/** Helper: Discount all old MTBF data, if it is time to do so.  Return
+ * the time at which we should next discount MTBF data. */
 time_t
 rep_hist_downrate_old_runs(time_t now)
 {
@@ -296,11 +325,13 @@ rep_hist_downrate_old_runs(time_t now)
   if (stability_last_downrated + STABILITY_INTERVAL > now)
     return stability_last_downrated + STABILITY_INTERVAL;
 
+  /* Okay, we should downrate the data.  By how much? */
   while (stability_last_downrated + STABILITY_INTERVAL < now) {
     stability_last_downrated += STABILITY_INTERVAL;
     alpha *= STABILITY_ALPHA;
   }
 
+  /* Multiply every w_r_l, t_r_w pair by alpha. */
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
        orhist_it = digestmap_iter_next(history_map,orhist_it)) {
@@ -315,7 +346,7 @@ rep_hist_downrate_old_runs(time_t now)
   return stability_last_downrated + STABILITY_INTERVAL;
 }
 
-/** DOCDOC */
+/** Helper: Return the weighted MTBF of the router with history <b>hist</b>. */
 static double
 get_stability(or_history_t *hist, time_t when)
 {
@@ -323,16 +354,21 @@ get_stability(or_history_t *hist, time_t when)
   double total_weights = hist->total_run_weights;
 
   if (hist->start_of_run) {
+    /* We're currently in a run.  Let total and total_weights hold the values
+     * they would hold if the current run were to end now. */
     total += (when-hist->start_of_run);
     total_weights += 1.0;
   }
-  if (total_weights < STABILITY_EPSILON)
+  if (total_weights < STABILITY_EPSILON) {
+    /* Round down to zero, and avoid divide-by-zero. */
     return 0.0;
+  }
 
   return total / total_weights;
 }
 
-/**DOCDOC*/
+/** Return an estimated MTBF for the router whose identity digest is
+ * <b>id</b>. Return 0 if the router is unknown. */
 double
 rep_hist_get_stability(const char *id, time_t when)
 {
@@ -341,6 +377,16 @@ rep_hist_get_stability(const char *id, time_t when)
     return 0.0;
 
   return get_stability(hist, when);
+}
+
+/** Return true if we've been measuring MTBFs for long enough to
+ * prounounce on Stability. */
+int
+rep_hist_have_measured_enough_stability(void)
+{
+  /* XXXX020 This doesn't do so well when we change our opinion
+   * as to whether we're tracking router stability. */
+  return started_tracking_stability < time(NULL) - 4*60*60;
 }
 
 /** Remember that we successfully extended from the OR with identity
@@ -502,7 +548,8 @@ rep_history_clean(time_t before)
   }
 }
 
-/** DOCDOC */
+/** Return a newly allocated string holding the filename in which we store
+ * MTBF information. */
 static char *
 get_mtbf_filename(void)
 {
@@ -513,7 +560,7 @@ get_mtbf_filename(void)
   return fn;
 }
 
-/** DOCDOC */
+/** Write MTBF data to disk.  Returns 0 on success, negative on failure. */
 int
 rep_hist_record_mtbf_data(void)
 {
@@ -526,6 +573,16 @@ rep_hist_record_mtbf_data(void)
   void *or_history_p;
   or_history_t *hist;
 
+  /* File format is:
+   *   FormatLine *KeywordLine Data
+   *
+   *   FormatLine = "format 1" NL
+   *   KeywordLine = Keyword SP Arguments NL
+   *   Data = "data" NL *RouterMTBFLine "." NL
+   *   RouterMTBFLine = Fingerprint SP WeightedRunLen SP
+   *           TotalRunWeights [SP S=StartRunTime] NL
+   */
+
   lines = smartlist_create();
 
   smartlist_add(lines, tor_strdup("format 1\n"));
@@ -534,6 +591,11 @@ rep_hist_record_mtbf_data(void)
   tor_snprintf(buf, sizeof(buf), "stored-at %s\n", time_buf);
   smartlist_add(lines, tor_strdup(buf));
 
+  if (started_tracking_stability) {
+    format_iso_time(time_buf, started_tracking_stability);
+    tor_snprintf(buf, sizeof(buf), "tracked-since %s\n", time_buf);
+    smartlist_add(lines, tor_strdup(buf));
+  }
   if (stability_last_downrated) {
     format_iso_time(time_buf, stability_last_downrated);
     tor_snprintf(buf, sizeof(buf), "last-downrated %s\n", time_buf);
@@ -579,7 +641,8 @@ rep_hist_record_mtbf_data(void)
   }
 }
 
-/** DOCDOC */
+/** Load MTBF data from disk.  Returns 0 on success or recoverable error, -1
+ * on failure. */
 int
 rep_hist_load_mtbf_data(time_t now)
 {
@@ -587,7 +650,8 @@ rep_hist_load_mtbf_data(time_t now)
   smartlist_t *lines;
   const char *line = NULL;
   int r=0, i;
-  time_t last_downrated = 0, stored_at = 0;
+  time_t last_downrated = 0, stored_at = 0, tracked_since = 0;
+  time_t latest_possible_start = now;
 
   {
     char *filename = get_mtbf_filename();
@@ -618,9 +682,16 @@ rep_hist_load_mtbf_data(time_t now)
         log_warn(LD_GENERAL,"Couldn't parse stored time in mtbf "
                  "history file.");
     }
+    if (!strcmpstart(line, "tracked-since ")) {
+      if (parse_iso_time(line+strlen("tracked-since "), &tracked_since)<0)
+        log_warn(LD_GENERAL,"Couldn't parse started-tracking time in mtbf "
+                 "history file.");
+    }
   }
   if (last_downrated > now)
     last_downrated = now;
+  if (tracked_since > now)
+    tracked_since = now;
 
   if (!stored_at) {
     log_warn(LD_GENERAL, "No stored time recorded.");
@@ -635,7 +706,7 @@ rep_hist_load_mtbf_data(time_t now)
     char hexbuf[HEX_DIGEST_LEN+1];
     char timebuf[ISO_TIME_LEN+1];
     time_t start_of_run = 0;
-    unsigned long wrl;
+    long wrl;
     double trw;
     int n;
     or_history_t *hist;
@@ -643,7 +714,7 @@ rep_hist_load_mtbf_data(time_t now)
     if (!strcmp(line, "."))
       break;
     /* XXXX020 audit the heck out of my scanf usage. */
-    n = sscanf(line, "%40s %lu %lf S=%10s %8s",
+    n = sscanf(line, "%40s %ld %lf S=%10s %8s",
                hexbuf, &wrl, &trw, timebuf, timebuf+11);
     if (n != 3 && n != 5) {
       log_warn(LD_GENERAL, "Couldn't scan line %s", escaped(line));
@@ -668,6 +739,8 @@ rep_hist_load_mtbf_data(time_t now)
       long run_length = stored_at - start_of_run;
       hist->start_of_run = now - run_length;
     }
+    if (hist->start_of_run < latest_possible_start + wrl)
+      latest_possible_start = hist->start_of_run - wrl;
 
     hist->weighted_run_length = wrl;
     hist->total_run_weights = trw;
@@ -675,7 +748,11 @@ rep_hist_load_mtbf_data(time_t now)
   if (strcmp(line, "."))
     log_warn(LD_GENERAL, "Truncated MTBF file.");
 
+  if (!tracked_since)
+    tracked_since = latest_possible_start;
+
   stability_last_downrated = last_downrated;
+  started_tracking_stability = tracked_since;
 
   goto done;
  err:
