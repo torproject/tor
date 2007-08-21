@@ -153,7 +153,7 @@ static config_var_t _option_vars[] = {
   VAR("ControlSocket",       LINELIST, ControlSocket,        NULL),
   VAR("CookieAuthentication",BOOL,     CookieAuthentication, "0"),
   VAR("CookieAuthFileGroupReadable",BOOL,CookieAuthFileGroupReadable, "0"),
-  VAR("CookieAuthFile",      STRING,   CookieAuthFile,       "0"),
+  VAR("CookieAuthFile",      STRING,   CookieAuthFile,       NULL),
   VAR("DataDirectory",       STRING,   DataDirectory,        NULL),
   OBSOLETE("DebugLogFile"),
   VAR("DirAllowPrivateAddresses",BOOL, DirAllowPrivateAddresses, NULL),
