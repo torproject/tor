@@ -1952,6 +1952,8 @@ routerlist_free(routerlist_t *rl)
   smartlist_free(rl->old_routers);
   if (routerlist->mmap_descriptors)
     tor_munmap_file(routerlist->mmap_descriptors);
+  if (routerlist->mmap_extrainfo)
+    tor_munmap_file(routerlist->mmap_extrainfo);
   tor_free(rl);
 
   router_dir_info_changed();

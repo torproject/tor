@@ -30,6 +30,7 @@ Changes in version 0.2.0.6-alpha - 2007-??-??
       servers to choose a circuit. Bugfix on 0.1.2.x.
     - Stop leaking part of the descriptor when we run into a particularly
       unparseable piece of it. Bugfix on 0.1.2.x.
+    - Unmap the extrainfo cache file on exit.
 
   o Minor features (misc):
     - Optionally (if built with -DEXPORTMALLINFO) export the output
