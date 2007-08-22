@@ -26,6 +26,8 @@ Changes in version 0.2.0.6-alpha - 2007-??-??
       new CookieAuthFile option. Reported by Matt Edman.
     - Fix a minor memory leak when we fail to find enough suitable
       servers to choose a circuit. Bugfix on 0.1.2.x.
+    - Stop leaking part of the descriptor when we run into a particularly
+      unparseable piece of it. Bugfix on 0.1.2.x.
 
   o Minor features (misc):
     - Optionally (if built with -DEXPORTMALLINFO) export the output
