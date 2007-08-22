@@ -1072,7 +1072,6 @@ circuit_get_unhandled_ports(time_t now)
   int i;
 
   for (i = 0; i < smartlist_len(source); ++i) {
-    /*XXXX020 some of these are leaked somewhere.. fix that. */
     tmp = tor_malloc(sizeof(uint16_t));
     memcpy(tmp, smartlist_get(source, i), sizeof(uint16_t));
     smartlist_add(dest, tmp);
@@ -1272,7 +1271,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
      * at least one predicted exit port. */
 
     int try;
-    smartlist_t *needed_ports = circuit_get_unhandled_ports(time(NULL));
+    smartlist_t *needed_ports;
 
     if (best_support == -1) {
       if (need_uptime || need_capacity) {
@@ -1290,6 +1289,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       log_notice(LD_CIRC, "All routers are down or won't exit -- choosing a "
                  "doomed exit at random.");
     }
+    needed_ports = circuit_get_unhandled_ports(time(NULL));
     for (try = 0; try < 2; try++) {
       /* try once to pick only from routers that satisfy a needed port,
        * then if there are none, pick from any that support exiting. */
