@@ -732,7 +732,9 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
   return 0;
 }
 
-/** DOCDOC */
+/** Given a v3 networkstatus consensus in <b>consensus</b>, check every
+ * as-yet-unchecked signature on <b>consensus.  Return 0 if there are enough
+ * good signatures from recognized authorities on it, and -1 otherwise. */
 int
 networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
 {
@@ -780,7 +782,16 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
     return -1;
 }
 
-/** DOCDOC */
+/** Given a consensus vote <b>target</b> and a list of
+ * notworkstatus_voter_info_t in <b>src_voter_list</b> that correspond to the
+ * same consensus, check whether there are any new signatures in
+ * <b>src_voter_list</b> that should be added to <b>target.  (A signature
+ * should be added if we have no signature for that voter in <b>target</b>
+ * yet, or if we have no verifiable signature and the new signature is
+ * verifiable.)  Set *<b>new_signatures_out</b> to a newly allocated string
+ * holding the newly added signatures; set *<b>regenerate_out</b> to true if
+ * we replaced a signature and 0 otherwise.  Return the number of signatures
+ * added or changed. */
 static int
 networkstatus_add_signatures_impl(networkstatus_vote_t *target,
                                   smartlist_t *src_voter_list,
@@ -862,7 +873,8 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
   return r;
 }
 
-/** DOCDOC */
+/** As networkstatus_add_consensus_signature_impl, but takes new signatures
+ * from the consensus in <b>src</b>. */
 int
 networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
                                        networkstatus_vote_t *src,
@@ -886,7 +898,8 @@ networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
                                            regenerate_out);
 }
 
-/** DOCDOC */
+/** As networkstatus_add_consensus_signature_impl, but takes new signatures
+ * from the detached signatures document <b>sigs</b>. */
 int
 networkstatus_add_detached_signatures(networkstatus_vote_t *target,
                                       ns_detached_signatures_t *sigs,
@@ -907,7 +920,8 @@ networkstatus_add_detached_signatures(networkstatus_vote_t *target,
                                            regenerate_out);
 }
 
-/** DOCDOC */
+/** Return a newly allocated string holding the detached-signatures document
+ * corresponding to the signatures on <b>consensus</b>. */
 char *
 networkstatus_get_detached_signatures(networkstatus_vote_t *consensus)
 {
@@ -965,7 +979,7 @@ networkstatus_get_detached_signatures(networkstatus_vote_t *consensus)
   return result;
 }
 
-/** DOCDOC */
+/** Release all storage held in <b>s</b>. */
 void
 ns_detached_signatures_free(ns_detached_signatures_t *s)
 {
@@ -1024,7 +1038,9 @@ authority_cert_dup(authority_cert_t *cert)
  * Vote scheduling
  * ===== */
 
-/** DOCDOC */
+/** Set *<b>timing_out</b> to the intervals at which we would like to vote.
+ * Note that these aren't the intervals we'll use to vote; they're the ones
+ * that we'll vote to use. */
 void
 dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out)
 {
@@ -1038,7 +1054,10 @@ dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out)
   timing_out->dist_delay = options->V3AuthDistDelay;
 }
 
-/** DOCDOC */
+/** Return the start of the next interval of size <b>interval</b> (in seconds)
+ * after <b>now</b>.  Midnight always starts a fresh interval, and if the last
+ * interval of a day would be truncated to less than half its size, it is
+ * rolled into the previous interval. */
 time_t
 dirvote_get_start_of_next_interval(time_t now, int interval)
 {
@@ -1069,20 +1088,28 @@ dirvote_get_start_of_next_interval(time_t now, int interval)
   return next;
 }
 
-/** DOCDOC */
+/** Scheduling information for a voting interval. */
 static struct {
+  /** When do we generate and distribute our vote for this interval? */
   time_t voting_starts;
+  /** When do we give up on getting more votes and generate a consensus? */
   time_t voting_ends;
+  /** When do we publish the consensus? */
   time_t interval_starts;
 
+  /** When do we discard old votes and pending detached signatures? */
   time_t discard_old_votes;
 
+  /* True iff we have generated and distributed our vote. */
   int have_voted;
+  /* True iff we have built a consensus and sent the signatures around. */
   int have_built_consensus;
+  /* True iff we have published our consensus. */
   int have_published_consensus;
 } voting_schedule = {0,0,0,0,0,0,0};
 
-/** DOCDOC */
+/** Set voting_schedule to hold the timing for the next vote we should be
+ * doing. */
 void
 dirvote_recalculate_timing(time_t now)
 {
@@ -1100,8 +1127,7 @@ dirvote_recalculate_timing(time_t now)
     vote_delay = consensus->vote_seconds;
     dist_delay = consensus->dist_seconds;
   } else {
-    /* XXXX020 drop this back down to 30 minutes. */
-    interval = 1200;
+    interval = 30*60;
     vote_delay = dist_delay = 300;
   }
 
@@ -1123,7 +1149,7 @@ dirvote_recalculate_timing(time_t now)
     ((end-start) - vote_delay - dist_delay)/2 ;
 }
 
-/** DOCDOC */
+/** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
 void
 dirvote_act(time_t now)
 {
@@ -1165,24 +1191,30 @@ dirvote_act(time_t now)
   }
 }
 
-/** DOCDOC */
+/** A vote networkstatus_vote_t and its unparsed body: held around so we can
+ * use it to generate a consensus (at voting_ends) and so we can serve it to
+ * other authorities that might want it. */
 typedef struct pending_vote_t {
   cached_dir_t *vote_body;
   networkstatus_vote_t *vote;
 } pending_vote_t;
 
-/** DOCDOC */
+/** List of pending_vote_t for the current vote. */
 static smartlist_t *pending_vote_list = NULL;
-/** DOCDOC */
+/** The body of the consensus that we're currently building.  Once we
+ * have it built, it goes into dirserv.c */
 static char *pending_consensus_body = NULL;
-/** DOCDOC */
+/** The detached signatures for the consensus that we're currently
+ * building. */
 static char *pending_consensus_signatures = NULL;
-/** DOCDOC */
+/** The parsed in-progress consensus document. */
 static networkstatus_vote_t *pending_consensus = NULL;
-/** DOCDOC */
+/** List of ns_detached_signatures_t: hold signatures that get posted to us
+ * before we have generated the consensus on our own. */
 static smartlist_t *pending_consensus_signature_list = NULL;
 
-/** DOCDOC */
+/** Generate a networkstatus vote and post it to all the v3 authorities.
+ * (V3 Authority only) */
 void
 dirvote_perform_vote(void)
 {
@@ -1208,7 +1240,7 @@ dirvote_perform_vote(void)
   log_notice(LD_DIR, "Vote posted.");
 }
 
-/** DOCDOC */
+/** Drop all currently pending votes, consensus, and detached signatures. */
 void
 dirvote_clear_pending_votes(void)
 {
@@ -1251,7 +1283,11 @@ list_v3_auth_ids(void)
   return keys;
 }
 
-/** DOCDOC */
+/** Called when we have received a networkstatus vote in <b>vote_body</b>.
+ * Parse and validate it, and on success store it as a pending vote (which we
+ * then return).  Return NULL on failure.  Sets *<b>msg_out</b> and
+ * *<b>status_out</b> to an HTTP response and status code.  (V3 authority
+ * only) */
 pending_vote_t *
 dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 {
@@ -1351,7 +1387,10 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   return NULL;
 }
 
-/** DOCDOC */
+/** Try to compute a v3 networkstatus consensus from the currently pending
+ * votes.  Return 0 on success, -1 on failure.  Store the consensus in
+ * pending_consensus: it won't be ready to be published until we have
+ * everybody else's signatures collected too. (V3 Authoritity only) */
 int
 dirvote_compute_consensus(void)
 {
@@ -1448,7 +1487,9 @@ dirvote_compute_consensus(void)
   return -1;
 }
 
-/** DOCDOC */
+/** Helper: we just got the <b>deteached_signatures_body</b> sent to us as
+ * signatures on the currently pending consensus.  Add them to the consensus
+ * as appropriate.  Return the number of signatures added. (?) */
 static int
 dirvote_add_signatures_to_pending_consensus(
                        const char *detached_signatures_body,
@@ -1541,10 +1582,14 @@ dirvote_add_signatures_to_pending_consensus(
   return r;
 }
 
-/** DOCDOC */
+/** Helper: we just got the <b>deteached_signatures_body</b> sent to us as
+ * signatures on the currently pending consensus.  Add them to the pending
+ * consensus (if we have one); otherwise queue them until we have a
+ * consensus. */
 int
 dirvote_add_signatures(const char *detached_signatures_body)
 {
+  /*XXXX020 return value is senseless. */
   if (pending_consensus) {
     const char *msg=NULL;
     log_notice(LD_DIR, "Got a signature. Adding it to the pending consensus.");
@@ -1560,7 +1605,8 @@ dirvote_add_signatures(const char *detached_signatures_body)
   }
 }
 
-/** DOCDOC */
+/** Replace the consensus that we're currently serving with the one that we've
+ * been building. (V3 Authority only) */
 int
 dirvote_publish_consensus(void)
 {
@@ -1606,21 +1652,24 @@ dirvote_free_all(void)
  * Access to pending items.
  * ==== */
 
-/** DOCDOC */
+/** Return the body of the consensus that we're currently trying to build. */
 const char *
 dirvote_get_pending_consensus(void)
 {
   return pending_consensus_body;
 }
 
-/** DOCDOC */
+/** Return the signatures that we know for the consensus that we're currently
+ * trying to build */
 const char *
 dirvote_get_pending_detached_signatures(void)
 {
   return pending_consensus_signatures;
 }
 
-/** DOCDOC */
+/** Return the vote for the authority with the v3 authority identity key
+ * digest <b>id</b>.  If <b>id</b> is NULL, return our own vote. May return
+ * NULL if we have no vote for the authority in question. */
 const cached_dir_t *
 dirvote_get_vote(const char *id)
 {

@@ -1089,7 +1089,7 @@ static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
  * cached_dir_t. */
 static digestmap_t *cached_v2_networkstatus = NULL;
 
-/** DOCDOC */
+/** The v3 consensus network status that we're currently serving. */
 static cached_dir_t *cached_v3_networkstatus = NULL;
 
 /** Possibly replace the contents of <b>d</b> with the value of
@@ -1258,7 +1258,9 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
   }
 }
 
-/* DOCDOC */
+/** Replace the v3 consensus networkstatus that we're serving with
+ * <b>networkstatus</b>, published at <b>published</b>.  No validation is
+ * performed. */
 void
 dirserv_set_cached_networkstatus_v3(const char *networkstatus,
                                     time_t published)
@@ -1788,9 +1790,10 @@ _compare_routerinfo_by_id_digest(const void **a, const void **b)
                 DIGEST_LEN);
 }
 
-/** DOCDOC
- *
- * sort first by addr, and then by descending order of usefulness.
+/** Helper for sorting: compares two routerinfos first by address, and then by
+ * descending order of "usefulness".  (An authority is more useful than a
+ * non-authority; a running router is more useful than a non-running router;
+ * and a router with more bandwidth is more useful than one with less.)
  **/
 static int
 _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
@@ -1806,10 +1809,9 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
   else if (first->addr > second->addr)
     return 1;
 
-  /* XXX020 k n lg n memcmps could show up bigtime in profiling. If
-   * they do, I suggest we just give authorities a free pass. -RD */
-  /* I think we're fine.  Remember, in nearly all cases, the addresses
-   * will be different and we'll never actually reach this point. -NM */
+  /* Potentially, this next bit could cause k n lg n memcmp calls.  But in
+   * reality, we will almost never get here, since addresses will usually be
+   * different. */
 
   first_is_auth =
     router_digest_is_trusted_dir(first->cache_info.identity_digest);
@@ -1839,7 +1841,9 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
   return _compare_routerinfo_by_id_digest(a, b);
 }
 
-/** DOCDOC takes list of routerinfo */
+/** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
+ * whose keys are the identity digests of those routers that we're going to
+ * exclude for Sybil-like appearance. */
 static digestmap_t *
 get_possible_sybil_list(const smartlist_t *routers)
 {
@@ -1868,7 +1872,11 @@ get_possible_sybil_list(const smartlist_t *routers)
   return omit_as_sybil;
 }
 
-/** DOCDOC */
+/** Extract status information from <b>ri</b> and from other authority
+ * functions and store it in <b>rs</b>>.  If <b>naming</b>, consider setting
+ * the named flag in <b>rs</b>. If not <b>exits_can_be_guards</b>, never mark
+ * an exit as a guard.  If <b>listbadexits</b>, consider setting the badexit
+ * flag. */
 static void
 set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  routerinfo_t *ri, time_t now,
@@ -1923,7 +1931,8 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->dir_port = ri->dir_port;
 }
 
-/** DOCDOC */
+/** Return a new networkstatus_vote_t* containing our current opinion. (For v3
+ * authorities */
 static networkstatus_vote_t *
 generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                 authority_cert_t *cert)
@@ -2062,7 +2071,9 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   return v3_out;
 }
 
-/* private DOCDOC */
+/** Return a new string containing teh string representation of the vote in
+ * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
+ * For v3 authorities. */
 char *
 format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                           networkstatus_vote_t *v3_ns)
@@ -2098,7 +2109,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   */
   char *version_lines = NULL;
   networkstatus_voter_info_t *voter;
-  /* XXX check that everything gets freed */
+  /* XXX020 check that everything gets freed */
 
   tor_assert(private_signing_key);
 
@@ -2793,7 +2804,9 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
   return found_any;
 }
 
-/** DOCDOC */
+/** Return true iff we have any of the docments (extrainfo or routerdesc)
+ * specified by the fingerprints in <b>fps</b> and <b>spool_src</b>.  Used to
+ * decide whether to send a 404.  */
 int
 dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src)
 {
