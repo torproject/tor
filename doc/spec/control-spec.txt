@@ -741,7 +741,7 @@ $Id$
     "PROTOCOLINFO" *(SP PIVERSION) CRLF
 
   The server reply format is:
-    "250+PROTOCOLINFO" SP PIVERSION CRLF *InfoLine "250 OK" CRLF
+    "250-PROTOCOLINFO" SP PIVERSION CRLF *InfoLine "250 OK" CRLF
 
     InfoLine = AuthLine / VersionLine / OtherLine
 

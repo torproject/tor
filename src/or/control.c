@@ -2321,7 +2321,7 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
     }
 
     connection_printf_to_buf(conn,
-                             "250+PROTOCOLINFO 1\r\n"
+                             "250-PROTOCOLINFO 1\r\n"
                              "250-AUTH METHODS=%s%s%s\r\n"
                              "250-VERSION Tor=%s\r\n"
                              "250 OK\r\n",

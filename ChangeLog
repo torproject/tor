@@ -24,6 +24,8 @@ Changes in version 0.2.0.6-alpha - 2007-??-??
     - Stop putting the authentication cookie in a file called "0"
       in your working directory if you don't specify anything for the
       new CookieAuthFile option. Reported by Matt Edman.
+    - Make it possible to read the PROTOCOLINFO response in a way that
+      conforms to our control-spec. Reported by Matt Edman.
     - Fix a minor memory leak when we fail to find enough suitable
       servers to choose a circuit. Bugfix on 0.1.2.x.
     - Stop leaking part of the descriptor when we run into a particularly
