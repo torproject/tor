@@ -45,6 +45,8 @@ Changes in version 0.1.2.17 - 2007-08-xx
       from tup.
     - Fix a minor memory leak when we fail to find enough suitable
       servers to choose a circuit.
+    - Stop leaking part of the descriptor when we run into a particularly
+      unparseable piece of it.
 
 
 Changes in version 0.1.2.16 - 2007-08-01

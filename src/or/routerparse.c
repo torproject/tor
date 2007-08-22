@@ -1747,6 +1747,7 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
     tok = get_next_token(s, where);
     if (tok->tp == _ERR) {
       log_warn(LD_DIR, "parse error: %s", tok->error);
+      token_free(tok);
       return -1;
     }
     smartlist_add(out, tok);
