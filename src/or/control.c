@@ -370,9 +370,9 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
 }
 
 /** Given a pointer to a string starting at <b>start</b> containing
- * <b>in_len_max</b> characters, decode a string beginning with a single
+ * <b>in_len_max</b> characters, decode a string beginning with one double
  * quote, containing any number of non-quote characters or characters escaped
- * with a backslash, and ending with a final quote.  Place the resulting
+ * with a backslash, and ending with a final double quote.  Place the resulting
  * string (unquoted, unescaped) into a newly allocated string in *<b>out</b>;
  * store its length in <b>out_len</b>.  On success, return a pointer to the
  * character immediately following the escaped string.  On failure, return
