@@ -1262,7 +1262,18 @@ router_get_advertised_bandwidth(routerinfo_t *router)
 
 /** Do not weight any declared bandwidth more than this much when picking
  * routers by bandwidth. */
-#define MAX_BELIEVABLE_BANDWIDTH 10000000 /* 10 MB/sec */
+#define DEFAULT_MAX_BELIEVABLE_BANDWIDTH 10000000 /* 10 MB/sec */
+
+/** Eventually, the number we return will come from the directory
+ * consensus, so clients can dynamically update to better numbers.
+ *
+ * But for now, or in case there is no consensus available, just return
+ * a sufficient default. */
+static uint32_t
+get_max_believable_bandwidth(void)
+{
+  return DEFAULT_MAX_BELIEVABLE_BANDWIDTH;
+}
 
 /** Helper function:
  * choose a random element of smartlist <b>sl</b>, weighted by
@@ -1301,6 +1312,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
   int n_unknown = 0;
   bitarray_t *exit_bits;
   bitarray_t *guard_bits;
+  uint32_t max_believable_bw = get_max_believable_bandwidth();
 
   /* Can't choose exit and guard at same time */
   tor_assert(!(for_exit && for_guard));
@@ -1344,7 +1356,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
     if (is_guard)
       bitarray_set(guard_bits, i);
     /* if they claim something huge, don't believe it */
-    if (this_bw > MAX_BELIEVABLE_BANDWIDTH) {
+    if (this_bw > max_believable_bw) {
       char fp[HEX_DIGEST_LEN+1];
       if (status) {
           base16_encode(fp, sizeof(fp),
@@ -1357,8 +1369,8 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
           "Bandwidth %d for router %s (%s) exceeds allowed max %d, capping",
           this_bw, router ? router->nickname : "(null)",
           status || router ? fp : "0",
-          MAX_BELIEVABLE_BANDWIDTH);
-      this_bw = MAX_BELIEVABLE_BANDWIDTH;
+          max_believable_bw);
+      this_bw = max_believable_bw;
     }
     if (is_known) {
       bandwidths[i] = (int32_t) this_bw; // safe since MAX_BELIEVABLE<INT32_MAX

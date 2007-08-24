@@ -4,6 +4,15 @@ Changes in version 0.2.0.6-alpha - 2007-??-??
       mean-times-between-failures. When we have 4 or more days of data,
       use measured MTBF rather than declared uptime to decide whether
       to call a router Stable. Implements proposal 108.
+    - When choosing nodes for non-guard positions, weight guards
+      proportionally less, since they already have enough load. Patch
+      from Mike Perry.
+    - Raise the "max believable bandwidth" from 1.5MB/s to 10MB/s. This
+      will allow fast Tor servers to get more attention. Also, when we're
+      upgrading from an old Tor version, forget our current guards and
+      pick new ones according to the new weightings. The resulting load
+      balancing improvement could raise effective network capacity by
+      a factor of four. Thanks to Mike Perry for measurements.
 
   o Major bugfixes:
     - Handle unexpected whitespace better in malformed descriptors. Bug
