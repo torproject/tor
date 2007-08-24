@@ -32,6 +32,10 @@ Changes in version 0.2.0.6-alpha - 2007-??-??
       address family. Addresses but does not wholly fix bug 483. (Bugfix
       on 0.2.0.x)
 
+  o Minor features (controller):
+    - There is now an ugly, temporary "desc/all-recent-extrainfo-hack"
+      GETINFO for Torstat to use into it can switch to use extrainfos.
+
   o Minor bugfixes (misc):
     - Let directory authorities startup even when they can't generate
       a descriptor immediately, e.g. because they don't know their

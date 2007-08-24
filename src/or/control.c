@@ -1230,6 +1230,48 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   return 0;
 }
 
+/** DOCDOC */
+static char *
+munge_extrainfo_into_routerinfo(const char *ri_body, signed_descriptor_t *ri,
+                                signed_descriptor_t *ei)
+{
+  char *out = NULL, *outp;
+  int i;
+  const char *router_sig;
+  const char *ei_body = signed_descriptor_get_body(ei);
+  size_t ri_len = ri->signed_descriptor_len;
+  size_t ei_len = ei->signed_descriptor_len;
+  if (!ei_body)
+    goto bail;
+
+  outp = out = tor_malloc(ri_len+ei_len+1);
+  if (!(router_sig = tor_memstr(ri_body, ri_len, "\nrouter-signature")))
+    goto bail;
+  ++router_sig;
+  memcpy(out, ri_body, router_sig-ri_body);
+  outp += router_sig-ri_body;
+
+  for (i=0; i < 2; ++i) {
+    const char *kwd = i?"\nwrite-history ":"\nread-history ";
+    const char *cp, *eol;
+    if (!(cp = tor_memstr(ei_body, ei_len, kwd)))
+      continue;
+    ++cp;
+    eol = memchr(cp, '\n', ei_len - (cp-ei_body));
+    memcpy(outp, cp, eol-cp+1);
+    outp += eol-cp+1;
+  }
+  memcpy(outp, router_sig, ri_len - (router_sig-ri_body));
+  *outp++ = '\0';
+  tor_assert(outp-out < (int)(ri_len+ei_len+1));
+
+  return out;
+ bail:
+  tor_free(out);
+  return tor_strndup(ri_body, ri->signed_descriptor_len);
+}
+
+
 /** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */
 static int
@@ -1260,6 +1302,28 @@ getinfo_helper_dir(control_connection_t *control_conn,
         if (body)
           smartlist_add(sl,
                   tor_strndup(body, ri->cache_info.signed_descriptor_len));
+      });
+    }
+    *answer = smartlist_join_strings(sl, "", 0, NULL);
+    SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
+    smartlist_free(sl);
+  } else if (!strcmp(question, "desc/all-recent-extrainfo-hack")) {
+    /* XXXX Remove this once Torstat asks for extrainfos. */
+    routerlist_t *routerlist = router_get_routerlist();
+    smartlist_t *sl = smartlist_create();
+    if (routerlist && routerlist->routers) {
+      SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+      {
+        const char *body = signed_descriptor_get_body(&ri->cache_info);
+        signed_descriptor_t *ei = extrainfo_get_by_descriptor_digest(
+                                     ri->cache_info.signed_descriptor_digest);
+        if (ei && body) {
+          smartlist_add(sl, munge_extrainfo_into_routerinfo(body,
+                                                        &ri->cache_info, ei));
+        } else if (body) {
+          smartlist_add(sl,
+                  tor_strndup(body, ri->cache_info.signed_descriptor_len));
+        }
       });
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
@@ -1584,6 +1648,7 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("desc/name/", dir, "Router descriptors by nickname."),
   ITEM("desc/all-recent", dir,
        "All non-expired, non-superseded router descriptors."),
+  ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
   ITEM("ns/all", networkstatus,
        "Brief summary of router status (v2 directory format)"),
   PREFIX("ns/id/", networkstatus,
