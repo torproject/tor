@@ -1293,7 +1293,7 @@ get_max_believable_bandwidth(void)
  *
  */
 static void *
-smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
+smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
                               int statuses)
 {
   unsigned int i;
@@ -1313,7 +1313,9 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
   uint32_t max_believable_bw = get_max_believable_bandwidth();
 
   /* Can't choose exit and guard at same time */
-  tor_assert(!(for_exit && for_guard));
+  tor_assert(rule == NO_WEIGHTING ||
+             rule == WEIGHT_FOR_EXIT ||
+             rule == WEIGHT_FOR_GUARD);
 
   /* First count the total bandwidth weight, and make a list
    * of each value.  <0 means "unknown; no routerinfo."  We use the
@@ -1430,12 +1432,12 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
      * For detailed derivation of this formula, see
      *   http://archives.seul.org/or/dev/Jul-2007/msg00056.html
      */
-    if (for_exit)
+    if (rule == WEIGHT_FOR_EXIT)
       exit_weight = 1.0;
     else
       exit_weight = 1.0 - all_bw/(3.0*exit_bw);
 
-    if (for_guard)
+    if (rule == WEIGHT_FOR_GUARD)
       guard_weight = 1.0;
     else
       guard_weight = 1.0 - all_bw/(3.0*guard_bw);
@@ -1469,9 +1471,9 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
             "(for guard == %d)",
             U64_PRINTF_ARG(total_bw),
             U64_PRINTF_ARG(total_exit_bw), U64_PRINTF_ARG(total_nonexit_bw),
-            exit_weight, for_exit,
+            exit_weight, (int)(rule == WEIGHT_FOR_EXIT),
             U64_PRINTF_ARG(total_guard_bw), U64_PRINTF_ARG(total_nonguard_bw),
-            guard_weight, for_guard);
+            guard_weight, (int)(rule == WEIGHT_FOR_GUARD));
 
   /* Almost done: choose a random value from the bandwidth weights. */
   rand_bw = crypto_rand_uint64(total_bw);
@@ -1515,9 +1517,10 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
  * the advertised bandwidth of each router.
  */
 routerinfo_t *
-routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard)
+routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
+                                  bandwidth_weight_rule_t rule)
 {
-  return smartlist_choose_by_bandwidth(sl, for_exit, for_guard, 0);
+  return smartlist_choose_by_bandwidth(sl, rule, 0);
 }
 
 /** Choose a random element of status list <b>sl</b>, weighted by
@@ -1527,7 +1530,7 @@ routerstatus_t *
 routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
 {
   /* We are choosing neither exit nor guard here. Weight accordingly. */
-  return smartlist_choose_by_bandwidth(sl, 0, 0, 1);
+  return smartlist_choose_by_bandwidth(sl, NO_WEIGHTING, 1);
 }
 
 /** Return a random running router from the routerlist.  If any node
@@ -1557,6 +1560,11 @@ router_choose_random_node(const char *preferred,
 {
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice = NULL;
+  bandwidth_weight_rule_t rule;
+
+  tor_assert(!(weight_for_exit && need_guard));
+  rule = weight_for_exit ? WEIGHT_FOR_EXIT :
+    (need_guard ? WEIGHT_FOR_GUARD : NO_WEIGHTING);
 
   excludednodes = smartlist_create();
   add_nickname_list_to_smartlist(excludednodes,excluded,0);
@@ -1584,8 +1592,7 @@ router_choose_random_node(const char *preferred,
       smartlist_subtract(sl,excludedsmartlist);
 
     if (need_capacity || need_guard)
-      choice = routerlist_sl_choose_by_bandwidth(sl, weight_for_exit,
-                                                 need_guard);
+      choice = routerlist_sl_choose_by_bandwidth(sl, rule);
     else
       choice = smartlist_choose(sl);
 

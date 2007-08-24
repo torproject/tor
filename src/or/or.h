@@ -3409,8 +3409,11 @@ routerinfo_t *router_find_exact_exit_enclave(const char *address,
 int router_is_unreliable(routerinfo_t *router, int need_uptime,
                          int need_capacity, int need_guard);
 uint32_t router_get_advertised_bandwidth(routerinfo_t *router);
-routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit,
-                                                int for_guard);
+typedef enum {
+  NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_GUARD
+} bandwidth_weight_rule_t;
+routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
+                                                bandwidth_weight_rule_t rule);
 routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl);
 
 routerinfo_t *router_choose_random_node(const char *preferred,
