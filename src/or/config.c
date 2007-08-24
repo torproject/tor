@@ -4357,7 +4357,7 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
   (void) from_setconf;
   (void) old_state;
 
-  if (state->GuardVersion < RECOMMENDED_GUARD_VERSION) {
+  if (state->EntryGuards && state->GuardVersion < RECOMMENDED_GUARD_VERSION) {
     config_free_lines(state->EntryGuards);
     state->EntryGuards = NULL;
     log_notice(LD_CONFIG, "Detected state file from old version '%s'. "
@@ -4524,6 +4524,7 @@ or_state_save(time_t now)
   len = strlen(get_version())+8;
   global_state->TorVersion = tor_malloc(len);
   tor_snprintf(global_state->TorVersion, len, "Tor %s", get_version());
+  global_state->GuardVersion = RECOMMENDED_GUARD_VERSION;
 
   state = config_dump(&state_format, global_state, 1, 0);
   len = strlen(state)+256;
