@@ -381,10 +381,22 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_VOTE 11
 /** A connection to a directory server: upload a v3 consensus signature */
 #define DIR_PURPOSE_UPLOAD_SIGNATURES 12
+/** A connection to a directory server: download one or more network-status
+ * objects */
+#define DIR_PURPOSE_FETCH_STATUS_VOTE 13
+/** A connection to a directory server: download one or more network-status
+ * objects */
+#define DIR_PURPOSE_FETCH_DETACHED_SIGNATURES 14
+/** A connection to a directory server: download one or more network-status
+ * objects */
+#define DIR_PURPOSE_FETCH_CONSENSUS 15
+/** A connection to a directory server: download one or more network-status
+ * objects */
+#define DIR_PURPOSE_FETCH_CERTIFICATE 16
 
 /** Purpose for connection at a directory server. */
-#define DIR_PURPOSE_SERVER 13
-#define _DIR_PURPOSE_MAX 13
+#define DIR_PURPOSE_SERVER 17
+#define _DIR_PURPOSE_MAX 17
 
 #define _EXIT_PURPOSE_MIN 1
 /** This exit stream wants to do an ordinary connect. */
@@ -393,7 +405,7 @@ typedef enum {
 #define EXIT_PURPOSE_RESOLVE 2
 #define _EXIT_PURPOSE_MAX 2
 
-/* !!!! If any connection purpose is ever over over 15, we must grow the type
+/* !!!! If any connection purpose is ever over over 31, we must grow the type
  * field in connection_t. */
 
 /** Circuit state: I'm the origin, still haven't done all my handshakes. */
@@ -763,7 +775,7 @@ typedef struct connection_t {
 
   uint8_t state; /**< Current state of this connection. */
   uint8_t type:4; /**< What kind of connection is this? */
-  uint8_t purpose:4; /**< Only used for DIR and EXIT types currently. */
+  uint8_t purpose:5; /**< Only used for DIR and EXIT types currently. */
 
   /* The next fields are all one-bit booleans. Some are only applicable to
    * connection subtypes, but we hold them here anyway, to save space.

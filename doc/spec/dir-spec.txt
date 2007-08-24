@@ -1139,7 +1139,7 @@ $Id$
    An authority SHOULD publish its vote immediately at the start of each voting
    period (minus VoteSeconds+DistSeconds).  It does this by making it
    available at
-     http://<hostname>/tor/status-vote/current/authority.z
+     http://<hostname>/tor/status-vote/next/authority.z
    and sending it in an HTTP POST request to each other authority at the URL
      http://<hostname>/tor/post/vote
 
@@ -1149,7 +1149,7 @@ $Id$
 
    Once an authority has a vote from another authority, it makes it available
    at
-      http://<hostname>/tor/status-vote/current/<fp>.z
+      http://<hostname>/tor/status-vote/next/<fp>.z
    where <fp> is the fingerprint of the other authority's identity key.
 
    The consensus status, along with as many signatures as the server

@@ -86,6 +86,10 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
       dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES ||
       dir_purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
       dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
+      dir_purpose == DIR_PURPOSE_FETCH_STATUS_VOTE ||
+      dir_purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES ||
+      dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS ||
+      dir_purpose == DIR_PURPOSE_FETCH_CERTIFICATE ||
       dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
       dir_purpose == DIR_PURPOSE_FETCH_EXTRAINFO)
     return 0;
@@ -113,6 +117,46 @@ authority_type_to_string(authority_type_t auth)
   }
   smartlist_free(lst);
   return result;
+}
+
+/** Return a string describing a given directory connection purpose. */
+static const char *
+dir_conn_purpose_to_string(int purpose)
+{
+  switch (purpose)
+    {
+    case DIR_PURPOSE_FETCH_DIR:
+      return "v1 directory fetch";
+    case DIR_PURPOSE_FETCH_RENDDESC:
+      return "hidden-service descriptor fetch";
+    case DIR_PURPOSE_UPLOAD_DIR:
+      return "server descriptor upload";
+    case DIR_PURPOSE_UPLOAD_RENDDESC:
+      return "hidden-service descriptor upload";
+    case DIR_PURPOSE_UPLOAD_VOTE:
+      return "server vote upload";
+    case DIR_PURPOSE_UPLOAD_SIGNATURES:
+      return "consensus signature upload";
+    case DIR_PURPOSE_FETCH_RUNNING_LIST:
+      return "running-routers fetch";
+    case DIR_PURPOSE_FETCH_NETWORKSTATUS:
+      return "network-status fetch";
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+      return "server descriptor fetch";
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+      return "extra-info fetch";
+    case DIR_PURPOSE_FETCH_CONSENSUS:
+      return "consensus network-status fetch";
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
+      return "authority cert fetch";
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:
+      return "status vote fetch";
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+      return "consensus signature fetch";
+    }
+
+  log_warn(LD_BUG, "Called with unknown purpose %d", purpose);
+  return "(unknown)";
 }
 
 /** Return true iff <b>identity_digest</b> is the digest of a router we
@@ -234,6 +278,12 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     case DIR_PURPOSE_FETCH_RENDDESC:
       type = HIDSERV_AUTHORITY;
       break;
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+    case DIR_PURPOSE_FETCH_CONSENSUS:
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
+      type = V3_AUTHORITY;
+      break;
     default:
       log_warn(LD_BUG, "Unexpected purpose %d", (int)dir_purpose);
       return;
@@ -267,18 +317,8 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       rs = router_pick_directory_server(1, 1, type,
                                         retry_if_no_servers);
       if (!rs) {
-        const char *which;
-        if (dir_purpose == DIR_PURPOSE_FETCH_DIR)
-          which = "directory";
-        else if (dir_purpose == DIR_PURPOSE_FETCH_RUNNING_LIST)
-          which = "status list";
-        else if (dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
-          which = "network status";
-        else // if (dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS)
-          which = "server descriptors";
-        log_info(LD_DIR,
-                 "No router found for %s; falling back to dirserver list",
-                 which);
+        log_info(LD_DIR, "No router found for %s; falling back to "
+                 "dirserver list.", dir_conn_purpose_to_string(dir_purpose));
         rs = router_pick_trusteddirserver(type, 1, 1,
                                           retry_if_no_servers);
         if (!rs)
@@ -410,6 +450,8 @@ connection_dir_request_failed(dir_connection_t *conn)
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
     connection_dir_download_routerdesc_failed(conn);
+  } else {
+    /* XXXX020 handle failing: votes. signatures. certificates. consensus. */
   }
 }
 
@@ -494,41 +536,7 @@ directory_initiate_command(const char *address, uint32_t addr,
   log_debug(LD_DIR, "anonymized %d, want_to_tunnel %d.",
             anonymized_connection, want_to_tunnel);
 
-  switch (dir_purpose) {
-    case DIR_PURPOSE_FETCH_DIR:
-      log_debug(LD_DIR,"initiating directory fetch");
-      break;
-    case DIR_PURPOSE_FETCH_RENDDESC:
-      log_debug(LD_DIR,"initiating hidden-service descriptor fetch");
-      break;
-    case DIR_PURPOSE_UPLOAD_DIR:
-      log_debug(LD_OR,"initiating server descriptor upload");
-      break;
-    case DIR_PURPOSE_UPLOAD_RENDDESC:
-      log_debug(LD_REND,"initiating hidden-service descriptor upload");
-      break;
-    case DIR_PURPOSE_UPLOAD_VOTE:
-      log_debug(LD_OR,"initiating server vote upload");
-      break;
-    case DIR_PURPOSE_UPLOAD_SIGNATURES:
-      log_debug(LD_OR,"initiating consensus signature upload");
-      break;
-    case DIR_PURPOSE_FETCH_RUNNING_LIST:
-      log_debug(LD_DIR,"initiating running-routers fetch");
-      break;
-    case DIR_PURPOSE_FETCH_NETWORKSTATUS:
-      log_debug(LD_DIR,"initiating network-status fetch");
-      break;
-    case DIR_PURPOSE_FETCH_SERVERDESC:
-      log_debug(LD_DIR,"initiating server descriptor fetch");
-      break;
-    case DIR_PURPOSE_FETCH_EXTRAINFO:
-      log_debug(LD_DIR,"initiating extra-info fetch");
-      break;
-    default:
-      log_err(LD_BUG, "Unrecognized directory connection purpose.");
-      tor_assert(0);
-  }
+  log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
   conn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR, AF_INET));
 
@@ -678,6 +686,34 @@ directory_send_command(dir_connection_t *conn,
       len = strlen(resource)+32;
       url = tor_malloc(len);
       tor_snprintf(url, len, "/tor/status/%s", resource);
+      break;
+    case DIR_PURPOSE_FETCH_CONSENSUS:
+      tor_assert(!resource);
+      tor_assert(!payload);
+      httpcommand = "GET";
+      url = tor_strdup("/tor/status-vote/current/consensus.z");
+      break;
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
+      tor_assert(resource);
+      tor_assert(!payload);
+      httpcommand = "GET";
+      len = strlen(resource)+32;
+      url = tor_malloc(len);
+      tor_snprintf(url, len, "/tor/keys/%s", resource);
+      break;
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:
+      tor_assert(resource);
+      tor_assert(!payload);
+      httpcommand = "GET";
+      len = strlen(resource)+32;
+      url = tor_malloc(len);
+      tor_snprintf(url, len, "/tor/status-vote/next/%s", resource);
+      break;
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+      tor_assert(!resource);
+      tor_assert(!payload);
+      httpcommand = "GET";
+      url = tor_strdup("/tor/status-vote/next/consensus-signatures.z");
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
       httpcommand = "GET";
@@ -1256,6 +1292,19 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       SMARTLIST_FOREACH(which, char *, s, tor_free(s));
       smartlist_free(which);
     }
+  }
+
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
+    /*XXXX020*/;
+  }
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
+    /*XXXX020*/;
+  }
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {
+    /*XXXX020*/;
+  }
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {
+    /*XXXX020*/;
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
@@ -1953,17 +2002,17 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                              * since it wants to be spooled. */
       if ((item = dirvote_get_pending_consensus()))
         smartlist_add(items, (char*)item);
-    } else if (current && !strcmp(url, "consensus-signatures")) {
+    } else if (!current && !strcmp(url, "consensus-signatures")) {
       /* XXXX020 the spec says that we should implement
        * currrent/consensus-signatures too.  Why? */
       const char *item;
       if ((item=dirvote_get_pending_detached_signatures()))
         smartlist_add(items, (char*)item);
-    } else if (current && !strcmp(url, "authority")) {
+    } else if (!current && !strcmp(url, "authority")) {
       const cached_dir_t *d;
       if ((d=dirvote_get_vote(NULL)))
         smartlist_add(dir_items, (cached_dir_t*)d);
-    } else if (current) {
+    } else if (!current) {
       const cached_dir_t *d;
       smartlist_t *fps = smartlist_create();
       dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
