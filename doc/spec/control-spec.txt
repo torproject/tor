@@ -367,6 +367,10 @@ $Id$
     "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest
       server descriptor for a given OR, NUL-terminated.
 
+    "extra-info/digest/<digest>"  -- the extrainfo document whose digest (in
+      hex) is <digest>.  Only available if we're downloading extra-info
+      documents.
+
     "ns/id/<OR identity>" or "ns/name/<OR nickname>" -- the latest network
       status info for a given OR.  Network status info is as given in
       dir-spec.txt, and reflects the current beliefs of this Tor about the

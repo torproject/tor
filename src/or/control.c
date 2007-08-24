@@ -1316,7 +1316,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
       {
         const char *body = signed_descriptor_get_body(&ri->cache_info);
         signed_descriptor_t *ei = extrainfo_get_by_descriptor_digest(
-                                     ri->cache_info.signed_descriptor_digest);
+                                     ri->cache_info.extra_info_digest);
         if (ei && body) {
           smartlist_add(sl, munge_extrainfo_into_routerinfo(body,
                                                         &ri->cache_info, ei));
@@ -1399,7 +1399,21 @@ getinfo_helper_dir(control_connection_t *control_conn,
         list_server_status(routerlist->routers, answer, verbose ? 2 : 1) < 0) {
       return -1;
     }
+  } else if (!strcmpstart(question, "extra-info/digest/")) {
+    question += strlen("extra-info/digest/");
+    if (strlen(question) == HEX_DIGEST_LEN) {
+      char d[DIGEST_LEN];
+      signed_descriptor_t *sd;
+      base16_decode(d, sizeof(d), question, strlen(question));
+      sd = extrainfo_get_by_descriptor_digest(d);
+      if (sd) {
+        const char *body = signed_descriptor_get_body(sd);
+        if (body)
+          *answer = tor_strndup(body, sd->signed_descriptor_len);
+      }
+    }
   }
+
   return 0;
 }
 
@@ -1649,6 +1663,7 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("desc/all-recent", dir,
        "All non-expired, non-superseded router descriptors."),
   ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
+  PREFIX("extrainfo/digest/", dir, "Extra-info documents by digest."),
   ITEM("ns/all", networkstatus,
        "Brief summary of router status (v2 directory format)"),
   PREFIX("ns/id/", networkstatus,
