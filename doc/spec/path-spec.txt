@@ -182,21 +182,19 @@ of their choices.
    proportional to its advertised bandwidth [the smaller of the 'rate' and
    'observed' arguments to the "bandwidth" element in its descriptor].  If a
    router's advertised bandwidth is greater than MAX_BELIEVABLE_BANDWIDTH
-   (1.5 MB/s), we clip to that value.
+   (10 MB/s), we clip to that value.
 
    For non-exit positions on "fast" circuits, we pick routers as above, but
    we weight the clipped advertised bandwidth of Exit-flagged nodes depending
    on the fraction of bandwidth available from non-Exit nodes.  Call the
    total clipped advertised bandwidth for Exit nodes under consideration E,
-   and the total clipped advertised bandwidth for non-Exit nodes under
    and the total clipped advertised bandwidth for all nodes under
    consideration T.  If E<T/3, we do not consider Exit-flagged nodes.
-   Otherwise, we weight their bandwidth with the factor 1-T/(3E). This
+   Otherwise, we weight their bandwidth with the factor (E-T/3)/E. This 
    ensures that bandwidth is evenly distributed over nodes in 3-hop paths.
 
-   Otherwise, we weight their bandwidth with the factor (E-N/2)/(N+E-N/2) ==
-   (2E - N)/(2E + N).  This ensures that bandwidth is evenly distributed over
-   nodes in 3-hop paths.
+   Similarly, guard nodes are weighted by the factor (G-T/3)/G, and not
+   considered for non-guard positions if this value is less than 0.
 
    Additionally, we may be building circuits with one or more requests in
    mind.  Each kind of request puts certain constraints on paths:

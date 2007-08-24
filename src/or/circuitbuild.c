@@ -1264,7 +1264,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     smartlist_subtract(sl,excludedexits);
     if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
-    router = routerlist_sl_choose_by_bandwidth(sl, 1);
+    router = routerlist_sl_choose_by_bandwidth(sl, 1, 0);
   } else {
     /* Either there are no pending connections, or no routers even seem to
      * possibly support any of them.  Choose a router at random that satisfies
@@ -1308,7 +1308,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
         smartlist_intersect(sl,preferredexits);
         /* XXX sometimes the above results in null, when the requested
          * exit node is down. we should pick it anyway. */
-      router = routerlist_sl_choose_by_bandwidth(sl, 1);
+      router = routerlist_sl_choose_by_bandwidth(sl, 1, 0);
       if (router)
         break;
     }

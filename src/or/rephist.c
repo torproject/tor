@@ -66,7 +66,6 @@ typedef struct or_history_t {
   /** If nonzero, we have been unable to connect since this time. */
   time_t down_since;
 
-
   /* === For MTBF tracking: */
   /** Weighted sum total of all times that this router has been online.
    */

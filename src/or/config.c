@@ -4355,8 +4355,10 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
       log_warn(LD_GENERAL, "Can't parse Tor version '%s' from your state "
                "file. Proceeding anyway.", state->TorVersion);
     } else { /* take action based on v */
-      if (tor_version_as_new_as(state->TorVersion, "0.1.1.10-alpha") &&
-          !tor_version_as_new_as(state->TorVersion, "0.1.1.16-rc-cvs")) {
+      if ((tor_version_as_new_as(state->TorVersion, "0.1.1.10-alpha") &&
+          !tor_version_as_new_as(state->TorVersion, "0.1.2.17-dev"))
+          || (tor_version_as_new_as(state->TorVersion, "0.2.0.0-alpha") &&
+          !tor_version_as_new_as(state->TorVersion, "0.2.0.6-alpha-dev"))) {
         log_notice(LD_CONFIG, "Detected state file from buggy version '%s'. "
                    "Enabling workaround to choose working entry guards.",
                    state->TorVersion);
