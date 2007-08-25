@@ -800,6 +800,8 @@ add_default_trusted_dirservers(void)
       "38D4 F5FC F7B1 0232 28B8 95EA 56ED E7D5 CCDC AF32",
     "dizum 194.109.206.212:80 "
       "7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
+    "Tonga orport=443 bridge no-v2 82.94.251.206:80 "
+      "4A0C CD2D DC79 9508 3D73 F5D6 6710 0C8A 5831 F16D",
     NULL
   };
   for (i=0; dirservers[i]; i++)

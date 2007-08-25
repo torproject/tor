@@ -1,4 +1,7 @@
 Changes in version 0.2.0.6-alpha - 2007-08-26
+  o New directory authorities:
+    - Set up Tonga as the default bridge directory authority.
+
   o Major features:
     - Directory authorities now track servers by weighted
       mean-times-between-failures. When we have 4 or more days of data,
