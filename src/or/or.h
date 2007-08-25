@@ -2123,11 +2123,6 @@ typedef struct {
 
   /** A list of Entry Guard-related configuration lines. */
   config_line_t *EntryGuards;
-  /** What algorithm did we use to select these guards? 0 if we didn't
-   * know about the GuardVersion concept when we picked them. We use
-   * this to expire and re-pick our guards if Tor knows about a newer
-   * version than the state file lists. */
-  int GuardVersion;
 
   /** These fields hold information on the history of bandwidth usage for
    * servers.  The "Ends" fields hold the time when we last updated the

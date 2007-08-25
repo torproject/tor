@@ -304,7 +304,6 @@ static config_var_t _state_vars[] = {
   VAR("EntryGuardDownSince",     LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuardUnlistedSince", LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuards",             LINELIST_V,  EntryGuards,             NULL),
-  VAR("GuardVersion",            UINT,        GuardVersion,            "0"),
 
   VAR("BWHistoryReadEnds",       ISOTIME,     BWHistoryReadEnds,      NULL),
   VAR("BWHistoryReadInterval",   UINT,        BWHistoryReadInterval,  "900"),
@@ -531,7 +530,6 @@ static config_var_description_t state_description[] = {
     "The last entry guard has been unreachable since this time." },
   { "EntryGuardUnlistedSince",
     "The last entry guard has been unusable since this time." },
-  { "GuardVersion", "Which algorithm did we use to pick these guards?" },
 
   { "LastRotatedOnionKey",
     "The last time at which we changed the medium-term private key used for "
@@ -4336,12 +4334,6 @@ get_or_state_fname(void)
   return fname;
 }
 
-/** What's the newest known version for our guard-picking algorithm?
- * If the version in the state file is older than this (or if there is
- * no version listed in the state file), we want to ignore the guards
- * in the state file and pick new ones. */
-#define RECOMMENDED_GUARD_VERSION 1
-
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
  * permissible transition from <b>old_state</b>.  Else warn and return -1.
  * Should have no side effects, except for normalizing the contents of
@@ -4357,15 +4349,26 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
   (void) from_setconf;
   (void) old_state;
 
-  if (state->EntryGuards && state->GuardVersion < RECOMMENDED_GUARD_VERSION) {
-    config_free_lines(state->EntryGuards);
-    state->EntryGuards = NULL;
-    log_notice(LD_CONFIG, "Detected state file from old version '%s'. "
-               "Choosing new entry guards for you.",
-               state->TorVersion ? state->TorVersion : "unknown");
-    state->GuardVersion = RECOMMENDED_GUARD_VERSION;
-  } else if (entry_guards_parse_state(state, 0, msg)<0) {
+  if (entry_guards_parse_state(state, 0, msg)<0)
     return -1;
+
+  if (state->EntryGuards && state->TorVersion) {
+    tor_version_t v;
+    if (tor_version_parse(state->TorVersion, &v)) {
+      log_warn(LD_GENERAL, "Can't parse Tor version '%s' from your state "
+               "file. Proceeding anyway.", state->TorVersion);
+    } else { /* take action based on v */
+      if ((tor_version_as_new_as(state->TorVersion, "0.1.1.10-alpha") &&
+          !tor_version_as_new_as(state->TorVersion, "0.1.2.16-dev"))
+          || (tor_version_as_new_as(state->TorVersion, "0.2.0.0-alpha") &&
+          !tor_version_as_new_as(state->TorVersion, "0.2.0.6-alpha"))) {
+        log_notice(LD_CONFIG, "Detected state file from old version '%s'. "
+                   "Choosing new entry guards for you.",
+                   state->TorVersion);
+        config_free_lines(state->EntryGuards);
+        state->EntryGuards = NULL;
+      }
+    }
   }
   return 0;
 }
@@ -4524,7 +4527,6 @@ or_state_save(time_t now)
   len = strlen(get_version())+8;
   global_state->TorVersion = tor_malloc(len);
   tor_snprintf(global_state->TorVersion, len, "Tor %s", get_version());
-  global_state->GuardVersion = RECOMMENDED_GUARD_VERSION;
 
   state = config_dump(&state_format, global_state, 1, 0);
   len = strlen(state)+256;
