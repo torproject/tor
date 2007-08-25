@@ -4,6 +4,17 @@ Changes in version 0.1.2.17 - 2007-08-xx
       deprecated since Tor 0.1.1.1-alpha, and keeping it safe and secure
       has been more of a headache than it's worth.
 
+  o Major bugfixes (load balancing):
+    - When choosing nodes for non-guard positions, weight guards
+      proportionally less, since they already have enough load. Patch
+      from Mike Perry.
+    - Raise the "max believable bandwidth" from 1.5MB/s to 10MB/s. This
+      will allow fast Tor servers to get more attention.
+    - When we're upgrading from an old Tor version, forget our current
+      guards and pick new ones according to the new weightings. These
+      three load balancing patches could raise effective network capacity
+      by a factor of four. Thanks to Mike Perry for measurements.
+
   o Major bugfixes (stream expiration):
     - Expire not-yet-successful application streams in all cases if
       they've been around longer than SocksTimeout. Right now there are

@@ -935,7 +935,7 @@ router_get_advertised_bandwidth(routerinfo_t *router)
 
 /** Do not weight any declared bandwidth more than this much when picking
  * routers by bandwidth. */
-#define MAX_BELIEVABLE_BANDWIDTH 1500000 /* 1.5 MB/sec */
+#define MAX_BELIEVABLE_BANDWIDTH 10000000 /* 10 MB/sec */
 
 /** Helper function:
  * choose a random element of smartlist <b>sl</b>, weighted by
@@ -945,28 +945,35 @@ router_get_advertised_bandwidth(routerinfo_t *router)
  * routerinfo_t's. Otherwise it's a list of routerstatus_t's.
  *
  * If <b>for_exit</b>, we're picking an exit node: consider all nodes'
- * bandwidth equally regardless of their Exit status.  If not <b>for_exit</b>,
+ * bandwidth equally regardless of their Exit status, since there may be
+ * some in the list because they exit to obscure ports. If not <b>for_exit</b>,
  * we're picking a non-exit node: weight exit-node's bandwidth downwards
  * depending on the smallness of the fraction of Exit-to-total bandwidth.
+ *
+ * If <b>for_guard</b>, we're picking a guard node: consider all guard's
+ * bandwidth equally. Otherwise, weight guards proportionally less.
  */
 static void *
-smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
+smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
+                              int statuses)
 {
   int i;
   routerinfo_t *router;
-  routerstatus_t *status;
+  routerstatus_t *status=NULL;
   int32_t *bandwidths;
   int is_exit;
+  int is_guard;
   uint64_t total_nonexit_bw = 0, total_exit_bw = 0, total_bw = 0;
+  uint64_t total_nonguard_bw = 0, total_guard_bw = 0;
   uint64_t rand_bw, tmp;
   double exit_weight;
+  double guard_weight;
   int n_unknown = 0;
-  int include_exits = 1;
 
   /* First count the total bandwidth weight, and make a list
    * of each value.  <0 means "unknown; no routerinfo."  We use the
    * bits of negative values to remember whether the router was fast (-x)&1
-   * and whether it was an exit (-x)&2.  Yes, it's a hack. */
+   * and whether it was an exit (-x)&2 or guard (-x)&4.  Yes, it's a hack. */
   bandwidths = tor_malloc(sizeof(int32_t)*smartlist_len(sl));
 
   /* Iterate over all the routerinfo_t or routerstatus_t, and */
@@ -980,16 +987,19 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       status = smartlist_get(sl, i);
       router = router_get_by_digest(status->identity_digest);
       is_exit = status->is_exit;
+      is_guard = status->is_possible_guard;
       if (router) {
         this_bw = router_get_advertised_bandwidth(router);
       } else { /* guess */
         is_known = 0;
         flags = status->is_fast ? 1 : 0;
         flags |= is_exit ? 2 : 0;
+        flags |= is_guard ? 4 : 0;
       }
     } else {
       router = smartlist_get(sl, i);
       is_exit = router->is_exit;
+      is_guard = router->is_possible_guard;
       this_bw = router_get_advertised_bandwidth(router);
     }
     /* if they claim something huge, don't believe it */
@@ -997,6 +1007,10 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       this_bw = MAX_BELIEVABLE_BANDWIDTH;
     if (is_known) {
       bandwidths[i] = (int32_t) this_bw; // safe since MAX_BELIEVABLE<INT32_MAX
+      if (is_guard)
+        total_guard_bw += this_bw;
+      else
+        total_nonguard_bw += this_bw;
       if (is_exit)
         total_exit_bw += this_bw;
       else
@@ -1025,11 +1039,16 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
       if (bw>=0)
         continue;
       is_exit = ((-bw)&2);
+      is_guard = ((-bw)&4);
       bandwidths[i] = ((-bw)&1) ? avg_fast : avg_slow;
       if (is_exit)
         total_exit_bw += bandwidths[i];
       else
         total_nonexit_bw += bandwidths[i];
+      if (is_guard)
+        total_guard_bw += bandwidths[i];
+      else
+        total_nonguard_bw += bandwidths[i];
     }
   }
 
@@ -1039,41 +1058,53 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     return smartlist_choose(sl);
   }
 
-  /* Figure out how to weight exits. */
-  if (for_exit) {
-    /* If we're choosing an exit node, exit bandwidth counts fully. */
-    exit_weight = 1.0;
-    total_bw = total_exit_bw + total_nonexit_bw;
-  } else {
+  /* Figure out how to weight exits and guards. */
+  { 
     double all_bw = U64_TO_DBL(total_exit_bw+total_nonexit_bw);
     double exit_bw = U64_TO_DBL(total_exit_bw);
+    double guard_bw = U64_TO_DBL(total_guard_bw);
     /*
      * For detailed derivation of this formula, see
      *   http://archives.seul.org/or/dev/Jul-2007/msg00056.html
      */
-    exit_weight = 1.0 - all_bw/(3.0*exit_bw);
-    if (exit_weight <= 0.0) {
-      include_exits = 0;
+    if (for_exit)
+      exit_weight = 1.0;
+    else
+      exit_weight = 1.0 - all_bw/(3.0*exit_bw);
+
+    if (for_guard)
+      guard_weight = 1.0;
+    else
+      guard_weight = 1.0 - all_bw/(3.0*guard_bw);
+
+    if (exit_weight <= 0.0)
       exit_weight = 0.0;
-      total_bw = total_nonexit_bw;
-    } else {
-      include_exits = 1;
-      total_bw = 0;
-      for (i=0; i < smartlist_len(sl); i++) {
-        if (statuses) {
-          status = smartlist_get(sl, i);
-          is_exit = status->is_exit;
-        } else {
-          router = smartlist_get(sl, i);
-          is_exit = router->is_exit;
-        }
-        if (is_exit)
-          total_bw += ((uint64_t)(bandwidths[i] * exit_weight));
-        else
-          total_bw += bandwidths[i];
+
+    if (guard_weight <= 0.0)
+      guard_weight = 0.0;
+
+    total_bw = 0;
+    for (i=0; i < smartlist_len(sl); i++) {
+      if (statuses) {
+        status = smartlist_get(sl, i);
+        is_exit = status->is_exit;
+        is_guard = status->is_possible_guard;
+      } else {
+        router = smartlist_get(sl, i);
+        is_exit = router->is_exit;
+        is_guard = router->is_possible_guard;
       }
+      if (is_exit && is_guard)
+        total_bw += ((uint64_t)(bandwidths[i] * exit_weight * guard_weight));
+      else if (is_guard)
+        total_bw += ((uint64_t)(bandwidths[i] * guard_weight));
+      else if (is_exit)
+        total_bw += ((uint64_t)(bandwidths[i] * exit_weight));
+      else
+        total_bw += bandwidths[i];
     }
   }
+
   /*
   log_debug(LD_CIRC, "Total bw = "U64_FORMAT", total exit bw = "U64_FORMAT
             ", total nonexit bw = "U64_FORMAT", exit weight = %lf "
@@ -1091,14 +1122,23 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
     if (statuses) {
       status = smartlist_get(sl, i);
       is_exit = status->is_exit;
+      is_guard = status->is_possible_guard;
     } else {
       router = smartlist_get(sl, i);
       is_exit = router->is_exit;
+      is_guard = router->is_possible_guard;
     }
-    if (is_exit)
+
+    /* Weights can be 0 if not counting guards/exits */
+    if (is_exit && is_guard)
+      tmp += ((uint64_t)(bandwidths[i] * exit_weight * guard_weight));
+    else if (is_guard)
+      tmp += ((uint64_t)(bandwidths[i] * guard_weight));
+    else if (is_exit)
       tmp += ((uint64_t)(bandwidths[i] * exit_weight));
     else
       tmp += bandwidths[i];
+
     if (tmp >= rand_bw)
       break;
   }
@@ -1116,18 +1156,19 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int statuses)
  * the advertised bandwidth of each router.
  */
 routerinfo_t *
-routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit)
+routerlist_sl_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard)
 {
-  return smartlist_choose_by_bandwidth(sl, for_exit, 0);
+  return smartlist_choose_by_bandwidth(sl, for_exit, for_guard, 0);
 }
 
 /** Choose a random element of status list <b>sl</b>, weighted by
- * the advertised bandwidth of each status.
+ * the advertised bandwidth of each status. Avoid putting load on
+ * exits and guards.
  */
 routerstatus_t *
 routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
 {
-  return smartlist_choose_by_bandwidth(sl, 1, 1);
+  return smartlist_choose_by_bandwidth(sl, 0, 0, 1);
 }
 
 /** Return a random running router from the routerlist.  If any node
@@ -1184,7 +1225,8 @@ router_choose_random_node(const char *preferred,
       smartlist_subtract(sl,excludedsmartlist);
 
     if (need_capacity || need_guard)
-      choice = routerlist_sl_choose_by_bandwidth(sl, weight_for_exit);
+      choice = routerlist_sl_choose_by_bandwidth(sl, weight_for_exit,
+                                                 need_guard);
     else
       choice = smartlist_choose(sl);
 
