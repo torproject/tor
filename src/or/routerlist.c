@@ -1320,7 +1320,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
   /* First count the total bandwidth weight, and make a list
    * of each value.  <0 means "unknown; no routerinfo."  We use the
    * bits of negative values to remember whether the router was fast (-x)&1
-   * and whether it was an exit (-x)&2.  Yes, it's a hack. */
+   * and whether it was an exit (-x)&2 or guard (-x)&4.  Yes, it's a hack. */
   bandwidths = tor_malloc(sizeof(int32_t)*smartlist_len(sl));
   exit_bits = bitarray_init_zero(smartlist_len(sl));
   guard_bits = bitarray_init_zero(smartlist_len(sl));

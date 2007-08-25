@@ -4,6 +4,8 @@ Changes in version 0.2.0.6-alpha - 2007-??-??
       mean-times-between-failures. When we have 4 or more days of data,
       use measured MTBF rather than declared uptime to decide whether
       to call a router Stable. Implements proposal 108.
+
+  o Major bugfixes (load balancing):
     - When choosing nodes for non-guard positions, weight guards
       proportionally less, since they already have enough load. Patch
       from Mike Perry.

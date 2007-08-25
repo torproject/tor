@@ -4359,9 +4359,9 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
                "file. Proceeding anyway.", state->TorVersion);
     } else { /* take action based on v */
       if ((tor_version_as_new_as(state->TorVersion, "0.1.1.10-alpha") &&
-          !tor_version_as_new_as(state->TorVersion, "0.1.2.16-dev"))
-          || (tor_version_as_new_as(state->TorVersion, "0.2.0.0-alpha") &&
-          !tor_version_as_new_as(state->TorVersion, "0.2.0.6-alpha"))) {
+           !tor_version_as_new_as(state->TorVersion, "0.1.2.16-dev")) ||
+          (tor_version_as_new_as(state->TorVersion, "0.2.0.0-alpha") &&
+           !tor_version_as_new_as(state->TorVersion, "0.2.0.6-alpha"))) {
         log_notice(LD_CONFIG, "Detected state file from old version '%s'. "
                    "Choosing new entry guards for you.",
                    state->TorVersion);
