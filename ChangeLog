@@ -1,3 +1,9 @@
+Changes in version 0.2.0.6-alpha - 2007-??-??
+  o Minor features (security):
+    - As a client, do not believe any server that tells us that any address
+      maps to an internal address space.
+
+
 Changes in version 0.2.0.6-alpha - 2007-08-26
   o New directory authorities:
     - Set up Tonga as the default bridge directory authority.

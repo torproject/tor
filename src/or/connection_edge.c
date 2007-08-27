@@ -1247,6 +1247,19 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                  END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
       return 0;
     }
+    if (options->ClientDNSRejectInternalAddresses) {
+      /* Don't let people try to do a reverse lookup on 10.0.0.1. */
+      tor_addr_t addr;
+      if (tor_addr_from_str(&addr, socks->address) >= 0 &&
+          tor_addr_is_internal(&addr, 0)) {
+        connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
+                                               0, NULL, -1, TIME_MAX);
+        connection_mark_unattached_ap(conn,
+                                 END_STREAM_REASON_SOCKSPROTOCOL |
+                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
+        return -1;
+      }
+    }
   } else if (!automap) {
     /* For address map controls, remap the address. */
     if (addressmap_rewrite(socks->address, sizeof(socks->address),

@@ -676,6 +676,13 @@ Bind to this address to listen for DNS connections.
 (Default: 127.0.0.1).
 .LP
 .TP
+\fBClientDNSRejectInternalAddresses\fP \fR\fB0\fR|\fB1\fR\fP
+If true, Tor does not believe any anonymously retrieved DNS answer that tells
+it that an address resolves to an internal address (like 127.0.0.1 or
+192.168.0.1).  This option prevents certain browser-based attacks; don't turn
+it off unless you know what you're doing.  (Default: 1).
+.LP
+.TP
 \fBDownloadExtraInfo\fP \fR\fB0\fR|\fB1\fR\fP
 If true, Tor downloads and caches "extra-info" documents.  These
 documents contain information about servers other than the information

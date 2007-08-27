@@ -143,6 +143,8 @@ static config_var_t _option_vars[] = {
   VAR("Bridge",              LINELIST, Bridges,              NULL),
   VAR("CircuitBuildTimeout", INTERVAL, CircuitBuildTimeout,  "1 minute"),
   VAR("CircuitIdleTimeout",  INTERVAL, CircuitIdleTimeout,   "1 hour"),
+  VAR("ClientDNSRejectInternalAddresses", BOOL,
+      ClientDNSRejectInternalAddresses, "1"),
   VAR("ClientOnly",          BOOL,     ClientOnly,           "0"),
   VAR("ConnLimit",           UINT,     ConnLimit,            "1000"),
   VAR("ConstrainedSockets",  BOOL,     ConstrainedSockets,   "0"),
@@ -827,7 +829,8 @@ options_act_reversible(or_options_t *old_options, char **msg)
   int logs_marked = 0;
 
   /* Daemonize _first_, since we only want to open most of this stuff in
-   * the subprocess. */
+   * the subprocess.  Libevent bases can't be reliably inherited across
+   * processes. */
   if (running_tor && options->RunAsDaemon) {
     /* No need to roll back, since you can't change the value. */
     start_daemon();

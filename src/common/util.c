@@ -2601,7 +2601,9 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, int len)
 }
 
 /** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.
- */
+ *
+ *  Return an address family on success, or -1 if an invalid address string is
+ *  provided. */
 int
 tor_addr_from_str(tor_addr_t *addr, const char *src)
 {

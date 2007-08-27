@@ -191,7 +191,8 @@
 #define DEFAULT_DNS_TTL (30*60)
 /** How long can a TTL be before we stop believing it? */
 #define MAX_DNS_TTL (3*60*60)
-/** How small can a TTL be before we stop believing it? */
+/** How small can a TTL be before we stop believing it?  Provides rudimentary
+ * pinning. */
 #define MIN_DNS_TTL (60)
 
 /** How often do we rotate onion keys? */
@@ -2092,6 +2093,11 @@ typedef struct {
   /** If true, we try to download extra-info documents (and we serve them,
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
+
+  /** If true, do not believe anybody who tells us that a domain resolves
+   * to an internal address, or that an internal address has a PTR mapping.
+   * Helps avoid some cross-site attacks. */
+  int ClientDNSRejectInternalAddresses;
 
   /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;
