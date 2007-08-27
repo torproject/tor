@@ -13,26 +13,32 @@ P       - phobos claims
         D Deferred
         X Abandoned
 
+Temporary notations for moving items around:
+++      - Make this a task for the current version
+d       - Move this into "nice to have for the current version"
+D       - Move this into "deferred from current version."
+X2      - This is a duplicate; remove it.
+
 Documentation and testing on 0.1.2.x-final series
 
-N - Test guard unreachable logic; make sure that we actually attempt to
+  o Test guard unreachable logic; make sure that we actually attempt to
     connect to guards that we think are unreachable from time to time.
     Make sure that we don't freak out when the network is down.
 
-  . Forward compatibility fixes
+++. Forward compatibility fixes
 N   - Hack up a client that gives out weird/no certificates, so we can
       test to make sure that this doesn't cause servers to crash.
 
-NR. Write path-spec.txt
+++. Finish path-spec.txt
 
-  - Docs
+++- Docs
     - Tell people about OSX Uninstaller
     - Quietly document NT Service options
     - More prominently, we should have a recommended apps list.
       - recommend gaim.
       - unrecommend IE because of ftp:// bug.
-N   - we should add a preamble to tor-design saying it's out of date.
-N   . Document transport and natdport
+    - we should add a preamble to tor-design saying it's out of date.
+    . Document transport and natdport
       o In man page
       - In a good HOWTO.
 
@@ -85,16 +91,19 @@ Things we'd like to do in 0.2.0.x:
           For now, just require that authorities not be skewed.
       - Start caching consensus documents once authorities make them
       - Start downloading and using consensus documents once caches serve them
+      - Controller support
+        - GETINFO to get consensus
+        - Event when new consensus arrives
     . 104: Long and Short Router Descriptors
       - Drop bandwidth history from router-descriptors
     - 105: Version negotiation for the Tor protocol
-    - 113: Simplifying directory authority administration
-    - 110: prevent infinite-length circuits (phase one)
+d   - 113: Simplifying directory authority administration
+d   - 110: prevent infinite-length circuits (phase one)
       - servers should recognize relay_extend cells and pass them
         on just like relay cells
 
   - Refactoring:
-    - Make resolves no longer use edge_connection_t unless they are actually
+D   - Make resolves no longer use edge_connection_t unless they are actually
       _on_ a socks connection: have edge_connection_t and (say)
       dns_request_t both extend an edge_stream_t, and have p_streams and
       n_streams both be linked lists of edge_stream_t.
@@ -103,9 +112,9 @@ Things we'd like to do in 0.2.0.x:
         - Benchmark pool-allocation vs straightforward malloc.
         - Adjust memory allocation logic in pools to favor a little less
           slack memory.
-      - MAYBE kill stalled circuits rather than stalled connections; consider
+d     - MAYBE kill stalled circuits rather than stalled connections; consider
         anonymity implications.
-    - Move all status info out of routerinfo into local_routerstatus.  Make
+d   - Move all status info out of routerinfo into local_routerstatus.  Make
       "who can change what" in local_routerstatus explicit.  Make
       local_routerstatus (or equivalent) subsume all places to go for "what
       router is this?"
@@ -122,20 +131,23 @@ Things we'd like to do in 0.2.0.x:
       extra-stable case.
     - Streamline how we pick entry nodes: Make choose_random_entry() have
       less magic and less control logic.
-    - Implement TLS shutdown properly when possible.
+d   - Implement TLS shutdown properly when possible.
     - Maybe move NT services into their own module.
     . Autoconf cleanups and improvements:
-      . Tell the user what -dev package to install based on OS.
-      - Detect correct version of libraries.
+      o Tell the user what -dev package to install based on OS.
+d     - Detect correct version of libraries.
     - Refactor networkstatus generation:
       - Include "v" line in getinfo values.
 
   - Features:
     - Traffic priorities
-      - Ability to prioritize own traffic over relayed traffic.
+      . Ability to prioritize own traffic over relayed traffic.
+        (Proposal 111.)
+        . Implement
+        - Merge proposal into the spec.
     . DNS Proxy
       - Document it
-    - A better UI for authority ops.
+d   - A better UI for authority ops.
       - Follow weasel's proposal, crossed with mixminion dir config format
       - Write a proposal
     . Bridges users (rudimentary version)
@@ -182,30 +194,34 @@ N     - Design/implement the "local-status" or something like it, from the
       - More TLS normalization work: make Tor less easily
         fingerprinted.
       - Directory system improvements
-        - config option to publish what ports you listen on, beyond
+d       - config option to publish what ports you listen on, beyond
           ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
-    - Let controller set router flags for authority to transmit, and for
+          (This is very similar to proposal 118.)
+d   - Let controller set router flags for authority to transmit, and for
       client to use.
-    - Support relaying streams to ipv6.
+d   - Support relaying streams to ipv6.
       - Internal code support for ipv6:
         o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
         - Most address variables need to become sockaddrs.
         - Teach resolving code how to handle ipv6.
         - Teach exit policies about ipv6 (consider ipv4/ipv6 interaction!)
         - ...
-    - Let servers decide to support BEGIN_DIR but not DirPort.
+x2  - Let servers decide to support BEGIN_DIR but not DirPort.
+      (duplicate of "Ability to act as a dir cache without a dir port.")
     - Blocking-resistance.
-    - It would be potentially helpful to https requests on the OR port by
+      - Write a proposal; make this part of 105.
+D   - It would be potentially helpful to https requests on the OR port by
       acting like an HTTPS server.
-    - add an 'exit-address' line in the descriptor for servers that exit
+d   - add an 'exit-address' line in the descriptor for servers that exit
       from something that isn't their published address.
     - Audit how much RAM we're using for buffers and cell pools; try to
       trim down a lot.
     - Accept \n as end of lines in the control protocol in addition to \r\n.
-    - Base relative control socket paths in datadir.
+    - Base relative control socket paths on datadir.
   o Deprecations:
     - can we deprecate 'getinfo network-status'?
     - can we deprecate the FastFirstHopPK config option?
+
 P - Packaging:
 P   - Can we switch to polipo?
 P   - If we haven't replaced privoxy, lock down its configuration in all
@@ -219,12 +235,13 @@ P - Consider creating special Tor-Polipo-Vidalia test packages,
     requested by Dmitri Vitalev
   - add an AuthDirBadexit torrc option if we decide we want one.
 
-Deferred from 0.1.2.x:
+Deferred from 0.1.2.x:   (Unmarked items will become "Future version")
   - BEGIN_DIR items
     - turn the received socks addr:port into a digest for setting .exit
     - handle connect-dir streams that don't have a chosen_exit_name set.
-  - 'networkstatus arrived' event
-  - More work on AvoidDiskWrites?
+  X 'networkstatus arrived' event
+    (Abandoned for simpler version in v3 protocol)
+d - More work on AvoidDiskWrites?
   - per-conn write buckets
   - separate config options for read vs write limiting
     (It's hard to support read > write, since we need better
@@ -236,16 +253,17 @@ Deferred from 0.1.2.x:
   - RAM use in directory authorities.
   - Memory use improvements:
     - Look into pulling serverdescs off buffers as they arrive.
-    - Save and mmap v1 directories, and networkstatus docs; store them
+    X Save and mmap v1 directories, and networkstatus docs; store them
       zipped, not uncompressed.
-      - Switch cached_router_t to use mmap.
-      - What to do about reference counts on windows?  (On Unix, this is
+      (Abandoned in favor of dropping v1 directory support.)
+      X Switch cached_router_t to use mmap.
+      X What to do about reference counts on windows?  (On Unix, this is
         easy: unlink works fine.  (Right?)  On Windows, I have doubts.  Do we
         need to keep multiple files?)
-      - What do we do about the fact that people can't read zlib-
+      X What do we do about the fact that people can't read zlib-
         compressed files manually?
 
-  - If the client's clock is too far in the past, it will drop (or
+d - If the client's clock is too far in the past, it will drop (or
     just not try to get) descriptors, so it'll never build circuits.
   - Tolerate clock skew on bridge relays.
 
@@ -256,14 +274,14 @@ Deferred from 0.1.2.x:
     circuit at every step. If we accept exits only at the last hop, we
     reintroduce Lasse's attacks from the Oakland paper.
 
-  - We should ship with a list of stable dir mirrors -- they're not
+++- We should ship with a list of stable dir mirrors -- they're not
     trusted like the authorities, but they'll provide more robustness
     and diversity for bootstrapping clients.
 
   - A way to adjust router flags from the controller.
     (How do we prevent the authority from clobbering them soon after?)
 
-  - Better estimates in the directory of whether servers have good uptime
+++- Better estimates in the directory of whether servers have good uptime
     (high expected time to failure) or good guard qualities (high
     fractional uptime).
     - AKA Track uptime as %-of-time-up, as well as time-since-last-down
@@ -281,7 +299,7 @@ Deferred from 0.1.2.x:
     - We need a getrlimit equivalent on Windows so we can reserve some
       file descriptors for saving files, etc. Otherwise we'll trigger
       asserts when we're out of file descriptors and crash.
-M   - rewrite how libevent does select() on win32 so it's not so very slow.
+    - rewrite how libevent does select() on win32 so it's not so very slow.
       - Add overlapped IO
 
   - Add an option (related to AvoidDiskWrites) to disable directory caching.
@@ -308,13 +326,13 @@ M   - rewrite how libevent does select() on win32 so it's not so very slow.
 
 Minor items for 0.1.2.x as time permits:
   - include bandwidth breakdown by conn->type in BW events.
-  - Recommend polipo? Please?
-  - Make documentation realize that location of system configuration file
+++- Recommend polipo? Please?
+++- Make documentation realize that location of system configuration file
     will depend on location of system defaults, and isn't always /etc/torrc.
-  - Review torrc.sample to make it more discursive.
+d - Review torrc.sample to make it more discursive.
   - a way to generate the website diagrams from source, so we can
     translate them as utf-8 text rather than with gimp.
-R - add d64 and fp64 along-side d and fp so people can paste status
+  - add d64 and fp64 along-side d and fp so people can paste status
     entries into a url. since + is a valid base64 char, only allow one
     at a time. spec and then do.
   - The Debian package now uses --verify-config when (re)starting,
@@ -336,7 +354,7 @@ R - add d64 and fp64 along-side d and fp so people can paste status
   - Rate limit exit connections to a given destination -- this helps
     us play nice with websites when Tor users want to crawl them; it
     also introduces DoS opportunities.
-  - Christian Grothoff's attack of infinite-length circuit.
+x2- Christian Grothoff's attack of infinite-length circuit.
     the solution is to have a separate 'extend-data' cell type
     which is used for the first N data cells, and only
     extend-data cells can be extend requests.
@@ -393,7 +411,7 @@ Future version:
   - servers might check certs for known-good ssl websites, and if they
     come back self-signed, declare themselves to be non-exits. similar
     to how we test for broken/evil dns now.
-  - we try to build 4 test circuits to break them over different
+d - we try to build 4 test circuits to break them over different
     servers. but sometimes our entry node is the same for multiple
     test circuits. this defeats the point.
   - when we hit a funny error from a dir request (eg 403 forbidden),
@@ -412,13 +430,15 @@ Future version:
     - capitalize the first sentence in the doxygen comment, except
       when you shouldn't.
     - avoid spelling errors and incorrect comments. ;)
-  - Should TrackHostExits expire TrackHostExitsExpire seconds after their
+++- Should TrackHostExits expire TrackHostExitsExpire seconds after their
     *last* use, not their *first* use?
   X Configuration format really wants sections.
-  . Good RBL substitute.
-    - Play with the implementations; link them from somewhere; add a
+++. Good RBL substitute.
+    o Play with the implementations; link them from somewhere; add a
       round-robin link from torel.torproject.org; describe how to
       use them in the FAQ.
+    o Torel is now implemented.
+    - Publicize torel.  (What else?
   - Authorities should try using exits for http to connect to some URLS
     (specified in a configuration file, so as not to make the List Of Things
     Not To Censor completely obvious) and ask them for results.  Exits that
@@ -440,7 +460,7 @@ Future version:
     to reduce remote sniping attacks.
   - Have new people be in limbo and need to demonstrate usefulness
     before we approve them.
-  - Clients should estimate their skew as median of skew from servers
+d - Clients should estimate their skew as median of skew from servers
     over last N seconds.
   - Make router_is_general_exit() a bit smarter once we're sure what it's for.
   - Audit everything to make sure rend and intro points are just as likely to
@@ -450,7 +470,9 @@ Future version:
   - Automatically determine what ports are reachable and start using
     those, if circuits aren't working and it's a pattern we recognize
     ("port 443 worked once and port 9001 keeps not working").
-  - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
+++- Limit to 2 dir, 2 OR, N SOCKS connections per IP.
+    - Or maybe close connections from same IP when we get a lot from one.
+    - Or maybe block IPs that connect too many times at once.
   - Handle full buffers without totally borking
   - Rate-limit OR and directory connections overall and per-IP and
     maybe per subnet.
@@ -460,17 +482,20 @@ Future version:
     - Specify?
   - hidserv offerers shouldn't need to define a SocksPort
     * figure out what breaks for this, and do it.
-  - tor should be able to have a pool of outgoing IP addresses
+d - tor should be able to have a pool of outgoing IP addresses
     that it is able to rotate through. (maybe)
     - Specify; implement.
+    - Probably this is part of proposal 118's stuff.
   - let each hidden service (or other thing) specify its own
     OutboundBindAddress?
 
 Blue-sky:
   - Patch privoxy and socks protocol to pass strings to the browser.
   - Standby/hotswap/redundant hidden services.
-  - Robust decentralized storage for hidden service descriptors.
-  - The "China problem"
+d . Robust decentralized storage for hidden service descriptors.
+    (Karsten is working on this.)
+x2. The "China problem"
+    (This is bridges.)
   - Allow small cells and large cells on the same network?
   - Cell buffering and resending. This will allow us to handle broken
     circuits as long as the endpoints don't break, plus will allow
