@@ -1,3 +1,6 @@
+(Remember to include both the revision number _AND_ an abbreviated
+description of the patch.)
+
 Backport items for 0.1.2:
   o r10939: Choose with complete fairness when exits are weighted.
   o r10956: fix the math for exit bandwidth weighting
@@ -15,6 +18,6 @@ Backport for 0.1.2.x once better tested:
   - coderman's constrained socket buffers patch (r10843)
   o r10964: control.c grammar conformance. could conceivably break
     old controllers that were relying on non-conformance.
-  - some subset of r11229?
-
+  - some subset of r11229 (unexpected whitespace in malformed descriptors)?
+  - r11287: Reject address mappings to internal addresses. (??)
 
