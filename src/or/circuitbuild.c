@@ -1740,7 +1740,8 @@ extend_info_alloc(const char *nickname, const char *digest,
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
   memcpy(info->identity_digest, digest, DIGEST_LEN);
-  strlcpy(info->nickname, nickname, sizeof(info->nickname));
+  if (nickname)
+    strlcpy(info->nickname, nickname, sizeof(info->nickname));
   if (onion_key)
     info->onion_key = crypto_pk_dup_key(onion_key);
   info->addr = addr;
