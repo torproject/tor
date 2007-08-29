@@ -2241,7 +2241,6 @@ int fetch_from_buf_http(buf_t *buf,
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                          int log_sockstype, int safe_socks);
 int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
-int fetch_from_buf_line_lf(buf_t *buf, char *data_out, size_t *data_len);
 
 int peek_buf_has_control0_command(buf_t *buf);
 
@@ -2720,10 +2719,8 @@ void enable_control_logging(void);
 
 #ifdef CONTROL_PRIVATE
 /* Used only by control.c and test.c */
-size_t write_escaped_data(const char *data, size_t len,
-                          int translate_newlines, char **out);
-size_t read_escaped_data(const char *data, size_t len,
-                         int translate_newlines,  char **out);
+size_t write_escaped_data(const char *data, size_t len, char **out);
+size_t read_escaped_data(const char *data, size_t len, char **out);
 #endif
 
 /********************************* cpuworker.c *****************************/

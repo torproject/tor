@@ -1462,52 +1462,6 @@ find_char_on_buf(buf_t *buf, char *start, size_t len, char c)
   return memchr(buf->mem, c, len_rest);
 }
 
-/** Helper: return a pointer to the first CRLF after cp on <b>buf</b>. Return
- * NULL if no CRLF is found. */
-static char *
-find_crlf_on_buf(buf_t *buf, char *cp)
-{
-  char *next;
-  while (1) {
-    size_t remaining = buf->datalen - _buf_offset(buf,cp);
-    cp = find_char_on_buf(buf, cp, remaining, '\r');
-    if (!cp)
-      return NULL;
-    next = _wrap_ptr(buf, cp+1);
-    if (next == _buf_end(buf))
-      return NULL;
-    if (*next == '\n')
-      return cp;
-    cp = next;
-  }
-}
-
-/** Try to read a single CRLF-terminated line from <b>buf</b>, and write it,
- * NUL-terminated, into the *<b>data_len</b> byte buffer at <b>data_out</b>.
- * Set *<b>data_len</b> to the number of bytes in the line, not counting the
- * terminating NUL.  Return 1 if we read a whole line, return 0 if we don't
- * have a whole line yet, and return -1 if we we need to grow the buffer.
- */
-int
-fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
-{
-  char *eol;
-  size_t sz;
-  /* Look for a CRLF. */
-  if (!(eol = find_crlf_on_buf(buf, buf->cur))) {
-    return 0;
-  }
-  sz = _buf_offset(buf, eol);
-  if (sz+3 > *data_len) {
-    *data_len = sz+3;
-    return -1;
-  }
-  fetch_from_buf(data_out, sz+2, buf);
-  data_out[sz+2] = '\0';
-  *data_len = sz+2;
-  return 1;
-}
-
 /** Try to read a single LF-terminated line from <b>buf</b>, and write it,
  * NUL-terminated, into the *<b>data_len</b> byte buffer at <b>data_out</b>.
  * Set *<b>data_len</b> to the number of bytes in the line, not counting the
@@ -1516,7 +1470,7 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
  *<b>data_len</b>.
  */
 int
-fetch_from_buf_line_lf(buf_t *buf, char *data_out, size_t *data_len)
+fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
 {
   char *cp;
   size_t sz;

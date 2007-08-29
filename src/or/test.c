@@ -2000,7 +2000,7 @@ test_util_control_formats(void)
     "..This is a test\r\nof the emergency \nbroadcast\r\n..system.\r\nZ.\r\n";
   size_t sz;
 
-  sz = read_escaped_data(inp, strlen(inp), 1, &out);
+  sz = read_escaped_data(inp, strlen(inp), &out);
   test_streq(out,
              ".This is a test\nof the emergency \nbroadcast\n.system.\nZ.\n");
   test_eq(sz, strlen(out));

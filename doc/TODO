@@ -144,7 +144,10 @@ N     - Design/implement the "local-status" or something like it, from the
       - Write a proposal; make this part of 105.
     - Audit how much RAM we're using for buffers and cell pools; try to
       trim down a lot.
-    - Accept \n as end of lines in the control protocol in addition to \r\n.
+    o Accept \n as end of lines in the control protocol in addition to \r\n.
+      o Use fetch_from_buf_line_lf in control.c instead of fetch_from_buf_line.
+      o Fix up read escaped_data to accept LF instead of CRLF, and to
+        always translate_newlines (since that's the only way it's called).
     - Base relative control socket paths on datadir.
     - We should ship with a list of stable dir mirrors -- they're not
       trusted like the authorities, but they'll provide more robustness

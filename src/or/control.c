@@ -272,16 +272,14 @@ connection_write_str_to_buf(const char *s, control_connection_t *conn)
 }
 
 /** Given a <b>len</b>-character string in <b>data</b>, made of lines
- * terminated by CRLF, allocate a new string in *<b>out</b>, and copy
- * the contents of <b>data</b> into *<b>out</b>, adding a period
- * before any period that that appears at the start of a line, and
- * adding a period-CRLF line at the end. If <b>translate_newlines</b>
- * is true, replace all LF characters sequences with CRLF.  Return the
- * number of bytes in *<b>out</b>.
+ * terminated by CRLF, allocate a new string in *<b>out</b>, and copy the
+ * contents of <b>data</b> into *<b>out</b>, adding a period before any period
+ * that that appears at the start of a line, and adding a period-CRLF line at
+ * the end. Replace all LF characters sequences with CRLF.  Return the number
+ * of bytes in *<b>out</b>.
  */
 /* static */ size_t
-write_escaped_data(const char *data, size_t len, int translate_newlines,
-                   char **out)
+write_escaped_data(const char *data, size_t len, char **out)
 {
   size_t sz_out = len+8;
   char *outp;
@@ -297,7 +295,7 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
   start_of_line = 1;
   while (data < end) {
     if (*data == '\n') {
-      if (translate_newlines && data > start && data[-1] != '\r')
+      if (data > start && data[-1] != '\r')
         *outp++ = '\r';
       start_of_line = 1;
     } else if (*data == '.') {
@@ -325,12 +323,11 @@ write_escaped_data(const char *data, size_t len, int translate_newlines,
 /** Given a <b>len</b>-character string in <b>data</b>, made of lines
  * terminated by CRLF, allocate a new string in *<b>out</b>, and copy
  * the contents of <b>data</b> into *<b>out</b>, removing any period
- * that appears at the start of a line.  If <b>translate_newlines</b>
- * is true, replace all CRLF sequences with LF.  Return the number of
+ * that appears at the start of a line, and replacing all CRLF sequences
+ * with LF.   Return the number of
  * bytes in *<b>out</b>. */
 /* static */ size_t
-read_escaped_data(const char *data, size_t len, int translate_newlines,
-                  char **out)
+read_escaped_data(const char *data, size_t len, char **out)
 {
   char *outp;
   const char *next;
@@ -341,28 +338,26 @@ read_escaped_data(const char *data, size_t len, int translate_newlines,
   end = data+len;
 
   while (data < end) {
+    /* we're at the start of a line. */
     if (*data == '.')
       ++data;
-    if (translate_newlines)
-      next = tor_memmem(data, end-data, "\r\n", 2);
-    else
-      next = tor_memmem(data, end-data, "\r\n.", 3);
+    next = memchr(data, '\n', end-data);
     if (next) {
-      memcpy(outp, data, next-data);
-      outp += (next-data);
-      data = next+2;
+      size_t n_to_copy = next-data;
+      /* Don't copy a CR that precedes this LF. */
+      if (n_to_copy && *(next-1) == '\r')
+        --n_to_copy;
+      memcpy(outp, data, n_to_copy);
+      outp += n_to_copy;
+      data = next+1; /* This will point at the start of the next line,
+                      * or the end of the string, or a period. */
     } else {
       memcpy(outp, data, end-data);
       outp += (end-data);
       *outp = '\0';
       return outp - *out;
     }
-    if (translate_newlines) {
-      *outp++ = '\n';
-    } else {
-      *outp++ = '\r';
-      *outp++ = '\n';
-    }
+    *outp++ = '\n';
   }
 
   *outp = '\0';
@@ -1818,7 +1813,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
     } else {
       char *esc = NULL;
       size_t esc_len;
-      esc_len = write_escaped_data(v, strlen(v), 1, &esc);
+      esc_len = write_escaped_data(v, strlen(v), &esc);
       connection_printf_to_buf(conn, "250+%s=\r\n", k);
       connection_write_to_buf(esc, esc_len, TO_CONN(conn));
       tor_free(esc);
@@ -2002,6 +1997,8 @@ static int
 handle_control_setpurpose(control_connection_t *conn, int for_circuits,
                           uint32_t len, const char *body)
 {
+  /* XXXX020 this should maybe be two functions; almost no code is acutally
+     shared. */
   origin_circuit_t *circ = NULL;
   routerinfo_t *ri = NULL;
   uint8_t new_purpose;
@@ -2170,7 +2167,7 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   }
   SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
   smartlist_free(args);
-  read_escaped_data(cp, len-(cp-body), 1, &desc);
+  read_escaped_data(cp, len-(cp-body), &desc);
 
   switch (router_load_single_router(desc, purpose, &msg)) {
   case -1:
@@ -2530,8 +2527,8 @@ connection_control_process_inbuf(control_connection_t *conn)
     char buf[128];
     set_uint16(buf+2, htons(0x0000)); /* type == error */
     set_uint16(buf+4, htons(0x0001)); /* code == internal error */
-    strlcpy(buf+6, "The v0 control protocol is not supported by Tor 0.2.0.x "
-            "and later; use Tor 0.1.2.x or upgrade your controller",
+    strlcpy(buf+6, "The v0 control protocol is not supported by Tor 0.1.2.17 "
+            "and later; upgrade your controller.",
             sizeof(buf)-6);
     body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
     set_uint16(buf+0, htons(body_len));
@@ -2571,10 +2568,16 @@ connection_control_process_inbuf(control_connection_t *conn)
     if (last_idx == 0 && *conn->incoming_cmd != '+')
       /* One line command, didn't start with '+'. */
       break;
+    /* XXXX this code duplication is kind of dumb. */
     if (last_idx+3 == conn->incoming_cmd_cur_len &&
         !memcmp(conn->incoming_cmd + last_idx, ".\r\n", 3)) {
       /* Just appended ".\r\n"; we're done. Remove it. */
       conn->incoming_cmd_cur_len -= 3;
+      break;
+    } else if (last_idx+2 == conn->incoming_cmd_cur_len &&
+               !memcmp(conn->incoming_cmd + last_idx, ".\n", 2)) {
+      /* Just appended ".\n"; we're done. Remove it. */
+      conn->incoming_cmd_cur_len -= 2;
       break;
     }
     /* Otherwise, read another line. */
@@ -3309,7 +3312,7 @@ control_event_or_authdir_new_descriptor(const char *action,
                msg ? msg : "");
 
   /* Escape the server descriptor properly */
-  esclen = write_escaped_data(desc, desclen, 1, &esc);
+  esclen = write_escaped_data(desc, desclen, &esc);
 
   totallen = strlen(firstline) + esclen + 1;
   buf = tor_malloc(totallen);
@@ -3345,7 +3348,7 @@ control_event_networkstatus_changed(smartlist_t *statuses)
     });
 
   s = smartlist_join_strings(strs, "", 0, NULL);
-  write_escaped_data(s, strlen(s), 1, &esc);
+  write_escaped_data(s, strlen(s), &esc);
   SMARTLIST_FOREACH(strs, char *, cp, tor_free(cp));
   smartlist_free(strs);
   tor_free(s);

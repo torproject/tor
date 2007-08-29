@@ -1725,7 +1725,7 @@ connection_ap_process_natd(edge_connection_t *conn)
 
   /* look for LF-terminated "[DEST ip_addr port]"
    * where ip_addr is a dotted-quad and port is in string form */
-  err = fetch_from_buf_line_lf(conn->_base.inbuf, tmp_buf, &tlen);
+  err = fetch_from_buf_line(conn->_base.inbuf, tmp_buf, &tlen);
   if (err == 0)
     return 0;
   if (err < 0) {

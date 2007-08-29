@@ -52,6 +52,10 @@ $Id$
   There are explicitly no limits on line length.  All 8-bit characters are
   permitted unless explicitly disallowed.
 
+  Wherever CRLF is specified to be accepted from the controller, Tor MAY also
+  accept LF.  Tor, however, MUST NOT generate LF instead of CRLF.
+  Controllers SHOULD always send CRLF.
+
 2.2. Commands from controller to Tor
 
     Command = Keyword Arguments CRLF / "+" Keyword Arguments CRLF Data
