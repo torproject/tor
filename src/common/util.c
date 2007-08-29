@@ -1459,6 +1459,106 @@ write_str_to_file(const char *fname, const char *str, int bin)
   return write_bytes_to_file(fname, str, strlen(str), bin);
 }
 
+/** DOCDOC */
+struct open_file_t {
+  char *tempname;
+  char *filename;
+  int rename_on_close;
+  int fd;
+};
+
+/** DOCDOC */
+int
+start_writing_to_file(const char *fname, int open_flags, int mode,
+                      open_file_t **data_out)
+{
+  size_t tempname_len = strlen(fname)+16;
+  open_file_t *new_file = tor_malloc_zero(sizeof(open_file_t));
+  const char *open_name;
+  tor_assert(fname);
+  tor_assert(data_out);
+  new_file->fd = -1;
+  tempname_len = strlen(fname)+16;
+  tor_assert(tempname_len > strlen(fname)); /*check for overflow*/
+  new_file->filename = tor_strdup(fname);
+  if (open_flags & O_APPEND) {
+    open_name = fname;
+    new_file->rename_on_close = 0;
+  } else {
+    new_file->tempname = tor_malloc(tempname_len);
+    if (tor_snprintf(new_file->tempname, tempname_len, "%s.tmp", fname)<0) {
+      log(LOG_WARN, LD_GENERAL, "Failed to generate filename");
+      goto err;
+    }
+    new_file->rename_on_close = 1;
+  }
+
+  if ((new_file->fd = open(new_file->tempname, open_flags, mode))
+      < 0) {
+    log(LOG_WARN, LD_FS, "Couldn't open \"%s\" for writing: %s",
+        new_file->tempname, strerror(errno));
+    goto err;
+  }
+
+  *data_out = new_file;
+
+  return new_file->fd;
+ err:
+  *data_out = NULL;
+  tor_free(new_file->filename);
+  tor_free(new_file->tempname);
+  tor_free(new_file);
+  return -1;
+}
+
+/** DOCDOC */
+static int
+finish_writing_to_file_impl(open_file_t *file_data, int abort_write)
+{
+  int r = 0;
+  tor_assert(file_data && file_data->filename);
+  if (file_data->fd >= 0 && close(file_data->fd) < 0) {
+    log_warn(LD_FS, "Error flushing \"%s\": %s", file_data->filename,
+             strerror(errno));
+    abort_write = 1;
+    r = -1;
+  }
+
+  if (file_data->rename_on_close) {
+    tor_assert(file_data->tempname && file_data->filename);
+    if (abort_write) {
+      unlink(file_data->tempname);
+    } else {
+      tor_assert(strcmp(file_data->filename, file_data->tempname));
+      if (replace_file(file_data->tempname, file_data->filename)) {
+        log_warn(LD_FS, "Error replacing \"%s\": %s", file_data->filename,
+                 strerror(errno));
+        r = -1;
+      }
+    }
+  }
+
+  tor_free(file_data->filename);
+  tor_free(file_data->tempname);
+  tor_free(file_data);
+
+  return r;
+}
+
+/** DOCDOC */
+int
+finish_writing_to_file(open_file_t *file_data)
+{
+  return finish_writing_to_file_impl(file_data, 0);
+}
+
+/** DOCDOC */
+int
+abort_writing_to_file(open_file_t *file_data)
+{
+  return finish_writing_to_file_impl(file_data, 1);
+}
+
 /** Helper: given a set of flags as passed to open(2), open the file
  * <b>fname</b> and write all the sized_chunk_t structs in <b>chunks</b> to
  * the file.  Do so as atomically as possible e.g. by opening temp files and
@@ -1467,53 +1567,24 @@ static int
 write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
                           int open_flags)
 {
-  size_t tempname_len;
-  char *tempname;
-  int fd;
-  int result;
-  tempname_len = strlen(fname)+16;
-  tor_assert(tempname_len > strlen(fname)); /*check for overflow*/
-  tempname = tor_malloc(tempname_len);
-  if (open_flags & O_APPEND) {
-    strlcpy(tempname, fname, tempname_len);
-  } else {
-    if (tor_snprintf(tempname, tempname_len, "%s.tmp", fname)<0) {
-      log(LOG_WARN, LD_GENERAL, "Failed to generate filename");
-      goto err;
-    }
-  }
-  if ((fd = open(tempname, open_flags, 0600))
-      < 0) {
-    log(LOG_WARN, LD_FS, "Couldn't open \"%s\" for writing: %s", tempname,
-        strerror(errno));
-    goto err;
-  }
+  open_file_t *file = NULL;
+  int fd, result;
+  fd = start_writing_to_file(fname, open_flags, 0600, &file);
+  if (fd<0)
+    return -1;
   SMARTLIST_FOREACH(chunks, sized_chunk_t *, chunk,
   {
     result = write_all(fd, chunk->bytes, chunk->len, 0);
     if (result < 0 || (size_t)result != chunk->len) {
-      log(LOG_WARN, LD_FS, "Error writing to \"%s\": %s", tempname,
+      log(LOG_WARN, LD_FS, "Error writing to \"%s\": %s", fname,
           strerror(errno));
-      close(fd);
       goto err;
     }
   });
-  if (close(fd)) {
-    log(LOG_WARN, LD_FS, "Error flushing to \"%s\": %s", tempname,
-        strerror(errno));
-    goto err;
-  }
-  if (!(open_flags & O_APPEND)) {
-    if (replace_file(tempname, fname)) {
-      log(LOG_WARN, LD_FS, "Error replacing \"%s\": %s", fname,
-          strerror(errno));
-      goto err;
-    }
-  }
-  tor_free(tempname);
-  return 0;
+
+  return finish_writing_to_file(file);
  err:
-  tor_free(tempname);
+  abort_writing_to_file(file);
   return -1;
 }
 
