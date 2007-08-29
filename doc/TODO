@@ -70,7 +70,8 @@ Things we'd like to do in 0.2.0.x:
         - GETINFO to get consensus
         - Event when new consensus arrives
     . 104: Long and Short Router Descriptors
-      - Drop bandwidth history from router-descriptors
+      - Drop bandwidth history from router-descriptors around September 10,
+        once torstatus and weasel have upgraded.
     - 105: Version negotiation for the Tor protocol
     . 111: Prioritize local traffic over relayed.
       o Implement
@@ -135,6 +136,8 @@ N     - Design/implement the "local-status" or something like it, from the
       - More TLS normalization work: make Tor less easily
         fingerprinted.
       - Directory system improvements
+    - Misc
+      - Make BEGIN_DIR mandatory for asking questions of bridge authorities?
 
   - Features (other than bridges):
     - Blocking-resistance.
@@ -156,6 +159,8 @@ N     - Design/implement the "local-status" or something like it, from the
      - Or maybe close connections from same IP when we get a lot from one.
      - Or maybe block IPs that connect too many times at once.
     - add an AuthDirBadexit torrc option if we decide we want one.
+    - Add a GuardsSelectedByVersion line to the state file so we know
+      not to drop guards we added.
 
   - Testing
 N   - Hack up a client that gives out weird/no certificates, so we can
@@ -190,7 +195,8 @@ P - Figure out if including RSA and IDEA are bad for Tor from a legal
 P - Create packages for Nokia 800, requested by Chris Soghoian
 P - Consider creating special Tor-Polipo-Vidalia test packages,
     requested by Dmitri Vitalev
-
+  - Get Vidalia supporting protocolinfo and using auth by default.
+  - Try to get newer Torbuttons into the windows bundle.
 
 Nice-to-have items for 0.2.0.x, time permitting:
   - Proposals
