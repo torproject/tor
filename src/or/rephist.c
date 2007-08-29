@@ -563,14 +563,23 @@ get_mtbf_filename(void)
 int
 rep_hist_record_mtbf_data(void)
 {
-  char buf[128];
   char time_buf[ISO_TIME_LEN+1];
-  smartlist_t *lines;
 
   digestmap_iter_t *orhist_it;
   const char *digest;
   void *or_history_p;
   or_history_t *hist;
+  open_file_t *open_file = NULL;
+  FILE *f;
+
+  {
+    char *filename = get_mtbf_filename();
+    f = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE|O_TEXT, 0600,
+                                    &open_file);
+    tor_free(filename);
+    if (!f)
+      return -1;
+  }
 
   /* File format is:
    *   FormatLine *KeywordLine Data
@@ -581,27 +590,24 @@ rep_hist_record_mtbf_data(void)
    *   RouterMTBFLine = Fingerprint SP WeightedRunLen SP
    *           TotalRunWeights [SP S=StartRunTime] NL
    */
+#define PUT(s) STMT_BEGIN if (fputs((s),f)<0) goto err; STMT_END
+#define PRINTF(args) STMT_BEGIN if (fprintf args <0) goto err; STMT_END
 
-  lines = smartlist_create();
-
-  smartlist_add(lines, tor_strdup("format 1\n"));
+  PUT("format 1\n");
 
   format_iso_time(time_buf, time(NULL));
-  tor_snprintf(buf, sizeof(buf), "stored-at %s\n", time_buf);
-  smartlist_add(lines, tor_strdup(buf));
+  PRINTF((f, "stored-at %s\n", time_buf));
 
   if (started_tracking_stability) {
     format_iso_time(time_buf, started_tracking_stability);
-    tor_snprintf(buf, sizeof(buf), "tracked-since %s\n", time_buf);
-    smartlist_add(lines, tor_strdup(buf));
+    PRINTF((f, "tracked-since %s\n", time_buf));
   }
   if (stability_last_downrated) {
     format_iso_time(time_buf, stability_last_downrated);
-    tor_snprintf(buf, sizeof(buf), "last-downrated %s\n", time_buf);
-    smartlist_add(lines, tor_strdup(buf));
+    PRINTF((f, "last-downrated %s\n", time_buf));
   }
 
-  smartlist_add(lines, tor_strdup("data\n"));
+  PUT("data\n");
 
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
@@ -616,28 +622,20 @@ rep_hist_record_mtbf_data(void)
       format_iso_time(time_buf, hist->start_of_run);
       t = time_buf;
     }
-    tor_snprintf(buf, sizeof(buf), "%s %lu %.5lf%s%s\n",
-                 dbuf, hist->weighted_run_length, hist->total_run_weights,
-                 t ? " S=" : "", t ? t : "");
-    smartlist_add(lines, tor_strdup(buf));
+    PRINTF((f, "%s %lu %.5lf%s%s\n",
+            dbuf, hist->weighted_run_length, hist->total_run_weights,
+            t ? " S=" : "", t ? t : ""));
   }
 
-  smartlist_add(lines, tor_strdup(".\n"));
+  PUT(".\n");
 
-  {
-    size_t sz;
-    /* XXXX This isn't terribly efficient; line-at-a-time would be
-     * way faster. */
-    char *filename = get_mtbf_filename();
-    char *data = smartlist_join_strings(lines, "", 0, &sz);
-    int r = write_bytes_to_file(filename, data, sz, 0);
+#undef PUT
+#undef PRINTF
 
-    tor_free(data);
-    tor_free(filename);
-    SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
-    smartlist_free(lines);
-    return r;
-  }
+  return finish_writing_to_file(open_file);
+ err:
+  abort_writing_to_file(open_file);
+  return -1;
 }
 
 /** Load MTBF data from disk.  Returns 0 on success or recoverable error, -1

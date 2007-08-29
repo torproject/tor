@@ -151,7 +151,7 @@ load_identity_key(void)
   FILE *f;
 
   if (make_new_id) {
-    int fd;
+    open_file_t *open_file = NULL;
     RSA *key;
     if (status != FN_NOENT) {
       log_err(LD_GENERAL, "--create-identity-key was specified, but %s "
@@ -171,18 +171,10 @@ load_identity_key(void)
       return 1;
     }
 
-    if ((fd = open(identity_key_file, O_CREAT|O_EXCL|O_WRONLY, 0400))<0) {
-      log_err(LD_GENERAL, "Couldn't fdopen %s for writing: %s",
-              identity_key_file, strerror(errno));
+    if (!(f = start_writing_to_stdio_file(identity_key_file,
+                                          OPEN_FLAGS_REPLACE, 0400,
+                                          &open_file)))
       return 1;
-    }
-
-    if (!(f = fdopen(fd, "w"))) {
-      close(fd);
-      log_err(LD_GENERAL, "Couldn't fdopen %s for writing: %s",
-              identity_key_file, strerror(errno));
-      return 1;
-    }
 
     if (!PEM_write_PKCS8PrivateKey_nid(f, identity_key,
                                        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
@@ -191,9 +183,10 @@ load_identity_key(void)
       log_err(LD_GENERAL, "Couldn't write identity key to %s",
               identity_key_file);
       crypto_log_errors(LOG_ERR, "Writing identity key");
+      abort_writing_to_file(open_file);
       return 1;
     }
-    fclose(f);
+    finish_writing_to_file(open_file);
   } else {
     if (status != FN_FILE) {
       log_err(LD_GENERAL,
@@ -224,7 +217,7 @@ load_identity_key(void)
 static int
 generate_signing_key(void)
 {
-  int fd;
+  open_file_t *open_file;
   FILE *f;
   RSA *key;
   log_notice(LD_GENERAL, "Generating %d-bit RSA signing key.",
@@ -240,26 +233,19 @@ generate_signing_key(void)
     return 1;
   }
 
-  if ((fd = open(signing_key_file, O_CREAT|O_EXCL|O_WRONLY, 0600))<0) {
-    log_err(LD_GENERAL, "Couldn't open %s for writing: %s",
-            signing_key_file, strerror(errno));
+  if (!(f = start_writing_to_stdio_file(signing_key_file,
+                                        OPEN_FLAGS_REPLACE, 0600,
+                                        &open_file)))
     return 1;
-  }
-
-  if (!(f = fdopen(fd, "w"))) {
-    close(fd);
-    log_err(LD_GENERAL, "Couldn't open %s for writing: %s",
-            signing_key_file, strerror(errno));
-    return 1;
-  }
 
   /* Write signing key with no encryption. */
   if (!PEM_write_RSAPrivateKey(f, key, NULL, NULL, 0, NULL, NULL)) {
     crypto_log_errors(LOG_WARN, "writing signing key");
+    abort_writing_to_file(open_file);
     return 1;
   }
 
-  fclose(f);
+  finish_writing_to_file(open_file);
 
   return 0;
 }

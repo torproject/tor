@@ -18,6 +18,11 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
       router, do not try to include the nickname if it is absent.  Fixes
       bug 467.
 
+  o Code simplifications and refactoring:
+    - Revamp file-writing logic so we don't need to have the entire contents
+      of a file in memory at once before we write to disk.  Tor, meet stdio.
+
+
 Changes in version 0.2.0.6-alpha - 2007-08-26
   o New directory authorities:
     - Set up Tonga as the default bridge directory authority.

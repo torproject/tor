@@ -156,8 +156,8 @@ N     - Design/implement the "local-status" or something like it, from the
        (high expected time to failure) or good guard qualities (high
        fractional uptime).
      - AKA Track uptime as %-of-time-up, as well as time-since-last-down
-    - Should TrackHostExits expire TrackHostExitsExpire seconds after their
-       *last* use, not their *first* use?
+    - Make TrackHostExits expire TrackHostExitsExpire seconds after their
+       *last* use, not their *first* use.
     - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
      - Or maybe close connections from same IP when we get a lot from one.
      - Or maybe block IPs that connect too many times at once.

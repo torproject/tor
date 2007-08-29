@@ -18,6 +18,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+#ifndef O_TEXT
+#define O_TEXT 0
+#endif
+
 /* Replace assert() with a variant that sends failures to the log before
  * calling assert() normally.
  */
@@ -213,9 +220,14 @@ file_status_t file_status(const char *filename);
  * directory; see that function's documentation for details. */
 typedef enum { CPD_NONE, CPD_CREATE, CPD_CHECK } cpd_check_t;
 int check_private_dir(const char *dirname, cpd_check_t check);
+#define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
+#define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)
 typedef struct open_file_t open_file_t;
 int start_writing_to_file(const char *fname, int open_flags, int mode,
                           open_file_t **data_out);
+FILE *start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
+                                  open_file_t **data_out);
+FILE *fdopen_file(open_file_t *file_data);
 int finish_writing_to_file(open_file_t *file_data);
 int abort_writing_to_file(open_file_t *file_data);
 int write_str_to_file(const char *fname, const char *str, int bin);

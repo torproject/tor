@@ -72,13 +72,6 @@ const char util_c_id[] = "$Id$";
 #include <malloc.h>
 #endif
 
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-#ifndef O_TEXT
-#define O_TEXT 0
-#endif
-
 /* =====
  * Memory management
  * ===== */
@@ -1465,6 +1458,7 @@ struct open_file_t {
   char *filename;
   int rename_on_close;
   int fd;
+  FILE *stdio_file;
 };
 
 /** DOCDOC */
@@ -1477,6 +1471,9 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   const char *open_name;
   tor_assert(fname);
   tor_assert(data_out);
+#if (O_BINARY != 0 && O_TEXT != 0)
+  tor_assert((open_flags & (O_BINARY|O_TEXT)) != 0);
+#endif
   new_file->fd = -1;
   tempname_len = strlen(fname)+16;
   tor_assert(tempname_len > strlen(fname)); /*check for overflow*/
@@ -1485,7 +1482,7 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     open_name = fname;
     new_file->rename_on_close = 0;
   } else {
-    new_file->tempname = tor_malloc(tempname_len);
+    open_name = new_file->tempname = tor_malloc(tempname_len);
     if (tor_snprintf(new_file->tempname, tempname_len, "%s.tmp", fname)<0) {
       log(LOG_WARN, LD_GENERAL, "Failed to generate filename");
       goto err;
@@ -1493,10 +1490,10 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     new_file->rename_on_close = 1;
   }
 
-  if ((new_file->fd = open(new_file->tempname, open_flags, mode))
+  if ((new_file->fd = open(open_name, open_flags, mode))
       < 0) {
-    log(LOG_WARN, LD_FS, "Couldn't open \"%s\" for writing: %s",
-        new_file->tempname, strerror(errno));
+    log(LOG_WARN, LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
+        open_name, fname, strerror(errno));
     goto err;
   }
 
@@ -1512,16 +1509,49 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
 }
 
 /** DOCDOC */
+FILE *
+fdopen_file(open_file_t *file_data)
+{
+  tor_assert(file_data);
+  if (file_data->stdio_file)
+    return file_data->stdio_file;
+  tor_assert(file_data->fd >= 0);
+  if (!(file_data->stdio_file = fdopen(file_data->fd, "a"))) {
+    log_warn(LD_FS, "Couldn't fdopen \"%s\": %s", file_data->filename,
+             strerror(errno));
+  }
+  return file_data->stdio_file;
+}
+
+/** DOCDOC */
+FILE *
+start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
+                            open_file_t **data_out)
+{
+  FILE *res;
+  if (start_writing_to_file(fname, open_flags, mode, data_out)<0)
+    return NULL;
+  if (!(res = fdopen_file(*data_out)))
+    abort_writing_to_file(*data_out);
+  return res;
+}
+
+/** DOCDOC */
 static int
 finish_writing_to_file_impl(open_file_t *file_data, int abort_write)
 {
   int r = 0;
   tor_assert(file_data && file_data->filename);
-  if (file_data->fd >= 0 && close(file_data->fd) < 0) {
+  if (file_data->stdio_file) {
+    if (fclose(file_data->stdio_file)) {
+      log_warn(LD_FS, "Error closing \"%s\": %s", file_data->filename,
+               strerror(errno));
+      abort_write = r = -1;
+    }
+  } else if (file_data->fd >= 0 && close(file_data->fd) < 0) {
     log_warn(LD_FS, "Error flushing \"%s\": %s", file_data->filename,
              strerror(errno));
-    abort_write = 1;
-    r = -1;
+    abort_write = r = -1;
   }
 
   if (file_data->rename_on_close) {
@@ -1538,6 +1568,8 @@ finish_writing_to_file_impl(open_file_t *file_data, int abort_write)
     }
   }
 
+  memset(file_data, 0, sizeof(file_data));
+  file_data->fd = -1;
   tor_free(file_data->filename);
   tor_free(file_data->tempname);
   tor_free(file_data);
@@ -1593,7 +1625,7 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
 int
 write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin)
 {
-  int flags = O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:O_TEXT);
+  int flags = OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT);
   return write_chunks_to_file_impl(fname, chunks, flags);
 }
 
@@ -1603,7 +1635,7 @@ int
 write_bytes_to_file(const char *fname, const char *str, size_t len,
                     int bin)
 {
-  int flags = O_WRONLY|O_CREAT|O_TRUNC|(bin?O_BINARY:O_TEXT);
+  int flags = OPEN_FLAGS_REPLACE|(bin?O_BINARY:O_TEXT);
   int r;
   sized_chunk_t c = { str, len };
   smartlist_t *chunks = smartlist_create();
@@ -1619,7 +1651,7 @@ int
 append_bytes_to_file(const char *fname, const char *str, size_t len,
                      int bin)
 {
-  int flags = O_WRONLY|O_CREAT|O_APPEND|(bin?O_BINARY:O_TEXT);
+  int flags = OPEN_FLAGS_APPEND|(bin?O_BINARY:O_TEXT);
   int r;
   sized_chunk_t c = { str, len };
   smartlist_t *chunks = smartlist_create();
