@@ -25,6 +25,10 @@ extern circuit_t *global_circuitlist;
 typedef struct {
   char nickname[MAX_NICKNAME_LEN+1];
   char identity[DIGEST_LEN];
+  time_t chosen_on_date; /**< Approximately when was this guard added?
+                          * "0" if we don't know. */
+  char *chosen_by_version; /**< What tor version added this guard? NULL
+                            * if we don't know. */
   unsigned int made_contact : 1; /**< 0 if we have never connected to this
                                   * router, 1 if we have. */
   unsigned int can_retry : 1; /**< Should we retry connecting to this entry,
@@ -56,6 +60,7 @@ static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
+static time_t start_of_month(time_t when);
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
  * and with the high bit specified by conn-\>circ_id_type, until we get
@@ -2054,6 +2059,8 @@ add_an_entry_guard(routerinfo_t *chosen, int reset_status)
   log_info(LD_CIRC, "Chose '%s' as new entry guard.", router->nickname);
   strlcpy(entry->nickname, router->nickname, sizeof(entry->nickname));
   memcpy(entry->identity, router->cache_info.identity_digest, DIGEST_LEN);
+  entry->chosen_on_date = start_of_month(time(NULL));
+  entry->chosen_by_version = tor_strdup(VERSION);
   if (chosen) /* prepend */
     smartlist_insert(entry_guards, 0, entry);
   else /* append */
@@ -2087,11 +2094,62 @@ pick_entry_guards(void)
  * unlisted, excluded, or otherwise nonusable before we give up on it? */
 #define ENTRY_GUARD_REMOVE_AFTER (30*24*60*60)
 
+/** Release all storage held by <b>e</b>. */
+static void
+entry_guard_free(entry_guard_t *e)
+{
+  tor_assert(e);
+  tor_free(e->chosen_by_version);
+  tor_free(e);
+}
+
+/** DOCDOC */
+static int
+remove_obsolete_entry_guards(void)
+{
+  int changed, i;
+  for (i = 0; i < smartlist_len(entry_guards); ++i) {
+    entry_guard_t *entry = smartlist_get(entry_guards, i);
+    const char *ver = entry->chosen_by_version;
+    const char *msg = NULL;
+    tor_version_t v;
+    int version_is_bad = 0;
+    if (!ver) {
+      msg = "does not say what version of Tor it was selected by";
+      version_is_bad = 1;
+    } else if (tor_version_parse(ver, &v)) {
+      msg = "does not seem to be from any recognized version of Tor";
+      version_is_bad = 1;
+    } else if ((tor_version_as_new_as(ver, "0.1.0.10-alpha") &&
+                !tor_version_as_new_as(ver, "0.1.2.16-dev")) ||
+               (tor_version_as_new_as(ver, "0.2.0.0-alpha") &&
+                !tor_version_as_new_as(ver, "0.2.0.6-alpha"))) {
+      msg = "was selected without regard for guard bandwidth";
+      version_is_bad = 1;
+    }
+    if (version_is_bad) {
+      char dbuf[HEX_DIGEST_LEN+1];
+      tor_assert(msg);
+      base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
+      log_notice(LD_CIRC, "Entry guard '%s' (%s) %s. (Version=%s.)  "
+                 "Replacing it.",
+                 entry->nickname, dbuf, msg, ver?escaped(ver):"none");
+      control_event_guard(entry->nickname, entry->identity, "DROPPED");
+      entry_guard_free(entry);
+      smartlist_del_keeporder(entry_guards, i--);
+      log_entry_guards(LOG_INFO);
+      changed = 1;
+    }
+  }
+
+  return changed ? 1 : 0;
+}
+
 /** Remove all entry guards that have been down or unlisted for so
  * long that we don't think they'll come up again. Return 1 if we
  * removed any, or 0 if we did nothing. */
 static int
-remove_dead_entries(void)
+remove_dead_entry_guards(void)
 {
   char dbuf[HEX_DIGEST_LEN+1];
   char tbuf[ISO_TIME_LEN+1];
@@ -2110,7 +2168,7 @@ remove_dead_entries(void)
                "since %s local time; removing.",
                entry->nickname, dbuf, tbuf);
       control_event_guard(entry->nickname, entry->identity, "DROPPED");
-      tor_free(entry);
+      entry_guard_free(entry);
       smartlist_del_keeporder(entry_guards, i);
       log_entry_guards(LOG_INFO);
       changed = 1;
@@ -2155,7 +2213,7 @@ entry_guards_compute_status(void)
                entry_is_live(entry, 0, 1, 0) ? "live" : "not live");
     });
 
-  if (remove_dead_entries())
+  if (remove_dead_entry_guards())
     changed = 1;
 
   if (changed) {
@@ -2454,6 +2512,19 @@ choose_random_entry(cpath_build_state_t *state)
   return r;
 }
 
+/** DOCDOC */
+static time_t
+start_of_month(time_t now)
+{
+  struct tm tm;
+  tor_gmtime_r(&now, &tm);
+  tm.tm_sec = 0;
+  tm.tm_min = 0;
+  tm.tm_hour = 0;
+  tm.tm_mday = 1;
+  return tor_timegm(&tm);
+}
+
 /** Parse <b>state</b> and learn about the entry guards it describes.
  * If <b>set</b> is true, and there are no errors, replace the global
  * entry_list with what we find.
@@ -2467,6 +2538,8 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
   smartlist_t *new_entry_guards = smartlist_create();
   config_line_t *line;
   time_t now = time(NULL);
+  const char *state_version = state->TorVersion;
+  digestmap_t *added_by = digestmap_new();
 
   *msg = NULL;
   for (line = state->EntryGuards; line; line = line->next) {
@@ -2496,7 +2569,8 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       smartlist_free(args);
       if (*msg)
         break;
-    } else {
+    } else if (!strcasecmp(line->key, "EntryGuardDownSince") ||
+               !strcasecmp(line->key, "EntryGuardUnlistedSince")) {
       time_t when;
       time_t last_try = 0;
       if (!node) {
@@ -2524,8 +2598,45 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       } else {
         node->bad_since = when;
       }
+    } else if (!strcasecmp(line->key, "EntryGuardAddedBy")) {
+      char d[DIGEST_LEN];
+      /* format is digest version date */
+      if (strlen(line->value) < HEX_DIGEST_LEN+1+1+1+ISO_TIME_LEN) {
+        log_warn(LD_BUG, "EntryGuardAddedBy line is not long enough.");
+        continue;
+      }
+      if (base16_decode(d, sizeof(d), line->value, HEX_DIGEST_LEN)<0 ||
+          line->value[HEX_DIGEST_LEN] != ' ') {
+        log_warn(LD_BUG, "EntryGuardAddedBy line %s does not begin with "
+                 "hex digest", escaped(line->value));
+        continue;
+      }
+      digestmap_set(added_by, d, tor_strdup(line->value+HEX_DIGEST_LEN+1));
+    } else {
+      log_warn(LD_BUG, "Unexpected key %s", line->key);
     }
   }
+
+  SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e,
+   {
+     char *sp;
+     char *val = digestmap_get(added_by, e->identity);
+     if (val && (sp = strchr(val, ' '))) {
+       time_t when;
+       *sp++ = '\0';
+       if (parse_iso_time(sp, &when)<0) {
+         log_warn(LD_BUG, "Can't read time %s in EntryGuardAddedBy", sp);
+       } else {
+         e->chosen_by_version = tor_strdup(val);
+         e->chosen_on_date = when;
+       }
+     } else {
+       if (state_version) {
+         e->chosen_by_version = tor_strdup(state_version);
+         e->chosen_on_date = start_of_month(time(NULL));
+       }
+     }
+   });
 
   if (*msg || !set) {
     SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e, tor_free(e));
@@ -2537,7 +2648,10 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
     }
     entry_guards = new_entry_guards;
     entry_guards_dirty = 0;
+    if (remove_obsolete_entry_guards())
+      entry_guards_dirty = 1;
   }
+  digestmap_free(added_by, _tor_free);
   return *msg ? -1 : 0;
 }
 
@@ -2601,6 +2715,22 @@ entry_guards_update_state(or_state_t *state)
         line->key = tor_strdup("EntryGuardUnlistedSince");
         line->value = tor_malloc(ISO_TIME_LEN+1);
         format_iso_time(line->value, e->bad_since);
+        next = &(line->next);
+      }
+      if (e->chosen_on_date && e->chosen_by_version &&
+          !strchr(e->chosen_by_version, ' ')) {
+        char d[HEX_DIGEST_LEN+1];
+        char t[ISO_TIME_LEN+1];
+        size_t val_len;
+        *next = line = tor_malloc_zero(sizeof(config_line_t));
+        line->key = tor_strdup("EntryGuardAddedBy");
+        val_len = (HEX_DIGEST_LEN+1+strlen(e->chosen_by_version)
+                   +1+ISO_TIME_LEN+1);
+        line->value = tor_malloc(val_len);
+        base16_encode(d, sizeof(d), e->identity, DIGEST_LEN);
+        format_iso_time(t, e->chosen_on_date);
+        tor_snprintf(line->value, val_len, "%s %s %s",
+                     d, e->chosen_by_version, t);
         next = &(line->next);
       }
     });
@@ -2670,6 +2800,7 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   return 0;
 }
 
+/** DOCDOC */
 typedef struct {
   uint32_t addr;
   uint16_t port;
@@ -2920,7 +3051,8 @@ void
 entry_guards_free_all(void)
 {
   if (entry_guards) {
-    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, tor_free(e));
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
+                      entry_guard_free(e));
     smartlist_free(entry_guards);
     entry_guards = NULL;
   }

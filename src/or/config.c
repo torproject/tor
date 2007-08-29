@@ -302,6 +302,7 @@ static config_var_t _state_vars[] = {
   VAR("EntryGuard",              LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuardDownSince",     LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuardUnlistedSince", LINELIST_S,  EntryGuards,             NULL),
+  VAR("EntryGuardAddedBy",       LINELIST_S,  EntryGuards,             NULL),
   V(EntryGuards,                 LINELIST_V,  NULL),
 
   V(BWHistoryReadEnds,                ISOTIME,  NULL),
@@ -4355,24 +4356,6 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
   if (entry_guards_parse_state(state, 0, msg)<0)
     return -1;
 
-  if (state->EntryGuards && state->TorVersion) {
-    tor_version_t v;
-    if (tor_version_parse(state->TorVersion, &v)) {
-      log_warn(LD_GENERAL, "Can't parse Tor version '%s' from your state "
-               "file. Proceeding anyway.", state->TorVersion);
-    } else { /* take action based on v */
-      if ((tor_version_as_new_as(state->TorVersion, "0.1.1.10-alpha") &&
-           !tor_version_as_new_as(state->TorVersion, "0.1.2.16-dev")) ||
-          (tor_version_as_new_as(state->TorVersion, "0.2.0.0-alpha") &&
-           !tor_version_as_new_as(state->TorVersion, "0.2.0.6-alpha"))) {
-        log_notice(LD_CONFIG, "Detected state file from old version '%s'. "
-                   "Choosing new entry guards for you.",
-                   state->TorVersion);
-        config_free_lines(state->EntryGuards);
-        state->EntryGuards = NULL;
-      }
-    }
-  }
   return 0;
 }
 
