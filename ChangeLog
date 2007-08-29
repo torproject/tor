@@ -1,8 +1,8 @@
-Changes in version 0.1.2.17 - 2007-08-xx
-  o Removed features (security):
+Changes in version 0.1.2.17 - 2007-08-30
+  o Major bugfixes (security):
     - We removed support for the old (v0) control protocol. It has been
-      deprecated since Tor 0.1.1.1-alpha, and keeping it safe and secure
-      has been more of a headache than it's worth.
+      deprecated since Tor 0.1.1.1-alpha, and keeping it secure has
+      become more of a headache than it's worth.
 
   o Major bugfixes (load balancing):
     - When choosing nodes for non-guard positions, weight guards
@@ -19,8 +19,7 @@ Changes in version 0.1.2.17 - 2007-08-xx
     - Expire not-yet-successful application streams in all cases if
       they've been around longer than SocksTimeout. Right now there are
       some cases where the stream will live forever, demanding a new
-      circuit every 15 seconds. Bugfix on 0.1.2.7-alpha; fixes bug 454;
-      reported by lodger.
+      circuit every 15 seconds. Fixes bug 454; reported by lodger.
 
   o Minor features (controller):
     - Add a PROTOCOLINFO controller command. Like AUTHENTICATE, it
