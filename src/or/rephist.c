@@ -469,7 +469,7 @@ rep_hist_dump_stats(time_t now, int severity)
     }
     log(severity, LD_GENERAL,
         "OR %s [%s]: %ld/%ld good connections; uptime %ld/%ld sec (%.2f%%); "
-        "wmtbf %lu:%lu:%lu",
+        "wmtbf %lu:%02lu:%02lu",
         name1, hexdigest1,
         or_history->n_conn_ok, or_history->n_conn_fail+or_history->n_conn_ok,
         upt, upt+downt, uptime*100.0,

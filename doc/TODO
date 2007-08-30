@@ -41,7 +41,7 @@ Things we'd like to do in 0.2.0.x:
       - Tor logs the libevent version on startup, for debugging purposes.
         This is great. But it does this before configuring the logs, so
         it only goes to stdout and is then lost.
-      - Aug 30 16:57:41.196 [info] OR (unknown) [8DEF1682406EDE71479E98A4AEB1F27829911106]: 11/141 good connections; uptime 6748/319666 sec (2.11%); wmtbf 4:6:16
+      o Aug 30 [...] wmtbf 4:6:16
         The wmtbf time value is missing some zero-pads.
 
   - Proposals:
