@@ -17,6 +17,8 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
     - When generating information telling us how to extend to a given
       router, do not try to include the nickname if it is absent.  Fixes
       bug 467.
+    - On OSX, stop warning the user that kqueue support in libevent is
+      "experimental", since it seems to have worked fine for ages.
 
   o Code simplifications and refactoring:
     - Revamp file-writing logic so we don't need to have the entire contents

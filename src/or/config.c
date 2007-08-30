@@ -622,7 +622,7 @@ typedef enum {
   /* Note: we compare these, so it's important that "old" precede everything,
    * and that "other" come last. */
   LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_12A,
-  LE_13, LE_13A, LE_13B,
+  LE_13, LE_13A, LE_13B, LE_13C, LE_13D,
   LE_OTHER
 } le_version_t;
 static le_version_t decode_libevent_version(void);
@@ -4156,17 +4156,6 @@ init_libevent(void)
 #ifdef __APPLE__
   if (decode_libevent_version() < LE_11B) {
     setenv("EVENT_NOKQUEUE","1",1);
-  } else if (!getenv("EVENT_NOKQUEUE")) {
-    const char *ver = NULL;
-#ifdef HAVE_EVENT_GET_VERSION
-    ver = event_get_version();
-#endif
-    /* If we're 1.1b or later, we'd better have get_version() */
-    tor_assert(ver);
-    log(LOG_NOTICE, LD_GENERAL, "Enabling experimental OS X kqueue support "
-        "with libevent %s.  If this turns out to not work, "
-        "set the environment variable EVENT_NOKQUEUE, and tell the Tor "
-        "developers.", ver);
   }
 #endif
   event_init();
@@ -4204,6 +4193,8 @@ static const struct {
   { "1.3",  LE_13 },
   { "1.3a", LE_13A },
   { "1.3b", LE_13B },
+  { "1.3c", LE_13C },
+  { "1.3d", LE_13D },
   { NULL, LE_OTHER }
 };
 
@@ -4288,7 +4279,7 @@ check_libevent_version(const char *m, int server)
     badness = "BROKEN";
   } else if (buggy) {
     log(LOG_WARN, LD_GENERAL,
-        "There are known bugs in using %s with libevent %s. "
+        "There are serious bugs in using %s with libevent %s. "
         "Please use the latest version of libevent.", m, v);
     badness = "BROKEN";
   } else if (iffy) {
