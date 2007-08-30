@@ -38,6 +38,9 @@ Things we'd like to do in 0.2.0.x:
           away and then returns before the old descriptor has expired.
       - add a --quiet commandline option that suppresses logs. useful
         for --hashed-password and maybe others.
+      - Tor logs the libevent version on startup, for debugging purposes.
+        This is great. But it does this before configuring the logs, so
+        it only goes to stdout and is then lost.
 
   - Proposals:
     . 101: Voting on the Tor Directory System (plus 103)
