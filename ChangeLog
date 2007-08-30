@@ -156,6 +156,12 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
     - Numerous bugfixes to directory voting code.
 
 
+Changes in version 0.1.2.16 - 2007-08-01
+  o Major security fixes:
+    - Close immediately after missing authentication on control port;
+      do not allow multiple authentication attempts.
+
+
 Changes in version 0.2.0.4-alpha - 2007-08-01
   o Major security fixes:
     - Close immediately after missing authentication on control port;
