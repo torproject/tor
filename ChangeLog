@@ -32,6 +32,67 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
     - Turn "descriptor store" into a full-fledged type.
 
 
+Changes in version 0.1.2.17 - 2007-08-30
+  o Major bugfixes (security):
+    - We removed support for the old (v0) control protocol. It has been
+      deprecated since Tor 0.1.1.1-alpha, and keeping it secure has
+      become more of a headache than it's worth.
+
+  o Major bugfixes (load balancing):
+    - When choosing nodes for non-guard positions, weight guards
+      proportionally less, since they already have enough load. Patch
+      from Mike Perry.
+    - Raise the "max believable bandwidth" from 1.5MB/s to 10MB/s. This
+      will allow fast Tor servers to get more attention.
+    - When we're upgrading from an old Tor version, forget our current
+      guards and pick new ones according to the new weightings. These
+      three load balancing patches could raise effective network capacity
+      by a factor of four. Thanks to Mike Perry for measurements.
+
+  o Major bugfixes (stream expiration):
+    - Expire not-yet-successful application streams in all cases if
+      they've been around longer than SocksTimeout. Right now there are
+      some cases where the stream will live forever, demanding a new
+      circuit every 15 seconds. Fixes bug 454; reported by lodger.
+
+  o Minor features (controller):
+    - Add a PROTOCOLINFO controller command. Like AUTHENTICATE, it
+      is valid before any authentication has been received. It tells
+      a controller what kind of authentication is expected, and what
+      protocol is spoken. Implements proposal 119.
+
+  o Minor bugfixes (performance):
+    - Save on most routerlist_assert_ok() calls in routerlist.c, thus
+      greatly speeding up loading cached-routers from disk on startup.
+    - Disable sentinel-based debugging for buffer code: we squashed all
+      the bugs that this was supposed to detect a long time ago, and now
+      its only effect is to change our buffer sizes from nice powers of
+      two (which platform mallocs tend to like) to values slightly over
+      powers of two (which make some platform mallocs sad).
+
+  o Minor bugfixes (misc):
+    - If exit bandwidth ever exceeds one third of total bandwidth, then
+      use the correct formula to weight exit nodes when choosing paths.
+      Based on patch from Mike Perry.
+    - Choose perfectly fairly among routers when choosing by bandwidth and
+      weighting by fraction of bandwidth provided by exits. Previously, we
+      would choose with only approximate fairness, and correct ourselves
+      if we ran off the end of the list.
+    - If we require CookieAuthentication but we fail to write the
+      cookie file, we would warn but not exit, and end up in a state
+      where no controller could authenticate. Now we exit.
+    - If we require CookieAuthentication, stop generating a new cookie
+      every time we change any piece of our config.
+    - Refuse to start with certain directory authority keys, and
+      encourage people using them to stop.
+    - Terminate multi-line control events properly. Original patch
+      from tup.
+    - Fix a minor memory leak when we fail to find enough suitable
+      servers to choose a circuit.
+    - Stop leaking part of the descriptor when we run into a particularly
+      unparseable piece of it.
+
+
 Changes in version 0.2.0.6-alpha - 2007-08-26
   o New directory authorities:
     - Set up Tonga as the default bridge directory authority.
