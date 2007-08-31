@@ -436,7 +436,7 @@ rend_process_relay_cell(circuit_t *circ, int command, size_t length,
 {
   or_circuit_t *or_circ = NULL;
   origin_circuit_t *origin_circ = NULL;
-  int r;
+  int r=0;
   if (CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
   else
@@ -444,31 +444,40 @@ rend_process_relay_cell(circuit_t *circ, int command, size_t length,
 
   switch (command) {
     case RELAY_COMMAND_ESTABLISH_INTRO:
-      r = rend_mid_establish_intro(or_circ,payload,length);
+      if (or_circ)
+        r = rend_mid_establish_intro(or_circ,payload,length);
       break;
     case RELAY_COMMAND_ESTABLISH_RENDEZVOUS:
-      r = rend_mid_establish_rendezvous(or_circ,payload,length);
+      if (or_circ)
+        r = rend_mid_establish_rendezvous(or_circ,payload,length);
       break;
     case RELAY_COMMAND_INTRODUCE1:
-      r = rend_mid_introduce(or_circ,payload,length);
+      if (or_circ)
+        r = rend_mid_introduce(or_circ,payload,length);
       break;
     case RELAY_COMMAND_INTRODUCE2:
-      r = rend_service_introduce(origin_circ,payload,length);
+      if (origin_circ)
+        r = rend_service_introduce(origin_circ,payload,length);
       break;
     case RELAY_COMMAND_INTRODUCE_ACK:
-      r = rend_client_introduction_acked(origin_circ,payload,length);
+      if (origin_circ)
+        r = rend_client_introduction_acked(origin_circ,payload,length);
       break;
     case RELAY_COMMAND_RENDEZVOUS1:
-      r = rend_mid_rendezvous(or_circ,payload,length);
+      if (or_circ)
+        r = rend_mid_rendezvous(or_circ,payload,length);
       break;
     case RELAY_COMMAND_RENDEZVOUS2:
-      r = rend_client_receive_rendezvous(origin_circ,payload,length);
+      if (origin_circ)
+        r = rend_client_receive_rendezvous(origin_circ,payload,length);
       break;
     case RELAY_COMMAND_INTRO_ESTABLISHED:
-      r = rend_service_intro_established(origin_circ,payload,length);
+      if (origin_circ)
+        r = rend_service_intro_established(origin_circ,payload,length);
       break;
     case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
-      r = rend_client_rendezvous_acked(origin_circ,payload,length);
+      if (origin_circ)
+        r = rend_client_rendezvous_acked(origin_circ,payload,length);
       break;
     default:
       tor_assert(0);
