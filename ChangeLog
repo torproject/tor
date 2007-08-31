@@ -19,6 +19,8 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
       bug 467.
     - On OSX, stop warning the user that kqueue support in libevent is
       "experimental", since it seems to have worked fine for ages.
+    - Fix a user-triggerable segfault in expand_filename().  (There isn't
+      a way to trigger this remotely.)
 
   o Code simplifications and refactoring:
     - Revamp file-writing logic so we don't need to have the entire contents
