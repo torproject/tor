@@ -10,6 +10,7 @@ Backport items for 0.1.2:
   o disable v0 control protocol
   o r11138: PROTOCOLINFO support.
   D r11141: CookieAuthFile and CookieAuthFileGroupReadable.
+  - r11166: Don't believe future dates from the state file.
 
 
 Backport for 0.1.2.x once better tested:
