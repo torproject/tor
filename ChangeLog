@@ -13,6 +13,10 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
     - Accept LF instead of CRLF on controller, since some software has a
       hard time generating real Internet newlines.
 
+  o Major bugfixes:
+    - Fix possible segfaults in functions called from
+      rend_process_relay_cell().
+
   o Minor bugfixes:
     - When generating information telling us how to extend to a given
       router, do not try to include the nickname if it is absent.  Fixes
