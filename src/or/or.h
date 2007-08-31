@@ -1403,6 +1403,30 @@ typedef struct ns_detached_signatures_t {
   smartlist_t *signatures; /* list of networkstatus_voter_info_t */
 } ns_detached_signatures_t;
 
+typedef enum store_type_t {
+  ROUTER_STORE,
+  ANNOTATED_ROUTER_STORE,
+  EXTRAINFO_STORE
+} store_type_t;
+
+/** DOCDOC */
+typedef struct desc_store_t {
+  const char *fname_base;
+  const char *description;
+
+  tor_mmap_t *mmap;
+
+  store_type_t type;
+
+  /** The size of the router log, in bytes. */
+  size_t journal_len;
+  /** The size of the router store, in bytes. */
+  size_t store_len;
+  /** Total bytes dropped since last rebuild: this is space currently
+   * used in the cache and the journal that could be freed by a rebuild. */
+  size_t bytes_dropped;
+} desc_store_t;
+
 /** Contents of a directory of onion routers. */
 typedef struct {
   /** Map from server identity digest to a member of routers. */
@@ -1422,12 +1446,14 @@ typedef struct {
   /** List of signed_descriptor_t for older router descriptors we're
    * caching. */
   smartlist_t *old_routers;
-  /** Mmaped file holding server descriptors.  If present, any router whose
-   * cache_info.saved_location == SAVED_IN_CACHE is stored in this file
+  /** DOCDOC Mmaped file holding server descriptors.  If present, any router
+   * whose cache_info.saved_location == SAVED_IN_CACHE is stored in this file
    * starting at cache_info.saved_offset */
-  tor_mmap_t *mmap_descriptors;
+  desc_store_t desc_store;
+  /** DOCDOC */
+  desc_store_t annotated_desc_store;
   /** Mmaped file holding extra-info documents. */
-  tor_mmap_t *mmap_extrainfo;
+  desc_store_t extrainfo_store;
 } routerlist_t;
 
 /** Information on router used when extending a circuit. We don't need a

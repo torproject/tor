@@ -29,6 +29,7 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
   o Code simplifications and refactoring:
     - Revamp file-writing logic so we don't need to have the entire contents
       of a file in memory at once before we write to disk.  Tor, meet stdio.
+    - Turn "descriptor store" into a full-fledged type.
 
 
 Changes in version 0.2.0.6-alpha - 2007-08-26
