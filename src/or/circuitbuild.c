@@ -2107,7 +2107,7 @@ entry_guard_free(entry_guard_t *e)
 static int
 remove_obsolete_entry_guards(void)
 {
-  int changed, i;
+  int changed = 0, i;
   for (i = 0; i < smartlist_len(entry_guards); ++i) {
     entry_guard_t *entry = smartlist_get(entry_guards, i);
     const char *ver = entry->chosen_by_version;
