@@ -79,14 +79,14 @@ build_socks_resolve_request(char **out,
       log_err(LD_GENERAL, "Tried to do a reverse lookup on a non-IP!");
       return -1;
     }
-    addrlen = is_ip_address ? 4 : 1 + strlen(hostname);
+    addrlen = reverse ? 4 : 1 + strlen(hostname);
     len = 6 + addrlen;
     *out = tor_malloc(len);
     (*out)[0] = 5; /* SOCKS version 5 */
     (*out)[1] = reverse ? '\xF1' : '\xF0'; /* RESOLVE_PTR or RESOLVE */
     (*out)[2] = 0; /* reserved. */
-    (*out)[3] = is_ip_address ? 1 : 3;
-    if (is_ip_address) {
+    (*out)[3] = reverse ? 1 : 3;
+    if (reverse) {
       set_uint32((*out)+4, in.s_addr);
     } else {
       (*out)[4] = (char)(uint8_t)(addrlen - 1);
