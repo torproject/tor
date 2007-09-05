@@ -5,8 +5,10 @@ const char dnsserv_c_id[] =
   "$Id$";
 
 /**
- * \file dnservs.c
- * \brief Implements client-side DNS proxy server code.
+ * \file dnservs.c \brief Implements client-side DNS proxy server code.  Note:
+ * this is the DNS Server code, not the Server DNS code.  Confused?  This code
+ * runs on client-side, and acts as a DNS server.  The code in dns.c, on the
+ * other hand, runs on Tor servers, and acts as a DNS client.
  **/
 
 #include "or.h"
