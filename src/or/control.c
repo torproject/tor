@@ -953,6 +953,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   size_t password_len;
   const char *cp;
   int i;
+  int bad_cookie, bad_password;
 
   if (TOR_ISXDIGIT(body[0])) {
     cp = body;
@@ -984,45 +985,68 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     used_quoted_string = 1;
   }
 
-  if (options->CookieAuthentication) {
-    if (password_len != AUTHENTICATION_COOKIE_LEN) {
-      log_warn(LD_CONTROL, "Got authentication cookie with wrong length (%d)",
-               (int)password_len);
-      errstr = "Wrong length on authentication cookie.";
-      goto err;
-    } else if (memcmp(authentication_cookie, password, password_len)) {
-      log_warn(LD_CONTROL, "Got mismatched authentication cookie");
-      errstr = "Authentication cookie did not match expected value.";
-      goto err;
-    } else {
-      goto ok;
-    }
-  } else if (options->HashedControlPassword) {
-    char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
-    char received[DIGEST_LEN];
-    if (decode_hashed_password(expected, options->HashedControlPassword)<0) {
-      log_warn(LD_CONTROL,
-               "Couldn't decode HashedControlPassword: invalid base16");
-      errstr = "Couldn't decode HashedControlPassword value in configuration.";
-      goto err;
-    }
-    secret_to_key(received,DIGEST_LEN,password,password_len,expected);
-    if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
-      goto ok;
-
-    if (used_quoted_string)
-      errstr = "Password did not match HashedControlPassword value from "
-        "configuration";
-    else
-      errstr = "Password did not match HashedControlPassword value from "
-        "configuration. Maybe you tried a plain text password? "
-        "If so, the standard requires that you put it in double quotes.";
-    goto err;
-  } else {
+  if (!options->CookieAuthentication && !options->HashedControlPassword) {
     /* if Tor doesn't demand any stronger authentication, then
      * the controller can get in with anything. */
     goto ok;
   }
+
+  if (options->CookieAuthentication) {
+    int also_password = options->HashedControlPassword != NULL;
+    if (password_len != AUTHENTICATION_COOKIE_LEN) {
+      if (!also_password) {
+        log_warn(LD_CONTROL, "Got authentication cookie with wrong length (%d)",
+                 (int)password_len);
+        errstr = "Wrong length on authentication cookie.";
+        goto err;
+      }
+      bad_cookie = 1;
+    } else if (memcmp(authentication_cookie, password, password_len)) {
+      if (!also_password) {
+        log_warn(LD_CONTROL, "Got mismatched authentication cookie");
+        errstr = "Authentication cookie did not match expected value.";
+        goto err;
+      }
+      bad_cookie = 1;
+    } else {
+      goto ok;
+    }
+  }
+
+  if (options->HashedControlPassword) {
+    char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
+    char received[DIGEST_LEN];
+    int also_cookie = options->CookieAuthentication;
+    if (decode_hashed_password(expected, options->HashedControlPassword)<0) {
+      if (!also_cookie) {
+        log_warn(LD_CONTROL,
+                 "Couldn't decode HashedControlPassword: invalid base16");
+        errstr ="Couldn't decode HashedControlPassword value in configuration.";
+      }
+      bad_password = 1;
+    } else {
+      secret_to_key(received,DIGEST_LEN,password,password_len,expected);
+      if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
+        goto ok;
+
+      if (used_quoted_string)
+        errstr = "Password did not match HashedControlPassword value from "
+          "configuration";
+      else
+        errstr = "Password did not match HashedControlPassword value from "
+          "configuration. Maybe you tried a plain text password? "
+          "If so, the standard requires that you put it in double quotes.";
+      bad_password = 1;
+      if (!also_cookie)
+        goto err;
+    }
+  }
+
+  /** We only get here if both kinds of authentication failed. */
+  tor_assert(bad_password && bad_cookie);
+  log_warn(LD_CONTROL, "Bad password or authentication cookie on controller.");
+  errstr = "Password did not match HashedControlPassword *or* authentication "
+    "cookie.";
 
  err:
   tor_free(password);

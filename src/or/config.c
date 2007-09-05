@@ -2903,8 +2903,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (decode_hashed_password(NULL, options->HashedControlPassword)<0)
       REJECT("Bad HashedControlPassword: wrong length or bad encoding");
   }
-  if (options->HashedControlPassword && options->CookieAuthentication)
-    REJECT("Cannot set both HashedControlPassword and CookieAuthentication");
 
   if (options->ControlListenAddress) {
     int all_are_local = 1;
