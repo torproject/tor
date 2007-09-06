@@ -4,6 +4,7 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
+#define MAIN_PRIVATE
 #include "or.h"
 
 const char ntmain_c_id[] =
@@ -194,7 +195,7 @@ nt_service_is_stopping(void)
 }
 
 /** DOCDOC */
-int
+void
 nt_service_set_state(DWORD state)
 {
   service_status.dwCurrentState = state;
@@ -708,13 +709,13 @@ nt_strerror(uint32_t errnum)
                  (LPSTR)&msgbuf, 0, NULL);
    return msgbuf;
 }
-#endif
 
 int
-nt_service_parse_options(int argc, char **argv)
+nt_service_parse_options(int argc, char **argv, int *should_exit)
 {
   backup_argv = argv;
   backup_argc = argc;
+  *should_exit = 0;
 
   if ((argc >= 3) &&
       (!strcmp(argv[1], "-service") || !strcmp(argv[1], "--service"))) {
@@ -728,13 +729,15 @@ nt_service_parse_options(int argc, char **argv)
     if (!strcmp(argv[2], "stop"))
       return nt_service_cmd_stop();
     printf("Unrecognized service command '%s'\n", argv[2]);
-    return -1;
+    *should_exit = 1;
+    return 1;
   }
   if (argc >= 2) {
     if (!strcmp(argv[1], "-nt-service") || !strcmp(argv[1], "--nt-service")) {
       nt_service_loadlibrary();
       nt_service_main();
-      return ;
+      *should_exit = 1;
+      return 0;
     }
     // These values have been deprecated since 0.1.1.2-alpha; we've warned
     // about them since 0.1.2.7-alpha.
@@ -743,6 +746,7 @@ nt_service_parse_options(int argc, char **argv)
       fprintf(stderr,
             "The %s option is deprecated; use \"--service install\" instead.",
             argv[1]);
+      *should_exit = 1;
       return nt_service_install(argc, argv);
     }
     if (!strcmp(argv[1], "-remove") || !strcmp(argv[1], "--remove")) {
@@ -750,8 +754,11 @@ nt_service_parse_options(int argc, char **argv)
       fprintf(stderr,
             "The %s option is deprecated; use \"--service remove\" instead.",
             argv[1]);
+      *should_exit = 1;
       return nt_service_remove();
     }
   }
+  *should_exit = 0;
+  return 0;
 }
 
