@@ -3018,6 +3018,19 @@ void tor_free_all(int postfork);
 
 int tor_main(int argc, char *argv[]);
 
+/********************************* ntmain.c ***************************/
+#ifdef MS_WINDOWS
+#define NT_SERVICE
+#endif
+
+#ifdef NT_SERVICE
+int nt_service_parse_options(int argc, char **argv);
+int nt_service_is_stopping(void);
+void nt_service_set_state(DWORD state);
+#else
+#define nt_service_is_stopping() (0)
+#endif
+
 /********************************* onion.c ***************************/
 
 int onion_pending_add(or_circuit_t *circ);

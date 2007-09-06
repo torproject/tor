@@ -4610,6 +4610,9 @@ extern const char dirserv_c_id[];
 extern const char dns_c_id[];
 extern const char hibernate_c_id[];
 extern const char main_c_id[];
+#ifdef NT_SERVICE
+extern const char ntmain_c_id[];
+#endif
 extern const char onion_c_id[];
 extern const char policies_c_id[];
 extern const char relay_c_id[];
@@ -4663,6 +4666,9 @@ print_svn_version(void)
   puts(dns_c_id);
   puts(hibernate_c_id);
   puts(main_c_id);
+#ifdef NT_SERVICE
+  puts(ntmain_c_id);
+#endif
   puts(onion_c_id);
   puts(policies_c_id);
   puts(relay_c_id);

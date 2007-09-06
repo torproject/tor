@@ -126,6 +126,7 @@ fi
 if test $bwin32 = true; then
 AC_DEFINE(MS_WINDOWS, 1, [Define to 1 if we are building for Windows.])
 fi
+AM_CONDITIONAL(BUILD_NT_SERVICES, test x$bwin32 = xtrue)
 
 dnl Enable C99 when compiling with MIPSpro
 AC_MSG_CHECKING([for MIPSpro compiler])
