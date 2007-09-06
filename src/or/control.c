@@ -953,7 +953,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   size_t password_len;
   const char *cp;
   int i;
-  int bad_cookie, bad_password;
+  int bad_cookie=0, bad_password=0;
 
   if (TOR_ISXDIGIT(body[0])) {
     cp = body;
