@@ -381,7 +381,7 @@ static config_var_description_t options_description[] = {
   { "PIDFile", "On startup, write our PID to this file. On clean shutdown, "
     "remove the file." },
   { "PreferTunneledDirConns", "If non-zero, avoid directory servers that "
-    "don't support tunneled conncetions." },
+    "don't support tunneled connections." },
   /* PreferTunneledDirConns */
   /* ProtocolWarnings */
   /* RephistTrackTime */
