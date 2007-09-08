@@ -49,13 +49,17 @@ Things we'd like to do in 0.2.0.x:
       . Finalize proposal
         * Describe schedule in copious detail.
       - Get authorities voting
-        . Code to manage key certificates
-          - Download as needed.
+        o Code to manage key certificates
+          o Download as needed.
+            o Code to download
+            o Code to retry download.
         . Code to generate consensus from a list of votes
           * Detect whether votes are really all for the same period.
         . Push/pull documents as appropriate.
           - Pull votes and signatures if we don't get them.
         - Cache votes and signatures on disk.
+          - Code to keep consensus docs in limbo if they don't have
+            have enough signatures.
         o Have clients know which authorities are v3 authorities, and what
           their keys are.
           - While we're at it, let v3 authorities have fqdns lines.

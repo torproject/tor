@@ -1298,7 +1298,22 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     /*XXXX020*/;
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
-    /*XXXX020*/;
+    log_info(LD_DIR,"Received aurhority certificatess (size %d) from server "
+             "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
+    if (status_code != 200) {
+      log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
+          "Received http status code %d (%s) from server "
+          "'%s:%d' while fetching \"/tor/keys/%s\".",
+           status_code, escaped(reason), conn->_base.address,
+           conn->_base.port, conn->requested_resource);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      return -1;
+    }
+    if (trusted_dirs_load_certs_from_string(body, 0)<0) {
+      log_warn(LD_DIR, "Unable to parse fetched certificates");
+    } else {
+      log_info(LD_DIR, "Successfully loaded certificates from fetch.");
+    }
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {
     /*XXXX020*/;

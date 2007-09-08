@@ -387,6 +387,59 @@ authority_cert_get_by_digests(const char *id_digest,
   return NULL;
 }
 
+/** DOCDOC */
+void
+authority_certs_fetch_missing(networkstatus_vote_t *status)
+{
+  smartlist_t *missing_digests = smartlist_create();
+  char *resource;
+  if (status) {
+    SMARTLIST_FOREACH(status->voters, networkstatus_voter_info_t *, voter,
+      {
+        trusted_dir_server_t *ds
+          = trusteddirserver_get_by_v3_auth_digest(voter->identity_digest);
+        if (ds &&
+            !authority_cert_get_by_digests(voter->identity_digest,
+                                           voter->signing_key_digest))
+          smartlist_add(missing_digests, voter->identity_digest);
+      });
+  }
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
+    {
+      int found = 0;
+      if (!(ds->type & V3_AUTHORITY))
+        continue;
+      if (smartlist_digest_isin(missing_digests, ds->v3_identity_digest))
+        continue;
+      SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
+        {
+          if (1) { //XXXX020! cert_is_definitely_expired(cert, now)) {
+            found = 1;
+            break;
+          }
+        });
+      smartlist_add(missing_digests, ds->v3_identity_digest);
+    });
+
+  {
+    smartlist_t *fps = smartlist_create();
+    SMARTLIST_FOREACH(missing_digests, const char *, d, {
+        char *fp = tor_malloc(HEX_DIGEST_LEN+1);
+        base16_encode(fp, HEX_DIGEST_LEN+1, d, DIGEST_LEN);
+        smartlist_add(fps, fp);
+      });
+    resource = smartlist_join_strings(fps, "+", 0, NULL);
+    SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
+    smartlist_free(fps);
+  }
+  log_notice(LD_DIR, "Launching request for %d missing certificates.",
+             smartlist_len(missing_digests)); /*XXXX020 downgrade to INFO*/
+  smartlist_free(missing_digests);
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
+                               resource, 1);
+  tor_free(resource);
+}
+
 /* Router descriptor storage.
  *
  * DOCDOC files annotated NM

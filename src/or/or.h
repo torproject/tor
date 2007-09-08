@@ -3451,6 +3451,7 @@ authority_cert_t *authority_cert_get_newest_by_id(const char *id_digest);
 authority_cert_t *authority_cert_get_by_sk_digest(const char *sk_digest);
 authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
                                                 const char *sk_digest);
+void authority_certs_fetch_missing(networkstatus_vote_t *status);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running);
