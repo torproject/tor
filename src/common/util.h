@@ -206,6 +206,15 @@ void format_local_iso_time(char *buf, time_t t);
 void format_iso_time(char *buf, time_t t);
 int parse_iso_time(const char *buf, time_t *t);
 int parse_http_time(const char *buf, struct tm *tm);
+/* Fuzzy time. */
+void ftime_set_maximum_sloppiness(int seconds);
+void ftime_set_estimated_skew(int seconds);
+/* typedef struct ftime_t { time_t earliest; time_t latest; } ftime_t; */
+/* void ftime_get_window(time_t now, ftime_t *ft_out); */
+int ftime_maybe_after(time_t now, time_t when);
+int ftime_maybe_before(time_t now, time_t when);
+int ftime_definitely_after(time_t now, time_t when);
+int ftime_definitely_before(time_t now, time_t when);
 
 /* File helpers */
 int write_all(int fd, const char *buf, size_t count, int isSocket);

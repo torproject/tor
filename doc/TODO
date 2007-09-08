@@ -71,7 +71,7 @@ Things we'd like to do in 0.2.0.x:
         - Dump certificates with the wrong time.  Or just warn?
         - Warn authority ops when their certs are nearly invalid.
         - When checking a consensus, make sure that its times are plausible.
-        - Add a function that will eventually tell us about our clock skew.
+        o Add a function that will eventually tell us about our clock skew.
           For now, just require that authorities not be skewed.
       - Start caching consensus documents once authorities make them
       - Start downloading and using consensus documents once caches serve them

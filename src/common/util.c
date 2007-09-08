@@ -1251,6 +1251,70 @@ parse_http_time(const char *date, struct tm *tm)
 }
 
 /* =====
+ * Fuzzy time
+ * ===== */
+
+/* In a perfect world, everybody would run ntp, and ntp would be perfect, so
+ * if we wanted to know "Is the current time before time X?" we could just say
+ * "time(NULL) < X".
+ *
+ * But unfortunately, many users are running Tor in an imperfect world, on
+ * even more imperfect computers.  Hence, we need to track time oddly.  We
+ * model the user's computer as being "skewed" from accurate time by
+ * -<b>ftime_skew</b> seconds, such that our best guess of the current time is
+ * time(NULL)+ftime_skew.  We also assume that our measurements of time may
+ * have up to <b>ftime_slop</b> seconds of inaccuracy; hence, the 
+ * measurements;
+ */
+static int ftime_skew = 0;
+static int ftime_slop = 60;
+void
+ftime_set_maximum_sloppiness(int seconds)
+{
+  tor_assert(seconds >= 0);
+  ftime_slop = seconds;
+}
+void
+ftime_set_estimated_skew(int seconds)
+{
+  ftime_skew = seconds;
+}
+#if 0
+void
+ftime_get_window(time_t now, ftime_t *ft_out)
+{
+  ft_out->earliest = now + ftime_skew - ftime_slop;
+  ft_out->latest =  now + ftime_skew + ftime_slop;
+}
+#endif
+int
+ftime_maybe_after(time_t now, time_t when)
+{
+  /* It may be after when iff the latest possible current time is after when. */
+  return (now + ftime_skew + ftime_slop) >= when;
+}
+int
+ftime_maybe_before(time_t now, time_t when)
+{
+  /* It may be before when iff the earliest possible current time is before. */
+  return (now + ftime_skew - ftime_slop) < when;
+}
+int
+ftime_definitely_after(time_t now, time_t when)
+{
+  /* It is definitely after when if the earliest time it could be is still
+   * after when. */
+  return (now + ftime_skew - ftime_slop) >= when;
+}
+int
+ftime_definitely_before(time_t now, time_t when)
+{
+  /* It is definitely before when if the latest time it could be is still
+   * before when. */
+  return (now + ftime_skew + ftime_slop) < when;
+}
+
+/* =====
  * File helpers
  * ===== */
 
