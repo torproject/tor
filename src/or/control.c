@@ -995,8 +995,8 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     int also_password = options->HashedControlPassword != NULL;
     if (password_len != AUTHENTICATION_COOKIE_LEN) {
       if (!also_password) {
-        log_warn(LD_CONTROL, "Got authentication cookie with wrong length (%d)",
-                 (int)password_len);
+        log_warn(LD_CONTROL, "Got authentication cookie with wrong length "
+                 "(%d)", (int)password_len);
         errstr = "Wrong length on authentication cookie.";
         goto err;
       }
@@ -1021,7 +1021,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       if (!also_cookie) {
         log_warn(LD_CONTROL,
                  "Couldn't decode HashedControlPassword: invalid base16");
-        errstr ="Couldn't decode HashedControlPassword value in configuration.";
+        errstr="Couldn't decode HashedControlPassword value in configuration.";
       }
       bad_password = 1;
     } else {
@@ -1289,7 +1289,6 @@ munge_extrainfo_into_routerinfo(const char *ri_body, signed_descriptor_t *ri,
   tor_free(out);
   return tor_strndup(ri_body, ri->signed_descriptor_len);
 }
-
 
 /** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */

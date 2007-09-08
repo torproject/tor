@@ -1263,8 +1263,8 @@ parse_http_time(const char *date, struct tm *tm)
  * model the user's computer as being "skewed" from accurate time by
  * -<b>ftime_skew</b> seconds, such that our best guess of the current time is
  * time(NULL)+ftime_skew.  We also assume that our measurements of time may
- * have up to <b>ftime_slop</b> seconds of inaccuracy; hence, the 
- * measurements;
+ * have up to <b>ftime_slop</b> seconds of inaccuracy; IOW, our window of
+ * estimate for the current time is now + ftime_skew +/- ftime_slop.
  */
 static int ftime_skew = 0;
 static int ftime_slop = 60;
@@ -1290,13 +1290,13 @@ ftime_get_window(time_t now, ftime_t *ft_out)
 int
 ftime_maybe_after(time_t now, time_t when)
 {
-  /* It may be after when iff the latest possible current time is after when. */
+  /* It may be after when iff the latest possible current time is after when */
   return (now + ftime_skew + ftime_slop) >= when;
 }
 int
 ftime_maybe_before(time_t now, time_t when)
 {
-  /* It may be before when iff the earliest possible current time is before. */
+  /* It may be before when iff the earliest possible current time is before */
   return (now + ftime_skew - ftime_slop) < when;
 }
 int

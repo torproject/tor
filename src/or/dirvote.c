@@ -16,7 +16,7 @@ const char dirvote_c_id[] =
 static int dirvote_add_signatures_to_pending_consensus(
                        const char *detached_signatures_body,
                        const char **msg_out);
-static char *list_v3_auth_ids(void); //XXXX020 nuke this.
+static char *list_v3_auth_ids(void);
 
 /* =====
  * Voting and consensus generation
