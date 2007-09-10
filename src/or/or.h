@@ -3025,7 +3025,6 @@ void do_hash_password(void);
 int tor_init(int argc, char **argv);
 #endif
 
-/********************************* ntmain.c ***************************/
 #ifdef MS_WINDOWS
 #define NT_SERVICE
 #endif
