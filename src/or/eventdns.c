@@ -1745,7 +1745,7 @@ server_request_free_answers(struct server_request *req)
 			free(victim->name);
 			if (victim->data)
 				free(victim->data);
-			/* XXXX free(victim?) -NM */
+			free(victim);
 			victim = next;
 		}
 		*list = NULL;
@@ -1761,6 +1761,7 @@ server_request_free(struct server_request *req)
 	if (req->base.questions) {
 		for (i = 0; i < req->base.nquestions; ++i)
 			free(req->base.questions[i]);
+		free(req->base.questions);
 	}
 
 	if (req->port) {
