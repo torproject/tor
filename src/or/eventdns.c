@@ -314,8 +314,6 @@ static int global_max_nameserver_timeout = 3;
 static const struct timeval global_nameserver_timeouts[] = {{10, 0}, {60, 0}, {300, 0}, {900, 0}, {3600, 0}};
 static const int global_nameserver_timeouts_length = sizeof(global_nameserver_timeouts)/sizeof(struct timeval);
 
-static const char *const evdns_error_strings[] = {"no error", "The name server was unable to interpret the query", "The name server suffered an internal error", "The requested domain name does not exist", "The name server refused to reply to the request"};
-
 static struct nameserver *nameserver_pick(void);
 static void evdns_request_insert(struct request *req, struct request **head);
 static void nameserver_ready_callback(int fd, short events, void *arg);
@@ -723,7 +721,8 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 		case DNS_ERR_SERVERFAILED:
 			/* rcode 2 (servfailed) sometimes means "we are broken" and
 			 * sometimes (with some binds) means "that request was very
-			 * confusing."  Treat this as a timeout, not a failure. */
+			 * confusing."  Treat this as a timeout, not a failure.
+			 */
 			/*XXXX refactor the parts of */
 			log(EVDNS_LOG_DEBUG, "Got a SERVERFAILED from nameserver %s; "
 				"will allow the request to time out.",
@@ -756,14 +755,14 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 	}
 }
 
-static inline int
+static int
 name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 	int name_end = -1;
 	int j = *idx;
 	int ptr_count = 0;
-#define GET32(x) do { if (j + 4 > length) goto err; memcpy(&_t32, packet + j, 4); j += 4; x = ntohl(_t32); } while(0);
-#define GET16(x) do { if (j + 2 > length) goto err; memcpy(&_t, packet + j, 2); j += 2; x = ntohs(_t); } while(0);
-#define GET8(x) do { if (j >= length) goto err; x = packet[j++]; } while(0);
+#define GET32(x) do { if (j + 4 > length) goto err; memcpy(&_t32, packet + j, 4); j += 4; x = ntohl(_t32); } while(0)
+#define GET16(x) do { if (j + 2 > length) goto err; memcpy(&_t, packet + j, 2); j += 2; x = ntohs(_t); } while(0)
+#define GET8(x) do { if (j >= length) goto err; x = packet[j++]; } while(0)
 
 	char *cp = name_out;
 	const char *const end = name_out + name_out_len;
@@ -776,7 +775,7 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 
 	for(;;) {
 		u8 label_len;
-		if (j >= length) return -1;
+		//if (j >= length) return -1;
 		GET8(label_len);
 		if (!label_len) break;
 		if (label_len & 0xc0) {
@@ -842,7 +841,7 @@ reply_parse(u8 *packet, int length) {
 
 	memset(&reply, 0, sizeof(reply));
 
-	/* if not an answer, it doesn't go with any of our requests. */
+	/* If it's not an answer, it doesn't go with any of our requests. */
 	if (!(flags & 0x8000)) return -1;  /* must be an answer */
 	if (flags & 0x020f) {
 		/* there was an error */
@@ -1254,7 +1253,7 @@ server_port_ready_callback(int fd, short events, void *arg) {
  * functions, so that is can be safely replaced with something smarter later. */
 #define MAX_LABELS 128
 /* Structures used to implement name compression */
-struct dnslabel_entry { char *v; int pos; };
+struct dnslabel_entry { char *v; off_t pos; };
 struct dnslabel_table {
 	int n_labels; /* number of current entries */
 	/* map from name to position in message */
@@ -1293,7 +1292,7 @@ dnslabel_table_get_pos(const struct dnslabel_table *table, const char *label)
 
 /* remember that we've used the label at position pos */
 static int
-dnslabel_table_add(struct dnslabel_table *table, const char *label, int pos)
+dnslabel_table_add(struct dnslabel_table *table, const char *label, off_t pos)
 {
 	char *v;
 	int p;
@@ -1514,7 +1513,7 @@ evdns_server_request_add_reply(struct evdns_server_request *_req, int section, c
 				free(item);
 				return -1;
 			}
-			item->datalen = -1;
+			item->datalen = (u16)-1;
 		} else {
 			if (!(item->data = malloc(datalen))) {
 				free(item->name);
@@ -1878,9 +1877,9 @@ static int
 evdns_request_transmit_to(struct request *req, struct nameserver *server) {
 	const int r = send(server->socket, req->request, req->request_len, 0);
 	if (r < 0) {
-		int err = last_error(server->socket);
-		if (error_is_eagain(err)) return 1;
-		nameserver_failed(req->ns, strerror(err));
+		int e = last_error(server->socket);
+		if (error_is_eagain(e)) return 1;
+		nameserver_failed(req->ns, strerror(e));
 		return 2;
 	} else if (r != (int)req->request_len) {
 		return 1;  /* short write */
@@ -2240,7 +2239,7 @@ request_new(int type, const char *name, int flags,
 	req->next = req->prev = NULL;
 
 	return req;
- err1:
+err1:
 	CLEAR(req);
 	_free(req);
 	return NULL;
@@ -2542,7 +2541,7 @@ search_try_next(struct request *const req) {
 			/* this name without a postfix */
 			if (string_num_dots(req->search_origname) < req->search_state->ndots) {
 				/* yep, we need to try it raw */
-				newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
+				struct request *const newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
 				log(EVDNS_LOG_DEBUG, "Search: trying raw query %s", req->search_origname);
 				if (newreq) {
 					request_submit(newreq);
