@@ -762,4 +762,3 @@ nt_service_parse_options(int argc, char **argv, int *should_exit)
   return 0;
 }
 
-
