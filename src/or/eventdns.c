@@ -34,7 +34,7 @@
 
 #include "eventdns_tor.h"
 #include <sys/types.h>
-//#define NDEBUG
+/* #define NDEBUG */
 
 #ifndef DNS_USE_CPU_CLOCK_FOR_ID
 #ifndef DNS_USE_GETTIMEOFDAY_FOR_ID
@@ -45,7 +45,7 @@
 #endif
 #endif
 
-// #define _POSIX_C_SOURCE 200507
+/* #define _POSIX_C_SOURCE 200507 */
 #define _GNU_SOURCE
 
 #ifdef DNS_USE_CPU_CLOCK_FOR_ID
@@ -133,7 +133,7 @@ typedef int socklen_t;
 
 #if 0
 #ifdef __USE_ISOC99B
-// libevent doesn't work without this
+/* libevent doesn't work without this */
 typedef uint8_t u_char;
 typedef unsigned int uint;
 #endif
@@ -145,8 +145,8 @@ typedef unsigned int uint;
 #define u16 uint16_t
 #define u8	uint8_t
 
-#define MAX_ADDRS 4	 // maximum number of addresses from a single packet
-// which we bother recording
+#define MAX_ADDRS 4	 /* maximum number of addresses from a single packet */
+/* which we bother recording */
 
 #define TYPE_A		EVDNS_TYPE_A
 #define TYPE_PTR	EVDNS_TYPE_PTR
@@ -157,29 +157,29 @@ typedef unsigned int uint;
 #define CLEAR(x) do { memset((x), 0, sizeof(*(x))); } while(0)
 
 struct request {
-	u8 *request;  // the dns packet data
+	u8 *request;  /* the dns packet data */
 	unsigned int request_len;
 	int reissue_count;
-	int tx_count;  // the number of times that this packet has been sent
-	unsigned int request_type; // TYPE_PTR or TYPE_A
-	void *user_pointer;	 // the pointer given to us for this request
+	int tx_count;  /* the number of times that this packet has been sent */
+	unsigned int request_type; /* TYPE_PTR or TYPE_A */
+	void *user_pointer;	 /* the pointer given to us for this request */
 	evdns_callback_type user_callback;
-	struct nameserver *ns;	// the server which we last sent it
+	struct nameserver *ns;	/* the server which we last sent it */
 
-	// elements used by the searching code
+	/* elements used by the searching code */
 	int search_index;
 	struct search_state *search_state;
-	char *search_origname;	// needs to be free()ed
+	char *search_origname;	/* needs to be free()ed */
 	int search_flags;
 
-	// these objects are kept in a circular list
+	/* these objects are kept in a circular list */
 	struct request *next, *prev;
 
 	struct event timeout_event;
 
-	u16 trans_id;  // the transaction id
-	char request_appended;	// true if the request pointer is data which follows this struct
-	char transmit_me;  // needs to be transmitted
+	u16 trans_id;  /* the transaction id */
+	char request_appended;	/* true if the request pointer is data which follows this struct */
+	char transmit_me;  /* needs to be transmitted */
 };
 
 #ifndef HAVE_STRUCT_IN6_ADDR
@@ -207,110 +207,110 @@ struct reply {
 };
 
 struct nameserver {
-	int socket;	 // a connected UDP socket
+	int socket;	 /* a connected UDP socket */
 	u32 address;
-	int failed_times;  // number of times which we have given this server a chance
-	int timedout;  // number of times in a row a request has timed out
+	int failed_times;  /* number of times which we have given this server a chance */
+	int timedout;  /* number of times in a row a request has timed out */
 	struct event event;
-	// these objects are kept in a circular list
+	/* these objects are kept in a circular list */
 	struct nameserver *next, *prev;
-	struct event timeout_event; // used to keep the timeout for
-								// when we next probe this server.
-								// Valid if state == 0
-	char state;	 // zero if we think that this server is down
-	char choked;  // true if we have an EAGAIN from this server's socket
-	char write_waiting;	 // true if we are waiting for EV_WRITE events
+	struct event timeout_event; /* used to keep the timeout for */
+								/* when we next probe this server. */
+								/* Valid if state == 0 */
+	char state;	 /* zero if we think that this server is down */
+	char choked;  /* true if we have an EAGAIN from this server's socket */
+	char write_waiting;	 /* true if we are waiting for EV_WRITE events */
 };
 
 static struct request *req_head = NULL, *req_waiting_head = NULL;
 static struct nameserver *server_head = NULL;
 
-// Represents a local port where we're listening for DNS requests. Right now,
-// only UDP is supported.
+/* Represents a local port where we're listening for DNS requests. Right now, */
+/* only UDP is supported. */
 struct evdns_server_port {
-	int socket; // socket we use to read queries and write replies.
-	int refcnt; // reference count.
-	char choked; // Are we currently blocked from writing?
-	char closing; // Are we trying to close this port, pending writes?
-	evdns_request_callback_fn_type user_callback; // Fn to handle requests
-	void *user_data; // Opaque pointer passed to user_callback
-	struct event event; // Read/write event
-	// circular list of replies that we want to write.
+	int socket; /* socket we use to read queries and write replies. */
+	int refcnt; /* reference count. */
+	char choked; /* Are we currently blocked from writing? */
+	char closing; /* Are we trying to close this port, pending writes? */
+	evdns_request_callback_fn_type user_callback; /* Fn to handle requests */
+	void *user_data; /* Opaque pointer passed to user_callback */
+	struct event event; /* Read/write event */
+	/* circular list of replies that we want to write. */
 	struct server_request *pending_replies;
 };
 
-// Represents part of a reply being built.	(That is, a single RR.)
+/* Represents part of a reply being built.	(That is, a single RR.) */
 struct server_reply_item {
-	struct server_reply_item *next; // next item in sequence.
-	char *name; // name part of the RR
-	u16 type : 16; // The RR type
-	u16 class : 16; // The RR class (usually CLASS_INET)
-	u32 ttl; // The RR TTL
-	char is_name; // True iff data is a label
-	u16 datalen; // Length of data; -1 if data is a label
-	void *data; // The contents of the RR
+	struct server_reply_item *next; /* next item in sequence. */
+	char *name; /* name part of the RR */
+	u16 type : 16; /* The RR type */
+	u16 class : 16; /* The RR class (usually CLASS_INET) */
+	u32 ttl; /* The RR TTL */
+	char is_name; /* True iff data is a label */
+	u16 datalen; /* Length of data; -1 if data is a label */
+	void *data; /* The contents of the RR */
 };
 
-// Represents a request that we've received as a DNS server, and holds
-// the components of the reply as we're constructing it.
+/* Represents a request that we've received as a DNS server, and holds */
+/* the components of the reply as we're constructing it. */
 struct server_request {
-	// Pointers to the next and previous entries on the list of replies
-	// that we're waiting to write.	 Only set if we have tried to respond
-	// and gotten EAGAIN.
+	/* Pointers to the next and previous entries on the list of replies */
+	/* that we're waiting to write.	 Only set if we have tried to respond */
+	/* and gotten EAGAIN. */
 	struct server_request *next_pending;
 	struct server_request *prev_pending;
 
-	u16 trans_id; // Transaction id.
-	struct evdns_server_port *port; // Which port received this request on?
-	struct sockaddr_storage addr; // Where to send the response
-	socklen_t addrlen; // length of addr
+	u16 trans_id; /* Transaction id. */
+	struct evdns_server_port *port; /* Which port received this request on? */
+	struct sockaddr_storage addr; /* Where to send the response */
+	socklen_t addrlen; /* length of addr */
 
-	int n_answer; // how many answer RRs have been set?
-	int n_authority; // how many authority RRs have been set?
-	int n_additional; // how many additional RRs have been set?
+	int n_answer; /* how many answer RRs have been set? */
+	int n_authority; /* how many authority RRs have been set? */
+	int n_additional; /* how many additional RRs have been set? */
 
-	struct server_reply_item *answer; // linked list of answer RRs
-	struct server_reply_item *authority; // linked list of authority RRs
-	struct server_reply_item *additional; // linked list of additional RRs
+	struct server_reply_item *answer; /* linked list of answer RRs */
+	struct server_reply_item *authority; /* linked list of authority RRs */
+	struct server_reply_item *additional; /* linked list of additional RRs */
 
-	// Constructed response.  Only set once we're ready to send a reply.
-	// Once this is set, the RR fields are cleared, and no more should be set.
+	/* Constructed response.  Only set once we're ready to send a reply. */
+	/* Once this is set, the RR fields are cleared, and no more should be set. */
 	char *response;
 	size_t response_len;
 
-	// Caller-visible fields: flags, questions.
+	/* Caller-visible fields: flags, questions. */
 	struct evdns_server_request base;
 };
 
-// helper macro
+/* helper macro */
 #define OFFSET_OF(st, member) ((off_t) (((char*)&((st*)0)->member)-(char*)0))
 
-// Given a pointer to an evdns_server_request, get the corresponding
-// server_request.
+/* Given a pointer to an evdns_server_request, get the corresponding */
+/* server_request. */
 #define TO_SERVER_REQUEST(base_ptr)										\
 	((struct server_request*)											\
 	 (((char*)(base_ptr) - OFFSET_OF(struct server_request, base))))
 
-// The number of good nameservers that we have
+/* The number of good nameservers that we have */
 static int global_good_nameservers = 0;
 
-// inflight requests are contained in the req_head list
-// and are actually going out across the network
+/* inflight requests are contained in the req_head list */
+/* and are actually going out across the network */
 static int global_requests_inflight = 0;
-// requests which aren't inflight are in the waiting list
-// and are counted here
+/* requests which aren't inflight are in the waiting list */
+/* and are counted here */
 static int global_requests_waiting = 0;
 
 static int global_max_requests_inflight = 64;
 
-static struct timeval global_timeout = {5, 0};	// 5 seconds
-static int global_max_reissues = 1;	// a reissue occurs when we get some errors from the server
-static int global_max_retransmits = 3;	// number of times we'll retransmit a request which timed out
-// number of timeouts in a row before we consider this server to be down
+static struct timeval global_timeout = {5, 0};	/* 5 seconds */
+static int global_max_reissues = 1;	/* a reissue occurs when we get some errors from the server */
+static int global_max_retransmits = 3;	/* number of times we'll retransmit a request which timed out */
+/* number of timeouts in a row before we consider this server to be down */
 static int global_max_nameserver_timeout = 3;
 
-// These are the timeout values for nameservers. If we find a nameserver is down
-// we try to probe it at intervals as given below. Values are in seconds.
+/* These are the timeout values for nameservers. If we find a nameserver is down */
+/* we try to probe it at intervals as given below. Values are in seconds. */
 static const struct timeval global_nameserver_timeouts[] = {{10, 0}, {60, 0}, {300, 0}, {900, 0}, {3600, 0}};
 static const int global_nameserver_timeouts_length = sizeof(global_nameserver_timeouts)/sizeof(struct timeval);
 
@@ -432,9 +432,9 @@ _evdns_log(int warn, const char *fmt, ...)
 
 #define log _evdns_log
 
-// This walks the list of inflight requests to find the
-// one with a matching transaction id. Returns NULL on
-// failure
+/* This walks the list of inflight requests to find the */
+/* one with a matching transaction id. Returns NULL on */
+/* failure */
 static struct request *
 request_find_from_trans_id(u16 trans_id) {
 	struct request *req = req_head, *const started_at = req_head;
@@ -449,8 +449,8 @@ request_find_from_trans_id(u16 trans_id) {
 	return NULL;
 }
 
-// a libevent callback function which is called when a nameserver
-// has gone down and we want to test if it has came back to life yet
+/* a libevent callback function which is called when a nameserver */
+/* has gone down and we want to test if it has came back to life yet */
 static void
 nameserver_prod_callback(int fd, short events, void *arg) {
 	struct nameserver *const ns = (struct nameserver *) arg;
@@ -460,17 +460,17 @@ nameserver_prod_callback(int fd, short events, void *arg) {
 	nameserver_send_probe(ns);
 }
 
-// a libevent callback which is called when a nameserver probe (to see if
-// it has come back to life) times out. We increment the count of failed_times
-// and wait longer to send the next probe packet.
+/* a libevent callback which is called when a nameserver probe (to see if */
+/* it has come back to life) times out. We increment the count of failed_times */
+/* and wait longer to send the next probe packet. */
 static void
 nameserver_probe_failed(struct nameserver *const ns) {
 	const struct timeval * timeout;
 	(void) evtimer_del(&ns->timeout_event);
 	CLEAR(&ns->timeout_event);
 	if (ns->state == 1) {
-		// This can happen if the nameserver acts in a way which makes us mark
-		// it as bad and then starts sending good replies.
+		/* This can happen if the nameserver acts in a way which makes us mark */
+		/* it as bad and then starts sending good replies. */
 		return;
 	}
 
@@ -484,17 +484,17 @@ nameserver_probe_failed(struct nameserver *const ns) {
 		log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
 			debug_ntoa(ns->address));
-		// ???? Do more?
+		/* ???? Do more? */
 	}
 }
 
-// called when a nameserver has been deemed to have failed. For example, too
-// many packets have timed out etc
+/* called when a nameserver has been deemed to have failed. For example, too */
+/* many packets have timed out etc */
 static void
 nameserver_failed(struct nameserver *const ns, const char *msg) {
 	struct request *req, *started_at;
-	// if this nameserver has already been marked as failed
-	// then don't do anything
+	/* if this nameserver has already been marked as failed */
+	/* then don't do anything */
 	if (!ns->state) return;
 
 	log(EVDNS_LOG_WARN, "Nameserver %s has failed: %s",
@@ -513,15 +513,15 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 		log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
 			debug_ntoa(ns->address));
-		// ???? Do more?
+		/* ???? Do more? */
 	}
 
-	// walk the list of inflight requests to see if any can be reassigned to
-	// a different server. Requests in the waiting queue don't have a
-	// nameserver assigned yet
+	/* walk the list of inflight requests to see if any can be reassigned to */
+	/* a different server. Requests in the waiting queue don't have a */
+	/* nameserver assigned yet */
 
-	// if we don't have *any* good nameservers then there's no point
-	// trying to reassign requests to one
+	/* if we don't have *any* good nameservers then there's no point */
+	/* trying to reassign requests to one */
 	if (!global_good_nameservers) return;
 
 	req = req_head;
@@ -529,8 +529,8 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	if (req) {
 		do {
 			if (req->tx_count == 0 && req->ns == ns) {
-				// still waiting to go out, can be moved
-				// to another server
+				/* still waiting to go out, can be moved */
+				/* to another server */
 				req->ns = nameserver_pick();
 			}
 			req = req->next;
@@ -557,14 +557,14 @@ request_trans_id_set(struct request *const req, const u16 trans_id) {
 	*((u16 *) req->request) = htons(trans_id);
 }
 
-// Called to remove a request from a list and dealloc it.
-// head is a pointer to the head of the list it should be
-// removed from or NULL if the request isn't in a list.
+/* Called to remove a request from a list and dealloc it. */
+/* head is a pointer to the head of the list it should be */
+/* removed from or NULL if the request isn't in a list. */
 static void
 request_finished(struct request *const req, struct request **head) {
 	if (head) {
 		if (req->next == req) {
-			// only item in the list
+			/* only item in the list */
 			*head = NULL;
 		} else {
 			req->next->prev = req->prev;
@@ -582,11 +582,11 @@ request_finished(struct request *const req, struct request **head) {
 	global_requests_inflight--;
 
 	if (!req->request_appended) {
-		// need to free the request data on it's own
+		/* need to free the request data on it's own */
 		free(req->request);
 	} else {
-		// the request data is appended onto the header
-		// so everything gets free()ed when we:
+		/* the request data is appended onto the header */
+		/* so everything gets free()ed when we: */
 	}
 
 	CLEAR(req);
@@ -595,23 +595,23 @@ request_finished(struct request *const req, struct request **head) {
 	evdns_requests_pump_waiting_queue();
 }
 
-// This is called when a server returns a funny error code.
-// We try the request again with another server.
-//
-// return:
-//	 0 ok
-//	 1 failed/reissue is pointless
+/* This is called when a server returns a funny error code. */
+/* We try the request again with another server. */
+/* */
+/* return: */
+/* 0 ok */
+/* 1 failed/reissue is pointless */
 static int
 request_reissue(struct request *req) {
 	const struct nameserver *const last_ns = req->ns;
-	// the last nameserver should have been marked as failing
-	// by the caller of this function, therefore pick will try
-	// not to return it
+	/* the last nameserver should have been marked as failing */
+	/* by the caller of this function, therefore pick will try */
+	/* not to return it */
 	req->ns = nameserver_pick();
 	if (req->ns == last_ns) {
-		// ... but pick did return it
-		// not a lot of point in trying again with the
-		// same server
+		/* ... but pick did return it */
+		/* not a lot of point in trying again with the */
+		/* same server */
 		return 1;
 	}
 
@@ -622,17 +622,17 @@ request_reissue(struct request *req) {
 	return 0;
 }
 
-// this function looks for space on the inflight queue and promotes
-// requests from the waiting queue if it can.
+/* this function looks for space on the inflight queue and promotes */
+/* requests from the waiting queue if it can. */
 static void
 evdns_requests_pump_waiting_queue(void) {
 	while (global_requests_inflight < global_max_requests_inflight &&
 		global_requests_waiting) {
 		struct request *req;
-		// move a request from the waiting queue to the inflight queue
+		/* move a request from the waiting queue to the inflight queue */
 		assert(req_waiting_head);
 		if (req_waiting_head->next == req_waiting_head) {
-			// only one item in the queue
+			/* only one item in the queue */
 			req = req_waiting_head;
 			req_waiting_head = NULL;
 		} else {
@@ -689,14 +689,14 @@ reply_callback(struct request *const req, u32 ttl, u32 err, struct reply *reply)
 	assert(0);
 }
 
-// this processes a parsed reply packet
+/* this processes a parsed reply packet */
 static void
 reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply) {
 	int error;
 	static const int error_codes[] = {DNS_ERR_FORMAT, DNS_ERR_SERVERFAILED, DNS_ERR_NOTEXIST, DNS_ERR_NOTIMPL, DNS_ERR_REFUSED};
 
 	if (flags & 0x020f || !reply || !reply->have_answer) {
-		// there was an error
+		/* there was an error */
 		if (flags & 0x0200) {
 			error = DNS_ERR_TRUNCATED;
 		} else {
@@ -711,7 +711,7 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 		switch(error) {
 		case DNS_ERR_NOTIMPL:
 		case DNS_ERR_REFUSED:
-			// we regard these errors as marking a bad nameserver
+			/* we regard these errors as marking a bad nameserver */
 			if (req->reissue_count < global_max_reissues) {
 				char msg[64];
 				snprintf(msg, sizeof(msg), "Bad response %d (%s)",
@@ -721,35 +721,35 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 			}
 			break;
 		case DNS_ERR_SERVERFAILED:
-			// rcode 2 (servfailed) sometimes means "we are broken" and
-			// sometimes (with some binds) means "that request was very
-			// confusing."  Treat this as a timeout, not a failure.
+			/* rcode 2 (servfailed) sometimes means "we are broken" and
+			 * sometimes (with some binds) means "that request was very
+			 * confusing."  Treat this as a timeout, not a failure. */
 			/*XXXX refactor the parts of */
 			log(EVDNS_LOG_DEBUG, "Got a SERVERFAILED from nameserver %s; "
 				"will allow the request to time out.",
 				debug_ntoa(req->ns->address));
 			break;
 		default:
-			// we got a good reply from the nameserver
+			/* we got a good reply from the nameserver */
 			nameserver_up(req->ns);
 		}
 
 		if (req->search_state && req->request_type != TYPE_PTR) {
-			// if we have a list of domains to search in, try the next one
+			/* if we have a list of domains to search in, try the next one */
 			if (!search_try_next(req)) {
-				// a new request was issued so this request is finished and
-				// the user callback will be made when that request (or a
-				// child of it) finishes.
+				/* a new request was issued so this request is finished and */
+				/* the user callback will be made when that request (or a */
+				/* child of it) finishes. */
 				request_finished(req, &req_head);
 				return;
 			}
 		}
 
-		// all else failed. Pass the failure up
+		/* all else failed. Pass the failure up */
 		reply_callback(req, 0, error, NULL);
 		request_finished(req, &req_head);
 	} else {
-		// all ok, tell the user
+		/* all ok, tell the user */
 		reply_callback(req, ttl, 0, reply);
 		nameserver_up(req->ns);
 		request_finished(req, &req_head);
@@ -768,11 +768,11 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 	char *cp = name_out;
 	const char *const end = name_out + name_out_len;
 
-	// Normally, names are a series of length prefixed strings terminated
-	// with a length of 0 (the lengths are u8's < 63).
-	// However, the length can start with a pair of 1 bits and that
-	// means that the next 14 bits are a pointer within the current
-	// packet.
+	/* Normally, names are a series of length prefixed strings terminated */
+	/* with a length of 0 (the lengths are u8's < 63). */
+	/* However, the length can start with a pair of 1 bits and that */
+	/* means that the next 14 bits are a pointer within the current */
+	/* packet. */
 
 	for(;;) {
 		u8 label_len;
@@ -812,13 +812,13 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 	return -1;
 }
 
-// parses a raw reply from a nameserver.
+/* parses a raw reply from a nameserver. */
 static int
 reply_parse(u8 *packet, int length) {
-	int j = 0;	// index into packet
-	u16 _t;	 // used by the macros
-	u32 _t32;  // used by the macros
-	char tmp_name[256]; // used by the macros
+	int j = 0;	/* index into packet */
+	u16 _t;	 /* used by the macros */
+	u32 _t32;  /* used by the macros */
+	char tmp_name[256]; /* used by the macros */
 
 	u16 trans_id, questions, answers, authority, additional, datalength;
 	u16 flags = 0;
@@ -843,14 +843,14 @@ reply_parse(u8 *packet, int length) {
 	memset(&reply, 0, sizeof(reply));
 
 	/* if not an answer, it doesn't go with any of our requests. */
-	if (!(flags & 0x8000)) return -1;  // must be an answer
+	if (!(flags & 0x8000)) return -1;  /* must be an answer */
 	if (flags & 0x020f) {
-		// there was an error
+		/* there was an error */
 		goto err;
 	}
-	// if (!answers) return;  // must have an answer of some form
+	/* if (!answers) return; */  /* must have an answer of some form */
 
-	// This macro skips a name in the DNS reply.
+	/* This macro skips a name in the DNS reply. */
 #define SKIP_NAME														\
 	do { tmp_name[0] = '\0';											\
 		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0) \
@@ -859,23 +859,25 @@ reply_parse(u8 *packet, int length) {
 
 	reply.type = req->request_type;
 
-	// skip over each question in the reply
+	/* skip over each question in the reply */
 	for (i = 0; i < questions; ++i) {
-		// the question looks like
-		//	 <label:name><u16:type><u16:class>
+		/* the question looks like
+		 * <label:name><u16:type><u16:class>
+		 */
 		SKIP_NAME;
 		j += 4;
 		if (j >= length) goto err;
 	}
 
-	// now we have the answer section which looks like
-	// <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
+	/* now we have the answer section which looks like
+	 * <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
+	 */
 
 	for (i = 0; i < answers; ++i) {
 		u16 type, class;
 
-		// XXX I'd be more comfortable if we actually checked the name
-		// here. -NM
+		/* XXX I'd be more comfortable if we actually checked the name */
+		/* here. -NM */
 		SKIP_NAME;
 		GET16(type);
 		GET16(class);
@@ -893,7 +895,7 @@ reply_parse(u8 *packet, int length) {
 			addrtocopy = MIN(MAX_ADDRS - reply.data.a.addrcount, (unsigned)addrcount);
 
 			ttl_r = MIN(ttl_r, ttl);
-			// we only bother with the first four addresses.
+			/* we only bother with the first four addresses. */
 			if (j + 4*addrtocopy > length) goto err;
 			memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
 				   packet + j, 4*addrtocopy);
@@ -918,11 +920,11 @@ reply_parse(u8 *packet, int length) {
 			}
 			if ((datalength & 15) != 0) /* not an even number of AAAAs. */
 				goto err;
-			addrcount = datalength >> 4;  // each address is 16 bytes long
+			addrcount = datalength >> 4;  /* each address is 16 bytes long */
 			addrtocopy = MIN(MAX_ADDRS - reply.data.aaaa.addrcount, (unsigned)addrcount);
 			ttl_r = MIN(ttl_r, ttl);
 
-			// we only bother with the first four addresses.
+			/* we only bother with the first four addresses. */
 			if (j + 16*addrtocopy > length) goto err;
 			memcpy(&reply.data.aaaa.addresses[reply.data.aaaa.addrcount],
 				   packet + j, 16*addrtocopy);
@@ -931,7 +933,7 @@ reply_parse(u8 *packet, int length) {
 			reply.have_answer = 1;
 			if (reply.data.aaaa.addrcount == MAX_ADDRS) break;
 		} else {
-			// skip over any other type of resource
+			/* skip over any other type of resource */
 			j += datalength;
 		}
 	}
@@ -944,21 +946,21 @@ reply_parse(u8 *packet, int length) {
 	return -1;
 }
 
-// Parse a raw request (packet,length) sent to a nameserver port (port) from
-// a DNS client (addr,addrlen), and if it's well-formed, call the corresponding
-// callback.
+/* Parse a raw request (packet,length) sent to a nameserver port (port) from */
+/* a DNS client (addr,addrlen), and if it's well-formed, call the corresponding */
+/* callback. */
 static int
 request_parse(u8 *packet, int length, struct evdns_server_port *port, struct sockaddr *addr, socklen_t addrlen)
 {
-	int j = 0;	// index into packet
-	u16 _t;	 // used by the macros
-	char tmp_name[256]; // used by the macros
+	int j = 0;	/* index into packet */
+	u16 _t;	 /* used by the macros */
+	char tmp_name[256]; /* used by the macros */
 
 	int i;
 	u16 trans_id, flags, questions, answers, authority, additional;
 	struct server_request *server_req = NULL;
 
-	// Get the header fields
+	/* Get the header fields */
 	GET16(trans_id);
 	GET16(flags);
 	GET16(questions);
@@ -966,8 +968,8 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 	GET16(authority);
 	GET16(additional);
 
-	if (flags & 0x8000) return -1; // Must not be an answer.
-	flags &= 0x0110; // Only RD and CD get preserved.
+	if (flags & 0x8000) return -1; /* Must not be an answer. */
+	flags &= 0x0110; /* Only RD and CD get preserved. */
 
 	server_req = malloc(sizeof(struct server_request));
 	if (server_req == NULL) return -1;
@@ -1001,12 +1003,12 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 		server_req->base.questions[server_req->base.nquestions++] = q;
 	}
 
-	// Ignore answers, authority, and additional.
+	/* Ignore answers, authority, and additional. */
 
 	server_req->port = port;
 	port->refcnt++;
 
-	// Only standard queries are supported.
+	/* Only standard queries are supported. */
 	if (flags & 0x7800) {
 		evdns_server_request_respond(&(server_req->base), DNS_ERR_NOTIMPL);
 		return -1;
@@ -1033,7 +1035,7 @@ err:
 #undef GET8
 }
 
-// Try to choose a strong transaction id which isn't already in flight
+/* Try to choose a strong transaction id which isn't already in flight */
 static u16
 transaction_id_pick(void) {
 	for (;;) {
@@ -1060,17 +1062,19 @@ transaction_id_pick(void) {
 #ifdef DNS_USE_OPENSSL_FOR_ID
 		u16 trans_id;
 		if (RAND_pseudo_bytes((u8 *) &trans_id, 2) == -1) {
-			/* // in the case that the RAND call fails we back
-			// down to using gettimeofday.
+			/* in the case that the RAND call fails we back */
+			/* down to using gettimeofday. */
+			/*
 			struct timeval tv;
 			gettimeofday(&tv, NULL);
-			trans_id = tv.tv_usec & 0xffff; */
+			trans_id = tv.tv_usec & 0xffff;
+			*/
 			abort();
 		}
 #endif
 
 		if (trans_id == 0xffff) continue;
-		// now check to see if that id is already inflight
+		/* now check to see if that id is already inflight */
 		req = started_at = req_head;
 		if (req) {
 			do {
@@ -1078,30 +1082,30 @@ transaction_id_pick(void) {
 				req = req->next;
 			} while (req != started_at);
 		}
-		// we didn't find it, so this is a good id
+		/* we didn't find it, so this is a good id */
 		if (req == started_at) return trans_id;
 	}
 }
 
-// choose a namesever to use. This function will try to ignore
-// nameservers which we think are down and load balance across the rest
-// by updating the server_head global each time.
+/* choose a namesever to use. This function will try to ignore */
+/* nameservers which we think are down and load balance across the rest */
+/* by updating the server_head global each time. */
 static struct nameserver *
 nameserver_pick(void) {
 	struct nameserver *started_at = server_head, *picked;
 	if (!server_head) return NULL;
 
-	// if we don't have any good nameservers then there's no
-	// point in trying to find one.
+	/* if we don't have any good nameservers then there's no */
+	/* point in trying to find one. */
 	if (!global_good_nameservers) {
 		server_head = server_head->next;
 		return server_head;
 	}
 
-	// remember that nameservers are in a circular list
+	/* remember that nameservers are in a circular list */
 	for (;;) {
 		if (server_head->state) {
-			// we think this server is currently good
+			/* we think this server is currently good */
 			picked = server_head;
 			server_head = server_head->next;
 			return picked;
@@ -1109,9 +1113,9 @@ nameserver_pick(void) {
 
 		server_head = server_head->next;
 		if (server_head == started_at) {
-			// all the nameservers seem to be down
-			// so we just return this one and hope for the
-			// best
+			/* all the nameservers seem to be down */
+			/* so we just return this one and hope for the */
+			/* best */
 			assert(global_good_nameservers == 0);
 			picked = server_head;
 			server_head = server_head->next;
@@ -1120,7 +1124,7 @@ nameserver_pick(void) {
 	}
 }
 
-// this is called when a namesever socket is ready for reading
+/* this is called when a namesever socket is ready for reading */
 static void
 nameserver_read(struct nameserver *ns) {
 	u8 packet[1500];
@@ -1138,8 +1142,8 @@ nameserver_read(struct nameserver *ns) {
 	}
 }
 
-// Read a packet from a DNS client on a server port s, parse it, and
-// act accordingly.
+/* Read a packet from a DNS client on a server port s, parse it, and */
+/* act accordingly. */
 static void
 server_port_read(struct evdns_server_port *s) {
 	u8 packet[1500];
@@ -1162,7 +1166,7 @@ server_port_read(struct evdns_server_port *s) {
 	}
 }
 
-// Try to write all pending replies on a given DNS server port.
+/* Try to write all pending replies on a given DNS server port. */
 static void
 server_port_flush(struct evdns_server_port *port)
 {
@@ -1177,25 +1181,25 @@ server_port_flush(struct evdns_server_port *port)
 			log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", strerror(err), err);
 		}
 		if (server_request_free(req)) {
-			// we released the last reference to req->port.
+			/* we released the last reference to req->port. */
 			return;
 		}
 	}
 
-	// We have no more pending requests; stop listening for 'writeable' events.
+	/* We have no more pending requests; stop listening for 'writeable' events. */
 	(void) event_del(&port->event);
 	CLEAR(&port->event);
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
 	if (event_add(&port->event, NULL) < 0) {
 		log(EVDNS_LOG_WARN, "Error from libevent when adding event for DNS server.");
-		// ???? Do more?
+		/* ???? Do more? */
 	}
 }
 
-// set if we are waiting for the ability to write to this server.
-// if waiting is true then we ask libevent for EV_WRITE events, otherwise
-// we stop these events.
+/* set if we are waiting for the ability to write to this server. */
+/* if waiting is true then we ask libevent for EV_WRITE events, otherwise */
+/* we stop these events. */
 static void
 nameserver_write_waiting(struct nameserver *ns, char waiting) {
 	if (ns->write_waiting == waiting) return;
@@ -1208,12 +1212,12 @@ nameserver_write_waiting(struct nameserver *ns, char waiting) {
 	if (event_add(&ns->event, NULL) < 0) {
 		log(EVDNS_LOG_WARN, "Error from libevent when adding event for %s",
 			debug_ntoa(ns->address));
-		// ???? Do more?
+		/* ???? Do more? */
 	}
 }
 
-// a callback function. Called by libevent when the kernel says that
-// a nameserver socket is ready for writing or reading
+/* a callback function. Called by libevent when the kernel says that */
+/* a nameserver socket is ready for writing or reading */
 static void
 nameserver_ready_callback(int fd, short events, void *arg) {
 	struct nameserver *ns = (struct nameserver *) arg;
@@ -1230,8 +1234,8 @@ nameserver_ready_callback(int fd, short events, void *arg) {
 	}
 }
 
-// a callback function. Called by libevent when the kernel says that
-// a server socket is ready for writing or reading.
+/* a callback function. Called by libevent when the kernel says that */
+/* a server socket is ready for writing or reading. */
 static void
 server_port_ready_callback(int fd, short events, void *arg) {
 	struct evdns_server_port *port = (struct evdns_server_port *) arg;
@@ -1249,22 +1253,22 @@ server_port_ready_callback(int fd, short events, void *arg) {
 /* This is an inefficient representation; only use it via the dnslabel_table_*
  * functions, so that is can be safely replaced with something smarter later. */
 #define MAX_LABELS 128
-// Structures used to implement name compression
+/* Structures used to implement name compression */
 struct dnslabel_entry { char *v; int pos; };
 struct dnslabel_table {
-	int n_labels; // number of current entries
-	// map from name to position in message
+	int n_labels; /* number of current entries */
+	/* map from name to position in message */
 	struct dnslabel_entry labels[MAX_LABELS];
 };
 
-// Initialize dnslabel_table.
+/* Initialize dnslabel_table. */
 static void
 dnslabel_table_init(struct dnslabel_table *table)
 {
 	table->n_labels = 0;
 }
 
-// Free all storage held by table, but not the table itself.
+/* Free all storage held by table, but not the table itself. */
 static void
 dnslabel_clear(struct dnslabel_table *table)
 {
@@ -1274,8 +1278,8 @@ dnslabel_clear(struct dnslabel_table *table)
 	table->n_labels = 0;
 }
 
-// return the position of the label in the current message, or -1 if the label
-// hasn't been used yet.
+/* return the position of the label in the current message, or -1 if the label */
+/* hasn't been used yet. */
 static int
 dnslabel_table_get_pos(const struct dnslabel_table *table, const char *label)
 {
@@ -1287,7 +1291,7 @@ dnslabel_table_get_pos(const struct dnslabel_table *table, const char *label)
 	return -1;
 }
 
-// remember that we've used the label at position pos
+/* remember that we've used the label at position pos */
 static int
 dnslabel_table_add(struct dnslabel_table *table, const char *label, int pos)
 {
@@ -1305,17 +1309,17 @@ dnslabel_table_add(struct dnslabel_table *table, const char *label, int pos)
 	return (0);
 }
 
-// Converts a string to a length-prefixed set of DNS labels, starting
-// at buf[j]. name and buf must not overlap. name_len should be the length
-// of name.	 table is optional, and is used for compression.
-//
-// Input: abc.def
-// Output: <3>abc<3>def<0>
-//
-// Returns the first index after the encoded name, or negative on error.
-//	 -1	 label was > 63 bytes
-//	 -2	 name too long to fit in buffer.
-//
+/* Converts a string to a length-prefixed set of DNS labels, starting */
+/* at buf[j]. name and buf must not overlap. name_len should be the length */
+/* of name.	 table is optional, and is used for compression. */
+/* */
+/* Input: abc.def */
+/* Output: <3>abc<3>def<0> */
+/* */
+/* Returns the first index after the encoded name, or negative on error. */
+/* -1	 label was > 63 bytes */
+/* -2	 name too long to fit in buffer. */
+/* */
 static off_t
 dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 				  const char *name, const int name_len,
@@ -1359,7 +1363,7 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 			j += end - start;
 			break;
 		} else {
-			// append length of the label.
+			/* append length of the label. */
 			const unsigned int label_len = name - start;
 			if (label_len > 63) return -1;
 			if ((size_t)(j+label_len+1) > buf_len) return -2;
@@ -1368,47 +1372,47 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 
 			memcpy(buf + j, start, name - start);
 			j += name - start;
-			// hop over the '.'
+			/* hop over the '.' */
 			name++;
 		}
 	}
 
-	// the labels must be terminated by a 0.
-	// It's possible that the name ended in a .
-	// in which case the zero is already there
+	/* the labels must be terminated by a 0. */
+	/* It's possible that the name ended in a . */
+	/* in which case the zero is already there */
 	if (!j || buf[j-1]) buf[j++] = 0;
 	return j;
  overflow:
 	return (-2);
 }
 
-// Finds the length of a dns request for a DNS name of the given
-// length. The actual request may be smaller than the value returned
-// here
+/* Finds the length of a dns request for a DNS name of the given */
+/* length. The actual request may be smaller than the value returned */
+/* here */
 static int
 evdns_request_len(const int name_len) {
-	return 96 + // length of the DNS standard header
+	return 96 + /* length of the DNS standard header */
 		name_len + 2 +
-		4;	// space for the resource type
+		4;	/* space for the resource type */
 }
 
-// build a dns request packet into buf. buf should be at least as long
-// as evdns_request_len told you it should be.
-//
-// Returns the amount of space used. Negative on error.
+/* build a dns request packet into buf. buf should be at least as long */
+/* as evdns_request_len told you it should be. */
+/* */
+/* Returns the amount of space used. Negative on error. */
 static int
 evdns_request_data_build(const char *const name, const int name_len,
 						 const u16 trans_id, const u16 type, const u16 class,
 						 u8 *const buf, size_t buf_len) {
-	off_t j = 0;	// current offset into buf
-	u16 _t;	 // used by the macros
+	off_t j = 0;	/* current offset into buf */
+	u16 _t;	 /* used by the macros */
 
 	APPEND16(trans_id);
-	APPEND16(0x0100);  // standard query, recusion needed
-	APPEND16(1);  // one question
-	APPEND16(0);  // no answers
-	APPEND16(0);  // no authority
-	APPEND16(0);  // no additional
+	APPEND16(0x0100);  /* standard query, recusion needed */
+	APPEND16(1);  /* one question */
+	APPEND16(0);  /* no answers */
+	APPEND16(0);  /* no authority */
+	APPEND16(0);  /* no additional */
 
 	j = dnsname_to_labels(buf, buf_len, j, name, name_len, NULL);
 	if (j < 0) {
@@ -1423,7 +1427,7 @@ evdns_request_data_build(const char *const name, const int name_len,
 	return (-1);
 }
 
-// exported function
+/* exported function */
 struct evdns_server_port *
 evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb, void *user_data)
 {
@@ -1432,7 +1436,7 @@ evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb,
 		return NULL;
 	memset(port, 0, sizeof(struct evdns_server_port));
 
-	assert(!is_tcp); // TCP sockets not yet implemented
+	assert(!is_tcp); /* TCP sockets not yet implemented */
 	port->socket = socket;
 	port->refcnt = 1;
 	port->choked = 0;
@@ -1443,11 +1447,11 @@ evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb,
 
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
-	event_add(&port->event, NULL); // check return.
+	event_add(&port->event, NULL); /* check return. */
 	return port;
 }
 
-// exported function
+/* exported function */
 void
 evdns_close_server_port(struct evdns_server_port *port)
 {
@@ -1456,7 +1460,7 @@ evdns_close_server_port(struct evdns_server_port *port)
 	port->closing = 1;
 }
 
-// exported function
+/* exported function */
 int
 evdns_server_request_add_reply(struct evdns_server_request *_req, int section, const char *name, int type, int class, int ttl, int datalen, int is_name, const char *data)
 {
@@ -1528,7 +1532,7 @@ evdns_server_request_add_reply(struct evdns_server_request *_req, int section, c
 	return 0;
 }
 
-// exported function
+/* exported function */
 int
 evdns_server_request_add_a_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
 {
@@ -1537,7 +1541,7 @@ evdns_server_request_add_a_reply(struct evdns_server_request *req, const char *n
 		  ttl, n*4, 0, addrs);
 }
 
-// exported function
+/* exported function */
 int
 evdns_server_request_add_aaaa_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
 {
@@ -1546,7 +1550,7 @@ evdns_server_request_add_aaaa_reply(struct evdns_server_request *req, const char
 		  ttl, n*16, 0, addrs);
 }
 
-// exported function
+/* exported function */
 int
 evdns_server_request_add_ptr_reply(struct evdns_server_request *req, struct in_addr *in, const char *inaddr_name, const char *hostname, int ttl)
 {
@@ -1568,7 +1572,7 @@ evdns_server_request_add_ptr_reply(struct evdns_server_request *req, struct in_a
 		  ttl, -1, 1, hostname);
 }
 
-// exported function
+/* exported function */
 int
 evdns_server_request_add_cname_reply(struct evdns_server_request *req, const char *name, const char *cname, int ttl)
 {
@@ -1675,7 +1679,7 @@ overflow:
 	return (0);
 }
 
-// exported function
+/* exported function */
 int
 evdns_server_request_respond(struct evdns_server_request *_req, int err)
 {
@@ -1725,7 +1729,7 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 	return 0;
 }
 
-// Free all storage held by RRs in req.
+/* Free all storage held by RRs in req. */
 static void
 server_request_free_answers(struct server_request *req)
 {
@@ -1752,8 +1756,8 @@ server_request_free_answers(struct server_request *req)
 	}
 }
 
-// Free all storage held by req, and remove links to it.
-// return true iff we just wound up freeing the server_port.
+/* Free all storage held by req, and remove links to it. */
+/* return true iff we just wound up freeing the server_port. */
 static int
 server_request_free(struct server_request *req)
 {
@@ -1796,7 +1800,7 @@ server_request_free(struct server_request *req)
 	return (0);
 }
 
-// Free all storage held by an evdns_server_port.  Only called when 
+/* Free all storage held by an evdns_server_port.  Only called when  */
 static void
 server_port_free(struct evdns_server_port *port)
 {
@@ -1809,11 +1813,11 @@ server_port_free(struct evdns_server_port *port)
 	}
 	(void) event_del(&port->event);
 	CLEAR(&port->event);
-	// XXXX020 actually free the port? -NM
-	// XXXX yes, and fix up evdns_close_server_port to dtrt. -NM
+	/* XXXX020 actually free the port? -NM */
+	/* XXXX yes, and fix up evdns_close_server_port to dtrt. -NM */
 }
 
-// exported function
+/* exported function */
 int
 evdns_server_request_drop(struct evdns_server_request *_req)
 {
@@ -1822,7 +1826,7 @@ evdns_server_request_drop(struct evdns_server_request *_req)
 	return 0;
 }
 
-// exported function
+/* exported function */
 int
 evdns_server_request_get_requesting_addr(struct evdns_server_request *_req, struct sockaddr *sa, int addr_len)
 {
@@ -1836,8 +1840,8 @@ evdns_server_request_get_requesting_addr(struct evdns_server_request *_req, stru
 #undef APPEND16
 #undef APPEND32
 
-// this is a libevent callback function which is called when a request
-// has timed out.
+/* this is a libevent callback function which is called when a request */
+/* has timed out. */
 static void
 evdns_request_timeout_callback(int fd, short events, void *arg) {
 	struct request *const req = (struct request *) arg;
@@ -1855,21 +1859,21 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 	(void) evtimer_del(&req->timeout_event);
 	CLEAR(&req->timeout_event);
 	if (req->tx_count >= global_max_retransmits) {
-		// this request has failed
+		/* this request has failed */
 		reply_callback(req, 0, DNS_ERR_TIMEOUT, NULL);
 		request_finished(req, &req_head);
 	} else {
-		// retransmit it
+		/* retransmit it */
 		evdns_request_transmit(req);
 	}
 }
 
-// try to send a request to a given server.
-//
-// return:
-//	 0 ok
-//	 1 temporary failure
-//	 2 other failure
+/* try to send a request to a given server. */
+/* */
+/* return: */
+/* 0 ok */
+/* 1 temporary failure */
+/* 2 other failure */
 static int
 evdns_request_transmit_to(struct request *req, struct nameserver *server) {
 	const int r = send(server->socket, req->request, req->request_len, 0);
@@ -1879,46 +1883,46 @@ evdns_request_transmit_to(struct request *req, struct nameserver *server) {
 		nameserver_failed(req->ns, strerror(err));
 		return 2;
 	} else if (r != (int)req->request_len) {
-		return 1;  // short write
+		return 1;  /* short write */
 	} else {
 		return 0;
 	}
 }
 
-// try to send a request, updating the fields of the request
-// as needed
-//
-// return:
-//	 0 ok
-//	 1 failed
+/* try to send a request, updating the fields of the request */
+/* as needed */
+/* */
+/* return: */
+/* 0 ok */
+/* 1 failed */
 static int
 evdns_request_transmit(struct request *req) {
 	int retcode = 0, r;
 
-	// if we fail to send this packet then this flag marks it
-	// for evdns_transmit
+	/* if we fail to send this packet then this flag marks it */
+	/* for evdns_transmit */
 	req->transmit_me = 1;
 	if (req->trans_id == 0xffff) abort();
 
 	if (req->ns->choked) {
-		// don't bother trying to write to a socket
-		// which we have had EAGAIN from
+		/* don't bother trying to write to a socket */
+		/* which we have had EAGAIN from */
 		return 1;
 	}
 
 	r = evdns_request_transmit_to(req, req->ns);
 	switch (r) {
 	case 1:
-		// temp failure
+		/* temp failure */
 		req->ns->choked = 1;
 		nameserver_write_waiting(req->ns, 1);
 		return 1;
 	case 2:
-		// failed in some other way
+		/* failed in some other way */
 		retcode = 1;
 		break;
 	default:
-		// transmitted; we need to check for timeout.
+		/* transmitted; we need to check for timeout. */
 		log(EVDNS_LOG_DEBUG,
 			"Setting timeout for request %lx", (unsigned long) req);
 		evtimer_set(&req->timeout_event, evdns_request_timeout_callback, req);
@@ -1926,7 +1930,7 @@ evdns_request_transmit(struct request *req) {
 			log(EVDNS_LOG_WARN,
 				"Error from libevent when adding timer for request %lx",
 				(unsigned long) req);
-			// ???? Do more?
+			/* ???? Do more? */
 		}
 	}
 
@@ -1944,7 +1948,7 @@ nameserver_probe_callback(int result, char type, int count, int ttl, void *addre
 	(void) addresses;
 
 	if (result == DNS_ERR_NONE || result == DNS_ERR_NOTEXIST) {
-		// this is a good reply
+		/* this is a good reply */
 		nameserver_up(ns);
 	} else nameserver_probe_failed(ns);
 }
@@ -1952,29 +1956,29 @@ nameserver_probe_callback(int result, char type, int count, int ttl, void *addre
 static void
 nameserver_send_probe(struct nameserver *const ns) {
 	struct request *req;
-	// here we need to send a probe to a given nameserver
-	// in the hope that it is up now.
+	/* here we need to send a probe to a given nameserver */
+	/* in the hope that it is up now. */
 
 	log(EVDNS_LOG_DEBUG, "Sending probe to %s", debug_ntoa(ns->address));
 
 	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
 	if (!req) return;
-	// we force this into the inflight queue no matter what
+	/* we force this into the inflight queue no matter what */
 	request_trans_id_set(req, transaction_id_pick());
 	req->ns = ns;
 	request_submit(req);
 }
 
-// returns:
-//	 0 didn't try to transmit anything
-//	 1 tried to transmit something
+/* returns: */
+/* 0 didn't try to transmit anything */
+/* 1 tried to transmit something */
 static int
 evdns_transmit(void) {
 	char did_try_to_transmit = 0;
 
 	if (req_head) {
 		struct request *const started_at = req_head, *req = req_head;
-		// first transmit all the requests which are currently waiting
+		/* first transmit all the requests which are currently waiting */
 		do {
 			if (req->transmit_me) {
 				did_try_to_transmit = 1;
@@ -1988,7 +1992,7 @@ evdns_transmit(void) {
 	return did_try_to_transmit;
 }
 
-// exported function
+/* exported function */
 int
 evdns_count_nameservers(void)
 {
@@ -2003,7 +2007,7 @@ evdns_count_nameservers(void)
 	return n;
 }
 
-// exported function
+/* exported function */
 int
 evdns_clear_nameservers_and_suspend(void)
 {
@@ -2033,7 +2037,7 @@ evdns_clear_nameservers_and_suspend(void)
 		struct request *next = req->next;
 		req->tx_count = req->reissue_count = 0;
 		req->ns = NULL;
-		// ???? What to do about searches?
+		/* ???? What to do about searches? */
 		(void) evtimer_del(&req->timeout_event);
 		CLEAR(&req->timeout_event);
 		req->trans_id = 0;
@@ -2058,7 +2062,7 @@ evdns_clear_nameservers_and_suspend(void)
 }
 
 
-// exported function
+/* exported function */
 int
 evdns_resume(void)
 {
@@ -2068,7 +2072,7 @@ evdns_resume(void)
 
 static int
 _evdns_nameserver_add_impl(unsigned long int address, int port) {
-	// first check to see if we already have this nameserver
+	/* first check to see if we already have this nameserver */
 
 	const struct nameserver *server = server_head, *const started_at = server_head;
 	struct nameserver *ns;
@@ -2114,7 +2118,7 @@ _evdns_nameserver_add_impl(unsigned long int address, int port) {
 
 	log(EVDNS_LOG_DEBUG, "Added nameserver %s", debug_ntoa(address));
 
-	// insert this nameserver into the list of them
+	/* insert this nameserver into the list of them */
 	if (!server_head) {
 		ns->next = ns->prev = ns;
 		server_head = ns;
@@ -2140,13 +2144,13 @@ out1:
 	return err;
 }
 
-// exported function
+/* exported function */
 int
 evdns_nameserver_add(unsigned long int address) {
 	return _evdns_nameserver_add_impl(address, 53);
 }
 
-// exported function
+/* exported function */
 int
 evdns_nameserver_ip_add(const char *ip_as_string) {
 	struct in_addr ina;
@@ -2175,7 +2179,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	return _evdns_nameserver_add_impl(ina.s_addr, port);
 }
 
-// insert into the tail of the queue
+/* insert into the tail of the queue */
 static void
 evdns_request_insert(struct request *req, struct request **head) {
 	if (!*head) {
@@ -2209,7 +2213,7 @@ request_new(int type, const char *name, int flags,
 	const int name_len = strlen(name);
 	const int request_max_len = evdns_request_len(name_len);
 	const u16 trans_id = issuing_now ? transaction_id_pick() : 0xffff;
-	// the request data is alloced in a single block with the header
+	/* the request data is alloced in a single block with the header */
 	struct request *const req =
 		(struct request *) malloc(sizeof(struct request) + request_max_len);
 	int rlen;
@@ -2218,9 +2222,9 @@ request_new(int type, const char *name, int flags,
 	if (!req) return NULL;
 	memset(req, 0, sizeof(struct request));
 
-	// request data lives just after the header
+	/* request data lives just after the header */
 	req->request = ((u8 *) req) + sizeof(struct request);
-	// denotes that the request data shouldn't be free()ed
+	/* denotes that the request data shouldn't be free()ed */
 	req->request_appended = 1;
 	rlen = evdns_request_data_build(name, name_len, trans_id,
 							type, CLASS_INET, req->request, request_max_len);
@@ -2245,8 +2249,8 @@ request_new(int type, const char *name, int flags,
 static void
 request_submit(struct request *const req) {
 	if (req->ns) {
-		// if it has a nameserver assigned then this is going
-		// straight into the inflight queue
+		/* if it has a nameserver assigned then this is going */
+		/* straight into the inflight queue */
 		evdns_request_insert(req, &req_head);
 		global_requests_inflight++;
 		evdns_request_transmit(req);
@@ -2256,7 +2260,7 @@ request_submit(struct request *const req) {
 	}
 }
 
-// exported function
+/* exported function */
 int evdns_resolve_ipv4(const char *name, int flags,
 					   evdns_callback_type callback, void *ptr) {
 	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
@@ -2272,7 +2276,7 @@ int evdns_resolve_ipv4(const char *name, int flags,
 	}
 }
 
-// exported function
+/* exported function */
 int evdns_resolve_ipv6(const char *name, int flags,
 					   evdns_callback_type callback, void *ptr) {
 	log(EVDNS_LOG_DEBUG, "Resolve requested for %s", name);
@@ -2330,24 +2334,23 @@ int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_ty
 	return 0;
 }
 
-
-/////////////////////////////////////////////////////////////////////
-// Search support
-//
-// the libc resolver has support for searching a number of domains
-// to find a name. If nothing else then it takes the single domain
-// from the gethostname() call.
-//
-// It can also be configured via the domain and search options in a
-// resolv.conf.
-//
-// The ndots option controls how many dots it takes for the resolver
-// to decide that a name is non-local and so try a raw lookup first.
+/*/////////////////////////////////////////////////////////////////// */
+/* Search support */
+/* */
+/* the libc resolver has support for searching a number of domains */
+/* to find a name. If nothing else then it takes the single domain */
+/* from the gethostname() call. */
+/* */
+/* It can also be configured via the domain and search options in a */
+/* resolv.conf. */
+/* */
+/* The ndots option controls how many dots it takes for the resolver */
+/* to decide that a name is non-local and so try a raw lookup first. */
 
 struct search_domain {
 	int len;
 	struct search_domain *next;
-	// the text string is appended to this structure
+	/* the text string is appended to this structure */
 };
 
 struct search_state {
@@ -2393,7 +2396,7 @@ search_postfix_clear(void) {
 	global_search_state = search_state_new();
 }
 
-// exported function
+/* exported function */
 void
 evdns_search_clear(void) {
 	search_postfix_clear();
@@ -2419,8 +2422,8 @@ search_postfix_add(const char *domain) {
 	global_search_state->head = sdomain;
 }
 
-// reverse the order of members in the postfix list. This is needed because,
-// when parsing resolv.conf we push elements in the wrong order
+/* reverse the order of members in the postfix list. This is needed because, */
+/* when parsing resolv.conf we push elements in the wrong order */
 static void
 search_reverse(void) {
 	struct search_domain *cur, *prev = NULL, *next;
@@ -2435,13 +2438,13 @@ search_reverse(void) {
 	global_search_state->head = prev;
 }
 
-// exported function
+/* exported function */
 void
 evdns_search_add(const char *domain) {
 	search_postfix_add(domain);
 }
 
-// exported function
+/* exported function */
 void
 evdns_search_ndots_set(const int ndots) {
 	if (!global_search_state) global_search_state = search_state_new();
@@ -2460,7 +2463,7 @@ search_set_from_hostname(void) {
 	search_postfix_add(domainname);
 }
 
-// warning: returns malloced string
+/* warning: returns malloced string */
 static char *
 search_make_new(const struct search_state *const state, int n, const char *const base_name) {
 	const int base_len = strlen(base_name);
@@ -2469,8 +2472,8 @@ search_make_new(const struct search_state *const state, int n, const char *const
 
 	for (dom = state->head; dom; dom = dom->next) {
 		if (!n--) {
-			// this is the postfix we want
-			// the actual postfix string is kept at the end of the structure
+			/* this is the postfix we want */
+			/* the actual postfix string is kept at the end of the structure */
 			const u8 *const postfix = ((u8 *) dom) + sizeof(struct search_domain);
 			const int postfix_len = dom->len;
 			char *const newname = (char *) malloc(base_len + need_to_append_dot + postfix_len + 1);
@@ -2483,7 +2486,7 @@ search_make_new(const struct search_state *const state, int n, const char *const
 		}
 	}
 
-	// we ran off the end of the list and still didn't find the requested string
+	/* we ran off the end of the list and still didn't find the requested string */
 	abort();
 	return NULL; /* unreachable; stops warnings in some compilers. */
 }
@@ -2494,7 +2497,7 @@ search_request_new(int type, const char *const name, int flags, evdns_callback_t
 	if ( ((flags & DNS_QUERY_NO_SEARCH) == 0) &&
 		 global_search_state &&
 		 global_search_state->num_domains) {
-		// we have some domains to search
+		/* we have some domains to search */
 		struct request *req;
 		if (string_num_dots(name) >= global_search_state->ndots) {
 			req = request_new(type, name, flags, user_callback, user_arg);
@@ -2522,23 +2525,23 @@ search_request_new(int type, const char *const name, int flags, evdns_callback_t
 	}
 }
 
-// this is called when a request has failed to find a name. We need to check
-// if it is part of a search and, if so, try the next name in the list
-// returns:
-//	 0 another request has been submitted
-//	 1 no more requests needed
+/* this is called when a request has failed to find a name. We need to check */
+/* if it is part of a search and, if so, try the next name in the list */
+/* returns: */
+/* 0 another request has been submitted */
+/* 1 no more requests needed */
 static int
 search_try_next(struct request *const req) {
 	if (req->search_state) {
-		// it is part of a search
+		/* it is part of a search */
 		char *new_name;
 		struct request *newreq;
 		req->search_index++;
 		if (req->search_index >= req->search_state->num_domains) {
-			// no more postfixes to try, however we may need to try
-			// this name without a postfix
+			/* no more postfixes to try, however we may need to try */
+			/* this name without a postfix */
 			if (string_num_dots(req->search_origname) < req->search_state->ndots) {
-				// yep, we need to try it raw
+				/* yep, we need to try it raw */
 				newreq = request_new(req->request_type, req->search_origname, req->search_flags, req->user_callback, req->user_pointer);
 				log(EVDNS_LOG_DEBUG, "Search: trying raw query %s", req->search_origname);
 				if (newreq) {
@@ -2579,12 +2582,12 @@ search_request_finished(struct request *const req) {
 	}
 }
 
-/////////////////////////////////////////////////////////////////////
-// Parsing resolv.conf files
+/*/////////////////////////////////////////////////////////////////// */
+/* Parsing resolv.conf files */
 
 static void
 evdns_resolv_set_defaults(int flags) {
-	// if the file isn't found then we assume a local resolver
+	/* if the file isn't found then we assume a local resolver */
 	if (flags & DNS_OPTION_SEARCH) search_set_from_hostname();
 	if (flags & DNS_OPTION_NAMESERVERS) evdns_nameserver_ip_add("127.0.0.1");
 }
@@ -2597,7 +2600,7 @@ strtok_r(char *s, const char *delim, char **state) {
 }
 #endif
 
-// helper version of atoi which returns -1 on error
+/* helper version of atoi which returns -1 on error */
 static int
 strtoint(const char *const str) {
 	char *endptr;
@@ -2606,7 +2609,7 @@ strtoint(const char *const str) {
 	return r;
 }
 
-// helper version of atoi that returns -1 on error and clips to bounds.
+/* helper version of atoi that returns -1 on error and clips to bounds. */
 static int
 strtoint_clipped(const char *const str, int min, int max)
 {
@@ -2621,7 +2624,7 @@ strtoint_clipped(const char *const str, int min, int max)
 		return r;
 }
 
-// exported function
+/* exported function */
 int
 evdns_set_option(const char *option, const char *val, int flags)
 {
@@ -2678,7 +2681,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 		struct in_addr ina;
 
 		if (inet_aton(nameserver, &ina)) {
-			// address is valid
+			/* address is valid */
 			evdns_nameserver_add(ina.s_addr);
 		}
 	} else if (!strcmp(first_token, "domain") && (flags & DNS_OPTION_SEARCH)) {
@@ -2705,14 +2708,14 @@ resolv_conf_parse_line(char *const start, int flags) {
 #undef NEXT_TOKEN
 }
 
-// exported function
-// returns:
-//	 0 no errors
-//	 1 failed to open file
-//	 2 failed to stat file
-//	 3 file too large
-//	 4 out of memory
-//	 5 short read from file
+/* exported function */
+/* returns: */
+/* 0 no errors */
+/* 1 failed to open file */
+/* 2 failed to stat file */
+/* 3 file too large */
+/* 4 out of memory */
+/* 5 short read from file */
 int
 evdns_resolv_conf_parse(int flags, const char *const filename) {
 	struct stat st;
@@ -2735,7 +2738,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 		err = (flags & DNS_OPTION_NAMESERVERS) ? 6 : 0;
 		goto out1;
 	}
-	if (st.st_size > 65535) { err = 3; goto out1; }	 // no resolv.conf should be any bigger
+	if (st.st_size > 65535) { err = 3; goto out1; }	 /* no resolv.conf should be any bigger */
 
 	resolv = (u8 *) malloc((size_t)st.st_size + 1);
 	if (!resolv) { err = 4; goto out1; }
@@ -2748,7 +2751,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 		assert(n < st.st_size);
 	}
 	if (r < 0) { err = 5; goto out2; }
-	resolv[n] = 0;	 // we malloced an extra byte; this should be fine.
+	resolv[n] = 0;	 /* we malloced an extra byte; this should be fine. */
 
 	start = (char *) resolv;
 	for (;;) {
@@ -2764,7 +2767,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	}
 
 	if (!server_head && (flags & DNS_OPTION_NAMESERVERS)) {
-		// no nameservers were configured.
+		/* no nameservers were configured. */
 		evdns_nameserver_ip_add("127.0.0.1");
 		err = 6;
 	}
@@ -2780,7 +2783,7 @@ out1:
 }
 
 #ifdef WIN32
-// Add multiple nameservers from a space-or-comma-separated list.
+/* Add multiple nameservers from a space-or-comma-separated list. */
 static int
 evdns_nameserver_ip_add_line(const char *ips) {
 	const char *addr;
@@ -2805,12 +2808,12 @@ evdns_nameserver_ip_add_line(const char *ips) {
 
 typedef DWORD(WINAPI *GetNetworkParams_fn_t)(FIXED_INFO *, DWORD*);
 
-// Use the windows GetNetworkParams interface in iphlpapi.dll to
-// figure out what our nameservers are.
+/* Use the windows GetNetworkParams interface in iphlpapi.dll to */
+/* figure out what our nameservers are. */
 static int
 load_nameservers_with_getnetworkparams(void)
 {
-	// Based on MSDN examples and inspection of	 c-ares code.
+	/* Based on MSDN examples and inspection of	 c-ares code. */
 	FIXED_INFO *fixed;
 	HMODULE handle = 0;
 	ULONG size = sizeof(FIXED_INFO);
@@ -2822,13 +2825,13 @@ load_nameservers_with_getnetworkparams(void)
 	/* XXXX Possibly, we should hardcode the location of this DLL. */
 	if (!(handle = LoadLibrary("iphlpapi.dll"))) {
 		log(EVDNS_LOG_WARN, "Could not open iphlpapi.dll");
-		//right now status = 0, doesn't that mean "good" - mikec
+		/* right now status = 0, doesn't that mean "good" - mikec */
 		status = -1;
 		goto done;
 	}
 	if (!(fn = (GetNetworkParams_fn_t) GetProcAddress(handle, "GetNetworkParams"))) {
 		log(EVDNS_LOG_WARN, "Could not get address of function.");
-		//same as above
+		/* same as above */
 		status = -1;
 		goto done;
 	}
@@ -3166,9 +3169,9 @@ main(int c, char **v) {
 }
 #endif
 
-// Local Variables:
-// tab-width: 4
-// c-basic-offset: 4
-// indent-tabs-mode: t
-// End:
+/* Local Variables: */
+/* tab-width: 4 */
+/* c-basic-offset: 4 */
+/* indent-tabs-mode: t */
+/* End: */
 
