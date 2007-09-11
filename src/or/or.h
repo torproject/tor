@@ -3550,7 +3550,8 @@ local_routerstatus_t *router_get_combined_status_by_descriptor_digest(
 int router_reload_consensus_networkstatus(void);
 networkstatus_vote_t *networkstatus_get_latest_consensus(void);
 networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);
-int networkstatus_set_current_consensus(const char *consensus, int from_cache);
+int networkstatus_set_current_consensus(const char *consensus, int from_cache,
+                                        int was_waiting_for_certs);
 
 //routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 int should_delay_dir_fetches(or_options_t *options);

@@ -65,8 +65,13 @@ static routerlist_t *routerlist = NULL;
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_list = NULL;
 
-/** Most recently received v3 consensus network status. */
+/** Most recently received and validated v3 consensus network status. */
 static networkstatus_vote_t *current_consensus = NULL;
+
+/** A v3 consensus networkstatus that we've received, but which we don't
+ * have enough certificates to be happy about. */
+static networkstatus_vote_t *consensus_waiting_for_certs = NULL;
+static char *consensus_waiting_for_certs_body = NULL;
 
 /** Global list of local_routerstatus_t for each router, known or unknown.
  * Kept sorted by digest. */
@@ -184,14 +189,26 @@ router_reload_consensus_networkstatus(void)
   tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-consensus",
                get_options()->DataDirectory);
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
-  if (!s)
-    return 0;
-
-  if (networkstatus_set_current_consensus(s, 1)) {
-    log_warn(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
-             filename);
+  if (s) {
+    if (networkstatus_set_current_consensus(s, 1, 0)) {
+      log_warn(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
+               filename);
+    }
+    tor_free(s);
   }
-  tor_free(s);
+
+  tor_snprintf(filename,sizeof(filename),
+               "%s"PATH_SEPARATOR"unverified-consensus",
+               get_options()->DataDirectory);
+  s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+  if (s) {
+    if (networkstatus_set_current_consensus(s, 1, 1)) {
+      log_warn(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
+               filename);
+    }
+    tor_free(s);
+  }
+
   return 0;
 }
 
@@ -265,6 +282,16 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
   }
 
   trusted_dirs_flush_certs_to_disk();
+
+  if (consensus_waiting_for_certs) {
+    if (!networkstatus_check_consensus_signature(
+                                    consensus_waiting_for_certs, 0)) {
+      if (!networkstatus_set_current_consensus(
+                                 consensus_waiting_for_certs_body, 0, 1)) {
+        tor_free(consensus_waiting_for_certs_body);
+      }
+    }
+  }
 
   return 0;
 }
@@ -2501,6 +2528,15 @@ routerlist_free_all(void)
   if (named_server_map) {
     strmap_free(named_server_map, _tor_free);
   }
+  if (current_consensus) {
+    networkstatus_vote_free(current_consensus);
+    current_consensus = NULL;
+  }
+  if (consensus_waiting_for_certs) {
+    networkstatus_vote_free(current_consensus);
+    current_consensus = NULL;
+  }
+  tor_free(consensus_waiting_for_certs_body);
 }
 
 /** Free all storage held by the routerstatus object <b>rs</b>. */
@@ -4027,9 +4063,11 @@ networkstatus_get_live_consensus(time_t now)
 
 /** DOCDOC */
 int
-networkstatus_set_current_consensus(const char *consensus, int from_cache)
+networkstatus_set_current_consensus(const char *consensus, int from_cache,
+                                    int was_waiting_for_certs)
 {
   networkstatus_vote_t *c;
+  int r;
   /* Make sure it's parseable. */
   c = networkstatus_parse_vote_from_string(consensus, 0);
   if (!c) {
@@ -4038,14 +4076,49 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache)
   }
 
   /* Make sure it's signed enough. */
-  if (networkstatus_check_consensus_signature(c, 1)<0) {
-    log_warn(LD_DIR, "Not enough good signatures on networkstatus consensus");
-    networkstatus_vote_free(c);
-    return -1;
+  if ((r=networkstatus_check_consensus_signature(c, 1))<0) {
+    if (r == -1 && !was_waiting_for_certs) {
+      /* Okay, so it _might_ be signed enough if we get more certificates. */
+      if (!was_waiting_for_certs)
+        log_notice(LD_DIR, "Not enough certificates to check networkstatus "
+                   "consensus");
+      if (!current_consensus ||
+          c->valid_after > current_consensus->valid_after) {
+        if (consensus_waiting_for_certs)
+          networkstatus_vote_free(consensus_waiting_for_certs);
+        tor_free(consensus_waiting_for_certs_body);
+        consensus_waiting_for_certs = c;
+        consensus_waiting_for_certs_body = tor_strdup(consensus);
+        if (!from_cache) {
+          or_options_t *options = get_options();
+          char filename[512];
+          tor_snprintf(filename, sizeof(filename),
+                       "%s"PATH_SEPARATOR"unverified-consensus",
+                       options->DataDirectory);
+          write_str_to_file(filename, consensus, 0);
+        }
+        /* XXXX020 trigger the certificate download. */
+      }
+      return -1;
+    } else {
+      if (!was_waiting_for_certs)
+        log_warn(LD_DIR, "Not enough good signatures on networkstatus "
+                 "consensus");
+      networkstatus_vote_free(c);
+      return -1;
+    }
   }
 
   if (current_consensus)
     networkstatus_vote_free(current_consensus);
+
+  if (consensus_waiting_for_certs &&
+      consensus_waiting_for_certs->valid_after <= c->valid_after) {
+    networkstatus_vote_free(consensus_waiting_for_certs);
+    consensus_waiting_for_certs = NULL;
+    if (consensus != consensus_waiting_for_certs_body)
+      tor_free(consensus_waiting_for_certs_body);
+  }
 
   current_consensus = c;
 

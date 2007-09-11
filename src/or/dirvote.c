@@ -735,7 +735,7 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
 /** Given a v3 networkstatus consensus in <b>consensus</b>, check every
  * as-yet-unchecked signature on <b>consensus.  Return 0 if there are enough
  * good signatures from recognized authorities on it, and -1 otherwise.
- * DOCDOC warn. */
+ * DOCDOC warn. DOCDOC -2 rerturn. */
 int
 networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
                                         int warn)
@@ -832,8 +832,10 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
 
   if (n_good >= n_required)
     return 0;
-  else
+  else if (n_good + n_missing_key >= n_required)
     return -1;
+  else
+    return -2;
 }
 
 /** Given a consensus vote <b>target</b> and a list of
@@ -1681,7 +1683,7 @@ dirvote_publish_consensus(void)
     return -1;
   }
 
-  if (networkstatus_set_current_consensus(pending_consensus_body, 0))
+  if (networkstatus_set_current_consensus(pending_consensus_body, 0, 0))
     log_warn(LD_DIR, "Error publishing consensus");
   else
     log_warn(LD_DIR, "Consensus published.");
