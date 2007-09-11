@@ -69,7 +69,7 @@ Things we'd like to do in 0.2.0.x:
         o Don't count votes with a different valid-after when generating
           the same consensus.
         - Dump certificates with the wrong time.  Or just warn?
-        - Warn authority ops when their certs are nearly invalid.
+        o Warn authority ops when their certs are nearly invalid.
         - When checking a consensus, make sure that its times are plausible.
         o Add a function that will eventually tell us about our clock skew.
           For now, just require that authorities not be skewed.

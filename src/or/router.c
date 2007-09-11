@@ -259,7 +259,7 @@ init_key_from_file(const char *fname, int generate, int severity)
 
 /** Load the v3 (voting) authority signing key and certificate from
  * <b>keydir</b>, if they are present. */
-/* XXXX020 maybe move to dirserv.c */
+/* XXXX020 maybe move to dirserv.c or dirvote.c */
 static void
 init_v3_authority_keys(const char *keydir)
 {
@@ -299,6 +299,8 @@ init_v3_authority_keys(const char *keydir)
   parsed->cache_info.signed_descriptor_len = eos-cert;
   cert = NULL;
 
+  /* Free old values! XXXX020 */
+
   authority_key_certificate = parsed;
   authority_signing_key = signing_key;
   parsed = NULL;
@@ -311,6 +313,51 @@ init_v3_authority_keys(const char *keydir)
     crypto_free_pk_env(signing_key);
   if (parsed)
     authority_cert_free(parsed);
+}
+
+/* DOCDOC */
+void
+v3_authority_check_key_expiry(void)
+{
+  time_t now, expires;
+  static time_t last_warned = 0;
+  int badness, time_left, warn_interval;
+  if (!authdir_mode_v3(get_options()) || !authority_key_certificate)
+    return;
+
+  now = time(NULL);
+  expires = authority_key_certificate->expires;
+  time_left = expires - now;
+  if (time_left <= 0) {
+    badness = LOG_ERR;
+    warn_interval = 60*60;
+  } else if (time_left <= 24*60*60) {
+    badness = LOG_WARN;
+    warn_interval = 60*60;
+  } else if (time_left <= 24*60*60*7) {
+    badness = LOG_WARN;
+    warn_interval = 24*60*60;
+  } else if (time_left <= 24*60*60*30) {
+    badness = LOG_WARN;
+    warn_interval = 24*60*60*5;
+  } else {
+    return;
+  }
+
+  if (last_warned + warn_interval > now)
+    return;
+
+  if (time_left <= 0) {
+    log(badness, LD_DIR, "Your v3 authority certificate has expired."
+        " Generate a new one NOW.");
+  } else if (time_left <= 24*60*60) {
+    log(badness, LD_DIR, "Your v3 authority certificate expires in %d hours;"
+        " Generate a new one NOW.", time_left/(60*60));
+  } else {
+    log(badness, LD_DIR, "Your v3 authority certificate expires in %d days;"
+        " Generate a new one soon.", time_left/(24*60*60));
+  }
+  last_warned = now;
 }
 
 /** Initialize all OR private keys, and the TLS context, as necessary.

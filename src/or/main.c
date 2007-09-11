@@ -807,7 +807,9 @@ run_connection_housekeeping(int i, time_t now)
 static void
 run_scheduled_events(time_t now)
 {
-  static time_t last_rotated_certificate = 0;
+  static time_t last_rotated_x509_certificate = 0;
+  static time_t time_to_check_v3_certificate = 0;
+#define CHECK_V3_CERTIFICATE_INTERVAL (5*60)
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
   static time_t time_to_check_ipaddress = 0;
@@ -873,16 +875,16 @@ run_scheduled_events(time_t now)
   }
 
   /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
-  if (!last_rotated_certificate)
-    last_rotated_certificate = now;
-  if (last_rotated_certificate+MAX_SSL_KEY_LIFETIME < now) {
+  if (!last_rotated_x509_certificate)
+    last_rotated_x509_certificate = now;
+  if (last_rotated_x509_certificate+MAX_SSL_KEY_LIFETIME < now) {
     log_info(LD_GENERAL,"Rotating tls context.");
     if (tor_tls_context_new(get_identity_key(), options->Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_warn(LD_BUG, "Error reinitializing TLS context");
       /* XXX is it a bug here, that we just keep going? */
     }
-    last_rotated_certificate = now;
+    last_rotated_x509_certificate = now;
     /* XXXX We should rotate TLS connections as well; this code doesn't change
      *      them at all. */
   }
@@ -919,6 +921,12 @@ run_scheduled_events(time_t now)
 
       time_to_save_stability = now + SAVE_STABILITY_INTERVAL;
     }
+  }
+
+  /* 1e. DOCDOC */
+  if (time_to_check_v3_certificate < now) {
+    v3_authority_check_key_expiry();
+    time_to_check_v3_certificate = now + CHECK_V3_CERTIFICATE_INTERVAL;
   }
 
   /** 2. Periodically, we consider getting a new directory, getting a
