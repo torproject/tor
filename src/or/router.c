@@ -299,8 +299,12 @@ init_v3_authority_keys(const char *keydir)
   parsed->cache_info.signed_descriptor_len = eos-cert;
   cert = NULL;
 
-  /* Free old values! XXXX020 */
-
+  /* Free old values... */
+  if (authority_key_certificate)
+    authority_cert_free(authority_key_certificate);
+  if (authority_signing_key)
+    crypto_free_pk_env(authority_signing_key);
+  /* ...and replace them. */
   authority_key_certificate = parsed;
   authority_signing_key = signing_key;
   parsed = NULL;
