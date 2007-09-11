@@ -4038,7 +4038,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache)
   }
 
   /* Make sure it's signed enough. */
-  if (networkstatus_check_consensus_signature(c)<0) {
+  if (networkstatus_check_consensus_signature(c, 1)<0) {
     log_warn(LD_DIR, "Not enough good signatures on networkstatus consensus");
     networkstatus_vote_free(c);
     return -1;

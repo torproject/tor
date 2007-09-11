@@ -734,9 +734,11 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
 
 /** Given a v3 networkstatus consensus in <b>consensus</b>, check every
  * as-yet-unchecked signature on <b>consensus.  Return 0 if there are enough
- * good signatures from recognized authorities on it, and -1 otherwise. */
+ * good signatures from recognized authorities on it, and -1 otherwise.
+ * DOCDOC warn. */
 int
-networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
+networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
+                                        int warn)
 {
   int n_good = 0;
   int n_missing_key = 0;
@@ -744,6 +746,10 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
   int n_unknown = 0;
   int n_no_signature = 0;
   int n_required = get_n_authorities(V3_AUTHORITY)/2 + 1;
+  smartlist_t *need_certs_from = smartlist_create();
+  smartlist_t *unrecognized = smartlist_create();
+  smartlist_t *missing_authorities = smartlist_create();
+  int severity;
 
   tor_assert(! consensus->is_vote);
 
@@ -755,10 +761,15 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
         authority_cert_get_by_digests(voter->identity_digest,
                                       voter->signing_key_digest);
       if (! cert) {
+        if (!trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
+          smartlist_add(unrecognized, voter);
+        else
+          smartlist_add(need_certs_from, voter);
         ++n_unknown;
         continue;
       }
       if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
+        smartlist_add(need_certs_from, voter);
         ++n_missing_key;
         continue;
       }
@@ -771,10 +782,53 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus)
       ++n_no_signature;
   });
 
-  log_notice(LD_DIR,
-             "%d unknown, %d missing key, %d good, %d bad, %d no signature, "
-             "%d required", n_unknown, n_missing_key, n_good, n_bad,
-             n_no_signature, n_required);
+  /* Now see whether we're missing any voters entirely. */
+  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                    trusted_dir_server_t *, ds,
+    {
+      if ((ds->type & V3_AUTHORITY) &&
+          !networkstatus_get_voter_by_id(consensus, ds->v3_identity_digest))
+        smartlist_add(missing_authorities, ds);
+    });
+
+  if (warn > 1 || (warn && n_good < n_required))
+    severity = LOG_WARN;
+  else
+    severity = LOG_INFO;
+
+  if (warn >= 0) {
+    SMARTLIST_FOREACH(unrecognized, networkstatus_voter_info_t *, voter,
+      {
+        log(severity, LD_DIR, "Consensus includes unrecognized authority '%s' "
+            "at %s:%d (contact %s; identity %s)",
+            voter->nickname, voter->address, (int)voter->dir_port,
+            voter->contact?voter->contact:"n/a",
+            hex_str(voter->identity_digest, DIGEST_LEN));
+      });
+    SMARTLIST_FOREACH(need_certs_from, networkstatus_voter_info_t *, voter,
+      {
+        log_info(LD_DIR, "Looks like we need to download a new certificate "
+                 "from authority '%s' at %s:%d (contact %s; identity %s)",
+                 voter->nickname, voter->address, (int)voter->dir_port,
+                 voter->contact?voter->contact:"n/a",
+                 hex_str(voter->identity_digest, DIGEST_LEN));
+      });
+    SMARTLIST_FOREACH(missing_authorities, trusted_dir_server_t *, ds,
+      {
+        log(severity, LD_DIR, "Consensus does not include configured "
+            "authority '%s' at %s:%d (identity %s)",
+            ds->nickname, ds->address, (int)ds->dir_port,
+            hex_str(ds->v3_identity_digest, DIGEST_LEN));
+      });
+    log(severity, LD_DIR,
+        "%d unknown, %d missing key, %d good, %d bad, %d no signature, "
+        "%d required", n_unknown, n_missing_key, n_good, n_bad,
+        n_no_signature, n_required);
+  }
+
+  smartlist_free(unrecognized);
+  smartlist_free(need_certs_from);
+  smartlist_free(missing_authorities);
 
   if (n_good >= n_required)
     return 0;
@@ -1444,7 +1498,7 @@ dirvote_compute_consensus(void)
     goto err;
   }
   /* 'Check' our own signature, to mark it valid. */
-  networkstatus_check_consensus_signature(consensus);
+  networkstatus_check_consensus_signature(consensus, -1);
 
   signatures = networkstatus_get_detached_signatures(consensus);
   if (!signatures) {
@@ -1622,7 +1676,7 @@ dirvote_publish_consensus(void)
 {
   /* Can we actually publish it yet? */
   if (!pending_consensus ||
-      networkstatus_check_consensus_signature(pending_consensus)<0) {
+      networkstatus_check_consensus_signature(pending_consensus, 1)<0) {
     log_warn(LD_DIR, "Not enough info to publish pending consensus");
     return -1;
   }

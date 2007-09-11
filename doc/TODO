@@ -64,8 +64,8 @@ Things we'd like to do in 0.2.0.x:
           their keys are.
           - While we're at it, let v3 authorities have fqdns lines.
         - Fix all XXXX020s in vote code
-      - Validate information properly.
-        - Warn if we get a vote with different authorities than we know.
+      . Validate information properly.
+        o Warn if we get a vote with different authorities than we know.
         o Don't count votes with a different valid-after when generating
           the same consensus.
         - Dump certificates with the wrong time.  Or just warn?

@@ -2888,7 +2888,8 @@ char *networkstatus_compute_consensus(smartlist_t *votes,
 networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        networkstatus_vote_t *vote,
                                        const char *identity);
-int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus);
+int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
+                                            int warn);
 int networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
                                            networkstatus_vote_t *src,
                                            char **new_signatures_out,
