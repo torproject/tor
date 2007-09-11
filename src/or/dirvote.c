@@ -1338,8 +1338,18 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     }
   }
 
-  /* XXXX020 check times; make sure epochs match. */
+  /* Is it for the right period? */
+  if (vote->valid_after != voting_schedule.interval_starts) {
+    char tbuf1[ISO_TIME_LEN+1], tbuf2[ISO_TIME_LEN+1];
+    format_iso_time(tbuf1, vote->valid_after);
+    format_iso_time(tbuf2, voting_schedule.interval_starts);
+    log_warn(LD_DIR, "Rejecting vote with valid-after time of %s; we were "
+             "expecting %s", tbuf1, tbuf2);
+    *msg_out = "Bad valid-after time";
+    goto err;
+  }
 
+  /* Now see whether we already have a vote from this authority.*/
   SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
       if (! memcmp(v->vote->cert->cache_info.identity_digest,
                    vote->cert->cache_info.identity_digest,

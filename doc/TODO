@@ -1,4 +1,4 @@
-$Id$
+yes$Id$
 Legend:
 SPEC!!  - Not specified
 SPEC    - Spec not finalized
@@ -52,7 +52,7 @@ Things we'd like to do in 0.2.0.x:
         o Code to manage key certificates
           o Download as needed.
             o Code to download
-            o Code to retry download.
+            . Code to retry download.
         . Code to generate consensus from a list of votes
           * Detect whether votes are really all for the same period.
         . Push/pull documents as appropriate.
@@ -66,7 +66,7 @@ Things we'd like to do in 0.2.0.x:
         - Fix all XXXX020s in vote code
       - Validate information properly.
         - Warn if we get a vote with different authorities than we know.
-        - Don't count votes with a different valid-after when generating
+        o Don't count votes with a different valid-after when generating
           the same consensus.
         - Dump certificates with the wrong time.  Or just warn?
         - Warn authority ops when their certs are nearly invalid.
