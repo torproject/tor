@@ -755,7 +755,7 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 	}
 }
 
-static int
+static INLINE int
 name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 	int name_end = -1;
 	int j = *idx;
@@ -775,7 +775,7 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
 
 	for(;;) {
 		u8 label_len;
-		//if (j >= length) return -1;
+		if (j >= length) return -1;
 		GET8(label_len);
 		if (!label_len) break;
 		if (label_len & 0xc0) {
@@ -1693,8 +1693,8 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 	r = sendto(port->socket, req->response, req->response_len, 0,
 			   (struct sockaddr*) &req->addr, req->addrlen);
 	if (r<0) {
-		int e = last_error(port->socket);
-		if (! error_is_eagain(e))
+		int err = last_error(port->socket);
+		if (! error_is_eagain(err))
 			return -1;
 
 		if (port->pending_replies) {
@@ -1877,9 +1877,9 @@ static int
 evdns_request_transmit_to(struct request *req, struct nameserver *server) {
 	const int r = send(server->socket, req->request, req->request_len, 0);
 	if (r < 0) {
-		int e = last_error(server->socket);
-		if (error_is_eagain(e)) return 1;
-		nameserver_failed(req->ns, strerror(e));
+		int err = last_error(server->socket);
+		if (error_is_eagain(err)) return 1;
+		nameserver_failed(req->ns, strerror(err));
 		return 2;
 	} else if (r != (int)req->request_len) {
 		return 1;  /* short write */
