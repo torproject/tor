@@ -5,9 +5,9 @@ noinst_PROGRAMS = test
 bin_PROGRAMS = tor
 
 if BUILD_NT_SERVICES
-PLATFORM_SOURCES=ntmain.c
+tor_platform_source=ntmain.c config.c
 else
-PLATFORM_SOURCES=
+tor_platform_source=
 endif
 
 EXTRA_DIST=ntmain.c
@@ -16,7 +16,7 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
 	cpuworker.c directory.c dirserv.c dirvote.c \
-	dns.c dnsserv.c hibernate.c main.c $(PLATFORM_SOURCES) \
+	dns.c dnsserv.c hibernate.c main.c $(tor_platform_source) \
 	onion.c policies.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	eventdns.c \
@@ -33,7 +33,7 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
 	cpuworker.c directory.c dirserv.c dirvote.c \
-	dns.c dnsserv.c hibernate.c main.c $(PLATFORM_SOURCES) \
+	dns.c dnsserv.c hibernate.c main.c $(tor_platform_source) \
 	onion.c policies.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	eventdns.c \
