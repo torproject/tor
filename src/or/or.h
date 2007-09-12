@@ -2890,14 +2890,12 @@ networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        const char *identity);
 int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
                                             int warn);
+#if 0
 int networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
-                                           networkstatus_vote_t *src,
-                                           char **new_signatures_out,
-                                           int *regenerate_out);
+                                           networkstatus_vote_t *src);
+#endif
 int networkstatus_add_detached_signatures(networkstatus_vote_t *target,
-                                          ns_detached_signatures_t *sigs,
-                                          char **new_signatures_out,
-                                          int *regenerate_out);
+                                          ns_detached_signatures_t *sigs);
 char *networkstatus_get_detached_signatures(networkstatus_vote_t *consensus);
 void ns_detached_signatures_free(ns_detached_signatures_t *s);
 

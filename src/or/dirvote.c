@@ -733,9 +733,12 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
 }
 
 /** Given a v3 networkstatus consensus in <b>consensus</b>, check every
- * as-yet-unchecked signature on <b>consensus.  Return 0 if there are enough
- * good signatures from recognized authorities on it, and -1 otherwise.
- * DOCDOC warn. DOCDOC -2 rerturn. */
+ * as-yet-unchecked signature on <b>consensus</b>.  Return 0 if there are
+ * enough good signatures from recognized authorities on it, -1 if we might
+ * get enough good signatures by fetching missing certificates, and -2
+ * otherwise.  Log messages at INFO or WARN: if <b>warn</b> is over 1, warn
+ * about every problem; if warn is at least 1, warn only if we can't get
+ * enough signatures; if warn is negative, log nothing at all. */
 int
 networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
                                         int warn)
@@ -791,7 +794,7 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
         smartlist_add(missing_authorities, ds);
     });
 
-  if (warn > 1 || (warn && n_good < n_required))
+  if (warn > 1 || (warn >= 0 && n_good < n_required))
     severity = LOG_WARN;
   else
     severity = LOG_INFO;
@@ -844,24 +847,14 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
  * <b>src_voter_list</b> that should be added to <b>target.  (A signature
  * should be added if we have no signature for that voter in <b>target</b>
  * yet, or if we have no verifiable signature and the new signature is
- * verifiable.)  Set *<b>new_signatures_out</b> to a newly allocated string
- * holding the newly added signatures; set *<b>regenerate_out</b> to true if
- * we replaced a signature and 0 otherwise.  Return the number of signatures
- * added or changed. */
+ * verifiable.)   Return the number of signatures added or changed. */
 static int
 networkstatus_add_signatures_impl(networkstatus_vote_t *target,
-                                  smartlist_t *src_voter_list,
-                                  char **new_signatures_out,
-                                  int *regenerate_out)
+                                  smartlist_t *src_voter_list)
 {
-  smartlist_t *added_signatures, *sigs;
-  int r;
+  int r = 0;
   tor_assert(target);
   tor_assert(!target->is_vote);
-  tor_assert(new_signatures_out);
-  tor_assert(regenerate_out);
-
-  added_signatures = smartlist_create();
 
   /* For each voter in src... */
   SMARTLIST_FOREACH(src_voter_list, networkstatus_voter_info_t *, src_voter,
@@ -869,7 +862,7 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
       networkstatus_voter_info_t *target_voter =
         networkstatus_get_voter_by_id(target, src_voter->identity_digest);
       authority_cert_t *cert;
-      /* If the target a doesn't know about this voter, then forget it. */
+      /* If the target doesn't know about this voter, then forget it. */
       if (!target_voter)
         continue;
 
@@ -886,11 +879,10 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
           networkstatus_check_voter_signature(target, src_voter, cert);
         }
       }
-      /* If this signature is good, or we don't have ay signature yet,
+      /* If this signature is good, or we don't have any signature yet,
        * then add it. */
       if (src_voter->good_signature || !target_voter->signature) {
-        if (target_voter->signature)
-          *regenerate_out = 1;
+        ++r;
         tor_free(target_voter->signature);
         target_voter->signature =
           tor_memdup(src_voter->signature, src_voter->signature_len);
@@ -899,43 +891,19 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
         target_voter->signature_len = src_voter->signature_len;
         target_voter->good_signature = 1;
         target_voter->bad_signature = 0;
-        smartlist_add(added_signatures, target_voter);
       }
     });
 
-  sigs = smartlist_create();
-  SMARTLIST_FOREACH(added_signatures, networkstatus_voter_info_t *, v,
-    {
-      char buf[4096];
-      char sk[HEX_DIGEST_LEN+1];
-      char ik[HEX_DIGEST_LEN+1];
-      tor_assert(v->signature);
-
-      base16_encode(sk, sizeof(sk), v->signing_key_digest, DIGEST_LEN);
-      base16_encode(ik, sizeof(ik), v->identity_digest, DIGEST_LEN);
-      tor_snprintf(buf, sizeof(buf), "directory-signature %s %s\n"
-                   "-----BEGIN SIGNATURE-----\n", ik, sk);
-      smartlist_add(sigs, tor_strdup(buf));
-      base64_encode(buf, sizeof(buf), v->signature, v->signature_len);
-      strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
-      smartlist_add(sigs, tor_strdup(buf));
-    });
-
-  *new_signatures_out = smartlist_join_strings(sigs, "", 0, NULL);
-  SMARTLIST_FOREACH(sigs, char *, cp, tor_free(cp));
-  smartlist_free(sigs);
-  r = smartlist_len(added_signatures);
-  smartlist_free(added_signatures);
   return r;
 }
 
+#if 0
 /** As networkstatus_add_consensus_signature_impl, but takes new signatures
  * from the consensus in <b>src</b>. */
 int
 networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
                                        networkstatus_vote_t *src,
-                                       char **new_signatures_out,
-                                       int *regenerate_out)
+                                       char **new_signatures_out)
 {
   tor_assert(src);
   tor_assert(! src->is_vote);
@@ -949,31 +917,24 @@ networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
   if (target == src)
     return 0;
 
-  return networkstatus_add_signatures_impl(target, src->voters,
-                                           new_signatures_out,
-                                           regenerate_out);
+  return networkstatus_add_signatures_impl(target, src->voters);
 }
+#endif
 
 /** As networkstatus_add_consensus_signature_impl, but takes new signatures
  * from the detached signatures document <b>sigs</b>. */
 int
 networkstatus_add_detached_signatures(networkstatus_vote_t *target,
-                                      ns_detached_signatures_t *sigs,
-                                      char **new_signatures_out,
-                                      int *regenerate_out)
+                                      ns_detached_signatures_t *sigs)
 {
   tor_assert(sigs);
-
-  *new_signatures_out = NULL;
 
   /* Are they the same consensus? */
   if (memcmp(target->networkstatus_digest, sigs->networkstatus_digest,
              DIGEST_LEN))
     return -1;
 
-  return networkstatus_add_signatures_impl(target, sigs->signatures,
-                                           new_signatures_out,
-                                           regenerate_out);
+  return networkstatus_add_signatures_impl(target, sigs->signatures);
 }
 
 /** Return a newly allocated string holding the detached-signatures document
@@ -1562,9 +1523,7 @@ dirvote_add_signatures_to_pending_consensus(
                        const char **msg_out)
 {
   ns_detached_signatures_t *sigs = NULL;
-  int r = -1, regenerate=0;
-  char *new_signatures = NULL;
-  size_t siglen;
+  int r = -1;
 
   tor_assert(detached_signatures_body);
   tor_assert(msg_out);
@@ -1583,13 +1542,11 @@ dirvote_add_signatures_to_pending_consensus(
   }
 
   r = networkstatus_add_detached_signatures(pending_consensus,
-                                            sigs,
-                                            &new_signatures,
-                                            &regenerate);
+                                            sigs);
 
   // XXXX020 originally, this test was regenerate && r >= 0).  But one
   // code path is simpler than 2.
-  if (new_signatures && (siglen = strlen(new_signatures)) && r >= 0) {
+  if (r >= 0) {
     /* XXXX This should really be its own function. */
     char *new_detached =
       networkstatus_get_detached_signatures(pending_consensus);
@@ -1605,7 +1562,7 @@ dirvote_add_signatures_to_pending_consensus(
     tor_assert(src);
     strlcpy(dst, src, new_consensus_len - (dst-pending_consensus_body));
 
-    /* XXXX020 remove this once it fails to crash. */
+    /* XXXX020 remove this block once it has failed to crash for a while. */
     {
       ns_detached_signatures_t *sigs =
         networkstatus_parse_detached_signatures(new_detached, NULL);
@@ -1619,22 +1576,6 @@ dirvote_add_signatures_to_pending_consensus(
     tor_free(pending_consensus_signatures);
     pending_consensus_signatures = new_detached;
   }
-#if 0
-  else if (new_signatures && (siglen = strlen(new_signatures)) && r >= 0) {
-    size_t siglen = strlen(new_signatures);
-    size_t len = strlen(pending_consensus_body);
-    pending_consensus_body = tor_realloc(pending_consensus_body,
-                                         len+siglen+1);
-    memcpy(pending_consensus_body+len, new_signatures, siglen+1);
-
-    len = strlen(pending_consensus_signatures);
-    pending_consensus_signatures = tor_realloc(pending_consensus_signatures,
-                                               len+siglen+1);
-    memcpy(pending_consensus_signatures+len, new_signatures, siglen+1);
-
-    log_info(LD_DIR, "Added %d new signatures to the pending consensus.", r);
-  }
-#endif
 
   *msg_out = "ok";
   goto done;
@@ -1642,7 +1583,6 @@ dirvote_add_signatures_to_pending_consensus(
   if (!msg_out)
     *msg_out = "Unrecognized error while adding detached signatures.";
  done:
-  tor_free(new_signatures);
   if (sigs)
     ns_detached_signatures_free(sigs);
   return r;

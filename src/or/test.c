@@ -2766,10 +2766,8 @@ test_v3_networkstatus(void)
   {
     char *consensus_text2, *consensus_text3;
     networkstatus_vote_t *con2, *con3;
-    char *detached_text1, *addition1, *detached_text2, *addition2;
+    char *detached_text1, *detached_text2;
     ns_detached_signatures_t *dsig1, *dsig2;
-    size_t sz;
-    int regen;
     /* Compute the other two signed consensuses. */
     smartlist_shuffle(votes);
     consensus_text2 = networkstatus_compute_consensus(votes, 3,
@@ -2812,12 +2810,9 @@ test_v3_networkstatus(void)
 
     /* Try adding it to con2. */
     detached_text2 = networkstatus_get_detached_signatures(con2);
-    addition1 = NULL;
-    test_eq(1, networkstatus_add_detached_signatures(con2, dsig1, &addition1,
-                                                     &regen));
-    sz = strlen(detached_text2)+strlen(addition1)+1;
-    detached_text2 = tor_realloc(detached_text2, sz);
-    strlcat(detached_text2, addition1, sz);
+    test_eq(1, networkstatus_add_detached_signatures(con2, dsig1));
+    tor_free(detached_text2);
+    detached_text2 = networkstatus_get_detached_signatures(con2);
     //printf("\n<%s>\n", detached_text2);
     dsig2 = networkstatus_parse_detached_signatures(detached_text2, NULL);
     test_assert(dsig2);
@@ -2832,12 +2827,10 @@ test_v3_networkstatus(void)
     test_eq(2, smartlist_len(dsig2->signatures));
 
     /* Try adding to con2 twice; verify that nothing changes. */
-    test_eq(0, networkstatus_add_detached_signatures(con2, dsig1, &addition2,
-                                                     &regen));
+    test_eq(0, networkstatus_add_detached_signatures(con2, dsig1));
 
     /* Add to con. */
-    test_eq(2, networkstatus_add_detached_signatures(con, dsig2, &addition2,
-                                                     &regen));
+    test_eq(2, networkstatus_add_detached_signatures(con, dsig2));
     /* Check signatures */
     test_assert(!networkstatus_check_voter_signature(con,
                                                smartlist_get(con->voters, 0),
@@ -2854,8 +2847,6 @@ test_v3_networkstatus(void)
     tor_free(detached_text2);
     ns_detached_signatures_free(dsig1);
     ns_detached_signatures_free(dsig2);
-    tor_free(addition1);
-    tor_free(addition2);
   }
 
   smartlist_free(votes);
