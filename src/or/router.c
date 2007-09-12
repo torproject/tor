@@ -1470,9 +1470,6 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   size_t written;
   int result=0;
   addr_policy_t *tmpe;
-#ifdef INCLUDE_BW_INFO_IN_ROUTERDESCS
-  char *bandwidth_usage;
-#endif
   char *family_line;
   or_options_t *options = get_options();
 
@@ -1507,11 +1504,6 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   /* Encode the publication time. */
   format_iso_time(published, router->cache_info.published_on);
 
-#ifdef INCLUDE_BW_INFO_IN_ROUTERDESCS
-  /* How busy have we been? */
-  bandwidth_usage = rep_hist_get_bandwidth_lines(0);
-#endif
-
   if (router->declared_family && smartlist_len(router->declared_family)) {
     size_t n;
     char *family = smartlist_join_strings(router->declared_family, " ", 0, &n);
@@ -1537,7 +1529,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "opt extra-info-digest %s\n%s"
                     "onion-key\n%s"
                     "signing-key\n%s"
-                    "%s%s%s",
+                    "%s%s",
     router->nickname,
     router->address,
     router->or_port,
@@ -1553,18 +1545,10 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     options->DownloadExtraInfo ? "opt caches-extra-info\n" : "",
     onion_pkey, identity_pkey,
     family_line,
-#ifdef INCLUDE_BW_INFO_IN_ROUTERDESCS
-    bandwidth_usage,
-#else
-    "",
-#endif
     we_are_hibernating() ? "opt hibernating 1\n" : "");
   tor_free(family_line);
   tor_free(onion_pkey);
   tor_free(identity_pkey);
-#ifdef INCLUDE_BW_INFO_IN_ROUTERDESCS
-  tor_free(bandwidth_usage);
-#endif
 
   if (result < 0) {
     log_warn(LD_BUG,"descriptor snprintf #1 ran out of room!");

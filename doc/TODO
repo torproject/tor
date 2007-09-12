@@ -78,8 +78,8 @@ Things we'd like to do in 0.2.0.x:
       - Controller support
         - GETINFO to get consensus
         - Event when new consensus arrives
-    . 104: Long and Short Router Descriptors
-      - Drop bandwidth history from router-descriptors around September 10,
+    o 104: Long and Short Router Descriptors
+      o Drop bandwidth history from router-descriptors around September 10,
         once torstatus and weasel have upgraded.
     - 105: Version negotiation for the Tor protocol
     . 111: Prioritize local traffic over relayed.

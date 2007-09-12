@@ -2067,7 +2067,6 @@ test_dir_format(void)
   addr_policy_t ex1, ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   tor_version_t ver1;
-  char *bw_lines = NULL;
 
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
@@ -2154,10 +2153,6 @@ test_dir_format(void)
   r2.exit_policy = &ex1;
   r2.nickname = tor_strdup("Fred");
 
-  bw_lines = rep_hist_get_bandwidth_lines(0);
-  test_assert(bw_lines);
-  test_assert(!strcmpstart(bw_lines, "opt write-history "));
-
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
                                                     &pk1_str_len));
   test_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str,
@@ -2186,13 +2181,11 @@ test_dir_format(void)
   strlcat(buf2, pk1_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
-  strlcat(buf2, bw_lines, sizeof(buf2));
   strlcat(buf2, "router-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
 
   test_streq(buf, buf2);
-  tor_free(bw_lines);
 
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   cp = buf;
