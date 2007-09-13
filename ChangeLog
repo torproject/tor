@@ -3,6 +3,11 @@ Changes in version 0.1.2.18 - 2007-??-??
     - Fix possible segfaults in functions called from
       rend_process_relay_cell().
 
+  o Minor bugfixes:
+    - Don't try to access (or alter) the state file when running
+      --list-fingerprint or --verify-config or --hash-password. (Resolves
+      bug 499.)
+
 
 Changes in version 0.1.2.17 - 2007-08-30
   o Major bugfixes (security):
