@@ -103,7 +103,7 @@ Things we'd like to do in 0.2.0.x:
       extra-stable case.
     - Streamline how we pick entry nodes: Make choose_random_entry() have
       less magic and less control logic.
-    - Maybe move NT services into their own module.
+    o Maybe move NT services into their own module.
     - Refactor networkstatus generation:
       - Include "v" line in getinfo values.
 

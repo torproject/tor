@@ -36,6 +36,9 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
       a way to trigger this remotely.)
     - Fix a memory leak when freeing incomplete requests from DNSPort.
       (Found by Niels Provos with valgrind.)
+    - Don't try to access (or alter) the state file when running
+      --list-fingerprint or --verify-config or --hash-password. (Resolves
+      bug 499.)
 
   o Code simplifications and refactoring:
     - Revamp file-writing logic so we don't need to have the entire contents

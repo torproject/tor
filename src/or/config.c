@@ -1007,13 +1007,10 @@ options_act(or_options_t *old_options)
   }
 
   /* Load state */
-  if (! global_state) {
+  if (! global_state && options->command == CMD_RUN_TOR) {
     if (or_state_load())
       return -1;
-
-    /* XXXX020 make this conditional? */
-    if (options->command == CMD_RUN_TOR)
-      rep_hist_load_mtbf_data(time(NULL));
+    rep_hist_load_mtbf_data(time(NULL));
   }
 
   /* Bail out at this point if we're not going to be a client or server:
