@@ -1681,7 +1681,7 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("desc/all-recent", dir,
        "All non-expired, non-superseded router descriptors."),
   ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
-  PREFIX("extrainfo/digest/", dir, "Extra-info documents by digest."),
+  PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
   ITEM("ns/all", networkstatus,
        "Brief summary of router status (v2 directory format)"),
   PREFIX("ns/id/", networkstatus,
@@ -1689,7 +1689,7 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("ns/name/", networkstatus,
          "Brief summary of router status by nickname (v2 directory format)."),
 
-  PREFIX("unregisterd-servers-", dirserv_unregistered, NULL),
+  PREFIX("unregistered-servers-", dirserv_unregistered, NULL),
   ITEM("network-status", dir,
        "Brief summary of router status (v1 directory format)"),
   ITEM("circuit-status", events, "List of current circuits originating here."),
