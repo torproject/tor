@@ -5,7 +5,7 @@ noinst_PROGRAMS = test
 bin_PROGRAMS = tor
 
 if BUILD_NT_SERVICES
-tor_platform_source=ntmain.c config.c
+tor_platform_source=ntmain.c
 else
 tor_platform_source=
 endif
