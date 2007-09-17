@@ -75,6 +75,10 @@ typedef struct or_history_t {
   time_t start_of_run;
   /** Sum of weights for runs in weighted_run_length. */
   double total_run_weights;
+  /* === For fractional uptime tracking: */
+  time_t start_of_downtime;
+  unsigned long weighted_uptime;
+  unsigned long total_weighted_time;
 
   /** Map from hex OR2 identity digest to a link_history_t for the link
    * from this OR to OR2. */
@@ -287,6 +291,11 @@ rep_hist_note_router_reachable(const char *id, time_t when)
   if (hist && !hist->start_of_run) {
     hist->start_of_run = when;
   }
+  if (hist && hist->start_of_downtime) {
+    long down_length = when - hist->start_of_downtime;
+    hist->total_weighted_time += down_length;
+    hist->start_of_downtime = 0;
+  }
 }
 
 /** We have just decided that this router is unreachable, meaning
@@ -303,6 +312,12 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
     hist->weighted_run_length += run_length;
     hist->total_run_weights += 1.0;
     hist->start_of_run = 0;
+
+    hist->weighted_uptime += run_length;
+    hist->total_weighted_time += run_length;
+  }
+  if (hist && !hist->start_of_downtime) {
+    hist->start_of_downtime = when;
   }
 }
 
@@ -340,6 +355,9 @@ rep_hist_downrate_old_runs(time_t now)
     hist->weighted_run_length =
       (unsigned long)(hist->weighted_run_length * alpha);
     hist->total_run_weights *= alpha;
+
+    hist->weighted_uptime *= alpha;
+    hist->total_weighted_time *= alpha;
   }
 
   return stability_last_downrated + STABILITY_INTERVAL;
@@ -366,6 +384,23 @@ get_stability(or_history_t *hist, time_t when)
   return total / total_weights;
 }
 
+/** DOCDOC */
+static double
+get_weighted_fractional_uptime(or_history_t *hist, time_t when)
+{
+  unsigned long total = hist->total_weighted_time;
+  unsigned long up = hist->weighted_uptime;
+
+  if (hist->start_of_run) {
+    long run_length = (when - hist->start_of_run);
+    up += run_length;
+    total += run_length;
+  } else if (hist->start_of_downtime) {
+    total += (when - hist->start_of_downtime);
+  }
+  return ((double) up) / total;
+}
+
 /** Return an estimated MTBF for the router whose identity digest is
  * <b>id</b>. Return 0 if the router is unknown. */
 double
@@ -376,6 +411,17 @@ rep_hist_get_stability(const char *id, time_t when)
     return 0.0;
 
   return get_stability(hist, when);
+}
+
+/** DOCDOC */
+double
+rep_hist_get_weighted_fractional_uptime(const char *id, time_t when)
+{
+  or_history_t *hist = get_or_history(id);
+  if (!hist)
+    return 0.0;
+
+  return get_weighted_fractional_uptime(hist, when);
 }
 
 /** Return true if we've been measuring MTBFs for long enough to

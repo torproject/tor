@@ -165,6 +165,9 @@ N     - Design/implement the "local-status" or something like it, from the
        (high expected time to failure) or good guard qualities (high
        fractional uptime).
      - AKA Track uptime as %-of-time-up, as well as time-since-last-down
+       o Implement tracking
+       - Make uptime info persist too.
+       - Base Guard on weighted fractional uptime.
     - Make TrackHostExits expire TrackHostExitsExpire seconds after their
        *last* use, not their *first* use.
     - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
