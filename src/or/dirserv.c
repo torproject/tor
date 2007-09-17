@@ -1502,7 +1502,7 @@ should_generate_v2_networkstatus(void)
  * network using allegedly high-uptime nodes, displacing all the
  * current guards. */
 #define UPTIME_TO_GUARANTEE_STABLE (3600*24*30)
-/* If a router's MTBF is at least this value, then it is always stable.
+/** If a router's MTBF is at least this value, then it is always stable.
  * See above. */
 #define MTBF_TO_GUARANTEE_STABLE (60*60*24*10)
 /** Similarly, we protect sufficiently fast nodes from being pushed
