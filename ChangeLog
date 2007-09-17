@@ -21,6 +21,9 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
        documents, and including it in router descriptors took up 60% (!) of
        compressed router descriptor downloads.  Completes implementation of
        proposal 104.
+     - Remove the contrib scripts ExerciseServer.py, PathDemo.py,
+       and TorControl.py, as they use the old v0 controller protocol,
+       and are obsoleted by TorFlow anyway.
 
   o Major bugfixes:
     - Fix possible segfaults in functions called from
