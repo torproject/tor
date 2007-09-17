@@ -36,6 +36,10 @@ Things we'd like to do in 0.2.0.x:
           unreachable is bunk -- it's leftover from the time when all
           servers ran 24/7. now it triggers every time a server goes
           away and then returns before the old descriptor has expired.
+        - maxadvertisedbandwidth should not influence whether dirport
+          is published.
+        - 0.2.0.x dir authorities have stopped giving people Authority
+          flags.
       - add a --quiet commandline option that suppresses logs. useful
         for --hashed-password and maybe others.
       - Tor logs the libevent version on startup, for debugging purposes.
