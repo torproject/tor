@@ -42,6 +42,10 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
     - Don't try to access (or alter) the state file when running
       --list-fingerprint or --verify-config or --hash-password. (Resolves
       bug 499.)
+    - Servers used to decline to publish their DirPort if their
+      BandwidthRate, RelayBandwidthRate, or MaxAdvertisedBandwidth
+      were below a threshold. Now they only look at BandwidthRate and
+      RelayBandwidthRate.
 
   o Code simplifications and refactoring:
     - Revamp file-writing logic so we don't need to have the entire contents

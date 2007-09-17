@@ -619,7 +619,10 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
     /* if we might potentially hibernate */
     new_choice = 0;
     reason = "AccountingMax enabled";
-  } else if (router->bandwidthrate < 51200) {
+#define MIN_BW_TO_ADVERTISE_DIRPORT 51200
+  } else if (options->BandwidthRate < MIN_BW_TO_ADVERTISE_DIRPORT ||
+             (options->RelayBandwidthRate > 0 &&
+              options->RelayBandwidthRate < MIN_BW_TO_ADVERTISE_DIRPORT)) {
     /* if we're advertising a small amount */
     new_choice = 0;
     reason = "BandwidthRate under 50KB";

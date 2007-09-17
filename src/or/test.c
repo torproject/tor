@@ -2163,7 +2163,7 @@ test_dir_format(void)
   memset(buf, 0, 2048);
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
 
-  strlcpy(buf2, "router Magri 18.244.0.1 9000 0 0\n"
+  strlcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
