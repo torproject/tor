@@ -2386,42 +2386,29 @@ test_same_voter(networkstatus_voter_info_t *v1,
 }
 
 static void
-test_util_dirvote_helpers(void)
+test_util_order_functions(void)
 {
-  smartlist_t *sl = smartlist_create();
-  int a=12,b=24,c=25,d=60,e=77;
-  time_t v=99, w=150, x=700, y=1000, z=time(NULL);
+  int lst[25], n = 0;
+  //  int a=12,b=24,c=25,d=60,e=77;
 
-  test_assert(y<z);
-  smartlist_add(sl, &a);
-  test_eq(a, median_int(sl)); /* a */
-  smartlist_add(sl, &e);
-  smartlist_shuffle(sl);
-  test_eq(a, median_int(sl)); /* a,e */
-  smartlist_add(sl, &e);
-  smartlist_shuffle(sl);
-  test_eq(e, median_int(sl)); /* a,e,e */
-  smartlist_add(sl, &b);
-  test_eq(b, median_int(sl)); /* a,b,e,e */
-  smartlist_add(sl, &d);
-  smartlist_add(sl, &a);
-  smartlist_add(sl, &c);
-  smartlist_shuffle(sl);
-  test_eq(c, median_int(sl)); /* a,a,b,c,d,e,e */
+#define median() median_int(lst, n)
 
-  smartlist_clear(sl);
-  smartlist_add(sl, &y);
-  test_eq(y, median_time(sl)); /*y*/
-  smartlist_add(sl, &w);
-  test_eq(w, median_time(sl)); /*w,y*/
-  smartlist_add(sl, &x);
-  test_eq(x, median_time(sl)); /*w,x,y*/
-  smartlist_add(sl, &v);
-  test_eq(w, median_time(sl)); /*v,w,x,y*/
-  smartlist_add(sl, &z);
-  test_eq(x, median_time(sl)); /*v,w,x,y,z*/
-
-  smartlist_free(sl);
+  lst[n++] = 12;
+  test_eq(12, median()); /* 12 */
+  lst[n++] = 77;
+  //smartlist_shuffle(sl);
+  test_eq(12, median()); /* 12, 77 */
+  lst[n++] = 77;
+  //smartlist_shuffle(sl);
+  test_eq(77, median()); /* 12, 77, 77 */
+  lst[n++] = 24;
+  test_eq(24, median()); /* 12,24,77,77 */
+  lst[n++] = 60;
+  lst[n++] = 12;
+  lst[n++] = 25;
+  //smartlist_shuffle(sl);
+  test_eq(25, median()); /* 12,12,24,25,60,77,77 */
+#undef median
 }
 
 static void
@@ -3121,7 +3108,7 @@ static struct {
   SUBENT(util, pqueue),
   SUBENT(util, mmap),
   SUBENT(util, threads),
-  SUBENT(util, dirvote_helpers),
+  SUBENT(util, order_functions),
   ENT(onion_handshake),
   ENT(dir_format),
   ENT(v3_networkstatus),

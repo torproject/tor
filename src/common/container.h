@@ -310,5 +310,34 @@ bitarray_is_set(bitarray_t *b, int bit)
   return b[bit >> BITARRAY_SHIFT] & (1u << (bit & BITARRAY_MASK));
 }
 
+/* These functions, given an <b>array</b> of <b>n_elements</b>, return the
+ * <b>nth</b> lowest element. <b>nth</b>=0 gives the lowest element;
+ * <b>n_elements</b>-1 gives the highest; and (<b>n_elements</b>-1) / 2 gives
+ * the median.  As a side effect, the elements of <b>array</b> are sorted. */
+int find_nth_int(int *array, int n_elements, int nth);
+time_t find_nth_time(time_t *array, int n_elements, int nth);
+double find_nth_double(double *array, int n_elements, int nth);
+uint32_t find_nth_uint32(uint32_t *array, int n_elements, int nth);
+static INLINE int
+median_int(int *array, int n_elements)
+{
+  return find_nth_int(array, n_elements, (n_elements-1)/2);
+}
+static INLINE time_t
+median_time(time_t *array, int n_elements)
+{
+  return find_nth_time(array, n_elements, (n_elements-1)/2);
+}
+static INLINE double
+median_double(double *array, int n_elements)
+{
+  return find_nth_double(array, n_elements, (n_elements-1)/2);
+}
+static INLINE uint32_t
+median_uint32(uint32_t *array, int n_elements)
+{
+  return find_nth_uint32(array, n_elements, (n_elements-1)/2);
+}
+
 #endif
 

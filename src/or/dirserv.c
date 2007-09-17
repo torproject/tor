@@ -1569,28 +1569,6 @@ dirserv_thinks_router_is_unreliable(time_t now,
   return 0;
 }
 
-/** Helper: returns a tristate based on comparing **(uint32_t**)<b>a</b>
- * to **(uint32_t**)<b>b</b>. */
-static int
-_compare_uint32(const void **a, const void **b)
-{
-  uint32_t first = **(uint32_t **)a, second = **(uint32_t **)b;
-  if (first < second) return -1;
-  if (first > second) return 1;
-  return 0;
-}
-
-/** Helper: returns a tristate based on comparing **(double**)<b>a</b>
- * to **(double**)<b>b</b>. */
-static int
-_compare_double(const void **a, const void **b)
-{
-  double first = **(double **)a, second = **(double **)b;
-  if (first < second) return -1;
-  if (first > second) return 1;
-  return 0;
-}
-
 /** Look through the routerlist, and assign the median uptime of running valid
  * servers to stable_uptime, and the relative bandwidth capacities to
  * fast_bandwidth and guard_bandwidth.  Set total_bandwidth to the total
@@ -1600,7 +1578,9 @@ _compare_double(const void **a, const void **b)
 static void
 dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
-  smartlist_t *uptimes, *mtbfs, *bandwidths, *bandwidths_excluding_exits;
+  int n_active, n_active_nonexit;
+  uint32_t *uptimes, *bandwidths, *bandwidths_excluding_exits;
+  double *mtbfs;
   time_t now = time(NULL);
 
   /* initialize these all here, in case there are no routers */
@@ -1612,63 +1592,48 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   total_bandwidth = 0;
   total_exit_bandwidth = 0;
 
-  uptimes = smartlist_create();
-  mtbfs = smartlist_create();
-  bandwidths = smartlist_create();
-  bandwidths_excluding_exits = smartlist_create();
+  n_active = n_active_nonexit = 0;
+  uptimes = tor_malloc(sizeof(uint32_t)*smartlist_len(rl->routers));
+  bandwidths = tor_malloc(sizeof(uint32_t)*smartlist_len(rl->routers));
+  bandwidths_excluding_exits =
+    tor_malloc(sizeof(uint32_t)*smartlist_len(rl->routers));
+  mtbfs = tor_malloc(sizeof(double)*smartlist_len(rl->routers));
 
   /* XXXX020 we should just use arrays and qsort.  */
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (router_is_active(ri, now)) {
-      uint32_t *up = tor_malloc(sizeof(uint32_t));
-      uint32_t *bw = tor_malloc(sizeof(uint32_t));
-      uint32_t *mtbf = tor_malloc(sizeof(double));
+      const char *id = ri->cache_info.identity_digest;
+      uint32_t bw;
       ri->is_exit = exit_policy_is_general_exit(ri->exit_policy);
-      *up = (uint32_t) real_uptime(ri, now);
-      smartlist_add(uptimes, up);
-      *mtbf = rep_hist_get_stability(ri->cache_info.identity_digest, now);
-      smartlist_add(mtbfs, mtbf);
-      *bw = router_get_advertised_bandwidth(ri);
-      total_bandwidth += *bw;
+      uptimes[n_active] = real_uptime(ri, now);
+      mtbfs[n_active] = rep_hist_get_stability(id, now);
+      bandwidths[n_active] = bw = router_get_advertised_bandwidth(ri);
+      total_bandwidth += bw;
       if (ri->is_exit && !ri->is_bad_exit) {
-        total_exit_bandwidth += *bw;
+        total_exit_bandwidth += bw;
       } else {
-        uint32_t *bw_not_exit = tor_malloc(sizeof(uint32_t));
-        *bw_not_exit = *bw;
-        smartlist_add(bandwidths_excluding_exits, bw_not_exit);
+        bandwidths_excluding_exits[n_active_nonexit] = bw;
+        ++n_active_nonexit;
       }
-      smartlist_add(bandwidths, bw);
+      ++n_active;
     }
   });
 
-  smartlist_sort(uptimes, _compare_uint32);
-  smartlist_sort(mtbfs, _compare_double);
-  smartlist_sort(bandwidths, _compare_uint32);
-  smartlist_sort(bandwidths_excluding_exits, _compare_uint32);
-
-  if (smartlist_len(uptimes))
-    stable_uptime = *(uint32_t*)smartlist_get(uptimes,
-                                              smartlist_len(uptimes)/2);
-
-  if (smartlist_len(mtbfs))
-    stable_mtbf = *(double*)smartlist_get(mtbfs,
-                                          smartlist_len(mtbfs)/2);
-  enough_mtbf_info = rep_hist_have_measured_enough_stability();
-
-  if (smartlist_len(bandwidths)) {
-    fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
-                                               smartlist_len(bandwidths)/8);
+  if (n_active) {
+    stable_uptime = median_uint32(uptimes, n_active);
+    stable_mtbf = median_double(mtbfs, n_active);
+    fast_bandwidth = find_nth_uint32(bandwidths, n_active, n_active/8);
+    /* Now bandwidths is sorted. */
     if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH)
-      fast_bandwidth = *(uint32_t*)smartlist_get(bandwidths,
-                                                 smartlist_len(bandwidths)/4);
-    guard_bandwidth_including_exits =
-      *(uint32_t*)smartlist_get(bandwidths, smartlist_len(bandwidths)/2);
+      fast_bandwidth = bandwidths[n_active/4];
+    guard_bandwidth_including_exits = bandwidths[(n_active-1)/2];
   }
 
-  if (smartlist_len(bandwidths_excluding_exits)) {
+  enough_mtbf_info = rep_hist_have_measured_enough_stability();
+
+  if (n_active_nonexit) {
     guard_bandwidth_excluding_exits =
-      *(uint32_t*)smartlist_get(bandwidths_excluding_exits,
-                                smartlist_len(bandwidths_excluding_exits)/2);
+      median_uint32(bandwidths_excluding_exits, n_active_nonexit);
   }
 
   log(LOG_INFO, LD_DIRSERV,
@@ -1678,14 +1643,10 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       (unsigned long)guard_bandwidth_including_exits,
       (unsigned long)guard_bandwidth_excluding_exits);
 
-  SMARTLIST_FOREACH(uptimes, uint32_t *, up, tor_free(up));
-  SMARTLIST_FOREACH(mtbfs, double *, mtbf, tor_free(mtbf));
-  SMARTLIST_FOREACH(bandwidths, uint32_t *, bw, tor_free(bw));
-  SMARTLIST_FOREACH(bandwidths_excluding_exits, uint32_t *, bw, tor_free(bw));
-  smartlist_free(uptimes);
-  smartlist_free(mtbfs);
-  smartlist_free(bandwidths);
-  smartlist_free(bandwidths_excluding_exits);
+  tor_free(uptimes);
+  tor_free(mtbfs);
+  tor_free(bandwidths);
+  tor_free(bandwidths_excluding_exits);
 }
 
 /** Given a platform string as in a routerinfo_t (possibly null), return a

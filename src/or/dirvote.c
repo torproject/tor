@@ -81,54 +81,6 @@ networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
   return NULL;
 }
 
-/** Helper for sorting a list of time_t*. */
-static int
-_compare_times(const void **_a, const void **_b)
-{
-  const time_t *a = *_a, *b = *_b;
-  if (*a<*b)
-    return -1;
-  else if (*a>*b)
-    return 1;
-  else
-    return 0;
-}
-
-/** Helper for sorting a list of int*. */
-static int
-_compare_ints(const void **_a, const void **_b)
-{
-  const int *a = *_a, *b = *_b;
-  if (*a<*b)
-    return -1;
-  else if (*a>*b)
-    return 1;
-  else
-    return 0;
-}
-
-/** Given a list of one or more time_t*, return the (low) median. */
-/*static*/ time_t
-median_time(smartlist_t *times)
-{
-  int idx;
-  tor_assert(smartlist_len(times));
-  smartlist_sort(times, _compare_times);
-  idx = (smartlist_len(times)-1)/2;
-  return *(time_t*)smartlist_get(times, idx);
-}
-
-/** Given a list of one or more int*, return the (low) median. */
-/*static*/ int
-median_int(smartlist_t *ints)
-{
-  int idx;
-  tor_assert(smartlist_len(ints));
-  smartlist_sort(ints, _compare_ints);
-  idx = (smartlist_len(ints)-1)/2;
-  return *(int*)smartlist_get(ints, idx);
-}
-
 /** Given a vote <b>vote</b> (not a consensus!), return its associated
  * networkstatus_voter_info_t.*/
 static networkstatus_voter_info_t *
@@ -322,11 +274,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
   /* Compute medians of time-related things, and figure out how many
    * routers we might need to talk about. */
   {
-    smartlist_t *va_times = smartlist_create();
-    smartlist_t *fu_times = smartlist_create();
-    smartlist_t *vu_times = smartlist_create();
-    smartlist_t *votesec_list = smartlist_create();
-    smartlist_t *distsec_list = smartlist_create();
+    int n_votes = smartlist_len(votes);
+    time_t *va_times = tor_malloc(n_votes * sizeof(time_t));
+    time_t *fu_times = tor_malloc(n_votes * sizeof(time_t));
+    time_t *vu_times = tor_malloc(n_votes * sizeof(time_t));
+    int *votesec_list = tor_malloc(n_votes * sizeof(int));
+    int *distsec_list = tor_malloc(n_votes * sizeof(int));
     int n_versioning_clients = 0, n_versioning_servers = 0;
     smartlist_t *combined_client_versions = smartlist_create();
     smartlist_t *combined_server_versions = smartlist_create();
@@ -334,11 +287,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
     SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
     {
       tor_assert(v->is_vote);
-      smartlist_add(va_times, &v->valid_after);
-      smartlist_add(fu_times, &v->fresh_until);
-      smartlist_add(vu_times, &v->valid_until);
-      smartlist_add(votesec_list, &v->vote_seconds);
-      smartlist_add(distsec_list, &v->dist_seconds);
+      va_times[v_sl_idx] = v->valid_after;
+      fu_times[v_sl_idx] = v->fresh_until;
+      vu_times[v_sl_idx] = v->valid_until;
+      votesec_list[v_sl_idx] = v->vote_seconds;
+      distsec_list[v_sl_idx] = v->dist_seconds;
       if (v->client_versions) {
         smartlist_t *cv = smartlist_create();
         ++n_versioning_clients;
@@ -360,11 +313,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
       SMARTLIST_FOREACH(v->known_flags, const char *, cp,
                         smartlist_add(flags, tor_strdup(cp)));
     });
-    valid_after = median_time(va_times);
-    fresh_until = median_time(fu_times);
-    valid_until = median_time(vu_times);
-    vote_seconds = median_int(votesec_list);
-    dist_seconds = median_int(distsec_list);
+    valid_after = median_time(va_times, n_votes);
+    fresh_until = median_time(fu_times, n_votes);
+    valid_until = median_time(vu_times, n_votes);
+    vote_seconds = median_int(votesec_list, n_votes);
+    dist_seconds = median_int(distsec_list, n_votes);
 
     /*
     SMARTLIST_FOREACH(va_times, int*, i,
@@ -400,11 +353,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_sort_strings(flags);
     smartlist_uniq_strings(flags);
 
-    smartlist_free(va_times);
-    smartlist_free(fu_times);
-    smartlist_free(vu_times);
-    smartlist_free(votesec_list);
-    smartlist_free(distsec_list);
+    tor_free(va_times);
+    tor_free(fu_times);
+    tor_free(vu_times);
+    tor_free(votesec_list);
+    tor_free(distsec_list);
   }
 
   chunks = smartlist_create();
