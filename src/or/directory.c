@@ -183,6 +183,21 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
   return 0;
 }
 
+/** Return true iff all trusted directory servers have accepted our
+ * server descriptor. */
+int
+directories_have_accepted_server_descriptor(void)
+{
+  smartlist_t *servers = router_get_trusted_dir_servers();
+  SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
+    if ((d->type & (V1_AUTHORITY|V2_AUTHORITY)) &&
+        !d->has_accepted_serverdesc) {
+      return 0;
+    }
+  });
+  return 1;
+}
+
 /** Start a connection to every suitable directory authority, using
  * connection purpose 'purpose' and uploading the payload 'payload'
  * (length 'payload_len').  The purpose should be one of
@@ -1400,10 +1415,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_DIR) {
     switch (status_code) {
       case 200: {
-          int all_done = 1;
           trusted_dir_server_t *ds =
             router_get_trusteddirserver_by_digest(conn->identity_digest);
-          smartlist_t *servers;
           log_info(LD_GENERAL,"eof (status 200) after uploading server "
                    "descriptor: finished.");
           control_event_server_status(
@@ -1411,15 +1424,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                       conn->_base.address, conn->_base.port);
 
           ds->has_accepted_serverdesc = 1;
-          servers = router_get_trusted_dir_servers();
-          SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
-              if ((d->type & (V1_AUTHORITY|V2_AUTHORITY)) &&
-                  !d->has_accepted_serverdesc) {
-                all_done = 0;
-                break;
-              }
-            });
-          if (all_done)
+          if (directories_have_accepted_server_descriptor())
             control_event_server_status(LOG_NOTICE, "GOOD_SERVER_DESCRIPTOR");
         }
         break;

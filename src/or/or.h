@@ -2761,6 +2761,7 @@ int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
 /********************************* directory.c ***************************/
 
+int directories_have_accepted_server_descriptor(void);
 char *authority_type_to_string(authority_type_t auth);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   authority_type_t type, const char *payload,
