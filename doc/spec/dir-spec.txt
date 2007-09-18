@@ -63,7 +63,7 @@ $Id$
         downloads consisted mainly of router descriptors that clients
         already had.
 
-      * Every directory authorities was a trust bottleneck: if a single
+      * Every directory authority was a trust bottleneck: if a single
         directory authority lied, it could make clients believe for a time
         an arbitrarily distorted view of the Tor network.  (Clients
         trusted the most recent signed document they downloaded.) Thus,
@@ -163,7 +163,7 @@ $Id$
    Routers may act as directory caches to reduce load on the directory
    authorities.  They announce this in their descriptors.
 
-   Periodically, each directory authority periodically generates a view of
+   Periodically, each directory authority generates a view of
    the current descriptors and status for known routers.  They send a
    signed summary of this view (a "status vote") to the other
    authorities.  The authorities compute the result of this vote, and sign
