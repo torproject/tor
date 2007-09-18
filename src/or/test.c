@@ -3084,6 +3084,115 @@ test_util_mempool(void)
   smartlist_free(allocated);
 }
 
+/* Test AES-CBC encryption and decryption. */
+static void
+test_crypto_aes_cbc(void)
+{
+  char *plain, *encrypted1, *encrypted2, *decrypted1, *decrypted2;
+  char plain_1[1], plain_15[15], plain_16[16], plain_17[17];
+  char key1[16], key2[16];
+  size_t encrypted_size, decrypted_size;
+  plain = tor_malloc(4095);
+  encrypted1 = tor_malloc(4095 + 1 + 16);
+  encrypted2 = tor_malloc(4095 + 1 + 16);
+  decrypted1 = tor_malloc(4095 + 1);
+  decrypted2 = tor_malloc(4095 + 1);
+  crypto_rand(plain, 4095);
+  crypto_rand(key1, 16);
+  crypto_rand(key2, 16);
+  crypto_rand(plain_1, 1);
+  crypto_rand(plain_15, 15);
+  crypto_rand(plain_16, 16);
+  crypto_rand(plain_17, 17);
+  key1[0] = key2[0] + 128; /* Make sure that contents are different. */
+  /* Encrypt and decrypt with the same key. */
+  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 4095 + 1 + 16,
+                                             plain, 4095);
+  test_eq(encrypted_size, 4095 + 1 + 16);
+  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 4095 + 1,
+                                             encrypted1, encrypted_size);
+  test_eq(decrypted_size, 4095);
+  test_memeq(plain, decrypted1, 4095);
+  /* Encrypt a second time (with a new random initialization vector). */
+  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted2, 4095 + 1 + 16,
+                                             plain, 4095);
+  test_eq(encrypted_size, 4095 + 1 + 16);
+  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted2, 4095 + 1,
+                                             encrypted2, encrypted_size);
+  test_eq(decrypted_size, 4095);
+  test_memeq(plain, decrypted2, 4095);
+  test_memneq(encrypted1, encrypted2, encrypted_size);
+  /* Decrypt with the wrong key. */
+  decrypted_size = crypto_cipher_decrypt_cbc(key2, decrypted2, 4095 + 1,
+                                             encrypted1, encrypted_size);
+  test_memneq(plain, decrypted2, encrypted_size);
+  /* Alter the initialization vector. */
+  encrypted1[0] += 42;
+  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 4095 + 1,
+                                             encrypted1, encrypted_size);
+  test_memneq(plain, decrypted2, 4095);
+  /* Special length case: 1. */
+  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 32,
+                                             plain_1, 1);
+  test_eq(encrypted_size, 32);
+  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 16,
+                                             encrypted1, 32);
+  test_eq(decrypted_size, 1);
+  test_memeq(plain_1, decrypted1, 1);
+  /* Special length case: 15. */
+  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 32,
+                                             plain_15, 15);
+  test_eq(encrypted_size, 32);
+  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 16,
+                                             encrypted1, 32);
+  test_eq(decrypted_size, 15);
+  test_memeq(plain_15, decrypted1, 15);
+  /* Special length case: 16. */
+  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 48,
+                                             plain_16, 16);
+  test_eq(encrypted_size, 48);
+  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 32,
+                                             encrypted1, 48);
+  test_eq(decrypted_size, 16);
+  test_memeq(plain_16, decrypted1, 16);
+  /* Special length case: 17. */
+  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 48,
+                                             plain_17, 17);
+  test_eq(encrypted_size, 48);
+  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 32,
+                                             encrypted1, 48);
+  test_eq(decrypted_size, 17);
+  test_memeq(plain_17, decrypted1, 17);
+  /* Free memory. */
+  tor_free(plain);
+  tor_free(encrypted1);
+  tor_free(encrypted2);
+  tor_free(decrypted1);
+  tor_free(decrypted2);
+}
+
+/* Test base32 decoding. */
+static void
+test_crypto_base32_decode(void)
+{
+  char plain[60], encoded[96 + 1], decoded[60];
+  int res;
+  crypto_rand(plain, 60);
+  /* Encode and decode a random string. */
+  base32_encode(encoded, 96 + 1, plain, 60);
+  res = base32_decode(decoded, 60, encoded, 96);
+  test_eq(res, 0);
+  test_memeq(plain, decoded, 60);
+  /* Change encoded string and decode. */
+  if (encoded[0] == 'a')
+    encoded[0] = 'b';
+  else
+    encoded[0] = 'a';
+  res = base32_decode(decoded, 60, encoded, 96);
+  test_eq(res, 0);
+  test_memneq(plain, decoded, 60);
+}
+
 #define ENT(x) { #x, test_ ## x, 0, 0 }
 #define SUBENT(x,y) { #x "/" #y, test_ ## x ## _ ## y, 1, 0 }
 
@@ -3097,6 +3206,8 @@ static struct {
   ENT(crypto),
   SUBENT(crypto, dh),
   SUBENT(crypto, s2k),
+  SUBENT(crypto, aes_cbc),
+  SUBENT(crypto, base32_decode),
   ENT(util),
   SUBENT(util, ip6_helpers),
   SUBENT(util, gzip),

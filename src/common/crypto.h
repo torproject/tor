@@ -124,6 +124,11 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, char *to,
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
                           const char *from, size_t fromlen);
 
+int crypto_cipher_encrypt_cbc(const char *key, char *to, size_t tolen,
+                              const char *from, size_t fromlen);
+int crypto_cipher_decrypt_cbc(const char *key, char *to, size_t tolen,
+                              const char *from, size_t fromlen);
+
 /* SHA-1 */
 int crypto_digest(char *digest, const char *m, size_t len);
 crypto_digest_env_t *crypto_new_digest_env(void);
@@ -164,6 +169,7 @@ int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 /** Characters that can appear (case-insensitively) in a base-32 encoding. */
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
 void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
+int base32_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 int digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
