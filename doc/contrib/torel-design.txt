@@ -3,7 +3,7 @@ Design For A Tor DNS-based Exit List
 Status:
 
   This is a suggested design for a DNS Exit List (DNSEL) for Tor exit nodes.
-  It hasn't been implemented.
+  See http://exitlist.torproject.org/ for an implementation.
 
 Why?
 
