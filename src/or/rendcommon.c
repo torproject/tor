@@ -43,7 +43,7 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
   tor_free(desc);
 }
 
-/** Encode a service descriptor for <b>desc</b>, and sign it with
+/** Encode a V0 service descriptor for <b>desc</b>, and sign it with
  * <b>key</b>. Store the descriptor in *<b>str_out</b>, and set
  * *<b>len_out</b> to its length.
  */

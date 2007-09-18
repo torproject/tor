@@ -123,12 +123,52 @@ $Id$
 
    The first time the OP provides an advertised service, it generates
    a public/private keypair (stored locally).  Periodically, the OP
-   generates and publishes a descriptor of type "V0". The V1 descriptor
-   format in 0.1.1.5-alpha-cvs is understood and accepted, but currently
-   no Tors generate them. The more complex V1 descriptor format below
-   is just speculation and has never been used.
+   generates and publishes a descriptor of type "V0".
 
-   A hypothetical "V1" descriptor contains:
+   The "V0" descriptor contains:
+
+         KL    Key length                            [2 octets]
+         PK    Bob's public key                      [KL octets]
+         TS    A timestamp                           [4 octets]
+         NI    Number of introduction points         [2 octets]
+         Ipt   A list of NUL-terminated ORs          [variable]
+         SIG   Signature of above fields             [variable]
+
+   KL is the length of PK, in octets.
+   TS is the number of seconds elapsed since Jan 1, 1970.
+
+   The members of Ipt may be either (a) nicknames, or (b) identity key
+   digests, encoded in hex, and prefixed with a '$'.  Clients must
+   accept both forms. Services must only generate the second form.
+   Once 0.0.9.x is obsoleted, we can drop the first form.
+
+   [It's ok for Bob to advertise 0 introduction points. He might want
+    to do that if he previously advertised some introduction points,
+    and now he doesn't have any. -RD]
+
+1.2.1. Other descriptor formats we don't use.
+
+   The V1 descriptor format was understood and accepted from
+   0.1.1.5-alpha-cvs to 0.2.0.6-alpha-dev, but no Tors generated it and
+   was removed:
+
+         V     Format byte: set to 255               [1 octet]
+         V     Version byte: set to 1                [1 octet]
+         KL    Key length                            [2 octets]
+         PK    Bob's public key                      [KL octets]
+         TS    A timestamp                           [4 octets]
+         PROTO Protocol versions: bitmask            [2 octets]
+         NI    Number of introduction points         [2 octets]
+         For each introduction point: (as in INTRODUCE2 cells)
+             IP     Introduction point's address     [4 octets]
+             PORT   Introduction point's OR port     [2 octets]
+             ID     Introduction point identity ID   [20 octets]
+             KLEN   Length of onion key              [2 octets]
+             KEY    Introduction point onion key     [KLEN octets]
+         SIG   Signature of above fields             [variable]
+
+   A hypothetical "V1" descriptor, that has never been used but might
+   be useful for historical reasons, contains:
 
          V     Format byte: set to 255               [1 octet]
          V     Version byte: set to 1                [1 octet]
@@ -154,53 +194,11 @@ $Id$
              KEY    Introduction point onion key     [KLEN octets]
          SIG   Signature of above fields             [variable]
 
-   The "V1" descriptor in 0.1.1.5-alpha-cvs contains:
-
-         V     Format byte: set to 255               [1 octet]
-         V     Version byte: set to 1                [1 octet]
-         KL    Key length                            [2 octets]
-         PK    Bob's public key                      [KL octets]
-         TS    A timestamp                           [4 octets]
-         PROTO Protocol versions: bitmask            [2 octets]
-         NI    Number of introduction points         [2 octets]
-         For each introduction point: (as in INTRODUCE2 cells)
-             IP     Introduction point's address     [4 octets]
-             PORT   Introduction point's OR port     [2 octets]
-             ID     Introduction point identity ID   [20 octets]
-             KLEN   Length of onion key              [2 octets]
-             KEY    Introduction point onion key     [KLEN octets]
-         SIG   Signature of above fields             [variable]
-
-   The "V0" descriptor contains:
-
-         KL    Key length                            [2 octets]
-         PK    Bob's public key                      [KL octets]
-         TS    A timestamp                           [4 octets]
-         NI    Number of introduction points         [2 octets]
-         Ipt   A list of NUL-terminated ORs          [variable]
-         SIG   Signature of above fields             [variable]
-
-   KL is the length of PK, in octets.
-   TS is the number of seconds elapsed since Jan 1, 1970.
-
    AUTHT specifies which authentication/authorization mechanism is
    required by the hidden service or the introduction point. AUTHD
    is arbitrary data that can be associated with an auth approach.
    Currently only AUTHT of [00 00] is supported, with an AUTHL of 0.
    See section 2 of this document for details on auth mechanisms.
-
-   The members of Ipt may be either (a) nicknames, or (b) identity key
-   digests, encoded in hex, and prefixed with a '$'.  Clients must
-   accept both forms. Services must only generate the second form.
-   Once 0.0.9.x is obsoleted, we can drop the first form.
-
-   [It's ok for Bob to advertise 0 introduction points. He might want
-    to do that if he previously advertised some introduction points,
-    and now he doesn't have any. -RD]
-
-   [Once Tor 0.1.0.x is obsolete, we can stop generating or using V0
-    descriptors. -NM]
-   [This should rather be retarded until V2 descriptors are stable. -KL]
 
 1.3. Bob's OP establishes his introduction points.
 
@@ -333,8 +331,6 @@ $Id$
 
        Cleartext
           PK_ID  Identifier for Bob's PK      [20 octets]
-[XXX011 want to put intro-level auth info here, but no version. crap. -RD]
-
        Encrypted to Bob's PK:
           RP     Rendezvous point's nickname  [20 octets]
           RC     Rendezvous cookie            [20 octets]
@@ -349,12 +345,33 @@ $Id$
           IP     Rendezvous point's address    [4 octets]
           PORT   Rendezvous point's OR port    [2 octets]
           ID     Rendezvous point identity ID [20 octets]
-          KLEN  Length of onion key            [2 octets]
+          KLEN   Length of onion key           [2 octets]
           KEY    Rendezvous point onion key [KLEN octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
-        OR
-          VER    Version byte: set to 4.           [1 octet]
+
+   PK_ID is the hash of Bob's public key.  RP is NUL-padded and
+   terminated. In version 0, it must contain a nickname. In version 1,
+   it must contain EITHER a nickname or an identity key digest that is
+   encoded in hex and prefixed with a '$'.
+
+   The hybrid encryption to Bob's PK works just like the hybrid
+   encryption in CREATE cells (see tor-spec). Thus the payload of the
+   version 0 RELAY_INTRODUCE1 cell on the wire will contain
+   20+42+16+20+20+128=246 bytes, and the version 1 and version 2
+   introduction formats have other sizes.
+
+   As of Tor 0.2.0.6-alpha, clients only generate the v0 introduction
+   format, whereas hidden services have understoodd and accepted v0,
+   v1, and v2 since 0.1.1.x.
+
+1.8.1. Other introduction formats we don't use.
+
+    We briefly speculated about using the following format for the
+    "encrypted to Bob's PK" part of the introduction, but no Tors have
+    ever generated these.
+
+          VER    Version byte: set to 3.           [1 octet]
           ATYPE  An address type (typically 4)     [1 octet]
           ADDR   Rendezvous point's IP address     [4 or 16 octets]
           PORT   Rendezvous point's OR port        [2 octets]
@@ -366,22 +383,6 @@ $Id$
           KEY    Rendezvous point onion key    [KLEN octets]
           RC     Rendezvous cookie               [20 octets]
           g^x    Diffie-Hellman data, part 1    [128 octets]
-
-   PK_ID is the hash of Bob's public key.  RP is NUL-padded and terminated,
-   and must contain EITHER a nickname, or an identity key digest, encoded in
-   hex, and prefixed with a '$'.
-
-   Implementations SHOULD accept all variants, although only the first,
-   unversioned variant SHOULD be generated.  If V1 descriptors were used,
-   implementations SHOULD have listed the variants they accept in their V1
-   descriptor, and implementations SHOULD only have generated the variants
-   listed in the service's V1 descriptor.  No version SHOULD generate the
-   second variant (version byte=1).
-
-   The hybrid encryption to Bob's PK works just like the hybrid
-   encryption in CREATE cells (see main spec). Thus the payload of the
-   RELAY_INTRODUCE1 cell on the wire will contain 20+42+16+20+20+128=246
-   bytes. [XXXX not really]
 
 1.9. Introduction: From the Introduction Point to Bob's OP
 

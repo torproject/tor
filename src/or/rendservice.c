@@ -301,7 +301,8 @@ rend_service_update_descriptor(rend_service_t *service)
   d->n_intro_points = 0;
   d->intro_points = tor_malloc_zero(sizeof(char*)*n);
   d->intro_point_extend_info = tor_malloc_zero(sizeof(extend_info_t*)*n);
-  d->protocols = (1<<2) | (1<<0); /* We support protocol 2 and protocol 0. */
+  /* We support intro protocol 2 and protocol 0. */
+  d->protocols = (1<<2) | (1<<0);
   for (i=0; i < n; ++i) {
     router = router_get_by_nickname(smartlist_get(service->intro_nodes, i),1);
     if (!router) {
@@ -541,7 +542,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
                                * any */
     router = router_get_by_nickname(rp_nickname, 0);
     if (!router) {
-      log_info(LD_REND, "Couldn't find router %s named in rendezvous cell.",
+      log_info(LD_REND, "Couldn't find router %s named in introduce2 cell.",
                escaped_safe_str(rp_nickname));
       /* XXXX Add a no-such-router reason? */
       reason = END_CIRC_REASON_TORPROTOCOL;
