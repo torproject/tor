@@ -1441,7 +1441,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     log_info(LD_REND,"Got a hidden service request for ID '%s'",
              safe_str(conn->rend_query));
     /* see if we already have it cached */
-    r = rend_cache_lookup_entry(conn->rend_query, -1, &entry);
+    r = rend_cache_lookup_entry(conn->rend_query, 0, &entry);
     if (r<0) {
       log_warn(LD_BUG,"Invalid service name '%s'",
                safe_str(conn->rend_query));

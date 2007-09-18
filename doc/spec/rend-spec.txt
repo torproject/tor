@@ -200,6 +200,7 @@ $Id$
 
    [Once Tor 0.1.0.x is obsolete, we can stop generating or using V0
     descriptors. -NM]
+   [This should rather be retarded until V2 descriptors are stable. -KL]
 
 1.3. Bob's OP establishes his introduction points.
 
@@ -282,14 +283,11 @@ $Id$
 1.6. Alice's OP retrieves a service descriptor.
 
    Alice opens a stream to a directory server via Tor, and makes an HTTP GET
-   request for the document '/tor/rendezvous/<z>' or '/tor/rendezvous1/<z>',
-   where '<z>' is replaced with the encoding of Bob's public key as described
-   above. (She may re-use old circuits for this.) The directory replies with
-   a 404 HTTP response if it does not recognize <z>, and otherwise returns
-   Bob's most recently uploaded service descriptor.  (If Alice requests
-   'rendezvous1', the directory server provides a V1 descriptor or a V0
-   descriptor if no V1 descriptor is available.  If Alice requests
-   'rendezvous', the directory server returns a V0 descriptor.)
+   request for the document '/tor/rendezvous/<z>', where '<z>' is replaced
+   with the encoding of Bob's public key as described above. (She may re-use
+   old circuits for this.) The directory replies with a 404 HTTP response if
+   it does not recognize <z>, and otherwise returns Bob's most recently
+   uploaded service descriptor.
 
    If Alice's OP receives a 404 response, it tries the other directory
    servers, and only fails the lookup if none recognize the public key hash.
@@ -356,7 +354,7 @@ $Id$
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
         OR
-          VER    Version byte: set to 3.           [1 octet]
+          VER    Version byte: set to 4.           [1 octet]
           ATYPE  An address type (typically 4)     [1 octet]
           ADDR   Rendezvous point's IP address     [4 or 16 octets]
           PORT   Rendezvous point's OR port        [2 octets]
@@ -373,11 +371,12 @@ $Id$
    and must contain EITHER a nickname, or an identity key digest, encoded in
    hex, and prefixed with a '$'.
 
-   Implementations SHOULD accept all variants, and list the variants they
-   accept in their V1 descriptor.  Implementations should only generate the
-   variants listed in the service's V1 descriptor; if no V1 descriptor is
-   available, only the first variant should be generated.  No version should
-   generate the second variant (version byte=1).
+   Implementations SHOULD accept all variants, although only the first,
+   unversioned variant SHOULD be generated.  If V1 descriptors were used,
+   implementations SHOULD have listed the variants they accept in their V1
+   descriptor, and implementations SHOULD only have generated the variants
+   listed in the service's V1 descriptor.  No version SHOULD generate the
+   second variant (version byte=1).
 
    The hybrid encryption to Bob's PK works just like the hybrid
    encryption in CREATE cells (see main spec). Thus the payload of the

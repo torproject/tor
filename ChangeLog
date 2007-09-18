@@ -27,6 +27,9 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
      - Remove the contrib scripts ExerciseServer.py, PathDemo.py,
        and TorControl.py, as they use the old v0 controller protocol,
        and are obsoleted by TorFlow anyway.
+     - Drop support for v1 rendezvous descriptors, since we never used
+       them anyway, and the code has probably rotted by now. Based on
+       patch from Karsten Loesing.
 
   o Major bugfixes:
     - Fix possible segfaults in functions called from

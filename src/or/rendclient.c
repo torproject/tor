@@ -69,7 +69,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   tor_assert(!rend_cmp_service_ids(introcirc->rend_query,
                                    rendcirc->rend_query));
 
-  if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
+  if (rend_cache_lookup_entry(introcirc->rend_query, 0, &entry) < 1) {
     log_warn(LD_REND,
              "query %s didn't have valid rend desc in cache. Failing.",
              escaped_safe_str(introcirc->rend_query));
@@ -281,7 +281,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
   rend_cache_entry_t *ent;
   connection_t *conn;
 
-  r = rend_cache_lookup_entry(query, -1, &ent);
+  r = rend_cache_lookup_entry(query, 0, &ent);
   if (r<0) {
     log_warn(LD_BUG, "Malformed service ID %s.", escaped_safe_str(query));
     return -1;
@@ -450,7 +450,7 @@ rend_client_desc_here(const char *query)
     if (rend_cmp_service_ids(query, conn->rend_query))
       continue;
     assert_connection_ok(TO_CONN(conn), now);
-    if (rend_cache_lookup_entry(conn->rend_query, -1, &entry) == 1 &&
+    if (rend_cache_lookup_entry(conn->rend_query, 0, &entry) == 1 &&
         entry->parsed->n_intro_points > 0) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
@@ -486,7 +486,7 @@ rend_client_get_random_intro(const char *query)
   int i;
   rend_cache_entry_t *entry;
 
-  if (rend_cache_lookup_entry(query, -1, &entry) < 1) {
+  if (rend_cache_lookup_entry(query, 0, &entry) < 1) {
     log_warn(LD_REND,
              "Query '%s' didn't have valid rend desc in cache. Failing.",
              safe_str(query));

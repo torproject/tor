@@ -49,7 +49,6 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
  */
 int
 rend_encode_service_descriptor(rend_service_descriptor_t *desc,
-                               int version,
                                crypto_pk_env_t *key,
                                char **str_out, size_t *len_out)
 {
@@ -60,42 +59,17 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   size_t buflen = PK_BYTES*2*(desc->n_intro_points+2);/*Too long, but ok*/
   cp = *str_out = tor_malloc(buflen);
   end = cp + PK_BYTES*2*(desc->n_intro_points+1);
-  if (version) {
-    *(uint8_t*)cp = (uint8_t)0xff;
-    *(uint8_t*)(cp+1) = (uint8_t)version;
-    cp += 2;
-  }
   asn1len = crypto_pk_asn1_encode(desc->pk, cp+2, end-(cp+2));
   set_uint16(cp, htons((uint16_t)asn1len));
   cp += 2+asn1len;
   set_uint32(cp, htonl((uint32_t)desc->timestamp));
   cp += 4;
-  if (version == 1) {
-    set_uint16(cp, htons(desc->protocols));
-    cp += 2;
-  }
   set_uint16(cp, htons((uint16_t)desc->n_intro_points));
   cp += 2;
-  if (version == 0) {
-    for (i=0; i < desc->n_intro_points; ++i) {
-      char *ipoint = (char*)desc->intro_points[i];
-      strlcpy(cp, ipoint, buflen-(cp-*str_out));
-      cp += strlen(ipoint)+1;
-    }
-  } else {
-    if (desc->n_intro_points)
-      tor_assert(desc->intro_point_extend_info);
-    for (i=0; i < desc->n_intro_points; ++i) {
-      extend_info_t *info = desc->intro_point_extend_info[i];
-      int klen;
-      set_uint32(cp, htonl(info->addr));
-      set_uint16(cp+4, htons(info->port));
-      memcpy(cp+6, info->identity_digest, DIGEST_LEN);
-      klen = crypto_pk_asn1_encode(info->onion_key, cp+6+DIGEST_LEN+2,
-                                   (end-(cp+6+DIGEST_LEN+2)));
-      set_uint16(cp+6+DIGEST_LEN, htons((uint16_t)klen));
-      cp += 6+DIGEST_LEN+2+klen;
-    }
+  for (i=0; i < desc->n_intro_points; ++i) {
+    char *ipoint = (char*)desc->intro_points[i];
+    strlcpy(cp, ipoint, buflen-(cp-*str_out));
+    cp += strlen(ipoint)+1;
   }
   note_crypto_pk_op(REND_SERVER);
   i = crypto_pk_private_sign_digest(key, cp, *str_out, cp-*str_out);
@@ -119,18 +93,12 @@ rend_parse_service_descriptor(const char *str, size_t len)
   int i;
   size_t keylen, asn1len;
   const char *end, *cp, *eos;
-  int version = 0;
 
   result = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   cp = str;
   end = str+len;
   if (end-cp<2) goto truncated;
-  if (*(uint8_t*)cp == 0xff) {
-    result->version = version = *(uint8_t*)(cp+1);
-    cp += 2;
-  } else {
-    result->version = version = 0;
-  }
+  result->version = 0;
   if (end-cp < 2) goto truncated;
   asn1len = ntohs(get_uint16(cp));
   cp += 2;
@@ -141,18 +109,12 @@ rend_parse_service_descriptor(const char *str, size_t len)
   if (end-cp < 4) goto truncated;
   result->timestamp = (time_t) ntohl(get_uint32(cp));
   cp += 4;
-  if (version == 1) {
-    if (end-cp < 2) goto truncated;
-    result->protocols = ntohs(get_uint16(cp));
-    cp += 2;
-  } else {
-    result->protocols = 1;
-  }
+  result->protocols = 1;
   if (end-cp < 2) goto truncated;
   result->n_intro_points = ntohs(get_uint16(cp));
   cp += 2;
 
-  if (version == 0 && result->n_intro_points != 0) {
+  if (result->n_intro_points != 0) {
     result->intro_points =
       tor_malloc_zero(sizeof(char*)*result->n_intro_points);
     for (i=0;i<result->n_intro_points;++i) {
@@ -161,33 +123,6 @@ rend_parse_service_descriptor(const char *str, size_t len)
       if (!eos) goto truncated;
       result->intro_points[i] = tor_strdup(cp);
       cp = eos+1;
-    }
-  } else if (version != 0 && result->n_intro_points != 0) {
-    result->intro_point_extend_info =
-      tor_malloc_zero(sizeof(extend_info_t*)*result->n_intro_points);
-    result->intro_points =
-      tor_malloc_zero(sizeof(char*)*result->n_intro_points);
-    for (i=0;i<result->n_intro_points;++i) {
-      extend_info_t *info = result->intro_point_extend_info[i] =
-        tor_malloc_zero(sizeof(extend_info_t));
-      int klen;
-      if (end-cp < 8+DIGEST_LEN) goto truncated;
-      info->addr = ntohl(get_uint32(cp));
-      info->port = ntohs(get_uint16(cp+4));
-      memcpy(info->identity_digest, cp+6, DIGEST_LEN);
-      info->nickname[0] = '$';
-      base16_encode(info->nickname+1, sizeof(info->nickname)-1,
-                    info->identity_digest, DIGEST_LEN);
-      result->intro_points[i] = tor_strdup(info->nickname);
-      klen = ntohs(get_uint16(cp+6+DIGEST_LEN));
-      cp += 8+DIGEST_LEN;
-      if (end-cp < klen) goto truncated;
-      if (!(info->onion_key = crypto_pk_asn1_decode(cp,klen))) {
-        log_warn(LD_PROTOCOL,
-                 "Internal error decoding onion key for intro point.");
-        goto error;
-      }
-      cp += klen;
     }
   }
   keylen = crypto_pk_keysize(result->pk);
@@ -307,28 +242,20 @@ rend_valid_service_id(const char *query)
   return 1;
 }
 
-/** If we have a cached rend_cache_entry_t for the service ID <b>query</b>,
- * set *<b>e</b> to that entry and return 1.  Else return 0.  If
- * <b>version</b> is nonnegative, only return an entry in that descriptor
- * format version. Otherwise (if <b>version</b> is negative), return the most
- * recent format we have.
+/** If we have a cached rend_cache_entry_t for the service ID <b>query</b>
+ * with <b>version</b>, set *<b>e</b> to that entry and return 1.
+ * Else return 0.
  */
 int
 rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
 {
-  char key[REND_SERVICE_ID_LEN+2]; /* 1<query>\0   or  0<query>\0 */
+  char key[REND_SERVICE_ID_LEN+2]; /* <version><query>\0 */
   tor_assert(rend_cache);
+  tor_assert(!version);
   if (!rend_valid_service_id(query))
     return -1;
-  *e = NULL;
-  if (version != 0) {
-    tor_snprintf(key, sizeof(key), "1%s", query);
-    *e = strmap_get_lc(rend_cache, key);
-  }
-  if (!*e && version != 1) {
-    tor_snprintf(key, sizeof(key), "0%s", query);
-    *e = strmap_get_lc(rend_cache, key);
-  }
+  tor_snprintf(key, sizeof(key), "%d%s", version, query);
+  *e = strmap_get_lc(rend_cache, key);
   if (!*e)
     return 0;
   return 1;
@@ -369,7 +296,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   rend_cache_entry_t *e;
   rend_service_descriptor_t *parsed;
   char query[REND_SERVICE_ID_LEN+1];
-  char key[REND_SERVICE_ID_LEN+2]; /* 1<query>\0  or  0<query>\0 */
+  char key[REND_SERVICE_ID_LEN+2]; /* 0<query>\0 */
   time_t now;
   or_options_t *options = get_options();
   tor_assert(rend_cache);
@@ -383,7 +310,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
     rend_service_descriptor_free(parsed);
     return -1;
   }
-  tor_snprintf(key, sizeof(key), "%c%s", parsed->version?'1':'0', query);
+  tor_snprintf(key, sizeof(key), "0%s", query);
   now = time(NULL);
   if (parsed->timestamp < now-REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,

@@ -937,7 +937,7 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
  * and upload it to all the dirservers.
  */
 static void
-upload_service_descriptor(rend_service_t *service, int version)
+upload_service_descriptor(rend_service_t *service)
 {
   char *desc;
   size_t desc_len;
@@ -946,7 +946,6 @@ upload_service_descriptor(rend_service_t *service, int version)
   /* Update the descriptor. */
   rend_service_update_descriptor(service);
   if (rend_encode_service_descriptor(service->desc,
-                                     version,
                                      service->private_key,
                                      &desc, &desc_len)<0) {
     log_warn(LD_BUG, "Internal error: couldn't encode service descriptor; "
@@ -1110,7 +1109,7 @@ rend_consider_services_upload(time_t now)
       /* if it's time, or if the directory servers have a wrong service
        * descriptor and ours has been stable for 30 seconds, upload a
        * new one of each format. */
-      upload_service_descriptor(service, 0);
+      upload_service_descriptor(service);
       service->next_upload_time = now + rendpostperiod;
     }
   }

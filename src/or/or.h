@@ -3244,7 +3244,7 @@ int rend_client_send_introduction(origin_circuit_t *introcirc,
 /** Information used to connect to a hidden service. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk; /**< This service's public key. */
-  int version; /**< 0 or 1. */
+  int version; /**< 0. */
   time_t timestamp; /**< Time when the descriptor was generated. */
   uint16_t protocols; /**< Bitmask: which rendezvous protocols are supported?
                        * (We allow bits '0', '1', and '2' to be set.) */
@@ -3267,7 +3267,6 @@ void rend_process_relay_cell(circuit_t *circ, int command, size_t length,
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
 int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
-                                   int version,
                                    crypto_pk_env_t *key,
                                    char **str_out,
                                    size_t *len_out);

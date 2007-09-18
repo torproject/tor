@@ -1515,7 +1515,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     switch (status_code) {
       case 200:
         if (rend_cache_store(body, body_len, 0) < 0) {
-          log_warn(LD_REND,"Failed to store rendezvous descriptor.");
+          log_warn(LD_REND,"Failed to fetch rendezvous descriptor.");
           /* alice's ap_stream will notice when connection_mark_for_close
            * cleans it up */
         } else {
@@ -2209,17 +2209,14 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
-  if (options->HSAuthoritativeDir &&
-      (!strcmpstart(url,"/tor/rendezvous/") ||
-       !strcmpstart(url,"/tor/rendezvous1/"))) {
+  if (options->HSAuthoritativeDir && !strcmpstart(url,"/tor/rendezvous/")) {
     /* rendezvous descriptor fetch */
     const char *descp;
     size_t desc_len;
-    int versioned = !strcmpstart(url,"/tor/rendezvous1/");
-    const char *query = url+strlen("/tor/rendezvous/")+(versioned?1:0);
+    const char *query = url+strlen("/tor/rendezvous/");
 
     log_info(LD_REND, "Handling rendezvous descriptor get");
-    switch (rend_cache_lookup_desc(query, versioned?-1:0, &descp, &desc_len)) {
+    switch (rend_cache_lookup_desc(query, 0, &descp, &desc_len)) {
       case 1: /* valid */
         write_http_response_header_impl(conn, desc_len,
                                    "application/octet-stream",
@@ -2376,7 +2373,6 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
     /* rendezvous descriptor post */
     log_info(LD_REND, "Handling rendezvous descriptor post.");
     if (rend_cache_store(body, body_len, 1) < 0) {
-//      char tmp[1024*2+1];
       log_fn(LOG_PROTOCOL_WARN, LD_DIRSERV,
              "Rejected rend descriptor (length %d) from %s.",
              (int)body_len, conn->_base.address);
