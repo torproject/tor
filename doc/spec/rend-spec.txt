@@ -361,9 +361,10 @@ $Id$
    20+42+16+20+20+128=246 bytes, and the version 1 and version 2
    introduction formats have other sizes.
 
-   As of Tor 0.2.0.6-alpha, clients only generate the v0 introduction
-   format, whereas hidden services have understoodd and accepted v0,
-   v1, and v2 since 0.1.1.x.
+   Through Tor 0.2.0.6-alpha, clients only generated the v0 introduction
+   format, whereas hidden services have understood and accepted v0,
+   v1, and v2 since 0.1.1.x. As of Tor 0.2.0.7-alpha, clients switched
+   to using the v2 intro format.
 
 1.8.1. Other introduction formats we don't use.
 

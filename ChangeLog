@@ -34,6 +34,10 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
   o Major bugfixes:
     - Fix possible segfaults in functions called from
       rend_process_relay_cell().
+    - Start using the v2 intro format for hidden service connections. Now
+      clients specify their chosen rendezvous point by identity digest
+      rather than by (potentially ambiguous) nickname. This change could
+      speed up hidden service connections dramatically.
 
   o Minor bugfixes:
     - When generating information telling us how to extend to a given

@@ -109,7 +109,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
   if (end-cp < 4) goto truncated;
   result->timestamp = (time_t) ntohl(get_uint32(cp));
   cp += 4;
-  result->protocols = 1;
+  result->protocols = 1<<2; /* always use intro format 2 */
   if (end-cp < 2) goto truncated;
   result->n_intro_points = ntohs(get_uint16(cp));
   cp += 2;
