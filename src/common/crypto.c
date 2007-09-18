@@ -1144,9 +1144,9 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
   return 0;
 }
 
-#define AES_CIPHER_BLOCK_SIZE (16)
+#define AES_CIPHER_BLOCK_SIZE 16
 
-#define AES_IV_SIZE (16)
+#define AES_IV_SIZE 16
 
 /** Encrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the
  * symmetric key <b>key</b> of 16 bytes length to <b>to</b> of length
@@ -1161,7 +1161,7 @@ crypto_cipher_encrypt_cbc(const char *key, char *to, size_t tolen,
 
   EVP_CIPHER_CTX ctx_msg, ctx_iv; /* cipher contexts for message and IV */
   unsigned char iv[AES_IV_SIZE]; /* initialization vector */
-  int outlen, tmplen; /* length of encrypted strings (w/ and wo/ final data) */
+  int outlen, tmplen; /* length of encrypted strings (w/ and w/o final data) */
 
   tor_assert(key);
   tor_assert(to);
@@ -1194,7 +1194,7 @@ crypto_cipher_encrypt_cbc(const char *key, char *to, size_t tolen,
   }
 
   /* clear all information from cipher context for the initialization vector
-   * and free up any allocated memory associate with it */
+   * and free up any allocated memory associated with it */
   EVP_CIPHER_CTX_cleanup(&ctx_iv);
 
   /* initialize cipher context for the message */
@@ -1224,7 +1224,7 @@ crypto_cipher_encrypt_cbc(const char *key, char *to, size_t tolen,
   outlen += tmplen;
 
   /* clear all information from cipher context and free up any allocated memory
-   * associate with it */
+   * associated with it */
   EVP_CIPHER_CTX_cleanup(&ctx_msg);
 
   /* return number of written bytes */
