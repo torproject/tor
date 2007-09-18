@@ -1589,6 +1589,18 @@ getinfo_helper_events(control_connection_t *control_conn,
       *answer = tor_strdup(has_completed_circuit ? "1" : "0");
     } else if (!strcmp(question, "status/enough-dir-info")) {
       *answer = tor_strdup(router_have_minimum_dir_info() ? "1" : "0");
+    } else if (!strcmp(question, "status/good-server-descriptor")) {
+      *answer = tor_strdup(directories_have_accepted_server_descriptor()
+                           ? "1" : "0");
+    } else if (!strcmp(question, "status/reachability-succeeded/or")) {
+      *answer = tor_strdup(check_whether_orport_reachable() ? "1" : "0");
+    } else if (!strcmp(question, "status/reachability-succeeded/dir")) {
+      *answer = tor_strdup(check_whether_dirport_reachable() ? "1" : "0");
+    } else if (!strcmp(question, "status/reachability-succeeded")) {
+      *answer = tor_malloc(16);
+      tor_snprintf(*answer, 16, "OR=%d DIR=%d",
+                   check_whether_orport_reachable() ? 1 : 0,
+                   check_whether_dirport_reachable() ? 1 : 0);
     } else if (!strcmpstart(question, "status/version/")) {
       combined_version_status_t st;
       int is_server = server_mode(get_options());

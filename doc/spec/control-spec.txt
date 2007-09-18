@@ -524,11 +524,21 @@ $Id$
 
     "status/circuit-established"
     "status/enough-dir-info"
+    "status/good-server-descriptor"
     "status/..."
       These provide the current internal Tor values for various Tor
       states. See Section 4.1.10 for explanations. (Only a few of the
       status events are available as getinfo's currently. Let us know if
-      you want more exposed.)
+      you want more exposed.)<
+    "status/reachability/or"
+      0 or 1, depending on whether we've found our ORPort reachable.
+    "status/reachability/dir"
+      0 or 1, depending on whether we've found our DirPort reachable.
+    "status/reachability"
+      "OR=" ("0"/"1") SP "DIR=" ("0"/"1")
+      Combines status/reachability/*; controllers MUST ignore unrecognized
+      elements in this entry.
+
     "status/version/recommended" -- List of currently recommended versions
     "status/version/current" -- Status of the current version. One of:
         new, old, unrecommended, recommended, new in series, obsolete.
@@ -1322,7 +1332,8 @@ $Id$
      "ORADDRESS=IP:port"
      "DIRADDRESS=IP:port"
        We successfully verified the reachability of our external OR port or
-       directory port.
+       directory port (depending on which of ORADDRESS or DIRADDRESS is
+       given.)
 
        {This event could effect the controller's idea of server status, but
        the controller should not interrupt the user to tell them so.}

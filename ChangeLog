@@ -14,6 +14,9 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
   o Minor features (controller):
     - Accept LF instead of CRLF on controller, since some software has a
       hard time generating real Internet newlines.
+    - Add GETINFO values for the server status events
+      "REACHABILITY_SUCCEEDED" and "GOOD_SERVER_DESCRIPTOR". Patch from
+      Robert Hogan.
 
   o Removed features:
      - Routers no longer include bandwidth-history lines in their
