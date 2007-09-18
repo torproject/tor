@@ -2232,29 +2232,26 @@ addr_policy_t *
 router_parse_addr_policy_from_string(const char *s, int assume_action)
 {
   directory_token_t *tok = NULL;
-  const char *cp;
-  char *tmp = NULL;
+  const char *cp, *eos;
+  /* Longest possible policy is "accept ffff:ffff:..255/ffff:...255:0-65535".
+   * But note that there can be an arbitrary amount of space between the
+   * accept and the address:mask/port element. */
+  char line[TOR_ADDR_BUF_LEN*2 + 32];
   addr_policy_t *r;
-  size_t len, idx;
-  const char *eos;
 
-  /* *s might not end with \n, so we need to extend it with one. */
-  len = strlen(s);
-  cp = tmp = tor_malloc(len+2);
-  for (idx = 0; idx < len; ++idx) {
-    tmp[idx] = TOR_TOLOWER(s[idx]);
+  s = eat_whitespace(s);
+  if ((*s == '*' || TOR_ISDIGIT(*s)) && assume_action >= 0) {
+    if (tor_snprintf(line, sizeof(line), "%s %s",
+               assume_action == ADDR_POLICY_ACCEPT?"accept":"reject", s)<0) {
+      log_warn(LD_DIR, "Policy %s is too long.", escaped(s));
+      return NULL;
+    }
+    cp = line;
+  } else { /* assume an already well-formed address policy line */
+    cp = s;
   }
-  tmp[len]='\n';
-  tmp[len+1]='\0';
-  while (TOR_ISSPACE(*cp))
-    ++cp;
-  if ((*cp == '*' || TOR_ISDIGIT(*cp)) && assume_action >= 0) {
-    char *new_str = tor_malloc(len+10);
-    tor_snprintf(new_str, len+10, "%s %s\n",
-                 assume_action == ADDR_POLICY_ACCEPT?"accept":"reject", cp);
-    tor_free(tmp);
-    cp = tmp = new_str;
-  }
+  tor_strlower(line);
+
   eos = cp + strlen(cp);
   tok = get_next_token(&cp, eos, routerdesc_token_table);
   if (tok->tp == _ERR) {
@@ -2272,7 +2269,6 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
  err:
   r = NULL;
  done:
-  tor_free(tmp);
   token_free(tok);
   return r;
 }

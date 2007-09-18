@@ -53,6 +53,7 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
     - Turn "descriptor store" into a full-fledged type.
     - Move all NT services code into a separate source file.
     - Unify all code that computes medians, percentile elements, etc.
+    - Get rid of a needless malloc when parsing address policies.
 
 
 Changes in version 0.1.2.17 - 2007-08-30

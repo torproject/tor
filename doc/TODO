@@ -59,7 +59,7 @@ Things we'd like to do in 0.2.0.x:
           o Detect whether votes are really all for the same period.
         . Push/pull documents as appropriate.
           - Pull votes and signatures if we don't get them.
-        - Cache votes and signatures on disk.
+        - Cache votes and signatures on disk?
           o Code to keep consensus docs in limbo if they don't have
             have enough signatures.
         o Have clients know which authorities are v3 authorities, and what
