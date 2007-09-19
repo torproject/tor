@@ -2934,7 +2934,7 @@ test_rend_fns(void)
   test_assert(!crypto_pk_cmp_keys(d1->pk, d2->pk));
   test_eq(d2->timestamp, now);
   test_eq(d2->version, 0);
-  test_eq(d2->protocols, 1);
+  test_eq(d2->protocols, 1<<2);
   test_eq(d2->n_intro_points, 3);
   test_streq(d2->intro_points[0], "tom");
   test_streq(d2->intro_points[1], "crow");
