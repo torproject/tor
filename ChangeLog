@@ -1,4 +1,8 @@
 Changes in version 0.2.0.7-alpha - 2007-??-??
+  o New directory authorities:
+    - Set up moria1 as the first v3 directory authority. See
+      doc/spec/dir-spec.txt for details on the new directory design.
+
   o Minor features (security):
     - As a client, do not believe any server that tells us that any address
       maps to an internal address space.

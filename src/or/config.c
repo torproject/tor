@@ -790,9 +790,8 @@ add_default_trusted_dirservers(void)
 {
   int i;
   const char *dirservers[] = {
-    /* eventually we should mark moria1 as "v1only" */
-    "moria1 v1 orport=9001 128.31.0.34:9031 "
-      "FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
+    "moria1 v1 orport=9001 v3ident=5420FD8EA46BD4290F1D07A1883C9D85ECC486C4 "
+      "128.31.0.34:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
     "moria2 v1 orport=9002 128.31.0.34:9032 "
       "719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF",
     "tor26 v1 orport=443 86.59.21.38:80 "
