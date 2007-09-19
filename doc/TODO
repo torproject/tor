@@ -16,6 +16,8 @@ P       - phobos claims
 Things we'd like to do in 0.2.0.x:
   - See also Flyspray tasks.
   - See also all items marked XXXX020 and DOCDOC in the code
+  - http://tor.eff.org/eff/legal-faq.html#License doesn't mention
+    licenses for other components of the bnudles.
 
   - Bugs.
      - Bug reports Roger has heard along that way that don't have enough
