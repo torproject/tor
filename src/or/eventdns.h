@@ -281,6 +281,8 @@ void evdns_search_ndots_set(const int ndots);
 typedef void (*evdns_debug_log_fn_type)(int is_warning, const char *msg);
 void evdns_set_log_fn(evdns_debug_log_fn_type fn);
 
+void evdns_set_transaction_id_fn(uint16_t (*fn)(void));
+
 #define DNS_NO_SEARCH 1
 
 /* Structures and functions used to implement a DNS server. */

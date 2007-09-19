@@ -179,11 +179,21 @@ evdns_log_cb(int warn, const char *msg)
   log(severity, LD_EXIT, "eventdns: %s", msg);
 }
 
+/** Helper: generate a good random transaction ID. */
+static uint16_t
+dns_get_transaction_id(void)
+{
+  uint16_t result;
+  crypto_rand((void*)&result, sizeof(result));
+  return result;
+}
+
 /** Initialize the DNS subsystem; called by the OR process. */
 int
 dns_init(void)
 {
   init_cache_map();
+  evdns_set_transaction_id_fn(dns_get_transaction_id);
   if (server_mode(get_options()))
     return configure_nameservers(1);
   return 0;
