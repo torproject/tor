@@ -304,16 +304,17 @@ rend_service_update_descriptor(rend_service_t *service)
   /* We support intro protocol 2 and protocol 0. */
   d->protocols = (1<<2) | (1<<0);
   for (i=0; i < n; ++i) {
-    router = router_get_by_nickname(smartlist_get(service->intro_nodes, i),1);
+    const char *name = smartlist_get(service->intro_nodes, i);
+    router = router_get_by_nickname(name, 1);
     if (!router) {
       log_info(LD_REND,"Router '%s' not found for intro point %d. Skipping.",
-               safe_str((char*)smartlist_get(service->intro_nodes, i)), i);
+               safe_str(name), i);
       continue;
     }
     circ = find_intro_circuit(router, service->pk_digest);
     if (circ && circ->_base.purpose == CIRCUIT_PURPOSE_S_INTRO) {
       /* We have an entirely established intro circuit. */
-      d->intro_points[d->n_intro_points] = tor_strdup(router->nickname);
+      d->intro_points[d->n_intro_points] = tor_strdup(name);
       d->intro_point_extend_info[d->n_intro_points] =
         extend_info_from_router(router);
       d->n_intro_points++;
