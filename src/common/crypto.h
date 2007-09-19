@@ -21,6 +21,8 @@
 #define DIGEST_LEN 20
 /** Length of our symmetric cipher's keys. */
 #define CIPHER_KEY_LEN 16
+/** Length of our symmetric cipher's IV. */
+#define CIPHER_IV_LEN 16
 /** Length of our public keys. */
 #define PK_BYTES (1024/8)
 /** Length of our DH keys. */
@@ -115,6 +117,8 @@ int crypto_pk_check_fingerprint_syntax(const char *s);
 /* symmetric crypto */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env);
 int crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key);
+void crypto_cipher_generate_iv(char *iv_out);
+int crypto_cipher_set_iv(crypto_cipher_env_t *env, const char *iv);
 const char *crypto_cipher_get_key(crypto_cipher_env_t *env);
 int crypto_cipher_encrypt_init_cipher(crypto_cipher_env_t *env);
 int crypto_cipher_decrypt_init_cipher(crypto_cipher_env_t *env);
@@ -123,6 +127,13 @@ int crypto_cipher_encrypt(crypto_cipher_env_t *env, char *to,
                           const char *from, size_t fromlen);
 int crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
                           const char *from, size_t fromlen);
+
+int crypto_cipher_encrypt_with_iv(crypto_cipher_env_t *env,
+                                  char *to, size_t tolen,
+                                  const char *from, size_t fromlen);
+int crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *env,
+                                  char *to, size_t tolen,
+                                  const char *from, size_t fromlen);
 
 int crypto_cipher_encrypt_cbc(const char *key, char *to, size_t tolen,
                               const char *from, size_t fromlen);

@@ -1074,7 +1074,24 @@ crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key)
     return -1;
 
   memcpy(env->key, key, CIPHER_KEY_LEN);
+  return 0;
+}
 
+/** DOCDOC */
+void
+crypto_cipher_generate_iv(char *iv_out)
+{
+  /* XXXX020 It's possible we want to get fancier here. */
+  crypto_rand(iv_out, CIPHER_IV_LEN);
+}
+
+/** DOCDOC */
+int
+crypto_cipher_set_iv(crypto_cipher_env_t *env, const char *iv)
+{
+  tor_assert(env);
+  tor_assert(iv);
+  aes_set_iv(env->cipher, iv);
   return 0;
 }
 
@@ -1144,8 +1161,67 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
   return 0;
 }
 
-#define AES_CIPHER_BLOCK_SIZE 16
 
+/** Encrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the key in
+ * <b>cipher</b> to the buffer in <b>to</b> of length
+ * <b>tolen</b>. <b>tolen</b> must be at least <b>fromlen</b> plus
+ * CIPHER_IV_LEN bytes for the initialization vector. On success, return the
+ * number of bytes written, on failure, return -1.
+ *
+ * This function adjusts the current position of the counter in <b>cipher</b>
+ * to immediately after the encrypted data.
+ */
+int
+crypto_cipher_encrypt_with_iv(crypto_cipher_env_t *cipher,
+                              char *to, size_t tolen,
+                              const char *from, size_t fromlen)
+{
+  tor_assert(cipher);
+  tor_assert(from);
+  tor_assert(to);
+
+  if (tolen < fromlen + CIPHER_IV_LEN)
+    return -1;
+
+  crypto_cipher_generate_iv(to);
+  if (crypto_cipher_set_iv(cipher, to)<0)
+    return -1;
+  crypto_cipher_encrypt(cipher, to+CIPHER_IV_LEN, from, fromlen);
+  crypto_free_cipher_env(cipher);
+  return fromlen + CIPHER_IV_LEN;
+}
+
+/** Encrypt <b>fromlen</b> bytes (at least 1+CIPHER_IV_LEN) from <b>from</b>
+ * with the key in <b>cipher</b> to the buffer in <b>to</b> of length
+ * <b>tolen</b>. <b>tolen</b> must be at least <b>fromlen</b> minus
+ * CIPHER_IV_LEN bytes for the initialization vector. On success, return the
+ * number of bytes written, on failure, return -1.
+ *
+ * This function adjusts the current position of the counter in <b>cipher</b>
+ * to immediately after the decrypted data.
+ */
+int
+crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *cipher,
+                              char *to, size_t tolen,
+                              const char *from, size_t fromlen)
+{
+  tor_assert(cipher);
+  tor_assert(from);
+  tor_assert(to);
+
+  if (fromlen < CIPHER_IV_LEN)
+    return -1;
+  if (tolen < fromlen - CIPHER_IV_LEN)
+    return -1;
+
+  if (crypto_cipher_set_iv(cipher, from)<0)
+    return -1;
+  crypto_cipher_encrypt(cipher, to, from+CIPHER_IV_LEN, fromlen-CIPHER_IV_LEN);
+  crypto_free_cipher_env(cipher);
+  return fromlen - CIPHER_IV_LEN;
+}
+
+#define AES_CIPHER_BLOCK_SIZE 16
 #define AES_IV_SIZE 16
 
 /** Encrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the
