@@ -63,6 +63,10 @@ Changes in version 0.2.0.7-alpha - 2007-??-??
       BandwidthRate, RelayBandwidthRate, or MaxAdvertisedBandwidth
       were below a threshold. Now they only look at BandwidthRate and
       RelayBandwidthRate.
+    - Remove an optimization in the AES counter-mode code that assumed that
+      the counter never exceeded 2^68.  When the counter can be set
+      arbitrarily as an IV (as it is by Karsten's new hidden services code),
+      this assumption no longer holds.
 
   o Code simplifications and refactoring:
     - Revamp file-writing logic so we don't need to have the entire contents
