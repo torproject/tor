@@ -2766,30 +2766,54 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
   return found_any;
 }
 
+/** Return the cache-info for identity fingerprint <b>fp</b>, or
+ * its extra-info document if <b>extrainfo</b> is true. Return
+ * NULL if not found or if the descriptor is older than
+ * <b>publish_cutoff</b>. */
+static signed_descriptor_t *
+get_signed_descriptor_by_fp(const char *fp, int extrainfo,
+                            time_t publish_cutoff)
+{
+  if (router_digest_is_me(fp)) {
+    if (extrainfo)
+      return &(router_get_my_extrainfo()->cache_info);
+    else
+      return &(router_get_my_routerinfo()->cache_info);
+  } else {
+    routerinfo_t *ri = router_get_by_digest(fp);
+    if (ri &&
+        ri->cache_info.published_on > publish_cutoff) {
+      if (extrainfo)
+        return extrainfo_get_by_descriptor_digest(
+                                     ri->cache_info.extra_info_digest);
+      else
+        return &ri->cache_info;
+    }
+  }
+  return NULL;
+}
+
 /** Return true iff we have any of the docments (extrainfo or routerdesc)
  * specified by the fingerprints in <b>fps</b> and <b>spool_src</b>.  Used to
  * decide whether to send a 404.  */
 int
 dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src)
 {
+  time_t publish_cutoff = time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH;
   SMARTLIST_FOREACH(fps, const char *, fp, {
       switch (spool_src)
       {
         case DIR_SPOOL_EXTRA_BY_DIGEST:
           if (extrainfo_get_by_descriptor_digest(fp)) return 1;
           break;
-        case DIR_SPOOL_EXTRA_BY_FP: {
-          routerinfo_t *ri = router_get_by_digest(fp);
-          if (ri && extrainfo_get_by_descriptor_digest(
-                                      ri->cache_info.extra_info_digest))
-            return 1;
-          }
-          break;
         case DIR_SPOOL_SERVER_BY_DIGEST:
           if (router_get_by_descriptor_digest(fp)) return 1;
           break;
+        case DIR_SPOOL_EXTRA_BY_FP:
         case DIR_SPOOL_SERVER_BY_FP:
-          if (router_get_by_digest(fp)) return 1;
+          if (get_signed_descriptor_by_fp(fp,
+                spool_src == DIR_SPOOL_EXTRA_BY_FP, publish_cutoff))
+            return 1;
           break;
       }
   });
@@ -2867,22 +2891,7 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
     char *fp = smartlist_pop_last(conn->fingerprint_stack);
     signed_descriptor_t *sd = NULL;
     if (by_fp) {
-      if (router_digest_is_me(fp)) {
-        if (extra)
-          sd = &(router_get_my_extrainfo()->cache_info);
-        else
-          sd = &(router_get_my_routerinfo()->cache_info);
-      } else {
-        routerinfo_t *ri = router_get_by_digest(fp);
-        if (ri &&
-            ri->cache_info.published_on > publish_cutoff) {
-          if (extra)
-            sd = extrainfo_get_by_descriptor_digest(
-                                         ri->cache_info.extra_info_digest);
-          else
-            sd = &ri->cache_info;
-        }
-      }
+      sd = get_signed_descriptor_by_fp(fp, extra, publish_cutoff);
     } else {
       sd = extra ? extrainfo_get_by_descriptor_digest(fp)
         : router_get_by_descriptor_digest(fp);
