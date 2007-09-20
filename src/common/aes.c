@@ -130,6 +130,7 @@ static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr,
 /* Interface to AES code, and counter implementation */
 
 struct aes_cnt_cipher {
+  /** This next element (howevever it's defined) is the AES key. */
 #if defined(USE_OPENSSL_EVP)
   EVP_CIPHER_CTX key;
 #elif defined(USE_OPENSSL_AES)
@@ -138,13 +139,37 @@ struct aes_cnt_cipher {
   u32 rk[4*(MAXNR+1)];
   int nr;
 #endif
+
+#if !defined(WORDS_BIGENDIAN) || defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION)
+  /** These four values, together, implement a 128-bit counter, with
+   * counter0 as the low-order word and counter3 as the high-order word. */
   u32 counter3;
   u32 counter2;
   u32 counter1;
   u32 counter0;
+#endif
+
+#ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
+  union {
+    /** The counter, in big-endian order, as bytes. */
+    u8 buf[16];
+    /** The counter, in big-endian order, as big-endian words.  Note that
+     * on big-endian platforms, this is redundant with counter3...0,
+     * so we just use these values instead. */
+    u32 buf32[4];
+  } ctr_buf;
+#endif
+  /** The encrypted value of ctr_buf. */
   u8 buf[16];
+  /** Our current stream position within buf. */
   u8 pos;
 };
+
+#if defined(WORDS_BIGENDIAN) && !defined(USE_RIJNDAEL_COUNTER_OPTIMIZIZATION)
+#define COUNTER(c, n) ((c)->ctr_buf.buf32[3-(n)])
+#else
+#define COUNTER(c, n) ((c)->counter ## n)
+#endif
 
 /**
  * Helper function: set <b>cipher</b>'s internal buffer to the encrypted
@@ -164,37 +189,17 @@ _aes_fill_buf(aes_cnt_cipher_t *cipher)
                   cipher->counter3, cipher->counter2,
                   cipher->counter1, cipher->counter0, cipher->buf);
 #else
-  u32 counter0 = cipher->counter0;
-  u32 counter1 = cipher->counter1;
-  u32 counter2 = cipher->counter2;
-  u32 counter3 = cipher->counter3;
-  u8 buf[16];
-  buf[15] = (counter0 >> 0)  & 0xff;
-  buf[14] = (counter0 >> 8)  & 0xff;
-  buf[13] = (counter0 >> 16) & 0xff;
-  buf[12] = (counter0 >> 24) & 0xff;
-  buf[11] = (counter1 >> 0)  & 0xff;
-  buf[10] = (counter1 >> 8)  & 0xff;
-  buf[ 9] = (counter1 >> 16) & 0xff;
-  buf[ 8] = (counter1 >> 24) & 0xff;
-  buf[ 7] = (counter2 >> 0)  & 0xff;
-  buf[ 6] = (counter2 >> 8)  & 0xff;
-  buf[ 5] = (counter2 >> 16) & 0xff;
-  buf[ 4] = (counter2 >> 24) & 0xff;
-  buf[ 3] = (counter3 >> 0)  & 0xff;
-  buf[ 2] = (counter3 >> 8)  & 0xff;
-  buf[ 1] = (counter3 >> 16) & 0xff;
-  buf[ 0] = (counter3 >> 24) & 0xff;
 
 #if defined(USE_OPENSSL_EVP)
   {
     int outl=16, inl=16;
-    EVP_EncryptUpdate(&cipher->key, cipher->buf, &outl, buf, inl);
+    EVP_EncryptUpdate(&cipher->key, cipher->buf, &outl,
+                      cipher->ctr_buf.buf, inl);
   }
 #elif defined(USE_OPENSSL_AES)
-  AES_encrypt(buf, cipher->buf, &cipher->key);
+  AES_encrypt(cipher->ctr_buf.buf, cipher->buf, &cipher->key);
 #else
-  rijndaelEncrypt(cipher->rk, cipher->nr, buf, cipher->buf);
+  rijndaelEncrypt(cipher->rk, cipher->nr, cipher->ctr_buf.buf, cipher->buf);
 #endif
 #endif
 }
@@ -232,10 +237,14 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
   cipher->nr = rijndaelKeySetupEnc(cipher->rk, (const unsigned char*)key,
                                    key_bits);
 #endif
-  cipher->counter0 = 0;
-  cipher->counter1 = 0;
-  cipher->counter2 = 0;
-  cipher->counter3 = 0;
+  COUNTER(cipher, 0) = 0;
+  COUNTER(cipher, 1) = 0;
+  COUNTER(cipher, 2) = 0;
+  COUNTER(cipher, 3) = 0;
+#ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
+  memset(cipher->ctr_buf.buf, 0, sizeof(cipher->ctr_buf.buf));
+#endif
+
   cipher->pos = 0;
   _aes_fill_buf(cipher);
 }
@@ -253,6 +262,14 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
   tor_free(cipher);
 }
 
+#if defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION) || defined(WORDS_BIGENDIAN)
+#define UPDATE_CTR_BUF(c, n)
+#else
+#define UPDATE_CTR_BUF(c, n) STMT_BEGIN                 \
+  (c)->ctr_buf.buf32[3-(n)] = htonl((c)->counter ## n); \
+  STMT_END
+#endif
+
 /** Encrypt <b>len</b> bytes from <b>input</b>, storing the result in
  * <b>output</b>.  Uses the key in <b>cipher</b>, and advances the counter
  * by <b>len</b> bytes as it encrypts.
@@ -261,6 +278,7 @@ void
 aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
           char *output)
 {
+
   /* XXXX This function is up to 5% of our runtime in some profiles;
    * we should look into unrolling some of the loops; taking advantage
    * of alignmement, using a bigger buffer, and so on. Not till after 0.1.2.x,
@@ -274,13 +292,17 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
       *(output++) = *(input++) ^ cipher->buf[c];
     } while (++c != 16);
     cipher->pos = c = 0;
-    if (PREDICT_UNLIKELY(! ++cipher->counter0)) {
-      if (PREDICT_UNLIKELY(! ++cipher->counter1)) {
-        if (PREDICT_UNLIKELY(! ++cipher->counter2)) {
-          ++cipher->counter3;
+    if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 0))) {
+      if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 1))) {
+        if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 2))) {
+          ++COUNTER(cipher, 3);
+          UPDATE_CTR_BUF(cipher, 3);
         }
+        UPDATE_CTR_BUF(cipher, 2);
       }
+      UPDATE_CTR_BUF(cipher, 1);
     }
+    UPDATE_CTR_BUF(cipher, 0);
     _aes_fill_buf(cipher);
   }
 }
@@ -317,6 +339,9 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
   cipher->counter1 = ntohl(get_uint32(iv+8));
   cipher->counter0 = ntohl(get_uint32(iv+12));
   cipher->pos = 0;
+#ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
+  memcpy(cipher->ctr_buf.buf, iv, 16);
+#endif
 
   _aes_fill_buf(cipher);
 }
@@ -1026,3 +1051,4 @@ main(int c, char **v)
   return 0;
 }
 #endif
+

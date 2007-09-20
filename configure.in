@@ -143,6 +143,8 @@ if test $bmipspro = true; then
   CFLAGS="$CFLAGS -c99"
 fi
 
+AC_C_BIGENDIAN
+
 AC_SEARCH_LIBS(socket, [socket])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])

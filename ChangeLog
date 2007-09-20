@@ -15,6 +15,12 @@ Changes in version 0.2.0.7-alpha - 2007-09-21
       temporarily runs an old version of Tor and then switches back to a new
       one, she doesn't automatically lose her guards.
 
+  o Minor features (speed):
+    - When implementing AES counter mode, update only the portions of the
+      counter buffer that need to change, and don't keep separate
+      network-order and host-order counters when they are the same (i.e., on
+      big-endian hosts.)
+
   o Minor features (controller):
     - Accept LF instead of CRLF on controller, since some software has a
       hard time generating real Internet newlines.
