@@ -1849,7 +1849,8 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
   memset(rs, 0, sizeof(routerstatus_t));
 
-  rs->is_authority = router_digest_is_trusted_dir(ri->identity_digest);
+  rs->is_authority =
+    router_digest_is_trusted_dir(ri->cache_info.identity_digest);
 
   /* Already set by compute_performance_thresholds. */
   rs->is_exit = ri->is_exit;
