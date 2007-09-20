@@ -1,6 +1,6 @@
 Changes in version 0.2.0.7-alpha - 2007-09-21
   o New directory authorities:
-    - Set up moria1 as the first v3 directory authority. See
+    - Set up moria1 and tor26 as the first v3 directory authorities. See
       doc/spec/dir-spec.txt for details on the new directory design.
 
   o Minor features (security):
