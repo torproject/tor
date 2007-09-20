@@ -141,6 +141,7 @@ struct aes_cnt_cipher {
 #endif
 
 #if !defined(WORDS_BIGENDIAN) || defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION)
+#define USING_COUNTER_VARS
   /** These four values, together, implement a 128-bit counter, with
    * counter0 as the low-order word and counter3 as the high-order word. */
   u32 counter3;
@@ -150,6 +151,7 @@ struct aes_cnt_cipher {
 #endif
 
 #ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
+#define USING_COUNTER_BUFS
   union {
     /** The counter, in big-endian order, as bytes. */
     u8 buf[16];
@@ -165,7 +167,7 @@ struct aes_cnt_cipher {
   u8 pos;
 };
 
-#if defined(WORDS_BIGENDIAN) && !defined(USE_RIJNDAEL_COUNTER_OPTIMIZIZATION)
+#if !defined(USING_COUNTER_VARS)
 #define COUNTER(c, n) ((c)->ctr_buf.buf32[3-(n)])
 #else
 #define COUNTER(c, n) ((c)->counter ## n)
@@ -237,11 +239,13 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
   cipher->nr = rijndaelKeySetupEnc(cipher->rk, (const unsigned char*)key,
                                    key_bits);
 #endif
-  COUNTER(cipher, 0) = 0;
-  COUNTER(cipher, 1) = 0;
-  COUNTER(cipher, 2) = 0;
-  COUNTER(cipher, 3) = 0;
-#ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
+#ifdef USING_COUNTER_VARS
+  cipher->counter0 = 0;
+  cipher->counter1 = 0;
+  cipher->counter2 = 0;
+  cipher->counter3 = 0;
+#endif
+#ifdef USING_COUNTER_BUFS
   memset(cipher->ctr_buf.buf, 0, sizeof(cipher->ctr_buf.buf));
 #endif
 
@@ -262,12 +266,12 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
   tor_free(cipher);
 }
 
-#if defined(USE_RIJNDAEL_COUNTER_OPTIMIZATION) || defined(WORDS_BIGENDIAN)
-#define UPDATE_CTR_BUF(c, n)
-#else
+#if defined(USING_COUNTER_VARS) && defined(USING_COUNTER_BUFS)
 #define UPDATE_CTR_BUF(c, n) STMT_BEGIN                 \
   (c)->ctr_buf.buf32[3-(n)] = htonl((c)->counter ## n); \
   STMT_END
+#else
+#define UPDATE_CTR_BUF(c, n)
 #endif
 
 /** Encrypt <b>len</b> bytes from <b>input</b>, storing the result in
@@ -334,10 +338,12 @@ aes_set_counter(aes_cnt_cipher_t *cipher, u64 counter)
 void
 aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
 {
+#ifdef USING_COUNTER_VARS
   cipher->counter3 = ntohl(get_uint32(iv));
   cipher->counter2 = ntohl(get_uint32(iv+4));
   cipher->counter1 = ntohl(get_uint32(iv+8));
   cipher->counter0 = ntohl(get_uint32(iv+12));
+#endif
   cipher->pos = 0;
 #ifndef USE_RIJNDAEL_COUNTER_OPTIMIZATION
   memcpy(cipher->ctr_buf.buf, iv, 16);
