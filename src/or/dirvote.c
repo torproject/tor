@@ -1126,7 +1126,7 @@ dirvote_act(time_t now)
   if (!voting_schedule.voting_starts) {
     char *keys = list_v3_auth_ids();
     authority_cert_t *c = get_my_v3_authority_cert();
-    log_notice(LD_DIR, "Scheduling voting.  Known authority IDs are %s."
+    log_notice(LD_DIR, "Scheduling voting.  Known authority IDs are %s. "
                "Mine is %s.",
                keys, hex_str(c->cache_info.identity_digest, DIGEST_LEN));
     tor_free(keys);
