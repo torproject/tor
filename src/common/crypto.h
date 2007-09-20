@@ -135,11 +135,6 @@ int crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *env,
                                   char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 
-int crypto_cipher_encrypt_cbc(const char *key, char *to, size_t tolen,
-                              const char *from, size_t fromlen);
-int crypto_cipher_decrypt_cbc(const char *key, char *to, size_t tolen,
-                              const char *from, size_t fromlen);
-
 /* SHA-1 */
 int crypto_digest(char *digest, const char *m, size_t len);
 crypto_digest_env_t *crypto_new_digest_env(void);

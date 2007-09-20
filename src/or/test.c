@@ -3033,10 +3033,11 @@ test_util_mempool(void)
   smartlist_free(allocated);
 }
 
-/* Test AES-CBC encryption and decryption. */
+/* Test AES-CTR encryption and decryption with IV. */
 static void
-test_crypto_aes_cbc(void)
+test_crypto_aes_iv(void)
 {
+  crypto_cipher_env_t *cipher;
   char *plain, *encrypted1, *encrypted2, *decrypted1, *decrypted2;
   char plain_1[1], plain_15[15], plain_16[16], plain_17[17];
   char key1[16], key2[16];
@@ -3055,61 +3056,88 @@ test_crypto_aes_cbc(void)
   crypto_rand(plain_17, 17);
   key1[0] = key2[0] + 128; /* Make sure that contents are different. */
   /* Encrypt and decrypt with the same key. */
-  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 4095 + 1 + 16,
+  cipher = crypto_create_init_cipher(key1, 1);
+  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 4095,
                                              plain, 4095);
-  test_eq(encrypted_size, 4095 + 1 + 16);
-  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 4095 + 1,
+  crypto_free_cipher_env(cipher);
+  test_eq(encrypted_size, 16 + 4095);
+  cipher = crypto_create_init_cipher(key1, 0);
+  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 4095,
                                              encrypted1, encrypted_size);
+  crypto_free_cipher_env(cipher);
   test_eq(decrypted_size, 4095);
   test_memeq(plain, decrypted1, 4095);
   /* Encrypt a second time (with a new random initialization vector). */
-  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted2, 4095 + 1 + 16,
+  cipher = crypto_create_init_cipher(key1, 1);
+  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted2, 16 + 4095,
                                              plain, 4095);
-  test_eq(encrypted_size, 4095 + 1 + 16);
-  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted2, 4095 + 1,
+  crypto_free_cipher_env(cipher);
+  test_eq(encrypted_size, 16 + 4095);
+  cipher = crypto_create_init_cipher(key1, 0);
+  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted2, 4095,
                                              encrypted2, encrypted_size);
+  crypto_free_cipher_env(cipher);
   test_eq(decrypted_size, 4095);
   test_memeq(plain, decrypted2, 4095);
   test_memneq(encrypted1, encrypted2, encrypted_size);
   /* Decrypt with the wrong key. */
-  decrypted_size = crypto_cipher_decrypt_cbc(key2, decrypted2, 4095 + 1,
+  cipher = crypto_create_init_cipher(key2, 0);
+  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted2, 4095,
                                              encrypted1, encrypted_size);
+  crypto_free_cipher_env(cipher);
   test_memneq(plain, decrypted2, encrypted_size);
   /* Alter the initialization vector. */
   encrypted1[0] += 42;
-  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 4095 + 1,
+  cipher = crypto_create_init_cipher(key1, 0);
+  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 4095,
                                              encrypted1, encrypted_size);
+  crypto_free_cipher_env(cipher);
   test_memneq(plain, decrypted2, 4095);
   /* Special length case: 1. */
-  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 32,
+  cipher = crypto_create_init_cipher(key1, 1);
+  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 1,
                                              plain_1, 1);
-  test_eq(encrypted_size, 32);
-  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 16,
-                                             encrypted1, 32);
+  crypto_free_cipher_env(cipher);
+  test_eq(encrypted_size, 16 + 1);
+  cipher = crypto_create_init_cipher(key1, 0);
+  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 1,
+                                             encrypted1, encrypted_size);
+  crypto_free_cipher_env(cipher);
   test_eq(decrypted_size, 1);
   test_memeq(plain_1, decrypted1, 1);
   /* Special length case: 15. */
-  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 32,
+  cipher = crypto_create_init_cipher(key1, 1);
+  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 15,
                                              plain_15, 15);
-  test_eq(encrypted_size, 32);
-  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 16,
-                                             encrypted1, 32);
+  crypto_free_cipher_env(cipher);
+  test_eq(encrypted_size, 16 + 15);
+  cipher = crypto_create_init_cipher(key1, 0);
+  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 15,
+                                             encrypted1, encrypted_size);
+  crypto_free_cipher_env(cipher);
   test_eq(decrypted_size, 15);
   test_memeq(plain_15, decrypted1, 15);
   /* Special length case: 16. */
-  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 48,
+  cipher = crypto_create_init_cipher(key1, 1);
+  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 16,
                                              plain_16, 16);
-  test_eq(encrypted_size, 48);
-  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 32,
-                                             encrypted1, 48);
+  crypto_free_cipher_env(cipher);
+  test_eq(encrypted_size, 16 + 16);
+  cipher = crypto_create_init_cipher(key1, 0);
+  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 16,
+                                             encrypted1, encrypted_size);
   test_eq(decrypted_size, 16);
   test_memeq(plain_16, decrypted1, 16);
   /* Special length case: 17. */
-  encrypted_size = crypto_cipher_encrypt_cbc(key1, encrypted1, 48,
+  cipher = crypto_create_init_cipher(key1, 1);
+  encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 17,
                                              plain_17, 17);
-  test_eq(encrypted_size, 48);
-  decrypted_size = crypto_cipher_decrypt_cbc(key1, decrypted1, 32,
-                                             encrypted1, 48);
+  crypto_free_cipher_env(cipher);
+  test_eq(encrypted_size, 16 + 17);
+  cipher = crypto_create_init_cipher(key1, 0);
+  decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 17,
+                                             encrypted1, encrypted_size);
+  crypto_free_cipher_env(cipher);
   test_eq(decrypted_size, 17);
   test_memeq(plain_17, decrypted1, 17);
   /* Free memory. */
@@ -3155,7 +3183,7 @@ static struct {
   ENT(crypto),
   SUBENT(crypto, dh),
   SUBENT(crypto, s2k),
-  SUBENT(crypto, aes_cbc),
+  SUBENT(crypto, aes_iv),
   SUBENT(crypto, base32_decode),
   ENT(util),
   SUBENT(util, ip6_helpers),

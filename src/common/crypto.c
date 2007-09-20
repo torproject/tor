@@ -1077,15 +1077,17 @@ crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key)
   return 0;
 }
 
-/** DOCDOC */
+/** Generate an initialization vector for our AES-CTR cipher; store it
+ * in the first CIPHER_IV_LEN bytes of <b>iv_out</b>. */
 void
 crypto_cipher_generate_iv(char *iv_out)
 {
-  /* XXXX020 It's possible we want to get fancier here. */
   crypto_rand(iv_out, CIPHER_IV_LEN);
 }
 
-/** DOCDOC */
+/** Adjust the counter of <b>env</b> to point to the first byte of the block
+ * corresponding to the encryption of the CIPHER_IV_LEN bytes at
+ * <b>iv</b>.  */
 int
 crypto_cipher_set_iv(crypto_cipher_env_t *env, const char *iv)
 {
@@ -1161,7 +1163,6 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
   return 0;
 }
 
-
 /** Encrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the key in
  * <b>cipher</b> to the buffer in <b>to</b> of length
  * <b>tolen</b>. <b>tolen</b> must be at least <b>fromlen</b> plus
@@ -1180,6 +1181,8 @@ crypto_cipher_encrypt_with_iv(crypto_cipher_env_t *cipher,
   tor_assert(from);
   tor_assert(to);
 
+  if (fromlen < 1)
+    return -1;
   if (tolen < fromlen + CIPHER_IV_LEN)
     return -1;
 
@@ -1187,11 +1190,10 @@ crypto_cipher_encrypt_with_iv(crypto_cipher_env_t *cipher,
   if (crypto_cipher_set_iv(cipher, to)<0)
     return -1;
   crypto_cipher_encrypt(cipher, to+CIPHER_IV_LEN, from, fromlen);
-  crypto_free_cipher_env(cipher);
   return fromlen + CIPHER_IV_LEN;
 }
 
-/** Encrypt <b>fromlen</b> bytes (at least 1+CIPHER_IV_LEN) from <b>from</b>
+/** Decrypt <b>fromlen</b> bytes (at least 1+CIPHER_IV_LEN) from <b>from</b>
  * with the key in <b>cipher</b> to the buffer in <b>to</b> of length
  * <b>tolen</b>. <b>tolen</b> must be at least <b>fromlen</b> minus
  * CIPHER_IV_LEN bytes for the initialization vector. On success, return the
@@ -1209,7 +1211,7 @@ crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *cipher,
   tor_assert(from);
   tor_assert(to);
 
-  if (fromlen < CIPHER_IV_LEN)
+  if (fromlen <= CIPHER_IV_LEN)
     return -1;
   if (tolen < fromlen - CIPHER_IV_LEN)
     return -1;
@@ -1217,171 +1219,7 @@ crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *cipher,
   if (crypto_cipher_set_iv(cipher, from)<0)
     return -1;
   crypto_cipher_encrypt(cipher, to, from+CIPHER_IV_LEN, fromlen-CIPHER_IV_LEN);
-  crypto_free_cipher_env(cipher);
   return fromlen - CIPHER_IV_LEN;
-}
-
-#define AES_CIPHER_BLOCK_SIZE 16
-#define AES_IV_SIZE 16
-
-/** Encrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the
- * symmetric key <b>key</b> of 16 bytes length to <b>to</b> of length
- * <b>tolen</b> which needs to be <b>fromlen</b>, padded to the next 16
- * bytes, plus exactly 16 bytes for the initialization vector. On success,
- * return the number of bytes written, on failure, return -1.
- */
-int
-crypto_cipher_encrypt_cbc(const char *key, char *to, size_t tolen,
-                          const char *from, size_t fromlen)
-{
-
-  EVP_CIPHER_CTX ctx_msg, ctx_iv; /* cipher contexts for message and IV */
-  unsigned char iv[AES_IV_SIZE]; /* initialization vector */
-  int outlen, tmplen; /* length of encrypted strings (w/ and w/o final data) */
-
-  tor_assert(key);
-  tor_assert(to);
-  tor_assert(tolen >= fromlen + AES_IV_SIZE +
-                    (AES_CIPHER_BLOCK_SIZE - fromlen % AES_CIPHER_BLOCK_SIZE));
-  tor_assert(from);
-  tor_assert(fromlen > 0);
-
-  /* generate random initialization vector */
-  crypto_rand((char *)iv, AES_IV_SIZE);
-
-  /* initialize cipher context for the initialization vector */
-  EVP_CIPHER_CTX_init(&ctx_iv);
-
-  /* disable padding for encryption of initialization vector */
-  EVP_CIPHER_CTX_set_padding(&ctx_iv, 0);
-
-  /* set up cipher context for the initialization vector for encryption with
-   * cipher type AES-128 in ECB mode, default implementation, given key, and
-   * no initialization vector */
-  EVP_EncryptInit_ex(&ctx_iv, EVP_aes_128_ecb(), NULL, (unsigned char *)key,
-                     NULL);
-
-  /* encrypt initialization vector (no padding necessary) and write it to the
-   * first 16 bytes of the result */
-  if (!EVP_EncryptUpdate(&ctx_iv, (unsigned char *)to, &outlen, iv,
-                         AES_IV_SIZE)) {
-    crypto_log_errors(LOG_WARN, "encrypting initialization vector");
-    return -1;
-  }
-
-  /* clear all information from cipher context for the initialization vector
-   * and free up any allocated memory associated with it */
-  EVP_CIPHER_CTX_cleanup(&ctx_iv);
-
-  /* initialize cipher context for the message */
-  EVP_CIPHER_CTX_init(&ctx_msg);
-
-  /* set up cipher context for encryption with cipher type AES-128 in CBC mode,
-   * default implementation, given key, and initialization vector */
-  EVP_EncryptInit_ex(&ctx_msg, EVP_aes_128_cbc(), NULL, (unsigned char *)key,
-                     iv);
-
-  /* encrypt fromlen bytes from buffer from and write the encrypted version to
-   * buffer to */
-  if (!EVP_EncryptUpdate(&ctx_msg,
-                        ((unsigned char *)to) + AES_IV_SIZE, &outlen,
-                        (const unsigned char *)from, (int)fromlen)) {
-    crypto_log_errors(LOG_WARN, "encrypting");
-    return -1;
-  }
-
-  /* encrypt the final data */
-  if (!EVP_EncryptFinal_ex(&ctx_msg,
-                        ((unsigned char *)to) + AES_IV_SIZE + outlen,
-                        &tmplen)) {
-    crypto_log_errors(LOG_WARN, "encrypting the final data");
-    return -1;
-  }
-  outlen += tmplen;
-
-  /* clear all information from cipher context and free up any allocated memory
-   * associated with it */
-  EVP_CIPHER_CTX_cleanup(&ctx_msg);
-
-  /* return number of written bytes */
-  return outlen + AES_IV_SIZE;
-}
-
-/** Decrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the
- * symmetric key <b>key</b> of 16 bytes length to <b>to</b> of length
- * <b>tolen</b> which may be <b>fromlen</b> minus 16 for the initialization
- * vector (the size of padding cannot be determined in advance). On success,
- * return the number of bytes written, on failure (NOT including providing
- * the wrong key, which occasionally returns the correct length!), return -1.
- */
-int
-crypto_cipher_decrypt_cbc(const char *key, char *to, size_t tolen,
-                          const char *from, size_t fromlen)
-{
-  EVP_CIPHER_CTX ctx_msg, ctx_iv; /* cipher contexts for message and IV */
-  unsigned char iv[AES_IV_SIZE]; /* initialization vector */
-  int outlen, tmplen; /* length of decrypted strings (w/ and wo/ final data) */
-
-  tor_assert(key);
-  tor_assert(to);
-  tor_assert(tolen >= fromlen - AES_IV_SIZE);
-  tor_assert(from);
-  tor_assert(fromlen > 0);
-
-  /* initialize cipher context for the initialization vector */
-  EVP_CIPHER_CTX_init(&ctx_iv);
-
-  /* disable padding for decryption of initialization vector */
-  EVP_CIPHER_CTX_set_padding(&ctx_iv, 0);
-
-  /* set up cipher context for the initialization vector for decryption with
-   * cipher type AES-128 in ECB mode, default implementation, given key, and
-   * no initialization vector */
-  EVP_DecryptInit_ex(&ctx_iv, EVP_aes_128_ecb(), NULL, (unsigned char *)key,
-                     NULL);
-
-  /* decrypt initialization vector (is not padded) */
-  if (!EVP_DecryptUpdate(&ctx_iv, iv, &outlen, (const unsigned char *)from,
-                         AES_IV_SIZE)) {
-    crypto_log_errors(LOG_WARN, "decrypting initialization vector");
-    return -1;
-  }
-
-  /* clear all information from cipher context for the initialization vector
-   * and free up any allocated memory associate with it */
-  EVP_CIPHER_CTX_cleanup(&ctx_iv);
-
-  /* initialize cipher context for the message */
-  EVP_CIPHER_CTX_init(&ctx_msg);
-
-  /* set up cipher context for decryption with cipher type AES-128 in CBC mode,
-   * default implementation, given key, and initialization vector */
-  EVP_DecryptInit_ex(&ctx_msg, EVP_aes_128_cbc(), NULL, (unsigned char *)key,
-                     iv);
-
-  /* decrypt fromlen-16 bytes from buffer from and write the decrypted version
-   * to buffer to */
-  if (!EVP_DecryptUpdate(&ctx_msg, (unsigned char *)to, &outlen,
-                        ((const unsigned char *)from) + AES_IV_SIZE,
-                        (int)fromlen - AES_IV_SIZE)) {
-    crypto_log_errors(LOG_INFO, "decrypting");
-    return -1;
-  }
-
-  /* decrypt the final data */
-  if (!EVP_DecryptFinal_ex(&ctx_msg, ((unsigned char *)to) + outlen,
-                           &tmplen)) {
-    crypto_log_errors(LOG_INFO, "decrypting the final data");
-    return -1;
-  }
-  outlen += tmplen;
-
-  /* clear all information from cipher context and free up any allocated memory
-   * associate with it */
-  EVP_CIPHER_CTX_cleanup(&ctx_msg);
-
-  /* return number of written bytes */
-  return outlen;
 }
 
 /* SHA-1 */
