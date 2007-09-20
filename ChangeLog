@@ -67,6 +67,8 @@ Changes in version 0.2.0.7-alpha - 2007-09-21
       the counter never exceeded 2^68.  When the counter can be set
       arbitrarily as an IV (as it is by Karsten's new hidden services code),
       this assumption no longer holds.
+    - Resume listing "AUTHORITY" flag for authorities in network status.
+      Bugfix on 0.2.0.3-alpha; reported by Alex de Joode.
 
   o Code simplifications and refactoring:
     - Revamp file-writing logic so we don't need to have the entire contents
