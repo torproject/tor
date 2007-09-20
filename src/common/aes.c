@@ -118,6 +118,7 @@ static int rijndaelKeySetupEnc(u32 rk[/*4*(Nr + 1)*/],
                                const u8 cipherKey[], int keyBits);
 #ifdef USE_RIJNDAEL_COUNTER_OPTIMIZATION
 static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr,
+                            u32 ctr3, u32 ctr2,
                             u32 ctr1, u32 ctr0, u8 ct[16]);
 #else
 static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr,
