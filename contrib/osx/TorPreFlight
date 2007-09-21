@@ -1,6 +1,5 @@
 #!/bin/sh
 # TorPreFlight is invoked before the install begins
-TMPFILE=`mktemp /tmp/TorSavedMe.tgz.XXXXXXXXXXXXX` 
 
 # Figure out where Tor is installed
 if [ -f /Library/StartupItems/Tor/Tor.loc ]; then
@@ -17,14 +16,8 @@ fi
 
 # Backup all of Tor, just in case
 if [ -d $TORPATH ]; then
-	tar zcf ${TMPFILE} ${TORPATH}/var/lib/tor ${TORPATH}/torrc ${PRIVOXYPATH}/config ${PRIVOXYPATH}/user.action
+  cp ${TORPATH}/torrc ${TORPATH}/torrc.installer-saved
+  cp ${PRIVOXYPATH}/config ${PRIVOXYPATH}/config.installer-saved
+  cp ${PRIVOXYPATH}/user.action ${PRIVOXYPATH}/user.action.installer-saved
 fi
 
-# Remove Tor and everything to do with it
-if [ -f ${TORPATH}/uninstall_tor_bundle.sh ]; then
-	${TORPATH}/uninstall_tor_bundle.sh
-else
-	$PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh
-fi
-
-# This is complete, we have a fresh system on which to install Tor

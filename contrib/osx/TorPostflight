@@ -82,13 +82,6 @@ if [ -f $PACKAGE_PATH/Contents/Resources/package_list.txt ]; then
    cp $PACKAGE_PATH/Contents/Resources/package_list.txt $TARGET/package_list.txt
 fi
 
-# If the pre-install script did it's thing, it should have saved the
-# config and server keys; put these back and leave for save keeping
-TORBACKUP=`ls -rt /tmp/TorSavedMe*| tail -1`
-if [ -f ${TORBACKUP} ]; then
-   tar zxf ${TORBACKUP} -C /
-fi
-
 if [ -d /Library/StartupItems/Tor ]; then
    rm -f /Library/StartupItems/Tor/Tor.loc
    echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
