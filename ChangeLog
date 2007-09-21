@@ -3,6 +3,14 @@ Changes in version 0.2.0.7-alpha - 2007-09-21
     - Set up moria1 and tor26 as the first v3 directory authorities. See
       doc/spec/dir-spec.txt for details on the new directory design.
 
+  o Major features (bridges):
+    - Make "UpdateBridgesFromAuthority" torrc option work: when bridge
+      users configure that and specify a bridge with an identity
+      fingerprint, now they will lookup the bridge descriptor at the
+      default bridge authority via a one-hop tunnel, but once circuits
+      are established they will switch to a three-hop tunnel for later
+      connections to the bridge authority.
+
   o Minor features (security):
     - As a client, do not believe any server that tells us that any address
       maps to an internal address space.

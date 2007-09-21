@@ -2927,6 +2927,9 @@ fetch_bridge_descriptors(time_t now)
       ask_bridge_directly = tor_digest_is_zero(bridge->identity) ||
                             !options->UpdateBridgesFromAuthority ||
                             !num_bridge_auths;
+      log_debug(LD_DIR, "ask_bridge_directly=%d (%d, %d, %d)",
+                ask_bridge_directly, tor_digest_is_zero(bridge->identity),
+                !options->UpdateBridgesFromAuthority, !num_bridge_auths);
 
       if (ask_bridge_directly &&
           !fascist_firewall_allows_address_or(bridge->addr, bridge->port)) {
@@ -2961,7 +2964,7 @@ fetch_bridge_descriptors(time_t now)
         log_info(LD_DIR, "Fetching bridge info '%s' from bridge authority.",
                  resource);
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                ROUTER_PURPOSE_BRIDGE, resource, 1);
+                ROUTER_PURPOSE_BRIDGE, resource, 0);
       }
     });
 }

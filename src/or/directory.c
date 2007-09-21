@@ -49,7 +49,8 @@ static void dir_networkstatus_download_failed(smartlist_t *failed,
                                               int status_code);
 static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int status_code,
-                                           int was_extrainfo);
+                                           int was_extrainfo,
+                                           int was_descriptor_digests);
 static void note_request(const char *key, size_t bytes);
 
 /********* START VARIABLES **********/
@@ -78,8 +79,8 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 {
   if (get_options()->AllDirActionsPrivate)
     return 1;
-  if (router_purpose == ROUTER_PURPOSE_BRIDGE)
-    return 1; /* if we have to ask, better make it anonymous */
+  if (router_purpose == ROUTER_PURPOSE_BRIDGE && has_completed_circuit)
+    return 1; /* if no circuits yet, we may need this info to bootstrap. */
   if (dir_purpose == DIR_PURPOSE_FETCH_DIR ||
       dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
       dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
@@ -307,37 +308,39 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   if (!options->FetchServerDescriptors && type != HIDSERV_AUTHORITY)
     return;
 
-  if (!get_via_tor && options->UseBridges) {
-    /* want to ask a running bridge for which we have a descriptor. */
-    routerinfo_t *ri = choose_random_entry(NULL);
-    if (ri) {
-      directory_initiate_command(ri->address, ri->addr,
-                                 ri->or_port, 0,
-                                 1, ri->cache_info.identity_digest,
-                                 dir_purpose,
-                                 router_purpose,
-                                 0, resource, NULL, 0);
-    } else
-      log_notice(LD_DIR, "Ignoring directory request, since no bridge "
-                         "nodes are available yet.");
-    return;
-  } else if (!get_via_tor) {
-    if (prefer_authority) {
-      /* only ask authdirservers, and don't ask myself */
-      rs = router_pick_trusteddirserver(type, 1, 1,
-                                        retry_if_no_servers);
-    }
-    if (!rs) {
-      /* anybody with a non-zero dirport will do */
-      rs = router_pick_directory_server(1, 1, type,
-                                        retry_if_no_servers);
-      if (!rs) {
-        log_info(LD_DIR, "No router found for %s; falling back to "
-                 "dirserver list.", dir_conn_purpose_to_string(dir_purpose));
+  if (!get_via_tor) {
+    if (options->UseBridges && type != BRIDGE_AUTHORITY) {
+      /* want to ask a running bridge for which we have a descriptor. */
+      routerinfo_t *ri = choose_random_entry(NULL);
+      if (ri) {
+        directory_initiate_command(ri->address, ri->addr,
+                                   ri->or_port, 0,
+                                   1, ri->cache_info.identity_digest,
+                                   dir_purpose,
+                                   router_purpose,
+                                   0, resource, NULL, 0);
+      } else
+        log_notice(LD_DIR, "Ignoring directory request, since no bridge "
+                           "nodes are available yet.");
+      return;
+    } else {
+      if (prefer_authority || type == BRIDGE_AUTHORITY) {
+        /* only ask authdirservers, and don't ask myself */
         rs = router_pick_trusteddirserver(type, 1, 1,
                                           retry_if_no_servers);
-        if (!rs)
-          get_via_tor = 1; /* last resort: try routing it via Tor */
+      }
+      if (!rs && type != BRIDGE_AUTHORITY) {
+        /* anybody with a non-zero dirport will do */
+        rs = router_pick_directory_server(1, 1, type,
+                                          retry_if_no_servers);
+        if (!rs) {
+          log_info(LD_DIR, "No router found for %s; falling back to "
+                   "dirserver list.", dir_conn_purpose_to_string(dir_purpose));
+          rs = router_pick_trusteddirserver(type, 1, 1,
+                                            retry_if_no_servers);
+          if (!rs)
+            get_via_tor = 1; /* last resort: try routing it via Tor */
+        }
       }
     }
   } else { /* get_via_tor */
@@ -1342,6 +1345,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     int was_ei = conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO;
     smartlist_t *which = NULL;
     int n_asked_for = 0;
+    int descriptor_digests = conn->requested_resource &&
+                             !strcmpstart(conn->requested_resource,"d/");
     log_info(LD_DIR,"Received %s (size %d) from server '%s:%d'",
              was_ei ? "extra server info" : "server info",
              (int)body_len, conn->_base.address, conn->_base.port);
@@ -1350,9 +1355,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     else
       note_request(was_compressed?"dl/server.z":"dl/server", orig_len);
     if (conn->requested_resource &&
-        !strcmpstart(conn->requested_resource,"d/")) {
+        (!strcmpstart(conn->requested_resource,"d/") ||
+         !strcmpstart(conn->requested_resource,"fp/"))) {
       which = smartlist_create();
-      dir_split_resource_into_fingerprints(conn->requested_resource+2,
+      dir_split_resource_into_fingerprints(conn->requested_resource +
+                                             (descriptor_digests ? 2 : 3),
                                            which, NULL, 0, 0);
       n_asked_for = smartlist_len(which);
     }
@@ -1370,7 +1377,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       if (!which) {
         connection_dir_download_routerdesc_failed(conn);
       } else {
-        dir_routerdesc_download_failed(which, status_code, was_ei);
+        dir_routerdesc_download_failed(which, status_code,
+                                       was_ei, descriptor_digests);
         SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
         smartlist_free(which);
       }
@@ -1391,10 +1399,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                     get_options()->UseBridges)))) {
       /* as we learn from them, we remove them from 'which' */
       if (was_ei) {
-        router_load_extrainfo_from_string(body, NULL, SAVED_NOWHERE, which);
+        router_load_extrainfo_from_string(body, NULL, SAVED_NOWHERE, which,
+                                          descriptor_digests);
       } else {
         router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
-                                        conn->router_purpose);
+                               descriptor_digests, conn->router_purpose);
         directory_info_has_arrived(now, 0);
       }
     }
@@ -1403,7 +1412,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                n_asked_for-smartlist_len(which), n_asked_for,
                conn->_base.address, (int)conn->_base.port);
       if (smartlist_len(which)) {
-        dir_routerdesc_download_failed(which, status_code, was_ei);
+        dir_routerdesc_download_failed(which, status_code,
+                                       was_ei, descriptor_digests);
       }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
@@ -2527,15 +2537,19 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
 }
 
 /** Called when one or more routerdesc (or extrainfo, if <b>was_extrainfo</b>)
- * fetches have failed (with uppercase fingerprints listed in
- * <b>failed</b>). */
+ * fetches have failed (with uppercase fingerprints listed in <b>failed</b>,
+ * either as descriptor digests or as identity digests based on
+ * <b>was_descriptor_digests</b>).
+ */
 static void
 dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
-                               int was_extrainfo)
+                               int was_extrainfo, int was_descriptor_digests)
 {
   char digest[DIGEST_LEN];
   time_t now = time(NULL);
   int server = server_mode(get_options()) && get_options()->DirPort;
+  if (!was_descriptor_digests)
+    return; /* FFFF should implement this someday */
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
     download_status_t *dls = NULL;

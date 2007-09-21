@@ -724,11 +724,11 @@ router_reload_router_list_impl(desc_store_t *store)
     if (extrainfo)
       router_load_extrainfo_from_string(store->mmap->data,
                                         store->mmap->data+store->mmap->size,
-                                        SAVED_IN_CACHE, NULL);
+                                        SAVED_IN_CACHE, NULL, 0);
     else
       router_load_routers_from_string(store->mmap->data,
                                       store->mmap->data+store->mmap->size,
-                                      SAVED_IN_CACHE, NULL,
+                                      SAVED_IN_CACHE, NULL, 0,
                                       ROUTER_PURPOSE_GENERAL);
   }
 
@@ -738,10 +738,11 @@ router_reload_router_list_impl(desc_store_t *store)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
   if (contents) {
     if (extrainfo)
-      router_load_extrainfo_from_string(contents, NULL,SAVED_IN_JOURNAL, NULL);
+      router_load_extrainfo_from_string(contents, NULL,SAVED_IN_JOURNAL,
+                                        NULL, 0);
     else
-      router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL, NULL,
-                                      ROUTER_PURPOSE_GENERAL);
+      router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL,
+                                      NULL, 0, ROUTER_PURPOSE_GENERAL);
     store->journal_len = (size_t) st.st_size;
     tor_free(contents);
   }
@@ -3128,14 +3129,18 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
  * the journal.
  *
  * If <b>requested_fingerprints</b> is provided, it must contain a list of
- * uppercased identity fingerprints.  Do not update any router whose
+ * uppercased fingerprints.  Do not update any router whose
  * fingerprint is not on the list; after updating a router, remove its
  * fingerprint from the list.
+ *
+ * If <b>descriptor_digests</b> is non-zero, then the requested_fingerprints
+ * are descriptor digests. Otherwise they are identity digests.
  */
 void
 router_load_routers_from_string(const char *s, const char *eos,
                                 saved_location_t saved_location,
                                 smartlist_t *requested_fingerprints,
+                                int descriptor_digests,
                                 uint8_t purpose)
 {
   smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
@@ -3151,9 +3156,11 @@ router_load_routers_from_string(const char *s, const char *eos,
 
   SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
   {
-    base16_encode(fp, sizeof(fp), ri->cache_info.signed_descriptor_digest,
-                  DIGEST_LEN);
     if (requested_fingerprints) {
+      base16_encode(fp, sizeof(fp), descriptor_digests ?
+                      ri->cache_info.signed_descriptor_digest :
+                      ri->cache_info.identity_digest,
+                    DIGEST_LEN);
       if (smartlist_string_isin(requested_fingerprints, fp)) {
         smartlist_string_remove(requested_fingerprints, fp);
       } else {
@@ -3195,7 +3202,8 @@ router_load_routers_from_string(const char *s, const char *eos,
 void
 router_load_extrainfo_from_string(const char *s, const char *eos,
                                   saved_location_t saved_location,
-                                  smartlist_t *requested_fingerprints)
+                                  smartlist_t *requested_fingerprints,
+                                  int descriptor_digests)
 {
   smartlist_t *extrainfo_list = smartlist_create();
   const char *msg;
@@ -3208,9 +3216,13 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   SMARTLIST_FOREACH(extrainfo_list, extrainfo_t *, ei, {
       if (requested_fingerprints) {
         char fp[HEX_DIGEST_LEN+1];
-        base16_encode(fp, sizeof(fp), ei->cache_info.signed_descriptor_digest,
+        base16_encode(fp, sizeof(fp), descriptor_digests ?
+                        ei->cache_info.signed_descriptor_digest :
+                        ei->cache_info.identity_digest,
                       DIGEST_LEN);
         smartlist_string_remove(requested_fingerprints, fp);
+        /* XXX020 We silently let people stuff us with extrainfos we
+         * didn't ask for. Is this a problem? -RD */
       }
       router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
     });
