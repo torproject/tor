@@ -190,8 +190,9 @@ int
 directories_have_accepted_server_descriptor(void)
 {
   smartlist_t *servers = router_get_trusted_dir_servers();
+  or_options_t *options = get_options();
   SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
-    if ((d->type & (V1_AUTHORITY|V2_AUTHORITY)) &&
+    if ((d->type & options->_PublishServerDescriptor) &&
         !d->has_accepted_serverdesc) {
       return 0;
     }
