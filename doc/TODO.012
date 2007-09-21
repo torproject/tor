@@ -22,4 +22,5 @@ Backport for 0.1.2.x once better tested:
   - some subset of r11229 (unexpected whitespace in malformed descriptors)?
   - r11287: Reject address mappings to internal addresses. (??)
   - r11499, r11500, r11501: hidserv hexdigests rather than nicknames
+  - r11548, the osx /tmp fix
 
