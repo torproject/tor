@@ -1088,7 +1088,8 @@ $Id$
    When a router posts a signed descriptor to a directory authority, the
    authority first checks whether it is well-formed and correctly
    self-signed.  If it is, the authority next verifies that the nickname
-   question is already assigned to a router with a different public key.
+   in question is not already assigned to a router with a different
+   public key.
    Finally, the authority MAY check that the router is not blacklisted
    because of its key, IP, or another reason.
 
