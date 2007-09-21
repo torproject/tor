@@ -48,17 +48,21 @@ Changes in version 0.2.0.7-alpha - 2007-09-21
      - Drop support for v1 rendezvous descriptors, since we never used
        them anyway, and the code has probably rotted by now. Based on
        patch from Karsten Loesing.
+     - On OSX, stop warning the user that kqueue support in libevent is
+      "experimental", since it seems to have worked fine for ages.
 
   o Major bugfixes:
     - Fix possible segfaults in functions called from
-      rend_process_relay_cell().
+      rend_process_relay_cell().  Bugfix on 0.1.2.x.
     - Hidden services were choosing introduction points uniquely by
       hexdigest, but when constructing the hidden service descriptor
       they merely wrote the (potentially ambiguous) nickname.
+      Bugfix on 0.1.2.x.
     - Clients now use the v2 intro format for hidden service
       connections: they specify their chosen rendezvous point by identity
       digest rather than by (potentially ambiguous) nickname. These
       changes could speed up hidden service connections dramatically.
+      Bugfix on 0.1.2.x.
     - Fix a bug that made servers send a "404 Not found" in response to
       attempts to fetch their server descriptor. This caused Tor servers
       to take many minutes to establish reachability for their DirPort,
@@ -67,24 +71,22 @@ Changes in version 0.2.0.7-alpha - 2007-09-21
   o Minor bugfixes:
     - When generating information telling us how to extend to a given
       router, do not try to include the nickname if it is absent.  Fixes
-      bug 467.
-    - On OSX, stop warning the user that kqueue support in libevent is
-      "experimental", since it seems to have worked fine for ages.
+      bug 467.  Bugfix on 0.2.0.3-alpha
     - Fix a user-triggerable segfault in expand_filename().  (There isn't
-      a way to trigger this remotely.)
+      a way to trigger this remotely.) Bugfix on 0.1.2.x.
     - Fix a memory leak when freeing incomplete requests from DNSPort.
-      (Found by Niels Provos with valgrind.)
+      (Found by Niels Provos with valgrind.)  Bugfix on 0.2.0.1-alpha
     - Don't try to access (or alter) the state file when running
       --list-fingerprint or --verify-config or --hash-password. (Resolves
-      bug 499.)
+      bug 499.)  Bugfix on 0.1.2.x
     - Servers used to decline to publish their DirPort if their
       BandwidthRate, RelayBandwidthRate, or MaxAdvertisedBandwidth
       were below a threshold. Now they only look at BandwidthRate and
-      RelayBandwidthRate.
+      RelayBandwidthRate.  Bugfix on ????
     - Remove an optimization in the AES counter-mode code that assumed that
       the counter never exceeded 2^68.  When the counter can be set
       arbitrarily as an IV (as it is by Karsten's new hidden services code),
-      this assumption no longer holds.
+      this assumption no longer holds.  Bugfix on 0.1.2.x.
     - Resume listing "AUTHORITY" flag for authorities in network status.
       Bugfix on 0.2.0.3-alpha; reported by Alex de Joode.
 
