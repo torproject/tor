@@ -1062,8 +1062,12 @@ dirvote_get_start_of_next_interval(time_t now, int interval)
 static struct {
   /** When do we generate and distribute our vote for this interval? */
   time_t voting_starts;
+  /** DOCDOC */
+  time_t fetch_missing_votes;
   /** When do we give up on getting more votes and generate a consensus? */
   time_t voting_ends;
+  /** DOCDOC */
+  time_t fetch_missing_signatures;
   /** When do we publish the consensus? */
   time_t interval_starts;
 
@@ -1076,7 +1080,7 @@ static struct {
   int have_built_consensus;
   /* True iff we have published our consensus. */
   int have_published_consensus;
-} voting_schedule = {0,0,0,0,0,0,0};
+} voting_schedule = {0,0,0,0,0,0,0,0,0};
 
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. */
@@ -1112,8 +1116,10 @@ dirvote_recalculate_timing(time_t now)
 
   tor_assert(end > start);
 
-  voting_schedule.voting_ends = start - vote_delay;
-  voting_schedule.voting_starts = start - vote_delay - dist_delay;
+  voting_schedule.fetch_missing_signatures = start - (dist_delay/2);
+  voting_schedule.voting_ends = start - dist_delay;
+  voting_schedule.fetch_missing_votes = start - dist_delay - (vote_delay/2);
+  voting_schedule.voting_starts = start - dist_delay - vote_delay;
 
   voting_schedule.discard_old_votes = start +
     ((end-start) - vote_delay - dist_delay)/2 ;
