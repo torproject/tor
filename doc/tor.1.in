@@ -379,18 +379,21 @@ you are reliable and high-bandwidth enough to be a useful server.)
 (Default: 0)
 .LP
 .TP
-\fBExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-A list of nodes to never use when building a circuit.
+\fBExcludeNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
+A list of identity fingerprints or nicknames of nodes to never use when
+building a circuit.
 .LP
 .TP
-\fBEntryNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-A list of preferred nodes to use for the first hop in the circuit.
+\fBEntryNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
+A list of identity fingerprints or nicknames of preferred nodes to use for the
+first hop in the circuit.
 These are treated only as preferences unless StrictEntryNodes (see
 below) is also set.
 .LP
 .TP
-\fBExitNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-A list of preferred nodes to use for the last hop in the circuit.
+\fBExitNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
+A list of identity fingerprints or nicknames of preferred nodes to use for the
+last hop in the circuit.
 These are treated only as preferences unless StrictExitNodes (see
 below) is also set.
 .LP
@@ -479,8 +482,9 @@ but never attach a new stream to a circuit that is too old.
 (Default: 10 minutes)
 .LP
 .TP
-\fBNodeFamily \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-The named Tor servers constitute a "family" of similar or co-administered
+\fBNodeFamily \fR\fInode\fR,\fInode\fR,\fI...\fP
+The Tor servers, defined by their identity fingerprints or nicknames,
+constitute a "family" of similar or co-administered
 servers, so never use any two of them in the same circuit. Defining a
 NodeFamily is only needed when a server doesn't list the family itself
 (with MyFamily). This option can be used multiple times.
@@ -497,12 +501,14 @@ close" on the same circuit.  Currently, two addresses are
 .\" .TP
 .LP
 .TP
-\fBRendNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-A list of preferred nodes to use for the rendezvous point, if possible.
+\fBRendNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
+A list of identity fingerprints or nicknames of preferred nodes to use for the
+rendezvous point, if possible.
 .LP
 .TP
-\fBRendExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-A list of nodes to never use when choosing a rendezvous point.
+\fBRendExcludeNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
+A list of identity fingerprints or nicknames of nodes to never use when
+choosing a rendezvous point.
 .LP
 .TP
 \fBSocksPort \fR\fIPORT\fP
@@ -531,9 +537,10 @@ unattached waiting for an appropriate circuit, before we fail it.
 (Default: 2 minutes.)
 .LP
 .TP
-\fBTestVia \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-A list of nodes to prefer for your middle hop when building testing
-circuits. This option is mainly for debugging reachability problems.
+\fBTestVia \fR\fInode\fR,\fInode\fR,\fI...\fP
+A list of identity fingerprints or nicknames of nodes to prefer for your middle
+hop when building testing circuits. This option is mainly for debugging
+reachability problems.
 .LP
 .TP
 \fBTrackHostExits \fR\fIhost\fR,\fI.domain\fR,\fI...\fR\fP
@@ -775,9 +782,9 @@ policy. See above entry on ExitPolicy. (Default: 1)
 If you have more than this number of onionskins queued for decrypt, reject new ones. (Default: 100)
 .LP
 .TP
-\fBMyFamily \fR\fInickname\fR,\fInickname\fR,\fI...\fP
+\fBMyFamily \fR\fInode\fR,\fInode\fR,\fI...\fP
 Declare that this Tor server is controlled or administered by a group
-or organization identical or similar to that of the other named servers.
+or organization identical or similar to that of the other servers, defined by their identity fingerprints or nicknames.
 When two servers both declare that they are in the same 'family', Tor clients
 will not use them in the same circuit.  (Each server only needs to list the
 other servers in its family; it doesn't need to list itself, but it won't hurt.)
@@ -1077,15 +1084,17 @@ multiple lines with the same VIRTPORT: when a user connects to that VIRTPORT,
 one of the TARGETs from those lines will be chosen at random.
 .LP
 .TP
-\fBHiddenServiceNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-If possible, use the specified nodes as introduction points for the hidden
-service. If this is left unset, Tor will be smart and pick some reasonable
-ones; most people can leave this unset.
+\fBHiddenServiceNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
+If possible, use the specified nodes, defined by their identity fingerprints or
+nicknames, as introduction points for the hidden service. If this is left
+unset, Tor will be smart and pick some reasonable ones; most people can leave
+this unset.
 .LP
 .TP
-\fBHiddenServiceExcludeNodes \fR\fInickname\fR,\fInickname\fR,\fI...\fP
-Do not use the specified nodes as introduction points for the hidden
-service. In normal use there is no reason to set this.
+\fBHiddenServiceExcludeNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
+Do not use the specified nodes, defined by their identity fingerprints or
+nicknames, as introduction points for the hidden service. In normal use there
+is no reason to set this.
 .LP
 .TP
 \fBPublishHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
