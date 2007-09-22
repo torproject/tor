@@ -574,6 +574,7 @@ directory_initiate_command(const char *address, uint32_t addr,
   if (!anonymized_connection && !want_to_tunnel) {
     /* then we want to connect directly */
 
+    /* XXX020 we should set dirconn_direct to 1 even if want_to_tunnel -RD */
     conn->dirconn_direct = 1;
     if (options->HttpProxy) {
       addr = options->HttpProxyAddr;
