@@ -297,6 +297,8 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       break;
     case DIR_PURPOSE_FETCH_STATUS_VOTE:
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+      type = V3_AUTHORITY;
+      break;
     case DIR_PURPOSE_FETCH_CONSENSUS:
     case DIR_PURPOSE_FETCH_CERTIFICATE:
       type = V3_AUTHORITY;
@@ -375,6 +377,32 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       directory_all_unreachable(time(NULL));
     }
   }
+}
+
+/** As directory_get_from_dirserver, but initiates a request to <i>every</i>
+ * directory authority other than ourself.  Only for use by authorities when
+ * searching for missing information while voting. */
+void
+directory_get_from_all_authorities(uint8_t dir_purpose,
+                                   uint8_t router_purpose,
+                                   const char *resource)
+{
+  tor_assert(dir_purpose == DIR_PURPOSE_FETCH_STATUS_VOTE ||
+             dir_purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES);
+
+  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                    trusted_dir_server_t *, ds,
+    {
+      routerstatus_t *rs;
+      if (router_digest_is_me(ds->digest))
+        continue;
+      if (!(ds->type & V3_AUTHORITY))
+        continue;
+      rs = &ds->fake_status.status;
+      /* XXXX020 should this ever tunnel via tor? */
+      directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
+                                              0, resource, NULL, 0);
+    });
 }
 
 /** Launch a new connection to the directory server <b>status</b> to
@@ -727,7 +755,7 @@ directory_send_command(dir_connection_t *conn,
       httpcommand = "GET";
       len = strlen(resource)+32;
       url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/status-vote/next/%s", resource);
+      tor_snprintf(url, len, "/tor/status-vote/next/%s.z", resource);
       break;
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
       tor_assert(!resource);
@@ -1318,7 +1346,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     /*XXXX020*/;
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
-    log_info(LD_DIR,"Received aurhority certificatess (size %d) from server "
+    log_info(LD_DIR,"Received authority certificatess (size %d) from server "
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
       log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
@@ -1336,10 +1364,38 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {
-    /*XXXX020*/;
+    const char *msg;
+    int st;
+    log_info(LD_DIR,"Got votes (size %d) from server %s:%d",
+             (int) body_len, conn->_base.address, conn->_base.port);
+    if (status_code != 200) {
+      log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
+             "Received http status code %d (%s) from server "
+             "'%s:%d' while fetching \"/tor/status-vote/next/%s.z\".",
+             status_code, escaped(reason), conn->_base.address,
+             conn->_base.port, conn->requested_resource);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      return -1;
+    }
+    if (!dirvote_add_vote(body, &msg, &st)) {
+      log_warn(LD_DIR, "Error adding retrieved vote: %s", msg);
+    } else {
+      log_info(LD_DIR, "Added vote(s) successfully.");
+    }
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {
-    /*XXXX020*/;
+    log_info(LD_DIR,"Got detached signatures (size %d) from server %s:%d",
+             (int) body_len, conn->_base.address, conn->_base.port);
+    if (status_code != 200) {
+      log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
+        "Received http status code %d (%s) from server "
+        "'%s:%d' while fetching \"/tor/status-vote/consensus-signatures.z\".",
+             status_code, escaped(reason), conn->_base.address,
+             conn->_base.port);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      return -1;
+    }
+    dirvote_add_signatures(body);
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||

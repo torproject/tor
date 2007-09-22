@@ -2769,6 +2769,9 @@ void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 void directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                                   const char *resource,
                                   int retry_if_no_servers);
+void directory_get_from_all_authorities(uint8_t dir_purpose,
+                                        uint8_t router_purpose,
+                                        const char *resource);
 void directory_initiate_command_routerstatus(routerstatus_t *status,
                                              uint8_t dir_purpose,
                                              uint8_t router_purpose,
@@ -3662,7 +3665,8 @@ void dump_distinct_digest_count(int severity);
 
 networkstatus_t *networkstatus_parse_from_string(const char *s);
 networkstatus_vote_t *networkstatus_parse_vote_from_string(const char *s,
-                                                           int is_vote);
+                                                          const char **eos_out,
+                                                          int is_vote);
 ns_detached_signatures_t *networkstatus_parse_detached_signatures(
                                           const char *s, const char *eos);
 

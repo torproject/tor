@@ -17,6 +17,10 @@ static int dirvote_add_signatures_to_pending_consensus(
                        const char *detached_signatures_body,
                        const char **msg_out);
 static char *list_v3_auth_ids(void);
+static void dirvote_fetch_missing_votes(void);
+static void dirvote_fetch_missing_signatures(void);
+
+/* XXXX020 lots of the functions here could be made static. Do so. */
 
 /* =====
  * Voting and consensus generation
@@ -641,7 +645,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   {
     networkstatus_vote_t *c;
-    if (!(c = networkstatus_parse_vote_from_string(result, 0))) {
+    if (!(c = networkstatus_parse_vote_from_string(result, NULL, 0))) {
       log_err(LD_BUG,"Generated a networkstatus consensus we couldn't "
               "parse.");
       tor_free(result);
@@ -686,7 +690,8 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
 }
 
 /** Given a v3 networkstatus consensus in <b>consensus</b>, check every
- * as-yet-unchecked signature on <b>consensus</b>.  Return 0 if there are
+ * as-yet-unchecked signature on <b>consensus</b>.  Return 1 if there is a
+ * signature from every recognized authority on it, 0 if there are
  * enough good signatures from recognized authorities on it, -1 if we might
  * get enough good signatures by fetching missing certificates, and -2
  * otherwise.  Log messages at INFO or WARN: if <b>warn</b> is over 1, warn
@@ -701,7 +706,8 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
   int n_bad = 0;
   int n_unknown = 0;
   int n_no_signature = 0;
-  int n_required = get_n_authorities(V3_AUTHORITY)/2 + 1;
+  int n_v3_authorities = get_n_authorities(V3_AUTHORITY);
+  int n_required = n_v3_authorities/2 + 1;
   smartlist_t *need_certs_from = smartlist_create();
   smartlist_t *unrecognized = smartlist_create();
   smartlist_t *missing_authorities = smartlist_create();
@@ -786,7 +792,9 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
   smartlist_free(need_certs_from);
   smartlist_free(missing_authorities);
 
-  if (n_good >= n_required)
+  if (n_good == n_v3_authorities)
+    return 1;
+  else if (n_good >= n_required)
     return 0;
   else if (n_good + n_missing_key >= n_required)
     return -1;
@@ -1076,11 +1084,15 @@ static struct {
 
   /* True iff we have generated and distributed our vote. */
   int have_voted;
+  /* DOCDOC */
+  int have_fetched_missing_votes;
   /* True iff we have built a consensus and sent the signatures around. */
   int have_built_consensus;
+  /* DOCDOC */
+  int have_fetched_missing_signatures;
   /* True iff we have published our consensus. */
   int have_published_consensus;
-} voting_schedule = {0,0,0,0,0,0,0,0,0};
+} voting_schedule = {0,0,0,0,0,0,0,0,0,0,0};
 
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. */
@@ -1143,7 +1155,12 @@ dirvote_act(time_t now)
     dirvote_perform_vote();
     voting_schedule.have_voted = 1;
   }
-  /* XXXX020 after a couple minutes here, start trying to fetch votes. */
+  if (voting_schedule.fetch_missing_votes < now &&
+      !voting_schedule.have_fetched_missing_votes) {
+    log_notice(LD_DIR, "Time to fetch any votes that we're missing.");
+    dirvote_fetch_missing_votes();
+    voting_schedule.have_fetched_missing_votes = 1;
+  }
   if (voting_schedule.voting_ends < now &&
       !voting_schedule.have_built_consensus) {
     log_notice(LD_DIR, "Time to compute a consensus.");
@@ -1151,6 +1168,12 @@ dirvote_act(time_t now)
     /* XXXX020 we will want to try again later if we haven't got enough
      * votes yet. */
     voting_schedule.have_built_consensus = 1;
+  }
+  if (voting_schedule.fetch_missing_signatures < now &&
+      !voting_schedule.have_fetched_missing_signatures) {
+    log_notice(LD_DIR, "Time to fetch any signatures that we're missing.");
+    dirvote_fetch_missing_signatures();
+    voting_schedule.have_fetched_missing_signatures = 1;
   }
   if (voting_schedule.interval_starts < now &&
       !voting_schedule.have_published_consensus) {
@@ -1216,6 +1239,53 @@ dirvote_perform_vote(void)
   log_notice(LD_DIR, "Vote posted.");
 }
 
+/** DOCDOC */
+static void
+dirvote_fetch_missing_votes(void)
+{
+  smartlist_t *missing_fps = smartlist_create();
+  char *resource;
+
+  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                    trusted_dir_server_t *, ds,
+    {
+      if ((ds->type & V3_AUTHORITY))
+        continue;
+      if (!dirvote_get_vote(ds->v3_identity_digest)) {
+        char *cp = tor_malloc(HEX_DIGEST_LEN+1);
+        base16_encode(cp, HEX_DIGEST_LEN+1, ds->v3_identity_digest,
+                      DIGEST_LEN);
+        smartlist_add(missing_fps, cp);
+      }
+    });
+
+  if (!smartlist_len(missing_fps)) {
+    smartlist_free(missing_fps);
+    return;
+  }
+  log_notice(LOG_NOTICE, "We're missing votes from %d authorities. Asking "
+             "every other authority for a copy.", smartlist_len(missing_fps));
+  resource = smartlist_join_strings(missing_fps, "+", 0, NULL);
+  directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE,
+                                     0, resource);
+  tor_free(resource);
+  SMARTLIST_FOREACH(missing_fps, char *, cp, tor_free(cp));
+  smartlist_free(missing_fps);
+}
+
+/** DOCDOC */
+static void
+dirvote_fetch_missing_signatures(void)
+{
+  if (!pending_consensus)
+    return;
+  if (networkstatus_check_consensus_signature(pending_consensus, -1) == 1)
+    return; /* we have a signature from everybody. */
+
+  directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES,
+                                     0, NULL);
+}
+
 /** Drop all currently pending votes, consensus, and detached signatures. */
 void
 dirvote_clear_pending_votes(void)
@@ -1271,6 +1341,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   networkstatus_voter_info_t *vi;
   trusted_dir_server_t *ds;
   pending_vote_t *pending_vote = NULL;
+  const char *end_of_vote = NULL;
+  int any_failed = 0;
   tor_assert(vote_body);
   tor_assert(msg_out);
   tor_assert(status_out);
@@ -1280,7 +1352,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     pending_vote_list = smartlist_create();
   *msg_out = NULL;
 
-  vote = networkstatus_parse_vote_from_string(vote_body, 1);
+ again:
+  vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote, 1);
   if (!vote) {
     *msg_out = "Unable to parse vote";
     goto err;
@@ -1325,7 +1398,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     goto err;
   }
 
-  /* Now see whether we already have a vote from this authority.*/
+  /* Now see whether we already h<ave a vote from this authority.*/
   SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
       if (! memcmp(v->vote->cert->cache_info.identity_digest,
                    vote->cert->cache_info.identity_digest,
@@ -1359,17 +1432,29 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
                                            vote->published);
   pending_vote->vote = vote;
   smartlist_add(pending_vote_list, pending_vote);
+
+  if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version "))
+    goto again;
+
+  if (any_failed)
+    goto err;
+
   if (!*status_out)
     *status_out = 200;
   *msg_out = "ok";
+
   return pending_vote;
  err:
+  any_failed = 1;
   if (vote)
     networkstatus_vote_free(vote);
   if (!*msg_out)
     *msg_out = "Error adding vote";
   if (!*status_out)
     *status_out = 400;
+
+  if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version "))
+    goto again;
   return NULL;
 }
 
@@ -1414,7 +1499,7 @@ dirvote_compute_consensus(void)
     log_warn(LD_DIR, "Couldn't generate a consensus at all!");
     goto err;
   }
-  consensus = networkstatus_parse_vote_from_string(consensus_body, 0);
+  consensus = networkstatus_parse_vote_from_string(consensus_body, NULL, 0);
   if (!consensus) {
     log_warn(LD_DIR, "Couldn't parse consensus we generated!");
     goto err;
@@ -1526,7 +1611,7 @@ dirvote_add_signatures_to_pending_consensus(
       ns_detached_signatures_t *sigs =
         networkstatus_parse_detached_signatures(new_detached, NULL);
       networkstatus_vote_t *v = networkstatus_parse_vote_from_string(
-                                                 pending_consensus_body, 0);
+                                             pending_consensus_body, NULL, 0);
       tor_assert(sigs);
       ns_detached_signatures_free(sigs);
       tor_assert(v);

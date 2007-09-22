@@ -1790,7 +1790,8 @@ networkstatus_parse_from_string(const char *s)
  * networkstatus consensus (if <b>is_vote</b> is false) from <b>s</b>, and
  * return the result.  Return NULL on failure. */
 networkstatus_vote_t *
-networkstatus_parse_vote_from_string(const char *s, int is_vote)
+networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
+                                     int is_vote)
 {
   smartlist_t *tokens = smartlist_create();
   smartlist_t *rs_tokens = NULL, *footer_tokens = NULL;
@@ -2026,7 +2027,10 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
 
   /* Parse footer; check signature. */
   footer_tokens = smartlist_create();
-  end_of_footer = s + strlen(s);
+  if ((end_of_footer = strstr(s, "\nnetwork-status-version ")))
+    ++end_of_footer;
+  else
+    end_of_footer = s + strlen(s);
   if (tokenize_string(s, end_of_footer, footer_tokens,
                       networkstatus_vote_footer_token_table)) {
     log_warn(LD_DIR, "Error tokenizing network-status vote footer.");
@@ -2091,6 +2095,9 @@ networkstatus_parse_vote_from_string(const char *s, int is_vote)
   /* XXXX020 enforce: vote must have at least one signature. */
 
   /* XXXX020 check dates for plausibility.  ??? */
+
+  if (eos_out)
+    *eos_out = end_of_footer;
 
   goto done;
  err:

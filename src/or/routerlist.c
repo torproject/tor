@@ -284,8 +284,8 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
   trusted_dirs_flush_certs_to_disk();
 
   if (consensus_waiting_for_certs) {
-    if (!networkstatus_check_consensus_signature(
-                                    consensus_waiting_for_certs, 0)) {
+    if (networkstatus_check_consensus_signature(
+                                    consensus_waiting_for_certs, 0)<0) {
       if (!networkstatus_set_current_consensus(
                                  consensus_waiting_for_certs_body, 0, 1)) {
         tor_free(consensus_waiting_for_certs_body);
@@ -4081,7 +4081,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   networkstatus_vote_t *c;
   int r;
   /* Make sure it's parseable. */
-  c = networkstatus_parse_vote_from_string(consensus, 0);
+  c = networkstatus_parse_vote_from_string(consensus, NULL, 0);
   if (!c) {
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
     return -1;

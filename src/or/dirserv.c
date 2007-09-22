@@ -2198,7 +2198,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
 
   {
     networkstatus_vote_t *v;
-    if (!(v = networkstatus_parse_vote_from_string(status, 1))) {
+    if (!(v = networkstatus_parse_vote_from_string(status, NULL, 1))) {
       log_err(LD_BUG,"Generated a networkstatus vote we couldn't parse: "
               "<<%s>>", status);
       goto err;

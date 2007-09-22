@@ -2520,7 +2520,7 @@ test_v3_networkstatus(void)
   /* dump the vote and try to parse it. */
   v1_text = format_networkstatus_vote(sign_skey_1, vote);
   test_assert(v1_text);
-  v1 = networkstatus_parse_vote_from_string(v1_text, 1);
+  v1 = networkstatus_parse_vote_from_string(v1_text, NULL, 1);
   test_assert(v1);
 
   /* Make sure the parsed thing was right. */
@@ -2604,7 +2604,7 @@ test_v3_networkstatus(void)
   /* generate and parse. */
   v2_text = format_networkstatus_vote(sign_skey_2, vote);
   test_assert(v2_text);
-  v2 = networkstatus_parse_vote_from_string(v2_text, 1);
+  v2 = networkstatus_parse_vote_from_string(v2_text, NULL, 1);
   test_assert(v2);
   /* Check that flags come out right.*/
   cp = smartlist_join_strings(v2->known_flags, ":", 0, NULL);
@@ -2639,7 +2639,7 @@ test_v3_networkstatus(void)
 
   v3_text = format_networkstatus_vote(sign_skey_3, vote);
   test_assert(v3_text);
-  v3 = networkstatus_parse_vote_from_string(v3_text, 1);
+  v3 = networkstatus_parse_vote_from_string(v3_text, NULL, 1);
   test_assert(v3);
 
   /* Compute a consensus as voter 3. */
@@ -2650,7 +2650,7 @@ test_v3_networkstatus(void)
                                                    cert3->identity_key,
                                                    sign_skey_3);
   test_assert(consensus_text);
-  con = networkstatus_parse_vote_from_string(consensus_text, 0);
+  con = networkstatus_parse_vote_from_string(consensus_text, NULL, 0);
   test_assert(con);
   //log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
   //           v1_text, v2_text, v3_text);
@@ -2759,8 +2759,8 @@ test_v3_networkstatus(void)
                                                       sign_skey_1);
     test_assert(consensus_text2);
     test_assert(consensus_text3);
-    con2 = networkstatus_parse_vote_from_string(consensus_text2, 0);
-    con3 = networkstatus_parse_vote_from_string(consensus_text3, 0);
+    con2 = networkstatus_parse_vote_from_string(consensus_text2, NULL, 0);
+    con3 = networkstatus_parse_vote_from_string(consensus_text3, NULL, 0);
     test_assert(con2);
     test_assert(con3);
 

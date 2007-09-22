@@ -1,3 +1,8 @@
+Changes in version 0.2.0.8-alpha - 2007-??-??
+  o Major features (directory authorities):
+    - When an authority is missing votes or signatures, it now tries to fetch
+      them.
+
 Changes in version 0.2.0.7-alpha - 2007-09-21
   o New directory authorities:
     - Set up moria1 and tor26 as the first v3 directory authorities. See
