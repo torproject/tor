@@ -209,14 +209,10 @@ P   - Can we switch to polipo?  Please?
 P   - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
-P - Figure out why openssl 0.9.8e "make test" fails at sha256t test.
-P - Figure out if including RSA and IDEA are bad for Tor from a legal
-     perspective
 P - Create packages for Nokia 800, requested by Chris Soghoian
 P - Consider creating special Tor-Polipo-Vidalia test packages,
     requested by Dmitri Vitalev
   - Get Vidalia supporting protocolinfo and using auth by default.
-  - Try to get newer Torbuttons into the windows bundle.
 
 Nice-to-have items for 0.2.0.x, time permitting:
   - Proposals
@@ -520,20 +516,20 @@ P - document http://wiki.noreply.org/noreply/TheOnionRouter/TransparentProxy on 
 P - figure out why x86_64 won't build rpms from tor.spec
 P - figure out spec files for bundles of vidalia-tor-polipo
 P - figure out polipo install scripts for bundles of vidalia-tor-polipo on osx, win32
-P - evaluate https://sourceforge.net/projects/kleanup/
-P - evaluate TorK
 P - figure out selinux policy for tor
 P - change packaging system to more automated and specific for each
      platform, suggested by Paul Wouter
+P - Setup repos for redhat and suse rpms & start signing the rpms the
+    way package management apps prefer
 
 Website:
-  - tor-in-the-media page
-  . more pictures from ren. he wants to describe the tor handshake
+P  - tor-in-the-media page
+  - more pictures from ren. he wants to describe the tor handshake
   - Figure out licenses for website material.
-  - and remove home and make the "Tor" picture be the link to home.
-  - put the logo on the website, in source form, so people can put it on
+P  - and remove home and make the "Tor" picture be the link to home.
+P  - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
-  - put the source image for the stickers on the website, so people can
+P  - put the source image for the stickers on the website, so people can
     print their own
 R - make a page with the hidden service diagrams.
   - ask Jan to be the translation coordinator? add to volunteer page.

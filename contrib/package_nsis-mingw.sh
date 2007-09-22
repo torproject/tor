@@ -21,8 +21,6 @@ mkdir win_tmp/tmp
 
 cp src/or/tor.exe win_tmp/bin/
 cp src/tools/tor-resolve.exe win_tmp/bin/
-cp /usr/local/ssl/lib/libcrypto.a win_tmp/bin/
-cp /usr/local/ssl/lib/libssl.a win_tmp/bin/
 cp contrib/tor.ico win_tmp/bin/
 
 # YOU must copy torbutton xpi into the contrib dir
