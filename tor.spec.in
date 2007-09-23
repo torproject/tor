@@ -191,7 +191,8 @@ for high-stakes anonymity.
 %__install -p -m 755 contrib/torctl ${RPM_BUILD_ROOT}%{_bindir}
 
 # Set up config file; "sample" file implements a basic user node.
-%__install -p -m 644 ${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc.sample ${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc
+%__install -p -m 644
+%${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc.sample %${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc.sample
 
 # Install the logrotate control file.
 %__mkdir_p -m 755 ${RPM_BUILD_ROOT}%{_sysconfdir}/logrotate.d
