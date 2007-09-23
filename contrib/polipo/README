@@ -1,0 +1,25 @@
+These are hacks to get polipo to work with Tor.  Someday, they will be
+commited upstream to the real polipo codebase.  They need some work:
+  - Merge the three makefiles into one with specific builds such as "make
+    dist-osx" or "make dist-win32"
+  - Configure the options for tor in polipo config, just leave them
+    commented out for easy activation.
+  - Work out better polipo config options for Tor.  
+
+Instructions for building polipo under mingw32 for Windows:
+1) Copy Makefile.mingw over Makefile.
+2) Run 'make'. 
+
+You should have a polipo.exe in the current directory.
+
+If you want to build an installer using the Nullsoft Installer, install
+the NSI Compiler.  In Windows Explorer, navigate to the directory in
+which you placed polipo-mingw.nsi.  Right click on polipo-mingw.nsi and
+choose Compile NSIS Script.  You'll then create a polipo installer.
+
+Instructions for building a polipo universal binary package under OSX Tiger:
+1) Copy Makefile.osx over Makefile.
+2) Run 'make'.
+3) Copy the contents of this directory into a directory named "contrib".
+4) Run './contrib/package.sh'
+5) You should have a Polipo-version.dmg ready for installation.
