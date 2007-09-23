@@ -1,0 +1,11 @@
+{
+  Description     = "Polipo";
+  Provides        = ("Polipo");
+  Requires        = ("NetworkExtensions","Resolver");
+  OrderPreference = "Late";
+  Messages =
+  {
+    start = "Starting Polipo";
+    stop  = "Stopping Polipo";
+  };
+}
