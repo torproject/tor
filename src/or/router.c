@@ -708,7 +708,7 @@ router_orport_found_reachable(void)
       return;
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
-                                me->address, me->dir_port);
+                                me->address, me->or_port);
   }
 }
 

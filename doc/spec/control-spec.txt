@@ -1188,7 +1188,7 @@ $Id$
        {Controllers should log bugs, but shouldn't annoy the user in case a
        bug appears frequently.}
 
-     CLOCK_SKEWED
+     CLOCK_SKEW
        SKEW="+" / "-" SECONDS
        SOURCE="DIRSERV:IP:Port" / "NETWORKSTATUS:IP:PORT"
          If "SKEW" is present, it's an estimate of how far we are from the

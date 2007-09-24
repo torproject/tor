@@ -3,6 +3,11 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - When an authority is missing votes or signatures, it now tries to fetch
       them.
 
+  o Minor bugfixes (controller):
+    - When sending a status event to the controller telling it that an
+      OR address is readable, set the port correctly.  (Previously we
+      were reporting the dir port.)  Bugfix on 0.1.2.x.
+
 Changes in version 0.2.0.7-alpha - 2007-09-21
   o New directory authorities:
     - Set up moria1 and tor26 as the first v3 directory authorities. See
