@@ -239,7 +239,6 @@ init_keys(void)
   char digest[20];
   char *cp;
   or_options_t *options = get_options();
-  or_state_t *state = get_or_state();
 
   if (!key_lock)
     key_lock = tor_mutex_new();
@@ -284,15 +283,21 @@ init_keys(void)
   prkey = init_key_from_file(keydir);
   if (!prkey) return -1;
   set_onion_key(prkey);
-  if (state->LastRotatedOnionKey > 100) { /* allow for some parsing slop. */
-    onionkey_set_at = state->LastRotatedOnionKey;
-  } else {
-    /* We have no LastRotatedOnionKey set; either we just created the key
-     * or it's a holdover from 0.1.2.4-alpha-dev or earlier.  In either case,
-     * start the clock ticking now so that we will eventually rotate it even
-     * if we don't stay up for a full MIN_ONION_KEY_LIFETIME. */
-    state->LastRotatedOnionKey = onionkey_set_at = time(NULL);
-    or_state_mark_dirty(state, options->AvoidDiskWrites ? time(NULL)+3600 : 0);
+
+  if (options->command == CMD_RUN_TOR) {
+    /* Only mess with the state file if we're actually running Tor */
+    or_state_t *state = get_or_state();
+    if (state->LastRotatedOnionKey > 100) { /* allow for some parsing slop. */
+      onionkey_set_at = state->LastRotatedOnionKey;
+    } else {
+      /* We have no LastRotatedOnionKey set; either we just created the key
+       * or it's a holdover from 0.1.2.4-alpha-dev or earlier.  In either case,
+       * start the clock ticking now so that we will eventually rotate it even
+       * if we don't stay up for a full MIN_ONION_KEY_LIFETIME. */
+      state->LastRotatedOnionKey = onionkey_set_at = time(NULL);
+      or_state_mark_dirty(state,
+                          options->AvoidDiskWrites ? time(NULL)+3600 : 0);
+    }
   }
 
   tor_snprintf(keydir,sizeof(keydir),"%s/keys/secret_onion_key.old",datadir);

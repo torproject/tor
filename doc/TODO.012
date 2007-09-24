@@ -11,7 +11,7 @@ Backport items for 0.1.2:
   o r11138: PROTOCOLINFO support.
   D r11141: CookieAuthFile and CookieAuthFileGroupReadable.
   - r11166: Don't believe future dates from the state file.
-  - r11566: make r11438 not actually break things.
+  o r11566: make r11438 not actually break things.
 
 
 Backport for 0.1.2.x once better tested:
