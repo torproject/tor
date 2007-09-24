@@ -8,6 +8,11 @@ Changes in version 0.1.2.18 - 2007-??-??
       --list-fingerprint or --verify-config or --hash-password. (Resolves
       bug 499.)
 
+  o Minor bugfixes (controller):
+    - When sending a status event to the controller telling it that an
+      OR address is readable, set the port correctly.  (Previously we
+      were reporting the dir port.)
+
 
 Changes in version 0.1.2.17 - 2007-08-30
   o Major bugfixes (security):
