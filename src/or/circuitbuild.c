@@ -1723,9 +1723,11 @@ extend_info_from_router(routerinfo_t *r)
   extend_info_t *info;
   tor_assert(r);
   info = tor_malloc_zero(sizeof(extend_info_t));
-  strlcpy(info->nickname, r->nickname, sizeof(info->nickname));
+  if (r->nickname)
+    strlcpy(info->nickname, r->nickname, sizeof(info->nickname));
   memcpy(info->identity_digest, r->cache_info.identity_digest, DIGEST_LEN);
-  info->onion_key = crypto_pk_dup_key(r->onion_pkey);
+  if (r->onion_pkey)
+    info->onion_key = crypto_pk_dup_key(r->onion_pkey);
   info->addr = r->addr;
   info->port = r->or_port;
   return info;
@@ -1739,7 +1741,8 @@ extend_info_from_routerstatus(routerstatus_t *s)
   extend_info_t *info;
   tor_assert(s);
   info = tor_malloc_zero(sizeof(extend_info_t));
-  strlcpy(info->nickname, s->nickname, sizeof(info->nickname));
+  if (s->nickname)
+    strlcpy(info->nickname, s->nickname, sizeof(info->nickname));
   memcpy(info->identity_digest, s->identity_digest, DIGEST_LEN);
   info->onion_key = NULL; /* routerstatus doesn't know this */
   info->addr = s->addr;

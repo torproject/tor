@@ -7,6 +7,9 @@ Changes in version 0.1.2.18 - 2007-??-??
     - Don't try to access (or alter) the state file when running
       --list-fingerprint or --verify-config or --hash-password. (Resolves
       bug 499.)
+    - When generating information telling us how to extend to a given
+      router, do not try to include the nickname if it is absent. (Resolves
+      bug 467.)
 
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an
