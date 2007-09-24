@@ -39,7 +39,7 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\win-uninstall.ico"
 !define MUI_HEADERIMAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Header\win.bmp"
 !define MUI_HEADERIMAGE
-!define MUI_FINISHPAGE_RUN '"$INSTDIR\polipo.exe" -c config'
+;!define MUI_FINISHPAGE_RUN 
 !define MUI_FINISHPAGE_LINK "Visit the Polipo website for the latest updates."
 !define MUI_FINISHPAGE_LINK_LOCATION ${WEBSITE}
 
@@ -103,7 +103,7 @@ Section "Start Menu" StartMenu
    IfFileExists "$SMPROGRAMS\Polipo\*.*" "" +2
       RMDir /r "$SMPROGRAMS\Polipo"
    CreateDirectory "$SMPROGRAMS\Polipo"
-   CreateShortCut "$SMPROGRAMS\Polipo\Polipo.lnk" '"$INSTDIR\polipo.exe" -c $INSTDIR\config' 
+   CreateShortCut "$SMPROGRAMS\Polipo\Polipo.lnk" "$INSTDIR\polipo.exe" "-c config" 
    CreateShortCut "$SMPROGRAMS\Polipo\Poliporc.lnk" "Notepad.exe" "$INSTDIR\config"
    CreateShortCut "$SMPROGRAMS\Polipo\Polipo Documentation.lnk" "$INSTDIR\www\index.html"
    CreateShortCut "$SMPROGRAMS\Polipo\Polipo Website.lnk" "$INSTDIR\Polipo Website.url"
@@ -112,12 +112,12 @@ SectionEnd
 
 Section "Desktop" Desktop
    SetOutPath $INSTDIR
-   CreateShortCut "$DESKTOP\Polipo.lnk" '"$INSTDIR\polipo.exe" -c $INSTDIR\config' 
+   CreateShortCut "$DESKTOP\Polipo.lnk" "$INSTDIR\polipo.exe" "-c config" 
 SectionEnd
 
 Section /o "Run at startup" Startup
    SetOutPath $INSTDIR
-   CreateShortCut "$SMSTARTUP\Polipo.lnk" '"$INSTDIR\polipo.exe" -c $INSTDIR\config' "" "" "" SW_SHOWMINIMIZED
+   CreateShortCut "$SMSTARTUP\Polipo.lnk" "$INSTDIR\polipo.exe" "-c config" "" "" "" SW_SHOWMINIMIZED
 SectionEnd
 
 SubSectionEnd
