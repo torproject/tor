@@ -6,7 +6,7 @@
 ;
 !include "MUI.nsh"
 
-!define VERSION "1.0.2"
+!define VERSION "1.0.3.20070922-darcs"
 !define INSTALLER "polipo-${VERSION}-win32.exe"
 !define WEBSITE "http://www.pps.jussieu.fr/~jch/software/polipo/"
 
@@ -39,7 +39,7 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\win-uninstall.ico"
 !define MUI_HEADERIMAGE_BITMAP "${NSISDIR}\Contrib\Graphics\Header\win.bmp"
 !define MUI_HEADERIMAGE
-!define MUI_FINISHPAGE_RUN "$INSTDIR\polipo.exe -c $configdir\config"
+!define MUI_FINISHPAGE_RUN '"$INSTDIR\polipo.exe" -c config'
 !define MUI_FINISHPAGE_LINK "Visit the Polipo website for the latest updates."
 !define MUI_FINISHPAGE_LINK_LOCATION ${WEBSITE}
 
@@ -57,7 +57,6 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 !insertmacro MUI_UNPAGE_FINISH
 !insertmacro MUI_LANGUAGE "English"
 
-Var configdir
 Var configfile
 
 ;Sections
@@ -77,13 +76,12 @@ Section "Polipo" Polipo
    WriteIniStr "$INSTDIR\Polipo Website.url" "InternetShortcut" "URL" ${WEBSITE}
 
    StrCpy $configfile "config"
-   StrCpy $configdir $INSTDIR
-   SetOutPath $configdir
+   SetOutPath $INSTDIR
    ;If there's already a polipo config file, ask if they want to
    ;overwrite it with the new one.
-   IfFileExists "$configdir\config" "" endifconfig
+   IfFileExists "$INSTDIR\config" "" endifconfig
       MessageBox MB_ICONQUESTION|MB_YESNO "You already have a Polipo config file.$\r$\nDo you want to overwrite it with the default sample config file?" IDNO yesreplace
-      Delete $configdir\config
+      Delete $INSTDIR\config
       Goto endifconfig
      yesreplace:
       StrCpy $configfile ".\config.windows"
@@ -105,8 +103,8 @@ Section "Start Menu" StartMenu
    IfFileExists "$SMPROGRAMS\Polipo\*.*" "" +2
       RMDir /r "$SMPROGRAMS\Polipo"
    CreateDirectory "$SMPROGRAMS\Polipo"
-   CreateShortCut "$SMPROGRAMS\Polipo\Polipo.lnk" "$INSTDIR\polipo.exe -c $configdir\config" 
-   CreateShortCut "$SMPROGRAMS\Polipo\Poliporc.lnk" "Notepad.exe" "$configdir\config"
+   CreateShortCut "$SMPROGRAMS\Polipo\Polipo.lnk" '"$INSTDIR\polipo.exe" -c $INSTDIR\config' 
+   CreateShortCut "$SMPROGRAMS\Polipo\Poliporc.lnk" "Notepad.exe" "$INSTDIR\config"
    CreateShortCut "$SMPROGRAMS\Polipo\Polipo Documentation.lnk" "$INSTDIR\www\index.html"
    CreateShortCut "$SMPROGRAMS\Polipo\Polipo Website.lnk" "$INSTDIR\Polipo Website.url"
    CreateShortCut "$SMPROGRAMS\Polipo\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
@@ -114,12 +112,12 @@ SectionEnd
 
 Section "Desktop" Desktop
    SetOutPath $INSTDIR
-   CreateShortCut "$DESKTOP\Polipo.lnk" "$INSTDIR\polipo.exe -c $configdir\config" 
+   CreateShortCut "$DESKTOP\Polipo.lnk" '"$INSTDIR\polipo.exe" -c $INSTDIR\config' 
 SectionEnd
 
 Section /o "Run at startup" Startup
    SetOutPath $INSTDIR
-   CreateShortCut "$SMSTARTUP\Polipo.lnk" "$INSTDIR\polipo.exe -c $configdir\config" "" "" "" SW_SHOWMINIMIZED
+   CreateShortCut "$SMSTARTUP\Polipo.lnk" '"$INSTDIR\polipo.exe" -c $INSTDIR\config' "" "" "" SW_SHOWMINIMIZED
 SectionEnd
 
 SubSectionEnd
@@ -130,8 +128,8 @@ Section "Uninstall"
    Delete "$INSTDIR\Polipo Website.url"
    Delete "$INSTDIR\config"
    Delete "$INSTDIR\config.sample"
-   StrCmp $configdir $INSTDIR +2 ""
-      RMDir /r $configdir
+   StrCmp $INSTDIR $INSTDIR +2 ""
+      RMDir /r $INSTDIR
    Delete "$INSTDIR\Uninstall.exe"
    RMDir /r "$INSTDIR\Documents"
    RMDir $INSTDIR
