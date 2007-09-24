@@ -1555,7 +1555,7 @@ expand_filename(const char *filename)
         return NULL;
       }
       home = tor_strdup(home);
-      rest = strlen(filename)>=2?(filename+2):NULL;
+      rest = strlen(filename)>=2?(filename+2):"";
     } else {
 #ifdef HAVE_PWD_H
       char *username, *slash;
@@ -1570,7 +1570,7 @@ expand_filename(const char *filename)
         return NULL;
       }
       tor_free(username);
-      rest = slash ? (slash+1) : NULL;
+      rest = slash ? (slash+1) : "";
 #else
       log_warn(LD_CONFIG, "Couldn't expend homedir on system without pwd.h");
       return tor_strdup(filename);
@@ -1585,7 +1585,7 @@ expand_filename(const char *filename)
      * Round up to 16 in case we can't do math. */
     len = strlen(home)+strlen(rest)+16;
     result = tor_malloc(len);
-    tor_snprintf(result,len,"%s/%s",home,rest?rest:"");
+    tor_snprintf(result,len,"%s/%s",home,rest);
     tor_free(home);
     return result;
   } else {

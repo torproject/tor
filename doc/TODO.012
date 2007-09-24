@@ -25,4 +25,4 @@ Backport for 0.1.2.x once better tested:
   - r11499, r11500, r11501: hidserv hexdigests rather than nicknames
   - r11548, the osx /tmp fix
   o r11293: Bulletproof code to generate extend info.
-  - r11332: Fix user-triggerable segfault in expand_filename("~")
+  o r11332: Fix user-triggerable segfault in expand_filename("~")

@@ -10,6 +10,8 @@ Changes in version 0.1.2.18 - 2007-??-??
     - When generating information telling us how to extend to a given
       router, do not try to include the nickname if it is absent. (Resolves
       bug 467.)
+    - Fix a user-triggerable segfault in expand_filename().  (There isn't
+      a way to trigger this remotely.)
 
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an
