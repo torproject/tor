@@ -1418,6 +1418,12 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
           v->vote_body = new_cached_dir(tor_strdup(vote_body),
                                         vote->published);
           v->vote = vote;
+          if (end_of_vote &&
+              !strcmpstart(end_of_vote, "network-status-version"))
+            goto again;
+
+          if (!*status_out)
+            *status_out = 200;
           *msg_out = "ok";
           return v;
         } else {
@@ -1450,7 +1456,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     networkstatus_vote_free(vote);
   if (!*msg_out)
     *msg_out = "Error adding vote";
-  if (!*status_out)
+  if (!*status_out || *status_out == 200)
     *status_out = 400;
 
   if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version "))
