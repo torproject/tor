@@ -192,10 +192,10 @@ N   - Hack up a client that gives out weird/no certificates, so we can
 
   - Documentation
     - HOWTO for DNSPort.
-    - Tell people about OSX Uninstaller
+P   - Tell people about OSX Uninstaller
     - Quietly document NT Service options
     - More prominently, we should have a recommended apps list.
-      - recommend gaim.
+      - recommend pidgin (gaim is renamed)
       - unrecommend IE because of ftp:// bug.
     - we should add a preamble to tor-design saying it's out of date.
     . Document transport and natdport in a good HOWTO.
@@ -204,7 +204,7 @@ N   - Hack up a client that gives out weird/no certificates, so we can
 
 P - Packaging:
 P   - Can we switch to polipo?  Please?
-    - Make documentation realize that location of system configuration file
+P    - Make documentation realize that location of system configuration file
       will depend on location of system defaults, and isn't always /etc/torrc.
 P   - If we haven't replaced privoxy, lock down its configuration in all
       packages, as documented in tor-doc-unix.html
@@ -474,7 +474,8 @@ Future versions:
 
   - Documentation
     - a way to generate the website diagrams from source, so we can
-      translate them as utf-8 text rather than with gimp.
+      translate them as utf-8 text rather than with gimp. (svg? or
+      imagemagick?)
     . Flesh out options_description array in src/or/config.c
     . multiple sample torrc files
     . figure out how to make nt service stuff work?
@@ -532,7 +533,7 @@ P  - put the logo on the website, in source form, so people can put it on
 P  - put the source image for the stickers on the website, so people can
     print their own
 R - make a page with the hidden service diagrams.
-  - ask Jan to be the translation coordinator? add to volunteer page.
+P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
   - add a page for localizing all tor's components.
   - It would be neat if we had a single place that described _all_ the
     tor-related tools you can use, and what they give you, and how well they
