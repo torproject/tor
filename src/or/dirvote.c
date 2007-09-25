@@ -1249,7 +1249,7 @@ dirvote_fetch_missing_votes(void)
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                     trusted_dir_server_t *, ds,
     {
-      if ((ds->type & V3_AUTHORITY))
+      if (!(ds->type & V3_AUTHORITY))
         continue;
       if (!dirvote_get_vote(ds->v3_identity_digest)) {
         char *cp = tor_malloc(HEX_DIGEST_LEN+1);
