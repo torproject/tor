@@ -1,0 +1,358 @@
+Filename: 121-hidden-service-authentication.txt
+Title: Hidden Service Authentication
+Version: $LastChangedRevision$
+Last-Modified: $LastChangedDate$
+Author: Tobias Kamm, Thomas Lauterbach, Karsten Loesing, Ferdinand Rieger,
+        Christoph Weingarten
+Created: 10-Sep-2007
+Status: Open
+
+Change history:
+
+  26-Sep-2007  Initial proposal for or-dev
+
+Overview:
+
+  This proposal deals with some possibilities to implement authentication
+  for restricted access to hidden services. This way we try to increase the
+  security level for the service provider (Bob) by giving him the ability
+  to exclude non-authorized users from using his service. It is based on
+  proposal 114-distributed-storage but is better suited for a fine grained
+  way of authentication, because it is less resource-consuming. Whenever we
+  refer to service descriptors and cell formats, we are talking about the
+  definitions found in 114-distributed-storage unless otherwise stated.
+
+  We discuss password and public-key authentication for the Onion Proxy
+  (OP) of Bob's hidden service (HS). Furthermore a challenge-response
+  authentication mechanism is introduced at the introduction point.
+
+  These modifications aim at:
+   - increasing the security of hidden services by limiting access only to
+     authorized users (specification see details) and
+   - reducing the traffic in the network by rejecting unauthorized access
+     requests earlier.
+
+Motivation:
+
+  The currently used implementation of hidden services does not provide any
+  kind of authentication. The v2 implementation adds an authentication
+  mechanism at the directory server. Security can be further improved by
+  adding two more authentication authorities at the introduction point
+  (IPo) and the OP.
+
+  Although the service descriptors are already designed to carry
+  authentication information the existing fields are not used so far.
+  Moreover one can find a couple of notes at the specification of cell
+  formats (rend-spec) which point at adding authentication information but
+  no fields are specified yet. It would be preferable to extend the Tor
+  network with authentication features to offer a solution for all
+  services. This would also provide means to authorize access to services
+  that currently do not support authentication mechanisms. Moreover, Bob's
+  authentication administration for all services could be performed
+  centralized in the Tor application, and the implementation overhead for
+  developers would be significantly reduced. Another benefit would be the
+  reduced traffic by checking authentication data and dropping unauthorized
+  requests as soon as possible. For example unauthorized requests could
+  already be discarded at the introduction points.
+
+  In addition to that, our implementation is able to hide the service from
+  users, who still have access to the secret cookie (see
+  114-distributed-storage) but should no longer be authorized. Bob can now
+  not only hide his location, but also to a certain degree his presence
+  towards unauthorized clients given that none of his IPo's are corrupted.
+
+Details:
+
+  /1/ Client authentication at the hidden service
+
+  In proposal 114 a client (Alice) who has a valid secret cookie, which may
+  be considered as a form of authentication, and a service ID is able to
+  connect to Bob if he is online. He can not distinguish between Alice
+  being intentionally authorized by himself or being an attacker.
+  Integrating authentication in Tor HS will ensure Bob that Alice is only
+  able to use the service if she is authorized by him.    
+
+  Authentication data will be transmitted via the RELAY_INTRODUCE1 cell
+  from Alice to Bob that is forwarded by the IPo. For this message several
+  format versions are specified in the rend-spec in section 1.8. We will
+  use the format version 3. This specification already contains the fields
+  "AUTHT" (to specify the authentication method), "AUTHL" (length of the
+  authentication data), and "AUTHD" (the authentication data) that will be
+  used to store authentication data. Since these fields are encrypted with
+  the service's public key, sniffing attacks will fail. Bob will only build
+  the circuit to the rendezvous point if the provided authentication data
+  is valid, otherwise he will drop the cell. This will improve security due
+  to preventing communication between Bob and Alice if she is an attacker.
+  As a positive side effect it reduces network traffic because it avoids
+  Bob from building unnecessary circuits to the rendezvous points.
+  Authentication at the HS should be the last gatekeeper and the number of
+  cases in which a client successfully passes the introduction point, but
+  fails at the HS should be almost zero. Therefore it is very important to
+  perform fine-grained access control already at the IPo (but without
+  relying on it).
+
+  The first authentication mechanism that will be supported is password
+  (symmetric secret) authentication. "AUTHT" is set to "1" for this
+  authentication method while the "AUTHL" field is set to "20", the length
+  of the SHA-1 digest of the password.
+
+  (1) Alice creates a password x and sends the password digest h(x) to Bob
+      out of band.
+  (2) Alice sends h(x) to Bob, encrypted with Bob's fresh service key (not
+      subject to this proposal, see proposal 114).
+  (3) Bob decrypts Alice's message using his private service key (see
+      proposal 114) and compares the contained h(x) with what he knows what
+      Alice's password digest h(x) should be.
+
+  This kind of authentication is well-known. It has the known disadvantage
+  of weak passwords that are vulnerable to dictionary or brute-force
+  attacks. Nevertheless it seems to be an appropriate solution since safe
+  passwords can be randomly generated by Tor. Cracking methods that rely on
+  guessing passwords should not be effective in the constantly changing
+  network infrastructure. A usability advantage is that this method is easy
+  to perform even for unexperienced users. The authenticationdata will be
+  the SHA-1 secure hash (see tor-spec) of the shared secret (password).
+
+  The premise to use password authentication is that Bob must send the
+  password to Alice outside Tor. If at the same time the secret cookie is
+  transmitted and the message is intercepted the attacker can gain access
+  to the service. Therefore, a secure way to exchange this information must
+  be established.
+
+  The second authentication mechanism is public-key authentication. The
+  well-known RSA implementation will be used as cipher (see tor-spec). 
+  Authentication data will be the hash of the rendezvous cookie, signed
+  with the private key (SK).
+
+  When Alice wants to use this authentication method she sets "AUTHT" to
+  "2" and "AUTHL" to "128" which is the size of the encrypted data. Since
+  the rendezvous cookie changes each time Alice connects, replay attacks
+  can be easily prevented.
+
+  (1) Alice creates a private key e and sends the corresponding public key
+      d to Bob out of band.
+  (2) Alice generates a random rendezvous cookie r, computes PKSign(e, r),
+      encrypts it with Bob's fresh service key (see proposal 114), and
+      sends the result to Bob.
+  (3) Bob decrypts Alice's message using his private service key (see
+      proposal 114) and verifies PKSign(e, r) with d.
+
+  The premise for public-key authentication is that Alice must send the
+  generated public key to Bob outside Tor. If an attacker is able to swap
+  that key, the attacker could perform a man-in-the-middle attack, if he
+  managed to serve as an IPo for Bob. Therefore a secure exchange channel
+  must be established.
+
+  Depending on what authentication data Bob knows from Alice (password
+  and/or public key, or other data that is added later) there are several
+  choices for Alice to authenticate to the service.
+
+  After validating the provided "AUTHD" Bob builds a circuit to the
+  rendezvous point and starts interacting with Alice. If Bob cannot
+  identify the client he must refuse the request by not connecting to the
+  rendezvous point.
+
+  It will also still be possible to establish v2 hidden services without
+  authentication. Therefore the "AUTHT" field must be set to "0". "AUTHL"
+  and "AUTHD" are not provided by the client in that case.
+
+  /2/ Client authentication at the introduction point 	
+
+  In addition to authentication at the HS OP, the IPo should be able to
+  detect and abandon all unauthorized requests. This would help to raise
+  the level of privacy and therefore also the level of security for Bob by
+  better hiding his online activity from unauthorized users. Especially if
+  Alice still has access to the secret cookie. This can be the case if she
+  had access to the service earlier, but is no longer authorized or the
+  directory is outdated. Another advantage of this additional "gate keeper"
+  would be reduced traffic in the network, because unauthorized requests
+  could already be detected and declined at the IPo.
+
+  It is important to notice that the IPo may not be trustworthy, and
+  therefore can not replace authentication at the HS OP itself. Nor should
+  the IPo get hold of critical authentication information (because it could
+  try to access the service itself).
+
+  A challenge-response authentication protocol is used to address these
+  issues. This means that a challenge is needed to be solved by Alice to
+  get forwarded to Bob by the IPo.
+
+  Two types of authentication are supported and need to be preconfigured by
+  Bob when creating the service: password and public-key authentication.
+  Again it is up to Alice what kind of authentication mechanism she wants
+  to use, given that Bob knows both her password and her public key.
+
+  If Alice uses a password to authenticate herself at the IPo, the
+  authentication is based on a symmetric challenge-response authentication 
+  protocol. In this case the challenge for Alice is to send h(x|y) where x
+  is a user-specific password, which should be different from the password
+  needed for authentication at the hidden service and y is a randomly
+  generated value. Alice gets hold of her password out of band.
+
+  With the initial RELAY_ESTABLISH_INTRO cell, the IPo gets a list of
+  h(x|y)'s which it stores locally. Upon a request of Alice it compares her
+  provided authentication data with the list entries. If there is a
+  matching entry in its list, Alice's request is valid and can be forwarded
+  to Bob. To generate the hash, Alice needs to know the password (which she
+  will get out of band) and the random value y. This value is contained in
+  the cookie-encrypted part of the hidden service descriptor which Alice
+  can retrieve from the directory using her secret cookie.
+
+  (1) Alice creates a password x and sends the password digest h(x) to Bob
+      out of band.
+  (2) Bob creates a random value y, computes h(h(x)|y), and sends the
+      result to the introduction point.
+  (3) Bob encrypts y with a secret cookie (see proposal 114) and writes it
+      to a rendezvous service descriptor.
+  (4) Alice fetches Bob's rendezvous service descriptor, decrypts y using
+      the secret cookie (see proposal 114), computes h(h(x)|y), encrypts
+      it with the public key of the introduction point, and sends it to
+      that introduction point.
+  (5) The introduction point decrypts h(h(x)|y) from Alice's message and
+      compares it to the value it knows from Bob (from step 2).
+
+  If Alice wants to use public-key authentication to authenticate herself
+  at Bob's HS, the challenge-response authentication protocol is slightly
+  different.
+
+  The IPo's are provided with a list of random value hashes h(r) with an
+  entry for each user via the RELAY_ESTABLISH_INTRO cell. For public-key
+  authentication Alice uses an RSA public/private-key pair (as specified in
+  tor-spec). The public key is made known to Bob out of band. The IPo's
+  will now be sent a new ESTABLISH_INTRO cell with an additional random
+  value hash for Alice and a new descriptor is uploaded to the responsible
+  directories. The public-key authentication part of the service descriptor
+  holds a blank separated list of key-value pairs with one pair for every
+  authorized user. The hash of the public key of a user serves as a key,
+  while the PK-encrypted r represents the value. Authorized users can now
+  find their respective key-value pair and decrypt the value of h(r). This
+  result serves as an authorization token at the IPo in the same way as
+  with password authentication. The IPo does not know which authentication
+  method was used since the tokens always have the same format.
+
+  (1) Alice creates a private key e and sends the corresponding public key
+      d to Bob out of band.
+  (2) Bob creates a random value y and sends it to the introduction point.
+  (3) Bob computes PKEncrypt(d, y), encrypts the result with a secret
+      cookie (see proposal 114), and writes it to a rendezvous service
+      descriptor.
+  (4) Alice fetches Bob's rendezvous service descriptor, decrypts
+      PKEncrypt(d, y) using the secret cookie (see proposal 114), decrypts
+      y from it using her private key e, and sends it to the introduction
+      point.
+  (5) The introduction point compares y with the value it knows from Bob
+      (from step 2).
+
+  To remove a user from a group, Bob needs to update the random value list
+  at the IPo's.
+
+  The changes needed in Tor to realize these two challenge-response
+  variations affect the RELAY_ESTABLISH_INTRO and RELAY_INTRODUCE1 relay
+  cells, the service descriptor and the code parts in Tor where these cells
+  and the descriptor are handled.
+
+  The RELAY_ESTABLISH_INTRO cell is now structured as follows:
+
+  V      Format byte: set to 255             [1 octet]
+  V      Version byte: set to 2              [1 octet]
+  KL     Key length                         [2 octets]
+  PK     Bob's public key                  [KL octets]
+  HS     Hash of session info              [20 octets]
+  AUTHT  The auth type that is supported     [1 octet]
+  AUTHL  Length of auth data                [2 octets]
+  AUTHD  Auth data                          [variable]
+  SIG    Signature of above information     [variable]
+
+  "AUTHT" is set to "1" for password/public-key authentication.
+  "AUTHD" is a list of 20 octet long challenges for clients.
+
+  The service descriptor as specified in 114-distributed-storage is used in
+  our implementation.
+
+  For password authentication "authentication" auth-type is set to "1" and
+  auth-data contains the 20 octets long string used by clients to construct
+  the response to the challenge for authentication at the IPo.
+
+  When using public-key authentication the auth-type is set to "2" and
+  auth-data holds a list of 148 octets long blank separated values. The
+  first 20 octets of each value is the hash of the public key of a certain
+  client and used by Alice to determine her entry in the list. The
+  remaining 128 octets contain the PK-encrypted token needed to
+  authenticate to the IPo.
+
+  The part of the RELAY_INTRODUCE1 cell that can be read by the IPo has the
+  following fields added:
+
+  AUTHT  The auth type that is supported   [1 octet]
+  AUTHL  Length of auth data               [1 octets]
+  AUTHD  Auth data                         [variable]
+
+  The AUTHT and AUTHL fields are provided to allow extensions of the
+  protocol. Currently, we set AUTHT to 1 for password/public-key
+  authentication and AUTHL to 20 for the length of the authorization token.
+
+Security implications:
+
+  In addition to the security features proposed in 114-distributed-storage
+  a new way of authentication is added at the OP of Bob. Moreover, the
+  authentication at the IPo's is improved to support a fine-grained access
+  control. Corrupted IPo's may easily bypass this authentication, but given
+  the case that the majority of IPo's is acting as expected we still
+  consider this feature as being useful.
+
+  Bob can now decide whether he wants to allow Alice to use his services or
+  not. This gives him the possibility to offer his services only to known
+  and trusted users that need to identify by a password or by signing their
+  messages. The anonymity of the client towards the service provider is
+  thereby reduced to pseudonymity.
+
+  Changing of access rights now involves all three authorization authorities
+  depending on what changes should be made:
+
+    - The user configures his changes at the local OP. Therefore he can
+      edit the cookie files that were extended to support multiple users.
+      Moreover he can edit the new user files that were added to specify
+      authentication information for every user.
+
+    - Whenever local changes occur, this information needs to be either
+      passed to the responsible IPo's, the directory servers, or both
+      depending on the authorization method and operation used. It is
+      important to have consistent authorization results at all authorities
+      at the same time, to create a trustworthy system with good user
+      acceptance. As these reconfigurations always follow local changes
+      they can be done automatically by the new Tor implementation and
+      therefore no user interaction is needed.
+
+    - The secret cookies proposed in 114-distributed-storage are used for
+      group management in our implementation as their use would be far to
+      costly for a user-based authorization. That is because right now one
+      descriptor is generated and uploaded for every secret cookie. Changes
+      in this configuration should therefore be rare (maybe never) and only
+      a few groups should exist. Provided that this is the case the costs
+      for changes seem acceptable. As there is currently no possibility to
+      make a directory remove the descriptor for a group an updated
+      descriptor without any IPo should be uploaded to the directory
+      servers.
+
+  Local changes to access rights can now be done faster than by changing
+  service descriptors which reduces the directory server load and network
+  traffic. Still every configuration change remains costly and users should
+  carefully choose how detailed the access right configuration should be.
+
+  Attacking clients now need to bypass two more authentication steps to
+  reach the service implementation. Compared to the current state it is
+  more likely that attackers can be stopped even before they are able to
+  contact Bob's OP. We expect that the possibility of an attack is thereby
+  significantly reduced. Another positive side effect is that network
+  traffic and router load is reduced by discarding unauthorized cells which
+  should lower the effectiveness of denial of service attacks.
+
+Compatibility:
+
+  When using our authentication for hidden services the implementation of
+  IPo's needs to be extended. Therefore we use version information provided
+  in router descriptors to be sure that we only send modified
+  RELAY_ESTABLISH_INTRO cells to routers that can handle them. Clients of
+  v2 hidden services will have to update their Tor installation if they
+  want to be able to use the service.
+

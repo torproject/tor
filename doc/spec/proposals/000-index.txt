@@ -43,6 +43,7 @@ Proposals by number:
 118  Advertising multiple ORPorts at once [NEEDS-RESEARCH]
 119  New PROTOCOLINFO command for controllers [CLOSED]
 120  Suicide descriptors when Tor servers stop [OPEN]
+121  Hidden Service Authentication [OPEN]
 
 
 Proposals by status:
@@ -57,6 +58,7 @@ Proposals by status:
    116  Two hop paths from entry guards
    117  IPv6 exits
    120  Suicide descriptors when Tor servers stop
+   121  Hidden Service Authentication
  ACCEPTED:
    101  Voting on the Tor Directory System
    103  Splitting identity key from regularly used signing key
