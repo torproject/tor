@@ -20,23 +20,15 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-// #include <stdio.h>
-// #include <stdlib.h>
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-//#ifdef HAVE_STRING_H
-//#include <string.h>
-//#endif
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
-//#ifdef HAVE_CTYPE_H
-//#include <ctype.h>
-//#endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
@@ -53,21 +45,12 @@
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-//#ifdef HAVE_SYS_SOCKET_H
-//#include <sys/socket.h>
-//#endif
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 #endif
-//#ifdef HAVE_SYS_TIME_H
-//#include <sys/time.h>
-//#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
-//#ifdef HAVE_NETINET_IN_H
-//#include <netinet/in.h>
-//#endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
@@ -89,25 +72,6 @@
 #else
 /* very high by default. "nobody should need more than this..." */
 #define MAXCONNECTIONS 15000
-#endif
-
-#if 0
-#ifdef MS_WINDOWS
-/* No, we don't need to redefine FD_SETSIZE before including winsock:
- * we use libevent now, and libevent handles the select() stuff.  Yes,
- * some documents imply that we need to redefine anyway if we're using
- * select() anywhere in our application or in anything it links to: these
- * documents are either the holy texts of a cargo cult of network
- * programmers, or more likely a simplification of what's going on for
- * people who haven't read winsock[2].h for themselves.
- */
-#if defined(_MSC_VER) && (_MSC_VER <= 1300)
-#include <winsock.h>
-#else
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
-#endif
 #endif
 
 #ifdef MS_WINDOWS
@@ -1118,9 +1082,12 @@ typedef struct download_status_t {
 
 /** Information need to cache an onion router's descriptor. */
 typedef struct signed_descriptor_t {
-  /** Pointer to the raw server descriptor.  Not necessarily NUL-terminated.
-   * If saved_location is SAVED_IN_CACHE, this pointer is null.  */
+  /** Pointer to the raw server descriptor, preceeded by annotatinos.  Not
+   * necessarily NUL-terminated.  If saved_location is SAVED_IN_CACHE, this
+   * pointer is null.  */
   char *signed_descriptor_body;
+  /** Length of the annotations preceeding the server descriptor. */
+  size_t annotations_len;
   /** Length of the server descriptor. */
   size_t signed_descriptor_len;
   /** Digest of the server descriptor, computed as specified in dir-spec.txt */
@@ -1135,7 +1102,7 @@ typedef struct signed_descriptor_t {
    * extrainfo. */
   download_status_t ei_dl_status;
   /** Where is the descriptor saved? */
-  saved_location_t saved_location ;
+  saved_location_t saved_location;
   /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
    * this descriptor in the corresponding file. */
   off_t saved_offset;
@@ -2894,10 +2861,6 @@ networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        const char *identity);
 int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
                                             int warn);
-#if 0
-int networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
-                                           networkstatus_vote_t *src);
-#endif
 int networkstatus_add_detached_signatures(networkstatus_vote_t *target,
                                           ns_detached_signatures_t *sigs);
 char *networkstatus_get_detached_signatures(networkstatus_vote_t *consensus);
@@ -3639,7 +3602,8 @@ int router_append_dirobj_signature(char *buf, size_t buf_len,
 int router_parse_list_from_string(const char **s, const char *eos,
                                   smartlist_t *dest,
                                   saved_location_t saved_location,
-                                  int is_extrainfo);
+                                  int is_extrainfo,
+                                  int allow_annotations);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey,
@@ -3648,7 +3612,8 @@ int router_parse_routerlist_from_directory(const char *s,
 int router_parse_runningrouters(const char *str);
 int router_parse_directory(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
-                                             int cache_copy);
+                                             int cache_copy,
+                                             int allow_annotations);
 extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
                          int cache_copy, struct digest_ri_map_t *routermap);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,

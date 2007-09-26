@@ -43,6 +43,8 @@ static local_routerstatus_t *router_get_combined_status_by_nickname(
                                                 int warn_if_unnamed);
 static void update_router_have_minimum_dir_info(void);
 static void router_dir_info_changed(void);
+static const char *signed_descriptor_get_body_impl(signed_descriptor_t *desc,
+                                                   int with_annotations);
 
 DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
 DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
@@ -522,8 +524,8 @@ signed_desc_append_to_journal(signed_descriptor_t *desc,
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
   char *fname;
-  const char *body = signed_descriptor_get_body(desc);
-  size_t len = desc->signed_descriptor_len;
+  const char *body = signed_descriptor_get_body_impl(desc,1);
+  size_t len = desc->signed_descriptor_len + desc->annotations_len;
 
   if (purpose != ROUTER_PURPOSE_GENERAL &&
       purpose != EXTRAINFO_PURPOSE_GENERAL) {
@@ -629,7 +631,7 @@ router_rebuild_store(int force, desc_store_t *store)
   SMARTLIST_FOREACH(signed_descriptors, signed_descriptor_t *, sd,
     {
       sized_chunk_t *c;
-      const char *body = signed_descriptor_get_body(sd);
+      const char *body = signed_descriptor_get_body_impl(sd, 1);
       if (!body) {
         log_warn(LD_BUG, "No descriptor available for router.");
         goto done;
@@ -638,7 +640,7 @@ router_rebuild_store(int force, desc_store_t *store)
         continue;
       c = tor_malloc(sizeof(sized_chunk_t));
       c->bytes = body;
-      c->len = sd->signed_descriptor_len;
+      c->len = sd->signed_descriptor_len + sd->annotations_len;
       smartlist_add(chunk_list, c);
     });
 
@@ -1965,21 +1967,29 @@ extrainfo_get_by_descriptor_digest(const char *digest)
 /** Return a pointer to the signed textual representation of a descriptor.
  * The returned string is not guaranteed to be NUL-terminated: the string's
  * length will be in desc-\>signed_descriptor_len. */
-const char *
-signed_descriptor_get_body(signed_descriptor_t *desc)
+static const char *
+signed_descriptor_get_body_impl(signed_descriptor_t *desc,
+                                int with_annotations)
 {
   const char *r = NULL;
   size_t len = desc->signed_descriptor_len;
+  off_t offset = desc->saved_offset;
+  if (with_annotations)
+    len += desc->annotations_len;
+  else
+    offset += desc->annotations_len;
+
   tor_assert(len > 32);
   if (desc->saved_location == SAVED_IN_CACHE && routerlist) {
     desc_store_t *store = desc_get_store(router_get_routerlist(), desc);
     if (store && store->mmap) {
       tor_assert(desc->saved_offset + len <= store->mmap->size);
-      r = store->mmap->data + desc->saved_offset;
+      r = store->mmap->data + offset;
     }
   }
   if (!r) /* no mmap, or not in cache. */
-    r = desc->signed_descriptor_body;
+    r = desc->signed_descriptor_body +
+      (with_annotations ? 0 : desc->annotations_len);
 
   tor_assert(r);
   if (memcmp("router ", r, 7) && memcmp("extra-info ", r, 11)) {
@@ -1989,6 +1999,13 @@ signed_descriptor_get_body(signed_descriptor_t *desc)
   tor_assert(!memcmp("router ", r, 7) || !memcmp("extra-info ", r, 11));
 
   return r;
+}
+
+/** DOCDOC */
+const char *
+signed_descriptor_get_body(signed_descriptor_t *desc)
+{
+  return signed_descriptor_get_body_impl(desc, 0);
 }
 
 /** Return the current list of all known routers. */
@@ -3089,7 +3106,7 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
   tor_assert(msg);
   *msg = NULL;
 
-  if (!(ri = router_parse_entry_from_string(s, NULL, 1))) {
+  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0))) {
     log_warn(LD_DIR, "Error parsing router descriptor; dropping.");
     *msg = "Couldn't parse router descriptor.";
     return -1;
@@ -3147,8 +3164,10 @@ router_load_routers_from_string(const char *s, const char *eos,
   char fp[HEX_DIGEST_LEN+1];
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
+  int allow_annotations = (saved_location != SAVED_NOWHERE);
 
-  router_parse_list_from_string(&s, eos, routers, saved_location, 0);
+  router_parse_list_from_string(&s, eos, routers, saved_location, 0,
+                                allow_annotations);
 
   routers_update_status_from_networkstatus(routers, !from_cache);
 
@@ -3209,7 +3228,7 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
 
-  router_parse_list_from_string(&s, eos, extrainfo_list, saved_location, 1);
+  router_parse_list_from_string(&s, eos, extrainfo_list, saved_location, 1, 0);
 
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 

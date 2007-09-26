@@ -2189,7 +2189,7 @@ test_dir_format(void)
 
   test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
   cp = buf;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1);
+  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0);
   test_assert(rp1);
   test_streq(rp1->address, r1.address);
   test_eq(rp1->or_port, r1.or_port);

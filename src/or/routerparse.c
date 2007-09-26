@@ -1,4 +1,4 @@
-/* oCpyright (c) 2001 Matej Pfajfar.
+/* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson. */
 /* See LICENSE for licensing information */
@@ -15,11 +15,9 @@ const char routerparse_c_id[] =
 
 /****************************************************************************/
 
-/** Enumeration of possible token types.  The ones starting with K_
- * correspond to directory 'keywords'.  _UNRECOGNIZED is for an
- * unrecognized keyword; _ERR is an error in the tokenizing process,
- * _EOF is an end-of-file marker, and _NIL is used to encode
- * not-a-token.
+/** Enumeration of possible token types.  The ones starting with K_ correspond
+ * to directory 'keywords'. _ERR is an error in the tokenizing process, _EOF
+ * is an end-of-file marker, and _NIL is used to encode not-a-token.
  */
 typedef enum {
   K_ACCEPT = 0,
@@ -77,11 +75,17 @@ typedef enum {
   K_CONSENSUS_DIGEST,
   K_CONSENSUS_METHODS,
 
+  A_PURPOSE,
+  _A_UNKNOWN,
+
   _UNRECOGNIZED,
   _ERR,
   _EOF,
   _NIL
 } directory_keyword;
+
+#define MIN_ANNOTATION A_PURPOSE
+#define MAX_ANNOTATION _A_UNKNOWN
 
 /** Structure to hold a single directory token.
  *
@@ -139,6 +143,8 @@ typedef struct token_rule_t {
   /** One or more of AT_START/AT_END to limit where the item may appear in a
    * document. */
   int pos;
+  /** DOCDOC */
+  int is_annotation;
 } token_rule_t;
 
 /*
@@ -149,21 +155,23 @@ typedef struct token_rule_t {
  */
 
 /** Appears to indicate the end of a table. */
-#define END_OF_TABLE { NULL, _NIL, 0,0,0, NO_OBJ, 0, INT_MAX, 0 }
+#define END_OF_TABLE { NULL, _NIL, 0,0,0, NO_OBJ, 0, INT_MAX, 0, 0 }
 /** An item with no restrictions: used for obsolete document types */
-#define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX, 0 }
+#define T(s,t,a,o)    { s, t, a, o, 0, INT_MAX, 0, 0 }
 /** An item with no restrictions on multiplicity or location. */
-#define T0N(s,t,a,o)  { s, t, a, o, 0, INT_MAX, 0 }
+#define T0N(s,t,a,o)  { s, t, a, o, 0, INT_MAX, 0, 0 }
 /** An item that must appear exactly once */
-#define T1(s,t,a,o)   { s, t, a, o, 1, 1, 0 }
+#define T1(s,t,a,o)   { s, t, a, o, 1, 1, 0, 0 }
 /** An item that must appear exactly once, at the start of the document */
-#define T1_START(s,t,a,o)   { s, t, a, o, 1, 1, AT_START }
+#define T1_START(s,t,a,o)   { s, t, a, o, 1, 1, AT_START, 0 }
 /** An item that must appear exactly once, at the end of the document */
-#define T1_END(s,t,a,o)   { s, t, a, o, 1, 1, AT_END }
+#define T1_END(s,t,a,o)   { s, t, a, o, 1, 1, AT_END, 0 }
 /** An item that must appear one or more times */
-#define T1N(s,t,a,o)  { s, t, a, o, 1, INT_MAX, 0 }
+#define T1N(s,t,a,o)  { s, t, a, o, 1, INT_MAX, 0, 0 }
 /** An item that must appear no more than once */
-#define T01(s,t,a,o)  { s, t, a, o, 0, 1, 0 }
+#define T01(s,t,a,o)  { s, t, a, o, 0, 1, 0, 0 }
+/** An annotation that must appear no more than once */
+#define A01(s,t,a,o)  { s, t, a, o, 0, 1, 0, 0 }
 
 /* Argument multiplicity: any number of arguments. */
 #define ARGS        0,INT_MAX,0
@@ -200,6 +208,7 @@ static token_rule_t routerdesc_token_table[] = {
 
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "bandwidth",           K_BANDWIDTH,           GE(3),   NO_OBJ ),
+  A01("@purpose",            A_PURPOSE,             GE(1),   NO_OBJ ),
 
   END_OF_TABLE
 };
@@ -365,7 +374,8 @@ static directory_token_t *find_first_by_keyword(smartlist_t *s,
                                                 directory_keyword keyword);
 static int tokenize_string(const char *start, const char *end,
                            smartlist_t *out,
-                           token_rule_t *table);
+                           token_rule_t *table,
+                           int allow_annotations);
 static directory_token_t *get_next_token(const char **s,
                                          const char *eos,
                                          token_rule_t *table);
@@ -614,7 +624,7 @@ router_parse_directory(const char *str)
   }
   ++cp;
   tokens = smartlist_create();
-  if (tokenize_string(cp,strchr(cp,'\0'),tokens,dir_token_table)) {
+  if (tokenize_string(cp,strchr(cp,'\0'),tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing directory signature"); goto err;
   }
   if (smartlist_len(tokens) != 1) {
@@ -643,7 +653,7 @@ router_parse_directory(const char *str)
   }
 
   tokens = smartlist_create();
-  if (tokenize_string(str,end,tokens,dir_token_table)) {
+  if (tokenize_string(str,end,tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing directory"); goto err;
   }
 
@@ -692,7 +702,7 @@ router_parse_runningrouters(const char *str)
     goto err;
   }
   tokens = smartlist_create();
-  if (tokenize_string(str,eos,tokens,dir_token_table)) {
+  if (tokenize_string(str,eos,tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing running-routers"); goto err;
   }
   tok = smartlist_get(tokens,0);
@@ -858,7 +868,8 @@ int
 router_parse_list_from_string(const char **s, const char *eos,
                               smartlist_t *dest,
                               saved_location_t saved_location,
-                              int want_extrainfo)
+                              int want_extrainfo,
+                              int allow_annotations)
 {
   routerinfo_t *router;
   extrainfo_t *extrainfo;
@@ -923,7 +934,8 @@ router_parse_list_from_string(const char **s, const char *eos,
       }
     } else if (!have_extrainfo && !want_extrainfo) {
       router = router_parse_entry_from_string(*s, end,
-                                          saved_location != SAVED_IN_CACHE);
+                                              saved_location != SAVED_IN_CACHE,
+                                              allow_annotations);
       if (router) {
         signed_desc = &router->cache_info;
         elt = router;
@@ -977,13 +989,14 @@ dump_distinct_digest_count(int severity)
  */
 routerinfo_t *
 router_parse_entry_from_string(const char *s, const char *end,
-                               int cache_copy)
+                               int cache_copy, int allow_annotations)
 {
   routerinfo_t *router = NULL;
   char digest[128];
   smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
   directory_token_t *tok;
   struct in_addr in;
+  const char *start_of_annotations, *cp;
 
   if (!end) {
     end = s + strlen(s);
@@ -993,12 +1006,23 @@ router_parse_entry_from_string(const char *s, const char *end,
   while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
     --end;
 
+  start_of_annotations = s;
+  cp = tor_memstr(s, end-s, "\nrouter ");
+  if (!cp) {
+    if (end-s < 7 || strcmpstart(s, "router ")) {
+      log_warn(LD_DIR, "No router keyword found.");
+      goto err;
+    }
+  } else {
+    s = cp+1;
+  }
+
   if (router_get_router_hash(s, digest) < 0) {
     log_warn(LD_DIR, "Couldn't compute router hash.");
     return NULL;
   }
   tokens = smartlist_create();
-  if (tokenize_string(s,end,tokens,routerdesc_token_table)) {
+  if (tokenize_string(s,end,tokens,routerdesc_token_table,allow_annotations)) {
     log_warn(LD_DIR, "Error tokenizing router descriptor.");
     goto err;
   }
@@ -1019,6 +1043,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->routerlist_index = -1;
   if (cache_copy)
     router->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
+  router->cache_info.signed_descriptor_len = s-start_of_annotations;
   router->cache_info.signed_descriptor_len = end-s;
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
@@ -1218,13 +1243,13 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     return NULL;
   }
   tokens = smartlist_create();
-  if (tokenize_string(s,end,tokens,extrainfo_token_table)) {
-    log_warn(LD_DIR, "Error tokenizing router descriptor.");
+  if (tokenize_string(s,end,tokens,extrainfo_token_table,0)) {
+    log_warn(LD_DIR, "Error tokenizing extra-info document.");
     goto err;
   }
 
   if (smartlist_len(tokens) < 2) {
-    log_warn(LD_DIR, "Impossibly short router descriptor.");
+    log_warn(LD_DIR, "Impossibly short extra-info document.");
     goto err;
   }
 
@@ -1328,7 +1353,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   len = eos - s;
 
   tokens = smartlist_create();
-  if (tokenize_string(s, eos, tokens, dir_key_certificate_table) < 0) {
+  if (tokenize_string(s, eos, tokens, dir_key_certificate_table,0) < 0) {
     log_warn(LD_DIR, "Error tokenizing key certificate");
     goto err;
   }
@@ -1468,7 +1493,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
 
   eos = find_start_of_next_routerstatus(*s);
 
-  if (tokenize_string(*s, eos, tokens, rtrstatus_token_table)) {
+  if (tokenize_string(*s, eos, tokens, rtrstatus_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing router status");
     goto err;
   }
@@ -1640,7 +1665,7 @@ networkstatus_parse_from_string(const char *s)
   }
 
   eos = find_start_of_next_routerstatus(s);
-  if (tokenize_string(s, eos, tokens, netstatus_token_table)) {
+  if (tokenize_string(s, eos, tokens, netstatus_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing network-status header.");
     goto err;
   }
@@ -1752,7 +1777,7 @@ networkstatus_parse_from_string(const char *s)
   smartlist_uniq(ns->entries, _compare_routerstatus_entries,
                  _free_duplicate_routerstatus_entry);
 
-  if (tokenize_string(s, NULL, footer_tokens, dir_footer_token_table)) {
+  if (tokenize_string(s, NULL, footer_tokens, dir_footer_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing network-status footer.");
     goto err;
   }
@@ -1812,7 +1837,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   end_of_header = find_start_of_next_routerstatus(s);
   if (tokenize_string(s, end_of_header, tokens,
                       is_vote ? networkstatus_vote_token_table :
-                                networkstatus_consensus_token_table)) {
+                                networkstatus_consensus_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing network-status vote header.");
     goto err;
   }
@@ -2032,7 +2057,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   else
     end_of_footer = s + strlen(s);
   if (tokenize_string(s, end_of_footer, footer_tokens,
-                      networkstatus_vote_footer_token_table)) {
+                      networkstatus_vote_footer_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing network-status vote footer.");
     goto err;
   }
@@ -2143,7 +2168,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     eos = s + strlen(s);
 
   if (tokenize_string(s, eos, tokens,
-                      networkstatus_detached_signature_token_table)) {
+                      networkstatus_detached_signature_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing detached networkstatus signatures");
     goto err;
   }
@@ -2569,8 +2594,12 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
     }
   }
 
-  if (tok->tp == _ERR) { /* No keyword matched; call it an "opt". */
-    tok->tp = K_OPT;
+  if (tok->tp == _ERR) {
+    /* No keyword matched; call it an "K_opt" or "A_unrecognized" */
+    if (**s == '@')
+      tok->tp = _A_UNKNOWN;
+    else
+      tok->tp = K_OPT;
     tok->args = tor_malloc(sizeof(char*));
     tok->args[0] = tor_strndup(*s, eol-*s);
     tok->n_args = 1;
@@ -2637,12 +2666,13 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
  */
 static int
 tokenize_string(const char *start, const char *end, smartlist_t *out,
-                token_rule_t *table)
+                token_rule_t *table, int allow_annotations)
 {
   const char **s;
   directory_token_t *tok = NULL;
   int counts[_NIL];
   int i;
+  int first_nonannotation;
 
   s = &start;
   if (!end)
@@ -2661,6 +2691,36 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
     *s = eat_whitespace_eos(*s, end);
   }
 
+  if (allow_annotations) {
+    first_nonannotation = -1;
+    for (i = 0; i < smartlist_len(out); ++i) {
+      tok = smartlist_get(out, i);
+      if (tok->tp < MIN_ANNOTATION || tok->tp > MAX_ANNOTATION) {
+        first_nonannotation = i;
+        break;
+      }
+    }
+    if (first_nonannotation < 0) {
+      log_warn(LD_DIR, "parse error: item contains only annotations");
+      return -1;
+    }
+    for (i=first_nonannotation;  i < smartlist_len(out); ++i) {
+      tok = smartlist_get(out, i);
+      if (tok->tp >= MIN_ANNOTATION && tok->tp <= MAX_ANNOTATION) {
+        log_warn(LD_DIR, "parse error: Annotations mixed with keywords");
+        return -1;
+      }
+    }
+  } else {
+    for (i=0;  i < smartlist_len(out); ++i) {
+      tok = smartlist_get(out, i);
+      if (tok->tp >= MIN_ANNOTATION && tok->tp <= MAX_ANNOTATION) {
+        log_warn(LD_DIR, "parse error: no annotations allowed.");
+        return -1;
+      }
+    }
+    first_nonannotation = 0;
+  }
   for (i = 0; table[i].t; ++i) {
     if (counts[table[i].v] < table[i].min_cnt) {
       log_warn(LD_DIR, "Parse error: missing %s element.", table[i].t);
@@ -2672,7 +2732,7 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
     }
     if (table[i].pos & AT_START) {
       if (smartlist_len(out) < 1 ||
-          (tok = smartlist_get(out, 0))->tp != table[i].v) {
+          (tok = smartlist_get(out, first_nonannotation))->tp != table[i].v) {
         log_warn(LD_DIR, "Parse error: first item is not %s.", table[i].t);
         return -1;
       }

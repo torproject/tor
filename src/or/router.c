@@ -485,7 +485,7 @@ init_keys(void)
       return -1;
     }
     if (mydesc) {
-      ri = router_parse_entry_from_string(mydesc, NULL, 1);
+      ri = router_parse_entry_from_string(mydesc, NULL, 1, 0);
       if (!ri) {
         log_err(LD_GENERAL,"Generated a routerinfo we couldn't parse.");
         return -1;
@@ -1632,7 +1632,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     const char *cp;
     routerinfo_t *ri_tmp;
     cp = s_dup = tor_strdup(s);
-    ri_tmp = router_parse_entry_from_string(cp, NULL, 1);
+    ri_tmp = router_parse_entry_from_string(cp, NULL, 1, 0);
     if (!ri_tmp) {
       log_err(LD_BUG,
               "We just generated a router descriptor we can't parse.");
