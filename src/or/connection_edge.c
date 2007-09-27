@@ -2526,7 +2526,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
 }
 
 /** Given an exit conn that should attach to us as a directory server, open a
- * bridge connection with a linked connection pir, create a new directory
+ * bridge connection with a linked connection pair, create a new directory
  * conn, and join them together.  Return 0 on success (or if there was an
  * error we could send back an end cell for).  Return -(some circuit end
  * reason) if the circuit needs to be torn down.  Either connects
