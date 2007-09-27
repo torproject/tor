@@ -8,6 +8,10 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
       OR address is readable, set the port correctly.  (Previously we
       were reporting the dir port.)  Bugfix on 0.1.2.x.
 
+  o Minor bugfixes (v3 directory code):
+    - Fix logic to look up a cert by its signing key digest.  Bugfix on
+      0.2.0.7-alpha.
+
 Changes in version 0.2.0.7-alpha - 2007-09-21
   o New directory authorities:
     - Set up moria1 and tor26 as the first v3 directory authorities. See

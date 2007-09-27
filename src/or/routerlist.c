@@ -388,7 +388,7 @@ authority_cert_get_by_sk_digest(const char *sk_digest)
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
   {
     if (!ds->v3_certs)
-      return NULL;
+      continue;
     SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
     {
       if (!memcmp(cert->signing_key_digest, sk_digest, DIGEST_LEN))
