@@ -2413,7 +2413,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       !strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg = NULL;
     uint8_t purpose = authdir_mode_bridge(options) ?
-                      ROUTER_PURPOSE_CONTROLLER : ROUTER_PURPOSE_GENERAL;
+                      ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
     int r = dirserv_add_multiple_descriptors(body, purpose, &msg);
     tor_assert(msg);
     if (r > 0)
