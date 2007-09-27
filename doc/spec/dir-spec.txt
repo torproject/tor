@@ -1258,7 +1258,7 @@ $Id$
       http://<hostname>/tor/keys/fp/<F>.z
 
    The key certificate whose signing key is <F> should be available at:
-      http://<hostname>/tor/keys/fp/<F>.z
+      http://<hostname>/tor/keys/sk/<F>.z
    [XXX020 cross-certify?]
 
    The most recent descriptor for a server whose identity key has a
