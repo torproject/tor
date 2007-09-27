@@ -471,13 +471,13 @@ authority_certs_fetch_missing(networkstatus_vote_t *status)
 
 /* Router descriptor storage.
  *
- * DOCDOC files annotated NM
- * Routerdescs are stored in a big file, named "cached-routers".  As new
+ * Routerdescs are stored in a big file, named "cached-descriptors".  As new
  * routerdescs arrive, we append them to a journal file named
- * "cached-routers.new".
+ * "cached-descriptors.new".
  *
- * From time to time, we replace "cached-routers" with a new file containing
- * only the live, non-superseded descriptors, and clear cached-routers.new.
+ * From time to time, we replace "cached-descriptors" with a new file
+ * containing only the live, non-superseded descriptors, and clear
+ * cached-routers.new.
  *
  * On startup, we read both files.
  */
@@ -497,7 +497,6 @@ router_should_rebuild_store(desc_store_t *store)
 static INLINE desc_store_t *
 desc_get_store(routerlist_t *rl, signed_descriptor_t *sd)
 {
-  // XXXX NM annotated
   if (sd->is_extrainfo)
     return &rl->extrainfo_store;
   else
@@ -708,19 +707,33 @@ router_reload_router_list_impl(desc_store_t *store)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
-  char *fname = tor_malloc(fname_len), *contents = NULL;
+  char *fname = tor_malloc(fname_len), *altname = NULL,
+    *contents = NULL;
   struct stat st;
+  int read_from_old_location = 0;
   int extrainfo = (store->type == EXTRAINFO_STORE);
   store->journal_len = store->store_len = 0;
 
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s",
                options->DataDirectory, store->fname_base);
+  if (store->fname_alt_base) {
+    altname = tor_malloc(fname_len);
+    tor_snprintf(altname, fname_len, "%s"PATH_SEPARATOR"%s",
+                 options->DataDirectory, store->fname_alt_base);
+  }
 
   if (store->mmap) /* get rid of it first */
     tor_munmap_file(store->mmap);
   store->mmap = NULL;
 
   store->mmap = tor_mmap_file(fname);
+  if (!store->mmap && altname && file_status(altname) == FN_FILE) {
+    read_from_old_location = 1;
+    log_notice(LD_DIR, "Couldn't read %s; trying to load routers from old "
+               "location %s.", fname, altname);
+    if ((store->mmap = tor_mmap_file(altname)))
+      read_from_old_location = 1;
+  }
   if (store->mmap) {
     store->store_len = store->mmap->size;
     if (extrainfo)
@@ -738,6 +751,11 @@ router_reload_router_list_impl(desc_store_t *store)
                options->DataDirectory, store->fname_base);
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
+  if (!contents && read_from_old_location) {
+    tor_snprintf(altname, fname_len, "%s"PATH_SEPARATOR"%s.new",
+                 options->DataDirectory, store->fname_alt_base);
+    contents = read_file_to_str(altname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
+  }
   if (contents) {
     if (extrainfo)
       router_load_extrainfo_from_string(contents, NULL,SAVED_IN_JOURNAL,
@@ -750,8 +768,9 @@ router_reload_router_list_impl(desc_store_t *store)
   }
 
   tor_free(fname);
+  tor_free(altname);
 
-  if (store->journal_len) {
+  if (store->journal_len || read_from_old_location) {
     /* Always clear the journal on startup.*/
     router_rebuild_store(1, store);
   } else if (!extrainfo) {
@@ -770,7 +789,6 @@ int
 router_reload_router_list(void)
 {
   routerlist_t *rl = router_get_routerlist();
-  // XXXX NM annotated
   if (router_reload_router_list_impl(&rl->desc_store))
     return -1;
   if (router_reload_router_list_impl(&rl->extrainfo_store))
@@ -2021,17 +2039,14 @@ router_get_routerlist(void)
     routerlist->desc_by_eid_map = sdmap_new();
     routerlist->extra_info_map = eimap_new();
 
-    routerlist->desc_store.fname_base = "cached-routers";
-    routerlist->annotated_desc_store.fname_base = "annotated-routers";
+    routerlist->desc_store.fname_base = "cached-descriptors";
+    routerlist->desc_store.fname_alt_base = "cached-routers";
     routerlist->extrainfo_store.fname_base = "cached-extrainfo";
 
     routerlist->desc_store.type = ROUTER_STORE;
-    routerlist->annotated_desc_store.type = ANNOTATED_ROUTER_STORE;
     routerlist->extrainfo_store.type = EXTRAINFO_STORE;
 
     routerlist->desc_store.description = "router descriptors";
-    routerlist->annotated_desc_store.description
-      = "annotated router descriptors";
     routerlist->extrainfo_store.description = "extra-info documents";
   }
   return routerlist;
@@ -2126,8 +2141,6 @@ routerlist_free(routerlist_t *rl)
   smartlist_free(rl->old_routers);
   if (routerlist->desc_store.mmap)
     tor_munmap_file(routerlist->desc_store.mmap);
-  if (routerlist->annotated_desc_store.mmap)
-    tor_munmap_file(routerlist->annotated_desc_store.mmap);
   if (routerlist->extrainfo_store.mmap)
     tor_munmap_file(routerlist->extrainfo_store.mmap);
   tor_free(rl);
@@ -3208,7 +3221,6 @@ router_load_routers_from_string(const char *s, const char *eos,
 
   routerlist_assert_ok(routerlist);
 
-  // annotated. XXXX NM
   router_rebuild_store(0, &routerlist->desc_store);
 
   smartlist_free(routers);

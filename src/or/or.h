@@ -1379,6 +1379,7 @@ typedef enum store_type_t {
 /** DOCDOC */
 typedef struct desc_store_t {
   const char *fname_base;
+  const char *fname_alt_base;
   const char *description;
 
   tor_mmap_t *mmap;
@@ -1417,8 +1418,6 @@ typedef struct {
    * whose cache_info.saved_location == SAVED_IN_CACHE is stored in this file
    * starting at cache_info.saved_offset */
   desc_store_t desc_store;
-  /** DOCDOC */
-  desc_store_t annotated_desc_store;
   /** Mmaped file holding extra-info documents. */
   desc_store_t extrainfo_store;
 } routerlist_t;

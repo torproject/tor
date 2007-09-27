@@ -138,8 +138,8 @@ N     . Cache for bridge descriptors
           o Mechanism to add annotations when we first add a descriptor
           o Don't serve annotations
           o Reject annotations that appear in things we've downloaded
-          - Name the router store something different: cached-descriptors?
-            - But load from cached-routers if no cached-descriptors is
+          o Name the router store something different: cached-descriptors?
+            o But load from cached-routers if no cached-descriptors is
               found.
             - Document this.
         - Use annotations to denote router purpose

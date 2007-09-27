@@ -3,6 +3,12 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - When an authority is missing votes or signatures, it now tries to fetch
       them.
 
+  o Minor features (router descriptor cache):
+    - Store routers in a file called cached-descriptors instead of in
+      cached-routers.  Initialize cached-descriptors from cached-routers
+      if the old format is around.  The new format allows us to store
+      annotations along with descriptors.
+
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an
       OR address is readable, set the port correctly.  (Previously we
