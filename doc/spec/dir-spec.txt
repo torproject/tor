@@ -1257,7 +1257,8 @@ $Id$
    is <F> should be available at:
       http://<hostname>/tor/keys/fp/<F>.z
 
-   The key certificate whose signing key is <F> should be available at:
+   The key certificate whose signing key fingerprint is <F> should be
+   available at:
       http://<hostname>/tor/keys/sk/<F>.z
    [XXX020 cross-certify?]
 
