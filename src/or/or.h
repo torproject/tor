@@ -1167,6 +1167,8 @@ typedef struct {
 #define ROUTER_PURPOSE_CONTROLLER 1
 /** Tor should use this router only for bridge positions in circuits. */
 #define ROUTER_PURPOSE_BRIDGE 2
+/** DOCDOC */
+#define ROUTER_PURPOSE_UNKNOWN 255
 
   uint8_t purpose; /** What positions in a circuit is this router good for? */
 
@@ -2779,6 +2781,7 @@ int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
 int dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
+                                     const char *source,
                                      const char **msg);
 int dirserv_add_descriptor(routerinfo_t *ri, const char **msg);
 int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
@@ -3357,6 +3360,9 @@ void router_reset_warnings(void);
 void router_reset_reachability(void);
 void router_free_all(void);
 
+const char *router_purpose_to_string(uint8_t p);
+uint8_t router_purpose_from_string(const char *s);
+
 #ifdef ROUTER_PRIVATE
 /* Used only by router.c and test.c */
 void get_platform_str(char *platform, size_t len);
@@ -3480,7 +3486,7 @@ void router_load_routers_from_string(const char *s, const char *eos,
                                      saved_location_t saved_location,
                                      smartlist_t *requested_fingerprints,
                                      int descriptor_digests,
-                                     uint8_t purpose);
+                                     const char *prepend_annotations);
 void router_load_extrainfo_from_string(const char *s, const char *eos,
                                        saved_location_t saved_location,
                                        smartlist_t *requested_fps,

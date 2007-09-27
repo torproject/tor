@@ -1015,6 +1015,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   directory_token_t *tok;
   struct in_addr in;
   const char *start_of_annotations, *cp;
+  size_t prepend_len = prepend_annotations ? strlen(prepend_annotations) : 0;
 
   tor_assert(!allow_annotations || !prepend_annotations);
 
@@ -1068,17 +1069,12 @@ router_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
-  tok = smartlist_get(tokens,0);
-  if (tok->tp != K_ROUTER) {
-    log_warn(LD_DIR,"Entry does not start with \"router\"");
-    goto err;
-  }
+  tok = find_first_by_keyword(tokens, K_ROUTER);
   tor_assert(tok->n_args >= 5);
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->routerlist_index = -1;
-  router->cache_info.annotations_len = s-start_of_annotations +
-    (prepend_annotations ? strlen(prepend_annotations) : 0) ;
+  router->cache_info.annotations_len = s-start_of_annotations + prepend_len;
   router->cache_info.signed_descriptor_len = end-s;
   if (cache_copy) {
     size_t len = router->cache_info.signed_descriptor_len +
@@ -1086,11 +1082,12 @@ router_parse_entry_from_string(const char *s, const char *end,
     char *cp =
       router->cache_info.signed_descriptor_body = tor_malloc(len+1);
     if (prepend_annotations) {
-      strlcpy(cp, prepend_annotations, len+1);
-      cp += strlen(prepend_annotations);
+      memcpy(cp, prepend_annotations, prepend_len);
+      cp += prepend_len;
     }
-    memcpy(cp, s, end-s);
-    cp[len] = '\0';
+    memcpy(cp, start_of_annotations, end-start_of_annotations);
+    router->cache_info.signed_descriptor_body[len] = '\0';
+    tor_assert(strlen(router->cache_info.signed_descriptor_body) == len);
   }
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
@@ -1116,8 +1113,6 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->bandwidthrate =
     tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
 
-  /* Set purpose XXXX020 NM NM*/
-
   if (!router->bandwidthrate) {
     log_warn(LD_DIR, "bandwidthrate %s unreadable or 0. Failing.",
              escaped(tok->args[0]));
@@ -1128,6 +1123,13 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->bandwidthcapacity =
     tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
   /* XXXX020 we don't error-check these values? -RD */
+
+  if ((tok = find_first_by_keyword(tokens, A_PURPOSE))) {
+    tor_assert(tok->n_args);
+    router->purpose = router_purpose_from_string(tok->args[0]);
+  } else {
+    router->purpose = ROUTER_PURPOSE_GENERAL;
+  }
 
   if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
     tor_assert(tok->n_args >= 1);

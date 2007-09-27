@@ -524,6 +524,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
  * returns the most severe error that occurred for any one of them. */
 int
 dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
+                                 const char *source,
                                  const char **msg)
 {
   int r=100; /* higher than any actual return value. */
@@ -532,12 +533,28 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   smartlist_t *list;
   const char *s;
   int n_parsed = 0;
+  time_t now = time(NULL);
+  char annotation_buf[256];
+  char time_buf[ISO_TIME_LEN+1];
+  int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);
+
+  format_iso_time(time_buf, now);
+  if (tor_snprintf(annotation_buf, sizeof(annotation_buf),
+                   "@uploaded-at %s\n"
+                   "@source %s\n"
+                   "%s%s%s", time_buf, escaped(source),
+                   !general ? "@purpose " : "",
+                   !general ? router_purpose_to_string(purpose) : "",
+                   !general ? "\n" : "")<0) {
+    *msg = "Couldn't format annotations";
+    return -1;
+  }
 
   s = desc;
   list = smartlist_create();
   if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 0, 0,
-                                     NULL)) {
+                                     annotation_buf)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
 
@@ -548,8 +565,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
          * router_load_single_router()? Lastly, does extrainfo_t want
          * a purpose field too, or can we just piggyback off the one
          * in routerinfo_t? */
-        ri->purpose = purpose;
-        if (purpose != ROUTER_PURPOSE_GENERAL)
+        tor_assert(ri->purpose == purpose);
+        if (purpose != ROUTER_PURPOSE_GENERAL) /*XXXXX020 wrong. */
           ri->cache_info.do_not_cache = 1;
 
         r_tmp = dirserv_add_descriptor(ri, &msg_out);
@@ -603,6 +620,9 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
  *  1 if well-formed and accepted but origin should hear *msg;
  *  0 if well-formed but redundant with one we already have;
  * -1 if it looks vaguely like a router descriptor but rejected;
+ *
+ * This function is only called when fresh descriptors are posted, not when
+ * we re-load the cache.
  */
 int
 dirserv_add_descriptor(routerinfo_t *ri, const char **msg)

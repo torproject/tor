@@ -8,6 +8,9 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
       cached-routers.  Initialize cached-descriptors from cached-routers
       if the old format is around.  The new format allows us to store
       annotations along with descriptors.
+    - Use annotations to record the time we received each descriptor.
+    - Use annotations to record the source for each descriptor.
+    - Use annotations to record the purpose of each descriptor.
 
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an

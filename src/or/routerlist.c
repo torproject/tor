@@ -675,7 +675,7 @@ router_rebuild_store(int force, desc_store_t *store)
         tor_free(sd->signed_descriptor_body); // sets it to null
         sd->saved_offset = offset;
       }
-      offset += sd->signed_descriptor_len;
+      offset += sd->signed_descriptor_len + sd->annotations_len;
       signed_descriptor_get_body(sd); /* reconstruct and assert */
     });
 
@@ -743,8 +743,7 @@ router_reload_router_list_impl(desc_store_t *store)
     else
       router_load_routers_from_string(store->mmap->data,
                                       store->mmap->data+store->mmap->size,
-                                      SAVED_IN_CACHE, NULL, 0,
-                                      ROUTER_PURPOSE_GENERAL);
+                                      SAVED_IN_CACHE, NULL, 0, NULL);
   }
 
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
@@ -762,7 +761,7 @@ router_reload_router_list_impl(desc_store_t *store)
                                         NULL, 0);
     else
       router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL,
-                                      NULL, 0, ROUTER_PURPOSE_GENERAL);
+                                      NULL, 0, NULL);
     store->journal_len = (size_t) st.st_size;
     tor_free(contents);
   }
@@ -2010,11 +2009,13 @@ signed_descriptor_get_body_impl(signed_descriptor_t *desc,
       (with_annotations ? 0 : desc->annotations_len);
 
   tor_assert(r);
-  if (memcmp("router ", r, 7) && memcmp("extra-info ", r, 11)) {
-    log_err(LD_DIR, "descriptor at %p begins with unexpected string %s",
-            desc, tor_strndup(r, 64));
+  if (!with_annotations) {
+    if (memcmp("router ", r, 7) && memcmp("extra-info ", r, 11)) {
+      log_err(LD_DIR, "descriptor at %p begins with unexpected string %s",
+              desc, tor_strndup(r, 64));
+    }
+    tor_assert(!memcmp("router ", r, 7) || !memcmp("extra-info ", r, 11));
   }
-  tor_assert(!memcmp("router ", r, 7) || !memcmp("extra-info ", r, 11));
 
   return r;
 }
@@ -3116,15 +3117,20 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
   routerinfo_t *ri;
   int r;
   smartlist_t *lst;
+  char annotation_buf[256];
   tor_assert(msg);
   *msg = NULL;
 
-  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0, NULL))) {
+  tor_snprintf(annotation_buf, sizeof(annotation_buf),
+               "@source controller\n"
+               "@purpose %s\n", router_purpose_to_string(purpose));
+
+  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0, annotation_buf))) {
     log_warn(LD_DIR, "Error parsing router descriptor; dropping.");
     *msg = "Couldn't parse router descriptor.";
     return -1;
   }
-  ri->purpose = purpose;
+  tor_assert(ri->purpose == purpose);
   if (ri->purpose != ROUTER_PURPOSE_GENERAL)
     ri->cache_info.do_not_cache = 1;
   if (router_is_me(ri)) {
@@ -3171,7 +3177,7 @@ router_load_routers_from_string(const char *s, const char *eos,
                                 saved_location_t saved_location,
                                 smartlist_t *requested_fingerprints,
                                 int descriptor_digests,
-                                uint8_t purpose)
+                                const char *prepend_annotations)
 {
   smartlist_t *routers = smartlist_create(), *changed = smartlist_create();
   char fp[HEX_DIGEST_LEN+1];
@@ -3180,7 +3186,7 @@ router_load_routers_from_string(const char *s, const char *eos,
   int allow_annotations = (saved_location != SAVED_NOWHERE);
 
   router_parse_list_from_string(&s, eos, routers, saved_location, 0,
-                                allow_annotations, NULL);
+                                allow_annotations, prepend_annotations);
 
   routers_update_status_from_networkstatus(routers, !from_cache);
 
@@ -3208,8 +3214,7 @@ router_load_routers_from_string(const char *s, const char *eos,
       }
     }
 
-    ri->purpose = purpose;
-    if (purpose != ROUTER_PURPOSE_GENERAL)
+    if (ri->purpose != ROUTER_PURPOSE_GENERAL) /* XXXX020 wrong. */
       ri->cache_info.do_not_cache = 1;
 
     if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0) {

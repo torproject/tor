@@ -1884,12 +1884,18 @@ get_purpose(char **string, int for_circuits, uint8_t *purpose)
   if (!strcmpstart(*string, "purpose="))
     *string += strlen("purpose=");
 
+  if (!for_circuits) {
+    int r = router_purpose_from_string(*string);
+    if (r == ROUTER_PURPOSE_UNKNOWN)
+      return -1;
+    *purpose = r;
+    return 0;
+  }
+
   if (!strcmp(*string, "general"))
-    *purpose = for_circuits ? CIRCUIT_PURPOSE_C_GENERAL :
-                              ROUTER_PURPOSE_GENERAL;
+    *purpose = CIRCUIT_PURPOSE_C_GENERAL;
   else if (!strcmp(*string, "controller"))
-    *purpose = for_circuits ? CIRCUIT_PURPOSE_CONTROLLER :
-                              ROUTER_PURPOSE_CONTROLLER;
+    *purpose = CIRCUIT_PURPOSE_CONTROLLER;
   else { /* not a recognized purpose */
     return -1;
   }

@@ -132,7 +132,7 @@ R     - drop 'authority' queries if they're to our own identity key; accept
       o be more robust to bridges being marked as down and leaving us
         stranded without any known "running" bridges.
 N     . Cache for bridge descriptors
-        . Annotated router store
+        o Annotated router store
           o Accept annotations before routers
           o Preserve and ignore unexpected annotations
           o Mechanism to add annotations when we first add a descriptor
@@ -141,11 +141,15 @@ N     . Cache for bridge descriptors
           o Name the router store something different: cached-descriptors?
             o But load from cached-routers if no cached-descriptors is
               found.
-            - Document this.
-        - Use annotations to denote router purpose
-          - Learn purpose from annotations
-          - Set annotations based on purpose
-          - Preserve routers with unrecognized purpose.
+            o Document this.
+          o Add a few example annotations to make sure this works: source
+            and downloaded/uploaded-at seem like a good start
+            - Drop this later as needed.
+        o Use annotations to denote router purpose
+          o Learn purpose from annotations
+          o Set annotations based on purpose
+          o Preserve routers with unrecognized purpose.
+R       - Stop setting the do-not-cache flag based on purpose.
     - Bridges operators (rudimentary version)
       - Ability to act as dir cache without a dir port.
       o Bridges publish to bridge authorities

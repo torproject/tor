@@ -1066,6 +1066,31 @@ body_is_plausible(const char *body, size_t len, int purpose)
   }
 }
 
+/** DOCDOC */
+static void
+load_downloaded_routers(const char *body, smartlist_t *which,
+                        int descriptor_digests,
+                        int router_purpose,
+                        const char *source)
+{
+  char buf[256];
+  char time_buf[ISO_TIME_LEN+1];
+  int general = router_purpose == ROUTER_PURPOSE_GENERAL;
+  format_iso_time(time_buf, time(NULL));
+
+  if (tor_snprintf(buf, sizeof(buf),
+                   "@downloaded-at %s\n"
+                   "@source %s\n"
+                   "%s%s%s", time_buf, escaped(source),
+                   !general ? "@purpose " : "",
+                   !general ? router_purpose_to_string(router_purpose) : "",
+                   !general ? "\n" : "")<0)
+    return;
+
+  router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
+                                  descriptor_digests, buf);
+}
+
 /** We are a client, and we've finished reading the server's
  * response. Parse and it and act appropriately.
  *
@@ -1460,8 +1485,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         router_load_extrainfo_from_string(body, NULL, SAVED_NOWHERE, which,
                                           descriptor_digests);
       } else {
-        router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
-                               descriptor_digests, conn->router_purpose);
+        //router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
+        //                       descriptor_digests, conn->router_purpose);
+        load_downloaded_routers(body, which, descriptor_digests,
+                                conn->router_purpose,
+                                conn->_base.address);
         directory_info_has_arrived(now, 0);
       }
     }
@@ -2414,7 +2442,8 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
     const char *msg = NULL;
     uint8_t purpose = authdir_mode_bridge(options) ?
                       ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
-    int r = dirserv_add_multiple_descriptors(body, purpose, &msg);
+    int r = dirserv_add_multiple_descriptors(body, purpose,
+                                             conn->_base.address, &msg);
     tor_assert(msg);
     if (r > 0)
       dirserv_get_directory(); /* rebuild and write to disk */

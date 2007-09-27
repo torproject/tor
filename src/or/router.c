@@ -1773,6 +1773,35 @@ router_reset_warnings(void)
   }
 }
 
+/** DOCDOC */
+const char *
+router_purpose_to_string(uint8_t p)
+{
+  switch (p)
+    {
+    case ROUTER_PURPOSE_GENERAL: return "general";
+    case ROUTER_PURPOSE_BRIDGE: return "bridge";
+    case ROUTER_PURPOSE_CONTROLLER: return "controller";
+    default:
+      tor_assert(0);
+    }
+  return NULL;
+}
+
+/** DOCDOC */
+uint8_t
+router_purpose_from_string(const char *s)
+{
+  if (!strcmp(s, "general"))
+    return ROUTER_PURPOSE_GENERAL;
+  else if (!strcmp(s, "bridge"))
+    return ROUTER_PURPOSE_BRIDGE;
+  else if (!strcmp(s, "controller"))
+    return ROUTER_PURPOSE_CONTROLLER;
+  else
+    return ROUTER_PURPOSE_UNKNOWN;
+}
+
 /** Release all static resources held in router.c */
 void
 router_free_all(void)
