@@ -122,17 +122,30 @@ Things we'd like to do in 0.2.0.x:
         - use the bridges for dir fetches even when our dirport is open.
 R     - drop 'authority' queries if they're to our own identity key; accept
         them otherwise.
-N     - Design/implement the "local-status" or something like it, from the
+      X Design/implement the "local-status" or something like it, from the
         "Descriptor purposes: how to tell them apart" section of
         http://archives.seul.org/or/dev/May-2007/msg00008.html
-        - cache of bridges that we've learned about and use but aren't
-          manually listed in the torrc.
       o timeout and retry schedules for fetching bridge descriptors
       - give extend_info_t a router_purpose again
       o react faster to download networkstatuses after the first bridge
         descriptor arrives
       o be more robust to bridges being marked as down and leaving us
         stranded without any known "running" bridges.
+N     . Cache for bridge descriptors
+        . Annotated router store
+          o Accept annotations before routers
+          o Preserve and ignore unexpected annotations
+          o Mechanism to add annotations when we first add a descriptor
+          o Don't serve annotations
+          o Reject annotations that appear in things we've downloaded
+          - Name the router store something different: cached-descriptors?
+            - But load from cached-routers if no cached-descriptors is
+              found.
+            - Document this.
+        - Use annotations to denote router purpose
+          - Learn purpose from annotations
+          - Set annotations based on purpose
+          - Preserve routers with unrecognized purpose.
     - Bridges operators (rudimentary version)
       - Ability to act as dir cache without a dir port.
       o Bridges publish to bridge authorities

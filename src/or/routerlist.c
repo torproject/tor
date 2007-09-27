@@ -3106,7 +3106,7 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
   tor_assert(msg);
   *msg = NULL;
 
-  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0))) {
+  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0, NULL))) {
     log_warn(LD_DIR, "Error parsing router descriptor; dropping.");
     *msg = "Couldn't parse router descriptor.";
     return -1;
@@ -3167,7 +3167,7 @@ router_load_routers_from_string(const char *s, const char *eos,
   int allow_annotations = (saved_location != SAVED_NOWHERE);
 
   router_parse_list_from_string(&s, eos, routers, saved_location, 0,
-                                allow_annotations);
+                                allow_annotations, NULL);
 
   routers_update_status_from_networkstatus(routers, !from_cache);
 
@@ -3228,7 +3228,8 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
 
-  router_parse_list_from_string(&s, eos, extrainfo_list, saved_location, 1, 0);
+  router_parse_list_from_string(&s, eos, extrainfo_list, saved_location, 1, 0,
+                                NULL);
 
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 

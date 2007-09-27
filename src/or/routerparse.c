@@ -372,10 +372,13 @@ static void token_free(directory_token_t *tok);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *find_first_by_keyword(smartlist_t *s,
                                                 directory_keyword keyword);
+#define TS_ANNOTATIONS_OK 1
+#define TS_NOCHECK 2
+#define TS_NO_NEW_ANNOTATIONS 4
 static int tokenize_string(const char *start, const char *end,
                            smartlist_t *out,
                            token_rule_t *table,
-                           int allow_annotations);
+                           int flags);
 static directory_token_t *get_next_token(const char **s,
                                          const char *eos,
                                          token_rule_t *table);
@@ -869,7 +872,8 @@ router_parse_list_from_string(const char **s, const char *eos,
                               smartlist_t *dest,
                               saved_location_t saved_location,
                               int want_extrainfo,
-                              int allow_annotations)
+                              int allow_annotations,
+                              const char *prepend_annotations)
 {
   routerinfo_t *router;
   extrainfo_t *extrainfo;
@@ -893,15 +897,24 @@ router_parse_list_from_string(const char **s, const char *eos,
     if ((eos - *s) < 32) /* make sure it's long enough. */
       break;
 
-    /* Don't start parsing the rest of *s unless it contains a router. */
+    /* Don't start parsing the rest of *s unless it contains a router or
+     * extra-info. */
     if (strcmpstart(*s, "extra-info ")==0) {
       have_extrainfo = 1;
-    } else  if (strcmpstart(*s, "router ")==0) {
+    } else if (strcmpstart(*s, "router ")==0) {
       have_extrainfo = 0;
     } else {
       /* skip junk. */
-      const char *ei = tor_memstr(*s, eos-*s, "\nextra-info ");
-      const char *ri = tor_memstr(*s, eos-*s, "\nrouter ");
+      const char *annotation = NULL, *ei, *ri;
+      if (**s == '@') {
+        annotation = *s;
+      } else {
+        if ((annotation = tor_memstr(*s, eos-*s, "\n@")))
+          ++annotation;
+      }
+
+      ei = tor_memstr(*s, eos-*s, "\nextra-info ");
+      ri = tor_memstr(*s, eos-*s, "\nrouter ");
       if (ri && (!ei || ri < ei)) {
         have_extrainfo = 0;
         *s = ri + 1;
@@ -911,6 +924,8 @@ router_parse_list_from_string(const char **s, const char *eos,
       } else {
         break;
       }
+      if (annotation && annotation < *s)
+        *s = annotation;
     }
     end = tor_memstr(*s, eos-*s, "\nrouter-signature");
     if (end)
@@ -935,7 +950,8 @@ router_parse_list_from_string(const char **s, const char *eos,
     } else if (!have_extrainfo && !want_extrainfo) {
       router = router_parse_entry_from_string(*s, end,
                                               saved_location != SAVED_IN_CACHE,
-                                              allow_annotations);
+                                              allow_annotations,
+                                              prepend_annotations);
       if (router) {
         signed_desc = &router->cache_info;
         elt = router;
@@ -986,10 +1002,12 @@ dump_distinct_digest_count(int severity)
  * returns NULL.  If <b>cache_copy</b> is true, duplicate the contents of
  * s through end into the signed_descriptor_body of the resulting
  * routerinfo_t.
+ * DOCDOC annotations
  */
 routerinfo_t *
 router_parse_entry_from_string(const char *s, const char *end,
-                               int cache_copy, int allow_annotations)
+                               int cache_copy, int allow_annotations,
+                               const char *prepend_annotations)
 {
   routerinfo_t *router = NULL;
   char digest[128];
@@ -998,6 +1016,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   struct in_addr in;
   const char *start_of_annotations, *cp;
 
+  tor_assert(!allow_annotations || !prepend_annotations);
+
   if (!end) {
     end = s + strlen(s);
   }
@@ -1005,6 +1025,15 @@ router_parse_entry_from_string(const char *s, const char *end,
   /* point 'end' to a point immediately after the final newline. */
   while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
     --end;
+
+  tokens = smartlist_create();
+  if (prepend_annotations) {
+    if (tokenize_string(prepend_annotations,NULL,tokens,
+                        routerdesc_token_table,TS_NOCHECK)) {
+      log_warn(LD_DIR, "Error tokenizing router descriptor.");
+      goto err;
+    }
+  }
 
   start_of_annotations = s;
   cp = tor_memstr(s, end-s, "\nrouter ");
@@ -1021,10 +1050,17 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR, "Couldn't compute router hash.");
     return NULL;
   }
-  tokens = smartlist_create();
-  if (tokenize_string(s,end,tokens,routerdesc_token_table,allow_annotations)) {
-    log_warn(LD_DIR, "Error tokenizing router descriptor.");
-    goto err;
+  {
+    int flags = 0;
+    if (allow_annotations)
+      flags |= TS_ANNOTATIONS_OK;
+    if (prepend_annotations)
+      flags |= TS_ANNOTATIONS_OK|TS_NO_NEW_ANNOTATIONS;
+
+    if (tokenize_string(s,end,tokens,routerdesc_token_table, flags)) {
+      log_warn(LD_DIR, "Error tokenizing router descriptor.");
+      goto err;
+    }
   }
 
   if (smartlist_len(tokens) < 2) {
@@ -1041,10 +1077,21 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
   router->routerlist_index = -1;
-  if (cache_copy)
-    router->cache_info.signed_descriptor_body = tor_strndup(s, end-s);
-  router->cache_info.signed_descriptor_len = s-start_of_annotations;
+  router->cache_info.annotations_len = s-start_of_annotations +
+    (prepend_annotations ? strlen(prepend_annotations) : 0) ;
   router->cache_info.signed_descriptor_len = end-s;
+  if (cache_copy) {
+    size_t len = router->cache_info.signed_descriptor_len +
+                router->cache_info.annotations_len;
+    char *cp =
+      router->cache_info.signed_descriptor_body = tor_malloc(len+1);
+    if (prepend_annotations) {
+      strlcpy(cp, prepend_annotations, len+1);
+      cp += strlen(prepend_annotations);
+    }
+    memcpy(cp, s, end-s);
+    cp[len] = '\0';
+  }
   memcpy(router->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
   router->nickname = tor_strdup(tok->args[0]);
@@ -1068,6 +1115,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   tor_assert(tok && tok->n_args >= 3);
   router->bandwidthrate =
     tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
+
+  /* Set purpose XXXX020 NM NM*/
 
   if (!router->bandwidthrate) {
     log_warn(LD_DIR, "bandwidthrate %s unreadable or 0. Failing.",
@@ -2663,16 +2712,18 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
 
 /** Read all tokens from a string between <b>start</b> and <b>end</b>, and add
  * them to <b>out</b>.  Parse according to the token rules in <b>table</b>.
+ * Caller must free tokens in <b>out</b>.
  */
 static int
 tokenize_string(const char *start, const char *end, smartlist_t *out,
-                token_rule_t *table, int allow_annotations)
+                token_rule_t *table, int flags)
 {
   const char **s;
   directory_token_t *tok = NULL;
   int counts[_NIL];
   int i;
   int first_nonannotation;
+  int prev_len = smartlist_len(out);
 
   s = &start;
   if (!end)
@@ -2691,7 +2742,10 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
     *s = eat_whitespace_eos(*s, end);
   }
 
-  if (allow_annotations) {
+  if (flags & TS_NOCHECK)
+    return 0;
+
+  if ((flags & TS_ANNOTATIONS_OK)) {
     first_nonannotation = -1;
     for (i = 0; i < smartlist_len(out); ++i) {
       tok = smartlist_get(out, i);
@@ -2708,6 +2762,12 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
       tok = smartlist_get(out, i);
       if (tok->tp >= MIN_ANNOTATION && tok->tp <= MAX_ANNOTATION) {
         log_warn(LD_DIR, "parse error: Annotations mixed with keywords");
+        return -1;
+      }
+    }
+    if ((flags & TS_NO_NEW_ANNOTATIONS)) {
+      if (first_nonannotation != prev_len) {
+        log_warn(LD_DIR, "parse error: Unexpectd annotations.");
         return -1;
       }
     }

@@ -536,11 +536,13 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
 
   s = desc;
   list = smartlist_create();
-  if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 0, 0)) {
+  if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 0, 0,
+                                     NULL)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
 
         /* Assign the purpose.
+         *
          * XXX020 Perhaps this should get pushed into
          * router_parse_list_from_string()? Also, tie it somehow into
          * router_load_single_router()? Lastly, does extrainfo_t want
@@ -561,7 +563,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   smartlist_clear(list);
 
   s = desc;
-  if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 1, 0)) {
+  if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 1, 0,
+                                     NULL)) {
     SMARTLIST_FOREACH(list, extrainfo_t *, ei, {
         msg_out = NULL;
 

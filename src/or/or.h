@@ -3603,7 +3603,8 @@ int router_parse_list_from_string(const char **s, const char *eos,
                                   smartlist_t *dest,
                                   saved_location_t saved_location,
                                   int is_extrainfo,
-                                  int allow_annotations);
+                                  int allow_annotations,
+                                  const char *prepend_annotations);
 int router_parse_routerlist_from_directory(const char *s,
                                            routerlist_t **dest,
                                            crypto_pk_env_t *pkey,
@@ -3613,7 +3614,8 @@ int router_parse_runningrouters(const char *str);
 int router_parse_directory(const char *str);
 routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
                                              int cache_copy,
-                                             int allow_annotations);
+                                             int allow_annotations,
+                                             const char *prepend_annotations);
 extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
                          int cache_copy, struct digest_ri_map_t *routermap);
 addr_policy_t *router_parse_addr_policy_from_string(const char *s,
