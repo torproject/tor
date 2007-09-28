@@ -3,6 +3,182 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.1.2.17 - 2007-08-30
+  o Major bugfixes (security):
+    - We removed support for the old (v0) control protocol. It has been
+      deprecated since Tor 0.1.1.1-alpha, and keeping it secure has
+      become more of a headache than it's worth.
+
+  o Major bugfixes (load balancing):
+    - When choosing nodes for non-guard positions, weight guards
+      proportionally less, since they already have enough load. Patch
+      from Mike Perry.
+    - Raise the "max believable bandwidth" from 1.5MB/s to 10MB/s. This
+      will allow fast Tor servers to get more attention.
+    - When we're upgrading from an old Tor version, forget our current
+      guards and pick new ones according to the new weightings. These
+      three load balancing patches could raise effective network capacity
+      by a factor of four. Thanks to Mike Perry for measurements.
+
+  o Major bugfixes (stream expiration):
+    - Expire not-yet-successful application streams in all cases if
+      they've been around longer than SocksTimeout. Right now there are
+      some cases where the stream will live forever, demanding a new
+      circuit every 15 seconds. Fixes bug 454; reported by lodger.
+
+  o Minor features (controller):
+    - Add a PROTOCOLINFO controller command. Like AUTHENTICATE, it
+      is valid before any authentication has been received. It tells
+      a controller what kind of authentication is expected, and what
+      protocol is spoken. Implements proposal 119.
+
+  o Minor bugfixes (performance):
+    - Save on most routerlist_assert_ok() calls in routerlist.c, thus
+      greatly speeding up loading cached-routers from disk on startup.
+    - Disable sentinel-based debugging for buffer code: we squashed all
+      the bugs that this was supposed to detect a long time ago, and now
+      its only effect is to change our buffer sizes from nice powers of
+      two (which platform mallocs tend to like) to values slightly over
+      powers of two (which make some platform mallocs sad).
+
+  o Minor bugfixes (misc):
+    - If exit bandwidth ever exceeds one third of total bandwidth, then
+      use the correct formula to weight exit nodes when choosing paths.
+      Based on patch from Mike Perry.
+    - Choose perfectly fairly among routers when choosing by bandwidth and
+      weighting by fraction of bandwidth provided by exits. Previously, we
+      would choose with only approximate fairness, and correct ourselves
+      if we ran off the end of the list.
+    - If we require CookieAuthentication but we fail to write the
+      cookie file, we would warn but not exit, and end up in a state
+      where no controller could authenticate. Now we exit.
+    - If we require CookieAuthentication, stop generating a new cookie
+      every time we change any piece of our config.
+    - Refuse to start with certain directory authority keys, and
+      encourage people using them to stop.
+    - Terminate multi-line control events properly. Original patch
+      from tup.
+    - Fix a minor memory leak when we fail to find enough suitable
+      servers to choose a circuit.
+    - Stop leaking part of the descriptor when we run into a particularly
+      unparseable piece of it.
+
+
+Changes in version 0.1.2.16 - 2007-08-01
+  o Major security fixes:
+    - Close immediately after missing authentication on control port;
+      do not allow multiple authentication attempts.
+
+
+Changes in version 0.1.2.15 - 2007-07-17
+  o Major bugfixes (compilation):
+    - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
+
+  o Major bugfixes (crashes):
+    - Try even harder not to dereference the first character after
+      an mmap(). Reported by lodger.
+    - Fix a crash bug in directory authorities when we re-number the
+      routerlist while inserting a new router.
+    - When the cached-routers file is an even multiple of the page size,
+      don't run off the end and crash. (Fixes bug 455; based on idea
+      from croup.)
+    - Fix eventdns.c behavior on Solaris: It is critical to include
+      orconfig.h _before_ sys/types.h, so that we can get the expected
+      definition of _FILE_OFFSET_BITS.
+
+  o Major bugfixes (security):
+    - Fix a possible buffer overrun when using BSD natd support. Bug
+      found by croup.
+    - When sending destroy cells from a circuit's origin, don't include
+      the reason for tearing down the circuit. The spec says we didn't,
+      and now we actually don't. Reported by lodger.
+    - Keep streamids from different exits on a circuit separate. This
+      bug may have allowed other routers on a given circuit to inject
+      cells into streams. Reported by lodger; fixes bug 446.
+    - If there's a never-before-connected-to guard node in our list,
+      never choose any guards past it. This way we don't expand our
+      guard list unless we need to.
+
+  o Minor bugfixes (guard nodes):
+    - Weight guard selection by bandwidth, so that low-bandwidth nodes
+      don't get overused as guards.
+
+  o Minor bugfixes (directory):
+    - Correctly count the number of authorities that recommend each
+      version. Previously, we were under-counting by 1.
+    - Fix a potential crash bug when we load many server descriptors at
+      once and some of them make others of them obsolete. Fixes bug 458.
+
+  o Minor bugfixes (hidden services):
+    - Stop tearing down the whole circuit when the user asks for a
+      connection to a port that the hidden service didn't configure.
+      Resolves bug 444.
+
+  o Minor bugfixes (misc):
+    - On Windows, we were preventing other processes from reading
+      cached-routers while Tor was running. Reported by janbar.
+    - Fix a possible (but very unlikely) bug in picking routers by
+      bandwidth. Add a log message to confirm that it is in fact
+      unlikely. Patch from lodger.
+    - Backport a couple of memory leak fixes.
+    - Backport miscellaneous cosmetic bugfixes.
+
+
+Changes in version 0.1.2.14 - 2007-05-25
+  o Directory authority changes:
+    - Two directory authorities (moria1 and moria2) just moved to new
+      IP addresses. This change will particularly affect those who serve
+      or use hidden services.
+
+  o Major bugfixes (crashes):
+    - If a directory server runs out of space in the connection table
+      as it's processing a begin_dir request, it will free the exit stream
+      but leave it attached to the circuit, leading to unpredictable
+      behavior. (Reported by seeess, fixes bug 425.)
+    - Fix a bug in dirserv_remove_invalid() that would cause authorities
+      to corrupt memory under some really unlikely scenarios.
+    - Tighten router parsing rules. (Bugs reported by Benedikt Boss.)
+    - Avoid segfaults when reading from mmaped descriptor file. (Reported
+      by lodger.)
+
+  o Major bugfixes (security):
+    - When choosing an entry guard for a circuit, avoid using guards
+      that are in the same family as the chosen exit -- not just guards
+      that are exactly the chosen exit. (Reported by lodger.)
+
+  o Major bugfixes (resource management):
+    - If a directory authority is down, skip it when deciding where to get
+      networkstatus objects or descriptors. Otherwise we keep asking
+      every 10 seconds forever. Fixes bug 384.
+    - Count it as a failure if we fetch a valid network-status but we
+      don't want to keep it. Otherwise we'll keep fetching it and keep
+      not wanting to keep it. Fixes part of bug 422.
+    - If all of our dirservers have given us bad or no networkstatuses
+      lately, then stop hammering them once per minute even when we
+      think they're failed. Fixes another part of bug 422.
+
+  o Minor bugfixes:
+    - Actually set the purpose correctly for descriptors inserted with
+      purpose=controller.
+    - When we have k non-v2 authorities in our DirServer config,
+      we ignored the last k authorities in the list when updating our
+      network-statuses.
+    - Correctly back-off from requesting router descriptors that we are
+      having a hard time downloading.
+    - Read resolv.conf files correctly on platforms where read() returns
+      partial results on small file reads.
+    - Don't rebuild the entire router store every time we get 32K of
+      routers: rebuild it when the journal gets very large, or when
+      the gaps in the store get very large.
+
+  o Minor features:
+    - When routers publish SVN revisions in their router descriptors,
+      authorities now include those versions correctly in networkstatus
+      documents.
+    - Warn when using a version of libevent before 1.3b to run a server on
+      OSX or BSD: these versions interact badly with userspace threads.
+
+
 Changes in version 0.1.2.13 - 2007-04-24
 
 Tor 0.1.2.13 is released in memory of Rob Levin (1955-2006), aka lilo
