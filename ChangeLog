@@ -21,6 +21,13 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - Fix logic to look up a cert by its signing key digest.  Bugfix on
       0.2.0.7-alpha.
 
+  o Minor bugfixes (performance):
+    - Use a slightly simpler string hashing algorithm (copying Python's
+      instead of Java's) and optimize our digest hashing algorithm to take
+      advantage of 64-bit platforms and to remove some possibly-costly
+      voodoo.
+
+
 Changes in version 0.2.0.7-alpha - 2007-09-21
   o New directory authorities:
     - Set up moria1 and tor26 as the first v3 directory authorities. See

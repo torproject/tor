@@ -65,6 +65,7 @@ ht_improve_hash(unsigned h)
   return h;
 }
 
+#if 0
 /** Basic string hash function, from Java standard String.hashCode(). */
 static INLINE unsigned
 ht_string_hash(const char *s)
@@ -75,6 +76,21 @@ ht_string_hash(const char *s)
     h += ((signed char)*s++)*m;
     m = (m<<5)-1; /* m *= 31 */
   }
+  return h;
+}
+#endif
+
+/** Basic string hash function, from Python's str.__hash__() */
+static INLINE unsigned
+ht_string_hash(const char *s)
+{
+  unsigned h;
+  const unsigned char *cp = (const unsigned char *)s;
+  h = *cp << 7;
+  while (*cp) {
+    h = (1000003*h) ^ *cp++;
+  }
+  h ^= (cp-(const unsigned char*)s);
   return h;
 }
 

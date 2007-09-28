@@ -694,8 +694,13 @@ digestmap_entries_eq(const digestmap_entry_t *a, const digestmap_entry_t *b)
 static INLINE unsigned int
 digestmap_entry_hash(const digestmap_entry_t *a)
 {
-  uint32_t *p = (uint32_t*)a->key;
-  return ht_improve_hash(p[0] ^ p[1] ^ p[2] ^ p[3] ^ p[4]);
+#if SIZEOF_INT != 8
+  const uint32_t *p = (const uint32_t*)a->key;
+  return p[0] ^ p[1] ^ p[2] ^ p[3] ^ p[4];
+#else
+  const uint64_t *p = (const uint64_t*)a->key;
+  return p[0] ^ p[1];
+#endif
 }
 
 HT_PROTOTYPE(strmap_impl, strmap_entry_t, node, strmap_entry_hash,
