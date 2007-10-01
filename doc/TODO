@@ -150,6 +150,8 @@ N     . Cache for bridge descriptors
           o Set annotations based on purpose
           o Preserve routers with unrecognized purpose.
 R       - Stop setting the do-not-cache flag based on purpose.
+        - Disable and mark as obsolete the setrouterpurpose controller
+          command.
     - Bridges operators (rudimentary version)
       - Ability to act as dir cache without a dir port.
       o Bridges publish to bridge authorities
