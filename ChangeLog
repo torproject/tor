@@ -12,6 +12,10 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - Use annotations to record the source for each descriptor.
     - Use annotations to record the purpose of each descriptor.
 
+  o Minor features (v3 authority system):
+    - Add more ways for tools to download the votes that lead to the current
+      consensus.
+
   o Major bugfixes (performance):
     - Fix really bad O(n^2) performance when parsing a long list of routers:
       Instead of searching the entire list for an "extra-info " string which

@@ -1133,8 +1133,7 @@ dirvote_recalculate_timing(time_t now)
   voting_schedule.fetch_missing_votes = start - dist_delay - (vote_delay/2);
   voting_schedule.voting_starts = start - dist_delay - vote_delay;
 
-  voting_schedule.discard_old_votes = start +
-    ((end-start) - vote_delay - dist_delay)/2 ;
+  voting_schedule.discard_old_votes = start;
 }
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
@@ -1185,7 +1184,7 @@ dirvote_act(time_t now)
   }
   if (voting_schedule.discard_old_votes < now) {
     log_notice(LD_DIR, "Time to discard old votes.");
-    dirvote_clear_pending_votes();
+    dirvote_clear_votes(0);
     dirvote_recalculate_timing(now);
   }
 }
@@ -1198,8 +1197,12 @@ typedef struct pending_vote_t {
   networkstatus_vote_t *vote;
 } pending_vote_t;
 
-/** List of pending_vote_t for the current vote. */
+/** List of pending_vote_t for the current vote.  Before we've used them to
+ * build a consensus, the votes go here. */
 static smartlist_t *pending_vote_list = NULL;
+/** List of pending_vote_t for the previous vote.  After we've used them to
+ * build a consensus, the votes go here for the next period. */
+static smartlist_t *previous_vote_list = NULL;
 /** The body of the consensus that we're currently building.  Once we
  * have it built, it goes into dirserv.c */
 static char *pending_consensus_body = NULL;
@@ -1251,7 +1254,7 @@ dirvote_fetch_missing_votes(void)
     {
       if (!(ds->type & V3_AUTHORITY))
         continue;
-      if (!dirvote_get_vote(ds->v3_identity_digest)) {
+      if (!dirvote_get_vote(ds->v3_identity_digest, 1, 1, 0)) {
         char *cp = tor_malloc(HEX_DIGEST_LEN+1);
         base16_encode(cp, HEX_DIGEST_LEN+1, ds->v3_identity_digest,
                       DIGEST_LEN);
@@ -1288,17 +1291,36 @@ dirvote_fetch_missing_signatures(void)
 
 /** Drop all currently pending votes, consensus, and detached signatures. */
 void
-dirvote_clear_pending_votes(void)
+dirvote_clear_votes(int all_votes)
 {
-  if (pending_vote_list) {
+  if (!previous_vote_list)
+    previous_vote_list = smartlist_create();
+  if (!pending_vote_list)
+    pending_vote_list = smartlist_create();
+
+  /* All "previous" votes are now junk. */
+  SMARTLIST_FOREACH(previous_vote_list, pending_vote_t *, v, {
+      cached_dir_decref(v->vote_body);
+      v->vote_body = NULL;
+      networkstatus_vote_free(v->vote);
+      tor_free(v);
+    });
+  smartlist_clear(previous_vote_list);
+
+  if (all_votes) {
+    /* If we're dumping all the votes, we delete the pending ones. */
     SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
         cached_dir_decref(v->vote_body);
         v->vote_body = NULL;
         networkstatus_vote_free(v->vote);
         tor_free(v);
       });
-    smartlist_clear(pending_vote_list);
+  } else {
+    /* Otherwise, we move them into "previous". */
+    smartlist_add_all(previous_vote_list, pending_vote_list);
   }
+  smartlist_clear(pending_vote_list);
+
   if (pending_consensus_signature_list) {
     SMARTLIST_FOREACH(pending_consensus_signature_list, char *, cp,
                       tor_free(cp));
@@ -1685,12 +1707,13 @@ dirvote_publish_consensus(void)
 void
 dirvote_free_all(void)
 {
-  dirvote_clear_pending_votes();
-  if (pending_vote_list) {
-    /* now empty as a result of clear_pending_votes. */
-    smartlist_free(pending_vote_list);
-    pending_vote_list = NULL;
-  }
+  dirvote_clear_votes(1);
+  /* now empty as a result of clear_pending_votes. */
+  smartlist_free(pending_vote_list);
+  pending_vote_list = NULL;
+  smartlist_free(previous_vote_list);
+  previous_vote_list = NULL;
+
   tor_free(pending_consensus_body);
   tor_free(pending_consensus_signatures);
   if (pending_consensus) {
@@ -1725,22 +1748,45 @@ dirvote_get_pending_detached_signatures(void)
 
 /** Return the vote for the authority with the v3 authority identity key
  * digest <b>id</b>.  If <b>id</b> is NULL, return our own vote. May return
- * NULL if we have no vote for the authority in question. */
+ * NULL if we have no vote for the authority in question.
+ * DOCDOC args */
 const cached_dir_t *
-dirvote_get_vote(const char *id)
+dirvote_get_vote(const char *fp, int by_id, int include_previous,
+                 int include_pending)
 {
-  if (!pending_vote_list)
+  if (!pending_vote_list && !previous_vote_list)
     return NULL;
-  if (id == NULL) {
+  if (fp == NULL) {
     authority_cert_t *c = get_my_v3_authority_cert();
-    if (c)
-      id = c->cache_info.identity_digest;
-    else
+    if (c) {
+      fp = c->cache_info.identity_digest;
+      by_id = 1;
+    } else
       return NULL;
   }
-  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, pv,
-       if (!memcmp(get_voter(pv->vote)->identity_digest, id, DIGEST_LEN))
-         return pv->vote_body);
+  if (by_id) {
+    if (pending_vote_list && include_pending) {
+      SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, pv,
+        if (!memcmp(get_voter(pv->vote)->identity_digest, fp, DIGEST_LEN))
+          return pv->vote_body);
+    }
+    if (previous_vote_list && include_previous) {
+      SMARTLIST_FOREACH(previous_vote_list, pending_vote_t *, pv,
+        if (!memcmp(get_voter(pv->vote)->identity_digest, fp, DIGEST_LEN))
+          return pv->vote_body);
+    }
+  } else {
+    if (pending_vote_list && include_pending) {
+      SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, pv,
+        if (!memcmp(pv->vote->networkstatus_digest, fp, DIGEST_LEN))
+          return pv->vote_body);
+    }
+    if (previous_vote_list && include_previous) {
+      SMARTLIST_FOREACH(previous_vote_list, pending_vote_t *, pv,
+        if (!memcmp(pv->vote->networkstatus_digest, fp, DIGEST_LEN))
+          return pv->vote_body);
+    }
+  }
   return NULL;
 }
 

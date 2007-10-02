@@ -1152,6 +1152,9 @@ $Id$
    at
       http://<hostname>/tor/status-vote/next/<fp>.z
    where <fp> is the fingerprint of the other authority's identity key.
+   And at
+      http://<hostname>/tor/status-vote/next/d/<d>.z
+   where <d> is the digest of the vote document.
 
    The consensus status, along with as many signatures as the server
    currently knows, should be available at
@@ -1165,6 +1168,12 @@ $Id$
       http://<hostname>/tor/status-vote/current/consensus.z
    and
       http://<hostname>/tor/status-vote/current/consensus-signatures.z
+
+   The other vote documents are analogously made available under
+     http://<hostname>/tor/status-vote/current/authority.z
+     http://<hostname>/tor/status-vote/current/<fp>.z
+     http://<hostname>/tor/status-vote/current/d/<d>.z
+   once the consensus is complete.
 
    Once an authority has computed and signed a consensus network status, it
    should send its detached signature to each other authority in an HTTP POST

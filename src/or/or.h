@@ -2887,7 +2887,7 @@ void dirvote_act(time_t now);
 
 /* invoked on timers and by outside triggers. */
 void dirvote_perform_vote(void);
-void dirvote_clear_pending_votes(void);
+void dirvote_clear_votes(int all_votes);
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
                                          const char **msg_out,
                                          int *status_out);
@@ -2898,7 +2898,9 @@ int dirvote_publish_consensus(void);
 /* Item access */
 const char *dirvote_get_pending_consensus(void);
 const char *dirvote_get_pending_detached_signatures(void);
-const cached_dir_t *dirvote_get_vote(const char *id);
+const cached_dir_t *dirvote_get_vote(const char *fp, int by_id,
+                                     int include_pending,
+                                     int include_previous);
 
 #ifdef DIRVOTE_PRIVATE
 int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,

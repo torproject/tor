@@ -2124,16 +2124,27 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       const char *item;
       if ((item=dirvote_get_pending_detached_signatures()))
         smartlist_add(items, (char*)item);
-    } else if (!current && !strcmp(url, "authority")) {
+    } else if (!strcmp(url, "authority")) {
       const cached_dir_t *d;
-      if ((d=dirvote_get_vote(NULL)))
+      if ((d=dirvote_get_vote(NULL, 1, current, !current)))
         smartlist_add(dir_items, (cached_dir_t*)d);
-    } else if (!current) {
+    } else {
       const cached_dir_t *d;
       smartlist_t *fps = smartlist_create();
+      int by_id, include_pending, include_previous;
+      if (!strcmpstart(url, "d/")) {
+        url += 2;
+        by_id = 0;
+        include_pending = include_previous = 1;
+      } else {
+        by_id = 1;
+        include_pending = current;
+        include_previous = !current;
+      }
       dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
       SMARTLIST_FOREACH(fps, char *, fp, {
-          if ((d = dirvote_get_vote(fp)))
+          if ((d = dirvote_get_vote(fp, by_id,
+                                    include_pending, include_previous)))
             smartlist_add(dir_items, (cached_dir_t*)d);
           tor_free(fp);
         });
