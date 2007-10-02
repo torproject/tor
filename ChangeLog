@@ -12,6 +12,12 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - Use annotations to record the source for each descriptor.
     - Use annotations to record the purpose of each descriptor.
 
+  o Major bugfixes (performance):
+    - Fix really bad O(n^2) performance when parsing a long list of routers:
+      Instead of searching the entire list for an "extra-info " string which
+      usually wasn't there, once for every routerinfo we read, just scan
+      lines forward until we find one we like.  Bugfix on 0.2.0.1.
+
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an
       OR address is readable, set the port correctly.  (Previously we

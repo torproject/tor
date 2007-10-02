@@ -855,6 +855,40 @@ check_signature_token(const char *digest,
   return 0;
 }
 
+/** DOCDOC */
+static int
+find_start_of_next_router_or_extrainfo(const char **s_ptr,
+                                       const char *eos,
+                                       int *is_extrainfo_out)
+{
+  const char *annotations = NULL;
+  const char *s = *s_ptr;
+
+  s = eat_whitespace_eos(s, eos);
+
+  while (s < eos-32) {  /* 32 gives enough room for a the first keyword. */
+    /* We're at the start of a line. */
+    tor_assert(*s != '\n');
+
+    if (*s == '@' && !annotations) {
+      annotations = s;
+    } else if (*s == 'r' && !strcmpstart(s, "router ")) {
+      *s_ptr = annotations ? annotations : s;
+      *is_extrainfo_out = 0;
+      return 0;
+    } else if (*s == 'e' && !strcmpstart(s, "extra-info ")) {
+      *s_ptr = annotations ? annotations : s;
+      *is_extrainfo_out = 1;
+      return 0;
+    }
+
+    if (!(s = memchr(s+1, '\n', eos-(s+1))))
+      break;
+    s = eat_whitespace_eos(s, eos);
+  }
+  return -1;
+}
+
 /** Given a string *<b>s</b> containing a concatenated sequence of router
  * descriptors (or extra-info documents if <b>is_extrainfo</b> is set), parses
  * them and stores the result in <b>dest</b>.  All routers are marked running
@@ -893,40 +927,9 @@ router_parse_list_from_string(const char **s, const char *eos,
   tor_assert(eos >= *s);
 
   while (1) {
-    *s = eat_whitespace_eos(*s, eos);
-    if ((eos - *s) < 32) /* make sure it's long enough. */
+    if (find_start_of_next_router_or_extrainfo(s, eos, &have_extrainfo) < 0)
       break;
 
-    /* Don't start parsing the rest of *s unless it contains a router or
-     * extra-info. */
-    if (strcmpstart(*s, "extra-info ")==0) {
-      have_extrainfo = 1;
-    } else if (strcmpstart(*s, "router ")==0) {
-      have_extrainfo = 0;
-    } else {
-      /* skip junk. */
-      const char *annotation = NULL, *ei, *ri;
-      if (**s == '@') {
-        annotation = *s;
-      } else {
-        if ((annotation = tor_memstr(*s, eos-*s, "\n@")))
-          ++annotation;
-      }
-
-      ei = tor_memstr(*s, eos-*s, "\nextra-info ");
-      ri = tor_memstr(*s, eos-*s, "\nrouter ");
-      if (ri && (!ei || ri < ei)) {
-        have_extrainfo = 0;
-        *s = ri + 1;
-      } else if (ei) {
-        have_extrainfo = 1;
-        *s = ei + 1;
-      } else {
-        break;
-      }
-      if (annotation && annotation < *s)
-        *s = annotation;
-    }
     end = tor_memstr(*s, eos-*s, "\nrouter-signature");
     if (end)
       end = tor_memstr(end, eos-end, "\n-----END SIGNATURE-----\n");
