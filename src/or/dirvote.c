@@ -19,8 +19,10 @@ static int dirvote_add_signatures_to_pending_consensus(
 static char *list_v3_auth_ids(void);
 static void dirvote_fetch_missing_votes(void);
 static void dirvote_fetch_missing_signatures(void);
-
-/* XXXX020 lots of the functions here could be made static. Do so. */
+static void dirvote_perform_vote(void);
+static void dirvote_clear_votes(int all_votes);
+static int dirvote_compute_consensus(void);
+static int dirvote_publish_consensus(void);
 
 /* =====
  * Voting and consensus generation
@@ -858,30 +860,6 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
   return r;
 }
 
-#if 0
-/** As networkstatus_add_consensus_signature_impl, but takes new signatures
- * from the consensus in <b>src</b>. */
-int
-networkstatus_add_consensus_signatures(networkstatus_vote_t *target,
-                                       networkstatus_vote_t *src,
-                                       char **new_signatures_out)
-{
-  tor_assert(src);
-  tor_assert(! src->is_vote);
-
-  *new_signatures_out = NULL;
-
-  /* Are they the same consensus? */
-  if (memcmp(target->networkstatus_digest, src->networkstatus_digest,
-             DIGEST_LEN))
-    return -1;
-  if (target == src)
-    return 0;
-
-  return networkstatus_add_signatures_impl(target, src->voters);
-}
-#endif
-
 /** As networkstatus_add_consensus_signature_impl, but takes new signatures
  * from the detached signatures document <b>sigs</b>. */
 int
@@ -1217,7 +1195,7 @@ static smartlist_t *pending_consensus_signature_list = NULL;
 
 /** Generate a networkstatus vote and post it to all the v3 authorities.
  * (V3 Authority only) */
-void
+static void
 dirvote_perform_vote(void)
 {
   cached_dir_t *new_vote = generate_v3_networkstatus();
@@ -1290,7 +1268,7 @@ dirvote_fetch_missing_signatures(void)
 }
 
 /** Drop all currently pending votes, consensus, and detached signatures. */
-void
+static void
 dirvote_clear_votes(int all_votes)
 {
   if (!previous_vote_list)
@@ -1490,7 +1468,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
  * votes.  Return 0 on success, -1 on failure.  Store the consensus in
  * pending_consensus: it won't be ready to be published until we have
  * everybody else's signatures collected too. (V3 Authoritity only) */
-int
+static int
 dirvote_compute_consensus(void)
 {
   /* Have we got enough votes to try? */
@@ -1616,8 +1594,6 @@ dirvote_add_signatures_to_pending_consensus(
   r = networkstatus_add_detached_signatures(pending_consensus,
                                             sigs);
 
-  // XXXX020 originally, this test was regenerate && r >= 0).  But one
-  // code path is simpler than 2.
   if (r >= 0) {
     /* XXXX This should really be its own function. */
     char *new_detached =
@@ -1685,7 +1661,7 @@ dirvote_add_signatures(const char *detached_signatures_body)
 
 /** Replace the consensus that we're currently serving with the one that we've
  * been building. (V3 Authority only) */
-int
+static int
 dirvote_publish_consensus(void)
 {
   /* Can we actually publish it yet? */

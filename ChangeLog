@@ -37,6 +37,9 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
       advantage of 64-bit platforms and to remove some possibly-costly
       voodoo.
 
+  o Code simplifications and refactoring:
+    - Make a bunch of functions static.  Remove some dead code.
+
 
 Changes in version 0.2.0.7-alpha - 2007-09-21
   o New directory authorities:

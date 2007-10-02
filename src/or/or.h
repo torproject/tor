@@ -2412,17 +2412,14 @@ int resolve_my_address(int warn_severity, or_options_t *options,
 int is_local_IP(uint32_t ip) ATTR_PURE;
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
-int options_init_logs(or_options_t *options, int validate_only);
 int option_is_recognized(const char *key);
 const char *option_get_canonical_name(const char *key);
 config_line_t *option_get_assignment(or_options_t *options,
                                      const char *key);
-char *options_dump(or_options_t *options, int minimal);
 int options_save_current(void);
 const char *get_torrc_fname(void);
 
 or_state_t *get_or_state(void);
-int or_state_load(void);
 int or_state_save(time_t now);
 
 int getinfo_helper_config(control_connection_t *conn,
@@ -2496,7 +2493,9 @@ connection_t *connection_get_by_type_purpose(int type, int purpose);
 connection_t *connection_get_by_type_addr_port_purpose(int type, uint32_t addr,
                                                    uint16_t port, int purpose);
 connection_t *connection_get_by_type_state(int type, int state);
+#if 0
 connection_t *connection_get_by_type_state_lastwritten(int type, int state);
+#endif
 connection_t *connection_get_by_type_state_rendquery(int type, int state,
                                                      const char *rendquery);
 
@@ -2572,7 +2571,6 @@ int client_dns_incr_failures(const char *address);
 void client_dns_clear_failures(const char *address);
 void client_dns_set_addressmap(const char *address, uint32_t val,
                                const char *exitname, int ttl);
-int address_is_in_virtual_range(const char *addr);
 const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
                              time_t max_expires, int want_expiry);
@@ -2886,14 +2884,10 @@ void dirvote_recalculate_timing(time_t now);
 void dirvote_act(time_t now);
 
 /* invoked on timers and by outside triggers. */
-void dirvote_perform_vote(void);
-void dirvote_clear_votes(int all_votes);
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
                                          const char **msg_out,
                                          int *status_out);
-int dirvote_compute_consensus(void);
 int dirvote_add_signatures(const char *detached_signatures_body);
-int dirvote_publish_consensus(void);
 
 /* Item access */
 const char *dirvote_get_pending_consensus(void);

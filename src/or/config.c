@@ -611,6 +611,8 @@ static config_line_t *get_assigned_option(config_format_t *fmt,
 static void config_init(config_format_t *fmt, void *options);
 static int or_state_validate(or_state_t *old_options, or_state_t *options,
                              int from_setconf, char **msg);
+static int or_state_load(void);
+static int options_init_logs(or_options_t *options, int validate_only);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
@@ -2331,7 +2333,7 @@ config_dump(config_format_t *fmt, void *options, int minimal,
  * the configuration in <b>options</b>.  If <b>minimal</b> is true, do not
  * include options that are the same as Tor's defaults.
  */
-char *
+static char *
 options_dump(or_options_t *options, int minimal)
 {
   return config_dump(&options_format, options, minimal, 0);
@@ -3515,7 +3517,7 @@ parse_log_severity_range(const char *range, int *min_out, int *max_out)
 /**
  * Initialize the logs based on the configuration file.
  */
-int
+static int
 options_init_logs(or_options_t *options, int validate_only)
 {
   config_line_t *opt;
@@ -4366,7 +4368,7 @@ or_state_set(or_state_t *new_state)
 /** Reload the persistent state from disk, generating a new state as needed.
  * Return 0 on success, less than 0 on failure.
  */
-int
+static int
 or_state_load(void)
 {
   or_state_t *new_state = NULL;

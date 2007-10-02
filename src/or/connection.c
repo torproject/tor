@@ -2369,6 +2369,7 @@ connection_get_by_type_state(int type, int state)
   return NULL;
 }
 
+#if 0
 /** Return the connection of type <b>type</b> that is in state
  * <b>state</b>, that was written to least recently, and that is not
  * marked for close.
@@ -2386,6 +2387,7 @@ connection_get_by_type_state_lastwritten(int type, int state)
   });
   return best;
 }
+#endif
 
 /** Return a connection of type <b>type</b> that has rendquery equal
  * to <b>rendquery</b>, and that is not marked for close. If state

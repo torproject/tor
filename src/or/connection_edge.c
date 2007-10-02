@@ -30,6 +30,7 @@ static smartlist_t *redirect_exit_list = NULL;
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
 static int connection_ap_process_natd(edge_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
+static int address_is_in_virtual_range(const char *addr);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -967,7 +968,7 @@ parse_virtual_addr_network(const char *val, int validate_only,
  * Return true iff <b>addr</b> is likely to have been returned by
  * client_dns_get_unused_address.
  **/
-int
+static int
 address_is_in_virtual_range(const char *address)
 {
   struct in_addr in;

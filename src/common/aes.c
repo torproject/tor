@@ -311,29 +311,6 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
   }
 }
 
-#if 0
-/** Return the current value of <b>cipher</b>'s counter. */
-u64
-aes_get_counter(aes_cnt_cipher_t *cipher)
-{
-  u64 counter = cipher->pos;
-  counter |= ((u64)cipher->counter0) << 4;
-  counter |= ((u64)cipher->counter1) << 36;
-  return counter;
-}
-
-/** Set <b>cipher</b>'s counter to <b>counter</b>. */
-void
-aes_set_counter(aes_cnt_cipher_t *cipher, u64 counter)
-{
-  cipher->pos = (u8)(counter & 0x0f);
-  cipher->counter0 = (u32) ((counter >> 4) & 0xffffffff);
-  cipher->counter1 = (u32) (counter >> 36);
-
-  _aes_fill_buf(cipher);
-}
-#endif
-
 /** DOCDOC */
 void
 aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
@@ -351,17 +328,6 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
 
   _aes_fill_buf(cipher);
 }
-
-#if 0
-/** Increment <b>cipher</b>'s counter by <b>delta</b>. */
-void
-aes_adjust_counter(aes_cnt_cipher_t *cipher, long delta)
-{
-  u64 counter = aes_get_counter(cipher);
-  counter += delta;
-  aes_set_counter(cipher, counter);
-}
-#endif
 
 #ifdef USE_BUILTIN_AES
 /*======================================================================*/
