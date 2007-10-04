@@ -1,0 +1,81 @@
+Filename: xxx-unnamed-flag.txt
+Title: Network status entries need a new Unnamed flag
+Version: $Revision$
+Last-Modified: $Date$
+Author: Roger Dingledine
+Created: 04-Oct-2007
+Status: Open
+
+Overview:
+
+  Tor's directory authorities can give certain servers a "Named" flag
+  in the network-status entry, when they want to bind that nickname to
+  that identity key. This allows clients to specify a nickname rather
+  than an identity fingerprint and still be certain they're getting the
+  "right" server. As dir-spec.txt describes it,
+
+    Name X is bound to identity Y if at least one binding directory lists
+    it, and no directory binds X to some other Y'.
+
+  In practice, clients can refer to servers by nickname whether they are
+  Named or not; if they refer to nicknames that aren't Named, a complaint
+  shows up in the log asking them to use the identity key in the future
+  --- but it still works.
+
+  The problem? Imagine a Tor server with nickname Bob. Bob and his
+  identity fingerprint are registered in tor26's approved-routers
+  file, but none of the other authorities registered him. Imagine
+  there are several other unregistered servers also with nickname Bob
+  ("the imposters").
+
+  While Bob is online, all is well: a) tor26 gives a Named flag to
+  the real one, and refuses to list the other ones; and b) the other
+  authorities list the imposters but don't give them a Named flag. Clients
+  who have all the network-statuses can compute which one is the real Bob.
+
+  But when the real Bob disappears and his descriptor expires? tor26
+  continues to refuse to list any of the imposters, and the other
+  authorities continue to list the imposters. Clients don't have any
+  idea that there exists a Named Bob, so they can ask for server Bob and
+  get one of the imposters. (A warning will also appear in their log,
+  but so what.)
+
+The stopgap solution:
+
+  tor26 should start accepting and listing the imposters, but it should
+  assign them a new flag: "Unnamed". This would produce three cases from
+  the client perspective:
+
+  1) A unique Bob is listed as Named, and nobody lists that Bob as
+  Unnamed. Clients can refer to Bob by nickname and be confident.
+
+  2) Every Bob is listed by some authority as Unnamed. Clients asking
+  for Bob should get a warning in the log and their request should fail
+  ("no such router").
+
+  3) At least one Bob is not listed by any authorities as Unnamed, but
+  there is no unique Named Bob. In this case we do what we did before
+  (currently "warn but allow it").
+
+Problems not solved by this stopgap:
+
+  If tor26 is the only authority that provides a binding for Bob, when
+  tor26 goes offline we're back in our previous situation -- the imposters
+  can be referenced with a mere ignorable warning in the client's log.
+
+  If some other authority Names a different Bob, and tor26 goes offline,
+  then that other Bob becomes the unique Named Bob.
+
+  So be it. We should try to solve these one day, but there's no clear way
+  to do it that doesn't destroy usability in other ways, and if we want
+  to get the Unnamed flag into v3 network statuses we should add it soon.
+
+Other benefits:
+
+  This new flag will allow people to operate servers that happen to have
+  the same nickname as somebody who registered their server two years ago
+  and left soon after. Right now there are dozens of nicknames that are
+  registered on all three binding directory authorities, yet haven't been
+  running for years. While it's bad that these nicknames are effectively
+  blacklisted from the network, the really bad part is that this logic
+  is really unintuitive to prospective new server operators.

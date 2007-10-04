@@ -44,6 +44,7 @@ Proposals by number:
 119  New PROTOCOLINFO command for controllers [CLOSED]
 120  Suicide descriptors when Tor servers stop [OPEN]
 121  Hidden Service Authentication [OPEN]
+122  Network status entries need a new Unnamed flag [OPEN]
 
 
 Proposals by status:
@@ -59,6 +60,7 @@ Proposals by status:
    117  IPv6 exits
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
+   122  Network status entries need a new Unnamed flag
  ACCEPTED:
    101  Voting on the Tor Directory System
    103  Splitting identity key from regularly used signing key
