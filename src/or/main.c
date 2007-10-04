@@ -908,7 +908,9 @@ run_scheduled_events(time_t now)
     dirserv_test_reachability(now, 0);
   }
 
-  /** 1d. DOCDOC */
+  /** 1d. Periodically, we discount older stability information so that new
+   * stability info counts more, and save the stability information to disk as
+   * appropriate. */
   if (time_to_downrate_stability < now)
     time_to_downrate_stability = rep_hist_downrate_old_runs(now);
   if (authdir_mode_tests_reachability(options)) {
@@ -923,7 +925,8 @@ run_scheduled_events(time_t now)
     }
   }
 
-  /* 1e. DOCDOC */
+  /* 1e. Periodicaly, if we're a v3 authority, we check whether our cert is
+   * close to expiring and warn the admin if it is. */
   if (time_to_check_v3_certificate < now) {
     v3_authority_check_key_expiry();
     time_to_check_v3_certificate = now + CHECK_V3_CERTIFICATE_INTERVAL;

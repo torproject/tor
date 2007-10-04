@@ -1066,7 +1066,12 @@ body_is_plausible(const char *body, size_t len, int purpose)
   }
 }
 
-/** DOCDOC */
+/** Called when we've just fetched a bunch of router descriptors in
+ * <b>body</b>.  The list <b>which</b>, if present, holds digests for
+ * descriptors we requested: descriptor digests if <b>descriptor_digests</b>
+ * is true, or identity digests otherwise.  Parse the descriptors, validate
+ * them, and annotate them as having purpose <b>purpose</b> and as having been
+ * downloaded from <b>source</b>. */
 static void
 load_downloaded_routers(const char *body, smartlist_t *which,
                         int descriptor_digests,
@@ -1077,6 +1082,7 @@ load_downloaded_routers(const char *body, smartlist_t *which,
   char time_buf[ISO_TIME_LEN+1];
   int general = router_purpose == ROUTER_PURPOSE_GENERAL;
   format_iso_time(time_buf, time(NULL));
+  tor_assert(source);
 
   if (tor_snprintf(buf, sizeof(buf),
                    "@downloaded-at %s\n"

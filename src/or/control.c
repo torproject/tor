@@ -1249,7 +1249,15 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   return 0;
 }
 
-/** DOCDOC */
+/** Awful hack: return a newly allocated string based on a routerinfo and
+ * (possibly) an extrainfo, sticking the read-history and write-history from
+ * <b>ei</b> into the resulting string.  The thing you get back won't
+ * necessarily have a valid signature.
+ *
+ * New code should never use this; it's for backward compatibiliy.
+ *
+ * NOTE: <b>ri_body</b> is as returned by signed_descriptor_get_body: it might
+ * not be NUL-terminated. */
 static char *
 munge_extrainfo_into_routerinfo(const char *ri_body, signed_descriptor_t *ri,
                                 signed_descriptor_t *ei)
@@ -2355,7 +2363,8 @@ handle_control_closecircuit(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we get a RESOLVE command: start trying to resolve
+ * the listed addresses. */
 static int
 handle_control_resolve(control_connection_t *conn, uint32_t len,
                        const char *body)
@@ -2390,7 +2399,7 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** DOCDOC */
+/** Called when we get a PROTOCOLINFO command: send back a reply. */
 static int
 handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
                             const char *body)
@@ -3554,7 +3563,8 @@ control_event_guard(const char *nickname, const char *digest,
   return 0;
 }
 
-/** DOCDOC */
+/** Helper: Return a newly allocated string containing a path to the
+ * file where we store our authentication cookie. */
 static char *
 get_cookie_file(void)
 {

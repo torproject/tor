@@ -1516,16 +1516,32 @@ write_str_to_file(const char *fname, const char *str, int bin)
   return write_bytes_to_file(fname, str, strlen(str), bin);
 }
 
-/** DOCDOC */
+/** Represents a file that we're writing to, with support for atomic commit:
+ * we can write into a a temporary file, and either remove the file on
+ * failure, or replace the original file on success. */
 struct open_file_t {
-  char *tempname;
-  char *filename;
-  int rename_on_close;
-  int fd;
-  FILE *stdio_file;
+  char *tempname; /**< Name of the temporary file. */
+  char *filename; /**< Name of the original file. */
+  int rename_on_close; /**< Are we using the temporary file or not? */
+  int fd; /**< fd for the open file. */
+  FILE *stdio_file; /**< stdio wrapper for <b>fd</b>. */
 };
 
-/** DOCDOC */
+/** Try to start writing to the file in <b>fname</b>, passing the flags
+ * <b>open_flags</b> to the open() syscall, creating the file (if needed) with
+ * access value <b>mode</b>.  If the O_APPEND flag is set, we append to the
+ * original file.  Otherwise, we open a new a temporary file in the same
+ * directory, and either replace the original or remove the temprorary file
+ * when we're done.
+ *
+ * Return the fd for the newly opened file, and store working data in
+ * *<b>data_out</b>.  The caller should not close the fd manually:
+ * instead, call finish_writing_to_file() or abort_writing_to_file().
+ * Returns -1 on failure.
+ *
+ * NOTE: When not appending, the flags O_CREAT and O_TRUNC are treated
+ * as true and the flag O_EXCL is treated as false.
+ */
 int
 start_writing_to_file(const char *fname, int open_flags, int mode,
                       open_file_t **data_out)
@@ -1551,6 +1567,9 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
       log(LOG_WARN, LD_GENERAL, "Failed to generate filename");
       goto err;
     }
+    /* We always replace an existing temporary file if there is one. */
+    open_flags |= O_CREAT|O_TRUNC;
+    open_flags &= ~O_EXCL;
     new_file->rename_on_close = 1;
   }
 
@@ -1572,7 +1591,9 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   return -1;
 }
 
-/** DOCDOC */
+/** Given <b>file_data</b> from start_writing_to_file(), return a stdio FILE*
+ * that can be used to write to the same file.  The caller should not mix
+ * stdio calls with non-stdio calls. */
 FILE *
 fdopen_file(open_file_t *file_data)
 {
@@ -1587,7 +1608,8 @@ fdopen_file(open_file_t *file_data)
   return file_data->stdio_file;
 }
 
-/** DOCDOC */
+/** Combines start_writing_to_file with fdopen_file(): arguments are as
+ * for start_writing_to_file, but  */
 FILE *
 start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
                             open_file_t **data_out)
@@ -1600,7 +1622,10 @@ start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
   return res;
 }
 
-/** DOCDOC */
+/** Helper function: close and free the underlying file and memory in
+ * <b>file_data</b>.  If we were writing into a temporary file, then delete
+ * that file (if abort_write is true) or replaces the target file with
+ * the temporary file (if abort_write is false). */
 static int
 finish_writing_to_file_impl(open_file_t *file_data, int abort_write)
 {
@@ -1641,14 +1666,17 @@ finish_writing_to_file_impl(open_file_t *file_data, int abort_write)
   return r;
 }
 
-/** DOCDOC */
+/** Finish writing to <b>file_data</b>: close the file handle, free memory as
+ * needed, and if using a temporary file, replace the original file with
+ * the temporary file. */
 int
 finish_writing_to_file(open_file_t *file_data)
 {
   return finish_writing_to_file_impl(file_data, 0);
 }
 
-/** DOCDOC */
+/** Finish writing to <b>file_data</b>: close the file handle, free memory as
+ * needed, and if using a temporary file, delete it. */
 int
 abort_writing_to_file(open_file_t *file_data)
 {

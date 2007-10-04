@@ -179,7 +179,7 @@ router_reload_networkstatus(void)
   return 0;
 }
 
-/**DOCDOC */
+/** Read the cached v3 consensus networkstatus from the disk. */
 int
 router_reload_consensus_networkstatus(void)
 {
@@ -363,7 +363,9 @@ trusted_dirs_remove_old_certs(void)
   trusted_dirs_flush_certs_to_disk();
 }
 
-/** DOCDOC */
+/** Return the newest v3 authority certificate whose v3 authority identity key
+ * has digest <b>id_digest</b>.  Return NULL if no such authority is known,
+ * or it has no certificate. */
 authority_cert_t *
 authority_cert_get_newest_by_id(const char *id_digest)
 {
@@ -379,7 +381,9 @@ authority_cert_get_newest_by_id(const char *id_digest)
   return best;
 }
 
-/** DOCDOC */
+/** Return the newest v3 authority certificate whose directory signing key has
+ * giest <sk_digest</b>. Return NULL if no such certificate is known.
+ */
 authority_cert_t *
 authority_cert_get_by_sk_digest(const char *sk_digest)
 {
@@ -416,7 +420,12 @@ authority_cert_get_by_digests(const char *id_digest,
   return NULL;
 }
 
-/** DOCDOC */
+/** Try to download any v3 authority certificates that we may be missing.  If
+ * <b>status</b> is provided, try to get all the ones that were used to sign
+ * <b>status</b>.  Additionally, try to have a non-expired certificate for
+ * every V3 authority in trusted_dir_servers.  Don't fetch certificates we
+ * already have.
+ **/
 void
 authority_certs_fetch_missing(networkstatus_vote_t *status)
 {
@@ -526,6 +535,7 @@ signed_desc_append_to_journal(signed_descriptor_t *desc,
   const char *body = signed_descriptor_get_body_impl(desc,1);
   size_t len = desc->signed_descriptor_len + desc->annotations_len;
 
+  /* XXXX020 remove this; we can now cache things with weird purposes. */
   if (purpose != ROUTER_PURPOSE_GENERAL &&
       purpose != EXTRAINFO_PURPOSE_GENERAL) {
     /* we shouldn't cache it. be happy and return. */
@@ -1983,7 +1993,14 @@ extrainfo_get_by_descriptor_digest(const char *digest)
 
 /** Return a pointer to the signed textual representation of a descriptor.
  * The returned string is not guaranteed to be NUL-terminated: the string's
- * length will be in desc-\>signed_descriptor_len. */
+ * length will be in desc-\>signed_descriptor_len.
+ *
+ * If with_annotations is set, the returned string will include the annotations
+ * (if any) preceding the descriptor.  This will increase the length of the
+ * string by desc-\>annotations_len.
+ *
+ * The caller must not free the string returned.
+ */
 static const char *
 signed_descriptor_get_body_impl(signed_descriptor_t *desc,
                                 int with_annotations)
@@ -2020,7 +2037,12 @@ signed_descriptor_get_body_impl(signed_descriptor_t *desc,
   return r;
 }
 
-/** DOCDOC */
+/** Return a pointer to the signed textual representation of a descriptor.
+ * The returned string is not guaranteed to be NUL-terminated: the string's
+ * length will be in desc-\>signed_descriptor_len.
+ *
+ * The caller must not free the string returned.
+ */
 const char *
 signed_descriptor_get_body(signed_descriptor_t *desc)
 {
@@ -4110,7 +4132,11 @@ networkstatus_get_live_consensus(time_t now)
     return NULL;
 }
 
-/** DOCDOC */
+/** Try to replace the current cached v3 networkstatus with the one in
+ * <b>consensus</b>.  If we don't have enough certificates to validate it,
+ * store it in consensus_waiting_for_certs and launch a certificate fetch.
+ *
+ * Return 0 on success, -1 on failure. */
 int
 networkstatus_set_current_consensus(const char *consensus, int from_cache,
                                     int was_waiting_for_certs)
@@ -4146,9 +4172,12 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
                        options->DataDirectory);
           write_str_to_file(filename, consensus, 0);
         }
-        /* XXXX020 trigger the certificate download. */
+        /* XXXX this test isn't quite right; see below. */
+        if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
+                                            DIR_PURPOSE_FETCH_CERTIFICATE))
+          authority_certs_fetch_missing(c);
       }
-      return -1;
+      return -1; /* XXXX020 shoul*/
     } else {
       if (!was_waiting_for_certs)
         log_warn(LD_DIR, "Not enough good signatures on networkstatus "
@@ -4157,6 +4186,14 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
       return -1;
     }
   }
+
+  /* Are we missing any certificates at all? */
+  /* XXXX The test for 'are we downloading' should be 'are we downloading
+   *    these certificates', and it should get pushed into
+   *    authority_certs_fetch_missing. */
+  if (r != 1 && !connection_get_by_type_purpose(CONN_TYPE_DIR,
+                                                DIR_PURPOSE_FETCH_CERTIFICATE))
+    authority_certs_fetch_missing(c);
 
   if (current_consensus)
     networkstatus_vote_free(current_consensus);

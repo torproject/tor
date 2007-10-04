@@ -1694,10 +1694,11 @@ version_from_platform(const char *platform)
 
 /** Helper: write the router-status information in <b>rs</b> into <b>buf</b>,
  * which has at least <b>buf_len</b> free characters.  Do NUL-termination.
- * Use the same format as in network-status documents.  If <b>platform</b> is
+ * Use the same format as in network-status documents.  If <b>version</b> is
  * non-NULL, add a "v" line for the platform.  Return 0 on success, -1 on
- * failure.
- * DOCDOC new arguments */
+ * failure.  If <b>first_line_only<b> is true, don't include any flags
+ * or version line.
+ */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
                           routerstatus_t *rs, const char *version,
@@ -1918,6 +1919,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
 
 /** Return a new networkstatus_vote_t* containing our current opinion. (For v3
  * authorities */
+/* XXXX020 possibly rename and relocate to dirvote.c? */
 static networkstatus_vote_t *
 generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                 authority_cert_t *cert)
@@ -2238,7 +2240,8 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   return status;
 }
 
-/** DOCDOC */
+/** Replace the value of <b>the_v3_networkstatus_vote</b> with a
+ * new vote, and return that value.  Returns NULL on failure. */
 /* XXXX020 possibly rename and relocate to dirvote.c? */
 cached_dir_t *
 generate_v3_networkstatus(void)

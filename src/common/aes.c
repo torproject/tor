@@ -311,7 +311,8 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
   }
 }
 
-/** DOCDOC */
+/** Reset the 128-bit counter of <b>cipher</b> to the 16-bit big-endian value
+ * in <b>iv</b>. */
 void
 aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
 {

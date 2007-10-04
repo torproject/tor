@@ -319,7 +319,8 @@ init_v3_authority_keys(const char *keydir)
     authority_cert_free(parsed);
 }
 
-/* DOCDOC */
+/** If we're a v3 authority, check whether we have a certificatge that's
+ * likely to expire soon.  Warn if we do, but not too often. */
 void
 v3_authority_check_key_expiry(void)
 {
@@ -791,7 +792,8 @@ authdir_mode_v3(or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
-/** DOCDOC */
+/** Return true if we belive ourselves to be any kind of non-bridge
+ * authoritative directory  */
 int
 authdir_mode_any_nonbridge(or_options_t *options)
 {
@@ -1773,7 +1775,9 @@ router_reset_warnings(void)
   }
 }
 
-/** DOCDOC */
+/** Given a router purpose, convert it to a string.  Don't call this on
+ * ROUTER_PURPOSE_UNKNOWN: The whole point of that value is that we don't
+ * know its string representation. */
 const char *
 router_purpose_to_string(uint8_t p)
 {
@@ -1788,7 +1792,7 @@ router_purpose_to_string(uint8_t p)
   return NULL;
 }
 
-/** DOCDOC */
+/** Given a string, convert it to a router purpose.  */
 uint8_t
 router_purpose_from_string(const char *s)
 {

@@ -1048,25 +1048,26 @@ dirvote_get_start_of_next_interval(time_t now, int interval)
 static struct {
   /** When do we generate and distribute our vote for this interval? */
   time_t voting_starts;
-  /** DOCDOC */
+  /** When do we send an HTTP request for any votes that we haven't
+   * been posted yet?*/
   time_t fetch_missing_votes;
   /** When do we give up on getting more votes and generate a consensus? */
   time_t voting_ends;
-  /** DOCDOC */
+  /** When do we send an HTTP request for any signatures we're expecting to
+   * see on the consensus? */
   time_t fetch_missing_signatures;
   /** When do we publish the consensus? */
   time_t interval_starts;
-
   /** When do we discard old votes and pending detached signatures? */
   time_t discard_old_votes;
 
   /* True iff we have generated and distributed our vote. */
   int have_voted;
-  /* DOCDOC */
+  /* True iff we've requested missing votes. */
   int have_fetched_missing_votes;
   /* True iff we have built a consensus and sent the signatures around. */
   int have_built_consensus;
-  /* DOCDOC */
+  /* True iff we've fetched missing signatures. */
   int have_fetched_missing_signatures;
   /* True iff we have published our consensus. */
   int have_published_consensus;
@@ -1220,7 +1221,9 @@ dirvote_perform_vote(void)
   log_notice(LD_DIR, "Vote posted.");
 }
 
-/** DOCDOC */
+/** Send an HTTP request to every other v3 authority, for the votes of every
+ * authority for which we haven't received a vote yet in this period. (V3
+ * authority only) */
 static void
 dirvote_fetch_missing_votes(void)
 {
@@ -1254,7 +1257,8 @@ dirvote_fetch_missing_votes(void)
   smartlist_free(missing_fps);
 }
 
-/** DOCDOC */
+/** Send a request to every other authority for its detached signatures,
+ * unless we have signatures from all other v3 authorities already. */
 static void
 dirvote_fetch_missing_signatures(void)
 {
@@ -1722,10 +1726,14 @@ dirvote_get_pending_detached_signatures(void)
   return pending_consensus_signatures;
 }
 
-/** Return the vote for the authority with the v3 authority identity key
- * digest <b>id</b>.  If <b>id</b> is NULL, return our own vote. May return
- * NULL if we have no vote for the authority in question.
- * DOCDOC args */
+/** Return a given vote specified by <b>fp</b>.  If <b>by_id</b>, return the
+ * vote for the authority with the v3 authority identity key digest <b>fp</b>;
+ * if <b>by_id</b> is false, return the vote whose digest is <b>fp</b>.  If
+ * <b>fp</b> is NULL, return our own vote.  If <b>include_previous</b> is
+ * false, do not consider any votes for a consensus that's already been built.
+ * If <b>include_pending</b> is false, do not consider any votes for the
+ * consensus that's in progress.  May return NULL if we have no vote for the
+ * authority in question. */
 const cached_dir_t *
 dirvote_get_vote(const char *fp, int by_id, int include_previous,
                  int include_pending)

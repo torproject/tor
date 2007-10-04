@@ -52,18 +52,19 @@ Things we'd like to do in 0.2.0.x:
     . 101: Voting on the Tor Directory System (plus 103)
       . Finalize proposal
         * Describe schedule in copious detail.
-      - Get authorities voting
+      . Get authorities voting
         o Code to manage key certificates
           o Download as needed.
             o Code to download
-            . Code to retry download.
+            D Code to retry download.
         o Code to generate consensus from a list of votes
           o Detect whether votes are really all for the same period.
         o Push/pull documents as appropriate.
           o Pull votes and signatures if we don't get them.
-        - Cache votes and signatures on disk?
+        o Cache votes and signatures on disk?
           o Code to keep consensus docs in limbo if they don't have
             have enough signatures.
+          D Save votes on disk.
         o Have clients know which authorities are v3 authorities, and what
           their keys are.
           - While we're at it, let v3 authorities have fqdns lines.

@@ -143,7 +143,7 @@ typedef struct token_rule_t {
   /** One or more of AT_START/AT_END to limit where the item may appear in a
    * document. */
   int pos;
-  /** DOCDOC */
+  /** True iff this token is an annotation. */
   int is_annotation;
 } token_rule_t;
 
@@ -855,7 +855,11 @@ check_signature_token(const char *digest,
   return 0;
 }
 
-/** DOCDOC */
+/** Helper: move *<b>s_ptr</b> ahead to the next router, the next extra-info,
+ * or to the first of the annotations proceeding the next router or
+ * extra-info---whichever comes first.  Set <b>is_extrainfo_out</b> to true if
+ * we found an extrainfo, or false if found a router. Do not scan beyond
+ * <b>eos</b>.  Return -1 if we found nothing; 0 if we found something. */
 static int
 find_start_of_next_router_or_extrainfo(const char **s_ptr,
                                        const char *eos,
@@ -1005,7 +1009,14 @@ dump_distinct_digest_count(int severity)
  * returns NULL.  If <b>cache_copy</b> is true, duplicate the contents of
  * s through end into the signed_descriptor_body of the resulting
  * routerinfo_t.
- * DOCDOC annotations
+ *
+ * If <b>allow_annotations</b>, it's okay to encounter annotations in <b>s</b>
+ * before the router; if it's false, reject the router if it's annotated.  If
+ * <b>prepend_annotations</b> is set, it should contain some annotations:
+ * append them to the front of the router before parsing it, and keep them
+ * around when caching the router.
+ *
+ * Only one of allow_annotations and prepend_annotations may be set.
  */
 routerinfo_t *
 router_parse_entry_from_string(const char *s, const char *end,
@@ -1531,7 +1542,11 @@ find_start_of_next_routerstatus(const char *s)
 /** Given a string at *<b>s</b>, containing a routerstatus object, and an
  * empty smartlist at <b>tokens</b>, parse and return the first router status
  * object in the string, and advance *<b>s</b> to just after the end of the
- * router status.  Return NULL and advance *<b>s</b> on error. */
+ * router status.  Return NULL and advance *<b>s</b> on error.
+ *
+ * If <b>vote</b> and <b>vote_rs</b> are provided, don't allocate a fresh
+ * routerstatus but use <b>vote_rs</b> instead
+ **/
 static routerstatus_t *
 routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
                                      networkstatus_vote_t *vote,

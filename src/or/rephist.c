@@ -384,7 +384,8 @@ get_stability(or_history_t *hist, time_t when)
   return total / total_weights;
 }
 
-/** DOCDOC */
+/** Helper: Return the weighted percent-of-time-online of the router with
+ * history <b>hist</b>. */
 static double
 get_weighted_fractional_uptime(or_history_t *hist, time_t when)
 {
@@ -413,7 +414,8 @@ rep_hist_get_stability(const char *id, time_t when)
   return get_stability(hist, when);
 }
 
-/** DOCDOC */
+/** Return an estimated percent-of-time-online for the router whose identity
+ * digest is <b>id</b>. Return 0 if the router is unknown. */
 double
 rep_hist_get_weighted_fractional_uptime(const char *id, time_t when)
 {

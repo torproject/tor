@@ -194,7 +194,7 @@ nt_service_is_stopping(void)
   return 0;
 }
 
-/** DOCDOC */
+/** Set the dwCurrentState field for our service to <b>state</b>. */
 void
 nt_service_set_state(DWORD state)
 {

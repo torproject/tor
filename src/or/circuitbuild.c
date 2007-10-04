@@ -2103,7 +2103,9 @@ entry_guard_free(entry_guard_t *e)
   tor_free(e);
 }
 
-/** DOCDOC */
+/** Remove any entry guard which was selected by an unknown version of Tor,
+ * or which was selected by a version of Tor that's known to select
+ * entry guards badly. */
 static int
 remove_obsolete_entry_guards(void)
 {
@@ -2512,7 +2514,7 @@ choose_random_entry(cpath_build_state_t *state)
   return r;
 }
 
-/** DOCDOC */
+/** Helper: Return the start of the month containing <b>time</b>. */
 static time_t
 start_of_month(time_t now)
 {

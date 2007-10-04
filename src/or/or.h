@@ -1167,7 +1167,8 @@ typedef struct {
 #define ROUTER_PURPOSE_CONTROLLER 1
 /** Tor should use this router only for bridge positions in circuits. */
 #define ROUTER_PURPOSE_BRIDGE 2
-/** DOCDOC */
+/** Tor should not use this router; it was marked in cached-descriptors with
+ * a purpose we didn't recognize. */
 #define ROUTER_PURPOSE_UNKNOWN 255
 
   uint8_t purpose; /** What positions in a circuit is this router good for? */
@@ -1187,8 +1188,11 @@ typedef struct {
   int routerlist_index;
 } routerinfo_t;
 
-/** DOCDOC */
-#define EXTRAINFO_PURPOSE_GENERAL -1
+/** DOCDOC
+ * XXXX020 remove this; purpose should have the same value for router
+ * and extrainfo.
+ */
+#define EXTRAINFO_PURPOSE_GENERAL 0
 
 /** Information needed to keep and cache a signed extra-info document. */
 typedef struct extrainfo_t {
@@ -1312,58 +1316,81 @@ typedef struct networkstatus_t {
                          * sorted by identity_digest. */
 } networkstatus_t;
 
-/** DOCDOC */
+/** The claim about a single router, make in a vote. */
 typedef struct vote_routerstatus_t {
-  routerstatus_t status;
-  uint64_t flags;
-  char *version;
+  routerstatus_t status; /**< Underlying 'status' object for this router.
+                          * Flags are redundant. */
+  uint64_t flags; /**< Bit-field for all recognized flags; index into
+                   * networkstatus_vote_t.known_flags. */
+  char *version; /**< The version that the authority says this router is
+                  * running. */
 } vote_routerstatus_t;
 
-/* DOCDOC */
+/* Information about a single voter in a vote or a consensus. */
 typedef struct networkstatus_voter_info_t {
-  char *nickname;
-  char identity_digest[DIGEST_LEN];
-  char *address;
-  uint32_t addr;
-  uint16_t dir_port;
-  uint16_t or_port;
-  char *contact;
-  char vote_digest[DIGEST_LEN];
-  char signing_key_digest[DIGEST_LEN]; /* This part is _not_ signed. */
+  char *nickname; /**< Nickname of this voter */
+  char identity_digest[DIGEST_LEN]; /**< Digest of this voter's identity key */
+  char *address; /**< Address of this voter, in string format. */
+  uint32_t addr; /**< Address of this voter, in IPv4, in host order. */
+  uint16_t dir_port; /**< Directory port of this voter */
+  uint16_t or_port; /**< OR port of this voter */
+  char *contact; /**< Contact information for this voter. */
+  char vote_digest[DIGEST_LEN]; /**< Digest of this voter's vote, as signed. */
 
+  /* DOCDOC */
+  char signing_key_digest[DIGEST_LEN]; /* This part is _not_ signed. */
   char *signature;
   int signature_len;
   unsigned int bad_signature : 1;
   unsigned int good_signature : 1;
 } networkstatus_voter_info_t;
 
-/*XXXX020 rename to networkstatus_t once it works. */
-/** DOCDOC is vote or consensus. */
+/** A common structure to hold a v2 network status vote, or a v2 network
+ * status consensus. */
+/* XXXX020 rename to networkstatus_t once it replaces networkstatus_t in
+ * functionality. */
 typedef struct networkstatus_vote_t {
-  int is_vote;
-  time_t published; /* vote only. */
-  time_t valid_after;
-  time_t fresh_until;
-  time_t valid_until;
+  int is_vote; /**< True if this is a vote; false if it is a consensus. */
+  time_t published; /**< Vote only: Tiem when vote was written. */
+  time_t valid_after; /**< Time after which this vote or consensus applies. */
+  time_t fresh_until; /**< Time before which this is the most recent vote or
+                       * consensus. */
+  time_t valid_until; /**< Time after which this vote or consensus should not
+                       * be used. */
+
+  /** How long does this vote/consensus claim that authorities take to
+   * distribute their votes to one another? */
   int vote_seconds;
+  /** How long does this vote/consensus claim that authorites take to
+   * distribute their consensus signatures to one another? */
   int dist_seconds;
 
+  /** Comma-separated list of recommended client software, or NULL if this
+   * voter has no opinion. */
   char *client_versions;
   char *server_versions;
+  /** List of flags that this vote/consensus applies to routers.  If a flag is
+   * not listed here, the voter has no opinion on what its value should be. */
   smartlist_t *known_flags;
 
-  smartlist_t *voters; /* list of networkstatus_voter_info_t */
+  /** List of networkstatus_voter_info_t.  For a vote, only one element
+   * is included.  For a consensus, one element is included for every voter
+   * whose vote contributed to the consensus. */
+  smartlist_t *voters;
 
-  struct authority_cert_t *cert; /* vote only. */
+  struct authority_cert_t *cert; /**< Vote only: the voter's certificate. */
 
+  /** Digest of this document, as signed. */
   char networkstatus_digest[DIGEST_LEN];
 
-  smartlist_t *routerstatus_list; /* holds vote_routerstatus_t if is_vote,
-                                   * otherwise just routerstatus_t. */
+  /** List of router statuses, sorted by identity digest.  For a vote,
+   * the elements are vote_routerstatus_t; for a consensus, the elements
+   * are routerstatus_t. */
+  smartlist_t *routerstatus_list;
 } networkstatus_vote_t;
 
-/* XXXX020 merge with networkstatus_vote_t ?? */
-/** DOCDOC */
+/** A set of signatures for a networkstatus consensus.  All fields are as for
+ * networkstatus_vote_t. */
 typedef struct ns_detached_signatures_t {
   time_t valid_after;
   time_t fresh_until;
@@ -1372,21 +1399,29 @@ typedef struct ns_detached_signatures_t {
   smartlist_t *signatures; /* list of networkstatus_voter_info_t */
 } ns_detached_signatures_t;
 
+/** Allowable types of desc_store_t. */
 typedef enum store_type_t {
-  ROUTER_STORE,
-  ANNOTATED_ROUTER_STORE,
-  EXTRAINFO_STORE
+  ROUTER_STORE = 0,
+  EXTRAINFO_STORE = 1
 } store_type_t;
 
-/** DOCDOC */
+/** A 'store' is a set of descriptors saved on disk, with accompanying
+ * journal, mmaped as needed, rebuilt as needed. */
 typedef struct desc_store_t {
+  /** Filename (within DataDir) for the store.  We append .tmp to this
+   * filename for a temporary file when rebuilding the store, and .new to this
+   * filename for the journal. */
   const char *fname_base;
+  /** Alternative (obsolete) value for fname_base: if the file named by
+   * fname_base isn't present, we read from here instead, but we never write
+   * here. */
   const char *fname_alt_base;
+  /** Human-readable description of what this store contains. */
   const char *description;
 
-  tor_mmap_t *mmap;
+  tor_mmap_t *mmap; /**< A mmap for the main file in the store. */
 
-  store_type_t type;
+  store_type_t type; /**< What's stored in this store? */
 
   /** The size of the router log, in bytes. */
   size_t journal_len;
@@ -1416,11 +1451,11 @@ typedef struct {
   /** List of signed_descriptor_t for older router descriptors we're
    * caching. */
   smartlist_t *old_routers;
-  /** DOCDOC Mmaped file holding server descriptors.  If present, any router
-   * whose cache_info.saved_location == SAVED_IN_CACHE is stored in this file
+  /** Store holding server descriptors.  If present, any router whose
+   * cache_info.saved_location == SAVED_IN_CACHE is stored in this file
    * starting at cache_info.saved_offset */
   desc_store_t desc_store;
-  /** Mmaped file holding extra-info documents. */
+  /** Store holding extra-info documents. */
   desc_store_t extrainfo_store;
 } routerlist_t;
 
@@ -2870,7 +2905,7 @@ void ns_detached_signatures_free(ns_detached_signatures_t *s);
 void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 
-/** DOCDOC */
+/** Describes the schedule by which votes should be generated. */
 typedef struct vote_timing_t {
   int vote_interval;
   int n_intervals_valid;
