@@ -17,7 +17,7 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
     case "$OSVER" in
-    	"10.5") OS="leopard" ARCH="universal";;
+    "10.5") OS="leopard" ARCH="universal";;
 	"10.4") OS="tiger" ARCH="universal";;
 	"10.3") OS="panther" ARCH="ppc";;
 	"10.2") OS="jaguar" ARCH="ppc";;
@@ -47,7 +47,7 @@ done
 ### Make Polipo package.
 chmod 755 contrib/PolipoPostflight
 cp polipo $BUILD_DIR/polipo_packageroot/polipo
-cp config.osx $BUILD_DIR/polipo_packageroot/config
+cp config.sample $BUILD_DIR/polipo_packageroot/config
 cp contrib/PolipoPostflight $BUILD_DIR/polipo_packageroot/postflight
 cp contrib/addsysuser $BUILD_DIR/polipo_packageroot/addsysuser
 cp contrib/uninstall_polipo_bundle.sh $BUILD_DIR/polipo_packageroot/uninstall_polipo_bundle.sh
