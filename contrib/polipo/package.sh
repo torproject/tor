@@ -1,6 +1,7 @@
 #!/bin/sh
 # $Id: package.sh 8992 2006-12-23 03:12:09Z phobos $
 # Copyright 2004-2005 Nick Mathewson & Andrew Lewman. 
+# Copyright 2005-2007 Andrew Lewman
 # See LICENSE in Polipo distribution for licensing information.
 
 ###
@@ -8,7 +9,7 @@
 #   http://developer.apple.com/documentation/DeveloperTools/Conceptual/SoftwareDistribution/index.html
 #   man packagemaker
 
-VERSION="1.0.2"
+VERSION="1.0.3"
 
 ## Determine OSX Version
 # map version to name
