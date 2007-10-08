@@ -1,0 +1,22 @@
+#!/usr/bin/ruby
+
+require "yaml"
+
+require 'db'
+require 'db-config'
+
+verbose = ARGV.first == "-v"
+
+db = Db.new($CONFIG['database']['dbname'], $CONFIG['database']['user'], $CONFIG['database']['password'])
+
+db.transaction_begin
+named = db.query2("
+		SELECT fingerprint, router_id, nickname_id, nick, first_seen, last_seen
+		FROM router NATURAL JOIN router_claims_nickname NATURAL JOIN nickname
+		WHERE named")
+while (n=named.next) do
+	puts "# (r##{n['router_id']},n##{n['nickname_id']}); first_seen: #{n['first_seen']}, last_seen: #{n['last_seen']}"
+	fpr = n['fingerprint'].split(/(....)/).delete_if{|x| x=="" }.join(' ')
+	puts "#{n['nick']} #{fpr}}"
+end
+db.transaction_commit

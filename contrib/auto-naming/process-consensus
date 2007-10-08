@@ -1,0 +1,94 @@
+#!/usr/bin/ruby
+
+require "yaml"
+
+require 'db'
+require 'db-config'
+require 'update-named-status'
+
+$db = Db.new($CONFIG['database']['dbname'], $CONFIG['database']['user'], $CONFIG['database']['password'])
+
+$router_cache = {}
+$nickname_cache = {}
+
+def parse_consensus consensus
+	ts = nil
+	routers = []
+	consensus.each do |line|
+		(key, value) = line.split(' ',2)
+		case key
+			when "valid-after", "published": ts = DateTime.parse(value)
+			when "r":
+				(nick, fpr, _) = value.split(' ', 3)
+				nick.downcase!
+				next if nick == 'unnamed'
+				routers << {
+					'nick' => nick,
+					'fingerprint' => (fpr+'=').unpack('m').first.unpack('H*').first
+					}
+		end
+	end
+	throw "Did not find a timestamp" unless ts
+	throw "Did not find any routers" unless routers.size > 0
+	return ts, routers
+end
+
+def insert_routers_into_db(router, table, field, value)
+	pk = table+'_id'
+	row = $db.query_row("SELECT #{pk} FROM #{table} WHERE #{field}=?", value)
+	if row
+		return row[pk]
+	else
+		r = { field => value }
+		$db.insert_row( table, r )
+		return r[pk]
+	end
+end
+
+def handle_one_consensus(c)
+	puts "parsing..." if $verbose
+	timestamp, routers = parse_consensus c
+	puts "storing..." if $verbose
+
+	routers.each do |router|
+		fpr = router['fingerprint']
+		nick = router['nick']
+		$router_cache[fpr] = router_id = ($router_cache[fpr] or insert_routers_into_db(router, 'router', 'fingerprint', router['fingerprint']))
+		$nickname_cache[nick] = nickname_id = ($nickname_cache[nick] or insert_routers_into_db(router, 'nickname', 'nick', router['nick']))
+
+		row = $db.update(
+			'router_claims_nickname',
+			{ 'last_seen' => timestamp.to_s },
+			{ 'router_id' => router_id, 'nickname_id' => nickname_id} )
+		case row
+			when 0:
+				$db.insert('router_claims_nickname',
+					{
+						'first_seen' => timestamp.to_s,
+						'last_seen' => timestamp.to_s,
+						'router_id' => router_id, 'nickname_id' => nickname_id} )
+			when 1:
+			else
+				throw "Update of router_claims_nickname returned unexpected number of affected rows(#{row})"
+		end
+	end
+end
+
+$db.transaction_begin
+if ARGV.first == '-v'
+	$verbose = true
+	ARGV.shift
+end
+
+if ARGV.size == 0
+	handle_one_consensus STDIN.readlines
+	do_update true
+else
+	ARGV.each do |filename|
+		puts filename if $verbose
+		handle_one_consensus File.new(filename).readlines
+		puts "updating..." if $verbose
+		do_update $verbose
+	end
+end
+$db.transaction_commit
