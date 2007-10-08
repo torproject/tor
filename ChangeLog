@@ -45,7 +45,8 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
 
   o Code simplifications and refactoring:
     - Make a bunch of functions static.  Remove some dead code.
-
+    - Pull out about a third of the really big routerlist.c; put it in a
+      new module, networkstatus.c.
 
 Changes in version 0.2.0.7-alpha - 2007-09-21
   o New directory authorities:

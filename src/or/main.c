@@ -1781,6 +1781,7 @@ tor_free_all(int postfork)
   }
   dirvote_free_all();
   routerlist_free_all();
+  networkstatus_free_all();
   addressmap_free_all();
   set_exit_redirects(NULL); /* free the registered exit redirects */
   dirserv_free_all();
