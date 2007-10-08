@@ -3,6 +3,11 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - When an authority is missing votes or signatures, it now tries to fetch
       them.
 
+  o Major features (v3 directory system):
+    - Caches now download v3 network status documents as needed.
+    - Caches now download descriptors listed in their v3 network status
+      documents.
+
   o Minor features (router descriptor cache):
     - Store routers in a file called cached-descriptors instead of in
       cached-routers.  Initialize cached-descriptors from cached-routers

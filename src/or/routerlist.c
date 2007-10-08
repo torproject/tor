@@ -36,6 +36,9 @@ static void update_networkstatus_cache_downloads(time_t now);
 static void update_networkstatus_client_downloads(time_t now);
 static void update_consensus_networkstatus_fetch_time(time_t now);
 static void update_consensus_networkstatus_downloads(time_t now);
+static void launch_router_descriptor_downloads(smartlist_t *downloadable,
+                                               time_t now);
+static void update_consensus_router_descriptor_downloads(time_t now);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static int have_tried_downloading_all_statuses(int n_failures);
 static routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
@@ -4016,7 +4019,7 @@ update_networkstatus_downloads(time_t now)
   update_consensus_networkstatus_downloads(now);
 }
 
-/** Clear all our timeouts for fetching v2 directory stuff, and then
+/** Clear all our timeouts for fetching v2 and v3 directory stuff, and then
  * give it all a try again. */
 void
 routerlist_retry_directory_downloads(time_t now)
@@ -5142,7 +5145,6 @@ update_router_descriptor_client_downloads(time_t now)
    * them until they have more, or until this amount of time has passed. */
 #define MAX_CLIENT_INTERVAL_WITHOUT_REQUEST (10*60)
   smartlist_t *downloadable = NULL;
-  int should_delay, n_downloadable;
   or_options_t *options = get_options();
 
   if (options->DirPort) {
@@ -5164,27 +5166,37 @@ update_router_descriptor_client_downloads(time_t now)
   }
 
   downloadable = router_list_client_downloadable();
+  launch_router_descriptor_downloads(downloadable, now);
+  smartlist_free(downloadable);
+}
+
+/** DOCDOC */
+static void
+launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
+{
+  int should_delay = 0, n_downloadable;
+  or_options_t *options = get_options();
+
   n_downloadable = smartlist_len(downloadable);
-  if (n_downloadable >= MAX_DL_TO_DELAY) {
-    log_debug(LD_DIR,
-              "There are enough downloadable routerdescs to launch requests.");
-    should_delay = 0;
-  } else if (n_downloadable == 0) {
-//    log_debug(LD_DIR, "No routerdescs need to be downloaded.");
-    should_delay = 1;
-  } else {
-    should_delay = (last_routerdesc_download_attempted +
-                    MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
-    if (!should_delay) {
-      if (last_routerdesc_download_attempted) {
-        log_info(LD_DIR,
-           "There are not many downloadable routerdescs, but we've "
-           "been waiting long enough (%d seconds). Downloading.",
-           (int)(now-last_routerdesc_download_attempted));
-      } else {
-        log_info(LD_DIR,
-           "There are not many downloadable routerdescs, but we haven't "
-           "tried downloading descriptors recently. Downloading.");
+  if (!options->DirPort) {
+    if (n_downloadable >= MAX_DL_TO_DELAY) {
+      log_debug(LD_DIR,
+             "There are enough downloadable routerdescs to launch requests.");
+      should_delay = 0;
+    } else {
+      should_delay = (last_routerdesc_download_attempted +
+                      MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
+      if (!should_delay) {
+        if (last_routerdesc_download_attempted) {
+          log_info(LD_DIR,
+                   "There are not many downloadable routerdescs, but we've "
+                   "been waiting long enough (%d seconds). Downloading.",
+                   (int)(now-last_routerdesc_download_attempted));
+        } else {
+          log_info(LD_DIR,
+                 "There are not many downloadable routerdescs, but we haven't "
+                 "tried downloading descriptors recently. Downloading.");
+        }
       }
     }
   }
@@ -5214,7 +5226,6 @@ update_router_descriptor_client_downloads(time_t now)
     }
     last_routerdesc_download_attempted = now;
   }
-  smartlist_free(downloadable);
 }
 
 /** Launch downloads for router status as needed, using the strategy used by
@@ -5359,6 +5370,44 @@ update_router_descriptor_cache_downloads(time_t now)
   digestmap_free(map,NULL);
 }
 
+/** DOCDOC */
+static void
+update_consensus_router_descriptor_downloads(time_t now)
+{
+  or_options_t *options = get_options();
+  digestmap_t *map = NULL;
+  smartlist_t *downloadable = smartlist_create();
+  int authdir = authdir_mode(options);
+  if (!options->DirPort) {
+    if (rep_hist_circbuilding_dormant(now))
+      return;
+  }
+  if (!current_consensus)
+    return;
+
+  map = digestmap_new();
+  list_pending_descriptor_downloads(map, 0);
+  SMARTLIST_FOREACH(current_consensus->routerstatus_list, routerstatus_t *, rs,
+    {
+      /* ????020 need-to-mirror? */
+      /* XXXX rate-limit retries. */
+      if (router_get_by_descriptor_digest(rs->descriptor_digest))
+        continue; /* We have it already. */
+      if (authdir && dirserv_would_reject_router(rs))
+        continue; /* We would throw it out immediately. */
+      if (!options->DirPort && !client_would_use_router(rs, now, options))
+        continue; /* We would never use it ourself. */
+      if (digestmap_get(map, rs->descriptor_digest))
+        continue; /* We have an in-progress download. */
+      smartlist_add(downloadable, rs->descriptor_digest);
+    });
+
+  launch_router_descriptor_downloads(downloadable, now);
+
+  smartlist_free(downloadable);
+  digestmap_free(map, NULL);
+}
+
 /** Launch downloads for router status as needed. */
 void
 update_router_descriptor_downloads(time_t now)
@@ -5368,6 +5417,7 @@ update_router_descriptor_downloads(time_t now)
     return;
   if (options->DirPort) {
     update_router_descriptor_cache_downloads(now);
+    update_consensus_router_descriptor_downloads(now); /*XXXX020 clients too*/
   } else {
     update_router_descriptor_client_downloads(now);
   }
