@@ -3495,7 +3495,10 @@ signed_descriptor_t *router_get_by_extrainfo_digest(const char *digest);
 signed_descriptor_t *extrainfo_get_by_descriptor_digest(const char *digest);
 const char *signed_descriptor_get_body(signed_descriptor_t *desc);
 int router_digest_version_as_new_as(const char *digest, const char *cutoff);
-int router_digest_is_trusted_dir(const char *digest);
+int router_digest_is_trusted_dir_type(const char *digest,
+                                      authority_type_t type);
+#define router_digest_is_trusted_dir(d) \
+  router_digest_is_trusted_dir_type((d), 0)
 routerlist_t *router_get_routerlist(void);
 void routerlist_reset_warnings(void);
 void routerlist_free(routerlist_t *routerlist);

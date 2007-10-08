@@ -990,10 +990,13 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
       continue;
     if (requireother && router_digest_is_me(status->identity_digest))
       continue;
+    if (type & V3_AUTHORITY) {
+      if (!(status->version_supports_v3_dir ||
+            router_digest_is_trusted_dir_type(status->identity_digest,
+                                              V3_AUTHORITY)))
+        continue;
+    }
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
-    if ((type & V3_AUTHORITY &&
-         !(status->version_supports_v3_dir || is_trusted)))
-      continue; /* is_trusted is not quite right XXXX020. */
     if ((type & V2_AUTHORITY) && !(status->is_v2_dir || is_trusted))
       continue;
     if ((type & EXTRAINFO_CACHE) &&
@@ -1886,17 +1889,20 @@ router_digest_version_as_new_as(const char *digest, const char *cutoff)
   return tor_version_as_new_as(router->platform, cutoff);
 }
 
-/** Return true iff <b>digest</b> is the digest of the identity key of
- * a trusted directory. */
+/** Return true iff <b>digest</b> is the digest of the identity key of a
+ * trusted directory matching at least one bit of <b>type</b>.  If <b>type</b>
+ * is zero, any authority is okay. */
 int
-router_digest_is_trusted_dir(const char *digest)
+router_digest_is_trusted_dir_type(const char *digest, authority_type_t type)
 {
   if (!trusted_dir_servers)
     return 0;
   if (authdir_mode(get_options()) && router_digest_is_me(digest))
     return 1;
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
-                    if (!memcmp(digest, ent->digest, DIGEST_LEN)) return 1);
+    if (!memcmp(digest, ent->digest, DIGEST_LEN)) {
+      return (!type) || ((type & ent->type) != 0);
+    });
   return 0;
 }
 
