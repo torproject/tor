@@ -34,6 +34,8 @@ static void local_routerstatus_free(local_routerstatus_t *rs);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
 static void update_networkstatus_cache_downloads(time_t now);
 static void update_networkstatus_client_downloads(time_t now);
+static void update_consensus_networkstatus_fetch_time(time_t now);
+static void update_consensus_networkstatus_downloads(time_t now);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static int have_tried_downloading_all_statuses(int n_failures);
 static routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
@@ -110,6 +112,13 @@ static time_t last_routerdesc_download_attempted = 0;
  * use this to rate-limit download attempts for directory caches (including
  * mirrors).  Clients don't use this now. */
 static time_t last_networkstatus_download_attempted = 0;
+
+/** The last time we tried to download a networkstatus, or 0 for "never".  We
+ * use this to rate-limit download attempts for directory caches (including
+ * mirrors).  Clients don't use this now. */
+static time_t last_consensus_networkstatus_download_attempted = 0;
+/**DOCDOC*/
+static time_t time_to_download_next_consensus = 0;
 
 /** True iff we have logged a warning about this OR not being valid or
  * not being named. */
@@ -982,6 +991,9 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
     if (requireother && router_digest_is_me(status->identity_digest))
       continue;
     is_trusted = router_digest_is_trusted_dir(status->identity_digest);
+    if ((type & V3_AUTHORITY &&
+         !(status->version_supports_v3_dir || is_trusted)))
+      continue; /* is_trusted is not quite right XXXX020. */
     if ((type & V2_AUTHORITY) && !(status->is_v2_dir || is_trusted))
       continue;
     if ((type & EXTRAINFO_CACHE) &&
@@ -3921,6 +3933,56 @@ update_networkstatus_client_downloads(time_t now)
   smartlist_free(missing);
 }
 
+/** DOCDOC */
+static void
+update_consensus_networkstatus_downloads(time_t now)
+{
+  or_options_t *options = get_options();
+  if (!options->DirPort) /*XXXX020 remove this. */
+    return;
+  if (time_to_download_next_consensus > now)
+    return;
+  if (authdir_mode_v3(options))
+    return;
+  if (connection_get_by_type_purpose(CONN_TYPE_DIR,
+                                     DIR_PURPOSE_FETCH_CONSENSUS))
+    return;
+  /* XXXX020 on failure, delay until next retry. */
+
+  last_consensus_networkstatus_download_attempted = now;/*XXXX020 use this*/
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_CONSENSUS,
+                               ROUTER_PURPOSE_GENERAL, NULL, 1);
+  // XXXX020 time_to_download_next_consensus = put it off for a while?
+}
+
+/** DOCDOC */
+static void
+update_consensus_networkstatus_fetch_time(time_t now)
+{
+  or_options_t *options = get_options();
+  /* XXXX020 call this when DirPort switches on or off. NMNM */
+  if (current_consensus) {
+    const networkstatus_vote_t *c = current_consensus;
+    time_t start;
+    long interval;
+    if (options->DirPort) {
+      start = c->valid_after + 120; /*XXXX020 make this a macro. */
+      /* XXXX020 too much magic. */
+      interval = (c->fresh_until - c->valid_after) / 2;
+    } else {
+      start = c->fresh_until;
+      /* XXXX020 too much magic. */
+      interval = (c->valid_until - c->fresh_until) * 7 / 8;
+    }
+    if (interval < 1)
+      interval = 1;
+    tor_assert(start+interval < c->valid_until);
+    time_to_download_next_consensus = start + crypto_rand_int(interval);
+  } else {
+    time_to_download_next_consensus = now;
+  }
+}
+
 /** Return 1 if there's a reason we shouldn't try any directory
  * fetches yet (e.g. we demand bridges and none are yet known).
  * Else return 0. */
@@ -3945,6 +4007,7 @@ update_networkstatus_downloads(time_t now)
     update_networkstatus_cache_downloads(now);
   else
     update_networkstatus_client_downloads(now);
+  update_consensus_networkstatus_downloads(now);
 }
 
 /** Clear all our timeouts for fetching v2 directory stuff, and then
@@ -4143,6 +4206,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
 {
   networkstatus_vote_t *c;
   int r;
+  time_t now = time(NULL);
+
   /* Make sure it's parseable. */
   c = networkstatus_parse_vote_from_string(consensus, NULL, 0);
   if (!c) {
@@ -4164,6 +4229,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
         tor_free(consensus_waiting_for_certs_body);
         consensus_waiting_for_certs = c;
         consensus_waiting_for_certs_body = tor_strdup(consensus);
+        /*XXXX020 delay next update. NMNM */
         if (!from_cache) {
           or_options_t *options = get_options();
           char filename[512];
@@ -4177,7 +4243,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
                                             DIR_PURPOSE_FETCH_CERTIFICATE))
           authority_certs_fetch_missing(c);
       }
-      return -1; /* XXXX020 shoul*/
+      return 0;
     } else {
       if (!was_waiting_for_certs)
         log_warn(LD_DIR, "Not enough good signatures on networkstatus "
@@ -4207,6 +4273,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   }
 
   current_consensus = c;
+
+  update_consensus_networkstatus_fetch_time(now);
 
   if (!from_cache) {
     or_options_t *options = get_options();

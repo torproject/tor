@@ -15,6 +15,7 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
   o Minor features (v3 authority system):
     - Add more ways for tools to download the votes that lead to the current
       consensus.
+    - Caches now download v3 network status documents as needed.
 
   o Major bugfixes (performance):
     - Fix really bad O(n^2) performance when parsing a long list of routers:

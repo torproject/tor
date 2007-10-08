@@ -497,8 +497,12 @@ connection_dir_request_failed(dir_connection_t *conn)
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
     connection_dir_download_routerdesc_failed(conn);
+  } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
+    /* XXXX020 NMNM */
+  } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
+    /* XXXX020 NMNM */
   } else {
-    /* XXXX020 handle failing: votes. signatures. certificates. consensus. */
+    /* XXXX020 handle failing: votes. signatures. */
   }
 }
 
@@ -1374,11 +1378,29 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
-    /*XXXX020*/;
+    /* XXXX020 NMNM */;
+    if (status_code != 200) {
+      log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
+          "Received http status code %d (%s) from server "
+          "'%s:%d' while fetching consensus directory.",
+           status_code, escaped(reason), conn->_base.address,
+           conn->_base.port);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      /* XXXX020NMNM retry. */
+      return -1;
+    }
+    log_info(LD_DIR,"Received consensus directory (size %d) from server "
+             "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
+    if (networkstatus_set_current_consensus(body, 0, 0)<0) {
+      log_warn(LD_DIR, "Unable to load consensus directory dowloaded from "
+               "server '%s:%d'", conn->_base.address, conn->_base.port);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      /* XXXX020 NMNM retry. */
+      return -1;
+    }
+    log_info(LD_DIR, "Successfully loaded consensus.");
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
-    log_info(LD_DIR,"Received authority certificatess (size %d) from server "
-             "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
       log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
           "Received http status code %d (%s) from server "
@@ -1386,8 +1408,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
            status_code, escaped(reason), conn->_base.address,
            conn->_base.port, conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
+      /* XXXX020NMNM retry. */
       return -1;
     }
+    log_info(LD_DIR,"Received authority certificatess (size %d) from server "
+             "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
     if (trusted_dirs_load_certs_from_string(body, 0)<0) {
       log_warn(LD_DIR, "Unable to parse fetched certificates");
     } else {

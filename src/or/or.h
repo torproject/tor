@@ -1247,6 +1247,9 @@ typedef struct routerstatus_t {
   unsigned int version_supports_begindir:1;
   /** True iff this router is a version that we can post extrainfo docs to. */
   unsigned int version_supports_extrainfo_upload:1;
+  /** True iff this router is a version that, if it caches directory info,
+   * we can get v3 downloads from. */
+  unsigned int version_supports_v3_dir:1;
 
   /** True if we, as a directory mirror, want to download the corresponding
    * routerinfo from the authority who gave us this routerstatus.  (That is,

@@ -1669,6 +1669,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
         tor_version_as_new_as(tok->args[0], "0.1.2.2-alpha");
       rs->version_supports_extrainfo_upload =
         tor_version_as_new_as(tok->args[0], "0.2.0.0-alpha-dev (r10070)");
+      rs->version_supports_v3_dir =
+        tor_version_as_new_as(tok->args[0], "0.2.0.8-alpha");
     }
     if (vote_rs) {
       vote_rs->version = tok->args[0];
