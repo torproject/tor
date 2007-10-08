@@ -1,4 +1,4 @@
-yes$Id$
+$Id$
 Legend:
 SPEC!!  - Not specified
 SPEC    - Spec not finalized
@@ -212,7 +212,6 @@ N   - Hack up a client that gives out weird/no certificates, so we can
 
   - Documentation
     - HOWTO for DNSPort.
-P   - Tell people about OSX Uninstaller
     - Quietly document NT Service options
     - More prominently, we should have a recommended apps list.
       - recommend pidgin (gaim is renamed)
@@ -552,6 +551,7 @@ P  - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
 P  - put the source image for the stickers on the website, so people can
     print their own
+P - figure out a license for the logos and docs we publish
 R - make a page with the hidden service diagrams.
 P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
   - add a page for localizing all tor's components.
