@@ -1,4 +1,4 @@
-Filename: xxx-unnamed-flag.txt
+Filename: 122-unnamed-flag.txt
 Title: Network status entries need a new Unnamed flag
 Version: $Revision$
 Last-Modified: $Date$
@@ -6,7 +6,7 @@ Author: Roger Dingledine
 Created: 04-Oct-2007
 Status: Open
 
-Overview:
+1. Overview:
 
   Tor's directory authorities can give certain servers a "Named" flag
   in the network-status entry, when they want to bind that nickname to
@@ -40,24 +40,37 @@ Overview:
   get one of the imposters. (A warning will also appear in their log,
   but so what.)
 
-The stopgap solution:
+2. The stopgap solution:
 
   tor26 should start accepting and listing the imposters, but it should
-  assign them a new flag: "Unnamed". This would produce three cases from
-  the client perspective:
+  assign them a new flag: "Unnamed". This would produce three cases in
+  terms of assigning flags:
 
-  1) A unique Bob is listed as Named, and nobody lists that Bob as
-  Unnamed. Clients can refer to Bob by nickname and be confident.
+  i) a router gets the Named flag in the v3 networkstatus if
+    a) it's the only router with that nickname that has the Named flag
+       out of all the votes, and
+    b) no vote lists it as Unnamed
+  else,
+  ii) a router gets the Unnamed flag if
+    a) some vote lists a different router with that nickname as Named, or
+    b) at least one vote lists it as Unnamed, or
+    c) there are other routers with the same nickname that are Unnamed
+  else,
+  iii) the router neither gets a Named nor an Unnamed flag.
 
-  2) Every Bob is listed by some authority as Unnamed. Clients asking
-  for Bob should get a warning in the log and their request should fail
-  ("no such router").
+  (This whole proposal is meant only for v3 dir flags; we shouldn't try
+  to backport it to the v2 dir world.)
 
-  3) At least one Bob is not listed by any authorities as Unnamed, but
-  there is no unique Named Bob. In this case we do what we did before
-  (currently "warn but allow it").
+  Then client behavior is:
 
-Problems not solved by this stopgap:
+  a) If there's a Bob with a Named flag, pick that one.
+  else b) If the Bobs don't have the Unnamed flag (notice that they should
+          either all have it, or none), pick one of them and warn.
+  else c) They all have the Unnamed flag -- no router found.
+
+3. Problems not solved by this stopgap:
+
+  3.1. Naming authorities can go offline.
 
   If tor26 is the only authority that provides a binding for Bob, when
   tor26 goes offline we're back in our previous situation -- the imposters
@@ -70,7 +83,22 @@ Problems not solved by this stopgap:
   to do it that doesn't destroy usability in other ways, and if we want
   to get the Unnamed flag into v3 network statuses we should add it soon.
 
-Other benefits:
+  3.2. V3 dir spec magnifies brief discrepancies.
+
+  Another point to notice is if tor26 names Bob(1), doesn't know about
+  Bob(2), but moria lists Bob(2). Then Bob(2) doesn't get an Unnamed flag
+  even if it should (and Bob(1) is not around).
+
+  Right now, in v2 dirs, the case where an authority doesn't know about
+  a server but the other authorities do know is rare. That's because
+  authorities periodically ask for other networkstatuses and then fetch
+  descriptors that are missing.
+
+  With v3, if that window occurs at the wrong time, it is extended for the
+  entire period. We could solve this by making the voting more complex,
+  but that doesn't seem worth it.
+
+4. Other benefits:
 
   This new flag will allow people to operate servers that happen to have
   the same nickname as somebody who registered their server two years ago
@@ -79,3 +107,4 @@ Other benefits:
   running for years. While it's bad that these nicknames are effectively
   blacklisted from the network, the really bad part is that this logic
   is really unintuitive to prospective new server operators.
+
