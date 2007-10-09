@@ -37,6 +37,8 @@ static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void update_router_have_minimum_dir_info(void);
 static const char *signed_descriptor_get_body_impl(signed_descriptor_t *desc,
                                                    int with_annotations);
+static void list_pending_downloads(digestmap_t *result,
+                                   int purpose, const char *prefix);
 
 DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
 DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
@@ -286,8 +288,12 @@ authority_cert_get_by_digests(const char *id_digest,
 void
 authority_certs_fetch_missing(networkstatus_vote_t *status)
 {
+  digestmap_t *pending = digestmap_new();
   smartlist_t *missing_digests = smartlist_create();
   char *resource;
+  time_t now = time(NULL);
+
+  list_pending_downloads(pending, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
   if (status) {
     SMARTLIST_FOREACH(status->voters, networkstatus_voter_info_t *, voter,
       {
@@ -308,7 +314,8 @@ authority_certs_fetch_missing(networkstatus_vote_t *status)
         continue;
       SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
         {
-          if (1) { //XXXX020! cert_is_definitely_expired(cert, now)) {
+          if (ftime_definitely_before(cert->expires, now)) {
+            /* It's definitely expired. */
             found = 1;
             break;
           }
@@ -320,7 +327,10 @@ authority_certs_fetch_missing(networkstatus_vote_t *status)
     smartlist_t *fps = smartlist_create();
     smartlist_add(fps, tor_strdup("fp/"));
     SMARTLIST_FOREACH(missing_digests, const char *, d, {
-        char *fp = tor_malloc(HEX_DIGEST_LEN+2);
+        char *fp;
+        if (digestmap_get(pending, d))
+          continue;
+        fp = tor_malloc(HEX_DIGEST_LEN+2);
         base16_encode(fp, HEX_DIGEST_LEN+1, d, DIGEST_LEN);
         fp[HEX_DIGEST_LEN] = '+';
         fp[HEX_DIGEST_LEN+1] = '\0';
@@ -337,6 +347,7 @@ authority_certs_fetch_missing(networkstatus_vote_t *status)
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                resource, 1);
   tor_free(resource);
+  digestmap_free(pending, NULL);
 }
 
 /* Router descriptor storage.
@@ -3349,17 +3360,13 @@ compute_recommended_versions(time_t now, int client,
   return result;
 }
 
-/** For every router descriptor (or extra-info document if <b>extrainfo</b> is
- * true) we are currently downloading by descriptor digest, set result[d] to
- * (void*)1. */
+/** DOCDOC */
 static void
-list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
+list_pending_downloads(digestmap_t *result,
+                       int purpose, const char *prefix)
 {
-  const char *prefix = "d/";
-  size_t p_len = strlen(prefix);
+  const size_t p_len = strlen(prefix);
   smartlist_t *tmp = smartlist_create();
-  int purpose =
-    extrainfo ? DIR_PURPOSE_FETCH_EXTRAINFO : DIR_PURPOSE_FETCH_SERVERDESC;
   smartlist_t *conns = get_connection_array();
 
   tor_assert(result);
@@ -3381,6 +3388,17 @@ list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
                       tor_free(d);
                     });
   smartlist_free(tmp);
+}
+
+/** For every router descriptor (or extra-info document if <b>extrainfo</b> is
+ * true) we are currently downloading by descriptor digest, set result[d] to
+ * (void*)1. */
+static void
+list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
+{
+  int purpose =
+    extrainfo ? DIR_PURPOSE_FETCH_EXTRAINFO : DIR_PURPOSE_FETCH_SERVERDESC;
+  list_pending_downloads(result, purpose, "d/");
 }
 
 /** Launch downloads for all the descriptors whose digests are listed

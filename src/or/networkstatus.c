@@ -978,10 +978,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
                        options->DataDirectory);
           write_str_to_file(filename, consensus, 0);
         }
-        /* XXXX this test isn't quite right; see below. */
-        if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
-                                            DIR_PURPOSE_FETCH_CERTIFICATE))
-          authority_certs_fetch_missing(c);
+        authority_certs_fetch_missing(c);
       }
       return 0;
     } else {
@@ -994,11 +991,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   }
 
   /* Are we missing any certificates at all? */
-  /* XXXX The test for 'are we downloading' should be 'are we downloading
-   *    these certificates', and it should get pushed into
-   *    authority_certs_fetch_missing. */
-  if (r != 1 && !connection_get_by_type_purpose(CONN_TYPE_DIR,
-                                                DIR_PURPOSE_FETCH_CERTIFICATE))
+  if (r != 1)
     authority_certs_fetch_missing(c);
 
   if (current_consensus)
