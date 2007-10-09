@@ -2939,7 +2939,8 @@ void dirvote_act(time_t now);
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
                                          const char **msg_out,
                                          int *status_out);
-int dirvote_add_signatures(const char *detached_signatures_body);
+int dirvote_add_signatures(const char *detached_signatures_body,
+                           const char **msg_out);
 
 /* Item access */
 const char *dirvote_get_pending_consensus(void);

@@ -42,6 +42,8 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - When we get a valid consensus, recompute the voting schedule.
     - Base the valid-after time of a vote on the consensus voting schedule,
       not on our preferred schedule.
+    - Make the return values and messages from signature uploads and downloads
+      more sensible.
 
   o Minor bugfixes (performance):
     - Use a slightly simpler string hashing algorithm (copying Python's

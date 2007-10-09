@@ -812,11 +812,13 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
  * <b>src_voter_list</b> that should be added to <b>target.  (A signature
  * should be added if we have no signature for that voter in <b>target</b>
  * yet, or if we have no verifiable signature and the new signature is
- * verifiable.)   Return the number of signatures added or changed. */
+ * verifiable.)   Return the number of signatures added or changed, or
+ * -1 on error. */
 static int
 networkstatus_add_signatures_impl(networkstatus_vote_t *target,
                                   smartlist_t *src_voter_list)
 {
+  /*XXXX020 merge with the only function that calls it. */
   int r = 0;
   tor_assert(target);
   tor_assert(!target->is_vote);
@@ -862,7 +864,7 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
   return r;
 }
 
-/** As networkstatus_add_consensus_signature_impl, but takes new signatures
+/** As networkstatus_add_signature_impl, but takes new signatures
  * from the detached signatures document <b>sigs</b>. */
 int
 networkstatus_add_detached_signatures(networkstatus_vote_t *target,
@@ -1645,9 +1647,11 @@ dirvote_add_signatures_to_pending_consensus(
     }
     tor_free(pending_consensus_signatures);
     pending_consensus_signatures = new_detached;
+    *msg_out = "Signatures added";
+  } else {
+    *msg_out = "Digest mismatch when adding detached signatures";
   }
 
-  *msg_out = "ok";
   goto done;
  err:
   if (!msg_out)
@@ -1661,22 +1665,22 @@ dirvote_add_signatures_to_pending_consensus(
 /** Helper: we just got the <b>deteached_signatures_body</b> sent to us as
  * signatures on the currently pending consensus.  Add them to the pending
  * consensus (if we have one); otherwise queue them until we have a
- * consensus. */
+ * consensus.  Return negative on failure, nonnegative on success. */
 int
-dirvote_add_signatures(const char *detached_signatures_body)
+dirvote_add_signatures(const char *detached_signatures_body,
+                       const char **msg)
 {
-  /*XXXX020 return value is senseless. */
   if (pending_consensus) {
-    const char *msg=NULL;
     log_notice(LD_DIR, "Got a signature. Adding it to the pending consensus.");
     return dirvote_add_signatures_to_pending_consensus(
-                                         detached_signatures_body, &msg);
+                                     detached_signatures_body, msg);
   } else {
     log_notice(LD_DIR, "Got a signature. Queueing it for the next consensus.");
     if (!pending_consensus_signature_list)
       pending_consensus_signature_list = smartlist_create();
     smartlist_add(pending_consensus_signature_list,
                   tor_strdup(detached_signatures_body));
+    *msg = "Signature queued";
     return 0;
   }
 }
