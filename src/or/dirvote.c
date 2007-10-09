@@ -1235,7 +1235,7 @@ dirvote_fetch_missing_votes(void)
     {
       if (!(ds->type & V3_AUTHORITY))
         continue;
-      if (!dirvote_get_vote(ds->v3_identity_digest, 1, 1, 0)) {
+      if (!dirvote_get_vote(ds->v3_identity_digest, 1, 0, 1)) {
         char *cp = tor_malloc(HEX_DIGEST_LEN+1);
         base16_encode(cp, HEX_DIGEST_LEN+1, ds->v3_identity_digest,
                       DIGEST_LEN);
