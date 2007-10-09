@@ -2283,8 +2283,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     }
   } else if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
     or_options_t *options = get_options();
-    port = options->DirPort; /* not actually used to open a connection */
-    if (!port || circ->purpose != CIRCUIT_PURPOSE_OR) {
+    if (!dirserver_mode(options) || circ->purpose != CIRCUIT_PURPOSE_OR) {
       end_payload[0] = END_STREAM_REASON_NOTDIRECTORY;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
                                    end_payload, 1, NULL);

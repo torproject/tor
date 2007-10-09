@@ -854,6 +854,14 @@ server_mode(or_options_t *options)
   return (options->ORPort != 0 || options->ORListenAddress);
 }
 
+/** Return true iff we are trying to be a directory server */
+int
+dirserver_mode(or_options_t *options)
+{
+  if (options->ClientOnly) return 0;
+  return options->DirPort != 0;
+}
+
 /** Remember if we've advertised ourselves to the dirservers. */
 static int server_is_advertised=0;
 
@@ -879,7 +887,10 @@ set_server_advertised(int s)
 int
 proxy_mode(or_options_t *options)
 {
-  return (options->SocksPort != 0 || options->SocksListenAddress);
+  return (options->SocksPort != 0 || options->SocksListenAddress ||
+          options->TransPort != 0 || options->TransListenAddress ||
+          options->NatdPort != 0 || options->NatdListenAddress ||
+          options->DNSPort != 0 || options->DNSListenAddress);
 }
 
 /** Decide if we're a publishable server. We are a publishable server if:

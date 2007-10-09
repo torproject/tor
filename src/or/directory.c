@@ -272,7 +272,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
 {
   routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
-  int prefer_authority = server_mode(options) && options->DirPort != 0;
+  int prefer_authority = dirserver_mode(options);
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
   authority_type_t type;
 
@@ -2753,7 +2753,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
 {
   char digest[DIGEST_LEN];
   time_t now = time(NULL);
-  int server = server_mode(get_options()) && get_options()->DirPort;
+  int server = dirserver_mode(get_options());
   if (!was_descriptor_digests)
     return; /* FFFF should implement this someday */
   SMARTLIST_FOREACH(failed, const char *, cp,

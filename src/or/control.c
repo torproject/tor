@@ -1381,7 +1381,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     tor_free(url);
     smartlist_free(descs);
   } else if (!strcmpstart(question, "dir/status/")) {
-    if (get_options()->DirPort) {
+    if (dirserver_mode(get_options())) {
       size_t len=0;
       char *cp;
       smartlist_t *status_list = smartlist_create();

@@ -2196,6 +2196,8 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   return r;
 }
 
+#define should_cache_old_descriptors() dirserver_mode(get_options())
+
 /** If we're a directory cache and routerlist <b>rl</b> doesn't have
  * a copy of router <b>ri</b> yet, add it to the list of old (not
  * recommended but still served) descriptors. Else free it. */
@@ -2209,7 +2211,7 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
   }
   tor_assert(ri->routerlist_index == -1);
 
-  if (get_options()->DirPort &&
+  if (should_cache_old_descriptors() &&
       ri->purpose == ROUTER_PURPOSE_GENERAL &&
       !sdmap_get(rl->desc_digest_map,
                  ri->cache_info.signed_descriptor_digest)) {
@@ -2254,7 +2256,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old)
   router_dir_info_changed();
   tor_assert(ri_tmp == ri);
 
-  if (make_old && get_options()->DirPort &&
+  if (make_old && should_cache_old_descriptors() &&
       ri->purpose == ROUTER_PURPOSE_GENERAL) {
     signed_descriptor_t *sd;
     sd = signed_descriptor_from_routerinfo(ri);
@@ -2379,7 +2381,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
               &ri_new->cache_info);
   }
 
-  if (get_options()->DirPort &&
+  if (should_cache_old_descriptors() &&
       ri_old->purpose == ROUTER_PURPOSE_GENERAL) {
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri_old);
     smartlist_add(rl->old_routers, sd);
@@ -2566,7 +2568,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       *msg = "Router descriptor is not referenced by any network-status.";
 
       /* Only journal this desc if we'll be serving it. */
-      if (!from_cache && get_options()->DirPort)
+      if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
                                       router_get_store(routerlist, router),
                                       router->purpose);
@@ -2596,7 +2598,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       log_debug(LD_DIR, "Skipping not-new descriptor for router '%s'",
                 router->nickname);
       /* Only journal this desc if we'll be serving it. */
-      if (!from_cache && get_options()->DirPort)
+      if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
                                       router_get_store(routerlist, router),
                                       router->purpose);
@@ -3568,7 +3570,7 @@ update_router_descriptor_client_downloads(time_t now)
   or_options_t *options = get_options();
   const smartlist_t *networkstatus_list = networkstatus_get_v2_list();
 
-  if (options->DirPort) {
+  if (dirserver_mode(options)) {
     log_warn(LD_BUG,
              "Called router_descriptor_client_downloads() on a dir mirror?");
   }
@@ -3599,7 +3601,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
   or_options_t *options = get_options();
 
   n_downloadable = smartlist_len(downloadable);
-  if (!options->DirPort) {
+  if (!dirserver_mode(options)) {
     if (n_downloadable >= MAX_DL_TO_DELAY) {
       log_debug(LD_DIR,
              "There are enough downloadable routerdescs to launch requests.");
@@ -3663,7 +3665,7 @@ update_router_descriptor_cache_downloads(time_t now)
   or_options_t *options = get_options();
   const smartlist_t *networkstatus_list = networkstatus_get_v2_list();
 
-  if (!options->DirPort) {
+  if (! dirserver_mode(options)) {
     log_warn(LD_BUG, "Called update_router_descriptor_cache_downloads() "
              "on a non-dir-mirror?");
   }
@@ -3800,9 +3802,10 @@ update_consensus_router_descriptor_downloads(time_t now)
   digestmap_t *map = NULL;
   smartlist_t *downloadable = smartlist_create();
   int authdir = authdir_mode(options);
+  int dirserver = dirserver_mode(options);
   networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
 
-  if (!options->DirPort) {
+  if (!dirserver) {
     if (rep_hist_circbuilding_dormant(now))
       return;
   }
@@ -3819,7 +3822,7 @@ update_consensus_router_descriptor_downloads(time_t now)
         continue; /* We have it already. */
       if (authdir && dirserv_would_reject_router(rs))
         continue; /* We would throw it out immediately. */
-      if (!options->DirPort && !client_would_use_router(rs, now, options))
+      if (!dirserver && !client_would_use_router(rs, now, options))
         continue; /* We would never use it ourself. */
       if (digestmap_get(map, rs->descriptor_digest))
         continue; /* We have an in-progress download. */
@@ -3839,7 +3842,7 @@ update_router_descriptor_downloads(time_t now)
   or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (options->DirPort) {
+  if (dirserver_mode(options)) {
     update_router_descriptor_cache_downloads(now);
     update_consensus_router_descriptor_downloads(now); /*XXXX020 clients too*/
   } else {
@@ -3888,12 +3891,12 @@ update_extrainfo_downloads(time_t now)
         smartlist_add(wanted, ri->cache_info.extra_info_digest);
       }
     });
-  if (options->DirPort) {
+  if (dirserver_mode(options)) {
     SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd, {
         if (should_download_extrainfo(sd, rl, pending, now)) {
           smartlist_add(wanted, sd->extra_info_digest);
         }
-      });
+    });
   }
   digestmap_free(pending, NULL);
 

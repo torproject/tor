@@ -234,7 +234,7 @@ add_networkstatus_to_cache(const char *s,
     tor_free(fn);
   }
 
-  if (get_options()->DirPort)
+  if (dirserver_mode(get_options()))
     dirserv_set_cached_networkstatus_v2(s,
                                         ns->identity_digest,
                                         ns->published_on);
@@ -290,7 +290,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
       !(trusted_dir->type & V2_AUTHORITY)) {
     log_info(LD_DIR, "Network status was signed, but not by an authoritative "
              "directory we recognize.");
-    if (!get_options()->DirPort) {
+    if (!dirserver_mode(get_options())) {
       networkstatus_free(ns);
       return 0;
     }
@@ -345,7 +345,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
   }
 
   if (!trusted_dir) {
-    if (!skewed && get_options()->DirPort) {
+    if (!skewed && dirserver_mode(get_options())) {
       /* We got a non-trusted networkstatus, and we're a directory cache.
        * This means that we asked an authority, and it told us about another
        * authority we didn't recognize. */
@@ -459,7 +459,7 @@ networkstatus_list_clean(time_t now)
       unlink(fname);
     }
     tor_free(fname);
-    if (get_options()->DirPort) {
+    if (dirserver_mode(get_options())) {
       dirserv_set_cached_networkstatus_v2(NULL, ns->identity_digest, 0);
     }
     networkstatus_free(ns);
@@ -857,7 +857,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
     const networkstatus_vote_t *c = current_consensus;
     time_t start;
     long interval;
-    if (options->DirPort) {
+    if (dirserver_mode(options)) {
       start = c->valid_after + 120; /*XXXX020 make this a macro. */
       /* XXXX020 too much magic. */
       interval = (c->fresh_until - c->valid_after) / 2;
@@ -895,7 +895,7 @@ update_networkstatus_downloads(time_t now)
   or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (options->DirPort)
+  if (dirserver_mode(options))
     update_networkstatus_cache_downloads(now);
   else
     update_networkstatus_client_downloads(now);
@@ -1019,7 +1019,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
     write_str_to_file(filename, consensus, 0);
   }
 
-  if (get_options()->DirPort)
+  if (dirserver_mode(get_options()))
     dirserv_set_cached_networkstatus_v3(consensus, c->valid_after);
 
   return 0;
@@ -1317,7 +1317,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
                  other_digest != conflict) {
         if (!warned) {
           char *d;
-          int should_warn = options->DirPort && authdir_mode(options);
+          int should_warn = authdir_mode(options);
           char fp1[HEX_DIGEST_LEN+1];
           char fp2[HEX_DIGEST_LEN+1];
           base16_encode(fp1, sizeof(fp1), other_digest, DIGEST_LEN);

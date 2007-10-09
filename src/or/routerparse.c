@@ -670,7 +670,7 @@ router_parse_directory(const char *str)
 
   /* Now that we know the signature is okay, and we have a
    * publication time, cache the directory. */
-  if (get_options()->DirPort && !authdir_mode_v1(get_options()))
+  if (dirserver_mode(get_options()) && !authdir_mode_v1(get_options()))
     dirserv_set_cached_directory(str, published_on, 0);
 
   r = 0;

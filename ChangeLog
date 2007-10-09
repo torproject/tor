@@ -60,6 +60,7 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
       caches will no longer need to hold authority opinions; thus, the
       rationale for keeping the types separate is now gone.
     - Make the code used to reschedule and reattempt downloads more uniform.
+    - Turn all 'Are we a directory?' logic into a call to dirserver_mode().
 
 
 Changes in version 0.2.0.7-alpha - 2007-09-21
