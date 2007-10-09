@@ -2017,8 +2017,18 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   v3_out->is_vote = 1;
   dirvote_get_preferred_voting_intervals(&timing);
   v3_out->published = now;
-  v3_out->valid_after =
-    dirvote_get_start_of_next_interval(now, timing.vote_interval);
+  {
+    networkstatus_vote_t *current_consensus =
+      networkstatus_get_live_consensus(now);
+    time_t consensus_interval;
+    if (current_consensus)
+      consensus_interval = current_consensus->fresh_until -
+        current_consensus->valid_after;
+    else
+      consensus_interval = timing.vote_interval;
+    v3_out->valid_after =
+      dirvote_get_start_of_next_interval(now, consensus_interval);
+  }
   v3_out->fresh_until = v3_out->valid_after + timing.vote_interval;
   v3_out->valid_until = v3_out->valid_after +
     (timing.vote_interval * timing.n_intervals_valid);
