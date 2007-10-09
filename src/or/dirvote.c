@@ -1359,6 +1359,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 
  again:
   vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote, 1);
+  if (!end_of_vote)
+    end_of_vote = vote_body + strlen(vote_body);
   if (!vote) {
     log_warn(LD_DIR, "Couldn't parse vote: length was %d",
              (int)strlen(vote_body));
@@ -1424,7 +1426,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
                      "directory.");
           cached_dir_decref(v->vote_body);
           networkstatus_vote_free(v->vote);
-          v->vote_body = new_cached_dir(tor_strdup(vote_body),
+          v->vote_body = new_cached_dir(tor_strndup(vote_body,
+                                                    end_of_vote-vote_body),
                                         vote->published);
           v->vote = vote;
           if (end_of_vote &&
@@ -1444,13 +1447,16 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     });
 
   pending_vote = tor_malloc_zero(sizeof(pending_vote_t));
-  pending_vote->vote_body = new_cached_dir(tor_strdup(vote_body),
+  pending_vote->vote_body = new_cached_dir(tor_strndup(vote_body,
+                                                       end_of_vote-vote_body),
                                            vote->published);
   pending_vote->vote = vote;
   smartlist_add(pending_vote_list, pending_vote);
 
-  if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version "))
+  if (!strcmpstart(end_of_vote, "network-status-version ")) {
+    vote_body = end_of_vote;
     goto again;
+  }
 
   goto done;
 
@@ -1465,8 +1471,10 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   if (vote)
     networkstatus_vote_free(vote);
 
-  if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version "))
+  if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version ")) {
+    vote_body = end_of_vote;
     goto again;
+  }
 
  done:
 
