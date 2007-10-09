@@ -45,6 +45,8 @@ static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(
                                dir_connection_t *conn, int status_code);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
+static void connection_dir_download_cert_failed(
+                               dir_connection_t *conn, int status_code);
 static void dir_networkstatus_download_failed(smartlist_t *failed,
                                               int status_code);
 static void dir_routerdesc_download_failed(smartlist_t *failed,
@@ -499,7 +501,9 @@ connection_dir_request_failed(dir_connection_t *conn)
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     /* XXXX020 NMNM */
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
-    /* XXXX020 NMNM */
+    log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
+             conn->_base.address);
+    connection_dir_download_cert_failed(conn, 0);
   } else {
     /* XXXX020 handle failing: votes. signatures. */
   }
@@ -525,7 +529,7 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
      * if all the authorities are shutting us out. */
     smartlist_t *trusted_dirs = router_get_trusted_dir_servers();
     SMARTLIST_FOREACH(trusted_dirs, trusted_dir_server_t *, ds,
-                      ++ds->n_networkstatus_failures);
+                      download_status_failed(&ds->v2_ns_dl_status, 0));
     directory_get_from_dirserver(conn->_base.purpose, conn->router_purpose,
                                  "all.z", 0 /* don't retry_if_no_servers */);
   } else if (!strcmpstart(conn->requested_resource, "fp/")) {
@@ -557,6 +561,28 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
              conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
 
   (void) conn;
+}
+
+/** Called when an attempt to fetch a certificate fails. */
+static void
+connection_dir_download_cert_failed(dir_connection_t *conn, int status)
+{
+  smartlist_t *failed;
+  tor_assert(conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE);
+
+  if (!conn->requested_resource)
+    return;
+  failed = smartlist_create();
+  dir_split_resource_into_fingerprints(conn->requested_resource,
+                                       failed, NULL, 1, 0);
+  SMARTLIST_FOREACH(failed, char *, cp,
+  {
+    trusted_dir_server_t *dir = trusteddirserver_get_by_v3_auth_digest(cp);
+    if (dir)
+      download_status_failed(&dir->cert_dl_status, status);
+    tor_free(cp);
+  });
+  smartlist_free(failed);
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the
@@ -1406,8 +1432,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           "'%s:%d' while fetching \"/tor/keys/%s\".",
            status_code, escaped(reason), conn->_base.address,
            conn->_base.port, conn->requested_resource);
+      connection_dir_download_cert_failed(conn, status_code);
       tor_free(body); tor_free(headers); tor_free(reason);
-      /* XXXX020NMNM retry. */
       return -1;
     }
     log_info(LD_DIR,"Received authority certificatess (size %d) from server "
@@ -2660,8 +2686,61 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
     dir = router_get_trusteddirserver_by_digest(digest);
 
     if (dir)
-      ++dir->n_networkstatus_failures;
+      download_status_failed(&dir->v2_ns_dl_status, status_code);
   });
+}
+
+/** DOCDOC */
+time_t
+download_status_increment_failure(download_status_t *dls, int status_code,
+                                  const char *item, int server, time_t now)
+{
+  tor_assert(dls);
+  if (status_code != 503 || server)
+    ++dls->n_download_failures;
+  if (server) {
+    switch (dls->n_download_failures) {
+      case 0: dls->next_attempt_at = 0; break;
+      case 1: dls->next_attempt_at = 0; break;
+      case 2: dls->next_attempt_at = 0; break;
+      case 3: dls->next_attempt_at = now+60; break;
+      case 4: dls->next_attempt_at = now+60; break;
+      case 5: dls->next_attempt_at = now+60*2; break;
+      case 6: dls->next_attempt_at = now+60*5; break;
+      case 7: dls->next_attempt_at = now+60*15; break;
+      default: dls->next_attempt_at = TIME_MAX; break;
+    }
+  } else {
+    switch (dls->n_download_failures) {
+      case 0: dls->next_attempt_at = 0; break;
+      case 1: dls->next_attempt_at = 0; break;
+      case 2: dls->next_attempt_at = now+60; break;
+      case 3: dls->next_attempt_at = now+60*5; break;
+      case 4: dls->next_attempt_at = now+60*10; break;
+      default: dls->next_attempt_at = TIME_MAX; break;
+    }
+  }
+  if (item) {
+    if (dls->next_attempt_at == 0)
+      log_debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
+                item, (int)dls->n_download_failures);
+    else if (dls->next_attempt_at < TIME_MAX)
+      log_debug(LD_DIR, "%s failed %d time(s); I'll try again in %d seconds.",
+                item, (int)dls->n_download_failures,
+                (int)(dls->next_attempt_at-now));
+    else
+      log_debug(LD_DIR, "%s failed %d time(s); Giving up for a while.",
+                item, (int)dls->n_download_failures);
+  }
+  return dls->next_attempt_at;
+}
+
+/** DOCDOC */
+void
+download_status_reset(download_status_t *dls)
+{
+  dls->n_download_failures = 0;
+  dls->next_attempt_at = 0;
 }
 
 /** Called when one or more routerdesc (or extrainfo, if <b>was_extrainfo</b>)
@@ -2669,7 +2748,7 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
  * either as descriptor digests or as identity digests based on
  * <b>was_descriptor_digests</b>).
  */
-static void
+void
 dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
                                int was_extrainfo, int was_descriptor_digests)
 {
@@ -2695,40 +2774,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
     }
     if (!dls || dls->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;
-    if (status_code != 503 || server)
-      ++dls->n_download_failures;
-    if (server) {
-      switch (dls->n_download_failures) {
-        case 0: dls->next_attempt_at = 0; break;
-        case 1: dls->next_attempt_at = 0; break;
-        case 2: dls->next_attempt_at = 0; break;
-        case 3: dls->next_attempt_at = now+60; break;
-        case 4: dls->next_attempt_at = now+60; break;
-        case 5: dls->next_attempt_at = now+60*2; break;
-        case 6: dls->next_attempt_at = now+60*5; break;
-        case 7: dls->next_attempt_at = now+60*15; break;
-        default: dls->next_attempt_at = TIME_MAX; break;
-      }
-    } else {
-      switch (dls->n_download_failures) {
-        case 0: dls->next_attempt_at = 0; break;
-        case 1: dls->next_attempt_at = 0; break;
-        case 2: dls->next_attempt_at = now+60; break;
-        case 3: dls->next_attempt_at = now+60*5; break;
-        case 4: dls->next_attempt_at = now+60*10; break;
-        default: dls->next_attempt_at = TIME_MAX; break;
-      }
-    }
-    if (dls->next_attempt_at == 0)
-      log_debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
-                cp, (int)dls->n_download_failures);
-    else if (dls->next_attempt_at < TIME_MAX)
-      log_debug(LD_DIR, "%s failed %d time(s); I'll try again in %d seconds.",
-                cp, (int)dls->n_download_failures,
-                (int)(dls->next_attempt_at-now));
-    else
-      log_debug(LD_DIR, "%s failed %d time(s); Giving up for a while.",
-                cp, (int)dls->n_download_failures);
+    download_status_increment_failure(dls, status_code, cp, server, now);
   });
 
   /* No need to relaunch descriptor downloads here: we already do it

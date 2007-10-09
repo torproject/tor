@@ -55,6 +55,7 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
       into routerstatus_t.  But once v3 directories are in use, clients and
       caches will no longer need to hold authority opinions; thus, the
       rationale for keeping the types separate is now gone.
+    - Make the code used to reschedule and reattempt downloads more uniform.
 
 
 Changes in version 0.2.0.7-alpha - 2007-09-21

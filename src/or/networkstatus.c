@@ -382,7 +382,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
           }
           old_ns->received_on = arrived_at;
         }
-        ++trusted_dir->n_networkstatus_failures;
+        download_status_failed(&trusted_dir->v2_ns_dl_status, 0);
         return 0;
       } else if (old_ns->published_on >= ns->published_on) {
         char old_published[ISO_TIME_LEN+1];
@@ -394,7 +394,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
                  trusted_dir->description, published,
                  old_published);
         networkstatus_free(ns);
-        ++trusted_dir->n_networkstatus_failures;
+        download_status_failed(&trusted_dir->v2_ns_dl_status, 0);
         return 0;
       } else {
         networkstatus_free(old_ns);
@@ -405,8 +405,9 @@ router_set_networkstatus(const char *s, time_t arrived_at,
     }
   }
 
-  if (source != NS_FROM_CACHE && trusted_dir)
-    trusted_dir->n_networkstatus_failures = 0;
+  if (source != NS_FROM_CACHE && trusted_dir) {
+    download_status_reset(&trusted_dir->v2_ns_dl_status);
+  }
 
   if (!found)
     smartlist_add(networkstatus_list, ns);
@@ -737,7 +738,8 @@ update_networkstatus_client_downloads(time_t now)
        if (!(ds->type & V2_AUTHORITY))
          continue;
        ++n_dirservers;
-       if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES)
+       if (!download_status_is_ready(&ds->v2_ns_dl_status, now,
+                                     NETWORKSTATUS_N_ALLOWABLE_FAILURES))
          continue;
        ++n_running_dirservers;
        if (ns && ns->published_on > now-NETWORKSTATUS_MAX_AGE)
@@ -791,7 +793,8 @@ update_networkstatus_client_downloads(time_t now)
         smartlist_free(missing);
         return;
       }
-      if (ds->n_networkstatus_failures > NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
+      if (ds->v2_ns_dl_status.n_download_failures >
+          NETWORKSTATUS_N_ALLOWABLE_FAILURES) {
         ++n_failed;
         continue;
       }
@@ -1584,11 +1587,10 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       router->is_bad_exit = rs->is_bad_exit;
     }
     if (router->is_running && ds) {
-      ds->n_networkstatus_failures = 0;
+      download_status_reset(&ds->v2_ns_dl_status);
     }
     if (reset_failures) {
-      rs->dl_status.n_download_failures = 0;
-      rs->dl_status.next_attempt_at = 0;
+      download_status_reset(&rs->dl_status);
     }
   });
   router_dir_info_changed();
@@ -1608,7 +1610,7 @@ have_tried_downloading_all_statuses(int n_failures)
       /* If we don't have the status, and we haven't failed to get the status,
        * we haven't tried to get the status. */
       if (!networkstatus_get_by_digest(ds->digest) &&
-          ds->n_networkstatus_failures <= n_failures)
+          ds->v2_ns_dl_status.n_download_failures <= n_failures)
         return 0;
     });
 

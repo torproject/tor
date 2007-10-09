@@ -967,8 +967,7 @@ mark_all_trusteddirservers_up(void)
     {
       routerstatus_t *rs;
       dir->is_running = 1;
-      dir->n_networkstatus_failures = 0;
-      dir->fake_status.last_dir_503_at = 0;
+      download_status_reset(&dir->v2_ns_dl_status);
       rs = router_get_combined_status_by_digest(dir->digest);
       if (rs && !rs->is_running) {
         rs->is_running = 1;
@@ -3486,7 +3485,8 @@ router_list_client_downloadable(void)
       /* Oddly, we have a descriptor more recent than the 'best' one, but it
          was once best. So that's okay. */
       ++n_uptodate;
-    } else if (rs->dl_status.next_attempt_at > now) {
+    } else if (!download_status_is_ready(&rs->dl_status, now,
+                                         MAX_ROUTERDESC_DOWNLOAD_FAILURES)) {
       /* We failed too recently to try again. */
       ++n_not_ready;
     } else {
@@ -3837,7 +3837,8 @@ should_download_extrainfo(signed_descriptor_t *sd,
   const char *d = sd->extra_info_digest;
   return (!sd->is_extrainfo &&
           !tor_digest_is_zero(d) &&
-          sd->ei_dl_status.next_attempt_at <= now &&
+          download_status_is_ready(&sd->ei_dl_status, now,
+                                   MAX_ROUTERDESC_DOWNLOAD_FAILURES) &&
           !eimap_get(rl->extra_info_map, d) &&
           !digestmap_get(pending, d));
 }
@@ -3997,8 +3998,7 @@ router_reset_descriptor_download_failures(void)
   const smartlist_t *routerstatus_list = networkstatus_get_all_statuses();
   SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
   {
-    rs->dl_status.n_download_failures = 0;
-    rs->dl_status.next_attempt_at = 0;
+    download_status_reset(&rs->dl_status);
   });
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
      SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
@@ -4011,13 +4011,11 @@ router_reset_descriptor_download_failures(void)
     return;
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
   {
-    ri->cache_info.ei_dl_status.n_download_failures = 0;
-    ri->cache_info.ei_dl_status.next_attempt_at = 0;
+    download_status_reset(&ri->cache_info.ei_dl_status);
   });
   SMARTLIST_FOREACH(routerlist->old_routers, signed_descriptor_t *, sd,
   {
-    sd->ei_dl_status.n_download_failures = 0;
-    sd->ei_dl_status.next_attempt_at = 0;
+    download_status_reset(&sd->ei_dl_status);
   });
 }
 

@@ -2801,6 +2801,25 @@ int dir_split_resource_into_fingerprints(const char *resource,
 char *directory_dump_request_log(void);
 int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
+time_t download_status_increment_failure(download_status_t *dls,
+                                         int status_code, const char *item,
+                                         int server, time_t now);
+#define download_status_failed(dls, sc)                                 \
+  download_status_increment_failure((dls), (sc), NULL,                  \
+                                    get_options()->DirPort, time(NULL))
+
+void download_status_reset(download_status_t *dls);
+/** DOCDOC */
+static int download_status_is_ready(download_status_t *dls, time_t now,
+                                    int max_failures);
+static INLINE int
+download_status_is_ready(download_status_t *dls, time_t now,
+                         int max_failures)
+{
+  return (dls->n_download_failures <= max_failures
+          && dls->next_attempt_at <= now);
+}
+
 /********************************* dirserv.c ***************************/
 
 #define UNNAMED_ROUTER_NICKNAME "Unnamed"
@@ -3458,9 +3477,11 @@ typedef struct trusted_dir_server_t {
   authority_type_t type;
 
   smartlist_t *v3_certs; /**< V3 key certificates for this authority */
+  download_status_t cert_dl_status; /**< Status of downloading this server's
+                               * latest certificate. */
+  download_status_t v2_ns_dl_status; /**< Status of downloading this server's
+                               * v2 network status. */
 
-  int n_networkstatus_failures; /**< How many times have we asked for this
-                                 * server's network-status unsuccessfully? */
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
                                * dir_server_t to directory_initiate_command_*
                                * as a routerstatus_t.  Not updated by the
