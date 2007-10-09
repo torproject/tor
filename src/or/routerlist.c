@@ -318,12 +318,16 @@ authority_certs_fetch_missing(networkstatus_vote_t *status)
 
   {
     smartlist_t *fps = smartlist_create();
+    smartlist_add(fps, tor_strdup("fp/"));
     SMARTLIST_FOREACH(missing_digests, const char *, d, {
-        char *fp = tor_malloc(HEX_DIGEST_LEN+1);
+        char *fp = tor_malloc(HEX_DIGEST_LEN+2);
         base16_encode(fp, HEX_DIGEST_LEN+1, d, DIGEST_LEN);
+        fp[HEX_DIGEST_LEN] = '+';
+        fp[HEX_DIGEST_LEN+1] = '\0';
         smartlist_add(fps, fp);
       });
-    resource = smartlist_join_strings(fps, "+", 0, NULL);
+    resource = smartlist_join_strings(fps, "", 0, NULL);
+    resource[strlen(resource)-1] = '\0';
     SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
     smartlist_free(fps);
   }

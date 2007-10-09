@@ -725,11 +725,13 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
         authority_cert_get_by_digests(voter->identity_digest,
                                       voter->signing_key_digest);
       if (! cert) {
-        if (!trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
+        if (!trusteddirserver_get_by_v3_auth_digest(voter->identity_digest)) {
           smartlist_add(unrecognized, voter);
-        else
+          ++n_unknown;
+        } else {
           smartlist_add(need_certs_from, voter);
-        ++n_unknown;
+          ++n_missing_key;
+        }
         continue;
       }
       if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
