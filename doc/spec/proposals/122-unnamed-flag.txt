@@ -43,8 +43,10 @@ Status: Open
 2. The stopgap solution:
 
   tor26 should start accepting and listing the imposters, but it should
-  assign them a new flag: "Unnamed". This would produce three cases in
-  terms of assigning flags:
+  assign them a new flag: "Unnamed".
+
+  This would produce three cases in terms of assigning flags in the consensus
+  networkstatus:
 
   i) a router gets the Named flag in the v3 networkstatus if
     a) it's the only router with that nickname that has the Named flag
@@ -97,6 +99,11 @@ Status: Open
   With v3, if that window occurs at the wrong time, it is extended for the
   entire period. We could solve this by making the voting more complex,
   but that doesn't seem worth it.
+
+  [3.3. Tor26 is only one tor26.
+
+  We need more naming authorities, possibly with some kind of auto-naming
+  feature.  This is out-of-scope for this proposal -NM]
 
 4. Other benefits:
 
