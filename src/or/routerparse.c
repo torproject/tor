@@ -1531,12 +1531,17 @@ static INLINE const char *
 find_start_of_next_routerstatus(const char *s)
 {
   const char *eos = strstr(s, "\nr ");
-  if (!eos)
-    eos = strstr(s, "\ndirectory-signature");
-  if (eos)
-    return eos+1;
-  else
+  if (eos) {
+    const char *eos2 = tor_memstr(s, eos-s, "\ndirectory-signature");
+    if (eos2 && eos2 < eos)
+      return eos2;
+    else
+      return eos+1;
+  } else {
+    if ((eos = strstr(s, "\ndirectory-signature")))
+      return eos+1;
     return s + strlen(s);
+  }
 }
 
 /** Given a string at *<b>s</b>, containing a routerstatus object, and an
