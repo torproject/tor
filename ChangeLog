@@ -47,6 +47,15 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - Make a bunch of functions static.  Remove some dead code.
     - Pull out about a third of the really big routerlist.c; put it in a
       new module, networkstatus.c.
+    - Merge the extra fields in local_routerstatus_t back into
+      routerstatus_t: we used to need one routerstatus_t for each
+      authority's opinion, plus a local_routerstatus_t for the locally
+      computed consensus opinion.  To save space, we put the locally
+      modified fields into local_routerstatus_t, and only the common stuff
+      into routerstatus_t.  But once v3 directories are in use, clients and
+      caches will no longer need to hold authority opinions; thus, the
+      rationale for keeping the types separate is now gone.
+
 
 Changes in version 0.2.0.7-alpha - 2007-09-21
   o New directory authorities:

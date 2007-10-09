@@ -3378,7 +3378,7 @@ control_event_or_authdir_new_descriptor(const char *action,
   return 0;
 }
 
-/** Called when the local_routerstatus_ts <b>statuses</b> have changed: sends
+/** Called when the routerstatus_ts <b>statuses</b> have changed: sends
  * an NS event to any controller that cares. */
 int
 control_event_networkstatus_changed(smartlist_t *statuses)
@@ -3390,9 +3390,9 @@ control_event_networkstatus_changed(smartlist_t *statuses)
 
   strs = smartlist_create();
   smartlist_add(strs, tor_strdup("650+NS\r\n"));
-  SMARTLIST_FOREACH(statuses, local_routerstatus_t *, rs,
+  SMARTLIST_FOREACH(statuses, routerstatus_t *, rs,
     {
-      s = networkstatus_getinfo_helper_single(&rs->status);
+      s = networkstatus_getinfo_helper_single(rs);
       if (!s) continue;
       smartlist_add(strs, s);
     });
@@ -3413,7 +3413,7 @@ control_event_networkstatus_changed(smartlist_t *statuses)
 /** Called when a single local_routerstatus_t has changed: Sends an NS event
  * to any countroller that cares. */
 int
-control_event_networkstatus_changed_single(local_routerstatus_t *rs)
+control_event_networkstatus_changed_single(routerstatus_t *rs)
 {
   smartlist_t *statuses;
   int r;

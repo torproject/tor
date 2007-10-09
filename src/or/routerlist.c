@@ -825,11 +825,10 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
   overloaded_tunnel = smartlist_create();
 
   /* Find all the running dirservers we know about. */
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, _local_status,
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, status,
   {
-    routerstatus_t *status = &(_local_status->status);
     int is_trusted;
-    int is_overloaded = _local_status->last_dir_503_at + DIR_503_TIMEOUT > now;
+    int is_overloaded = status->last_dir_503_at + DIR_503_TIMEOUT > now;
     if (!status->is_running || !status->dir_port || !status->is_valid)
       continue;
     if (status->is_bad_directory)
@@ -928,11 +927,11 @@ router_pick_trusteddirserver_impl(authority_type_t type,
           (!fascistfirewall ||
            fascist_firewall_allows_address_or(d->addr, d->or_port)))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel,
-                      &d->fake_status.status);
+                      &d->fake_status);
       else if (!fascistfirewall ||
                fascist_firewall_allows_address_dir(d->addr, d->dir_port))
         smartlist_add(is_overloaded ? overloaded_direct : direct,
-                      &d->fake_status.status);
+                      &d->fake_status);
     });
 
   if (smartlist_len(tunnel)) {
@@ -966,13 +965,13 @@ mark_all_trusteddirservers_up(void)
   if (trusted_dir_servers) {
     SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, dir,
     {
-      local_routerstatus_t *rs;
+      routerstatus_t *rs;
       dir->is_running = 1;
       dir->n_networkstatus_failures = 0;
       dir->fake_status.last_dir_503_at = 0;
       rs = router_get_combined_status_by_digest(dir->digest);
-      if (rs && !rs->status.is_running) {
-        rs->status.is_running = 1;
+      if (rs && !rs->is_running) {
+        rs->is_running = 1;
         rs->last_dir_503_at = 0;
         control_event_networkstatus_changed_single(rs);
       }
@@ -1670,7 +1669,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       int any_unwarned = 0;
       SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
         {
-          local_routerstatus_t *rs;
+          routerstatus_t *rs;
           char *desc;
           size_t dlen;
           char fp[HEX_DIGEST_LEN+1];
@@ -1702,7 +1701,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
       smartlist_free(fps);
     } else if (warn_if_unnamed) {
-      local_routerstatus_t *rs = router_get_combined_status_by_digest(
+      routerstatus_t *rs = router_get_combined_status_by_digest(
           best_match->cache_info.identity_digest);
       if (rs && !rs->name_lookup_warned) {
         char fp[HEX_DIGEST_LEN+1];
@@ -2443,7 +2442,7 @@ void
 router_set_status(const char *digest, int up)
 {
   routerinfo_t *router;
-  local_routerstatus_t *status;
+  routerstatus_t *status;
   tor_assert(digest);
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
@@ -2460,8 +2459,8 @@ router_set_status(const char *digest, int up)
     router->is_running = up;
   }
   status = router_get_combined_status_by_digest(digest);
-  if (status && status->status.is_running != up) {
-    status->status.is_running = up;
+  if (status && status->is_running != up) {
+    status->is_running = up;
     control_event_networkstatus_changed_single(status);
   }
   router_dir_info_changed();
@@ -3193,18 +3192,18 @@ add_trusted_dir_server(const char *nickname, const char *address,
     tor_snprintf(ent->description, dlen, "directory server at %s:%d",
                  hostname, (int)dir_port);
 
-  ent->fake_status.status.addr = ent->addr;
-  memcpy(ent->fake_status.status.identity_digest, digest, DIGEST_LEN);
+  ent->fake_status.addr = ent->addr;
+  memcpy(ent->fake_status.identity_digest, digest, DIGEST_LEN);
   if (nickname)
-    strlcpy(ent->fake_status.status.nickname, nickname,
-            sizeof(ent->fake_status.status.nickname));
+    strlcpy(ent->fake_status.nickname, nickname,
+            sizeof(ent->fake_status.nickname));
   else
-    ent->fake_status.status.nickname[0] = '\0';
-  ent->fake_status.status.dir_port = ent->dir_port;
-  ent->fake_status.status.or_port = ent->or_port;
+    ent->fake_status.nickname[0] = '\0';
+  ent->fake_status.dir_port = ent->dir_port;
+  ent->fake_status.or_port = ent->or_port;
 
   if (ent->or_port)
-    ent->fake_status.status.version_supports_begindir = 1;
+    ent->fake_status.version_supports_begindir = 1;
 
   smartlist_add(trusted_dir_servers, ent);
   router_dir_info_changed();
@@ -3470,20 +3469,20 @@ router_list_client_downloadable(void)
   list_pending_descriptor_downloads(downloading, 0);
 
   routerstatus_list_update_from_networkstatus(now);
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
   {
     routerinfo_t *ri;
-    if (router_get_by_descriptor_digest(rs->status.descriptor_digest)) {
+    if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
       /* We have the 'best' descriptor for this router. */
       ++n_uptodate;
-    } else if (!client_would_use_router(&rs->status, now, options)) {
+    } else if (!client_would_use_router(rs, now, options)) {
       /* We wouldn't want this descriptor even if we got it. */
       ++n_wouldnt_use;
-    } else if (digestmap_get(downloading, rs->status.descriptor_digest)) {
+    } else if (digestmap_get(downloading, rs->descriptor_digest)) {
       /* We're downloading this one now. */
       ++n_in_progress;
-    } else if ((ri = router_get_by_digest(rs->status.identity_digest)) &&
-               ri->cache_info.published_on > rs->status.published_on) {
+    } else if ((ri = router_get_by_digest(rs->identity_digest)) &&
+               ri->cache_info.published_on > rs->published_on) {
       /* Oddly, we have a descriptor more recent than the 'best' one, but it
          was once best. So that's okay. */
       ++n_uptodate;
@@ -3492,7 +3491,7 @@ router_list_client_downloadable(void)
       ++n_not_ready;
     } else {
       /* Okay, time to try it. */
-      smartlist_add(downloadable, rs->status.descriptor_digest);
+      smartlist_add(downloadable, rs->descriptor_digest);
       ++n_downloadable;
     }
   });
@@ -3756,7 +3755,7 @@ update_router_descriptor_cache_downloads(time_t now)
     log_info(LD_DIR, "Requesting %d descriptors from authority \"%s\"",
              smartlist_len(dl), ds->nickname);
     for (j=0; j < smartlist_len(dl); j += MAX_DL_PER_REQUEST) {
-      initiate_descriptor_downloads(&(ds->fake_status.status),
+      initiate_descriptor_downloads(&(ds->fake_status),
                                     DIR_PURPOSE_FETCH_SERVERDESC, dl, j,
                                     j+MAX_DL_PER_REQUEST);
     }
@@ -3966,9 +3965,9 @@ update_router_have_minimum_dir_info(void)
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
                     tot += routerstatus_count_usable_entries(ns->entries));
   avg = tot / n_ns;
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
      {
-       if (rs->status.is_running)
+       if (rs->is_running)
          num_running++;
      });
   res = smartlist_len(routerlist->routers) >= (avg/4) && num_running > 2;
@@ -3996,7 +3995,7 @@ router_reset_descriptor_download_failures(void)
 {
   const smartlist_t *networkstatus_list = networkstatus_get_v2_list();
   const smartlist_t *routerstatus_list = networkstatus_get_all_statuses();
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
   {
     rs->dl_status.n_download_failures = 0;
     rs->dl_status.next_attempt_at = 0;

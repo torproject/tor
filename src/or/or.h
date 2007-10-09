@@ -1251,28 +1251,23 @@ typedef struct routerstatus_t {
    * we can get v3 downloads from. */
   unsigned int version_supports_v3_dir:1;
 
+  /* ---- The fields below aren't derived from the networkstatus; they
+   * hold local information only. */
+
   /** True if we, as a directory mirror, want to download the corresponding
    * routerinfo from the authority who gave us this routerstatus.  (That is,
    * if we don't have the routerinfo, and if we haven't already tried to get it
    * from this authority.)
    */
   unsigned int need_to_mirror:1;
-} routerstatus_t;
-
-/** Our "local" or combined view of the info from all networkstatus objects
- * about a single router. */
-typedef struct local_routerstatus_t {
-  /** What do we believe to be the case about this router?  In this field,
-   * descriptor_digest represents the descriptor we would most like to use for
-   * this router. */
-  routerstatus_t status;
-  time_t last_dir_503_at; /**< When did this router last tell us that it
-                           * was too busy to serve directory info? */
-  download_status_t dl_status;
   unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
                                       * to this (unnamed) router by nickname?
                                       */
-} local_routerstatus_t;
+  time_t last_dir_503_at; /**< When did this router last tell us that it
+                           * was too busy to serve directory info? */
+  download_status_t dl_status;
+
+} routerstatus_t;
 
 /** How many times will we try to download a router's descriptor before giving
  * up? */
@@ -2732,7 +2727,7 @@ int control_event_or_authdir_new_descriptor(const char *action,
                                             const char *msg);
 int control_event_my_descriptor_changed(void);
 int control_event_networkstatus_changed(smartlist_t *statuses);
-int control_event_networkstatus_changed_single(local_routerstatus_t *rs);
+int control_event_networkstatus_changed_single(routerstatus_t *rs);
 int control_event_general_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_client_status(int severity, const char *format, ...)
@@ -3057,9 +3052,8 @@ const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
 void routerstatus_list_update_from_networkstatus(time_t now);
 
 void networkstatus_free_all(void);
-local_routerstatus_t *router_get_combined_status_by_nickname(
-                                                const char *nickname,
-                                                int warn_if_unnamed);
+routerstatus_t *router_get_combined_status_by_nickname(const char *nickname,
+                                                       int warn_if_unnamed);
 void routerstatus_free(routerstatus_t *routerstatus);
 void networkstatus_free(networkstatus_t *networkstatus);
 
@@ -3467,7 +3461,7 @@ typedef struct trusted_dir_server_t {
 
   int n_networkstatus_failures; /**< How many times have we asked for this
                                  * server's network-status unsuccessfully? */
-  local_routerstatus_t fake_status; /**< Used when we need to pass this trusted
+  routerstatus_t fake_status; /**< Used when we need to pass this trusted
                                * dir_server_t to directory_initiate_command_*
                                * as a routerstatus_t.  Not updated by the
                                * router-status management code!
@@ -3574,9 +3568,9 @@ void add_trusted_dir_server(const char *nickname, const char *address,
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 networkstatus_t *networkstatus_get_by_digest(const char *digest);
-local_routerstatus_t *router_get_combined_status_by_digest(const char *digest);
-local_routerstatus_t *router_get_combined_status_by_descriptor_digest(
-                                                          const char *digest);
+routerstatus_t *router_get_combined_status_by_digest(const char *digest);
+routerstatus_t *router_get_combined_status_by_descriptor_digest(
+                                                       const char *digest);
 
 //routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 int should_delay_dir_fetches(or_options_t *options);

@@ -12,7 +12,7 @@ const char networkstatus_c_id[] =
 
 #include "or.h"
 
-/** Global list of local_routerstatus_t for each router, known or unknown.
+/** Global list of routerstatus_t for each router, known or unknown.
  * Kept sorted by digest. */
 static smartlist_t *routerstatus_list = NULL;
 /** Map from descriptor digest to a member of routerstatus_list: used to
@@ -74,7 +74,7 @@ networkstatus_reset_warnings(void)
 {
   if (!routerstatus_list)
     routerstatus_list = smartlist_create();
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
                     rs->name_lookup_warned = 0);
 
   if (!warned_conflicts)
@@ -167,13 +167,6 @@ router_reload_consensus_networkstatus(void)
 /** Free all storage held by the routerstatus object <b>rs</b>. */
 void
 routerstatus_free(routerstatus_t *rs)
-{
-  tor_free(rs);
-}
-
-/** Free all storage held by the local_routerstatus object <b>rs</b>. */
-static void
-local_routerstatus_free(local_routerstatus_t *rs)
 {
   tor_free(rs);
 }
@@ -505,7 +498,7 @@ networkstatus_get_v2_list(void)
   return networkstatus_list;
 }
 
-/** DOCDOC list of local_routerstatus_t */
+/** DOCDOC list of routerstatus_t */
 const smartlist_t *
 networkstatus_get_all_statuses(void)
 {
@@ -516,7 +509,7 @@ networkstatus_get_all_statuses(void)
 
 /** Return the consensus view of the status of the router whose identity
  * digest is <b>digest</b>, or NULL if we don't know about any such router. */
-local_routerstatus_t *
+routerstatus_t *
 router_get_combined_status_by_digest(const char *digest)
 {
   if (!routerstatus_list)
@@ -528,7 +521,7 @@ router_get_combined_status_by_digest(const char *digest)
 /** Return the consensus view of the status of the router whose current
  * <i>descriptor</i> digest is <b>digest</b>, or NULL if no such router is
  * known. */
-local_routerstatus_t *
+routerstatus_t *
 router_get_combined_status_by_descriptor_digest(const char *digest)
 {
   if (!routerstatus_by_desc_digest_map)
@@ -537,15 +530,15 @@ router_get_combined_status_by_descriptor_digest(const char *digest)
 }
 
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
- * the corresponding local_routerstatus_t, or NULL if none exists.  Warn the
+ * the corresponding routerstatus_t, or NULL if none exists.  Warn the
  * user if <b>warn_if_unnamed</b> is set, and they have specified a router by
  * nickname, but the Named flag isn't set for that router. */
-local_routerstatus_t *
+routerstatus_t *
 router_get_combined_status_by_nickname(const char *nickname,
                                        int warn_if_unnamed)
 {
   char digest[DIGEST_LEN];
-  local_routerstatus_t *best=NULL;
+  routerstatus_t *best=NULL;
   smartlist_t *matches=NULL;
 
   if (!routerstatus_list || !nickname)
@@ -561,10 +554,10 @@ router_get_combined_status_by_nickname(const char *nickname,
   }
 
   matches = smartlist_create();
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, lrs,
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, lrs,
     {
-      if (!strcasecmp(lrs->status.nickname, nickname)) {
-        if (lrs->status.is_named) {
+      if (!strcasecmp(lrs->nickname, nickname)) {
+        if (lrs->is_named) {
           smartlist_free(matches);
           return lrs;
         } else {
@@ -576,7 +569,7 @@ router_get_combined_status_by_nickname(const char *nickname,
 
   if (smartlist_len(matches)>1 && warn_if_unnamed) {
     int any_unwarned=0;
-    SMARTLIST_FOREACH(matches, local_routerstatus_t *, lrs,
+    SMARTLIST_FOREACH(matches, routerstatus_t *, lrs,
       {
         if (! lrs->name_lookup_warned) {
           lrs->name_lookup_warned=1;
@@ -591,7 +584,7 @@ router_get_combined_status_by_nickname(const char *nickname,
   } else if (warn_if_unnamed && best && !best->name_lookup_warned) {
     char fp[HEX_DIGEST_LEN+1];
     base16_encode(fp, sizeof(fp),
-                  best->status.identity_digest, DIGEST_LEN);
+                  best->identity_digest, DIGEST_LEN);
     log_warn(LD_CONFIG,
          "When looking up a status, you specified a server \"%s\" by name, "
          "but the directory authorities do not have any key registered for "
@@ -621,16 +614,16 @@ routerstatus_t *
 routerstatus_get_by_hexdigest(const char *hexdigest)
 {
   char digest[DIGEST_LEN];
-  local_routerstatus_t *rs;
+  routerstatus_t *rs;
   trusted_dir_server_t *ds;
 
   if (strlen(hexdigest) < HEX_DIGEST_LEN ||
       base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN) < 0)
     return NULL;
   if ((ds = router_get_trusteddirserver_by_digest(digest)))
-    return &(ds->fake_status.status);
+    return &ds->fake_status;
   if ((rs = router_get_combined_status_by_digest(digest)))
-    return &(rs->status);
+    return rs;
   return NULL;
 }
 #endif
@@ -685,7 +678,7 @@ update_networkstatus_cache_downloads(time_t now)
          base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
          strlcat(resource, ".z", sizeof(resource));
          directory_initiate_command_routerstatus(
-               &ds->fake_status.status, DIR_PURPOSE_FETCH_NETWORKSTATUS,
+               &ds->fake_status, DIR_PURPOSE_FETCH_NETWORKSTATUS,
                ROUTER_PURPOSE_GENERAL,
                0, /* Not private */
                resource,
@@ -1371,7 +1364,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     int n_supports_extrainfo_upload=0;
     int n_desc_digests=0, highest_count=0;
     const char *the_name = NULL;
-    local_routerstatus_t *rs_out, *rs_old;
+    routerstatus_t *rs_out, *rs_old;
     routerstatus_t *rs, *most_recent;
     networkstatus_t *ns;
     const char *lowest = NULL;
@@ -1476,11 +1469,11 @@ routerstatus_list_update_from_networkstatus(time_t now)
           digest_counts[i].rs->published_on > most_recent->published_on)
         most_recent = digest_counts[i].rs;
     }
-    rs_out = tor_malloc_zero(sizeof(local_routerstatus_t));
-    memcpy(&rs_out->status, most_recent, sizeof(routerstatus_t));
+    rs_out = tor_malloc_zero(sizeof(routerstatus_t));
+    memcpy(rs_out, most_recent, sizeof(routerstatus_t));
     /* Copy status info about this router, if we had any before. */
     if ((rs_old = router_get_combined_status_by_digest(lowest))) {
-      if (!memcmp(rs_out->status.descriptor_digest,
+      if (!memcmp(rs_out->descriptor_digest,
                   most_recent->descriptor_digest, DIGEST_LEN)) {
         rs_out->dl_status.n_download_failures =
           rs_old->dl_status.n_download_failures;
@@ -1493,40 +1486,40 @@ routerstatus_list_update_from_networkstatus(time_t now)
     log_debug(LD_DIR, "Router '%s' is listed by %d/%d directories, "
               "named by %d/%d, validated by %d/%d, and %d/%d recent "
               "directories think it's running.",
-              rs_out->status.nickname,
+              rs_out->nickname,
               n_listing, n_statuses, n_named, n_naming, n_valid, n_statuses,
               n_running, n_recent);
-    rs_out->status.is_named  = 0;
+    rs_out->is_named  = 0;
     if (the_name && strcmp(the_name, "**mismatch**") && n_named > 0) {
       const char *d = strmap_get_lc(name_map, the_name);
       if (d && d != conflict)
-        rs_out->status.is_named = 1;
-      if (smartlist_string_isin(warned_conflicts, rs_out->status.nickname))
-        smartlist_string_remove(warned_conflicts, rs_out->status.nickname);
+        rs_out->is_named = 1;
+      if (smartlist_string_isin(warned_conflicts, rs_out->nickname))
+        smartlist_string_remove(warned_conflicts, rs_out->nickname);
     }
-    if (rs_out->status.is_named)
-      strlcpy(rs_out->status.nickname, the_name,
-              sizeof(rs_out->status.nickname));
-    rs_out->status.is_valid = n_valid > n_statuses/2;
-    rs_out->status.is_running = n_running > n_recent/2;
-    rs_out->status.is_exit = n_exit > n_statuses/2;
-    rs_out->status.is_fast = n_fast > n_statuses/2;
-    rs_out->status.is_possible_guard = n_guard > n_statuses/2;
-    rs_out->status.is_stable = n_stable > n_statuses/2;
-    rs_out->status.is_v2_dir = n_v2_dir > n_statuses/2;
-    rs_out->status.is_bad_exit = n_bad_exit > n_listing_bad_exits/2;
-    rs_out->status.is_bad_directory =
+    if (rs_out->is_named)
+      strlcpy(rs_out->nickname, the_name,
+              sizeof(rs_out->nickname));
+    rs_out->is_valid = n_valid > n_statuses/2;
+    rs_out->is_running = n_running > n_recent/2;
+    rs_out->is_exit = n_exit > n_statuses/2;
+    rs_out->is_fast = n_fast > n_statuses/2;
+    rs_out->is_possible_guard = n_guard > n_statuses/2;
+    rs_out->is_stable = n_stable > n_statuses/2;
+    rs_out->is_v2_dir = n_v2_dir > n_statuses/2;
+    rs_out->is_bad_exit = n_bad_exit > n_listing_bad_exits/2;
+    rs_out->is_bad_directory =
       n_bad_directory > n_listing_bad_directories/2;
-    rs_out->status.version_known = n_version_known > 0;
-    rs_out->status.version_supports_begindir =
+    rs_out->version_known = n_version_known > 0;
+    rs_out->version_supports_begindir =
       n_supports_begindir > n_version_known/2;
-    rs_out->status.version_supports_extrainfo_upload =
+    rs_out->version_supports_extrainfo_upload =
       n_supports_extrainfo_upload > n_version_known/2;
-    if (!rs_old || memcmp(rs_old, rs_out, sizeof(local_routerstatus_t)))
+    if (!rs_old || memcmp(rs_old, rs_out, sizeof(routerstatus_t)))
       smartlist_add(changed_list, rs_out);
   }
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
-                    local_routerstatus_free(rs));
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
+                    routerstatus_free(rs));
 
   smartlist_free(routerstatus_list);
   routerstatus_list = result;
@@ -1534,9 +1527,9 @@ routerstatus_list_update_from_networkstatus(time_t now)
   if (routerstatus_by_desc_digest_map)
     digestmap_free(routerstatus_by_desc_digest_map, NULL);
   routerstatus_by_desc_digest_map = digestmap_new();
-  SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
+  SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
                     digestmap_set(routerstatus_by_desc_digest_map,
-                                  rs->status.descriptor_digest,
+                                  rs->descriptor_digest,
                                   rs));
 
   tor_free(networkstatus);
@@ -1560,7 +1553,7 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
                                          int reset_failures)
 {
   trusted_dir_server_t *ds;
-  local_routerstatus_t *rs;
+  routerstatus_t *rs;
   or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options);
   int namingdir = authdir && options->NamingAuthoritativeDir;
@@ -1578,17 +1571,17 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       continue;
 
     if (!namingdir)
-      router->is_named = rs->status.is_named;
+      router->is_named = rs->is_named;
 
     if (!authdir) {
       /* If we're not an authdir, believe others. */
-      router->is_valid = rs->status.is_valid;
-      router->is_running = rs->status.is_running;
-      router->is_fast = rs->status.is_fast;
-      router->is_stable = rs->status.is_stable;
-      router->is_possible_guard = rs->status.is_possible_guard;
-      router->is_exit = rs->status.is_exit;
-      router->is_bad_exit = rs->status.is_bad_exit;
+      router->is_valid = rs->is_valid;
+      router->is_running = rs->is_running;
+      router->is_fast = rs->is_fast;
+      router->is_stable = rs->is_stable;
+      router->is_possible_guard = rs->is_possible_guard;
+      router->is_exit = rs->is_exit;
+      router->is_bad_exit = rs->is_bad_exit;
     }
     if (router->is_running && ds) {
       ds->n_networkstatus_failures = 0;
@@ -1641,7 +1634,7 @@ int
 getinfo_helper_networkstatus(control_connection_t *conn,
                              const char *question, char **answer)
 {
-  local_routerstatus_t *status;
+  routerstatus_t *status;
   (void) conn;
 
   if (!routerstatus_list) {
@@ -1651,9 +1644,8 @@ getinfo_helper_networkstatus(control_connection_t *conn,
 
   if (!strcmp(question, "ns/all")) {
     smartlist_t *statuses = smartlist_create();
-    SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, lrs,
+    SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
       {
-        routerstatus_t *rs = &(lrs->status);
         smartlist_add(statuses, networkstatus_getinfo_helper_single(rs));
       });
     *answer = smartlist_join_strings(statuses, "", 0, NULL);
@@ -1673,7 +1665,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   }
 
   if (status) {
-    *answer = networkstatus_getinfo_helper_single(&status->status);
+    *answer = networkstatus_getinfo_helper_single(status);
   }
   return 0;
 }
@@ -1690,8 +1682,8 @@ networkstatus_free_all(void)
     networkstatus_list = NULL;
   }
   if (routerstatus_list) {
-    SMARTLIST_FOREACH(routerstatus_list, local_routerstatus_t *, rs,
-                      local_routerstatus_free(rs));
+    SMARTLIST_FOREACH(routerstatus_list, routerstatus_t *, rs,
+                      routerstatus_free(rs));
     smartlist_free(routerstatus_list);
     routerstatus_list = NULL;
   }

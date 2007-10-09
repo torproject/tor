@@ -167,7 +167,6 @@ int
 router_supports_extrainfo(const char *identity_digest, int is_authority)
 {
   routerinfo_t *ri = router_get_by_digest(identity_digest);
-  local_routerstatus_t *lrs;
 
   if (ri) {
     if (ri->caches_extra_info)
@@ -177,8 +176,8 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
       return 1;
   }
   if (is_authority) {
-    lrs = router_get_combined_status_by_digest(identity_digest);
-    if (lrs && lrs->status.version_supports_extrainfo_upload)
+    routerstatus_t *rs = router_get_combined_status_by_digest(identity_digest);
+    if (rs && rs->version_supports_extrainfo_upload)
       return 1;
   }
   return 0;
@@ -229,7 +228,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
    */
   SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
     {
-      routerstatus_t *rs = &(ds->fake_status.status);
+      routerstatus_t *rs = &(ds->fake_status);
       size_t upload_len = payload_len;
 
       if ((type & ds->type) == 0)
@@ -398,7 +397,7 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
         continue;
       if (!(ds->type & V3_AUTHORITY))
         continue;
-      rs = &ds->fake_status.status;
+      rs = &ds->fake_status;
       /* XXXX020 should this ever tunnel via tor? */
       directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
                                               0, resource, NULL, 0);
@@ -1196,7 +1195,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   (void) skewed; /* skewed isn't used yet. */
 
   if (status_code == 503) {
-    local_routerstatus_t *rs;
+    routerstatus_t *rs;
     trusted_dir_server_t *ds;
     log_info(LD_DIR,"Received http status code %d (%s) from server "
              "'%s:%d'. I'll try again soon.",
@@ -2689,7 +2688,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
       if (sd)
         dls = &sd->ei_dl_status;
     } else {
-      local_routerstatus_t *rs =
+      routerstatus_t *rs =
         router_get_combined_status_by_descriptor_digest(digest);
       if (rs)
         dls = &rs->dl_status;
