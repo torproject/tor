@@ -1350,10 +1350,10 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   tor_assert(vote_body);
   tor_assert(msg_out);
   tor_assert(status_out);
-  *status_out = 0;
 
   if (!pending_vote_list)
     pending_vote_list = smartlist_create();
+  *status_out = 0;
   *msg_out = NULL;
 
  again:
@@ -1411,9 +1411,11 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
         if (!memcmp(vi_old->vote_digest, vi->vote_digest, DIGEST_LEN)) {
           /* Ah, it's the same vote. Not a problem. */
           log_info(LD_DIR, "Discarding a vote we already have.");
-          *status_out = 200;
-          *msg_out = "ok";
-          goto err;
+          if (*status_out < 200)
+            *status_out = 200;
+          if (!*msg_out)
+            *msg_out = "OK";
+          goto discard;
         } else if (v->vote->published < vote->published) {
           log_notice(LD_DIR, "Replacing an older pending vote from this "
                      "directory.");
@@ -1426,9 +1428,10 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
               !strcmpstart(end_of_vote, "network-status-version"))
             goto again;
 
-          if (!*status_out)
+          if (*status_out < 200)
             *status_out = 200;
-          *msg_out = "ok";
+          if (!*msg_out)
+            *msg_out = "OK";
           return v;
         } else {
           *msg_out = "Already have a newer pending vote";
@@ -1446,26 +1449,30 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version "))
     goto again;
 
-  if (any_failed)
-    goto err;
+  goto done;
 
-  if (!*status_out)
-    *status_out = 200;
-  *msg_out = "ok";
-
-  return pending_vote;
  err:
   any_failed = 1;
-  if (vote)
-    networkstatus_vote_free(vote);
   if (!*msg_out)
     *msg_out = "Error adding vote";
-  if (!*status_out || *status_out == 200)
+  if (*status_out < 400)
     *status_out = 400;
+
+ discard:
+  if (vote)
+    networkstatus_vote_free(vote);
 
   if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version "))
     goto again;
-  return NULL;
+
+ done:
+
+  if (*status_out < 200)
+    *status_out = 200;
+  if (!*msg_out)
+    *msg_out = "ok";
+
+  return any_failed ? NULL : pending_vote;
 }
 
 /** Try to compute a v3 networkstatus consensus from the currently pending
