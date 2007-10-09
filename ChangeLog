@@ -39,6 +39,7 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - Only change the reply to a vote to "OK" if it's not already set.  This
       gets rid of annoying "400 OK" log messages, which may have been masking
       some deeper issue.  Bugfix on 0.2.0.7-alpha.
+    - When we get a valid consensus, recompute the voting schedule.
 
   o Minor bugfixes (performance):
     - Use a slightly simpler string hashing algorithm (copying Python's

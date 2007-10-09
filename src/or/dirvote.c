@@ -1080,8 +1080,6 @@ static struct {
 void
 dirvote_recalculate_timing(time_t now)
 {
-  /* XXXX020 call this when inputs may have changed (i.e., whenver we get a
-   * fresh consensus.) */
   int interval, vote_delay, dist_delay;
   time_t start;
   time_t end;
@@ -1361,6 +1359,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
  again:
   vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote, 1);
   if (!vote) {
+    log_warn(LD_DIR, "Couldn't parse vote: length was %d", strlen(vote_body));
     *msg_out = "Unable to parse vote";
     goto err;
   }

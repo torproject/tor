@@ -1015,6 +1015,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   current_consensus = c;
 
   update_consensus_networkstatus_fetch_time(now);
+  dirvote_recalculate_timing(now);
 
   if (!from_cache) {
     or_options_t *options = get_options();
