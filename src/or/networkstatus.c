@@ -219,7 +219,7 @@ _compare_networkstatus_published_on(const void **_a, const void **_b)
 }
 
 /** Add the parsed neworkstatus in <b>ns</b> (with original document in
- * <b>s</b> to the disk cache (and the in-memory directory server cache) as
+ * <b>s</b>) to the disk cache (and the in-memory directory server cache) as
  * appropriate. */
 static int
 add_networkstatus_to_cache(const char *s,
@@ -308,7 +308,7 @@ router_set_networkstatus(const char *s, time_t arrived_at,
 
   if (ns->published_on > now + NETWORKSTATUS_ALLOW_SKEW) {
     log_warn(LD_GENERAL, "Network status from %s was published in the future "
-             "(%s GMT). Somebody is skewed here: check your clock. "
+             "(%s GMT). Check your system clock! "
              "Not caching.",
              source_desc, published);
     control_event_general_status(LOG_WARN,

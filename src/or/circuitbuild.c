@@ -686,7 +686,7 @@ void
 circuit_note_clock_jumped(int seconds_elapsed)
 {
   int severity = server_mode(get_options()) ? LOG_WARN : LOG_NOTICE;
-  log(severity, LD_GENERAL, "Your clock just jumped %d seconds %s; "
+  log(severity, LD_GENERAL, "Your system clock just jumped %d seconds %s; "
       "assuming established circuits no longer work.",
       seconds_elapsed >=0 ? seconds_elapsed : -seconds_elapsed,
       seconds_elapsed >=0 ? "forward" : "backward");
