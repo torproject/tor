@@ -858,7 +858,7 @@ server_mode(or_options_t *options)
 int
 dirserver_mode(or_options_t *options)
 {
-  if (options->ClientOnly) return 0;
+//  if (options->ClientOnly) return 0;
   return options->DirPort != 0;
 }
 
