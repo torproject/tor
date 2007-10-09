@@ -1359,7 +1359,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
  again:
   vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote, 1);
   if (!vote) {
-    log_warn(LD_DIR, "Couldn't parse vote: length was %d", strlen(vote_body));
+    log_warn(LD_DIR, "Couldn't parse vote: length was %d",
+             (int)strlen(vote_body));
     *msg_out = "Unable to parse vote";
     goto err;
   }
