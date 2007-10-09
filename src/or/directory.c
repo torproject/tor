@@ -2182,25 +2182,24 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         smartlist_add(items, (char*)item);
     } else if (!strcmp(url, "authority")) {
       const cached_dir_t *d;
-      if ((d=dirvote_get_vote(NULL, 1, current, !current)))
+      int flags = DGV_BY_ID |
+        (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
+      if ((d=dirvote_get_vote(NULL, flags)))
         smartlist_add(dir_items, (cached_dir_t*)d);
     } else {
       const cached_dir_t *d;
       smartlist_t *fps = smartlist_create();
-      int by_id, include_pending, include_previous;
+      int flags;
       if (!strcmpstart(url, "d/")) {
         url += 2;
-        by_id = 0;
-        include_pending = include_previous = 1;
+        flags = DGV_BY_ID | DGV_INCLUDE_PENDING | DGV_INCLUDE_PREVIOUS;
       } else {
-        by_id = 1;
-        include_pending = current;
-        include_previous = !current;
+        flags = DGV_BY_ID |
+          (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
       }
       dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
       SMARTLIST_FOREACH(fps, char *, fp, {
-          if ((d = dirvote_get_vote(fp, by_id,
-                                    include_pending, include_previous)))
+          if ((d = dirvote_get_vote(fp, flags)))
             smartlist_add(dir_items, (cached_dir_t*)d);
           tor_free(fp);
         });

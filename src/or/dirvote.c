@@ -1235,7 +1235,8 @@ dirvote_fetch_missing_votes(void)
     {
       if (!(ds->type & V3_AUTHORITY))
         continue;
-      if (!dirvote_get_vote(ds->v3_identity_digest, 1, 0, 1)) {
+      if (!dirvote_get_vote(ds->v3_identity_digest,
+                            DGV_BY_ID|DGV_INCLUDE_PENDING)) {
         char *cp = tor_malloc(HEX_DIGEST_LEN+1);
         base16_encode(cp, HEX_DIGEST_LEN+1, ds->v3_identity_digest,
                       DIGEST_LEN);
@@ -1744,9 +1745,12 @@ dirvote_get_pending_detached_signatures(void)
  * consensus that's in progress.  May return NULL if we have no vote for the
  * authority in question. */
 const cached_dir_t *
-dirvote_get_vote(const char *fp, int by_id, int include_previous,
-                 int include_pending)
+dirvote_get_vote(const char *fp, int flags)
 {
+  int by_id = flags & DGV_BY_ID;
+  const int include_pending = flags & DGV_INCLUDE_PENDING;
+  const int include_previous = flags & DGV_INCLUDE_PREVIOUS;
+
   if (!pending_vote_list && !previous_vote_list)
     return NULL;
   if (fp == NULL) {

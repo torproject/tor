@@ -2944,9 +2944,10 @@ int dirvote_add_signatures(const char *detached_signatures_body);
 /* Item access */
 const char *dirvote_get_pending_consensus(void);
 const char *dirvote_get_pending_detached_signatures(void);
-const cached_dir_t *dirvote_get_vote(const char *fp, int by_id,
-                                     int include_pending,
-                                     int include_previous);
+#define DGV_BY_ID 1
+#define DGV_INCLUDE_PENDING 2
+#define DGV_INCLUDE_PREVIOUS 4
+const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
 
 #ifdef DIRVOTE_PRIVATE
 int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
