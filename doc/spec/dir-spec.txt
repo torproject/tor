@@ -1036,6 +1036,9 @@ $Id$
      The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.
 
+   All ties in computing medians are broken in favor of the smaller or
+   earlier item.
+
 3.4.1. Forward compatibility
 
    Future versions of Tor will need to include new information in the
