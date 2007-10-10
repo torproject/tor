@@ -806,25 +806,31 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
     return -2;
 }
 
-/** Given a consensus vote <b>target</b> and a list of
- * notworkstatus_voter_info_t in <b>src_voter_list</b> that correspond to the
- * same consensus, check whether there are any new signatures in
- * <b>src_voter_list</b> that should be added to <b>target.  (A signature
- * should be added if we have no signature for that voter in <b>target</b>
- * yet, or if we have no verifiable signature and the new signature is
- * verifiable.)   Return the number of signatures added or changed, or
- * -1 on error. */
-static int
-networkstatus_add_signatures_impl(networkstatus_vote_t *target,
-                                  smartlist_t *src_voter_list)
+/** Given a consensus vote <b>target</b> and a set of detached signatures in
+ * <b>sigs</b> that correspond to the same consensus, check whether there are
+ * any new signatures in <b>src_voter_list</b> that should be added to
+ * <b>target.  (A signature should be added if we have no signature for that
+ * voter in <b>target</b> yet, or if we have no verifiable signature and the
+ * new signature is verifiable.)  Return the number of signatures added or
+ * changed, or -1 if the document signed by <b>sigs</b> isn't the same
+ * document as <b>target</b>. */
+int
+networkstatus_add_detached_signatures(networkstatus_vote_t *target,
+                                      ns_detached_signatures_t *sigs)
 {
-  /*XXXX020 merge with the only function that calls it. */
   int r = 0;
+  tor_assert(sigs);
   tor_assert(target);
   tor_assert(!target->is_vote);
 
+
+  /* Are they the same consensus? */
+  if (memcmp(target->networkstatus_digest, sigs->networkstatus_digest,
+             DIGEST_LEN))
+    return -1;
+
   /* For each voter in src... */
-  SMARTLIST_FOREACH(src_voter_list, networkstatus_voter_info_t *, src_voter,
+  SMARTLIST_FOREACH(sigs->signatures, networkstatus_voter_info_t *, src_voter,
     {
       networkstatus_voter_info_t *target_voter =
         networkstatus_get_voter_by_id(target, src_voter->identity_digest);
@@ -864,21 +870,6 @@ networkstatus_add_signatures_impl(networkstatus_vote_t *target,
   return r;
 }
 
-/** As networkstatus_add_signature_impl, but takes new signatures
- * from the detached signatures document <b>sigs</b>. */
-int
-networkstatus_add_detached_signatures(networkstatus_vote_t *target,
-                                      ns_detached_signatures_t *sigs)
-{
-  tor_assert(sigs);
-
-  /* Are they the same consensus? */
-  if (memcmp(target->networkstatus_digest, sigs->networkstatus_digest,
-             DIGEST_LEN))
-    return -1;
-
-  return networkstatus_add_signatures_impl(target, sigs->signatures);
-}
 
 /** Return a newly allocated string holding the detached-signatures document
  * corresponding to the signatures on <b>consensus</b>. */
