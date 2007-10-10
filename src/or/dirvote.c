@@ -823,7 +823,6 @@ networkstatus_add_detached_signatures(networkstatus_vote_t *target,
   tor_assert(target);
   tor_assert(!target->is_vote);
 
-
   /* Are they the same consensus? */
   if (memcmp(target->networkstatus_digest, sigs->networkstatus_digest,
              DIGEST_LEN))
@@ -869,7 +868,6 @@ networkstatus_add_detached_signatures(networkstatus_vote_t *target,
 
   return r;
 }
-
 
 /** Return a newly allocated string holding the detached-signatures document
  * corresponding to the signatures on <b>consensus</b>. */
