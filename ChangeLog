@@ -1,13 +1,25 @@
 Changes in version 0.2.0.8-alpha - 2007-10-12
+  o Major features (router descriptor cache):
+    - Store routers in a file called cached-descriptors instead of in
+      cached-routers. Initialize cached-descriptors from cached-routers
+      if the old format is around. The new format allows us to store
+      annotations along with descriptors.
+    - Use annotations to record the time we received each descriptor.
+    - Use annotations to record the source for each descriptor.
+    - Use annotations to record the purpose of each descriptor.
+    - Bridge authorities now write bridge descriptors to disk, meaning
+      we can export them to other programs and begin distributing them
+      to blocked users.
+
   o Major features (directory authorities):
-    - When an authority is missing votes or signatures, it now tries to fetch
-      them.
+    - When a v3 authority is missing votes or signatures, it now tries
+      to fetch them.
     - Directory authorities track weighted fractional uptime as well as
       weighted mean-time-between failures.  WFU is suitable for deciding
       whether a node is "usually up", while MTBF is suitable for deciding
-      whether a node is "likely to stay up."  We need both, because "usually
-      up" is a good requirement for guards, while "likely to stay up" is
-      a good requirement for long-lived connections.
+      whether a node is "likely to stay up."  We need both, because
+      "usually up" is a good requirement for guards, while "likely to
+      stay up" is a good requirement for long-lived connections.
 
   o Major features (v3 directory system):
     - Caches now download v3 network status documents as needed.
@@ -16,51 +28,43 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
     - All hosts now attempt to download and keep fresh v3 authority
       certificates, and re-attempt after failures.
 
-  o Minor features (router descriptor cache):
-    - Store routers in a file called cached-descriptors instead of in
-      cached-routers.  Initialize cached-descriptors from cached-routers
-      if the old format is around.  The new format allows us to store
-      annotations along with descriptors.
-    - Use annotations to record the time we received each descriptor.
-    - Use annotations to record the source for each descriptor.
-    - Use annotations to record the purpose of each descriptor.
+  o Major bugfixes (performance):
+    - Fix really bad O(n^2) performance when parsing a long list of
+      routers: Instead of searching the entire list for an "extra-info "
+      string which usually wasn't there, once for every routerinfo
+      we read, just scan lines forward until we find one we like.
+      Bugfix on 0.2.0.1.
 
   o Minor features (v3 authority system):
-    - Add more ways for tools to download the votes that lead to the current
-      consensus.
-    - Caches now download v3 network status documents as needed.
-    - Send a 503 when low on bandwidth and a vote, consensus, or certificate
-      is requested.
+    - Add more ways for tools to download the votes that lead to the
+      current consensus.
+    - Send a 503 when low on bandwidth and a vote, consensus, or
+      certificate is requested.
     - If-modified-since is now implemented properly for all kinds of
       certificate requests.
 
-  o Minor features (network statuses):
+  o Minor bugfixes (network statuses):
     - Tweak the implementation of proposal 109 slightly: allow at most
       two Tor servers on the same IP address, except if it's the location
-      of a directory authority, in which case allow five.
-
-  o Major bugfixes (performance):
-    - Fix really bad O(n^2) performance when parsing a long list of routers:
-      Instead of searching the entire list for an "extra-info " string which
-      usually wasn't there, once for every routerinfo we read, just scan
-      lines forward until we find one we like.  Bugfix on 0.2.0.1.
+      of a directory authority, in which case allow five. Bugfix on
+      0.2.0.3-alpha.
 
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an
-      OR address is readable, set the port correctly.  (Previously we
-      were reporting the dir port.)  Bugfix on 0.1.2.x.
+      OR address is readable, set the port correctly. (Previously we
+      were reporting the dir port.) Bugfix on 0.1.2.x.
 
   o Minor bugfixes (v3 directory code):
-    - Fix logic to look up a cert by its signing key digest.  Bugfix on
+    - Fix logic to look up a cert by its signing key digest. Bugfix on
       0.2.0.7-alpha.
-    - Only change the reply to a vote to "OK" if it's not already set.  This
-      gets rid of annoying "400 OK" log messages, which may have been masking
-      some deeper issue.  Bugfix on 0.2.0.7-alpha.
+    - Only change the reply to a vote to "OK" if it's not already
+      set. This gets rid of annoying "400 OK" log messages, which may
+      have been masking some deeper issue. Bugfix on 0.2.0.7-alpha.
     - When we get a valid consensus, recompute the voting schedule.
-    - Base the valid-after time of a vote on the consensus voting schedule,
-      not on our preferred schedule.
-    - Make the return values and messages from signature uploads and downloads
-      more sensible.
+    - Base the valid-after time of a vote on the consensus voting
+      schedule, not on our preferred schedule.
+    - Make the return values and messages from signature uploads and
+      downloads more sensible.
     - Fix a memory leak when serving votes and consensus documents, and
       another when serving certificates.
 
@@ -81,8 +85,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
 
   o Minor bugfixes (Security):
     - Never report that we've used more bandwidth than we're willing to
-      relay: it leaks how much non-relay traffic we're using.  Resolves bug
-      516.
+      relay: it leaks how much non-relay traffic we're using. Resolves
+      bug 516.
 
   o Code simplifications and refactoring:
     - Make a bunch of functions static.  Remove some dead code.
@@ -91,13 +95,15 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
     - Merge the extra fields in local_routerstatus_t back into
       routerstatus_t: we used to need one routerstatus_t for each
       authority's opinion, plus a local_routerstatus_t for the locally
-      computed consensus opinion.  To save space, we put the locally
-      modified fields into local_routerstatus_t, and only the common stuff
-      into routerstatus_t.  But once v3 directories are in use, clients and
-      caches will no longer need to hold authority opinions; thus, the
-      rationale for keeping the types separate is now gone.
-    - Make the code used to reschedule and reattempt downloads more uniform.
-    - Turn all 'Are we a directory?' logic into a call to dirserver_mode().
+      computed consensus opinion. To save space, we put the locally
+      modified fields into local_routerstatus_t, and only the common
+      stuff into routerstatus_t. But once v3 directories are in use,
+      clients and caches will no longer need to hold authority opinions;
+      thus, the rationale for keeping the types separate is now gone.
+    - Make the code used to reschedule and reattempt downloads more
+      uniform.
+    - Turn all 'Are we a directory server/mirror?' logic into a call to
+      dirserver_mode().
 
 
 Changes in version 0.2.0.7-alpha - 2007-09-21
