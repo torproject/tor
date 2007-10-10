@@ -1840,7 +1840,10 @@ get_possible_sybil_list(const smartlist_t *routers)
   smartlist_sort(routers_by_ip, _compare_routerinfo_by_ip_and_bw);
   omit_as_sybil = digestmap_new();
 
-#define MAX_WITH_SAME_ADDR 3
+/* Allow at most this number of Tor servers on a single IP address, ... */
+#define MAX_WITH_SAME_ADDR 2
+/* ... unless it's a directory authority, in which case allow more. */
+#define MAX_WITH_SAME_ADDR_ON_AUTHORITY 5
   last_addr = 0;
   addr_count = 0;
   SMARTLIST_FOREACH(routers_by_ip, routerinfo_t *, ri,
@@ -1849,7 +1852,9 @@ get_possible_sybil_list(const smartlist_t *routers)
         last_addr = ri->addr;
         addr_count = 1;
       } else if (++addr_count > MAX_WITH_SAME_ADDR) {
-        digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
+        if (!router_digest_is_trusted_dir(ri->cache_info.identity_digest) ||
+            addr_count > MAX_WITH_SAME_ADDR_ON_AUTHORITY)
+          digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
       }
     });
 

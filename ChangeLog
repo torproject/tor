@@ -30,6 +30,11 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       consensus.
     - Caches now download v3 network status documents as needed.
 
+  o Minor features (network statuses):
+    - Tweak the implementation of proposal 109 slightly: allow at most
+      two Tor servers on the same IP address, except if it's the location
+      of a directory authority, in which case allow five.
+
   o Major bugfixes (performance):
     - Fix really bad O(n^2) performance when parsing a long list of routers:
       Instead of searching the entire list for an "extra-info " string which
