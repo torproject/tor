@@ -47,6 +47,10 @@ Things we'd like to do in 0.2.0.x:
         it only goes to stdout and is then lost.
       o Aug 30 [...] wmtbf 4:6:16
         The wmtbf time value is missing some zero-pads.
+      - we should do another bandwidth test every 12 hours or something
+        if we're showing less than 50KB and our bandwidthrate says we can
+        do more than that. I think some servers are forgetting the results
+        of their first test, and then never seeing use.
 
   - Proposals:
     . 101: Voting on the Tor Directory System (plus 103)
@@ -460,6 +464,7 @@ Future versions:
       working").
 
   - Security
+    - some better fix for bug #516?
     - don't do dns hijacking tests if we're reject *:* exit policy?
       (deferred until 0.1.1.x is less common)
     - Directory guards
