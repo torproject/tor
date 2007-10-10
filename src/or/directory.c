@@ -2369,10 +2369,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto keys_done;
     }
     SMARTLIST_FOREACH(certs, authority_cert_t *, c,
-      if (cert->cache_info.published_on < if_modified_since)
+      if (c->cache_info.published_on < if_modified_since)
         SMARTLIST_DEL_CURRENT(certs, c));
     if (!smartlist_len(certs)) {
-      write_status_line(conn, 304, "Not modified");
+      write_http_status_line(conn, 304, "Not modified");
       goto keys_done;
     }
     len = 0;
