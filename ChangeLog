@@ -2,6 +2,12 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
   o Major features (directory authorities):
     - When an authority is missing votes or signatures, it now tries to fetch
       them.
+    - Directory authorities track weighted fractional uptime as well as
+      weighted mean-time-between failures.  WFU is suitable for deciding
+      whether a node is "usually up", while MTBF is suitable for deciding
+      whether a node is "likely to stay up."  We need both, because "usually
+      up" is a good requirement for guards, while "likely to stay up" is
+      a good requirement for long-lived connections.
 
   o Major features (v3 directory system):
     - Caches now download v3 network status documents as needed.

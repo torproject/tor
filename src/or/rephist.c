@@ -641,7 +641,7 @@ rep_hist_record_mtbf_data(void)
 #define PUT(s) STMT_BEGIN if (fputs((s),f)<0) goto err; STMT_END
 #define PRINTF(args) STMT_BEGIN if (fprintf args <0) goto err; STMT_END
 
-  PUT("format 1\n");
+  PUT("format 2\n");
 
   format_iso_time(time_buf, time(NULL));
   PRINTF((f, "stored-at %s\n", time_buf));
@@ -666,12 +666,21 @@ rep_hist_record_mtbf_data(void)
     hist = (or_history_t*) or_history_p;
 
     base16_encode(dbuf, sizeof(dbuf), digest, DIGEST_LEN);
+    PRINTF((f, "R %s\n", dbuf));
     if (hist->start_of_run) {
       format_iso_time(time_buf, hist->start_of_run);
       t = time_buf;
     }
-    PRINTF((f, "%s %lu %.5lf%s%s\n",
-            dbuf, hist->weighted_run_length, hist->total_run_weights,
+    PRINTF((f, "+MTBF %lu %.5lf%s%s\n",
+            hist->weighted_run_length, hist->total_run_weights,
+            t ? " S=" : "", t ? t : ""));
+    t = NULL;
+    if (hist->start_of_downtime) {
+      format_iso_time(time_buf, hist->start_of_downtime);
+      t = time_buf;
+    }
+    PRINTF((f, "+WFU %lu %lu%s%s\n",
+            hist->weighted_uptime, hist->total_weighted_time,
             t ? " S=" : "", t ? t : ""));
   }
 
@@ -686,6 +695,22 @@ rep_hist_record_mtbf_data(void)
   return -1;
 }
 
+/** Helper: return the first j >= i such that !strcmpstart(sl[j], prefix) and
+ * such that no line sl[k] with i <= k < j starts with "R ".  Return -1 if no
+ * such line exists. */
+static int
+find_next_with(smartlist_t *sl, int i, const char *prefix)
+{
+  for ( ; i < smartlist_len(sl); ++i) {
+    const char *line = smartlist_get(sl, i);
+    if (!strcmpstart(line, prefix))
+      return i;
+    if (!strcmpstart(line, "R "))
+      return -1;
+  }
+  return -1;
+}
+
 /** Load MTBF data from disk.  Returns 0 on success or recoverable error, -1
  * on failure. */
 int
@@ -697,6 +722,7 @@ rep_hist_load_mtbf_data(time_t now)
   int r=0, i;
   time_t last_downrated = 0, stored_at = 0, tracked_since = 0;
   time_t latest_possible_start = now;
+  long format = -1;
 
   {
     char *filename = get_mtbf_filename();
@@ -709,8 +735,18 @@ rep_hist_load_mtbf_data(time_t now)
     tor_free(d);
   }
 
-  if (smartlist_len(lines)<4 || strcmp(smartlist_get(lines, 0), "format 1")) {
-    log_warn(LD_GENERAL,"Unrecognized format in mtbf history file. Skipping.");
+  {
+    const char *firstline;
+    if (smartlist_len(lines)>4) {
+      firstline = smartlist_get(lines, 0);
+      if (!strcmpstart(firstline, "format "))
+        format = tor_parse_long(firstline+strlen("format "),
+                                10, -1, LONG_MAX, NULL, NULL);
+    }
+  }
+  if (format != 1 && format != 2) {
+    log_warn(LD_GENERAL,
+             "Unrecognized format in mtbf history file. Skipping.");
     goto err;
   }
   for (i = 1; i < smartlist_len(lines); ++i) {
@@ -749,46 +785,109 @@ rep_hist_load_mtbf_data(time_t now)
   for (; i < smartlist_len(lines); ++i) {
     char digest[DIGEST_LEN];
     char hexbuf[HEX_DIGEST_LEN+1];
-    char timebuf[ISO_TIME_LEN+1];
+    char mtbf_timebuf[ISO_TIME_LEN+1];
+    char wfu_timebuf[ISO_TIME_LEN+1];
     time_t start_of_run = 0;
-    long wrl;
-    double trw;
+    time_t start_of_downtime = 0;
+    int have_mtbf = 0, have_wfu = 0;
+    long wrl = 0;
+    double trw = 0;
+    long wt_uptime = 0, total_wt_time = 0;
     int n;
     or_history_t *hist;
     line = smartlist_get(lines, i);
     if (!strcmp(line, "."))
       break;
-    /* XXXX020 audit the heck out of my scanf usage. */
-    n = sscanf(line, "%40s %ld %lf S=%10s %8s",
-               hexbuf, &wrl, &trw, timebuf, timebuf+11);
-    if (n != 3 && n != 5) {
-      log_warn(LD_GENERAL, "Couldn't scan line %s", escaped(line));
-      continue;
+
+    mtbf_timebuf[0] = '\0';
+    wfu_timebuf[0] = '\0';
+
+    if (format == 1) {
+      /* XXXX020 audit the heck out of my scanf usage. */
+      n = sscanf(line, "%40s %ld %lf S=%10s %8s",
+                 hexbuf, &wrl, &trw, mtbf_timebuf, mtbf_timebuf+11);
+      if (n != 3 && n != 5) {
+        log_warn(LD_GENERAL, "Couldn't scan line %s", escaped(line));
+        continue;
+      }
+      have_mtbf = 1;
+    } else {
+      // format == 2.
+      int mtbf_idx, wfu_idx;
+      if (strcmpstart(line, "R ") || strlen(line) < 2+HEX_DIGEST_LEN)
+        continue;
+      strlcpy(hexbuf, line+2, sizeof(hexbuf));
+      mtbf_idx = find_next_with(lines, i+1, "+MTBF ");
+      wfu_idx = find_next_with(lines, i+1, "+WFU ");
+      if (mtbf_idx >= 0) {
+        const char *mtbfline = smartlist_get(lines, mtbf_idx);
+        n = sscanf(mtbfline, "+MTBF %lu %lf S=%10s %8s",
+                   &wrl, &trw, mtbf_timebuf, mtbf_timebuf+11);
+        if (n == 2 || n == 4) {
+          have_mtbf = 1;
+        } else {
+          log_warn(LD_GENERAL, "Couldn't scan +MTBF line %s",
+                   escaped(mtbfline));
+        }
+      }
+      if (wfu_idx >= 0) {
+        const char *wfuline = smartlist_get(lines, wfu_idx);
+        n = sscanf(wfuline, "+WFU %lu %lu S=%10s %8s",
+                   &wt_uptime, &total_wt_time,
+                   wfu_timebuf, wfu_timebuf+11);
+        if (n == 2 || n == 4) {
+          have_wfu = 1;
+        } else {
+          log_warn(LD_GENERAL, "Couldn't scan +WFU line %s", escaped(wfuline));
+        }
+      }
+      if (wfu_idx > i)
+        i = wfu_idx;
+      if (mtbf_idx > i)
+        i = mtbf_idx;
     }
     if (base16_decode(digest, DIGEST_LEN, hexbuf, HEX_DIGEST_LEN) < 0) {
       log_warn(LD_GENERAL, "Couldn't hex string %s", escaped(hexbuf));
       continue;
     }
-    if (n == 5) {
-      timebuf[10] = ' ';
-      if (parse_iso_time(timebuf, &start_of_run)<0)
-        log_warn(LD_GENERAL, "Couldn't parse time %s", escaped(timebuf));
-    }
     hist = get_or_history(digest);
     if (!hist)
       continue;
 
-    if (!start_of_run || start_of_run > stored_at) {
-      hist->start_of_run = 0;
-    } else {
-      long run_length = stored_at - start_of_run;
-      hist->start_of_run = now - run_length;
-    }
-    if (hist->start_of_run < latest_possible_start + wrl)
-      latest_possible_start = hist->start_of_run - wrl;
+    if (have_mtbf) {
+      if (mtbf_timebuf[0]) {
+        mtbf_timebuf[10] = ' ';
+        if (parse_iso_time(mtbf_timebuf, &start_of_run)<0)
+          log_warn(LD_GENERAL, "Couldn't parse time %s",
+                   escaped(mtbf_timebuf));
+      }
+      if (!start_of_run || start_of_run > stored_at) {
+        hist->start_of_run = 0;
+      } else {
+        long run_length = stored_at - start_of_run;
+        hist->start_of_run = now - run_length;
+      }
+      if (hist->start_of_run < latest_possible_start + wrl)
+        latest_possible_start = hist->start_of_run - wrl;
 
-    hist->weighted_run_length = wrl;
-    hist->total_run_weights = trw;
+      hist->weighted_run_length = wrl;
+      hist->total_run_weights = trw;
+    }
+    if (have_wfu) {
+      if (wfu_timebuf[0]) {
+        wfu_timebuf[10] = ' ';
+        if (parse_iso_time(wfu_timebuf, &start_of_downtime)<0)
+          log_warn(LD_GENERAL, "Couldn't parse time %s", escaped(wfu_timebuf));
+      }
+    }
+    if (!start_of_downtime || start_of_downtime > stored_at) {
+      hist->start_of_downtime = 0;
+    } else {
+      long down_length = stored_at - start_of_downtime;
+      hist->start_of_downtime = start_of_downtime - down_length;
+    }
+    hist->weighted_uptime = wt_uptime;
+    hist->total_weighted_time = total_wt_time;
   }
   if (strcmp(line, "."))
     log_warn(LD_GENERAL, "Truncated MTBF file.");
