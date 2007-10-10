@@ -1228,7 +1228,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
               !addressmap_have_mapping(req->address) &&
               !have_warned_about_unsafe_socks) {
             log_warn(LD_APP,
-                "Your application (using socks5 on port %d) is giving "
+                "Your application (using socks5 to port %d) is giving "
                 "Tor only an IP address. Applications that do DNS resolves "
                 "themselves may leak information. Consider using Socks4A "
                 "(e.g. via privoxy or socat) instead. For more information, "
@@ -1265,14 +1265,14 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           buf_remove_from_front(buf, 5+len+2);
           if (!tor_strisprint(req->address) || strchr(req->address,'\"')) {
             log_warn(LD_PROTOCOL,
-                     "Your application (using socks5 on port %d) gave Tor "
+                     "Your application (using socks5 to port %d) gave Tor "
                      "a malformed hostname: %s. Rejecting the connection.",
                      req->port, escaped(req->address));
             return -1;
           }
           if (log_sockstype)
             log_notice(LD_APP,
-                  "Your application (using socks5 on port %d) gave "
+                  "Your application (using socks5 to port %d) gave "
                   "Tor a hostname, which means Tor will do the DNS resolve "
                   "for you. This is good.", req->port);
           return 1;
@@ -1334,7 +1334,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           !addressmap_have_mapping(tmpbuf) &&
           !have_warned_about_unsafe_socks) {
         log_warn(LD_APP,
-                 "Your application (using socks4 on port %d) is giving Tor "
+                 "Your application (using socks4 to port %d) is giving Tor "
                  "only an IP address. Applications that do DNS resolves "
                  "themselves may leak information. Consider using Socks4A "
                  "(e.g. via privoxy or socat) instead. For more information, "
@@ -1367,7 +1367,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
         if (log_sockstype)
           log_notice(LD_APP,
-                     "Your application (using socks4a on port %d) gave "
+                     "Your application (using socks4a to port %d) gave "
                      "Tor a hostname, which means Tor will do the DNS resolve "
                      "for you. This is good.", req->port);
       }
@@ -1376,7 +1376,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
               sizeof(req->address));
       if (!tor_strisprint(req->address) || strchr(req->address,'\"')) {
         log_warn(LD_PROTOCOL,
-                 "Your application (using socks4 on port %d) gave Tor "
+                 "Your application (using socks4 to port %d) gave Tor "
                  "a malformed hostname: %s. Rejecting the connection.",
                  req->port, escaped(req->address));
         return -1;
