@@ -899,7 +899,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   struct sockaddr_in remote;
   char addrbuf[256];
   /* length of the remote address. Must be whatever accept() needs. */
-  socklen_t remotelen = 256;
+  socklen_t remotelen = sizeof(addrbuf);
   char tmpbuf[INET_NTOA_BUF_LEN];
   or_options_t *options = get_options();
 
@@ -932,9 +932,11 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     set_constrained_socket_buffers(news, (int)options->ConstrainedSockSize);
 
   if (((struct sockaddr*)addrbuf)->sa_family != conn->socket_family) {
-    log_warn(LD_BUG, "A listener connection returned a socket with a "
+    /* This is annoying, but can apparently happen on some Darwins. */
+    log_info(LD_BUG, "A listener connection returned a socket with a "
              "mismatched family. %s for addr_family %d gave us a socket "
-             "with address family %d.", conn_type_to_string(conn->type),
+             "with address family %d.  Dropping.",
+             conn_type_to_string(conn->type),
              (int)conn->socket_family,
              (int)((struct sockaddr*)addrbuf)->sa_family);
     tor_close_socket(news);
