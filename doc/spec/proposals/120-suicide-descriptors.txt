@@ -74,3 +74,11 @@ Acknowledgements:
 
   tup suggested this idea.
 
+Comments:
+
+  1) Don't name the official feature "suicide descriptors".  Suicide is
+     irreversible, and the concept pushes many people's buttons. How about
+     "shutdown descriptors"?
+  2) Maybe add a rule "Don't do this for hibernation if we expect to wake
+     up before the next consensus is published"?
+                                                      - NM 9 Oct 2007

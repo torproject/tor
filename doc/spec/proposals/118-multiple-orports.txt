@@ -51,5 +51,16 @@ add in better ideas, etc.
     between them when they get extend cells to the same server on
     different ports.
 
+    - Suggested rule:
+      - If we're told to extend to IP:Port:ID, and we have a connection
+        to some server with ID, and we have confirmed that the server
+        likes the address we originally used when connecting to it (via
+        means in proposal 105), then use the existing connection.
+      - If we're told to extend to IP:Port:ID, and we have a descriptor
+        for the ID, and we have a connection to some server with ID,
+        and the existing connection is to an address listed as valid
+        in the descriptor, then use the existing connection.
+      - Otherwise, use a new connection.
+
   - How this all interacts with coderman's ipv6 stuff (proposal 117).
 
