@@ -86,3 +86,6 @@ Compatibility:
     would only make use of a bit of it. So Roger suggested that he run
     two Tor servers, to use more.
 
+[Note Roger's tweak to this behavior, in
+http://archives.seul.org/or/cvs/Oct-2007/msg00118.html]
+
