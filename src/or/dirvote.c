@@ -1310,7 +1310,8 @@ dirvote_clear_votes(int all_votes)
   }
 }
 
-/* XXXX020 delete me. */
+/** Return a newly allocated string containing the hex-encoded v3 authority
+    identity digest of every recognized v3 authority. */
 static char *
 list_v3_auth_ids(void)
 {
@@ -1318,9 +1319,10 @@ list_v3_auth_ids(void)
   char *keys;
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                     trusted_dir_server_t *, ds,
-       if (!tor_digest_is_zero(ds->v3_identity_digest))
-         smartlist_add(known_v3_keys,
-              tor_strdup(hex_str(ds->v3_identity_digest, DIGEST_LEN))));
+    if ((ds->type & V3_AUTHORITY) &&
+        !tor_digest_is_zero(ds->v3_identity_digest))
+      smartlist_add(known_v3_keys,
+                    tor_strdup(hex_str(ds->v3_identity_digest, DIGEST_LEN))));
   keys = smartlist_join_strings(known_v3_keys, ", ", 0, NULL);
   SMARTLIST_FOREACH(known_v3_keys, char *, cp, tor_free(cp));
   smartlist_free(known_v3_keys);
@@ -1610,7 +1612,6 @@ dirvote_add_signatures_to_pending_consensus(
                                             sigs);
 
   if (r >= 0) {
-    /* XXXX This should really be its own function. */
     char *new_detached =
       networkstatus_get_detached_signatures(pending_consensus);
     const char *src;
