@@ -60,6 +60,11 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
       cache when canceling a pending resolve.  Don't log unless stuff
       is fishy.  Resolves bug 463.
 
+  o Minor bugfixes (Security):
+    - Never report that we've used more bandwidth than we're willing to
+      relay: it leaks how much non-relay traffic we're using.  Resolves bug
+      516.
+
   o Code simplifications and refactoring:
     - Make a bunch of functions static.  Remove some dead code.
     - Pull out about a third of the really big routerlist.c; put it in a

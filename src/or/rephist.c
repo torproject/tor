@@ -1014,6 +1014,8 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
 {
   char *cp = buf;
   int i, n;
+  or_options_t *options = get_options();
+  uint64_t cutoff;
 
   if (b->num_maxes_set <= b->next_max_idx) {
     /* We haven't been through the circular array yet; time starts at i=0.*/
@@ -1024,6 +1026,15 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
     i = b->next_max_idx;
   }
 
+  if (options->RelayBandwidthRate) {
+    /* We don't want to report that we used more bandwidth than the max we're
+     * willing to relay; otherwise everybody will know how much traffic
+     * we used ourself. */
+    cutoff = options->RelayBandwidthRate * NUM_SECS_BW_SUM_INTERVAL;
+  } else {
+    cutoff = UINT64_MAX;
+  }
+
   for (n=0; n<b->num_maxes_set; ++n,++i) {
     uint64_t total;
     if (i >= NUM_TOTALS)
@@ -1031,6 +1042,9 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
     tor_assert(i < NUM_TOTALS);
     /* Round the bandwidth used down to the nearest 1k. */
     total = b->totals[i] & ~0x3ff;
+    if (total > cutoff)
+      total = cutoff;
+
     if (n==(b->num_maxes_set-1))
       tor_snprintf(cp, len-(cp-buf), U64_FORMAT, U64_PRINTF_ARG(total));
     else
