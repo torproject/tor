@@ -2988,8 +2988,6 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
     return -1;
   }
   tor_assert(ri->purpose == purpose);
-  if (ri->purpose != ROUTER_PURPOSE_GENERAL)
-    ri->cache_info.do_not_cache = 1;
   if (router_is_me(ri)) {
     log_warn(LD_DIR, "Router's identity key matches mine; dropping.");
     *msg = "Router's identity key matches mine.";
@@ -3070,9 +3068,6 @@ router_load_routers_from_string(const char *s, const char *eos,
         continue;
       }
     }
-
-    if (ri->purpose != ROUTER_PURPOSE_GENERAL) /* XXXX020 wrong. */
-      ri->cache_info.do_not_cache = 1;
 
     if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0) {
       smartlist_add(changed, ri);

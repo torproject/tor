@@ -557,18 +557,6 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
                                      annotation_buf)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
-
-        /* Assign the purpose.
-         *
-         * XXX020 Perhaps this should get pushed into
-         * router_parse_list_from_string()? Also, tie it somehow into
-         * router_load_single_router()? Lastly, does extrainfo_t want
-         * a purpose field too, or can we just piggyback off the one
-         * in routerinfo_t? */
-        tor_assert(ri->purpose == purpose);
-        if (purpose != ROUTER_PURPOSE_GENERAL) /*XXXXX020 wrong. */
-          ri->cache_info.do_not_cache = 1;
-
         r_tmp = dirserv_add_descriptor(ri, &msg_out);
         if (r_tmp < r) {
           r = r_tmp;
@@ -584,10 +572,6 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
                                      NULL)) {
     SMARTLIST_FOREACH(list, extrainfo_t *, ei, {
         msg_out = NULL;
-
-        /* XXX020 see above note on purpose fields */
-        if (purpose != ROUTER_PURPOSE_GENERAL)
-          ei->cache_info.do_not_cache = 1;
 
         r_tmp = dirserv_add_extrainfo(ei, &msg_out);
         if (r_tmp < r) {
