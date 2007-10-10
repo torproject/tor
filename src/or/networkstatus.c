@@ -45,12 +45,10 @@ static int networkstatus_list_has_changed = 0;
  * mirrors).  Clients don't use this now. */
 static time_t last_networkstatus_download_attempted = 0;
 
-/** The last time we tried to download a networkstatus, or 0 for "never".  We
- * use this to rate-limit download attempts for directory caches (including
- * mirrors).  Clients don't use this now. */
-static time_t last_consensus_networkstatus_download_attempted = 0;
 /**DOCDOC*/
 static time_t time_to_download_next_consensus = 0;
+/**DOCDOC*/
+static download_status_t consensus_dl_status = { 0, 0};
 
 /** List of strings for nicknames or fingerprints we've already warned about
  * and that are still conflicted. */ /*XXXX020 obsoleted by v3 dirs? */
@@ -644,7 +642,7 @@ routerstatus_get_by_hexdigest(const char *hexdigest)
  * network-statuses.
  */
 static void
-update_networkstatus_cache_downloads(time_t now)
+update_v2_networkstatus_cache_downloads(time_t now)
 {
   int authority = authdir_mode_v2(get_options());
   int interval =
@@ -706,7 +704,7 @@ update_networkstatus_cache_downloads(time_t now)
  * necessary".  See function comments for implementation details.
  */
 static void
-update_networkstatus_client_downloads(time_t now)
+update_v2_networkstatus_client_downloads(time_t now)
 {
   int n_live = 0, n_dirservers, n_running_dirservers, needed = 0;
   int fetch_latest = 0;
@@ -836,15 +834,21 @@ update_consensus_networkstatus_downloads(time_t now)
     return;
   if (authdir_mode_v3(options))
     return;
+  if (!download_status_is_ready(&consensus_dl_status, now, 8))
+    return; /*XXXX020 magic number 8.*/
   if (connection_get_by_type_purpose(CONN_TYPE_DIR,
                                      DIR_PURPOSE_FETCH_CONSENSUS))
     return;
-  /* XXXX020 on failure, delay until next retry. */
 
-  last_consensus_networkstatus_download_attempted = now;/*XXXX020 use this*/
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CONSENSUS,
                                ROUTER_PURPOSE_GENERAL, NULL, 1);
-  // XXXX020 time_to_download_next_consensus = put it off for a while?
+}
+
+/** DOCDOC */
+void
+networkstatus_consensus_download_failed(int status_code)
+{
+  download_status_failed(&consensus_dl_status, status_code);
 }
 
 /** DOCDOC */
@@ -888,7 +892,8 @@ should_delay_dir_fetches(or_options_t *options)
   return 0;
 }
 
-/** Launch requests for networkstatus documents as appropriate. */
+/** Launch requests for networkstatus documents and authority certificates as
+ * appropriate. */
 void
 update_networkstatus_downloads(time_t now)
 {
@@ -896,10 +901,14 @@ update_networkstatus_downloads(time_t now)
   if (should_delay_dir_fetches(options))
     return;
   if (dirserver_mode(options))
-    update_networkstatus_cache_downloads(now);
+    update_v2_networkstatus_cache_downloads(now);
   else
-    update_networkstatus_client_downloads(now);
+    update_v2_networkstatus_client_downloads(now);
   update_consensus_networkstatus_downloads(now);
+  if (consensus_waiting_for_certs)
+    authority_certs_fetch_missing(consensus_waiting_for_certs, now);
+  else
+    authority_certs_fetch_missing(current_consensus, now);
 }
 
 /** Return the network status with a given identity digest. */
@@ -978,7 +987,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
                        options->DataDirectory);
           write_str_to_file(filename, consensus, 0);
         }
-        authority_certs_fetch_missing(c);
+        authority_certs_fetch_missing(c, now);
       }
       return 0;
     } else {
@@ -992,7 +1001,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
 
   /* Are we missing any certificates at all? */
   if (r != 1)
-    authority_certs_fetch_missing(c);
+    authority_certs_fetch_missing(c, now);
 
   if (current_consensus)
     networkstatus_vote_free(current_consensus);

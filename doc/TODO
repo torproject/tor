@@ -85,8 +85,12 @@ Things we'd like to do in 0.2.0.x:
         them
         o Download code
         o Code to schedule downloads
-        - Code to retry failed downloads
-        - Code to delay next download while fetching certificates
+        o Code to retry failed downloads
+        - Code to delay next download while fetching certificates to verify
+          a consensus we already got.
+        - Code to retry consensus download if we got one we already have.
+        - Use if-modified-since on consensus download
+        - Use if-modified-since on certificate download
         o Code to download routers listed in v3 networkstatus consensuses.
         - Enable for non-caches
       - Code to use v3 networkstatus documents once clients are

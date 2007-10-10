@@ -3043,10 +3043,11 @@ int tor_init(int argc, char **argv);
 
 /********************************* networkstatus.c *********************/
 
-/** How old do we allow a network-status to get before removing it
+/** How old do we allow a v2 network-status to get before removing it
  * completely? */
 #define MAX_NETWORKSTATUS_AGE (10*24*60*60)
 
+void networkstatus_consensus_download_failed(int status_code);
 void networkstatus_reset_warnings(void);
 int router_reload_networkstatus(void);
 /* for consensuses. */
@@ -3511,7 +3512,7 @@ authority_cert_t *authority_cert_get_newest_by_id(const char *id_digest);
 authority_cert_t *authority_cert_get_by_sk_digest(const char *sk_digest);
 authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
                                                 const char *sk_digest);
-void authority_certs_fetch_missing(networkstatus_vote_t *status);
+void authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running);

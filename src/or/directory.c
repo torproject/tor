@@ -1411,7 +1411,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
            status_code, escaped(reason), conn->_base.address,
            conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
-      /* XXXX020NMNM retry. */
+      networkstatus_consensus_download_failed(status_code);
       return -1;
     }
     log_info(LD_DIR,"Received consensus directory (size %d) from server "

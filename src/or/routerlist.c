@@ -97,6 +97,7 @@ trusted_dirs_reload_certs(void)
   if (!contents)
     return 0;
   r = trusted_dirs_load_certs_from_string(contents, 1);
+  log_notice(LD_DIR, "Loaded %d certs from cache.", r);
   tor_free(contents);
   return r;
 }
@@ -279,6 +280,9 @@ authority_cert_get_by_digests(const char *id_digest,
   return NULL;
 }
 
+/** How many times will we try to fetch a certificate before giving up? */
+#define MAX_CERT_DL_FAILURES 8
+
 /** Try to download any v3 authority certificates that we may be missing.  If
  * <b>status</b> is provided, try to get all the ones that were used to sign
  * <b>status</b>.  Additionally, try to have a non-expired certificate for
@@ -286,12 +290,11 @@ authority_cert_get_by_digests(const char *id_digest,
  * already have.
  **/
 void
-authority_certs_fetch_missing(networkstatus_vote_t *status)
+authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
 {
   digestmap_t *pending = digestmap_new();
   smartlist_t *missing_digests = smartlist_create();
-  char *resource;
-  time_t now = time(NULL);
+  char *resource = NULL;
 
   list_pending_downloads(pending, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
   if (status) {
@@ -299,9 +302,15 @@ authority_certs_fetch_missing(networkstatus_vote_t *status)
       {
         trusted_dir_server_t *ds
           = trusteddirserver_get_by_v3_auth_digest(voter->identity_digest);
-        if (ds &&
-            !authority_cert_get_by_digests(voter->identity_digest,
-                                           voter->signing_key_digest))
+        if (!ds)
+          continue;
+        if (authority_cert_get_by_digests(voter->identity_digest,
+                                          voter->signing_key_digest)) {
+          download_status_reset(&ds->cert_dl_status);
+          continue;
+        }
+        if (download_status_is_ready(&ds->cert_dl_status, now,
+                                     MAX_CERT_DL_FAILURES))
           smartlist_add(missing_digests, voter->identity_digest);
       });
   }
@@ -312,18 +321,26 @@ authority_certs_fetch_missing(networkstatus_vote_t *status)
         continue;
       if (smartlist_digest_isin(missing_digests, ds->v3_identity_digest))
         continue;
+      if (!ds->v3_certs)
+        ds->v3_certs = smartlist_create();
       SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
         {
-          if (ftime_definitely_before(cert->expires, now)) {
-            /* It's definitely expired. */
+          if (!ftime_definitely_after(now, cert->expires)) {
+            /* It's not expired, and we weren't looking for something to
+             * verify a consensus with.  Call it done. */
+            download_status_reset(&ds->cert_dl_status);
             found = 1;
             break;
           }
         });
-      smartlist_add(missing_digests, ds->v3_identity_digest);
+      if (!found && download_status_is_ready(&ds->cert_dl_status, now,
+                                             MAX_CERT_DL_FAILURES))
+        smartlist_add(missing_digests, ds->v3_identity_digest);
     });
 
-  {
+  if (!smartlist_len(missing_digests)) {
+    goto done;
+  } else {
     smartlist_t *fps = smartlist_create();
     smartlist_add(fps, tor_strdup("fp/"));
     SMARTLIST_FOREACH(missing_digests, const char *, d, {
@@ -341,12 +358,14 @@ authority_certs_fetch_missing(networkstatus_vote_t *status)
     SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
     smartlist_free(fps);
   }
-  log_notice(LD_DIR, "Launching request for %d missing certificates.",
-             smartlist_len(missing_digests)); /*XXXX020 downgrade to INFO*/
-  smartlist_free(missing_digests);
+  log_notice(LD_DIR, "Launching request for %d missing certificates",
+             smartlist_len(missing_digests));
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                resource, 1);
+
+ done:
   tor_free(resource);
+  smartlist_free(missing_digests);
   digestmap_free(pending, NULL);
 }
 

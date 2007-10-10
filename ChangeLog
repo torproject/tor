@@ -13,6 +13,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
     - Caches now download v3 network status documents as needed.
     - Caches now download descriptors listed in their v3 network status
       documents.
+    - All hosts now attempt to download and keep fresh v3 authority
+      certificates, and re-attempt after failures.
 
   o Minor features (router descriptor cache):
     - Store routers in a file called cached-descriptors instead of in
