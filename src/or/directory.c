@@ -2161,9 +2161,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
   if (!strcmpstart(url,"/tor/status-vote/current/") ||
       !strcmpstart(url,"/tor/status-vote/next/")) {
-    /*XXXX020 implement if-modified-since and 503-rate-limiting */
+    /*XXXX020 implement if-modified-since */
     int current = 1;
     ssize_t body_len = 0;
+    ssize_t estimated_len = 0;
     smartlist_t *items = smartlist_create();
     smartlist_t *dir_items = smartlist_create();
     int lifetime = 60; /* XXXX020 should actually use vote intervals. */
@@ -2211,13 +2212,24 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     }
     if (!smartlist_len(dir_items) && !smartlist_len(items)) {
       write_http_status_line(conn, 404, "Not found");
-      goto done;
+      goto vote_done;
     }
-    SMARTLIST_FOREACH(items, const char *, item,
-        if (!deflated)
-          body_len += strlen(item));
     SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
                       body_len += deflated ? d->dir_z_len : d->dir_len);
+    estimated_len += body_len;
+    SMARTLIST_FOREACH(items, const char *, item, {
+        size_t ln = strlen(item);
+        if (deflated) {
+          body_len += ln; estimated_len += ln;
+        } else {
+          estimated_len += ln/2;
+        }
+      });
+
+    if (global_write_bucket_low(TO_CONN(conn), estimated_len, 1)) {
+      write_http_status_line(conn, 503, "Directory busy, try again later.");
+      goto vote_done;
+    }
     write_http_response_header(conn, body_len ? body_len : -1, deflated,
                  lifetime);
 
@@ -2237,6 +2249,9 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                                   deflated ? d->dir_z_len : d->dir_len,
                                   TO_CONN(conn)));
     }
+  vote_done:
+    smartlist_free(items);
+    smartlist_free(dir_items);
     goto done;
   }
 
@@ -2306,6 +2321,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }
 
   if (!strcmpstart(url,"/tor/keys/")) {
+    /*XXXX020 implement if-modified-since */
     smartlist_t *certs = smartlist_create();
     ssize_t len = -1;
     if (!strcmp(url, "/tor/keys/all")) {
@@ -2345,19 +2361,23 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     } else {
       write_http_status_line(conn, 400, "Bad request");
       smartlist_free(certs);
-      goto done;
+      goto keys_done;
     }
     if (!smartlist_len(certs)) {
       write_http_status_line(conn, 404, "Not found");
       smartlist_free(certs);
-      goto done;
+      goto keys_done;
     }
-    if (!deflated) {
-      len = 0;
-      SMARTLIST_FOREACH(certs, authority_cert_t *, c,
-                        len += c->cache_info.signed_descriptor_len);
+    len = 0;
+    SMARTLIST_FOREACH(certs, authority_cert_t *, c,
+                      len += c->cache_info.signed_descriptor_len);
+
+    if (global_write_bucket_low(TO_CONN(conn), deflated?len/2:len, 1)) {
+      write_http_status_line(conn, 503, "Directory busy, try again later.");
+      goto keys_done;
     }
-    write_http_response_header(conn, len, deflated, 60*60);
+
+    write_http_response_header(conn, deflated?-1:len, deflated, 60*60);
     if (deflated) {
       conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
@@ -2371,6 +2391,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                                     c->cache_info.signed_descriptor_len,
                                     TO_CONN(conn)));
     }
+  keys_done:
     smartlist_free(certs);
     goto done;
   }

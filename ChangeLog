@@ -29,6 +29,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
     - Add more ways for tools to download the votes that lead to the current
       consensus.
     - Caches now download v3 network status documents as needed.
+    - Send a 503 when low on bandwidth and a vote, consensus, or certificate
+      is requested.
 
   o Minor features (network statuses):
     - Tweak the implementation of proposal 109 slightly: allow at most
@@ -57,6 +59,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       not on our preferred schedule.
     - Make the return values and messages from signature uploads and downloads
       more sensible.
+    - Fix a memory leak when serving votes and consensus documents, and
+      another when serving certificates.
 
   o Minor bugfixes (performance):
     - Use a slightly simpler string hashing algorithm (copying Python's
