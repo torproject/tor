@@ -55,6 +55,11 @@ Changes in version 0.2.0.8-alpha - 2007-??-??
     - On some platforms, accept() can return a broken address.  Detect
       this more quietly, and deal accordingly.  (Fixes bug 483.)
 
+  o Minor bugfixes (DNS):
+    - It's not actually an error to find a non-pending entry in the DNS
+      cache when canceling a pending resolve.  Don't log unless stuff
+      is fishy.  Resolves bug 463.
+
   o Code simplifications and refactoring:
     - Make a bunch of functions static.  Remove some dead code.
     - Pull out about a third of the really big routerlist.c; put it in a

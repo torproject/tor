@@ -836,8 +836,15 @@ dns_cancel_pending_resolve(const char *address)
     return;
 
   if (resolve->state != CACHE_STATE_PENDING) {
-    log_notice(LD_BUG,"Address %s is not pending (state %d). Dropping.",
-               escaped_safe_str(address), resolve->state);
+    /* We can get into this state if we never actually created the pending
+     * resolve, due to finding an earlier cached error or something.  Just
+     * ignore it. */
+    if (resolve->pending_connections) {
+      log_warn(LD_BUG,
+               "Address %s is not pending but has pending connections!",
+               escaped_safe_str(address));
+      tor_fragile_assert();
+    }
     return;
   }
 
