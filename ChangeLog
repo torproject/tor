@@ -31,6 +31,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
     - Caches now download v3 network status documents as needed.
     - Send a 503 when low on bandwidth and a vote, consensus, or certificate
       is requested.
+    - If-modified-since is now implemented properly for all kinds of
+      certificate requests.
 
   o Minor features (network statuses):
     - Tweak the implementation of proposal 109 slightly: allow at most

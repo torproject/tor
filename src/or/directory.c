@@ -2161,7 +2161,9 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
   if (!strcmpstart(url,"/tor/status-vote/current/") ||
       !strcmpstart(url,"/tor/status-vote/next/")) {
-    /*XXXX020 implement if-modified-since */
+    /* XXXX If-modified-since is only the implemented for the current
+     * consensus: that's probably fine, since it's the only vote document
+     * people fetch much.*/
     int current = 1;
     ssize_t body_len = 0;
     ssize_t estimated_len = 0;
@@ -2321,7 +2323,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }
 
   if (!strcmpstart(url,"/tor/keys/")) {
-    /*XXXX020 implement if-modified-since */
     smartlist_t *certs = smartlist_create();
     ssize_t len = -1;
     if (!strcmp(url, "/tor/keys/all")) {
@@ -2331,8 +2332,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         if (!ds->v3_certs)
           continue;
         SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
-                if (cert->cache_info.published_on >= if_modified_since)
-                  smartlist_add(certs, cert));
+                          smartlist_add(certs, cert));
       });
     } else if (!strcmp(url, "/tor/keys/authority")) {
       authority_cert_t *cert = get_my_v3_authority_cert();
@@ -2366,6 +2366,13 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     if (!smartlist_len(certs)) {
       write_http_status_line(conn, 404, "Not found");
       smartlist_free(certs);
+      goto keys_done;
+    }
+    SMARTLIST_FOREACH(certs, authority_cert_t *, c,
+      if (cert->cache_info.published_on < if_modified_since)
+        SMARTLIST_DEL_CURRENT(certs, c));
+    if (!smartlist_len(certs)) {
+      write_status_line(conn, 304, "Not modified");
       goto keys_done;
     }
     len = 0;
