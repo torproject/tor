@@ -1,4 +1,4 @@
-Changes in version 0.2.0.8-alpha - 2007-??-??
+Changes in version 0.2.0.8-alpha - 2007-10-12
   o Major features (directory authorities):
     - When an authority is missing votes or signatures, it now tries to fetch
       them.
