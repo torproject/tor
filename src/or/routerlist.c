@@ -1783,6 +1783,20 @@ router_digest_is_trusted_dir_type(const char *digest, authority_type_t type)
   return 0;
 }
 
+/** Return true iff <b>addr</b> is the address of one of our trusted
+ * directory authorities. */
+int
+router_addr_is_trusted_dir(uint32_t addr)
+{
+  if (!trusted_dir_servers)
+    return 0;
+  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
+    if (ent->addr == addr)
+      return 1;
+    );
+  return 0;
+}
+
 /** If hexdigest is correctly formed, base16_decode it into
  * digest, which must have DIGEST_LEN space in it.
  * Return 0 on success, -1 on failure.

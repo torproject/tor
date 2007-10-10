@@ -1852,7 +1852,7 @@ get_possible_sybil_list(const smartlist_t *routers)
         last_addr = ri->addr;
         addr_count = 1;
       } else if (++addr_count > MAX_WITH_SAME_ADDR) {
-        if (!router_digest_is_trusted_dir(ri->cache_info.identity_digest) ||
+        if (!router_addr_is_trusted_dir(ri->addr) ||
             addr_count > MAX_WITH_SAME_ADDR_ON_AUTHORITY)
           digestmap_set(omit_as_sybil, ri->cache_info.identity_digest, ri);
       }

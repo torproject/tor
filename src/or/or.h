@@ -3555,6 +3555,7 @@ int router_digest_is_trusted_dir_type(const char *digest,
                                       authority_type_t type);
 #define router_digest_is_trusted_dir(d) \
   router_digest_is_trusted_dir_type((d), 0)
+int router_addr_is_trusted_dir(uint32_t addr);
 routerlist_t *router_get_routerlist(void);
 void routerlist_reset_warnings(void);
 void routerlist_free(routerlist_t *routerlist);
