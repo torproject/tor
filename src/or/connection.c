@@ -283,14 +283,11 @@ _connection_free(connection_t *conn)
   }
 
   if (conn->linked) {
-    int severity = buf_datalen(conn->inbuf)+buf_datalen(conn->outbuf)
-      ? LOG_NOTICE : LOG_INFO;
-    log_fn(severity, LD_GENERAL, "Freeing linked %s connection [%s] with %d "
-           "bytes on inbuf, %d on outbuf.",
-           conn_type_to_string(conn->type),
-           conn_state_to_string(conn->type, conn->state),
-           (int)buf_datalen(conn->inbuf), (int)buf_datalen(conn->outbuf));
-    // tor_assert(!buf_datalen(conn->outbuf)); /*XXXX020 remove me.*/
+    log_info(LD_GENERAL, "Freeing linked %s connection [%s] with %d "
+             "bytes on inbuf, %d on outbuf.",
+             conn_type_to_string(conn->type),
+             conn_state_to_string(conn->type, conn->state),
+             (int)buf_datalen(conn->inbuf), (int)buf_datalen(conn->outbuf));
   }
 
   if (!connection_is_listener(conn)) {
