@@ -2355,10 +2355,10 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
       return NULL;
     }
     cp = line;
+    tor_strlower(line);
   } else { /* assume an already well-formed address policy line */
     cp = s;
   }
-  tor_strlower(line);
 
   eos = cp + strlen(cp);
   tok = get_next_token(&cp, eos, routerdesc_token_table);

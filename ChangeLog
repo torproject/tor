@@ -83,10 +83,14 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       cache when canceling a pending resolve.  Don't log unless stuff
       is fishy.  Resolves bug 463.
 
-  o Minor bugfixes (Security):
+  o Minor bugfixes (anonymity):
     - Never report that we've used more bandwidth than we're willing to
       relay: it leaks how much non-relay traffic we're using. Resolves
       bug 516.
+
+  o Minor bugfixes (of some sort):
+    - Stop calling tor_strlower() on uninitialized memory in some cases.
+      Bugfix in 0.2.0.7-alpha.
 
   o Code simplifications and refactoring:
     - Make a bunch of functions static.  Remove some dead code.
