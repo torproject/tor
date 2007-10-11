@@ -557,6 +557,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
                                      annotation_buf)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
+        tor_assert(ri->purpose == purpose);
         r_tmp = dirserv_add_descriptor(ri, &msg_out);
         if (r_tmp < r) {
           r = r_tmp;
