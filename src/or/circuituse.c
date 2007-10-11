@@ -102,7 +102,6 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
     } else {
       if (conn->socks_request->command == SOCKS_COMMAND_CONNECT_DIR) {
         /* don't use three-hop circuits -- that could hurt our anonymity. */
-//        log_debug(LD_CIRC,"Skipping multi-hop circuit for CONNECT_DIR.");
         return 0;
       }
     }

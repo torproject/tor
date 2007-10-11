@@ -781,8 +781,8 @@ typedef struct connection_t {
   /** True iff we're currently able to read on the linked conn, and our
    * read_event should be made active with libevent. */
   unsigned int active_on_link:1;
-  /** True iff we've called connection_close_immediate on this linked
-   * connection */
+  /** True iff we've called connection_close_immediate() on this linked
+   * connection. */
   unsigned int linked_conn_is_closed:1;
 
   int s; /**< Our socket; -1 if this connection is closed, or has no

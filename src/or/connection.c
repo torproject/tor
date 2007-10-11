@@ -529,8 +529,8 @@ connection_about_to_close_connection(connection_t *conn)
   }
 }
 
-/** Return true iff connection_close_immediate has been called on this
- * connection */
+/** Return true iff connection_close_immediate() has been called on this
+ * connection. */
 #define CONN_IS_CLOSED(c) \
   ((c)->linked ? ((c)->linked_conn_is_closed) : ((c)->s < 0))
 
@@ -2271,7 +2271,7 @@ _connection_write_to_buf_impl(const char *string, size_t len,
     if (conn->type == CONN_TYPE_OR &&
         conn->outbuf_flushlen-len < MIN_TLS_FLUSHLEN &&
         conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
-      /* We just pushed outbuf_flushelen to MIN_TLS_FLUSHLEN or above;
+      /* We just pushed outbuf_flushlen to MIN_TLS_FLUSHLEN or above;
        * we can send out a full TLS frame now if we like. */
       extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
       conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
@@ -2671,7 +2671,7 @@ connection_finished_flushing(connection_t *conn)
 {
   tor_assert(conn);
 
-  /* If the connection is don't try to do anything more here. */
+  /* If the connection is closed, don't try to do anything more here. */
   if (CONN_IS_CLOSED(conn))
     return 0;
 
