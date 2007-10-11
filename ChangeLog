@@ -12,6 +12,8 @@ Changes in version 0.1.2.18 - 2007-??-??
       bug 467.)
     - Fix a user-triggerable segfault in expand_filename().  (There isn't
       a way to trigger this remotely.)
+    - Fix a minor memory leak whenever a controller sends the PROTOCOLINFO
+      command. Bugfix on 0.1.2.17.
 
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an
