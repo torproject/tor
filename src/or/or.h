@@ -2886,11 +2886,11 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 
 /********************************* dirvote.c ************************/
 
-/* XXXX020 enforce */
-/* XXXX020 document in dir-spec.txt */
-/*DOCDOC*/
+/** Lowest allowable value for VoteSeconds. /*
 #define MIN_VOTE_SECONDS 20
+/** Lowest allowable value for DistSeconds. */
 #define MIN_DIST_SECONDS 20
+/** Smallest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
 
 void dirvote_free_all(void);

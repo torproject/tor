@@ -309,8 +309,14 @@ $Id$
 
    VA-DistSeconds-VoteSeconds: The authorities exchange votes.
 
+   VA-DistSeconds-VoteSeconds/2: The authorities try to download any
+   votes they don't have.
+
    VA-DistSeconds: The authorities calculate the consensus and exchange
    signatures.
+
+   VA-DistSeconds/2: The authorities try to download any signatures
+   they don't have.
 
    VA: All authorities have a multiply signed consensus.
 
@@ -318,7 +324,12 @@ $Id$
 
    FU: The consensus is no long the freshest consensus.
 
+   FU ... VU: Clients download the consensus.
+
    VU: The consensus is no longer valid.
+
+   VoteSeconds and DistSeconds MUST each be at least 20 seconds; FU-VA and
+   VU-FU MUST each be at least 5 minutes.
 
 2. Router operation and formats
 

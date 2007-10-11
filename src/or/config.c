@@ -3025,7 +3025,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->V3AuthNIntervalsValid < 2)
     REJECT("V3AuthNIntervalsValid must be at least 2.");
 
-  if (options->V3AuthVotingInterval < 300) {
+  if (options->V3AuthVotingInterval < MIN_VOTE_INTERVAL) {
     REJECT("V3AuthVotingInterval is insanely low.");
   } else if (options->V3AuthVotingInterval > 24*60*60) {
     REJECT("V3AuthVotingInterval is insanely high.");
