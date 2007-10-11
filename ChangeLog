@@ -114,6 +114,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       uniform.
     - Turn all 'Are we a directory server/mirror?' logic into a call to
       dirserver_mode().
+    - Remove the code to generate the oldest (v1) directory format.
+      The code has been disabled since 0.2.0.5-alpha.
 
 
 Changes in version 0.2.0.7-alpha - 2007-09-21

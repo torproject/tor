@@ -789,9 +789,6 @@ directory_set_dirty(void)
   time_t now = time(NULL);
   int set_v1_dirty=0;
 
-#ifdef FULL_V1_DIRECTORIES
-  set_v1_dirty = 1;
-#else
   /* Regenerate stubs only every 8 hours. XXXX020 */
 #define STUB_REGENERATE_INTERVAL (8*60*60)
   if (!the_directory || !the_runningrouters.dir)
@@ -799,7 +796,6 @@ directory_set_dirty(void)
   else if (the_directory->published < now - STUB_REGENERATE_INTERVAL ||
            the_runningrouters.published < now - STUB_REGENERATE_INTERVAL)
     set_v1_dirty = 1;
-#endif
 
   if (set_v1_dirty) {
     if (!the_directory_is_dirty)
@@ -976,10 +972,9 @@ router_is_active(routerinfo_t *ri, time_t now)
  */
 int
 dirserv_dump_directory_to_string(char **dir_out,
-                                 crypto_pk_env_t *private_key, int complete)
+                                 crypto_pk_env_t *private_key)
 {
   char *cp;
-  char *router_status;
   char *identity_pkey; /* Identity key, DER64-encoded. */
   char *recommended_versions;
   char digest[DIGEST_LEN];
@@ -988,21 +983,9 @@ dirserv_dump_directory_to_string(char **dir_out,
   size_t buf_len;
   size_t identity_pkey_len;
   time_t now = time(NULL);
-#ifdef FULL_V1_DIRECTORIES
-  routerlist_t *rl = router_get_routerlist();
-#else
-  (void)complete;
-#endif
 
   tor_assert(dir_out);
   *dir_out = NULL;
-
-#ifdef FULL_V1_DIRECTORIES
-  if (list_server_status(rl->routers, &router_status, 0))
-    return -1;
-#else
-  router_status = tor_strdup("");
-#endif
 
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
                                            &identity_pkey_len)<0) {
@@ -1015,13 +998,8 @@ dirserv_dump_directory_to_string(char **dir_out,
 
   format_iso_time(published, now);
 
-  buf_len = 2048+strlen(recommended_versions)+
-    strlen(router_status);
-#ifdef FULL_V1_DIRECTORIES
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-                    if (complete || router_is_active(ri, now))
-                      buf_len += ri->cache_info.signed_descriptor_len+1);
-#endif
+  buf_len = 2048+strlen(recommended_versions);
+
   buf = tor_malloc(buf_len);
   /* We'll be comparing against buf_len throughout the rest of the
      function, though strictly speaking we shouldn't be able to exceed
@@ -1034,30 +1012,13 @@ dirserv_dump_directory_to_string(char **dir_out,
                "recommended-software %s\n"
                "router-status %s\n"
                "dir-signing-key\n%s\n",
-               published, recommended_versions, router_status,
+               published, recommended_versions, "",
                identity_pkey);
 
   tor_free(recommended_versions);
-  tor_free(router_status);
   tor_free(identity_pkey);
 
   cp = buf + strlen(buf);
-#ifdef FULL_V1_DIRECTORIES
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-    {
-      size_t len = ri->cache_info.signed_descriptor_len;
-      const char *body;
-      if (!complete && !router_is_active(ri, now))
-        continue;
-      if (cp+len+1 >= buf+buf_len)
-        goto truncated;
-      body = signed_descriptor_get_body(&ri->cache_info);
-      memcpy(cp, body, len);
-      cp += len;
-      *cp++ = '\n'; /* add an extra newline in case somebody was depending on
-                     * it. */
-    });
-#endif
   *cp = '\0';
 
   /* These multiple strlcat calls are inefficient, but dwarfed by the RSA
@@ -1384,8 +1345,7 @@ dirserv_regenerate_directory(void)
 {
   char *new_directory=NULL;
 
-  if (dirserv_dump_directory_to_string(&new_directory,
-                                       get_identity_key(), 0)) {
+  if (dirserv_dump_directory_to_string(&new_directory, get_identity_key())) {
     log_warn(LD_BUG, "Error creating directory.");
     tor_free(new_directory);
     return NULL;
@@ -1412,24 +1372,13 @@ static cached_dir_t *
 generate_runningrouters(void)
 {
   char *s=NULL;
-  char *router_status=NULL;
   char digest[DIGEST_LEN];
   char published[ISO_TIME_LEN+1];
   size_t len;
   crypto_pk_env_t *private_key = get_identity_key();
   char *identity_pkey; /* Identity key, DER64-encoded. */
   size_t identity_pkey_len;
-#ifdef FULL_V1_DIRECTORIES
-  routerlist_t *rl = router_get_routerlist();
-#endif
 
-#ifdef FULL_V1_DIRECTORIES
-  if (list_server_status(rl->routers, &router_status, 0)) {
-    goto err;
-  }
-#else
-  router_status = tor_strdup("");
-#endif
   if (crypto_pk_write_public_key_to_string(private_key,&identity_pkey,
                                            &identity_pkey_len)<0) {
     log_warn(LD_BUG,"write identity_pkey to string failed!");
@@ -1437,7 +1386,7 @@ generate_runningrouters(void)
   }
   format_iso_time(published, time(NULL));
 
-  len = 2048+strlen(router_status);
+  len = 2048;
   s = tor_malloc_zero(len);
   tor_snprintf(s, len,
                "network-status\n"
@@ -1445,9 +1394,8 @@ generate_runningrouters(void)
                "router-status %s\n"
                "dir-signing-key\n%s"
                "directory-signature %s\n",
-               published, router_status, identity_pkey,
+               published, "", identity_pkey,
                get_options()->Nickname);
-  tor_free(router_status);
   tor_free(identity_pkey);
   if (router_get_runningrouters_hash(s,digest)) {
     log_warn(LD_BUG,"couldn't compute digest");
@@ -1463,7 +1411,6 @@ generate_runningrouters(void)
   return &the_runningrouters;
  err:
   tor_free(s);
-  tor_free(router_status);
   return NULL;
 }
 

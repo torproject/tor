@@ -2842,8 +2842,7 @@ int dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
 int list_server_status(smartlist_t *routers, char **router_status_out,
                        int for_controller);
 int dirserv_dump_directory_to_string(char **dir_out,
-                                     crypto_pk_env_t *private_key,
-                                     int complete);
+                                     crypto_pk_env_t *private_key);
 void directory_set_dirty(void);
 cached_dir_t *dirserv_get_directory(void);
 cached_dir_t *dirserv_get_runningrouters(void);

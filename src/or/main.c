@@ -957,11 +957,7 @@ run_scheduled_events(time_t now)
                                    ROUTER_PURPOSE_GENERAL, NULL, 1);
     }
 /** How often do we (as a cache) fetch a new V1 runningrouters document? */
-#ifdef FULL_V1_DIRECTORIES
-#define V1_RUNNINGROUTERS_FETCH_PERIOD (30*60)
-#else
 #define V1_RUNNINGROUTERS_FETCH_PERIOD (6*60*60)
-#endif
     time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
 
      /* Also, take this chance to remove old information from rephist
