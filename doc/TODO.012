@@ -14,6 +14,7 @@ Backport items for 0.1.2:
   o r11566: make r11438 not actually break things.
   - r11828+: Detect bad sa_family from accept().
   - r11882: Avoid crash-bug 451.
+  - r11886: Consider family as well as identity when cannibalizing circuits.
 
 
 Backport for 0.1.2.x once better tested:
