@@ -413,8 +413,7 @@ If 1, Tor will only create outgoing connections to ORs running on ports that
 your firewall allows (defaults to 80 and 443; see \fBFirewallPorts\fR).  This will
 allow you to run Tor as a client behind a firewall with restrictive policies,
 but will not allow you to run as a server behind such a firewall.
-This option is deprecated; use
-ReachableAddresses instead.
+If you prefer more fine-grained control, use ReachableAddresses instead.
 .LP
 .TP
 \fBFirewallPorts \fR\fIPORTS\fP
