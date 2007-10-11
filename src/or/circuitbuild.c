@@ -2404,7 +2404,7 @@ entry_guards_prepend_from_config(void)
   /* Finally, the remaining EntryNodes, unless we're strict */
   if (options->StrictEntryNodes) {
     SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
-                      tor_free(e));
+                      entry_guard_free(e));
   } else {
     smartlist_add_all(entry_guards, old_entry_guards_not_on_list);
   }
@@ -2641,11 +2641,13 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
    });
 
   if (*msg || !set) {
-    SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e, tor_free(e));
+    SMARTLIST_FOREACH(new_entry_guards, entry_guard_t *, e,
+                      entry_guard_free(e));
     smartlist_free(new_entry_guards);
   } else { /* !*err && set */
     if (entry_guards) {
-      SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, tor_free(e));
+      SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
+                        entry_guard_free(e));
       smartlist_free(entry_guards);
     }
     entry_guards = new_entry_guards;

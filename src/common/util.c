@@ -1530,8 +1530,8 @@ struct open_file_t {
 /** Try to start writing to the file in <b>fname</b>, passing the flags
  * <b>open_flags</b> to the open() syscall, creating the file (if needed) with
  * access value <b>mode</b>.  If the O_APPEND flag is set, we append to the
- * original file.  Otherwise, we open a new a temporary file in the same
- * directory, and either replace the original or remove the temprorary file
+ * original file.  Otherwise, we open a new temporary file in the same
+ * directory, and either replace the original or remove the temporary file
  * when we're done.
  *
  * Return the fd for the newly opened file, and store working data in
