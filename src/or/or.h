@@ -2886,7 +2886,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 
 /********************************* dirvote.c ************************/
 
-/** Lowest allowable value for VoteSeconds. /*
+/** Lowest allowable value for VoteSeconds. */
 #define MIN_VOTE_SECONDS 20
 /** Lowest allowable value for DistSeconds. */
 #define MIN_DIST_SECONDS 20
@@ -3040,37 +3040,67 @@ int tor_init(int argc, char **argv);
  * completely? */
 #define MAX_NETWORKSTATUS_AGE (10*24*60*60)
 
-void networkstatus_consensus_download_failed(int status_code);
-void networkstatus_reset_warnings(void);
-int router_reload_networkstatus(void);
-/* for consensuses. */
-int router_reload_consensus_networkstatus(void);
-networkstatus_vote_t *networkstatus_get_latest_consensus(void);
-networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);
-int networkstatus_set_current_consensus(const char *consensus, int from_cache,
-                                        int was_waiting_for_certs);
-char *networkstatus_get_cache_filename(const char *identity_digest);
 typedef enum {
   NS_FROM_CACHE, NS_FROM_DIR_BY_FP, NS_FROM_DIR_ALL, NS_GENERATED
 } networkstatus_source_t;
+
+typedef enum version_status_t {
+  VS_RECOMMENDED=0, /**< This version is listed as recommended. */
+  VS_OLD=1, /**< This version is older than any recommended version. */
+  VS_NEW=2, /**< This version is newer than any recommended version. */
+  VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
+                       * in its series, but later recommended versions exist.
+                       */
+  VS_UNRECOMMENDED=4 /**< This version is not recommended (general case). */
+} version_status_t;
+
+typedef struct combined_version_status_t {
+  /** How many networkstatuses claim to know about versions? */
+  int n_versioning;
+  /** What do the majority of networkstatuses believe about this version? */
+  enum version_status_t consensus;
+  /** How many networkstatuses constitute the majority? */
+  int n_concurring;
+} combined_version_status_t;
+
+void networkstatus_reset_warnings(void);
+int router_reload_networkstatus(void);
+int router_reload_consensus_networkstatus(void);
+void routerstatus_free(routerstatus_t *rs);
+void networkstatus_free(networkstatus_t *ns);
+char *networkstatus_get_cache_filename(const char *identity_digest);
 int router_set_networkstatus(const char *s, time_t arrived_at,
                              networkstatus_source_t source,
                              smartlist_t *requested_fingerprints);
 void networkstatus_list_clean(time_t now);
 routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
                                          const char *digest);
-/* XXXX020 move remaining functions in networkstatus.c into this section. */
 const smartlist_t *networkstatus_get_v2_list(void);
 const smartlist_t *networkstatus_get_all_statuses(void);
-void networkstatus_note_certs_arrived(void);
-const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
-void routerstatus_list_update_from_networkstatus(time_t now);
-
-void networkstatus_free_all(void);
+routerstatus_t *router_get_combined_status_by_digest(const char *digest);
+routerstatus_t *router_get_combined_status_by_descriptor_digest(const char *d);
 routerstatus_t *router_get_combined_status_by_nickname(const char *nickname,
                                                        int warn_if_unnamed);
-void routerstatus_free(routerstatus_t *routerstatus);
-void networkstatus_free(networkstatus_t *networkstatus);
+const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
+routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
+void networkstatus_consensus_download_failed(int status_code);
+int should_delay_dir_fetches(or_options_t *options);
+void update_networkstatus_downloads(time_t now);
+networkstatus_t *networkstatus_get_by_digest(const char *digest);
+networkstatus_vote_t *networkstatus_get_latest_consensus(void);
+networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);
+int networkstatus_set_current_consensus(const char *consensus, int from_cache,
+                                        int was_waiting_for_certs);
+void networkstatus_note_certs_arrived(void);
+void routers_update_all_from_networkstatus(time_t now);
+void networkstatus_list_update_recent(time_t now);
+void routerstatus_list_update_from_networkstatus(time_t now);
+void routers_update_status_from_networkstatus(smartlist_t *routers,
+                                              int reset_failures);
+char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
+int getinfo_helper_networkstatus(control_connection_t *conn,
+                                 const char *question, char **answer);
+void networkstatus_free_all(void);
 
 /********************************* ntmain.c ***************************/
 #ifdef MS_WINDOWS
@@ -3486,26 +3516,32 @@ typedef struct trusted_dir_server_t {
                                **/
 } trusted_dir_server_t;
 
-int router_reload_router_list(void);
+#define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
+
+#define ROUTER_MAX_DECLARED_BANDWIDTH INT32_MAX
+
 int get_n_authorities(authority_type_t type);
-smartlist_t *router_get_trusted_dir_servers(void);
-routerstatus_t *router_pick_directory_server(int requireother,
-                                             int fascistfirewall,
-                                             authority_type_t type,
-                                             int retry_if_no_servers);
-routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
-                                             int requireother,
-                                             int fascistfirewall,
-                                             int retry_if_no_servers);
-trusted_dir_server_t *router_get_trusteddirserver_by_digest(
-     const char *digest);
-trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(
-     const char *digest);
+int trusted_dirs_reload_certs(void);
+int trusted_dirs_load_certs_from_string(const char *contents, int from_store);
+void trusted_dirs_flush_certs_to_disk(void);
 authority_cert_t *authority_cert_get_newest_by_id(const char *id_digest);
 authority_cert_t *authority_cert_get_by_sk_digest(const char *sk_digest);
 authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
                                                 const char *sk_digest);
 void authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now);
+int router_reload_router_list(void);
+smartlist_t *router_get_trusted_dir_servers(void);
+routerstatus_t *router_pick_directory_server(int requireother,
+                                             int fascistfirewall,
+                                             authority_type_t type,
+                                             int retry_if_no_servers);
+trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
+trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
+routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
+                                             int requireother,
+                                             int fascistfirewall,
+                                             int retry_if_no_servers);
+void router_reset_status_download_failures(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running);
@@ -3513,29 +3549,32 @@ int router_nickname_is_in_list(routerinfo_t *router, const char *list);
 routerinfo_t *routerlist_find_my_routerinfo(void);
 routerinfo_t *router_find_exact_exit_enclave(const char *address,
                                              uint16_t port);
-
-#define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
-
-#define ROUTER_MAX_DECLARED_BANDWIDTH INT32_MAX
 int router_is_unreliable(routerinfo_t *router, int need_uptime,
                          int need_capacity, int need_guard);
 uint32_t router_get_advertised_bandwidth(routerinfo_t *router);
+
 typedef enum {
   NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_GUARD
 } bandwidth_weight_rule_t;
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
 routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl);
-
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
                                         smartlist_t *excludedsmartlist,
-                                        int need_uptime, int need_bandwidth,
+                                        int need_uptime, int need_capacity,
                                         int need_guard,
                                         int allow_invalid, int strict,
                                         int weight_for_exit);
 routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
+int router_digest_version_as_new_as(const char *digest, const char *cutoff);
+int router_digest_is_trusted_dir_type(const char *digest,
+                                      authority_type_t type);
+#define router_digest_is_trusted_dir(d) \
+  router_digest_is_trusted_dir_type((d), 0)
+
+int router_addr_is_trusted_dir(uint32_t addr);
 int hexdigest_to_digest(const char *hexdigest, char *digest);
 routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
 routerinfo_t *router_get_by_digest(const char *digest);
@@ -3543,26 +3582,20 @@ signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
 signed_descriptor_t *router_get_by_extrainfo_digest(const char *digest);
 signed_descriptor_t *extrainfo_get_by_descriptor_digest(const char *digest);
 const char *signed_descriptor_get_body(signed_descriptor_t *desc);
-int router_digest_version_as_new_as(const char *digest, const char *cutoff);
-int router_digest_is_trusted_dir_type(const char *digest,
-                                      authority_type_t type);
-#define router_digest_is_trusted_dir(d) \
-  router_digest_is_trusted_dir_type((d), 0)
-int router_addr_is_trusted_dir(uint32_t addr);
 routerlist_t *router_get_routerlist(void);
-void routerlist_reset_warnings(void);
-void routerlist_free(routerlist_t *routerlist);
-void dump_routerlist_mem_usage(int severity);
-void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old);
 void routerinfo_free(routerinfo_t *router);
 void extrainfo_free(extrainfo_t *extrainfo);
+void routerlist_free(routerlist_t *rl);
+void dump_routerlist_mem_usage(int severity);
+void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old);
 void routerlist_free_all(void);
+void routerlist_reset_warnings(void);
 void router_set_status(const char *digest, int up);
-void routerlist_remove_old_routers(void);
 int router_add_to_routerlist(routerinfo_t *router, const char **msg,
                              int from_cache, int from_fetch);
 void router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                         int from_cache, int from_fetch);
+void routerlist_remove_old_routers(void);
 int router_load_single_router(const char *s, uint8_t purpose,
                               const char **msg);
 void router_load_routers_from_string(const char *s, const char *eos,
@@ -3572,55 +3605,31 @@ void router_load_routers_from_string(const char *s, const char *eos,
                                      const char *prepend_annotations);
 void router_load_extrainfo_from_string(const char *s, const char *eos,
                                        saved_location_t saved_location,
-                                       smartlist_t *requested_fps,
+                                       smartlist_t *requested_fingerprints,
                                        int descriptor_digests);
-
+void routerlist_retry_directory_downloads(time_t now);
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
 int router_exit_policy_rejects_all(routerinfo_t *router);
-
 void add_trusted_dir_server(const char *nickname, const char *address,
-                            uint16_t dir_port, uint16_t or_port,
-                            const char *digest,
-                            const char *v3_auth_digest,
-                            authority_type_t type);
+                       uint16_t dir_port, uint16_t or_port,
+                       const char *digest, const char *v3_auth_digest,
+                       authority_type_t type);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
-networkstatus_t *networkstatus_get_by_digest(const char *digest);
-routerstatus_t *router_get_combined_status_by_digest(const char *digest);
-routerstatus_t *router_get_combined_status_by_descriptor_digest(
-                                                       const char *digest);
-
-//routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
-int should_delay_dir_fetches(or_options_t *options);
-void update_networkstatus_downloads(time_t now);
-void routerlist_retry_directory_downloads(time_t now);
+char *compute_recommended_versions(time_t now, int client,
+                                   const char *my_version,
+                                   combined_version_status_t *status_out);
 void update_router_descriptor_downloads(time_t now);
 void update_extrainfo_downloads(time_t now);
-void routers_update_all_from_networkstatus(time_t now);
-void routers_update_status_from_networkstatus(smartlist_t *routers,
-                                              int reset_failures);
-smartlist_t *router_list_superseded(void);
 int router_have_minimum_dir_info(void);
 void router_dir_info_changed(void);
-void networkstatus_list_update_recent(time_t now);
 void router_reset_descriptor_download_failures(void);
-void router_reset_status_download_failures(void);
 int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
 int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
                                            const char **msg);
-const char *esc_router_info(routerinfo_t *router);
-
-char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
-int getinfo_helper_networkstatus(control_connection_t *conn,
-                                 const char *question, char **answer);
-
 void routerlist_assert_ok(routerlist_t *rl);
-void routerlist_check_bug_417(void);
-
-int trusted_dirs_reload_certs(void);
-int trusted_dirs_load_certs_from_string(const char *contents, int from_store);
-void trusted_dirs_flush_certs_to_disk(void);
+const char *esc_router_info(routerinfo_t *router);
 
 /********************************* routerparse.c ************************/
 
@@ -3641,28 +3650,6 @@ typedef struct tor_version_t {
   char status_tag[MAX_STATUS_TAG_LEN];
   int svn_revision;
 } tor_version_t;
-
-typedef enum version_status_t {
-  VS_RECOMMENDED=0, /**< This version is listed as recommended. */
-  VS_OLD=1, /**< This version is older than any recommended version. */
-  VS_NEW=2, /**< This version is newer than any recommended version. */
-  VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
-                       * in its series, but later recommended versions exist.
-                       */
-  VS_UNRECOMMENDED=4 /**< This version is not recommended (general case). */
-} version_status_t;
-
-typedef struct combined_version_status_t {
-  /** How many networkstatuses claim to know about versions? */
-  int n_versioning;
-  /** What do the majority of networkstatuses believe about this version? */
-  version_status_t consensus;
-  /** How many networkstatuses constitute the majority? */
-  int n_concurring;
-} combined_version_status_t;
-char *compute_recommended_versions(time_t now, int client,
-                             const char *my_version,
-                             combined_version_status_t *status_out);
 
 int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
