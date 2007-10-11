@@ -400,7 +400,6 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
       if (!(ds->type & V3_AUTHORITY))
         continue;
       rs = &ds->fake_status;
-      /* XXXX020 should this ever tunnel via tor? */
       directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
                                               0, resource, NULL, 0);
     });
@@ -1343,8 +1342,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
-      /* XXXX020 This warning tends to freak out clients who get a 403. */
-      log_warn(LD_DIR,
+      int dir_okay = status_code == 403;
+      log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
            "Received http status code %d (%s) from server "
            "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
            status_code, escaped(reason), conn->_base.address,
@@ -1372,7 +1371,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           smartlist_add(which, hex);
         });
     } else {
-      /* Can we even end up here? -- weasel*/
+      /* XXXX Can we even end up here? -- weasel*/
       source = NS_FROM_DIR_BY_FP;
       log_warn(LD_BUG, "We received a networkstatus but we didn't ask "
                        "for it by fp, nor did we ask for all.");
@@ -1506,11 +1505,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       n_asked_for = smartlist_len(which);
     }
     if (status_code != 200) {
-      int dir_okay = status_code == 404 ||
+      int dir_okay = status_code == 404 || status_code == 403 ||
         (status_code == 400 && !strcmp(reason, "Servers unavailable."));
       /* 404 means that it didn't have them; no big deal.
        * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
-      /* XXXX020 This warning tends to freak out clients who get a 403. */
       log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
              "Received http status code %d (%s) from server '%s:%d' "
              "while fetching \"/tor/server/%s\". I'll try again soon.",

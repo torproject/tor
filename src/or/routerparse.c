@@ -1903,7 +1903,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   directory_token_t *tok;
   int ok;
   struct in_addr in;
-  int i, inorder;
+  int i, inorder, n_signatures = 0;
 
   if (router_get_networkstatus_v3_hash(s, ns_digest)) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
@@ -2040,6 +2040,11 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                  "network-status vote.", escaped(tok->args[1]));
         goto err;
       }
+      if (is_vote && memcmp(ns->cert->cache_info.identity_digest,
+                            voter->identity_digest, DIGEST_LEN)) {
+        log_warn(LD_DIR,"Mismatch between identities in certificate and vote");
+        goto err;
+      }
       voter->address = tor_strdup(tok->args[2]);
       if (!tor_inet_aton(tok->args[3], &in)) {
         log_warn(LD_DIR, "Error decoding IP address %s in network-status.",
@@ -2174,13 +2179,13 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       goto err;
     }
 
-    if (is_vote &&
-        memcmp(declared_identity, ns->cert->cache_info.identity_digest,
-               DIGEST_LEN)) {
-      log_warn(LD_DIR, "Digest mismatch between declared and actual on "
-               "network-status vote.");
-      goto err;
-      /* XXXX020 also check cert against dir-source line. */
+    if (is_vote) {
+      if (memcmp(declared_identity, ns->cert->cache_info.identity_digest,
+                 DIGEST_LEN)) {
+        log_warn(LD_DIR, "Digest mismatch between declared and actual on "
+                 "network-status vote.");
+        goto err;
+      }
     }
 
     if (is_vote) {
@@ -2192,8 +2197,13 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       v->signature = tor_memdup(tok->object_body, tok->object_size);
       v->signature_len = tok->object_size;
     }
+    ++n_signatures;
   });
-  /* XXXX020 enforce: vote must have at least one signature. */
+
+  if (! n_signatures) {
+    log_warn(LD_DIR, "No signatures on networkstatus vote.");
+    goto err;
+  }
 
   /* XXXX020 check dates for plausibility.  ??? */
 

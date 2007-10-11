@@ -3826,10 +3826,20 @@ update_consensus_router_descriptor_downloads(time_t now)
   list_pending_descriptor_downloads(map, 0);
   SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
     {
-      /* ????020 need-to-mirror? */
-      /* XXXX rate-limit retries. */
+      routerstatus_t *lrs;
       if (router_get_by_descriptor_digest(rs->descriptor_digest))
         continue; /* We have it already. */
+
+      /* XXXX020 change this once the real consensus is the canonical place
+       * to go for router information. */
+      lrs = router_get_combined_status_by_digest(rs->identity_digest);
+      if (!lrs ||
+          memcmp(lrs->descriptor_digest, rs->descriptor_digest, DIGEST_LEN))
+        lrs = rs;
+      if (!download_status_is_ready(&lrs->dl_status, now,
+                                    MAX_ROUTERDESC_DOWNLOAD_FAILURES))
+        continue;
+
       if (authdir && dirserv_would_reject_router(rs))
         continue; /* We would throw it out immediately. */
       if (!dirserver && !client_would_use_router(rs, now, options))

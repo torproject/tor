@@ -325,14 +325,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
     vote_seconds = median_int(votesec_list, n_votes);
     dist_seconds = median_int(distsec_list, n_votes);
 
-    /*
-    SMARTLIST_FOREACH(va_times, int*, i,
-                      printf("VA: %d\n", *i));
-    SMARTLIST_FOREACH(fu_times, int*, i,
-                      printf("FU: %d\n", *i));
-    printf("%d..%d\n", (int)valid_after, (int)valid_until);
-    */
-
     tor_assert(valid_after+MIN_VOTE_INTERVAL <= fresh_until);
     tor_assert(fresh_until+MIN_VOTE_INTERVAL <= valid_until);
     tor_assert(vote_seconds >= MIN_VOTE_SECONDS);

@@ -27,6 +27,7 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       documents.
     - All hosts now attempt to download and keep fresh v3 authority
       certificates, and re-attempt after failures.
+    - More internal-consistency checks for vote parsing.
 
   o Major bugfixes (performance):
     - Fix really bad O(n^2) performance when parsing a long list of
@@ -77,6 +78,10 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
   o Minor bugfixes (portability):
     - On some platforms, accept() can return a broken address.  Detect
       this more quietly, and deal accordingly.  (Fixes bug 483.)
+
+  o Minor bugfixes (usability):
+    - Treat some 403 responses from directory servers as INFO rather than
+      WARN-severity events.
 
   o Minor bugfixes (DNS):
     - It's not actually an error to find a non-pending entry in the DNS
