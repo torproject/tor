@@ -1188,12 +1188,6 @@ typedef struct {
   int routerlist_index;
 } routerinfo_t;
 
-/** DOCDOC
- * XXXX020 remove this; purpose should have the same value for router
- * and extrainfo.
- */
-#define EXTRAINFO_PURPOSE_GENERAL 0
-
 /** Information needed to keep and cache a signed extra-info document. */
 typedef struct extrainfo_t {
   signed_descriptor_t cache_info;

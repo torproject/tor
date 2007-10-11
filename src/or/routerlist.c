@@ -410,27 +410,16 @@ router_get_store(routerlist_t *rl, routerinfo_t *ri)
 
 /** Add the signed_descriptor_t in <b>desc</b> to the router
  * journal; change its saved_location to SAVED_IN_JOURNAL and set its
- * offset appropriately.
- *
- * If <b>purpose</b> isn't ROUTER_PURPOSE_GENERAL or
- * EXTRAINFO_PURPOSE_GENERAL, just do nothing. */
+ * offset appropriately. */
 static int
 signed_desc_append_to_journal(signed_descriptor_t *desc,
-                              desc_store_t *store,
-                              int purpose) // XXXX NM Nuke purpose.
+                              desc_store_t *store)
 {
   or_options_t *options = get_options();
   size_t fname_len = strlen(options->DataDirectory)+32;
   char *fname;
   const char *body = signed_descriptor_get_body_impl(desc,1);
   size_t len = desc->signed_descriptor_len + desc->annotations_len;
-
-  /* XXXX020 remove this; we can now cache things with weird purposes. */
-  if (purpose != ROUTER_PURPOSE_GENERAL &&
-      purpose != EXTRAINFO_PURPOSE_GENERAL) {
-    /* we shouldn't cache it. be happy and return. */
-    return 0;
-  }
 
   fname = tor_malloc(fname_len);
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
@@ -2601,8 +2590,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
-                                      router_get_store(routerlist, router),
-                                      router->purpose);
+                                      router_get_store(routerlist, router));
       routerlist_insert_old(routerlist, router);
       return -1;
     }
@@ -2631,8 +2619,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
-                                      router_get_store(routerlist, router),
-                                      router->purpose);
+                                      router_get_store(routerlist, router));
       routerlist_insert_old(routerlist, router);
       *msg = "Router descriptor was not new.";
       return -1;
@@ -2669,8 +2656,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       routerlist_replace(routerlist, old_router, router);
       if (!from_cache) {
         signed_desc_append_to_journal(&router->cache_info,
-                                      router_get_store(routerlist, router),
-                                      router->purpose);
+                                      router_get_store(routerlist, router));
       }
       directory_set_dirty();
       *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
@@ -2686,8 +2672,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   routerlist_insert(routerlist, router);
   if (!from_cache)
     signed_desc_append_to_journal(&router->cache_info,
-                                  router_get_store(routerlist, router),
-                                  router->purpose);
+                                  router_get_store(routerlist, router));
   directory_set_dirty();
   return 0;
 }
@@ -2706,8 +2691,7 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
 
   if (inserted && !from_cache)
     signed_desc_append_to_journal(&ei->cache_info,
-                                  &routerlist->extrainfo_store,
-                                  EXTRAINFO_PURPOSE_GENERAL);
+                                  &routerlist->extrainfo_store);
 }
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
