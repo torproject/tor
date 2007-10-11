@@ -12,6 +12,8 @@ Backport items for 0.1.2:
   D r11141: CookieAuthFile and CookieAuthFileGroupReadable.
   - r11166: Don't believe future dates from the state file.
   o r11566: make r11438 not actually break things.
+  - r11828+: Detect bad sa_family from accept().
+  - r11882: Avoid crash-bug 451.
 
 
 Backport for 0.1.2.x once better tested:
@@ -26,3 +28,4 @@ Backport for 0.1.2.x once better tested:
   - r11548, the osx /tmp fix
   o r11293: Bulletproof code to generate extend info.
   o r11332: Fix user-triggerable segfault in expand_filename("~")
+  - r11829: Don't warn when cancel_pending_resolve() finds a cached failure.
