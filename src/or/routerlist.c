@@ -1009,6 +1009,13 @@ router_reset_status_download_failures(void)
   mark_all_trusteddirservers_up();
 }
 
+/** Return true iff router1 and router2 have the same /16 network. */
+static INLINE int
+routers_in_same_network_family(routerinfo_t *r1, routerinfo_t *r2)
+{
+  return (r1->addr & 0xffff0000) == (r2->addr & 0xffff0000);
+}
+
 /** Look through the routerlist and identify routers that
  * advertise the same /16 network address as <b>router</b>.
  * Add each of them to <b>sl</b>.
@@ -1018,8 +1025,7 @@ routerlist_add_network_family(smartlist_t *sl, routerinfo_t *router)
 {
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
   {
-    if (router != r &&
-        (router->addr & 0xffff0000) == (r->addr & 0xffff0000))
+    if (router != r && routers_in_same_network_family(router, r))
       smartlist_add(sl, r);
   });
 }
@@ -1056,11 +1062,45 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   }
 
   /* If the user declared any families locally, honor those too. */
-  for (cl = get_options()->NodeFamilies; cl; cl = cl->next) {
+  for (cl = options->NodeFamilies; cl; cl = cl->next) {
     if (router_nickname_is_in_list(router, cl->value)) {
       add_nickname_list_to_smartlist(sl, cl->value, 0);
     }
   }
+}
+
+/** Return true iff r is named by some nickname in <b>lst</b>. */
+static INLINE int
+router_in_nickname_smartlist(smartlist_t *lst, routerinfo_t *r)
+{
+  if (!lst) return 0;
+  SMARTLIST_FOREACH(lst, const char *, name,
+    if (router_nickname_matches(r, name))
+      return 1;);
+  return 0;
+}
+
+/** Return true iff r1 and r2 are in the same family, but not the same
+ * router. */
+int
+routers_in_same_family(routerinfo_t *r1, routerinfo_t *r2)
+{
+  or_options_t *options = get_options();
+  config_line_t *cl;
+
+  if (options->EnforceDistinctSubnets && routers_in_same_network_family(r1,r2))
+    return 1;
+
+  if (router_in_nickname_smartlist(r1->declared_family, r2) &&
+      router_in_nickname_smartlist(r2->declared_family, r1))
+    return 1;
+
+  for (cl = options->NodeFamilies; cl; cl = cl->next) {
+    if (router_nickname_is_in_list(r1, cl->value) &&
+        router_nickname_is_in_list(r2, cl->value))
+      return 1;
+  }
+  return 0;
 }
 
 /** Given a (possibly NULL) comma-and-whitespace separated list of nicknames,

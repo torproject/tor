@@ -3546,6 +3546,7 @@ routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
                                              int retry_if_no_servers);
 void router_reset_status_download_failures(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
+int routers_in_same_family(routerinfo_t *r1, routerinfo_t *r2);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running);
 int router_nickname_is_in_list(routerinfo_t *router, const char *list);

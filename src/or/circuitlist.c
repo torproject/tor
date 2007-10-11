@@ -801,7 +801,6 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
 {
   circuit_t *_circ;
   origin_circuit_t *best=NULL;
-//  or_options_t *options = get_options();
 
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
@@ -829,9 +828,15 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
         if (info) {
           /* need to make sure we don't duplicate hops */
           crypt_path_t *hop = circ->cpath;
+          routerinfo_t *ri1 = router_get_by_digest(info->identity_digest);
           do {
+            routerinfo_t *ri2;
             if (!memcmp(hop->extend_info->identity_digest,
                         info->identity_digest, DIGEST_LEN))
+              goto next;
+            if (ri1 &&
+                (ri2 = router_get_by_digest(hop->extend_info->identity_digest))
+                && routers_in_same_family(ri1, ri2))
               goto next;
             hop=hop->next;
           } while (hop!=circ->cpath);
