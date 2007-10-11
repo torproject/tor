@@ -1446,7 +1446,7 @@ static int
 should_generate_v2_networkstatus(void)
 {
   return authdir_mode_v2(get_options()) &&
-    !authdir_mode_bridge(get_options()) && /* XXX020 */
+    !authdir_mode_bridge(get_options()) && /* XXX020 RD */
     the_v2_networkstatus_is_dirty &&
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }
@@ -1554,7 +1554,6 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     tor_malloc(sizeof(uint32_t)*smartlist_len(rl->routers));
   mtbfs = tor_malloc(sizeof(double)*smartlist_len(rl->routers));
 
-  /* XXXX020 we should just use arrays and qsort.  */
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (router_is_active(ri, now)) {
       const char *id = ri->cache_info.identity_digest;
@@ -1823,10 +1822,6 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     router_is_active(ri, now) &&
     !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
   rs->is_running = ri->is_running; /* computed above */
-  /*
-    int f_authority = router_digest_is_trusted_dir(
-    ri->cache_info.identity_digest);
-  */
   rs->is_named = naming && ri->is_named;
   rs->is_valid = ri->is_valid;
   rs->is_possible_guard = rs->is_fast && rs->is_stable &&
@@ -1878,8 +1873,6 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   networkstatus_voter_info_t *voter = NULL;
   vote_timing_t timing;
   digestmap_t *omit_as_sybil = NULL;
-
-  /* check that everything is deallocated XXXX020 */
 
   tor_assert(private_key);
   tor_assert(cert);
@@ -1999,8 +1992,9 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   v3_out->voters = smartlist_create();
   smartlist_add(v3_out->voters, voter);
   v3_out->cert = authority_cert_dup(cert);
-  /* ????? networkstatus_digest is unset. */
   v3_out->routerstatus_list = routerstatuses;
+  /* Note: networkstatus_digest is unset; it won't get set until we actually
+   * format the vote. */
 
   return v3_out;
 }
@@ -2025,25 +2019,17 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
    (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
 
   size_t len;
-  char *status = NULL, *client_versions = NULL, *server_versions = NULL;
+  char *status = NULL;
+  const char *client_versions = NULL, *server_versions = NULL;
   char *outp, *endp;
-  // or_options_t *options = get_options();
   char fingerprint[FINGERPRINT_LEN+1];
   char ipaddr[INET_NTOA_BUF_LEN];
   char digest[DIGEST_LEN];
   struct in_addr in;
   uint32_t addr;
   routerlist_t *rl = router_get_routerlist();
-  // time_t now = time(NULL);
-  // time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
-  /*
-  int naming = options->NamingAuthoritativeDir;
-  int listbadexits = options->AuthDirListBadExits;
-  int exits_can_be_guards;
-  */
   char *version_lines = NULL;
   networkstatus_voter_info_t *voter;
-  /* XXX020 check that everything gets freed */
 
   tor_assert(private_signing_key);
 
@@ -2940,7 +2926,8 @@ connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
  * <b>conn</b>, and the outbuf has become too empty.  If the current
  * networkstatus object (in <b>conn</b>-\>cached_dir) has more data, pull data
  * from there.  Otherwise, pop the next fingerprint from fingerprint_stack,
- * and start spooling the next networkstatus.  If we run out of entries,
+ * and start spooling the next networkstatus.  (A digest of all 0 bytes is
+ * treated as a request for the current consensus.) If we run out of entries,
  * flushes the zlib state and sets the spool source to NONE.  Returns 0 on
  * success, negative on failure. */
 static int
@@ -2970,7 +2957,7 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
       /* Add another networkstatus; start serving it. */
       char *fp = smartlist_pop_last(conn->fingerprint_stack);
       cached_dir_t *d;
-      if (tor_digest_is_zero(fp)) /* XXXX020 document this "feature". */
+      if (tor_digest_is_zero(fp))
         d = cached_v3_networkstatus;
       else if (router_digest_is_me(fp))
         d = the_v2_networkstatus;
