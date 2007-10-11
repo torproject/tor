@@ -590,6 +590,10 @@ $Id$
   This changes the descriptor's purpose. See +POSTDESCRIPTOR below
   for details.
 
+  NOTE: This command was disabled and made obsolete as of Tor
+  0.2.0.8-alpha. It doesn't exist anymore, and is listed here only for
+  historical interest.
+
 3.13. ATTACHSTREAM
 
   Sent from the client to the server.  The syntax is:

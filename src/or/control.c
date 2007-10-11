@@ -116,9 +116,8 @@ static int handle_control_getinfo(control_connection_t *conn, uint32_t len,
 static int handle_control_extendcircuit(control_connection_t *conn,
                                         uint32_t len,
                                         const char *body);
-static int handle_control_setpurpose(control_connection_t *conn,
-                                     int for_circuits,
-                                     uint32_t len, const char *body);
+static int handle_control_setcircuitpurpose(control_connection_t *conn,
+                                            uint32_t len, const char *body);
 static int handle_control_attachstream(control_connection_t *conn,
                                        uint32_t len,
                                         const char *body);
@@ -262,7 +261,7 @@ control_event_is_interesting(int event)
 }
 
 /** Append a NUL-terminated string <b>s</b> to the end of
- * <b>conn</b>-\>outbuf
+ * <b>conn</b>-\>outbuf.
  */
 static INLINE void
 connection_write_str_to_buf(const char *s, control_connection_t *conn)
@@ -448,7 +447,7 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
   connection_write_to_buf(buf, len, TO_CONN(conn));
 }
 
-/** Send a "DONE" message down the control connection <b>conn</b> */
+/** Send a "DONE" message down the control connection <b>conn</b>. */
 static void
 send_control_done(control_connection_t *conn)
 {
@@ -2039,53 +2038,36 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** Called when we get a SETCIRCUITPURPOSE (if <b>for_circuits</b>
- * is 1) or SETROUTERPURPOSE message. If we can find
- * the circuit/router and it's a valid purpose, change it. */
+/** Called when we get a SETCIRCUITPURPOSE message. If we can find the
+ * circuit and it's a valid purpose, change it. */
 static int
-handle_control_setpurpose(control_connection_t *conn, int for_circuits,
-                          uint32_t len, const char *body)
+handle_control_setcircuitpurpose(control_connection_t *conn,
+                                 uint32_t len, const char *body)
 {
-  /* XXXX020 this should maybe be two functions; almost no code is acutally
-     shared. */
   origin_circuit_t *circ = NULL;
-  routerinfo_t *ri = NULL;
   uint8_t new_purpose;
   smartlist_t *args;
-  const char *command =
-    for_circuits ? "SETCIRCUITPURPOSE" : "SETROUTERPURPOSE";
   (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
 
-  args = getargs_helper(command, conn, body, 2, -1);
+  args = getargs_helper("SETCIRCUITPURPOSE", conn, body, 2, -1);
   if (!args)
     goto done;
 
-  if (for_circuits) {
-    if (!(circ = get_circ(smartlist_get(args,0)))) {
-      connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
-                               (char*)smartlist_get(args, 0));
-      goto done;
-    }
-  } else {
-    if (!(ri = router_get_by_nickname(smartlist_get(args,0), 0))) {
-      connection_printf_to_buf(conn, "552 Unknown router \"%s\"\r\n",
-                               (char*)smartlist_get(args, 0));
-      goto done;
-    }
+  if (!(circ = get_circ(smartlist_get(args,0)))) {
+    connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
+                             (char*)smartlist_get(args, 0));
+    goto done;
   }
 
   {
     char *purp = smartlist_get(args,1);
-    if (get_purpose(&purp, for_circuits, &new_purpose) < 0) {
+    if (get_purpose(&purp, 1, &new_purpose) < 0) {
       connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
       goto done;
     }
   }
 
-  if (for_circuits)
-    circ->_base.purpose = new_purpose;
-  else
-    ri->purpose = new_purpose;
+  circ->_base.purpose = new_purpose;
   connection_write_str_to_buf("250 OK\r\n", conn);
 
 done:
@@ -2695,11 +2677,10 @@ connection_control_process_inbuf(control_connection_t *conn)
     if (handle_control_extendcircuit(conn, data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SETCIRCUITPURPOSE")) {
-    if (handle_control_setpurpose(conn, 1, data_len, args))
+    if (handle_control_setcircuitpurpose(conn, data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SETROUTERPURPOSE")) {
-    if (handle_control_setpurpose(conn, 0, data_len, args))
-      return -1;
+    connection_write_str_to_buf("511 SETROUTERPURPOSE is obsolete.\r\n", conn);
   } else if (!strcasecmp(conn->incoming_cmd, "ATTACHSTREAM")) {
     if (handle_control_attachstream(conn, data_len, args))
       return -1;

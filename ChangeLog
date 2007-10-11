@@ -7,6 +7,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
     - Use annotations to record the time we received each descriptor.
     - Use annotations to record the source for each descriptor.
     - Use annotations to record the purpose of each descriptor.
+    - Disable the SETROUTERPURPOSE controller command: it is now
+      obsolete.
     - Bridge authorities now write bridge descriptors to disk, meaning
       we can export them to other programs and begin distributing them
       to blocked users.
@@ -113,7 +115,7 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       Bugfix in 0.2.0.7-alpha.
     - Fix a minor memory leak whenever we parse guards from our state
       file. Bugfix on 0.2.0.7-alpha.
-    - Fix a minor memory leak whenever we wrote out a file. Bugfix on
+    - Fix a minor memory leak whenever we write out a file. Bugfix on
       0.2.0.7-alpha.
     - Fix a minor memory leak whenever a controller sends the PROTOCOLINFO
       command. Bugfix on 0.2.0.5-alpha.
