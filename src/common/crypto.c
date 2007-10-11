@@ -22,8 +22,6 @@ const char crypto_c_id[] =
 #include <wincrypt.h>
 #endif
 
-#include <string.h>
-
 #include <openssl/err.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -32,14 +30,7 @@ const char crypto_c_id[] =
 #include <openssl/opensslv.h>
 #include <openssl/bn.h>
 #include <openssl/dh.h>
-#include <openssl/rsa.h>
-#include <openssl/dh.h>
 #include <openssl/conf.h>
-
-#include <stdlib.h>
-#include <assert.h>
-#include <stdio.h>
-#include <limits.h>
 
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
