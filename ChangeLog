@@ -61,6 +61,9 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       two Tor servers on the same IP address, except if it's the location
       of a directory authority, in which case allow five. Bugfix on
       0.2.0.3-alpha.
+    - When looking for a circuit to cannibalize, consider family as well
+      as identity.  Fixes bug 438.  Bugfix on 0.1.0.x (which introduced
+      circuit cannibalization).
 
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an
