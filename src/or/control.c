@@ -2456,6 +2456,7 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
                              cookies?" COOKIEFILE=":"",
                              cookies?esc_cfile:"",
                              escaped(VERSION));
+    tor_free(methods);
     tor_free(cfile);
     tor_free(esc_cfile);
   }

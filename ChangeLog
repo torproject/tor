@@ -95,6 +95,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       file. Bugfix on 0.2.0.7-alpha.
     - Fix a minor memory leak whenever we wrote out a file. Bugfix on
       0.2.0.7-alpha.
+    - Fix a minor memory leak whenever a controller sends the PROTOCOLINFO
+      command. Bugfix on 0.2.0.5-alpha.
 
   o Code simplifications and refactoring:
     - Make a bunch of functions static.  Remove some dead code.
