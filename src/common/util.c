@@ -1657,8 +1657,6 @@ finish_writing_to_file_impl(open_file_t *file_data, int abort_write)
     }
   }
 
-  memset(file_data, 0, sizeof(file_data));
-  file_data->fd = -1;
   tor_free(file_data->filename);
   tor_free(file_data->tempname);
   tor_free(file_data);
