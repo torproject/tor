@@ -529,6 +529,11 @@ connection_about_to_close_connection(connection_t *conn)
   }
 }
 
+/** Return true iff connection_close_immediate has been called on this
+ * connection */
+#define CONN_IS_CLOSED(c) \
+  ((c)->linked ? ((c)->linked_conn_is_closed) : ((c)->s < 0))
+
 /** Close the underlying socket for <b>conn</b>, so we don't try to
  * flush it. Must be used in conjunction with (right before)
  * connection_mark_for_close().
@@ -537,7 +542,7 @@ void
 connection_close_immediate(connection_t *conn)
 {
   assert_connection_ok(conn,0);
-  if (conn->s < 0 && !conn->linked) {
+  if (CONN_IS_CLOSED(conn)) {
     log_err(LD_BUG,"Attempt to close already-closed connection.");
     tor_fragile_assert();
     return;
@@ -554,6 +559,8 @@ connection_close_immediate(connection_t *conn)
   if (conn->s >= 0)
     tor_close_socket(conn->s);
   conn->s = -1;
+  if (conn->linked)
+    conn->linked_conn_is_closed = 1;
   if (!connection_is_listener(conn)) {
     buf_clear(conn->outbuf);
     conn->outbuf_flushlen = 0;
@@ -2046,6 +2053,11 @@ connection_handle_write(connection_t *conn, int force)
   if (conn->marked_for_close || conn->s < 0)
     return 0; /* do nothing */
 
+  if (conn->in_flushed_some) {
+    log_warn(LD_BUG, "called recursively from inside conn->in_flushed_some()");
+    return 0;
+  }
+
   conn->timestamp_lastwritten = now;
 
   /* Sometimes, "writable" means "connected". */
@@ -2207,6 +2219,7 @@ void
 _connection_write_to_buf_impl(const char *string, size_t len,
                               connection_t *conn, int zlib)
 {
+  /* XXXX This function really needs to return -1 on failure. */
   int r;
   size_t old_datalen;
   if (!len)
@@ -2248,9 +2261,18 @@ _connection_write_to_buf_impl(const char *string, size_t len,
     int extra = 0;
     conn->outbuf_flushlen += len;
 
+    /* Should we try flushing the outbuf now? */
+    if (conn->in_flushed_some) {
+      /* Don't flush the outbuf when the reason we're writing more stuff is
+       * _because_ we flushed the outbuf.  That's unfair. */
+      return;
+    }
+
     if (conn->type == CONN_TYPE_OR &&
         conn->outbuf_flushlen-len < MIN_TLS_FLUSHLEN &&
         conn->outbuf_flushlen >= MIN_TLS_FLUSHLEN) {
+      /* We just pushed outbuf_flushelen to MIN_TLS_FLUSHLEN or above;
+       * we can send out a full TLS frame now if we like. */
       extra = conn->outbuf_flushlen - MIN_TLS_FLUSHLEN;
       conn->outbuf_flushlen = MIN_TLS_FLUSHLEN;
     } else if (conn->type == CONN_TYPE_CONTROL &&
@@ -2625,13 +2647,17 @@ connection_process_inbuf(connection_t *conn, int package_partial)
 static int
 connection_flushed_some(connection_t *conn)
 {
+  int r = 0;
+  tor_assert(!conn->in_flushed_some);
+  conn->in_flushed_some = 1;
   if (conn->type == CONN_TYPE_DIR &&
-      conn->state == DIR_CONN_STATE_SERVER_WRITING)
-    return connection_dirserv_flushed_some(TO_DIR_CONN(conn));
-  else if (conn->type == CONN_TYPE_OR)
-    return connection_or_flushed_some(TO_OR_CONN(conn));
-  else
-    return 0;
+      conn->state == DIR_CONN_STATE_SERVER_WRITING) {
+    r = connection_dirserv_flushed_some(TO_DIR_CONN(conn));
+  } else if (conn->type == CONN_TYPE_OR) {
+    r = connection_or_flushed_some(TO_OR_CONN(conn));
+  }
+  conn->in_flushed_some = 0;
+  return r;
 }
 
 /** We just finished flushing bytes from conn-\>outbuf, and there
@@ -2644,6 +2670,10 @@ static int
 connection_finished_flushing(connection_t *conn)
 {
   tor_assert(conn);
+
+  /* If the connection is don't try to do anything more here. */
+  if (CONN_IS_CLOSED(conn))
+    return 0;
 
 //  log_fn(LOG_DEBUG,"entered. Socket %u.", conn->s);
 

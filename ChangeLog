@@ -35,6 +35,18 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
       string which usually wasn't there, once for every routerinfo
       we read, just scan lines forward until we find one we like.
       Bugfix on 0.2.0.1.
+    - When we add data to a write buffer in response to the data on that
+      write buffer getting low because of a flush, do not consider the newly
+      added data as a candidate for immediate flushing, but rather make it
+      wait until the next round of writing.  Otherwise, we flush and refill
+      recursively, and a single greedy TLS connection can eat all of our
+      bandwidth.  Bugfix on 0.1.2.7-alpha.
+
+  o Major bugfixes (crashes):
+    - If a connection is shut down abruptly because of something that
+      happened inside connection_flushed_some(), do not call
+      connection_finished_flushing().  Should fix bug 451. Bugfix on
+      0.1.2.7-alpha.
 
   o Minor features (v3 authority system):
     - Add more ways for tools to download the votes that lead to the

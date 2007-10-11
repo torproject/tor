@@ -744,9 +744,6 @@ typedef struct connection_t {
 
   /* The next fields are all one-bit booleans. Some are only applicable to
    * connection subtypes, but we hold them here anyway, to save space.
-   * (Currently, they all fit into a single byte. If they ever need more than
-   * one byte, we can shave some bits off type, state, and purpose above, none
-   * of which is ever over 31.)
    */
   unsigned read_blocked_on_bw:1; /**< Boolean: should we start reading again
                             * once the bandwidth throttler allows it? */
@@ -769,6 +766,9 @@ typedef struct connection_t {
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
   unsigned int chosen_exit_optional:1;
+  /** Set to 1 when we're inside connection_flushed_some to keep us from
+   * calling connection_handle_write() recursively. */
+  unsigned int in_flushed_some:1;
 
   /* For linked connections:
    */
@@ -781,6 +781,9 @@ typedef struct connection_t {
   /** True iff we're currently able to read on the linked conn, and our
    * read_event should be made active with libevent. */
   unsigned int active_on_link:1;
+  /** True iff we've called connection_close_immediate on this linked
+   * connection */
+  unsigned int linked_conn_is_closed:1;
 
   int s; /**< Our socket; -1 if this connection is closed, or has no
           * socket. */
