@@ -499,7 +499,7 @@ connection_dir_request_failed(dir_connection_t *conn)
              conn->_base.address);
     connection_dir_download_routerdesc_failed(conn);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
-    /* XXXX020 NMNM */
+    networkstatus_consensus_download_failed(0);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
@@ -1403,7 +1403,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
-    /* XXXX020 NMNM */;
     if (status_code != 200) {
       log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
           "Received http status code %d (%s) from server "
@@ -1420,7 +1419,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       log_warn(LD_DIR, "Unable to load consensus directory dowloaded from "
                "server '%s:%d'", conn->_base.address, conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
-      /* XXXX020 NMNM retry. */
+      networkstatus_consensus_download_failed(0);
       return -1;
     }
     log_info(LD_DIR, "Successfully loaded consensus.");

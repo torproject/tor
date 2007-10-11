@@ -1009,7 +1009,6 @@ mark_all_trusteddirservers_up(void)
       }
     });
   }
-  // last_networkstatus_download_attempted = 0; // XXXX !!!!
   router_dir_info_changed();
 }
 

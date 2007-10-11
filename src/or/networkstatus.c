@@ -989,6 +989,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
         }
         authority_certs_fetch_missing(c, now);
       }
+      download_status_reset(&consensus_dl_status); /*XXXX020 not quite right.*/
       return 0;
     } else {
       if (!was_waiting_for_certs)
@@ -998,6 +999,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
       return -1;
     }
   }
+
+  download_status_reset(&consensus_dl_status); /*XXXX020 not quite right.*/
 
   /* Are we missing any certificates at all? */
   if (r != 1)
@@ -1679,7 +1682,6 @@ getinfo_helper_networkstatus(control_connection_t *conn,
 void
 networkstatus_free_all(void)
 {
-  /* XXXX !!!! CALLME */
   if (networkstatus_list) {
     SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
                       networkstatus_free(ns));
