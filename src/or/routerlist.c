@@ -97,7 +97,6 @@ trusted_dirs_reload_certs(void)
   if (!contents)
     return 0;
   r = trusted_dirs_load_certs_from_string(contents, 1);
-  log_notice(LD_DIR, "Loaded %d certs from cache.", r);
   tor_free(contents);
   return r;
 }
