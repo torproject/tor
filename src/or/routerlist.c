@@ -2860,7 +2860,6 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
 void
 routerlist_remove_old_routers(void)
 {
-  /* XXXX020 call me less often */
   int i, hi=-1;
   const char *cur_id = NULL;
   time_t now = time(NULL);
@@ -4045,6 +4044,8 @@ update_router_have_minimum_dir_info(void)
     res = 0;
     goto done;
   }
+  /*XXXX020 remove this call. routerlist_remove_old_routers shows up in some
+   * profiles, and this is the biggest caller of that function. */
   routerlist_remove_old_routers();
   networkstatus_list_clean(now);
 
