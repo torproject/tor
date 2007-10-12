@@ -4403,3 +4403,21 @@ esc_router_info(routerinfo_t *router)
   return info;
 }
 
+/** Helper for sorting: compare two routerinfos by their identity
+ * digest. */
+static int
+_compare_routerinfo_by_id_digest(const void **a, const void **b)
+{
+  routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
+  return memcmp(first->cache_info.identity_digest,
+                second->cache_info.identity_digest,
+                DIGEST_LEN);
+}
+
+/** Sort a list of routerinfo_t in ascending order of identity digest. */
+void
+routers_sort_by_identity(smartlist_t *routers)
+{
+  smartlist_sort(routers, _compare_routerinfo_by_id_digest);
+}
+

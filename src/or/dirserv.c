@@ -1695,17 +1695,6 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   return 0;
 }
 
-/** Helper for sorting: compare two routerinfos by their identity
- * digest. */
-static int
-_compare_routerinfo_by_id_digest(const void **a, const void **b)
-{
-  routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
-  return memcmp(first->cache_info.identity_digest,
-                second->cache_info.identity_digest,
-                DIGEST_LEN);
-}
-
 /** Helper for sorting: compares two routerinfos first by address, and then by
  * descending order of "usefulness".  (An authority is more useful than a
  * non-authority; a running router is more useful than a non-running router;
@@ -1754,7 +1743,9 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
 
   /* They're equal! Compare by identity digest, so there's a
    * deterministic order and we avoid flapping. */
-  return _compare_routerinfo_by_id_digest(a, b);
+  return memcmp(first->cache_info.identity_digest,
+                second->cache_info.identity_digest,
+                DIGEST_LEN);
 }
 
 /** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
@@ -1913,7 +1904,7 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
 
   routers = smartlist_create();
   smartlist_add_all(routers, rl->routers);
-  smartlist_sort(routers, _compare_routerinfo_by_id_digest);
+  routers_sort_by_identity(routers);
   omit_as_sybil = get_possible_sybil_list(routers);
 
   routerstatuses = smartlist_create();
@@ -2337,7 +2328,7 @@ generate_networkstatus_opinion(int v2)
 
   routers = smartlist_create();
   smartlist_add_all(routers, rl->routers);
-  smartlist_sort(routers, _compare_routerinfo_by_id_digest);
+  routers_sort_by_identity(routers);
 
   omit_as_sybil = get_possible_sybil_list(routers);
 
