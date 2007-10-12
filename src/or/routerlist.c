@@ -2860,6 +2860,7 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
 void
 routerlist_remove_old_routers(void)
 {
+  /* XXXX020 call me less often */
   int i, hi=-1;
   const char *cur_id = NULL;
   time_t now = time(NULL);
@@ -2878,7 +2879,7 @@ routerlist_remove_old_routers(void)
 
   retain = digestmap_new();
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
-  /* Build a list of all the descriptors that _anybody_ recommends. */
+  /* Build a list of all the descriptors that _anybody_ lists. */
   SMARTLIST_FOREACH(networkstatus_list, networkstatus_t *, ns,
     {
       /* XXXX The inner loop here gets pretty expensive, and actually shows up
@@ -2893,6 +2894,16 @@ routerlist_remove_old_routers(void)
         if (rs->published_on >= cutoff)
           digestmap_set(retain, rs->descriptor_digest, (void*)1));
     });
+
+  {
+    /* Retain anything listed in the consensus. */
+    networkstatus_vote_t *ns = networkstatus_get_latest_consensus();
+    if (ns) {
+      SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+        if (rs->published_on >= cutoff)
+          digestmap_set(retain, rs->descriptor_digest, (void*)1));
+    }
+  }
 
   /* If we have a bunch of networkstatuses, we should consider pruning current
    * routers that are too old and that nobody recommends.  (If we don't have
