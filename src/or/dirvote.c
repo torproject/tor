@@ -1066,7 +1066,7 @@ dirvote_recalculate_timing(time_t now)
   int interval, vote_delay, dist_delay;
   time_t start;
   time_t end;
-  networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
+  networkstatus_vote_t *consensus = networkstatus_get_live_consensus(now);
 
   memset(&voting_schedule, 0, sizeof(voting_schedule));
 
