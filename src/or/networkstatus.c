@@ -1069,6 +1069,7 @@ networkstatus_note_certs_arrived(void)
 void
 routers_update_all_from_networkstatus(time_t now)
 {
+  /*XXXX020 Change this function to look at the consensus. */
   routerinfo_t *me;
   routerlist_t *rl = router_get_routerlist();
   if (!networkstatus_list ||
@@ -1187,6 +1188,7 @@ routers_update_all_from_networkstatus(time_t now)
 void
 networkstatus_list_update_recent(time_t now)
 {
+  /*XXXX020 Nuke this function. */
   int n_statuses, n_recent, changed, i;
   char published[ISO_TIME_LEN+1];
 
@@ -1245,6 +1247,7 @@ typedef struct {
 void
 routerstatus_list_update_from_networkstatus(time_t now)
 {
+  /* XXXX020 nuke this function.  It serves no point in v3 */
   or_options_t *options = get_options();
   int n_trusted, n_statuses, n_recent = 0, n_naming = 0;
   int n_listing_bad_exits = 0, n_listing_bad_directories = 0;
@@ -1561,6 +1564,7 @@ void
 routers_update_status_from_networkstatus(smartlist_t *routers,
                                          int reset_failures)
 {
+  /*XXXX020 remove this. while function */
   trusted_dir_server_t *ds;
   routerstatus_t *rs;
   or_options_t *options = get_options();
@@ -1599,6 +1603,112 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
       download_status_reset(&rs->dl_status);
     }
   });
+  router_dir_info_changed();
+}
+
+/** Update our view of router status (as stored in routerstatus_list) from the
+ * current set of network status documents (as stored in networkstatus_list).
+ * Do nothing unless the network status list has changed since the last time
+ * this function was called. DOCDOC
+ */
+void
+routerstatus_list_update_from_consensus_networkstatus(time_t now)
+{
+  /* XXXX020 use this function */
+  (void)now;
+
+  if (!current_consensus)
+    return;
+
+  if (named_server_map)
+    strmap_free(named_server_map, _tor_free);
+  named_server_map = strmap_new();
+  SMARTLIST_FOREACH(current_consensus->routerstatus_list, routerstatus_t *, rs,
+    {
+      if (rs->is_named) {
+        strmap_set(named_server_map, rs->nickname,
+                   tor_memdup(rs->identity_digest, DIGEST_LEN));
+      }
+    });
+
+  if (routerstatus_by_desc_digest_map)
+    digestmap_free(routerstatus_by_desc_digest_map, NULL);
+  routerstatus_by_desc_digest_map = digestmap_new();
+  SMARTLIST_FOREACH(current_consensus->routerstatus_list, routerstatus_t *, rs,
+                    digestmap_set(routerstatus_by_desc_digest_map,
+                                  rs->descriptor_digest,
+                                  rs));
+
+  /* XXXX020 memcpy extra information from old consensus, somewhere. */
+
+  /* XXXX020 incorporate entries from v2 networkstatuses, for download
+   * purposees. */
+}
+
+/** Given a list <b>routers</b> of routerinfo_t *, update each routers's
+ * is_named, is_valid, and is_running fields according to our current
+ * networkstatus_t documents.  May re-order <b>router</b>. DOCDOC */
+void
+routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
+                                                   int reset_failures)
+{
+  /*XXXX020 use this function */
+  trusted_dir_server_t *ds;
+  routerstatus_t *rs;
+  or_options_t *options = get_options();
+  int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
+  int namingdir = authdir && options->NamingAuthoritativeDir;
+  networkstatus_vote_t *ns = current_consensus;
+  int idx;
+  if (!ns || !smartlist_len(ns->routerstatus_list))
+    return;
+
+  routers_sort_by_identity(routers);
+  /* Now routers and ns->routerstatus_list are both in ascending order
+   * of identity digest. */
+  idx = 0;
+  rs = smartlist_get(ns->routerstatus_list, idx);
+
+  SMARTLIST_FOREACH(routers, routerinfo_t *, router,
+  {
+    const char *digest = router->cache_info.identity_digest;
+    int r;
+    while ((r = memcmp(rs->identity_digest, digest, DIGEST_LEN))<0) {
+      if (idx == smartlist_len(ns->routerstatus_list)) {
+        /* We're out of routerstatuses. Bail. */
+        goto done;
+      }
+      rs = smartlist_get(ns->routerstatus_list, ++idx);
+    }
+    if (r>0) {
+      /* We have no routerstatus for this router. Skip it. */
+      continue;
+    }
+
+    ds = router_get_trusteddirserver_by_digest(digest);
+
+    if (!namingdir)
+      router->is_named = rs->is_named;
+
+    if (!authdir) {
+      /* If we're not an authdir, believe others. */
+      router->is_valid = rs->is_valid;
+      router->is_running = rs->is_running;
+      router->is_fast = rs->is_fast;
+      router->is_stable = rs->is_stable;
+      router->is_possible_guard = rs->is_possible_guard;
+      router->is_exit = rs->is_exit;
+      router->is_bad_exit = rs->is_bad_exit;
+    }
+    if (router->is_running && ds) {
+      download_status_reset(&ds->v2_ns_dl_status);
+    }
+    if (reset_failures) {
+      download_status_reset(&rs->dl_status);
+    }
+  });
+
+ done:
   router_dir_info_changed();
 }
 

@@ -3103,6 +3103,9 @@ void networkstatus_list_update_recent(time_t now);
 void routerstatus_list_update_from_networkstatus(time_t now);
 void routers_update_status_from_networkstatus(smartlist_t *routers,
                                               int reset_failures);
+void routerstatus_list_update_from_consensus_networkstatus(time_t now);
+void routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
+                                                        int reset_failures);
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
@@ -3637,6 +3640,7 @@ int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
                                            const char **msg);
 void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);
+void routers_sort_by_identity(smartlist_t *routers);
 
 /********************************* routerparse.c ************************/
 
