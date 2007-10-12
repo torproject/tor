@@ -1803,7 +1803,7 @@ router_purpose_to_string(uint8_t p)
   return NULL;
 }
 
-/** Given a string, convert it to a router purpose.  */
+/** Given a string, convert it to a router purpose. */
 uint8_t
 router_purpose_from_string(const char *s)
 {

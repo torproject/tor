@@ -635,11 +635,17 @@ $Id$
 3.14. POSTDESCRIPTOR
 
   Sent from the client to the server. The syntax is:
-    "+POSTDESCRIPTOR" [SP "purpose=" Purpose] CRLF Descriptor CRLF "." CRLF
+    "+POSTDESCRIPTOR" [SP "purpose=" Purpose] [SP "cache=" Cache]
+                      CRLF Descriptor CRLF "." CRLF
 
   This message informs the server about a new descriptor. If Purpose is
   specified, it must be either "general" or "controller", else we
   return a 552 error.
+
+  If Cache is specified, it must be either "no" or "yes", else we
+  return a 552 error. If Cache is not specified, Tor will decide for
+  itself whether it wants to cache the descriptor, and controllers
+  must not rely on its choice.
 
   The descriptor, when parsed, must contain a number of well-specified
   fields, including fields for its nickname and identity.

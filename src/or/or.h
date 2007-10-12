@@ -451,6 +451,9 @@ typedef enum {
 /** A controller made this circuit and Tor should not use it. */
 #define CIRCUIT_PURPOSE_CONTROLLER 18
 #define _CIRCUIT_PURPOSE_MAX 18
+/** A catch-all for unrecognized purposes. Currently we don't expect
+ * to make or see any circuits with this purpose. */
+#define CIRCUIT_PURPOSE_UNKNOWN 255
 
 /** True iff the circuit purpose <b>p</b> is for a circuit that
  * originated at this node. */
@@ -3600,7 +3603,7 @@ int router_add_to_routerlist(routerinfo_t *router, const char **msg,
 void router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                         int from_cache, int from_fetch);
 void routerlist_remove_old_routers(void);
-int router_load_single_router(const char *s, uint8_t purpose,
+int router_load_single_router(const char *s, uint8_t purpose, int cache,
                               const char **msg);
 void router_load_routers_from_string(const char *s, const char *eos,
                                      saved_location_t saved_location,

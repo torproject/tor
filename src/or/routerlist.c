@@ -2991,7 +2991,8 @@ routerlist_descriptors_added(smartlist_t *sl)
  * This is used only by the controller.
  */
 int
-router_load_single_router(const char *s, uint8_t purpose, const char **msg)
+router_load_single_router(const char *s, uint8_t purpose, int cache,
+                          const char **msg)
 {
   routerinfo_t *ri;
   int r;
@@ -3016,6 +3017,9 @@ router_load_single_router(const char *s, uint8_t purpose, const char **msg)
     routerinfo_free(ri);
     return 0;
   }
+
+  if (!cache) /* obey the preference of the controller */
+    ri->cache_info.do_not_cache = 1;
 
   lst = smartlist_create();
   smartlist_add(lst, ri);

@@ -1878,35 +1878,19 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** If *<b>string</b> contains a recognized purpose (for
- * circuits if <b>for_circuits</b> is 1, else for routers),
- * possibly prefaced with the string "purpose=", then assign it
- * and return 0. Otherwise return -1.
- *
- * If it's prefaced with "purpose=", then set *<b>string</b> to
- * the remainder of the string. */
-static int
-get_purpose(char **string, int for_circuits, uint8_t *purpose)
+/** Given a string, convert it to a circuit purpose. */
+static uint8_t
+circuit_purpose_from_string(const char *string)
 {
-  if (!strcmpstart(*string, "purpose="))
-    *string += strlen("purpose=");
+  if (!strcmpstart(string, "purpose="))
+    string += strlen("purpose=");
 
-  if (!for_circuits) {
-    int r = router_purpose_from_string(*string);
-    if (r == ROUTER_PURPOSE_UNKNOWN)
-      return -1;
-    *purpose = r;
-    return 0;
-  }
-
-  if (!strcmp(*string, "general"))
-    *purpose = CIRCUIT_PURPOSE_C_GENERAL;
-  else if (!strcmp(*string, "controller"))
-    *purpose = CIRCUIT_PURPOSE_CONTROLLER;
-  else { /* not a recognized purpose */
-    return -1;
-  }
-  return 0;
+  if (!strcmp(string, "general"))
+    return CIRCUIT_PURPOSE_C_GENERAL;
+  else if (!strcmp(string, "controller"))
+    return CIRCUIT_PURPOSE_CONTROLLER;
+  else
+    return CIRCUIT_PURPOSE_UNKNOWN;
 }
 
 /** Return a newly allocated smartlist containing the arguments to the command
@@ -1963,7 +1947,8 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   if (zero_circ && smartlist_len(args)>2) {
     char *purp = smartlist_get(args,2);
-    if (get_purpose(&purp, 1, &intended_purpose) < 0) {
+    intended_purpose = circuit_purpose_from_string(purp);
+    if (intended_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
       connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
       SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
       smartlist_free(args);
@@ -2061,7 +2046,8 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
 
   {
     char *purp = smartlist_get(args,1);
-    if (get_purpose(&purp, 1, &new_purpose) < 0) {
+    new_purpose = circuit_purpose_from_string(purp);
+    if (new_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
       connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
       goto done;
     }
@@ -2178,6 +2164,7 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   char *desc;
   const char *msg=NULL;
   uint8_t purpose = ROUTER_PURPOSE_GENERAL;
+  int cache = 0; /* eventually, we may switch this to 1 */
 
   char *cp = memchr(body, '\n', len);
   smartlist_t *args = smartlist_create();
@@ -2186,21 +2173,37 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
 
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args)) {
-    char *purp = smartlist_get(args,0);
-    if (get_purpose(&purp, 0, &purpose) < 0) {
-      connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
-                               purp);
-      SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
-      smartlist_free(args);
-      return 0;
+  SMARTLIST_FOREACH(args, char *, option,
+  {
+    if (!strcasecmpstart(option, "purpose=")) {
+      option += strlen("purpose=");
+      purpose = router_purpose_from_string(option);
+      if (purpose == ROUTER_PURPOSE_UNKNOWN) {
+        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n",
+                                 option);
+        goto done;
+      }
+    } else if (!strcasecmpstart(option, "cache=")) {
+      option += strlen("cache=");
+      if (!strcmp(option, "no"))
+        cache = 0;
+      else if (!strcmp(option, "yes"))
+        cache = 1;
+      else {
+        connection_printf_to_buf(conn, "552 Unknown cache request \"%s\"\r\n",
+                                 option);
+        goto done;
+      }
+    } else { /* unrecognized argument? */
+      connection_printf_to_buf(conn,
+        "512 Unexpected argument \"%s\" to postdescriptor\r\n", option);
+      goto done;
     }
-  }
-  SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
-  smartlist_free(args);
+  });
+
   read_escaped_data(cp, len-(cp-body), &desc);
 
-  switch (router_load_single_router(desc, purpose, &msg)) {
+  switch (router_load_single_router(desc, purpose, cache, &msg)) {
   case -1:
     if (!msg) msg = "Could not parse descriptor";
     connection_printf_to_buf(conn, "554 %s\r\n", msg);
@@ -2215,6 +2218,9 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   }
 
   tor_free(desc);
+ done:
+  SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
+  smartlist_free(args);
   return 0;
 }
 

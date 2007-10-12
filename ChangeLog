@@ -9,6 +9,8 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
     - Use annotations to record the purpose of each descriptor.
     - Disable the SETROUTERPURPOSE controller command: it is now
       obsolete.
+    - Controllers should now specify cache=no or cache=yes when using
+      the +POSTDESCRIPTOR command.
     - Bridge authorities now write bridge descriptors to disk, meaning
       we can export them to other programs and begin distributing them
       to blocked users.
