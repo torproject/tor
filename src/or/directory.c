@@ -2359,12 +2359,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       smartlist_free(fps);
     } else {
       write_http_status_line(conn, 400, "Bad request");
-      smartlist_free(certs);
       goto keys_done;
     }
     if (!smartlist_len(certs)) {
       write_http_status_line(conn, 404, "Not found");
-      smartlist_free(certs);
       goto keys_done;
     }
     SMARTLIST_FOREACH(certs, authority_cert_t *, c,
