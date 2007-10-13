@@ -1344,8 +1344,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
-      int dir_okay = status_code == 403;
-      log_fn(dir_okay ? LOG_INFO : LOG_WARN, LD_DIR,
+      log_warn(LD_DIR,
            "Received http status code %d (%s) from server "
            "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
            status_code, escaped(reason), conn->_base.address,
@@ -1405,7 +1404,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     if (status_code != 200) {
-      log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
+      log_warn(LD_DIR,
           "Received http status code %d (%s) from server "
           "'%s:%d' while fetching consensus directory.",
            status_code, escaped(reason), conn->_base.address,
@@ -1427,7 +1426,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
     if (status_code != 200) {
-      log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
+      log_warn(LD_DIR,
           "Received http status code %d (%s) from server "
           "'%s:%d' while fetching \"/tor/keys/%s\".",
            status_code, escaped(reason), conn->_base.address,
@@ -1450,7 +1449,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Got votes (size %d) from server %s:%d",
              (int) body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
-      log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
+      log_warn(LD_DIR,
              "Received http status code %d (%s) from server "
              "'%s:%d' while fetching \"/tor/status-vote/next/%s.z\".",
              status_code, escaped(reason), conn->_base.address,
@@ -1469,7 +1468,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Got detached signatures (size %d) from server %s:%d",
              (int) body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
-      log_fn(status_code == 403 ? LOG_INFO : LOG_WARN, LD_DIR,
+      log_warn(LD_DIR,
         "Received http status code %d (%s) from server "
         "'%s:%d' while fetching \"/tor/status-vote/consensus-signatures.z\".",
              status_code, escaped(reason), conn->_base.address,
@@ -1507,7 +1506,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       n_asked_for = smartlist_len(which);
     }
     if (status_code != 200) {
-      int dir_okay = status_code == 404 || status_code == 403 ||
+      int dir_okay = status_code == 404 ||
         (status_code == 400 && !strcmp(reason, "Servers unavailable."));
       /* 404 means that it didn't have them; no big deal.
        * Older (pre-0.1.1.8) servers said 400 Servers unavailable instead. */
@@ -1587,18 +1586,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         log_warn(LD_GENERAL,"http status 400 (%s) response from "
                  "dirserver '%s:%d'. Please correct.",
                  escaped(reason), conn->_base.address, conn->_base.port);
-        control_event_server_status(LOG_WARN,
-                      "BAD_SERVER_DESCRIPTOR DIRAUTH=%s:%d REASON=\"%s\"",
-                      conn->_base.address, conn->_base.port, escaped(reason));
-        break;
-      case 403:
-        log_warn(LD_GENERAL,
-             "http status 403 (%s) response from dirserver "
-             "'%s:%d'. Is your clock skewed? Have you mailed us your key "
-             "fingerprint? Are you using the right key? Are you using a "
-             "private IP address? See http://tor.eff.org/doc/"
-             "tor-doc-server.html",escaped(reason), conn->_base.address,
-             conn->_base.port);
         control_event_server_status(LOG_WARN,
                       "BAD_SERVER_DESCRIPTOR DIRAUTH=%s:%d REASON=\"%s\"",
                       conn->_base.address, conn->_base.port, escaped(reason));
