@@ -192,6 +192,10 @@ directories_have_accepted_server_descriptor(void)
 {
   smartlist_t *servers = router_get_trusted_dir_servers();
   or_options_t *options = get_options();
+  /* XXX020 If any authority of the needed type is down, this
+   * function will never return true. Perhaps we need to be
+   * tolerant of down servers? Or even better, should we change
+   * this so one successful upload is enough? -RD */
   SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
     if ((d->type & options->_PublishServerDescriptor) &&
         !d->has_accepted_serverdesc) {
