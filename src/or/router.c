@@ -597,7 +597,7 @@ check_whether_dirport_reachable(void)
  * a DirPort.
  */
 static int
-decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
+decide_to_advertise_dirport(or_options_t *options, uint16_t dir_port)
 {
   static int advertising=1; /* start out assuming we will advertise */
   int new_choice=1;
@@ -607,10 +607,10 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
    * worth mentioning to the user, either because they're obvious
    * or because they're normal behavior. */
 
-  if (!router->dir_port) /* short circuit the rest of the function */
+  if (!dir_port) /* short circuit the rest of the function */
     return 0;
   if (authdir_mode(options)) /* always publish */
-    return router->dir_port;
+    return dir_port;
   if (we_are_hibernating())
     return 0;
   if (!check_whether_dirport_reachable())
@@ -635,7 +635,7 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
 
   if (advertising != new_choice) {
     if (new_choice == 1) {
-      log(LOG_NOTICE, LD_DIR, "Advertising DirPort as %d", router->dir_port);
+      log(LOG_NOTICE, LD_DIR, "Advertising DirPort as %d", dir_port);
     } else {
       tor_assert(reason);
       log(LOG_NOTICE, LD_DIR, "Not advertising DirPort (Reason: %s)", reason);
@@ -643,7 +643,7 @@ decide_to_advertise_dirport(or_options_t *options, routerinfo_t *router)
     advertising = new_choice;
   }
 
-  return advertising ? router->dir_port : 0;
+  return advertising ? dir_port : 0;
 }
 
 /** Some time has passed, or we just got new directory information.
@@ -722,7 +722,8 @@ router_dirport_found_reachable(void)
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
-    mark_my_descriptor_dirty();
+    if (!me || decide_to_advertise_dirport(get_options(), me->dir_port))
+      mark_my_descriptor_dirty();
     if (!me)
       return;
     control_event_server_status(LOG_NOTICE,
@@ -1553,7 +1554,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     router->nickname,
     router->address,
     router->or_port,
-    decide_to_advertise_dirport(options, router),
+    decide_to_advertise_dirport(options, router->dir_port),
     router->platform,
     published,
     fingerprint,

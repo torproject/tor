@@ -1250,7 +1250,7 @@ dns_servers_relaunch_checks(void)
 }
 
 /** Called when we get a SIGHUP: reload configuration files and keys,
- * retry all connections, re-upload all descriptors, and so on. */
+ * retry all connections, and so on. */
 static int
 do_hup(void)
 {
@@ -1299,8 +1299,6 @@ do_hup(void)
    * force a retry there. */
 
   if (server_mode(options)) {
-//    const char *descriptor;
-    mark_my_descriptor_dirty();
     /* Restart cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate();

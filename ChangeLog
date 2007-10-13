@@ -1,5 +1,11 @@
 Changes in version 0.2.0.9-alpha - 2007-10-??
 
+  o Major bugfixes:
+    - Stop publishing a new server descriptor just because we HUP or
+      when we find our DirPort to be reachable but won't actually publish
+      it. Extra descriptors without any real changes are dropped by the
+      authorities, and can screw up our "publish every 18 hours" schedule.
+
 
 Changes in version 0.2.0.8-alpha - 2007-10-12
   o Major features (router descriptor cache):
