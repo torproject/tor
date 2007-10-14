@@ -765,6 +765,47 @@ routerlist_add_family(smartlist_t *sl, routerinfo_t *router)
   }
 }
 
+/** Return true iff r is named by some nickname in <b>lst</b>. */
+static INLINE int
+router_in_nickname_smartlist(smartlist_t *lst, routerinfo_t *r)
+{
+  if (!lst) return 0;
+  SMARTLIST_FOREACH(lst, const char *, name,
+    if (router_nickname_matches(r, name))
+      return 1;);
+  return 0;
+}
+
+/** Return true iff router1 and router2 have the same /16 network. */
+static INLINE int
+routers_in_same_network_family(routerinfo_t *r1, routerinfo_t *r2)
+{
+  return (r1->addr & 0xffff0000) == (r2->addr & 0xffff0000);
+}
+
+/** Return true iff r1 and r2 are in the same family, but not the same
+ * router. */
+int
+routers_in_same_family(routerinfo_t *r1, routerinfo_t *r2)
+{
+  or_options_t *options = get_options();
+  config_line_t *cl;
+
+  if (options->EnforceDistinctSubnets && routers_in_same_network_family(r1,r2))
+    return 1;
+
+  if (router_in_nickname_smartlist(r1->declared_family, r2) &&
+      router_in_nickname_smartlist(r2->declared_family, r1))
+    return 1;
+
+  for (cl = options->NodeFamilies; cl; cl = cl->next) {
+    if (router_nickname_is_in_list(r1, cl->value) &&
+        router_nickname_is_in_list(r2, cl->value))
+      return 1;
+  }
+  return 0;
+}
+
 /** Given a (possibly NULL) comma-and-whitespace separated list of nicknames,
  * see which nicknames in <b>list</b> name routers in our routerlist, and add
  * the routerinfos for those routers to <b>sl</b>.  If <b>must_be_running</b>,
@@ -1059,7 +1100,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
   }
 
   /* Figure out how to weight exits and guards. */
-  { 
+  {
     double all_bw = U64_TO_DBL(total_exit_bw+total_nonexit_bw);
     double exit_bw = U64_TO_DBL(total_exit_bw);
     double guard_bw = U64_TO_DBL(total_guard_bw);

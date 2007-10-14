@@ -13,6 +13,9 @@ Changes in version 0.1.2.18 - 2007-??-??
       happened inside connection_flushed_some(), do not call
       connection_finished_flushing().  Should fix bug 451. Bugfix on
       0.1.2.7-alpha.
+    - When looking for a circuit to cannibalize, consider family as well
+      as identity.  Fixes bug 438.  Bugfix on 0.1.0.x (which introduced
+      circuit cannibalization).
 
   o Minor bugfixes:
     - Don't try to access (or alter) the state file when running
