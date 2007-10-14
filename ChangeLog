@@ -24,6 +24,13 @@ Changes in version 0.1.2.18 - 2007-??-??
       were reporting the dir port.)
     - Fix a minor memory leak whenever a controller sends the PROTOCOLINFO
       command. Bugfix on 0.1.2.17.
+    - When loading bandwidth history, do not believe any information in
+      the future.  Fixes bug 434.
+    - When loading entry guard information, do not believe any information
+      in the future.
+    - When we have our clock set far in the future and generate an onion key,
+      then re-set our clock to be correct, we should not stop the onion
+      key from getting rotated.
 
 
 Changes in version 0.1.2.17 - 2007-08-30
