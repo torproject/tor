@@ -9,6 +9,10 @@ Changes in version 0.1.2.18 - 2007-??-??
       connections: they specify their chosen rendezvous point by identity
       digest rather than by (potentially ambiguous) nickname. These
       changes could speed up hidden service connections dramatically.
+    - If a connection is shut down abruptly because of something that
+      happened inside connection_flushed_some(), do not call
+      connection_finished_flushing().  Should fix bug 451. Bugfix on
+      0.1.2.7-alpha.
 
   o Minor bugfixes:
     - Don't try to access (or alter) the state file when running

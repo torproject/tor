@@ -2289,6 +2289,9 @@ connection_finished_flushing(connection_t *conn)
 {
   tor_assert(conn);
 
+  if (conn->s < 0 || !conn->write_event)
+    return 0;
+
 //  log_fn(LOG_DEBUG,"entered. Socket %u.", conn->s);
 
   switch (conn->type) {
