@@ -14,6 +14,6 @@ P - r10579: new addsysuser implementation for osx (??)
     (this will break some existing test-network configurations, yes?)
   o r11499, r11500, r11501: hidserv hexdigests rather than nicknames
 P - r11548, the osx /tmp fix
-N - r11829: Don't warn when cancel_pending_resolve() finds a cached failure.
+  o r11829: Don't warn when cancel_pending_resolve() finds a cached failure.
 R - r11915: just because you hup, don't publish a near-duplicate descriptor
 

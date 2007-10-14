@@ -40,6 +40,9 @@ Changes in version 0.1.2.18 - 2007-??-??
       key from getting rotated.
     - On some platforms, accept() can return a broken address.  Detect
       this more quietly, and deal accordingly.  (Fixes bug 483.)
+    - It's not actually an error to find a non-pending entry in the DNS
+      cache when canceling a pending resolve.  Don't log unless stuff
+      is fishy.  Resolves bug 463.
 
 
 Changes in version 0.1.2.17 - 2007-08-30
