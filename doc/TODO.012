@@ -10,25 +10,28 @@ Backport items for 0.1.2:
   o disable v0 control protocol
   o r11138: PROTOCOLINFO support.
   D r11141: CookieAuthFile and CookieAuthFileGroupReadable.
-  - r11166: Don't believe future dates from the state file.
+N - r11166: Don't believe future dates from the state file.
   o r11566: make r11438 not actually break things.
-  - r11828+: Detect bad sa_family from accept().
-  - r11882: Avoid crash-bug 451.
-  - r11886: Consider family as well as identity when cannibalizing circuits.
+N - r11828+: Detect bad sa_family from accept().
+N - r11882: Avoid crash-bug 451.
+N - r11886: Consider family as well as identity when cannibalizing circuits.
 
 
 Backport for 0.1.2.x once better tested:
-  - r10579: new addsysuser implementation for osx (??)
-  - Some fix for bug 438 (??)
-  - coderman's constrained socket buffers patch (r10843)
+P - r10579: new addsysuser implementation for osx (??)
+  X coderman's constrained socket buffers patch (r10843)
+    (this is a non-critical new feature. if people want it badly they
+    should run the dev branch.)
   o r10964: control.c grammar conformance. could conceivably break
     old controllers that were relying on non-conformance.
-  - some subset of r11229 (unexpected whitespace in malformed descriptors)?
-  - r11287: Reject address mappings to internal addresses. (??)
-  - r11499, r11500, r11501: hidserv hexdigests rather than nicknames
-  - r11548, the osx /tmp fix
+  X some subset of r11229 (unexpected whitespace in malformed descriptors)?
+    (no need, I don't think any of the 0.1.2.x code calls the buggy parts)
+  D r11287: Reject address mappings to internal addresses. (??)
+    (this will break some existing test-network configurations, yes?)
+R - r11499, r11500, r11501: hidserv hexdigests rather than nicknames
+P - r11548, the osx /tmp fix
   o r11293: Bulletproof code to generate extend info.
   o r11332: Fix user-triggerable segfault in expand_filename("~")
-  - r11829: Don't warn when cancel_pending_resolve() finds a cached failure.
-  - r11915: just because you hup, don't publish a near-duplicate descriptor
+N - r11829: Don't warn when cancel_pending_resolve() finds a cached failure.
+R - r11915: just because you hup, don't publish a near-duplicate descriptor
 
