@@ -146,7 +146,7 @@ rend_parse_service_descriptor(const char *str, size_t len)
     result->protocols = ntohs(get_uint16(cp));
     cp += 2;
   } else {
-    result->protocols = 1;
+    result->protocols = 1<<2; /* always use intro format 2 */
   }
   if (end-cp < 2) goto truncated;
   result->n_intro_points = ntohs(get_uint16(cp));

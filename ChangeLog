@@ -2,6 +2,13 @@ Changes in version 0.1.2.18 - 2007-??-??
   o Major bugfixes:
     - Fix possible segfaults in functions called from
       rend_process_relay_cell().
+    - Hidden services were choosing introduction points uniquely by
+      hexdigest, but when constructing the hidden service descriptor
+      they merely wrote the (potentially ambiguous) nickname.
+    - Clients now use the v2 intro format for hidden service
+      connections: they specify their chosen rendezvous point by identity
+      digest rather than by (potentially ambiguous) nickname. These
+      changes could speed up hidden service connections dramatically.
 
   o Minor bugfixes:
     - Don't try to access (or alter) the state file when running
