@@ -38,15 +38,11 @@ Things we'd like to do in 0.2.0.x:
           unreachable is bunk -- it's leftover from the time when all
           servers ran 24/7. now it triggers every time a server goes
           away and then returns before the old descriptor has expired.
-        o 0.2.0.x dir authorities have stopped giving people Authority
-          flags.
       - add a --quiet commandline option that suppresses logs. useful
         for --hashed-password and maybe others.
       - Tor logs the libevent version on startup, for debugging purposes.
         This is great. But it does this before configuring the logs, so
         it only goes to stdout and is then lost.
-      o Aug 30 [...] wmtbf 4:6:16
-        The wmtbf time value is missing some zero-pads.
       - we should do another bandwidth test every 12 hours or something
         if we're showing less than 50KB and our bandwidthrate says we can
         do more than that. I think some servers are forgetting the results
@@ -57,45 +53,19 @@ Things we'd like to do in 0.2.0.x:
       . Finalize proposal
         * Describe schedule in copious detail.
       . Get authorities voting
-        o Code to manage key certificates
-          o Download as needed.
-            o Code to download
-            . Code to retry download.
-              o Schedule download times on failure
-              - Reattempt downloads periodically
-        o Code to generate consensus from a list of votes
-          o Detect whether votes are really all for the same period.
-        o Push/pull documents as appropriate.
-          o Pull votes and signatures if we don't get them.
-        o Cache votes and signatures on disk?
-          o Code to keep consensus docs in limbo if they don't have
-            have enough signatures.
-          D Save votes on disk.
-        o Have clients know which authorities are v3 authorities, and what
-          their keys are.
-          - While we're at it, let v3 authorities have fqdns lines.
+        - While we're at it, let v3 authorities have fqdns lines.
         - Fix all XXXX020s in vote code
       . Validate information properly.
-        o Warn if we get a vote with different authorities than we know.
-        o Don't count votes with a different valid-after when generating
-          the same consensus.
         - Dump certificates with the wrong time.  Or just warn?
-        o Warn authority ops when their certs are nearly invalid.
         - When checking a consensus, make sure that its times are plausible.
-        o Add a function that will eventually tell us about our clock skew.
-          For now, just require that authorities not be skewed.
       . Start caching consensus documents once authorities make them;
         start downloading consensus documents once caches serve
         them
-        o Download code
-        o Code to schedule downloads
-        o Code to retry failed downloads
         - Code to delay next download while fetching certificates to verify
           a consensus we already got.
         - Code to retry consensus download if we got one we already have.
         - Use if-modified-since on consensus download
         - Use if-modified-since on certificate download
-        o Code to download routers listed in v3 networkstatus consensuses.
         - Enable for non-caches
       - Code to use v3 networkstatus documents once clients are
         fetching them
@@ -104,12 +74,8 @@ Things we'd like to do in 0.2.0.x:
       - Controller support
         - GETINFO to get consensus
         - Event when new consensus arrives
-    o 104: Long and Short Router Descriptors
-      o Drop bandwidth history from router-descriptors around September 10,
-        once torstatus and weasel have upgraded.
     - 105: Version negotiation for the Tor protocol
     . 111: Prioritize local traffic over relayed.
-      o Implement
       - Merge into tor-spec.txt.
 
   - Refactoring:
@@ -129,7 +95,6 @@ Things we'd like to do in 0.2.0.x:
       extra-stable case.
     - Streamline how we pick entry nodes: Make choose_random_entry() have
       less magic and less control logic.
-    o Maybe move NT services into their own module.
     - Refactor networkstatus generation:
       - Include "v" line in getinfo values.
 
@@ -153,27 +118,6 @@ R     - drop 'authority' queries if they're to our own identity key; accept
         descriptor arrives
       o be more robust to bridges being marked as down and leaving us
         stranded without any known "running" bridges.
-N     . Cache for bridge descriptors
-        o Annotated router store
-          o Accept annotations before routers
-          o Preserve and ignore unexpected annotations
-          o Mechanism to add annotations when we first add a descriptor
-          o Don't serve annotations
-          o Reject annotations that appear in things we've downloaded
-          o Name the router store something different: cached-descriptors?
-            o But load from cached-routers if no cached-descriptors is
-              found.
-            o Document this.
-          o Add a few example annotations to make sure this works: source
-            and downloaded/uploaded-at seem like a good start
-            - Drop this later as needed.
-        o Use annotations to denote router purpose
-          o Learn purpose from annotations
-          o Set annotations based on purpose
-          o Preserve routers with unrecognized purpose.
-R       - Stop setting the do-not-cache flag based on purpose.
-        o Disable and mark as obsolete the setrouterpurpose controller
-          command.
     - Bridges operators (rudimentary version)
       - Ability to act as dir cache without a dir port.
       o Bridges publish to bridge authorities
@@ -198,10 +142,6 @@ R       - Stop setting the do-not-cache flag based on purpose.
       - Write a proposal; make this part of 105.
     - Audit how much RAM we're using for buffers and cell pools; try to
       trim down a lot.
-    o Accept \n as end of lines in the control protocol in addition to \r\n.
-      o Use fetch_from_buf_line_lf in control.c instead of fetch_from_buf_line.
-      o Fix up read escaped_data to accept LF instead of CRLF, and to
-        always translate_newlines (since that's the only way it's called).
     - Base relative control socket paths on datadir.
     - We should ship with a list of stable dir mirrors -- they're not
       trusted like the authorities, but they'll provide more robustness
@@ -219,9 +159,6 @@ R       - Stop setting the do-not-cache flag based on purpose.
      - Or maybe close connections from same IP when we get a lot from one.
      - Or maybe block IPs that connect too many times at once.
     - add an AuthDirBadexit torrc option if we decide we want one.
-    o Add a GuardsSelectedByVersion line to the state file so we know
-      not to drop guards we added.
-      o Have it include the date too.
 
   - Testing
 N   - Hack up a client that gives out weird/no certificates, so we can
