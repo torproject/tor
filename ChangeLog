@@ -6,6 +6,13 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       it. Extra descriptors without any real changes are dropped by the
       authorities, and can screw up our "publish every 18 hours" schedule.
 
+  o Code simplifications and refactoring:
+    - Remove support for the old bw_accounting file: we've been storing
+      bandwidth accounting information in the state file since 0.1.2.5-alpha.
+      This may result in bandwidth accounting errors if you try to upgrade
+      from 0.1.1.x or earlier, or if you try to downgrade to 0.1.1.x or
+      earlier.
+
 
 Changes in version 0.2.0.8-alpha - 2007-10-12
   o Major features (router descriptor cache):

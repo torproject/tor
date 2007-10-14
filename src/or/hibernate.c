@@ -553,49 +553,7 @@ accounting_set_wakeup_time(void)
 int
 accounting_record_bandwidth_usage(time_t now, or_state_t *state)
 {
-  char buf[128];
-  char fname[512];
-  char time1[ISO_TIME_LEN+1];
-  char time2[ISO_TIME_LEN+1];
-  char *cp = buf;
-  time_t tmp;
-  int r = 0;
-  uint64_t expected;
-  static time_t last_recorded = 0;
-
-  /* First, update bw_accounting. Until 0.1.2.5-alpha, this was the only place
-   * we stored this information. The format is:
-   * Version\nTime\nTime\nRead\nWrite\nSeconds\nExpected-Rate\n */
-
-  format_iso_time(time1, interval_start_time);
-  format_iso_time(time2, now);
-  /* now check to see if they're valid times -- if they're not,
-   * and we write them, then tor will refuse to start next time. */
-  if (parse_iso_time(time1, &tmp) || parse_iso_time(time2, &tmp)) {
-    log_warn(LD_ACCT, "Created a time that we refused to parse.");
-    return -1;
-  }
-  expected = expected_bandwidth_usage;
-  /* Cap this value, since older versions won't parse a uint64_t here. */
-  if (expected > UINT32_MAX)
-    expected = UINT32_MAX;
-  tor_snprintf(cp, sizeof(buf),
-               "%d\n%s\n%s\n"U64_FORMAT"\n"U64_FORMAT"\n%lu\n%lu\n",
-               BW_ACCOUNTING_VERSION,
-               time1,
-               time2,
-               U64_PRINTF_ARG(ROUND_UP(n_bytes_read_in_interval)),
-               U64_PRINTF_ARG(ROUND_UP(n_bytes_written_in_interval)),
-               (unsigned long)n_seconds_active_in_interval,
-               (unsigned long)expected);
-  tor_snprintf(fname, sizeof(fname), "%s"PATH_SEPARATOR"bw_accounting",
-               get_options()->DataDirectory);
-  if (!get_options()->AvoidDiskWrites || (last_recorded + 3600 < now)) {
-    r = write_str_to_file(fname, buf, 0);
-    last_recorded = now;
-  }
-
-  /* Now update the state */
+  /* Just update the state */
   state->AccountingIntervalStart = interval_start_time;
   state->AccountingBytesReadInInterval = ROUND_UP(n_bytes_read_in_interval);
   state->AccountingBytesWrittenInInterval =
@@ -606,7 +564,7 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
   or_state_mark_dirty(state,
                       now+(get_options()->AvoidDiskWrites ? 7200 : 60));
 
-  return r;
+  return 0;
 }
 #undef ROUND_UP
 
@@ -615,116 +573,49 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
 static int
 read_bandwidth_usage(void)
 {
-  char *s = NULL;
-  char fname[512];
-  time_t t1, t2;
-  uint64_t n_read, n_written;
-  uint32_t expected_bw, n_seconds;
-  smartlist_t *elts = NULL;
-  int ok, use_state=0, r=-1;
   or_state_t *state = get_or_state();
 
-  tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
-               get_options()->DataDirectory);
-  elts = smartlist_create();
-  if ((s = read_file_to_str(fname, 0, NULL)) == NULL) {
-    /* We have an old-format bw_accounting file. */
-    use_state = 1;
-  }
-  if (!use_state) {
-    smartlist_split_string(elts, s, "\n",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK,0);
-    tor_free(s);
-
-    if (smartlist_len(elts)<1 ||
-        atoi(smartlist_get(elts,0)) != BW_ACCOUNTING_VERSION) {
-      log_warn(LD_ACCT, "Unrecognized bw_accounting file version: %s",
-               (const char*)smartlist_get(elts,0));
-      use_state = 1;
-    }
-  }
-  if (!use_state && smartlist_len(elts) < 7) {
-    log_warn(LD_ACCT, "Corrupted bw_accounting file: %d lines",
-             smartlist_len(elts));
-    use_state = 1;
-  }
-  if (!use_state && parse_iso_time(smartlist_get(elts,2), &t2)) {
-    log_warn(LD_ACCT, "Error parsing bandwidth usage last-written time");
-    use_state = 1;
-  }
-  if (use_state || t2 <= state->LastWritten) {
-    /* Okay; it looks like the state file is more up-to-date than the
-     * bw_accounting file, or the bw_accounting file is nonexistant,
-     * or the bw_accounting file is corrupt.
-     */
-    log_info(LD_ACCT, "Reading bandwdith accounting data from state file");
-    n_bytes_read_in_interval = state->AccountingBytesReadInInterval;
-    n_bytes_written_in_interval = state->AccountingBytesWrittenInInterval;
-    n_seconds_active_in_interval = state->AccountingSecondsActive;
-    interval_start_time = state->AccountingIntervalStart;
-    expected_bandwidth_usage = state->AccountingExpectedUsage;
-    r = 0;
-    goto done;
+  {
+    char fname[512];
+    tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
+                 get_options()->DataDirectory);
+    unlink(fname);
   }
 
-  if (parse_iso_time(smartlist_get(elts,1), &t1)) {
-    log_warn(LD_ACCT, "Error parsing bandwidth usage start time.");
-    goto done;
-  }
-  n_read = tor_parse_uint64(smartlist_get(elts,3), 10, 0, UINT64_MAX,
-                            &ok, NULL);
-  if (!ok) {
-    log_warn(LD_ACCT, "Error parsing number of bytes read");
-    goto done;
-  }
-  n_written = tor_parse_uint64(smartlist_get(elts,4), 10, 0, UINT64_MAX,
-                               &ok, NULL);
-  if (!ok) {
-    log_warn(LD_ACCT, "Error parsing number of bytes written");
-    goto done;
-  }
-  n_seconds = (uint32_t)tor_parse_ulong(smartlist_get(elts,5), 10,0,ULONG_MAX,
-                                        &ok, NULL);
-  if (!ok) {
-    log_warn(LD_ACCT, "Error parsing number of seconds live");
-    goto done;
-  }
-  expected_bw =(uint32_t)tor_parse_ulong(smartlist_get(elts,6), 10,0,ULONG_MAX,
-                                        &ok, NULL);
-  if (!ok) {
-    log_warn(LD_ACCT, "Error parsing expected bandwidth");
-    goto done;
-  }
+  if (!state)
+    return 0;
 
-  /* XXXX020 do something if the interval "starts" far in the future?
-   * or do we alrady handle that. */
+  /* Okay; it looks like the state file is more up-to-date than the
+   * bw_accounting file, or the bw_accounting file is nonexistant,
+   * or the bw_accounting file is corrupt.
+   */
+  log_info(LD_ACCT, "Reading bandwdith accounting data from state file");
+  n_bytes_read_in_interval = state->AccountingBytesReadInInterval;
+  n_bytes_written_in_interval = state->AccountingBytesWrittenInInterval;
+  n_seconds_active_in_interval = state->AccountingSecondsActive;
+  interval_start_time = state->AccountingIntervalStart;
+  expected_bandwidth_usage = state->AccountingExpectedUsage;
 
-  n_bytes_read_in_interval = n_read;
-  n_bytes_written_in_interval = n_written;
-  n_seconds_active_in_interval = n_seconds;
-  interval_start_time = t1;
-  expected_bandwidth_usage = expected_bw;
+  {
+    char tbuf1[ISO_TIME_LEN+1];
+    char tbuf2[ISO_TIME_LEN+1];
+    format_iso_time(tbuf1, state->LastWritten);
+    format_iso_time(tbuf2, state->AccountingIntervalStart);
 
-  log_info(LD_ACCT,
-       "Successfully read bandwidth accounting file written at %s "
+    log_info(LD_ACCT,
+       "Successfully read bandwidth accounting info from state written at %s "
        "for interval starting at %s.  We have been active for %lu seconds in "
        "this interval.  At the start of the interval, we expected to use "
        "about %lu KB per second. ("U64_FORMAT" bytes read so far, "
        U64_FORMAT" bytes written so far)",
-       (char*)smartlist_get(elts,2),
-       (char*)smartlist_get(elts,1),
+       tbuf1, tbuf2,
        (unsigned long)n_seconds_active_in_interval,
        (unsigned long)(expected_bandwidth_usage*1024/60),
        U64_PRINTF_ARG(n_bytes_read_in_interval),
        U64_PRINTF_ARG(n_bytes_written_in_interval));
-
-  r = 0;
- done:
-  if (elts) {
-    SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
-    smartlist_free(elts);
   }
-  return r;
+
+  return 0;
 }
 
 /** Return true iff we have sent/received all the bytes we are willing
