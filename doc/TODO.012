@@ -3,7 +3,7 @@ description of the patch.)
 
 Backport items for 0.1.2:
   o r11166: Don't believe future dates from the state file.
-N - r11828+: Detect bad sa_family from accept().
+  o r11828+: Detect bad sa_family from accept().
 N - r11882: Avoid crash-bug 451.
 N - r11886: Consider family as well as identity when cannibalizing circuits.
 

@@ -736,7 +736,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   struct sockaddr_in remote;
   char addrbuf[256];
   /* length of the remote address. Must be whatever accept() needs. */
-  socklen_t remotelen = 256;
+  socklen_t remotelen = sizeof(addrbuf);
   char tmpbuf[INET_NTOA_BUF_LEN];
   tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
@@ -762,6 +762,16 @@ connection_handle_listener_read(connection_t *conn, int new_type)
             news,conn->s);
 
   set_socket_nonblocking(news);
+  if (((struct sockaddr*)addrbuf)->sa_family != AF_INET) {
+    log_info(LD_BUG, "A listener connection returned a socket with a "
+             "mismatched family.  %s for addr_family %d gave us a socket "
+             "with address family %d.  Dropping.",
+             conn_type_to_string(conn->type),
+             (int)AF_INET,
+             (int)((struct sockaddr*)addrbuf)->sa_family);
+    tor_close_socket(news);
+    return 0;
+  }
 
   if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_INFO)<0) {
     log_info(LD_NET,
