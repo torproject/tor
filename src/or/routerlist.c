@@ -601,6 +601,7 @@ router_reload_router_list_impl(desc_store_t *store)
   struct stat st;
   int read_from_old_location = 0;
   int extrainfo = (store->type == EXTRAINFO_STORE);
+  time_t now = time(NULL);
   store->journal_len = store->store_len = 0;
 
   tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s",
@@ -623,6 +624,9 @@ router_reload_router_list_impl(desc_store_t *store)
     if ((store->mmap = tor_mmap_file(altname)))
       read_from_old_location = 1;
   }
+  if (altname && !read_from_old_location) {
+    remove_file_if_very_old(altname, now);
+  }
   if (store->mmap) {
     store->store_len = store->mmap->size;
     if (extrainfo)
@@ -639,10 +643,13 @@ router_reload_router_list_impl(desc_store_t *store)
                options->DataDirectory, store->fname_base);
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-  if (!contents && read_from_old_location) {
+  if (read_from_old_location) {
     tor_snprintf(altname, fname_len, "%s"PATH_SEPARATOR"%s.new",
                  options->DataDirectory, store->fname_alt_base);
-    contents = read_file_to_str(altname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
+    if (!contents)
+      contents = read_file_to_str(altname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
+    else
+      remove_file_if_very_old(altname, now);
   }
   if (contents) {
     if (extrainfo)

@@ -6,6 +6,11 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       it. Extra descriptors without any real changes are dropped by the
       authorities, and can screw up our "publish every 18 hours" schedule.
 
+  o Minor features:
+    - If we find a cached-routers file that's been sitting around for more
+      than 28 days unmodified, then most likely it's a leftover from when we
+      upgraded to 0.2.0.8-alpha.  Remove it.  It has no good routers anyway.
+
   o Code simplifications and refactoring:
     - Remove support for the old bw_accounting file: we've been storing
       bandwidth accounting information in the state file since 0.1.2.5-alpha.
