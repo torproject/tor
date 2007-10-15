@@ -2189,7 +2189,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       int flags;
       if (!strcmpstart(url, "d/")) {
         url += 2;
-        flags = DGV_BY_ID | DGV_INCLUDE_PENDING | DGV_INCLUDE_PREVIOUS;
+        flags = DGV_INCLUDE_PENDING | DGV_INCLUDE_PREVIOUS;
       } else {
         flags = DGV_BY_ID |
           (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
