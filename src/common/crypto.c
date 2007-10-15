@@ -1891,8 +1891,10 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   for (j = 0; j < srclen; ++j) {
     if (src[j] > 0x60 && src[j] < 0x7B) tmp[j] = src[j] - 0x61;
     else if (src[j] > 0x31 && src[j] < 0x38) tmp[j] = src[j] - 0x18;
+    else if (src[j] > 0x40 && src[j] < 0x5B) tmp[j] = src[j] - 0x41;
     else {
       log_warn(LD_BUG, "illegal character in base32 encoded string");
+      tor_free(tmp);
       return -1;
     }
   }

@@ -3160,6 +3160,12 @@ test_crypto_base32_decode(void)
   res = base32_decode(decoded, 60, encoded, 96);
   test_eq(res, 0);
   test_memeq(plain, decoded, 60);
+  /* Encode, uppercase, and decode a random string. */
+  base32_encode(encoded, 96 + 1, plain, 60);
+  tor_strupper(encoded);
+  res = base32_decode(decoded, 60, encoded, 96);
+  test_eq(res, 0);
+  test_memeq(plain, decoded, 60);
   /* Change encoded string and decode. */
   if (encoded[0] == 'a')
     encoded[0] = 'b';

@@ -18,6 +18,14 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       after publishing the consensus; avoid a heisenbug that made them stick
       around indefinitely.
 
+  o Minor bugfixes (memory leaks):
+    - Stop leaking memory on failing case of base32_decode.  Bugfix on
+      0.2.0.7-alpha.
+
+  o Minor bugfixes (misc):
+    - Make base32_decode() accept upper-case letters.  Bugfix on
+      0.2.0.7-alpha.
+
   o Code simplifications and refactoring:
     - Remove support for the old bw_accounting file: we've been storing
       bandwidth accounting information in the state file since 0.1.2.5-alpha.
