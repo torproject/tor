@@ -1939,6 +1939,7 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   dirvote_get_preferred_voting_intervals(&timing);
   v3_out->published = now;
   {
+    char tbuf[ISO_TIME_LEN+1];
     networkstatus_vote_t *current_consensus =
       networkstatus_get_live_consensus(now);
     time_t consensus_interval;
@@ -1949,6 +1950,10 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
       consensus_interval = timing.vote_interval;
     v3_out->valid_after =
       dirvote_get_start_of_next_interval(now, consensus_interval);
+    format_iso_time(tbuf, v3_out->valid_after);
+    log_notice(LD_DIR,"Choosing valid-after time in vote as %s: "
+               "consensus_set=%d, interval=%d",
+               tbuf, current_consensus?1:0, consensus_interval);
   }
   v3_out->fresh_until = v3_out->valid_after + timing.vote_interval;
   v3_out->valid_until = v3_out->valid_after +

@@ -1092,6 +1092,14 @@ dirvote_recalculate_timing(time_t now)
   voting_schedule.voting_ends = start - dist_delay;
   voting_schedule.fetch_missing_votes = start - dist_delay - (vote_delay/2);
   voting_schedule.voting_starts = start - dist_delay - vote_delay;
+
+  {
+    char tbuf[ISO_TIME_LEN+1];
+    format_iso_time(tbuf, voting_schedule.interval_starts);
+    log_notice(LD_DIR,"Choosing expected valid-after time as %s: "
+               "consensus_set=%d, interval=%d",
+               tbuf, consensus?1:0, interval);
+  }
 }
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
