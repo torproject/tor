@@ -1,7 +1,17 @@
-Changes in version 0.1.2.18 - 2007-??-??
-  o Major bugfixes:
+Changes in version 0.1.2.18 - 2007-10-??
+  o Major bugfixes (crashes):
+    - If a connection is shut down abruptly because of something that
+      happened inside connection_flushed_some(), do not call
+      connection_finished_flushing(). Should fix bug 451:
+      "connection_stop_writing: Assertion conn->write_event failed"
+      Bugfix on 0.1.2.7-alpha.
     - Fix possible segfaults in functions called from
       rend_process_relay_cell().
+
+  o Major bugfixes (other):
+    - Stop publishing a new server descriptor just because we get a
+      HUP signal. This led (in a roundabout way) to some servers getting
+      dropped from the networkstatus lists for a few hours each day.
     - Hidden services were choosing introduction points uniquely by
       hexdigest, but when constructing the hidden service descriptor
       they merely wrote the (potentially ambiguous) nickname.
@@ -9,16 +19,9 @@ Changes in version 0.1.2.18 - 2007-??-??
       connections: they specify their chosen rendezvous point by identity
       digest rather than by (potentially ambiguous) nickname. These
       changes could speed up hidden service connections dramatically.
-    - If a connection is shut down abruptly because of something that
-      happened inside connection_flushed_some(), do not call
-      connection_finished_flushing().  Should fix bug 451. Bugfix on
-      0.1.2.7-alpha.
     - When looking for a circuit to cannibalize, consider family as well
-      as identity.  Fixes bug 438.  Bugfix on 0.1.0.x (which introduced
+      as identity. Fixes bug 438. Bugfix on 0.1.0.x (which introduced
       circuit cannibalization).
-    - Stop publishing a new server descriptor just because we get a
-      HUP signal. This led (in a roundabout way) to some servers getting
-      dropped from the networkstatus lists for a few hours each day.
 
   o Minor bugfixes:
     - Don't try to access (or alter) the state file when running
@@ -35,17 +38,17 @@ Changes in version 0.1.2.18 - 2007-??-??
     - Fix a minor memory leak whenever a controller sends the PROTOCOLINFO
       command. Bugfix on 0.1.2.17.
     - When loading bandwidth history, do not believe any information in
-      the future.  Fixes bug 434.
+      the future. Fixes bug 434.
     - When loading entry guard information, do not believe any information
       in the future.
-    - When we have our clock set far in the future and generate an onion key,
-      then re-set our clock to be correct, we should not stop the onion
-      key from getting rotated.
-    - On some platforms, accept() can return a broken address.  Detect
-      this more quietly, and deal accordingly.  (Fixes bug 483.)
+    - When we have our clock set far in the future and generate an
+      onion key, then re-set our clock to be correct, we should not stop
+      the onion key from getting rotated.
+    - On some platforms, accept() can return a broken address. Detect
+      this more quietly, and deal accordingly. Fixes bug 483.
     - It's not actually an error to find a non-pending entry in the DNS
-      cache when canceling a pending resolve.  Don't log unless stuff
-      is fishy.  Resolves bug 463.
+      cache when canceling a pending resolve. Don't log unless stuff
+      is fishy. Resolves bug 463.
 
 
 Changes in version 0.1.2.17 - 2007-08-30
