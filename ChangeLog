@@ -16,6 +16,9 @@ Changes in version 0.1.2.18 - 2007-??-??
     - When looking for a circuit to cannibalize, consider family as well
       as identity.  Fixes bug 438.  Bugfix on 0.1.0.x (which introduced
       circuit cannibalization).
+    - Stop publishing a new server descriptor just because we get a
+      HUP signal. This led (in a roundabout way) to some servers getting
+      dropped from the networkstatus lists for a few hours each day.
 
   o Minor bugfixes:
     - Don't try to access (or alter) the state file when running
