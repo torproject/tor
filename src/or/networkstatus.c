@@ -1012,12 +1012,15 @@ routers_update_all_from_networkstatus(time_t now)
   routerlist_t *rl = router_get_routerlist();
   networkstatus_vote_t *consensus = networkstatus_get_live_consensus(now);
 
-  router_dir_info_changed();
+  router_dir_info_changed(); /*XXXX020 really? */
 
   if (networkstatus_v2_list_has_changed) {
     routerstatus_list_update_from_v2_networkstatus();
     networkstatus_v2_list_has_changed = 0;
   }
+
+  if (!consensus)
+    return;
 
   routers_update_status_from_consensus_networkstatus(rl->routers, 0);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
@@ -1025,7 +1028,7 @@ routers_update_all_from_networkstatus(time_t now)
   entry_guards_compute_status();
 
   me = router_get_my_routerinfo();
-  if (me && consensus && !have_warned_about_invalid_status) {
+  if (me && !have_warned_about_invalid_status) {
     routerstatus_t *rs = networkstatus_vote_find_entry(consensus,
                                         me->cache_info.identity_digest);
 
@@ -1042,7 +1045,7 @@ routers_update_all_from_networkstatus(time_t now)
     }
   }
 
-  if (consensus && !have_warned_about_old_version) {
+  if (!have_warned_about_old_version) {
     int is_server = server_mode(get_options());
     version_status_t status;
     const char *recommended = is_server ?
