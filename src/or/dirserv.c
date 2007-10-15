@@ -1953,7 +1953,7 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
     format_iso_time(tbuf, v3_out->valid_after);
     log_notice(LD_DIR,"Choosing valid-after time in vote as %s: "
                "consensus_set=%d, interval=%d",
-               tbuf, current_consensus?1:0, consensus_interval);
+               tbuf, current_consensus?1:0, (int)consensus_interval);
   }
   v3_out->fresh_until = v3_out->valid_after + timing.vote_interval;
   v3_out->valid_until = v3_out->valid_after +
