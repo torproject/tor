@@ -67,6 +67,8 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
 
     smartlist_free(ns->routerstatus_list);
   }
+  if (ns->desc_digest_map)
+    digestmap_free(ns->desc_digest_map, NULL);
 
   memset(ns, 11, sizeof(*ns));
   tor_free(ns);

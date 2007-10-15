@@ -178,7 +178,7 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
       return 1;
   }
   if (is_authority) {
-    routerstatus_t *rs = router_get_combined_status_by_digest(identity_digest);
+    routerstatus_t *rs = router_get_consensus_status_by_id(identity_digest);
     if (rs && rs->version_supports_extrainfo_upload)
       return 1;
   }
@@ -1232,7 +1232,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              "'%s:%d'. I'll try again soon.",
              status_code, escaped(reason), conn->_base.address,
              conn->_base.port);
-    if ((rs = router_get_combined_status_by_digest(conn->identity_digest)))
+    if ((rs = router_get_consensus_status_by_id(conn->identity_digest)))
       rs->last_dir_503_at = now;
     if ((ds = router_get_trusteddirserver_by_digest(conn->identity_digest)))
       ds->fake_status.last_dir_503_at = now;
@@ -1387,7 +1387,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       if (next)
         next[1] = '\0';
       /* learn from it, and then remove it from 'which' */
-      if (router_set_networkstatus(cp, now, source, which)<0)
+      if (router_set_networkstatus_v2(cp, now, source, which)<0)
         break;
       if (next) {
         next[1] = 'n';
@@ -1426,6 +1426,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       networkstatus_consensus_download_failed(0);
       return -1;
     }
+    routers_update_all_from_networkstatus(now); /*launches router downloads*/
+    directory_info_has_arrived(now, 0);
     log_info(LD_DIR, "Successfully loaded consensus.");
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
@@ -2790,10 +2792,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
       if (sd)
         dls = &sd->ei_dl_status;
     } else {
-      routerstatus_t *rs =
-        router_get_combined_status_by_descriptor_digest(digest);
-      if (rs)
-        dls = &rs->dl_status;
+      dls = router_get_dl_status_by_descriptor_digest(digest);
     }
     if (!dls || dls->n_download_failures >= MAX_ROUTERDESC_DOWNLOAD_FAILURES)
       continue;

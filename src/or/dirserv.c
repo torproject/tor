@@ -2380,12 +2380,12 @@ generate_networkstatus_opinion(int v2)
   }
 
   {
-    networkstatus_t *ns;
-    if (!(ns = networkstatus_parse_from_string(status))) {
+    networkstatus_v2_t *ns;
+    if (!(ns = networkstatus_v2_parse_from_string(status))) {
       log_err(LD_BUG,"Generated a networkstatus we couldn't parse.");
       goto done;
     }
-    networkstatus_free(ns);
+    networkstatus_v2_free(ns);
   }
 
   {
@@ -2395,7 +2395,7 @@ generate_networkstatus_opinion(int v2)
     *ns_ptr = new_cached_dir(status, now);
     status = NULL; /* So it doesn't get double-freed. */
     the_v2_networkstatus_is_dirty = 0;
-    router_set_networkstatus((*ns_ptr)->dir, now, NS_GENERATED, NULL);
+    router_set_networkstatus_v2((*ns_ptr)->dir, now, NS_GENERATED, NULL);
     r = *ns_ptr;
   }
 

@@ -120,12 +120,6 @@
 #define cell_t tor_cell_t
 #endif
 
-/** Undefine this when it's time to stop generating v1 directories. */
-// #define FULL_V1_DIRECTORIES
-/** Undefine this when it's time to stop includeing bandwidth info in router
- * descriptors. */
-#define INCLUDE_BW_INFO_IN_ROUTERDESCS
-
 /** Length of longest allowable configured nickname. */
 #define MAX_NICKNAME_LEN 19
 /** Length of a router identity encoded as a hexadecimal digest, plus
@@ -172,8 +166,6 @@
 #define ROUTER_MAX_AGE_TO_PUBLISH (60*60*20)
 /** How old do we let a saved descriptor get before force-removing it? */
 #define OLD_ROUTER_DESC_MAX_AGE (60*60*24*5)
-/** How old do we let a networkstatus get before ignoring it? */
-#define NETWORKSTATUS_MAX_AGE (60*60*24)
 
 /** Possible rules for generating circuit IDs on an OR connection. */
 typedef enum {
@@ -342,26 +334,24 @@ typedef enum {
 #define DIR_PURPOSE_UPLOAD_RENDDESC 9
 /** A connection to a directory server: upload a v3 networkstatus vote. */
 #define DIR_PURPOSE_UPLOAD_VOTE 10
-/** A connection to a directory server: fetch a v3 networkstatus vote. */
-#define DIR_PURPOSE_FETCH_VOTE 11
 /** A connection to a directory server: upload a v3 consensus signature */
-#define DIR_PURPOSE_UPLOAD_SIGNATURES 12
+#define DIR_PURPOSE_UPLOAD_SIGNATURES 11
 /** A connection to a directory server: download one or more network-status
  * objects */
-#define DIR_PURPOSE_FETCH_STATUS_VOTE 13
+#define DIR_PURPOSE_FETCH_STATUS_VOTE 12
 /** A connection to a directory server: download one or more network-status
  * objects */
-#define DIR_PURPOSE_FETCH_DETACHED_SIGNATURES 14
+#define DIR_PURPOSE_FETCH_DETACHED_SIGNATURES 13
 /** A connection to a directory server: download one or more network-status
  * objects */
-#define DIR_PURPOSE_FETCH_CONSENSUS 15
+#define DIR_PURPOSE_FETCH_CONSENSUS 14
 /** A connection to a directory server: download one or more network-status
  * objects */
-#define DIR_PURPOSE_FETCH_CERTIFICATE 16
+#define DIR_PURPOSE_FETCH_CERTIFICATE 15
 
 /** Purpose for connection at a directory server. */
-#define DIR_PURPOSE_SERVER 17
-#define _DIR_PURPOSE_MAX 17
+#define DIR_PURPOSE_SERVER 16
+#define _DIR_PURPOSE_MAX 16
 
 #define _EXIT_PURPOSE_MIN 1
 /** This exit stream wants to do an ordinary connect. */
@@ -1274,7 +1264,7 @@ typedef struct routerstatus_t {
 #define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8
 
 /** Contents of a v2 (non-consensus, non-vote) network status object. */
-typedef struct networkstatus_t {
+typedef struct networkstatus_v2_t {
   /** When did we receive the network-status document? */
   time_t received_on;
 
@@ -1312,7 +1302,7 @@ typedef struct networkstatus_t {
 
   smartlist_t *entries; /**< List of routerstatus_t*.   This list is kept
                          * sorted by identity_digest. */
-} networkstatus_t;
+} networkstatus_v2_t;
 
 /** The claim about a single router, make in a vote. */
 typedef struct vote_routerstatus_t {
@@ -1385,6 +1375,10 @@ typedef struct networkstatus_vote_t {
    * the elements are vote_routerstatus_t; for a consensus, the elements
    * are routerstatus_t. */
   smartlist_t *routerstatus_list;
+
+  /** If present, a map from descriptor digest to elements of
+   * routerstatus_list. */
+  digestmap_t *desc_digest_map;
 } networkstatus_vote_t;
 
 /** A set of signatures for a networkstatus consensus.  All fields are as for
@@ -1466,7 +1460,6 @@ typedef struct extend_info_t {
                                           * display. */
   char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
   uint16_t port; /**< OR port. */
-//  uint8_t router_purpose; /**< General, controller, or bridge. */
   uint32_t addr; /**< IP address in host order. */
   crypto_pk_env_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
@@ -2310,7 +2303,6 @@ extend_info_t *extend_info_alloc(const char *nickname, const char *digest,
                                  crypto_pk_env_t *onion_key,
                                  uint32_t addr, uint16_t port);
 extend_info_t *extend_info_from_router(routerinfo_t *r);
-//extend_info_t *extend_info_from_routerstatus(routerstatus_t *s);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);
 routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
@@ -3058,52 +3050,43 @@ typedef enum version_status_t {
   VS_NEW_IN_SERIES=3, /**< This version is newer than any recommended version
                        * in its series, but later recommended versions exist.
                        */
-  VS_UNRECOMMENDED=4 /**< This version is not recommended (general case). */
+  VS_UNRECOMMENDED=4, /**< This version is not recommended (general case). */
+  VS_UNKNOWN, /**< We have no idea. */
 } version_status_t;
 
-typedef struct combined_version_status_t {
-  /** How many networkstatuses claim to know about versions? */
-  int n_versioning;
-  /** What do the majority of networkstatuses believe about this version? */
-  enum version_status_t consensus;
-  /** How many networkstatuses constitute the majority? */
-  int n_concurring;
-} combined_version_status_t;
-
 void networkstatus_reset_warnings(void);
-int router_reload_networkstatus(void);
+void networkstatus_reset_download_failures(void);
+int router_reload_v2_networkstatus(void);
 int router_reload_consensus_networkstatus(void);
 void routerstatus_free(routerstatus_t *rs);
-void networkstatus_free(networkstatus_t *ns);
+void networkstatus_v2_free(networkstatus_v2_t *ns);
 char *networkstatus_get_cache_filename(const char *identity_digest);
-int router_set_networkstatus(const char *s, time_t arrived_at,
+int router_set_networkstatus_v2(const char *s, time_t arrived_at,
                              networkstatus_source_t source,
                              smartlist_t *requested_fingerprints);
-void networkstatus_list_clean(time_t now);
-routerstatus_t *networkstatus_find_entry(networkstatus_t *ns,
+void networkstatus_v2_list_clean(time_t now);
+routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
                                          const char *digest);
+routerstatus_t *networkstatus_vote_find_entry(networkstatus_vote_t *ns,
+                                              const char *digest);
 const smartlist_t *networkstatus_get_v2_list(void);
-const smartlist_t *networkstatus_get_all_statuses(void);
-routerstatus_t *router_get_combined_status_by_digest(const char *digest);
-routerstatus_t *router_get_combined_status_by_descriptor_digest(const char *d);
-routerstatus_t *router_get_combined_status_by_nickname(const char *nickname,
+download_status_t *router_get_dl_status_by_descriptor_digest(const char *d);
+routerstatus_t *router_get_consensus_status_by_id(const char *digest);
+routerstatus_t *router_get_consensus_status_by_descriptor_digest(
+                                                        const char *digest);
+routerstatus_t *router_get_consensus_status_by_nickname(const char *nickname,
                                                        int warn_if_unnamed);
 const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
-routerstatus_t *routerstatus_get_by_hexdigest(const char *hexdigest);
 void networkstatus_consensus_download_failed(int status_code);
 int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);
-networkstatus_t *networkstatus_get_by_digest(const char *digest);
+networkstatus_v2_t *networkstatus_v2_get_by_digest(const char *digest);
 networkstatus_vote_t *networkstatus_get_latest_consensus(void);
 networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);
 int networkstatus_set_current_consensus(const char *consensus, int from_cache,
                                         int was_waiting_for_certs);
 void networkstatus_note_certs_arrived(void);
 void routers_update_all_from_networkstatus(time_t now);
-void networkstatus_list_update_recent(time_t now);
-void routerstatus_list_update_from_networkstatus(time_t now);
-void routers_update_status_from_networkstatus(smartlist_t *routers,
-                                              int reset_failures);
 void routerstatus_list_update_from_consensus_networkstatus(time_t now);
 void routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                         int reset_failures);
@@ -3628,9 +3611,6 @@ void add_trusted_dir_server(const char *nickname, const char *address,
                        authority_type_t type);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
-char *compute_recommended_versions(time_t now, int client,
-                                   const char *my_version,
-                                   combined_version_status_t *status_out);
 void update_router_descriptor_downloads(time_t now);
 void update_extrainfo_downloads(time_t now);
 int router_have_minimum_dir_info(void);
@@ -3695,7 +3675,6 @@ addr_policy_t *router_parse_addr_policy_from_string(const char *s,
                                                     int assume_action);
 version_status_t tor_version_is_obsolete(const char *myversion,
                                          const char *versionlist);
-version_status_t version_status_join(version_status_t a, version_status_t b);
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
@@ -3703,7 +3682,7 @@ void sort_version_list(smartlist_t *lst, int remove_duplicates);
 void assert_addr_policy_ok(addr_policy_t *t);
 void dump_distinct_digest_count(int severity);
 
-networkstatus_t *networkstatus_parse_from_string(const char *s);
+networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);
 networkstatus_vote_t *networkstatus_parse_vote_from_string(const char *s,
                                                           const char **eos_out,
                                                           int is_vote);

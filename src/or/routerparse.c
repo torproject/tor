@@ -564,36 +564,6 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
   return ret;
 }
 
-/** Return the combined status of the current version, given that we know of
- * one set of networkstatuses that give us status <b>a</b>, and another that
- * gives us status <b>b</b>.
- *
- * For example, if one authority thinks that we're NEW, and another thinks
- * we're OLD, we're simply UNRECOMMENDED.
- *
- * This function does not handle calculating whether we're RECOMMENDED; that
- * follows a simple majority rule.  This function simply calculates *why*
- * we're not recommended (if we're not).
- */
-version_status_t
-version_status_join(version_status_t a, version_status_t b)
-{
-  if (a == b)
-    return a;
-  else if (a == VS_UNRECOMMENDED || b == VS_UNRECOMMENDED)
-    return VS_UNRECOMMENDED;
-  else if (a == VS_RECOMMENDED)
-    return b;
-  else if (b == VS_RECOMMENDED)
-    return a;
-  /* Okay.  Neither is 'recommended' or 'unrecommended', and they differ. */
-  else if (a == VS_OLD || b == VS_OLD)
-    return VS_UNRECOMMENDED;
-  /* One is VS_NEW, the other is VS_NEW_IN_SERIES */
-  else
-    return VS_NEW_IN_SERIES;
-}
-
 /** Read a signed directory from <b>str</b>.  If it's well-formed, return 0.
  * Otherwise, return -1.  If we're a directory cache, cache it.
  */
@@ -1722,13 +1692,13 @@ _free_duplicate_routerstatus_entry(void *e)
  * signature of the network status, but do not (yet) check the signing key for
  * authority.
  */
-networkstatus_t *
-networkstatus_parse_from_string(const char *s)
+networkstatus_v2_t *
+networkstatus_v2_parse_from_string(const char *s)
 {
   const char *eos;
   smartlist_t *tokens = smartlist_create();
   smartlist_t *footer_tokens = smartlist_create();
-  networkstatus_t *ns = NULL;
+  networkstatus_v2_t *ns = NULL;
   char ns_digest[DIGEST_LEN];
   char tmp_digest[DIGEST_LEN];
   struct in_addr in;
@@ -1745,7 +1715,7 @@ networkstatus_parse_from_string(const char *s)
     log_warn(LD_DIR, "Error tokenizing network-status header.");
     goto err;
   }
-  ns = tor_malloc_zero(sizeof(networkstatus_t));
+  ns = tor_malloc_zero(sizeof(networkstatus_v2_t));
   memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
   tok = find_first_by_keyword(tokens, K_NETWORK_STATUS_VERSION);
@@ -1876,7 +1846,7 @@ networkstatus_parse_from_string(const char *s)
   goto done;
  err:
   if (ns)
-    networkstatus_free(ns);
+    networkstatus_v2_free(ns);
   ns = NULL;
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));

@@ -69,8 +69,29 @@ Things we'd like to do in 0.2.0.x:
         - Enable for non-caches
       - Code to use v3 networkstatus documents once clients are
         fetching them
-        - Implement
-        - Enable
+        o Make everybody download v3 networkstatus docs.
+        o Make clients not download v2 networkstatus docs.
+        o Make everybody download routerdescs based on v3 networkstatus
+          docs.
+        o Change definition of "have enough information to build circuits"
+        o Base version sanity check on v3 ns.
+        o Change routerstatus_get_by_* to use v3 networkstatus docs.
+        o Make download_status_get_by_descriptor_digest() use v2
+          networkstatus docs too.
+        o Eliminate routerstatus_list.
+        o Make routers_update_all_from_networkstatus() [or equivalent]
+          get called at the right time.
+        o Make  routersstatus_list_update_from_consensus_networkstatus()
+          get renamed and called.
+        o When setting a new consensus, copy the extra fields out of the
+          old consensus (if any).
+        o Update named-server-map as appropriate.
+        - Fix all XXXX020s.
+        - Sort out need_to_mirror
+        - Work hard to make sure clients never look at v2 networkstatus docs.
+        - Check in old_routers before fetching a router status. You never
+          know if we'll flap...
+
       - Controller support
         - GETINFO to get consensus
         - Event when new consensus arrives

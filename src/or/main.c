@@ -995,9 +995,10 @@ run_scheduled_events(time_t now)
      * update all the descriptors' running status. */
     /* purge obsolete entries */
     routerlist_remove_old_routers();
-    networkstatus_list_clean(now);
-    networkstatus_list_update_recent(now);
-    routers_update_all_from_networkstatus(now);
+    networkstatus_v2_list_clean(now);
+#if 0
+    networkstatus_v2_list_update_recent(now);
+#endif
 
     /* Also, once per minute, check whether we want to download any
      * networkstatus documents.
@@ -1339,6 +1340,14 @@ do_main_loop(void)
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 
+  if (trusted_dirs_reload_certs())
+    return -1;
+  if (router_reload_v2_networkstatus()) {
+    return -1;
+  }
+  if (router_reload_consensus_networkstatus()) {
+    return -1;
+  }
   /* load the routers file, or assign the defaults. */
   if (router_reload_router_list()) {
     return -1;
@@ -1346,12 +1355,6 @@ do_main_loop(void)
   /* load the networkstatuses. (This launches a download for new routers as
    * appropriate.)
    */
-  if (router_reload_networkstatus()) {
-    return -1;
-  }
-  if (router_reload_consensus_networkstatus()) {
-    return -1;
-  }
   now = time(NULL);
   directory_info_has_arrived(now, 1);
 

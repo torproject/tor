@@ -1609,33 +1609,38 @@ getinfo_helper_events(control_connection_t *control_conn,
                    check_whether_orport_reachable() ? 1 : 0,
                    check_whether_dirport_reachable() ? 1 : 0);
     } else if (!strcmpstart(question, "status/version/")) {
-      combined_version_status_t st;
       int is_server = server_mode(get_options());
-      char *recommended;
-      recommended = compute_recommended_versions(time(NULL),
-                                                 !is_server, VERSION, &st);
+      networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+      version_status_t status;
+      const char *recommended;
+      if (c) {
+        recommended = is_server ? c->server_versions : c->client_versions;
+        status = tor_version_is_obsolete(VERSION, recommended);
+      } else {
+        recommended = "?";
+        status = VS_UNKNOWN;
+      }
+
       if (!strcmp(question, "status/version/recommended")) {
-        *answer = recommended;
+        *answer = tor_strdup(recommended);
         return 0;
       }
-      tor_free(recommended);
       if (!strcmp(question, "status/version/current")) {
-        switch (st.consensus)
+        switch (status)
           {
           case VS_RECOMMENDED: *answer = tor_strdup("recommended"); break;
           case VS_OLD: *answer = tor_strdup("obsolete"); break;
           case VS_NEW: *answer = tor_strdup("new"); break;
           case VS_NEW_IN_SERIES: *answer = tor_strdup("new in series"); break;
           case VS_UNRECOMMENDED: *answer = tor_strdup("unrecommended"); break;
+          case VS_UNKNOWN: *answer = tor_strdup("unknown"); break;
           default: tor_fragile_assert();
           }
-      } else if (!strcmp(question, "status/version/num-versioning")) {
+      } else if (!strcmp(question, "status/version/num-versioning") ||
+                 !strcmp(question, "status/version/num-concurring")) {
+        /*XXXX020 deprecate.*/
         char s[33];
-        tor_snprintf(s, sizeof(s), "%d", st.n_versioning);
-        *answer = tor_strdup(s);
-      } else if (!strcmp(question, "status/version/num-concurring")) {
-        char s[33];
-        tor_snprintf(s, sizeof(s), "%d", st.n_concurring);
+        tor_snprintf(s, sizeof(s), "%d", get_n_authorities(V3_AUTHORITY));
         *answer = tor_strdup(s);
       }
     } else {

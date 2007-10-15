@@ -1,4 +1,9 @@
 Changes in version 0.2.0.9-alpha - 2007-10-??
+  o Major features (v3 directory system):
+    - Clients now download v3 consensus networkstatus documents instead
+      of v2 networkstatus documents.  Clients and caches now their opinions
+      about routers on these consensus documents.  Clients only download
+      router descriptors listed in the consensus.
 
   o Major bugfixes:
     - Stop publishing a new server descriptor just because we HUP or
