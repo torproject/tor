@@ -3,3 +3,4 @@ Privoxy
 torstartup
 privoxyconf
 Vidalia
+torbutton

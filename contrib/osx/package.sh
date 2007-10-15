@@ -8,6 +8,7 @@
 #    - One for Privoxy.
 #    - One for a tor-specific privoxy configuration script.
 #    - One for Startup scripts for Tor.
+#    - One for Torbutton, an extension for FireFox
 #
 # This script expects to be run from the toplevel makefile, with VERSION
 # set to the latest Tor version, and Tor already built.
@@ -19,6 +20,11 @@
 # Where have we put the zip file containing Privoxy?  Edit this if your
 # privoxy lives somewhere else.
 PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.6.zip
+
+# Where have we put the xpi and license for Torbutton? Edit this if your
+# torbutton and torbutton license live somewhere else.
+TORBUTTON_PATH=~/tmp/torbutton-1.1.8-alpha.xpi
+TORBUTTON_LIC_PATH=~/tmp/LICENSE
 
 ###
 # Helpful info on OS X packaging:
@@ -66,11 +72,13 @@ for subdir in tor_packageroot tor_resources \
               torstartup_packageroot \
               privoxyconf_packageroot \
               torbundle_resources \
+              torbutton_packageroot \
               output; do
     mkdir $BUILD_DIR/$subdir
 done
 
 ### Make Tor package.
+
 make install DESTDIR=$BUILD_DIR/tor_packageroot
 #mv $BUILD_DIR/tor_packageroot/Library/Tor/torrc.sample $BUILD_DIR/tor_packageroot/Library/Tor/torrc
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
@@ -139,16 +147,31 @@ $PACKAGEMAKER -build                      \
 
 ### Make Startup Script package
 
-  mkdir -p $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
-  cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
+mkdir -p $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
+cp contrib/osx/Tor contrib/osx/StartupParameters.plist \
    $BUILD_DIR/torstartup_packageroot/Library/StartupItems/Tor
 
-  find $BUILD_DIR/torstartup_packageroot -print0 | sudo xargs -0 chown root:wheel
-  $PACKAGEMAKER -build                     \
-      -p $BUILD_DIR/output/torstartup.pkg  \
-      -f $BUILD_DIR/torstartup_packageroot \
-      -i contrib/osx/TorStartupInfo.plist  \
-      -d contrib/osx/TorStartupDesc.plist
+find $BUILD_DIR/torstartup_packageroot -print0 | sudo xargs -0 chown root:wheel
+
+$PACKAGEMAKER -build 		       \
+  -p $BUILD_DIR/output/torstartup.pkg  \
+  -f $BUILD_DIR/torstartup_packageroot \
+  -i contrib/osx/TorStartupInfo.plist  \
+  -d contrib/osx/TorStartupDesc.plist
+
+### Make Torbutton Installation package
+
+mkdir -p $BUILD_DIR/torbutton_packageroot/Library/Torbutton
+cp $TORBUTTON_PATH $BUILD_DIR/torbutton_packageroot/Library/Torbutton/
+cp $TORBUTTON_LIC_PATH $BUILD_DIR/torbutton_packageroot/Library/Torbutton/Torbutton-LICENSE.txt
+
+find $BUILD_DIR/torbutton_packageroot -print0 | sudo xargs -0 chown root:wheel
+
+$PACKAGEMAKER -build 		       	\
+  -p $BUILD_DIR/output/torbutton.pkg	\
+  -f $BUILD_DIR/torbutton_packageroot 	\
+  -i contrib/osx/TorbuttonInfo.plist  	\
+  -d contrib/osx/TorbuttonDesc.plist
 
 ### Assemble the metapackage.  Packagemaker won't buld metapackages from
 # the command line, so we need to do it by hand.
@@ -175,6 +198,7 @@ cp $PRIVOXY_RESDIR/License.html $BUILD_DIR/output/Privoxy\ License.html
 cp $PRIVOXY_RESDIR/ReadMe.txt $BUILD_DIR/output/Privoxy\ ReadMe.txt
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/output/Tor\ ReadMe.rtf
 cp LICENSE $BUILD_DIR/output/Tor\ License.txt
+cp $TORBUTTON_LIC_PATH $BUILD_DIR/output/Torbutton_LICENSE.txt
 
 ### Package it all into a DMG
 

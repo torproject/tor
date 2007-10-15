@@ -5,9 +5,9 @@
 	<key>IFPkgDescriptionDeleteWarning</key>
 	<string></string>
 	<key>IFPkgDescriptionDescription</key>
-	<string>Bundled package of Tor @VERSION@ and Privoxy.</string>
+	<string>Bundled package of Tor @VERSION@, Privoxy 3.0.6, and Torbutton.</string>
 	<key>IFPkgDescriptionTitle</key>
-	<string>Tor - Privoxy Bundle</string>
+	<string>Tor - Privoxy - Torbutton Bundle</string>
 	<key>IFPkgDescriptionVersion</key>
 	<string>@VERSION@</string>
 </dict>
