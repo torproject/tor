@@ -1137,10 +1137,10 @@ dirvote_act(time_t now)
     log_notice(LD_DIR, "Time to publish the consensus and discard old votes");
     dirvote_publish_consensus();
     dirvote_clear_votes(0);
+    voting_schedule.have_published_consensus = 1;
     /* XXXX020 we will want to try again later if we haven't got enough
      * signatures yet. */
     dirvote_recalculate_timing(now);
-    voting_schedule.have_published_consensus = 1;
   }
 }
 
