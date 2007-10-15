@@ -1043,8 +1043,6 @@ static struct {
   time_t fetch_missing_signatures;
   /** When do we publish the consensus? */
   time_t interval_starts;
-  /** When do we discard old votes and pending detached signatures? */
-  time_t discard_old_votes;
 
   /* True iff we have generated and distributed our vote. */
   int have_voted;
@@ -1056,7 +1054,7 @@ static struct {
   int have_fetched_missing_signatures;
   /* True iff we have published our consensus. */
   int have_published_consensus;
-} voting_schedule = {0,0,0,0,0,0,0,0,0,0,0};
+} voting_schedule = {0,0,0,0,0,0,0,0,0,0};
 
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. */
@@ -1094,8 +1092,6 @@ dirvote_recalculate_timing(time_t now)
   voting_schedule.voting_ends = start - dist_delay;
   voting_schedule.fetch_missing_votes = start - dist_delay - (vote_delay/2);
   voting_schedule.voting_starts = start - dist_delay - vote_delay;
-
-  voting_schedule.discard_old_votes = start;
 }
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
@@ -1138,16 +1134,13 @@ dirvote_act(time_t now)
   }
   if (voting_schedule.interval_starts < now &&
       !voting_schedule.have_published_consensus) {
-    log_notice(LD_DIR, "Time to publish the consensus.");
+    log_notice(LD_DIR, "Time to publish the consensus and discard old votes");
     dirvote_publish_consensus();
+    dirvote_clear_votes(0);
     /* XXXX020 we will want to try again later if we haven't got enough
      * signatures yet. */
-    voting_schedule.have_published_consensus = 1;
-  }
-  if (voting_schedule.discard_old_votes < now) {
-    log_notice(LD_DIR, "Time to discard old votes.");
-    dirvote_clear_votes(0);
     dirvote_recalculate_timing(now);
+    voting_schedule.have_published_consensus = 1;
   }
 }
 

@@ -6,14 +6,17 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       it. Extra descriptors without any real changes are dropped by the
       authorities, and can screw up our "publish every 18 hours" schedule.
 
-  o Minor features:
+  o Minor features (router descriptor cache):
     - If we find a cached-routers file that's been sitting around for more
       than 28 days unmodified, then most likely it's a leftover from when we
       upgraded to 0.2.0.8-alpha.  Remove it.  It has no good routers anyway.
 
-  o Minor bugfixes:
+  o Minor bugfixes (directory authorities):
     - Correct the implementation of "download votes by digest."  Bugfix on
       0.2.0.8-alpha.
+    - Make the "next period" votes into "current period" votes immediately
+      after publishing the consensus; avoid a heisenbug that made them stick
+      around indefinitely.
 
   o Code simplifications and refactoring:
     - Remove support for the old bw_accounting file: we've been storing
