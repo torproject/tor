@@ -811,12 +811,16 @@ This directive can be specified multiple times to bind to multiple
 addresses/ports.
 .LP
 .TP
-\fBPublishServerDescriptor \fR\fB0\fR|\fB1\fR\fP
-If set to 0, Tor will act as a server if you have an ORPort
-defined, but it will not publish its descriptor to the dirservers. This
-option is useful if you're testing out your server, or if you're using
-a Tor controller that handles directory publishing for you.
-(Default: 1)
+\fBPublishServerDescriptor \fR\fB0\fR|\fB1\fR|\fBv1\fR|\fBv2\fR|\fBv3\fR|\fBbridge\fR|\fBhidserv\fR, ...\fP
+This option is only considered if you have an ORPort defined. You can
+choose multiple arguments, separated by commas.
+
+If set to 0, Tor will act as a server but it will not publish its
+descriptor to the directory authorities. (This is useful if you're
+testing out your server, or if you're using a Tor controller that handles
+directory publishing for you.) Otherwise, Tor will publish its descriptor
+to all directory authorities of the type(s) specified. The value "1" is
+treated as a synonym for the default, which is currently "v1,v2".
 .LP
 .TP
 \fBRedirectExit \fR\fIpattern target\fP
