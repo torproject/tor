@@ -864,13 +864,17 @@ networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
   SMARTLIST_FOREACH(new_c->routerstatus_list, routerstatus_t *, rs_new,
   {
     int r;
-    while ((r = memcmp(rs_old->identity_digest, rs_new->identity_digest,
+    while (rs_old && /* XXX020 Nick, solve this: sometimes rs_old is NULL */
+           (r = memcmp(rs_old->identity_digest, rs_new->identity_digest,
                        DIGEST_LEN))<0) {
       if (idx == smartlist_len(old_c->routerstatus_list))
         goto done;
       rs_old = smartlist_get(old_c->routerstatus_list, ++idx);
     }
     if (r>0)
+      continue;
+    if (r<0) /* XXX020 Nick, solve this: sometimes it's -1 which doesn't
+              * match your comment below. */
       continue;
     /* Okay, so we're looking at the same identity. */
     rs_new->name_lookup_warned = rs_old->name_lookup_warned;
