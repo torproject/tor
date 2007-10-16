@@ -2667,11 +2667,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
-  /*XXXX020 I had suspicions about whether this was correct, but now I
-   * can't remember why. :( -NM */
-  if (consensus && !in_consensus && !authdir_mode(get_options())) {
-    /* If it's not listed in the consensus, then don't consider replacing
-     * the latest router with it. */
+  if (router->purpose == ROUTER_PURPOSE_GENERAL &&
+      consensus && !in_consensus && !authdir_mode(get_options())) {
+    /* If it's a general router not listed in the consensus, then don't
+     * consider replacing the latest router with it. */
     if (!from_cache && should_cache_old_descriptors())
       signed_desc_append_to_journal(&router->cache_info,
                                     router_get_store(routerlist, router));
