@@ -22,6 +22,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Make the "next period" votes into "current period" votes immediately
       after publishing the consensus; avoid a heisenbug that made them stick
       around indefinitely.
+    - When we discard a vote as a duplicate, do not report this as an error.
     - Correctly check for bad options to the "PublishServerDescriptor"
       config option. Bugfix on 0.2.0.1-alpha; reported by Matt Edman.
     - When we discard a vote as a duplicate, do not report this as an error.
