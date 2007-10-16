@@ -2391,9 +2391,8 @@ ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
 
 /** Parse an authority type from <b>list</b> and write it to *<b>auth</b>.  If
  * <b>compatible</b> is non-zero, treat "1" as "v1,v2" and treat "0" as "".
- * Return 0 on success or -(idx of first bad member) if not a recognized
- * authority type.
- */
+ * Return 0 on success or -1 if not a recognized authority type (in which
+ * case the value of *<b>auth</b> is undefined). */
 static int
 parse_authority_type_from_list(smartlist_t *list, authority_type_t *auth,
                                int compatible)
@@ -2418,7 +2417,7 @@ parse_authority_type_from_list(smartlist_t *list, authority_type_t *auth,
     else if (!strcasecmp(string, "") || (compatible && !strcmp(string, "0")))
       /* no authority */;
     else
-      return - string_sl_idx;
+      return -1;
     });
   return 0;
 }
