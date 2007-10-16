@@ -24,6 +24,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       around indefinitely.
     - Correctly check for bad options to the "PublishServerDescriptor"
       config option. Bugfix on 0.2.0.1-alpha; reported by Matt Edman.
+    - When we discard a vote as a duplicate, do not report this as an error.
 
   o Minor bugfixes (memory leaks):
     - Stop leaking memory on failing case of base32_decode.  Bugfix on

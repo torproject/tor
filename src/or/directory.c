@@ -1463,10 +1463,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    if (!dirvote_add_vote(body, &msg, &st)) {
+    dirvote_add_vote(body, &msg, &st);
+    if (st > 299) {
       log_warn(LD_DIR, "Error adding retrieved vote: %s", msg);
     } else {
-      log_info(LD_DIR, "Added vote(s) successfully.");
+      log_info(LD_DIR, "Added vote(s) successfully [msg: %s]", msg);
     }
   }
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {

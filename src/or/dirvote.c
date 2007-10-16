@@ -1406,8 +1406,6 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
           log_info(LD_DIR, "Discarding a vote we already have.");
           if (*status_out < 200)
             *status_out = 200;
-          if (!*msg_out)
-            *msg_out = "OK";
           goto discard;
         } else if (v->vote->published < vote->published) {
           log_notice(LD_DIR, "Replacing an older pending vote from this "
@@ -1468,8 +1466,14 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 
   if (*status_out < 200)
     *status_out = 200;
-  if (!*msg_out)
-    *msg_out = "ok";
+  if (!*msg_out) {
+    if (!any_failed && !pending_vote) {
+      *msg_out = "Duplicate discarded";
+    } else {
+      *msg_out = "ok";
+    }
+  }
+
 
   return any_failed ? NULL : pending_vote;
 }
