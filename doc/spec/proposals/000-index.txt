@@ -45,6 +45,7 @@ Proposals by number:
 120  Suicide descriptors when Tor servers stop [OPEN]
 121  Hidden Service Authentication [OPEN]
 122  Network status entries need a new Unnamed flag [OPEN]
+123  Naming authorities automatically create bindings [OPEN]
 
 
 Proposals by status:
@@ -61,6 +62,7 @@ Proposals by status:
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
    122  Network status entries need a new Unnamed flag
+   123  Naming authorities automatically create bindings
  ACCEPTED:
    101  Voting on the Tor Directory System
    103  Splitting identity key from regularly used signing key
