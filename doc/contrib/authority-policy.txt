@@ -8,9 +8,13 @@ we're making it up as we go.)
 o Stability:
   - Must be a low-downtime Tor server (computer as well as network).
   - Must have a static IP.
-  - Must have been a stable Tor server for at least 3 months.
-  - Must intend to stick around for the next 12 months or more.
+  - The operator must have been running a stable Tor server for at least
+    3 months.
+  - Must intend for this server to stick around for the next 12 months
+    or more.
   - Must not hibernate.
+  - Should not be an exit node (as this increases the risk both of
+    downtime and of key compromise).
 
 o Performance:
   - Must have sufficient bandwidth: at least 300 kB/s symmetric,
