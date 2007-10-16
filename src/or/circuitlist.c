@@ -1056,10 +1056,15 @@ assert_circuit_ok(const circuit_t *c)
   tor_assert(c->purpose >= _CIRCUIT_PURPOSE_MIN &&
              c->purpose <= _CIRCUIT_PURPOSE_MAX);
 
-  if (CIRCUIT_IS_ORIGIN(c))
-    origin_circ = TO_ORIGIN_CIRCUIT((circuit_t*)c);
-  else
-    or_circ = TO_OR_CIRCUIT((circuit_t*)c);
+  {
+    /* Having a separate variable for this pleases GCC 4.2 in ways I hope I
+     * never understand. -NM. */
+    circuit_t *nonconst_circ = (circuit_t*) c;
+    if (CIRCUIT_IS_ORIGIN(c))
+      origin_circ = TO_ORIGIN_CIRCUIT(nonconst_circ);
+    else
+      or_circ = TO_OR_CIRCUIT(nonconst_circ);
+  }
 
   if (c->n_conn) {
     tor_assert(!memcmp(c->n_conn->identity_digest, c->n_conn_id_digest,
