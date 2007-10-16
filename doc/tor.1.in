@@ -102,8 +102,8 @@ Windows since that platform lacks getrlimit(). (Default: 1000)
 .LP
 .TP
 \fBConstrainedSockets \fR\fB0\fR|\fB1\fR\fP
-If set, Tor will tell the kernel to attempt to shrink the buffers for all 
-sockets to the size specified in \fBConstrainedSockSize\fP.  This is useful 
+If set, Tor will tell the kernel to attempt to shrink the buffers for all
+sockets to the size specified in \fBConstrainedSockSize\fP.  This is useful
 for virtual servers and other environments where system level TCP
 buffers may be limited.  If you're on a virtual server, and you
 encounter the "Error creating network
@@ -326,19 +326,19 @@ If non-zero, try to use crypto hardware acceleration when
 available. This is untested and probably buggy. (Default: 0)
 .LP
 .TP
-\fBAvoidDiskWrites \fR\fB0|\fR\fB1\fP
+\fBAvoidDiskWrites \fR\fB0\fR|\fB1\fP
 If non-zero, try to write to disk less frequently than we would otherwise.
 This is useful when running on flash memory or other media that support only
 a limited number of writes.  (Default: 0)
 .LP
 .TP
-\fBTunnelDirConns \fR\fB0|\fR\fB1\fP
+\fBTunnelDirConns \fR\fB0\fR|\fB1\fP
 If non-zero, when a directory server we contact supports it, we will
 build a one-hop circuit and make an encrypted connection via its
 ORPort. (Default: 0)
 .LP
 .TP
-\fBPreferTunneledDirConns \fR\fB0|\fR\fB1\fP
+\fBPreferTunneledDirConns \fR\fB0\fR|\fB1\fP
 If non-zero, we will avoid directory servers that don't support tunneled
 directory connections, when possible. (Default: 0)
 
