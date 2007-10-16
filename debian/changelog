@@ -1,3 +1,10 @@
+tor (0.1.2.17-dev-1) UNRELEASED; urgency=low
+
+  * Development snapshot.
+  * Temporarily ignore result of unit tests.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 16 Oct 2007 12:54:10 +0200
+
 tor (0.1.2.17-1) unstable; urgency=low
 
   * New upstream version.
