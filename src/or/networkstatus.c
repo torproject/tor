@@ -104,7 +104,8 @@ networkstatus_reset_download_failures(void)
     const char *key;
     void *val;
     download_status_t *dls;
-    for (iter = digestmap_iter_init(map); !digestmap_iter_done(iter); ) {
+    for (iter = digestmap_iter_init(map); !digestmap_iter_done(iter);
+         iter = digestmap_iter_next(map, iter) ) {
       digestmap_iter_get(iter, &key, &val);
       dls = val;
       download_status_reset(dls);
