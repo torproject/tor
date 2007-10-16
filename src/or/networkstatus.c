@@ -1173,6 +1173,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
     }
     if (r>0) {
       /* We have no routerstatus for this router. Skip it. */
+      router->is_named = 0;
       continue;
     }
     tor_assert(r==0);
@@ -1191,6 +1192,10 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       router->is_possible_guard = rs->is_possible_guard;
       router->is_exit = rs->is_exit;
       router->is_bad_exit = rs->is_bad_exit;
+      if (rs->is_named && !strcasecmp(router->nickname, rs->nickname))
+        router->is_named = 1;
+      else
+        router->is_named = 0;
     }
     if (router->is_running && ds) {
       download_status_reset(&ds->v2_ns_dl_status);
