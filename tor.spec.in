@@ -117,7 +117,7 @@ Version: %{version}
 Release: %{release}
 
 Summary: Anonymizing overlay network for TCP (The onion router)
-URL: http://tor.eff.org/
+URL: https://www.torproject.org/
 Group: System Environment/Daemons
 
 License: BSD-like
@@ -137,7 +137,7 @@ BuildRequires: rpm-build >= 4.0
 Requires(pre): /usr/bin/id, /bin/date, /bin/sh
 Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
 
-Source0: http://tor.eff.org/dist/%{name}-%{native_version}.tar.gz
+Source0: https://www.torproject.org/dist/%{name}-%{native_version}.tar.gz
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 

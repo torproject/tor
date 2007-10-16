@@ -1,6 +1,6 @@
 
 Most users should simply follow the directions at
-http://tor.eff.org/docs/tor-doc-unix
+http://www.torproject.org/docs/tor-doc-unix
 
 If you got the source from Subversion, run "./autogen.sh", which will
 run the various auto* programs and then run ./configure for you. From
