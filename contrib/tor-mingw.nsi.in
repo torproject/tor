@@ -7,7 +7,7 @@
 
 !define VERSION "0.2.0.8-alpha-dev"
 !define INSTALLER "tor-${VERSION}-win32.exe"
-!define WEBSITE "http://tor.eff.org/"
+!define WEBSITE "https://www.torproject.org/"
 
 !define LICENSE "LICENSE"
 ;BIN is where it expects to find tor.exe, tor-resolve.exe, libcrypto.a and libssl.a
@@ -25,10 +25,10 @@ CRCCheck on
 XPStyle on
 VIProductVersion "${VERSION}"
 VIAddVersionKey "ProductName" "The Onion Router: Tor"
-VIAddVersionKey "Comments" "http://tor.eff.org"
+VIAddVersionKey "Comments" "https://www.torproject.org/"
 VIAddVersionKey "LegalTrademarks" "Three line BSD"
 VIAddVersionKey "LegalCopyright" "©2004-2007, Roger Dingledine, Nick Mathewson"
-VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at http://tor.eff.org/"
+VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at https://www.torproject.org/"
 VIAddVersionKey "FileVersion" "${VERSION}"
 
 !define MUI_WELCOMEPAGE_TITLE "Welcome to the Tor ${VERSION} Setup Wizard"
