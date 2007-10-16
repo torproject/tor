@@ -1,30 +1,24 @@
-             How to run an experimental v3 directory authority.
 
-                                 13 Aug 2007
-
-                                    NOTE:
-       This code is experimental, and for directory authorities only.
-      Please do not try to make it work right now without Nick's help.
-
+                    How to add a v3 directory authority.
 
 What we'll be doing:
 
-   We'll be setting up a couple of authorities to vote with each other.
-
-   (Later, we'll revise this document to explain how to add or remove
-   or operate a v3 voting authority.)
-
+   We'll be configuring your Tor server as a v3 directory authority,
+   generating a v3 identity key plus certificates, and adding your v3
+   identity fingerprint to the list of default directory authorities.
 
 The steps:
 
 0) Make sure you're running ntp, and that your time is correct.
 
-   Make sure you have Tor version at least r11083.
+   Make sure you have Tor version at least r11953. In the short term,
+   running a working authority may mean running the latest version of
+   Tor from SVN trunk. Later on, we hope that it will become easier
+   and you can just run a recent development release (and later still,
+   a recent stable release).
 
-   Make sure you can do this with 2 or more authorities.
-
-1) First, you'll need a certificate.  Run tor-gencert to generate one.
-   tor-gencert is in ./src/tools/.
+1) First, you'll need a certificate.  Run ./src/tools/tor-gencert to
+   generate one.
 
    Run tor-gencert in a separate, very secure directory.  The first time
    you run it, you will need to run it with the --create-identity-key
@@ -42,7 +36,7 @@ The steps:
          with your identity-key.
 
    You will need to rotate your signing key periodically.  The current
-   default lifetime is 1 year.  I'll probably take this down to a month or
+   default lifetime is 1 year.  We'll probably take this down to a month or
    two some time soon.  To rotate your key, run tor-gencert as before,
    but without the --create-identity-key option.
 
@@ -50,52 +44,41 @@ The steps:
    directory.
 
    For example if your data directory is /var/lib/tor/, you should run
-     cp authority_signing_key authority_certificate /var/lib/tor
+     cp authority_signing_key authority_certificate /var/lib/tor/keys/
 
    You will need to repeat this every time you rotate your certificate.
 
-3) Tell Tor to be a v3 authority by adding this to your torrc:
+3) Tell your Tor to be a v3 authority by adding these lines to your torrc:
 
+   AuthoritativeDirectory 1
    V3AuthoritativeDirectory 1
 
-   Tell Tor to try voting every half hour by adding this to your torrc:
+4) Now your authority is generating a networkstatus opinion (called a
+   "vote") every period, but none of the other authorities care yet. The
+   next step is to get a Tor developer (likely Roger or Nick) to add
+   your v3 identity fingerprint to the default list of dirservers.
 
-   V3AuthVotingInterval 30 minutes
+   First, you need to learn your authority's v3 identity fingerprint.
+   It should be in your authority_certificate file in a line like:
 
-4) Now you'll need to add DirServer lines to your Tor.  Right now, the
-   defaults are:
+     fingerprint 3041632465FA8847A98B2C5742108C72325532D9
 
-    DirServer moria1 v1 orport=9001 128.31.0.34:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441
-    DirServer moria2 v1 orport=9002 128.31.0.34:9032 719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF
-    DirServer tor26 v1 orport=443 86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D
-    DirServer lefkada orport=443 140.247.60.64:80 38D4 F5FC F7B1 0232 28B8 95EA 56ED E7D5 CCDC AF32
-    DirServer dizum 194.109.206.212:80 7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755
+   One of the Tor developers then needs to add this fingerprint to
+   the add_default_trusted_dirservers() function in config.c, using
+   the syntax "v3ident=<fingerprint>". For example, if moria1's new v3
+   identity fingerprint is FOO, the moria1 dirserver line should now be:
 
-   You will need to tell every Tor that is running a v3 authority about the
-   other v3 authorities.  To do this:
+     DirServer moria1 v1 orport=9001 v3ident=FOO 128.31.0.34:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441
 
-     -- Add the default DirServer lines to your torrc... INCLUDING
-        THE AUTHORITIES THAT YOU ARE NOT TESTING WITH V3.
+   The v3ident item must appear after the nickname and before the IP.
 
-     -- Find out every authority's v3 identity fingerprint.  It should
-        be in your authority_certificate file in a line like:
+5) Once your fingerprint has been added to config.c, we will try to
+   get a majority of v3 authorities to upgrade, so they know about you
+   too. At that point your vote will automatically be included in the
+   networkstatus consensus, and you'll be a fully-functioning contributing
+   v3 authority.
 
-        fingerprint 3041632465FA8847A98B2C5742108C72325532D9
+   Note also that a majority of the configured v3 authorities need to
+   agree in order to generate a consensus: so this is also the point
+   where extended downtime on your server means missing votes.
 
-     -- To the DirServer line of every authority with a v3 identity, add
-        a v3ident=<fingerprint> item.  For example, if moria1's new v3
-        identity fingerprint is FOO, the moria1 dirserver line should now
-        be:
-
-    DirServer moria1 v1 orport=9001 v3ident=FOO 128.31.0.34:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441
-
-        The v3ident item must appear after the nickname and before the IP.
-
- 5) Restart Tor and let me know what happens.  You might want to enable
-    coredumps.
-
- 6) If it breaks very badly, or you're not going to be around to restart it,
-    disable v3 voting by setting V3AuthoritativeDirectory to 0.
-
-
--- Nick
