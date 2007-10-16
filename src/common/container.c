@@ -956,11 +956,11 @@ strmap_remove_lc(strmap_t *map, const char *key)
  *    strmap_iter_get(iter, &key, &val);
  *    cp = (char*)val;
  *    if (!*cp) {
- *       iter = strmap_iter_next_rmv(iter);
+ *       iter = strmap_iter_next_rmv(map,iter);
  *       free(val);
  *    } else {
  *       for (;*cp;cp++) *cp = TOR_TOUPPER(*cp);
- *       iter = strmap_iter_next(iter);
+ *       iter = strmap_iter_next(map,iter);
  *    }
  * }
  * \endcode
