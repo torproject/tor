@@ -1173,8 +1173,9 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
     }
     if (r>0) {
       /* We have no routerstatus for this router. Clear flags and skip it. */
-      if (!authdir) {
+      if (!namingdir)
         router->is_named = 0;
+      if (!authdir) {
         if (router->purpose == ROUTER_PURPOSE_GENERAL) {
           router->is_valid = router->is_running =
             router->is_fast = router->is_stable =
