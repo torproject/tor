@@ -3720,6 +3720,8 @@ update_consensus_router_descriptor_downloads(time_t now)
   int authdir = authdir_mode(options);
   int dirserver = dirserver_mode(options);
   networkstatus_vote_t *consensus = networkstatus_get_live_consensus(now);
+  int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
+    n_inprogress=0;
 
   if (!dirserver) {
     if (rep_hist_circbuilding_dormant(now))
@@ -3732,20 +3734,36 @@ update_consensus_router_descriptor_downloads(time_t now)
   list_pending_descriptor_downloads(map, 0);
   SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
     {
-      if (router_get_by_descriptor_digest(rs->descriptor_digest))
+      if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
+        ++n_have;
         continue; /* We have it already. */
+      }
       if (!download_status_is_ready(&rs->dl_status, now,
-                                    MAX_ROUTERDESC_DOWNLOAD_FAILURES))
+                                    MAX_ROUTERDESC_DOWNLOAD_FAILURES)) {
+        ++n_delayed;
         continue;
+      }
 
-      if (authdir && dirserv_would_reject_router(rs))
+      if (authdir && dirserv_would_reject_router(rs)) {
+        ++n_would_reject;
         continue; /* We would throw it out immediately. */
-      if (!dirserver && !client_would_use_router(rs, now, options))
+      }
+      if (!dirserver && !client_would_use_router(rs, now, options)) {
+        ++n_wouldnt_use;
         continue; /* We would never use it ourself. */
-      if (digestmap_get(map, rs->descriptor_digest))
+      }
+      if (digestmap_get(map, rs->descriptor_digest)) {
+        ++n_inprogress;
         continue; /* We have an in-progress download. */
+      }
       smartlist_add(downloadable, rs->descriptor_digest);
     });
+
+  log_info(LD_DIR,
+           "%d routers downloadable. %d delayed; %d present; %d would_reject; "
+           "%d wouldnt_use, %d in progress.",
+           smartlist_len(downloadable), n_delayed, n_have, n_would_reject,
+           n_wouldnt_use, n_inprogress);
 
   launch_router_descriptor_downloads(downloadable, now);
 
