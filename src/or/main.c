@@ -994,8 +994,9 @@ run_scheduled_events(time_t now)
     /* If any networkstatus documents are no longer recent, we need to
      * update all the descriptors' running status. */
     /* purge obsolete entries */
-    routerlist_remove_old_routers();
     networkstatus_v2_list_clean(now);
+    /* Remove dead routers. */
+    routerlist_remove_old_routers();
 #if 0
     networkstatus_v2_list_update_recent(now);
 #endif

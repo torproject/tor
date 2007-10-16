@@ -16,6 +16,10 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       than 28 days unmodified, then most likely it's a leftover from when we
       upgraded to 0.2.0.8-alpha.  Remove it.  It has no good routers anyway.
 
+  o Minor features (performance):
+    - Call routerlist_remove_old_routers() much less often.  This should
+      speed startup, especially on directory caches.
+
   o Minor bugfixes (directory authorities):
     - Correct the implementation of "download votes by digest."  Bugfix on
       0.2.0.8-alpha.

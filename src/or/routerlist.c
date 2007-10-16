@@ -475,7 +475,7 @@ router_rebuild_store(int force, desc_store_t *store)
   if (!routerlist)
     return 0;
 
-  routerlist_assert_ok(routerlist);
+  //routerlist_assert_ok(routerlist);
 
   /* Don't save deadweight. */
   routerlist_remove_old_routers();
@@ -2140,6 +2140,7 @@ dump_routerlist_mem_usage(int severity)
       smartlist_len(routerlist->old_routers), U64_PRINTF_ARG(olddescs));
 }
 
+#if 0
 /** Return non-zero if we have a lot of extra descriptors in our
  * routerlist, and should get rid of some of them. Else return 0.
  *
@@ -2158,6 +2159,7 @@ routerlist_is_overfull(routerlist_t *rl)
     return smartlist_len(rl->old_routers) > smartlist_len(rl->routers)*2;
   }
 }
+#endif
 
 static INLINE int
 _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
@@ -2613,8 +2615,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     return -1;
   }
 
+#if 0
   if (routerlist_is_overfull(routerlist))
     routerlist_remove_old_routers();
+#endif
 
   if (authdir) {
     if (authdir_wants_to_reject_router(router, msg,
@@ -2907,7 +2911,7 @@ routerlist_remove_old_routers(void)
   if (!routerlist || !consensus)
     return;
 
-  routerlist_assert_ok(routerlist);
+  // routerlist_assert_ok(routerlist);
 
   retain = digestmap_new();
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
@@ -2959,7 +2963,7 @@ routerlist_remove_old_routers(void)
     }
   }
 
-  routerlist_assert_ok(routerlist);
+  //routerlist_assert_ok(routerlist);
 
   /* Remove far-too-old members of routerlist->old_routers. */
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
@@ -2972,7 +2976,7 @@ routerlist_remove_old_routers(void)
     }
   }
 
-  routerlist_assert_ok(routerlist);
+  //routerlist_assert_ok(routerlist);
 
   /* Now we might have to look at routerlist->old_routers for extraneous
    * members. (We'd keep all the members if we could, but we need to save
@@ -3002,7 +3006,7 @@ routerlist_remove_old_routers(void)
   }
   if (hi>=0)
     routerlist_remove_old_cached_routers_with_id(cutoff, 0, hi, retain);
-  routerlist_assert_ok(routerlist);
+  //routerlist_assert_ok(routerlist);
 
  done:
   digestmap_free(retain, NULL);
@@ -3475,6 +3479,10 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
   }
   if (rs->published_on + ESTIMATED_PROPAGATION_TIME > now) {
     /* Most caches probably don't have this descriptor yet. */
+    return 0;
+  }
+  if (rs->published_on + OLD_ROUTER_DESC_MAX_AGE < now) {
+    /* We'd drop it immediately for being too old. */
     return 0;
   }
   return 1;
