@@ -287,7 +287,6 @@ exit 0
 %{_bindir}/torctl
 %{_bindir}/torify
 %{_bindir}/tor-resolve
-%{_bindir}/tor-gencert
 %config %{_initrddir}/%{name}
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/logrotate.d/%{name}
 %dir %attr(0755,root,%{torgroup}) %{_sysconfdir}/%{name}/
@@ -297,6 +296,10 @@ exit 0
 %attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+
+* Wed Oct 17 2007 Andrew Lewman <phobos@rootme.org>
+- Remove tor_gencert as this feature isn't backported yet.
+- Confirm all we really need is libevent 1.1a at a minimum 
 
 * Tue Feb 27 2007 Andrew Lewman <phobos@rootme.org>
 - Fix a potential race condition in how we determine the running state of tor.  Found by Stefan Nordhausen.
