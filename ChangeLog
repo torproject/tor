@@ -33,7 +33,13 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - When we're configured to be a v3 authority, but we're only listed
       as a non-v3 authority in our DirServer line for ourself, correct the
       listing.
+
+  o Minor bugfixes (v3 directory protocol)
     - Delete unverified-consensus when the real consensus is set.
+
+  o Minor bugfixes (controller):
+    - Don't reset trusted dir server list when we set a configuration option.
+      (Patch from Robert Hogan.)
 
   o Minor bugfixes (memory leaks):
     - Stop leaking memory on failing case of base32_decode.  Bugfix on
