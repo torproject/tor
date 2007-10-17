@@ -33,6 +33,8 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - When we're configured to be a v3 authority, but we're only listed
       as a non-v3 authority in our DirServer line for ourself, correct the
       listing.
+    - Treat missing v3 keys or certificates as an error when running as a
+      v3 directory authority.
 
   o Minor bugfixes (v3 directory protocol)
     - Delete unverified-consensus when the real consensus is set.

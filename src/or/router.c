@@ -255,28 +255,27 @@ init_key_from_file(const char *fname, int generate, int severity)
   return NULL;
 }
 
-/** Load the v3 (voting) authority signing key and certificate from
- * <b>keydir</b>, if they are present. */
+/** Load the v3 (voting) authority signing key and certificate, if they are
+ * present.  Return -1 if anything is missing, mismatched, or unloadable;
+ * return 0 on success. */
 /* XXXX020 maybe move to dirserv.c or dirvote.c */
-static void
-init_v3_authority_keys(const char *keydir)
+static int
+init_v3_authority_keys(void)
 {
   char *fname = NULL, *cert = NULL;
   const char *eos = NULL;
-  size_t fname_len = strlen(keydir) + 64;
   crypto_pk_env_t *signing_key = NULL;
   authority_cert_t *parsed = NULL;
+  int r = -1;
 
-  fname = tor_malloc(fname_len);
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"authority_signing_key",
-               keydir);
+  fname = get_datadir_fname2("keys", "authority_signing_key");
   signing_key = init_key_from_file(fname, 0, LOG_INFO);
   if (!signing_key) {
     log_warn(LD_DIR, "No version 3 directory key found in %s", fname);
     goto done;
   }
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"authority_certificate",
-               keydir);
+  tor_free(fname);
+  fname = get_datadir_fname2("keys", "authority_certificate");
   cert = read_file_to_str(fname, 0, NULL);
   if (!cert) {
     log_warn(LD_DIR, "Signing key found, but no certificate found in %s",
@@ -308,6 +307,7 @@ init_v3_authority_keys(const char *keydir)
   parsed = NULL;
   signing_key = NULL;
 
+  r = 0;
  done:
   tor_free(fname);
   tor_free(cert);
@@ -315,6 +315,7 @@ init_v3_authority_keys(const char *keydir)
     crypto_free_pk_env(signing_key);
   if (parsed)
     authority_cert_free(parsed);
+  return r;
 }
 
 /** If we're a v3 authority, check whether we have a certificatge that's
@@ -420,7 +421,12 @@ init_keys(void)
   /* 1a. Read v3 directory authority key/cert information. */
   memset(v3_digest, 0, sizeof(v3_digest));
   if (authdir_mode_v3(options)) {
-    init_v3_authority_keys(keydir);
+    if (init_v3_authority_keys()<0) {
+      log_err(LD_GENERAL, "We're configured as a V3 authority, but we "
+              "were unable to load our v3 authority keys and certificate! "
+              "Use tor-gencert to generate them. Dying.");
+      return -1;
+    }
     if (get_my_v3_authority_cert()) {
       crypto_pk_get_digest(get_my_v3_authority_cert()->identity_key,
                            v3_digest);
