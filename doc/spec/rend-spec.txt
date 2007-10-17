@@ -146,6 +146,168 @@ $Id$
     to do that if he previously advertised some introduction points,
     and now he doesn't have any. -RD]
 
+   The format of a "V2" descriptor, that will probably used at some time in
+   the future, is as follows:
+
+     "rendezvous-service-descriptor" descriptor-id NL
+
+       [At start, exactly once]
+
+       Indicates the beginning of the descriptor. "descriptor-id" is a
+       temporary identifier of 160 bits formatted as 32 base32 chars that
+       can only be calculated by the hidden service and its clients,
+       i.e. by everyone who is aware of a "secret-cookie". (Further,
+       everyone can verify that this "descriptor-id" belongs to the rest
+       of the descriptor, even without knowing "secret-cookie", as
+       described below.) The "descriptor-id" is calculated by performing
+       the following operation:
+
+         descriptor-id =
+             H(permanent-id | H(time-period | secret-cookie | replica))
+
+       "permanent-id" is the permanent identifier of the hidden service,
+       consisting of 80 bits. It can be calculated by computing the hash value
+       of the public hidden service key and truncating after the first 80 bits:
+
+         permanent-id = H(public-key)[:10]
+
+       "h(time-period, cookie, replica)" is the secret id part that is
+       necessary to verify that the hidden service is the true originator
+       of this descriptor. It can only be created by the hidden service
+       and its clients, but the "signature" below can only be created by
+       the service.
+
+       "cookie" is a secret password of 120 bits that is shared between the
+       hidden service provider and its clients.
+        [XXXX Why 120? -NM]
+
+       "replica" denotes the number of the non-consecutive replica.
+        [XXXX What does this mean? -NM]
+
+       The "time-period" changes periodically depending on the global time and
+       as a function of "permanent-id". The current value for "time-period" can
+       be calculated using the following formula:
+
+         time-period = (current-time + permanent-id-byte * 86400 / 256)
+                         / 86400
+
+       "current-time" contains the current system time in seconds since
+       1970-01-01 00:00, e.g. 1188241957. "permanent-id-byte" is the first
+       (unsigned) byte of the permanent identifier (which is in network
+       order), e.g. 143. Adding the product of "permanent-id-byte" and
+       86400 (seconds per day), divided by 256, prevents "time-period" from
+       changing for all descriptors at the same time of the day. The result
+       of the overall operation is a (network-ordered) 32-bit integer, e.g.
+       13753 or 0x000035B9 with the example values given above.
+
+     "version" version-number NL
+
+       [Exactly once]
+
+       The version number of this descriptor's format.  In this case: 2.
+
+     "permanent-key" NL a public key in PEM format
+
+       [Exactly once]
+
+       The public key of the hidden service which is required to verify the
+       "descriptor-id" and the "signature".
+
+     "secret-id-part" secret-id-part NL
+
+       [Exactly once]
+
+       The result of the following operation as explained above, formatted as
+       32 base32 chars. Using this secret id part, everyone can verify that
+       the signed descriptor belongs to "descriptor-id".
+
+         secret-id-part = H(time-period | cookie | replica)
+
+     "publication-time" YYYY-MM-DD HH:MM:SS NL
+
+       [Exactly once]
+
+       A timestamp when this descriptor has been created.
+
+     "protocol-versions" version-string NL
+
+       [Exactly once]
+
+       A bitmask of allowed rendezvous protocols.
+          [XXXX what do the numbers this mean? And why a bitmask??? -NM]
+
+     "introduction-points" NL encrypted-string
+
+       [At most once]
+
+       A list of introduction points that is encrypted with AES in CTR mode
+       with a random initialization vector of 128 bits that is written to
+       the beginning of the encrypted string, and the secret key "cookie",
+       that is 120 bits long and padded with zeros to be 128 bits long.
+        [XXXX again, why 120 bits?? -NM]
+
+       The encrypted-string is encoded in base64, and surrounded with
+       "-----BEGIN AES ENCRYPTED MESSAGE-----" and
+       "-----END AES ENCRYPTED MESSAGE-----".
+
+       The unencrypted string may begin with:
+
+        ["authentication" auth-type NL auth-data ... reserved]
+
+           [At start, any number]
+
+       Subsequently, an arbitrary number of introduction point entries may
+       follow, each containing the following data:
+
+         "introduction-point" identifier NL
+
+           [At start, exactly once]
+
+           The identifier of this introduction point.
+           [XXXX What's the identifier? -NM]
+
+         "ip-address" ip-address NL
+
+           [Exactly once]
+
+           The IP address of this introduction point.
+
+         "onion-port" port NL
+
+           [Exactly once]
+
+           The TCP port on which the introduction point is listening for
+           incoming onion requests.
+
+         "onion-key" NL a public key in PEM format
+
+           [Exactly once]
+
+           The public key that can be used to encrypt messages to this
+           introduction point.
+
+         "service-key" NL a public key in PEM format
+
+           [Exactly once]
+
+           The public key that can be used to encrypt messages to the hidden
+           service.
+
+        ["authentication" auth-type NL auth-data ... reserved]
+
+           [Any number]
+           [XXXX this is valid at the start *and* at the end? -NM]
+
+
+        (This ends the fields in the encrypted portion of the descriptor.)
+
+     "signature" NL signature-string
+
+       [At end, exactly once]
+
+       A signature of all fields above with the private key of the hidden
+       service.
+
 1.2.1. Other descriptor formats we don't use.
 
    The V1 descriptor format was understood and accepted from
@@ -459,4 +621,3 @@ $Id$
 2. Authentication and authorization.
 
 Foo.
-
