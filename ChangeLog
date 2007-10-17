@@ -38,6 +38,8 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
 
   o Minor bugfixes (v3 directory protocol)
     - Delete unverified-consensus when the real consensus is set.
+    - Consider retrying a consensus networkstatus fetch immediately after one
+      fails: don't wait 60 seconds to notice.
 
   o Minor bugfixes (controller):
     - Don't reset trusted dir server list when we set a configuration option.

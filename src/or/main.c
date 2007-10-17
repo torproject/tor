@@ -997,9 +997,6 @@ run_scheduled_events(time_t now)
     networkstatus_v2_list_clean(now);
     /* Remove dead routers. */
     routerlist_remove_old_routers();
-#if 0
-    networkstatus_v2_list_update_recent(now);
-#endif
 
     /* Also, once per minute, check whether we want to download any
      * networkstatus documents.

@@ -728,6 +728,8 @@ static void
 update_consensus_networkstatus_downloads(time_t now)
 {
   or_options_t *options = get_options();
+  if (!networkstatus_get_live_consensus(now))
+    time_to_download_next_consensus = now;
   if (time_to_download_next_consensus > now)
     return;
   if (authdir_mode_v3(options))
@@ -747,6 +749,8 @@ void
 networkstatus_consensus_download_failed(int status_code)
 {
   download_status_failed(&consensus_dl_status, status_code);
+  /* Retry immediately, if appropriate. */
+  update_consensus_networkstatus_downloads(time(NULL));
 }
 
 /** DOCDOC */
@@ -755,8 +759,8 @@ update_consensus_networkstatus_fetch_time(time_t now)
 {
   or_options_t *options = get_options();
   /* XXXX020 call this when DirPort switches on or off. NMNM */
-  if (current_consensus) {
-    const networkstatus_vote_t *c = current_consensus;
+  networkstatus_vote_t *c = networkstatus_get_live_consensus(now);
+  if (c) {
     time_t start;
     long interval;
     if (dirserver_mode(options)) {
@@ -772,9 +776,16 @@ update_consensus_networkstatus_fetch_time(time_t now)
       interval = 1;
     tor_assert(start+interval < c->valid_until);
     time_to_download_next_consensus = start + crypto_rand_int(interval);
+    {
+      char tbuf[ISO_TIME_LEN+1];
+      format_local_iso_time(tbuf, time_to_download_next_consensus);
+      log_info(LD_DIR, "Have a live consensus; fetching next one at %s.",tbuf);
+    }
   } else {
     time_to_download_next_consensus = now;
+    log_info(LD_DIR, "No live consensus; we should fetch one immediately.");
   }
+
 }
 
 /** Return 1 if there's a reason we shouldn't try any directory
