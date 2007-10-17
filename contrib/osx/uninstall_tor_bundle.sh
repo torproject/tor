@@ -128,7 +128,11 @@ done < $PACKAGE_LIST_SRC
 
 ## nuke the user created by the install process.
 echo ". Removing created user $TOR_USER"
-niutil -destroy . /users/$TOR_USER
+if [ -x /usr/bin/dscl ]; then
+   dscl . -delete /users/$TOR_USER
+else
+   niutil -destroy . /users/$TOR_USER
+fi
 
 
 ## clean up
