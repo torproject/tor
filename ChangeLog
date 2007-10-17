@@ -33,6 +33,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - When we're configured to be a v3 authority, but we're only listed
       as a non-v3 authority in our DirServer line for ourself, correct the
       listing.
+    - Delete unverified-consensus when the real consensus is set.
 
   o Minor bugfixes (memory leaks):
     - Stop leaking memory on failing case of base32_decode.  Bugfix on
@@ -48,7 +49,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       This may result in bandwidth accounting errors if you try to upgrade
       from 0.1.1.x or earlier, or if you try to downgrade to 0.1.1.x or
       earlier.
-
+    - New convenience code to locate a file within the DataDirectory.
 
 Changes in version 0.2.0.8-alpha - 2007-10-12
   o Major features (router descriptor cache):

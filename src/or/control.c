@@ -1397,19 +1397,15 @@ getinfo_helper_dir(control_connection_t *control_conn,
     } else {
       smartlist_t *fp_list = smartlist_create();
       smartlist_t *status_list = smartlist_create();
-      size_t fn_len = strlen(get_options()->DataDirectory)+HEX_DIGEST_LEN+32;
-      char *fn = tor_malloc(fn_len+1);
-      char hex_id[HEX_DIGEST_LEN+1];
       dirserv_get_networkstatus_v2_fingerprints(
                              fp_list, question+strlen("dir/status/"));
       SMARTLIST_FOREACH(fp_list, const char *, fp, {
           char *s;
-          base16_encode(hex_id, sizeof(hex_id), fp, DIGEST_LEN);
-          tor_snprintf(fn, fn_len, "%s/cached-status/%s",
-                       get_options()->DataDirectory, hex_id);
-          s = read_file_to_str(fn, 0, NULL);
+          char *fname = networkstatus_get_cache_filename(fp);
+          s = read_file_to_str(fname, 0, NULL);
           if (s)
             smartlist_add(status_list, s);
+          tor_free(fname);
         });
       SMARTLIST_FOREACH(fp_list, char *, fp, tor_free(fp));
       smartlist_free(fp_list);
@@ -3565,11 +3561,7 @@ get_cookie_file(void)
   if (options->CookieAuthFile && strlen(options->CookieAuthFile)) {
     return tor_strdup(options->CookieAuthFile);
   } else {
-    const char *datadir = get_options()->DataDirectory;
-    size_t len = strlen(datadir)+64;
-    char *fname = tor_malloc(len);
-    tor_snprintf(fname, len, "%s"PATH_SEPARATOR"control_auth_cookie", datadir);
-    return fname;
+    return get_datadir_fname("control_auth_cookie");
   }
 }
 

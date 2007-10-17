@@ -4312,17 +4312,56 @@ get_or_state(void)
   return global_state;
 }
 
-/** Return the filename used to write and read the persistent state. */
-static char *
-get_or_state_fname(void)
+/** Return a newly allocated string holding a filename relative to the data
+ * directory.  If <b>sub1</b> is present, it is the first path component after
+ * the data directory.  If <b>sub2</b> is also present, it is the second path
+ * component after the data directory.  If <b>suffix</b> is present, it
+ * is appended to the filename.
+ *
+ * Examples:
+ *    get_datadir_fname2_suffix("a", NULL, NULL) -> $DATADIR/a
+ *    get_datadir_fname2_suffix("a", NULL, ".tmp") -> $DATADIR/a.tmp
+ *    get_datadir_fname2_suffix("a", "b", ".tmp") -> $DATADIR/a/b/.tmp
+ *    get_datadir_fname2_suffix("a", "b", NULL) -> $DATADIR/a/b
+ *
+ * Note: Consider using the get_datadir_fname* macros in or.h.
+ */
+char *
+get_datadir_fname2_suffix(const char *sub1, const char *sub2,
+                          const char *suffix)
 {
-  char *fname = NULL;
   or_options_t *options = get_options();
-  size_t len = strlen(options->DataDirectory) + 16;
+  char *fname = NULL;
+  size_t len;
+  tor_assert(options);
+  tor_assert(options->DataDirectory);
+  tor_assert(sub1 || !sub2); /* If sub2 is present, sub1 must be present. */
+  len = strlen(options->DataDirectory);
+  if (sub1) {
+    len += strlen(sub1)+1;
+    if (sub2)
+      len += strlen(sub2)+1;
+  }
+  if (suffix)
+    len += strlen(suffix);
+  len++;
   fname = tor_malloc(len);
-  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"state", options->DataDirectory);
+  if (sub1) {
+    if (sub2) {
+      tor_snprintf(fname, len, "%s"PATH_SEPARATOR"%s"PATH_SEPARATOR"%s",
+                   options->DataDirectory, sub1, sub2);
+    } else {
+      tor_snprintf(fname, len, "%s"PATH_SEPARATOR"%s",
+                   options->DataDirectory, sub1);
+    }
+  } else {
+    strlcpy(fname, options->DataDirectory, len);
+  }
+  if (suffix)
+    strlcat(fname, suffix, len);
   return fname;
 }
+
 
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
  * permissible transition from <b>old_state</b>.  Else warn and return -1.
@@ -4375,7 +4414,7 @@ or_state_load(void)
   char *errmsg = NULL;
   int r = -1, badstate = 0;
 
-  fname = get_or_state_fname();
+  fname = get_datadir_fname("state");
   switch (file_status(fname)) {
     case FN_FILE:
       if (!(contents = read_file_to_str(fname, 0, NULL))) {
@@ -4510,7 +4549,7 @@ or_state_save(time_t now)
                "# You *do not* need to edit this file.\n\n%s",
                tbuf, state);
   tor_free(state);
-  fname = get_or_state_fname();
+  fname = get_datadir_fname("state");
   if (write_str_to_file(fname, contents, 0)<0) {
     log_warn(LD_FS, "Unable to write state to file \"%s\"", fname);
     tor_free(fname);

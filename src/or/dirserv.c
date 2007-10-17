@@ -178,7 +178,7 @@ dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk)
 int
 dirserv_load_fingerprint_file(void)
 {
-  char fname[512];
+  char *fname;
   char *cf;
   char *nickname, *fingerprint;
   authdir_config_t *fingerprint_list_new;
@@ -186,8 +186,7 @@ dirserv_load_fingerprint_file(void)
   config_line_t *front=NULL, *list;
   or_options_t *options = get_options();
 
-  tor_snprintf(fname, sizeof(fname),
-               "%s/approved-routers", options->DataDirectory);
+  fname = get_datadir_fname("approved-routers");
   log_info(LD_GENERAL,
            "Reloading approved fingerprints from \"%s\"...", fname);
 
@@ -195,12 +194,16 @@ dirserv_load_fingerprint_file(void)
   if (!cf) {
     if (options->NamingAuthoritativeDir) {
       log_warn(LD_FS, "Cannot open fingerprint file '%s'. Failing.", fname);
+      tor_free(fname);
       return -1;
     } else {
       log_info(LD_FS, "Cannot open fingerprint file '%s'. Returning.", fname);
+      tor_free(fname);
       return 0;
     }
   }
+  tor_free(fname);
+
   result = config_get_lines(cf, &front);
   tor_free(cf);
   if (result < 0) {

@@ -575,10 +575,9 @@ read_bandwidth_usage(void)
   or_state_t *state = get_or_state();
 
   {
-    char fname[512];
-    tor_snprintf(fname, sizeof(fname), "%s/bw_accounting",
-                 get_options()->DataDirectory);
+    char *fname = get_datadir_fname("bw_accounting");
     unlink(fname);
+    tor_free(fname);
   }
 
   if (!state)

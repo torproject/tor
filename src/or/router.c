@@ -153,17 +153,12 @@ get_my_v3_authority_signing_key(void)
 void
 rotate_onion_key(void)
 {
-  char fname[512];
-  char fname_prev[512];
+  char *fname, *fname_prev;
   crypto_pk_env_t *prkey;
   or_state_t *state = get_or_state();
   time_t now;
-  tor_snprintf(fname,sizeof(fname),
-               "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key",
-               get_options()->DataDirectory);
-  tor_snprintf(fname_prev,sizeof(fname_prev),
-               "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key.old",
-               get_options()->DataDirectory);
+  fname = get_datadir_fname2("keys", "secret_onion_key");
+  fname_prev = get_datadir_fname2("keys", "secret_onion_key.old");
   if (!(prkey = crypto_new_pk_env())) {
     log_err(LD_GENERAL,"Error constructing rotated onion key");
     goto error;
@@ -191,9 +186,12 @@ rotate_onion_key(void)
   tor_mutex_release(key_lock);
   mark_my_descriptor_dirty();
   or_state_mark_dirty(state, get_options()->AvoidDiskWrites ? now+3600 : 0);
-  return;
+  goto done;
  error:
   log_warn(LD_GENERAL, "Couldn't rotate onion key.");
+ done:
+  tor_free(fname);
+  tor_free(fname_prev);
 }
 
 /** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist
@@ -372,11 +370,11 @@ v3_authority_check_key_expiry(void)
 int
 init_keys(void)
 {
-  char keydir[512];
+  char *keydir;
   char fingerprint[FINGERPRINT_LEN+1];
   /*nickname<space>fp\n\0 */
   char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
-  const char *mydesc, *datadir;
+  const char *mydesc;
   crypto_pk_env_t *prkey;
   char digest[20];
   char v3_digest[20];
@@ -408,15 +406,16 @@ init_keys(void)
     return 0;
   }
   /* Make sure DataDirectory exists, and is private. */
-  datadir = options->DataDirectory;
-  if (check_private_dir(datadir, CPD_CREATE)) {
+  if (check_private_dir(options->DataDirectory, CPD_CREATE)) {
     return -1;
   }
   /* Check the key directory. */
-  tor_snprintf(keydir,sizeof(keydir),"%s"PATH_SEPARATOR"keys", datadir);
+  keydir = get_datadir_fname("keys");
   if (check_private_dir(keydir, CPD_CREATE)) {
+    tor_free(keydir);
     return -1;
   }
+  tor_free(keydir);
 
   /* 1a. Read v3 directory authority key/cert information. */
   memset(v3_digest, 0, sizeof(v3_digest));
@@ -430,18 +429,18 @@ init_keys(void)
   }
 
   /* 1. Read identity key. Make it if none is found. */
-  tor_snprintf(keydir,sizeof(keydir),
-               "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_id_key",datadir);
+  keydir = get_datadir_fname2("keys", "secret_id_key");
   log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir);
   prkey = init_key_from_file(keydir, 1, LOG_ERR);
+  tor_free(keydir);
   if (!prkey) return -1;
   set_identity_key(prkey);
 
   /* 2. Read onion key.  Make it if none is found. */
-  tor_snprintf(keydir,sizeof(keydir),
-             "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key",datadir);
+  keydir = get_datadir_fname2("keys", "secret_onion_key");
   log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir);
   prkey = init_key_from_file(keydir, 1, LOG_ERR);
+  tor_free(keydir);
   if (!prkey) return -1;
   set_onion_key(prkey);
   if (options->command == CMD_RUN_TOR) {
@@ -463,13 +462,13 @@ init_keys(void)
     }
   }
 
-  tor_snprintf(keydir,sizeof(keydir),
-         "%s"PATH_SEPARATOR"keys"PATH_SEPARATOR"secret_onion_key.old",datadir);
+  keydir = get_datadir_fname2("keys", "secret_onion_key.old");
   if (file_status(keydir) == FN_FILE) {
     prkey = init_key_from_file(keydir, 1, LOG_ERR);
     if (prkey)
       lastonionkey = prkey;
   }
+  tor_free(keydir);
 
   /* 3. Initialize link key and TLS context. */
   if (tor_tls_context_new(get_identity_key(), options->Nickname,
@@ -503,8 +502,9 @@ init_keys(void)
   }
 
   /* 5. Dump fingerprint to 'fingerprint' */
-  tor_snprintf(keydir,sizeof(keydir),"%s"PATH_SEPARATOR"fingerprint", datadir);
+  keydir = get_datadir_fname("fingerprint");
   log_info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
+  tor_free(keydir);
   if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 1)<0) {
     log_err(LD_GENERAL,"Error computing fingerprint");
     return -1;

@@ -3033,6 +3033,36 @@ test_util_mempool(void)
   smartlist_free(allocated);
 }
 
+static void
+test_util_datadir(void)
+{
+  char buf[1024];
+  char *f;
+
+  f = get_datadir_fname(NULL);
+  test_streq(f, temp_dir);
+  tor_free(f);
+  f = get_datadir_fname("state");
+  tor_snprintf(buf, sizeof(buf), "%s"PATH_SEPARATOR"state", temp_dir);
+  test_streq(f, buf);
+  tor_free(f);
+  f = get_datadir_fname2("cache", "thingy");
+  tor_snprintf(buf, sizeof(buf),
+               "%s"PATH_SEPARATOR"cache"PATH_SEPARATOR"thingy", temp_dir);
+  test_streq(f, buf);
+  tor_free(f);
+  f = get_datadir_fname2_suffix("cache", "thingy", ".foo");
+  tor_snprintf(buf, sizeof(buf),
+               "%s"PATH_SEPARATOR"cache"PATH_SEPARATOR"thingy.foo", temp_dir);
+  test_streq(f, buf);
+  tor_free(f);
+  f = get_datadir_fname_suffix("cache", ".foo");
+  tor_snprintf(buf, sizeof(buf), "%s"PATH_SEPARATOR"cache.foo",
+               temp_dir);
+  test_streq(f, buf);
+  tor_free(f);
+}
+
 /* Test AES-CTR encryption and decryption with IV. */
 static void
 test_crypto_aes_iv(void)
@@ -3194,6 +3224,7 @@ static struct {
   ENT(util),
   SUBENT(util, ip6_helpers),
   SUBENT(util, gzip),
+  SUBENT(util, datadir),
   SUBENT(util, smartlist),
   SUBENT(util, bitarray),
   SUBENT(util, mempool),

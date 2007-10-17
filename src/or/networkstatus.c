@@ -118,17 +118,15 @@ networkstatus_reset_download_failures(void)
 int
 router_reload_v2_networkstatus(void)
 {
-  char filename[512];
   smartlist_t *entries;
   struct stat st;
   char *s;
-  tor_assert(get_options()->DataDirectory);
+  char *filename = get_datadir_fname("cached-status");
   if (!networkstatus_v2_list)
     networkstatus_v2_list = smartlist_create();
 
-  tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-status",
-               get_options()->DataDirectory);
   entries = tor_listdir(filename);
+  tor_free(filename);
   SMARTLIST_FOREACH(entries, const char *, fn, {
       char buf[DIGEST_LEN];
       if (strlen(fn) != HEX_DIGEST_LEN ||
@@ -137,9 +135,7 @@ router_reload_v2_networkstatus(void)
                  "Skipping cached-status file with unexpected name \"%s\"",fn);
         continue;
       }
-      tor_snprintf(filename,sizeof(filename),
-                   "%s"PATH_SEPARATOR"cached-status"PATH_SEPARATOR"%s",
-                   get_options()->DataDirectory, fn);
+      filename = get_datadir_fname2("cached-status", fn);
       s = read_file_to_str(filename, 0, &st);
       if (s) {
         if (router_set_networkstatus_v2(s, st.st_mtime, NS_FROM_CACHE,
@@ -148,6 +144,7 @@ router_reload_v2_networkstatus(void)
         }
         tor_free(s);
       }
+      tor_free(filename);
     });
   SMARTLIST_FOREACH(entries, char *, fn, tor_free(fn));
   smartlist_free(entries);
@@ -160,13 +157,12 @@ router_reload_v2_networkstatus(void)
 int
 router_reload_consensus_networkstatus(void)
 {
-  char filename[512];
+  char *filename;
   char *s;
 
   /* XXXX020 Suppress warnings if cached consensus is bad. */
 
-  tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-consensus",
-               get_options()->DataDirectory);
+  filename = get_datadir_fname("cached-consensus");
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   if (s) {
     if (networkstatus_set_current_consensus(s, 1, 0)) {
@@ -175,10 +171,9 @@ router_reload_consensus_networkstatus(void)
     }
     tor_free(s);
   }
+  tor_free(filename);
 
-  tor_snprintf(filename,sizeof(filename),
-               "%s"PATH_SEPARATOR"unverified-consensus",
-               get_options()->DataDirectory);
+  filename = get_datadir_fname("unverified-consensus");
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   if (s) {
     if (networkstatus_set_current_consensus(s, 1, 1)) {
@@ -187,6 +182,7 @@ router_reload_consensus_networkstatus(void)
     }
     tor_free(s);
   }
+  tor_free(filename);
 
   return 0;
 }
@@ -221,14 +217,9 @@ networkstatus_v2_free(networkstatus_v2_t *ns)
 char *
 networkstatus_get_cache_filename(const char *identity_digest)
 {
-  const char *datadir = get_options()->DataDirectory;
-  size_t len = strlen(datadir)+64;
   char fp[HEX_DIGEST_LEN+1];
-  char *fn = tor_malloc(len+1);
   base16_encode(fp, HEX_DIGEST_LEN+1, identity_digest, DIGEST_LEN);
-  tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status"PATH_SEPARATOR"%s",
-               datadir,fp);
-  return fn;
+  return get_datadir_fname2("cached-status", fp);
 }
 
 /** Helper for smartlist_sort: Compare two networkstatus objects by
@@ -901,15 +892,19 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
                                     int was_waiting_for_certs)
 {
   networkstatus_vote_t *c;
-  int r;
+  int r, result=-1;
   time_t now = time(NULL);
+  char *unverified_fname = NULL, *consensus_fname = NULL;
 
   /* Make sure it's parseable. */
   c = networkstatus_parse_vote_from_string(consensus, NULL, 0);
   if (!c) {
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
-    return -1;
+    goto done;
   }
+
+  consensus_fname = get_datadir_fname("cached-consensus");
+  unverified_fname = get_datadir_fname("unverified-consensus");
 
   /* Make sure it's signed enough. */
   if ((r=networkstatus_check_consensus_signature(c, 1))<0) {
@@ -927,23 +922,27 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
         consensus_waiting_for_certs_body = tor_strdup(consensus);
         /*XXXX020 delay next update. NMNM */
         if (!from_cache) {
-          or_options_t *options = get_options();
-          char filename[512];
-          tor_snprintf(filename, sizeof(filename),
-                       "%s"PATH_SEPARATOR"unverified-consensus",
-                       options->DataDirectory);
-          write_str_to_file(filename, consensus, 0);
+          write_str_to_file(unverified_fname, consensus, 0);
         }
         authority_certs_fetch_missing(c, now);
+      } else {
+        /* Even if we had enough signatures, we'd never use this as the
+         * latest consensus. */
+        if (was_waiting_for_certs && from_cache)
+          unlink(unverified_fname);
       }
       download_status_reset(&consensus_dl_status); /*XXXX020 not quite right.*/
-      return 0;
+      result = 0;
+      goto done;
     } else {
+      /* This can never be signed enough Kill it. */
       if (!was_waiting_for_certs)
         log_warn(LD_DIR, "Not enough good signatures on networkstatus "
                  "consensus");
+      if (was_waiting_for_certs && from_cache)
+        unlink(unverified_fname);
       networkstatus_vote_free(c);
-      return -1;
+      goto done;
     }
   }
 
@@ -964,6 +963,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
     consensus_waiting_for_certs = NULL;
     if (consensus != consensus_waiting_for_certs_body)
       tor_free(consensus_waiting_for_certs_body);
+    unlink(unverified_fname);
   }
 
   current_consensus = c;
@@ -973,12 +973,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   routerstatus_list_update_named_server_map();
 
   if (!from_cache) {
-    or_options_t *options = get_options();
-    char filename[512];
-    tor_snprintf(filename, sizeof(filename),
-                 "%s"PATH_SEPARATOR"cached-consensus",
-                 options->DataDirectory);
-    write_str_to_file(filename, consensus, 0);
+    write_str_to_file(consensus_fname, consensus, 0);
   }
 
   if (dirserver_mode(get_options()))
@@ -986,7 +981,11 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
 
   router_dir_info_changed();
 
-  return 0;
+  result = 0;
+ done:
+  tor_free(consensus_fname);
+  tor_free(unverified_fname);
+  return result;
 }
 
 /** DOCDOC */

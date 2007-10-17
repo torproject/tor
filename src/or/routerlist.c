@@ -87,13 +87,13 @@ get_n_authorities(authority_type_t type)
 int
 trusted_dirs_reload_certs(void)
 {
-  char filename[512];
+  char *filename;
   char *contents;
   int r;
 
-  tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-certs",
-               get_options()->DataDirectory);
+  filename = get_datadir_fname("cached-certs");
   contents = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+  tor_free(filename);
   if (!contents)
     return 0;
   r = trusted_dirs_load_certs_from_string(contents, 1);
@@ -161,7 +161,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 void
 trusted_dirs_flush_certs_to_disk(void)
 {
-  char filename[512];
+  char *filename;
   smartlist_t *chunks;
 
   if (!trusted_dir_servers_certs_changed)
@@ -169,8 +169,6 @@ trusted_dirs_flush_certs_to_disk(void)
 
   chunks = smartlist_create();
 
-  tor_snprintf(filename,sizeof(filename),"%s"PATH_SEPARATOR"cached-certs",
-               get_options()->DataDirectory);
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
   {
       if (ds->v3_certs) {
@@ -183,9 +181,11 @@ trusted_dirs_flush_certs_to_disk(void)
           });
       }
   });
+  filename = get_datadir_fname("cached-certs");
   if (write_chunks_to_file(filename, chunks, 0)) {
     log_warn(LD_FS, "Error writing certificates to disk.");
   }
+  tor_free(filename);
   SMARTLIST_FOREACH(chunks, sized_chunk_t *, c, tor_free(c));
   smartlist_free(chunks);
 
@@ -415,15 +415,9 @@ static int
 signed_desc_append_to_journal(signed_descriptor_t *desc,
                               desc_store_t *store)
 {
-  or_options_t *options = get_options();
-  size_t fname_len = strlen(options->DataDirectory)+32;
-  char *fname;
+  char *fname = get_datadir_fname_suffix(store->fname_base, ".new");
   const char *body = signed_descriptor_get_body_impl(desc,1);
   size_t len = desc->signed_descriptor_len + desc->annotations_len;
-
-  fname = tor_malloc(fname_len);
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
-               options->DataDirectory, store->fname_base);
 
   tor_assert(len == strlen(body));
 
@@ -462,7 +456,6 @@ static int
 router_rebuild_store(int force, desc_store_t *store)
 {
   or_options_t *options;
-  size_t fname_len;
   smartlist_t *chunk_list = NULL;
   char *fname = NULL, *fname_tmp = NULL;
   int r = -1;
@@ -483,13 +476,9 @@ router_rebuild_store(int force, desc_store_t *store)
   log_info(LD_DIR, "Rebuilding %s cache", store->description);
 
   options = get_options();
-  fname_len = strlen(options->DataDirectory)+32;
-  fname = tor_malloc(fname_len);
-  fname_tmp = tor_malloc(fname_len);
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s",
-               options->DataDirectory, store->fname_base);
-  tor_snprintf(fname_tmp, fname_len, "%s"PATH_SEPARATOR"%s.tmp",
-               options->DataDirectory, store->fname_base);
+
+  fname = get_datadir_fname(store->fname_base);
+  fname_tmp = get_datadir_fname_suffix(store->fname_base, ".tmp");
 
   chunk_list = smartlist_create();
 
@@ -571,9 +560,8 @@ router_rebuild_store(int force, desc_store_t *store)
       signed_descriptor_get_body(sd); /* reconstruct and assert */
     });
 
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
-               options->DataDirectory, store->fname_base);
-
+  tor_free(fname);
+  fname = get_datadir_fname_suffix(store->fname_base, ".new");
   write_str_to_file(fname, "", 1);
 
   r = 0;
@@ -597,23 +585,16 @@ router_rebuild_store(int force, desc_store_t *store)
 static int
 router_reload_router_list_impl(desc_store_t *store)
 {
-  or_options_t *options = get_options();
-  size_t fname_len = strlen(options->DataDirectory)+32;
-  char *fname = tor_malloc(fname_len), *altname = NULL,
-    *contents = NULL;
+  char *fname = NULL, *altname = NULL, *contents = NULL;
   struct stat st;
   int read_from_old_location = 0;
   int extrainfo = (store->type == EXTRAINFO_STORE);
   time_t now = time(NULL);
   store->journal_len = store->store_len = 0;
 
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s",
-               options->DataDirectory, store->fname_base);
-  if (store->fname_alt_base) {
-    altname = tor_malloc(fname_len);
-    tor_snprintf(altname, fname_len, "%s"PATH_SEPARATOR"%s",
-                 options->DataDirectory, store->fname_alt_base);
-  }
+  fname = get_datadir_fname(store->fname_base);
+  if (store->fname_alt_base)
+    altname = get_datadir_fname(store->fname_alt_base);
 
   if (store->mmap) /* get rid of it first */
     tor_munmap_file(store->mmap);
@@ -642,13 +623,13 @@ router_reload_router_list_impl(desc_store_t *store)
                                       SAVED_IN_CACHE, NULL, 0, NULL);
   }
 
-  tor_snprintf(fname, fname_len, "%s"PATH_SEPARATOR"%s.new",
-               options->DataDirectory, store->fname_base);
+  tor_free(fname);
+  fname = get_datadir_fname_suffix(store->fname_base, ".new");
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
   if (read_from_old_location) {
-    tor_snprintf(altname, fname_len, "%s"PATH_SEPARATOR"%s.new",
-                 options->DataDirectory, store->fname_alt_base);
+    tor_free(altname);
+    altname = get_datadir_fname_suffix(store->fname_alt_base, ".new");
     if (!contents)
       contents = read_file_to_str(altname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
     else

@@ -595,18 +595,6 @@ rep_history_clean(time_t before)
   }
 }
 
-/** Return a newly allocated string holding the filename in which we store
- * MTBF information. */
-static char *
-get_mtbf_filename(void)
-{
-  const char *datadir = get_options()->DataDirectory;
-  size_t len = strlen(datadir)+32;
-  char *fn = tor_malloc(len);
-  tor_snprintf(fn, len, "%s"PATH_SEPARATOR"router-stability", datadir);
-  return fn;
-}
-
 /** Write MTBF data to disk.  Returns 0 on success, negative on failure. */
 int
 rep_hist_record_mtbf_data(void)
@@ -621,7 +609,7 @@ rep_hist_record_mtbf_data(void)
   FILE *f;
 
   {
-    char *filename = get_mtbf_filename();
+    char *filename = get_datadir_fname("router-stability");
     f = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE|O_TEXT, 0600,
                                     &open_file);
     tor_free(filename);
@@ -725,7 +713,7 @@ rep_hist_load_mtbf_data(time_t now)
   long format = -1;
 
   {
-    char *filename = get_mtbf_filename();
+    char *filename = get_datadir_fname("router-stability");
     char *d = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
     tor_free(filename);
     if (!d)

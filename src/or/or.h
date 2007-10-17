@@ -2443,6 +2443,14 @@ config_line_t *option_get_assignment(or_options_t *options,
                                      const char *key);
 int options_save_current(void);
 const char *get_torrc_fname(void);
+char *get_datadir_fname2_suffix(const char *sub1, const char *sub2,
+                                const char *suffix);
+/**DOCDOC*/
+#define get_datadir_fname(sub1) get_datadir_fname2_suffix((sub1), NULL, NULL)
+#define get_datadir_fname2(sub1,sub2) \
+  get_datadir_fname2_suffix((sub1), (sub2), NULL)
+#define get_datadir_fname_suffix(sub1, suffix) \
+  get_datadir_fname2_suffix((sub1), NULL, (suffix))
 
 or_state_t *get_or_state(void);
 int or_state_save(time_t now);
