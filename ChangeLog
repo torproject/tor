@@ -49,6 +49,12 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Make base32_decode() accept upper-case letters.  Bugfix on
       0.2.0.7-alpha.
 
+  o Minor bugfixes (performance):
+    - Base64 decoding was actually showing up on our profile when parsing
+      the initial descriptor file; switch to an in-process all-at-once
+      implementation that's about 3.5x times faster than calling out to
+      OpenSSL.
+
   o Code simplifications and refactoring:
     - Remove support for the old bw_accounting file: we've been storing
       bandwidth accounting information in the state file since 0.1.2.5-alpha.

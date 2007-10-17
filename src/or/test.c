@@ -363,7 +363,7 @@ test_crypto(void)
   crypto_cipher_env_t *env1, *env2;
   crypto_pk_env_t *pk1, *pk2;
   char *data1, *data2, *data3, *cp;
-  int i, j, p, len;
+  int i, j, p, len, idx;
   size_t size;
 
   data1 = tor_malloc(1024);
@@ -528,13 +528,21 @@ test_crypto(void)
   crypto_free_pk_env(pk2);
 
   /* Base64 tests */
+  memset(data1, 6, 1024);
+  for (idx = 0; idx < 10; ++idx) {
+    i = base64_encode(data2, 1024, data1, idx);
+    j = base64_decode(data3, 1024, data2, i);
+    test_eq(j,idx);
+    test_memeq(data3, data1, idx);
+  }
+
   strlcpy(data1, "Test string that contains 35 chars.", 1024);
   strlcat(data1, " 2nd string that contains 35 chars.", 1024);
 
   i = base64_encode(data2, 1024, data1, 71);
   j = base64_decode(data3, 1024, data2, i);
-  test_streq(data3, data1);
   test_eq(j, 71);
+  test_streq(data3, data1);
   test_assert(data2[i] == '\0');
 
   crypto_rand(data1, DIGEST_LEN);
@@ -543,7 +551,7 @@ test_crypto(void)
   test_eq(BASE64_DIGEST_LEN, strlen(data2));
   test_eq(100, data2[BASE64_DIGEST_LEN+2]);
   memset(data3, 99, 1024);
-  digest_from_base64(data3, data2);
+  test_eq(digest_from_base64(data3, data2), 0);
   test_memeq(data1, data3, DIGEST_LEN);
   test_eq(99, data3[DIGEST_LEN+1]);
 
@@ -2639,6 +2647,7 @@ test_v3_networkstatus(void)
 
   v3_text = format_networkstatus_vote(sign_skey_3, vote);
   test_assert(v3_text);
+
   v3 = networkstatus_parse_vote_from_string(v3_text, NULL, 1);
   test_assert(v3);
 

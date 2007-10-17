@@ -1768,6 +1768,8 @@ smartlist_shuffle(smartlist_t *sl)
 int
 base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
+  /* XXXX we might want to rewrite this along the lines of base64_decode, if
+   * it ever shows up in the profile. */
   EVP_ENCODE_CTX ctx;
   int len, ret;
 
@@ -1787,18 +1789,48 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   return ret;
 }
 
+#define X 255
+#define SP 64
+#define PAD 65
+/** Internal table mapping byte values to what they represent in base64.
+ * Numbers 0..63 are 6-bit integers.  SPs are spaces, and should be
+ * skipped.  Xs are invalid and must not appear in base64. PAD indicates
+ * end-of-string. */
+static const uint8_t base64_decode_table[256] = {
+  X, X, X, X, X, X, X, X, X, SP, SP, SP, X, SP, X, X, /* */
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+  SP, X, X, X, X, X, X, X, X, X, X, 62, X, X, X, 63,
+  52, 53, 54, 55, 56, 57, 58, 59, 60, 61, X, X, X, PAD, X, X,
+  X, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+  15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, X, X, X, X, X,
+  X, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+  41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, X, X, X, X, X,
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+  X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,
+};
+
 /** Base-64 decode <b>srclen</b> bytes of data from <b>src</b>.  Write
  * the result into <b>dest</b>, if it will fit within <b>destlen</b>
  * bytes.  Return the number of bytes written on success; -1 if
  * destlen is too short, or other failure.
  *
- * NOTE: destlen should be a little longer than the amount of data it
- * will contain, since we check for sufficient space conservatively.
- * Here, "a little" is around 64-ish bytes.
+ * NOTE 1: destlen is checked conservatively, as though srclen contained no
+ * spaces or padding.
+ *
+ * NOTE 2: This implementation does not check for the correct number of
+ * padding "=" characters at the end of the string, and does not check
+ * for internal padding characters.
  */
 int
 base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
+#ifdef USE_OPENSSL_BASE64
   EVP_ENCODE_CTX ctx;
   int len, ret;
   /* 64 bytes of input -> *up to* 48 bytes of output.
@@ -1815,7 +1847,80 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   EVP_DecodeFinal(&ctx, (unsigned char*)dest, &ret);
   ret += len;
   return ret;
+#else
+  #define ACC32
+  const char *eos = src+srclen;
+  uint32_t n=0;
+  int n_idx=0;
+  char *dest_orig = dest;
+
+  /* Max number of bits == srclen*6.
+   * Number of bytes required to hold all bits == (srclen*6)/8.
+   * Yes, we want to round down: anything that hangs over the end of a
+   * byte is padding. */
+  if (destlen < (srclen*3)/4)
+    return -1;
+  if (destlen > SIZE_T_CEILING)
+    return -1;
+
+  /* Iterate over all the bytes in src.  Each one will add 0 or 6 bits to the
+   * value we're decoding.  Accumulate bits in <b>n</b>, and whenever we have
+   * 24 bits, batch them into 3 bytes and flush those bytes to dest.
+   */
+  for ( ; src < eos; ++src) {
+    unsigned char c = (unsigned char) *src;
+    uint8_t v = base64_decode_table[c];
+    switch (v) {
+      case X:
+        /* This character isn't allowed in base64. */
+        return -1;
+      case SP:
+        /* This character is whitespace, and has no effect. */
+        continue;
+      case PAD:
+        /* We've hit an = character: the data is over. */
+        goto end_of_loop;
+      default:
+        /* We have an actual 6-bit value.  Append it to the bits in n. */
+        n = (n<<6) | v;
+        if ((++n_idx) == 4) {
+          /* We've accumulated 24 bits in n. Flush them. */
+          *dest++ = (n>>16);
+          *dest++ = (n>>8) & 0xff;
+          *dest++ = (n) & 0xff;
+          n_idx = 0;
+          n = 0;
+        }
+    }
+  }
+ end_of_loop:
+  /* If we have leftover bits, we need to cope. */
+  switch (n_idx) {
+    case 0:
+    default:
+      /* No leftover bits.  We win. */
+      break;
+    case 1:
+      /* 6 leftover bits. That's invalid; we can't form a byte out of that. */
+      return -1;
+    case 2:
+      /* 12 leftover bits: The last 4 are padding and the first 8 are data. */
+      *dest++ = n >> 4;
+      break;
+    case 3:
+      /* 18 leftover bits: The last 2 are padding and the first 16 are data. */
+      *dest++ = n >> 10;
+      *dest++ = n >> 2;
+  }
+
+  tor_assert((dest-dest_orig) <= (ssize_t)destlen);
+
+  return dest-dest_orig;
+#endif
 }
+#undef X
+#undef SP
+#undef NIL
 
 /** Base-64 encode DIGEST_LINE bytes from <b>digest</b>, remove the trailing =
  * and newline characters, and store the nul-terminated result in the first
@@ -1836,6 +1941,7 @@ digest_to_base64(char *d64, const char *digest)
 int
 digest_from_base64(char *digest, const char *d64)
 {
+#ifdef USE_OPENSSL_BASE64
   char buf_in[BASE64_DIGEST_LEN+3];
   char buf[256];
   if (strlen(d64) != BASE64_DIGEST_LEN)
@@ -1846,6 +1952,12 @@ digest_from_base64(char *digest, const char *d64)
     return -1;
   memcpy(digest, buf, DIGEST_LEN);
   return 0;
+#else
+  if (base64_decode(digest, DIGEST_LEN, d64, strlen(d64)) == DIGEST_LEN)
+    return 0;
+  else
+    return -1;
+#endif
 }
 
 /** Implements base32 encoding as in rfc3548.  Limitation: Requires
@@ -1878,6 +1990,8 @@ base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 int
 base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
+  /* XXXX we might want to rewrite this along the lines of base64_decode, if
+   * it ever shows up in the profile. */
   unsigned int nbits, i, j, bit;
   char *tmp;
   nbits = srclen * 5;
