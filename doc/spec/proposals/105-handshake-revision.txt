@@ -120,11 +120,12 @@ Proposal:
    When a Tor connection is established, both parties normally send a
    VERSIONS cell before sending any other cells.  (But see below.)
 
-         NumVersions          [1 byte]
+         VersionsLen          [1 byte]
          Versions             [NumVersions bytes]
 
-   "Versions" is a sequence of NumVersions link connection protocol versions,
-   each one byte long.  Parties should list all of the versions which they
+   "Versions" is a sequence of NumVersions bytes.  Each value between 1 and
+   127 inclusive represents a single version; current implementations MUST
+   ignore other bytes.  Parties should list all of the versions which they
    are able and willing to support.  Parties can only communicate if they
    have some connection protocol version in common.
 
@@ -133,17 +134,23 @@ Proposal:
    the other side has sent a VERSIONS cell won't work for these servers:
    if the other side sends no cells back, it is impossible to tell
    whether they
+
    have sent a VERSIONS cell that has been stalled, or whether they have
-   dropped our own VERSIONS cell as unrecognized.  Thus, immediately after
-   a TLS connection has been established, the parties check whether the
-   other side has an obsolete certificate (organizationName equal to "Tor"
-   or "TOR").  If the other party presented an obsolete certificate,
-   we assume a v1 connection.  Otherwise, both parties send VERSIONS
-   cells listing all their supported versions.  Upon receiving the
-   other party's VERSIONS cell, the implementation begins using the
-   highest-valued version common to both cells.  If the first cell from
-   the other party has a recognized command, and is _not_ a VERSIONS cell, we
-   assume a v1 protocol.
+   dropped our own VERSIONS cell as unrecognized.  Therefore, we'll
+   change the TLS negotiation parameters so that old parties can still
+   negotiate, but new parties can recognize each other.  Immediately
+   after a TLS connection has been established, the parties check
+   whether the other side negotiated the connection in an "old" way or a
+   "new" way.  If either party negotiated in the "old" way, we assume a
+   v1 connection.  Otherwise, both parties send VERSIONS cells listing
+   all their supported versions.  Upon receiving the other party's
+   VERSIONS cell, the implementation begins using the highest-valued
+   version common to both cells.  If the first cell from the other party
+   has a recognized command, and is _not_ a VERSIONS cell, we assume a
+   v1 protocol.
+
+   (For more detail on the TLS protocol change, see forthcoming draft
+   proposals from Steven Murdoch.)
 
    Implementations MUST discard VERSIONS cells that are not the first
    recognized cells sent on a connection.
@@ -159,8 +166,9 @@ Proposal:
 
    A NETINFO cell contains:
          Timestamp              [4 bytes]
-         This OR's address      [variable]
          Other OR's address     [variable]
+         Number of addresses    [1 byte]
+         This OR's addresses    [variable]
 
    Timestamp is the OR's current Unix time, in seconds since the epoch.  If
    an implementation receives time values from many ORs that
@@ -168,23 +176,32 @@ Proposal:
    administrator. (We leave the definition of 'many' intentionally vague
    for now.)
 
+   Before believing the timestamp in a NETINFO cell, implementations
+   SHOULD compare the time at which they received the cell to the time
+   when they sent their VERSIONS cell.  If the difference is very large,
+   it is likely that the cell was delayed long enough that its
+   contents are out of date.
+
    Each address contains Type/Length/Value as used in Section 6.4 of
-   tor-spec.txt.  The first address is the address of the interface the
-   party sending the NETINFO cell
-   used to connect to or accept connections from the other -- we include it
+   tor-spec.txt.  The first address is the one that the party sending
+   the NETINFO cell believes the other has -- it can be used to learn
+   what your IP address is if you have no other hints.
+   The rest of the addresses are the advertised addresses of the party
+   sending the NETINFO cell -- we include them
    to block a man-in-the-middle attack on TLS that lets an attacker bounce
    traffic through his own computers to enable timing and packet-counting
    attacks.
 
-   The second address is the one that the party sending the NETINFO cell
-   believes the other has -- it can be used to learn what your IP address
-   is if you have no other hints.
+   If a party connects to an OR based on an EXTEND cell, and the address
+   given in the EXTEND cell is not listed in the NETINFO cell, the first
+   party SHOULD close the connection as a likely MITM attack.
+
 
 Discussion: Versions versus feature lists
 
    Many protocols negotiate lists of available features instead of (or in
    addition to) protocol versions.  While it's possible that some amount of
-   version negotiation could be supported in a later Tor, we should prefer to
+   feature negotiation could be supported in a later Tor, we should prefer to
    use protocol versions whenever possible, for reasons discussed in
    the "Anonymity Loves Company" paper.
 
@@ -210,8 +227,13 @@ Discussion: Bytes per version, versions per cell
      - Decide that if we need to support more versions, we can add a
        MOREVERSIONS cell that gets sent before the VERSIONS cell.  The spec
        above requires Tors to ignore unrecognized cell types that they get
-       before the first VERSIONS cell, and still allows version negotiation to
+       before the first VERSIONS cell, and still allows version negotiation
+       to
        succeed.
+
+   [Resolution: Reserve the high bit and the v0 value for later use.  If
+    we ever have more live versions than we can fit in a cell, we've made a
+    bad design decision somewhere along the line.]
 
 Discussion: Reducing round-trips
 
@@ -265,7 +287,6 @@ Discussion: Advertising versions in routerdescs and networkstatuses.
      [Versions of Tor before 0.1.2.5-alpha rejected router descriptors with
      unrecognized items; the protocols line should be preceded with an "opt"
      until these Tors are obsolete.]
-
 
 Security issues:
 
