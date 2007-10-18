@@ -121,9 +121,9 @@ Proposal:
    VERSIONS cell before sending any other cells.  (But see below.)
 
          VersionsLen          [1 byte]
-         Versions             [NumVersions bytes]
+         Versions             [VersionsLen bytes]
 
-   "Versions" is a sequence of NumVersions bytes.  Each value between 1 and
+   "Versions" is a sequence of VersionsLen bytes.  Each value between 1 and
    127 inclusive represents a single version; current implementations MUST
    ignore other bytes.  Parties should list all of the versions which they
    are able and willing to support.  Parties can only communicate if they

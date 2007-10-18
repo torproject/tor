@@ -107,19 +107,19 @@ Status: Open
 
 4. Changes to the v2 directory
 
-  Previously v2 authorities that had a binding for a server named Bob did
+  Previously, v2 authorities that had a binding for a server named Bob did
   not list any other server named Bob.  This will change too:
 
   Version 2 authorities will start listing all routers they know about,
   whether they conflict with a name-binding or not:  Servers for which
   this authority has a binding will continue to be marked Named,
-  additionally all other servers of that will be listed without the
+  additionally all other servers of that nickname will be listed without the
   Named flag (i.e. there will be no Unnamed flag in v2 status documents).
 
   Clients already should handle having a named Bob alongside unnamed
   Bobs correctly, and having the unnamed Bobs in the status file even
-  without the named server is no worse than the curren status quo where
-  clients learn about those severs from other authorities.
+  without the named server is no worse than the current status quo where
+  clients learn about those servers from other authorities.
 
   The benefit of this is that an authority's opinion on a server like
   Guard, Stable, Fast etc. can now be learned by clients even if that

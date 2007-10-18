@@ -1251,7 +1251,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
 /** Awful hack: return a newly allocated string based on a routerinfo and
  * (possibly) an extrainfo, sticking the read-history and write-history from
  * <b>ei</b> into the resulting string.  The thing you get back won't
- * necessarily have a valid signature.
+ * have a valid signature.
  *
  * New code should never use this; it's for backward compatibiliy.
  *

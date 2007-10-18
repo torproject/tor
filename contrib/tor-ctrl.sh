@@ -11,7 +11,7 @@
 #
 # tor-ctrl will return 0 if it was successful and 1 if not, 2 will be returned
 # if something (telnet, xxd) is missing.  4 will be returned if it executed
-# serveral commands from a file.
+# several commands from a file.
 #
 # For setting the bandwidth for specific times of the day, I suggest calling
 # tor-ctrl via cron, e.g.:
@@ -49,10 +49,11 @@
 # Also have a look at my page:
 # http://ge.mine.nu/
 #
-# 2007-10-03: First version, only changing bandwidth possible
+# 2007-10-03: First version, only changing bandwidth possible.
 # 2007-10-04: Renaming to "tor-ctrl", added a lot of functions, it's now a
-#             general-purpose tool added control_auth_cookie/controlpassword
-#             auth, getopts, program checks, readinf from file etc.
+#             general-purpose tool.
+#             Added control_auth_cookie/controlpassword auth, getopts,
+#             program checks, reading from file etc.
 
 VERSION=v1
 TORCTLIP=127.0.0.1

@@ -862,7 +862,7 @@ networkstatus_get_live_consensus(time_t now)
 }
 
 /** Copy all the ancillary information (like router download status and so on)
- * from <b>old_c</b> to <b>new_c</b> */
+ * from <b>old_c</b> to <b>new_c</b>. */
 static void
 networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
                                       const networkstatus_vote_t *old_c)
@@ -1138,7 +1138,7 @@ download_status_map_update_from_v2_networkstatus(void)
 }
 
 /** Update our view of the list of named servers from the most recently
- * retrieved networkstatus consensus */
+ * retrieved networkstatus consensus. */
 static void
 routerstatus_list_update_named_server_map(void)
 {
@@ -1157,9 +1157,9 @@ routerstatus_list_update_named_server_map(void)
     });
 }
 
-/** Given a list <b>routers</b> of routerinfo_t *, update each status fields
+/** Given a list <b>routers</b> of routerinfo_t *, update each status field
  * according to our current consensus networkstatus.  May re-order
- * <b>router</b>. */
+ * <b>routers</b>. */
 void
 routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                    int reset_failures)
