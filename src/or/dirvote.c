@@ -1061,12 +1061,17 @@ static struct {
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. */
 void
-dirvote_recalculate_timing(time_t now)
+dirvote_recalculate_timing(or_options_t *options, time_t now)
 {
   int interval, vote_delay, dist_delay;
   time_t start;
   time_t end;
-  networkstatus_vote_t *consensus = networkstatus_get_live_consensus(now);
+  networkstatus_vote_t *consensus;
+
+  if (!authdir_mode_v3(options))
+    return;
+
+  consensus = networkstatus_get_live_consensus(now);
 
   memset(&voting_schedule, 0, sizeof(voting_schedule));
 
@@ -1106,8 +1111,10 @@ dirvote_recalculate_timing(time_t now)
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */
 void
-dirvote_act(time_t now)
+dirvote_act(or_options_t *options, time_t now)
 {
+  if (!authdir_mode_v3(options))
+    return;
   if (!voting_schedule.voting_starts) {
     char *keys = list_v3_auth_ids();
     authority_cert_t *c = get_my_v3_authority_cert();
@@ -1115,7 +1122,7 @@ dirvote_act(time_t now)
                "Mine is %s.",
                keys, hex_str(c->cache_info.identity_digest, DIGEST_LEN));
     tor_free(keys);
-    dirvote_recalculate_timing(now);
+    dirvote_recalculate_timing(options, now);
   }
   if (voting_schedule.voting_starts < now && !voting_schedule.have_voted) {
     log_notice(LD_DIR, "Time to vote.");
@@ -1150,7 +1157,7 @@ dirvote_act(time_t now)
     voting_schedule.have_published_consensus = 1;
     /* XXXX020 we will want to try again later if we haven't got enough
      * signatures yet. */
-    dirvote_recalculate_timing(now);
+    dirvote_recalculate_timing(options, now);
   }
 }
 

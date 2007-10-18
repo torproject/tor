@@ -984,7 +984,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   current_consensus = c;
 
   update_consensus_networkstatus_fetch_time(now);
-  dirvote_recalculate_timing(now);
+  dirvote_recalculate_timing(get_options(), now);
   routerstatus_list_update_named_server_map();
 
   if (!from_cache) {

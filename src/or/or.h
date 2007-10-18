@@ -2932,8 +2932,8 @@ typedef struct vote_timing_t {
 /* vote scheduling */
 void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
 time_t dirvote_get_start_of_next_interval(time_t now, int interval);
-void dirvote_recalculate_timing(time_t now);
-void dirvote_act(time_t now);
+void dirvote_recalculate_timing(or_options_t *options, time_t now);
+void dirvote_act(or_options_t *options, time_t now);
 
 /* invoked on timers and by outside triggers. */
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
