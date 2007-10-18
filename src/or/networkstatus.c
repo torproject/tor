@@ -48,10 +48,6 @@ static time_t time_to_download_next_consensus = 0;
 /** Download status for the current consensus networkstatus. */
 static download_status_t consensus_dl_status = { 0, 0};
 
-/** List of strings for nicknames or fingerprints we've already warned about
- * and that are still conflicted. */ /*XXXX020 obsoleted by v3 dirs? */
-static smartlist_t *warned_conflicts = NULL;
-
 /** True iff we have logged a warning about this OR not being valid or
  * not being named. */
 static int have_warned_about_invalid_status = 0;
@@ -75,11 +71,6 @@ networkstatus_reset_warnings(void)
                       routerstatus_t *, rs,
                       rs->name_lookup_warned = 0);
   }
-
-  if (!warned_conflicts)
-    warned_conflicts = smartlist_create();
-  SMARTLIST_FOREACH(warned_conflicts, char *, cp, tor_free(cp));
-  smartlist_clear(warned_conflicts); /* now the list is empty. */
 
   have_warned_about_invalid_status = 0;
   have_warned_about_old_version = 0;
@@ -1312,11 +1303,6 @@ networkstatus_free_all(void)
     current_consensus = NULL;
   }
   tor_free(consensus_waiting_for_certs_body);
-  if (warned_conflicts) {
-    SMARTLIST_FOREACH(warned_conflicts, char *, cp, tor_free(cp));
-    smartlist_free(warned_conflicts);
-    warned_conflicts = NULL;
-  }
   if (named_server_map) {
     strmap_free(named_server_map, _tor_free);
   }
