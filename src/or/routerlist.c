@@ -2960,6 +2960,12 @@ routerlist_remove_old_routers(void)
 
   //routerlist_assert_ok(routerlist);
 
+  log_info(LD_DIR, "We have %d live routers and %d old router descriptors. "
+           "At most %d must be retained because of networkstatuses.",
+           smartlist_len(routerlist->routers),
+           smartlist_len(routerlist->old_routers),
+           digestmap_size(retain));
+
   /* Now we might have to look at routerlist->old_routers for extraneous
    * members. (We'd keep all the members if we could, but we need to save
    * space.) First, check whether we have too many router descriptors, total.
