@@ -973,7 +973,7 @@ options_act(or_options_t *old_options)
       }
     }
   } else {
-    if (!router_get_trusted_dir_servers())
+    if (!smartlist_len(router_get_trusted_dir_servers()))
       add_default_trusted_dirservers();
   }
 
