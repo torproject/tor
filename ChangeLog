@@ -22,6 +22,12 @@ Changes in version 0.1.2.18 - 2007-10-??
     - When looking for a circuit to cannibalize, consider family as well
       as identity. Fixes bug 438. Bugfix on 0.1.0.x (which introduced
       circuit cannibalization).
+    - When a router wasn't listed in a new networkstatus, we were leaving
+      the flags for that router alone -- meaning it remained Named,
+      Running, etc -- even though absence from the networkstatus means
+      that it shouldn't be considered to exist at all anymore. Now we
+      clear all the flags for routers that fall out of the networkstatus
+      consensus. Fixes bug 529.
 
   o Minor bugfixes:
     - Don't try to access (or alter) the state file when running
