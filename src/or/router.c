@@ -510,15 +510,16 @@ init_keys(void)
   /* 5. Dump fingerprint to 'fingerprint' */
   keydir = get_datadir_fname("fingerprint");
   log_info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
-  tor_free(keydir);
   if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 1)<0) {
     log_err(LD_GENERAL,"Error computing fingerprint");
+    tor_free(keydir);
     return -1;
   }
   tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
   if (tor_snprintf(fingerprint_line, sizeof(fingerprint_line),
                    "%s %s\n",options->Nickname, fingerprint) < 0) {
     log_err(LD_GENERAL,"Error writing fingerprint line");
+    tor_free(keydir);
     return -1;
   }
   /* Check whether we need to write the fingerprint file. */
@@ -528,10 +529,12 @@ init_keys(void)
   if (!cp || strcmp(cp, fingerprint_line)) {
     if (write_str_to_file(keydir, fingerprint_line, 0)) {
       log_err(LD_FS, "Error writing fingerprint line to file");
+      tor_free(keydir);
       return -1;
     }
   }
   tor_free(cp);
+  tor_free(keydir);
 
   log(LOG_NOTICE, LD_GENERAL,
       "Your Tor server's identity key fingerprint is '%s %s'",
