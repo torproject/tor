@@ -10,6 +10,12 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       when we find our DirPort to be reachable but won't actually publish
       it. Extra descriptors without any real changes are dropped by the
       authorities, and can screw up our "publish every 18 hours" schedule.
+    - When a router wasn't listed in a new networkstatus, we were leaving
+      the flags for that router alone -- meaning it remained Named,
+      Running, etc -- even though absence from the networkstatus means
+      that it shouldn't be considered to exist at all anymore. Now we
+      clear all the flags for routers that fall out of the networkstatus
+      consensus. Fixes bug 529.
 
   o Minor features (router descriptor cache):
     - If we find a cached-routers file that's been sitting around for more
@@ -75,6 +81,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Include the "tor-ctrl.sh" bash script by Stefan Behte to provide
       Unix users an easy way to script their Tor process (e.g. by adjusting
       bandwidth based on the time of the day).
+
 
 Changes in version 0.2.0.8-alpha - 2007-10-12
   o Major features (router descriptor cache):
@@ -2450,7 +2457,7 @@ Changes in version 0.1.1.13-alpha - 2006-02-09
       addresses, unless the server operator explicitly turns it off.
 
   o Major features:
-    - Clients not longer download descriptors for non-running
+    - Clients no longer download descriptors for non-running
       descriptors.
     - Before we add new directory authorities, we should make it
       clear that only v1 authorities should receive/publish hidden
