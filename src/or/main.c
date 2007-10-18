@@ -98,8 +98,12 @@ int has_completed_circuit=0;
 /** How often do we check buffers and pools for empty space that can be
  * deallocated? */
 #define MEM_SHRINK_INTERVAL (60)
-/** How often do we check for router descriptors that we should download? */
-#define DESCRIPTOR_RETRY_INTERVAL (10)
+/** How often do we check for router descriptors that we should download
+ * when we have too little directory info? */
+#define GREEDY_DESCRIPTOR_RETRY_INTERVAL (10)
+/** How often do we check for router descriptors that we should download
+ * when we have enough directory info? */
+#define LAZY_DESCRIPTOR_RETRY_INTERVAL (60)
 /** How often do we 'forgive' undownloadable router descriptors and attempt
  * to download them again? */
 #define DESCRIPTOR_FAILURE_RESET_INTERVAL (60*60)
@@ -859,13 +863,14 @@ run_scheduled_events(time_t now)
   }
 
   if (time_to_try_getting_descriptors < now) {
-    /* XXXX  Maybe we should do this every 10sec when not enough info,
-     * and every 60sec when we have enough info -NM Great idea -RD */
     update_router_descriptor_downloads(now);
     update_extrainfo_downloads(now);
     if (options->UseBridges)
       fetch_bridge_descriptors(now);
-    time_to_try_getting_descriptors = now + DESCRIPTOR_RETRY_INTERVAL;
+    if (router_have_minimum_dir_info())
+      time_to_try_getting_descriptors = now + LAZY_DESCRIPTOR_RETRY_INTERVAL;
+    else
+      time_to_try_getting_descriptors = now + GREEDY_DESCRIPTOR_RETRY_INTERVAL;
   }
 
   if (time_to_reset_descriptor_failures < now) {
