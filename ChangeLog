@@ -69,6 +69,11 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       earlier.
     - New convenience code to locate a file within the DataDirectory.
 
+  o Utilities
+    - Include the "tor-ctrl.sh" bash script by Stefan Behte to provide
+      Unix users an easy way to script their Tor process (e.g. by adjusting
+      bandwidth based on the time of the day).
+
 Changes in version 0.2.0.8-alpha - 2007-10-12
   o Major features (router descriptor cache):
     - Store routers in a file called cached-descriptors instead of in
