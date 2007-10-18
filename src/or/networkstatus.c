@@ -761,21 +761,24 @@ update_consensus_networkstatus_fetch_time(time_t now)
   /* XXXX020 call this when DirPort switches on or off. NMNM */
   networkstatus_vote_t *c = networkstatus_get_live_consensus(now);
   if (c) {
+    long dl_interval;
+    long interval = c->fresh_until - c->valid_after;
     time_t start;
-    long interval;
     if (dirserver_mode(options)) {
-      start = c->valid_after + 120; /*XXXX020 make this a macro. */
-      /* XXXX020 too much magic. */
-      interval = (c->fresh_until - c->valid_after) / 2;
+      start = c->fresh_until + 120; /*XXXX020 make this a macro. */
+      dl_interval = interval/2;
     } else {
-      start = c->fresh_until;
+      start = c->fresh_until + (interval*3)/4;
       /* XXXX020 too much magic. */
-      interval = (c->valid_until - c->fresh_until) * 7 / 8;
+      dl_interval = (c->valid_until - start) * 7 / 8;
     }
-    if (interval < 1)
-      interval = 1;
-    tor_assert(start+interval < c->valid_until);
-    time_to_download_next_consensus = start + crypto_rand_int(interval);
+    if (dl_interval < 1)
+      dl_interval = 1;
+    /* We must not try to replace c while it's still the most valid: */
+    tor_assert(c->fresh_until < start);
+    /* We must download the next one before c is invalid: */
+    tor_assert(start+dl_interval < c->valid_until);
+    time_to_download_next_consensus = start + crypto_rand_int(dl_interval);
     {
       char tbuf[ISO_TIME_LEN+1];
       format_local_iso_time(tbuf, time_to_download_next_consensus);

@@ -40,6 +40,8 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Delete unverified-consensus when the real consensus is set.
     - Consider retrying a consensus networkstatus fetch immediately after one
       fails: don't wait 60 seconds to notice.
+    - When fetching a consensus as a cache, wait until a newer consensus
+      exists before trying to replace the current one.
 
   o Minor bugfixes (controller):
     - Don't reset trusted dir server list when we set a configuration option.
