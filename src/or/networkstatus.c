@@ -780,9 +780,16 @@ update_consensus_networkstatus_fetch_time(time_t now)
     tor_assert(start+dl_interval < c->valid_until);
     time_to_download_next_consensus = start + crypto_rand_int(dl_interval);
     {
-      char tbuf[ISO_TIME_LEN+1];
-      format_local_iso_time(tbuf, time_to_download_next_consensus);
-      log_info(LD_DIR, "Have a live consensus; fetching next one at %s.",tbuf);
+      char tbuf1[ISO_TIME_LEN+1];
+      char tbuf2[ISO_TIME_LEN+1];
+      char tbuf3[ISO_TIME_LEN+1];
+      format_local_iso_time(tbuf1, c->fresh_until);
+      format_local_iso_time(tbuf2, c->valid_until);
+      format_local_iso_time(tbuf3, time_to_download_next_consensus);
+      log_info(LD_DIR, "Live consensus %s the most recent until %s and will "
+               "expire at %s; fetching the next one at %s.",
+               (c->fresh_until > now) ? "will be" : "was",
+               tbuf1, tbuf2, tbuf3);
     }
   } else {
     time_to_download_next_consensus = now;

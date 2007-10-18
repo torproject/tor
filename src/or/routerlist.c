@@ -3771,24 +3771,6 @@ update_router_descriptor_downloads(time_t now)
   update_consensus_router_descriptor_downloads(now);
 }
 
-/** Return true iff <b>sd</b> is the descriptor for a router descriptor that
- * has an extrainfo that we don't currently have, are not currently
- * downloading, and have not recently tried to download. */
-static INLINE int
-should_download_extrainfo(signed_descriptor_t *sd,
-                          const routerlist_t *rl,
-                          const digestmap_t *pending,
-                          time_t now)
-{
-  const char *d = sd->extra_info_digest;
-  return (!sd->is_extrainfo &&
-          !tor_digest_is_zero(d) &&
-          download_status_is_ready(&sd->ei_dl_status, now,
-                                   MAX_ROUTERDESC_DOWNLOAD_FAILURES) &&
-          !eimap_get(rl->extra_info_map, d) &&
-          !digestmap_get(pending, d));
-}
-
 /** Launch extrainfo downloads as needed. */
 void
 update_extrainfo_downloads(time_t now)
@@ -3797,7 +3779,8 @@ update_extrainfo_downloads(time_t now)
   routerlist_t *rl;
   smartlist_t *wanted;
   digestmap_t *pending;
-  int i;
+  int old_routers, i;
+  int n_no_ei = 0, n_pending = 0, n_have = 0, n_delay = 0;
   if (! options->DownloadExtraInfo)
     return;
   if (should_delay_dir_fetches(options))
@@ -3807,19 +3790,43 @@ update_extrainfo_downloads(time_t now)
   list_pending_descriptor_downloads(pending, 1);
   rl = router_get_routerlist();
   wanted = smartlist_create();
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-      if (should_download_extrainfo(&ri->cache_info, rl, pending, now)) {
-        smartlist_add(wanted, ri->cache_info.extra_info_digest);
+  for (old_routers = 0; old_routers < 2; ++old_routers) {
+    smartlist_t *lst = old_routers ? rl->old_routers : rl->routers;
+    for (i = 0; i < smartlist_len(lst); ++i) {
+      signed_descriptor_t *sd;
+      char *d;
+      if (old_routers)
+        sd = smartlist_get(lst, i);
+      else
+        sd = &((routerinfo_t*)smartlist_get(lst, i))->cache_info;
+      if (sd->is_extrainfo)
+        continue; /* This should never happen. */
+      d = sd->extra_info_digest;
+      if (tor_digest_is_zero(d)) {
+        ++n_no_ei;
+        continue;
       }
-    });
-  if (dirserver_mode(options)) {
-    SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd, {
-        if (should_download_extrainfo(sd, rl, pending, now)) {
-          smartlist_add(wanted, sd->extra_info_digest);
-        }
-    });
+      if (eimap_get(rl->extra_info_map, d)) {
+        ++n_have;
+        continue;
+      }
+      if (!download_status_is_ready(&sd->ei_dl_status, now,
+                                    MAX_ROUTERDESC_DOWNLOAD_FAILURES)) {
+        ++n_delay;
+        continue;
+      }
+      if (digestmap_get(pending, d)) {
+        ++n_pending;
+        continue;
+      }
+      smartlist_add(wanted, d);
+    }
   }
   digestmap_free(pending, NULL);
+
+  log_info(LD_DIR, "Extrainfo download status: %d router with no ei, %d "
+           "with present ei, %d delaying, %d pending, %d downloadable.",
+           n_no_ei, n_have, n_delay, n_pending, smartlist_len(wanted));
 
   smartlist_shuffle(wanted);
   for (i = 0; i < smartlist_len(wanted); i += MAX_DL_PER_REQUEST) {

@@ -1560,8 +1560,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       }
     }
     if (which) { /* mark remaining ones as failed */
-      log_info(LD_DIR, "Received %d/%d routers requested from %s:%d",
+      log_info(LD_DIR, "Received %d/%d %s requested from %s:%d",
                n_asked_for-smartlist_len(which), n_asked_for,
+               was_ei ? "extra-info documents" : "router descriptors",
                conn->_base.address, (int)conn->_base.port);
       if (smartlist_len(which)) {
         dir_routerdesc_download_failed(which, status_code,
