@@ -441,7 +441,7 @@ static config_var_description_t options_description[] = {
     "and servers." },
   { "ORListenAddress", "Bind to this address to listen for connections from "
     "clients and servers, instead of the default 0.0.0.0:ORPort." },
-  { "PublishServerDescriptors", "Set to 0 in order to keep the server from "
+  { "PublishServerDescriptor", "Set to 0 in order to keep the server from "
     "uploading info to the directory authorities." },
   /*{ "RedirectExit", "When an outgoing connection tries to connect to a "
    *"given address, redirect it to another address instead." },
@@ -885,8 +885,8 @@ options_act(or_options_t *old_options)
   int running_tor = options->command == CMD_RUN_TOR;
   char *msg;
 
-  clear_trusted_dir_servers();
   if (options->DirServers) {
+    clear_trusted_dir_servers();
     for (cl = options->DirServers; cl; cl = cl->next) {
       if (parse_dir_server_line(cl->value, 0)<0) {
         log_err(LD_BUG,
@@ -895,7 +895,8 @@ options_act(or_options_t *old_options)
       }
     }
   } else {
-    add_default_trusted_dirservers();
+    if (!router_get_trusted_dir_servers())
+      add_default_trusted_dirservers();
   }
 
   if (running_tor && rend_config_services(options, 0)<0) {

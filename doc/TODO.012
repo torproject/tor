@@ -14,4 +14,5 @@ Backport for 0.1.2.x once better tested:
   o r11499, r11500, r11501: hidserv hexdigests rather than nicknames
   o r11829: Don't warn when cancel_pending_resolve() finds a cached failure.
   o r11915: just because you hup, don't publish a near-duplicate descriptor
-
+  - r11994: Call routerlist_remove_old_routers() less.  This will be a
+	    tricky backport.
