@@ -2716,7 +2716,10 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
   });
 }
 
-/** DOCDOC */
+/** Called when an attempt to download <b>dls</b> has failed with HTTP status
+ * <b>status_code</b>.  Increment the failure count (if the code indicates a
+ * real failure) and set <b>dls<b>->next_attempt_at to an appropriate time in
+ * the future. */
 time_t
 download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
@@ -2761,7 +2764,8 @@ download_status_increment_failure(download_status_t *dls, int status_code,
   return dls->next_attempt_at;
 }
 
-/** DOCDOC */
+/** Reset <b>dls</b> so that it will be considered downloadable
+ * immediately. */
 void
 download_status_reset(download_status_t *dls)
 {

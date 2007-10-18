@@ -7,22 +7,26 @@ const char networkstatus_c_id[] =
   "$Id$";
 
 /**
- * DOCDOC
+ * \file Functions and structures for handling network status documents as a
+ * client or cache.
  */
 
 #include "or.h"
 
-/** XXXXX020 are all these still needed */
+/* For tracking v2 networkstatus documents.  Only caches do this now. */
 
-/** DOCDOC */
+/** Map from descriptor digest of routers listed in the v2 networkstatus
+ * documents to download_status_t* */
 static digestmap_t *v2_download_status_map = NULL;
-
-/** Map from lowercase nickname to digest of named server, if any. */
-static strmap_t *named_server_map = NULL;
-
 /** Global list of all of the current v2 network_status documents that we know
  * about.  This list is kept sorted by published_on. */
 static smartlist_t *networkstatus_v2_list = NULL;
+/** True iff any member of networkstatus_v2_list has changed since the last
+ * time we called download_status_map_update_from_v2_networkstatus() */
+static int networkstatus_v2_list_has_changed = 0;
+
+/** Map from lowercase nickname to digest of named server, if any. */
+static strmap_t *named_server_map = NULL;
 
 /** Most recently received and validated v3 consensus network status. */
 static networkstatus_vote_t *current_consensus = NULL;
@@ -32,18 +36,16 @@ static networkstatus_vote_t *current_consensus = NULL;
 static networkstatus_vote_t *consensus_waiting_for_certs = NULL;
 static char *consensus_waiting_for_certs_body = NULL;
 
-/** True iff any member of networkstatus_v2_list has changed since the last
- * time we called routerstatus_list_update_from_networkstatus(). */
-static int networkstatus_v2_list_has_changed = 0;
-
 /** The last time we tried to download a networkstatus, or 0 for "never".  We
  * use this to rate-limit download attempts for directory caches (including
  * mirrors).  Clients don't use this now. */
 static time_t last_networkstatus_download_attempted = 0;
 
-/**DOCDOC*/
+/** A time before which we shouldn't try to replace the current consensus:
+ * this will be at some point after the next consensus becomes valid, but
+ * before the current consensus becomes invalid. */
 static time_t time_to_download_next_consensus = 0;
-/**DOCDOC*/
+/** Download status for the current consensus networkstatus. */
 static download_status_t consensus_dl_status = { 0, 0};
 
 /** List of strings for nicknames or fingerprints we've already warned about
@@ -60,10 +62,11 @@ static int have_warned_about_old_version = 0;
  * listed by the authorities  */
 static int have_warned_about_new_version = 0;
 
-static void routerstatus_list_update_from_v2_networkstatus(void);
+static void download_status_map_update_from_v2_networkstatus(void);
 static void routerstatus_list_update_named_server_map(void);
 
-/** DOCDOC */
+/** Forget that we've warned about anything networkstatus-related, so we will
+ * give fresh warnings if the same behavior happens again. */
 void
 networkstatus_reset_warnings(void)
 {
@@ -520,7 +523,7 @@ networkstatus_vote_find_entry(networkstatus_vote_t *ns, const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
-/** DOCDOC */
+/** Return a list of the v2 networkstatus documents. */
 const smartlist_t *
 networkstatus_get_v2_list(void)
 {
@@ -547,7 +550,8 @@ router_get_consensus_status_by_descriptor_digest(const char *digest)
   return digestmap_get(current_consensus->desc_digest_map, digest);
 }
 
-/** DOCDOC */
+/** Given the digest of a router descriptor, return its current download
+ * status, or NULL if the digest is unrecognized. */
 download_status_t *
 router_get_dl_status_by_descriptor_digest(const char *d)
 {
@@ -648,7 +652,8 @@ router_get_consensus_status_by_nickname(const char *nickname,
   return best;
 }
 
-/** DOCDOC */
+/** Return the identity digest that's mapped to officially by
+ * <b>nickname</b>. */
 const char *
 networkstatus_get_router_digest_by_nickname(const char *nickname)
 {
@@ -723,28 +728,31 @@ update_v2_networkstatus_cache_downloads(time_t now)
   }
 }
 
-/** DOCDOC */
+/** If we want to download a fresh consensus, launch a new download as
+ * appropriate.  */
 static void
 update_consensus_networkstatus_downloads(time_t now)
 {
   or_options_t *options = get_options();
   if (!networkstatus_get_live_consensus(now))
-    time_to_download_next_consensus = now;
+    time_to_download_next_consensus = now; /* No live consensus? Get one now!*/
   if (time_to_download_next_consensus > now)
-    return;
+    return; /* Wait until the current consensus is older. */
   if (authdir_mode_v3(options))
-    return;
+    return; /* Authorities never fetch a consensus */
+  /*XXXX020 magic number 8.*/
   if (!download_status_is_ready(&consensus_dl_status, now, 8))
-    return; /*XXXX020 magic number 8.*/
+    return; /* We failed downloading a consensus too recently. */
   if (connection_get_by_type_purpose(CONN_TYPE_DIR,
                                      DIR_PURPOSE_FETCH_CONSENSUS))
-    return;
+    return; /* There's an in-progress download.*/
 
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CONSENSUS,
                                ROUTER_PURPOSE_GENERAL, NULL, 1);
 }
 
-/** DOCDOC */
+/** Called when an attempt to download a consensus fails: note that the
+ * failure occurred, and possibly retry. */
 void
 networkstatus_consensus_download_failed(int status_code)
 {
@@ -753,7 +761,8 @@ networkstatus_consensus_download_failed(int status_code)
   update_consensus_networkstatus_downloads(time(NULL));
 }
 
-/** DOCDOC */
+/** Update the time at which we'll consider replacing the current
+ * consensus. */
 static void
 update_consensus_networkstatus_fetch_time(time_t now)
 {
@@ -851,7 +860,8 @@ networkstatus_get_live_consensus(time_t now)
     return NULL;
 }
 
-/** DOCDOC */
+/** Copy all the ancillary information (like router download status and so on)
+ * from <b>old_c</b> to <b>new_c</b> */
 static void
 networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
                                       const networkstatus_vote_t *old_c)
@@ -999,7 +1009,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   return result;
 }
 
-/** DOCDOC */
+/** Called when we have gotten more certificates: see whether we can
+ * now verify a pending consensus. */
 void
 networkstatus_note_certs_arrived(void)
 {
@@ -1027,10 +1038,8 @@ routers_update_all_from_networkstatus(time_t now)
 
   router_dir_info_changed(); /*XXXX020 really? */
 
-  if (networkstatus_v2_list_has_changed) {
-    routerstatus_list_update_from_v2_networkstatus();
-    networkstatus_v2_list_has_changed = 0;
-  }
+  if (networkstatus_v2_list_has_changed)
+    download_status_map_update_from_v2_networkstatus();
 
   if (!consensus)
     return;
@@ -1096,9 +1105,10 @@ routers_update_all_from_networkstatus(time_t now)
   }
 }
 
-/** DOCDOC */
+/** Update v2_download_status_map to contain an entry for every router
+ * descriptor listed in the v2 networkstatuses. */
 static void
-routerstatus_list_update_from_v2_networkstatus(void)
+download_status_map_update_from_v2_networkstatus(void)
 {
   digestmap_t *dl_status;
   if (!networkstatus_v2_list)
@@ -1123,13 +1133,11 @@ routerstatus_list_update_from_v2_networkstatus(void)
   });
   digestmap_free(v2_download_status_map, _tor_free);
   v2_download_status_map = dl_status;
+  networkstatus_v2_list_has_changed = 0;
 }
 
-/** Update our view of router status (as stored in routerstatus_list) from the
- * current set of network status documents (as stored in networkstatus_list).
- * Do nothing unless the network status list has changed since the last time
- * this function was called. DOCDOC
- */
+/** Update our view of the list of named servers from the most recently
+ * retrieved networkstatus consensus */
 static void
 routerstatus_list_update_named_server_map(void)
 {
@@ -1148,9 +1156,9 @@ routerstatus_list_update_named_server_map(void)
     });
 }
 
-/** Given a list <b>routers</b> of routerinfo_t *, update each routers's
- * is_named, is_valid, and is_running fields according to our current
- * networkstatus_t documents.  May re-order <b>router</b>. DOCDOC */
+/** Given a list <b>routers</b> of routerinfo_t *, update each status fields
+ * according to our current consensus networkstatus.  May re-order
+ * <b>router</b>. */
 void
 routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                    int reset_failures)
@@ -1285,7 +1293,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   return 0;
 }
 
-/** DOCDOC */
+/** Free all storage held locally in this module. */
 void
 networkstatus_free_all(void)
 {

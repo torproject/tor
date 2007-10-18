@@ -4363,7 +4363,6 @@ get_datadir_fname2_suffix(const char *sub1, const char *sub2,
   return fname;
 }
 
-
 /** Return 0 if every setting in <b>state</b> is reasonable, and a
  * permissible transition from <b>old_state</b>.  Else warn and return -1.
  * Should have no side effects, except for normalizing the contents of

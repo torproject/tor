@@ -1474,7 +1474,6 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     }
   }
 
-
   return any_failed ? NULL : pending_vote;
 }
 

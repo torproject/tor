@@ -2101,7 +2101,8 @@ routerlist_free(routerlist_t *rl)
   router_dir_info_changed();
 }
 
-/** DOCDOC */
+/** Log information about how much memory is being used for routerlist,
+ * at log level <b>severity</b>. */
 void
 dump_routerlist_mem_usage(int severity)
 {
@@ -3357,7 +3358,10 @@ any_trusted_dir_is_v1_authority(void)
   return 0;
 }
 
-/** DOCDOC */
+/** For every current directory connection whose purpose is <b>purpose</b>,
+ * and where the resource being downloaded begins with <b>prefix</b>, split
+ * rest of the resource into base16 fingerprints, decode them, and set the
+ * corresponding elements of <b>result</b> to a nonzero value. */
 static void
 list_pending_downloads(digestmap_t *result,
                        int purpose, const char *prefix)
@@ -3490,7 +3494,9 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
  * them until they have more, or until this amount of time has passed. */
 #define MAX_CLIENT_INTERVAL_WITHOUT_REQUEST (10*60)
 
-/** DOCDOC */
+/** Given a list of router descriptor digests in <b>downloadable</b>, decide
+ * whether to delay fetching until we have more.  If we don't want to delay,
+ * launch one or more requests to the appropriate directory authorities. */
 static void
 launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
 {
@@ -3691,7 +3697,8 @@ update_router_descriptor_cache_downloads(time_t now)
   digestmap_free(map,NULL);
 }
 
-/** DOCDOC */
+/** For any descriptor that we want that's currently listed in the live
+ * consensus, download it as appropriate. */
 static void
 update_consensus_router_descriptor_downloads(time_t now)
 {
@@ -3721,10 +3728,9 @@ update_consensus_router_descriptor_downloads(time_t now)
       }
       if (!download_status_is_ready(&rs->dl_status, now,
                                     MAX_ROUTERDESC_DOWNLOAD_FAILURES)) {
-        ++n_delayed;
+        ++n_delayed; /* Not ready for retry. */
         continue;
       }
-
       if (authdir && dirserv_would_reject_router(rs)) {
         ++n_would_reject;
         continue; /* We would throw it out immediately. */
