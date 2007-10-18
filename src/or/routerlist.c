@@ -3894,8 +3894,19 @@ routers_update_status_from_networkstatus(smartlist_t *routers,
     rs = router_get_combined_status_by_digest(digest);
     ds = router_get_trusteddirserver_by_digest(digest);
 
-    if (!rs)
+    if (!rs) {
+      if (!namingdir)
+        router->is_named = 0;
+      if (!authdir) {
+        if (router->purpose == ROUTER_PURPOSE_GENERAL) {
+          router->is_valid = router->is_running =
+            router->is_fast = router->is_stable =
+            router->is_possible_guard = router->is_exit =
+            router->is_bad_exit = 0;
+        }
+      }
       continue;
+    }
 
     if (!namingdir)
       router->is_named = rs->status.is_named;
