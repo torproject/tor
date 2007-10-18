@@ -146,21 +146,21 @@ $Id$
     to do that if he previously advertised some introduction points,
     and now he doesn't have any. -RD]
 
-   The format of a "V2" descriptor, that will probably used at some time in
-   the future, is as follows:
+   The format of a "V2" descriptor, that will probably be used at some time
+   in the future, is as follows:
 
      "rendezvous-service-descriptor" descriptor-id NL
 
        [At start, exactly once]
 
        Indicates the beginning of the descriptor. "descriptor-id" is a
-       temporary identifier of 160 bits formatted as 32 base32 chars that
-       can only be calculated by the hidden service and its clients,
-       i.e. by everyone who is aware of a "secret-cookie". (Further,
-       everyone can verify that this "descriptor-id" belongs to the rest
-       of the descriptor, even without knowing "secret-cookie", as
-       described below.) The "descriptor-id" is calculated by performing
-       the following operation:
+       periodically changing identifier of 160 bits formatted as 32 base32
+       chars that is calculated by the hidden service and its clients. If
+       the optional "secret-cookie" is used, this "descriptor-id" cannot be
+       computed by anyone else. (Everyone can verify that this
+       "descriptor-id" belongs to the rest of the descriptor, even without
+       knowing the optional "secret-cookie", as described below.) The
+       "descriptor-id" is calculated by performing the following operation:
 
          descriptor-id =
              H(permanent-id | H(time-period | secret-cookie | replica))
@@ -171,18 +171,25 @@ $Id$
 
          permanent-id = H(public-key)[:10]
 
-       "h(time-period, cookie, replica)" is the secret id part that is
+       "H(time-period | secret-cookie | replica)" is the (possibly secret)
+       id part that is
        necessary to verify that the hidden service is the true originator
        of this descriptor. It can only be created by the hidden service
        and its clients, but the "signature" below can only be created by
        the service.
 
-       "cookie" is a secret password of 120 bits that is shared between the
-       hidden service provider and its clients.
-        [XXXX Why 120? -NM]
+       "secret-cookie" is an optional secret password of 128 bits that is
+       shared between the hidden service provider and its clients.
 
        "replica" denotes the number of the non-consecutive replica.
-        [XXXX What does this mean? -NM]
+
+        (Each descriptor is replicated on a number of _consecutive_ nodes
+         in the identifier ring by making every storing node responsible
+         for the identifier intervals starting from its 3rd predecessor's
+         ID to its own ID. In addition to that, every service publishes
+         multiple descriptors with different descriptor IDs in order to
+         distribute them to different places on the ring. Therefore,
+         "replica" chooses one of the _non-consecutive_ replicas. -KL)
 
        The "time-period" changes periodically depending on the global time and
        as a function of "permanent-id". The current value for "time-period" can
@@ -233,22 +240,23 @@ $Id$
 
        [Exactly once]
 
-       A bitmask of allowed rendezvous protocols.
-          [XXXX what do the numbers this mean? And why a bitmask??? -NM]
+       A comma-separated list of recognized and permitted version numbers
+       for use in INTRODUCE cells; these versions are described in section
+       1.8 below.
 
      "introduction-points" NL encrypted-string
 
        [At most once]
 
-       A list of introduction points that is encrypted with AES in CTR mode
-       with a random initialization vector of 128 bits that is written to
-       the beginning of the encrypted string, and the secret key "cookie",
-       that is 120 bits long and padded with zeros to be 128 bits long.
-        [XXXX again, why 120 bits?? -NM]
+       A list of introduction points. If the optional "secret-cookie" is
+       used, this list is encrypted with AES in CTR mode with a random
+       initialization vector of 128 bits that is written to
+       the beginning of the encrypted string, and the "secret-cookie" as
+       secret key of 128 bits length.
 
-       The encrypted-string is encoded in base64, and surrounded with
-       "-----BEGIN AES ENCRYPTED MESSAGE-----" and
-       "-----END AES ENCRYPTED MESSAGE-----".
+       The string containing the introduction point data (either encrypted
+       or not) is encoded in base64, and surrounded with
+       "-----BEGIN MESSAGE-----" and "-----END MESSAGE-----".
 
        The unencrypted string may begin with:
 
@@ -263,8 +271,8 @@ $Id$
 
            [At start, exactly once]
 
-           The identifier of this introduction point.
-           [XXXX What's the identifier? -NM]
+           The identifier of this introduction point: the base-16 encoded
+           hash of this introduction point's identity key.
 
          "ip-address" ip-address NL
 
@@ -297,7 +305,11 @@ $Id$
 
            [Any number]
            [XXXX this is valid at the start *and* at the end? -NM]
-
+           [These are two separate "authentication" fields. The one above
+            is global and independent from the introduction points, and
+            this one is specific for one introduction point. Should we use
+            different names for them? -KL]
+           [Probably. -NM]
 
         (This ends the fields in the encrypted portion of the descriptor.)
 
