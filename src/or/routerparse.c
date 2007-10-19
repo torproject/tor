@@ -74,6 +74,7 @@ typedef enum {
   K_VOTE_DIGEST,
   K_CONSENSUS_DIGEST,
   K_CONSENSUS_METHODS,
+  K_CONSENSUS_METHOD,
 
   A_PURPOSE,
   _A_UNKNOWN,
@@ -339,7 +340,8 @@ static token_rule_t networkstatus_consensus_token_table[] = {
   T1( "known-flags",         K_KNOWN_FLAGS,     CONCAT_ARGS, NO_OBJ ),
 
   T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
-  T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS,    NO_OBJ ),
+  T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS, NO_OBJ ),
+  T01("consensus-method",    K_CONSENSUS_METHOD,    EQ(1),   NO_OBJ),
 
   END_OF_TABLE
 };

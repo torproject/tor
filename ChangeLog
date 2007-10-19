@@ -21,6 +21,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - If we find a cached-routers file that's been sitting around for more
       than 28 days unmodified, then most likely it's a leftover from when we
       upgraded to 0.2.0.8-alpha.  Remove it.  It has no good routers anyway.
+    - When we (as a cache) download a descriptor because it was listed in a
+      consensus, remember when the consensus was supposed to expire, and
+      don't expire the descriptor until then.
 
   o Minor features (performance):
     - Call routerlist_remove_old_routers() much less often.  This should

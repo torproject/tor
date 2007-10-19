@@ -2791,7 +2791,8 @@ _compare_duration_idx(const void *_d1, const void *_d2)
  * indices <b>lo</b> or higher may be changed.
  */
 static void
-routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
+routerlist_remove_old_cached_routers_with_id(time_t now,
+                                             time_t cutoff, int lo, int hi,
                                              digestmap_t *retain)
 {
   int i, n = hi-lo+1;
@@ -2827,7 +2828,8 @@ routerlist_remove_old_cached_routers_with_id(time_t cutoff, int lo, int hi,
     signed_descriptor_t *r = smartlist_get(lst, i);
     signed_descriptor_t *r_next;
     lifespans[i-lo].idx = i;
-    if (retain && digestmap_get(retain, r->signed_descriptor_digest)) {
+    if (r->last_listed_as_valid_until >= now ||
+        (retain && digestmap_get(retain, r->signed_descriptor_digest))) {
       must_keep[i-lo] = 1;
     }
     if (i < hi) {
@@ -2933,6 +2935,7 @@ routerlist_remove_old_routers(void)
     for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
       router = smartlist_get(routerlist->routers, i);
       if (router->cache_info.published_on <= cutoff &&
+          router->cache_info.last_listed_as_valid_until < now &&
           !digestmap_get(retain,router->cache_info.signed_descriptor_digest)) {
         /* Too old: remove it.  (If we're a cache, just move it into
          * old_routers.) */
@@ -2952,6 +2955,7 @@ routerlist_remove_old_routers(void)
   for (i = 0; i < smartlist_len(routerlist->old_routers); ++i) {
     sd = smartlist_get(routerlist->old_routers, i);
     if (sd->published_on <= cutoff &&
+        sd->last_listed_as_valid_until < now &&
         !digestmap_get(retain, sd->signed_descriptor_digest)) {
       /* Too old.  Remove it. */
       routerlist_remove_old(routerlist, sd, i--);
@@ -2987,13 +2991,14 @@ routerlist_remove_old_routers(void)
       hi = i;
     }
     if (memcmp(cur_id, r->identity_digest, DIGEST_LEN)) {
-      routerlist_remove_old_cached_routers_with_id(cutoff, i+1, hi, retain);
+      routerlist_remove_old_cached_routers_with_id(now,
+                                                   cutoff, i+1, hi, retain);
       cur_id = r->identity_digest;
       hi = i;
     }
   }
   if (hi>=0)
-    routerlist_remove_old_cached_routers_with_id(cutoff, 0, hi, retain);
+    routerlist_remove_old_cached_routers_with_id(now, cutoff, 0, hi, retain);
   //routerlist_assert_ok(routerlist);
 
  done:

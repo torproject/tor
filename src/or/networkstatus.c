@@ -1049,6 +1049,8 @@ routers_update_all_from_networkstatus(time_t now)
   routers_update_status_from_consensus_networkstatus(rl->routers, 0);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
                     ri->routerlist_index = ri_sl_idx);
+  if (rl->old_routers)
+    signed_descs_update_status_from_consensus_networkstatus(rl->old_routers);
   entry_guards_compute_status();
 
   me = router_get_my_routerinfo();
@@ -1216,6 +1218,11 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       else
         router->is_named = 0;
     }
+    if (!memcmp(router->cache_info.signed_descriptor_digest,
+                rs->descriptor_digest, DIGEST_LEN)) {
+      if (ns->valid_until > router->cache_info.last_listed_as_valid_until)
+        router->cache_info.last_listed_as_valid_until = ns->valid_until;
+    }
 
     if (!authdir) {
       /* If we're not an authdir, believe others. */
@@ -1237,6 +1244,31 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
 
  done:
   router_dir_info_changed();
+}
+
+/**DOCDOC*/
+void
+signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
+{
+  networkstatus_vote_t *ns = current_consensus;
+  if (!ns)
+    return;
+
+  if (!ns->desc_digest_map) {
+    char dummy[DIGEST_LEN];
+    /* instantiates the digest map. */
+    memset(dummy, 0, sizeof(dummy));
+    router_get_consensus_status_by_descriptor_digest(dummy);
+  }
+  SMARTLIST_FOREACH(descs, signed_descriptor_t *, d,
+  {
+    routerstatus_t *rs = digestmap_get(ns->desc_digest_map,
+                                       d->signed_descriptor_digest);
+    if (rs) {
+      if (ns->valid_until > d->last_listed_as_valid_until)
+        d->last_listed_as_valid_until = ns->valid_until;
+    }
+  });
 }
 
 /** Generate networkstatus lines for a single routerstatus_t object, and

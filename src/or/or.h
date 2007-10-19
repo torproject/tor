@@ -1102,6 +1102,9 @@ typedef struct signed_descriptor_t {
   /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
    * this descriptor in the corresponding file. */
   off_t saved_offset;
+  /** The valid-until time of the most recent consensus that listed this
+   * descriptor.  0 for "never listed in a consensus, so far as we know." */
+  time_t last_listed_as_valid_until;
   /* If true, we do not ever try to save this object in the cache. */
   unsigned int do_not_cache : 1;
   /* If true, this item is meant to represent an extrainfo. */
@@ -3098,6 +3101,9 @@ void routers_update_all_from_networkstatus(time_t now);
 void routerstatus_list_update_from_consensus_networkstatus(time_t now);
 void routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                         int reset_failures);
+void signed_descs_update_status_from_consensus_networkstatus(
+                                                         smartlist_t *descs);
+
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
