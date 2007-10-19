@@ -64,7 +64,8 @@ static int dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
 #define FP_NAMED   1  /**< Listed in fingerprint file. */
 #define FP_INVALID 2  /**< Believed invalid. */
 #define FP_REJECT  4  /**< We will not publish this router. */
-#define FP_BADEXIT 8 /**< We'll tell clients not to use this as an exit. */
+#define FP_BADEXIT 8  /**< We'll tell clients not to use this as an exit. */
+#define FP_UNNAMED 16 /**< Another router has this name in fingerprint file. */
 
 /** Encapsulate a nickname and an FP_* status; target of status_by_digest
  * map. */
@@ -309,6 +310,28 @@ dirserv_would_reject_router(routerstatus_t *rs)
   return (res & FP_REJECT) != 0;
 }
 
+/** Helper: Based only on the ID/Nickname combination,
+ * return FP_UNNAMED (unnamed), FP_NAMED (named), or 0 (neither).
+ */
+static uint32_t
+dirserv_get_name_status(const char *id_digest, const char *nickname)
+{
+  char fp[HEX_DIGEST_LEN+1];
+  char *fp_by_name;
+
+  base16_encode(fp, sizeof(fp), id_digest, DIGEST_LEN);
+
+  if ((fp_by_name =
+       strmap_get_lc(fingerprint_list->fp_by_name, nickname))) {
+    if (!strcasecmp(fp, fp_by_name)) {
+      return FP_NAMED;
+    } else {
+      return FP_UNNAMED; /* Wrong fingerprint. */
+    }
+  }
+  return 0;
+}
+
 /** Helper: As dirserv_get_router_status, but takes the router fingerprint
  * (hex, no spaces), nickname, address (used for logging only), IP address, OR
  * port, platform (logging only) and contact info (logging only) as arguments.
@@ -323,44 +346,39 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
                         const char *platform, const char *contact,
                         const char **msg, int should_log)
 {
-  char fp[HEX_DIGEST_LEN+1];
   int reject_unlisted = get_options()->AuthDirRejectUnlisted;
   uint32_t result = 0;
   router_status_t *status_by_digest;
-  char *fp_by_name;
+
   if (!fingerprint_list)
     fingerprint_list = authdir_config_new();
-
-  base16_encode(fp, sizeof(fp), id_digest, DIGEST_LEN);
 
   if (should_log)
     log_debug(LD_DIRSERV, "%d fingerprints, %d digests known.",
               strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
-  if ((fp_by_name =
-       strmap_get_lc(fingerprint_list->fp_by_name, nickname))) {
-    if (!strcasecmp(fp, fp_by_name)) {
-      result |= FP_NAMED;
-      if (should_log)
-        log_debug(LD_DIRSERV,"Good fingerprint for '%s'",nickname);
-    } else {
-      if (should_log) {
-        char *esc_contact = esc_for_log(contact);
-        log_warn(LD_DIRSERV,
-                 "Mismatched fingerprint for '%s': expected '%s' got '%s'. "
-                 "ContactInfo '%s', platform '%s'.)",
-                 nickname, fp_by_name, fp,
-                 esc_contact,
-                 platform ? escaped(platform) : "");
-        tor_free(esc_contact);
-      }
-      if (msg)
-        *msg = "Rejected: There is already a named server with this nickname "
-          "and a different fingerprint.";
-      return FP_REJECT; /* Wrong fingerprint. */
-    }
+  result = dirserv_get_name_status(id_digest, nickname);
+  if (result & FP_NAMED) {
+    if (should_log)
+      log_debug(LD_DIRSERV,"Good fingerprint for '%s'",nickname);
   }
+  if (result & FP_UNNAMED) {
+    if (should_log) {
+      char *esc_contact = esc_for_log(contact);
+      log_warn(LD_DIRSERV,
+               "Mismatched fingerprint for '%s'. "
+               "ContactInfo '%s', platform '%s'.)",
+               nickname,
+               esc_contact,
+               platform ? escaped(platform) : "");
+      tor_free(esc_contact);
+    }
+    if (msg)
+      *msg = "Rejected: There is already a named server with this nickname "
+        "and a different fingerprint.";
+  }
+
   status_by_digest = digestmap_get(fingerprint_list->status_by_digest,
                                    id_digest);
   if (status_by_digest)
@@ -1670,7 +1688,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     return 0;
   cp = buf + strlen(buf);
   r = tor_snprintf(cp, buf_len - (cp-buf),
-                   "s%s%s%s%s%s%s%s%s%s%s\n",
+                   "s%s%s%s%s%s%s%s%s%s%s%s\n",
                   /* These must stay in alphabetical order. */
                    rs->is_authority?" Authority":"",
                    rs->is_bad_exit?" BadExit":"",
@@ -1678,8 +1696,9 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                    rs->is_fast?" Fast":"",
                    rs->is_possible_guard?" Guard":"",
                    rs->is_named?" Named":"",
-                   rs->is_stable?" Stable":"",
                    rs->is_running?" Running":"",
+                   rs->is_stable?" Stable":"",
+                   rs->is_unnamed?" Unnamed":"",
                    rs->is_v2_dir?" V2Dir":"",
                    rs->is_valid?" Valid":"");
   if (r<0) {
@@ -1816,7 +1835,13 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     router_is_active(ri, now) &&
     !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
   rs->is_running = ri->is_running; /* computed above */
-  rs->is_named = naming && ri->is_named;
+
+  if (naming) {
+    uint32_t name_status = dirserv_get_name_status(
+                         ri->cache_info.identity_digest, ri->nickname);
+    rs->is_named = (naming && (name_status & FP_NAMED)) ? 1 : 0;
+    rs->is_unnamed = (naming && (name_status & FP_UNNAMED)) ? 1 : 0;
+  }
   rs->is_valid = ri->is_valid;
   rs->is_possible_guard = rs->is_fast && rs->is_stable &&
     (!rs->is_exit || exits_can_be_guards) &&
@@ -1831,7 +1856,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
 
   if (!strcasecmp(ri->nickname, UNNAMED_ROUTER_NICKNAME))
-    rs->is_named = 0;
+    rs->is_named = rs->is_unnamed = 0;
 
   rs->published_on = ri->cache_info.published_on;
   memcpy(rs->identity_digest, ri->cache_info.identity_digest, DIGEST_LEN);
@@ -1979,8 +2004,10 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (listbadexits)
     smartlist_add(v3_out->known_flags, tor_strdup("BadExit"));
-  if (naming)
+  if (naming) {
     smartlist_add(v3_out->known_flags, tor_strdup("Named"));
+    smartlist_add(v3_out->known_flags, tor_strdup("Unnamed"));
+  }
   smartlist_sort_strings(v3_out->known_flags);
 
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));

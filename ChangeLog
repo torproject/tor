@@ -4,6 +4,11 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       of v2 networkstatus documents.  Clients and caches now their opinions
       about routers on these consensus documents.  Clients only download
       router descriptors listed in the consensus.
+    - Authorities now list servers who have the same nickname as a different
+      named server, but list them with a new flag, "Unnamed". (122)
+    - If the consensus list a router as "Unnamed", the name is assigned
+      to a different router: do not identify the router by that name.
+      (Partially implements proposal 122.)
 
   o Major bugfixes:
     - Stop publishing a new server descriptor just because we HUP or
@@ -16,9 +21,6 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       that it shouldn't be considered to exist at all anymore. Now we
       clear all the flags for routers that fall out of the networkstatus
       consensus. Fixes bug 529.
-    - If the consensus list a router as "Unnamed", the name is assigned
-      to a different router: do not identify the router by that name.
-      (Partially implements proposal 122.)
 
   o Minor features (v3 directory protocol):
     - Allow tor-gencert to generate a new certificate without replacing the

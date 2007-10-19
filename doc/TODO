@@ -95,8 +95,12 @@ Things we'd like to do in 0.2.0.x:
       - Merge into tor-spec.txt.
     . 122: Network status entries need an Unnamed flag
       - Merge into dir-spec.txt
-      - Implement voting side
+      o Implement voting side
+        o Set Named and Unnamed sensibly
+        o Don't reject Unnamed routers.
       - Implement consensus side
+        - Generic "pick which voting method to use" code.
+        - 
       o Implement client side
 
   - Refactoring:
