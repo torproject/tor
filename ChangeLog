@@ -52,6 +52,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Treat missing v3 keys or certificates as an error when running as a
       v3 directory authority.
 
+    - If an authority doesn't have a qualified hostname, just put its address
+      in the 
+
   o Minor bugfixes (v3 directory protocol)
     - Delete unverified-consensus when the real consensus is set.
     - Consider retrying a consensus networkstatus fetch immediately after one

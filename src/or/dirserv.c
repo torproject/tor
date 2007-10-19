@@ -1875,6 +1875,10 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
     log_warn(LD_NET, "Couldn't resolve my hostname");
     return NULL;
   }
+  if (!strchr(hostname, '.')) {
+    tor_free(hostname);
+    hostname = tor_dup_addr(addr);
+  }
   if (crypto_pk_get_digest(private_key, signing_key_digest)<0) {
     log_err(LD_BUG, "Error computing signing key digest");
     return NULL;
