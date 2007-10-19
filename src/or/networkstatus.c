@@ -177,6 +177,7 @@ router_reload_consensus_networkstatus(void)
     tor_free(s);
   }
   tor_free(filename);
+  routers_update_all_from_networkstatus(time(NULL));
 
   return 0;
 }
