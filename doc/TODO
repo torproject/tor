@@ -61,11 +61,11 @@ Things we'd like to do in 0.2.0.x:
 
   - Proposals:
     . 101: Voting on the Tor Directory System (plus 103)
-      . Finalize proposal
-        * Describe schedule in copious detail.
+      o Finalize proposal
+        o Describe schedule in copious detail.
       . Get authorities voting
-        - While we're at it, let v3 authorities have fqdns lines.
-        - Fix all XXXX020s in vote code
+        X While we're at it, let v3 authorities have fqdns lines.
+        . Fix all XXXX020s in vote code
       . Validate information properly.
         - Dump certificates with the wrong time.  Or just warn?
         - When checking a consensus, make sure that its times are plausible.
@@ -80,35 +80,23 @@ Things we'd like to do in 0.2.0.x:
         - Enable for non-caches
       - Code to use v3 networkstatus documents once clients are
         fetching them
-        o Make everybody download v3 networkstatus docs.
-        o Make clients not download v2 networkstatus docs.
-        o Make everybody download routerdescs based on v3 networkstatus
-          docs.
-        o Change definition of "have enough information to build circuits"
-        o Base version sanity check on v3 ns.
-        o Change routerstatus_get_by_* to use v3 networkstatus docs.
-        o Make download_status_get_by_descriptor_digest() use v2
-          networkstatus docs too.
-        o Eliminate routerstatus_list.
-        o Make routers_update_all_from_networkstatus() [or equivalent]
-          get called at the right time.
-        o Make  routersstatus_list_update_from_consensus_networkstatus()
-          get renamed and called.
-        o When setting a new consensus, copy the extra fields out of the
-          old consensus (if any).
-        o Update named-server-map as appropriate.
+        - Implement.
         - Fix all XXXX020s.
         - Sort out need_to_mirror
         - Work hard to make sure clients never look at v2 networkstatus docs.
         - Check in old_routers before fetching a router status. You never
           know if we'll flap...
-
       - Controller support
         - GETINFO to get consensus
         - Event when new consensus arrives
     - 105: Version negotiation for the Tor protocol
     . 111: Prioritize local traffic over relayed.
       - Merge into tor-spec.txt.
+    - 122: Network status entries need an Unnamed flag
+      - Merge into dir-spec.txt
+      - Implement voting side
+      - Implement consensus side
+      - Implement client side
 
   - Refactoring:
     . Make cells get buffered on circuit, not on the or_conn.
@@ -178,6 +166,8 @@ R     - drop 'authority' queries if they're to our own identity key; accept
     - We should ship with a list of stable dir mirrors -- they're not
       trusted like the authorities, but they'll provide more robustness
       and diversity for bootstrapping clients.
+      - Implement this as a list of routerstatus, like fake_routerstatus in
+        trusted_dir_derver_t?
     - Better estimates in the directory of whether servers have good uptime
        (high expected time to failure) or good guard qualities (high
        fractional uptime).
