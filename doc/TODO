@@ -58,7 +58,7 @@ Things we'd like to do in 0.2.0.x:
       out and download the ancient history of the universe.
     o List IP addresses in certificates?
     o Make the address in votes be an actual IP address.
-    - Change 'mismatched digest' message to first check timestamps instead.
+    o Change 'mismatched digest' message to first check timestamps instead.
 
   - Proposals:
     . 101: Voting on the Tor Directory System (plus 103)
@@ -78,12 +78,12 @@ Things we'd like to do in 0.2.0.x:
         - Code to retry consensus download if we got one we already have.
         - Use if-modified-since on consensus download
         - Use if-modified-since on certificate download
-        - Enable for non-caches
+        o Enable for non-caches
       - Code to use v3 networkstatus documents once clients are
         fetching them
-        - Implement.
+        o Implement.
         - Fix all XXXX020s.
-        - Sort out need_to_mirror
+        o Sort out need_to_mirror
         - Work hard to make sure clients never look at v2 networkstatus docs.
         - Check in old_routers before fetching a router status. You never
           know if we'll flap...

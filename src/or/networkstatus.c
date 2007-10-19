@@ -896,7 +896,6 @@ networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
     if (!memcmp(rs_old->descriptor_digest, rs_new->descriptor_digest,
                 DIGEST_LEN)) {
       /* And the same descriptor too! */
-      rs_new->need_to_mirror = rs_old->need_to_mirror; /*XXXX020 NM ????? */
       memcpy(&rs_new->dl_status, &rs_old->dl_status,sizeof(download_status_t));
     }
   });

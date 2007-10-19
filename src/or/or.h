@@ -1250,7 +1250,7 @@ typedef struct routerstatus_t {
   /** True if we, as a directory mirror, want to download the corresponding
    * routerinfo from the authority who gave us this routerstatus.  (That is,
    * if we don't have the routerinfo, and if we haven't already tried to get it
-   * from this authority.)
+   * from this authority.)  Applies in v2 networkstatus document only.
    */
   unsigned int need_to_mirror:1;
   unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
