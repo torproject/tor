@@ -471,8 +471,7 @@ smartlist_sort(smartlist_t *sl, int (*compare)(const void **a, const void **b))
 
 /** Given a sorted smartlist <b>sl</b> and the comparison function used to
  * sort it, remove all duplicate members.  If free_fn is provided, calls
- * free_fn on each duplicate.  Otherwise, frees them with tor_free(), which
- * may not be what you want..  Preserves order.
+ * free_fn on each duplicate.  Otherwise, just removes them.  Preserves order.
  */
 void
 smartlist_uniq(smartlist_t *sl,
@@ -485,8 +484,6 @@ smartlist_uniq(smartlist_t *sl,
                 (const void **)&(sl->list[i])) == 0) {
       if (free_fn)
         free_fn(sl->list[i]);
-      else
-        tor_free(sl->list[i]);
       smartlist_del_keeporder(sl, i--);
     }
   }
@@ -530,7 +527,7 @@ smartlist_sort_strings(smartlist_t *sl)
 void
 smartlist_uniq_strings(smartlist_t *sl)
 {
-  smartlist_uniq(sl, _compare_string_ptrs, NULL);
+  smartlist_uniq(sl, _compare_string_ptrs, _tor_free);
 }
 
 /* Heap-based priority queue implementation for O(lg N) insert and remove.
@@ -653,7 +650,7 @@ smartlist_sort_digests(smartlist_t *sl)
 void
 smartlist_uniq_digests(smartlist_t *sl)
 {
-  smartlist_uniq(sl, _compare_digests, NULL);
+  smartlist_uniq(sl, _compare_digests, _tor_free);
 }
 
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \

@@ -1469,7 +1469,7 @@ test_util_smartlist(void)
                      "50,noon,radar,a,man,a,plan,a,canal,panama,radar,noon,50",
                      ",", 0, 0);
   smartlist_sort(sl, _compare_strs);
-  smartlist_uniq(sl, _compare_strs, NULL);
+  smartlist_uniq(sl, _compare_strs, _tor_free);
   cp = smartlist_join_strings(sl, ",", 0, NULL);
   test_streq(cp, "50,a,canal,man,noon,panama,plan,radar");
   tor_free(cp);
