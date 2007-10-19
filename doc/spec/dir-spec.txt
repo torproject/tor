@@ -303,7 +303,7 @@ $Id$
    (FU) time and a "valid-until" (VU) time.  VA MUST precede FU, which MUST
    in turn precede VU.  Times are chosen so that every consensus will be
    "fresh" until the next consensus becomes valid, and "valid" for a while
-   after.  At least 2 or 3 consensuses should be valid at any given time.
+   after.  At least 3 consensuses should be valid at any given time.
 
    The timeline for a given consensus is as follows:
 
@@ -320,11 +320,17 @@ $Id$
 
    VA: All authorities have a multiply signed consensus.
 
-   VA ... FU: Caches download the consensus.
+   VA ... FU: Caches download the consensus.  (Note that since caches have
+        no way of telling what VA and FU are until they have downloaded
+        the consensus, they assume that the present descriptor's VA is
+        equal to the previous one's FU, and that its FU is one interval after
+        that.)
 
    FU: The consensus is no long the freshest consensus.
 
-   FU ... VU: Clients download the consensus.
+   FU ... (the current descriptors's VU): Clients download the consensus.
+        (See note above: clients guess that the next descriptor's FU will be
+        two intervals after the current VA.)
 
    VU: The consensus is no longer valid.
 
@@ -649,6 +655,11 @@ $Id$
         the protocol described in this document.  Implementations MUST
         reject formats they don't understand.
 
+    "address" IP NL
+        [Once or more]
+
+        An IP:Port for this authority's directory port.
+
     "fingerprint" fingerprint NL
 
         [Exactly once.]
@@ -737,6 +748,15 @@ $Id$
         A space-separated list of supported methods for generating
         consensuses from votes.  See section 3.4.1 for details.  Method "1"
         MUST be included.
+
+    "consensus-method" SP Integer NL
+
+        [Exactly once for consensuses; does not occur in votes.]
+
+        See section 3.4.1 for details.
+
+        (Only included when the vote is generated with consensus-method 2 or
+        later.)
 
     "published" SP YYYY-MM-DD SP HH:MM:SS NL
 
