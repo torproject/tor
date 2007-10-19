@@ -1221,6 +1221,8 @@ typedef struct routerstatus_t {
   unsigned int is_fast:1; /**< True iff this router has good bandwidth. */
   unsigned int is_running:1; /**< True iff this router is up. */
   unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
+  unsigned int is_unnamed:1; /**< True iff "nickname" belongs to another
+                              * router. */
   unsigned int is_valid:1; /**< True iff this router is validated. */
   unsigned int is_v2_dir:1; /**< True iff this router can serve directory
                              * information with v2 of the directory
@@ -1348,6 +1350,11 @@ typedef struct networkstatus_vote_t {
                        * consensus. */
   time_t valid_until; /**< Time after which this vote or consensus should not
                        * be used. */
+
+  /** Consensus only: what method was used to produce this consensus? */
+  int consensus_method;
+  /** Vote only: what methods is this voter willing to use? */
+  smartlist_t *supported_methods;
 
   /** How long does this vote/consensus claim that authorities take to
    * distribute their votes to one another? */
@@ -3091,6 +3098,7 @@ routerstatus_t *router_get_consensus_status_by_descriptor_digest(
 routerstatus_t *router_get_consensus_status_by_nickname(const char *nickname,
                                                        int warn_if_unnamed);
 const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
+int networkstatus_nickname_is_unnamed(const char *nickname);
 void networkstatus_consensus_download_failed(int status_code);
 int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);

@@ -93,11 +93,11 @@ Things we'd like to do in 0.2.0.x:
     - 105: Version negotiation for the Tor protocol
     . 111: Prioritize local traffic over relayed.
       - Merge into tor-spec.txt.
-    - 122: Network status entries need an Unnamed flag
+    . 122: Network status entries need an Unnamed flag
       - Merge into dir-spec.txt
       - Implement voting side
       - Implement consensus side
-      - Implement client side
+      o Implement client side
 
   - Refactoring:
     . Make cells get buffered on circuit, not on the or_conn.

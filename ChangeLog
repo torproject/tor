@@ -16,6 +16,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       that it shouldn't be considered to exist at all anymore. Now we
       clear all the flags for routers that fall out of the networkstatus
       consensus. Fixes bug 529.
+    - If the consensus list a router as "Unnamed", the name is assigned
+      to a different router: do not identify the router by that name.
+      (Partially implements proposal 122.)
 
   o Minor features (v3 directory protocol):
     - Allow tor-gencert to generate a new certificate without replacing the

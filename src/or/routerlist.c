@@ -1701,6 +1701,8 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
   if ((named_digest = networkstatus_get_router_digest_by_nickname(nickname))) {
     return rimap_get(routerlist->identity_map, named_digest);
   }
+  if (networkstatus_nickname_is_unnamed(nickname))
+    return NULL;
 
   /* If we reach this point, there's no canonical value for the nickname. */
 

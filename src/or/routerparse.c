@@ -1534,12 +1534,17 @@ find_start_of_next_routerstatus(const char *s)
  * router status.  Return NULL and advance *<b>s</b> on error.
  *
  * If <b>vote</b> and <b>vote_rs</b> are provided, don't allocate a fresh
- * routerstatus but use <b>vote_rs</b> instead
+ * routerstatus but use <b>vote_rs</b> instead.
+ *
+ * If <b>consensus_method</b> is nonzero, this routerstatus is part of a
+ * consensus, and we should parse it according to the method used to
+ * make that consensus.
  **/
 static routerstatus_t *
 routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
                                      networkstatus_vote_t *vote,
-                                     vote_routerstatus_t *vote_rs)
+                                     vote_routerstatus_t *vote_rs,
+                                     int consensus_method)
 {
   const char *eos;
   routerstatus_t *rs = NULL;
@@ -1645,6 +1650,11 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
         rs->is_bad_directory = 1;
       else if (!strcmp(tok->args[i], "Authority"))
         rs->is_authority = 1;
+      else if (!strcmp(tok->args[i], "Unnamed") &&
+               consensus_method >= 2) {
+        /* Unnamed is computed right by consensus method 2 and later. */
+        rs->is_unnamed = 1;
+      }
     }
   }
   if ((tok = find_first_by_keyword(tokens, K_V))) {
@@ -1830,7 +1840,7 @@ networkstatus_v2_parse_from_string(const char *s)
   smartlist_clear(tokens);
   while (!strcmpstart(s, "r ")) {
     routerstatus_t *rs;
-    if ((rs = routerstatus_parse_entry_from_string(&s, tokens, NULL, NULL)))
+    if ((rs = routerstatus_parse_entry_from_string(&s, tokens, NULL, NULL, 0)))
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, _compare_routerstatus_entries);
@@ -1936,6 +1946,26 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     tok = find_first_by_keyword(tokens, K_PUBLISHED);
     if (parse_iso_time(tok->args[0], &ns->published))
       goto err;
+
+    ns->supported_methods = smartlist_create();
+    tok = find_first_by_keyword(tokens, K_CONSENSUS_METHODS);
+    if (tok) {
+      for (i=0; i < tok->n_args; ++i)
+        smartlist_add(ns->supported_methods, tok->args[i]);
+      tok->n_args = 0; /* Prevent double free. */
+    } else {
+      smartlist_add(ns->supported_methods, tor_strdup("1"));
+    }
+  } else {
+    tok = find_first_by_keyword(tokens, K_CONSENSUS_METHOD);
+    if (tok) {
+      ns->consensus_method = (int)tor_parse_long(tok->args[0], 10, 1, INT_MAX,
+                                                 &ok, NULL);
+      if (!ok)
+        goto err;
+    } else {
+      ns->consensus_method = 1;
+    }
   }
 
   tok = find_first_by_keyword(tokens, K_VALID_AFTER);
@@ -2086,7 +2116,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   while (!strcmpstart(s, "r ")) {
     if (is_vote) {
       vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-      if (routerstatus_parse_entry_from_string(&s, tokens, ns, rs))
+      if (routerstatus_parse_entry_from_string(&s, tokens, ns, rs, 0))
         smartlist_add(ns->routerstatus_list, rs);
       else {
         tor_free(rs->version);
@@ -2094,7 +2124,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
     } else {
       routerstatus_t *rs;
-      if ((rs =routerstatus_parse_entry_from_string(&s, tokens, NULL, NULL)))
+      if ((rs = routerstatus_parse_entry_from_string(&s, tokens, NULL, NULL,
+                                                     ns->consensus_method)))
         smartlist_add(ns->routerstatus_list, rs);
     }
   }

@@ -25,8 +25,11 @@ static smartlist_t *networkstatus_v2_list = NULL;
  * time we called download_status_map_update_from_v2_networkstatus() */
 static int networkstatus_v2_list_has_changed = 0;
 
-/** Map from lowercase nickname to digest of named server, if any. */
+/** Map from lowercase nickname to identity digest of named server, if any. */
 static strmap_t *named_server_map = NULL;
+/** Map from lowercase nickname to (void*)1 for all names that are listed
+ * as unnamed for some server in the consensus. */
+static strmap_t *unnamed_server_map = NULL;
 
 /** Most recently received and validated v3 consensus network status. */
 static networkstatus_vote_t *current_consensus = NULL;
@@ -579,6 +582,7 @@ router_get_consensus_status_by_nickname(const char *nickname,
   routerstatus_t *best=NULL;
   smartlist_t *matches=NULL;
   const char *named_id=NULL;
+  int any_unnamed=0;
 
   if (!current_consensus || !nickname)
     return NULL;
@@ -597,6 +601,10 @@ router_get_consensus_status_by_nickname(const char *nickname,
   if (named_id)
     return networkstatus_vote_find_entry(current_consensus, named_id);
 
+  if (unnamed_server_map &&
+      strmap_get_lc(named_server_map, nickname))
+    return NULL; /* XXXX020 should we warn? */
+
   /*XXXX020 is this behavior really what we want? */
   matches = smartlist_create();
   SMARTLIST_FOREACH(current_consensus->routerstatus_list,
@@ -604,16 +612,22 @@ router_get_consensus_status_by_nickname(const char *nickname,
     {
       if (!strcasecmp(lrs->nickname, nickname)) {
         if (lrs->is_named) {
+          /* XXXX020 this should never happen. */
           smartlist_free(matches);
           return lrs;
         } else {
+          if (lrs->is_unnamed)
+            smartlist_free(matches); /* nor should this. */
           smartlist_add(matches, lrs);
           best = lrs;
         }
       }
     });
 
-  if (smartlist_len(matches)>1 && warn_if_unnamed) {
+  if (any_unnamed) {
+    /* XXXX020 should we warn? */
+    return NULL;
+  } else if (smartlist_len(matches)>1 && warn_if_unnamed) {
     int any_unwarned=0;
     SMARTLIST_FOREACH(matches, routerstatus_t *, lrs,
       {
@@ -652,6 +666,13 @@ networkstatus_get_router_digest_by_nickname(const char *nickname)
   if (!named_server_map)
     return NULL;
   return strmap_get_lc(named_server_map, nickname);
+}
+
+/** DOCDOC */
+int
+networkstatus_nickname_is_unnamed(const char *nickname)
+{
+  return strmap_get_lc(named_server_map, nickname) != NULL;
 }
 
 /** How frequently do directory authorities re-download fresh networkstatus
@@ -1061,6 +1082,11 @@ routers_update_all_from_networkstatus(time_t now)
       log_info(LD_GENERAL, "The latest consensus does not list us."
                "Are you misconfigured?");
       have_warned_about_invalid_status = 1;
+    } else if (rs->is_unnamed) {
+      /* XXXX020 this isn't a useful warning. */
+      log_info(LD_GENERAL,  "The directory have assigned the nickname "
+               "you're using to a different identity.");
+      have_warned_about_invalid_status = 1;
     } else if (!rs->is_named) {
       /*XXXX020 this isn't a correct warning. */
       log_info(LD_GENERAL,  "The directory authorities do not recognize "
@@ -1150,11 +1176,17 @@ routerstatus_list_update_named_server_map(void)
   if (named_server_map)
     strmap_free(named_server_map, _tor_free);
   named_server_map = strmap_new();
+  if (unnamed_server_map)
+    strmap_free(unnamed_server_map, NULL);
+  named_server_map = strmap_new();
   SMARTLIST_FOREACH(current_consensus->routerstatus_list, routerstatus_t *, rs,
     {
       if (rs->is_named) {
-        strmap_set(named_server_map, rs->nickname,
-                   tor_memdup(rs->identity_digest, DIGEST_LEN));
+        strmap_set_lc(named_server_map, rs->nickname,
+                      tor_memdup(rs->identity_digest, DIGEST_LEN));
+      }
+      if (rs->is_unnamed) {
+        strmap_set_lc(unnamed_server_map, rs->nickname, (void*)1);
       }
     });
 }
@@ -1347,6 +1379,9 @@ networkstatus_free_all(void)
   tor_free(consensus_waiting_for_certs_body);
   if (named_server_map) {
     strmap_free(named_server_map, _tor_free);
+  }
+  if (unnamed_server_map) {
+    strmap_free(unnamed_server_map, NULL);
   }
 }
 
