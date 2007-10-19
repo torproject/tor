@@ -9,6 +9,8 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - If the consensus list a router as "Unnamed", the name is assigned
       to a different router: do not identify the router by that name.
       (Partially implements proposal 122.)
+    - Authorities can now come to a consensus on which method to use to
+      compute the consensus.  This gives us forward compatibility.
 
   o Major bugfixes:
     - Stop publishing a new server descriptor just because we HUP or
@@ -61,7 +63,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       moria:9031."
     - Distinguish between detached signatures for the wrong period, and
       detached signatures for a divergent vote.
-
+    - Fix a small memory leak when computing a consensus.
 
   o Minor bugfixes (v3 directory protocol)
     - Delete unverified-consensus when the real consensus is set.

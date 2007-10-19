@@ -250,6 +250,63 @@ hash_list_members(char *digest_out, smartlist_t *lst)
   crypto_free_digest_env(d);
 }
 
+/**DOCDOC*/
+static int
+_cmp_int_strings(const void **_a, const void **_b)
+{
+  const char *a = *_a, *b = *_b;
+  int ai = (int)tor_parse_long(a, 10, 1, INT_MAX, NULL, NULL);
+  int bi = (int)tor_parse_long(b, 10, 1, INT_MAX, NULL, NULL);
+  if (ai<bi)
+    return -1;
+  else if (ai==bi)
+    return 0;
+  else
+    return 1;
+}
+
+/**DOCDOC*/
+static int
+compute_consensus_method(smartlist_t *votes)
+{
+  smartlist_t *all_methods = smartlist_create();
+  smartlist_t *acceptable_methods = smartlist_create();
+  smartlist_t *tmp = smartlist_create();
+  int min = (smartlist_len(votes) * 2) / 3;
+  int n_ok;
+  int result;
+  SMARTLIST_FOREACH(votes, networkstatus_vote_t *, vote,
+  {
+    tor_assert(vote->supported_methods);
+    smartlist_add_all(tmp, vote->supported_methods);
+    smartlist_sort(tmp, _cmp_int_strings);
+    smartlist_uniq(tmp, _cmp_int_strings, NULL);
+    smartlist_add_all(all_methods, tmp);
+    smartlist_clear(tmp);
+  });
+
+  smartlist_sort(all_methods, _cmp_int_strings);
+  get_frequent_members(acceptable_methods, all_methods, min);
+  n_ok = smartlist_len(acceptable_methods);
+  if (n_ok) {
+    const char *best = smartlist_get(acceptable_methods, n_ok-1);
+    result = (int)tor_parse_long(best, 10, 1, INT_MAX, NULL, NULL);
+  } else {
+    result = 1;
+  }
+  smartlist_free(tmp);
+  smartlist_free(all_methods);
+  smartlist_free(acceptable_methods);
+  return result;
+}
+
+/**DOCDOC*/
+static int
+consensus_method_is_supported(int method)
+{
+  return (method == 1);
+}
+
 /** Given a list of vote networkstatus_vote_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
@@ -266,6 +323,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 {
   smartlist_t *chunks;
   char *result = NULL;
+  int consensus_method;
 
   time_t valid_after, fresh_until, valid_until;
   int vote_seconds, dist_seconds;
@@ -278,6 +336,17 @@ networkstatus_compute_consensus(smartlist_t *votes,
     return NULL;
   }
   flags = smartlist_create();
+
+  consensus_method = compute_consensus_method(votes);
+  if (consensus_method_is_supported(consensus_method)) {
+    log_info(LD_DIR, "Generating consensus using method %d.",
+             consensus_method);
+  } else {
+    log_warn(LD_DIR, "The other authorities will use consensus method %d, "
+             "which I don't support.  Maybe I should upgrade!",
+             consensus_method);
+    consensus_method = 1;
+  }
 
   /* Compute medians of time-related things, and figure out how many
    * routers we might need to talk about. */
@@ -372,9 +441,16 @@ networkstatus_compute_consensus(smartlist_t *votes,
     format_iso_time(vu_buf, valid_until);
     flaglist = smartlist_join_strings(flags, " ", 0, NULL);
 
+    smartlist_add(chunks, tor_strdup("network-status-version 3\n"
+                                     "vote-status consensus\n"));
+
+    if (consensus_method >= 2) {
+      tor_snprintf(buf, sizeof(buf), "consensus-method %d\n",
+                   consensus_method);
+      smartlist_add(chunks, tor_strdup(buf));
+    }
+
     tor_snprintf(buf, sizeof(buf),
-                 "network-status-version 3\n"
-                 "vote-status consensus\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
                  "valid-until %s\n"
@@ -439,6 +515,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     int **flag_map; /* flag_map[j][b] is an index f such that flag_map[f]
                      * is the same flag as votes[j]->known_flags[b]. */
     int *named_flag; /* Index of the flag "Named" for votes[j] */
+    int *unnamed_flag; /* Index of the flag "Unnamed" for votes[j] */
 
     index = tor_malloc_zero(sizeof(int)*smartlist_len(votes));
     size = tor_malloc_zero(sizeof(int)*smartlist_len(votes));
@@ -446,8 +523,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
     n_flag_voters = tor_malloc_zero(sizeof(int) * smartlist_len(flags));
     flag_map = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
     named_flag = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
+    unnamed_flag = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
     for (i = 0; i < smartlist_len(votes); ++i)
-      named_flag[i] = -1;
+      unnamed_flag[i] = named_flag[i] = -1;
     SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
     {
       flag_map[v_sl_idx] = tor_malloc_zero(
@@ -460,6 +538,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
         ++n_flag_voters[p];
         if (!strcmp(fl, "Named"))
           named_flag[v_sl_idx] = fl_sl_idx;
+        if (!strcmp(fl, "Named"))
+          unnamed_flag[v_sl_idx] = fl_sl_idx;
       });
       n_voter_flags[v_sl_idx] = smartlist_len(v->known_flags);
       size[v_sl_idx] = smartlist_len(v->routerstatus_list);
@@ -598,6 +678,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       tor_free(flag_map[i]);
     tor_free(flag_map);
     tor_free(flag_counts);
+    tor_free(named_flag);
+    tor_free(unnamed_flag);
     smartlist_free(matching_descs);
     smartlist_free(chosen_flags);
     smartlist_free(versions);

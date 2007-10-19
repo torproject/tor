@@ -98,9 +98,10 @@ Things we'd like to do in 0.2.0.x:
       o Implement voting side
         o Set Named and Unnamed sensibly
         o Don't reject Unnamed routers.
-      - Implement consensus side
-        - Generic "pick which voting method to use" code.
-        - 
+      . Implement consensus side
+        o Generic "pick which voting method to use" code.
+        - When version 2 is set, set the Unnamed flag right.
+        - Mention that we support method 2.
       o Implement client side
 
   - Refactoring:
