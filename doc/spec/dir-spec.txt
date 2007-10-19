@@ -326,7 +326,7 @@ $Id$
         equal to the previous one's FU, and that its FU is one interval after
         that.)
 
-   FU: The consensus is no long the freshest consensus.
+   FU: The consensus is no longer the freshest consensus.
 
    FU ... (the current descriptors's VU): Clients download the consensus.
         (See note above: clients guess that the next descriptor's FU will be
