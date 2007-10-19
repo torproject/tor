@@ -2919,7 +2919,8 @@ networkstatus_voter_info_t *networkstatus_get_voter_by_id(
 int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
                                             int warn);
 int networkstatus_add_detached_signatures(networkstatus_vote_t *target,
-                                          ns_detached_signatures_t *sigs);
+                                          ns_detached_signatures_t *sigs,
+                                          const char **msg_out);
 char *networkstatus_get_detached_signatures(networkstatus_vote_t *consensus);
 void ns_detached_signatures_free(ns_detached_signatures_t *s);
 

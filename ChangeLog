@@ -51,9 +51,12 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       listing.
     - Treat missing v3 keys or certificates as an error when running as a
       v3 directory authority.
-
     - If an authority doesn't have a qualified hostname, just put its address
-      in the 
+      in the vote.  This fixes the problem where we referred to "moria on
+      moria:9031."
+    - Distinguish between detached signatures for the wrong period, and
+      detached signatures for a divergent vote.
+
 
   o Minor bugfixes (v3 directory protocol)
     - Delete unverified-consensus when the real consensus is set.

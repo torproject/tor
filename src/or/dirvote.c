@@ -810,17 +810,36 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
  * document as <b>target</b>. */
 int
 networkstatus_add_detached_signatures(networkstatus_vote_t *target,
-                                      ns_detached_signatures_t *sigs)
+                                      ns_detached_signatures_t *sigs,
+                                      const char **msg_out)
 {
   int r = 0;
   tor_assert(sigs);
   tor_assert(target);
   tor_assert(!target->is_vote);
 
+  /* Do the times seem right? */
+  if (target->valid_after != sigs->valid_after) {
+    *msg_out = "Valid-After times do not match "
+      "when adding detached signatures to consensus";
+    return -1;
+  }
+  if (target->fresh_until != sigs->fresh_until) {
+    *msg_out = "Fresh-until times do not match "
+      "when adding detached signatures to consensus";
+    return -1;
+  }
+  if (target->valid_until != sigs->valid_until) {
+    *msg_out = "Valid-until times do not match "
+      "when adding detached signatures to consensus";
+    return -1;
+  }
   /* Are they the same consensus? */
   if (memcmp(target->networkstatus_digest, sigs->networkstatus_digest,
-             DIGEST_LEN))
+             DIGEST_LEN)) {
+    *msg_out = "Digest mismatch when adding detached signatures to consensus";
     return -1;
+  }
 
   /* For each voter in src... */
   SMARTLIST_FOREACH(sigs->signatures, networkstatus_voter_info_t *, src_voter,
@@ -1612,7 +1631,7 @@ dirvote_add_signatures_to_pending_consensus(
   }
 
   r = networkstatus_add_detached_signatures(pending_consensus,
-                                            sigs);
+                                            sigs, msg_out);
 
   if (r >= 0) {
     char *new_detached =
@@ -1644,7 +1663,7 @@ dirvote_add_signatures_to_pending_consensus(
     pending_consensus_signatures = new_detached;
     *msg_out = "Signatures added";
   } else {
-    *msg_out = "Digest mismatch when adding detached signatures";
+    goto err;
   }
 
   goto done;
