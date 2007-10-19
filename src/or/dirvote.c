@@ -516,6 +516,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
                      * is the same flag as votes[j]->known_flags[b]. */
     int *named_flag; /* Index of the flag "Named" for votes[j] */
     int *unnamed_flag; /* Index of the flag "Unnamed" for votes[j] */
+    int chosen_named_idx, chosen_unnamed_idx;
+
+    strmap_t *name_to_id_map = strmap_new();
+    char conflict[DIGEST_LEN];
+    char unknown[DIGEST_LEN];
+    memset(conflict, 0, sizeof(conflict));
+    memset(unknown, 0xff, sizeof(conflict));
 
     index = tor_malloc_zero(sizeof(int)*smartlist_len(votes));
     size = tor_malloc_zero(sizeof(int)*smartlist_len(votes));
@@ -526,6 +533,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
     unnamed_flag = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
     for (i = 0; i < smartlist_len(votes); ++i)
       unnamed_flag[i] = named_flag[i] = -1;
+    chosen_named_idx = smartlist_string_pos(flags, "Named");
+    chosen_unnamed_idx = smartlist_string_pos(flags, "Unnamed");
+
+    /* Build the flag index. */
     SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
     {
       flag_map[v_sl_idx] = tor_malloc_zero(
@@ -538,12 +549,64 @@ networkstatus_compute_consensus(smartlist_t *votes,
         ++n_flag_voters[p];
         if (!strcmp(fl, "Named"))
           named_flag[v_sl_idx] = fl_sl_idx;
-        if (!strcmp(fl, "Named"))
+        if (!strcmp(fl, "Unnamed"))
           unnamed_flag[v_sl_idx] = fl_sl_idx;
       });
       n_voter_flags[v_sl_idx] = smartlist_len(v->known_flags);
       size[v_sl_idx] = smartlist_len(v->routerstatus_list);
     });
+
+    /* Named and Unnamed get treated specially */
+    if (consensus_method >= 2) {
+      SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
+      {
+        uint64_t nf;
+        if (named_flag[v_sl_idx]<0)
+          continue;
+        nf = U64_LITERAL(1) << named_flag[v_sl_idx];
+        SMARTLIST_FOREACH(v->routerstatus_list, vote_routerstatus_t *, rs,
+        {
+          if ((rs->flags & nf) != 0) {
+            const char *d = strmap_get_lc(name_to_id_map, rs->status.nickname);
+            if (!d) {
+              /* We have no name officially mapped to this digest. */
+              strmap_set_lc(name_to_id_map, rs->status.nickname,
+                            rs->status.identity_digest);
+            } else if (d != conflict &&
+                memcmp(d, rs->status.identity_digest, DIGEST_LEN)) {
+              /* Authorities disagree about this nickname. */
+              strmap_set_lc(name_to_id_map, rs->status.nickname, conflict);
+            } else {
+              /* It's already a conflict, or it's already this ID. */
+            }
+          }
+        });
+      });
+      SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
+      {
+        uint64_t uf;
+        if (unnamed_flag[v_sl_idx]<0)
+          continue;
+        uf = U64_LITERAL(1) << unnamed_flag[v_sl_idx];
+        SMARTLIST_FOREACH(v->routerstatus_list, vote_routerstatus_t *, rs,
+        {
+          if ((rs->flags & uf) != 0) {
+            const char *d = strmap_get_lc(name_to_id_map, rs->status.nickname);
+            if (d == conflict || d == unknown) {
+              /* Leave it alone; we know what it is. */
+            } else if (!d) {
+              /* We have no name officially mapped to this digest. */
+              strmap_set_lc(name_to_id_map, rs->status.nickname, unknown);
+            } else if (!memcmp(d, rs->status.identity_digest, DIGEST_LEN)) {
+              /* Authorities disagree about this nickname. */
+              strmap_set_lc(name_to_id_map, rs->status.nickname, conflict);
+            } else {
+              /* It's mapped to a different name. */
+            }
+          }
+        });
+      });
+    }
 
     /* Now go through all the votes */
     flag_counts = tor_malloc(sizeof(int) * smartlist_len(flags));
@@ -553,6 +616,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       const char *lowest_id = NULL;
       const char *chosen_version;
       const char *chosen_name = NULL;
+      int is_named = 0, is_unnamed = 0;
       int naming_conflict = 0;
       int n_listing = 0;
       int i;
@@ -605,7 +669,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
           }
           chosen_name = rs->status.nickname;
         }
-
       });
 
       /* We don't include this router at all unless more than half of
@@ -632,16 +695,33 @@ networkstatus_compute_consensus(smartlist_t *votes,
         strlcpy(rs_out.nickname, rs->status.nickname, sizeof(rs_out.nickname));
       }
 
+      if (consensus_method == 1) {
+        is_named = chosen_named_idx >= 0 &&
+          (!naming_conflict && flag_counts[chosen_named_idx]);
+      } else {
+        const char *d = strmap_get_lc(name_to_id_map, rs_out.nickname);
+        if (!d) {
+          is_named = is_unnamed = 0;
+        } else if (!memcmp(d, lowest_id, DIGEST_LEN)) {
+          is_named = 1; is_unnamed = 0;
+        } else {
+          is_named = 0; is_unnamed = 1;
+        }
+      }
+
       /* Set the flags. */
       smartlist_add(chosen_flags, (char*)"s"); /* for the start of the line. */
       SMARTLIST_FOREACH(flags, const char *, fl,
       {
-        if (strcmp(fl, "Named")) {
-          if (flag_counts[fl_sl_idx] > n_flag_voters[fl_sl_idx]/2)
+        if (!strcmp(fl, "Named")) {
+          if (is_named)
+            smartlist_add(chosen_flags, (char*)fl);
+        } else if (!strcmp(fl, "Unnamed") && consensus_method >= 2) {
+          if (is_unnamed)
             smartlist_add(chosen_flags, (char*)fl);
         } else {
-          if (!naming_conflict && flag_counts[fl_sl_idx])
-            smartlist_add(chosen_flags, (char*)"Named");
+          if (flag_counts[fl_sl_idx] > n_flag_voters[fl_sl_idx]/2)
+            smartlist_add(chosen_flags, (char*)fl);
         }
       });
 
@@ -680,6 +760,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_free(flag_counts);
     tor_free(named_flag);
     tor_free(unnamed_flag);
+    strmap_free(name_to_id_map, NULL);
     smartlist_free(matching_descs);
     smartlist_free(chosen_flags);
     smartlist_free(versions);
