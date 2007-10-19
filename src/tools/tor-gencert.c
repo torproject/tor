@@ -39,9 +39,11 @@
 char *identity_key_file = NULL;
 char *signing_key_file = NULL;
 char *certificate_file = NULL;
+int reuse_signing_key = 0;
 int verbose = 0;
 int make_new_id = 0;
 int months_lifetime = DEFAULT_LIFETIME;
+char *address = NULL;
 
 EVP_PKEY *identity_key = NULL;
 EVP_PKEY *signing_key = NULL;
@@ -53,7 +55,8 @@ show_help(void)
   fprintf(stderr, "Syntax:\n"
           "tor-gencert [-h|--help] [-v] [--create-identity-key] "
           "[-i identity_key_file]\n"
-          "            [-s signing_key_file] [-c certificate_file]\n");
+          "            [-s signing_key_file] [-c certificate_file] "
+          "[--reuse-signing-key]\n");
 }
 
 /* XXXX copied from crypto.c */
@@ -109,8 +112,25 @@ parse_commandline(int argc, char **argv)
         fprintf(stderr, "Lifetime (in months) was out of range.");
         return 1;
       }
+    } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--reuse")) {
+      reuse_signing_key = 1;
     } else if (!strcmp(argv[i], "-v")) {
       verbose = 1;
+    } else if (!strcmp(argv[i], "-a")) {
+      uint32_t addr;
+      uint16_t port;
+      char b[INET_NTOA_BUF_LEN];
+      struct in_addr in;
+      if (i+1>=argc) {
+        fprintf(stderr, "No argument to -a\n");
+        return 1;
+      }
+      if (parse_addr_port(LOG_ERR, argv[++i], NULL, &addr, &port)<0)
+        return 1;
+      in.s_addr = htonl(addr);
+      tor_inet_ntoa(&in, b, sizeof(b));
+      address = tor_malloc(INET_NTOA_BUF_LEN+32);
+      tor_snprintf(address, INET_NTOA_BUF_LEN+32, "%s:%d", b, (int)port);
     } else if (!strcmp(argv[i], "--create-identity-key")) {
       make_new_id = 1;
     } else {
@@ -210,6 +230,24 @@ load_identity_key(void)
     }
     fclose(f);
   }
+  return 0;
+}
+
+/** DOCDOC */
+static int
+load_signing_key(void)
+{
+  FILE *f;
+  if (!(f = fopen(signing_key_file, "r"))) {
+    log_err(LD_GENERAL, "Couldn't open %s for reading: %s",
+            signing_key_file, strerror(errno));
+    return 1;
+  }
+  if (!(signing_key = PEM_read_PrivateKey(f, NULL, NULL, NULL))) {
+    log_err(LD_GENERAL, "Couldn't read siging key from %s", signing_key_file);
+    return 1;
+  }
+  fclose(f);
   return 0;
 }
 
@@ -315,13 +353,15 @@ generate_certificate(void)
   format_iso_time(expires, mktime(&tm));
 
   tor_snprintf(buf, sizeof(buf),
-               "dir-key-certificate-version 3\n"
-               "fingerprint %s\n"
+               "dir-key-certificate-version 3"
+               "%s%s"
+               "\nfingerprint %s\n"
                "dir-key-published %s\n"
                "dir-key-expires %s\n"
                "dir-identity-key\n%s"
                "dir-signing-key\n%s"
                "dir-key-certification\n",
+               address?"\ndir-address ":"", address?address:"",
                fingerprint, published, expires, ident, signing);
   signed_len = strlen(buf);
   SHA1((const unsigned char*)buf,signed_len,(unsigned char*)digest);
@@ -368,8 +408,13 @@ main(int argc, char **argv)
     goto done;
   if (load_identity_key())
     goto done;
-  if (generate_signing_key())
-    goto done;
+  if (reuse_signing_key) {
+    if (load_signing_key())
+      goto done;
+  } else {
+    if (generate_signing_key())
+      goto done;
+  }
   if (generate_certificate())
     goto done;
 
@@ -379,6 +424,7 @@ main(int argc, char **argv)
     EVP_PKEY_free(identity_key);
   if (signing_key)
     EVP_PKEY_free(signing_key);
+  tor_free(address);
 
   crypto_global_cleanup();
   return r;

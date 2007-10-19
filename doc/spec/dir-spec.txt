@@ -655,7 +655,7 @@ $Id$
         the protocol described in this document.  Implementations MUST
         reject formats they don't understand.
 
-    "address" IP NL
+    "dir-address" IP NL
         [Once or more]
 
         An IP:Port for this authority's directory port.

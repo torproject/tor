@@ -63,6 +63,7 @@ typedef enum {
   K_DIR_KEY_PUBLISHED,
   K_DIR_KEY_EXPIRES,
   K_DIR_KEY_CERTIFICATION,
+  K_DIR_ADDRESS,
 
   K_VOTE_STATUS,
   K_VALID_AFTER,
@@ -280,8 +281,6 @@ static token_rule_t dir_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowable in the footer of v1/v2 directory/networkstatus
- * footers. */
 #define CERTIFICATE_MEMBERS                                                  \
   T1("dir-key-certificate-version", K_DIR_KEY_CERTIFICATE_VERSION,           \
                                                      GE(1),       NO_OBJ ),  \
@@ -290,7 +289,8 @@ static token_rule_t dir_token_table[] = {
   T1("dir-key-expires",  K_DIR_KEY_EXPIRES,          CONCAT_ARGS, NO_OBJ),   \
   T1("dir-signing-key",  K_DIR_SIGNING_KEY,          NO_ARGS,     NEED_KEY ),\
   T1("dir-key-certification", K_DIR_KEY_CERTIFICATION,                       \
-                                                     NO_ARGS,     NEED_OBJ),
+                                                     NO_ARGS,     NEED_OBJ), \
+  T01("dir-address",     K_DIR_ADDRESS,              GE(1),       NO_OBJ),
 
 static token_rule_t dir_key_certificate_table[] = {
   CERTIFICATE_MEMBERS
@@ -346,6 +346,8 @@ static token_rule_t networkstatus_consensus_token_table[] = {
   END_OF_TABLE
 };
 
+/** List of tokens allowable in the footer of v1/v2 directory/networkstatus
+ * footers. */
 static token_rule_t networkstatus_vote_footer_token_table[] = {
   T(  "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
   END_OF_TABLE
@@ -1436,6 +1438,16 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     log_warn(LD_DIR, "Digest of certificate key didn't match declared "
              "fingerprint");
     goto err;
+  }
+
+  tok = find_first_by_keyword(tokens, K_DIR_ADDRESS);
+  if (tok) {
+    tor_assert(tok->n_args);
+    if (parse_addr_port(LOG_WARN, tok->args[0], NULL, &cert->addr,
+                        &cert->dir_port)<0) {
+      log_warn(LD_DIR, "Couldn't parse dir-address in certificate");
+      goto err;
+    }
   }
 
   tok = find_first_by_keyword(tokens, K_DIR_KEY_PUBLISHED);

@@ -1475,6 +1475,8 @@ typedef struct authority_cert_t {
   crypto_pk_env_t *signing_key;
   char signing_key_digest[DIGEST_LEN];
   time_t expires;
+  uint32_t addr;
+  uint16_t dir_port;
 } authority_cert_t;
 
 /** Bitfield enum type listing types of directory authority/directory

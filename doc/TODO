@@ -56,7 +56,7 @@ Things we'd like to do in 0.2.0.x:
     - Make new download types comply with should_delay_dir_fetches()
     - When DownloadExtraInfo is turned on for the first time, don't flip
       out and download the ancient history of the universe.
-    - List IP addresses in certificates?
+    o List IP addresses in certificates?
     - Make the address in votes be an actual IP address.
 
   - Proposals:
