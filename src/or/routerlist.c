@@ -295,6 +295,9 @@ authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
   smartlist_t *missing_digests = smartlist_create();
   char *resource = NULL;
 
+  if (should_delay_dir_fetches(get_options()))
+    return;
+
   list_pending_downloads(pending, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
   if (status) {
     SMARTLIST_FOREACH(status->voters, networkstatus_voter_info_t *, voter,
