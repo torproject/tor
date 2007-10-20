@@ -235,7 +235,7 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
   }                                                                     \
   static INLINE int prefix##size(maptype *map)                          \
   {                                                                     \
-    return digestmap_isempty((digestmap_t*)map);                        \
+    return digestmap_size((digestmap_t*)map);                           \
   }                                                                     \
   static INLINE prefix##iter_t *prefix##iter_init(maptype *map)         \
   {                                                                     \
