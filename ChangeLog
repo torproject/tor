@@ -83,6 +83,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
   o Minor bugfixes (misc):
     - Make base32_decode() accept upper-case letters.  Bugfix on
       0.2.0.7-alpha.
+    - Don't try to download extrainfo documents when we're trying to
+      fetch enough directory info to build a circuit: having enough
+      info should get priority.
 
   o Minor bugfixes (performance):
     - Base64 decoding was actually showing up on our profile when parsing

@@ -3801,6 +3801,8 @@ update_extrainfo_downloads(time_t now)
     return;
   if (should_delay_dir_fetches(options))
     return;
+  if (!router_have_minimum_dir_info())
+    return;
 
   pending = digestmap_new();
   list_pending_descriptor_downloads(pending, 1);
