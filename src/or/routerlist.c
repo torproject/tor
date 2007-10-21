@@ -2205,7 +2205,8 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   int r = 0;
   routerinfo_t *ri = rimap_get(rl->identity_map,
                                ei->cache_info.identity_digest);
-  signed_descriptor_t *sd;
+  signed_descriptor_t *sd =
+    sdmap_get(rl->desc_by_eid_map, ei->cache_info.signed_descriptor_digest);
   extrainfo_t *ei_tmp;
 
   {
@@ -2218,16 +2219,8 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
     /* This router is unknown; we can't even verify the signature. Give up.*/
     goto done;
   }
-  if (routerinfo_incompatible_with_extrainfo(ri, ei, NULL)) {
-    if (ei->bad_sig) /* If the signature didn't check, it's just wrong. */
-      goto done;
-    sd = sdmap_get(rl->desc_by_eid_map,
-                   ei->cache_info.signed_descriptor_digest);
-    if (!sd ||
-        memcmp(sd->identity_digest, ei->cache_info.identity_digest,
-               DIGEST_LEN) ||
-        sd->published_on != ei->cache_info.published_on)
-      goto done;
+  if (routerinfo_incompatible_with_extrainfo(ri, ei, sd, NULL)) {
+    goto done;
   }
 
   /* Okay, if we make it here, we definitely have a router corresponding to
@@ -2740,8 +2733,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 }
 
 /** Insert <b>ei</b> into the routerlist, or free it. Other arguments are
- * as for router_add_to_routerlist(). */
-void
+ * as for router_add_to_routerlist().
+ * DOCDOC Inserted
+ */
+int
 router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                    int from_cache, int from_fetch)
 {
@@ -2754,6 +2749,8 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
   if (inserted && !from_cache)
     signed_desc_append_to_journal(&ei->cache_info,
                                   &routerlist->extrainfo_store);
+
+  return inserted;
 }
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
@@ -3174,7 +3171,9 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 
   SMARTLIST_FOREACH(extrainfo_list, extrainfo_t *, ei, {
-      if (requested_fingerprints) {
+      int added =
+        router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
+      if (added && requested_fingerprints) {
         char fp[HEX_DIGEST_LEN+1];
         base16_encode(fp, sizeof(fp), descriptor_digests ?
                         ei->cache_info.signed_descriptor_digest :
@@ -3184,7 +3183,6 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
         /* XXX020 We silently let people stuff us with extrainfos we
          * didn't ask for. Is this a problem? -RD */
       }
-      router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
     });
 
   routerlist_assert_ok(routerlist);
@@ -4042,13 +4040,19 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
  * dropped.  Return 0 for "compatible", return 1 for "reject, and inform
  * whoever uploaded <b>ei</b>, and return -1 for "reject silently.".  If
  * <b>msg</b> is present, set *<b>msg</b> to a description of the
- * incompatibility (if any). */
+ * incompatibility (if any)
+ *
+ * DOCDOC sd.
+ **/
 int
 routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
+                                       signed_descriptor_t *sd,
                                        const char **msg)
 {
   tor_assert(ri);
   tor_assert(ei);
+  if (!sd)
+    sd = &ri->cache_info;
 
   if (ei->bad_sig) {
     if (msg) *msg = "Extrainfo signature was bad, or signed with wrong key.";
@@ -4079,16 +4083,16 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
     tor_free(ei->pending_sig);
   }
 
-  if (ei->cache_info.published_on < ri->cache_info.published_on) {
+  if (ei->cache_info.published_on < sd->published_on) {
     if (msg) *msg = "Extrainfo published time did not match routerdesc";
     return 1;
-  } else if (ei->cache_info.published_on > ri->cache_info.published_on) {
+  } else if (ei->cache_info.published_on > sd->published_on) {
     if (msg) *msg = "Extrainfo published time did not match routerdesc";
     return -1;
   }
 
   if (memcmp(ei->cache_info.signed_descriptor_digest,
-             ri->cache_info.extra_info_digest, DIGEST_LEN)) {
+             sd->extra_info_digest, DIGEST_LEN)) {
     if (msg) *msg = "Extrainfo digest did not match value from routerdesc";
     return 1; /* Digest doesn't match declared value. */
   }

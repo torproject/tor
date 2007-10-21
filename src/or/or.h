@@ -3612,7 +3612,7 @@ void routerlist_reset_warnings(void);
 void router_set_status(const char *digest, int up);
 int router_add_to_routerlist(routerinfo_t *router, const char **msg,
                              int from_cache, int from_fetch);
-void router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
+int router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                         int from_cache, int from_fetch);
 void routerlist_remove_old_routers(void);
 int router_load_single_router(const char *s, uint8_t purpose, int cache,
@@ -3643,6 +3643,7 @@ void router_dir_info_changed(void);
 void router_reset_descriptor_download_failures(void);
 int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
 int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
+                                           signed_descriptor_t *sd,
                                            const char **msg);
 void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);

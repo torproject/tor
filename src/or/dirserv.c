@@ -701,7 +701,7 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
     extrainfo_free(ei);
     return -1;
   }
-  if ((r = routerinfo_incompatible_with_extrainfo(ri, ei, msg))) {
+  if ((r = routerinfo_incompatible_with_extrainfo(ri, ei, NULL, msg))) {
     extrainfo_free(ei);
     return r < 0 ? 0 : -1;
   }

@@ -23,6 +23,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       that it shouldn't be considered to exist at all anymore. Now we
       clear all the flags for routers that fall out of the networkstatus
       consensus. Fixes bug 529.
+    - Fix awful behavior in DownloadExtraInfo option where we'd fetch
+      extrainfo documents and then discard them immediately for not
+      matching the latest router.
 
   o Minor features (v3 directory protocol):
     - Allow tor-gencert to generate a new certificate without replacing the

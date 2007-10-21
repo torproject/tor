@@ -1305,7 +1305,7 @@ router_rebuild_descriptor(int force)
   router_get_router_hash(ri->cache_info.signed_descriptor_body,
                          ri->cache_info.signed_descriptor_digest);
 
-  tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL));
+  tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
 
   if (desc_routerinfo)
     routerinfo_free(desc_routerinfo);
