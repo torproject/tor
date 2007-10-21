@@ -3817,6 +3817,10 @@ update_extrainfo_downloads(time_t now)
         sd = &((routerinfo_t*)smartlist_get(lst, i))->cache_info;
       if (sd->is_extrainfo)
         continue; /* This should never happen. */
+      if (old_routers && !router_get_by_digest(sd->identity_digest))
+        continue; /* Couldn't check the signature if we got it. */
+      if (sd->extrainfo_is_bogus)
+        continue;
       d = sd->extra_info_digest;
       if (tor_digest_is_zero(d)) {
         ++n_no_ei;
@@ -4042,13 +4046,14 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
  * <b>msg</b> is present, set *<b>msg</b> to a description of the
  * incompatibility (if any)
  *
- * DOCDOC sd.
+ * DOCDOC sd.  DOCDOC extrainfo_is_bogus.
  **/
 int
 routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
                                        signed_descriptor_t *sd,
                                        const char **msg)
 {
+  int digest_matches, r=1;
   tor_assert(ri);
   tor_assert(ei);
   if (!sd)
@@ -4059,13 +4064,15 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
     return 1;
   }
 
-  /* The nickname must match exactly to have been generated at the same time
+  digest_matches = !memcmp(ei->cache_info.signed_descriptor_digest,
+                           sd->extra_info_digest, DIGEST_LEN);
+
+  /* The identity must match exactly to have been generated at the same time
    * by the same router. */
-  if (strcmp(ri->nickname, ei->nickname) ||
-      memcmp(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
+  if (memcmp(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
              DIGEST_LEN)) {
     if (msg) *msg = "Extrainfo nickname or identity did not match routerinfo";
-    return 1; /* different servers */
+    goto err; /* different servers */
   }
 
   if (ei->pending_sig) {
@@ -4077,7 +4084,7 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
       ei->bad_sig = 1;
       tor_free(ei->pending_sig);
       if (msg) *msg = "Extrainfo signature bad, or signed with wrong key";
-      return 1; /* Bad signature, or no match. */
+      goto err; /* Bad signature, or no match. */
     }
 
     tor_free(ei->pending_sig);
@@ -4085,19 +4092,28 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
 
   if (ei->cache_info.published_on < sd->published_on) {
     if (msg) *msg = "Extrainfo published time did not match routerdesc";
-    return 1;
+    goto err;
   } else if (ei->cache_info.published_on > sd->published_on) {
     if (msg) *msg = "Extrainfo published time did not match routerdesc";
-    return -1;
+    r = -1;
+    goto err;
   }
 
-  if (memcmp(ei->cache_info.signed_descriptor_digest,
-             sd->extra_info_digest, DIGEST_LEN)) {
+  if (!digest_matches) {
     if (msg) *msg = "Extrainfo digest did not match value from routerdesc";
-    return 1; /* Digest doesn't match declared value. */
+    goto err; /* Digest doesn't match declared value. */
   }
 
   return 0;
+ err:
+  if (digest_matches) {
+    /* This signature was okay, and the digest was right: This is indeed the
+     * corresponding extrainfo.  But insanely, it doesn't match the routerinfo
+     * that lists it.  Don't try to fetch this one again. */
+    sd->extrainfo_is_bogus = 1;
+  }
+
+  return r;
 }
 
 /** Assert that the internal representation of <b>rl</b> is

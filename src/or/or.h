@@ -1109,6 +1109,9 @@ typedef struct signed_descriptor_t {
   unsigned int do_not_cache : 1;
   /* If true, this item is meant to represent an extrainfo. */
   unsigned int is_extrainfo : 1;
+  /* If true, we got an extrainfo for this item, and the digest was right,
+   * but it was incompatible. */
+  unsigned int extrainfo_is_bogus : 1;
 } signed_descriptor_t;
 
 /** Information about another onion router in the network. */
