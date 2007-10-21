@@ -68,7 +68,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       detached signatures for a divergent vote.
     - Fix a small memory leak when computing a consensus.
 
-  o Minor bugfixes (v3 directory protocol)
+  o Minor bugfixes (v3 directory protocol):
     - Delete unverified-consensus when the real consensus is set.
     - Consider retrying a consensus networkstatus fetch immediately after one
       fails: don't wait 60 seconds to notice.
@@ -76,8 +76,13 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       exists before trying to replace the current one.
 
   o Minor bugfixes (controller):
-    - Don't reset trusted dir server list when we set a configuration option.
-      (Patch from Robert Hogan.)
+    - Don't reset trusted dir server list when we set a configuration
+      option. Patch from Robert Hogan.
+    - Respond to INT and TERM SIGNAL commands before we execute the
+      signal, in case the signal shuts us down. We had a patch in
+      0.1.2.1-alpha that tried to do this by queueing the response on
+      the connection's buffer before shutting down, but that really
+      isn't the same thing. Bug located by Matt Edman.
 
   o Minor bugfixes (memory leaks):
     - Stop leaking memory on failing case of base32_decode.  Bugfix on

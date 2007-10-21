@@ -1119,8 +1119,10 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   if (sig<0)
     return 0;
 
-  /* Send DONE first, in case the signal makes us shut down. */
   send_control_done(conn);
+  /* Flush the "done" first if the signal might make us shut down. */
+  if (sig == SIGTERM || sig == SIGINT)
+    connection_handle_write(TO_CONN(conn), 1);
   control_signal_act(sig);
   return 0;
 }
