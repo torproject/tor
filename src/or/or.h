@@ -3103,6 +3103,7 @@ routerstatus_t *router_get_consensus_status_by_nickname(const char *nickname,
 const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
 int networkstatus_nickname_is_unnamed(const char *nickname);
 void networkstatus_consensus_download_failed(int status_code);
+void update_consensus_networkstatus_fetch_time(time_t now);
 int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);
 networkstatus_v2_t *networkstatus_v2_get_by_digest(const char *digest);

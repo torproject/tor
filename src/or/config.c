@@ -1119,6 +1119,17 @@ options_act(or_options_t *old_options)
       options_transition_affects_descriptor(old_options, options))
     mark_my_descriptor_dirty();
 
+  /* We may need to reschedule some directory stuff if our status changed. */
+  if (authdir_mode_v3(options) && !authdir_mode_v3(old_options))
+    dirvote_recalculate_timing(options, time(NULL));
+  if (!bool_eq(dirserver_mode(options), dirserver_mode(old_options))) {
+    /* Make sure update_router_have_min_dir_info gets called. */
+    router_dir_info_changed();
+    /* We might need to download a new consensus status later or sooner than
+     * we had expected. */
+    update_consensus_networkstatus_fetch_time(time(NULL));
+  }
+
   return 0;
 }
 

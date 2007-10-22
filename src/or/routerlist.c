@@ -3863,7 +3863,6 @@ router_dir_info_changed(void)
 static void
 update_router_have_minimum_dir_info(void)
 {
-  /*XXX020 call when dirserver_mode() changes. */
   int num_present = 0, num_usable=0;
   time_t now = time(NULL);
   int res;

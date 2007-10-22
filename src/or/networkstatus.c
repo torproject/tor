@@ -776,11 +776,10 @@ networkstatus_consensus_download_failed(int status_code)
 
 /** Update the time at which we'll consider replacing the current
  * consensus. */
-static void
+void
 update_consensus_networkstatus_fetch_time(time_t now)
 {
   or_options_t *options = get_options();
-  /* XXXX020 call this when DirPort switches on or off. NMNM */
   networkstatus_vote_t *c = networkstatus_get_live_consensus(now);
   if (c) {
     long dl_interval;

@@ -31,6 +31,8 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Allow tor-gencert to generate a new certificate without replacing the
       signing key.
     - Allow certificates to include an address.
+    - When we change our directory-cache settings, reschedule all voting
+      and download operations.
 
   o Minor features (router descriptor cache):
     - If we find a cached-routers file that's been sitting around for more
