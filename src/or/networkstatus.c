@@ -990,6 +990,9 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
 
   download_status_reset(&consensus_dl_status); /*XXXX020 not quite right.*/
 
+  /* XXXX020 check dates for plausibility.  Don't trust a consensus whose
+   * valid-after date is very far in the future. */
+
   /* Are we missing any certificates at all? */
   if (r != 1)
     authority_certs_fetch_missing(c, now);

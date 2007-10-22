@@ -2220,8 +2220,6 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     goto err;
   }
 
-  /* XXXX020 check dates for plausibility.  ??? */
-
   if (eos_out)
     *eos_out = end_of_footer;
 
