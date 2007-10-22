@@ -210,6 +210,214 @@ networkstatus_v2_free(networkstatus_v2_t *ns)
   tor_free(ns);
 }
 
+/** Clear all storage held in <b>ns</b>. */
+void
+networkstatus_vote_free(networkstatus_vote_t *ns)
+{
+  if (!ns)
+    return;
+
+  tor_free(ns->client_versions);
+  tor_free(ns->server_versions);
+  if (ns->known_flags) {
+    SMARTLIST_FOREACH(ns->known_flags, char *, c, tor_free(c));
+    smartlist_free(ns->known_flags);
+  }
+  if (ns->voters) {
+    SMARTLIST_FOREACH(ns->voters, networkstatus_voter_info_t *, voter,
+    {
+      tor_free(voter->nickname);
+      tor_free(voter->address);
+      tor_free(voter->contact);
+    });
+    smartlist_free(ns->voters);
+  }
+  if (ns->cert)
+    authority_cert_free(ns->cert);
+
+  if (ns->routerstatus_list) {
+    if (ns->is_vote) {
+      SMARTLIST_FOREACH(ns->routerstatus_list, vote_routerstatus_t *, rs,
+      {
+        tor_free(rs->version);
+        tor_free(rs);
+      });
+    } else {
+      SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
+                        tor_free(rs));
+    }
+
+    smartlist_free(ns->routerstatus_list);
+  }
+  if (ns->desc_digest_map)
+    digestmap_free(ns->desc_digest_map, NULL);
+
+  memset(ns, 11, sizeof(*ns));
+  tor_free(ns);
+}
+
+/** Return the voter info from <b>vote</b> for the voter whose identity digest
+ * is <b>identity</b>, or NULL if no such voter is associated with
+ * <b>vote</b>. */
+networkstatus_voter_info_t *
+networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
+                              const char *identity)
+{
+  if (!vote || !vote->voters)
+    return NULL;
+  SMARTLIST_FOREACH(vote->voters, networkstatus_voter_info_t *, voter,
+    if (!memcmp(voter->identity_digest, identity, DIGEST_LEN))
+      return voter);
+  return NULL;
+}
+
+/** Check whether the signature on <b>voter</b> is correctly signed by
+ * the signing key of <b>cert</b>. Return -1 if <b>cert</b> doesn't match the
+ * signing key; otherwise set the good_signature or bad_signature flag on
+ * <b>voter</b>, and return 0. */
+/* (private; exposed for testing.) */
+int
+networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
+                                    networkstatus_voter_info_t *voter,
+                                    authority_cert_t *cert)
+{
+  char d[DIGEST_LEN];
+  char *signed_digest;
+  size_t signed_digest_len;
+  if (crypto_pk_get_digest(cert->signing_key, d)<0)
+    return -1;
+  if (memcmp(voter->signing_key_digest, d, DIGEST_LEN))
+    return -1;
+  signed_digest_len = crypto_pk_keysize(cert->signing_key);
+  signed_digest = tor_malloc(signed_digest_len);
+  if (crypto_pk_public_checksig(cert->signing_key,
+                                signed_digest,
+                                voter->signature,
+                                voter->signature_len) != DIGEST_LEN ||
+      memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
+    log_warn(LD_DIR, "Got a bad signature on a networkstatus vote");
+    voter->bad_signature = 1;
+  } else {
+    voter->good_signature = 1;
+  }
+  return 0;
+}
+
+/** Given a v3 networkstatus consensus in <b>consensus</b>, check every
+ * as-yet-unchecked signature on <b>consensus</b>.  Return 1 if there is a
+ * signature from every recognized authority on it, 0 if there are
+ * enough good signatures from recognized authorities on it, -1 if we might
+ * get enough good signatures by fetching missing certificates, and -2
+ * otherwise.  Log messages at INFO or WARN: if <b>warn</b> is over 1, warn
+ * about every problem; if warn is at least 1, warn only if we can't get
+ * enough signatures; if warn is negative, log nothing at all. */
+int
+networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
+                                        int warn)
+{
+  int n_good = 0;
+  int n_missing_key = 0;
+  int n_bad = 0;
+  int n_unknown = 0;
+  int n_no_signature = 0;
+  int n_v3_authorities = get_n_authorities(V3_AUTHORITY);
+  int n_required = n_v3_authorities/2 + 1;
+  smartlist_t *need_certs_from = smartlist_create();
+  smartlist_t *unrecognized = smartlist_create();
+  smartlist_t *missing_authorities = smartlist_create();
+  int severity;
+
+  tor_assert(! consensus->is_vote);
+
+  SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, voter,
+  {
+    if (!voter->good_signature && !voter->bad_signature && voter->signature) {
+      /* we can try to check the signature. */
+      authority_cert_t *cert =
+        authority_cert_get_by_digests(voter->identity_digest,
+                                      voter->signing_key_digest);
+      if (! cert) {
+        if (!trusteddirserver_get_by_v3_auth_digest(voter->identity_digest)) {
+          smartlist_add(unrecognized, voter);
+          ++n_unknown;
+        } else {
+          smartlist_add(need_certs_from, voter);
+          ++n_missing_key;
+        }
+        continue;
+      }
+      if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
+        smartlist_add(need_certs_from, voter);
+        ++n_missing_key;
+        continue;
+      }
+    }
+    if (voter->good_signature)
+      ++n_good;
+    else if (voter->bad_signature)
+      ++n_bad;
+    else
+      ++n_no_signature;
+  });
+
+  /* Now see whether we're missing any voters entirely. */
+  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                    trusted_dir_server_t *, ds,
+    {
+      if ((ds->type & V3_AUTHORITY) &&
+          !networkstatus_get_voter_by_id(consensus, ds->v3_identity_digest))
+        smartlist_add(missing_authorities, ds);
+    });
+
+  if (warn > 1 || (warn >= 0 && n_good < n_required))
+    severity = LOG_WARN;
+  else
+    severity = LOG_INFO;
+
+  if (warn >= 0) {
+    SMARTLIST_FOREACH(unrecognized, networkstatus_voter_info_t *, voter,
+      {
+        log(severity, LD_DIR, "Consensus includes unrecognized authority '%s' "
+            "at %s:%d (contact %s; identity %s)",
+            voter->nickname, voter->address, (int)voter->dir_port,
+            voter->contact?voter->contact:"n/a",
+            hex_str(voter->identity_digest, DIGEST_LEN));
+      });
+    SMARTLIST_FOREACH(need_certs_from, networkstatus_voter_info_t *, voter,
+      {
+        log_info(LD_DIR, "Looks like we need to download a new certificate "
+                 "from authority '%s' at %s:%d (contact %s; identity %s)",
+                 voter->nickname, voter->address, (int)voter->dir_port,
+                 voter->contact?voter->contact:"n/a",
+                 hex_str(voter->identity_digest, DIGEST_LEN));
+      });
+    SMARTLIST_FOREACH(missing_authorities, trusted_dir_server_t *, ds,
+      {
+        log(severity, LD_DIR, "Consensus does not include configured "
+            "authority '%s' at %s:%d (identity %s)",
+            ds->nickname, ds->address, (int)ds->dir_port,
+            hex_str(ds->v3_identity_digest, DIGEST_LEN));
+      });
+    log(severity, LD_DIR,
+        "%d unknown, %d missing key, %d good, %d bad, %d no signature, "
+        "%d required", n_unknown, n_missing_key, n_good, n_bad,
+        n_no_signature, n_required);
+  }
+
+  smartlist_free(unrecognized);
+  smartlist_free(need_certs_from);
+  smartlist_free(missing_authorities);
+
+  if (n_good == n_v3_authorities)
+    return 1;
+  else if (n_good >= n_required)
+    return 0;
+  else if (n_good + n_missing_key >= n_required)
+    return -1;
+  else
+    return -2;
+}
+
 /** Helper: return a newly allocated string containing the name of the filename
  * where we plan to cache the network status with the given identity digest. */
 char *

@@ -2898,14 +2898,6 @@ void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
 
-cached_dir_t *generate_v3_networkstatus(void);
-
-#ifdef DIRSERV_PRIVATE
-char *
-format_networkstatus_vote(crypto_pk_env_t *private_key,
-                          networkstatus_vote_t *v3_ns);
-#endif
-
 /********************************* dirvote.c ************************/
 
 /** Lowest allowable value for VoteSeconds. */
@@ -2918,16 +2910,10 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 void dirvote_free_all(void);
 
 /* vote manipulation */
-void networkstatus_vote_free(networkstatus_vote_t *ns);
 char *networkstatus_compute_consensus(smartlist_t *votes,
                                       int total_authorities,
                                       crypto_pk_env_t *identity_key,
                                       crypto_pk_env_t *signing_key);
-networkstatus_voter_info_t *networkstatus_get_voter_by_id(
-                                       networkstatus_vote_t *vote,
-                                       const char *identity);
-int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
-                                            int warn);
 int networkstatus_add_detached_signatures(networkstatus_vote_t *target,
                                           ns_detached_signatures_t *sigs,
                                           const char **msg_out);
@@ -2935,7 +2921,6 @@ char *networkstatus_get_detached_signatures(networkstatus_vote_t *consensus);
 void ns_detached_signatures_free(ns_detached_signatures_t *s);
 
 /* cert manipulation */
-void authority_cert_free(authority_cert_t *cert);
 authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 
 /** Describes the schedule by which votes should be generated. */
@@ -2965,11 +2950,14 @@ const char *dirvote_get_pending_detached_signatures(void);
 #define DGV_INCLUDE_PENDING 2
 #define DGV_INCLUDE_PREVIOUS 4
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
+networkstatus_vote_t *
+dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
+                                        authority_cert_t *cert);
 
 #ifdef DIRVOTE_PRIVATE
-int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
-                                        networkstatus_voter_info_t *voter,
-                                        authority_cert_t *cert);
+char *
+format_networkstatus_vote(crypto_pk_env_t *private_key,
+                          networkstatus_vote_t *v3_ns);
 #endif
 
 /********************************* dns.c ***************************/
@@ -3084,6 +3072,15 @@ int router_reload_v2_networkstatus(void);
 int router_reload_consensus_networkstatus(void);
 void routerstatus_free(routerstatus_t *rs);
 void networkstatus_v2_free(networkstatus_v2_t *ns);
+void networkstatus_vote_free(networkstatus_vote_t *ns);
+networkstatus_voter_info_t *networkstatus_get_voter_by_id(
+                                       networkstatus_vote_t *vote,
+                                       const char *identity);
+int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
+                                            int warn);
+int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
+                                        networkstatus_voter_info_t *voter,
+                                        authority_cert_t *cert);
 char *networkstatus_get_cache_filename(const char *identity_digest);
 int router_set_networkstatus_v2(const char *s, time_t arrived_at,
                              networkstatus_source_t source,
@@ -3639,6 +3636,7 @@ void add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
                        const char *digest, const char *v3_auth_digest,
                        authority_type_t type);
+void authority_cert_free(authority_cert_t *cert);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
 void update_router_descriptor_downloads(time_t now);

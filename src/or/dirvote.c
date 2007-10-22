@@ -19,77 +19,192 @@ static int dirvote_add_signatures_to_pending_consensus(
 static char *list_v3_auth_ids(void);
 static void dirvote_fetch_missing_votes(void);
 static void dirvote_fetch_missing_signatures(void);
-static void dirvote_perform_vote(void);
+static int dirvote_perform_vote(void);
 static void dirvote_clear_votes(int all_votes);
 static int dirvote_compute_consensus(void);
 static int dirvote_publish_consensus(void);
 
 /* =====
- * Voting and consensus generation
- * ===== */
+ * Voting
+ * =====*/
 
-/*XXXX020 move to networkstaus.c */
-/** Clear all storage held in <b>ns</b>. */
-void
-networkstatus_vote_free(networkstatus_vote_t *ns)
+/** Return a new string containing teh string representation of the vote in
+ * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
+ * For v3 authorities. */
+char *
+format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
+                          networkstatus_vote_t *v3_ns)
 {
-  if (!ns)
-    return;
+/** Longest status flag name that we generate. */
+#define LONGEST_STATUS_FLAG_NAME_LEN 9
+/** Maximum number of status flags we'll apply to one router. */
+#define N_STATUS_FLAGS 10
+/** Amount of space to allocate for each entry. (r line and s line.) */
+#define RS_ENTRY_LEN                                                    \
+  ( /* first line */                                                    \
+   MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
+   5*2 /* ports */ + 10 /* punctuation */ +                             \
+   /* second line */                                                    \
+   (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
 
-  tor_free(ns->client_versions);
-  tor_free(ns->server_versions);
-  if (ns->known_flags) {
-    SMARTLIST_FOREACH(ns->known_flags, char *, c, tor_free(c));
-    smartlist_free(ns->known_flags);
-  }
-  if (ns->voters) {
-    SMARTLIST_FOREACH(ns->voters, networkstatus_voter_info_t *, voter,
-    {
-      tor_free(voter->nickname);
-      tor_free(voter->address);
-      tor_free(voter->contact);
-    });
-    smartlist_free(ns->voters);
-  }
-  if (ns->cert)
-    authority_cert_free(ns->cert);
+  size_t len;
+  char *status = NULL;
+  const char *client_versions = NULL, *server_versions = NULL;
+  char *outp, *endp;
+  char fingerprint[FINGERPRINT_LEN+1];
+  char ipaddr[INET_NTOA_BUF_LEN];
+  char digest[DIGEST_LEN];
+  struct in_addr in;
+  uint32_t addr;
+  routerlist_t *rl = router_get_routerlist();
+  char *version_lines = NULL;
+  networkstatus_voter_info_t *voter;
 
-  if (ns->routerstatus_list) {
-    if (ns->is_vote) {
-      SMARTLIST_FOREACH(ns->routerstatus_list, vote_routerstatus_t *, rs,
-      {
-        tor_free(rs->version);
-        tor_free(rs);
-      });
-    } else {
-      SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
-                        tor_free(rs));
+  tor_assert(private_signing_key);
+
+  voter = smartlist_get(v3_ns->voters, 0);
+
+  addr = voter->addr;
+  in.s_addr = htonl(addr);
+  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
+
+  base16_encode(fingerprint, sizeof(fingerprint),
+                v3_ns->cert->cache_info.identity_digest, DIGEST_LEN);
+  client_versions = v3_ns->client_versions;
+  server_versions = v3_ns->server_versions;
+
+  if (client_versions || server_versions) {
+    size_t v_len = 64;
+    char *cp;
+    if (client_versions)
+      v_len += strlen(client_versions);
+    if (client_versions)
+      v_len += strlen(server_versions);
+    version_lines = tor_malloc(v_len);
+    cp = version_lines;
+    if (client_versions) {
+      tor_snprintf(cp, v_len-(cp-version_lines),
+                   "client-versions %s\n", client_versions);
+      cp += strlen(cp);
     }
-
-    smartlist_free(ns->routerstatus_list);
+    if (server_versions)
+      tor_snprintf(cp, v_len-(cp-version_lines),
+                   "server-versions %s\n", server_versions);
+  } else {
+    version_lines = tor_strdup("");
   }
-  if (ns->desc_digest_map)
-    digestmap_free(ns->desc_digest_map, NULL);
 
-  memset(ns, 11, sizeof(*ns));
-  tor_free(ns);
+  len = 8192;
+  len += strlen(version_lines);
+  len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
+  len += v3_ns->cert->cache_info.signed_descriptor_len;
+
+  status = tor_malloc(len);
+  {
+    char published[ISO_TIME_LEN+1];
+    char va[ISO_TIME_LEN+1];
+    char fu[ISO_TIME_LEN+1];
+    char vu[ISO_TIME_LEN+1];
+    char *flags = smartlist_join_strings(v3_ns->known_flags, " ", 0, NULL);
+    authority_cert_t *cert = v3_ns->cert;
+    format_iso_time(published, v3_ns->published);
+    format_iso_time(va, v3_ns->valid_after);
+    format_iso_time(fu, v3_ns->fresh_until);
+    format_iso_time(vu, v3_ns->valid_until);
+
+    tor_assert(cert);
+    tor_snprintf(status, len,
+                 "network-status-version 3\n"
+                 "vote-status vote\n"
+                 "consensus-methods 1\n"
+                 "published %s\n"
+                 "valid-after %s\n"
+                 "fresh-until %s\n"
+                 "valid-until %s\n"
+                 "voting-delay %d %d\n"
+                 "%s" /* versions */
+                 "known-flags %s\n"
+                 "dir-source %s %s %s %s %d %d\n"
+                 "contact %s\n",
+                 published, va, fu, vu,
+                 v3_ns->vote_seconds, v3_ns->dist_seconds,
+                 version_lines,
+                 flags,
+                 voter->nickname, fingerprint, voter->address,
+                   ipaddr, voter->dir_port, voter->or_port, voter->contact);
+
+    tor_free(flags);
+    outp = status + strlen(status);
+    endp = status + len;
+    tor_assert(outp + cert->cache_info.signed_descriptor_len < endp);
+    memcpy(outp, cert->cache_info.signed_descriptor_body,
+           cert->cache_info.signed_descriptor_len);
+
+    outp += cert->cache_info.signed_descriptor_len;
+  }
+
+  SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
+  {
+    if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
+                                  vrs->version, 0) < 0) {
+      log_warn(LD_BUG, "Unable to print router status.");
+      goto err;
+    }
+    outp += strlen(outp);
+  });
+
+  {
+    char signing_key_fingerprint[FINGERPRINT_LEN+1];
+    if (tor_snprintf(outp, endp-outp, "directory-signature ")<0) {
+      log_warn(LD_BUG, "Unable to start signature line.");
+      goto err;
+    }
+    outp += strlen(outp);
+
+    if (crypto_pk_get_fingerprint(private_signing_key,
+                                  signing_key_fingerprint, 0)<0) {
+      log_warn(LD_BUG, "Unable to get fingerprint for signing key");
+      goto err;
+    }
+    if (tor_snprintf(outp, endp-outp, "%s %s\n", fingerprint,
+                     signing_key_fingerprint)<0) {
+      log_warn(LD_BUG, "Unable to end signature line.");
+      goto err;
+    }
+    outp += strlen(outp);
+  }
+
+  if (router_get_networkstatus_v3_hash(status, digest)<0)
+    goto err;
+  note_crypto_pk_op(SIGN_DIR);
+  if (router_append_dirobj_signature(outp,endp-outp,digest,
+                                     private_signing_key)<0) {
+    log_warn(LD_BUG, "Unable to sign networkstatus vote.");
+    goto err;
+  }
+
+  {
+    networkstatus_vote_t *v;
+    if (!(v = networkstatus_parse_vote_from_string(status, NULL, 1))) {
+      log_err(LD_BUG,"Generated a networkstatus vote we couldn't parse: "
+              "<<%s>>", status);
+      goto err;
+    }
+    networkstatus_vote_free(v);
+  }
+
+  goto done;
+
+ err:
+  tor_free(status);
+ done:
+  tor_free(version_lines);
+  return status;
 }
 
-/*XXXX020 move to networkstaus.c */
-/** Return the voter info from <b>vote</b> for the voter whose identity digest
- * is <b>identity</b>, or NULL if no such voter is associated with
- * <b>vote</b>. */
-networkstatus_voter_info_t *
-networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
-                              const char *identity)
-{
-  if (!vote || !vote->voters)
-    return NULL;
-  SMARTLIST_FOREACH(vote->voters, networkstatus_voter_info_t *, voter,
-    if (!memcmp(voter->identity_digest, identity, DIGEST_LEN))
-      return voter);
-  return NULL;
-}
+/* =====
+ * Consensus generation
+ * ===== */
 
 /** Given a vote <b>vote</b> (not a consensus!), return its associated
  * networkstatus_voter_info_t.*/
@@ -818,155 +933,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
   return result;
 }
 
-/*XXXX020 move to networkstatus.c ? */
-/** Check whether the signature on <b>voter</b> is correctly signed by
- * the signing key of <b>cert</b>. Return -1 if <b>cert</b> doesn't match the
- * signing key; otherwise set the good_signature or bad_signature flag on
- * <b>voter</b>, and return 0. */
-/* (private; exposed for testing.) */
-int
-networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
-                                    networkstatus_voter_info_t *voter,
-                                    authority_cert_t *cert)
-{
-  char d[DIGEST_LEN];
-  char *signed_digest;
-  size_t signed_digest_len;
-  if (crypto_pk_get_digest(cert->signing_key, d)<0)
-    return -1;
-  if (memcmp(voter->signing_key_digest, d, DIGEST_LEN))
-    return -1;
-  signed_digest_len = crypto_pk_keysize(cert->signing_key);
-  signed_digest = tor_malloc(signed_digest_len);
-  if (crypto_pk_public_checksig(cert->signing_key,
-                                signed_digest,
-                                voter->signature,
-                                voter->signature_len) != DIGEST_LEN ||
-      memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
-    log_warn(LD_DIR, "Got a bad signature on a networkstatus vote");
-    voter->bad_signature = 1;
-  } else {
-    voter->good_signature = 1;
-  }
-  return 0;
-}
-
-/*XXXX020 move to networkstatus.c ? */
-/** Given a v3 networkstatus consensus in <b>consensus</b>, check every
- * as-yet-unchecked signature on <b>consensus</b>.  Return 1 if there is a
- * signature from every recognized authority on it, 0 if there are
- * enough good signatures from recognized authorities on it, -1 if we might
- * get enough good signatures by fetching missing certificates, and -2
- * otherwise.  Log messages at INFO or WARN: if <b>warn</b> is over 1, warn
- * about every problem; if warn is at least 1, warn only if we can't get
- * enough signatures; if warn is negative, log nothing at all. */
-int
-networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
-                                        int warn)
-{
-  int n_good = 0;
-  int n_missing_key = 0;
-  int n_bad = 0;
-  int n_unknown = 0;
-  int n_no_signature = 0;
-  int n_v3_authorities = get_n_authorities(V3_AUTHORITY);
-  int n_required = n_v3_authorities/2 + 1;
-  smartlist_t *need_certs_from = smartlist_create();
-  smartlist_t *unrecognized = smartlist_create();
-  smartlist_t *missing_authorities = smartlist_create();
-  int severity;
-
-  tor_assert(! consensus->is_vote);
-
-  SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, voter,
-  {
-    if (!voter->good_signature && !voter->bad_signature && voter->signature) {
-      /* we can try to check the signature. */
-      authority_cert_t *cert =
-        authority_cert_get_by_digests(voter->identity_digest,
-                                      voter->signing_key_digest);
-      if (! cert) {
-        if (!trusteddirserver_get_by_v3_auth_digest(voter->identity_digest)) {
-          smartlist_add(unrecognized, voter);
-          ++n_unknown;
-        } else {
-          smartlist_add(need_certs_from, voter);
-          ++n_missing_key;
-        }
-        continue;
-      }
-      if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
-        smartlist_add(need_certs_from, voter);
-        ++n_missing_key;
-        continue;
-      }
-    }
-    if (voter->good_signature)
-      ++n_good;
-    else if (voter->bad_signature)
-      ++n_bad;
-    else
-      ++n_no_signature;
-  });
-
-  /* Now see whether we're missing any voters entirely. */
-  SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                    trusted_dir_server_t *, ds,
-    {
-      if ((ds->type & V3_AUTHORITY) &&
-          !networkstatus_get_voter_by_id(consensus, ds->v3_identity_digest))
-        smartlist_add(missing_authorities, ds);
-    });
-
-  if (warn > 1 || (warn >= 0 && n_good < n_required))
-    severity = LOG_WARN;
-  else
-    severity = LOG_INFO;
-
-  if (warn >= 0) {
-    SMARTLIST_FOREACH(unrecognized, networkstatus_voter_info_t *, voter,
-      {
-        log(severity, LD_DIR, "Consensus includes unrecognized authority '%s' "
-            "at %s:%d (contact %s; identity %s)",
-            voter->nickname, voter->address, (int)voter->dir_port,
-            voter->contact?voter->contact:"n/a",
-            hex_str(voter->identity_digest, DIGEST_LEN));
-      });
-    SMARTLIST_FOREACH(need_certs_from, networkstatus_voter_info_t *, voter,
-      {
-        log_info(LD_DIR, "Looks like we need to download a new certificate "
-                 "from authority '%s' at %s:%d (contact %s; identity %s)",
-                 voter->nickname, voter->address, (int)voter->dir_port,
-                 voter->contact?voter->contact:"n/a",
-                 hex_str(voter->identity_digest, DIGEST_LEN));
-      });
-    SMARTLIST_FOREACH(missing_authorities, trusted_dir_server_t *, ds,
-      {
-        log(severity, LD_DIR, "Consensus does not include configured "
-            "authority '%s' at %s:%d (identity %s)",
-            ds->nickname, ds->address, (int)ds->dir_port,
-            hex_str(ds->v3_identity_digest, DIGEST_LEN));
-      });
-    log(severity, LD_DIR,
-        "%d unknown, %d missing key, %d good, %d bad, %d no signature, "
-        "%d required", n_unknown, n_missing_key, n_good, n_bad,
-        n_no_signature, n_required);
-  }
-
-  smartlist_free(unrecognized);
-  smartlist_free(need_certs_from);
-  smartlist_free(missing_authorities);
-
-  if (n_good == n_v3_authorities)
-    return 1;
-  else if (n_good >= n_required)
-    return 0;
-  else if (n_good + n_missing_key >= n_required)
-    return -1;
-  else
-    return -2;
-}
-
 /** Given a consensus vote <b>target</b> and a set of detached signatures in
  * <b>sigs</b> that correspond to the same consensus, check whether there are
  * any new signatures in <b>src_voter_list</b> that should be added to
@@ -1127,23 +1093,7 @@ ns_detached_signatures_free(ns_detached_signatures_t *s)
  * Certificate functions
  * ===== */
 
-/*XXXX020 move to routerlist.c ? */
-/** Free storage held in <b>cert</b>. */
-void
-authority_cert_free(authority_cert_t *cert)
-{
-  if (!cert)
-    return;
-
-  tor_free(cert->cache_info.signed_descriptor_body);
-  if (cert->signing_key)
-    crypto_free_pk_env(cert->signing_key);
-  if (cert->identity_key)
-    crypto_free_pk_env(cert->identity_key);
-
-  tor_free(cert);
-}
-
+/*XXXX020 make this static? */
 /** Allocate and return a new authority_cert_t with the same contents as
  * <b>cert</b>. */
 authority_cert_t *
@@ -1376,21 +1326,36 @@ static smartlist_t *pending_consensus_signature_list = NULL;
 
 /** Generate a networkstatus vote and post it to all the v3 authorities.
  * (V3 Authority only) */
-static void
+static int
 dirvote_perform_vote(void)
 {
-  cached_dir_t *new_vote = generate_v3_networkstatus();
+  crypto_pk_env_t *key = get_my_v3_authority_signing_key();
+  authority_cert_t *cert = get_my_v3_authority_cert();
+  networkstatus_vote_t *ns;
+  char *contents;
   pending_vote_t *pending_vote;
+
   int status;
   const char *msg = "";
 
-  if (!new_vote)
-    return;
+  if (!cert || !key) {
+    log_warn(LD_NET, "Didn't find key/certificate to generate v3 vote");
+    return -1;
+  }
+  if (!(ns = dirserv_generate_networkstatus_vote_obj(key, cert)))
+    return -1;
 
-  if (!(pending_vote = dirvote_add_vote(new_vote->dir, &msg, &status))) {
+  contents = format_networkstatus_vote(key, ns);
+  networkstatus_vote_free(ns);
+  if (!contents)
+    return -1;
+
+  pending_vote = dirvote_add_vote(contents, &msg, &status);
+  tor_free(contents);
+  if (!pending_vote) {
     log_warn(LD_DIR, "Couldn't store my own vote! (I told myself, '%s'.)",
              msg);
-    return;
+    return -1;
   }
 
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_VOTE,
@@ -1399,6 +1364,7 @@ dirvote_perform_vote(void)
                                pending_vote->vote_body->dir,
                                pending_vote->vote_body->dir_len, 0);
   log_notice(LD_DIR, "Vote posted.");
+  return 0;
 }
 
 /** Send an HTTP request to every other v3 authority, for the votes of every

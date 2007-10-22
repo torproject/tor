@@ -115,6 +115,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       from 0.1.1.x or earlier, or if you try to downgrade to 0.1.1.x or
       earlier.
     - New convenience code to locate a file within the DataDirectory.
+    - Move non-authority functionality out of dirvote.c.
 
   o Utilities
     - Include the "tor-ctrl.sh" bash script by Stefan Behte to provide

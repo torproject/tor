@@ -3300,6 +3300,22 @@ add_trusted_dir_server(const char *nickname, const char *address,
   router_dir_info_changed();
 }
 
+/** Free storage held in <b>cert</b>. */
+void
+authority_cert_free(authority_cert_t *cert)
+{
+  if (!cert)
+    return;
+
+  tor_free(cert->cache_info.signed_descriptor_body);
+  if (cert->signing_key)
+    crypto_free_pk_env(cert->signing_key);
+  if (cert->identity_key)
+    crypto_free_pk_env(cert->identity_key);
+
+  tor_free(cert);
+}
+
 /** Free storage held in <b>ds</b>. */
 static void
 trusted_dir_server_free(trusted_dir_server_t *ds)

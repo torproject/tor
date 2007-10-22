@@ -1457,10 +1457,6 @@ dirserv_get_consensus(void)
 /** For authoritative directories: the current (v2) network status. */
 static cached_dir_t *the_v2_networkstatus = NULL;
 
-/** For authoritative directories: out most recent vote for the (v3) network
- * status */
-static cached_dir_t *the_v3_networkstatus_vote = NULL;
-
 /** Return true iff our opinion of the routers has been stale for long
  * enough that we should generate a new v2 network status doc. */
 static int
@@ -1870,10 +1866,9 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
 
 /** Return a new networkstatus_vote_t* containing our current opinion. (For v3
  * authorities */
-/* XXXX020 possibly rename and relocate to dirvote.c? */
-static networkstatus_vote_t *
-generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
-                                authority_cert_t *cert)
+networkstatus_vote_t *
+dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
+                                       authority_cert_t *cert)
 {
   or_options_t *options = get_options();
   networkstatus_vote_t *v3_out = NULL;
@@ -2029,224 +2024,11 @@ generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   return v3_out;
 }
 
-/** Return a new string containing teh string representation of the vote in
- * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
- * For v3 authorities. */
-char *
-format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
-                          networkstatus_vote_t *v3_ns)
-{
-/** Longest status flag name that we generate. */
-#define LONGEST_STATUS_FLAG_NAME_LEN 9
-/** Maximum number of status flags we'll apply to one router. */
-#define N_STATUS_FLAGS 10
-/** Amount of space to allocate for each entry. (r line and s line.) */
-#define RS_ENTRY_LEN                                                    \
-  ( /* first line */                                                    \
-   MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
-   5*2 /* ports */ + 10 /* punctuation */ +                             \
-   /* second line */                                                    \
-   (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
-
-  size_t len;
-  char *status = NULL;
-  const char *client_versions = NULL, *server_versions = NULL;
-  char *outp, *endp;
-  char fingerprint[FINGERPRINT_LEN+1];
-  char ipaddr[INET_NTOA_BUF_LEN];
-  char digest[DIGEST_LEN];
-  struct in_addr in;
-  uint32_t addr;
-  routerlist_t *rl = router_get_routerlist();
-  char *version_lines = NULL;
-  networkstatus_voter_info_t *voter;
-
-  tor_assert(private_signing_key);
-
-  voter = smartlist_get(v3_ns->voters, 0);
-
-  addr = voter->addr;
-  in.s_addr = htonl(addr);
-  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
-
-  base16_encode(fingerprint, sizeof(fingerprint),
-                v3_ns->cert->cache_info.identity_digest, DIGEST_LEN);
-  client_versions = v3_ns->client_versions;
-  server_versions = v3_ns->server_versions;
-
-  if (client_versions || server_versions) {
-    size_t v_len = 64;
-    char *cp;
-    if (client_versions)
-      v_len += strlen(client_versions);
-    if (client_versions)
-      v_len += strlen(server_versions);
-    version_lines = tor_malloc(v_len);
-    cp = version_lines;
-    if (client_versions) {
-      tor_snprintf(cp, v_len-(cp-version_lines),
-                   "client-versions %s\n", client_versions);
-      cp += strlen(cp);
-    }
-    if (server_versions)
-      tor_snprintf(cp, v_len-(cp-version_lines),
-                   "server-versions %s\n", server_versions);
-  } else {
-    version_lines = tor_strdup("");
-  }
-
-  len = 8192;
-  len += strlen(version_lines);
-  len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
-  len += v3_ns->cert->cache_info.signed_descriptor_len;
-
-  status = tor_malloc(len);
-  {
-    char published[ISO_TIME_LEN+1];
-    char va[ISO_TIME_LEN+1];
-    char fu[ISO_TIME_LEN+1];
-    char vu[ISO_TIME_LEN+1];
-    char *flags = smartlist_join_strings(v3_ns->known_flags, " ", 0, NULL);
-    authority_cert_t *cert = v3_ns->cert;
-    format_iso_time(published, v3_ns->published);
-    format_iso_time(va, v3_ns->valid_after);
-    format_iso_time(fu, v3_ns->fresh_until);
-    format_iso_time(vu, v3_ns->valid_until);
-
-    tor_assert(cert);
-    tor_snprintf(status, len,
-                 "network-status-version 3\n"
-                 "vote-status vote\n"
-                 "consensus-methods 1\n"
-                 "published %s\n"
-                 "valid-after %s\n"
-                 "fresh-until %s\n"
-                 "valid-until %s\n"
-                 "voting-delay %d %d\n"
-                 "%s" /* versions */
-                 "known-flags %s\n"
-                 "dir-source %s %s %s %s %d %d\n"
-                 "contact %s\n",
-                 published, va, fu, vu,
-                 v3_ns->vote_seconds, v3_ns->dist_seconds,
-                 version_lines,
-                 flags,
-                 voter->nickname, fingerprint, voter->address,
-                   ipaddr, voter->dir_port, voter->or_port, voter->contact);
-
-    tor_free(flags);
-    outp = status + strlen(status);
-    endp = status + len;
-    tor_assert(outp + cert->cache_info.signed_descriptor_len < endp);
-    memcpy(outp, cert->cache_info.signed_descriptor_body,
-           cert->cache_info.signed_descriptor_len);
-
-    outp += cert->cache_info.signed_descriptor_len;
-  }
-
-  SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
-  {
-    if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
-                                  vrs->version, 0) < 0) {
-      log_warn(LD_BUG, "Unable to print router status.");
-      goto err;
-    }
-    outp += strlen(outp);
-  });
-
-  {
-    char signing_key_fingerprint[FINGERPRINT_LEN+1];
-    if (tor_snprintf(outp, endp-outp, "directory-signature ")<0) {
-      log_warn(LD_BUG, "Unable to start signature line.");
-      goto err;
-    }
-    outp += strlen(outp);
-
-    if (crypto_pk_get_fingerprint(private_signing_key,
-                                  signing_key_fingerprint, 0)<0) {
-      log_warn(LD_BUG, "Unable to get fingerprint for signing key");
-      goto err;
-    }
-    if (tor_snprintf(outp, endp-outp, "%s %s\n", fingerprint,
-                     signing_key_fingerprint)<0) {
-      log_warn(LD_BUG, "Unable to end signature line.");
-      goto err;
-    }
-    outp += strlen(outp);
-  }
-
-  if (router_get_networkstatus_v3_hash(status, digest)<0)
-    goto err;
-  note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(outp,endp-outp,digest,
-                                     private_signing_key)<0) {
-    log_warn(LD_BUG, "Unable to sign networkstatus vote.");
-    goto err;
-  }
-
-  {
-    networkstatus_vote_t *v;
-    if (!(v = networkstatus_parse_vote_from_string(status, NULL, 1))) {
-      log_err(LD_BUG,"Generated a networkstatus vote we couldn't parse: "
-              "<<%s>>", status);
-      goto err;
-    }
-    networkstatus_vote_free(v);
-  }
-
-  goto done;
-
- err:
-  tor_free(status);
- done:
-  tor_free(version_lines);
-  return status;
-}
-
-/** Replace the value of <b>the_v3_networkstatus_vote</b> with a
- * new vote, and return that value.  Returns NULL on failure. */
-/* XXXX020 possibly rename and relocate to dirvote.c? */
-cached_dir_t *
-generate_v3_networkstatus(void)
-{
-  crypto_pk_env_t *key = get_my_v3_authority_signing_key();
-  authority_cert_t *cert = get_my_v3_authority_cert();
-  networkstatus_vote_t *ns;
-  char *status;
-  time_t now = time(NULL);
-
-  if (!cert || !key) {
-    log_warn(LD_NET, "Didn't find key/certificate to generate v3 vote");
-    return NULL;
-  }
-
-  if (!(ns = generate_networkstatus_vote_obj(key, cert)))
-    return NULL;
-
-  status = format_networkstatus_vote(key, ns);
-  networkstatus_vote_free(ns);
-  if (!status)
-    return NULL;
-
-  {
-    cached_dir_t **ns_ptr =
-      &the_v3_networkstatus_vote;
-    if (*ns_ptr)
-      cached_dir_decref(*ns_ptr);
-    *ns_ptr = new_cached_dir(status, now);
-    status = NULL; /* So it doesn't get double-freed. */
-  }
-
-  return the_v3_networkstatus_vote;
-}
-
-/** For v2 and v3 authoritative directories only: If <b>v2</b> is set, replace
- * the contents of <b>the_v2_networkstatus</b> with a newly generated network
- * status object.  If <b>v2</b> is zero, replace the contents of
- * <b>the_v3_networkstatus_vote</b> with a newly generated consensus vote
- * object. */
+/** For v2 authoritative directories only: Replace the contents of
+ * <b>the_v2_networkstatus</b> with a newly generated network status
+ * object.  */
 static cached_dir_t *
-generate_networkstatus_opinion(int v2)
+generate_v2_networkstatus_opinion(void)
 {
 /** Longest status flag name that we generate. */
 #define LONGEST_STATUS_FLAG_NAME_LEN 9
@@ -2284,9 +2066,6 @@ generate_networkstatus_opinion(int v2)
   char *version_lines = NULL;
   smartlist_t *routers = NULL;
   digestmap_t *omit_as_sybil = NULL;
-
-  if (!v2)
-    return generate_v3_networkstatus();
 
   private_key = get_identity_key();
 
@@ -2460,7 +2239,7 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
     cached_v2_networkstatus = digestmap_new();
 
   if (should_generate_v2_networkstatus())
-    generate_networkstatus_opinion(1);
+    generate_v2_networkstatus_opinion();
 
   if (!strcmp(key,"authority")) {
     if (authdir_mode_v2(get_options())) {
@@ -2515,7 +2294,7 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
   SMARTLIST_FOREACH(fingerprints, const char *, fp,
     {
       if (router_digest_is_me(fp) && should_generate_v2_networkstatus())
-        generate_networkstatus_opinion(1);
+        generate_v2_networkstatus_opinion();
       cached = digestmap_get(cached_v2_networkstatus, fp);
       if (cached) {
         smartlist_add(result, cached);
