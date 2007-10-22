@@ -120,6 +120,12 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
 
 
 Changes in version 0.2.0.8-alpha - 2007-10-12
+  This eighth development snapshot fixes a crash bug that's been bothering
+  us since February 2007, lets bridge authorities store a list of bridge
+  descriptors they've seen, gets v3 directory voting closer to working,
+  starts caching v3 directory consensus documents on directory mirrors,
+  and fixes a variety of smaller issues including some minor memory leaks.
+
   o Major features (router descriptor cache):
     - Store routers in a file called cached-descriptors instead of in
       cached-routers. Initialize cached-descriptors from cached-routers
@@ -258,6 +264,10 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
 
 
 Changes in version 0.2.0.7-alpha - 2007-09-21
+  This seventh development snapshot makes bridges work again, makes bridge
+  authorities work for the first time, fixes two huge performance flaws
+  in hidden services, and fixes a variety of minor issues.
+
   o New directory authorities:
     - Set up moria1 and tor26 as the first v3 directory authorities. See
       doc/spec/dir-spec.txt for details on the new directory design.
@@ -361,6 +371,16 @@ Changes in version 0.2.0.7-alpha - 2007-09-21
 
 
 Changes in version 0.1.2.17 - 2007-08-30
+  Tor 0.1.2.17 features a new Vidalia version in the Windows and OS
+  X bundles. Vidalia 0.0.14 makes authentication required for the
+  ControlPort in the default configuration, which addresses important
+  security risks. Everybody who uses Vidalia (or another controller)
+  should upgrade.
+
+  In addition, this Tor update fixes major load balancing problems with
+  path selection, which should speed things up a lot once many people
+  have upgraded.
+
   o Major bugfixes (security):
     - We removed support for the old (v0) control protocol. It has been
       deprecated since Tor 0.1.1.1-alpha, and keeping it secure has
@@ -422,6 +442,17 @@ Changes in version 0.1.2.17 - 2007-08-30
 
 
 Changes in version 0.2.0.6-alpha - 2007-08-26
+  This sixth development snapshot features a new Vidalia version in the
+  Windows and OS X bundles. Vidalia 0.0.14 makes authentication required for
+  the ControlPort in the default configuration, which addresses important
+  security risks.
+
+  In addition, this snapshot fixes major load balancing problems
+  with path selection, which should speed things up a lot once many
+  people have upgraded. The directory authorities also use a new
+  mean-time-between-failure approach to tracking which servers are stable,
+  rather than just looking at the most recent uptime.
+
   o New directory authorities:
     - Set up Tonga as the default bridge directory authority.
 
@@ -475,6 +506,12 @@ Changes in version 0.2.0.6-alpha - 2007-08-26
 
 
 Changes in version 0.2.0.5-alpha - 2007-08-19
+  This fifth development snapshot fixes compilation on Windows again;
+  fixes an obnoxious client-side bug that slowed things down and put
+  extra load on the network; gets us closer to using the v3 directory
+  voting scheme; makes it easier for Tor controllers to use cookie-based
+  authentication; and fixes a variety of other bugs.
+
   o Removed features:
     - Version 1 directories are no longer generated in full. Instead,
       authorities generate and serve "stub" v1 directories that list
@@ -553,12 +590,22 @@ Changes in version 0.2.0.5-alpha - 2007-08-19
 
 
 Changes in version 0.1.2.16 - 2007-08-01
+  Tor 0.1.2.16 fixes a critical security vulnerability that allows a
+  remote attacker in certain situations to rewrite the user's torrc
+  configuration file. This can completely compromise anonymity of users
+  in most configurations, including those running the Vidalia bundles,
+  TorK, etc. Or worse.
+
   o Major security fixes:
     - Close immediately after missing authentication on control port;
       do not allow multiple authentication attempts.
 
 
 Changes in version 0.2.0.4-alpha - 2007-08-01
+  This fourth development snapshot fixes a critical security vulnerability
+  for most users, specifically those running Vidalia, TorK, etc. Everybody
+  should upgrade to either 0.1.2.16 or 0.2.0.4-alpha.
+
   o Major security fixes:
     - Close immediately after missing authentication on control port;
       do not allow multiple authentication attempts.
@@ -581,6 +628,11 @@ Changes in version 0.2.0.4-alpha - 2007-08-01
 
 
 Changes in version 0.2.0.3-alpha - 2007-07-29
+  This third development snapshot introduces new experimental
+  blocking-resistance features and a preliminary version of the v3
+  directory voting design, and includes many other smaller features
+  and bugfixes.
+
   o Major features:
     - The first pieces of our "bridge" design for blocking-resistance
       are implemented. People can run bridge directory authorities;
@@ -710,6 +762,10 @@ Changes in version 0.2.0.3-alpha - 2007-07-29
 
 
 Changes in version 0.1.2.15 - 2007-07-17
+  Tor 0.1.2.15 fixes several crash bugs, fixes some anonymity-related
+  problems, fixes compilation on BSD, and fixes a variety of other
+  bugs. Everybody should upgrade.
+
   o Major bugfixes (compilation):
     - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
 
@@ -782,6 +838,11 @@ Changes in version 0.2.0.2-alpha - 2007-06-02
 
 
 Changes in version 0.2.0.1-alpha - 2007-06-01
+  This early development snapshot provides new features for people running
+  Tor as both a client and a server (check out the new RelayBandwidth
+  config options); lets Tor run as a DNS proxy; and generally moves us
+  forward on a lot of fronts.
+
   o Major features, server usability:
     - New config options RelayBandwidthRate and RelayBandwidthBurst:
       a separate set of token buckets for relayed traffic. Right now
@@ -980,6 +1041,10 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
 
 
 Changes in version 0.1.2.14 - 2007-05-25
+  Tor 0.1.2.14 changes the addresses of two directory authorities (this
+  change especially affects those who serve or use hidden services),
+  and fixes several other crash- and security-related bugs.
+
   o Directory authority changes:
     - Two directory authorities (moria1 and moria2) just moved to new
       IP addresses. This change will particularly affect those who serve
@@ -1035,6 +1100,15 @@ Changes in version 0.1.2.14 - 2007-05-25
 
 
 Changes in version 0.1.2.13 - 2007-04-24
+  Tor 0.1.2.13, the first stable release of the 0.1.2.x branch, is
+  finally ready.
+
+  This release features some major anonymity fixes, such as safer path
+  selection; better client performance; faster bootstrapping, better
+  address detection, and better DNS support for servers; write limiting as
+  well as read limiting to make servers easier to run; and a huge pile of
+  other features and bug fixes. The bundles also ship with Vidalia 0.0.11.
+
   o Minor fixes:
     - Fix a memory leak when we ask for "all" networkstatuses and we
       get one we don't recognize.
