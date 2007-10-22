@@ -79,13 +79,13 @@ Things we'd like to do in 0.2.0.x:
         - Use if-modified-since on consensus download
         - Use if-modified-since on certificate download
         o Enable for non-caches
-      - Code to use v3 networkstatus documents once clients are
+      . Code to use v3 networkstatus documents once clients are
         fetching them
         o Implement.
-        - Fix all XXXX020s.
+        o Fix all XXXX020s.
         o Sort out need_to_mirror
-        - Work hard to make sure clients never look at v2 networkstatus docs.
-        - Check in old_routers before fetching a router status. You never
+        o Work hard to make sure clients never look at v2 networkstatus docs.
+        o Check in old_routers before fetching a router status. You never
           know if we'll flap...
       - Controller support
         - GETINFO to get consensus

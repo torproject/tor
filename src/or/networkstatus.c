@@ -790,7 +790,6 @@ router_get_consensus_status_by_nickname(const char *nickname,
   routerstatus_t *best=NULL;
   smartlist_t *matches=NULL;
   const char *named_id=NULL;
-  int any_unnamed=0;
 
   if (!current_consensus || !nickname)
     return NULL;
@@ -820,22 +819,23 @@ router_get_consensus_status_by_nickname(const char *nickname,
     {
       if (!strcasecmp(lrs->nickname, nickname)) {
         if (lrs->is_named) {
-          /* XXXX020 this should never happen. */
+          tor_fragile_assert() /* This should never happen. */
           smartlist_free(matches);
           return lrs;
         } else {
-          if (lrs->is_unnamed)
-            smartlist_free(matches); /* nor should this. */
+          if (lrs->is_unnamed) {
+            tor_fragile_assert(); /* nor should this. */
+            smartlist_clear(matches);
+            best=NULL;
+            break;
+          }
           smartlist_add(matches, lrs);
           best = lrs;
         }
       }
     });
 
-  if (any_unnamed) {
-    /* XXXX020 should we warn? */
-    return NULL;
-  } else if (smartlist_len(matches)>1 && warn_if_unnamed) {
+  if (smartlist_len(matches)>1 && warn_if_unnamed) {
     int any_unwarned=0;
     SMARTLIST_FOREACH(matches, routerstatus_t *, lrs,
       {
@@ -949,6 +949,9 @@ update_v2_networkstatus_cache_downloads(time_t now)
   }
 }
 
+/**DOCDOC*/
+#define CONSENUS_NETWORKSTATUS_MAX_DL_TRIES 8
+
 /** If we want to download a fresh consensus, launch a new download as
  * appropriate.  */
 static void
@@ -961,8 +964,8 @@ update_consensus_networkstatus_downloads(time_t now)
     return; /* Wait until the current consensus is older. */
   if (authdir_mode_v3(options))
     return; /* Authorities never fetch a consensus */
-  /*XXXX020 magic number 8.*/
-  if (!download_status_is_ready(&consensus_dl_status, now, 8))
+  if (!download_status_is_ready(&consensus_dl_status, now,
+                                CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES))
     return; /* We failed downloading a consensus too recently. */
   if (connection_get_by_type_purpose(CONN_TYPE_DIR,
                                      DIR_PURPOSE_FETCH_CONSENSUS))
@@ -982,6 +985,9 @@ networkstatus_consensus_download_failed(int status_code)
   update_consensus_networkstatus_downloads(time(NULL));
 }
 
+/**DOCDOC*/
+#define CONSENSUS_MIN_SECONDS_BEFORE_CACHING 120
+
 /** Update the time at which we'll consider replacing the current
  * consensus. */
 void
@@ -994,12 +1000,16 @@ update_consensus_networkstatus_fetch_time(time_t now)
     long interval = c->fresh_until - c->valid_after;
     time_t start;
     if (dirserver_mode(options)) {
-      start = c->fresh_until + 120; /*XXXX020 make this a macro. */
+      /* We want to cache the next one at some point after this one
+       * is no longer fresh... */
+      start = c->fresh_until + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
+      /* But only in the first half-interval after that. */
       dl_interval = interval/2;
     } else {
+      /* Give all the caches enough time to download the consensus.*/
       start = c->fresh_until + (interval*3)/4;
-      /* XXXX020 too much magic. */
-      dl_interval = (c->valid_until - start) * 7 / 8;
+      /* But download the next one before this one is expired. */
+      dl_interval = ((c->valid_until - start) * 7 )/ 8;
     }
     if (dl_interval < 1)
       dl_interval = 1;
@@ -1275,13 +1285,15 @@ routers_update_all_from_networkstatus(time_t now)
   routerlist_t *rl = router_get_routerlist();
   networkstatus_vote_t *consensus = networkstatus_get_live_consensus(now);
 
-  router_dir_info_changed(); /*XXXX020 really? */
-
   if (networkstatus_v2_list_has_changed)
     download_status_map_update_from_v2_networkstatus();
 
   if (!consensus)
     return;
+
+  /* More routers may be up or down now: we need to recalc whether there's
+   * enough directory info. */
+  router_dir_info_changed();
 
   routers_update_status_from_consensus_networkstatus(rl->routers, 0);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
