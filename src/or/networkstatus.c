@@ -810,7 +810,7 @@ router_get_consensus_status_by_nickname(const char *nickname,
     return networkstatus_vote_find_entry(current_consensus, named_id);
 
   if (unnamed_server_map &&
-      strmap_get_lc(named_server_map, nickname))
+      strmap_get_lc(unnamed_server_map, nickname))
     return NULL; /* XXXX020 should we warn? */
 
   /*XXXX020 is this behavior really what we want? */
