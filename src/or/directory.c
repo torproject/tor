@@ -509,8 +509,12 @@ connection_dir_request_failed(dir_connection_t *conn)
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
     connection_dir_download_cert_failed(conn, 0);
-  } else {
-    /* XXXX020 handle failing: votes. signatures. */
+  } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {
+    log_info(LD_DIR, "Giving up downloading detached signatures from '%s'",
+             conn->_base.address);
+  } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {
+    log_info(LD_DIR, "Giving up downloading votes from '%s'",
+             conn->_base.address);
   }
 }
 
@@ -2094,6 +2098,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     int is_v3 = !strcmpstart(url, "/tor/status-vote");
     const char *request_type = NULL;
     const char *key = url + strlen("/tor/status/");
+    int lifetime = NETWORKSTATUS_CACHE_LIFETIME;
     if (!is_v3) {
       dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
       if (!strcmpstart(key, "fp/"))
@@ -2106,9 +2111,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       else
         request_type = "/tor/status/?";
     } else {
+      networkstatus_vote_t *v = networkstatus_get_current_consensus();
       smartlist_add(dir_fps, tor_memdup("\0\0\0\0\0\0\0\0\0\0"
                                         "\0\0\0\0\0\0\0\0\0\0", 20));
       request_type = deflated?"v3.z":"v3";
+      lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
     }
 
     if (!smartlist_len(dir_fps)) { /* we failed to create/cache cp */
@@ -2143,7 +2150,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     // note_request(request_type,dlen);
     (void) request_type;
     write_http_response_header(conn, -1, deflated,
-                 smartlist_len(dir_fps) == 1 ? NETWORKSTATUS_CACHE_LIFETIME:0);
+                               smartlist_len(dir_fps) == 1 ? lifetime : 0);
     conn->fingerprint_stack = dir_fps;
     if (! deflated)
       conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);

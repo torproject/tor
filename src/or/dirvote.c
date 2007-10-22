@@ -28,6 +28,7 @@ static int dirvote_publish_consensus(void);
  * Voting and consensus generation
  * ===== */
 
+/*XXXX020 move to networkstaus.c */
 /** Clear all storage held in <b>ns</b>. */
 void
 networkstatus_vote_free(networkstatus_vote_t *ns)
@@ -74,6 +75,7 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
   tor_free(ns);
 }
 
+/*XXXX020 move to networkstaus.c */
 /** Return the voter info from <b>vote</b> for the voter whose identity digest
  * is <b>identity</b>, or NULL if no such voter is associated with
  * <b>vote</b>. */
@@ -816,6 +818,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   return result;
 }
 
+/*XXXX020 move to networkstatus.c ? */
 /** Check whether the signature on <b>voter</b> is correctly signed by
  * the signing key of <b>cert</b>. Return -1 if <b>cert</b> doesn't match the
  * signing key; otherwise set the good_signature or bad_signature flag on
@@ -848,6 +851,7 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
   return 0;
 }
 
+/*XXXX020 move to networkstatus.c ? */
 /** Given a v3 networkstatus consensus in <b>consensus</b>, check every
  * as-yet-unchecked signature on <b>consensus</b>.  Return 1 if there is a
  * signature from every recognized authority on it, 0 if there are
@@ -1123,6 +1127,7 @@ ns_detached_signatures_free(ns_detached_signatures_t *s)
  * Certificate functions
  * ===== */
 
+/*XXXX020 move to routerlist.c ? */
 /** Free storage held in <b>cert</b>. */
 void
 authority_cert_free(authority_cert_t *cert)
@@ -1321,8 +1326,8 @@ dirvote_act(or_options_t *options, time_t now)
       !voting_schedule.have_built_consensus) {
     log_notice(LD_DIR, "Time to compute a consensus.");
     dirvote_compute_consensus();
-    /* XXXX020 we will want to try again later if we haven't got enough
-     * votes yet. */
+    /* XXXX We will want to try again later if we haven't got enough
+     * votes yet.  Implement this if it turns out to ever happen. */
     voting_schedule.have_built_consensus = 1;
   }
   if (voting_schedule.fetch_missing_signatures < now &&
@@ -1337,8 +1342,8 @@ dirvote_act(or_options_t *options, time_t now)
     dirvote_publish_consensus();
     dirvote_clear_votes(0);
     voting_schedule.have_published_consensus = 1;
-    /* XXXX020 we will want to try again later if we haven't got enough
-     * signatures yet. */
+    /* XXXX We will want to try again later if we haven't got enough
+     * signatures yet.  Implement this if it turns out to ever happen. */
     dirvote_recalculate_timing(options, now);
   }
 }
@@ -1811,7 +1816,9 @@ dirvote_add_signatures_to_pending_consensus(
     tor_assert(src);
     strlcpy(dst, src, new_consensus_len - (dst-pending_consensus_body));
 
-    /* XXXX020 remove this block once it has failed to crash for a while. */
+    /* We remove this block once it has failed to crash for a while.  But
+     * unless it shows up in profiles, we're probably better leaving it in,
+     * just in case we break detached signature processing at some point. */
     {
       ns_detached_signatures_t *sigs =
         networkstatus_parse_detached_signatures(new_detached, NULL);
