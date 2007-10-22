@@ -950,7 +950,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
 }
 
 /**DOCDOC*/
-#define CONSENUS_NETWORKSTATUS_MAX_DL_TRIES 8
+#define CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES 8
 
 /** If we want to download a fresh consensus, launch a new download as
  * appropriate.  */
