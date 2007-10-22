@@ -2111,7 +2111,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       else
         request_type = "/tor/status/?";
     } else {
-      networkstatus_vote_t *v = networkstatus_get_current_consensus();
+      networkstatus_vote_t *v = networkstatus_get_latest_consensus();
+      time_t now = time(NULL);
       smartlist_add(dir_fps, tor_memdup("\0\0\0\0\0\0\0\0\0\0"
                                         "\0\0\0\0\0\0\0\0\0\0", 20));
       request_type = deflated?"v3.z":"v3";
