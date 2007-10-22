@@ -592,6 +592,8 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
     tor_free(cp);
   });
   smartlist_free(failed);
+
+  update_certificate_downloads(time(NULL));
 }
 
 /** Helper for directory_initiate_command_(router|trusted_dir): send the

@@ -843,6 +843,13 @@ update_networkstatus_downloads(time_t now)
   if (dirserver_mode(options))
     update_v2_networkstatus_cache_downloads(now);
   update_consensus_networkstatus_downloads(now);
+  update_certificate_downloads(now);
+}
+
+/**DOCDOC */
+void
+update_certificate_downloads(time_t now)
+{
   if (consensus_waiting_for_certs)
     authority_certs_fetch_missing(consensus_waiting_for_certs, now);
   else

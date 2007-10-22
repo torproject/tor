@@ -33,6 +33,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Allow certificates to include an address.
     - When we change our directory-cache settings, reschedule all voting
       and download operations.
+    - Reattempt certificate downloads immediately on failure, as appropriate.
 
   o Minor features (router descriptor cache):
     - If we find a cached-routers file that's been sitting around for more

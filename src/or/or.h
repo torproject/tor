@@ -3106,6 +3106,7 @@ void networkstatus_consensus_download_failed(int status_code);
 void update_consensus_networkstatus_fetch_time(time_t now);
 int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);
+void update_certificate_downloads(time_t now);
 networkstatus_v2_t *networkstatus_v2_get_by_digest(const char *digest);
 networkstatus_vote_t *networkstatus_get_latest_consensus(void);
 networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);

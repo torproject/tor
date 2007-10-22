@@ -49,7 +49,7 @@ Things we'd like to do in 0.2.0.x:
         of their first test, and then never seeing use.
 
   - Before 0.2.0.9-alpha (for nickm)
-    - Retry cert downloads as appropriate
+    o Retry cert downloads as appropriate
     - Delay consensus download retry when there's a unverified consensus we're
       downloading the certs to check
       - But don't delay forever.
