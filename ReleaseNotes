@@ -4,6 +4,16 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.1.2.17 - 2007-08-30
+  Tor 0.1.2.17 features a new Vidalia version in the Windows and OS
+  X bundles. Vidalia 0.0.14 makes authentication required for the
+  ControlPort in the default configuration, which addresses important
+  security risks. Everybody who uses Vidalia (or another controller)
+  should upgrade.
+
+  In addition, this Tor update fixes major load balancing problems with
+  path selection, which should speed things up a lot once many people
+  have upgraded.
+
   o Major bugfixes (security):
     - We removed support for the old (v0) control protocol. It has been
       deprecated since Tor 0.1.1.1-alpha, and keeping it secure has
@@ -65,12 +75,22 @@ Changes in version 0.1.2.17 - 2007-08-30
 
 
 Changes in version 0.1.2.16 - 2007-08-01
+  Tor 0.1.2.16 fixes a critical security vulnerability that allows a
+  remote attacker in certain situations to rewrite the user's torrc
+  configuration file. This can completely compromise anonymity of users
+  in most configurations, including those running the Vidalia bundles,
+  TorK, etc. Or worse.
+
   o Major security fixes:
     - Close immediately after missing authentication on control port;
       do not allow multiple authentication attempts.
 
 
 Changes in version 0.1.2.15 - 2007-07-17
+  Tor 0.1.2.15 fixes several crash bugs, fixes some anonymity-related
+  problems, fixes compilation on BSD, and fixes a variety of other
+  bugs. Everybody should upgrade.
+
   o Major bugfixes (compilation):
     - Fix compile on FreeBSD/NetBSD/OpenBSD. Oops.
 
@@ -125,6 +145,10 @@ Changes in version 0.1.2.15 - 2007-07-17
 
 
 Changes in version 0.1.2.14 - 2007-05-25
+  Tor 0.1.2.14 changes the addresses of two directory authorities (this
+  change especially affects those who serve or use hidden services),
+  and fixes several other crash- and security-related bugs.
+
   o Directory authority changes:
     - Two directory authorities (moria1 and moria2) just moved to new
       IP addresses. This change will particularly affect those who serve
@@ -180,10 +204,15 @@ Changes in version 0.1.2.14 - 2007-05-25
 
 
 Changes in version 0.1.2.13 - 2007-04-24
+  This release features some major anonymity fixes, such as safer path
+  selection; better client performance; faster bootstrapping, better
+  address detection, and better DNS support for servers; write limiting as
+  well as read limiting to make servers easier to run; and a huge pile of
+  other features and bug fixes. The bundles also ship with Vidalia 0.0.11.
 
-Tor 0.1.2.13 is released in memory of Rob Levin (1955-2006), aka lilo
-of the Freenode IRC network, remembering his patience and vision for
-free speech on the Internet.
+  Tor 0.1.2.13 is released in memory of Rob Levin (1955-2006), aka lilo
+  of the Freenode IRC network, remembering his patience and vision for
+  free speech on the Internet.
 
   o Major features, client performance:
     - Weight directory requests by advertised bandwidth. Now we can

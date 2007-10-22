@@ -1100,14 +1100,15 @@ Changes in version 0.1.2.14 - 2007-05-25
 
 
 Changes in version 0.1.2.13 - 2007-04-24
-  Tor 0.1.2.13, the first stable release of the 0.1.2.x branch, is
-  finally ready.
-
   This release features some major anonymity fixes, such as safer path
   selection; better client performance; faster bootstrapping, better
   address detection, and better DNS support for servers; write limiting as
   well as read limiting to make servers easier to run; and a huge pile of
   other features and bug fixes. The bundles also ship with Vidalia 0.0.11.
+
+  Tor 0.1.2.13 is released in memory of Rob Levin (1955-2006), aka lilo
+  of the Freenode IRC network, remembering his patience and vision for
+  free speech on the Internet.
 
   o Minor fixes:
     - Fix a memory leak when we ask for "all" networkstatuses and we
