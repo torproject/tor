@@ -405,12 +405,6 @@ desc_get_store(routerlist_t *rl, signed_descriptor_t *sd)
     return &rl->desc_store;
 }
 
-static INLINE desc_store_t *
-router_get_store(routerlist_t *rl, routerinfo_t *ri)
-{
-  return desc_get_store(rl, &ri->cache_info);
-}
-
 /** Add the signed_descriptor_t in <b>desc</b> to the router
  * journal; change its saved_location to SAVED_IN_JOURNAL and set its
  * offset appropriately. */
@@ -2127,27 +2121,6 @@ dump_routerlist_mem_usage(int severity)
       smartlist_len(routerlist->old_routers), U64_PRINTF_ARG(olddescs));
 }
 
-#if 0
-/** Return non-zero if we have a lot of extra descriptors in our
- * routerlist, and should get rid of some of them. Else return 0.
- *
- * We should be careful to not return true too eagerly, since we
- * could churn. By using "+1" below, we make sure this function
- * only returns true at most every smartlist_len(rl-\>routers)
- * new descriptors.
- */
-static INLINE int
-routerlist_is_overfull(routerlist_t *rl)
-{
-  /*XXXX020 no longer wholly logical.*/
-  if (dirserver_mode(get_options())) {
-    return smartlist_len(rl->old_routers) > smartlist_len(rl->routers)*5;
-  } else {
-    return smartlist_len(rl->old_routers) > smartlist_len(rl->routers)*2;
-  }
-}
-#endif
-
 static INLINE int
 _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 {
@@ -2316,12 +2289,10 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old)
       sdmap_set(rl->desc_by_eid_map, sd->extra_info_digest, sd);
   } else {
     signed_descriptor_t *sd_tmp;
-    desc_store_t *store = router_get_store(rl, ri);
     sd_tmp = sdmap_remove(rl->desc_digest_map,
                           ri->cache_info.signed_descriptor_digest);
     tor_assert(sd_tmp == &(ri->cache_info));
-    if (store)
-      store->bytes_dropped += ri->cache_info.signed_descriptor_len;
+    rl->desc_store.bytes_dropped += ri->cache_info.signed_descriptor_len;
     ei_tmp = eimap_remove(rl->extra_info_map,
                           ri->cache_info.extra_info_digest);
     if (ei_tmp) {
@@ -2439,7 +2410,6 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     if (!tor_digest_is_zero(sd->extra_info_digest))
       sdmap_set(rl->desc_by_eid_map, sd->extra_info_digest, sd);
   } else {
-    desc_store_t *store;
     if (memcmp(ri_old->cache_info.signed_descriptor_digest,
                ri_new->cache_info.signed_descriptor_digest,
                DIGEST_LEN)) {
@@ -2459,9 +2429,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
       sdmap_remove(rl->desc_by_eid_map,
                    ri_old->cache_info.extra_info_digest);
     }
-    store = router_get_store(rl, ri_old);
-    if (store)
-      store->bytes_dropped += ri_old->cache_info.signed_descriptor_len;
+    rl->desc_store.bytes_dropped += ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
   }
 #ifdef DEBUG_ROUTERLIST
@@ -2624,7 +2592,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
-                                      router_get_store(routerlist, router));
+                                      &routerlist->desc_store);
       routerlist_insert_old(routerlist, router);
       return -1;
     }
@@ -2657,7 +2625,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
      * consider replacing the latest router with it. */
     if (!from_cache && should_cache_old_descriptors())
       signed_desc_append_to_journal(&router->cache_info,
-                                    router_get_store(routerlist, router));
+                                    &routerlist->desc_store);
     routerlist_insert_old(routerlist, router);
     return -1;
   }
@@ -2674,7 +2642,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
-                                      router_get_store(routerlist, router));
+                                      &routerlist->desc_store);
       routerlist_insert_old(routerlist, router);
       *msg = "Router descriptor was not new.";
       return -1;
@@ -2711,7 +2679,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       routerlist_replace(routerlist, old_router, router);
       if (!from_cache) {
         signed_desc_append_to_journal(&router->cache_info,
-                                      router_get_store(routerlist, router));
+                                      &routerlist->desc_store);
       }
       directory_set_dirty();
       *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
@@ -2727,7 +2695,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   routerlist_insert(routerlist, router);
   if (!from_cache)
     signed_desc_append_to_journal(&router->cache_info,
-                                  router_get_store(routerlist, router));
+                                  &routerlist->desc_store);
   directory_set_dirty();
   return 0;
 }
