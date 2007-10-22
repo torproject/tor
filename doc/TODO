@@ -54,7 +54,7 @@ Things we'd like to do in 0.2.0.x:
       downloading the certs to check
       - But don't delay forever.
     o Make new download types comply with should_delay_dir_fetches()
-    - When DownloadExtraInfo is turned on for the first time, don't flip
+    o When DownloadExtraInfo is turned on for the first time, don't flip
       out and download the ancient history of the universe.
     o List IP addresses in certificates?
     o Make the address in votes be an actual IP address.

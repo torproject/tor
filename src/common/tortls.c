@@ -399,8 +399,16 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
     goto error;
   X509_free(cert); /* We just added a reference to cert. */
   cert=NULL;
+#if 1
   if (idcert && !SSL_CTX_add_extra_chain_cert(result->ctx,idcert))
     goto error;
+#else
+  if (idcert) {
+    X509_STORE *s = SSL_CTX_get_cert_store(result->ctx);
+    tor_assert(s);
+    X509_STORE_add_cert(s, idcert);
+  }
+#endif
   idcert=NULL; /* The context now owns the reference to idcert */
   SSL_CTX_set_session_cache_mode(result->ctx, SSL_SESS_CACHE_OFF);
   tor_assert(rsa);
