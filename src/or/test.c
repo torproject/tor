@@ -3207,10 +3207,10 @@ test_crypto_base32_decode(void)
   test_eq(res, 0);
   test_memeq(plain, decoded, 60);
   /* Change encoded string and decode. */
-  if (encoded[0] == 'a')
-    encoded[0] = 'b';
+  if (encoded[0] == 'A' || encoded[0] == 'a')
+    encoded[0] = 'B';
   else
-    encoded[0] = 'a';
+    encoded[0] = 'A';
   res = base32_decode(decoded, 60, encoded, 96);
   test_eq(res, 0);
   test_memneq(plain, decoded, 60);
