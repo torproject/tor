@@ -46,6 +46,10 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Don't try to launch descriptor downloads quite so often when we
       have enough directory information.
 
+  o Minor features (compilation):
+    - Detect non-ASCII platforms (if any still exist) and refuse to
+      build there.  Some of our code assumes that 'A' is 65 and so on.
+
   o Minor bugfixes (directory authorities):
     - Correct the implementation of "download votes by digest."  Bugfix on
       0.2.0.8-alpha.
