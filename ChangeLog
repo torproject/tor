@@ -106,6 +106,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Don't try to download extrainfo documents when we're trying to
       fetch enough directory info to build a circuit: having enough
       info should get priority.
+    - Don't complain that "your server has not managed to confirm that its
+      ports are reachable" if we haven't been able to build any circuits
+      yet. Bug found by spending four hours without a v3 consensus.
 
   o Minor bugfixes (performance):
     - Base64 decoding was actually showing up on our profile when parsing

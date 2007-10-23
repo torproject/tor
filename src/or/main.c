@@ -1153,6 +1153,7 @@ second_elapsed_callback(int fd, short event, void *args)
   if (server_mode(options) &&
       !we_are_hibernating() &&
       seconds_elapsed > 0 &&
+      has_completed_circuit &&
       stats_n_seconds_working / TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT !=
       (stats_n_seconds_working+seconds_elapsed) /
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
