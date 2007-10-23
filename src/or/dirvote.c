@@ -116,7 +116,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status vote\n"
-                 "consensus-methods 1\n"
+                 "consensus-methods 1 2\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
@@ -421,7 +421,7 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  return (method == 1);
+  return (method >= 1) && (method <= 2);
 }
 
 /** Given a list of vote networkstatus_vote_t in <b>votes</b>, our public
