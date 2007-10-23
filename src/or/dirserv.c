@@ -1969,18 +1969,18 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
     char tbuf[ISO_TIME_LEN+1];
     networkstatus_vote_t *current_consensus =
       networkstatus_get_live_consensus(now);
-    time_t consensus_interval;
+    time_t last_consensus_interval; /* only used to pick a valid_after */
     if (current_consensus)
-      consensus_interval = current_consensus->fresh_until -
+      last_consensus_interval = current_consensus->fresh_until -
         current_consensus->valid_after;
     else
-      consensus_interval = timing.vote_interval;
+      last_consensus_interval = DEFAULT_VOTING_INTERVAL_WHEN_NO_CONSENSUS;
     v3_out->valid_after =
-      dirvote_get_start_of_next_interval(now, consensus_interval);
+      dirvote_get_start_of_next_interval(now, last_consensus_interval);
     format_iso_time(tbuf, v3_out->valid_after);
     log_notice(LD_DIR,"Choosing valid-after time in vote as %s: "
-               "consensus_set=%d, interval=%d",
-               tbuf, current_consensus?1:0, (int)consensus_interval);
+               "consensus_set=%d, last_interval=%d",
+               tbuf, current_consensus?1:0, (int)last_consensus_interval);
   }
   v3_out->fresh_until = v3_out->valid_after + timing.vote_interval;
   v3_out->valid_until = v3_out->valid_after +

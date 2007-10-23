@@ -1217,7 +1217,7 @@ dirvote_recalculate_timing(or_options_t *options, time_t now)
     vote_delay = consensus->vote_seconds;
     dist_delay = consensus->dist_seconds;
   } else {
-    interval = 30*60;
+    interval = DEFAULT_VOTING_INTERVAL_WHEN_NO_CONSENSUS;
     vote_delay = dist_delay = 300;
   }
 

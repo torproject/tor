@@ -74,6 +74,11 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
     - Distinguish between detached signatures for the wrong period, and
       detached signatures for a divergent vote.
     - Fix a small memory leak when computing a consensus.
+    - When there's no concensus, we were forming a vote every 30
+      minutes, but writing the "valid-after" line in our vote based
+      on our configured V3AuthVotingInterval: so unless the intervals
+      matched up, we immediately rejected our own vote because it didn't
+      start at the voting interval that caused us to construct a vote.
 
   o Minor bugfixes (v3 directory protocol):
     - Delete unverified-consensus when the real consensus is set.

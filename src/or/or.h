@@ -2907,6 +2907,9 @@ cached_dir_t *new_cached_dir(char *s, time_t published);
 /** Smallest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
 
+/** If there is no consensus, what interval do we default to? */
+#define DEFAULT_VOTING_INTERVAL_WHEN_NO_CONSENSUS (30*60)
+
 void dirvote_free_all(void);
 
 /* vote manipulation */
