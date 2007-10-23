@@ -1407,7 +1407,7 @@ routerstatus_list_update_named_server_map(void)
   named_server_map = strmap_new();
   if (unnamed_server_map)
     strmap_free(unnamed_server_map, NULL);
-  named_server_map = strmap_new();
+  unnamed_server_map = strmap_new();
   SMARTLIST_FOREACH(current_consensus->routerstatus_list, routerstatus_t *, rs,
     {
       if (rs->is_named) {
