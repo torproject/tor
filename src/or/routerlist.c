@@ -459,13 +459,19 @@ router_rebuild_store(int force, desc_store_t *store)
   off_t offset = 0;
   smartlist_t *signed_descriptors = NULL;
   int nocache=0;
+  size_t total_expected_len = 0;
+  int had_any;
 
   if (!force && !router_should_rebuild_store(store))
     return 0;
   if (!routerlist)
     return 0;
 
-  //routerlist_assert_ok(routerlist);
+  if (store->type == EXTRAINFO_STORE)
+    had_any = !eimap_isempty(routerlist->extra_info_map);
+  else
+    had_any = (smartlist_len(routerlist->routers)+
+               smartlist_len(routerlist->old_routers))>0;
 
   /* Don't save deadweight. */
   routerlist_remove_old_routers();
@@ -516,6 +522,7 @@ router_rebuild_store(int force, desc_store_t *store)
       c = tor_malloc(sizeof(sized_chunk_t));
       c->bytes = body;
       c->len = sd->signed_descriptor_len + sd->annotations_len;
+      total_expected_len += c->len;
       smartlist_add(chunk_list, c);
     });
 
@@ -535,10 +542,23 @@ router_rebuild_store(int force, desc_store_t *store)
     goto done;
   }
 
+  errno = 0;
   store->mmap = tor_mmap_file(fname);
   if (! store->mmap) {
-    log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
-    //tor_assert(0);
+    if (errno == ERANGE) {
+      /* empty store.*/
+      if (total_expected_len) {
+        log_warn(LD_FS, "We wrote some bytes to a new descriptor file at '%s',"
+                 " but when we went to mmap it, it was empty!", fname);
+      } else if (had_any) {
+        log_notice(LD_FS, "We just removed every descriptor in '%s'.  This is "
+                   "okay if we're just starting up after a long time. "
+                   "Otherwise, it's a bug.",
+                   fname);
+      }
+    } else {
+      log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
+    }
   }
 
   log_info(LD_DIR, "Reconstructing pointers into cache");
@@ -694,6 +714,8 @@ router_get_trusted_dir_servers(void)
  * (that is, a trusted dirserver, or one running 0.0.9rc5-cvs or later).
  * Don't pick an authority if any non-authority is viable.
  * Other args are as in router_pick_directory_server_impl().
+ *
+ * DOCDOC arguments are pretty screwed up.
  */
 routerstatus_t *
 router_pick_directory_server(int requireother,

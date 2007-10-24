@@ -119,6 +119,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       ports are reachable" if we haven't been able to build any circuits
       yet. Bug found by spending four hours without a v3 consensus. Bugfix
       on 0.1.2.x.
+    - Detect the reason for failing to mmap a descriptor file we just
+      wrote, and give a more useful log message.  Fixes bug 533. Bugfix
+      on 0.1.2.x.
 
   o Code simplifications and refactoring:
     - Remove support for the old bw_accounting file: we've been storing
