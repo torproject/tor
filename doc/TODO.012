@@ -6,6 +6,9 @@ Backport items for 0.1.2:
   o r11828+: Detect bad sa_family from accept().
   o r11882: Avoid crash-bug 451.
   o r11886: Consider family as well as identity when cannibalizing circuits.
+  - backport the osx privoxy.config changes
+  - no need to backport the windows privoxy.config changes because they're
+    not in SVN??
 
 
 Backport for 0.1.2.x once better tested:
