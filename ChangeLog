@@ -27,7 +27,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       consensus. Fixes bug 529; bugfix on 0.1.2.x.
     - Fix awful behavior in DownloadExtraInfo option where we'd fetch
       extrainfo documents and then discard them immediately for not
-      matching the latest router. Bugfix on ????NICK????
+      matching the latest router. Bugfix on 0.2.0.1-alpha.
 
   o Minor features (v3 directory protocol):
     - Allow tor-gencert to generate a new certificate without replacing
