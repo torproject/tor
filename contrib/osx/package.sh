@@ -23,7 +23,7 @@ PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.6.zip
 
 # Where have we put the xpi and license for Torbutton? Edit this if your
 # torbutton and torbutton license live somewhere else.
-TORBUTTON_PATH=~/tmp/torbutton-1.1.8-alpha.xpi
+TORBUTTON_PATH=~/tmp/torbutton-1.1.9.1-alpha.xpi
 TORBUTTON_LIC_PATH=~/tmp/LICENSE
 
 ###
