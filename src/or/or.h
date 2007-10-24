@@ -3549,16 +3549,16 @@ authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
 void authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now);
 int router_reload_router_list(void);
 smartlist_t *router_get_trusted_dir_servers(void);
-routerstatus_t *router_pick_directory_server(int requireother,
-                                             int fascistfirewall,
-                                             authority_type_t type,
-                                             int retry_if_no_servers);
+
+/* Flags for pick_directory_server and pick_trusteddirserver. */
+#define PDS_ALLOW_SELF                 (1<<0)
+#define PDS_RETRY_IF_NO_SERVERS        (1<<1)
+#define PDS_IGNORE_FASCISTFIREWALL     (1<<2)
+#define _PDS_PREFER_TUNNELED_DIR_CONNS (1<<16)
+routerstatus_t *router_pick_directory_server(authority_type_t type, int flags);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
 trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
-routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
-                                             int requireother,
-                                             int fascistfirewall,
-                                             int retry_if_no_servers);
+routerstatus_t *router_pick_trusteddirserver(authority_type_t type, int flags);
 void router_reset_status_download_failures(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 int routers_in_same_family(routerinfo_t *r1, routerinfo_t *r2);

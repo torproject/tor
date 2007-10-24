@@ -20,13 +20,10 @@ const char routerlist_c_id[] =
 /****************************************************************************/
 
 /* static function prototypes */
-static routerstatus_t *router_pick_directory_server_impl(int requireother,
-                                                     int fascistfirewall,
-                                                     int prefer_tunnel,
-                                                     authority_type_t auth);
+static routerstatus_t *router_pick_directory_server_impl(
+                                           authority_type_t auth, int flags);
 static routerstatus_t *router_pick_trusteddirserver_impl(
-                 authority_type_t type, int requireother,
-                 int fascistfirewall, int prefer_tunnel);
+                                           authority_type_t auth, int flags);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
@@ -705,33 +702,33 @@ router_get_trusted_dir_servers(void)
   return trusted_dir_servers;
 }
 
-/** Try to find a running dirserver. If there are no running dirservers
- * in our routerlist and <b>retry_if_no_servers</b> is non-zero,
- * set all the authoritative ones as running again, and pick one;
- * if there are then no dirservers at all in our routerlist,
- * reload the routerlist and try one last time. If for_runningrouters is
- * true, then only pick a dirserver that can answer runningrouters queries
- * (that is, a trusted dirserver, or one running 0.0.9rc5-cvs or later).
- * Don't pick an authority if any non-authority is viable.
- * Other args are as in router_pick_directory_server_impl().
+/** Try to find a running dirserver that supports operations of <b>type</b>.
  *
- * DOCDOC arguments are pretty screwed up.
+ * If there are no running dirservers in our routerlist and the
+ * <b>PDS_RETRY_IF_NO_SERVERS</b> flag is set, set all the authoritative ones
+ * as running again, and pick one.
+ *
+ * If the <b>PDS_IGNORE_FASCISTFIREWALL</b> flag is set, then include
+ * dirservers that we can't reach.
+ *
+ * If the <b>PDS_ALLOW_SELF</b> flag is not set, then don't include ourself
+ * (if we'rea dirserver).
+ *
+ * Don't pick an authority if any non-authority is viable; try to avoid using
+ * servers that have returned 503 recently.
  */
 routerstatus_t *
-router_pick_directory_server(int requireother,
-                             int fascistfirewall,
-                             authority_type_t type,
-                             int retry_if_no_servers)
+router_pick_directory_server(authority_type_t type, int flags)
 {
   routerstatus_t *choice;
-  int prefer_tunnel = get_options()->PreferTunneledDirConns;
+  if (get_options()->PreferTunneledDirConns)
+    flags |= _PDS_PREFER_TUNNELED_DIR_CONNS;
 
   if (!routerlist)
     return NULL;
 
-  choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             prefer_tunnel, type);
-  if (choice || !retry_if_no_servers)
+  choice = router_pick_directory_server_impl(type, flags);
+  if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
     return choice;
 
   log_info(LD_DIR,
@@ -740,19 +737,18 @@ router_pick_directory_server(int requireother,
   /* mark all authdirservers as up again */
   mark_all_trusteddirservers_up();
   /* try again */
-  choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             prefer_tunnel, type);
+  choice = router_pick_directory_server_impl(type, flags);
   if (choice)
     return choice;
 
+  /* XXXX020 what's the point of *reloading* and trying again?? -NM */
   log_info(LD_DIR,"Still no %s router entries. Reloading and trying again.",
-           fascistfirewall ? "reachable" : "known");
+           (flags & PDS_IGNORE_FASCISTFIREWALL) ? "known" : "reachable");
   if (router_reload_router_list()) {
     return NULL;
   }
   /* give it one last try */
-  choice = router_pick_directory_server_impl(requireother, fascistfirewall,
-                                             prefer_tunnel, type);
+  choice = router_pick_directory_server_impl(type, flags);
   return choice;
 }
 
@@ -792,53 +788,38 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
   return NULL;
 }
 
-/** Try to find a running trusted dirserver. If there are no running
- * trusted dirservers and <b>retry_if_no_servers</b> is non-zero,
- * set them all as running again, and try again.
- * <b>type> specifies the type of authoritative dir we require.
- * Other args are as in router_pick_trusteddirserver_impl().
+/** Try to find a running trusted dirserver.  Flags are as for
+ * router_pick_directory_server.
  */
 routerstatus_t *
-router_pick_trusteddirserver(authority_type_t type,
-                             int requireother,
-                             int fascistfirewall,
-                             int retry_if_no_servers)
+router_pick_trusteddirserver(authority_type_t type, int flags)
 {
   routerstatus_t *choice;
-  int prefer_tunnel = get_options()->PreferTunneledDirConns;
+  if (get_options()->PreferTunneledDirConns)
+    flags |= _PDS_PREFER_TUNNELED_DIR_CONNS;
 
-  choice = router_pick_trusteddirserver_impl(type, requireother,
-                                fascistfirewall, prefer_tunnel);
-  if (choice || !retry_if_no_servers)
+  choice = router_pick_trusteddirserver_impl(type, flags);
+  if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
     return choice;
 
   log_info(LD_DIR,
            "No trusted dirservers are reachable. Trying them all again.");
   mark_all_trusteddirservers_up();
-  return router_pick_trusteddirserver_impl(type, requireother,
-                              fascistfirewall, prefer_tunnel);
+  return router_pick_trusteddirserver_impl(type, flags);
 }
 
 /** How long do we avoid using a directory server after it's given us a 503? */
 #define DIR_503_TIMEOUT (60*60)
 
 /** Pick a random running valid directory server/mirror from our
- * routerlist.
+ * routerlist.  Arguments are as for router_pick_directory_server(), except
+ * that RETRY_IF_NO_SERVERS is ignored, and:
  *
- * If <b>fascistfirewall</b>, make sure the router we pick is allowed
- * by our firewall options.
- * If <b>requireother</b>, it cannot be us. If <b>for_v2_directory</b>,
- * choose a directory server new enough to support the v2 directory
- * functionality.
- * If <b>prefer_tunnel</b>, choose a directory server that is reachable
- * and supports BEGIN_DIR cells, if possible.
- *
- * Don't pick an authority if any non-authorities are viable. Try to
- * avoid using servers that are overloaded (have returned 503 recently).
+ * If the _PDS_PREFER_TUNNELED_DIR_CONNS flag is set, prefer directory servers
+ * that we can use with BEGINDIR.
  */
 static routerstatus_t *
-router_pick_directory_server_impl(int requireother, int fascistfirewall,
-                                  int prefer_tunnel, authority_type_t type)
+router_pick_directory_server_impl(authority_type_t type, int flags)
 {
   routerstatus_t *result;
   smartlist_t *direct, *tunnel;
@@ -846,6 +827,9 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   time_t now = time(NULL);
   const networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
+  int requireother = ! (flags & PDS_ALLOW_SELF);
+  int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
+  int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
 
   if (!consensus)
     return NULL;
@@ -919,21 +903,20 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
   return result;
 }
 
-/** Choose randomly from among the trusted dirservers that are up.  If
- * <b>fascistfirewall</b>, make sure the port we pick is allowed by our
- * firewall options.  If <b>requireother</b>, it cannot be us.
- * <b>type> specifies the type of authoritative dir we require.
+/** Choose randomly from among the trusted dirservers that are up.  Flags
+ * are as for router_pick_directory_server_impl().
  */
 static routerstatus_t *
-router_pick_trusteddirserver_impl(authority_type_t type,
-                                  int requireother, int fascistfirewall,
-                                  int prefer_tunnel)
+router_pick_trusteddirserver_impl(authority_type_t type, int flags)
 {
   smartlist_t *direct, *tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   routerinfo_t *me = router_get_my_routerinfo();
   routerstatus_t *result;
   time_t now = time(NULL);
+  int requireother = ! (flags & PDS_ALLOW_SELF);
+  int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
+  int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
 
   direct = smartlist_create();
   tunnel = smartlist_create();
