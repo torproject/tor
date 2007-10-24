@@ -1,76 +1,80 @@
-Changes in version 0.2.0.9-alpha - 2007-10-??
-  o Major features (v3 directory system):
+Changes in version 0.2.0.9-alpha - 2007-10-24
+  o Major features (directory system):
     - Clients now download v3 consensus networkstatus documents instead
-      of v2 networkstatus documents.  Clients and caches now their opinions
-      about routers on these consensus documents.  Clients only download
-      router descriptors listed in the consensus.
-    - Authorities now list servers who have the same nickname as a different
-      named server, but list them with a new flag, "Unnamed". (122)
+      of v2 networkstatus documents. Clients and caches now base their
+      opinions about routers on these consensus documents. Clients only
+      download router descriptors listed in the consensus.
+    - Authorities now list servers who have the same nickname as
+      a different named server, but list them with a new flag,
+      "Unnamed". Partially implements proposal 122.
     - If the consensus list a router as "Unnamed", the name is assigned
       to a different router: do not identify the router by that name.
-      (Partially implements proposal 122.)
+      Partially implements proposal 122.
     - Authorities can now come to a consensus on which method to use to
-      compute the consensus.  This gives us forward compatibility.
+      compute the consensus. This gives us forward compatibility.
 
   o Major bugfixes:
     - Stop publishing a new server descriptor just because we HUP or
       when we find our DirPort to be reachable but won't actually publish
-      it. Extra descriptors without any real changes are dropped by the
+      it. New descriptors without any real changes are dropped by the
       authorities, and can screw up our "publish every 18 hours" schedule.
+      Bugfix on 0.1.2.x.
     - When a router wasn't listed in a new networkstatus, we were leaving
       the flags for that router alone -- meaning it remained Named,
       Running, etc -- even though absence from the networkstatus means
       that it shouldn't be considered to exist at all anymore. Now we
       clear all the flags for routers that fall out of the networkstatus
-      consensus. Fixes bug 529.
+      consensus. Fixes bug 529; bugfix on 0.1.2.x.
     - Fix awful behavior in DownloadExtraInfo option where we'd fetch
       extrainfo documents and then discard them immediately for not
-      matching the latest router.
+      matching the latest router. Bugfix on ????NICK????
 
   o Minor features (v3 directory protocol):
-    - Allow tor-gencert to generate a new certificate without replacing the
-      signing key.
+    - Allow tor-gencert to generate a new certificate without replacing
+      the signing key.
     - Allow certificates to include an address.
     - When we change our directory-cache settings, reschedule all voting
       and download operations.
-    - Reattempt certificate downloads immediately on failure, as appropriate.
+    - Reattempt certificate downloads immediately on failure, as long as
+      we haven't failed a threshold number of times yet.
 
   o Minor features (router descriptor cache):
     - If we find a cached-routers file that's been sitting around for more
-      than 28 days unmodified, then most likely it's a leftover from when we
-      upgraded to 0.2.0.8-alpha.  Remove it.  It has no good routers anyway.
-    - When we (as a cache) download a descriptor because it was listed in a
-      consensus, remember when the consensus was supposed to expire, and
-      don't expire the descriptor until then.
+      than 28 days unmodified, then most likely it's a leftover from
+      when we upgraded to 0.2.0.8-alpha. Remove it. It has no good
+      routers anyway.
+    - When we (as a cache) download a descriptor because it was listed
+      in a consensus, remember when the consensus was supposed to expire,
+      and don't expire the descriptor until then.
 
   o Minor features (performance):
-    - Call routerlist_remove_old_routers() much less often.  This should
+    - Call routerlist_remove_old_routers() much less often. This should
       speed startup, especially on directory caches.
-    - Don't try to launch descriptor downloads quite so often when we
-      have enough directory information.
+    - Don't try to launch new descriptor downloads quite so often when we
+      already have enough directory information to build circuits.
+    - Base64 decoding was actually showing up on our profile when parsing
+      the initial descriptor file; switch to an in-process all-at-once
+      implementation that's about 3.5x times faster than calling out to
+      OpenSSL.
 
   o Minor features (compilation):
     - Detect non-ASCII platforms (if any still exist) and refuse to
-      build there.  Some of our code assumes that 'A' is 65 and so on.
+      build there: some of our code assumes that 'A' is 65 and so on.
 
-  o Minor bugfixes (directory authorities):
-    - Correct the implementation of "download votes by digest."  Bugfix on
-      0.2.0.8-alpha.
+  o Minor bugfixes (v3 directory authorities, bugfixes on 0.2.0.x):
     - Make the "next period" votes into "current period" votes immediately
-      after publishing the consensus; avoid a heisenbug that made them stick
-      around indefinitely.
-    - When we discard a vote as a duplicate, do not report this as an error.
-    - Correctly check for bad options to the "PublishServerDescriptor"
-      config option. Bugfix on 0.2.0.1-alpha; reported by Matt Edman.
-    - When we discard a vote as a duplicate, do not report this as an error.
-    - When we're configured to be a v3 authority, but we're only listed
-      as a non-v3 authority in our DirServer line for ourself, correct the
-      listing.
+      after publishing the consensus; avoid a heisenbug that made them
+      stick around indefinitely.
+    - When we discard a vote as a duplicate, do not report this as
+      an error.
     - Treat missing v3 keys or certificates as an error when running as a
       v3 directory authority.
-    - If an authority doesn't have a qualified hostname, just put its address
-      in the vote.  This fixes the problem where we referred to "moria on
-      moria:9031."
+    - When we're configured to be a v3 authority, but we're only listed
+      as a non-v3 authority in our DirServer line for ourself, correct
+      the listing.
+    - If an authority doesn't have a qualified hostname, just put
+      its address in the vote. This fixes the problem where we referred to
+      "moria on moria:9031."
     - Distinguish between detached signatures for the wrong period, and
       detached signatures for a divergent vote.
     - Fix a small memory leak when computing a consensus.
@@ -79,59 +83,56 @@ Changes in version 0.2.0.9-alpha - 2007-10-??
       on our configured V3AuthVotingInterval: so unless the intervals
       matched up, we immediately rejected our own vote because it didn't
       start at the voting interval that caused us to construct a vote.
+
+  o Minor bugfixes (v3 directory protocol, bugfixes on 0.2.0.x):
+    - Delete unverified-consensus when the real consensus is set.
+    - Consider retrying a consensus networkstatus fetch immediately
+      after one fails: don't wait 60 seconds to notice.
+    - When fetching a consensus as a cache, wait until a newer consensus
+      should exist before trying to replace the current one.
+
+  o Minor bugfixes (other directory issues):
+    - Correct the implementation of "download votes by digest." Bugfix on
+      0.2.0.8-alpha.
     - Authorities no longer send back "400 you're unreachable please fix
       it" errors to Tor servers that aren't online all the time. We're
-      supposed to tolerate these servers now.
-
-  o Minor bugfixes (v3 directory protocol):
-    - Delete unverified-consensus when the real consensus is set.
-    - Consider retrying a consensus networkstatus fetch immediately after one
-      fails: don't wait 60 seconds to notice.
-    - When fetching a consensus as a cache, wait until a newer consensus
-      exists before trying to replace the current one.
+      supposed to tolerate these servers now. Bugfix on 0.1.2.x.
 
   o Minor bugfixes (controller):
     - Don't reset trusted dir server list when we set a configuration
-      option. Patch from Robert Hogan.
+      option. Patch from Robert Hogan; bugfix on 0.1.2.x.
     - Respond to INT and TERM SIGNAL commands before we execute the
       signal, in case the signal shuts us down. We had a patch in
       0.1.2.1-alpha that tried to do this by queueing the response on
       the connection's buffer before shutting down, but that really
-      isn't the same thing. Bug located by Matt Edman.
-
-  o Minor bugfixes (memory leaks):
-    - Stop leaking memory on failing case of base32_decode.  Bugfix on
-      0.2.0.7-alpha.
+      isn't the same thing at all. Bug located by Matt Edman.
 
   o Minor bugfixes (misc):
-    - Make base32_decode() accept upper-case letters.  Bugfix on
-      0.2.0.7-alpha.
+    - Correctly check for bad options to the "PublishServerDescriptor"
+      config option. Bugfix on 0.2.0.1-alpha; reported by Matt Edman.
+    - Stop leaking memory on failing case of base32_decode, and make
+      it accept upper-case letters. Bugfixes on 0.2.0.7-alpha.
     - Don't try to download extrainfo documents when we're trying to
       fetch enough directory info to build a circuit: having enough
-      info should get priority.
+      info should get priority. Bugfix on 0.2.0.x.
     - Don't complain that "your server has not managed to confirm that its
       ports are reachable" if we haven't been able to build any circuits
-      yet. Bug found by spending four hours without a v3 consensus.
-
-  o Minor bugfixes (performance):
-    - Base64 decoding was actually showing up on our profile when parsing
-      the initial descriptor file; switch to an in-process all-at-once
-      implementation that's about 3.5x times faster than calling out to
-      OpenSSL.
+      yet. Bug found by spending four hours without a v3 consensus. Bugfix
+      on 0.1.2.x.
 
   o Code simplifications and refactoring:
     - Remove support for the old bw_accounting file: we've been storing
-      bandwidth accounting information in the state file since 0.1.2.5-alpha.
-      This may result in bandwidth accounting errors if you try to upgrade
-      from 0.1.1.x or earlier, or if you try to downgrade to 0.1.1.x or
-      earlier.
+      bandwidth accounting information in the state file since
+      0.1.2.5-alpha.  This may result in bandwidth accounting errors
+      if you try to upgrade from 0.1.1.x or earlier, or if you try to
+      downgrade to 0.1.1.x or earlier.
     - New convenience code to locate a file within the DataDirectory.
     - Move non-authority functionality out of dirvote.c.
 
   o Utilities
     - Include the "tor-ctrl.sh" bash script by Stefan Behte to provide
-      Unix users an easy way to script their Tor process (e.g. by adjusting
-      bandwidth based on the time of the day).
+      Unix users an easy way to script their Tor process (e.g. by
+      adjusting bandwidth based on the time of the day).
 
 
 Changes in version 0.2.0.8-alpha - 2007-10-12
