@@ -133,7 +133,7 @@ $Id$
 
 3. Commands
 
-  All commands and other keywords are case-insensitive.
+  All commands are case-insensitive, but most keywords are case-sensitive.
 
 3.1. SETCONF
 
