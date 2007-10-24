@@ -134,7 +134,6 @@ Proposal:
    the other side has sent a VERSIONS cell won't work for these servers:
    if the other side sends no cells back, it is impossible to tell
    whether they
-
    have sent a VERSIONS cell that has been stalled, or whether they have
    dropped our own VERSIONS cell as unrecognized.  Therefore, we'll
    change the TLS negotiation parameters so that old parties can still

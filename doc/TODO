@@ -203,7 +203,7 @@ P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - Create packages for Nokia 800, requested by Chris Soghoian
 P - Consider creating special Tor-Polipo-Vidalia test packages,
     requested by Dmitri Vitalev
-  - Get Vidalia supporting protocolinfo and using auth by default.
+  o Get Vidalia supporting protocolinfo and using auth by default.
 
 Nice-to-have items for 0.2.0.x, time permitting:
   - Proposals
