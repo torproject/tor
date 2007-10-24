@@ -883,22 +883,6 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
   router->is_running = answer;
 }
 
-/** Return 1 if we're confident that there's a problem with
- * <b>router</b>'s reachability and its operator should be notified.
- */
-int
-dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
-                                               time_t now)
-{
-  if (router->is_hibernating)
-    return 0;
-  if (now >= router->last_reachable + 5*REACHABLE_TIMEOUT &&
-      router->testing_since &&
-      now >= router->testing_since + 5*REACHABLE_TIMEOUT)
-    return 1;
-  return 0;
-}
-
 /** Based on the routerinfo_ts in <b>routers</b>, allocate the
  * contents of a v1-style router-status line, and store it in
  * *<b>router_status_out</b>.  Return 0 on success, -1 on failure.
@@ -2452,7 +2436,6 @@ dirserv_orconn_tls_done(const char *address,
                ri->nickname);
       rep_hist_note_router_reachable(digest_rcvd, now);
       ri->last_reachable = now;
-      ri->num_unreachable_notifications = 0;
     }
   });
   /* FFFF Maybe we should reinstate the code that dumps routers with the same

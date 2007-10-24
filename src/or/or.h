@@ -1181,9 +1181,6 @@ typedef struct {
   time_t last_reachable;
   /** When did we start testing reachability for this OR? */
   time_t testing_since;
-  /** How many times has a descriptor been posted and we believed
-   * this router to be unreachable? We only actually warn on the third. */
-  int num_unreachable_notifications;
 
   /** What position is this descriptor within routerlist->routers? -1 for
    * none. */
@@ -2853,8 +2850,6 @@ int dirserv_add_descriptor(routerinfo_t *ri, const char **msg);
 int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
                                         const char *question, char **answer);
 void dirserv_free_descriptors(void);
-int dirserv_thinks_router_is_blatantly_unreachable(routerinfo_t *router,
-                                                   time_t now);
 int list_server_status(smartlist_t *routers, char **router_status_out,
                        int for_controller);
 int dirserv_dump_directory_to_string(char **dir_out,

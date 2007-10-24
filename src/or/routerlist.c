@@ -2536,11 +2536,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   int authdir = authdir_mode(get_options());
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
-  /* router_have_minimum_dir_info() has side effects, so do it before we
-   * start the real work */
-  int authdir_may_warn_about_unreachable_server =
-    authdir && !from_cache && !from_fetch &&
-    router_have_minimum_dir_info();
   networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
   int in_consensus = 0;
@@ -2648,33 +2643,14 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       return -1;
     } else {
       /* Same key, new. */
-      int unreachable = 0;
       log_debug(LD_DIR, "Replacing entry for router '%s/%s' [%s]",
                 router->nickname, old_router->nickname,
                 hex_str(id_digest,DIGEST_LEN));
       if (router->addr == old_router->addr &&
           router->or_port == old_router->or_port) {
-        /* these carry over when the address and orport are unchanged.*/
+        /* these carry over when the address and orport are unchanged. */
         router->last_reachable = old_router->last_reachable;
         router->testing_since = old_router->testing_since;
-        router->num_unreachable_notifications =
-          old_router->num_unreachable_notifications;
-      }
-      if (authdir_may_warn_about_unreachable_server &&
-          dirserv_thinks_router_is_blatantly_unreachable(router, time(NULL))) {
-        if (router->num_unreachable_notifications >= 3) {
-          unreachable = 1;
-          log_notice(LD_DIR, "Notifying server '%s' that it's unreachable. "
-                     "(ContactInfo '%s', platform '%s').",
-                     router->nickname,
-                     router->contact_info ? router->contact_info : "",
-                     router->platform ? router->platform : "");
-        } else {
-          log_info(LD_DIR,"'%s' may be unreachable -- the %d previous "
-                   "descriptors were thought to be unreachable.",
-                   router->nickname, router->num_unreachable_notifications);
-          router->num_unreachable_notifications++;
-        }
       }
       routerlist_replace(routerlist, old_router, router);
       if (!from_cache) {
@@ -2682,11 +2658,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                                       &routerlist->desc_store);
       }
       directory_set_dirty();
-      *msg = unreachable ? "Dirserver believes your ORPort is unreachable" :
-        authdir_believes_valid ? "Valid server updated" :
+      *msg = authdir_believes_valid ? "Valid server updated" :
         ("Invalid server updated. (This dirserver is marking your "
          "server as unapproved.)");
-      return unreachable ? 1 : 0;
+      return 0;
     }
   }
 
