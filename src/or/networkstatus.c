@@ -38,6 +38,8 @@ static networkstatus_vote_t *current_consensus = NULL;
  * have enough certificates to be happy about. */
 static networkstatus_vote_t *consensus_waiting_for_certs = NULL;
 static char *consensus_waiting_for_certs_body = NULL;
+static time_t consensus_waiting_for_certs_set_at = 0;
+static int consensus_waiting_for_certs_dl_failed = 0;
 
 /** The last time we tried to download a networkstatus, or 0 for "never".  We
  * use this to rate-limit download attempts for directory caches (including
@@ -951,6 +953,8 @@ update_v2_networkstatus_cache_downloads(time_t now)
 
 /**DOCDOC*/
 #define CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES 8
+/**DOCDOC*/
+#define DELAY_WHILE_FETCHING_CERTS (20*60)
 
 /** If we want to download a fresh consensus, launch a new download as
  * appropriate.  */
@@ -970,6 +974,17 @@ update_consensus_networkstatus_downloads(time_t now)
   if (connection_get_by_type_purpose(CONN_TYPE_DIR,
                                      DIR_PURPOSE_FETCH_CONSENSUS))
     return; /* There's an in-progress download.*/
+
+  if (consensus_waiting_for_certs) {
+    if (consensus_waiting_for_certs_set_at + DELAY_WHILE_FETCHING_CERTS > now)
+      return; /* We're still getting certs for this one. */
+    else {
+      if (!consensus_waiting_for_certs_dl_failed) {
+        download_status_failed(&consensus_dl_status, 0);
+        consensus_waiting_for_certs_dl_failed=1;
+      }
+    }
+  }
 
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CONSENSUS,
                                ROUTER_PURPOSE_GENERAL, NULL, 1);
@@ -1153,7 +1168,9 @@ networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
  * <b>consensus</b>.  If we don't have enough certificates to validate it,
  * store it in consensus_waiting_for_certs and launch a certificate fetch.
  *
- * Return 0 on success, -1 on failure. */
+ * Return 0 on success, -1 on failure.  On -1, caller should increment
+ * the failure count as appropriate.
+ */
 int
 networkstatus_set_current_consensus(const char *consensus, int from_cache,
                                     int was_waiting_for_certs)
@@ -1167,6 +1184,20 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   c = networkstatus_parse_vote_from_string(consensus, NULL, 0);
   if (!c) {
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
+    goto done;
+  }
+
+  if (current_consensus &&
+      !memcmp(c->networkstatus_digest, current_consensus->networkstatus_digest,
+              DIGEST_LEN)) {
+    /* We already have this one. That's a failure. */
+    log_info(LD_DIR, "Got a consensus we already have");
+    goto done;
+  }
+
+  if (current_consensus && c->valid_after <= current_consensus->valid_after) {
+    /* We have a newer one. */
+    log_info(LD_DIR, "Got a consensus at least as old as the one we have");
     goto done;
   }
 
@@ -1187,33 +1218,32 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
         tor_free(consensus_waiting_for_certs_body);
         consensus_waiting_for_certs = c;
         consensus_waiting_for_certs_body = tor_strdup(consensus);
-        /*XXXX020 delay next update. NMNM */
+        consensus_waiting_for_certs_set_at = now;
+        consensus_waiting_for_certs_dl_failed = 0;
         if (!from_cache) {
           write_str_to_file(unverified_fname, consensus, 0);
         }
         authority_certs_fetch_missing(c, now);
+        /* This case is not a success or a failure until we get the certs
+         * or fail to get the certs. */
+        result = 0;
       } else {
         /* Even if we had enough signatures, we'd never use this as the
          * latest consensus. */
         if (was_waiting_for_certs && from_cache)
           unlink(unverified_fname);
       }
-      download_status_reset(&consensus_dl_status); /*XXXX020 not quite right.*/
-      result = 0;
       goto done;
-    } else {
-      /* This can never be signed enough Kill it. */
+    } else  {
+      /* This can never be signed enough:  Kill it. */
       if (!was_waiting_for_certs)
         log_warn(LD_DIR, "Not enough good signatures on networkstatus "
                  "consensus");
-      if (was_waiting_for_certs && from_cache)
+      if (was_waiting_for_certs && (r < -1) && from_cache)
         unlink(unverified_fname);
-      networkstatus_vote_free(c);
       goto done;
     }
   }
-
-  download_status_reset(&consensus_dl_status); /*XXXX020 not quite right.*/
 
   /* XXXX020 check dates for plausibility.  Don't trust a consensus whose
    * valid-after date is very far in the future. */
@@ -1233,10 +1263,21 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
     consensus_waiting_for_certs = NULL;
     if (consensus != consensus_waiting_for_certs_body)
       tor_free(consensus_waiting_for_certs_body);
+    consensus_waiting_for_certs_set_at = 0;
+    consensus_waiting_for_certs_dl_failed = 0;
     unlink(unverified_fname);
   }
 
+  /* Reset the failure count only if this consensus is actually valid. */
+  if (c->valid_after <= now && now <= c->valid_until) {
+    download_status_reset(&consensus_dl_status);
+  } else {
+    if (!from_cache)
+      download_status_failed(&consensus_dl_status, 0);
+  }
+
   current_consensus = c;
+  c = NULL; /* Prevent free. */
 
   update_consensus_networkstatus_fetch_time(now);
   dirvote_recalculate_timing(get_options(), now);
@@ -1253,6 +1294,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
 
   result = 0;
  done:
+  if (c)
+    networkstatus_vote_free(c);
   tor_free(consensus_fname);
   tor_free(unverified_fname);
   return result;

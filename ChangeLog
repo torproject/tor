@@ -37,6 +37,11 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       and download operations.
     - Reattempt certificate downloads immediately on failure, as long as
       we haven't failed a threshold number of times yet.
+    - Delay retrying consensus downloads while we're downloading
+      certificates to verify the one we just got.  Also, count getting a
+      consensus that we already have (or one that isn't valid) as a failure,
+      and count failing to get the certificates after 20 minutes as a
+      failure.
 
   o Minor features (router descriptor cache):
     - If we find a cached-routers file that's been sitting around for more

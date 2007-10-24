@@ -48,11 +48,11 @@ Things we'd like to do in 0.2.0.x:
         do more than that. I think some servers are forgetting the results
         of their first test, and then never seeing use.
 
-  - Before 0.2.0.9-alpha (for nickm)
+  o Before 0.2.0.9-alpha (for nickm)
     o Retry cert downloads as appropriate
-    - Delay consensus download retry when there's a unverified consensus we're
+    o Delay consensus download retry when there's a unverified consensus we're
       downloading the certs to check
-      - But don't delay forever.
+      o But don't delay forever.
     o Make new download types comply with should_delay_dir_fetches()
     o When DownloadExtraInfo is turned on for the first time, don't flip
       out and download the ancient history of the universe.
@@ -63,14 +63,14 @@ Things we'd like to do in 0.2.0.x:
   - Proposals:
     . 101: Voting on the Tor Directory System (plus 103)
       . Validate information properly.
-        - Dump certificates with the wrong time.  Or just warn?
-        - When checking a consensus, make sure that its times are plausible.
+        . Dump certificates with the wrong time.  Or just warn?
+        . When checking a consensus, make sure that its times are plausible.
       . Start caching consensus documents once authorities make them;
         start downloading consensus documents once caches serve
         them
-        - Code to delay next download while fetching certificates to verify
+        o Code to delay next download while fetching certificates to verify
           a consensus we already got.
-        - Code to retry consensus download if we got one we already have.
+        o Code to retry consensus download if we got one we already have.
         - Use if-modified-since on consensus download
         - Use if-modified-since on certificate download
       - Controller support
