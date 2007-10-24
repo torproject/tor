@@ -90,6 +90,8 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       after one fails: don't wait 60 seconds to notice.
     - When fetching a consensus as a cache, wait until a newer consensus
       should exist before trying to replace the current one.
+    - Use a more forgiving schedule for retrying failed consensus downloads
+      than for other types.
 
   o Minor bugfixes (other directory issues):
     - Correct the implementation of "download votes by digest." Bugfix on

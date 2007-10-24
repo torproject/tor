@@ -49,7 +49,7 @@ static time_t last_networkstatus_download_attempted = 0;
  * before the current consensus becomes invalid. */
 static time_t time_to_download_next_consensus = 0;
 /** Download status for the current consensus networkstatus. */
-static download_status_t consensus_dl_status = { 0, 0};
+static download_status_t consensus_dl_status = { 0, 0, DL_SCHED_CONSENSUS };
 
 /** True iff we have logged a warning about this OR not being valid or
  * not being named. */

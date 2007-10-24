@@ -2725,6 +2725,19 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
   });
 }
 
+static const int server_dl_schedule[] = {
+  0, 0, 0, 60, 60, 60*2, 60*5, 60*15, INT_MAX
+};
+static const int client_dl_schedule[] = {
+  0, 0, 60, 60*5, 60*10, INT_MAX
+};
+static const int server_consensus_dl_schedule[] = {
+  0, 0, 60, 60*5, 60*10, 60*30, 60*30, 60*30, 60*30, 60*30, 60*60, 60*60*2
+};
+static const int client_consensus_dl_schedule[] = {
+  0, 0, 60, 60*5, 60*10, 60*30, 60*60, 60*60, 60*60, 60*60*3, 60*60*6, 60*60*12
+};
+
 /** Called when an attempt to download <b>dls</b> has failed with HTTP status
  * <b>status_code</b>.  Increment the failure count (if the code indicates a
  * real failure) and set <b>dls<b>->next_attempt_at to an appropriate time in
@@ -2733,31 +2746,46 @@ time_t
 download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
 {
+  const int *schedule;
+  int schedule_len;
+  int increment;
   tor_assert(dls);
   if (status_code != 503 || server)
     ++dls->n_download_failures;
-  if (server) {
-    switch (dls->n_download_failures) {
-      case 0: dls->next_attempt_at = 0; break;
-      case 1: dls->next_attempt_at = 0; break;
-      case 2: dls->next_attempt_at = 0; break;
-      case 3: dls->next_attempt_at = now+60; break;
-      case 4: dls->next_attempt_at = now+60; break;
-      case 5: dls->next_attempt_at = now+60*2; break;
-      case 6: dls->next_attempt_at = now+60*5; break;
-      case 7: dls->next_attempt_at = now+60*15; break;
-      default: dls->next_attempt_at = TIME_MAX; break;
-    }
-  } else {
-    switch (dls->n_download_failures) {
-      case 0: dls->next_attempt_at = 0; break;
-      case 1: dls->next_attempt_at = 0; break;
-      case 2: dls->next_attempt_at = now+60; break;
-      case 3: dls->next_attempt_at = now+60*5; break;
-      case 4: dls->next_attempt_at = now+60*10; break;
-      default: dls->next_attempt_at = TIME_MAX; break;
-    }
+
+  switch (dls->schedule) {
+    case DL_SCHED_GENERIC:
+      if (server) {
+        schedule = server_dl_schedule;
+        schedule_len = sizeof(server_dl_schedule)/sizeof(int);
+      } else {
+        schedule = client_dl_schedule;
+        schedule_len = sizeof(client_dl_schedule)/sizeof(int);
+      }
+      break;
+    case DL_SCHED_CONSENSUS:
+      if (server) {
+        schedule = server_consensus_dl_schedule;
+        schedule_len = sizeof(server_consensus_dl_schedule)/sizeof(int);
+      } else {
+        schedule = client_consensus_dl_schedule;
+        schedule_len = sizeof(client_consensus_dl_schedule)/sizeof(int);
+      }
+      break;
+    default:
+      tor_assert(0);
   }
+
+  if (dls->n_download_failures < schedule_len)
+    increment = schedule[dls->n_download_failures];
+  else
+    increment = schedule[schedule_len-1];
+
+  if (increment < INT_MAX)
+    dls->next_attempt_at = now+increment;
+  else
+    dls->next_attempt_at = TIME_MAX;
+
   if (item) {
     if (dls->next_attempt_at == 0)
       log_debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",

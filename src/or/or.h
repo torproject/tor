@@ -1067,6 +1067,12 @@ typedef enum {
   SAVED_IN_JOURNAL
 } saved_location_t;
 
+/** DOCDOC */
+typedef enum {
+  DL_SCHED_GENERIC = 0,
+  DL_SCHED_CONSENSUS = 1,
+} download_schedule_t;
+
 /** Information about our plans for retrying downloads for a downloadable
  * object. */
 typedef struct download_status_t {
@@ -1074,6 +1080,7 @@ typedef struct download_status_t {
                            * again? */
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
+  download_schedule_t schedule : 1;
 } download_status_t;
 
 /** Information need to cache an onion router's descriptor. */
