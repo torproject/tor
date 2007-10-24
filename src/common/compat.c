@@ -126,7 +126,8 @@ typedef struct tor_mmap_impl_t {
                         * size, rounded up to the nearest page.) */
 } tor_mmap_impl_t;
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
- * failure, return NULL. */
+ * failure, return NULL.  Sets errno properly, using ERANGE to mean
+ * "empty file". */
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
@@ -140,9 +141,11 @@ tor_mmap_file(const char *filename)
 
   fd = open(filename, O_RDONLY, 0);
   if (fd<0) {
+    int save_errno = errno;
     int severity = (errno == ENOENT) ? LOG_INFO : LOG_WARN;
     log_fn(severity, LD_FS,"Could not open \"%s\" for mmap(): %s",filename,
            strerror(errno));
+    errno = save_errno;
     return NULL;
   }
 
@@ -156,14 +159,17 @@ tor_mmap_file(const char *filename)
     /* Zero-length file. If we call mmap on it, it will succeed but
      * return NULL, and bad things will happen. So just fail. */
     log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
+    errno = ERANGE;
     return NULL;
   }
 
   string = mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0);
   if (string == MAP_FAILED) {
+    int save_errno = errno;
     close(fd);
     log_warn(LD_FS,"Could not mmap file \"%s\": %s", filename,
              strerror(errno));
+    errno = save_errno;
     return NULL;
   }
 
@@ -196,6 +202,7 @@ tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
   win_mmap_t *res = tor_malloc_zero(sizeof(win_mmap_t));
+  int empty = 0;
   res->file_handle = INVALID_HANDLE_VALUE;
   res->mmap_handle = NULL;
 
@@ -213,6 +220,7 @@ tor_mmap_file(const char *filename)
 
   if (res->base.size == 0) {
     log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
+    empty = 1;
     goto err;
   }
 
@@ -243,7 +251,13 @@ tor_mmap_file(const char *filename)
     log_fn(severity, LD_FS, "Couldn't mmap file \"%s\": %s", filename, msg);
     tor_free(msg);
   }
+  if (e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND)
+    e = ENOENT;
+  else
+    e = EINVAL;
  err:
+  if (empty)
+    errno = ERANGE;
   tor_munmap_file(&res->base);
   return NULL;
 }

@@ -1782,16 +1782,20 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   fd = open(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
   if (fd<0) {
     int severity = LOG_WARN;
+    int save_errno = errno;
     if (errno == ENOENT && (flags & RFTS_IGNORE_MISSING))
       severity = LOG_INFO;
     log_fn(severity, LD_FS,"Could not open \"%s\": %s ",filename,
            strerror(errno));
+    errno = save_errno;
     return NULL;
   }
 
   if (fstat(fd, &statbuf)<0) {
+    int save_errno = errno;
     close(fd);
     log_warn(LD_FS,"Could not fstat \"%s\".",filename);
+    errno = save_errno;
     return NULL;
   }
 
@@ -1802,10 +1806,12 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 
   r = read_all(fd,string,(size_t)statbuf.st_size,0);
   if (r<0) {
+    int save_errno = errno;
     log_warn(LD_FS,"Error reading from file \"%s\": %s", filename,
              strerror(errno));
     tor_free(string);
     close(fd);
+    errno = save_errno;
     return NULL;
   }
   string[r] = '\0'; /* NUL-terminate the result. */
@@ -1825,10 +1831,12 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
     if (r != statbuf.st_size) {
       /* Unless we're using text mode on win32, we'd better have an exact
        * match for size. */
+      int save_errno = errno;
       log_warn(LD_FS,"Could read only %d of %ld bytes of file \"%s\".",
                r, (long)statbuf.st_size,filename);
       tor_free(string);
       close(fd);
+      errno = save_errno;
       return NULL;
     }
   close(fd);
