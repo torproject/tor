@@ -250,11 +250,11 @@ tor_mmap_file(const char *filename)
     char *msg = format_win32_error(e);
     log_fn(severity, LD_FS, "Couldn't mmap file \"%s\": %s", filename, msg);
     tor_free(msg);
+    if (e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND)
+      errno = ENOENT;
+    else
+      errno = EINVAL;
   }
-  if (e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND)
-    e = ENOENT;
-  else
-    e = EINVAL;
  err:
   if (empty)
     errno = ERANGE;
