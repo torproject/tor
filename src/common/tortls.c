@@ -337,8 +337,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 #define CIPHER_LIST (TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":" \
                      SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
 #else
-/* We're running OpenSSL before 0.9.7. We only support 3DES. */
-#define CIPHER_LIST SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA
+#error "Tor requires OpenSSL version 0.9.7 or later, for AES support."
 #endif
 
 /** Create a new TLS context for use with Tor TLS handshakes.
@@ -844,12 +843,6 @@ int
 tor_tls_get_pending_bytes(tor_tls_t *tls)
 {
   tor_assert(tls);
-#if OPENSSL_VERSION_NUMBER < 0x0090700fl
-  if (tls->ssl->rstate == SSL_ST_READ_BODY)
-    return 0;
-  if (tls->ssl->s3->rrec.type != SSL3_RT_APPLICATION_DATA)
-    return 0;
-#endif
   return SSL_pending(tls->ssl);
 }
 

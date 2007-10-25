@@ -1,4 +1,8 @@
 Changes in version 0.2.0.10-alpha - 2007-1?-??
+  o New requirements:
+    - Drop support for OpenSSL version 0.9.6.  Just about nobody was using
+      it, it had no AES, and it hasn't seen any security patches since 2004.
+
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
       on 0.2.0.x.

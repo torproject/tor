@@ -53,15 +53,11 @@ const char crypto_c_id[] =
 #include "container.h"
 #include "compat.h"
 
-#if OPENSSL_VERSION_NUMBER < 0x00905000l
-#error "We require openssl >= 0.9.5"
+#if OPENSSL_VERSION_NUMBER < 0x00907000l
+#error "We require openssl >= 0.9.7"
 #endif
 
-#if OPENSSL_VERSION_NUMBER < 0x00907000l
-#define NO_ENGINES
-#else
 #include <openssl/engine.h>
-#endif
 
 /** Macro: is k a valid RSA public or private key? */
 #define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
@@ -153,7 +149,6 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 
-#ifndef NO_ENGINES
 /** Log any OpenSSL engines we're using at NOTICE. */
 static void
 log_engine(const char *fn, ENGINE *e)
@@ -168,7 +163,6 @@ log_engine(const char *fn, ENGINE *e)
     log(LOG_INFO, LD_CRYPTO, "Using default implementation for %s", fn);
   }
 }
-#endif
 
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
@@ -187,7 +181,6 @@ crypto_global_init(int useAccel)
     if (useAccel < 0) {
       log_info(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
     }
-#ifndef NO_ENGINES
     if (useAccel > 0) {
       log_info(LD_CRYPTO, "Initializing OpenSSL engine support.");
       ENGINE_load_builtin_engines();
@@ -202,7 +195,6 @@ crypto_global_init(int useAccel)
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
     }
-#endif
   }
   return 0;
 }
@@ -222,11 +214,9 @@ crypto_global_cleanup(void)
   EVP_cleanup();
   ERR_remove_state(0);
   ERR_free_strings();
-#ifndef NO_ENGINES
   ENGINE_cleanup();
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
-#endif
 #ifdef TOR_IS_MULTITHREADED
   if (_n_openssl_mutexes) {
     int n = _n_openssl_mutexes;
@@ -949,11 +939,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
   /* This ifdef suppresses a type warning.  Take out the first case once
    * everybody is using openssl 0.9.7 or later.
    */
-#if OPENSSL_VERSION_NUMBER < 0x00907000l
-  unsigned char *cp;
-#else
   const unsigned char *cp;
-#endif
   cp = buf = tor_malloc(len);
   memcpy(buf,str,len);
   rsa = d2i_RSAPublicKey(NULL, &cp, len);
