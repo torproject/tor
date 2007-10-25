@@ -2,6 +2,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
       on 0.2.0.x.
+    - Stop leaking memory every time we parse a v3 certificate. Bugfix
+      on 0.2.0.1-alpha.
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24
@@ -232,7 +234,7 @@ Changes in version 0.2.0.8-alpha - 2007-10-12
 
   o Minor bugfixes (controller):
     - When sending a status event to the controller telling it that an
-      OR address is readable, set the port correctly. (Previously we
+      OR address is reachable, set the port correctly. (Previously we
       were reporting the dir port.) Bugfix on 0.1.2.x.
 
   o Minor bugfixes (v3 directory system):

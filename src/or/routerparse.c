@@ -1392,7 +1392,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   len = eos - s;
 
   tokens = smartlist_create();
-  if (tokenize_string(s, eos, tokens, dir_key_certificate_table,0) < 0) {
+  if (tokenize_string(s, eos, tokens, dir_key_certificate_table, 0) < 0) {
     log_warn(LD_DIR, "Error tokenizing key certificate");
     goto err;
   }
@@ -1501,9 +1501,13 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   if (end_of_string) {
     *end_of_string = eat_whitespace(eos);
   }
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  smartlist_free(tokens);
   return cert;
  err:
   authority_cert_free(cert);
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  smartlist_free(tokens);
   return NULL;
 }
 
