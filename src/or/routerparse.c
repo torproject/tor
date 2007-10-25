@@ -2241,6 +2241,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     tor_free(voter->nickname);
     tor_free(voter->address);
     tor_free(voter->contact);
+    tor_free(voter->signature);
     tor_free(voter);
   }
   if (rs_tokens) {

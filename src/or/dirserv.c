@@ -2813,5 +2813,6 @@ dirserv_free_all(void)
     digestmap_free(cached_v2_networkstatus, _free_cached_dir);
     cached_v2_networkstatus = NULL;
   }
+  cached_dir_decref(cached_v3_networkstatus);
 }
 

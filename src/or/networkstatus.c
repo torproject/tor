@@ -231,6 +231,8 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
       tor_free(voter->nickname);
       tor_free(voter->address);
       tor_free(voter->contact);
+      tor_free(voter->signature);
+      tor_free(voter);
     });
     smartlist_free(ns->voters);
   }
@@ -302,6 +304,7 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
   } else {
     voter->good_signature = 1;
   }
+  tor_free(signed_digest);
   return 0;
 }
 

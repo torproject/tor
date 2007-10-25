@@ -2,10 +2,20 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
       on 0.2.0.x.
+
+  o Minor bugfixes (memory leaks):
     - Stop leaking memory every time we parse a v3 certificate. Bugfix
       on 0.2.0.1-alpha.
     - Stop leaking memory every time we load a v3 certificate. Bugfix
-      on 0.2.0.1-alpha.  Fixes Bug 536.
+      on 0.2.0.1-alpha.  Fixes Bug 536
+    - Stop leaking a cached networkstatus on exit.  Bugfix on
+      0.2.0.3-alpha.
+    - Stop leaking voter information every time we free a consensus.  Bugfix
+      on 0.2.0.3-alpha.
+    - Stop leaking signed data every time we check a voter signature.
+      Bugfix on 0.2.0.3-alpha.
+    - Stop leaking a signature every time we fail to parse a consensus or
+      a vote.  Bugfix on 0.2.0.3-alpha.
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24
