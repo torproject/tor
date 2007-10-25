@@ -2780,6 +2780,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "of the Internet, so they must not set Reachable*Addresses "
            "or FascistFirewall.");
 
+  if (options->UseBridges &&
+      server_mode(options))
+    REJECT("Servers must be able to freely connect to the rest "
+           "of the Internet, so they must not set UseBridges.");
+
   options->_AllowInvalid = 0;
   if (options->AllowInvalidNodes) {
     SMARTLIST_FOREACH(options->AllowInvalidNodes, const char *, cp, {
