@@ -23,10 +23,10 @@ Proposals by number:
 098  Proposals that should be written [META]
 099  Miscellaneous proposals [META]
 100  Tor Unreliable Datagram Extension Proposal [DEAD]
-101  Voting on the Tor Directory System [ACCEPTED]
+101  Voting on the Tor Directory System [CLOSED]
 102  Dropping "opt" from the directory format [CLOSED]
 103  Splitting identity key from regularly used signing key [ACCEPTED]
-104  Long and Short Router Descriptors [ACCEPTED]
+104  Long and Short Router Descriptors [CLOSED]
 105  Version negotiation for the Tor protocol [OPEN]
 106  Checking fewer things during TLS handshakes [CLOSED]
 107  Uptime Sanity Checking [CLOSED]
@@ -63,9 +63,7 @@ Proposals by status:
    121  Hidden Service Authentication
    123  Naming authorities automatically create bindings
  ACCEPTED:
-   101  Voting on the Tor Directory System
    103  Splitting identity key from regularly used signing key
-   104  Long and Short Router Descriptors
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
  META:
@@ -74,7 +72,9 @@ Proposals by status:
    098  Proposals that should be written
    099  Miscellaneous proposals
  CLOSED:
+   101  Voting on the Tor Directory System
    102  Dropping "opt" from the directory format
+   104  Long and Short Router Descriptors
    106  Checking fewer things during TLS handshakes
    107  Uptime Sanity Checking
    108  Base "Stable" Flag on Mean Time Between Failures
