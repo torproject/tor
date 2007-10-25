@@ -1128,8 +1128,8 @@ networkstatus_get_reasonably_live_consensus(time_t now)
 {
 #define REASONABLY_LIVE_TIME (24*60*60)
   if (current_consensus &&
-      current_consensus->valid_after <= now+REASONABLY_LIVE_TIME &&
-      now <= current_consensus->valid_until)
+      current_consensus->valid_after <= now &&
+      now <= current_consensus->valid_until+REASONABLY_LIVE_TIME)
     return current_consensus;
   else
     return NULL;
