@@ -712,7 +712,7 @@ router_get_trusted_dir_servers(void)
  * dirservers that we can't reach.
  *
  * If the <b>PDS_ALLOW_SELF</b> flag is not set, then don't include ourself
- * (if we'rea dirserver).
+ * (if we're a dirserver).
  *
  * Don't pick an authority if any non-authority is viable; try to avoid using
  * servers that have returned 503 recently.
@@ -1467,7 +1467,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
         total_bw += bandwidths[i];
     }
   }
-  log_debug(LD_CIRC, "Total bw = "U64_FORMAT
+  log_debug(LD_CIRC, "Total weighted bw = "U64_FORMAT
             ", exit bw = "U64_FORMAT
             ", nonexit bw = "U64_FORMAT", exit weight = %lf "
             "(for exit == %d)"

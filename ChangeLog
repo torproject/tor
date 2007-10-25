@@ -6,7 +6,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       download router descriptors listed in the consensus.
     - Authorities now list servers who have the same nickname as
       a different named server, but list them with a new flag,
-      "Unnamed". Partially implements proposal 122.
+      "Unnamed". Now we can list servers that happen to pick the same
+      nickname as a server that registered two years ago and then
+      disappeared. Partially implements proposal 122.
     - If the consensus list a router as "Unnamed", the name is assigned
       to a different router: do not identify the router by that name.
       Partially implements proposal 122.
@@ -43,8 +45,8 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       and count failing to get the certificates after 20 minutes as a
       failure.
     - Build circuits and download descriptors even if our consensus is a
-      little expired.  (This feature will go away once authorities are more
-      reliable.)
+      little expired. (This feature will go away once authorities are
+      more reliable.)
 
   o Minor features (router descriptor cache):
     - If we find a cached-routers file that's been sitting around for more
@@ -98,8 +100,8 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       after one fails: don't wait 60 seconds to notice.
     - When fetching a consensus as a cache, wait until a newer consensus
       should exist before trying to replace the current one.
-    - Use a more forgiving schedule for retrying failed consensus downloads
-      than for other types.
+    - Use a more forgiving schedule for retrying failed consensus
+      downloads than for other types.
 
   o Minor bugfixes (other directory issues):
     - Correct the implementation of "download votes by digest." Bugfix on
@@ -142,7 +144,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
     - New convenience code to locate a file within the DataDirectory.
     - Move non-authority functionality out of dirvote.c.
     - Refactor the arguments for router_pick_{directory_|trusteddir}server
-      so that they take all take the same named flags.
+      so that they all take the same named flags.
 
   o Utilities
     - Include the "tor-ctrl.sh" bash script by Stefan Behte to provide
