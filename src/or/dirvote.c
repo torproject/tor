@@ -1525,6 +1525,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
              "This authority %s.  Known v3 key IDs are: %s",
              hex_str(vi->identity_digest, DIGEST_LEN),
              ds?"is not recognized":"is recognized, but is not listed as v3",
+/* XXX020 isn't the above line backwards? -RD */
              keys);
     tor_free(keys);
 
