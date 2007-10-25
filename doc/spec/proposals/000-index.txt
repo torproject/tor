@@ -44,7 +44,7 @@ Proposals by number:
 119  New PROTOCOLINFO command for controllers [CLOSED]
 120  Suicide descriptors when Tor servers stop [OPEN]
 121  Hidden Service Authentication [OPEN]
-122  Network status entries need a new Unnamed flag [OPEN]
+122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [OPEN]
 
 
@@ -61,7 +61,6 @@ Proposals by status:
    117  IPv6 exits
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
-   122  Network status entries need a new Unnamed flag
    123  Naming authorities automatically create bindings
  ACCEPTED:
    101  Voting on the Tor Directory System
@@ -81,6 +80,7 @@ Proposals by status:
    108  Base "Stable" Flag on Mean Time Between Failures
    109  No more than one server per IP address
    119  New PROTOCOLINFO command for controllers
+   122  Network status entries need a new Unnamed flag
  SUPERSEDED:
    112  Bring Back Pathlen Coin Weight
  DEAD:

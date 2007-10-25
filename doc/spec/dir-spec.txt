@@ -965,6 +965,10 @@ $Id$
    binds X to some other Y'.)  A router is called 'Named' if the router
    believes the given name should be bound to the given key.
 
+   "Unnamed" -- Directory authorities that support naming should vote for a
+   router to be 'Unnamed' if its given nickname is mapped a different
+   identity.
+
    "Running" -- A router is 'Running' if the authority managed to connect to
    it successfully within the last 30 minutes.
 
@@ -1061,6 +1065,17 @@ $Id$
           _any_ authority, and if all authorities that list it list the same
           nickname.
 
+          - If consensus-method 2 or later is in use, it is also a
+            requirement to be Named that no authority calls the router's
+            identity and nickname pair "Unnamed".
+
+        * If consenuss-method 2 or later is in use, the Unnamed flag is
+          set for a routerstatus if any authorities have voted for a different
+          identities to be Named with that nickname, or if any authority
+          lists that nickname/ID pair as Unnamed.
+
+          (With consenus-method 1, Unnamed is set like any other flag.)
+
         * The version is given as whichever version is listed by the most
           voters, with ties decided in favor of more recent versions.
 
@@ -1077,9 +1092,10 @@ $Id$
    half) generate and sign the same signed consensus.
 
    To achieve this, authorities list in their votes their supported methods
-   for generating consensuses from votes.  The method described above and
-   implemented in Tor 0.2.0.x is "1".  Later methods will be assigned higher
-   numbers.
+   for generating consensuses from votes.  Later methods will be assigned
+   higher numbers.  Currently recognized methods:
+     "1" -- The first implemented version.
+     "2" -- Added support for the Unnamed flag.
 
    Before generating a consensus, an authority must decide which consensus
    method to use.  To do this, it looks for the highest version number
@@ -1488,26 +1504,25 @@ $Id$
 
 6.2. Managing naming
 
-   [XXXX rewrite for v3]
-
    In order to provide human-memorable names for individual server
    identities, some directory servers bind names to IDs.  Clients handle
    names in two ways:
 
    When a client encounters a name it has not mapped before:
 
-      If all the live "Naming" network-status documents the client has
-      claim that the name binds to some identity ID, and the client has at
-      least three live network-status documents, the client maps the name to
-      ID.
+      If the consensus lists any router with that name as "Named", or if
+      consensus-method 2 or later is in use and the consensus lists any
+      router with that name as having the "Unnamed" flag, then the name is
+      bound.  (It's bound to the ID listed in the entry with the Named,
+      or to an unknown ID if no name is found.)
 
-   When a user tries to refer to a router with a name that does not have a
-   mapping under the above rules, the implementation SHOULD warn the user.
-   After giving the warning, the implementation MAY use a router that at
-   least one Naming authority maps the name to, so long as no other naming
-   authority maps that name to a different router.  If no Naming authority
-   maps the name to a router, the implementation MAY use any router that
-   advertises the name.
+   When the user refers to a bound name, the implementation SHOULD provide
+   only the router with ID bound to that name, and no other router, even
+   if the router with the right ID can't be found.
+
+   When a user tries to refer to a non-bound name, the implementation SHOULD
+   warn the user. After warning the use, the implementation MAY use any
+   router that advertises the name.
 
    Not every router needs a nickname.  When a router doesn't configure a
    nickname, it publishes with the default nickname "Unnamed".  Authorities
