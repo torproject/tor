@@ -3685,7 +3685,8 @@ update_consensus_router_descriptor_downloads(time_t now)
   smartlist_t *downloadable = smartlist_create();
   int authdir = authdir_mode(options);
   int dirserver = dirserver_mode(options);
-  networkstatus_vote_t *consensus = networkstatus_get_live_consensus(now);
+  networkstatus_vote_t *consensus =
+    networkstatus_get_reasonably_live_consensus(now);
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
     n_inprogress=0;
 
@@ -3864,7 +3865,7 @@ update_router_have_minimum_dir_info(void)
   int res;
   or_options_t *options = get_options();
   const networkstatus_vote_t *consensus =
-    networkstatus_get_live_consensus(now);
+    networkstatus_get_reasonably_live_consensus(now);
 
   if (!consensus) {
     res = 0;

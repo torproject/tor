@@ -42,6 +42,9 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       consensus that we already have (or one that isn't valid) as a failure,
       and count failing to get the certificates after 20 minutes as a
       failure.
+    - Build circuits and download descriptors even if our consensus is a
+      little expired.  (This feature will go away once authorities are more
+      reliable.)
 
   o Minor features (router descriptor cache):
     - If we find a cached-routers file that's been sitting around for more

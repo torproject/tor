@@ -1122,6 +1122,19 @@ networkstatus_get_live_consensus(time_t now)
     return NULL;
 }
 
+/* XXXX020 remove this in favor of get_live_consensus. */
+networkstatus_vote_t *
+networkstatus_get_reasonably_live_consensus(time_t now)
+{
+#define REASONABLY_LIVE_TIME (24*60*60)
+  if (current_consensus &&
+      current_consensus->valid_after <= now+REASONABLY_LIVE_TIME &&
+      now <= current_consensus->valid_until)
+    return current_consensus;
+  else
+    return NULL;
+}
+
 /** Copy all the ancillary information (like router download status and so on)
  * from <b>old_c</b> to <b>new_c</b>. */
 static void
