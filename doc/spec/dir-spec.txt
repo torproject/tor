@@ -215,7 +215,7 @@ $Id$
 
     Document ::= (Item | NL)+
     Item ::= KeywordLine Object*
-    KeywordLine ::= Keyword NL | Keyword WS ArgumentsChar+ NL
+    KeywordLine ::= Keyword NL | Keyword WS ArgumentChar+ NL
     Keyword = KeywordChar+
     KeywordChar ::= 'A' ... 'Z' | 'a' ... 'z' | '0' ... '9' | '-'
     ArgumentChar ::= any printing ASCII character except NL.
@@ -328,7 +328,7 @@ $Id$
 
    FU: The consensus is no longer the freshest consensus.
 
-   FU ... (the current descriptors's VU): Clients download the consensus.
+   FU ... (the current descriptor's VU): Clients download the consensus.
         (See note above: clients guess that the next descriptor's FU will be
         two intervals after the current VA.)
 
@@ -1040,7 +1040,7 @@ $Id$
      by more than half of the voting authorities that included a
      client-versions or server-versions lines in their votes.
 
-     The authority item groups (dir-source, contact, fignerprint,
+     The authority item groups (dir-source, contact, fingerprint,
      vote-digest) are taken from the votes of the voting
      authorities. These groups are sorted by the digests of the
      authorities identity keys, in ascending order.
@@ -1069,12 +1069,12 @@ $Id$
             requirement to be Named that no authority calls the router's
             identity and nickname pair "Unnamed".
 
-        * If consenuss-method 2 or later is in use, the Unnamed flag is
+        * If consensus-method 2 or later is in use, the Unnamed flag is
           set for a routerstatus if any authorities have voted for a different
           identities to be Named with that nickname, or if any authority
           lists that nickname/ID pair as Unnamed.
 
-          (With consenus-method 1, Unnamed is set like any other flag.)
+          (With consensus-method 1, Unnamed is set like any other flag.)
 
         * The version is given as whichever version is listed by the most
           voters, with ties decided in favor of more recent versions.
@@ -1554,7 +1554,7 @@ $Id$
 
    A client should believe that a router supports a given feature if that
    feature is supported by the router or protocol versions in more than half
-   of the live networkstatus's "v" entries for that router.  In other words,
+   of the live networkstatuses' "v" entries for that router.  In other words,
    if the "v" entries for some router are:
        v Tor 0.0.8pre1                (from authority 1)
        v Tor 0.1.2.11                 (from authority 2)
