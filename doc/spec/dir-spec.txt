@@ -966,12 +966,11 @@ $Id$
    believes the given name should be bound to the given key.
 
    "Unnamed" -- Directory authorities that support naming should vote for a
-   router to be 'Unnamed' if its given nickname is mapped a different
+   router to be 'Unnamed' if its given nickname is mapped to a different
    identity.
 
    "Running" -- A router is 'Running' if the authority managed to connect to
    it successfully within the last 30 minutes.
-
 
    "Stable" -- A router is 'Stable' if it is active, and either its
    Weighted MTBF is at least the median for known active routers or
@@ -1063,11 +1062,9 @@ $Id$
 
         * The Named flag appears if it is included for this routerstatus by
           _any_ authority, and if all authorities that list it list the same
-          nickname.
-
-          - If consensus-method 2 or later is in use, it is also a
-            requirement to be Named that no authority calls the router's
-            identity and nickname pair "Unnamed".
+          nickname. However, if consensus-method 2 or later is in use, and
+          any authority calls this identity/nickname pair Unnamed, then
+          this routerstatus does not get the Named flag.
 
         * If consensus-method 2 or later is in use, the Unnamed flag is
           set for a routerstatus if any authorities have voted for a different
@@ -1521,7 +1518,7 @@ $Id$
    if the router with the right ID can't be found.
 
    When a user tries to refer to a non-bound name, the implementation SHOULD
-   warn the user. After warning the use, the implementation MAY use any
+   warn the user. After warning the user, the implementation MAY use any
    router that advertises the name.
 
    Not every router needs a nickname.  When a router doesn't configure a
