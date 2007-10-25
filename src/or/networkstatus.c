@@ -1657,6 +1657,10 @@ networkstatus_free_all(void)
     smartlist_free(networkstatus_v2_list);
     networkstatus_v2_list = NULL;
   }
+  if (v2_download_status_map) {
+    digestmap_free(v2_download_status_map, _tor_free);
+    v2_download_status_map = NULL;
+  }
   if (current_consensus) {
     networkstatus_vote_free(current_consensus);
     current_consensus = NULL;

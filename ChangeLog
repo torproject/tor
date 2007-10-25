@@ -16,6 +16,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       Bugfix on 0.2.0.3-alpha.
     - Stop leaking a signature every time we fail to parse a consensus or
       a vote.  Bugfix on 0.2.0.3-alpha.
+    - Stop leaking v2_download_status_map on shutdown.  Bugfix on
+      0.2.0.9-alpha.
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24
