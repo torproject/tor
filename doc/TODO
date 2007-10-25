@@ -204,6 +204,8 @@ P - Create packages for Nokia 800, requested by Chris Soghoian
 P - Consider creating special Tor-Polipo-Vidalia test packages,
     requested by Dmitri Vitalev
   o Get Vidalia supporting protocolinfo and using auth by default.
+P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton
+  bundle
 
 Nice-to-have items for 0.2.0.x, time permitting:
   - Proposals
