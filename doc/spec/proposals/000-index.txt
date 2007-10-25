@@ -25,7 +25,7 @@ Proposals by number:
 100  Tor Unreliable Datagram Extension Proposal [DEAD]
 101  Voting on the Tor Directory System [CLOSED]
 102  Dropping "opt" from the directory format [CLOSED]
-103  Splitting identity key from regularly used signing key [ACCEPTED]
+103  Splitting identity key from regularly used signing key [CLOSED]
 104  Long and Short Router Descriptors [CLOSED]
 105  Version negotiation for the Tor protocol [OPEN]
 106  Checking fewer things during TLS handshakes [CLOSED]
@@ -33,7 +33,7 @@ Proposals by number:
 108  Base "Stable" Flag on Mean Time Between Failures [CLOSED]
 109  No more than one server per IP address [CLOSED]
 110  Avoiding infinite length circuits [OPEN]
-111  Prioritizing local traffic over relayed traffic [OPEN]
+111  Prioritizing local traffic over relayed traffic [FINISHED]
 112  Bring Back Pathlen Coin Weight [SUPERSEDED]
 113  Simplifying directory authority administration [OPEN]
 114  Distributed Storage for Tor Hidden Service Descriptors [OPEN]
@@ -53,7 +53,6 @@ Proposals by status:
  OPEN:
    105  Version negotiation for the Tor protocol
    110  Avoiding infinite length circuits
-   111  Prioritizing local traffic over relayed traffic
    113  Simplifying directory authority administration
    114  Distributed Storage for Tor Hidden Service Descriptors
    115  Two Hop Paths
@@ -63,7 +62,6 @@ Proposals by status:
    121  Hidden Service Authentication
    123  Naming authorities automatically create bindings
  ACCEPTED:
-   103  Splitting identity key from regularly used signing key
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
  META:
@@ -71,9 +69,12 @@ Proposals by status:
    001  The Tor Proposal Process
    098  Proposals that should be written
    099  Miscellaneous proposals
+ FINISHED:
+   111  Prioritizing local traffic over relayed traffic
  CLOSED:
    101  Voting on the Tor Directory System
    102  Dropping "opt" from the directory format
+   103  Splitting identity key from regularly used signing key
    104  Long and Short Router Descriptors
    106  Checking fewer things during TLS handshakes
    107  Uptime Sanity Checking
