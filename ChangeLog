@@ -4,6 +4,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       on 0.2.0.x.
     - Stop leaking memory every time we parse a v3 certificate. Bugfix
       on 0.2.0.1-alpha.
+    - Stop leaking memory every time we load a v3 certificate. Bugfix
+      on 0.2.0.1-alpha.  Fixes Bug 536.
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24

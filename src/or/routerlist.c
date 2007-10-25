@@ -140,8 +140,6 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
     if (found)
       continue;
 
-    cert->cache_info.signed_descriptor_body = tor_strndup(s, eos-s);
-    cert->cache_info.signed_descriptor_len = eos-s;
     smartlist_add(ds->v3_certs, cert);
 
     if (!from_store)
