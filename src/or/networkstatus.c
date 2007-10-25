@@ -1301,7 +1301,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   }
 
   if (dirserver_mode(get_options()))
-    dirserv_set_cached_networkstatus_v3(consensus, c->valid_after);
+    dirserv_set_cached_networkstatus_v3(consensus,
+                                        current_consensus->valid_after);
 
   router_dir_info_changed();
 
