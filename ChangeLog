@@ -4,6 +4,9 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       it, it had no AES, and it hasn't seen any security patches since 2004.
 
   o Minor features:
+    - Directory authorities now decide whether routers are stable enough to
+      be guards based not on their MTBF or their uptime, but on their
+      fractional uptime: the fraction of the time that they are online.
     - Clients new hold circuitless TLS connections open for 1.5 times
       MaxCircuitDirtiness, since it is likely that they'll need to build
       a circuit over them within that timeframe.  Previously, they held them

@@ -27,7 +27,11 @@ Things we'd like to do in 0.2.0.x:
       o Bump up OR the "connection timeout" value to be 1.5
 	circuit dirtiness interval.
       o Document this in tor-spec
-    - base Guard flag on WFU rather than or in addition to MTBF
+    o base Guard flag on WFU rather than on MTBF.
+      o Change guard calculation
+      o Change dir-spec.txt
+      - What should we do about hosts that have been up for only 1 hour,
+        but have been up for 100% of that one hour?
     D 118 if feasible and obvious
     D Maintain a skew estimate and use ftime consistently.
     - 105+TLS, if possible.

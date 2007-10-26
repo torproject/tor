@@ -1474,6 +1474,7 @@ should_generate_v2_networkstatus(void)
 static uint32_t stable_uptime = 0; /* start at a safe value */
 static double stable_mtbf = 0.0;
 static int enough_mtbf_info = 0;
+static double guard_wfu = 0.0;
 static uint32_t fast_bandwidth = 0;
 static uint32_t guard_bandwidth_including_exits = 0;
 static uint32_t guard_bandwidth_excluding_exits = 0;
@@ -1536,7 +1537,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
   int n_active, n_active_nonexit;
   uint32_t *uptimes, *bandwidths, *bandwidths_excluding_exits;
-  double *mtbfs;
+  double *mtbfs, *wfus;
   time_t now = time(NULL);
 
   /* initialize these all here, in case there are no routers */
@@ -1554,6 +1555,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   bandwidths_excluding_exits =
     tor_malloc(sizeof(uint32_t)*smartlist_len(rl->routers));
   mtbfs = tor_malloc(sizeof(double)*smartlist_len(rl->routers));
+  wfus = tor_malloc(sizeof(double)*smartlist_len(rl->routers));
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (router_is_active(ri, now)) {
@@ -1562,6 +1564,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       ri->is_exit = exit_policy_is_general_exit(ri->exit_policy);
       uptimes[n_active] = real_uptime(ri, now);
       mtbfs[n_active] = rep_hist_get_stability(id, now);
+      wfus [n_active] = rep_hist_get_weighted_fractional_uptime(id, now);
       bandwidths[n_active] = bw = router_get_advertised_bandwidth(ri);
       total_bandwidth += bw;
       if (ri->is_exit && !ri->is_bad_exit) {
@@ -1577,6 +1580,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   if (n_active) {
     stable_uptime = median_uint32(uptimes, n_active);
     stable_mtbf = median_double(mtbfs, n_active);
+    guard_wfu = median_double(wfus, n_active);
     fast_bandwidth = find_nth_uint32(bandwidths, n_active, n_active/8);
     /* Now bandwidths is sorted. */
     if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH)
@@ -1591,6 +1595,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       median_uint32(bandwidths_excluding_exits, n_active_nonexit);
   }
 
+  /*XXXX020 Log the other stuff too. */
   log(LOG_INFO, LD_DIRSERV,
       "Cutoffs: %lus uptime, %lu b/s fast, %lu or %lu b/s guard.",
       (unsigned long)stable_uptime,
@@ -1600,6 +1605,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 
   tor_free(uptimes);
   tor_free(mtbfs);
+  tor_free(wfus);
   tor_free(bandwidths);
   tor_free(bandwidths_excluding_exits);
 }
@@ -1823,12 +1829,19 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->is_unnamed = (naming && (name_status & FP_UNNAMED)) ? 1 : 0;
   }
   rs->is_valid = ri->is_valid;
-  rs->is_possible_guard = rs->is_fast && rs->is_stable &&
-    (!rs->is_exit || exits_can_be_guards) &&
-    (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
-     router_get_advertised_bandwidth(ri) >=
-     (exits_can_be_guards ? guard_bandwidth_including_exits :
-      guard_bandwidth_excluding_exits));
+  
+  if (rs->is_fast &&
+      (!rs->is_exit || exits_can_be_guards) &&
+      (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
+       router_get_advertised_bandwidth(ri) >=
+       (exits_can_be_guards ? guard_bandwidth_including_exits :
+        guard_bandwidth_excluding_exits))) {
+    double wfu = rep_hist_get_weighted_fractional_uptime(
+                                      ri->cache_info.identity_digest, now);
+    rs->is_possible_guard = (wfu >= guard_wfu) ? 1 : 0;
+  } else {
+    rs->is_possible_guard = 0;
+  }
   rs->is_bad_exit = listbadexits && ri->is_bad_exit;
   /* 0.1.1.9-alpha is the first version to support fetch by descriptor
    * hash. */
