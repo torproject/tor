@@ -779,7 +779,8 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
-       if (!memcmp(ds->v3_identity_digest, digest, DIGEST_LEN))
+       if (!memcmp(ds->v3_identity_digest, digest, DIGEST_LEN) &&
+           (ds->type & V3_AUTHORITY))
          return ds;
      });
 
