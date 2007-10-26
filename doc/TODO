@@ -19,6 +19,15 @@ Things we'd like to do in 0.2.0.x:
   - http://tor.eff.org/eff/legal-faq.html#License doesn't mention
     licenses for other components of the bundles.
 
+  - Before the feature freeze:
+    - Support for preconfigured mirror lists
+    - Download consensuses (et al) via if-modified-since
+    - Saner TLS rotation
+    - base Guard flag on WFU rather than or in addition to MTBF
+    - 118 if feasible and obvious
+    - Maintain a skew estimate and use ftime consistently.
+    - 105+TLS, if possible.
+
   - Bugs.
      - Bug reports Roger has heard along that way that don't have enough
         details/attention to solve them yet.
@@ -48,23 +57,9 @@ Things we'd like to do in 0.2.0.x:
         do more than that. I think some servers are forgetting the results
         of their first test, and then never seeing use.
 
-  o Before 0.2.0.9-alpha (for nickm)
-    o Retry cert downloads as appropriate
-    o Delay consensus download retry when there's a unverified consensus we're
-      downloading the certs to check
-      o But don't delay forever.
-    o Make new download types comply with should_delay_dir_fetches()
-    o When DownloadExtraInfo is turned on for the first time, don't flip
-      out and download the ancient history of the universe.
-    o List IP addresses in certificates?
-    o Make the address in votes be an actual IP address.
-    o Change 'mismatched digest' message to first check timestamps instead.
-
   - Proposals:
     . 101: Voting on the Tor Directory System (plus 103)
-      . Validate information properly.
-        . Dump certificates with the wrong time.  Or just warn?
-        . When checking a consensus, make sure that its times are plausible.
+      - Handle badly timed certificates properly.
       . Start caching consensus documents once authorities make them;
         start downloading consensus documents once caches serve
         them
@@ -79,16 +74,6 @@ Things we'd like to do in 0.2.0.x:
     - 105: Version negotiation for the Tor protocol
     . 111: Prioritize local traffic over relayed.
       - Merge into tor-spec.txt.
-    o 122: Network status entries need an Unnamed flag
-      o Merge into dir-spec.txt
-      o Implement voting side
-        o Set Named and Unnamed sensibly
-        o Don't reject Unnamed routers.
-      o Implement consensus side
-        o Generic "pick which voting method to use" code.
-        o When version 2 is set, set the Unnamed flag right.
-        o Mention (and admit to ourself) that we support method 2.
-      o Implement client side
 
   - Refactoring:
     . Make cells get buffered on circuit, not on the or_conn.
