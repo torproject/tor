@@ -19,31 +19,27 @@ Things we'd like to do in 0.2.0.x:
   - http://tor.eff.org/eff/legal-faq.html#License doesn't mention
     licenses for other components of the bundles.
 
-  - Before the feature freeze:
+  - Before the feature freeze: (Nick)
     - Support for preconfigured mirror lists
+      - Use a pre-shipped fallback consensus.
     - Download consensuses (et al) via if-modified-since
     - Saner TLS rotation
+      - Bump up the "connection timeout" value to be 1.5
+	circuit dirtiness interval.
     - base Guard flag on WFU rather than or in addition to MTBF
-    - 118 if feasible and obvious
-    - Maintain a skew estimate and use ftime consistently.
+    D 118 if feasible and obvious
+    D Maintain a skew estimate and use ftime consistently.
     - 105+TLS, if possible.
+    - Skew issues:
+      - if you load (nick says receive/set/anything) a consensus that's
+        in the future, then log about skew.
+      - should change the "skew complaint" to specify in largest units
+        rather than just seconds.
     - karsten's patches
-    - roger makes tunnelled dir conns use begin_dir if enabled
+
+  - Before the feature freeze: (Roger)
+    - Make tunnelled dir conns use begin_dir if enabled
     - make bridge users fall back from bridge authority to direct attempt
-
-  - windows users who are one week in the past can be given any
-    consensus between then and now and they'll consider it "live"
-    and use it.
-
-  - if you load (nick says receive/set/anything) a consensus that's
-    in the future, then log about skew. this is for clients that live
-    a week in the past: they grab a consensus and complain about skew,
-    but tor works! and it's not for a day or so that it stops working,
-    at which point they won't try doing any dir requests so they won't
-    see any further skew complaints.
-
-  - should change the "skew complaint" to specify in largest units
-    rather than just seconds.
 
   - get more v3 authorities before 0.2.0.x comes out.
     - brainstorm about who those should be
