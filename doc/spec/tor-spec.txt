@@ -194,9 +194,12 @@ see tor-design.pdf.
    of TLS records MUST NOT leak information about the type or contents
    of the cells.
 
-   TLS connections are not permanent. Either side may close a connection
+   TLS connections are not permanent. Either side MAY close a connection
    if there are no circuits running over it and an amount of time
-   (KeepalivePeriod, defaults to 5 minutes) has passed.
+   (KeepalivePeriod, defaults to 5 minutes) has passed since the last time
+   any traffic was transmitted over the TLS connection.  Clients SHOULD
+   also hold a TLS connection with no circuits open, if it is likely that a
+   circuit will be built soon using that connection.
 
    (As an exception, directory servers may try to stay connected to all of
    the ORs -- though this will be phased out for the Tor 0.1.2.x release.)

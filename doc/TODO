@@ -23,9 +23,10 @@ Things we'd like to do in 0.2.0.x:
     - Support for preconfigured mirror lists
       - Use a pre-shipped fallback consensus.
     - Download consensuses (et al) via if-modified-since
-    - Saner TLS rotation
-      - Bump up the "connection timeout" value to be 1.5
+    o Saner TLS rotation
+      o Bump up OR the "connection timeout" value to be 1.5
 	circuit dirtiness interval.
+      o Document this in tor-spec
     - base Guard flag on WFU rather than or in addition to MTBF
     D 118 if feasible and obvious
     D Maintain a skew estimate and use ftime consistently.
@@ -103,8 +104,8 @@ Things we'd like to do in 0.2.0.x:
         - Handle rate-limiting on directory writes to linked directory
           connections in a more sensible manner.
         - Find more ways to test this.
-    - Have clients do TLS connection rotation less often than "every 10
-      minutes" in the thrashy case, and more often than "once a week" in the
+    o Do TLS rotation less often than "every 10 minutes" in the thrashy case.
+    D Do TLS connection rotation more often than "once a week" in the
       extra-stable case.
     - Streamline how we pick entry nodes: Make choose_random_entry() have
       less magic and less control logic.

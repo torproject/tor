@@ -764,19 +764,23 @@ run_connection_housekeeping(int i, time_t now)
      the connection or send a keepalive, depending. */
   if (now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
     routerinfo_t *router = router_get_by_digest(or_conn->identity_digest);
+    int maxCircuitlessPeriod = options->MaxCircuitDirtiness*3/2;
     if (!connection_state_is_open(conn)) {
+      /* We never managed to actually get this connection open and happy. */
       log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (we_are_hibernating() && !or_conn->n_circuits &&
                !buf_datalen(conn->outbuf)) {
+      /* We're hibernating, there's no circuits, and nothing to flush.*/
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
                "[Hibernating or exiting].",
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (!clique_mode(options) && !or_conn->n_circuits &&
+               now >= conn->timestamp_lastwritten + maxCircuitlessPeriod &&
                (!router || !server_mode(options) ||
                 !router_is_clique_mode(router))) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
