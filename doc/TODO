@@ -27,6 +27,9 @@ Things we'd like to do in 0.2.0.x:
     - 118 if feasible and obvious
     - Maintain a skew estimate and use ftime consistently.
     - 105+TLS, if possible.
+    - karsten's patches
+    - roger makes tunnelled dir conns use begin_dir if enabled
+    - make bridge users fall back from bridge authority to direct attempt
 
   - windows users who are one week in the past can be given any
     consensus between then and now and they'll consider it "live"
