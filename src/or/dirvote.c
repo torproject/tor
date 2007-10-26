@@ -1526,6 +1526,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
              hex_str(vi->identity_digest, DIGEST_LEN),
              ds?"is not recognized":"is recognized, but is not listed as v3",
 /* XXX020 isn't the above line backwards? -RD */
+/* In fact, how can ds->v3_identity_digest be set if it's not a
+ * V3_AUTHORITY? */
              keys);
     tor_free(keys);
 
