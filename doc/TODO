@@ -28,6 +28,23 @@ Things we'd like to do in 0.2.0.x:
     - Maintain a skew estimate and use ftime consistently.
     - 105+TLS, if possible.
 
+  - windows users who are one week in the past can be given any
+    consensus between then and now and they'll consider it "live"
+    and use it.
+
+  - if you load (nick says receive/set/anything) a consensus that's
+    in the future, then log about skew. this is for clients that live
+    a week in the past: they grab a consensus and complain about skew,
+    but tor works! and it's not for a day or so that it stops working,
+    at which point they won't try doing any dir requests so they won't
+    see any further skew complaints.
+
+  - should change the "skew complaint" to specify in largest units
+    rather than just seconds.
+
+  - get more v3 authorities before 0.2.0.x comes out.
+    - brainstorm about who those should be
+
   - Bugs.
      - Bug reports Roger has heard along that way that don't have enough
         details/attention to solve them yet.
