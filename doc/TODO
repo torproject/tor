@@ -504,7 +504,7 @@ P - Setup repos for redhat and suse rpms & start signing the rpms the
 
 Website:
 P  - tor-in-the-media page
-  - more pictures from ren. he wants to describe the tor handshake
+  X more pictures from ren. he wants to describe the tor handshake
   - Figure out licenses for website material.
 P  - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
@@ -518,3 +518,5 @@ P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
     tor-related tools you can use, and what they give you, and how well they
     work.  Right now, we don't give a lot of guidance wrt
     torbutton/foxproxy/privoxy/polipo in any consistent place.
+  - the tor mirror pages are probably still mirroring from tor.eff.org.
+    Get them to switch, and maybe remove the ones that haven't switched?
