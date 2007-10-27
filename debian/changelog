@@ -1,3 +1,10 @@
+tor (0.2.0.9-alpha-1+svn) experimentalX; urgency=low
+
+  * Do not separate required lsb facilities with commas in the
+    init script (closes: #448001).
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 27 Oct 2007 18:34:23 +0200
+
 tor (0.2.0.9-alpha-1) experimental; urgency=low
 
   * New upstream version.

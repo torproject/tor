@@ -2,8 +2,8 @@
 
 ### BEGIN INIT INFO
 # Provides:          tor
-# Required-Start:    $local_fs, $remote_fs, $network, $named, $time
-# Required-Stop:     $local_fs, $remote_fs, $network, $named, $time
+# Required-Start:    $local_fs $remote_fs $network $named $time
+# Required-Stop:     $local_fs $remote_fs $network $named $time
 # Should-Start:      $syslog
 # Should-Stop:       $syslog
 # Default-Start:     2 3 4 5
