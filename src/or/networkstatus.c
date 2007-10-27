@@ -176,7 +176,7 @@ router_reload_consensus_networkstatus(void)
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   if (s) {
     if (networkstatus_set_current_consensus(s, 1, 1)) {
-      log_warn(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
+      log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
                filename);
     }
     tor_free(s);
