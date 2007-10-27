@@ -17,6 +17,6 @@ named = db.query2("
 while (n=named.next) do
 	puts "# (r##{n['router_id']},n##{n['nickname_id']}); first_seen: #{n['first_seen']}, last_seen: #{n['last_seen']}"
 	fpr = n['fingerprint'].split(/(....)/).delete_if{|x| x=="" }.join(' ')
-	puts "#{n['nick']} #{fpr}}"
+	puts "#{n['nick']} #{fpr}"
 end
 db.transaction_commit
