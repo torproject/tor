@@ -1,0 +1,3 @@
+MAILTO=admin
+# cronjob for tor naming
+23 * * * * make -s -C auto-naming update && make -s -C auto-naming

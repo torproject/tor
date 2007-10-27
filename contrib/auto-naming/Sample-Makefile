@@ -1,0 +1,20 @@
+
+all: ../approved-routers
+
+update:
+	wget -q -O - http://tor.noreply.org/tor/status-vote/current/consensus | \
+		./process-consensus
+
+.PHONY: approved-routers-auto
+approved-routers-auto:
+	./build-approved-routers > "$@"
+
+.INTERMEDIATE: approved-routers
+approved-routers: approved-routers-auto /etc/tor/approved-routers
+	cat $^ > "$@"
+
+../approved-routers: approved-routers
+	if ! diff -q "$<" "$@"; then \
+		mv "$<" "$@" &&\
+		(! [ -e /var/run/tor/tor.pid ] || kill -HUP `cat /var/run/tor/tor.pid`) ; \
+		fi
