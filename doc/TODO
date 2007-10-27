@@ -23,6 +23,9 @@ Things we'd like to do in 0.2.0.x:
     - Support for preconfigured mirror lists
       - Use a pre-shipped fallback consensus.
     - Download consensuses (et al) via if-modified-since
+      - Implement backend support for sending if-modified-since
+      - Use it for consensuses.
+      - Use it for certificates
     o Saner TLS rotation
       o Bump up OR the "connection timeout" value to be 1.5
 	circuit dirtiness interval.
@@ -39,6 +42,24 @@ Things we'd like to do in 0.2.0.x:
     D 118 if feasible and obvious
     D Maintain a skew estimate and use ftime consistently.
     - 105+TLS, if possible.
+      - 105 only
+        - Need to get a finished proposal 105
+        - "Pick a version" function
+        - Have a 'waiting_for_version' state.
+        - Store version in or_connection_t.
+        - Generate netinfo cells
+        - Accept netinfo cells
+        - Version negotiation: send a version cell and enter
+          waiting-for-version; when version cell arrives, pick version
+          and send netinfo and be "open".
+        - On netinfo, warn if there's skew from a server.
+        - Handle IP addresses in netinfo properly.
+      - TLS only
+        - Need to get a finished TLS normalization proposal
+        - Revised authentication.
+        - Revised handshake.
+        - Have a 'waiting_for_authentication' state.
+        - Only do version negotiation if we use the normalized TLS.
     - Skew issues:
       - if you load (nick says receive/set/anything) a consensus that's
         in the future, then log about skew.
