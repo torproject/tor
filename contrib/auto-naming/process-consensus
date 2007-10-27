@@ -82,7 +82,7 @@ end
 
 if ARGV.size == 0
 	handle_one_consensus STDIN.readlines
-	do_update true
+	do_update $verbose
 else
 	ARGV.each do |filename|
 		puts filename if $verbose
