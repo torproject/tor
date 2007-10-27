@@ -1,0 +1,65 @@
+=== AUTONAMING FOR TOR ===
+
+Tor directory authorities may maintain a binding of server identities
+(their long term identity key) and nicknames.  In their status documents
+they may for each router they know tell if this is indeed the owner of
+that nickname or not.
+
+This toolset allows automatic maintaining of a binding list of nicknames
+to identity keys, implementing Tor proposal 123[1].
+
+The rules are simple:
+ - A router claiming to be Bob is named (i.e. added to the binding list)
+   if there currently does not exist a different binding for that
+   nickname, the router has been around for a bit (2 weeks), no other
+   router has used that nickname in a while (1 month).
+ - A binding is removed if the server that owns it has not been seen
+   in a long time (6 months).
+
+
+=== REQUIREMENTS ===
+
+ * ruby, and its postgres DBI interface (Debian packages: ruby, ruby1.8, libdbi-ruby1.8, libdbd-pg-ruby1.8)
+ * postgres (tested with >= 8.1)
+ * cron
+
+=== SETUP ===
+
+ * copy this tree some place, like into a 'auto-naming' directory in your Tor's
+   data directory
+ * create a database and a user, modifying db-config.rb accordingly
+ * initialize the database by executing the sql statements in create-db.sql
+ * setup a cronjob that feeds the current consensus to the process-consensus
+   script regularly.
+ * once the database is sufficiently populated, maybe a month or so after the
+   previous step, setup a cronjob to regularly build the binding list using
+   the build-approved-routers script.  You probably want to append a manually
+   manged list of rejections to that file and give it to tor as its
+   "approved-routers" file.
+   The Sample-Makefile and Sample-crontab demonstrate the method used at tor26.
+
+
+1. https://tor-svn.freehaven.net/svn/tor/trunk/doc/spec/proposals/123-autonaming.txt
+
+
+
+
+Copyright (c) 2007 Peter Palfrader
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
