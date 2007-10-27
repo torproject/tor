@@ -1,0 +1,68 @@
+#! /bin/sh -e
+
+if [ $# -lt 1 ]; then
+    echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch} ${2:+-d $2}"
+
+case "$1" in
+    -patch) patch -p2 ${patch_opts} < $0;;
+    -unpatch) patch -R -p2 ${patch_opts} < $0;;
+    *)
+        echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+        exit 1;;
+esac
+
+exit 0
+
+@DPATCH@
+Author: arma
+Date: 2007-10-27 17:40:32 -0400 (Sat, 27 Oct 2007)
+New Revision: 12235
+
+Modified:
+   tor/trunk/ChangeLog
+   tor/trunk/src/or/networkstatus.c
+Log:
+we need to send nick to the chalkboard to type 'un' 1000 times:
+
+Stop servers from crashing if they set a Family option (or
+maybe in other situations too). Bugfix on 0.2.0.9-alpha; reported
+by Fabian Keil.
+
+
+# disabled by weasel
+# Modified: tor/trunk/ChangeLog
+# ===================================================================
+# --- tor/trunk/ChangeLog	2007-10-27 21:36:56 UTC (rev 12234)
+# +++ tor/trunk/ChangeLog	2007-10-27 21:40:32 UTC (rev 12235)
+# @@ -1,4 +1,9 @@
+#  Changes in version 0.2.0.10-alpha - 2007-1?-??
+# +  o Major bugfixes:
+# +    - Stop servers from crashing if they set a Family option (or
+# +      maybe in other situations too). Bugfix on 0.2.0.9-alpha; reported
+# +      by Fabian Keil.
+# +
+#    o New requirements:
+#      - Drop support for OpenSSL version 0.9.6.  Just about nobody was using
+#        it, it had no AES, and it hasn't seen any security patches since 2004.
+# 
+Modified: tor/trunk/src/or/networkstatus.c
+===================================================================
+--- tor/trunk/src/or/networkstatus.c	2007-10-27 21:36:56 UTC (rev 12234)
++++ tor/trunk/src/or/networkstatus.c	2007-10-27 21:40:32 UTC (rev 12235)
+@@ -885,7 +885,9 @@
+ int
+ networkstatus_nickname_is_unnamed(const char *nickname)
+ {
+-  return strmap_get_lc(named_server_map, nickname) != NULL;
++  if (!unnamed_server_map)
++    return 0;
++  return strmap_get_lc(unnamed_server_map, nickname) != NULL;
+ }
+ 
+ /** How frequently do directory authorities re-download fresh networkstatus
+

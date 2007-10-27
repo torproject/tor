@@ -1,9 +1,11 @@
-tor (0.2.0.9-alpha-1+svn) experimentalX; urgency=low
+tor (0.2.0.9-alpha-2) experimental; urgency=low
 
   * Do not separate required lsb facilities with commas in the
     init script (closes: #448001).
+  * Add 12_r12235_do_not_crash_when_myfamily_is_set.dpatch,
+    from trunk/head.
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 27 Oct 2007 18:34:23 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sun, 28 Oct 2007 00:03:21 +0200
 
 tor (0.2.0.9-alpha-1) experimental; urgency=low
 

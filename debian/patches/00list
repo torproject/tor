@@ -3,3 +3,4 @@
 06_add_compile_time_defaults.dpatch
 07_log_to_file_by_default.dpatch
 11_tor_as_root_more_helpful.dpatch
+12_r12235_do_not_crash_when_myfamily_is_set.dpatch
