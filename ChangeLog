@@ -1,4 +1,9 @@
 Changes in version 0.2.0.10-alpha - 2007-1?-??
+  o Major bugfixes:
+    - Stop servers from crashing if they set a Family option (or
+      maybe in other situations too). Bugfix on 0.2.0.9-alpha; reported
+      by Fabian Keil.
+
   o New requirements:
     - Drop support for OpenSSL version 0.9.6.  Just about nobody was using
       it, it had no AES, and it hasn't seen any security patches since 2004.

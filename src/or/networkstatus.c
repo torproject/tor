@@ -885,7 +885,9 @@ networkstatus_get_router_digest_by_nickname(const char *nickname)
 int
 networkstatus_nickname_is_unnamed(const char *nickname)
 {
-  return strmap_get_lc(named_server_map, nickname) != NULL;
+  if (!unnamed_server_map)
+    return 0;
+  return strmap_get_lc(unnamed_server_map, nickname) != NULL;
 }
 
 /** How frequently do directory authorities re-download fresh networkstatus
