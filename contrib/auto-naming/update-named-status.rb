@@ -5,7 +5,7 @@ require "yaml"
 require 'db'
 require 'db-config'
 
-def do_update verbose
+def do_update(verbose)
 	now = "TIMESTAMP '" + $db.query_row("SELECT max(last_seen) AS max FROM router_claims_nickname")['max'].to_s + "'"
 
 	denamed = $db.do("
