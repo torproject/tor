@@ -35,6 +35,12 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24
+  This ninth development snapshot switches clients to the new v3 directory
+  system; allows servers to be listed in the network status even when they
+  have the same nickname as a registered server; and fixes many other
+  bugs including a big one that was causing some servers to disappear
+  from the network status lists for a few hours each day.
+
   o Major features (directory system):
     - Clients now download v3 consensus networkstatus documents instead
       of v2 networkstatus documents. Clients and caches now base their
