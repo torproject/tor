@@ -87,7 +87,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
                  * or is a rendezvous circuit. */
     }
     if (build_state->onehop_tunnel) {
-      if (conn->socks_request->command != SOCKS_COMMAND_CONNECT_DIR) {
+      if (!conn->want_onehop) {
         log_debug(LD_CIRC,"Skipping one-hop circuit.");
         return 0;
       }
@@ -100,7 +100,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
           return 0; /* this is a circuit to somewhere else */
       }
     } else {
-      if (conn->socks_request->command == SOCKS_COMMAND_CONNECT_DIR) {
+      if (conn->want_onehop) {
         /* don't use three-hop circuits -- that could hurt our anonymity. */
         return 0;
       }
@@ -835,6 +835,8 @@ circuit_launch_by_extend_info(uint8_t purpose, int onehop_tunnel,
   if ((extend_info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
       purpose != CIRCUIT_PURPOSE_TESTING && !onehop_tunnel) {
     /* see if there are appropriate circs available to cannibalize. */
+    /* XXX020 if we're planning to add a hop, perhaps we want to look for
+     * internal circs rather than exit circs? -RD */
     circ = circuit_find_to_cannibalize(purpose, extend_info,
                                        need_uptime, need_capacity, internal);
     if (circ) {
@@ -948,11 +950,12 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   tor_assert(circp);
   tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   check_exit_policy =
-      (conn->socks_request->command == SOCKS_COMMAND_CONNECT) &&
+      conn->socks_request->command == SOCKS_COMMAND_CONNECT &&
+      !conn->use_begindir &&
       !connection_edge_is_rendezvous_stream(conn);
-  want_onehop = conn->socks_request->command == SOCKS_COMMAND_CONNECT_DIR;
+  want_onehop = conn->want_onehop;
 
-  need_uptime = (conn->socks_request->command == SOCKS_COMMAND_CONNECT) &&
+  need_uptime = !conn->want_onehop && !conn->use_begindir &&
                 smartlist_string_num_isin(options->LongLivedPorts,
                                           conn->socks_request->port);
   need_internal = desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL;
@@ -1005,6 +1008,8 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   /* is one already on the way? */
   circ = circuit_get_best(conn, 0, desired_circuit_purpose,
                           need_uptime, need_internal);
+  if (circ)
+    log_debug(LD_CIRC, "one on the way!");
   if (!circ) {
     extend_info_t *extend_info=NULL;
     uint8_t new_circ_purpose;
@@ -1221,17 +1226,14 @@ connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
 
   link_apconn_to_circ(conn, circ, cpath);
   tor_assert(conn->socks_request);
-  switch (conn->socks_request->command) {
-    case SOCKS_COMMAND_CONNECT:
+  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
+    if (!conn->use_begindir)
       consider_recording_trackhost(conn, circ);
-      /* fall through */
-    case SOCKS_COMMAND_CONNECT_DIR:
-      if (connection_ap_handshake_send_begin(conn) < 0)
-        return -1;
-      break;
-    default:
-      if (connection_ap_handshake_send_resolve(conn) < 0)
-        return -1;
+    if (connection_ap_handshake_send_begin(conn) < 0)
+      return -1;
+  } else {
+    if (connection_ap_handshake_send_resolve(conn) < 0)
+      return -1;
   }
 
   return 1;
@@ -1254,7 +1256,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->_base.state == AP_CONN_STATE_CIRCUIT_WAIT);
   tor_assert(conn->socks_request);
-  want_onehop = conn->socks_request->command == SOCKS_COMMAND_CONNECT_DIR;
+  want_onehop = conn->want_onehop;
 
   conn_age = time(NULL) - conn->_base.timestamp_created;
 
@@ -1307,7 +1309,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
     log_debug(LD_APP|LD_CIRC,
               "Attaching apconn to circ %d (stream %d sec old).",
               circ->_base.n_circ_id, conn_age);
-    /* here, print the circ's path. so people can figure out which circs are
+    /* print the circ's path, so people can figure out which circs are
      * sucking. */
     circuit_log_path(LOG_INFO,LD_APP|LD_CIRC,circ);
 

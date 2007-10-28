@@ -910,6 +910,12 @@ typedef struct edge_connection_t {
   /** True iff this connection is for a dns request only. */
   unsigned int is_dns_request : 1;
 
+  /** True iff this stream wants a one-hop circuit (e.g. for begin_dir). */
+  int want_onehop:1;
+  /** True iff this stream should use a begin_dir connection (either via
+   * onehop or via a whole circuit). */
+  int use_begindir:1;
+
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */
   struct evdns_server_request *dns_server_request;
@@ -2212,13 +2218,7 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 /** Please turn this IP address into an FQDN, privately. */
 #define SOCKS_COMMAND_RESOLVE_PTR   0xF1
 
-/** Please open an encrypted direct TCP connection to the directory port
- * of the Tor server specified by address:port. (In this case address:port
- * specifies the ORPort of the server.) */
-#define SOCKS_COMMAND_CONNECT_DIR   0xF2
-
-#define SOCKS_COMMAND_IS_CONNECT(c) ((c)==SOCKS_COMMAND_CONNECT || \
-                                     (c)==SOCKS_COMMAND_CONNECT_DIR)
+#define SOCKS_COMMAND_IS_CONNECT(c) ((c)==SOCKS_COMMAND_CONNECT)
 #define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
                                      (c)==SOCKS_COMMAND_RESOLVE_PTR)
 
@@ -2583,7 +2583,8 @@ int connection_ap_handshake_send_begin(edge_connection_t *ap_conn);
 int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn);
 
 edge_connection_t  *connection_ap_make_link(char *address, uint16_t port,
-                                            const char *digest, int command);
+                                            const char *digest,
+                                            int use_begindir, int want_onehop);
 void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
                                          size_t replylen,
                                          int endreason);

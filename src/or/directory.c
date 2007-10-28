@@ -609,17 +609,17 @@ directory_initiate_command(const char *address, uint32_t addr,
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
-  int want_to_tunnel = options->TunnelDirConns && supports_begindir &&
-                       !anonymized_connection && or_port &&
-                       fascist_firewall_allows_address_or(addr, or_port);
+  int use_begindir = options->TunnelDirConns && supports_begindir && or_port &&
+                     (anonymized_connection ||
+                      fascist_firewall_allows_address_or(addr, or_port));
 
   tor_assert(address);
   tor_assert(addr);
   tor_assert(or_port || dir_port);
   tor_assert(digest);
 
-  log_debug(LD_DIR, "anonymized %d, want_to_tunnel %d.",
-            anonymized_connection, want_to_tunnel);
+  log_debug(LD_DIR, "anonymized %d, use_begindir %d.",
+            anonymized_connection, use_begindir);
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
@@ -627,7 +627,7 @@ directory_initiate_command(const char *address, uint32_t addr,
 
   /* set up conn so it's got all the data we need to remember */
   conn->_base.addr = addr;
-  conn->_base.port = want_to_tunnel ? or_port : dir_port;
+  conn->_base.port = use_begindir ? or_port : dir_port;
   conn->_base.address = tor_strdup(address);
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
 
@@ -637,11 +637,12 @@ directory_initiate_command(const char *address, uint32_t addr,
   /* give it an initial state */
   conn->_base.state = DIR_CONN_STATE_CONNECTING;
 
-  if (!anonymized_connection && !want_to_tunnel) {
-    /* then we want to connect directly */
+  /* decide whether we can learn our IP address from this conn */
+  conn->dirconn_direct = !anonymized_connection;
 
-    /* XXX020 we should set dirconn_direct to 1 even if want_to_tunnel -RD */
-    conn->dirconn_direct = 1;
+  if (!anonymized_connection && !use_begindir) {
+    /* then we want to connect to dirport directly */
+
     if (options->HttpProxy) {
       addr = options->HttpProxyAddr;
       dir_port = options->HttpProxyPort;
@@ -665,19 +666,15 @@ directory_initiate_command(const char *address, uint32_t addr,
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
     }
-  } else { /* we want to connect via tor */
+  } else { /* we want to connect via a tor connection */
     edge_connection_t *linked_conn;
     /* make an AP connection
      * populate it and add it at the right state
      * hook up both sides
      */
-    conn->dirconn_direct = 0;
     linked_conn =
       connection_ap_make_link(conn->_base.address, conn->_base.port,
-                              digest,
-                              anonymized_connection ?
-                                SOCKS_COMMAND_CONNECT :
-                                SOCKS_COMMAND_CONNECT_DIR);
+                              digest, use_begindir, conn->dirconn_direct);
     if (!linked_conn) {
       log_warn(LD_NET,"Making tunnel to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));

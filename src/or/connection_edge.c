@@ -1379,7 +1379,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         return -1;
       }
 
-      if (!conn->chosen_exit_name && !circ) {
+      if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */
         routerinfo_t *r =
           router_find_exact_exit_enclave(socks->address, socks->port);
@@ -1395,11 +1395,12 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         }
       }
 
-      /* help predict this next time */
-      rep_hist_note_used_port(socks->port, time(NULL));
+      if (!conn->use_begindir) {
+        /* help predict this next time */
+        rep_hist_note_used_port(socks->port, time(NULL));
+      }
     } else if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
-    } else if (socks->command == SOCKS_COMMAND_CONNECT_DIR) {
       ; /* nothing */
     } else {
       tor_fragile_assert();
@@ -1840,8 +1841,8 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
   log_debug(LD_APP,
             "Sending relay cell to begin stream %d.", ap_conn->stream_id);
 
-  begin_type = ap_conn->socks_request->command == SOCKS_COMMAND_CONNECT ?
-                 RELAY_COMMAND_BEGIN : RELAY_COMMAND_BEGIN_DIR;
+  begin_type = ap_conn->use_begindir ?
+                 RELAY_COMMAND_BEGIN_DIR : RELAY_COMMAND_BEGIN;
   if (begin_type == RELAY_COMMAND_BEGIN) {
     tor_assert(circ->build_state->onehop_tunnel == 0);
   }
@@ -1955,7 +1956,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
  */
 edge_connection_t *
 connection_ap_make_link(char *address, uint16_t port,
-                        const char *digest, int command)
+                        const char *digest, int use_begindir, int want_onehop)
 {
   edge_connection_t *conn;
 
@@ -1973,8 +1974,10 @@ connection_ap_make_link(char *address, uint16_t port,
   strlcpy(conn->socks_request->address, address,
           sizeof(conn->socks_request->address));
   conn->socks_request->port = port;
-  conn->socks_request->command = command;
-  if (command == SOCKS_COMMAND_CONNECT_DIR) {
+  conn->socks_request->command = SOCKS_COMMAND_CONNECT;
+  conn->want_onehop = want_onehop;
+  conn->use_begindir = use_begindir;
+  if (use_begindir) {
     conn->chosen_exit_name = tor_malloc(HEX_DIGEST_LEN+2);
     conn->chosen_exit_name[0] = '$';
     base16_encode(conn->chosen_exit_name+1,HEX_DIGEST_LEN+1,
@@ -2622,7 +2625,8 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
     }
   }
 
-  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT) {
+  if (conn->socks_request->command == SOCKS_COMMAND_CONNECT &&
+      !conn->use_begindir) {
     struct in_addr in;
     uint32_t addr = 0;
     addr_policy_result_t r;

@@ -1,4 +1,13 @@
 Changes in version 0.2.0.10-alpha - 2007-1?-??
+  o Major features:
+    - Separate "SOCKS_COMMAND_CONNECT_DIR" into two flags in
+      edge_connection_t: want_onehop if it must attach to a circuit with
+      only one hop (e.g. for the current tunnelled connections that use
+      begin_dir), and use_begindir if we mean to use a BEGIN_DIR relay
+      command to establish the stream rather than the normal BEGIN. Now
+      we can make anonymized begin_dir connections for (e.g.) more secure
+      hidden service posting and fetching.
+
   o Major bugfixes:
     - Stop servers from crashing if they set a Family option (or
       maybe in other situations too). Bugfix on 0.2.0.9-alpha; reported
