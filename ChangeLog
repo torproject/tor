@@ -29,6 +29,9 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       open only for KeepalivePeriod.
     - Use "If-Modified-Since" to avoid retrieving consensus networkstatuses
       that we already have.
+    - When we have no consensus, check FallbackNetworkstatusFile (defaults
+      to $PREFIX/share/tor/fallback-consensus) for a consensus.  This way
+      we start knowing some directory caches.
 
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
