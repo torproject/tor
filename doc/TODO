@@ -21,8 +21,9 @@ Things we'd like to do in 0.2.0.x:
     licenses for other components of the bundles.
 
   - Before the feature freeze: (Nick)
-    - Support for preconfigured mirror lists
-      - Use a pre-shipped fallback consensus.
+    o Support for preconfigured mirror lists
+      o Use a pre-shipped fallback consensus.
+      o Code to install a pre-defined fallback consensus
     . Download consensuses (et al) via if-modified-since
       o Implement backend support for sending if-modified-since
       o Use it for consensuses.

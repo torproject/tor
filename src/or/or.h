@@ -2174,6 +2174,9 @@ typedef struct {
   int V3AuthDistDelay;
   /** The number of intervals we think a consensus should be valid. */
   int V3AuthNIntervalsValid;
+
+  /** DOCDOC here and in tor.1 */
+  char *FallbackNetworkstatusFile;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

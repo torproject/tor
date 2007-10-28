@@ -158,6 +158,8 @@ router_reload_consensus_networkstatus(void)
 {
   char *filename;
   char *s;
+  struct stat st;
+  or_options_t *options = get_options();
 
   /* XXXX020 Suppress warnings if cached consensus is bad. */
 
@@ -182,6 +184,24 @@ router_reload_consensus_networkstatus(void)
     tor_free(s);
   }
   tor_free(filename);
+
+  if (!current_consensus ||
+      (stat(options->FallbackNetworkstatusFile, &st)==0 &&
+       st.st_mtime > current_consensus->valid_after)) {
+    s = read_file_to_str(options->FallbackNetworkstatusFile,
+                         RFTS_IGNORE_MISSING, NULL);
+    if (s) {
+      if (networkstatus_set_current_consensus(s, 1, 1)) {
+        log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
+                 options->FallbackNetworkstatusFile);
+      } else {
+        log_notice(LD_FS, "Loaded fallback consensus networkstaus from \"%s\"",
+                   options->FallbackNetworkstatusFile);
+      }
+      tor_free(s);
+    }
+  }
+
   routers_update_all_from_networkstatus(time(NULL));
 
   return 0;
