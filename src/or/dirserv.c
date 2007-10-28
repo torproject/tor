@@ -366,7 +366,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
   if (result & FP_UNNAMED) {
     if (should_log) {
       char *esc_contact = esc_for_log(contact);
-      log_warn(LD_DIRSERV,
+      log_info(LD_DIRSERV,
                "Mismatched fingerprint for '%s'. "
                "ContactInfo '%s', platform '%s'.)",
                nickname,
