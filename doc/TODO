@@ -550,12 +550,16 @@ P - Setup repos for redhat and suse rpms & start signing the rpms the
 Website:
 J  - tor-in-the-media page
 P  - Figure out licenses for website material.
+    (Phobos reccomends the Open Publication License at
+    http://opencontent.org/openpub/)
 P  - put the logo on the website, in source form, so people can put it on
     stickers directly, etc.
 P  - put the source image for the stickers on the website, so people can
     print their own
 P - figure out a license for the logos and docs we publish (trademark
 figures into this)
+    (Phobos reccomends the Open Publication License at
+    http://opencontent.org/openpub/)
 R - make a page with the hidden service diagrams.
 P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
   - add a page for localizing all tor's components.
