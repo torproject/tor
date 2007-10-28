@@ -1,4 +1,4 @@
-Changes in version 0.1.2.18 - 2007-10-??
+Changes in version 0.1.2.18 - 2007-10-28
   o Major bugfixes (crashes):
     - If a connection is shut down abruptly because of something that
       happened inside connection_flushed_some(), do not call
@@ -8,10 +8,7 @@ Changes in version 0.1.2.18 - 2007-10-??
     - Fix possible segfaults in functions called from
       rend_process_relay_cell().
 
-  o Major bugfixes (other):
-    - Stop publishing a new server descriptor just because we get a
-      HUP signal. This led (in a roundabout way) to some servers getting
-      dropped from the networkstatus lists for a few hours each day.
+  o Major bugfixes (hidden services):
     - Hidden services were choosing introduction points uniquely by
       hexdigest, but when constructing the hidden service descriptor
       they merely wrote the (potentially ambiguous) nickname.
@@ -19,6 +16,11 @@ Changes in version 0.1.2.18 - 2007-10-??
       connections: they specify their chosen rendezvous point by identity
       digest rather than by (potentially ambiguous) nickname. These
       changes could speed up hidden service connections dramatically.
+
+  o Major bugfixes (other):
+    - Stop publishing a new server descriptor just because we get a
+      HUP signal. This led (in a roundabout way) to some servers getting
+      dropped from the networkstatus lists for a few hours each day.
     - When looking for a circuit to cannibalize, consider family as well
       as identity. Fixes bug 438. Bugfix on 0.1.0.x (which introduced
       circuit cannibalization).
@@ -55,8 +57,8 @@ Changes in version 0.1.2.18 - 2007-10-??
     - It's not actually an error to find a non-pending entry in the DNS
       cache when canceling a pending resolve. Don't log unless stuff
       is fishy. Resolves bug 463.
-    - Don't reset trusted dir server list when we set a configuration option.
-      (Patch from Robert Hogan.)
+    - Don't reset trusted dir server list when we set a configuration
+      option. Patch from Robert Hogan.
 
 
 Changes in version 0.1.2.17 - 2007-08-30
