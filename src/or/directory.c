@@ -34,8 +34,9 @@ const char directory_c_id[] =
  *   connection_finished_connecting() in connection.c
  */
 static void directory_send_command(dir_connection_t *conn,
-                       int purpose, int direct, const char *resource,
-                       const char *payload, size_t payload_len);
+                             int purpose, int direct, const char *resource,
+                             const char *payload, size_t payload_len,
+                             time_t if_modified_since);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
 static int purpose_needs_anonymity(uint8_t dir_purpose,
@@ -254,7 +255,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
       directory_initiate_command_routerstatus(rs, dir_purpose,
                                               router_purpose,
                                               post_via_tor,
-                                              NULL, payload, upload_len);
+                                              NULL, payload, upload_len, 0);
     });
   if (!found) {
     char *s = authority_type_to_string(type);
@@ -280,6 +281,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
   authority_type_t type;
   int flags = retry_if_no_servers ? PDS_RETRY_IF_NO_SERVERS : 0;
+  time_t if_modified_since = 0;
 
   /* FFFF we could break this switch into its own function, and call
    * it elsewhere in directory.c. -RD */
@@ -314,6 +316,12 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       return;
   }
 
+  if (DIR_PURPOSE_FETCH_CONSENSUS) {
+    networkstatus_vote_t *v = networkstatus_get_latest_consensus();
+    if (v)
+      if_modified_since = v->valid_after + 180;
+  }
+
   if (!options->FetchServerDescriptors && type != HIDSERV_AUTHORITY)
     return;
 
@@ -329,7 +337,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                                    1, ri->cache_info.identity_digest,
                                    dir_purpose,
                                    router_purpose,
-                                   0, resource, NULL, 0);
+                                   0, resource, NULL, 0, if_modified_since);
       } else
         log_notice(LD_DIR, "Ignoring directory request, since no bridge "
                            "nodes are available yet.");
@@ -371,7 +379,8 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     directory_initiate_command_routerstatus(rs, dir_purpose,
                                             router_purpose,
                                             get_via_tor,
-                                            resource, NULL, 0);
+                                            resource, NULL, 0,
+                                            if_modified_since);
   else {
     log_notice(LD_DIR,
                "While fetching directory info, "
@@ -405,7 +414,7 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
         continue;
       rs = &ds->fake_status;
       directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
-                                              0, resource, NULL, 0);
+                                              0, resource, NULL, 0, 0);
     });
 }
 
@@ -430,7 +439,8 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                                         int anonymized_connection,
                                         const char *resource,
                                         const char *payload,
-                                        size_t payload_len)
+                                        size_t payload_len,
+                                        time_t if_modified_since)
 {
   routerinfo_t *router;
   char address_buf[INET_NTOA_BUF_LEN+1];
@@ -449,7 +459,7 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                              status->identity_digest,
                              dir_purpose, router_purpose,
                              anonymized_connection, resource,
-                             payload, payload_len);
+                             payload, payload_len, if_modified_since);
 }
 
 /** Return true iff <b>conn</b> is the client side of a directory connection
@@ -594,7 +604,7 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
   update_certificate_downloads(time(NULL));
 }
 
-/** Helper for directory_initiate_command_(router|trusted_dir): send the
+/** Helper for directory_initiate_command_routerstatus: send the
  * command to a server whose address is <b>address</b>, whose IP is
  * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version
  * <b>supports_begindir</b>, and whose identity key digest is
@@ -605,7 +615,8 @@ directory_initiate_command(const char *address, uint32_t addr,
                            int supports_begindir, const char *digest,
                            uint8_t dir_purpose, uint8_t router_purpose,
                            int anonymized_connection, const char *resource,
-                           const char *payload, size_t payload_len)
+                           const char *payload, size_t payload_len,
+                           time_t if_modified_since)
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
@@ -661,7 +672,7 @@ directory_initiate_command(const char *address, uint32_t addr,
       case 0:
         /* queue the command on the outbuf */
         directory_send_command(conn, dir_purpose, 1, resource,
-                               payload, payload_len);
+                               payload, payload_len, if_modified_since);
         connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
@@ -690,7 +701,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     conn->_base.state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
     directory_send_command(conn, dir_purpose, 0, resource,
-                           payload, payload_len);
+                           payload, payload_len, if_modified_since);
     connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
     connection_start_reading(TO_CONN(linked_conn));
   }
@@ -702,11 +713,13 @@ directory_initiate_command(const char *address, uint32_t addr,
 static void
 directory_send_command(dir_connection_t *conn,
                        int purpose, int direct, const char *resource,
-                       const char *payload, size_t payload_len)
+                       const char *payload, size_t payload_len,
+                       time_t if_modified_since)
 {
   char proxystring[256];
   char proxyauthstring[256];
   char hoststring[128];
+  char imsstring[RFC1123_TIME_LEN+32];
   char *url;
   char request[8192];
   const char *httpcommand = NULL;
@@ -725,6 +738,15 @@ directory_send_command(dir_connection_t *conn,
   } else {
     tor_snprintf(hoststring, sizeof(hoststring),"%s:%d",
                  conn->_base.address, conn->_base.port);
+  }
+
+  /* Format if-modified-since */
+  if (!if_modified_since) {
+    imsstring[0] = '\0';
+  } else {
+    char b[RFC1123_TIME_LEN+1];
+    format_rfc1123_time(b, if_modified_since);
+    tor_snprintf(imsstring, sizeof(imsstring), "\r\nIf-Modified-Since: %s", b);
   }
 
   /* come up with some proxy lines, if we're using one. */
@@ -870,14 +892,16 @@ directory_send_command(dir_connection_t *conn,
 
   if (!strcmp(httpcommand, "GET") && !payload) {
     tor_snprintf(request, sizeof(request),
-                 " HTTP/1.0\r\nHost: %s%s\r\n\r\n",
+                 " HTTP/1.0\r\nHost: %s%s%s\r\n\r\n",
                  hoststring,
+                 imsstring,
                  proxyauthstring);
   } else {
     tor_snprintf(request, sizeof(request),
-                 " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s\r\n\r\n",
+                 " HTTP/1.0\r\nContent-Length: %lu\r\nHost: %s%s%s\r\n\r\n",
                  payload ? (unsigned long)payload_len : 0,
                  hoststring,
+                 imsstring,
                  proxyauthstring);
   }
   connection_write_to_buf(request, strlen(request), TO_CONN(conn));
@@ -1409,7 +1433,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     if (status_code != 200) {
-      log_warn(LD_DIR,
+      int severity = (status_code == 304) ? LOG_INFO : LOG_WARN;
+      log(severity, LD_DIR,
           "Received http status code %d (%s) from server "
           "'%s:%d' while fetching consensus directory.",
            status_code, escaped(reason), conn->_base.address,
@@ -1431,6 +1456,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     directory_info_has_arrived(now, 0);
     log_info(LD_DIR, "Successfully loaded consensus.");
   }
+
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
     if (status_code != 200) {
       log_warn(LD_DIR,

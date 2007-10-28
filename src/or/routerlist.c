@@ -3417,7 +3417,7 @@ initiate_descriptor_downloads(routerstatus_t *source,
     directory_initiate_command_routerstatus(source, purpose,
                                             ROUTER_PURPOSE_GENERAL,
                                             0, /* not private */
-                                            resource, NULL, 0);
+                                            resource, NULL, 0, 0);
   } else {
     directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource, 1);
   }

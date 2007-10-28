@@ -23,14 +23,10 @@ Things we'd like to do in 0.2.0.x:
   - Before the feature freeze: (Nick)
     - Support for preconfigured mirror lists
       - Use a pre-shipped fallback consensus.
-    - Download consensuses (et al) via if-modified-since
-      - Implement backend support for sending if-modified-since
-      - Use it for consensuses.
+    . Download consensuses (et al) via if-modified-since
+      o Implement backend support for sending if-modified-since
+      o Use it for consensuses.
       - Use it for certificates
-    o Saner TLS rotation
-      o Bump up OR the "connection timeout" value to be 1.5
-	circuit dirtiness interval.
-      o Document this in tor-spec
     o base Guard flag on WFU rather than on MTBF.
       o Change guard calculation
       o Change dir-spec.txt

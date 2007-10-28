@@ -27,6 +27,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       MaxCircuitDirtiness, since it is likely that they'll need to build
       a circuit over them within that timeframe.  Previously, they held them
       open only for KeepalivePeriod.
+    - Use "If-Modified-Since" to avoid retrieving consensus networkstatuses
+      that we already have.
 
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix

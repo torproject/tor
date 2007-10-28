@@ -2820,7 +2820,8 @@ void directory_initiate_command_routerstatus(routerstatus_t *status,
                                              int anonymized_connection,
                                              const char *resource,
                                              const char *payload,
-                                             size_t payload_len);
+                                             size_t payload_len,
+                                             time_t if_modified_since);
 
 int parse_http_response(const char *headers, int *code, time_t *date,
                         compress_method_t *compression, char **response);
@@ -2836,7 +2837,8 @@ void directory_initiate_command(const char *address, uint32_t addr,
                                 uint8_t dir_purpose, uint8_t router_purpose,
                                 int anonymized_connection,
                                 const char *resource,
-                                const char *payload, size_t payload_len);
+                                const char *payload, size_t payload_len,
+                                time_t if_modified_since);
 
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,

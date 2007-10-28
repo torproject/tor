@@ -944,7 +944,8 @@ update_v2_networkstatus_cache_downloads(time_t now)
                ROUTER_PURPOSE_GENERAL,
                0, /* Not private */
                resource,
-               NULL, 0 /* No payload. */);
+               NULL, 0 /* No payload. */,
+               0 /* No I-M-S. */);
        });
   } else {
     /* A non-authority cache launches one connection to a random authority. */

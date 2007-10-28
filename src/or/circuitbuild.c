@@ -2954,7 +2954,7 @@ fetch_bridge_descriptors(time_t now)
                                      1, bridge->identity,
                                      DIR_PURPOSE_FETCH_SERVERDESC,
                                      ROUTER_PURPOSE_BRIDGE,
-                                     0, "authority.z", NULL, 0);
+                                     0, "authority.z", NULL, 0, 0);
         }
       } else {
         /* We have a digest and we want to ask an authority. We could
