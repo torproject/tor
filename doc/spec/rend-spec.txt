@@ -271,7 +271,7 @@ $Id$
 
            [At start, exactly once]
 
-           The identifier of this introduction point: the base-16 encoded
+           The identifier of this introduction point: the base-32 encoded
            hash of this introduction point's identity key.
 
          "ip-address" ip-address NL

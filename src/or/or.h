@@ -587,6 +587,27 @@ typedef enum {
 /** Length of 'y' portion of 'y.onion' URL. */
 #define REND_SERVICE_ID_LEN 16
 
+/** Time period for which a v2 descriptor will be valid. */
+#define REND_TIME_PERIOD_V2_DESC_VALIDITY (24*60*60)
+
+/** Time period within which two sets of v2 descriptors will be uploaded in
+ * parallel. */
+#define REND_TIME_PERIOD_OVERLAPPING_V2_DESCS (60*60)
+
+/** Number of non-consecutive replicas (i.e. distributed somewhere
+ * in the ring) for a descriptor. */
+#define REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS 2
+
+/** Maximum time that an onion router may not respond unless taken
+ * from the list of hidden service directories. */
+#define REND_HS_DIR_REACHABLE_TIMEOUT (45*60)
+
+/** Number of consecutive replicas for a descriptor. */
+#define REND_NUMBER_OF_CONSECUTIVE_REPLICAS 3
+
+/** Length of v2 descriptor ID (32 base32 chars = 160 bits). */
+#define REND_DESC_ID_V2_BASE32 32
+
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
 
@@ -3351,7 +3372,7 @@ int rend_client_send_introduction(origin_circuit_t *introcirc,
 /** Information used to connect to a hidden service. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk; /**< This service's public key. */
-  int version; /**< 0. */
+  int version; /**< 0 or 2. */
   time_t timestamp; /**< Time when the descriptor was generated. */
   uint16_t protocols; /**< Bitmask: which rendezvous protocols are supported?
                        * (We allow bits '0', '1', and '2' to be set.) */
@@ -3365,6 +3386,8 @@ typedef struct rend_service_descriptor_t {
    * from this array if introduction attempts fail.  If this array is present,
    * its elements correspond to the elements of intro_points. */
   extend_info_t **intro_point_extend_info;
+  strmap_t *intro_keys; /**< map from intro node hexdigest to key; only
+                         * used for versioned hidden service descriptors. */
 } rend_service_descriptor_t;
 
 int rend_cmp_service_ids(const char *one, const char *two);
@@ -3399,6 +3422,17 @@ int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
 int rend_cache_store(const char *desc, size_t desc_len, int published);
 int rend_cache_size(void);
+int rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
+                               smartlist_t *desc_ids_out,
+                               rend_service_descriptor_t *desc, time_t now,
+                               const char *descriptor_cookie, uint8_t period);
+int rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
+                            const char *descriptor_cookie,
+                            time_t now, uint8_t replica);
+int rend_id_is_in_interval(const char *a, const char *b, const char *c);
+void rend_get_descriptor_id_bytes(char *descriptor_id_out,
+                                  const char *service_id,
+                                  const char *secret_id_part);
 
 /********************************* rendservice.c ***************************/
 
@@ -3728,6 +3762,16 @@ ns_detached_signatures_t *networkstatus_parse_detached_signatures(
 
 authority_cert_t *authority_cert_parse_from_string(const char *s,
                                                    const char **end_of_string);
+int rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
+                                     char *desc_id_out,
+                                     char **intro_points_encrypted_out,
+                                     size_t *intro_points_encrypted_size_out,
+                                     size_t *encoded_size_out,
+                                     const char **next_out, const char *desc);
+int rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
+                                     const char *descriptor_cookie,
+                                     const char *intro_content,
+                                     size_t intro_size);
 
 #endif
 

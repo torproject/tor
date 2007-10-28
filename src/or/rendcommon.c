@@ -43,7 +43,429 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
   tor_free(desc);
 }
 
-/** Encode a V0 service descriptor for <b>desc</b>, and sign it with
+/* Length of a binary-encoded rendezvous service ID. */
+#define REND_SERVICE_ID_BINARY 10
+
+/* Length of the time period that is used to encode the secret ID part of
+ * versioned hidden service descriptors. */
+#define REND_TIME_PERIOD_BINARY 4
+
+/* Length of the descriptor cookie that is used for versioned hidden
+ * service descriptors. */
+#define REND_DESC_COOKIE_BINARY 16
+
+/* Length of the replica number that is used to determine the secret ID
+ * part of versioned hidden service descriptors. */
+#define REND_REPLICA_BINARY 1
+
+/* Length of the base32-encoded secret ID part of versioned hidden service
+ * descriptors. */
+#define REND_SECRET_ID_PART_BASE32 32
+
+/* Compute the descriptor ID for <b>service_id</b> of length
+ * <b>REND_SERVICE_ID_BINARY</b> and <b>secret_id_part</b> of length
+ * <b>DIGEST_LEN</b>, and write it to <b>descriptor_id_out</b> of length
+ * <b>DIGEST_LEN</b>. */
+void
+rend_get_descriptor_id_bytes(char *descriptor_id_out,
+                             const char *service_id,
+                             const char *secret_id_part)
+{
+  crypto_digest_env_t *digest = crypto_new_digest_env();
+  crypto_digest_add_bytes(digest, service_id, REND_SERVICE_ID_BINARY);
+  crypto_digest_add_bytes(digest, secret_id_part, DIGEST_LEN);
+  crypto_digest_get_digest(digest, descriptor_id_out, DIGEST_LEN);
+  crypto_free_digest_env(digest);
+}
+
+/* Compute the secret ID part for <b>time_period</b> of length
+ * <b>REND_TIME_PERIOD_BINARY</b>, <b>descriptor_cookie</b> of length
+ * <b>REND_DESC_COOKIE_BINARY</b> which may also be <b>NULL</b> if no
+ * descriptor_cookie shall be used, and <b>replica</b>, and write it to
+ * <b>secret_id_part</b> of length DIGEST_LEN. */
+static void
+get_secret_id_part_bytes(char *secret_id_part, const char *time_period,
+                         const char *descriptor_cookie, uint8_t replica)
+{
+  crypto_digest_env_t *digest = crypto_new_digest_env();
+  crypto_digest_add_bytes(digest, time_period, REND_TIME_PERIOD_BINARY);
+  if (descriptor_cookie) {
+    crypto_digest_add_bytes(digest, descriptor_cookie,
+                            REND_DESC_COOKIE_BINARY);
+  }
+  crypto_digest_add_bytes(digest, (const char *)&replica, REND_REPLICA_BINARY);
+  crypto_digest_get_digest(digest, secret_id_part, DIGEST_LEN);
+  crypto_free_digest_env(digest);
+}
+
+/* Compute the time period bytes for time <b>now</b> plus a potentially
+ * intended <b>deviation</b> of one or more periods, and the first byte of
+ * <b>service_id</b>, and write it to <b>time_period</b> of length 4. */
+static void
+get_time_period_bytes(char *time_period, time_t now, uint8_t deviation,
+                      const char *service_id)
+{
+  uint32_t host_order =
+    (uint32_t)
+    (now + ((uint8_t) *service_id) * REND_TIME_PERIOD_V2_DESC_VALIDITY / 256)
+    / REND_TIME_PERIOD_V2_DESC_VALIDITY + deviation;
+  uint32_t network_order = htonl(host_order);
+  set_uint32(time_period, network_order);
+}
+
+/* Compute the time in seconds that a descriptor that is generated
+ * <b>now</b> for <b>service_id</b> will be valid. */
+static uint32_t
+get_seconds_valid(time_t now, const char *service_id)
+{
+  uint32_t result = REND_TIME_PERIOD_V2_DESC_VALIDITY -
+    (uint32_t)
+    (now + ((uint8_t) *service_id) * REND_TIME_PERIOD_V2_DESC_VALIDITY / 256)
+    % REND_TIME_PERIOD_V2_DESC_VALIDITY;
+  return result;
+}
+
+/* Compute the binary <b>desc_id</b> for a given base32-encoded
+ * <b>service_id</b> and binary encoded <b>descriptor_cookie</b> of length
+ * 16 that may be <b>NULL</b> at time <b>now</b> for replica number
+ * <b>replica</b>. <b>desc_id</b> needs to have <b>DIGEST_LEN</b> bytes
+ * free. Return 0 for success, -1 otherwise. */
+int
+rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
+                        const char *descriptor_cookie, time_t now,
+                        uint8_t replica)
+{
+  char service_id_binary[REND_SERVICE_ID_BINARY];
+  char time_period[REND_TIME_PERIOD_BINARY];
+  char secret_id_part[DIGEST_LEN];
+  if (!service_id ||
+      strlen(service_id) != REND_SERVICE_ID_LEN) {
+    log_warn(LD_REND, "Could not compute v2 descriptor ID: "
+                      "Illegal service ID: %s", service_id);
+    return -1;
+  }
+  if (replica >= REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS) {
+    log_warn(LD_REND, "Could not compute v2 descriptor ID: "
+                      "Replica number out of range: %d", replica);
+    return -1;
+  }
+  /* Convert service ID to binary. */
+  if (base32_decode(service_id_binary, REND_SERVICE_ID_BINARY,
+                    service_id, REND_SERVICE_ID_LEN) < 0) {
+    log_warn(LD_REND, "Could not compute v2 descriptor ID: "
+                      "Illegal characters in service ID: %s",
+             service_id);
+    return -1;
+  }
+  /* Calculate current time-period. */
+  get_time_period_bytes(time_period, now, 0, service_id_binary);
+  /* Calculate secret-id-part = h(time-period + replica). */
+  get_secret_id_part_bytes(secret_id_part, time_period, descriptor_cookie,
+                           replica);
+  /* Calculate descriptor ID. */
+  rend_get_descriptor_id_bytes(desc_id_out, service_id_binary, secret_id_part);
+  return 0;
+}
+
+/* Encode the introduction points in <b>desc</b>, optionally encrypt them
+ * with <b>descriptor_cookie</b> of length 16 that may also be <b>NULL</b>,
+ * write them to a newly allocated string, and write a pointer to it to
+ * <b>ipos_base64</b>. Return 0 for success, -1 otherwise. */
+static int
+rend_encode_v2_intro_points(char **ipos_base64,
+                            rend_service_descriptor_t *desc,
+                            const char *descriptor_cookie)
+{
+  size_t unenc_len;
+  char *unenc;
+  size_t unenc_written = 0;
+  char *enc;
+  int enclen;
+  int i;
+  crypto_cipher_env_t *cipher;
+  /* Assemble unencrypted list of introduction points. */
+  unenc_len = desc->n_intro_points * 1000; /* too long, but ok. */
+  unenc = tor_malloc_zero(unenc_len);
+  for (i = 0; i < desc->n_intro_points; i++) {
+    char id_base32[32 + 1];
+    char *onion_key;
+    size_t onion_key_len;
+    crypto_pk_env_t *intro_key;
+    char *service_key;
+    size_t service_key_len;
+    int res;
+    char hex_digest[HEX_DIGEST_LEN+2];
+    /* Obtain extend info with introduction point details. */
+    extend_info_t *info = desc->intro_point_extend_info[i];
+    /* Encode introduction point ID. */
+    base32_encode(id_base32, 32 + 1, info->identity_digest, DIGEST_LEN);
+    /* Encode onion key. */
+    if (crypto_pk_write_public_key_to_string(info->onion_key, &onion_key,
+                                             &onion_key_len) < 0) {
+      log_warn(LD_REND, "Could not write onion key.");
+      if (onion_key) tor_free(onion_key);
+      tor_free(unenc);
+      return -1;
+    }
+    /* Encode intro key. */
+    hex_digest[0] = '$';
+    base16_encode(hex_digest+1, HEX_DIGEST_LEN+1,
+                  info->identity_digest,
+                  DIGEST_LEN);
+    intro_key = strmap_get(desc->intro_keys, hex_digest);
+    if (!intro_key ||
+      crypto_pk_write_public_key_to_string(intro_key, &service_key,
+                                           &service_key_len) < 0) {
+      log_warn(LD_REND, "Could not write intro key.");
+      if (service_key) tor_free(service_key);
+      tor_free(onion_key);
+      tor_free(unenc);
+      return -1;
+    }
+    /* Assemble everything for this introduction point. */
+    res = tor_snprintf(unenc + unenc_written, unenc_len - unenc_written,
+                         "introduction-point %s\n"
+                         "ip-address %s\n"
+                         "onion-port %d\n"
+                         "onion-key\n%s"
+                         "service-key\n%s",
+                       id_base32,
+                       tor_dup_addr(info->addr),
+                       info->port,
+                       onion_key,
+                       service_key);
+    tor_free(onion_key);
+    tor_free(service_key);
+    if (res < 0) {
+      log_warn(LD_REND, "Not enough space for writing introduction point "
+                        "string.");
+      tor_free(unenc);
+      return -1;
+    }
+    /* Update total number of written bytes for unencrypted intro points. */
+    unenc_written += res;
+  }
+  /* Finalize unencrypted introduction points. */
+  if (unenc_len < unenc_written + 2) {
+    log_warn(LD_REND, "Not enough space for finalizing introduction point "
+                      "string.");
+    tor_free(unenc);
+    return -1;
+  }
+  unenc[unenc_written++] = '\n';
+  unenc[unenc_written++] = 0;
+  /* If a descriptor cookie is passed, encrypt introduction points. */
+  if (descriptor_cookie) {
+    enc = tor_malloc_zero(unenc_written + 16);
+    cipher = crypto_create_init_cipher(descriptor_cookie, 1);
+    enclen = crypto_cipher_encrypt_with_iv(cipher, enc, unenc_written + 16,
+                                           unenc, unenc_written);
+    crypto_free_cipher_env(cipher);
+    tor_free(unenc);
+    if (enclen < 0) {
+      log_warn(LD_REND, "Could not encrypt introduction point string.");
+      if (enc) tor_free(enc);
+      return -1;
+    }
+    /* Replace original string by encrypted one. */
+    unenc = enc;
+    unenc_written = enclen;
+  }
+  /* Base64-encode introduction points. */
+  *ipos_base64 = tor_malloc_zero(unenc_written * 2);
+  if (base64_encode(*ipos_base64, unenc_written * 2, unenc, unenc_written)
+      < 0) {
+    log_warn(LD_REND, "Could not encode introduction point string to "
+                      "base64.");
+    tor_free(unenc);
+    tor_free(ipos_base64);
+    return -1;
+  }
+  tor_free(unenc);
+  return 0;
+}
+
+/** Attempt to parse the given <b>desc_str</b> and return true if this
+ * succeeds, false otherwise. */
+static int
+rend_desc_v2_is_parsable(const char *desc_str)
+{
+  rend_service_descriptor_t *test_parsed;
+  char test_desc_id[DIGEST_LEN];
+  char *test_intro_content;
+  size_t test_intro_size;
+  size_t test_encoded_size;
+  const char *test_next;
+  int res = rend_parse_v2_service_descriptor(&test_parsed, test_desc_id,
+                                         &test_intro_content,
+                                         &test_intro_size,
+                                         &test_encoded_size,
+                                         &test_next, desc_str);
+  tor_free(test_parsed);
+  tor_free(test_intro_content);
+  return (res >= 0);
+}
+
+/** Encode a set of new service descriptors for <b>desc</b> at time
+ * <b>now</b> using <b>descriptor_cookie</b> (may be <b>NULL</b> if
+ * introduction points shall not be encrypted) and <b>period</b> (e.g. 0
+ * for the current period, 1 for the next period, etc.), write the
+ * ASCII-encoded outputs to newly allocated strings and add them to the
+ * existing <b>desc_strs</b>, and write the descriptor IDs to newly
+ * allocated strings and add them to the existing <b>desc_ids</b>; return
+ * the number of seconds that the descriptors will be found under those
+ * <b>desc_ids</b> by clients, or -1 if the encoding was not successful. */
+int
+rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
+                           smartlist_t *desc_ids_out,
+                           rend_service_descriptor_t *desc, time_t now,
+                           const char *descriptor_cookie, uint8_t period)
+{
+  char service_id[DIGEST_LEN];
+  char time_period[REND_TIME_PERIOD_BINARY];
+  char *ipos_base64 = NULL;
+  int k;
+  uint32_t seconds_valid;
+  if (!desc) {
+    log_warn(LD_REND, "Could not encode v2 descriptor: No desc given.");
+    return -1;
+  }
+  /* Obtain service_id from public key. */
+  crypto_pk_get_digest(desc->pk, service_id);
+  /* Calculate current time-period. */
+  get_time_period_bytes(time_period, now, period, service_id);
+  /* Determine how many seconds the descriptor will be valid. */
+  seconds_valid = period * REND_TIME_PERIOD_V2_DESC_VALIDITY +
+                  get_seconds_valid(now, service_id);
+  /* Assemble, possibly encrypt, and encode introduction points. */
+  if (rend_encode_v2_intro_points(&ipos_base64, desc, descriptor_cookie) < 0) {
+    log_warn(LD_REND, "Encoding of introduction points did not succeed.");
+    if (ipos_base64) tor_free(ipos_base64);
+    return -1;
+  }
+  /* Encode REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS descriptors. */
+  for (k = 0; k < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; k++) {
+    char secret_id_part[DIGEST_LEN];
+    char secret_id_part_base32[REND_SECRET_ID_PART_BASE32 + 1];
+    char *desc_id;
+    char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
+    char *permanent_key;
+    size_t permanent_key_len;
+    char published[ISO_TIME_LEN+1];
+    int i;
+    char protocol_versions_string[16]; /* max len: "0,1,2,3,4,5,6,7\0" */
+    size_t protocol_versions_written;
+    size_t desc_len;
+    char *desc_str;
+    int result = 0;
+    size_t written = 0;
+    char desc_digest[DIGEST_LEN];
+    /* Calculate secret-id-part = h(time-period + cookie + replica). */
+    get_secret_id_part_bytes(secret_id_part, time_period, descriptor_cookie,
+                             k);
+    base32_encode(secret_id_part_base32, REND_SECRET_ID_PART_BASE32 + 1,
+                  secret_id_part, DIGEST_LEN);
+    /* Calculate descriptor ID. */
+    desc_id = tor_malloc_zero(DIGEST_LEN);
+    rend_get_descriptor_id_bytes(desc_id, service_id, secret_id_part);
+    smartlist_add(desc_ids_out, desc_id);
+    base32_encode(desc_id_base32, REND_DESC_ID_V2_BASE32 + 1,
+                  desc_id, DIGEST_LEN);
+    /* PEM-encode the public key */
+    if (crypto_pk_write_public_key_to_string(desc->pk, &permanent_key,
+                                             &permanent_key_len) < 0) {
+      log_warn(LD_BUG, "Could not write public key to string.");
+      if (permanent_key) tor_free(permanent_key);
+      goto err;
+    }
+    /* Encode timestamp. */
+    format_iso_time(published, desc->timestamp);
+    /* Write protocol-versions bitmask to comma-separated value string. */
+    protocol_versions_written = 0;
+    for (i = 0; i < 8; i++) {
+      if (desc->protocols & 1 << i) {
+        tor_snprintf(protocol_versions_string + protocol_versions_written,
+                     16 - protocol_versions_written, "%d,", i);
+        protocol_versions_written += 2;
+      }
+    }
+    protocol_versions_string[protocol_versions_written - 1] = 0;
+    /* Assemble complete descriptor. */
+    desc_len = 2000 + desc->n_intro_points * 1000; /* far too long, but ok. */
+    desc_str = tor_malloc_zero(desc_len);
+    result = tor_snprintf(desc_str, desc_len,
+             "rendezvous-service-descriptor %s\n"
+             "version 2\n"
+             "permanent-key\n%s"
+             "secret-id-part %s\n"
+             "publication-time %s\n"
+             "protocol-versions %s\n"
+             "introduction-points\n"
+             "-----BEGIN MESSAGE-----\n%s"
+             "-----END MESSAGE-----\n",
+        desc_id_base32,
+        permanent_key,
+        secret_id_part_base32,
+        published,
+        protocol_versions_string,
+        ipos_base64);
+    tor_free(permanent_key);
+    if (result < 0) {
+      log_warn(LD_BUG, "Descriptor ran out of room.");
+      if (desc_str) tor_free(desc_str);
+      goto err;
+    }
+    written = result;
+    /* Add signature. */
+    strlcpy(desc_str + written, "signature\n", desc_len - written);
+    written += strlen(desc_str + written);
+    desc_str[written] = '\0';
+    if (crypto_digest(desc_digest, desc_str, written) < 0) {
+      log_warn(LD_BUG, "could not create digest.");
+      tor_free(desc_str);
+      goto err;
+    }
+    if (router_append_dirobj_signature(desc_str + written,
+                                       desc_len - written,
+                                       desc_digest, desc->pk) < 0) {
+      log_warn(LD_BUG, "Couldn't sign desc.");
+      tor_free(desc_str);
+      goto err;
+    }
+    written += strlen(desc_str+written);
+    if (written+2 > desc_len) {
+        log_warn(LD_BUG, "Could not finish desc.");
+        tor_free(desc_str);
+        goto err;
+    }
+    desc_str[written++] = '\n';
+    desc_str[written++] = 0;
+    /* Check if we can parse our own descriptor. */
+    if (!rend_desc_v2_is_parsable(desc_str)) {
+      log_warn(LD_BUG, "Could not parse my own descriptor: %s", desc_str);
+      tor_free(desc_str);
+      goto err;
+    }
+    smartlist_add(desc_strs_out, desc_str);
+  }
+
+  log_info(LD_REND, "Successfully encoded a v2 descriptor and "
+                      "confirmed that it is parsable.");
+  goto done;
+
+ err:
+  SMARTLIST_FOREACH(desc_ids_out, void *, id, tor_free(id));
+  smartlist_clear(desc_ids_out);
+  SMARTLIST_FOREACH(desc_strs_out, void *, str, tor_free(str));
+  smartlist_clear(desc_strs_out);
+  seconds_valid = -1;
+
+ done:
+  tor_free(ipos_base64);
+  return seconds_valid;
+}
+
+/** Encode a service descriptor for <b>desc</b>, and sign it with
  * <b>key</b>. Store the descriptor in *<b>str_out</b>, and set
  * *<b>len_out</b> to its length.
  */

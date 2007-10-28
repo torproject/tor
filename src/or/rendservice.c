@@ -51,6 +51,8 @@ typedef struct rend_service_t {
   char pk_digest[DIGEST_LEN];
   smartlist_t *intro_nodes; /**< list of hexdigests for intro points we have,
                              * or are trying to establish. */
+  strmap_t *intro_keys; /**< map from intro node hexdigest to key; only
+                          * used for versioned hidden service descriptors. */
   time_t intro_period_started;
   int n_intro_circuits_launched; /**< count of intro circuits we have
                                   * established in this period. */
@@ -72,6 +74,15 @@ num_rend_services(void)
   return smartlist_len(rend_service_list);
 }
 
+/** Release the storage held by the intro key in <b>_ent</b>.
+ */
+static void
+intro_key_free(void *_ent)
+{
+  crypto_pk_env_t *ent = _ent;
+  crypto_free_pk_env(ent);
+}
+
 /** Release the storage held by <b>service</b>.
  */
 static void
@@ -83,6 +94,8 @@ rend_service_free(rend_service_t *service)
   smartlist_free(service->ports);
   if (service->private_key)
     crypto_free_pk_env(service->private_key);
+  if (service->intro_keys)
+    strmap_free(service->intro_keys, intro_key_free);
   tor_free(service->intro_prefer_nodes);
   tor_free(service->intro_exclude_nodes);
   SMARTLIST_FOREACH(service->intro_nodes, void*, p, tor_free(p));
@@ -119,6 +132,7 @@ add_service(rend_service_t *service)
     service->intro_prefer_nodes = tor_strdup("");
   if (!service->intro_exclude_nodes)
     service->intro_exclude_nodes = tor_strdup("");
+  service->intro_keys = strmap_new();
 
   if (!smartlist_len(service->ports)) {
     log_warn(LD_CONFIG, "Hidden service with no ports configured; ignoring.");
@@ -303,6 +317,7 @@ rend_service_update_descriptor(rend_service_t *service)
   d->intro_point_extend_info = tor_malloc_zero(sizeof(extend_info_t*)*n);
   /* We support intro protocol 2 and protocol 0. */
   d->protocols = (1<<2) | (1<<0);
+  d->intro_keys = service->intro_keys;
   for (i=0; i < n; ++i) {
     const char *name = smartlist_get(service->intro_nodes, i);
     router = router_get_by_nickname(name, 1);

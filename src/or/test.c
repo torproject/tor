@@ -99,7 +99,7 @@ remove_directory(void)
 static crypto_pk_env_t *
 pk_generate(int idx)
 {
-  static crypto_pk_env_t *pregen[3] = {NULL, NULL, NULL};
+  static crypto_pk_env_t *pregen[5] = {NULL, NULL, NULL, NULL, NULL};
   tor_assert(idx < (int)(sizeof(pregen)/sizeof(pregen[0])));
   if (! pregen[idx]) {
     pregen[idx] = crypto_new_pk_env();
@@ -3216,6 +3216,97 @@ test_crypto_base32_decode(void)
   test_memneq(plain, decoded, 60);
 }
 
+/* Test encoding and parsing of v2 rendezvous service descriptors. */
+static void
+test_rend_fns_v2(void)
+{
+  rend_service_descriptor_t *generated, *parsed;
+  char service_id[DIGEST_LEN];
+  char service_id_base32[REND_SERVICE_ID_LEN+1];
+  const char *next_desc;
+  smartlist_t *desc_strs = smartlist_create();
+  smartlist_t *desc_ids = smartlist_create();
+  char computed_desc_id[DIGEST_LEN];
+  char parsed_desc_id[DIGEST_LEN];
+  crypto_pk_env_t *pk1, *pk2;
+  time_t now;
+  char *intro_points_encrypted;
+  size_t intro_points_size;
+  size_t encoded_size;
+  int i;
+  pk1 = pk_generate(0);
+  pk2 = pk_generate(1);
+  generated = tor_malloc_zero(sizeof(rend_service_descriptor_t));
+  generated->pk = crypto_pk_dup_key(pk1);
+  crypto_pk_get_digest(generated->pk, service_id);
+  base32_encode(service_id_base32, REND_SERVICE_ID_LEN+1, service_id, 10);
+  now = time(NULL);
+  generated->timestamp = now;
+  generated->n_intro_points = 3;
+  generated->version = 2;
+  generated->protocols = 42;
+  generated->intro_point_extend_info =
+    tor_malloc_zero(sizeof(extend_info_t *) * generated->n_intro_points);
+  generated->intro_points =
+    tor_malloc_zero(sizeof(char *) * generated->n_intro_points);
+  generated->intro_keys = strmap_new();
+  for (i = 0; i < generated->n_intro_points; i++) {
+    extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
+    crypto_pk_env_t *okey = pk_generate(2 + i);
+    info->onion_key = crypto_pk_dup_key(okey);
+    crypto_pk_get_digest(info->onion_key, info->identity_digest);
+    //crypto_rand(info->identity_digest, DIGEST_LEN); /* Would this work? */
+    info->nickname[0] = '$';
+    base16_encode(info->nickname + 1, sizeof(info->nickname) - 1,
+                  info->identity_digest, DIGEST_LEN);
+    info->addr = crypto_rand_int(65536); /* Does not cover all IP addresses. */
+    info->port = crypto_rand_int(65536);
+    generated->intro_points[i] = tor_strdup(info->nickname);
+    generated->intro_point_extend_info[i] = info;
+    strmap_set(generated->intro_keys, info->nickname, pk2);
+  }
+  test_assert(rend_encode_v2_descriptors(desc_strs, desc_ids, generated, now,
+                                         NULL, 0) > 0);
+  test_assert(rend_compute_v2_desc_id(computed_desc_id, service_id_base32,
+                                      NULL, now, 0) == 0);
+  test_assert(smartlist_digest_isin(desc_ids, computed_desc_id));
+  test_assert(rend_parse_v2_service_descriptor(&parsed, parsed_desc_id,
+                                               &intro_points_encrypted,
+                                               &intro_points_size,
+                                               &encoded_size,
+                                               &next_desc,
+                                               desc_strs->list[0]) == 0);
+  test_assert(parsed);
+  test_assert(smartlist_digest_isin(desc_ids, parsed_desc_id));
+  test_assert(rend_decrypt_introduction_points(parsed, NULL,
+                                               intro_points_encrypted,
+                                               intro_points_size) == 3);
+  test_assert(!crypto_pk_cmp_keys(generated->pk, parsed->pk));
+  test_eq(parsed->timestamp, now);
+  test_eq(parsed->version, 2);
+  test_eq(parsed->protocols, 42);
+  test_eq(parsed->n_intro_points, 3);
+  for (i = 0; i < parsed->n_intro_points; i++) {
+    extend_info_t *par_info = parsed->intro_point_extend_info[i];
+    extend_info_t *gen_info = generated->intro_point_extend_info[i];
+    test_assert(!crypto_pk_cmp_keys(gen_info->onion_key, par_info->onion_key));
+    test_memeq(gen_info->identity_digest, par_info->identity_digest,
+               DIGEST_LEN);
+    test_streq(gen_info->nickname, par_info->nickname);
+    test_streq(generated->intro_points[i], parsed->intro_points[i]);
+    test_eq(gen_info->addr, par_info->addr);
+    test_eq(gen_info->port, par_info->port);
+  }
+  tor_free(intro_points_encrypted);
+  /*for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
+    tor_free(desc_strs[i]);*/
+  smartlist_free(desc_strs);
+  for (i = 0; i < parsed->n_intro_points; i++) {
+    tor_free(parsed->intro_point_extend_info[i]->onion_key);
+    tor_free(generated->intro_point_extend_info[i]->onion_key);
+  }
+}
+
 #define ENT(x) { #x, test_ ## x, 0, 0 }
 #define SUBENT(x,y) { #x "/" #y, test_ ## x ## _ ## y, 1, 0 }
 
@@ -3249,6 +3340,7 @@ static struct {
   ENT(v3_networkstatus),
   ENT(policies),
   ENT(rend_fns),
+  SUBENT(rend_fns, v2),
   { NULL, NULL, 0, 0 },
 };
 
