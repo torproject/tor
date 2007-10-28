@@ -384,6 +384,9 @@ get_stability(or_history_t *hist, time_t when)
   return total / total_weights;
 }
 
+/* Until we've known about you for this long, you simply can't be up. */
+#define MIN_WEIGHTED_TIME_TO_BE_UP (18*60*60)
+
 /** Helper: Return the weighted percent-of-time-online of the router with
  * history <b>hist</b>. */
 static double
@@ -399,6 +402,8 @@ get_weighted_fractional_uptime(or_history_t *hist, time_t when)
   } else if (hist->start_of_downtime) {
     total += (when - hist->start_of_downtime);
   }
+  if (total < MIN_WEIGHTED_TIME_TO_BE_UP)
+    return 0.0;
   return ((double) up) / total;
 }
 
