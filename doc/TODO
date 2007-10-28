@@ -567,7 +567,18 @@ P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
     tor-related tools you can use, and what they give you, and how well they
     work.  Right now, we don't give a lot of guidance wrt
     torbutton/foxproxy/privoxy/polipo in any consistent place.
-P  - the tor mirror pages are probably still mirroring from tor.eff.org.
-    Get them to switch, and maybe remove the ones that haven't switched?
-    (We have 34 mirrors, I emailed the mirrors for which I have a
-contact.)
+
+  - Tor mirrors
+    - make a mailing list with the mirror operators
+    - make an automated tool to check /project/trace/ at mirrors to
+      learn which ones are lagging behind.
+    - auto (or manually) cull the mirrors that are broken; and
+      contact their operator?
+    - a set of instructions for mirror operators to make their apaches
+      serve our charsets correctly, and bonus points for language
+      negotiation.
+    - figure out how to load-balance the downloads across mirrors?
+    - ponder how to get users to learn that they should google for
+      "tor mirrors" if the main site is blocked.
+    - find a mirror volunteer to coordinate all of this
+
