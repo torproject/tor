@@ -1,6 +1,7 @@
 #!/bin/sh
 # $Id$
 # Copyright 2004-2005 Nick Mathewson. 
+# Copyright 2005-2007 Andrew Lewman
 # See LICENSE in Tor distribution for licensing information.
 
 # This script builds a Macintosh OS X metapackage containing 4 packages:

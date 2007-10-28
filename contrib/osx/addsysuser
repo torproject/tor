@@ -4,6 +4,8 @@
 #
 # Modified for Tor installer by Nick Mathewson
 # 2007-06-12 Modified for leopard by Andrew Lewman
+# Copyright (c) 2007 Andrew Lewman
+#
 
 
 ROOTPROP=/
