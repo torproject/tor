@@ -1829,7 +1829,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->is_unnamed = (naming && (name_status & FP_UNNAMED)) ? 1 : 0;
   }
   rs->is_valid = ri->is_valid;
-  
+
   if (rs->is_fast &&
       (!rs->is_exit || exits_can_be_guards) &&
       (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
