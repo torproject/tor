@@ -910,10 +910,11 @@ typedef struct edge_connection_t {
   /** True iff this connection is for a dns request only. */
   unsigned int is_dns_request : 1;
 
-  /** True iff this stream wants a one-hop circuit (e.g. for begin_dir). */
+  /** True iff this stream must attach to a one-hop circuit (e.g. for
+   * begin_dir). */
   int want_onehop:1;
-  /** True iff this stream should use a begin_dir connection (either via
-   * onehop or via a whole circuit). */
+  /** True iff this stream should use a BEGIN_DIR relay command to establish
+   * itself rather than BEGIN (either via onehop or via a whole circuit). */
   int use_begindir:1;
 
   /** If this is a DNSPort connection, this field holds the pending DNS

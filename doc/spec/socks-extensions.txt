@@ -60,7 +60,8 @@ Tor's extensions to the SOCKS protocol
   directory port of the Tor server specified by address:port (the port
   specified should be the ORPort of the server). It uses a one-hop tunnel
   and a "BEGIN_DIR" relay cell to accomplish this secure connection.
-  Th F2 command value was removed in Tor 0.2.0.10-alpha in favor of a
+
+  The F2 command value was removed in Tor 0.2.0.10-alpha in favor of a
   new use_begindir flag in edge_connection_t.
 
 4. HTTP-resistance
