@@ -3372,7 +3372,7 @@ int rend_client_send_introduction(origin_circuit_t *introcirc,
 /** Information used to connect to a hidden service. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk; /**< This service's public key. */
-  int version; /**< 0 or 2. */
+  int version; /**< Version of the descriptor format: 0 or 2. */
   time_t timestamp; /**< Time when the descriptor was generated. */
   uint16_t protocols; /**< Bitmask: which rendezvous protocols are supported?
                        * (We allow bits '0', '1', and '2' to be set.) */
@@ -3388,6 +3388,9 @@ typedef struct rend_service_descriptor_t {
   extend_info_t **intro_point_extend_info;
   strmap_t *intro_keys; /**< map from intro node hexdigest to key; only
                          * used for versioned hidden service descriptors. */
+
+  /* XXXX020 Refactor n_intro_points, intro_points, intro_point_extend_info,
+   * and intro_keys into a list of intro points. */
 } rend_service_descriptor_t;
 
 int rend_cmp_service_ids(const char *one, const char *two);

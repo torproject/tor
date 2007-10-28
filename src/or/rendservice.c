@@ -74,7 +74,7 @@ num_rend_services(void)
   return smartlist_len(rend_service_list);
 }
 
-/** Release the storage held by the intro key in <b>_ent</b>.
+/** Helper: Release the storage held by the intro key in <b>_ent</b>.
  */
 static void
 intro_key_free(void *_ent)
@@ -302,12 +302,11 @@ rend_service_update_descriptor(rend_service_t *service)
   origin_circuit_t *circ;
   int i,n;
   routerinfo_t *router;
-
   if (service->desc) {
     rend_service_descriptor_free(service->desc);
     service->desc = NULL;
   }
-  d = service->desc = tor_malloc(sizeof(rend_service_descriptor_t));
+  d = service->desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
   d->version = 1;
@@ -317,7 +316,23 @@ rend_service_update_descriptor(rend_service_t *service)
   d->intro_point_extend_info = tor_malloc_zero(sizeof(extend_info_t*)*n);
   /* We support intro protocol 2 and protocol 0. */
   d->protocols = (1<<2) | (1<<0);
-  d->intro_keys = service->intro_keys;
+
+  if (service->intro_keys) {
+    /* We need to copy keys so that they're not deleted when we free the
+     * descriptor. */
+    strmap_iter_t *iter;
+    d->intro_keys = strmap_new();
+    for (iter = strmap_iter_init(service->intro_keys); !strmap_iter_done(iter);
+         iter = strmap_iter_next(service->intro_keys, iter)) {
+      const char *key;
+      void *val;
+      crypto_pk_env_t *k;
+      strmap_iter_get(iter, &key, &val);
+      k = val;
+      strmap_set(d->intro_keys, key, crypto_pk_dup_key(k));
+    }
+  }
+
   for (i=0; i < n; ++i) {
     const char *name = smartlist_get(service->intro_nodes, i);
     router = router_get_by_nickname(name, 1);

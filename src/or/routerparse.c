@@ -315,22 +315,22 @@ static token_rule_t dir_key_certificate_table[] = {
 
 /** List of tokens allowable in rendezvous service descriptors */
 static token_rule_t desc_token_table[] = {
-  T1("rendezvous-service-descriptor", R_RENDEZVOUS_SERVICE_DESCRIPTOR, EQ(1), \
-     NO_OBJ),
+  T1_START("rendezvous-service-descriptor", R_RENDEZVOUS_SERVICE_DESCRIPTOR,
+           EQ(1), NO_OBJ),
   T1("version", R_VERSION, EQ(1), NO_OBJ),
   T1("permanent-key", R_PERMANENT_KEY, NO_ARGS, NEED_KEY_1024),
   T1("secret-id-part", R_SECRET_ID_PART, EQ(1), NO_OBJ),
   T1("publication-time", R_PUBLICATION_TIME, CONCAT_ARGS, NO_OBJ),
   T1("protocol-versions", R_PROTOCOL_VERSIONS, EQ(1), NO_OBJ),
   T1("introduction-points", R_INTRODUCTION_POINTS, NO_ARGS, NEED_OBJ),
-  T1("signature", R_SIGNATURE, NO_ARGS, NEED_OBJ),
+  T1_END("signature", R_SIGNATURE, NO_ARGS, NEED_OBJ),
   END_OF_TABLE
 };
 
 /** List of tokens allowed in the (encrypted) list of introduction points of
  * rendezvous service descriptors */
 static token_rule_t ipo_token_table[] = {
-  T1("introduction-point", R_IPO_IDENTIFIER, EQ(1), NO_OBJ),
+  T1_START("introduction-point", R_IPO_IDENTIFIER, EQ(1), NO_OBJ),
   T1("ip-address", R_IPO_IP_ADDRESS, EQ(1), NO_OBJ),
   T1("onion-port", R_IPO_ONION_PORT, EQ(1), NO_OBJ),
   T1("onion-key", R_IPO_ONION_KEY, NO_ARGS, NEED_KEY_1024),
@@ -3166,13 +3166,13 @@ sort_version_list(smartlist_t *versions, int remove_duplicates)
 }
 
 /** Parse and validate the ASCII-encoded v2 descriptor in <b>desc</b>,
- * write the parsed descriptor to the newly allocated <b>parsed</b>, the
- * binary descriptor ID of length DIGEST_LEN to <b>desc_id</b>, the
+ * write the parsed descriptor to the newly allocated *<b>parsed_out</b>, the
+ * binary descriptor ID of length DIGEST_LEN to <b>desc_id_out</b>, the
  * encrypted introduction points to the newly allocated
- * <b>intro_points_encrypted</b>, their encrypted size to
- * <b>intro_points_encrypted_size</b>, the size of the encoded descriptor
- * to <b>encoded_size</b>, and a pointer to the possibly next
- * descriptor to <b>next</b>; return 0 for success (including validation)
+ * *<b>intro_points_encrypted_out</b>, their encrypted size to
+ * *<b>intro_points_encrypted_size_out</b>, the size of the encoded descriptor
+ * to *<b>encoded_size_out</b>, and a pointer to the possibly next
+ * descriptor to *<b>next_now</b>; return 0 for success (including validation)
  * and -1 for failure.
  */
 int
@@ -3229,16 +3229,12 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     goto err;
   }
   /* Check whether descriptor starts correctly. */
-  tok = smartlist_get(tokens, 0);
-  if (tok->tp != R_RENDEZVOUS_SERVICE_DESCRIPTOR) {
-    log_warn(LD_REND, "Entry does not start with "
-             "\"rendezvous-service-descriptor\"");
-    goto err;
-  }
   /* Parse base32-encoded descriptor ID. */
   tok = find_first_by_keyword(tokens, R_RENDEZVOUS_SERVICE_DESCRIPTOR);
   tor_assert(tok);
+  tor_assert(tok == smartlist_get(tokens, 0));
   tor_assert(tok->n_args == 1);
+  /*XXXX020 magic 32. */
   if (strlen(tok->args[0]) != 32 ||
       strspn(tok->args[0], BASE32_CHARS) != 32) {
     log_warn(LD_REND, "Invalid descriptor ID: '%s'", tok->args[0]);
@@ -3255,7 +3251,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tor_assert(tok);
   tor_assert(tok->n_args == 1);
   result->version = atoi(tok->args[0]);
-  if (result->version < 2) {
+  if (result->version < 2) { /*XXXX020 what if > 2? */
     log_warn(LD_REND, "Wrong descriptor version: %d", result->version);
     goto err;
   }
@@ -3268,6 +3264,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tok = find_first_by_keyword(tokens, R_SECRET_ID_PART);
   tor_assert(tok);
   tor_assert(tok->n_args == 1);
+  /* XXXX020 magic 32. */
   if (strlen(tok->args[0]) != 32 ||
       strspn(tok->args[0], BASE32_CHARS) != 32) {
     log_warn(LD_REND, "Invalid secret ID part: '%s'", tok->args[0]);
@@ -3295,16 +3292,19 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   smartlist_split_string(versions, tok->args[0], ",",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   for (i = 0; i < smartlist_len(versions); i++) {
+    /* XXXX020 validate the numbers here. */
     version = atoi(smartlist_get(versions, i));
     result->protocols |= 1 << version;
   }
+  SMARTLIST_FOREACH(versions, char *, cp, tor_free(cp));
   smartlist_free(versions);
   /* Parse encrypted introduction points. Don't verify. */
   tok = find_first_by_keyword(tokens, R_INTRODUCTION_POINTS);
   tor_assert(tok);
-  *intro_points_encrypted_out = tor_malloc_zero(tok->object_size);
-  memcpy(*intro_points_encrypted_out, tok->object_body, tok->object_size);
+  /* XXXX020 make sure it's "BEGIN MESSAGE", not "BEGIN SOMETHINGELSE" */
+  *intro_points_encrypted_out = tok->object_body;
   *intro_points_encrypted_size_out = tok->object_size;
+  tok->object_body = NULL; /* Prevent free. */
   /* Parse and verify signature. */
   tok = find_first_by_keyword(tokens, R_SIGNATURE);
   tor_assert(tok);
@@ -3351,7 +3351,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
                                  const char *intro_points_encrypted,
                                  size_t intro_points_encrypted_size)
 {
-  char *ipos_decrypted;
+  char *ipos_decrypted = NULL;
   const char **current_ipo;
   smartlist_t *intropoints;
   smartlist_t *tokens;
@@ -3375,7 +3375,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
                                              intro_points_encrypted_size);
     crypto_free_cipher_env(cipher);
     if (unenclen < 0) {
-      if (ipos_decrypted) tor_free(ipos_decrypted);
+      tor_free(ipos_decrypted);
       return -1;
     }
     intro_points_encrypted = ipos_decrypted;
@@ -3385,7 +3385,12 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   current_ipo = (const char **)&intro_points_encrypted;
   intropoints = smartlist_create();
   tokens = smartlist_create();
-  parsed->intro_keys = strmap_new();
+  if (parsed->intro_keys) {
+    log_warn(LD_BUG, "Parsing list of introduction points for the same "
+             "hidden service, twice.");
+  } else {
+    parsed->intro_keys = strmap_new();
+  }
   while (!strcmpstart(*current_ipo, "introduction-point ")) {
     /* Determine end of string. */
     const char *eos = strstr(*current_ipo, "\nintroduction-point ");
@@ -3413,6 +3418,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     /* Parse identifier. */
     tok = find_first_by_keyword(tokens, R_IPO_IDENTIFIER);
     tor_assert(tok);
+    /* XXXX020 magic 32. */
     if (base32_decode(info->identity_digest, DIGEST_LEN,
                       tok->args[0], 32) < 0) {
       log_warn(LD_REND, "Identity digest contains illegal characters: %s",
@@ -3434,6 +3440,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     info->addr = ntohl(ip.s_addr);
     /* Parse onion port. */
     tok = find_first_by_keyword(tokens, R_IPO_ONION_PORT);
+    /* XXXX020 validate range. */
     info->port = (uint16_t) atoi(tok->args[0]);
     /* Parse onion key. */
     tok = find_first_by_keyword(tokens, R_IPO_ONION_KEY);
@@ -3447,6 +3454,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     smartlist_add(intropoints, info);
   }
   /* Write extend infos to descriptor. */
+  /* XXXX020 what if intro_points (&tc) are already set? */
   parsed->n_intro_points = smartlist_len(intropoints);
   parsed->intro_point_extend_info =
     tor_malloc_zero(sizeof(extend_info_t *) * parsed->n_intro_points);

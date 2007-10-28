@@ -7,6 +7,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       command to establish the stream rather than the normal BEGIN. Now
       we can make anonymized begin_dir connections for (e.g.) more secure
       hidden service posting and fetching.
+    - Code to parse and generate new hidden service descriptor format
+      (From Karsten Loesing.)
 
   o Major bugfixes:
     - Stop servers from crashing if they set a Family option (or
