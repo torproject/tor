@@ -6,8 +6,8 @@ $Id$
 1. Overview
 
   Most of the time, Tor treats user-specified hostnames as opaque:  When the
-  user connects to tor.eff.org, Tor picks an exit node and uses that node to
-  connect to "tor.eff.org".  Some hostnames, however, can be used to override
+  user connects to www.torproject.org, Tor picks an exit node and uses that node to
+  connect to "www.torproject.org".  Some hostnames, however, can be used to override
   Tor's default behavior and circuit-building rules.
 
   These hostnames can be passed to Tor as the address part of a SOCKS4a or

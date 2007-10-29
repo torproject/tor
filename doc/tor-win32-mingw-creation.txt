@@ -101,7 +101,7 @@ Type "make install"
 Stage Five:  Build Tor
 ----------------------
 
-Download the current Tor alpha release from http://tor.eff.org/download.html.
+Download the current Tor alpha release from https://www.torproject.org/download.html.
 Copy the Tor tarball into the "tor-mingw" directory.
 Extract Tor:
 Type "tar zxf latest-tor-alpha.tar.gz"

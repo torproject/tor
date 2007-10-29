@@ -56,7 +56,7 @@ system, you can replace "linux" with your operating system.
 
 The process used to create the distributed rpms is as follows:
 
-Download and Extract the latest tor source code from https://tor.eff.org/.
+Download and Extract the latest tor source code from https://www.torproject.org/.
 In the Tor directory:
 ./configure --enable-eventdns --enable-static --disable-shared
 make dist-rpm

@@ -4,7 +4,7 @@ $Id$
 
 0. Overview and preliminaries
 
-   Read http://tor.eff.org/doc/design-paper/tor-design.html#sec:rendezvous
+   Read https://www.torproject.org/doc/design-paper/tor-design.html#sec:rendezvous
    before you read this specification. It will make more sense.
 
    Rendezvous points provide location-hidden services (server

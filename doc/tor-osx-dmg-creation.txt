@@ -64,7 +64,7 @@ Place into a location of your choosing, remember this location.
 9) Get the torbutton LICENSE file from https://torbutton.torproject.org.
 Place into a location of your choosing, remember this location.
 
-10) Get your preferred version of the tor source from https://tor.eff.org/download.  
+10) Get your preferred version of the tor source from https://www.torproject.org/download.  
 Extract the tarball.
 
 11) Update three variables in contrib/osx/package.sh:
@@ -133,7 +133,7 @@ Place into a location of your choosing, remember this location.
 2) Get the torbutton LICENSE file from https://torbutton.torproject.org.  
 Place into a location of your choosing, remember this location.
 
-3) Get your preferred version of the tor source from tor.eff.org.  Extract the
+3) Get your preferred version of the tor source from https://www.torproject.org.  Extract the
 tarball.
 
 4) Update three variables in contrib/osx/package.sh:

@@ -317,8 +317,8 @@ $Id$
   address.
 
   Example:
-    C: MAPADDRESS 0.0.0.0=tor.eff.org 1.2.3.4=tor.freehaven.net
-    S: 250-127.192.10.10=tor.eff.org
+    C: MAPADDRESS 0.0.0.0=torproject.org 1.2.3.4=tor.freehaven.net
+    S: 250-127.192.10.10=torproject.org
     S: 250 1.2.3.4=tor.freehaven.net
 
   {Note: This feature is designed to be used to help Tor-ify applications
