@@ -37,6 +37,11 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       to $PREFIX/share/tor/fallback-consensus) for a consensus.  This way
       we start knowing some directory caches.
 
+  - Utilities:
+    - Update linux-tor-prio.sh script to allow QoS based on the uid of
+      the Tor prossess.  See comments in scripts.  (Patch from Marco Bonetti
+      with tweaks from Mike Perry.)
+
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
       on 0.2.0.x.

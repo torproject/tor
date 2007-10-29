@@ -1,24 +1,24 @@
 #!/bin/bash
-# Written by Mike Perry
+# Written by Marco Bonetti & Mike Perry
 # Based on instructions from Dan Singletary's ADSL Bandwidth Management HOWTO
 # http://www.faqs.org/docs/Linux-HOWTO/ADSL-Bandwidth-Management-HOWTO.html
 # This script is Public Domain.
 
-# The following configuration works well for a ~5Mbit tor node. It requires
-# that you place your Tor traffic on a separate IP from the rest of your
-# traffic.
-
-# BEGIN DEVICE PARAMETERS
+# BEGIN USER TUNABLE PARAMETERS
 
 DEV=eth0
-BOX_IP=42.42.42.42
-TOR_IP=43.43.43.43
+
+# NOTE! You must START Tor under this UID. Using the Tor User/Group 
+# config setting is NOT sufficient.
+TOR_UID=$(id -u tor)
+
+# If the UID mechanism doesn't work for you, you can set this parameter
+# instead. If set, it will take precedence over the UID setting. Note that
+# you need multiple IPs for this to work.
+#TOR_IP="42.42.42.42"
 
 # Average ping to most places on the net, milliseconds
 RTT_LATENCY=40
-
-# END DEVICE PARAMETERS
-# BEGIN UPLOAD PARAMETERS
 
 # RATE_UP must be less than your connection's upload capacity. If it is
 # larger, then the bottleneck will be at your router's queue, which you
@@ -37,8 +37,6 @@ CHAIN=OUTPUT
 #CHAIN=PREROUTING
 #CHAIN=POSTROUTING
 
-# END UPLOAD PARAMETERS
-
 MTU=1500
 AVG_PKT=900
 
@@ -56,18 +54,18 @@ BDP=$(expr $BDP / 4)
 
 if [ "$1" = "status" ]
 then
-        echo "[qdisc]"
-        tc -s qdisc show dev $DEV
-        tc -s qdisc show dev imq0
-        echo "[class]"
-        tc -s class show dev $DEV
-        tc -s class show dev imq0
-        echo "[filter]"
-        tc -s filter show dev $DEV
-        tc -s filter show dev imq0
-        echo "[iptables]"
-        iptables -t mangle -L TORSHAPER-OUT -v -x 2> /dev/null
-        exit
+	echo "[qdisc]"
+	tc -s qdisc show dev $DEV
+	tc -s qdisc show dev imq0
+	echo "[class]"
+	tc -s class show dev $DEV
+	tc -s class show dev imq0
+	echo "[filter]"
+	tc -s filter show dev $DEV
+	tc -s filter show dev imq0
+	echo "[iptables]"
+	iptables -t mangle -L TORSHAPER-OUT -v -x 2> /dev/null
+	exit
 fi
 
 
@@ -84,8 +82,8 @@ rmmod imq 2> /dev/null > /dev/null
 
 if [ "$1" = "stop" ]
 then
-        echo "Shaping removed on $DEV."
-        exit
+	echo "Shaping removed on $DEV."
+	exit
 fi
 
 # Outbound Shaping (limits total bandwidth to RATE_UP)
@@ -115,13 +113,19 @@ tc filter add dev $DEV parent 1:0 prio 0 protocol ip handle 21 fw flowid 1:21
 iptables -t mangle -N TORSHAPER-OUT
 iptables -t mangle -I $CHAIN -o $DEV -j TORSHAPER-OUT
 
+
 # Set firewall marks
-# Low priority to Tor IP
-iptables -t mangle -A TORSHAPER-OUT -s $TOR_IP -j MARK --set-mark 21
+# Low priority to Tor
+if [ ""$TOR_IP == "" ]
+then
+	echo "Using UID-based QoS. UID $TOR_UID marked as low priority."
+	iptables -t mangle -A TORSHAPER-OUT -m owner --uid-owner $TOR_UID -j MARK --set-mark 21
+else
+	echo "Using IP-based QoS. $TOR_IP marked as low priority."
+	iptables -t mangle -A TORSHAPER-OUT -s $TOR_IP -j MARK --set-mark 21
+fi
 
 # High prio for everything else
-# Don't bother to use BOX_IP. Box probably has other IPs too...
-#iptables -t mangle -A TORSHAPER-OUT -s $BOX_IP -j MARK --set-mark 20
 iptables -t mangle -A TORSHAPER-OUT -m mark --mark 0 -j MARK --set-mark 20
 
 echo "Outbound shaping added to $DEV.  Rate for Tor upload at least: ${RATE_UP_TOR}Kbyte/sec."
