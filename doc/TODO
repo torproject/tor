@@ -63,6 +63,7 @@ Things we'd like to do in 0.2.0.x:
         in the future, then log about skew.
       - should change the "skew complaint" to specify in largest units
         rather than just seconds.
+    - Learn new authority IPs from consensus/certs.
     - karsten's patches
 
   - Before the feature freeze: (Roger)
