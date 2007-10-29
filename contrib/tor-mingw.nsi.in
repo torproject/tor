@@ -91,7 +91,7 @@ Section "Tor" Tor
    File /oname=$configfile "..\src\config\torrc.sample"
 SectionEnd
 
-Section "OpenSSL 0.9.8d" OpenSSL
+Section "OpenSSL 0.9.8e" OpenSSL
    SetOutPath $INSTDIR
    File "${BIN}\libcrypto.a"
    File "${BIN}\libssl.a"
