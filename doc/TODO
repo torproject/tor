@@ -31,7 +31,7 @@ Things we'd like to do in 0.2.0.x:
     o base Guard flag on WFU rather than on MTBF.
       o Change guard calculation
       o Change dir-spec.txt
-      - What should we do about hosts that have been up for only 1 hour,
+      o What should we do about hosts that have been up for only 1 hour,
         but have been up for 100% of that one hour? -NM
         Perhaps the guard flag should only be assigned if the measurement
         period for that server is at least some large period, like a

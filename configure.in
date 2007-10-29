@@ -620,10 +620,11 @@ AH_TEMPLATE([LOCALSTATEDIR], [Default location to store state files.])
 AC_DEFINE_UNQUOTED(LOCALSTATEDIR,"$LOCALSTATEDIR")
 
 dnl Note: this is not the same as Tor's "DataDir" config option.
-DATADIR=`eval echo $datadir`
-AC_SUBST(DATADIR)
-AH_TEMPLATE([DATADIR], [Default location for platform-independent read-only data.])
-AC_DEFINE_UNQUOTED(DATADIR,"$DATADIR")
+dnl   We'd call it 'DATADIR', except that's a symbol in MinGW's objidl.h.  
+SHARE_DATADIR=`eval echo $datadir`
+AC_SUBST(SHARE_DATADIR)
+AH_TEMPLATE([SHARE_DATADIR], [Default location for platform-independent read-only data.])
+AC_DEFINE_UNQUOTED(SHARE_DATADIR,"$SHARE_DATADIR")
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
