@@ -42,7 +42,7 @@ file privoxyosx_setup_3.0.6.zip
 
 ## Compiling Tor
 
-1) Get your preferred version of the tor source from tor.eff.org.
+1) Get your preferred version of the tor source from https://www.torproject.org/
 
 2) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
@@ -82,7 +82,7 @@ by default, in /usr/local/lib/.
 /usr/local/lib/libevent.a (for architecture i386):      current ar archive random library
 /usr/local/lib/libevent.a (for architecture ppc):       current ar archive
 
-6) Get your preferred version of the tor source from tor.eff.org.
+6) Get your preferred version of the tor source from https://www.torproject.org/
 
 7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
