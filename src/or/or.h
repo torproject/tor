@@ -351,7 +351,13 @@ typedef enum {
 
 /** Purpose for connection at a directory server. */
 #define DIR_PURPOSE_SERVER 16
-#define _DIR_PURPOSE_MAX 16
+/** A connection to a hidden service directory server: upload a v2 rendezvous
+ * descriptor. */
+#define DIR_PURPOSE_UPLOAD_RENDDESC_V2 17
+/** A connection to a hidden service directory server: download a v2 rendezvous
+ * descriptor. */
+#define DIR_PURPOSE_FETCH_RENDDESC_V2 18
+#define _DIR_PURPOSE_MAX 18
 
 #define _EXIT_PURPOSE_MIN 1
 /** This exit stream wants to do an ordinary connect. */
@@ -607,6 +613,14 @@ typedef enum {
 
 /** Length of v2 descriptor ID (32 base32 chars = 160 bits). */
 #define REND_DESC_ID_V2_BASE32 32
+
+/** Length of the base32-encoded secret ID part of versioned hidden service
+ * descriptors. */
+#define REND_SECRET_ID_PART_LEN_BASE32 32
+
+/** Length of the base32-encoded hash of an introduction point's
+ * identity key. */
+#define REND_INTRO_POINT_ID_LEN_BASE32 32
 
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
@@ -1197,6 +1211,11 @@ typedef struct {
   unsigned int is_exit:1; /**< Do we think this is an OK exit? */
   unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
                                * or otherwise nasty? */
+  unsigned int wants_to_be_hs_dir:1; /**< True iff this router has set a flag
+                                         to possibly act as hidden service
+                                         directory. */
+  unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
+                             * directory. */
 
 /** Tor can use this router for general positions in circuits. */
 #define ROUTER_PURPOSE_GENERAL 0
@@ -1269,6 +1288,8 @@ typedef struct routerstatus_t {
                                * an exit node. */
   unsigned int is_bad_directory:1; /**< Do we think this directory is junky,
                                     * underpowered, or otherwise useless? */
+  unsigned int is_hs_dir:1; /** True iff this router is a hidden service
+                             * directory. */
   /** True iff we know version info for this router. (i.e., a "v" entry was
    * included.)  We'll replace all these with a big tor_version_t or a char[]
    * if the number of traits we care about ever becomes incredibly big. */
@@ -1998,6 +2019,10 @@ typedef struct {
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /** and hidden service descriptors? */
+  int HidServDirectoryV2; /**< Do we act as hs dir? */
+  int __MinUptimeHidServDirectoryV2; /**< Accept hs dirs after what time? */
+  int __ConsiderAllRoutersAsHidServDirectories; /**< Consider all routers as
+                                                 * hidden service dirs? */
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */
@@ -2849,6 +2874,12 @@ int dir_split_resource_into_fingerprints(const char *resource,
 char *directory_dump_request_log(void);
 int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
+void directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *descs,
+                              const char *service_id, int seconds_valid,
+                              smartlist_t *hs_dirs);
+void directory_get_from_hs_dir(const char *desc_id, const char *query,
+                               smartlist_t *hs_dirs);
+
 time_t download_status_increment_failure(download_status_t *dls,
                                          int status_code, const char *item,
                                          int server, time_t now);
@@ -3422,13 +3453,19 @@ typedef struct rend_cache_entry_t {
 
 void rend_cache_init(void);
 void rend_cache_clean(void);
+void rend_cache_clean_up(void);
+void rend_cache_clean_v2_dir(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
 int rend_cache_lookup_desc(const char *query, int version, const char **desc,
                            size_t *desc_len);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
+int rend_cache_lookup_v2_dir(const char *query, char **desc);
 int rend_cache_store(const char *desc, size_t desc_len, int published);
+int rend_cache_store_v2_client(const char *desc,
+                               const char *descriptor_cookie);
+int rend_cache_store_v2_dir(const char *desc);
 int rend_cache_size(void);
 int rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
                                smartlist_t *desc_ids_out,
@@ -3701,6 +3738,18 @@ int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
 void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
+
+smartlist_t *hid_serv_create_routing_table(void);
+int hid_serv_have_enough_directories(smartlist_t *hs_dirs);
+int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
+                                         const char *id,
+                                         smartlist_t *hs_dirs);
+routerinfo_t *hid_serv_next_directory(const char *id,
+                                      smartlist_t *hs_dirs);
+routerinfo_t *hid_serv_previous_directory(const char *id,
+                                          smartlist_t *hs_dirs);
+int hid_serv_acting_as_directory(smartlist_t *hs_dirs);
+int hid_serv_responsible_for_desc_id(const char *id, smartlist_t *hs_dirs);
 
 /********************************* routerparse.c ************************/
 

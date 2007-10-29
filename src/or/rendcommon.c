@@ -60,25 +60,13 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
 /*XXXX020 Rename to include "len" and maybe not "binary" */
 #define REND_SERVICE_ID_BINARY 10
 
-/** Length of the time period that is used to encode the secret ID part of
- * versioned hidden service descriptors. */
-/*XXXX020 Rename to include "len" and maybe not "binary" */
-#define REND_TIME_PERIOD_BINARY 4
-
 /** Length of the descriptor cookie that is used for versioned hidden
  * service descriptors. */
-/* XXXX020 rename to REND_DESC_COOKIE_(BINARY_)LEN */
-#define REND_DESC_COOKIE_BINARY 16
+#define REND_DESC_COOKIE_LEN 16
 
 /** Length of the replica number that is used to determine the secret ID
  * part of versioned hidden service descriptors. */
-/* XXXX020 rename to REND_REPLICA_(BINARY_)LEN */
-#define REND_REPLICA_BINARY 1
-
-/** Length of the base32-encoded secret ID part of versioned hidden service
- * descriptors. */
-/*XXXX020 Rename to include "len" */
-#define REND_SECRET_ID_PART_BASE32 32
+#define REND_REPLICA_LEN 1
 
 /** Compute the descriptor ID for <b>service_id</b> of length
  * <b>REND_SERVICE_ID_BINARY</b> and <b>secret_id_part</b> of length
@@ -98,7 +86,7 @@ rend_get_descriptor_id_bytes(char *descriptor_id_out,
 
 /** Compute the secret ID part for time_period,
  * a <b>descriptor_cookie</b> of length
- * <b>REND_DESC_COOKIE_BINARY</b> which may also be <b>NULL</b> if no
+ * <b>REND_DESC_COOKIE_LEN</b> which may also be <b>NULL</b> if no
  * descriptor_cookie shall be used, and <b>replica</b>, and write it to
  * <b>secret_id_part</b> of length DIGEST_LEN. */
 static void
@@ -110,9 +98,9 @@ get_secret_id_part_bytes(char *secret_id_part, uint32_t time_period,
   crypto_digest_add_bytes(digest, (char*)&time_period, sizeof(uint32_t));
   if (descriptor_cookie) {
     crypto_digest_add_bytes(digest, descriptor_cookie,
-                            REND_DESC_COOKIE_BINARY);
+                            REND_DESC_COOKIE_LEN);
   }
-  crypto_digest_add_bytes(digest, (const char *)&replica, REND_REPLICA_BINARY);
+  crypto_digest_add_bytes(digest, (const char *)&replica, REND_REPLICA_LEN);
   crypto_digest_get_digest(digest, secret_id_part, DIGEST_LEN);
   crypto_free_digest_env(digest);
 }
@@ -146,7 +134,7 @@ get_seconds_valid(time_t now, const char *service_id)
 
 /** Compute the binary <b>desc_id_out</b> (DIGEST_LEN bytes long) for a given
  * base32-encoded <b>service_id</b> and optional unencoded
- * <b>descriptor_cookie</b> of length REND_DESC_COOKIE_BINARY,
+ * <b>descriptor_cookie</b> of length REND_DESC_COOKIE_LEN,
  * at time <b>now</b> for replica number
  * <b>replica</b>. <b>desc_id</b> needs to have <b>DIGEST_LEN</b> bytes
  * free. Return 0 for success, -1 otherwise. */
@@ -188,7 +176,7 @@ rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
 }
 
 /* Encode the introduction points in <b>desc</b>, optionally encrypt them with
- * an optional <b>descriptor_cookie</b> of length REND_DESC_COOKIE_BINARY,
+ * an optional <b>descriptor_cookie</b> of length REND_DESC_COOKIE_LEN,
  * encode it in base64, and write it to a newly allocated string, and write a
  * pointer to it to *<b>ipos_base64</b>. Return 0 for success, -1
  * otherwise. */
@@ -207,7 +195,7 @@ rend_encode_v2_intro_points(char **ipos_base64,
   unenc_len = desc->n_intro_points * 1000; /* too long, but ok. */
   unenc = tor_malloc_zero(unenc_len);
   for (i = 0; i < desc->n_intro_points; i++) {
-    char id_base32[32 + 1]; /*XXXX020 should be a macro */
+    char id_base32[REND_INTRO_POINT_ID_LEN_BASE32 + 1];
     char *onion_key = NULL;
     size_t onion_key_len;
     crypto_pk_env_t *intro_key;
@@ -370,7 +358,7 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
   /* Encode REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS descriptors. */
   for (k = 0; k < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; k++) {
     char secret_id_part[DIGEST_LEN];
-    char secret_id_part_base32[REND_SECRET_ID_PART_BASE32 + 1];
+    char secret_id_part_base32[REND_SECRET_ID_PART_LEN_BASE32 + 1];
     char *desc_id;
     char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
     char *permanent_key = NULL;
@@ -387,7 +375,7 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
     /* Calculate secret-id-part = h(time-period + cookie + replica). */
     get_secret_id_part_bytes(secret_id_part, time_period, descriptor_cookie,
                              k);
-    base32_encode(secret_id_part_base32, REND_SECRET_ID_PART_BASE32 + 1,
+    base32_encode(secret_id_part_base32, REND_SECRET_ID_PART_LEN_BASE32 + 1,
                   secret_id_part, DIGEST_LEN);
     /* Calculate descriptor ID. */
     desc_id = tor_malloc_zero(DIGEST_LEN);
@@ -628,12 +616,17 @@ rend_get_service_id(crypto_pk_env_t *pk, char *out)
  * rend_cache_entry_t. */
 static strmap_t *rend_cache = NULL;
 
+/** Map from descriptor id to rend_cache_entry_t; only for hidden service
+ * directories. */
+static digestmap_t *rend_cache_v2_dir = NULL;
+
 /** Initializes the service descriptor cache.
  */
 void
 rend_cache_init(void)
 {
   rend_cache = strmap_new();
+  rend_cache_v2_dir = digestmap_new();
 }
 
 /** Helper: free storage held by a single service descriptor cache entry. */
@@ -651,7 +644,9 @@ void
 rend_cache_free_all(void)
 {
   strmap_free(rend_cache, _rend_cache_entry_free);
+  digestmap_free(rend_cache_v2_dir, _rend_cache_entry_free);
   rend_cache = NULL;
+  rend_cache_v2_dir = NULL;
 }
 
 /** Removes all old entries from the service descriptor cache.
@@ -675,6 +670,88 @@ rend_cache_clean(void)
       iter = strmap_iter_next(rend_cache, iter);
     }
   }
+}
+
+/** Remove all old entries on v2 hidden service directories. */
+void
+rend_cache_clean_v2_dir(void)
+{
+  digestmap_iter_t *iter;
+  const char *key;
+  void *val;
+  rend_cache_entry_t *ent;
+  time_t cutoff;
+  cutoff = time(NULL) - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
+  for (iter = digestmap_iter_init(rend_cache_v2_dir);
+       !digestmap_iter_done(iter); ) {
+    digestmap_iter_get(iter, &key, &val);
+    ent = (rend_cache_entry_t*)val;
+    if (ent->parsed->timestamp < cutoff) {
+      char key_base32[REND_DESC_ID_V2_BASE32 + 1];
+      base32_encode(key_base32, REND_DESC_ID_V2_BASE32 + 1, key, DIGEST_LEN);
+      log_info(LD_REND, "Removing descriptor with ID '%s' from cache, "
+                        "because it is too old!",
+               key_base32);
+      iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
+      _rend_cache_entry_free(ent);
+    } else {
+      iter = digestmap_iter_next(rend_cache_v2_dir, iter);
+    }
+  }
+}
+
+/** Determines whether <b>a</b> is in the interval of <b>b</b> (excluded) and
+ * <b>c</b> (included) in a circular digest ring; returns 1 if this is the
+ * case, and 0 otherwise.
+ */
+int
+rend_id_is_in_interval(const char *a, const char *b, const char *c)
+{
+  tor_assert(a);
+  tor_assert(b);
+  tor_assert(c);
+  /* There are five cases in which a is outside the interval ]b,c]: */
+  if ((memcmp(a, b, DIGEST_LEN) == 0) || /* 1. a == b (b is excluded) */
+      /* 2. b == c (interval is empty) */
+      (memcmp(b, c, DIGEST_LEN) == 0) ||
+      /* 3. a b c */
+      (memcmp(a, b, DIGEST_LEN) <= 0 && memcmp(b, c, DIGEST_LEN) < 0) ||
+      /* 4. c a b */
+      (memcmp(c, a, DIGEST_LEN) < 0 && memcmp(a, b, DIGEST_LEN) <= 0) ||
+      /* 5. b c a */
+      (memcmp(b, c, DIGEST_LEN) < 0 && memcmp(c, a, DIGEST_LEN) < 0))
+    return 0;
+  /* In the other cases, a is inside the interval. */
+  else
+    return 1;
+}
+
+/** Clean up all values for which this node as hidden service directory is
+ * not responsible */
+void
+rend_cache_clean_up(void)
+{
+  digestmap_iter_t *iter;
+  const char *key;
+  void *val;
+  rend_cache_entry_t *ent;
+  smartlist_t *hs_dirs = hid_serv_create_routing_table();
+  for (iter = digestmap_iter_init(rend_cache_v2_dir);
+       !digestmap_iter_done(iter); ) {
+    digestmap_iter_get(iter, &key, &val);
+    ent = (rend_cache_entry_t*)val;
+    if (!hid_serv_responsible_for_desc_id(key, hs_dirs)) {
+      char key_base32[REND_DESC_ID_V2_BASE32 + 1];
+      base32_encode(key_base32, REND_DESC_ID_V2_BASE32 + 1, key, DIGEST_LEN);
+      log_info(LD_REND, "Removing descriptor with ID '%s' from cache, "
+                        "because we are not reponsible for it!", key_base32);
+      iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
+      _rend_cache_entry_free(ent);
+    } else {
+      iter = digestmap_iter_next(rend_cache_v2_dir, iter);
+    }
+  }
+  smartlist_free(hs_dirs);
 }
 
 /** Return true iff <b>query</b> is a syntactically valid service ID (as
@@ -729,6 +806,41 @@ rend_cache_lookup_desc(const char *query, int version, const char **desc,
   *desc = e->desc;
   *desc_len = e->len;
   return 1;
+}
+
+/** Lookup the v2 service descriptor with base32-encoded <b>desc_id</b> and
+ * copy the pointer to it to <b>desc</b>.
+ */
+int
+rend_cache_lookup_v2_dir(const char *desc_id, char **desc)
+{
+  rend_cache_entry_t *e;
+  char desc_id_digest[DIGEST_LEN];
+  smartlist_t *hs_dirs;
+  tor_assert(rend_cache_v2_dir);
+  if (base32_decode(desc_id_digest, DIGEST_LEN,
+                    desc_id, REND_DESC_ID_V2_BASE32) < 0) {
+    log_warn(LD_REND, "Descriptor ID contains illegal characters: %s",
+             desc_id);
+    return -1;
+  }
+  /* Determine if we are responsible. */
+  hs_dirs = hid_serv_create_routing_table();
+  if (hid_serv_responsible_for_desc_id(desc_id_digest, hs_dirs) < 0) {
+    log_info(LD_REND, "Could not answer fetch request for v2 descriptor; "
+                      "either we are no hidden service directory, or we are "
+                      "not responsible for the requested ID.");
+    smartlist_free(hs_dirs);
+    return -1;
+  }
+  smartlist_free(hs_dirs);
+  /* Lookup descriptor and return. */
+  e = (rend_cache_entry_t*) digestmap_get(rend_cache_v2_dir, desc_id_digest);
+  if (e) {
+    *desc = e->desc;
+    return 1;
+  }
+  return 0;
 }
 
 /** Parse *desc, calculate its service id, and store it in the cache.
@@ -810,6 +922,218 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
 
   log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
             safe_str(query), (int)desc_len);
+  return 1;
+}
+
+/** Parse the v2 service descriptor(s) in <b>desc</b> and store it/them to the
+ * local rend cache. Don't attempt to decrypt the included list of introduction
+ * points (as we don't have a descriptor cookie for it).
+ *
+ * If we have a newer descriptor with the same ID, ignore this one.
+ * If we have an older descriptor with the same ID, replace it.
+ * Return -1 if it's malformed or otherwise rejected; return 0 if
+ * it's the same or older than one we've already got; return 1 if
+ * it's novel.
+ */
+int
+rend_cache_store_v2_dir(const char *desc)
+{
+  rend_service_descriptor_t *parsed;
+  char desc_id[DIGEST_LEN];
+  char *intro_content;
+  size_t intro_size;
+  size_t encoded_size;
+  char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
+  int number_stored = 0;
+  const char *current_desc = desc;
+  const char *next_desc;
+  rend_cache_entry_t *e;
+  time_t now = time(NULL);
+  smartlist_t *hs_dirs = hid_serv_create_routing_table();
+  tor_assert(rend_cache_v2_dir);
+  tor_assert(desc);
+  if (!hid_serv_acting_as_directory(hs_dirs)) {
+    /* Cannot store descs, because we are (currently) not acting as
+     * hidden service directory. */
+    log_info(LD_REND, "Cannot store descs: Not acting as hs dir");
+    smartlist_free(hs_dirs);
+    return -1;
+  }
+  while (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
+                                          &intro_size, &encoded_size,
+                                          &next_desc, current_desc) >= 0) {
+    /* We don't care about the introduction points. */
+    tor_free(intro_content);
+    /* For pretty log statements. */
+    base32_encode(desc_id_base32, REND_DESC_ID_V2_BASE32 + 1,
+                  desc_id, DIGEST_LEN);
+    /* Is desc ID in the range that we are (directly or indirectly) responsible
+     * for? */
+    if (!hid_serv_responsible_for_desc_id(desc_id, hs_dirs)) {
+      log_info(LD_REND, "Service descriptor with desc ID %s is not in "
+                        "interval that we are responsible for.",
+               desc_id_base32);
+      rend_service_descriptor_free(parsed);
+      goto skip;
+    }
+    /* Is descriptor too old? */
+    if (parsed->timestamp < now - REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
+      log_info(LD_REND, "Service descriptor with desc ID %s is too old.",
+               desc_id_base32);
+      rend_service_descriptor_free(parsed);
+      goto skip;
+    }
+    /* Is descriptor too far in the future? */
+    if (parsed->timestamp > now + REND_CACHE_MAX_SKEW) {
+      log_info(LD_REND, "Service descriptor with desc ID %s is too far in the "
+                        "future.",
+               desc_id_base32);
+      rend_service_descriptor_free(parsed);
+      goto skip;
+    }
+    /* Do we already have a newer descriptor? */
+    e = (rend_cache_entry_t *)digestmap_get(rend_cache_v2_dir, desc_id);
+    if (e && e->parsed->timestamp > parsed->timestamp) {
+      log_info(LD_REND, "We already have a newer service descriptor with the "
+                        "same desc ID %s and version.", desc_id_base32);
+      rend_service_descriptor_free(parsed);
+      goto skip;
+    }
+    /* Do we already have this descriptor? */
+    if (e && !strcmp(desc, e->desc)) {
+      log_info(LD_REND, "We already have this service descriptor with desc "
+                        "ID %s.", desc_id_base32);
+      e->received = time(NULL);
+      rend_service_descriptor_free(parsed);
+      goto skip;
+    }
+    /* Store received descriptor. */
+    if (!e) {
+      e = tor_malloc_zero(sizeof(rend_cache_entry_t));
+      digestmap_set(rend_cache_v2_dir, desc_id, e);
+    } else {
+      rend_service_descriptor_free(e->parsed);
+      tor_free(e->desc);
+    }
+    e->received = time(NULL);
+    e->parsed = parsed;
+    e->desc = tor_malloc(encoded_size + 1);
+    strlcpy(e->desc, current_desc, encoded_size + 1);
+    e->len = encoded_size;
+    log_info(LD_REND, "Successfully stored service descriptor with desc ID "
+                      "'%s' and len %d.", desc_id_base32, encoded_size);
+    number_stored++;
+ skip:
+    /* advance to next descriptor, if available. */
+    current_desc = next_desc;
+    /* check if there is a next descriptor. */
+    if (strncmp(current_desc, "rendezvous-service-descriptor ",
+                strlen("rendezvous-service-descriptor ")))
+      break;
+  }
+  log_info(LD_REND, "Parsed and added %d descriptor%s.",
+           number_stored, number_stored != 1 ? "s" : "");
+  return number_stored;
+}
+
+/** Parse the v2 service descriptor in <b>desc</b>, decrypt the included list
+ * of introduction points with <b>descriptor_cookie</b> (which may also be
+ * <b>NULL</b> if decryption is not necessary), and store the descriptor to
+ * the local cache under its version and service id.
+ *
+ * If we have a newer descriptor with the same ID, ignore this one.
+ * If we have an older descriptor with the same ID, replace it.
+ * Return -1 if it's malformed or otherwise rejected; return 0 if
+ * it's the same or older than one we've already got; return 1 if
+ * it's novel.
+ */
+int
+rend_cache_store_v2_client(const char *desc, const char *descriptor_cookie)
+{
+  rend_service_descriptor_t *parsed = NULL;
+  char desc_id[DIGEST_LEN];
+  char *intro_content = NULL;
+  size_t intro_size;
+  size_t encoded_size;
+  const char *next_desc;
+  time_t now = time(NULL);
+  char key[REND_SERVICE_ID_LEN+2];
+  char service_id[REND_SERVICE_ID_LEN+1];
+  rend_cache_entry_t *e;
+  tor_assert(rend_cache);
+  tor_assert(desc);
+  /* Parse the descriptor. */
+  if (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
+                                       &intro_size, &encoded_size,
+                                       &next_desc, desc) < 0) {
+    if (parsed) rend_service_descriptor_free(parsed);
+    if (intro_content) tor_free(intro_content);
+    log_warn(LD_REND, "Could not parse descriptor.");
+    return -1;
+  }
+  /* Compute service ID from public key. */
+  if (rend_get_service_id(parsed->pk, service_id)<0) {
+    log_warn(LD_REND, "Couldn't compute service ID.");
+    rend_service_descriptor_free(parsed);
+    tor_free(intro_content);
+    return -1;
+  }
+  /* Decode/decrypt introduction points. */
+  if (rend_decrypt_introduction_points(parsed, descriptor_cookie,
+                                       intro_content, intro_size) < 0) {
+    log_warn(LD_PROTOCOL,"Couldn't decode/decrypt introduction points.");
+    rend_service_descriptor_free(parsed);
+    tor_free(intro_content);
+    return -1;
+  }
+  /* We don't need the encoded/encrypted introduction points any longer. */
+  tor_free(intro_content);
+  /* Is descriptor too old? */
+  if (parsed->timestamp < now - REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
+    log_warn(LD_REND, "Service descriptor with service ID %s is too old.",
+             service_id);
+    rend_service_descriptor_free(parsed);
+    return -1;
+  }
+  /* Is descriptor too far in the future? */
+  if (parsed->timestamp > now + REND_CACHE_MAX_SKEW) {
+    log_warn(LD_REND, "Service descriptor with service ID %s is too far in "
+                      "the future.", service_id);
+    rend_service_descriptor_free(parsed);
+    return -1;
+  }
+  /* Do we already have a newer descriptor? */
+  tor_snprintf(key, sizeof(key), "2%s", service_id);
+  e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
+  if (e && e->parsed->timestamp > parsed->timestamp) {
+    log_info(LD_REND, "We already have a newer service descriptor for "
+                      "service ID %s with the same desc ID and version.",
+             service_id);
+    rend_service_descriptor_free(parsed);
+    return 0;
+  }
+  /* Do we already have this descriptor? */
+  if (e && !strcmp(desc, e->desc)) {
+    log_info(LD_REND,"We already have this service descriptor %s.",
+             service_id);
+    e->received = time(NULL);
+    rend_service_descriptor_free(parsed);
+    return 0;
+  }
+  if (!e) {
+    e = tor_malloc_zero(sizeof(rend_cache_entry_t));
+    strmap_set_lc(rend_cache, key, e);
+  } else {
+    rend_service_descriptor_free(e->parsed);
+    tor_free(e->desc);
+  }
+  e->received = time(NULL);
+  e->parsed = parsed;
+  e->desc = tor_malloc_zero(encoded_size + 1);
+  strlcpy(e->desc, desc, encoded_size + 1);
+  e->len = encoded_size;
+  log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
+            service_id, encoded_size);
   return 1;
 }
 

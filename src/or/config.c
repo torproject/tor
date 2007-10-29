@@ -188,6 +188,7 @@ static config_var_t _option_vars[] = {
   V(Group,                       STRING,   NULL),
   V(HardwareAccel,               BOOL,     "0"),
   V(HashedControlPassword,       STRING,   NULL),
+  V(HidServDirectoryV2,          BOOL,     "0"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceExcludeNodes", LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceNodes",  LINELIST_S, RendConfigLines,    NULL),
@@ -286,8 +287,12 @@ static config_var_t _option_vars[] = {
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
+  VAR("__ConsiderAllRoutersAsHidServDirectories", BOOL,
+      __ConsiderAllRoutersAsHidServDirectories, "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
+  VAR("__MinUptimeHidServDirectoryV2", INTERVAL,
+      __MinUptimeHidServDirectoryV2, "24 hours"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -2688,6 +2693,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("HSAuthorityRecordStats is set but we're not running as "
            "a hidden service authority.");
 
+  if (options->HidServDirectoryV2 && !options->DirPort)
+    REJECT("Running as hidden service directory, but no DirPort set.");
+
   if (options->ConnLimit <= 0) {
     r = tor_snprintf(buf, sizeof(buf),
         "ConnLimit must be greater than 0, but was set to %d",
@@ -2818,6 +2826,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
                   (char*)smartlist_get(options->PublishServerDescriptor, -i));
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
+  }
+
+  if (options->__MinUptimeHidServDirectoryV2 < 0) {
+    log_warn(LD_CONFIG, "__MinUptimeHidServDirectoryV2 option must be at "
+                        "least 0 seconds. Changing to 0.");
+    options->__MinUptimeHidServDirectoryV2 = 0;
   }
 
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {

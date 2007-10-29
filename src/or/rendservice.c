@@ -309,7 +309,8 @@ rend_service_update_descriptor(rend_service_t *service)
   d = service->desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
-  d->version = 1;
+  d->version = 1; /*< XXXX020 this value is ignored by the
+                   * encode functions; do we need to set it at all? */
   n = smartlist_len(service->intro_nodes);
   d->n_intro_points = 0;
   d->intro_points = tor_malloc_zero(sizeof(char*)*n);

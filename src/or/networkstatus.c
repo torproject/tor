@@ -1576,6 +1576,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       router->is_possible_guard = rs->is_possible_guard;
       router->is_exit = rs->is_exit;
       router->is_bad_exit = rs->is_bad_exit;
+      router->is_hs_dir = rs->is_hs_dir;
     }
     if (router->is_running && ds) {
       download_status_reset(&ds->v2_ns_dl_status);

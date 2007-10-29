@@ -57,6 +57,7 @@ typedef enum {
   K_EXTRA_INFO,
   K_EXTRA_INFO_DIGEST,
   K_CACHES_EXTRA_INFO,
+  K_HIDDEN_SERVICE_DIR,
 
   K_DIR_KEY_CERTIFICATE_VERSION,
   K_DIR_IDENTITY_KEY,
@@ -218,6 +219,7 @@ static token_rule_t routerdesc_token_table[] = {
   T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
   T01("extra-info-digest",   K_EXTRA_INFO_DIGEST,   GE(1),   NO_OBJ ),
+  T01("hidden-service-dir",  K_HIDDEN_SERVICE_DIR,  NO_ARGS, NO_OBJ ),
 
   T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
   T01("caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ ),
@@ -1255,6 +1257,10 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
+  if ((tok = find_first_by_keyword(tokens, K_HIDDEN_SERVICE_DIR))) {
+    router->wants_to_be_hs_dir = 1;
+  }
+
   tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE);
   tor_assert(tok);
   note_crypto_pk_op(VERIFY_RTR);
@@ -1698,6 +1704,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
                consensus_method >= 2) {
         /* Unnamed is computed right by consensus method 2 and later. */
         rs->is_unnamed = 1;
+      } else if (!strcmp(tok->args[i], "HSDir")) {
+        rs->is_hs_dir = 1;
       }
     }
   }
@@ -3172,7 +3180,7 @@ sort_version_list(smartlist_t *versions, int remove_duplicates)
  * *<b>intro_points_encrypted_out</b>, their encrypted size to
  * *<b>intro_points_encrypted_size_out</b>, the size of the encoded descriptor
  * to *<b>encoded_size_out</b>, and a pointer to the possibly next
- * descriptor to *<b>next_now</b>; return 0 for success (including validation)
+ * descriptor to *<b>next_out</b>; return 0 for success (including validation)
  * and -1 for failure.
  */
 int
@@ -3228,15 +3236,13 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     log_warn(LD_REND, "Impossibly short descriptor.");
     goto err;
   }
-  /* Check whether descriptor starts correctly. */
   /* Parse base32-encoded descriptor ID. */
   tok = find_first_by_keyword(tokens, R_RENDEZVOUS_SERVICE_DESCRIPTOR);
   tor_assert(tok);
   tor_assert(tok == smartlist_get(tokens, 0));
   tor_assert(tok->n_args == 1);
-  /*XXXX020 magic 32. */
-  if (strlen(tok->args[0]) != 32 ||
-      strspn(tok->args[0], BASE32_CHARS) != 32) {
+  if (strlen(tok->args[0]) != REND_DESC_ID_V2_BASE32 ||
+      strspn(tok->args[0], BASE32_CHARS) != REND_DESC_ID_V2_BASE32) {
     log_warn(LD_REND, "Invalid descriptor ID: '%s'", tok->args[0]);
     goto err;
   }
@@ -3252,6 +3258,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tor_assert(tok->n_args == 1);
   result->version = atoi(tok->args[0]);
   if (result->version < 2) { /*XXXX020 what if > 2? */
+                             /* Good question: should higher versions
+                              * be rejected by directories? -KL */
     log_warn(LD_REND, "Wrong descriptor version: %d", result->version);
     goto err;
   }
@@ -3264,9 +3272,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tok = find_first_by_keyword(tokens, R_SECRET_ID_PART);
   tor_assert(tok);
   tor_assert(tok->n_args == 1);
-  /* XXXX020 magic 32. */
-  if (strlen(tok->args[0]) != 32 ||
-      strspn(tok->args[0], BASE32_CHARS) != 32) {
+  if (strlen(tok->args[0]) != REND_SECRET_ID_PART_LEN_BASE32 ||
+      strspn(tok->args[0], BASE32_CHARS) != REND_SECRET_ID_PART_LEN_BASE32) {
     log_warn(LD_REND, "Invalid secret ID part: '%s'", tok->args[0]);
     goto err;
   }
@@ -3418,9 +3425,8 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     /* Parse identifier. */
     tok = find_first_by_keyword(tokens, R_IPO_IDENTIFIER);
     tor_assert(tok);
-    /* XXXX020 magic 32. */
     if (base32_decode(info->identity_digest, DIGEST_LEN,
-                      tok->args[0], 32) < 0) {
+                      tok->args[0], REND_INTRO_POINT_ID_LEN_BASE32) < 0) {
       log_warn(LD_REND, "Identity digest contains illegal characters: %s",
                tok->args[0]);
       tor_free(info);

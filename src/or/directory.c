@@ -157,6 +157,10 @@ dir_conn_purpose_to_string(int purpose)
       return "status vote fetch";
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
       return "consensus signature fetch";
+    case DIR_PURPOSE_FETCH_RENDDESC_V2:
+      return "hidden-service v2 descriptor fetch";
+    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
+      return "hidden-service v2 descriptor upload";
     }
 
   log_warn(LD_BUG, "Called with unknown purpose %d", purpose);
@@ -422,7 +426,7 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
  * upload or download a server or rendezvous
  * descriptor. <b>dir_purpose</b> determines what
  * kind of directory connection we're launching, and must be one of
- * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC}. <b>router_purpose</b>
+ * DIR_PURPOSE_{FETCH|UPLOAD}_{DIR|RENDDESC|RENDDESC_V2}. <b>router_purpose</b>
  * specifies the descriptor purposes we have in mind (currently only
  * used for FETCH_DIR).
  *
@@ -867,11 +871,26 @@ directory_send_command(dir_connection_t *conn,
       url = tor_malloc(len);
       tor_snprintf(url, len, "/tor/rendezvous/%s", resource);
       break;
+    case DIR_PURPOSE_FETCH_RENDDESC_V2:
+      tor_assert(resource);
+      tor_assert(!payload);
+      tor_assert(strlen(resource) <= REND_DESC_ID_V2_BASE32);
+      httpcommand = "GET";
+      len = strlen(resource) + 32;
+      url = tor_malloc(len);
+      tor_snprintf(url, len, "/tor/rendezvous2/%s", resource);
+      break;
     case DIR_PURPOSE_UPLOAD_RENDDESC:
       tor_assert(!resource);
       tor_assert(payload);
       httpcommand = "POST";
       url = tor_strdup("/tor/rendezvous/publish");
+      break;
+    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
+      tor_assert(!resource);
+      tor_assert(payload);
+      httpcommand = "POST";
+      url = tor_strdup("/tor/rendezvous2/publish");
       break;
     default:
       tor_assert(0);
@@ -1721,8 +1740,46 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
   }
 
-  if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_RENDDESC) {
-    log_info(LD_REND,"Uploaded rendezvous descriptor (status %d (%s))",
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2) {
+    log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
+             "(%s))",
+             (int)body_len, status_code, escaped(reason));
+    switch (status_code) {
+      case 200:
+        if (rend_cache_store_v2_client(body, NULL) < 0) {
+          log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed.");
+          /* alice's ap_stream will notice when connection_mark_for_close
+           * cleans it up */
+        } else {
+          /* success. notify pending connections about this. */
+          log_info(LD_REND, "Successfully fetched rendezvous descriptor.");
+          conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
+          rend_client_desc_here(conn->rend_query);
+        }
+        break;
+      case 404:
+        /* not there. pending connections will be notified when
+         * connection_mark_for_close cleans it up. */
+        break;
+      case 400:
+        log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
+                 "http status 400 (%s). Dirserver didn't like our "
+                 "v2 rendezvous query?", escaped(reason));
+        break;
+      default:
+        log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
+                 "http status %d (%s) response unexpected while "
+                 "fetching v2 hidden service descriptor (server '%s:%d').",
+                 status_code, escaped(reason), conn->_base.address,
+                 conn->_base.port);
+        break;
+    }
+  }
+
+  if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_RENDDESC ||
+      conn->_base.purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2) {
+    log_info(LD_REND,"Uploaded rendezvous descriptor (status %d "
+             "(%s))",
              status_code, escaped(reason));
     switch (status_code) {
       case 200:
@@ -2428,6 +2485,32 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
+  if (options->HidServDirectoryV2 &&
+       !strcmpstart(url,"/tor/rendezvous2/")) {
+    /* Handle v2 rendezvous descriptor fetch request. */
+    char *descp;
+    const char *query = url + strlen("/tor/rendezvous2/");
+    if (strlen(query) == REND_DESC_ID_V2_BASE32) {
+      log_info(LD_REND, "Got a v2 rendezvous descriptor request for ID '%s'",
+               query);
+      switch (rend_cache_lookup_v2_dir(query, &descp)) {
+        case 1: /* valid */
+          write_http_response_header(conn, strlen(descp), 0, 0);
+          connection_write_to_buf(descp, strlen(descp), TO_CONN(conn));
+          break;
+        case 0: /* well-formed but not present */
+          write_http_status_line(conn, 404, "Not found");
+          break;
+        case -1: /* not well-formed */
+          write_http_status_line(conn, 400, "Bad request");
+          break;
+      }
+    } else { /* not well-formed */
+      write_http_status_line(conn, 400, "Bad request");
+    }
+    goto done;
+  }
+
   if (options->HSAuthoritativeDir && !strcmpstart(url,"/tor/rendezvous/")) {
     /* rendezvous descriptor fetch */
     const char *descp;
@@ -2546,6 +2629,27 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
 
   conn->_base.state = DIR_CONN_STATE_SERVER_WRITING;
 
+  if (parse_http_url(headers, &url) < 0) {
+    write_http_status_line(conn, 400, "Bad request");
+    return 0;
+  }
+  log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
+
+  /* Handle v2 rendezvous service publish request. */
+  if (options->HidServDirectoryV2 &&
+      !strcmpstart(url,"/tor/rendezvous2/publish")) {
+    if (rend_cache_store_v2_dir(body) < 0) {
+      log_warn(LD_REND, "Rejected rend descriptor (length %d) from %s.",
+             (int)body_len, conn->_base.address);
+      write_http_status_line(conn, 400, "Invalid service descriptor rejected");
+      log_info(LD_REND, "Handled v2 rendezvous descriptor post: rejected");
+    } else {
+      write_http_status_line(conn, 200, "Service descriptor stored");
+      log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");
+    }
+    goto done;
+  }
+
   if (!authdir_mode(options)) {
     /* we just provide cached directories; we don't want to
      * receive anything. */
@@ -2553,12 +2657,6 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
                            "accept posted server descriptors");
     return 0;
   }
-
-  if (parse_http_url(headers, &url) < 0) {
-    write_http_status_line(conn, 400, "Bad request");
-    return 0;
-  }
-  log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
 
   if (authdir_mode_handles_descs(options) &&
       !strcmp(url,"/tor/")) { /* server descriptor post */
@@ -2946,5 +3044,107 @@ dir_split_resource_into_fingerprints(const char *resource,
   smartlist_add_all(fp_out, fp_tmp);
   smartlist_free(fp_tmp);
   return 0;
+}
+
+/** Determine the responsible hidden service directories for
+ * <b>desc_ids</b> and upload the appropriate descriptor from
+ * <b>desc_strs</b> to them; each smartlist must contain
+ * REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS entries; <b>service_id</b> and
+ * <b>seconds_valid</b> are only passed for logging purposes.*/
+/* XXXX020 enable tunneling when available!! */
+void
+directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
+                         const char *service_id, int seconds_valid,
+                         smartlist_t *hs_dirs_)
+{
+  int i, j;
+  smartlist_t *responsible_dirs;
+  routerinfo_t *hs_dir;
+  if (smartlist_len(desc_ids) != REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS ||
+      smartlist_len(desc_strs) != REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS) {
+    log_warn(LD_REND, "Could not post descriptors to hidden service "
+                      "directories: Illegal number of descriptor "
+                      "IDs/strings");
+    return;
+  }
+  responsible_dirs = smartlist_create();
+  for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++) {
+    const char *desc_id = smartlist_get(desc_ids, i);
+    const char *desc_str = smartlist_get(desc_strs, i);
+    /* Determine responsible dirs. */
+    if (hid_serv_get_responsible_directories(responsible_dirs, desc_id,
+                                             hs_dirs_) < 0) {
+      log_warn(LD_REND, "Could not determine the responsible hidden service "
+                        "directories to post descriptors to.");
+      smartlist_free(responsible_dirs);
+      return;
+    }
+    for (j = 0; j < REND_NUMBER_OF_CONSECUTIVE_REPLICAS; j++) {
+      char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
+      hs_dir = smartlist_get(responsible_dirs, j);
+      /* Send publish request. */
+      directory_initiate_command(hs_dir->address, hs_dir->addr,
+                                 hs_dir->or_port, hs_dir->dir_port, 0,
+                                 hs_dir->cache_info.identity_digest,
+                                 DIR_PURPOSE_UPLOAD_RENDDESC_V2,
+                                 ROUTER_PURPOSE_GENERAL,
+                                 1, NULL, desc_str, strlen(desc_str), 0);
+      base32_encode(desc_id_base32, REND_DESC_ID_V2_BASE32 + 1,
+                    desc_id, DIGEST_LEN);
+      log_info(LD_REND, "Sending publish request for v2 descriptor for "
+                        "service '%s' with descriptor ID '%s' with validity "
+                        "of %d seconds to hidden service directory '%s' on "
+                        "port %d.",
+               service_id,
+               desc_id_base32,
+               seconds_valid,
+               hs_dir->nickname,
+               hs_dir->dir_port);
+    }
+    smartlist_clear(responsible_dirs);
+  }
+  smartlist_free(responsible_dirs);
+}
+
+/** Determine the responsible hidden service directories for <b>desc_id</b>
+ * and fetch the descriptor belonging to this ID from one of them;
+ * <b>query</b> is only passed for pretty log statements.
+ * XXXX020 enable tunneling when available!! */
+void
+directory_get_from_hs_dir(const char *desc_id, const char *query,
+                          smartlist_t *hs_dirs_)
+{
+  smartlist_t *responsible_dirs = smartlist_create();
+  routerinfo_t *hs_dir;
+  char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
+  int replica;
+  tor_assert(desc_id);
+  tor_assert(query);
+  tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
+  /* Determine responsible dirs. */
+  if (hid_serv_get_responsible_directories(responsible_dirs, desc_id,
+                                           hs_dirs_) < 0) {
+    log_warn(LD_REND, "Could not determine the responsible hidden service "
+                      "directories to fetch descriptors.");
+    smartlist_free(responsible_dirs);
+    return;
+  }
+  replica = crypto_rand_int(REND_NUMBER_OF_CONSECUTIVE_REPLICAS);
+  hs_dir = smartlist_get(responsible_dirs, replica);
+  /* XXXX020 if hsdir fails, use another one... */
+  base32_encode(desc_id_base32, REND_DESC_ID_V2_BASE32 + 1,
+                desc_id, DIGEST_LEN);
+  /* Send fetch request. */
+  directory_initiate_command(hs_dir->address, hs_dir->addr,
+                             hs_dir->or_port, hs_dir->dir_port, 0,
+                             hs_dir->cache_info.identity_digest,
+                             DIR_PURPOSE_FETCH_RENDDESC_V2,
+                             ROUTER_PURPOSE_GENERAL,
+                             1, desc_id_base32, NULL, 0, 0);
+  log_info(LD_REND, "Sending fetch request for v2 descriptor for "
+                    "service '%s' with descriptor ID '%s' to hidden "
+                    "service directory '%s' on port %d.",
+           query, desc_id_base32, hs_dir->nickname, hs_dir->dir_port);
+  smartlist_free(responsible_dirs);
 }
 

@@ -1526,6 +1526,21 @@ dirserv_thinks_router_is_unreliable(time_t now,
   return 0;
 }
 
+/** Return true if <b>router</b> has an uptime of at least
+ * <b>__MinUptimeHidServDirectoryV2</b> and is reachable in the last
+ * REND_HS_DIR_REACHABLE_TIMEOUT seconds, else false.
+ */
+static int
+dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
+{
+  int uptime = real_uptime(router, now);
+
+  return (router->wants_to_be_hs_dir &&
+          uptime > get_options()->__MinUptimeHidServDirectoryV2 &&
+          ((router_is_me(router) && !we_are_hibernating()) ||
+           (now < router->last_reachable + REND_HS_DIR_REACHABLE_TIMEOUT)));
+}
+
 /** Look through the routerlist, and assign the median uptime of running valid
  * servers to stable_uptime, and the relative bandwidth capacities to
  * fast_bandwidth and guard_bandwidth.  Set total_bandwidth to the total
@@ -1674,13 +1689,14 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     return 0;
   cp = buf + strlen(buf);
   r = tor_snprintf(cp, buf_len - (cp-buf),
-                   "s%s%s%s%s%s%s%s%s%s%s%s\n",
+                   "s%s%s%s%s%s%s%s%s%s%s%s%s\n",
                   /* These must stay in alphabetical order. */
                    rs->is_authority?" Authority":"",
                    rs->is_bad_exit?" BadExit":"",
                    rs->is_exit?" Exit":"",
                    rs->is_fast?" Fast":"",
                    rs->is_possible_guard?" Guard":"",
+                   rs->is_hs_dir?" HSDir":"",
                    rs->is_named?" Named":"",
                    rs->is_running?" Running":"",
                    rs->is_stable?" Stable":"",
@@ -1843,6 +1859,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->is_possible_guard = 0;
   }
   rs->is_bad_exit = listbadexits && ri->is_bad_exit;
+  ri->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, now);
+  if (get_options()->__ConsiderAllRoutersAsHidServDirectories)
+    ri->is_hs_dir = 1; /* Override real value. */
+  rs->is_hs_dir = ri->is_hs_dir;
   /* 0.1.1.9-alpha is the first version to support fetch by descriptor
    * hash. */
   rs->is_v2_dir = ri->dir_port &&
@@ -1992,7 +2012,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   v3_out->server_versions = server_versions;
   v3_out->known_flags = smartlist_create();
   smartlist_split_string(v3_out->known_flags,
-                "Authority Exit Fast Guard Running Stable V2Dir Valid",
+                "Authority Exit Fast Guard HSDir Running Stable V2Dir Valid",
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (listbadexits)
     smartlist_add(v3_out->known_flags, tor_strdup("BadExit"));
