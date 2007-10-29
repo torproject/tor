@@ -8,7 +8,9 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       we can make anonymized begin_dir connections for (e.g.) more secure
       hidden service posting and fetching.
     - Code to parse and generate new hidden service descriptor format
-      (From Karsten Loesing.)
+      (From Karsten Loesing).
+    - Code to cache and download new hidden service descriptor format
+      (From Karsten Loesing).
 
   o Major bugfixes:
     - Stop servers from crashing if they set a Family option (or

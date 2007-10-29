@@ -1716,6 +1716,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           log_warn(LD_REND,"Failed to fetch rendezvous descriptor.");
           /* alice's ap_stream will notice when connection_mark_for_close
            * cleans it up */
+          /*XXXX020 maybe retry quickly; timeout takes a while. */
         } else {
           /* success. notify pending connections about this. */
           conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
@@ -1725,6 +1726,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       case 404:
         /* not there. pending connections will be notified when
          * connection_mark_for_close cleans it up. */
+        /*XXXX020 maybe retry quickly; timeout takes a while. */
         break;
       case 400:
         log_warn(LD_REND,
@@ -1746,7 +1748,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
       case 200:
-        if (rend_cache_store_v2_client(body, NULL) < 0) {
+        if (rend_cache_store_v2_desc_as_client(body, NULL) < 0) {
           log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed.");
           /* alice's ap_stream will notice when connection_mark_for_close
            * cleans it up */
@@ -2488,12 +2490,12 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   if (options->HidServDirectoryV2 &&
        !strcmpstart(url,"/tor/rendezvous2/")) {
     /* Handle v2 rendezvous descriptor fetch request. */
-    char *descp;
+    const char *descp;
     const char *query = url + strlen("/tor/rendezvous2/");
     if (strlen(query) == REND_DESC_ID_V2_BASE32) {
       log_info(LD_REND, "Got a v2 rendezvous descriptor request for ID '%s'",
                query);
-      switch (rend_cache_lookup_v2_dir(query, &descp)) {
+      switch (rend_cache_lookup_v2_desc(query, &descp)) {
         case 1: /* valid */
           write_http_response_header(conn, strlen(descp), 0, 0);
           connection_write_to_buf(descp, strlen(descp), TO_CONN(conn));
@@ -2638,7 +2640,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   /* Handle v2 rendezvous service publish request. */
   if (options->HidServDirectoryV2 &&
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
-    if (rend_cache_store_v2_dir(body) < 0) {
+    if (rend_cache_store_v2_desc_as_dir(body) < 0) {
       log_warn(LD_REND, "Rejected rend descriptor (length %d) from %s.",
              (int)body_len, conn->_base.address);
       write_http_status_line(conn, 400, "Invalid service descriptor rejected");
@@ -3052,17 +3054,18 @@ dir_split_resource_into_fingerprints(const char *resource,
  * REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS entries; <b>service_id</b> and
  * <b>seconds_valid</b> are only passed for logging purposes.*/
 /* XXXX020 enable tunneling when available!! */
+/* XXXX020 desc_ids and desc_strs could be merged.  Should they? */
 void
 directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
                          const char *service_id, int seconds_valid,
-                         smartlist_t *hs_dirs_)
+                         smartlist_t *hs_dirs)
 {
   int i, j;
   smartlist_t *responsible_dirs;
   routerinfo_t *hs_dir;
   if (smartlist_len(desc_ids) != REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS ||
       smartlist_len(desc_strs) != REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS) {
-    log_warn(LD_REND, "Could not post descriptors to hidden service "
+    log_warn(LD_BUG, "Could not post descriptors to hidden service "
                       "directories: Illegal number of descriptor "
                       "IDs/strings");
     return;
@@ -3073,12 +3076,14 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
     const char *desc_str = smartlist_get(desc_strs, i);
     /* Determine responsible dirs. */
     if (hid_serv_get_responsible_directories(responsible_dirs, desc_id,
-                                             hs_dirs_) < 0) {
+                                             hs_dirs) < 0) {
       log_warn(LD_REND, "Could not determine the responsible hidden service "
                         "directories to post descriptors to.");
       smartlist_free(responsible_dirs);
       return;
     }
+    tor_assert(smartlist_len(responsible_dirs) ==
+               REND_NUMBER_OF_CONSECUTIVE_REPLICAS);
     for (j = 0; j < REND_NUMBER_OF_CONSECUTIVE_REPLICAS; j++) {
       char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
       hs_dir = smartlist_get(responsible_dirs, j);
@@ -3089,7 +3094,7 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
                                  DIR_PURPOSE_UPLOAD_RENDDESC_V2,
                                  ROUTER_PURPOSE_GENERAL,
                                  1, NULL, desc_str, strlen(desc_str), 0);
-      base32_encode(desc_id_base32, REND_DESC_ID_V2_BASE32 + 1,
+      base32_encode(desc_id_base32, sizeof(desc_id_base32),
                     desc_id, DIGEST_LEN);
       log_info(LD_REND, "Sending publish request for v2 descriptor for "
                         "service '%s' with descriptor ID '%s' with validity "
@@ -3112,25 +3117,28 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
  * XXXX020 enable tunneling when available!! */
 void
 directory_get_from_hs_dir(const char *desc_id, const char *query,
-                          smartlist_t *hs_dirs_)
+                          smartlist_t *hs_dirs)
 {
   smartlist_t *responsible_dirs = smartlist_create();
   routerinfo_t *hs_dir;
   char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
-  int replica;
   tor_assert(desc_id);
   tor_assert(query);
   tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
   /* Determine responsible dirs. */
   if (hid_serv_get_responsible_directories(responsible_dirs, desc_id,
-                                           hs_dirs_) < 0) {
+                                           hs_dirs) < 0) {
     log_warn(LD_REND, "Could not determine the responsible hidden service "
                       "directories to fetch descriptors.");
     smartlist_free(responsible_dirs);
     return;
   }
-  replica = crypto_rand_int(REND_NUMBER_OF_CONSECUTIVE_REPLICAS);
-  hs_dir = smartlist_get(responsible_dirs, replica);
+  hs_dir = smartlist_choose(responsible_dirs);
+  smartlist_free(responsible_dirs);
+  if (!hs_dir) {
+    /*XXXX020 log. */
+    return;
+  }
   /* XXXX020 if hsdir fails, use another one... */
   base32_encode(desc_id_base32, REND_DESC_ID_V2_BASE32 + 1,
                 desc_id, DIGEST_LEN);

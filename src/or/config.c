@@ -118,8 +118,6 @@ typedef struct config_var_t {
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
 
-
-
 /** Array of configuration options.  Until we disallow nonstandard
  * abbreviations, order is significant, since the first matching option will
  * be chosen first.
@@ -287,13 +285,12 @@ static config_var_t _option_vars[] = {
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
-  VAR("__ConsiderAllRoutersAsHidServDirectories", BOOL,
-      __ConsiderAllRoutersAsHidServDirectories, "0"),
+  /*XXXX020 for testing.  Maybe remove before -rc. */
+  V(__ConsiderAllRoutersAsHidServDirectories, BOOL, "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
-  VAR("__MinUptimeHidServDirectoryV2", INTERVAL,
-      __MinUptimeHidServDirectoryV2, "24 hours"),
-
+  /*XXXX020 for testing.  Maybe remove before -rc. */
+  V(__MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR

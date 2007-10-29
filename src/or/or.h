@@ -1211,11 +1211,10 @@ typedef struct {
   unsigned int is_exit:1; /**< Do we think this is an OK exit? */
   unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
                                * or otherwise nasty? */
-  unsigned int wants_to_be_hs_dir:1; /**< True iff this router has set a flag
-                                         to possibly act as hidden service
-                                         directory. */
+  unsigned int wants_to_be_hs_dir:1; /**< True iff this router claims to be
+                                      * a hidden service directory. */
   unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
-                             * directory. */
+                             * directory according to the authorities. */
 
 /** Tor can use this router for general positions in circuits. */
 #define ROUTER_PURPOSE_GENERAL 0
@@ -2020,6 +2019,10 @@ typedef struct {
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /** and hidden service descriptors? */
   int HidServDirectoryV2; /**< Do we act as hs dir? */
+
+  /*XXXX020 maybe remove these next two testing options.  DEFINITELY rename
+   * them at some point, since I think C says that identifiers beginning with
+   * __ are implementation-reserved or something. */
   int __MinUptimeHidServDirectoryV2; /**< Accept hs dirs after what time? */
   int __ConsiderAllRoutersAsHidServDirectories; /**< Consider all routers as
                                                  * hidden service dirs? */
@@ -3452,6 +3455,9 @@ typedef struct rend_cache_entry_t {
 } rend_cache_entry_t;
 
 void rend_cache_init(void);
+/*XXXX020 clean *and* clean_up *and* clean_v2_dir? Rename some. */
+/*XXXX020 Call clean_up and clean_v2_dir from somewhere; nothing calls them
+ * now. */
 void rend_cache_clean(void);
 void rend_cache_clean_up(void);
 void rend_cache_clean_v2_dir(void);
@@ -3461,11 +3467,11 @@ int rend_cache_lookup_desc(const char *query, int version, const char **desc,
                            size_t *desc_len);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
-int rend_cache_lookup_v2_dir(const char *query, char **desc);
+int rend_cache_lookup_v2_desc(const char *query, const char **desc);
 int rend_cache_store(const char *desc, size_t desc_len, int published);
-int rend_cache_store_v2_client(const char *desc,
+int rend_cache_store_v2_desc_as_client(const char *desc,
                                const char *descriptor_cookie);
-int rend_cache_store_v2_dir(const char *desc);
+int rend_cache_store_v2_desc_as_dir(const char *desc);
 int rend_cache_size(void);
 int rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
                                smartlist_t *desc_ids_out,
@@ -3740,15 +3746,15 @@ const char *esc_router_info(routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
 smartlist_t *hid_serv_create_routing_table(void);
-int hid_serv_have_enough_directories(smartlist_t *hs_dirs);
+int hid_serv_have_enough_directories(const smartlist_t *hs_dirs);
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id,
-                                         smartlist_t *hs_dirs);
+                                         const smartlist_t *hs_dirs);
 routerinfo_t *hid_serv_next_directory(const char *id,
-                                      smartlist_t *hs_dirs);
+                                      const smartlist_t *hs_dirs);
 routerinfo_t *hid_serv_previous_directory(const char *id,
-                                          smartlist_t *hs_dirs);
-int hid_serv_acting_as_directory(smartlist_t *hs_dirs);
+                                          const smartlist_t *hs_dirs);
+int hid_serv_acting_as_directory(const smartlist_t *hs_dirs);
 int hid_serv_responsible_for_desc_id(const char *id, smartlist_t *hs_dirs);
 
 /********************************* routerparse.c ************************/
