@@ -1250,6 +1250,41 @@ parse_http_time(const char *date, struct tm *tm)
   return 0;
 }
 
+/** DOCDOC */
+int
+format_time_interval(char *out, size_t out_len, long interval)
+{
+  /* We only report seconds if there's no hours. */
+  long sec = 0, min = 0, hour = 0, day = 0;
+  if (interval < 0)
+    interval = -interval;
+
+  if (interval >= 86400) {
+    day = interval / 86400;
+    interval %= 86400;
+  }
+  if (interval >= 3600) {
+    hour = interval / 3600;
+    interval %= 3600;
+  }
+  if (interval >= 60) {
+    min = interval / 60;
+    interval %= 60;
+  }
+  sec = interval;
+
+  if (day) {
+    return tor_snprintf(out, out_len, "%ld days, %ld hours, %ld minutes",
+                        day, hour, min);
+  } else if (hour) {
+    return tor_snprintf(out, out_len, "%ld hours, %ld minutes", hour, min);
+  } else if (min) {
+    return tor_snprintf(out, out_len, "%ld minutes, %ld seconds", min, sec);
+  } else {
+    return tor_snprintf(out, out_len, "%ld seconds", sec);
+  }
+}
+
 /* =====
  * Fuzzy time
  * ===== */

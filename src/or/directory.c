@@ -1250,14 +1250,18 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
      */
     delta = conn->_base.timestamp_lastwritten - date_header;
     if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
+      char dbuf[64];
       int trusted = router_digest_is_trusted_dir(conn->identity_digest);
+      format_time_interval(dbuf, sizeof(dbuf), delta);
       log_fn(trusted ? LOG_WARN : LOG_INFO,
              LD_HTTP,
              "Received directory with skewed time (server '%s:%d'): "
-             "we are %d minutes %s, or the directory is %d minutes %s.",
+             "It seems that our clock is %s by %s, or that theirs is %s. "
+             "Tor requires an accurate clock to work: please check your time "
+             "and date settings.",
              conn->_base.address, conn->_base.port,
-             abs(delta)/60, delta>0 ? "ahead" : "behind",
-             abs(delta)/60, delta>0 ? "behind" : "ahead");
+             delta>0 ? "ahead" : "behind", dbuf,
+             delta>0 ? "behind" : "ahead");
       skewed = 1; /* don't check the recommended-versions line */
       control_event_general_status(trusted ? LOG_WARN : LOG_NOTICE,
                                "CLOCK_SKEW SKEW=%d SOURCE=DIRSERV:%s:%d",

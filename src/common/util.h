@@ -206,6 +206,7 @@ void format_local_iso_time(char *buf, time_t t);
 void format_iso_time(char *buf, time_t t);
 int parse_iso_time(const char *buf, time_t *t);
 int parse_http_time(const char *buf, struct tm *tm);
+int format_time_interval(char *out, size_t out_len, long interval);
 /* Fuzzy time. */
 void ftime_set_maximum_sloppiness(int seconds);
 void ftime_set_estimated_skew(int seconds);
