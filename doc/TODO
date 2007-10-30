@@ -42,16 +42,21 @@ Things we'd like to do in 0.2.0.x:
     - 105+TLS, if possible.
       - 105 only
         - Need to get a finished proposal 105
-        - "Pick a version" function
+        o "Pick a version" function
         - Have a 'waiting_for_version' state.
-        - Store version in or_connection_t.
-        - Generate netinfo cells
-        - Accept netinfo cells
+        o Store version in or_connection_t.
+        o Generate netinfo cells
+        o Accept netinfo cells
+        . Add an is_canonical field to or_connection_t.
+          o Set it when we get a match in the netinfo.
+          o Set it when we get a match for a routerinfo we have.
+          - Don't extend a circuit over a noncanonical connection with
+            mismatched address.
         - Version negotiation: send a version cell and enter
           waiting-for-version; when version cell arrives, pick version
           and send netinfo and be "open".
-        - On netinfo, warn if there's skew from a server.
-        - Handle IP addresses in netinfo properly.
+        o On netinfo, warn if there's skew from a server.
+        - Learn our outgoing IP address from netinfo cells?
       - TLS only
         - Need to get a finished TLS normalization proposal
         - Revised authentication.

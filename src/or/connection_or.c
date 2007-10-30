@@ -356,11 +356,16 @@ connection_or_init_conn_from_address(or_connection_t *conn,
   connection_or_set_identity_digest(conn, id_digest);
   conn->_base.addr = addr;
   conn->_base.port = port;
+  conn->real_addr = addr;
   if (r) {
+    if (conn->_base.addr == r->addr)
+      conn->is_canonical = 1;
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
        * This is dangerous, since if we ever try looking up a conn by
        * its actual addr/port, we won't remember. Careful! */
+      /* XXXX020 this is stupid, and it's the reason we need real_addr to
+       * track is_canonical properly. */
       conn->_base.addr = r->addr;
       conn->_base.port = r->or_port;
     }
@@ -740,6 +745,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
   }
   connection_watch_events(TO_CONN(conn), EV_READ);
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
+
+  conn->link_proto = 1; /* Version negotiation not yet enabled.XXX020 */
   return 0;
 }
 
@@ -773,7 +780,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
   char buf[CELL_NETWORK_SIZE];
   cell_t cell;
 
-loop:
+ loop:
   log_debug(LD_OR,
             "%d: starting, inbuf_datalen %d (%d pending in tls object).",
             conn->_base.s,(int)buf_datalen(conn->_base.inbuf),
@@ -825,3 +832,56 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   return 0;
 }
 
+/** DOCDOC */
+static int
+connection_or_send_versions(or_connection_t *conn)
+{
+  cell_t cell;
+  uint8_t versions[] = { 1 };
+  int n_versions = sizeof(versions) / sizeof(uint8_t);
+  int i;
+  memset(&cell, 0, sizeof(cell_t));
+  cell.command = CELL_VERSIONS;
+  set_uint16(cell.payload, htons(n_versions));
+  for (i = 0; i < n_versions; ++i) {
+    uint8_t v = versions[i];
+    tor_assert(v > 0 && v < 128);
+    cell.payload[2+i] = v;
+  }
+
+  connection_or_write_cell_to_buf(&cell, conn);
+}
+
+/** DOCDOC */
+static int
+connection_or_send_netinfo(or_connection_t *conn)
+{
+  cell_t cell;
+  time_t now = time(NULL);
+  routerinfo_t *me;
+
+  memset(&cell, 0, sizeof(cell_t));
+  cell.command = CELL_NETINFO;
+
+  /* Their address. */
+  set_uint32(cell.payload, htonl(now));
+  cell.payload[4] = RESOLVED_TYPE_IPV4;
+  cell.payload[5] = 4;
+  set_uint32(cell.payload+6, htonl(conn->_base.addr));
+
+  /* My address. */
+  if ((me = router_get_my_routerinfo())) {
+    cell.payload[10] = 1; /* only one address is supported. */
+    cell.payload[11] = RESOLVED_TYPE_IPV4;
+    cell.payload[12] = 4;
+    set_uint32(cell.payload+13, htonl(me->addr));
+  } else {
+    cell.payload[10] = 0;
+  }
+
+  connection_or_write_cell_to_buf(&cell, conn);
+
+  /*XXXX020 remove these once we send netinfo and versions cells. */
+  (void) connection_or_send_netinfo;
+  (void) connection_or_send_versions;
+}

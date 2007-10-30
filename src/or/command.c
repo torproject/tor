@@ -25,12 +25,16 @@ uint64_t stats_n_create_cells_processed = 0;
 uint64_t stats_n_created_cells_processed = 0;
 uint64_t stats_n_relay_cells_processed = 0;
 uint64_t stats_n_destroy_cells_processed = 0;
+uint64_t stats_n_versions_cells_processed = 0;
+uint64_t stats_n_netinfo_cells_processed = 0;
 
-/* These are the main four functions for processing cells */
+/* These are the main functions for processing cells */
 static void command_process_create_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_created_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_relay_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_destroy_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_versions_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_netinfo_cell(cell_t *cell, or_connection_t *conn);
 
 #ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the
@@ -99,6 +103,16 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
   }
 #endif
 
+#ifdef KEEP_TIMING_STATS
+#define PROCESS_CELL(tp, cl, cn) STMT_BEGIN {                   \
+    ++num ## tp;                                                \
+    command_time_process_cell(cl, cn, & tp ## time ,            \
+                              command_process_ ## tp ## _cell);  \
+  } STMT_END
+#else
+#define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
+#endif
+
   switch (cell->command) {
     case CELL_PADDING:
       ++stats_n_padding_cells_processed;
@@ -107,47 +121,31 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
     case CELL_CREATE:
     case CELL_CREATE_FAST:
       ++stats_n_create_cells_processed;
-#ifdef KEEP_TIMING_STATS
-      ++num_create;
-      command_time_process_cell(cell, conn, &create_time,
-                                command_process_create_cell);
-#else
-      command_process_create_cell(cell, conn);
-#endif
+      PROCESS_CELL(create, cell, conn);
       break;
     case CELL_CREATED:
     case CELL_CREATED_FAST:
       ++stats_n_created_cells_processed;
-#ifdef KEEP_TIMING_STATS
-      ++num_created;
-      command_time_process_cell(cell, conn, &created_time,
-                                command_process_created_cell);
-#else
-      command_process_created_cell(cell, conn);
-#endif
+      PROCESS_CELL(created, cell, conn);
       break;
     case CELL_RELAY:
       ++stats_n_relay_cells_processed;
-#ifdef KEEP_TIMING_STATS
-      ++num_relay;
-      command_time_process_cell(cell, conn, &relay_time,
-                                command_process_relay_cell);
-#else
-      command_process_relay_cell(cell, conn);
-#endif
+      PROCESS_CELL(relay, cell, conn);
       break;
     case CELL_DESTROY:
       ++stats_n_destroy_cells_processed;
-#ifdef KEEP_TIMING_STATS
-      ++num_destroy;
-      command_time_process_cell(cell, conn, &destroy_time,
-                                command_process_destroy_cell);
-#else
-      command_process_destroy_cell(cell, conn);
-#endif
+      PROCESS_CELL(destroy, cell, conn);
+      break;
+    case CELL_VERSIONS:
+      ++stats_n_versions_cells_processed;
+      PROCESS_CELL(versions, cell, conn);
+      break;
+    case CELL_NETINFO:
+      ++stats_n_netinfo_cells_processed;
+      PROCESS_CELL(netinfo, cell, conn);
       break;
     default:
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+      log_fn(LOG_INFO, LD_PROTOCOL,
              "Cell of unknown type (%d) received. Dropping.", cell->command);
       break;
   }
@@ -386,6 +384,113 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
       relay_send_command_from_edge(0, circ, RELAY_COMMAND_TRUNCATED,
                                    payload, sizeof(payload), NULL);
     }
+  }
+}
+
+/** Process a 'versions' cell.  The current link protocol version must be 0
+ * to indicate that no version has yet been negotiated. DOCDOC say more. */
+static void
+command_process_versions_cell(cell_t *cell, or_connection_t *conn)
+{
+  uint16_t versionslen;
+  int highest_supported_version = 0;
+  const char *cp, *end;
+  if (conn->link_proto != 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a VERSIONS cell on a connection with its version "
+           "already set to %d; dropping", (int) conn->link_proto);
+    return;
+  }
+  versionslen = ntohs(get_uint16(cell->payload));
+  end = cell->payload + 2 + versionslen;
+  if (end > cell->payload + CELL_PAYLOAD_SIZE)
+    end = cell->payload + CELL_PAYLOAD_SIZE; /*XXXX020 warn?*/
+  for (cp = cell->payload + 2; cp < end; ++cp) {
+    uint8_t v = *cp;
+    if (v == 1) {
+      if (v > highest_supported_version)
+        highest_supported_version = v;
+    }
+  }
+  if (!versionslen) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Couldn't find a version in common; defaulting to v1.");
+    /*XXXX020 or just break the connection?*/
+    conn->link_proto = 1;
+    return;
+  }
+}
+
+/** Process a 'netinfo' cell. DOCDOC say more. */
+static void
+command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
+{
+  time_t timestamp;
+  uint8_t my_addr_type;
+  uint8_t my_addr_len;
+  const char *my_addr_ptr;
+  const char *cp, *end;
+  uint8_t n_other_addrs;
+  time_t now = time(NULL);
+
+  /*XXXX020 reject duplicat netinfos. */
+
+  if (conn->link_proto < 2) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a NETINFO cell on %s connection; dropping.",
+           conn->link_proto == 0 ? "non-versioned" : "a v1");
+    return;
+  }
+  /* Decode the cell. */
+  timestamp = ntohl(get_uint32(cell->payload));
+  my_addr_type = (uint8_t) cell->payload[4];
+  my_addr_len = (uint8_t) cell->payload[5];
+  my_addr_ptr = cell->payload + 6;
+  /* Possibly learn my address. XXXX020 */
+  end = cell->payload + CELL_PAYLOAD_SIZE;
+  cp = cell->payload + 6 + my_addr_len;
+  if (cp >= end) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Address too long in netinfo cell; dropping.");
+    return;
+  }
+
+  /*XXXX020 magic number 3600 */
+  if (abs(timestamp - now) > 3600 &&
+      router_get_by_digest(conn->identity_digest)) {
+    long delta = now - timestamp;
+    char dbuf[64];
+    /*XXXX020 not always warn!*/
+    format_time_interval(dbuf, sizeof(dbuf), delta);
+    log_fn(LOG_WARN, LD_HTTP, "Received NETINFO cell with skewed time from "
+           "server at %s:%d.  It seems that our clock is %s by %s, or "
+           "that theirs is %s. Tor requires an accurate clock to work: "
+           "please check your time and date settings.",
+           conn->_base.address, (int)conn->_base.port,
+           delta>0 ? "ahead" : "behind", dbuf,
+           delta>0 ? "behind" : "ahead");
+    control_event_general_status(LOG_WARN,
+                                 "CLOCK_SKEW SKEW=%ld SOURCE=OR:%s:%d",
+                                 delta, conn->_base.address, conn->_base.port);
+  }
+
+  n_other_addrs = (uint8_t) *cp++;
+  while (n_other_addrs && cp < end-2) {
+    /* Consider all the other addresses; if any matches, this connection is
+     * "canonical." */
+    uint8_t other_addr_type = (uint8_t) *cp++;
+    uint8_t other_addr_len = (uint8_t) *cp++;
+    if (cp + other_addr_len >= end)
+      break; /*XXXX020 protocol warn. */
+    if (other_addr_type == RESOLVED_TYPE_IPV4 && other_addr_len == 4) {
+      uint32_t addr = ntohl(get_uint32(cp));
+      if (addr == conn->real_addr) {
+        conn->is_canonical = 1;
+        break;
+      }
+    }
+    cp += other_addr_len;
+    --n_other_addrs;
   }
 }
 

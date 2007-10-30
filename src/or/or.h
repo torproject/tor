@@ -651,6 +651,8 @@ typedef enum {
 #define CELL_DESTROY 4
 #define CELL_CREATE_FAST 5
 #define CELL_CREATED_FAST 6
+#define CELL_VERSIONS 7
+#define CELL_NETINFO 8
 
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
@@ -868,9 +870,14 @@ typedef struct or_connection_t {
    * recent, we can rate limit it further. */
   time_t client_used;
 
+  uint32_t real_addr; /**DOCDOC */
+
   circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
                                   * connection, which half of the space should
                                   * we use? */
+  unsigned int is_canonical; /**< DOCDOC */
+  uint8_t link_proto; /**< What protocol version are we using? 0 for
+                       * "none negotiated yet." */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
                           * range 0..1<<15-1. */

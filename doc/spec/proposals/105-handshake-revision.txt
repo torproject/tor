@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson, Roger Dingledine
 Created:
-Status: Open
+Status: Accepted
 
 Overview:
 
@@ -120,7 +120,7 @@ Proposal:
    When a Tor connection is established, both parties normally send a
    VERSIONS cell before sending any other cells.  (But see below.)
 
-         VersionsLen          [1 byte]
+         VersionsLen          [2 byte]
          Versions             [VersionsLen bytes]
 
    "Versions" is a sequence of VersionsLen bytes.  Each value between 1 and
@@ -156,6 +156,8 @@ Proposal:
 
    The VERSIONS cell must be sent as a v1 cell (2 bytes of circuitID, 1
    byte of command, 509 bytes of payload).
+
+   [NOTE: The VERSIONS cell is assigned the command number 7.]
 
 2.2. MITM-prevention and time checking
 
@@ -195,6 +197,7 @@ Proposal:
    given in the EXTEND cell is not listed in the NETINFO cell, the first
    party SHOULD close the connection as a likely MITM attack.
 
+   [NOTE: The NETINFO cell is assigned the command number 8.]
 
 Discussion: Versions versus feature lists
 
