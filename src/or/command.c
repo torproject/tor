@@ -395,7 +395,8 @@ command_process_versions_cell(cell_t *cell, or_connection_t *conn)
   uint16_t versionslen;
   int highest_supported_version = 0;
   const char *cp, *end;
-  if (conn->link_proto != 0) {
+  if (conn->link_proto != 0 ||
+      conn->_base.state != OR_CONN_STATE_WAITING_FOR_VERSIONS) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a VERSIONS cell on a connection with its version "
            "already set to %d; dropping", (int) conn->link_proto);
@@ -412,13 +413,18 @@ command_process_versions_cell(cell_t *cell, or_connection_t *conn)
         highest_supported_version = v;
     }
   }
-  if (!versionslen) {
+  if (!highest_supported_version) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Couldn't find a version in common; defaulting to v1.");
     /*XXXX020 or just break the connection?*/
     conn->link_proto = 1;
     return;
   }
+  conn->link_proto = highest_supported_version;
+  conn->_base.state = OR_CONN_STATE_OPEN;
+
+  if (highest_supported_version >= 2)
+    connection_or_send_netinfo(conn);
 }
 
 /** Process a 'netinfo' cell. DOCDOC say more. */
@@ -433,9 +439,9 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   uint8_t n_other_addrs;
   time_t now = time(NULL);
 
-  /*XXXX020 reject duplicat netinfos. */
+  /*XXXX020 reject duplicate netinfos. */
 
-  if (conn->link_proto < 2) {
+  if (conn->link_proto < 2 || conn->_base.state != OR_CONN_STATE_OPEN) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a NETINFO cell on %s connection; dropping.",
            conn->link_proto == 0 ? "non-versioned" : "a v1");

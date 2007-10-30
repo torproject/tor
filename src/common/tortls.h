@@ -64,6 +64,8 @@ size_t tor_tls_get_forced_write_size(tor_tls_t *tls);
 void tor_tls_get_n_raw_bytes(tor_tls_t *tls,
                              size_t *n_read, size_t *n_written);
 
+int tor_tls_used_v1_handshake(tor_tls_t *tls);
+
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */
 #define check_no_tls_errors() _check_no_tls_errors(__FILE__,__LINE__)

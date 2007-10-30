@@ -888,3 +888,10 @@ _check_no_tls_errors(const char *fname, int line)
   tls_log_errors(LOG_WARN, NULL);
 }
 
+/**DOCDOC */
+int
+tor_tls_used_v1_handshake(tor_tls_t *tls)
+{
+  (void)tls;
+  return 1;
+}

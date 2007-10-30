@@ -16,6 +16,7 @@ const char connection_or_c_id[] =
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
+static int connection_or_send_versions(or_connection_t *conn);
 
 /**************************************************************/
 
@@ -732,8 +733,25 @@ connection_tls_finish_handshake(or_connection_t *conn)
   }
 
   directory_set_dirty();
+
+  if (tor_tls_used_v1_handshake(conn->tls)) {
+    conn->link_proto = 1;
+    return connection_or_set_state_open(conn);
+  } else {
+    /*XXXX020 actually, we'll need to send some kind of authentication. */
+    conn->_base.state = OR_CONN_STATE_WAITING_FOR_VERSIONS;
+    return connection_or_send_versions(conn);
+  }
+}
+
+/**DOCDOC*/
+int
+connection_or_set_state_open(or_connection_t *conn)
+{
+  int started_here = connection_or_nonopen_was_started_here(conn);
   conn->_base.state = OR_CONN_STATE_OPEN;
   control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED, 0);
+
   if (started_here) {
     rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
     if (entry_guard_register_connect_status(conn->identity_digest, 1,
@@ -746,7 +764,6 @@ connection_tls_finish_handshake(or_connection_t *conn)
   connection_watch_events(TO_CONN(conn), EV_READ);
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
 
-  conn->link_proto = 1; /* Version negotiation not yet enabled.XXX020 */
   return 0;
 }
 
@@ -850,10 +867,12 @@ connection_or_send_versions(or_connection_t *conn)
   }
 
   connection_or_write_cell_to_buf(&cell, conn);
+
+  return 0;
 }
 
 /** DOCDOC */
-static int
+int
 connection_or_send_netinfo(or_connection_t *conn)
 {
   cell_t cell;
@@ -881,7 +900,5 @@ connection_or_send_netinfo(or_connection_t *conn)
 
   connection_or_write_cell_to_buf(&cell, conn);
 
-  /*XXXX020 remove these once we send netinfo and versions cells. */
-  (void) connection_or_send_netinfo;
-  (void) connection_or_send_versions;
+  return 0;
 }

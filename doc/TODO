@@ -43,7 +43,7 @@ Things we'd like to do in 0.2.0.x:
       - 105 only
         - Need to get a finished proposal 105
         o "Pick a version" function
-        - Have a 'waiting_for_version' state.
+        o Have a 'waiting_for_version' state.
         o Store version in or_connection_t.
         o Generate netinfo cells
         o Accept netinfo cells
@@ -52,7 +52,7 @@ Things we'd like to do in 0.2.0.x:
           o Set it when we get a match for a routerinfo we have.
           - Don't extend a circuit over a noncanonical connection with
             mismatched address.
-        - Version negotiation: send a version cell and enter
+        o Version negotiation: send a version cell and enter
           waiting-for-version; when version cell arrives, pick version
           and send netinfo and be "open".
         o On netinfo, warn if there's skew from a server.

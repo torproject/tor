@@ -236,9 +236,12 @@ typedef enum {
 #define OR_CONN_STATE_PROXY_READING 3
 /** State for a connection to an OR: SSL is handshaking, not done yet. */
 #define OR_CONN_STATE_HANDSHAKING 4
+/** State for a connection to an OR: We sent a VERSIONS cell and want one back
+ */
+#define OR_CONN_STATE_WAITING_FOR_VERSIONS 5
 /** State for a connection to an OR: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 5
-#define _OR_CONN_STATE_MAX 5
+#define OR_CONN_STATE_OPEN 6
+#define _OR_CONN_STATE_MAX 6
 
 #define _EXIT_CONN_STATE_MIN 1
 /** State for an exit connection: waiting for response from dns farm. */
@@ -2717,10 +2720,12 @@ or_connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);
 
+int connection_or_set_state_open(or_connection_t *conn);
 void connection_or_write_cell_to_buf(const cell_t *cell,
                                      or_connection_t *conn);
 int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
+int connection_or_send_netinfo(or_connection_t *conn);
 
 void cell_pack(packed_cell_t *dest, const cell_t *src);
 
