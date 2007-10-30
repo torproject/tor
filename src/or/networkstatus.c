@@ -1235,7 +1235,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   }
 
   if (current_consensus && c->valid_after <= current_consensus->valid_after) {
-    /* We have a newer one. */
+    /* We have a newer one.  There's no point in accepting this one,
+     * even if it's great. */
     log_info(LD_DIR, "Got a consensus at least as old as the one we have");
     goto done;
   }
@@ -1284,9 +1285,6 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
     }
   }
 
-  /* XXXX020 check dates for plausibility.  Don't trust a consensus whose
-   * valid-after date is very far in the future. */
-
   /* Are we missing any certificates at all? */
   if (r != 1)
     authority_certs_fetch_missing(c, now);
@@ -1329,6 +1327,15 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   if (dirserver_mode(get_options()))
     dirserv_set_cached_networkstatus_v3(consensus,
                                         current_consensus->valid_after);
+
+  if (ftime_definitely_before(now, current_consensus->valid_after)) {
+    char buf[ISO_TIME_LEN+1];
+    format_iso_time(buf, current_consensus->valid_after);
+    log_warn(LD_GENERAL, "Consensus network status document was published "
+             "at some time in the future (%s GMT).  Check your time and date "
+             "settings!", buf);
+    control_event_general_status(LOG_WARN, "CLOCK_SKEW SOURCE=CONSENSUS");
+  }
 
   router_dir_info_changed();
 

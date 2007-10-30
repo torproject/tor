@@ -1200,12 +1200,14 @@ $Id$
 
      CLOCK_SKEW
        SKEW="+" / "-" SECONDS
-       SOURCE="DIRSERV:IP:Port" / "NETWORKSTATUS:IP:PORT"
+       SOURCE="DIRSERV:IP:Port" / "NETWORKSTATUS:IP:PORT" / "CONSENSUS"
          If "SKEW" is present, it's an estimate of how far we are from the
          time declared in the source.  If the source is a DIRSERV, we got
          the current time from a connection to a dirserver.  If the source is
-         a NETWORKSTATUS, we decided we're skewed because we got a
-         networkstatus from far in the future.
+         a NETWORKSTATUS, we decided we're skewed because we got a v2
+         networkstatus from far in the future.  If the source is
+         CONSENSUS, we decided we're skewed because we got a networkstatus
+         consensus from the future.
 
          {Controllers may want to warn the user if the skew is high, or if
          multiple skew messages appear at severity WARN.  Controllers

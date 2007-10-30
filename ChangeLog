@@ -36,6 +36,7 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
     - When we have no consensus, check FallbackNetworkstatusFile (defaults
       to $PREFIX/share/tor/fallback-consensus) for a consensus.  This way
       we start knowing some directory caches.
+    - When we receive a consensus from the future, warn about skew.
 
   - Utilities:
     - Update linux-tor-prio.sh script to allow QoS based on the uid of

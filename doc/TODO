@@ -58,8 +58,8 @@ Things we'd like to do in 0.2.0.x:
         - Revised handshake.
         - Have a 'waiting_for_authentication' state.
         - Only do version negotiation if we use the normalized TLS.
-    - Skew issues:
-      - if you load (nick says receive/set/anything) a consensus that's
+    . Skew issues:
+      o if you load (nick says receive/set/anything) a consensus that's
         in the future, then log about skew.
       - should change the "skew complaint" to specify in largest units
         rather than just seconds.
