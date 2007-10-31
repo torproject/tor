@@ -58,6 +58,8 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
 
 /** Length of a binary-encoded rendezvous service ID. */
 /*XXXX020 Rename to include "len" and maybe not "binary" */
+/* Need to change REND_SERVICE_ID_LEN 16 to REND_SERVICE_ID_LEN_BASE32
+ * before! -KL */
 #define REND_SERVICE_ID_BINARY 10
 
 /** Length of the descriptor cookie that is used for versioned hidden
@@ -360,7 +362,7 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
     char secret_id_part[DIGEST_LEN];
     char secret_id_part_base32[REND_SECRET_ID_PART_LEN_BASE32 + 1];
     char *desc_id;
-    char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
+    char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
     char *permanent_key = NULL;
     size_t permanent_key_len;
     char published[ISO_TIME_LEN+1];
@@ -381,7 +383,7 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
     desc_id = tor_malloc_zero(DIGEST_LEN);
     rend_get_descriptor_id_bytes(desc_id, service_id, secret_id_part);
     smartlist_add(desc_ids_out, desc_id);
-    base32_encode(desc_id_base32, REND_DESC_ID_V2_BASE32 + 1,
+    base32_encode(desc_id_base32, sizeof(desc_id_base32),
                   desc_id, DIGEST_LEN);
     /* PEM-encode the public key */
     if (crypto_pk_write_public_key_to_string(desc->pk, &permanent_key,
@@ -687,7 +689,7 @@ rend_cache_clean_v2_dir(void)
     digestmap_iter_get(iter, &key, &val);
     ent = val;
     if (ent->parsed->timestamp < cutoff) {
-      char key_base32[REND_DESC_ID_V2_BASE32 + 1];
+      char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
       log_info(LD_REND, "Removing descriptor with ID '%s' from cache, "
                         "because it is too old!",
@@ -746,8 +748,9 @@ rend_cache_clean_up(void)
     digestmap_iter_get(iter, &key, &val);
     ent = val;
     if (!hid_serv_responsible_for_desc_id(key, hs_dirs)) {
-      char key_base32[REND_DESC_ID_V2_BASE32 + 1];
-      base32_encode(key_base32, REND_DESC_ID_V2_BASE32 + 1, key, DIGEST_LEN);
+      char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+      base32_encode(key_base32, sizeof(key_base32),
+                    key, DIGEST_LEN);
       log_info(LD_REND, "Removing descriptor with ID '%s' from cache, "
                         "because we are not reponsible for it!", key_base32);
       iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
@@ -818,14 +821,14 @@ rend_cache_lookup_desc(const char *query, int version, const char **desc,
  * well-formed-but-not-found, and -1 on failure.
  */
 int
-rend_cache_lookup_v2_desc(const char *desc_id, const char **desc)
+rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
 {
   rend_cache_entry_t *e;
   char desc_id_digest[DIGEST_LEN];
   smartlist_t *hs_dirs;
   tor_assert(rend_cache_v2_dir);
   if (base32_decode(desc_id_digest, DIGEST_LEN,
-                    desc_id, REND_DESC_ID_V2_BASE32) < 0) {
+                    desc_id, REND_DESC_ID_V2_LEN_BASE32) < 0) {
     log_warn(LD_REND, "Descriptor ID contains illegal characters: %s",
              desc_id);
     return -1;
@@ -949,7 +952,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   char *intro_content;
   size_t intro_size;
   size_t encoded_size;
-  char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
+  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   int number_stored = 0;
   const char *current_desc = desc;
   const char *next_desc;

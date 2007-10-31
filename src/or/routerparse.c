@@ -3241,13 +3241,13 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tor_assert(tok);
   tor_assert(tok == smartlist_get(tokens, 0));
   tor_assert(tok->n_args == 1);
-  if (strlen(tok->args[0]) != REND_DESC_ID_V2_BASE32 ||
-      strspn(tok->args[0], BASE32_CHARS) != REND_DESC_ID_V2_BASE32) {
+  if (strlen(tok->args[0]) != REND_DESC_ID_V2_LEN_BASE32 ||
+      strspn(tok->args[0], BASE32_CHARS) != REND_DESC_ID_V2_LEN_BASE32) {
     log_warn(LD_REND, "Invalid descriptor ID: '%s'", tok->args[0]);
     goto err;
   }
   if (base32_decode(desc_id_out, DIGEST_LEN,
-                    tok->args[0], REND_DESC_ID_V2_BASE32) < 0) {
+                    tok->args[0], REND_DESC_ID_V2_LEN_BASE32) < 0) {
     log_warn(LD_REND, "Descriptor ID contains illegal characters: %s",
              tok->args[0]);
     goto err;

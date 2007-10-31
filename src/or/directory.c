@@ -874,7 +874,7 @@ directory_send_command(dir_connection_t *conn,
     case DIR_PURPOSE_FETCH_RENDDESC_V2:
       tor_assert(resource);
       tor_assert(!payload);
-      tor_assert(strlen(resource) <= REND_DESC_ID_V2_BASE32);
+      tor_assert(strlen(resource) <= REND_DESC_ID_V2_LEN_BASE32);
       httpcommand = "GET";
       len = strlen(resource) + 32;
       url = tor_malloc(len);
@@ -2496,10 +2496,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     /* Handle v2 rendezvous descriptor fetch request. */
     const char *descp;
     const char *query = url + strlen("/tor/rendezvous2/");
-    if (strlen(query) == REND_DESC_ID_V2_BASE32) {
+    if (strlen(query) == REND_DESC_ID_V2_LEN_BASE32) {
       log_info(LD_REND, "Got a v2 rendezvous descriptor request for ID '%s'",
                query);
-      switch (rend_cache_lookup_v2_desc(query, &descp)) {
+      switch (rend_cache_lookup_v2_desc_as_dir(query, &descp)) {
         case 1: /* valid */
           write_http_response_header(conn, strlen(descp), 0, 0);
           connection_write_to_buf(descp, strlen(descp), TO_CONN(conn));
@@ -3057,8 +3057,8 @@ dir_split_resource_into_fingerprints(const char *resource,
  * <b>desc_strs</b> to them; each smartlist must contain
  * REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS entries; <b>service_id</b> and
  * <b>seconds_valid</b> are only passed for logging purposes.*/
-/* XXXX020 enable tunneling when available!! */
 /* XXXX020 desc_ids and desc_strs could be merged.  Should they? */
+/* I guess they should. -KL */
 void
 directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
                          const char *service_id, int seconds_valid,
@@ -3089,11 +3089,11 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
     tor_assert(smartlist_len(responsible_dirs) ==
                REND_NUMBER_OF_CONSECUTIVE_REPLICAS);
     for (j = 0; j < REND_NUMBER_OF_CONSECUTIVE_REPLICAS; j++) {
-      char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
+      char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       hs_dir = smartlist_get(responsible_dirs, j);
       /* Send publish request. */
       directory_initiate_command(hs_dir->address, hs_dir->addr,
-                                 hs_dir->or_port, hs_dir->dir_port, 0,
+                                 hs_dir->or_port, hs_dir->dir_port, 1,
                                  hs_dir->cache_info.identity_digest,
                                  DIR_PURPOSE_UPLOAD_RENDDESC_V2,
                                  ROUTER_PURPOSE_GENERAL,
@@ -3117,15 +3117,14 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
 
 /** Determine the responsible hidden service directories for <b>desc_id</b>
  * and fetch the descriptor belonging to this ID from one of them;
- * <b>query</b> is only passed for pretty log statements.
- * XXXX020 enable tunneling when available!! */
+ * <b>query</b> is only passed for pretty log statements. */
 void
 directory_get_from_hs_dir(const char *desc_id, const char *query,
                           smartlist_t *hs_dirs)
 {
   smartlist_t *responsible_dirs = smartlist_create();
   routerinfo_t *hs_dir;
-  char desc_id_base32[REND_DESC_ID_V2_BASE32 + 1];
+  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   tor_assert(desc_id);
   tor_assert(query);
   tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
@@ -3140,15 +3139,16 @@ directory_get_from_hs_dir(const char *desc_id, const char *query,
   hs_dir = smartlist_choose(responsible_dirs);
   smartlist_free(responsible_dirs);
   if (!hs_dir) {
-    /*XXXX020 log. */
+    log_warn(LD_BUG, "Could not pick one of the responsible hidden service "
+                     "directories to fetch descriptors.");
     return;
   }
   /* XXXX020 if hsdir fails, use another one... */
-  base32_encode(desc_id_base32, REND_DESC_ID_V2_BASE32 + 1,
+  base32_encode(desc_id_base32, sizeof(desc_id_base32),
                 desc_id, DIGEST_LEN);
   /* Send fetch request. */
   directory_initiate_command(hs_dir->address, hs_dir->addr,
-                             hs_dir->or_port, hs_dir->dir_port, 0,
+                             hs_dir->or_port, hs_dir->dir_port, 1,
                              hs_dir->cache_info.identity_digest,
                              DIR_PURPOSE_FETCH_RENDDESC_V2,
                              ROUTER_PURPOSE_GENERAL,

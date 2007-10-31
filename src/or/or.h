@@ -615,7 +615,7 @@ typedef enum {
 #define REND_NUMBER_OF_CONSECUTIVE_REPLICAS 3
 
 /** Length of v2 descriptor ID (32 base32 chars = 160 bits). */
-#define REND_DESC_ID_V2_BASE32 32
+#define REND_DESC_ID_V2_LEN_BASE32 32
 
 /** Length of the base32-encoded secret ID part of versioned hidden service
  * descriptors. */
@@ -1763,6 +1763,12 @@ typedef struct origin_circuit_t {
    */
   crypt_path_t *cpath;
 
+  /** Stores the rendezvous descriptor version if purpose is S_* to
+   * distinguish introduction and rendezvous points belonging to the same
+   * rendezvous service ID, but different descriptor versions.
+   */
+  uint8_t rend_desc_version;
+
   /** The rend_pk_digest field holds a hash of location-hidden service's
    * PK if purpose is S_ESTABLISH_INTRO or S_RENDEZVOUSING.
    */
@@ -1779,6 +1785,11 @@ typedef struct origin_circuit_t {
    * for a hidden service, or is S_*.
    */
   char rend_query[REND_SERVICE_ID_LEN+1];
+
+  /* The intro key replaces the hidden service's public key if purpose is
+   * S_ESTABLISH_INTRO or S_INTRO, provided that no unversioned rendezvous
+   * descriptor is used. */
+  crypto_pk_env_t *intro_key;
 
   /** The next stream_id that will be tried when we're attempting to
    * construct a new AP stream originating at this circuit. */
@@ -3470,6 +3481,8 @@ void rend_cache_init(void);
 /*XXXX020 clean *and* clean_up *and* clean_v2_dir? Rename some. */
 /*XXXX020 Call clean_up and clean_v2_dir from somewhere; nothing calls them
  * now. */
+/* Those functions were called from the (removed) replication functionality.
+ * We need to call them from somewhere periodically; main()? -KL */
 void rend_cache_clean(void);
 void rend_cache_clean_up(void);
 void rend_cache_clean_v2_dir(void);
@@ -3479,7 +3492,7 @@ int rend_cache_lookup_desc(const char *query, int version, const char **desc,
                            size_t *desc_len);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
-int rend_cache_lookup_v2_desc(const char *query, const char **desc);
+int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
 int rend_cache_store(const char *desc, size_t desc_len, int published);
 int rend_cache_store_v2_desc_as_client(const char *desc,
                                const char *descriptor_cookie);

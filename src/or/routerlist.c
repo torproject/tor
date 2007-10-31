@@ -4305,7 +4305,7 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   const char *digest;
   int i;
   routerinfo_t *router;
-  char id_base32[REND_DESC_ID_V2_BASE32+1];
+  char id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   tor_assert(id);
   base32_encode(id_base32, sizeof(id_base32), id, DIGEST_LEN);
   if (!hid_serv_have_enough_directories(hs_dirs)) {
@@ -4379,7 +4379,7 @@ hid_serv_acting_as_directory(const smartlist_t *hs_dirs)
   });
   if (!found_me) {
     /* not acting as HS Dir */
-    char me_base32[REND_DESC_ID_V2_BASE32 + 1];
+    char me_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
     base32_encode(me_base32, sizeof(me_base32),
                   me->cache_info.identity_digest, DIGEST_LEN);
     log_info(LD_REND, "We are not acting as hidden service directory, "
