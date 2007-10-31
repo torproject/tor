@@ -895,3 +895,4 @@ tor_tls_used_v1_handshake(tor_tls_t *tls)
   (void)tls;
   return 1;
 }
+

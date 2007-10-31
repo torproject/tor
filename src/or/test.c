@@ -480,7 +480,6 @@ test_crypto(void)
 
   }
 
-
   /* Public-key ciphers */
   pk1 = pk_generate(0);
   pk2 = crypto_new_pk_env();

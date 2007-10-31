@@ -902,3 +902,4 @@ connection_or_send_netinfo(or_connection_t *conn)
 
   return 0;
 }
+
