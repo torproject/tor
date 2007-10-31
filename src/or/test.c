@@ -445,6 +445,42 @@ test_crypto(void)
              "\xA9\x99\x3E\x36\x47\x06\x81\x6A\xBA\x3E\x25\x71\x78"
              "\x50\xC2\x6C\x9C\xD0\xD8\x9D", 20);
 
+  /* Test HMAC-SHA-1 with test cases from RFC2202. */
+  {
+    char key[80];
+    char digest[20];
+    char data[50];
+
+    /* Case 1. */
+    memset(key, 0x0b, 20);
+    crypto_hmac_sha1(digest, key, 20, "Hi There", 8);
+    test_streq(hex_str(digest, 20),
+               "B617318655057264E28BC0B6FB378C8EF146BE00");
+
+    /* Case 2. */
+    crypto_hmac_sha1(digest, "Jefe", 4, "what do ya want for nothing?", 28);
+    test_streq(hex_str(digest, 20),
+               "EFFCDF6AE5EB2FA2D27416D5F184DF9C259A7C79");
+
+    /* Case 4. */
+    base16_decode(key, 25,
+                  "0102030405060708090a0b0c0d0e0f10111213141516171819", 50);
+    memset(data, 0xcd, 50);
+    crypto_hmac_sha1(digest, key, 25, data, 50);
+    test_streq(hex_str(digest, 20),
+               "4C9007F4026250C6BC8414F9BF50C86C2D7235DA");
+
+    /* Case . */
+    memset(key, 0xaa, 80);
+    crypto_hmac_sha1(digest, key, 80,
+                     "Test Using Larger Than Block-Size Key - Hash Key First",
+                     54);
+    test_streq(hex_str(digest, 20),
+               "AA4AE5E15272D00E95705637CE8A3B55ED402112");
+
+  }
+
+
   /* Public-key ciphers */
   pk1 = pk_generate(0);
   pk2 = crypto_new_pk_env();
@@ -2175,6 +2211,7 @@ test_dir_format(void)
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
+          "opt protocols Link 1 Circuit 1\n"
           "published 1970-01-01 00:00:00\n"
           "opt fingerprint ", sizeof(buf2));
   test_assert(!crypto_pk_get_fingerprint(pk2, fingerprint, 1));

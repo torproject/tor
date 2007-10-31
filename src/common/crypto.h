@@ -146,6 +146,9 @@ void crypto_digest_get_digest(crypto_digest_env_t *digest,
 crypto_digest_env_t *crypto_digest_dup(const crypto_digest_env_t *digest);
 void crypto_digest_assign(crypto_digest_env_t *into,
                           const crypto_digest_env_t *from);
+void crypto_hmac_sha1(char *hmac_out,
+                      const char *key, size_t key_len,
+                      const char *msg, size_t msg_len);
 
 /* Key negotiation */
 crypto_dh_env_t *crypto_dh_new(void);

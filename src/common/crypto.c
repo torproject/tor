@@ -1261,7 +1261,7 @@ void
 crypto_digest_get_digest(crypto_digest_env_t *digest,
                          char *out, size_t out_len)
 {
-  static unsigned char r[DIGEST_LEN];
+  static unsigned char r[DIGEST_LEN]; /*XXXXX020 why static? */
   SHA_CTX tmpctx;
   tor_assert(digest);
   tor_assert(out);
@@ -1295,6 +1295,54 @@ crypto_digest_assign(crypto_digest_env_t *into,
   tor_assert(into);
   tor_assert(from);
   memcpy(into,from,sizeof(crypto_digest_env_t));
+}
+
+/**DOCDOC */
+#define DIGEST_BLOCKSIZE 64
+
+/** Compute the HMAC-SHA-1 of the <b>msg_len</b> bytes in <b>msg</b>, using
+ * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST_LEN-byte result
+ * in <b>hmac_out</b>.
+ */
+void
+crypto_hmac_sha1(char *hmac_out,
+                 const char *key, size_t key_len,
+                 const char *msg, size_t msg_len)
+{
+  SHA_CTX sha;
+  uint8_t K[DIGEST_BLOCKSIZE], D[DIGEST_LEN], K_SHORT[DIGEST_LEN];
+  const uint8_t *real_key;
+  unsigned int i;
+
+  if (key_len > DIGEST_BLOCKSIZE) {
+    SHA1((const unsigned char*)key, key_len, K_SHORT);
+    key_len = DIGEST_LEN;
+    real_key = K_SHORT;
+  } else {
+    real_key = (const uint8_t*)key;
+  }
+
+  memset(K, 0, sizeof(K));
+  memcpy(K, real_key, key_len);
+  for (i=0; i < sizeof(K); ++i)
+    K[i] ^= 0x36;
+  SHA1_Init(&sha);
+  SHA1_Update(&sha, K, sizeof(K));
+  SHA1_Update(&sha, msg, msg_len);
+  SHA1_Final(D, &sha);
+
+  /*
+  memset(K, 0, sizeof(K));
+  memcpy(K, real_key, key_len);
+  for (i=0; i < sizeof(K); ++i)
+    K[i] ^= 0x5c;
+  */
+  for (i=0; i < sizeof(K); ++i)
+    K[i] ^= (0x36 ^ 0x5c);
+  SHA1_Init(&sha);
+  SHA1_Update(&sha, K, sizeof(K));
+  SHA1_Update(&sha, D, sizeof(D));
+  SHA1_Final((unsigned char*)hmac_out, &sha);
 }
 
 /* DH */
