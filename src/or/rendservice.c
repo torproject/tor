@@ -56,11 +56,14 @@ typedef struct rend_service_t {
   time_t intro_period_started;
   int n_intro_circuits_launched; /**< count of intro circuits we have
                                   * established in this period. */
+  /* DOCDOC undocumented versions */
   rend_service_descriptor_t *desc;
   time_t desc_is_dirty;
   time_t next_upload_time;
+  /* XXXX020 A service never actually has both descriptor versions; perhaps
+   * this should be an int rather than in intmax. */
   int descriptor_versions; /**< bitmask of rendezvous descriptor versions
-                            * that will be published. */
+                            * that will be published. "0" means "default." */
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.
@@ -454,9 +457,9 @@ rend_service_load_keys(void)
   return 0;
 }
 
-/** Return the service whose public key has a digest of <b>digest</b>
- * and which publishes descriptors of the given <b>versions</b> bitmask.
- * Return NULL if no such service exists.
+/** Return the service whose public key has a digest of <b>digest</b> and
+ * which publishes exactly the descriptor of the given <b>versions</b>
+ * bitmask.  Return NULL if no such service exists.
  */
 static rend_service_t *
 rend_service_get_by_pk_digest_and_version(const char* digest,
@@ -810,7 +813,8 @@ rend_service_launch_establish_intro(rend_service_t *service,
   if (!(service->descriptor_versions & 1)) {
     launched->intro_key = crypto_new_pk_env();
     tor_assert(!crypto_pk_generate_key(launched->intro_key));
-    strmap_set(service->intro_keys, nickname, launched->intro_key);
+    strmap_set(service->intro_keys, nickname,
+               crypto_pk_dup_key(launched->intro_key));
   }
   if (launched->_base.state == CIRCUIT_STATE_OPEN)
     rend_service_intro_has_opened(launched);

@@ -389,6 +389,8 @@ circuit_free(circuit_t *circ)
     tor_free(ocirc->build_state);
 
     circuit_free_cpath(ocirc->cpath);
+    if (ocirc->intro_key)
+      crypto_free_pk_env(ocirc->intro_key);
 
   } else {
     or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);

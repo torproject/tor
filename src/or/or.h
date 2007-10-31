@@ -1763,12 +1763,6 @@ typedef struct origin_circuit_t {
    */
   crypt_path_t *cpath;
 
-  /** Stores the rendezvous descriptor version if purpose is S_* to
-   * distinguish introduction and rendezvous points belonging to the same
-   * rendezvous service ID, but different descriptor versions.
-   */
-  uint8_t rend_desc_version;
-
   /** The rend_pk_digest field holds a hash of location-hidden service's
    * PK if purpose is S_ESTABLISH_INTRO or S_RENDEZVOUSING.
    */
@@ -1785,6 +1779,14 @@ typedef struct origin_circuit_t {
    * for a hidden service, or is S_*.
    */
   char rend_query[REND_SERVICE_ID_LEN+1];
+
+  /** Stores the rendezvous descriptor version if purpose is S_*. Used to
+   * distinguish introduction and rendezvous points belonging to the same
+   * rendezvous service ID, but different descriptor versions.
+   * XXXX020 I believe this is a bitmap, but the doc doesn't say so. If so,
+   *  why?  A circuit can't be using two different rendezvous decriptors. -NM
+   */
+  uint8_t rend_desc_version;
 
   /* The intro key replaces the hidden service's public key if purpose is
    * S_ESTABLISH_INTRO or S_INTRO, provided that no unversioned rendezvous
