@@ -1918,7 +1918,6 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
   time_t now = time(NULL);
 
   tor_assert(conn);
-  tor_assert(type);
 
   format_rfc1123_time(date, now);
   cp = tmp;
