@@ -40,7 +40,7 @@ fi
 
 # Create the configuration file only if there wasn't one already.
 if [ ! -f $TARGET/torrc ]; then
-  cp $TARGET/torrc.sample $TARGET/torrc.sample
+  cp $TARGET/torrc.sample $TARGET/torrc
 fi
 
 # Ensure symbolic links
