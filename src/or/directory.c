@@ -1635,7 +1635,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                                                "X-Descriptor-Not-New: ");
           int rejected = 0;
           if (rejected_hdr) {
-            if (!strcmp(rejected, "Yes")) {
+            if (!strcmp(rejected_hdr, "Yes")) {
               /* XXXX020 use this information; be sure to upload next one
                * sooner. */
               rejected = 1;
@@ -1909,7 +1909,7 @@ write_http_status_line(dir_connection_t *conn, int status,
 static void
 write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
                            const char *type, const char *encoding,
-                           const cahr *extra_headers,
+                           const char *extra_headers,
                            int cache_lifetime)
 {
   char date[RFC1123_TIME_LEN+1];
@@ -2704,8 +2704,8 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
         write_http_status_line(conn, 400, msg);
         break;
       case 0: /* accepted but discarded */
-        write_http_response_header(conn, -1, NULL, NULL,
-                                   "X-Descriptor-Not-New: Yes\r\n", -1);
+        write_http_response_header_impl(conn, -1, NULL, NULL,
+                                        "X-Descriptor-Not-New: Yes\r\n", -1);
         break;
       case 2: /* accepted */
         write_http_status_line(conn, 200, msg);
