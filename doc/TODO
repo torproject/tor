@@ -24,10 +24,10 @@ Things we'd like to do in 0.2.0.x:
     o Support for preconfigured mirror lists
       o Use a pre-shipped fallback consensus.
       o Code to install a pre-defined fallback consensus
-    . Download consensuses (et al) via if-modified-since
+    o Download consensuses (et al) via if-modified-since
       o Implement backend support for sending if-modified-since
       o Use it for consensuses.
-      - Use it for certificates
+      D Use it for certificates
     o base Guard flag on WFU rather than on MTBF.
       o Change guard calculation
       o Change dir-spec.txt
@@ -57,6 +57,7 @@ Things we'd like to do in 0.2.0.x:
           and send netinfo and be "open".
         o On netinfo, warn if there's skew from a server.
         - Learn our outgoing IP address from netinfo cells?
+        - Earliest stages of 110 (infinite-length) in v2 protocol.
       - TLS only
         - Need to get a finished TLS normalization proposal
         - Revised authentication.
@@ -108,16 +109,16 @@ Things we'd like to do in 0.2.0.x:
         of their first test, and then never seeing use.
 
   - Proposals:
-    . 101: Voting on the Tor Directory System (plus 103)
-      - Handle badly timed certificates properly.
-      . Start caching consensus documents once authorities make them;
+    o 101: Voting on the Tor Directory System (plus 103)
+      o Handle badly timed certificates properly.
+      o Start caching consensus documents once authorities make them;
         start downloading consensus documents once caches serve
         them
         o Code to delay next download while fetching certificates to verify
           a consensus we already got.
         o Code to retry consensus download if we got one we already have.
-        - Use if-modified-since on consensus download
-        - Use if-modified-since on certificate download
+        D Use if-modified-since on consensus download
+        o Use if-modified-since on certificate download
       - Controller support
         - GETINFO to get consensus
         - Event when new consensus arrives
@@ -140,7 +141,7 @@ Things we'd like to do in 0.2.0.x:
     o Do TLS rotation less often than "every 10 minutes" in the thrashy case.
     D Do TLS connection rotation more often than "once a week" in the
       extra-stable case.
-    - Streamline how we pick entry nodes: Make choose_random_entry() have
+    D Streamline how we pick entry nodes: Make choose_random_entry() have
       less magic and less control logic.
     - Refactor networkstatus generation:
       - Include "v" line in getinfo values.
@@ -185,28 +186,27 @@ R     - drop 'authority' queries if they're to our own identity key; accept
       - Make BEGIN_DIR mandatory for asking questions of bridge authorities?
 
   - Features (other than bridges):
-    - Blocking-resistance.
-      - Write a proposal; make this part of 105.
     - Audit how much RAM we're using for buffers and cell pools; try to
       trim down a lot.
     - Base relative control socket paths on datadir.
-    - We should ship with a list of stable dir mirrors -- they're not
+    o We should ship with a list of stable dir mirrors -- they're not
       trusted like the authorities, but they'll provide more robustness
       and diversity for bootstrapping clients.
-      - Implement this as a list of routerstatus, like fake_routerstatus in
+      X Implement this as a list of routerstatus, like fake_routerstatus in
         trusted_dir_derver_t?
-    - Better estimates in the directory of whether servers have good uptime
+      o Implemented as a fallback networkstatus consensus.
+    o Better estimates in the directory of whether servers have good uptime
        (high expected time to failure) or good guard qualities (high
        fractional uptime).
-     - AKA Track uptime as %-of-time-up, as well as time-since-last-down
+      o AKA Track uptime as %-of-time-up, as well as time-since-last-down
        o Implement tracking
-       - Make uptime info persist too.
-       - Base Guard on weighted fractional uptime.
+       o Make uptime info persist too.
+       o Base Guard on weighted fractional uptime.
     - Make TrackHostExits expire TrackHostExitsExpire seconds after their
        *last* use, not their *first* use.
     - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
-     - Or maybe close connections from same IP when we get a lot from one.
-     - Or maybe block IPs that connect too many times at once.
+      - Or maybe close connections from same IP when we get a lot from one.
+      - Or maybe block IPs that connect too many times at once.
     - add an AuthDirBadexit torrc option if we decide we want one.
 
   - Testing
@@ -241,11 +241,15 @@ P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton
   bundle
 
 Nice-to-have items for 0.2.0.x, time permitting:
+  - Low-priority bugs:
+    - we try to build 4 test circuits to break them over different
+      servers. but sometimes our entry node is the same for multiple
+      test circuits. this defeats the point.
+
+Deferred from 0.2.0.x:
   - Proposals
     - 113: Simplifying directory authority administration
     - 110: prevent infinite-length circuits (phase one)
-    . Robust decentralized storage for hidden service descriptors.
-      (Karsten is working on this; proposal 114.)
     - 118: Listen on and advertise multiple ports:
       - Tor should be able to have a pool of outgoing IP addresses that it is
         able to rotate through. (maybe.  Possible overlap with proposal 118.)
@@ -258,7 +262,6 @@ Nice-to-have items for 0.2.0.x, time permitting:
         - Most address variables need to become tor_addr_t
         - Teach resolving code how to handle ipv6.
         - Teach exit policies about ipv6 (consider ipv4/ipv6 interaction!)
-
   - Features
     - Let controller set router flags for authority to transmit, and for
       client to use.
@@ -267,35 +270,16 @@ Nice-to-have items for 0.2.0.x, time permitting:
     - Clients should estimate their skew as median of skew from servers
       over last N seconds.
     - More work on AvoidDiskWrites?
-
+  - Features
+    - Make a TCP DNSPort
   - Protocol work
     - MAYBE kill stalled circuits rather than stalled connections.  This is
       possible thanks to cell queues, but we need to consider the anonymity
       implications.
     - Implement TLS shutdown properly when possible.
-
-  - Low-priority bugs:
-    - we try to build 4 test circuits to break them over different
-      servers. but sometimes our entry node is the same for multiple
-      test circuits. this defeats the point.
+  - Bugs
     - If the client's clock is too far in the past, it will drop (or just not
       try to get) descriptors, so it'll never build circuits.
-
-  - Refactoring:
-    - Move all status info out of routerinfo into local_routerstatus.  Make
-      "who can change what" in local_routerstatus explicit.  Make
-      local_routerstatus (or equivalent) subsume all places to go for "what
-      router is this?"
-
-  - Build:
-    - Detect correct version of libraries from autoconf script.
-
-  - Documentation:
-    - Review torrc.sample to make it more discursive.
-
-Deferred from 0.2.0.x:
-  - Features
-    - Make a TCP DNSPort
   - Refactoring
     - Make resolves no longer use edge_connection_t unless they are actually
       _on_ a socks connection: have edge_connection_t and (say)
@@ -303,6 +287,10 @@ Deferred from 0.2.0.x:
       n_streams both be linked lists of edge_stream_t.
     - Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
       online config documentation from a single source.
+    - Move all status info out of routerinfo into local_routerstatus.  Make
+      "who can change what" in local_routerstatus explicit.  Make
+      local_routerstatus (or equivalent) subsume all places to go for "what
+      router is this?"
   - Blocking/scanning-resistance
     - It would be potentially helpful to https requests on the OR port by
       acting like an HTTPS server.
@@ -313,6 +301,8 @@ Deferred from 0.2.0.x:
       descriptors we have.
     - Some mechanism for specifying that we want to stop using a cached
       bridge.
+  - Build:
+    - Detect correct version of libraries from autoconf script.
 
 
 Future versions:
