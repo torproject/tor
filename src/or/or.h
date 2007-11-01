@@ -2228,6 +2228,10 @@ typedef struct {
 
   /** DOCDOC here and in tor.1 */
   char *FallbackNetworkstatusFile;
+
+  /** DOCDOC here and in tor.1 */
+  int LearnAuthorityAddrFromCerts;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -3649,6 +3653,8 @@ typedef struct trusted_dir_server_t {
                                * latest certificate. */
   download_status_t v2_ns_dl_status; /**< Status of downloading this server's
                                * v2 network status. */
+  time_t addr_current_at; /**< When was the document that we derived the
+                           * address information from published? */
 
   routerstatus_t fake_status; /**< Used when we need to pass this trusted
                                * dir_server_t to directory_initiate_command_*

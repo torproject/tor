@@ -37,6 +37,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
     - When we receive a consensus from the future, warn about skew.
     - Improve skew reporting: try to give the user a better log message about
       how skewed they are, and how much this matters.
+    - When we have a certificate for an authority, believe that certificate's
+      claims about the authority's IP address.
 
   o Minor features (controller):
     - When reporting clock skew, and we only have a lower bound on the amount

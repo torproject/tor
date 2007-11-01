@@ -108,6 +108,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 {
   trusted_dir_server_t *ds;
   const char *s, *eos;
+  or_options_t *options = get_options();
 
   for (s = contents; *s; s = eos) {
     authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
@@ -141,6 +142,22 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
       continue;
 
     smartlist_add(ds->v3_certs, cert);
+    if (options->LearnAuthorityAddrFromCerts &&
+        cert->cache_info.published_on > ds->addr_current_at) {
+      if (cert->addr && cert->dir_port &&
+          (ds->addr != cert->addr ||
+           ds->dir_port != cert->dir_port)) {
+        char *a = tor_dup_addr(cert->addr);
+        log_notice(LD_DIR, "Updating address for directory authority %s "
+                   "from %s:%d to %s:%d based on in certificate.",
+                   ds->nickname, ds->address, (int)ds->dir_port,
+                   a, cert->dir_port);
+        tor_free(a);
+        ds->addr = cert->addr;
+        ds->dir_port = cert->dir_port;
+      }
+      ds->addr_current_at = cert->cache_info.published_on;
+    }
 
     if (!from_store)
       trusted_dir_servers_certs_changed = 1;
