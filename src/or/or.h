@@ -3418,6 +3418,7 @@ void rend_client_rendcirc_has_opened(origin_circuit_t *circ);
 int rend_client_introduction_acked(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
 void rend_client_refetch_renddesc(const char *query);
+void rend_client_refetch_v2_renddesc(const char *query);
 int rend_client_remove_intro_point(extend_info_t *failed_intro,
                                    const char *query);
 int rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,

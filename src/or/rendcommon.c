@@ -778,18 +778,26 @@ rend_valid_service_id(const char *query)
 
 /** If we have a cached rend_cache_entry_t for the service ID <b>query</b>
  * with <b>version</b>, set *<b>e</b> to that entry and return 1.
- * Else return 0.
+ * Else return 0. If <b>version</b> is nonnegative, only return an entry
+ * in that descriptor format version. Otherwise (if <b>version</b> is
+ * negative), return the most recent format we have.
  */
 int
 rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
 {
   char key[REND_SERVICE_ID_LEN+2]; /* <version><query>\0 */
   tor_assert(rend_cache);
-  tor_assert(!version);
   if (!rend_valid_service_id(query))
     return -1;
-  tor_snprintf(key, sizeof(key), "%d%s", version, query);
-  *e = strmap_get_lc(rend_cache, key);
+  *e = NULL;
+  if (version != 0) {
+    tor_snprintf(key, sizeof(key), "2%s", query);
+    *e = strmap_get_lc(rend_cache, key);
+  }
+  if (!*e && version != 2) {
+    tor_snprintf(key, sizeof(key), "0%s", query);
+    *e = strmap_get_lc(rend_cache, key);
+  }
   if (!*e)
     return 0;
   return 1;

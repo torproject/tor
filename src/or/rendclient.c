@@ -63,13 +63,14 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   rend_cache_entry_t *entry;
   crypt_path_t *cpath;
   off_t dh_offset;
+  crypto_pk_env_t *intro_key; /* either Bob's public key or an intro key. */
 
   tor_assert(introcirc->_base.purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
   tor_assert(rendcirc->_base.purpose == CIRCUIT_PURPOSE_C_REND_READY);
   tor_assert(!rend_cmp_service_ids(introcirc->rend_query,
                                    rendcirc->rend_query));
 
-  if (rend_cache_lookup_entry(introcirc->rend_query, 0, &entry) < 1) {
+  if (rend_cache_lookup_entry(introcirc->rend_query, -1, &entry) < 1) {
     log_warn(LD_REND,
              "query %s didn't have valid rend desc in cache. Failing.",
              escaped_safe_str(introcirc->rend_query));
@@ -77,7 +78,17 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   }
 
   /* first 20 bytes of payload are the hash of bob's pk */
-  if (crypto_pk_get_digest(entry->parsed->pk, payload)<0) {
+  if (entry->parsed->version == 0) { /* unversioned descriptor */
+    intro_key = entry->parsed->pk;
+  } else { /* versioned descriptor */
+    char hex_digest[HEX_DIGEST_LEN+2];
+    hex_digest[0] = '$';
+    base16_encode(hex_digest+1, HEX_DIGEST_LEN+1,
+                  introcirc->build_state->chosen_exit->identity_digest,
+                  DIGEST_LEN);
+    intro_key = strmap_get(entry->parsed->intro_keys, hex_digest);
+  }
+  if (crypto_pk_get_digest(intro_key, payload)<0) {
     log_warn(LD_BUG, "Internal error: couldn't hash public key.");
     goto err;
   }
@@ -132,7 +143,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   note_crypto_pk_op(REND_CLIENT);
   /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
    * to avoid buffer overflows? */
-  r = crypto_pk_public_hybrid_encrypt(entry->parsed->pk, payload+DIGEST_LEN,
+  r = crypto_pk_public_hybrid_encrypt(intro_key, payload+DIGEST_LEN,
                                       tmp,
                                       (int)(dh_offset+DH_KEY_LEN),
                                       PK_PKCS1_OAEP_PADDING, 0);
@@ -268,6 +279,39 @@ rend_client_refetch_renddesc(const char *query)
   }
 }
 
+/** If we are not currently fetching a rendezvous service descriptor for the
+ * base32-encoded service ID <b>query</b>, start a connection to a hidden
+ * service directory to fetch a new one.
+ */
+void
+rend_client_refetch_v2_renddesc(const char *query)
+{
+  char descriptor_id[DIGEST_LEN];
+  int replica;
+  smartlist_t *hs_dirs;
+  tor_assert(query);
+  tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
+  /* Are we configured to fetch descriptors? */
+  if (!get_options()->FetchHidServDescriptors) {
+    log_warn(LD_REND, "We received an onion address for a v2 rendezvous "
+        "service descriptor, but are not fetching service descriptors.");
+    return;
+  }
+  log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
+            query);
+  replica = crypto_rand_int(REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS);
+  if (rend_compute_v2_desc_id(descriptor_id, query, NULL, time(NULL),
+                              replica) < 0) {
+    log_warn(LD_REND, "Internal error: Computing v2 rendezvous "
+                      "descriptor ID did not succeed.");
+    return;
+  }
+  hs_dirs = hid_serv_create_routing_table();
+  directory_get_from_hs_dir(descriptor_id, query, hs_dirs);
+  smartlist_free(hs_dirs);
+  return;
+}
+
 /** Remove failed_intro from ent. If ent now has no intro points, or
  * service is unrecognized, then launch a new renddesc fetch.
  *
@@ -281,7 +325,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
   rend_cache_entry_t *ent;
   connection_t *conn;
 
-  r = rend_cache_lookup_entry(query, 0, &ent);
+  r = rend_cache_lookup_entry(query, -1, &ent);
   if (r<0) {
     log_warn(LD_BUG, "Malformed service ID %s.", escaped_safe_str(query));
     return -1;
@@ -289,6 +333,9 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
   if (r==0) {
     log_info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
              escaped_safe_str(query));
+    /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
+     * arrives first. */
+    rend_client_refetch_v2_renddesc(query);
     rend_client_refetch_renddesc(query);
     return 0;
   }
@@ -325,6 +372,9 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
     log_info(LD_REND,
              "No more intro points remain for %s. Re-fetching descriptor.",
              escaped_safe_str(query));
+    /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
+     * arrives first. */
+    rend_client_refetch_v2_renddesc(query);
     rend_client_refetch_renddesc(query);
 
     /* move all pending streams back to renddesc_wait */
@@ -450,7 +500,7 @@ rend_client_desc_here(const char *query)
     if (rend_cmp_service_ids(query, conn->rend_query))
       continue;
     assert_connection_ok(TO_CONN(conn), now);
-    if (rend_cache_lookup_entry(conn->rend_query, 0, &entry) == 1 &&
+    if (rend_cache_lookup_entry(conn->rend_query, -1, &entry) == 1 &&
         entry->parsed->n_intro_points > 0) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
@@ -486,7 +536,7 @@ rend_client_get_random_intro(const char *query)
   int i;
   rend_cache_entry_t *entry;
 
-  if (rend_cache_lookup_entry(query, 0, &entry) < 1) {
+  if (rend_cache_lookup_entry(query, -1, &entry) < 1) {
     log_warn(LD_REND,
              "Query '%s' didn't have valid rend desc in cache. Failing.",
              safe_str(query));

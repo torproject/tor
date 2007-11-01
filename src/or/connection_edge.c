@@ -1443,7 +1443,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     log_info(LD_REND,"Got a hidden service request for ID '%s'",
              safe_str(conn->rend_query));
     /* see if we already have it cached */
-    r = rend_cache_lookup_entry(conn->rend_query, 0, &entry);
+    r = rend_cache_lookup_entry(conn->rend_query, -1, &entry);
     if (r<0) {
       log_warn(LD_BUG,"Invalid service name '%s'",
                safe_str(conn->rend_query));
@@ -1454,6 +1454,9 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
       log_info(LD_REND, "Unknown descriptor %s. Fetching.",
                safe_str(conn->rend_query));
+      /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
+       * arrives first. */
+      rend_client_refetch_v2_renddesc(conn->rend_query);
       rend_client_refetch_renddesc(conn->rend_query);
     } else { /* r > 0 */
 /** How long after we receive a hidden service descriptor do we consider
@@ -1470,6 +1473,9 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         log_info(LD_REND, "Stale descriptor %s. Refetching.",
                  safe_str(conn->rend_query));
+        /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
+         * arrives first. */
+        rend_client_refetch_v2_renddesc(conn->rend_query);
         rend_client_refetch_renddesc(conn->rend_query);
       }
     }
