@@ -1032,7 +1032,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     e->desc = tor_strndup(current_desc, encoded_size);
     e->len = encoded_size;
     log_info(LD_REND, "Successfully stored service descriptor with desc ID "
-                      "'%s' and len %d.", desc_id_base32, encoded_size);
+                      "'%s' and len %d.", desc_id_base32, (int)encoded_size);
     number_stored++;
     goto advance;
   skip:
@@ -1150,7 +1150,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   strlcpy(e->desc, desc, encoded_size + 1);
   e->len = encoded_size;
   log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
-            service_id, encoded_size);
+            service_id, (int)encoded_size);
   return 1;
 }
 
