@@ -31,6 +31,7 @@ const char crypto_c_id[] =
 #include <openssl/bn.h>
 #include <openssl/dh.h>
 #include <openssl/conf.h>
+#include <openssl/hmac.h>
 
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
@@ -1297,6 +1298,7 @@ crypto_digest_assign(crypto_digest_env_t *into,
   memcpy(into,from,sizeof(crypto_digest_env_t));
 }
 
+#if 0
 /**DOCDOC */
 #define DIGEST_BLOCKSIZE 64
 
@@ -1343,6 +1345,20 @@ crypto_hmac_sha1(char *hmac_out,
   SHA1_Update(&sha, K, sizeof(K));
   SHA1_Update(&sha, D, sizeof(D));
   SHA1_Final((unsigned char*)hmac_out, &sha);
+}
+#endif
+
+/** Compute the HMAC-SHA-1 of the <b>msg_len</b> bytes in <b>msg</b>, using
+ * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST_LEN-byte result
+ * in <b>hmac_out</b>.
+ */
+void
+crypto_hmac_sha1(char *hmac_out,
+                 const char *key, size_t key_len,
+                 const char *msg, size_t msg_len)
+{
+  HMAC(EVP_sha1(), key, key_len, (unsigned char*)msg, msg_len,
+       (unsigned char*)hmac_out, NULL);
 }
 
 /* DH */
