@@ -1631,6 +1631,17 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       case 200: {
           trusted_dir_server_t *ds =
             router_get_trusteddirserver_by_digest(conn->identity_digest);
+          char *rejected_hdr = http_get_header(headers,
+                                               "X-Descriptor-Not-New: ");
+          int rejected = 0;
+          if (rejected_hdr) {
+            if (!strcmp(rejected, "Yes")) {
+              /* XXXX020 use this information; be sure to upload next one
+               * sooner. */
+              rejected = 1;
+            }
+            tor_free(rejected_hdr);
+          }
           log_info(LD_GENERAL,"eof (status 200) after uploading server "
                    "descriptor: finished.");
           control_event_server_status(
@@ -1898,6 +1909,7 @@ write_http_status_line(dir_connection_t *conn, int status,
 static void
 write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
                            const char *type, const char *encoding,
+                           const cahr *extra_headers,
                            int cache_lifetime)
 {
   char date[RFC1123_TIME_LEN+1];
@@ -1911,9 +1923,13 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
   format_rfc1123_time(date, now);
   cp = tmp;
   tor_snprintf(cp, sizeof(tmp),
-               "HTTP/1.0 200 OK\r\nDate: %s\r\nContent-Type: %s\r\n",
-               date, type);
+               "HTTP/1.0 200 OK\r\nDate: %s\r\n",
+               date);
   cp += strlen(tmp);
+  if (type) {
+    tor_snprintf(cp, sizeof(tmp)-(cp-tmp), "Content-Type: %s\r\n", type);
+    cp += strlen(cp);
+  }
   if (!is_internal_IP(conn->_base.addr, 0)) {
     /* Don't report the source address for a localhost/private connection. */
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
@@ -1938,12 +1954,14 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
                  "Expires: %s\r\n", expbuf);
     cp += strlen(cp);
-  } else {
+  } else if (cache_lifetime == 0) {
     /* We could say 'Cache-control: no-cache' here if we start doing
      * http/1.1 */
     strlcpy(cp, "Pragma: no-cache\r\n", sizeof(tmp)-(cp-tmp));
     cp += strlen(cp);
   }
+  if (extra_headers)
+    strlcpy(cp, extra_headers, sizeof(tmp)-(cp-tmp));
   if (sizeof(tmp)-(cp-tmp) > 3)
     memcpy(cp, "\r\n", 3);
   else
@@ -1960,6 +1978,7 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
   write_http_response_header_impl(conn, length,
                           deflated?"application/octet-stream":"text/plain",
                           deflated?"deflate":"identity",
+                             NULL,
                              cache_lifetime);
 }
 
@@ -2527,8 +2546,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     switch (rend_cache_lookup_desc(query, 0, &descp, &desc_len)) {
       case 1: /* valid */
         write_http_response_header_impl(conn, desc_len,
-                                   "application/octet-stream",
-                                   NULL, 0);
+                                        "application/octet-stream",
+                                        NULL, NULL, 0);
         note_request("/tor/rendezvous?/", desc_len);
         /* need to send descp separately, because it may include nuls */
         connection_write_to_buf(descp, desc_len, TO_CONN(conn));
@@ -2685,6 +2704,9 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
         write_http_status_line(conn, 400, msg);
         break;
       case 0: /* accepted but discarded */
+        write_http_response_header(conn, -1, NULL, NULL,
+                                   "X-Descriptor-Not-New: Yes\r\n", -1);
+        break;
       case 2: /* accepted */
         write_http_status_line(conn, 200, msg);
         break;

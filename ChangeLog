@@ -41,6 +41,9 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       claims about the authority's IP address.
     - New --quiet command-line option to suppress the default console log.
       Good in combination with --hash-password.
+    - Authorities send back an X-Descriptor-Not-New header in response to
+      an accepted-but-discarded descriptor upload.  Partially implements
+      fix for bug 535.
 
   o Minor features (controller):
     - When reporting clock skew, and we only have a lower bound on the amount

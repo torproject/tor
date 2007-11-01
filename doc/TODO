@@ -57,7 +57,8 @@ Things we'd like to do in 0.2.0.x:
           and send netinfo and be "open".
         o On netinfo, warn if there's skew from a server.
         - Learn our outgoing IP address from netinfo cells?
-        - Earliest stages of 110 (infinite-length) in v2 protocol.
+        - Earliest stages of 110 (infinite-length) in v2 protocol:
+          add support for RELAY_EARLY.
       - TLS only
         - Need to get a finished TLS normalization proposal
         - Revised authentication.
@@ -207,7 +208,7 @@ R     - drop 'authority' queries if they're to our own identity key; accept
     - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
       - Or maybe close connections from same IP when we get a lot from one.
       - Or maybe block IPs that connect too many times at once.
-    - add an AuthDirBadexit torrc option if we decide we want one.
+    D add an AuthDirBadexit torrc option if we decide we want one.
 
   - Testing
 N   - Hack up a client that gives out weird/no certificates, so we can
