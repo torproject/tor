@@ -247,6 +247,24 @@ Nice-to-have items for 0.2.0.x, time permitting:
       servers. but sometimes our entry node is the same for multiple
       test circuits. this defeats the point.
 
+Planned for 0.2.1.x:
+  - switch out privoxy in the bundles and replace it with polipo.
+  - make the new tls handshake blocking-resistant.
+  - figure out some way to collect feedback about what countries are using
+    bridges, in a way that doesn't screw anonymity too much.
+  - let tor dir mirrors proxy connections to the tor download site, so
+    if you know a bridge you can fetch the tor software.
+  - more strategies for distributing bridge addresses in a way that
+    doesn't rely on knowing somebody who runs a bridge for you.
+  - A way to adjust router status flags from the controller.  (How do we
+    prevent the authority from clobbering them soon afterward?)
+  - Bridge authorities should do reachability testing but only on the
+    purpose==bridge descriptors they have.
+  - Clients should estimate their skew as median of skew from servers
+    over last N seconds.
+  - Investigate RAM use in Tor servers.
+  - Start on the WSAENOBUFS solution.
+
 Deferred from 0.2.0.x:
   - Proposals
     - 113: Simplifying directory authority administration
@@ -268,8 +286,6 @@ Deferred from 0.2.0.x:
       client to use.
     - add an 'exit-address' line in the descriptor for servers that exit
       from something that isn't their published address.
-    - Clients should estimate their skew as median of skew from servers
-      over last N seconds.
     - More work on AvoidDiskWrites?
   - Features
     - Make a TCP DNSPort
@@ -298,8 +314,6 @@ Deferred from 0.2.0.x:
     - Do we want to maintain our own set of entryguards that we use as
       next hop after the bridge? Open research question; let's say no
       for 0.2.0 unless we learn otherwise.
-    - Should do reachability testing but only on the purpose==bridge
-      descriptors we have.
     - Some mechanism for specifying that we want to stop using a cached
       bridge.
   - Build:
@@ -331,7 +345,7 @@ Future versions:
 
   - Directory system
     - BEGIN_DIR items
-      - turn the received socks addr:port into a digest for setting .exit
+      X turn the received socks addr:port into a digest for setting .exit
       - handle connect-dir streams that don't have a chosen_exit_name set.
     - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
     - Add an option (related to AvoidDiskWrites) to disable directory
@@ -364,7 +378,7 @@ Future versions:
     - Hidserv offerers shouldn't need to define a SocksPort
 
   - Server operation
-    - When we notice a 'Rejected: There is already a named server with
+    X When we notice a 'Rejected: There is already a named server with
       this nickname' message... or maybe instead when we see in the
       networkstatuses that somebody else is Named with the name we
       want: warn the user, send a STATUS_SERVER message, and fall back
@@ -377,8 +391,6 @@ Future versions:
       such errors recently, then don't warn about it.
 
   - Controller
-    - A way to adjust router flags from the controller.  (How do we
-      prevent the authority from clobbering them soon afterward?)
     - Implement missing status events and accompanying getinfos
       - DIR_REACHABLE
       - BAD_DIR_RESPONSE (Unexpected directory response; maybe we're behind
@@ -416,7 +428,6 @@ Future versions:
       (It's hard to support read > write, since we need better
        congestion control to avoid overfull buffers there.  So,
        defer the whole thing.)
-    - Investigate RAM use in directory authorities.
     - Look into pulling serverdescs off buffers as they arrive.
     - Rate limit exit connections to a given destination -- this helps
       us play nice with websites when Tor users want to crawl them; it
@@ -466,9 +477,6 @@ Future versions:
       middleman nodes connect all over.  Rate-limit failed
       connections, perhaps?
     - DoS protection: TLS puzzles, public key ops, bandwidth exhaustion.
-
-  - Bridges
-    - Tolerate clock skew on bridge relays.
 
   - Needs thinking
     - Now that we're avoiding exits when picking non-exit positions,
