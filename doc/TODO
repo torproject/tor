@@ -97,7 +97,7 @@ Things we'd like to do in 0.2.0.x:
           unreachable is bunk -- it's leftover from the time when all
           servers ran 24/7. now it triggers every time a server goes
           away and then returns before the old descriptor has expired.
-      - add a --quiet commandline option that suppresses logs. useful
+      o add a --quiet commandline option that suppresses logs. useful
         for --hashed-password and maybe others.
       - Tor logs the libevent version on startup, for debugging purposes.
         This is great. But it does this before configuring the logs, so

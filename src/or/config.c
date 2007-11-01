@@ -1195,7 +1195,8 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
       continue;
     } else if (!strcmp(argv[i],"--list-fingerprint") ||
                !strcmp(argv[i],"--verify-config") ||
-               !strcmp(argv[i],"--ignore-missing-torrc")) {
+               !strcmp(argv[i],"--ignore-missing-torrc") ||
+               !strcmp(argv[i],"--quiet")) {
       i += 1; /* command-line option. ignore it. */
       continue;
     } else if (!strcmp(argv[i],"--nt-service") ||
@@ -1203,6 +1204,7 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
       i += 1;
       continue;
     }
+
     if (i == argc-1) {
       log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
                argv[i]);

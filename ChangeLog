@@ -39,6 +39,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       how skewed they are, and how much this matters.
     - When we have a certificate for an authority, believe that certificate's
       claims about the authority's IP address.
+    - New --quiet command-line option to suppress the default console log.
+      Good in combination with --hash-password.
 
   o Minor features (controller):
     - When reporting clock skew, and we only have a lower bound on the amount

@@ -1718,6 +1718,7 @@ handle_signals(int is_parent)
 tor_init(int argc, char *argv[])
 {
   char buf[256];
+  int i, quiet = 0;
   time_of_process_start = time(NULL);
   if (!connection_array)
     connection_array = smartlist_create();
@@ -1737,8 +1738,16 @@ tor_init(int argc, char *argv[])
   addressmap_init(); /* Init the client dns cache. Do it always, since it's
                       * cheap. */
 
-  /* give it somewhere to log to initially */
-  add_temp_log();
+  /* We search for the "quiet" option first, since it decides whether we
+   * will log anything at all to the command line. */
+  for (i=1;i<argc;++i) {
+    if (!strcmp(argv[i], "--quiet")) /*DOCDOC in mangpage.*/
+      quiet = 1;
+  }
+  if (!quiet) {
+    /* give it somewhere to log to initially */
+    add_temp_log();
+  }
 
   log(LOG_NOTICE, LD_GENERAL, "Tor v%s. This is experimental software. "
       "Do not rely on it for strong anonymity. (Running on %s)",get_version(),
