@@ -267,6 +267,7 @@ Planned for 0.2.1.x:
     over last N seconds.
   - Investigate RAM use in Tor servers.
   - Start on the WSAENOBUFS solution.
+  - Start on Windows auto-update for Tor
 
 Deferred from 0.2.0.x:
   - Proposals
