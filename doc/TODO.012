@@ -9,6 +9,7 @@ Backport items for 0.1.2:
   - backport the osx privoxy.config changes
   - no need to backport the windows privoxy.config changes because they're
     not in SVN??
+  - r12339: rlim_t may be wider than unsigned long.
 
 
 Backport for 0.1.2.x once better tested:
