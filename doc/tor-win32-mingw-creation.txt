@@ -27,15 +27,15 @@ Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
 Download openssl:
-http://www.openssl.org/source/openssl-0.9.8e.tar.gz
+http://www.openssl.org/source/openssl-0.9.8g.tar.gz
 
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
 Type "cd tor-mingw/"
-Type "tar zxf openssl-0.9.8e.tar.gz"
+Type "tar zxf openssl-0.9.8g.tar.gz"
 
 Make openssl libraries:
-Type "cd tor-mingw/openssl-0.9.8e/"
+Type "cd tor-mingw/openssl-0.9.8g/"
 Type "./Configure -no-idea -no-rc5 -no-mdc2 mingw"
 Edit Makefile and remove the "test:" and "tests:" sections.
 Type "rm -rf ./test"
@@ -107,7 +107,7 @@ Extract Tor:
 Type "tar zxf latest-tor-alpha.tar.gz"
 
 cd tor-<version>
-Type "./configure --enable-static --disable-shared"
+Type "./configure"
 Type "make"
 
 You now have a tor.exe in src/or/.  This is Tor.

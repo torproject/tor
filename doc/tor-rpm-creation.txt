@@ -58,7 +58,7 @@ The process used to create the distributed rpms is as follows:
 
 Download and Extract the latest tor source code from https://www.torproject.org/.
 In the Tor directory:
-./configure --enable-eventdns --enable-static --disable-shared
+./configure
 make dist-rpm
 
 You should have at least two, maybe three, rpms.  There should be the binary
