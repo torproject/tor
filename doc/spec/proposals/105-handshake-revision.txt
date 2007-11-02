@@ -193,9 +193,17 @@ Proposal:
    traffic through his own computers to enable timing and packet-counting
    attacks.
 
-   If a party connects to an OR based on an EXTEND cell, and the address
-   given in the EXTEND cell is not listed in the NETINFO cell, the first
-   party SHOULD close the connection as a likely MITM attack.
+   A Tor instance should use the other Tor's reported address
+   information as part of logic to decide whether to treat a given
+   connection as suitable for extending circuits to a given address/ID
+   combination.  When we get an extend request, we use an use an
+   existing OR connection if the ID matches, and ANY of the following
+   conditions hold:
+       - The IP matches the requested IP.
+       - We know that the IP we're using is canonical because it was
+         listed in the NETINFO cell.
+       - We know that the IP we're using is canonical because it was
+         listed in the server descriptor.
 
    [NOTE: The NETINFO cell is assigned the command number 8.]
 
