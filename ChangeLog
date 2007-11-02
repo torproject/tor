@@ -44,6 +44,7 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
     - Authorities send back an X-Descriptor-Not-New header in response to
       an accepted-but-discarded descriptor upload.  Partially implements
       fix for bug 535.
+    - Make the "not enough dir info yet" message better.
 
   o Minor features (controller):
     - When reporting clock skew, and we only have a lower bound on the amount

@@ -3845,6 +3845,8 @@ static int have_min_dir_info = 0;
  * enough directory info to build circuits that our old answer can no longer
  * be trusted. */
 static int need_to_update_have_min_dir_info = 1;
+/** DOCDOC */
+static char dir_info_status[128] = "";
 
 /** Return true iff we have enough networkstatus and router information to
  * start building circuits.  Right now, this means "more than half the
@@ -3870,6 +3872,13 @@ router_dir_info_changed(void)
   need_to_update_have_min_dir_info = 1;
 }
 
+/** DOCDOC */
+const char *
+get_dir_info_status_string(void)
+{
+  return dir_info_status;
+}
+
 /** Change the value of have_min_dir_info, setting it true iff we have enough
  * network and router information to build circuits.  Clear the value of
  * need_to_update_have_min_dir_info. */
@@ -3884,12 +3893,19 @@ update_router_have_minimum_dir_info(void)
     networkstatus_get_reasonably_live_consensus(now);
 
   if (!consensus) {
+    if (!networkstatus_get_latest_consensus())
+      strlcpy(dir_info_status, "We have no network-status document.",
+	      sizeof(dir_info_status));
+    else
+      strlcpy(dir_info_status, "We have no recent network-status document.",
+	      sizeof(dir_info_status));
     res = 0;
     goto done;
   }
 
   if (should_delay_dir_fetches(get_options())) {
     log_notice(LD_DIR, "no known bridge descriptors running yet; stalling");
+    strlcpy(dir_info_status, "No bridge descriptors.", sizeof(dir_info_status));
     res = 0;
     goto done;
   }
@@ -3903,7 +3919,19 @@ update_router_have_minimum_dir_info(void)
          }
        }
      });
-  res = num_present >= num_usable/4 && num_usable > 2;
+
+  if (num_present < num_usable/4) {
+    tor_snprintf(dir_info_status, sizeof(dir_info_status),
+            "We have only %d/%d usable descriptors.", num_present, num_usable);
+    res = 0;
+  } else if (num_usable < 2) {
+    tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                 "Only %d usable descriptor%s known!", num_usable,
+                 num_usable ? "" : "s");
+    res = 0;
+  } else {
+    res = 1;
+  }
 
  done:
   if (res && !have_min_dir_info) {
@@ -3919,6 +3947,7 @@ update_router_have_minimum_dir_info(void)
     control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }
   have_min_dir_info = res;
+  need_to_update_have_min_dir_info = 0;
 }
 
 /** Reset the descriptor download failure count on all routers, so that we

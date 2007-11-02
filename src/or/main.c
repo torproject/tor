@@ -659,7 +659,7 @@ directory_info_has_arrived(time_t now, int from_cache)
   if (!router_have_minimum_dir_info()) {
     log(LOG_NOTICE, LD_DIR,
         "I learned some more directory information, but not enough to "
-        "build a circuit.");
+        "build a circuit: %s", get_dir_info_status_string());
     update_router_descriptor_downloads(now);
     return;
   } else {

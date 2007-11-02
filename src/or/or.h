@@ -3769,6 +3769,7 @@ void update_router_descriptor_downloads(time_t now);
 void update_extrainfo_downloads(time_t now);
 int router_have_minimum_dir_info(void);
 void router_dir_info_changed(void);
+const char *get_dir_info_status_string(void);
 void router_reset_descriptor_download_failures(void);
 int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
 int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
