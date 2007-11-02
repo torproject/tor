@@ -1,0 +1,145 @@
+Filename: xxx-bridges.txt
+Title: Behavior for bridge users, bridge relays, and bridge authorities
+Version: $Revision: 12051 $
+Last-Modified: $Date: 2007-10-19 14:56:24 -0400 (Fri, 19 Oct 2007) $
+Author: Roger Dingledine
+Created: xx-Oct-2007
+Status: Open
+
+0. Preface:
+
+  This document describes the design decisions around support for bridge
+  users, bridge relays, and bridge authorities.
+
+  For more details on what all of these mean, look at blocking.tex in
+  /doc/design-paper/
+
+1. Bridge relays.
+
+  Bridge relays are just like normal Tor relays except they don't publish
+  their server descriptors to the main directory authorities.
+
+1.1. PublishServerDescriptor
+
+  To configure your relay to be a bridge relay, just add
+    PublishServerDescriptor bridge
+  to your torrc. This will cause your relay to publish its descriptor
+  to all the bridge authorities rather than the default authorities.
+
+  Alternatively, you can say
+    PublishServerDescriptor 0
+  which will cause your relay to not publish anywhere. This could be
+  useful for private bridges.
+
+1.2. Defining DirPort
+
+  Bridges need to answer BEGIN_DIR requests, both so they can answer
+  /server/authority questions ("what's your descriptor?") and so they
+  can supply their bridge users with cached copies of all the various
+  Tor network information.
+
+  Right now (0.2.0.9-alpha) we require that bridges turn their DirPort on
+  -- which means both that we answer BEGIN_DIR requests and that we fetch
+  and cache directory information in an aggressive way like other servers.
+
+  But:
+  a) we don't enforce that DirPort is on, since it's not clear how to
+  detect if the user meant to be a bridge. So it's easy to launch a bridge
+  relay that silently refuses BEGIN_DIR requests and is thus useless.
+  b) We don't actually care if they have an open or reachable DirPort. So
+  at some point we should separate having an open DirPort from answering
+  directory questions. Which leads to:
+  c) We need to investigate if there are any anonymity worries with
+  answering BEGIN_DIR requests when our DirPort is off. If there aren't,
+  we can drop the DirPort requirement.
+
+1.3. Exit policy
+
+  Bridge relays should use an exit policy of "reject *:*". This is
+  because they only need to relay traffic between the bridge users
+  and the rest of the Tor network, so there's no need to let people
+  exit directly from them.
+
+1.4. RelayBandwidthRate / RelayBandwidthBurst
+
+  We invented the RelayBandwidth* options for this situation: Tor clients
+  who want to allow relaying too. See proposal 111 for details. Relay
+  operators should feel free to rate-limit their relayed traffic.
+
+1.5. Helping the user with port forwarding, NAT, etc.
+
+  Just as for operating normal relays, our documentation and hints for
+  how to make your ORPort reachable are inadequate for normal users.
+
+  We need to work harder on this step.
+
+1.6. Vidalia integration
+
+  Vidalia has turned into "Relay" settings page into a tri-state
+  "Don't relay" "Relay for the Tor network" "Help censored users".
+
+  If the click the third choice, it forces your exit policy to reject *:*,
+  and it forces your DirPort to 9030 (see Sec 1.2 above about DirPort).
+
+  If all the bridges end up on port 9001, that's not so good. On the
+  other hand, putting the bridges on a low-numbered port in the Unix
+  world requires jumping through extra hoops. The current compromise is
+  that Vidalia makes the ORPort default to 443 on Windows, and 9001 on
+  other platforms.
+
+2. Bridge authorities.
+
+  Bridge authorities are like normal directory authorities, except they
+  don't create their own network-status documents. So if you ask an
+  authority for a network-status document, they behave like a directory
+  mirror: they give you one from one of the main authorities. But if
+  you ask the bridge authority for a particular identity fingerprint,
+  it will happily give you the latest descriptor for that fingerprint.
+
+  Right now there's one bridge authority, running on the Tonga relay.
+
+2.1. Exporting bridge-purpose descriptors
+
+  We've added a new purpose for server descriptors, the "bridge"
+  purpose. With the new router-descriptors file that includes annotations,
+  it's easy to look through it and find the bridge-purpose descriptors.
+
+  We should work with Tonga to export its router-descriptors file to
+  some place where we can distribute the bridge addresses according to
+  the policies in blocking.pdf. It might even be easier to have it write
+  out a separate file, just for export, that includes only the bridge
+  descriptors; or maybe a six-liner perl postprocessing script is the
+  better plan there to create a file for export.
+
+2.2. Reachability/uptime testing
+
+  should bridge relays publish anonymously to the bridge authority?
+
+  migrating to multiple bridge authorities
+
+3. Bridge users.
+
+    UseBridges 1
+    TunnelDirConns 1
+
+  Format of the bridge identifier.
+
+  bridges as entry guards
+
+  bridges as directory guards
+
+    UpdateBridgesFromAuthority 1
+
+  when to use a one-hop circuit, when to use a three-hop, to reach
+  the directory authority
+
+  bridge descriptor retry schedule
+
+  when to make TunnelDirConns default.
+
+  Vidalia integration:
+
+    vidalia looks up the geoip data for tor servers it knows about. which
+    is fine, except when they're bridges. now geoip.vidalia-project.net
+    is a place to go to learn bridge IP addresses.
+
