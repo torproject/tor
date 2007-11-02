@@ -362,6 +362,12 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, struct sockaddr_storage, s
 #endif
 ])
 
+AC_CHECK_TYPES([rlim_t], , ,
+[#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
+])
+
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
 AC_RUN_IFELSE(AC_LANG_SOURCE([
