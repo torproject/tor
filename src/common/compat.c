@@ -737,7 +737,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
     }
 #endif
     if (bad) {
-      log_warn(LD_CONFIG, "Couldn't set maximum number of file descriptors: %s",
+      log_warn(LD_CONFIG,"Couldn't set maximum number of file descriptors: %s",
                strerror(errno));
       return -1;
     }
