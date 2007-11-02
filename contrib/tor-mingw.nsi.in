@@ -10,7 +10,7 @@
 !define WEBSITE "https://www.torproject.org/"
 
 !define LICENSE "LICENSE"
-;BIN is where it expects to find tor.exe, tor-resolve.exe, libcrypto.a and libssl.a
+;BIN is where it expects to find tor.exe and tor-resolve.exe
 !define BIN "..\bin"
 
 SetCompressor lzma
@@ -89,12 +89,6 @@ Section "Tor" Tor
       StrCpy $configfile "torrc.sample"
    endiftorrc:
    File /oname=$configfile "..\src\config\torrc.sample"
-SectionEnd
-
-Section "OpenSSL 0.9.8e" OpenSSL
-   SetOutPath $INSTDIR
-   File "${BIN}\libcrypto.a"
-   File "${BIN}\libssl.a"
 SectionEnd
 
 Section "Documents" Docs
@@ -200,7 +194,6 @@ SectionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${Tor} "The core executable and config files needed for Tor to run."
-  !insertmacro MUI_DESCRIPTION_TEXT ${OpenSSL} "OpenSSL libraries required by Tor."
   !insertmacro MUI_DESCRIPTION_TEXT ${Docs} "Documentation about Tor."
   !insertmacro MUI_DESCRIPTION_TEXT ${ShortCuts} "Shortcuts to easily start Tor"
   !insertmacro MUI_DESCRIPTION_TEXT ${StartMenu} "Shortcuts to access Tor and it's documentation from the Start Menu"
