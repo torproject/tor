@@ -77,7 +77,10 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       0.2.0.9-alpha.
 
   - Minor bugfixes (portability):
-    - Run correctly on platforms where rlim_t is larger than unsigned long.
+    - Run correctly on platforms where rlim_t is larger than unsigned
+      long.
+    - Run correctly on platforms where the real limit for number of
+      open files is OPEN_FILES, not rlim_max from getrlimit(RLIMIT_NOFILES)
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24

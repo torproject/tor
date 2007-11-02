@@ -94,6 +94,9 @@ const char compat_c_id[] =
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
 #endif
+#ifdef HAVE_SYS_SYSLIMITS_H
+#include <sys/syslimits.h>
+#endif
 
 #ifdef USE_BSOCKETS
 #include <bsocket.h>
@@ -710,10 +713,34 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
              (unsigned long)rlim.rlim_cur, (unsigned long)most);
   }
   rlim.rlim_cur = most;
+
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
-    log_warn(LD_CONFIG, "Could not set maximum number of file descriptors: %s",
-             strerror(errno));
-    return -1;
+    int bad = 1;
+#ifdef OPEN_MAX
+    if (errno == EINVAL && OPEN_MAX < rlim.rlim_cur) {
+      /* On some platforms, OPEN_MAX is the real limit, and getrlimit() is
+       * full of nasty lies.  I'm looking at you, OSX 10.5.... */
+      rlim.rlim_cur = OPEN_MAX;
+      if (setrlimit(RLIMIT_NOFILE, &rlim) == 0) {
+        if (rlim.rlim_cur < limit) {
+          log_warn(LD_CONFIG, "We are limited to %lu file descriptors by "
+                 "OPEN_MAX, and ConnLimit is %lu.  Changing ConnLimit; sorry.",
+                   (unsigned long)OPEN_MAX, limit);
+        } else {
+          log_info(LD_CONFIG, "Dropped connection limit to OPEN_MAX (%lu); "
+                   "Apparently, %lu was too high and rlimit lied to us.",
+                   (unsigned long)OPEN_MAX, (unsigned long)most);
+        }
+        most = rlim.rlim_cur;
+        bad = 0;
+      }
+    }
+#endif
+    if (bad) {
+      log_warn(LD_CONFIG, "Couldn't set maximum number of file descriptors: %s",
+               strerror(errno));
+      return -1;
+    }
   }
   /* leave some overhead for logs, etc, */
   limit = most;
