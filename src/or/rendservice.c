@@ -62,6 +62,11 @@ typedef struct rend_service_t {
   time_t next_upload_time;
   /* XXXX020 A service never actually has both descriptor versions; perhaps
    * this should be an int rather than in intmax. */
+  /* A service can never publish v0 and v2 descriptors, but maybe it can
+   * publish v2 and v3 descriptors in the future. As with origin_circuit_t:
+   * Would it be clearer to switch to a single version number for now and
+   * switch back to a bitmap, when the above becomes true? -KL */
+  /* Yes. s/when/if/.  "YAGNI" -NM. */
   int descriptor_versions; /**< bitmask of rendezvous descriptor versions
                             * that will be published. "0" means "default." */
 } rend_service_t;
@@ -138,7 +143,8 @@ add_service(rend_service_t *service)
   if (!service->intro_exclude_nodes)
     service->intro_exclude_nodes = tor_strdup("");
   if (service->descriptor_versions == 0)
-    service->descriptor_versions = 1; /* Default is v0 only. */
+    service->descriptor_versions = 1 + (1<<2); /**< Default is v0 and v2 in
+                                                * parallel. */
   service->intro_keys = strmap_new();
 
   /* If the service is configured to publish unversioned (v0) and versioned
@@ -1210,7 +1216,7 @@ rend_services_introduce(void)
         log_info(LD_REND,"Giving up on %s as intro point for %s.",
                  intro, service->service_id);
         tor_free(intro);
-        /* XXXX020 We could also remove the intro key here... */
+        /* XXXXX020 we could also remove the intro key here. */
         smartlist_del(service->intro_nodes,j--);
         changed = 1;
         service->desc_is_dirty = now;

@@ -973,6 +973,7 @@ run_scheduled_events(time_t now)
      * and the rend cache. */
     rep_history_clean(now - options->RephistTrackTime);
     rend_cache_clean();
+    rend_cache_clean_v2_descs_as_dir();
     /* XXX020 we only clean this stuff if DirPort is set?! -RD */
   }
 

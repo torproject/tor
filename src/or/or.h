@@ -1785,6 +1785,11 @@ typedef struct origin_circuit_t {
    * rendezvous service ID, but different descriptor versions.
    * XXXX020 I believe this is a bitmap, but the doc doesn't say so. If so,
    *  why?  A circuit can't be using two different rendezvous decriptors. -NM
+   * Yes, it is a bitmap. The reason is that it might turn out that a version
+   * 3 _can_ use the same introduction point as version 2; only version 0
+   * is incompatible. Would it be clearer to switch to a single version number
+   * for now and switch back to a bitmap, when the above becomes true? -KL
+   * Yes.  "YAGNI." -NM
    */
   uint8_t rend_desc_version;
 
@@ -3485,14 +3490,8 @@ typedef struct rend_cache_entry_t {
 } rend_cache_entry_t;
 
 void rend_cache_init(void);
-/*XXXX020 clean *and* clean_up *and* clean_v2_dir? Rename some. */
-/*XXXX020 Call clean_up and clean_v2_dir from somewhere; nothing calls them
- * now. */
-/* Those functions were called from the (removed) replication functionality.
- * We need to call them from somewhere periodically; main()? -KL */
 void rend_cache_clean(void);
-void rend_cache_clean_up(void);
-void rend_cache_clean_v2_dir(void);
+void rend_cache_clean_v2_descs_as_dir(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
 int rend_cache_lookup_desc(const char *query, int version, const char **desc,

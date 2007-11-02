@@ -192,7 +192,6 @@ static config_var_t _option_vars[] = {
   VAR("HiddenServiceNodes",  LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
-  /*DOCDOC in tor manpage*/
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
   V(HSAuthoritativeDir,          BOOL,     "0"),
   V(HSAuthorityRecordStats,      BOOL,     "0"),

@@ -22,6 +22,8 @@ rend_cmp_service_ids(const char *one, const char *two)
 /** Helper: Release the storage held by the intro key in <b>_ent</b>.
  */
 /*XXXX020 there's also one of these in rendservice.c */
+/* Right. But the only alternative to that (which I know) would be to
+ * write it to or.h. Should I do that? -KL */
 static void
 intro_key_free(void *_ent)
 {
@@ -436,7 +438,6 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
     /* Add signature. */
     strlcpy(desc_str + written, "signature\n", desc_len - written);
     written += strlen(desc_str + written);
-    desc_str[written] = '\0'; /* XXXX020 strlcpy always nul-terminates. */
     if (crypto_digest(desc_digest, desc_str, written) < 0) {
       log_warn(LD_BUG, "could not create digest.");
       tor_free(desc_str);
@@ -674,25 +675,26 @@ rend_cache_clean(void)
   }
 }
 
-/** Remove all old entries on v2 hidden service directories. */
+/** Remove all old v2 descriptors and those for which this hidden service
+ * directory is not responsible for any more. */
 void
-rend_cache_clean_v2_dir(void)
+rend_cache_clean_v2_descs_as_dir(void)
 {
   digestmap_iter_t *iter;
-  const char *key;
-  void *val;
-  rend_cache_entry_t *ent;
-  time_t cutoff;
-  cutoff = time(NULL) - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
+  smartlist_t *hs_dirs = hid_serv_create_routing_table();
+  time_t cutoff = time(NULL) - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
   for (iter = digestmap_iter_init(rend_cache_v2_dir);
        !digestmap_iter_done(iter); ) {
+    const char *key;
+    void *val;
+    rend_cache_entry_t *ent;
     digestmap_iter_get(iter, &key, &val);
     ent = val;
-    if (ent->parsed->timestamp < cutoff) {
+    if (ent->parsed->timestamp < cutoff ||
+        !hid_serv_responsible_for_desc_id(key, hs_dirs)) {
       char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
-      log_info(LD_REND, "Removing descriptor with ID '%s' from cache, "
-                        "because it is too old!",
+      log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
                key_base32);
       iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
       _rend_cache_entry_free(ent);
@@ -700,6 +702,7 @@ rend_cache_clean_v2_dir(void)
       iter = digestmap_iter_next(rend_cache_v2_dir, iter);
     }
   }
+  smartlist_free(hs_dirs);
 }
 
 /** Determines whether <b>a</b> is in the interval of <b>b</b> (excluded) and
@@ -731,35 +734,6 @@ rend_id_is_in_interval(const char *a, const char *b, const char *c)
 
   /* In the other cases (a c b; b a c; c b a), a is inside the interval. */
   return 1;
-}
-
-/** Clean up all values for which this node as hidden service directory is
- * not responsible */
-void
-rend_cache_clean_up(void)
-{
-  digestmap_iter_t *iter;
-  smartlist_t *hs_dirs = hid_serv_create_routing_table();
-  for (iter = digestmap_iter_init(rend_cache_v2_dir);
-       !digestmap_iter_done(iter); ) {
-    const char *key;
-    void *val;
-    rend_cache_entry_t *ent;
-    digestmap_iter_get(iter, &key, &val);
-    ent = val;
-    if (!hid_serv_responsible_for_desc_id(key, hs_dirs)) {
-      char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-      base32_encode(key_base32, sizeof(key_base32),
-                    key, DIGEST_LEN);
-      log_info(LD_REND, "Removing descriptor with ID '%s' from cache, "
-                        "because we are not reponsible for it!", key_base32);
-      iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
-      _rend_cache_entry_free(ent);
-    } else {
-      iter = digestmap_iter_next(rend_cache_v2_dir, iter);
-    }
-  }
-  smartlist_free(hs_dirs);
 }
 
 /** Return true iff <b>query</b> is a syntactically valid service ID (as
@@ -1067,6 +1041,19 @@ rend_cache_store_v2_desc_as_client(const char *desc,
 {
   /*XXXX this seems to have a bit of duplicate code with
    * rend_cache_store_v2_desc_as_dir().  Fix that. */
+  /* Though having similar elements, both functions were separated on
+   * purpose:
+   * - dirs don't care about encoded/encrypted introduction points, clients
+   *   do.
+   * - dirs store descriptors in a separate cache by descriptor ID, whereas
+   *   clients store them by service ID; both caches are different data
+   *   structures and have different access methods.
+   * - dirs store a descriptor only if they are responsible for its ID,
+   *   clients do so in every way (because they have requested it before).
+   * - dirs can process multiple concatenated descriptors which is required
+   *   for replication, whereas clients only accept a single descriptor.
+   * Thus, combining both methods would result in a lot of if statements
+   * which probably would not improve, but worsen code readability. -KL */
   rend_service_descriptor_t *parsed = NULL;
   char desc_id[DIGEST_LEN];
   char *intro_content = NULL;

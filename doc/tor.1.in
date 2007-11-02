@@ -1107,6 +1107,11 @@ if you're using a Tor controller that handles hidserv publishing for you.
 (Default: 1)
 .LP
 .TP
+\fBHiddenServiceVersion \fR\fIversion\fR,\fIversion\fR,\fI...\fP
+A list of rendezvous service descriptor versions to publish for the hidden
+service. Possible version numbers are 0 and 2. (Default: 0, 2)
+.LP
+.TP
 \fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor uploads any rendezvous
 service descriptors to the directory servers.  This information is also

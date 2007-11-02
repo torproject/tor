@@ -3257,9 +3257,11 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tor_assert(tok);
   tor_assert(tok->n_args == 1);
   result->version = atoi(tok->args[0]);
-  if (result->version < 2) { /*XXXX020 what if > 2? */
-                             /* Good question: should higher versions
-                              * be rejected by directories? -KL */
+  if (result->version != 2) {
+    /* If it's <2, it shouldn't be under this format.  If the number
+     * is greater than 2, we bumped it because we broke backward
+     * compatibility.  See how version numbers in our other formats
+     * work. */
     log_warn(LD_REND, "Wrong descriptor version: %d", result->version);
     goto err;
   }
@@ -3300,6 +3302,15 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   for (i = 0; i < smartlist_len(versions); i++) {
     /* XXXX020 validate the numbers here. */
+    /* As above, validating these numbers on a hidden service directory
+     * might require an extension to new valid numbers at some time. But
+     * this would require making a distinction of hidden service direcoties
+     * which accept the old valid numbers and those which accept the new
+     * valid numbers. -KL */
+    /* As above, increased version numbers are for
+     * non-backward-compatible changes.  This code doesn't know how to
+     * parse a v3 descriptor, because a v3 descriptor is by definitition not 
+     * compatible with this code.  */
     version = atoi(smartlist_get(versions, i));
     result->protocols |= 1 << version;
   }
@@ -3308,7 +3319,11 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   /* Parse encrypted introduction points. Don't verify. */
   tok = find_first_by_keyword(tokens, R_INTRODUCTION_POINTS);
   tor_assert(tok);
-  /* XXXX020 make sure it's "BEGIN MESSAGE", not "BEGIN SOMETHINGELSE" */
+  if (strcmp(tok->object_type, "MESSAGE")) {
+    log_warn(LD_DIR, "Bad object type: introduction points should be of "
+             "type MESSAGE");
+    goto err;
+  }
   *intro_points_encrypted_out = tok->object_body;
   *intro_points_encrypted_size_out = tok->object_size;
   tok->object_body = NULL; /* Prevent free. */
@@ -3446,8 +3461,14 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     info->addr = ntohl(ip.s_addr);
     /* Parse onion port. */
     tok = find_first_by_keyword(tokens, R_IPO_ONION_PORT);
-    /* XXXX020 validate range. */
     info->port = (uint16_t) atoi(tok->args[0]);
+    /* XXXX020 this next check fails with ports like 65537. */
+    if (!info->port) {
+      log_warn(LD_REND, "Introduction point onion port is out of range: %d",
+               info->port);
+      tor_free(info);
+      goto err;
+    }
     /* Parse onion key. */
     tok = find_first_by_keyword(tokens, R_IPO_ONION_KEY);
     info->onion_key = tok->key;
@@ -3461,6 +3482,9 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   }
   /* Write extend infos to descriptor. */
   /* XXXX020 what if intro_points (&tc) are already set? */
+  /* This function is not intended to be invoced multiple times for
+   * the same descriptor. Should this be asserted? -KL */
+  /* Yes. -NM */
   parsed->n_intro_points = smartlist_len(intropoints);
   parsed->intro_point_extend_info =
     tor_malloc_zero(sizeof(extend_info_t *) * parsed->n_intro_points);

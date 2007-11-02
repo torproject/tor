@@ -521,6 +521,10 @@
 ## hidden service. In normal use there is no reason to set this.
 #HiddenServiceExcludeNodes nickname,nickname,...
 
+## Publish the given rendezvous service descriptor versions for the
+## hidden service.
+#HiddenServiceVersion 0,2
+
 ## Every time the specified period elapses, Tor uploads any ren-
 ## dezvous service descriptors to the directory servers.  This
 ## information is also uploaded whenever it changes. 
