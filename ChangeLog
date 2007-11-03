@@ -9,6 +9,9 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
       hidden service posting and fetching.
     - Code to implement new hidden service descriptor format (from Karsten
       Loesing).
+    - Raise the default BandwidthRate/BandwidthBurst to 5MB/10MB, to
+      accommodate the growing number of servers that use the default
+      and are reaching it.
 
   o Major bugfixes:
     - Stop servers from crashing if they set a Family option (or
