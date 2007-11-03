@@ -1487,6 +1487,23 @@ test_util_smartlist(void)
   test_streq("and", smartlist_bsearch(sl, " AND", _compare_without_first_ch));
   test_eq_ptr(NULL, smartlist_bsearch(sl, " ANz", _compare_without_first_ch));
 
+  /* Test bsearch_idx */
+  {
+    int f;
+    test_eq(0, smartlist_bsearch_idx(sl," aaa",_compare_without_first_ch,&f));
+    test_eq(f, 0);
+    test_eq(0, smartlist_bsearch_idx(sl," and",_compare_without_first_ch,&f));
+    test_eq(f, 1);
+    test_eq(1, smartlist_bsearch_idx(sl," arm",_compare_without_first_ch,&f));
+    test_eq(f, 0);
+    test_eq(1, smartlist_bsearch_idx(sl," arma",_compare_without_first_ch,&f));
+    test_eq(f, 1);
+    test_eq(2, smartlist_bsearch_idx(sl," armb",_compare_without_first_ch,&f));
+    test_eq(f, 0);
+    test_eq(7, smartlist_bsearch_idx(sl," zzzz",_compare_without_first_ch,&f));
+    test_eq(f, 0);
+  }
+
   /* Test reverse() and pop_last() */
   smartlist_reverse(sl);
   cp = smartlist_join_strings(sl, ",", 0, NULL);

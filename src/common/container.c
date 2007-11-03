@@ -490,21 +490,69 @@ smartlist_uniq(smartlist_t *sl,
 }
 
 /** Assuming the members of <b>sl</b> are in order, return a pointer to the
- * member which matches <b>key</b>.  Ordering and matching are defined by a
- * <b>compare</b> function, which returns 0 on a match; less than 0 if key is
+ * member that matches <b>key</b>.  Ordering and matching are defined by a
+ * <b>compare</b> function that returns 0 on a match; less than 0 if key is
  * less than member, and greater than 0 if key is greater then member.
  */
 void *
 smartlist_bsearch(smartlist_t *sl, const void *key,
                   int (*compare)(const void *key, const void **member))
 {
+#if 0
   void ** r;
+
   if (!sl->num_used)
     return NULL;
 
   r = bsearch(key, sl->list, sl->num_used, sizeof(void*),
               (int (*)(const void *, const void *))compare);
   return r ? *r : NULL;
+#endif
+  int found, idx;
+  idx = smartlist_bsearch_idx(sl, key, compare, &found);
+  return found ? smartlist_get(sl, idx) : NULL;
+}
+
+/** Assuming the members of <b>sl</b> are in order, return the index of the
+ * member that matches <b>key</b>.  If no member matches, return the index of
+ * the first member greater than <b>key</b>, or smartlist_len(sl) if no member
+ * is greater than <b>key</b>.  Set <b>found_out</b> to true on a match, to
+ * false otherwise.  Ordering and matching are defined by a <b>compare</b>
+ * function that returns 0 on a match; less than 0 if key is less than member,
+ * and greater than 0 if key is greater then member.
+ */
+int
+smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
+                      int (*compare)(const void *key, const void **member),
+                      int *found_out)
+{
+  int hi = smartlist_len(sl) - 1, lo = 0, cmp, mid;
+
+  while (lo <= hi) {
+    mid = (lo + hi) / 2;
+    cmp = compare(key, (const void**) &(sl->list[mid]));
+    if (cmp>0) { /* key > sl[mid] */
+      lo = mid+1;
+    } else if (cmp<0) { /* key < sl[mid] */
+      hi = mid-1;
+    } else { /* key == sl[mid] */
+      *found_out = 1;
+      return mid;
+    }
+  }
+  /* lo > hi. */
+  {
+    tor_assert(lo >= 0);
+    if (lo < smartlist_len(sl)) {
+      cmp = compare(key, (const void**) &(sl->list[lo]));
+      tor_assert(cmp < 0);
+    } else if (smartlist_len(sl)) {
+      cmp = compare(key, (const void**) &(sl->list[smartlist_len(sl)-1]));
+      tor_assert(cmp > 0);
+    }
+  }
+  *found_out = 0;
+  return lo;
 }
 
 /** Helper: compare two const char **s. */

@@ -106,6 +106,10 @@ void smartlist_uniq_digests(smartlist_t *sl);
 void *smartlist_bsearch(smartlist_t *sl, const void *key,
                         int (*compare)(const void *key, const void **member))
  ATTR_PURE;
+int smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
+                          int (*compare)(const void *key, const void **member),
+                          int *found_out)
+ ATTR_PURE;
 
 void smartlist_pqueue_add(smartlist_t *sl,
                           int (*compare)(const void *a, const void *b),
