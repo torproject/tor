@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metalink version="3.0" generator="Metalink Editor version 1.1.0" xmlns="http://www.metalinker.org/">
+  <publisher>
+    <name>The Tor Project</name>
+    <url>https://www.torproject.org</url>
+  </publisher>
+  <license>
+    <name>BSD</name>
+    <url>http://opensource.org/licenses/bsd-license.php</url>
+  </license>
+  <identity>Tor</identity>
+  <version>@VERSION@</version>
+  <copyright>2007 The Tor Project, Inc.</copyright>
+  <description>Anonymity Online</description>
+  <files>
+    <file name="tor-@VERSION@.tar.gz">
+      <size>1251636</size>
+      <language>en</language>
+      <os>Source</os>
+      <verification>
+        <hash type="md5">ef8fc7f45d167875c337063d437c9832</hash>
+        <hash type="sha1">01092fb75c407b5c1d7f33db069cf7641973d94d</hash>
+        <hash type="sha256">fc0fb0c2891ae09854a69512c6b4988964f2eaf62ce80ed6644cb21f87f6056a</hash>
+        <pieces type="sha1" length="262144">
+          <hash piece="0">c778dd01e05734d57f769082545f9802386e42bb</hash>
+          <hash piece="1">39b172ed8b9290884c7bd129db633a79e28d5ae9</hash>
+          <hash piece="2">28d708e7489a1e9951e757443672535aedfa3abe</hash>
+          <hash piece="3">a7623e07081819a37300de0511bbdda0bdc960bd</hash>
+          <hash piece="4">f246021e55affe320a1f86eac5b049dd0caad828</hash>
+        </pieces>
+      </verification>
+      <resources>
+        <url type="http" location="at">http://tor.cypherpunks.at/dist/</url>
+        <url type="http" location="ca">http://tor.depthstrike.com/dist/</url>
+        <url type="http" location="ca">http://tor.hermetix.org/dist/</url>
+        <url type="http" location="ch">http://tor.boinc.ch/dist/</url>
+        <url type="http" location="cn">http://tor.anonymity.cn/dist/</url>
+      </resources>
+    </file>
+  </files>
+</metalink>
