@@ -624,7 +624,9 @@ directory_initiate_command(const char *address, uint32_t addr,
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
-  int use_begindir = options->TunnelDirConns && supports_begindir && or_port &&
+  int use_begindir = supports_begindir && or_port &&
+                     (options->TunnelDirConns ||
+                      router_purpose == ROUTER_PURPOSE_BRIDGE) &&
                      (anonymized_connection ||
                       fascist_firewall_allows_address_or(addr, or_port));
 
