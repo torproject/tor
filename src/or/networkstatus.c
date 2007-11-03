@@ -1210,15 +1210,18 @@ networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
  * <b>consensus</b>.  If we don't have enough certificates to validate it,
  * store it in consensus_waiting_for_certs and launch a certificate fetch.
  *
- * Return 0 on success, -1 on failure.  On -1, caller should increment
+ * Return 0 on success, <0 on failure.  On failure, caller should increment
  * the failure count as appropriate.
+ *
+ * We return -1 for mild failures that don't need to be reported to the
+ * user, and -2 for more serious problems.
  */
 int
 networkstatus_set_current_consensus(const char *consensus, int from_cache,
                                     int was_waiting_for_certs)
 {
   networkstatus_vote_t *c;
-  int r, result=-1;
+  int r, result = -1;
   time_t now = time(NULL);
   char *unverified_fname = NULL, *consensus_fname = NULL;
 
@@ -1226,6 +1229,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   c = networkstatus_parse_vote_from_string(consensus, NULL, 0);
   if (!c) {
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
+    result = -2;
     goto done;
   }
 
@@ -1251,9 +1255,12 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   if ((r=networkstatus_check_consensus_signature(c, 1))<0) {
     if (r == -1 && !was_waiting_for_certs) {
       /* Okay, so it _might_ be signed enough if we get more certificates. */
-      if (!was_waiting_for_certs)
+      if (!was_waiting_for_certs) {
+        /* XXX020 eventually downgrade this log severity, or make it so
+         * users know why they're being told. */
         log_notice(LD_DIR, "Not enough certificates to check networkstatus "
                    "consensus");
+      }
       if (!current_consensus ||
           c->valid_after > current_consensus->valid_after) {
         if (consensus_waiting_for_certs)
@@ -1277,11 +1284,13 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
           unlink(unverified_fname);
       }
       goto done;
-    } else  {
+    } else {
       /* This can never be signed enough:  Kill it. */
-      if (!was_waiting_for_certs)
+      if (!was_waiting_for_certs) {
         log_warn(LD_DIR, "Not enough good signatures on networkstatus "
                  "consensus");
+        result = -2;
+      }
       if (was_waiting_for_certs && (r < -1) && from_cache)
         unlink(unverified_fname);
       goto done;

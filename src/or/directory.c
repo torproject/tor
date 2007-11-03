@@ -1455,6 +1455,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
+    int r;
     if (status_code != 200) {
       int severity = (status_code == 304) ? LOG_INFO : LOG_WARN;
       log(severity, LD_DIR,
@@ -1468,9 +1469,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     log_info(LD_DIR,"Received consensus directory (size %d) from server "
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
-    if (networkstatus_set_current_consensus(body, 0, 0)<0) {
-      log_warn(LD_DIR, "Unable to load consensus directory dowloaded from "
-               "server '%s:%d'", conn->_base.address, conn->_base.port);
+    if ((r=networkstatus_set_current_consensus(body, 0, 0))<0) {
+      log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
+             "Unable to load consensus directory downloaded from "
+             "server '%s:%d'", conn->_base.address, conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
       networkstatus_consensus_download_failed(0);
       return -1;

@@ -3309,7 +3309,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
      * valid numbers. -KL */
     /* As above, increased version numbers are for
      * non-backward-compatible changes.  This code doesn't know how to
-     * parse a v3 descriptor, because a v3 descriptor is by definitition not
+     * parse a v3 descriptor, because a v3 descriptor is by definition not
      * compatible with this code.  */
     version = atoi(smartlist_get(versions, i));
     result->protocols |= 1 << version;
