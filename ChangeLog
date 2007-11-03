@@ -1,4 +1,4 @@
-Changes in version 0.2.0.10-alpha - 2007-1?-??
+Changes in version 0.2.0.10-alpha - 2007-11-0?
   o Major features:
     - Separate "SOCKS_COMMAND_CONNECT_DIR" into two flags in
       edge_connection_t: want_onehop if it must attach to a circuit with
@@ -17,28 +17,29 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
 
   o New requirements:
     - Drop support for OpenSSL version 0.9.6.  Just about nobody was using
-      it, it had no AES, and it hasn't seen any security patches since 2004.
+      it, it had no AES, and it hasn't seen any security patches since
+      2004.
 
   o Minor features:
-    - Directory authorities now decide whether routers are stable enough to
-      be guards based not on their MTBF or their uptime, but on their
-      fractional uptime: the fraction of the time that they are online.
-      (No router counts as having uptime until we've known about it for
-      at least 24 hours.)
+    - Directory authorities now decide whether routers are stable
+      enough to be guards based not on their MTBF or their uptime, but
+      on their fractional uptime: the fraction of the time that they
+      are online. (No router counts as having uptime until we've known
+      about it for at least 24 hours.)
     - Clients new hold circuitless TLS connections open for 1.5 times
       MaxCircuitDirtiness, since it is likely that they'll need to build
-      a circuit over them within that timeframe.  Previously, they held them
-      open only for KeepalivePeriod.
+      a circuit over them within that timeframe. Previously, they held
+      them open only for KeepalivePeriod.
     - Use "If-Modified-Since" to avoid retrieving consensus networkstatuses
       that we already have.
     - When we have no consensus, check FallbackNetworkstatusFile (defaults
       to $PREFIX/share/tor/fallback-consensus) for a consensus.  This way
       we start knowing some directory caches.
     - When we receive a consensus from the future, warn about skew.
-    - Improve skew reporting: try to give the user a better log message about
-      how skewed they are, and how much this matters.
-    - When we have a certificate for an authority, believe that certificate's
-      claims about the authority's IP address.
+    - Improve skew reporting: try to give the user a better log message
+      about how skewed they are, and how much this matters.
+    - When we have a certificate for an authority, believe that
+      certificate's claims about the authority's IP address.
     - New --quiet command-line option to suppress the default console log.
       Good in combination with --hash-password.
     - Authorities send back an X-Descriptor-Not-New header in response to
@@ -47,13 +48,14 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
     - Make the "not enough dir info yet" message better.
 
   o Minor features (controller):
-    - When reporting clock skew, and we only have a lower bound on the amount
-      of skew, amount anyway, marked as a lower bound.
+    - When reporting clock skew, and we only have a lower bound on
+      the amount of skew, amount anyway, marked as a lower bound.
+      [XXX Nick: what does this mean??]
 
-  - Utilities:
+  o Utilities:
     - Update linux-tor-prio.sh script to allow QoS based on the uid of
-      the Tor prossess.  See comments in scripts.  (Patch from Marco Bonetti
-      with tweaks from Mike Perry.)
+      the Tor process. Patch from Marco Bonetti with tweaks from Mike
+      Perry.
 
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
@@ -67,8 +69,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       on 0.2.0.1-alpha.  Fixes Bug 536
     - Stop leaking a cached networkstatus on exit.  Bugfix on
       0.2.0.3-alpha.
-    - Stop leaking voter information every time we free a consensus.  Bugfix
-      on 0.2.0.3-alpha.
+    - Stop leaking voter information every time we free a consensus.
+      Bugfix on 0.2.0.3-alpha.
     - Stop leaking signed data every time we check a voter signature.
       Bugfix on 0.2.0.3-alpha.
     - Stop leaking a signature every time we fail to parse a consensus or
@@ -83,7 +85,8 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
     - Run correctly on platforms where rlim_t is larger than unsigned
       long.
     - Run correctly on platforms where the real limit for number of
-      open files is OPEN_FILES, not rlim_max from getrlimit(RLIMIT_NOFILES)
+      open files is OPEN_FILES, not rlim_max from
+      getrlimit(RLIMIT_NOFILES).
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24
