@@ -754,6 +754,17 @@ networkstatus_vote_find_entry(networkstatus_vote_t *ns, const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
+/*XXXX020 make this static once functions are moved into this file. */
+/** DOCDOC */
+int
+networkstatus_vote_find_entry_idx(networkstatus_vote_t *ns,
+                                  const char *digest, int *found_out)
+{
+  return smartlist_bsearch_idx(ns->routerstatus_list, digest,
+                               _compare_digest_to_routerstatus_entry,
+                               found_out);
+}
+
 /** Return a list of the v2 networkstatus documents. */
 const smartlist_t *
 networkstatus_get_v2_list(void)

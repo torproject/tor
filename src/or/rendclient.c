@@ -288,7 +288,6 @@ rend_client_refetch_v2_renddesc(const char *query)
 {
   char descriptor_id[DIGEST_LEN];
   int replica;
-  smartlist_t *hs_dirs;
   tor_assert(query);
   tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
   /* Are we configured to fetch descriptors? */
@@ -306,9 +305,7 @@ rend_client_refetch_v2_renddesc(const char *query)
                       "descriptor ID did not succeed.");
     return;
   }
-  hs_dirs = hid_serv_create_routing_table();
-  directory_get_from_hs_dir(descriptor_id, query, hs_dirs);
-  smartlist_free(hs_dirs);
+  directory_get_from_hs_dir(descriptor_id, query);
   return;
 }
 

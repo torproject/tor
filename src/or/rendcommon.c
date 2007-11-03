@@ -681,7 +681,6 @@ void
 rend_cache_clean_v2_descs_as_dir(void)
 {
   digestmap_iter_t *iter;
-  smartlist_t *hs_dirs = hid_serv_create_routing_table();
   time_t cutoff = time(NULL) - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
   for (iter = digestmap_iter_init(rend_cache_v2_dir);
        !digestmap_iter_done(iter); ) {
@@ -691,7 +690,7 @@ rend_cache_clean_v2_descs_as_dir(void)
     digestmap_iter_get(iter, &key, &val);
     ent = val;
     if (ent->parsed->timestamp < cutoff ||
-        !hid_serv_responsible_for_desc_id(key, hs_dirs)) {
+        !hid_serv_responsible_for_desc_id(key)) {
       char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
       log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
@@ -702,7 +701,6 @@ rend_cache_clean_v2_descs_as_dir(void)
       iter = digestmap_iter_next(rend_cache_v2_dir, iter);
     }
   }
-  smartlist_free(hs_dirs);
 }
 
 /** Determines whether <b>a</b> is in the interval of <b>b</b> (excluded) and
@@ -807,7 +805,6 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
 {
   rend_cache_entry_t *e;
   char desc_id_digest[DIGEST_LEN];
-  smartlist_t *hs_dirs;
   tor_assert(rend_cache_v2_dir);
   if (base32_decode(desc_id_digest, DIGEST_LEN,
                     desc_id, REND_DESC_ID_V2_LEN_BASE32) < 0) {
@@ -816,15 +813,12 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
     return -1;
   }
   /* Determine if we are responsible. */
-  hs_dirs = hid_serv_create_routing_table();
-  if (hid_serv_responsible_for_desc_id(desc_id_digest, hs_dirs) < 0) {
+  if (hid_serv_responsible_for_desc_id(desc_id_digest) < 0) {
     log_info(LD_REND, "Could not answer fetch request for v2 descriptor; "
                       "either we are no hidden service directory, or we are "
                       "not responsible for the requested ID.");
-    smartlist_free(hs_dirs);
     return -1;
   }
-  smartlist_free(hs_dirs);
   /* Lookup descriptor and return. */
   e = digestmap_get(rend_cache_v2_dir, desc_id_digest);
   if (e) {
@@ -940,14 +934,12 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   const char *next_desc;
   rend_cache_entry_t *e;
   time_t now = time(NULL);
-  smartlist_t *hs_dirs = hid_serv_create_routing_table();
   tor_assert(rend_cache_v2_dir);
   tor_assert(desc);
-  if (!hid_serv_acting_as_directory(hs_dirs)) {
+  if (!hid_serv_acting_as_directory()) {
     /* Cannot store descs, because we are (currently) not acting as
      * hidden service directory. */
     log_info(LD_REND, "Cannot store descs: Not acting as hs dir");
-    smartlist_free(hs_dirs);
     return -1;
   }
   while (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
@@ -960,7 +952,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
                   desc_id, DIGEST_LEN);
     /* Is desc ID in the range that we are (directly or indirectly) responsible
      * for? */
-    if (!hid_serv_responsible_for_desc_id(desc_id, hs_dirs)) {
+    if (!hid_serv_responsible_for_desc_id(desc_id)) {
       log_info(LD_REND, "Service descriptor with desc ID %s is not in "
                         "interval that we are responsible for.",
                desc_id_base32);

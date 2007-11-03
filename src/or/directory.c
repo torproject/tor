@@ -3084,12 +3084,11 @@ dir_split_resource_into_fingerprints(const char *resource,
 /* I guess they should. -KL */
 void
 directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
-                         const char *service_id, int seconds_valid,
-                         smartlist_t *hs_dirs)
+                         const char *service_id, int seconds_valid)
 {
   int i, j;
   smartlist_t *responsible_dirs;
-  routerinfo_t *hs_dir;
+  routerstatus_t *hs_dir;
   if (smartlist_len(desc_ids) != REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS ||
       smartlist_len(desc_strs) != REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS) {
     log_warn(LD_BUG, "Could not post descriptors to hidden service "
@@ -3102,8 +3101,7 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
     const char *desc_id = smartlist_get(desc_ids, i);
     const char *desc_str = smartlist_get(desc_strs, i);
     /* Determine responsible dirs. */
-    if (hid_serv_get_responsible_directories(responsible_dirs, desc_id,
-                                             hs_dirs) < 0) {
+    if (hid_serv_get_responsible_directories(responsible_dirs, desc_id) < 0) {
       log_warn(LD_REND, "Could not determine the responsible hidden service "
                         "directories to post descriptors to.");
       smartlist_free(responsible_dirs);
@@ -3115,9 +3113,7 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
       char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       hs_dir = smartlist_get(responsible_dirs, j);
       /* Send publish request. */
-      directory_initiate_command(hs_dir->address, hs_dir->addr,
-                                 hs_dir->or_port, hs_dir->dir_port, 1,
-                                 hs_dir->cache_info.identity_digest,
+      directory_initiate_command_routerstatus(hs_dir,
                                  DIR_PURPOSE_UPLOAD_RENDDESC_V2,
                                  ROUTER_PURPOSE_GENERAL,
                                  1, NULL, desc_str, strlen(desc_str), 0);
@@ -3142,18 +3138,16 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
  * and fetch the descriptor belonging to this ID from one of them;
  * <b>query</b> is only passed for pretty log statements. */
 void
-directory_get_from_hs_dir(const char *desc_id, const char *query,
-                          smartlist_t *hs_dirs)
+directory_get_from_hs_dir(const char *desc_id, const char *query)
 {
   smartlist_t *responsible_dirs = smartlist_create();
-  routerinfo_t *hs_dir;
+  routerstatus_t *hs_dir;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   tor_assert(desc_id);
   tor_assert(query);
   tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
   /* Determine responsible dirs. */
-  if (hid_serv_get_responsible_directories(responsible_dirs, desc_id,
-                                           hs_dirs) < 0) {
+  if (hid_serv_get_responsible_directories(responsible_dirs, desc_id) < 0) {
     log_warn(LD_REND, "Could not determine the responsible hidden service "
                       "directories to fetch descriptors.");
     smartlist_free(responsible_dirs);
@@ -3170,9 +3164,8 @@ directory_get_from_hs_dir(const char *desc_id, const char *query,
   base32_encode(desc_id_base32, sizeof(desc_id_base32),
                 desc_id, DIGEST_LEN);
   /* Send fetch request. */
-  directory_initiate_command(hs_dir->address, hs_dir->addr,
-                             hs_dir->or_port, hs_dir->dir_port, 1,
-                             hs_dir->cache_info.identity_digest,
+  directory_initiate_command_routerstatus(
+                             hs_dir,
                              DIR_PURPOSE_FETCH_RENDDESC_V2,
                              ROUTER_PURPOSE_GENERAL,
                              1, desc_id_base32, NULL, 0, 0);

@@ -1100,7 +1100,7 @@ upload_service_descriptor(rend_service_t *service)
   /* Upload v2 descriptor? */
   if (service->descriptor_versions & (1 << 2) &&
       get_options()->PublishHidServDescriptors) {
-    smartlist_t *hs_dirs = hid_serv_create_routing_table();
+    smartlist_t *hs_dirs = hid_serv_create_routing_table_st();
     if (hid_serv_have_enough_directories(hs_dirs)) {
       int seconds_valid;
       smartlist_t *desc_strs = smartlist_create();
@@ -1119,8 +1119,7 @@ upload_service_descriptor(rend_service_t *service)
       rend_get_service_id(service->desc->pk, serviceid);
       log_info(LD_REND, "Sending publish request for hidden service %s",
                    serviceid);
-      directory_post_to_hs_dir(desc_ids, desc_strs, serviceid, seconds_valid,
-                               hs_dirs);
+      directory_post_to_hs_dir(desc_ids, desc_strs, serviceid, seconds_valid);
       /* Free memory for descriptors. */
       for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++) {
         tor_free(smartlist_get(desc_strs, i));
@@ -1148,7 +1147,7 @@ upload_service_descriptor(rend_service_t *service)
           return;
         }
         directory_post_to_hs_dir(desc_ids, desc_strs, serviceid,
-                                 seconds_valid, hs_dirs);
+                                 seconds_valid);
         /* Free memory for descriptors. */
         for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++) {
           tor_free(smartlist_get(desc_strs, i));
@@ -1157,10 +1156,10 @@ upload_service_descriptor(rend_service_t *service)
         smartlist_free(desc_strs);
         smartlist_free(desc_ids);
       }
-      smartlist_free(hs_dirs);
       uploaded = 1;
       log_info(LD_REND, "Successfully uploaded v2 rend descriptors!");
     }
+    smartlist_free(hs_dirs);
   }
 
   /* If not uploaded, try again in one minute. */

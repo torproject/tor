@@ -2912,10 +2912,8 @@ char *directory_dump_request_log(void);
 int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
 void directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *descs,
-                              const char *service_id, int seconds_valid,
-                              smartlist_t *hs_dirs);
-void directory_get_from_hs_dir(const char *desc_id, const char *query,
-                               smartlist_t *hs_dirs);
+                              const char *service_id, int seconds_valid);
+void directory_get_from_hs_dir(const char *desc_id, const char *query);
 
 time_t download_status_increment_failure(download_status_t *dls,
                                          int status_code, const char *item,
@@ -3191,6 +3189,8 @@ routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
                                          const char *digest);
 routerstatus_t *networkstatus_vote_find_entry(networkstatus_vote_t *ns,
                                               const char *digest);
+int networkstatus_vote_find_entry_idx(networkstatus_vote_t *ns,
+                                      const char *digest, int *found_out);
 const smartlist_t *networkstatus_get_v2_list(void);
 download_status_t *router_get_dl_status_by_descriptor_digest(const char *d);
 routerstatus_t *router_get_consensus_status_by_id(const char *digest);
@@ -3779,17 +3779,18 @@ void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
-smartlist_t *hid_serv_create_routing_table(void);
+smartlist_t *hid_serv_create_routing_table_st(void);
 int hid_serv_have_enough_directories(const smartlist_t *hs_dirs);
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
-                                         const char *id,
-                                         const smartlist_t *hs_dirs);
+                                         const char *id);
+#if 0
 routerinfo_t *hid_serv_next_directory(const char *id,
                                       const smartlist_t *hs_dirs);
 routerinfo_t *hid_serv_previous_directory(const char *id,
                                           const smartlist_t *hs_dirs);
-int hid_serv_acting_as_directory(const smartlist_t *hs_dirs);
-int hid_serv_responsible_for_desc_id(const char *id, smartlist_t *hs_dirs);
+#endif
+int hid_serv_acting_as_directory(void);
+int hid_serv_responsible_for_desc_id(const char *id);
 
 /********************************* routerparse.c ************************/
 

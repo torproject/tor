@@ -4289,24 +4289,31 @@ routers_sort_by_identity(smartlist_t *routers)
   smartlist_sort(routers, _compare_routerinfo_by_id_digest);
 }
 
+#if 0
 /** Return the first router that is acting as hidden service directory and that
  * has a greater ID than <b>id</b>; if all routers have smaller IDs than
  * <b>id</b>, return the router with the smallest ID; if the router list is
  * NULL, or has no elements, return NULL.
  */
-routerinfo_t *
-hid_serv_next_directory(const char *id, const smartlist_t *hs_dirs)
+routerstatus_t *
+hid_serv_next_directory(const char *id)
 {
-  int i;
-  if (!hs_dirs) return NULL;
-  if (smartlist_len(hs_dirs) == 0) return NULL;
-  for (i = 0; i < smartlist_len(hs_dirs); i++) {
-    routerinfo_t *router = smartlist_get(hs_dirs, i);
-    if (memcmp(router->cache_info.identity_digest, id, DIGEST_LEN) > 0) {
-      return router;
-    }
-  }
-  return smartlist_get(hs_dirs, 0);
+  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+  int idx, i, f;
+  if (!c || !smartlist_len(c->routerstatus_list)) return NULL;
+  idx = networkstatus_vote_find_entry_idx(c, id, &f);
+  if (f) ++idx;
+  if (idx >= smartlist_len(c->routerstatus_list))
+    idx = 0;
+  i = idx;
+  do {
+    routerstatus_t *rs = smartlist_get(c->routerstatus_list, i);
+    if (rs->is_hs_dir)
+      return rs;
+    if (++i == smartlist_len(c->routerstatus_list))
+      i = 0;
+  } while (i != idx);
+  return NULL;
 }
 
 /** Return the first router that is acting as hidden service directory and that
@@ -4314,20 +4321,27 @@ hid_serv_next_directory(const char *id, const smartlist_t *hs_dirs)
  * <b>id</b>, return the router with the highest ID; if the router list is
  * NULL, or has no elements, return NULL.
  */
-routerinfo_t *
-hid_serv_previous_directory(const char *id, const smartlist_t *hs_dirs)
+routerstatus_t *
+hid_serv_previous_directory(const char *id)
 {
-  int i;
-  if (!hs_dirs) return NULL;
-  if (smartlist_len(hs_dirs) == 0) return NULL;
-  for (i = smartlist_len(hs_dirs) - 1; i >= 0; i--) {
-    routerinfo_t *router = smartlist_get(hs_dirs, i);
-    if (memcmp(router->cache_info.identity_digest, id, DIGEST_LEN) < 0) {
-      return router;
-    }
-  }
-  return smartlist_get(hs_dirs, smartlist_len(hs_dirs) - 1);
+  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+  int idx, i, f;
+  if (!c || !smartlist_len(c->routerstatus_list)) return NULL;
+  idx = networkstatus_vote_find_entry_idx(c, id, &f);
+  --idx;
+  if (idx < 0)
+    idx = smartlist_len(c->routerstatus_list) - 1;
+  i = idx;
+  do {
+    routerstatus_t *rs = smartlist_get(c->routerstatus_list, i);
+    if (rs->is_hs_dir)
+      return rs;
+    if (--i < 0)
+      i = smartlist_len(c->routerstatus_list) - 1;
+  } while (i != idx);
+  return NULL;
 }
+#endif
 
 /** Returns true, if we are aware of enough hidden service directory to
  * usefully perform v2 rend operations on them (publish, fetch, replicate),
@@ -4340,100 +4354,93 @@ hid_serv_have_enough_directories(const smartlist_t *hs_dirs)
 
 /** Determine the REND_NUMBER_OF_CONSECUTIVE_REPLICAS routers that are
  * responsible for <b>id</b> (binary) and add pointers to those routers'
- * routerinfo_t to <b>responsible_dirs</b>. If we don't have enough
+ * routerstatus_t to <b>responsible_dirs</b>. If we don't have enough
  * hidden service directories, return -1, else 0. */
-/*XXXX020 yield routerstatus_t, not routerinfo_t! */
 int
 hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
-                                     const char *id,
-                                     const smartlist_t *hs_dirs)
+                                     const char *id)
 {
-  const char *digest;
-  int i;
-  routerinfo_t *router;
-  char id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+  int start, found, n_added = 0, i;
+  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+  if (!c || !smartlist_len(c->routerstatus_list)) {
+    log_warn(LD_REND, "We don't have a consensus, so we can't perform v2 "
+             "rendezvous operations.");
+  }
   tor_assert(id);
-  base32_encode(id_base32, sizeof(id_base32), id, DIGEST_LEN);
-  if (!hid_serv_have_enough_directories(hs_dirs)) {
-    log_warn(LD_REND, "We don't have enough hidden service directories to "
-                      "perform v2 rendezvous operations!");
-    return -1;
-  }
-  digest = id;
-  for (i = 0; i < REND_NUMBER_OF_CONSECUTIVE_REPLICAS; i++) {
-    router = hid_serv_next_directory(digest, hs_dirs);
-    digest = router->cache_info.identity_digest;
-    if (!router) {
-      log_warn(LD_REND, "Could not determine next router in "
-                        "hidden service routing table.");
-      return -1;
+  start = networkstatus_vote_find_entry_idx(c, id, &found);
+  if (found) ++start;
+  if (start == smartlist_len(c->routerstatus_list)) start = 0;
+  i = start;
+  do {
+    routerstatus_t *r = smartlist_get(c->routerstatus_list, i);
+    if (r->is_hs_dir) {
+      smartlist_add(responsible_dirs, r);
+      if (++n_added == REND_NUMBER_OF_CONSECUTIVE_REPLICAS)
+        return 0;
     }
-    smartlist_add(responsible_dirs, router);
-  }
-  return 0;
+    if (++i == smartlist_len(c->routerstatus_list))
+      i = 0;
+  } while (i != start);
+
+  log_warn(LD_REND, "We don't have enough hidden service directories to "
+           "perform v2 rendezvous operations!");
+  return -1;
 }
 
-/** Create a list of routerinfo_t in ascending order of identity digests
+/** Create a list of routerstatus_t in ascending order of identity digests
  * containing all routers that have been assigned as hidden service
  * directories by the directory authorities; this list can be used as
  * hidden service routing table. */
-/*XXXX020 using routerinfo_t here instead of routerstatus_t is error-prone.
- * Best change that. */
 smartlist_t *
-hid_serv_create_routing_table(void)
+hid_serv_create_routing_table_st(void)
 {
   smartlist_t *hs_dirs = smartlist_create();
-  tor_assert(routerlist);
-  /* Copy the routerinfo_t's of all hidden service directories to a new
+  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+  if (!c) return hs_dirs;
+  /* Copy the routerstatus_t's of all hidden service directories to a new
    * smartlist. */
-  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
+  SMARTLIST_FOREACH(c->routerstatus_list, routerstatus_t *, r,
   {
     if (r->is_hs_dir)
       smartlist_add(hs_dirs, r);
   });
-  routers_sort_by_identity(hs_dirs);
+  /* It's already sorted by ID. */
   return hs_dirs;
 }
 
 /** Return true if this node is currently acting as hidden service
  * directory, false otherwise. */
 int
-hid_serv_acting_as_directory(const smartlist_t *hs_dirs)
+hid_serv_acting_as_directory(void)
 {
-  routerinfo_t *me = routerlist_find_my_routerinfo();
-  int found_me = 0;
-  if (!me) {
+  routerinfo_t *me = router_get_my_routerinfo();
+  networkstatus_vote_t *c;
+  routerstatus_t *rs;
+  if (!me)
     return 0;
-  }
   if (!get_options()->HidServDirectoryV2) {
     log_info(LD_REND, "We are not acting as hidden service directory, "
                       "because we have not been configured as such.");
     return 0;
   }
-  if (!hs_dirs) {
-    /* routing table is NULL */
-    log_info(LD_REND, "We are not acting as hidden service directory, "
-                      "because our own routing table is NULL.");
+  if (!(c = networkstatus_get_latest_consensus())) {
+    log_info(LD_REND, "There's no consensus, so I can't tell if I'm a hidden "
+             "service directory");
     return 0;
   }
-  SMARTLIST_FOREACH(hs_dirs, routerinfo_t *, router,
-  {
-    if (router_is_me(router)) {
-      found_me = 1;
-      break;
-    }
-  });
-  if (!found_me) {
-    /* not acting as HS Dir */
-    char me_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-    base32_encode(me_base32, sizeof(me_base32),
-                  me->cache_info.identity_digest, DIGEST_LEN);
-    log_info(LD_REND, "We are not acting as hidden service directory, "
-                      "because we are not listed as such in our own "
-                      "routing table. me=%s, num entries in RT=%d",
-                      me_base32, smartlist_len(hs_dirs));
+  rs = networkstatus_vote_find_entry(c, me->cache_info.identity_digest);
+  if (!rs) {
+    log_info(LD_REND, "We're not listed in the consensus, so we're not "
+             "being a hidden service directory.");
     return 0;
   }
+  if (!rs->is_hs_dir) {
+    log_info(LD_REND, "We're not listed as a hidden service directory in "
+             "the consensus, so we won't be one.");
+    return 0;
+  }
+
+#if 0
   if (smartlist_len(hs_dirs) <= REND_NUMBER_OF_CONSECUTIVE_REPLICAS) {
     /* too few HS Dirs -- that won't work */
     log_info(LD_REND, "We are not acting as hidden service directory, "
@@ -4441,26 +4448,34 @@ hid_serv_acting_as_directory(const smartlist_t *hs_dirs)
                       "directories in the routing table.");
     return 0;
   }
+#endif
   return 1;
 }
 
 /** Return true if this node is responsible for storing the descriptor ID
  * in <b>query</b> and false otherwise. */
 int
-hid_serv_responsible_for_desc_id(const char *query, smartlist_t *hs_dirs)
+hid_serv_responsible_for_desc_id(const char *query)
 {
-  const char *me;
-  const char *predecessor;
-  routerinfo_t *router;
-  int i;
-  if (!hid_serv_acting_as_directory(hs_dirs))
+  routerinfo_t *me;
+  routerstatus_t *last_rs;
+  const char *my_id, *last_id;
+  int result;
+  smartlist_t *responsible;
+  if (!hid_serv_acting_as_directory())
     return 0;
-  me = router_get_my_routerinfo()->cache_info.identity_digest;
-  predecessor = me;
-  for (i = 0; i < REND_NUMBER_OF_CONSECUTIVE_REPLICAS; i++) {
-    router = hid_serv_previous_directory(predecessor, hs_dirs);
-    predecessor = router->cache_info.identity_digest;
+  if (!(me = router_get_my_routerinfo()))
+    return 0; /* This is redundant, but let's be paranoid. */
+  my_id = me->cache_info.identity_digest;
+  responsible = smartlist_create();
+  if (hid_serv_get_responsible_directories(responsible, query)<0) {
+    smartlist_free(responsible);
+    return 0;
   }
-  return rend_id_is_in_interval(query, predecessor, me);
+  last_rs = smartlist_get(responsible, smartlist_len(responsible)-1);
+  last_id = last_rs->identity_digest;
+  result = rend_id_is_in_interval(my_id, query, last_id);
+  smartlist_free(responsible);
+  return result;
 }
 
