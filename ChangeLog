@@ -75,6 +75,9 @@ Changes in version 0.2.0.10-alpha - 2007-1?-??
       a vote.  Bugfix on 0.2.0.3-alpha.
     - Stop leaking v2_download_status_map on shutdown.  Bugfix on
       0.2.0.9-alpha.
+    - Stop leaking conn->nickname every time we make a connection to a
+      Tor relay without knowing its expected identity digest (e.g. when
+      using bridges). Bugfix on 0.2.0.3-alpha.
 
   - Minor bugfixes (portability):
     - Run correctly on platforms where rlim_t is larger than unsigned
