@@ -1278,6 +1278,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
           networkstatus_vote_free(consensus_waiting_for_certs);
         tor_free(consensus_waiting_for_certs_body);
         consensus_waiting_for_certs = c;
+        c = NULL; /* Prevent free. */
         consensus_waiting_for_certs_body = tor_strdup(consensus);
         consensus_waiting_for_certs_set_at = now;
         consensus_waiting_for_certs_dl_failed = 0;
