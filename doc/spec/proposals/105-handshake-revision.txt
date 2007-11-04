@@ -196,7 +196,7 @@ Proposal:
    A Tor instance should use the other Tor's reported address
    information as part of logic to decide whether to treat a given
    connection as suitable for extending circuits to a given address/ID
-   combination.  When we get an extend request, we use an use an
+   combination.  When we get an extend request, we use an
    existing OR connection if the ID matches, and ANY of the following
    conditions hold:
        - The IP matches the requested IP.
