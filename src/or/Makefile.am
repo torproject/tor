@@ -23,6 +23,10 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	eventdns.c \
 	tor_main.c
 
+AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
+        -DLOCALSTATEDIR="\"$(localstatedir)\"" \
+        -DBINDIR="\"$(bindir)\""
+
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on windows, but I assure you that it
 # matters a lot there, and is quite hard to debug if you forget to do it.
