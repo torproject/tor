@@ -2825,20 +2825,6 @@ clear_bridge_list(void)
   smartlist_clear(bridge_list);
 }
 
-#if 0
-/** Return 1 if <b>digest</b> is one of our known bridges. */
-int
-identity_digest_is_a_bridge(const char *digest)
-{
-  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
-    {
-      if (!memcmp(bridge->identity, digest, DIGEST_LEN))
-        return 1;
-    });
-  return 0;
-}
-#endif
-
 /** Return a bridge pointer if <b>ri</b> is one of our known bridges
  * (either by comparing keys if possible, else by comparing addr/port).
  * Else return NULL. */
@@ -2902,6 +2888,52 @@ bridge_fetch_status_arrived(bridge_info_t *bridge, time_t now)
   bridge->fetch_status.n_download_failures = 0;
 }
 
+/** If <b>digest</b> is one of our known bridges, return it. */
+static bridge_info_t *
+find_bridge_by_digest(char *digest)
+{
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
+    {
+      if (!memcmp(bridge->identity, digest, DIGEST_LEN))
+        return bridge;
+    });
+  return NULL;
+}
+
+/** We need to ask <b>bridge</b> for its server descriptor. <b>address</b>
+ * is a helpful string describing this bridge. */
+static void
+launch_direct_bridge_descriptor_fetch(char *address, bridge_info_t *bridge)
+{
+  if (connection_get_by_type_addr_port_purpose(
+      CONN_TYPE_DIR, bridge->addr, bridge->port,
+      DIR_PURPOSE_FETCH_SERVERDESC))
+    return; /* it's already on the way */
+  directory_initiate_command(address, bridge->addr,
+                             bridge->port, 0,
+                             1, bridge->identity,
+                             DIR_PURPOSE_FETCH_SERVERDESC,
+                             ROUTER_PURPOSE_BRIDGE,
+                             0, "authority.z", NULL, 0, 0);
+}
+
+/** Fetching the bridge descriptor from the bridge authority returned a
+ * "not found". Fall back to trying a direct fetch. */
+void
+retry_bridge_descriptor_fetch_directly(char *digest)
+{
+  bridge_info_t *bridge = find_bridge_by_digest(digest);
+  char address_buf[INET_NTOA_BUF_LEN+1];
+  struct in_addr in;
+
+  if (!bridge)
+    return; /* not found? oh well. */
+
+  in.s_addr = htonl(bridge->addr);
+  tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
+  launch_direct_bridge_descriptor_fetch(address_buf, bridge);
+}
+
 /** For each bridge in our list for which we don't currently have a
  * descriptor, fetch a new copy of its descriptor -- either directly
  * from the bridge or via a bridge authority. */
@@ -2941,21 +2973,15 @@ fetch_bridge_descriptors(time_t now)
                    "firewall policy. %s.", address_buf, bridge->port,
                    num_bridge_auths ? "Asking bridge authority instead" :
                                       "Skipping");
-        ask_bridge_directly = 0;
+        if (num_bridge_auths)
+          ask_bridge_directly = 0;
+        else
+          continue;
       }
 
       if (ask_bridge_directly) {
-        if (!connection_get_by_type_addr_port_purpose(
-            CONN_TYPE_DIR, bridge->addr, bridge->port,
-            DIR_PURPOSE_FETCH_SERVERDESC)) {
-          /* we need to ask the bridge itself for its descriptor. */
-          directory_initiate_command(address_buf, bridge->addr,
-                                     bridge->port, 0,
-                                     1, bridge->identity,
-                                     DIR_PURPOSE_FETCH_SERVERDESC,
-                                     ROUTER_PURPOSE_BRIDGE,
-                                     0, "authority.z", NULL, 0, 0);
-        }
+        /* we need to ask the bridge itself for its descriptor. */
+        launch_direct_bridge_descriptor_fetch(address_buf, bridge);
       } else {
         /* We have a digest and we want to ask an authority. We could
          * combine all the requests into one, but that may give more

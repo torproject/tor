@@ -50,6 +50,13 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
       fix for bug 535.
     - Make the "not enough dir info yet" message better.
 
+  o Minor features (bridges):
+    - If bridge users set UpdateBridgesFromAuthority, but the digest
+      they ask for is a 404 from the bridge authority, they now fall
+      back to trying the bridge directly.
+    - Bridges now use begin_dir to publish their server descriptor to
+      the bridge authority, even when they haven't set TunnelDirConns.
+
   o Minor features (controller):
     - When reporting clock skew, and we only have a lower bound on
       the amount of skew, amount anyway, marked as a lower bound.

@@ -52,6 +52,7 @@ static void dir_networkstatus_download_failed(smartlist_t *failed,
                                               int status_code);
 static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int status_code,
+                                           int router_purpose,
                                            int was_extrainfo,
                                            int was_descriptor_digests);
 static void note_request(const char *key, size_t bytes);
@@ -1582,6 +1583,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         connection_dir_download_routerdesc_failed(conn);
       } else {
         dir_routerdesc_download_failed(which, status_code,
+                                       conn->router_purpose,
                                        was_ei, descriptor_digests);
         SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
         smartlist_free(which);
@@ -1621,6 +1623,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                conn->_base.address, (int)conn->_base.port);
       if (smartlist_len(which)) {
         dir_routerdesc_download_failed(which, status_code,
+                                       conn->router_purpose,
                                        was_ei, descriptor_digests);
       }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
@@ -2968,16 +2971,26 @@ download_status_reset(download_status_t *dls)
  * either as descriptor digests or as identity digests based on
  * <b>was_descriptor_digests</b>).
  */
-void
+static void
 dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
+                               int router_purpose,
                                int was_extrainfo, int was_descriptor_digests)
 {
   char digest[DIGEST_LEN];
   time_t now = time(NULL);
   or_options_t *options = get_options();
   int server = server_mode(options) && dirserver_mode(options);
-  if (!was_descriptor_digests)
-    return; /* FFFF should implement this someday */
+  if (!was_descriptor_digests) {
+    if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
+      tor_assert(!was_extrainfo); /* not supported yet */
+      SMARTLIST_FOREACH(failed, const char *, cp,
+      {
+        base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
+        retry_bridge_descriptor_fetch_directly(digest);
+      });
+    }
+    return; /* FFFF should implement for other-than-router-purpose someday */
+  }
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
     download_status_t *dls = NULL;
@@ -2996,7 +3009,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
   });
 
   /* No need to relaunch descriptor downloads here: we already do it
-   * every 10 seconds (DESCRIPTOR_RETRY_INTERVAL) in main.c. */
+   * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
 }
 
 /** Given a directory <b>resource</b> request, containing zero
