@@ -60,12 +60,12 @@ Options are case-insensitive.
 \fBBandwidthRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 A token bucket limits the average incoming bandwidth usage on this node
 to the specified number of bytes per second, and the average outgoing
-bandwidth usage to that same value. (Default: 3 MB)
+bandwidth usage to that same value. (Default: 5 MB)
 .LP
 .TP
 \fBBandwidthBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
 Limit the maximum token bucket size (also known as the burst) to the
-given number of bytes in each direction. (Default: 6 MB)
+given number of bytes in each direction. (Default: 10 MB)
 .LP
 .TP
 \fBMaxAdvertisedBandwidth \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
