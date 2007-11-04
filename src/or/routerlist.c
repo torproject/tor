@@ -367,6 +367,12 @@ authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
         fp[HEX_DIGEST_LEN+1] = '\0';
         smartlist_add(fps, fp);
       });
+    if (smartlist_len(fps) == 1) {
+      /* we didn't add any: they were all pending */
+      SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
+      smartlist_free(fps);
+      goto done;
+    }
     resource = smartlist_join_strings(fps, "", 0, NULL);
     resource[strlen(resource)-1] = '\0';
     SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
