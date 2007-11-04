@@ -670,6 +670,8 @@ directory_initiate_command(const char *address, uint32_t addr,
                                dir_port)) {
       case -1:
         connection_dir_request_failed(conn); /* retry if we want */
+        /* XXX we only pass 'conn' above, not 'resource', 'payload',
+         * etc. So in many situations it can't retry! -RD */
         connection_free(TO_CONN(conn));
         return;
       case 1:

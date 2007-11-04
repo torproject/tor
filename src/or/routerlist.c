@@ -3911,7 +3911,8 @@ update_router_have_minimum_dir_info(void)
 
   if (should_delay_dir_fetches(get_options())) {
     log_notice(LD_DIR, "no known bridge descriptors running yet; stalling");
-    strlcpy(dir_info_status, "No bridge descriptors.",sizeof(dir_info_status));
+    strlcpy(dir_info_status, "No live bridge descriptors.",
+            sizeof(dir_info_status));
     res = 0;
     goto done;
   }

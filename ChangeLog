@@ -18,6 +18,18 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
       maybe in other situations too). Bugfix on 0.2.0.9-alpha; reported
       by Fabian Keil.
 
+  o Major bugfixes (v3 dir, bugfixes on 0.2.0.9-alpha):
+    - Consider replacing the current consensus when certificates arrive
+      that make the pending consensus valid.  Previously, we were only
+      considering replacement when the new certs _didn't_ help.
+    - Fix an assert error on startup if we didn't already have the
+      consensus and certs cached in our datadirectory: we were caching
+      the consensus in consensus_waiting_for_certs but then free'ing it
+      right after.
+    - Avoid sending a request for "keys/fp" (for which we'll get a 400 Bad
+      Request) if we need more v3 certs but we've already got pending
+      requests for all of them.
+
   o New requirements:
     - Drop support for OpenSSL version 0.9.6.  Just about nobody was using
       it, it had no AES, and it hasn't seen any security patches since
@@ -66,11 +78,6 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
     - Update linux-tor-prio.sh script to allow QoS based on the uid of
       the Tor process. Patch from Marco Bonetti with tweaks from Mike
       Perry.
-
-  o Major bugfixes:
-    - Consider replace the current consensus when certificates arrive
-      that make the pending consensus valid.  Previously, we were only
-      considering replacement when the new certs _didn't_ help.
 
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
