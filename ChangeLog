@@ -67,6 +67,11 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
       the Tor process. Patch from Marco Bonetti with tweaks from Mike
       Perry.
 
+  o Major bugfixes:
+    - Consider replace the current consensus when certificates arrive
+      that make the pending consensus valid.  Previously, we were only
+      considering replacement when the new certs _didn't_ help.
+
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
       on 0.2.0.x.

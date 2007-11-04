@@ -1384,7 +1384,7 @@ networkstatus_note_certs_arrived(void)
 {
   if (consensus_waiting_for_certs) {
     if (networkstatus_check_consensus_signature(
-                                    consensus_waiting_for_certs, 0)<0) {
+                                    consensus_waiting_for_certs, 0)>=0) {
       if (!networkstatus_set_current_consensus(
                                  consensus_waiting_for_certs_body, 0, 1)) {
         tor_free(consensus_waiting_for_certs_body);
