@@ -39,7 +39,7 @@ Things we'd like to do in 0.2.0.x:
         - functions to validate a chain of x509 certs, and extract a PK.
         - Parse CERT cells
         - Generate CERT cells
-        - Keep copies of X509 certs around, not necessarily associated with
+        o Keep copies of X509 certs around, not necessarily associated with
           connection.
       - LINK_AUTH cells
         - Code to generate
@@ -58,7 +58,7 @@ Things we'd like to do in 0.2.0.x:
         - After we send NETINFO, send CERT and LINK_AUTH if needed.
         - Once we get a good LINK_AUTH, the connection is OPEN.
         - Ban most cell types on a non-OPEN connection.
-      - Make code work right wrt TLS context rotation.
+      o Make code work right wrt TLS context rotation.
       - NETINFO fallout
         - Don't extend a circuit over a noncanonical connection with
           mismatched address.

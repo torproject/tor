@@ -43,6 +43,7 @@ const char tortls_c_id[] =
 
 /** Structure holding the TLS state for a single connection. */
 typedef struct tor_tls_context_t {
+  int refcnt;
   SSL_CTX *ctx;
   X509 *my_cert;
   X509 *my_id_cert;
@@ -52,21 +53,23 @@ typedef struct tor_tls_context_t {
  * accessed from within tortls.c.
  */
 struct tor_tls_t {
+  tor_tls_context_t *context; /**DOCDOC */
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED
-  } state; /**< The current SSL state, depending on which operations have
-            * completed successfully. */
-  int isServer; /**< True iff this is a server-side connection */
+  } state : 7; /**< The current SSL state, depending on which operations have
+                * completed successfully. */
+  unsigned int isServer:1; /**< True iff this is a server-side connection */
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
   unsigned long last_write_count;
   unsigned long last_read_count;
 };
 
-static void tor_tls_context_free(tor_tls_context_t *ctx);
+static void tor_tls_context_decref(tor_tls_context_t *ctx);
+static void tor_tls_context_incref(tor_tls_context_t *ctx);
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         crypto_pk_env_t *rsa_sign,
                                         const char *cname,
@@ -214,7 +217,7 @@ void
 tor_tls_free_all(void)
 {
   if (global_tls_context) {
-    tor_tls_context_free(global_tls_context);
+    tor_tls_context_decref(global_tls_context);
     global_tls_context = NULL;
   }
 }
@@ -345,12 +348,22 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 
 /** DOCDOC */
 static void
-tor_tls_context_free(tor_tls_context_t *ctx)
+tor_tls_context_decref(tor_tls_context_t *ctx)
 {
-  SSL_CTX_free(ctx->ctx);
-  X509_free(ctx->my_cert);
-  X509_free(ctx->my_id_cert);
-  tor_free(ctx);
+  tor_assert(ctx);
+  if (--ctx->refcnt == 0) {
+    SSL_CTX_free(ctx->ctx);
+    X509_free(ctx->my_cert);
+    X509_free(ctx->my_id_cert);
+    tor_free(ctx);
+  }
+}
+
+/** DOCDOC */
+static void
+tor_tls_context_incref(tor_tls_context_t *ctx)
+{
+  ++ctx->refcnt;
 }
 
 /** Create a new TLS context for use with Tor TLS handshakes.
@@ -394,6 +407,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   }
 
   result = tor_malloc_zero(sizeof(tor_tls_context_t));
+  result->refcnt = 1;
   result->my_cert = X509_dup(cert);
   result->my_id_cert = X509_dup(idcert);
 
@@ -446,7 +460,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   if (global_tls_context) {
     /* This is safe even if there are open connections: OpenSSL does
      * reference counting with SSL and SSL_CTX objects. */
-    tor_tls_context_free(global_tls_context);
+    tor_tls_context_decref(global_tls_context);
   }
   global_tls_context = result;
   if (rsa)
@@ -461,10 +475,8 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
     crypto_free_pk_env(rsa);
   if (dh)
     crypto_dh_free(dh);
-  if (result && result->ctx)
-    SSL_CTX_free(result->ctx);
   if (result)
-    tor_free(result);
+    tor_tls_context_decref(result);
   if (cert)
     X509_free(cert);
   if (idcert)
@@ -495,10 +507,13 @@ tor_tls_new(int sock, int isServer)
 #endif
   if (! bio) {
     tls_log_errors(LOG_WARN, "opening BIO");
+    SSL_free(result->ssl);
     tor_free(result);
     return NULL;
   }
   SSL_set_bio(result->ssl, bio, bio);
+  tor_tls_context_incref(global_tls_context);
+  result->context = global_tls_context;
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;
@@ -525,6 +540,8 @@ tor_tls_free(tor_tls_t *tls)
   tor_assert(tls && tls->ssl);
   SSL_free(tls->ssl);
   tls->ssl = NULL;
+  if (tls->context)
+    tor_tls_context_decref(tls->context);
   tor_free(tls);
 }
 
@@ -701,7 +718,8 @@ tor_tls_get_cert_digests(tor_tls_t *tls,
 {
   X509 *cert;
   unsigned int len;
-  cert = SSL_get_certificate(tls->ssl);
+  tor_assert(tls->context);
+  cert = tls->context->my_cert;
   if (cert) {
     X509_digest(cert, EVP_sha1(), (unsigned char*)my_digest_out, &len);
     if (len != DIGEST_LEN)
