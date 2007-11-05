@@ -993,6 +993,42 @@ fetch_from_buf(char *string, size_t string_len, buf_t *buf)
   return buf->datalen;
 }
 
+/** DOCDOC Returns 0 on "not a var-length cell."; 1 whether it's all here
+ * yet or not. */
+int
+fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out)
+{
+  char hdr[VAR_CELL_HEADER_SIZE];
+  var_cell_t *result;
+  uint8_t command;
+  uint16_t length;
+  check();
+  *out = NULL;
+  if (buf->datalen < VAR_CELL_HEADER_SIZE)
+    return 0;
+  peek_from_buf(hdr, sizeof(hdr), buf);
+
+  command = *(uint8_t*)(hdr+2);
+  if (!(CELL_COMMAND_IS_VAR_LENGTH(command)))
+    return 0;
+
+  length = ntohs(get_uint16(hdr+3));
+  if (buf->datalen < (size_t)(VAR_CELL_HEADER_SIZE+length))
+    return 1;
+  result = tor_malloc(sizeof(var_cell_t)+length-1);
+  result->command = command;
+  result->payload_len = length;
+  result->circ_id = ntohs(*(uint16_t*)hdr);
+
+  buf_remove_from_front(buf, VAR_CELL_HEADER_SIZE);
+  peek_from_buf(result->payload, length, buf);
+  buf_remove_from_front(buf, length);
+  check();
+
+  *out = result;
+  return 1;
+}
+
 /** Move up to *<b>buf_flushlen</b> bytes from <b>buf_in</b> to
  * <b>buf_out</b>, and modify *<b>buf_flushlen</b> appropriately.
  * Return the number of bytes actually copied.

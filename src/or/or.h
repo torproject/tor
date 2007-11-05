@@ -660,6 +660,9 @@ typedef enum {
 #define CELL_CERT 9
 #define CELL_LINK_AUTH 10
 
+#define CELL_COMMAND_IS_VAR_LENGTH(x) \
+  ((x) == CELL_CERT || (x) == CELL_VERSIONS)
+
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
 
@@ -701,28 +704,36 @@ typedef enum {
 /** Number of bytes in a cell transmitted over the network. */
 #define CELL_NETWORK_SIZE 512
 
+#define VAR_CELL_HEADER_SIZE 5
+
 /** Number of bytes in a relay cell's header (not including general cell
  * header). */
 #define RELAY_HEADER_SIZE (1+2+2+4+2)
 /** Largest number of bytes that can fit in a relay cell payload. */
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
-typedef struct cell_t cell_t;
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
-struct cell_t {
+typedef struct cell_t {
   uint16_t circ_id; /**< Circuit which received the cell. */
-  uint8_t command; /**< Type of the cell: one of PADDING, CREATE, RELAY,
-                    * or DESTROY. */
+  uint8_t command; /**< Type of the cell: one of CELL_PADDING, CELL_CREATE,
+                    * CELL_DESTROY, etc */
   char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
-};
+} cell_t;
 
-typedef struct packed_cell_t packed_cell_t;
+/** Parsed variable-length onion routing cell. */
+typedef struct var_cell_t {
+  uint8_t command;
+  uint16_t circ_id;
+  uint16_t payload_len;
+  char payload[1];
+} var_cell_t;
+
 /** A cell as packed for writing to the network. */
-struct packed_cell_t {
+typedef struct packed_cell_t {
   struct packed_cell_t *next; /**< Next cell queued on this circuit. */
   char body[CELL_NETWORK_SIZE]; /**< Cell as packed for network. */
-};
+} packed_cell_t;
 
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
@@ -2387,6 +2398,7 @@ int write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
                       const char *data, size_t data_len, int done);
 int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
+int fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out);
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
                         char **body_out, size_t *body_used, size_t max_bodylen,
@@ -2546,6 +2558,7 @@ int connection_ap_handshake_attach_circuit(edge_connection_t *conn);
 /********************************* command.c ***************************/
 
 void command_process_cell(cell_t *cell, or_connection_t *conn);
+void command_process_var_cell(var_cell_t *cell, or_connection_t *conn);
 void connection_or_act_on_netinfo(or_connection_t *conn);
 
 extern uint64_t stats_n_padding_cells_processed;
@@ -2786,6 +2799,8 @@ int connection_or_compute_link_auth_hmac(or_connection_t *conn,
                                          char *hmac_out);
 
 void cell_pack(packed_cell_t *dest, const cell_t *src);
+void var_cell_pack_header(var_cell_t *cell, char *hdr_out);
+void var_cell_free(var_cell_t *cell);
 
 /********************************* control.c ***************************/
 

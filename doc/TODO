@@ -30,8 +30,8 @@ Things we'd like to do in 0.2.0.x:
         act-on-netinfo logic separate so it can get called _after_
         negotiation.
       - Variable-length cells
-        - Add structure
-        - Add parse logic
+        o Add structure
+        o Add parse logic
         - Make CERT and VERSIONS variable.
       - CERT cells
         - functions to parse x509 certs

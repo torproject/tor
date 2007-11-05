@@ -35,9 +35,10 @@ static void command_process_create_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_created_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_relay_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_destroy_cell(cell_t *cell, or_connection_t *conn);
-static void command_process_versions_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_versions_cell(var_cell_t *cell,
+                                          or_connection_t *conn);
 static void command_process_netinfo_cell(cell_t *cell, or_connection_t *conn);
-static void command_process_cert_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_cert_cell(var_cell_t *cell, or_connection_t *conn);
 static void command_process_link_auth_cell(cell_t *cell,or_connection_t *conn);
 
 #ifdef KEEP_TIMING_STATS
@@ -143,16 +144,14 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
       PROCESS_CELL(destroy, cell, conn);
       break;
     case CELL_VERSIONS:
-      ++stats_n_versions_cells_processed;
-      PROCESS_CELL(versions, cell, conn);
+      tor_fragile_assert();
       break;
     case CELL_NETINFO:
       ++stats_n_netinfo_cells_processed;
       PROCESS_CELL(netinfo, cell, conn);
       break;
     case CELL_CERT:
-      ++stats_n_cert_cells_processed;
-      PROCESS_CELL(cert, cell, conn);
+      tor_fragile_assert();
       break;
     case CELL_LINK_AUTH:
       ++stats_n_link_auth_cells_processed;
@@ -161,6 +160,55 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
     default:
       log_fn(LOG_INFO, LD_PROTOCOL,
              "Cell of unknown type (%d) received. Dropping.", cell->command);
+      break;
+  }
+}
+
+/** Process a <b>cell</b> that was just received on <b>conn</b>. Keep internal
+ * statistics about how many of each cell we've processed so far
+ * this second, and the total number of microseconds it took to
+ * process each type of cell.
+ */
+void
+command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
+{
+#ifdef KEEP_TIMING_STATS
+  /* how many of each cell have we seen so far this second? needs better
+   * name. */
+  static int num_versions=0, num_cert=0;
+
+  time_t now = time(NULL);
+
+  if (now > current_second) { /* the second has rolled over */
+    /* print stats */
+    log_info(LD_OR,
+             "At end of second: %d versions (%d ms), %d cert (%d ms)",
+             num_versions, versions_time/1000,
+             cert, cert_time/1000);
+
+    num_versions = num_cert = 0;
+    versions_time = cert_time = 0;
+
+    /* remember which second it is, for next time */
+    current_second = now;
+  }
+#endif
+
+  /*XXXX020 reject all when not handshaking. */
+  switch (cell->command) {
+    case CELL_VERSIONS:
+      ++stats_n_versions_cells_processed;
+      PROCESS_CELL(versions, cell, conn);
+      break;
+    case CELL_CERT:
+      ++stats_n_cert_cells_processed;
+      PROCESS_CELL(cert, cell, conn);
+      break;
+    default:
+      log_warn(LD_BUG,
+               "Variable-length cell of unknown type (%d) received.",
+               cell->command);
+      tor_fragile_assert();
       break;
   }
 }
@@ -404,7 +452,7 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
 /** Process a 'versions' cell.  The current link protocol version must be 0
  * to indicate that no version has yet been negotiated. DOCDOC say more. */
 static void
-command_process_versions_cell(cell_t *cell, or_connection_t *conn)
+command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
 {
   uint16_t versionslen;
   int highest_supported_version = 0;
@@ -560,7 +608,7 @@ connection_or_act_on_netinfo(or_connection_t *conn)
 }
 
 static void
-command_process_cert_cell(cell_t *cell, or_connection_t *conn)
+command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
 {
   (void) cell;
   (void) conn;

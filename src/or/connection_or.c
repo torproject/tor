@@ -147,6 +147,22 @@ cell_unpack(cell_t *dest, const char *src)
   memcpy(dest->payload, src+3, CELL_PAYLOAD_SIZE);
 }
 
+/** DOCDOC */
+void
+var_cell_pack_header(var_cell_t *cell, char *hdr_out)
+{
+  *(uint16_t*)(hdr_out) = htons(cell->circ_id);
+  *(uint8_t*)(hdr_out+2) = cell->command;
+  set_uint16(hdr_out+3, htons(cell->payload_len));
+}
+
+/** DOCDOC */
+void
+var_cell_free(var_cell_t *cell)
+{
+  tor_free(cell);
+}
+
 int
 connection_or_reached_eof(or_connection_t *conn)
 {
@@ -825,6 +841,13 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   connection_write_to_buf(networkcell.body, CELL_NETWORK_SIZE, TO_CONN(conn));
 }
 
+/** DOCDOC */
+static int
+connection_fetch_var_cell_from_buf(or_connection_t *conn, var_cell_t **out)
+{
+  return fetch_var_cell_from_buf(conn->_base.inbuf, out);
+}
+
 /** Process cells from <b>conn</b>'s inbuf.
  *
  * Loop: while inbuf contains a cell, pull it off the inbuf, unpack it,
@@ -835,27 +858,34 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 static int
 connection_or_process_cells_from_inbuf(or_connection_t *conn)
 {
-  char buf[CELL_NETWORK_SIZE];
-  cell_t cell;
+  var_cell_t *var_cell;
 
- loop:
-  log_debug(LD_OR,
-            "%d: starting, inbuf_datalen %d (%d pending in tls object).",
-            conn->_base.s,(int)buf_datalen(conn->_base.inbuf),
-            tor_tls_get_pending_bytes(conn->tls));
-  if (buf_datalen(conn->_base.inbuf) < CELL_NETWORK_SIZE) /* whole response
-                                                             available? */
-    return 0; /* not yet */
+  while (1) {
+    log_debug(LD_OR,
+              "%d: starting, inbuf_datalen %d (%d pending in tls object).",
+              conn->_base.s,(int)buf_datalen(conn->_base.inbuf),
+              tor_tls_get_pending_bytes(conn->tls));
+    if (connection_fetch_var_cell_from_buf(conn, &var_cell)) {
+      if (!var_cell)
+        return 0; /* not yet. */
+      command_process_var_cell(var_cell, conn);
+      var_cell_free(var_cell);
+    } else {
+      char buf[CELL_NETWORK_SIZE];
+      cell_t cell;
+      if (buf_datalen(conn->_base.inbuf) < CELL_NETWORK_SIZE) /* whole response
+                                                                 available? */
+        return 0; /* not yet */
 
-  connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, TO_CONN(conn));
+      connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, TO_CONN(conn));
 
-  /* retrieve cell info from buf (create the host-order struct from the
-   * network-order string) */
-  cell_unpack(&cell, buf);
+      /* retrieve cell info from buf (create the host-order struct from the
+       * network-order string) */
+      cell_unpack(&cell, buf);
 
-  command_process_cell(&cell, conn);
-
-  goto loop; /* process the remainder of the buffer */
+      command_process_cell(&cell, conn);
+    }
+  }
 }
 
 /** Write a destroy cell with circ ID <b>circ_id</b> and reason <b>reason</b>
