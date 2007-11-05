@@ -1026,6 +1026,7 @@ update_consensus_networkstatus_downloads(time_t now)
     }
   }
 
+  log_info(LD_DIR, "Launching networkstatus consensus download.");
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CONSENSUS,
                                ROUTER_PURPOSE_GENERAL, NULL, 1);
 }
