@@ -947,3 +947,37 @@ connection_or_send_netinfo(or_connection_t *conn)
   return 0;
 }
 
+#define LINK_AUTH_STRING "Tor initiator certificate verification"
+/** DOCDOC */
+int
+connection_or_compute_link_auth_hmac(or_connection_t *conn,
+                                     char *hmac_out)
+{
+  char buf[64 + 2*TOR_TLS_RANDOM_LEN + 2*DIGEST_LEN];
+  char *cp;
+  or_handshake_state_t *s;
+  tor_assert(conn);
+  tor_assert(conn->handshake_state);
+  tor_assert(conn->tls);
+  s = conn->handshake_state;
+
+  /* Fill the buffer. */
+  strlcpy(buf, LINK_AUTH_STRING, sizeof(buf));
+  cp = buf+strlen(buf);
+  ++cp; /* Skip the NUL */
+  memcpy(cp, s->client_random, TOR_TLS_RANDOM_LEN);
+  cp += TOR_TLS_RANDOM_LEN;
+  memcpy(cp, s->server_random, TOR_TLS_RANDOM_LEN);
+  cp += TOR_TLS_RANDOM_LEN;
+  memcpy(cp, s->client_cert_digest, DIGEST_LEN);
+  cp += DIGEST_LEN;
+  memcpy(cp, s->server_cert_digest, DIGEST_LEN);
+  cp += DIGEST_LEN;
+  tor_assert(cp < buf+sizeof(buf));
+
+  if (tor_tls_hmac_with_master_secret(conn->tls, hmac_out, buf, cp-buf) < 0)
+    return -1;
+  return 0;
+}
+
+

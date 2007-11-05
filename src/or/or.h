@@ -657,6 +657,8 @@ typedef enum {
 #define CELL_CREATED_FAST 6
 #define CELL_VERSIONS 7
 #define CELL_NETINFO 8
+#define CELL_CERT 9
+#define CELL_LINK_AUTH 10
 
 /** How long to test reachability before complaining to the user. */
 #define TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT (20*60)
@@ -2778,6 +2780,10 @@ void connection_or_write_cell_to_buf(const cell_t *cell,
 int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
 int connection_or_send_netinfo(or_connection_t *conn);
+int connection_or_send_certs(or_connection_t *conn);
+int connection_or_send_link_auth(or_connection_t *conn);
+int connection_or_compute_link_auth_hmac(or_connection_t *conn,
+                                         char *hmac_out);
 
 void cell_pack(packed_cell_t *dest, const cell_t *src);
 

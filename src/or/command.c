@@ -27,6 +27,8 @@ uint64_t stats_n_relay_cells_processed = 0;
 uint64_t stats_n_destroy_cells_processed = 0;
 uint64_t stats_n_versions_cells_processed = 0;
 uint64_t stats_n_netinfo_cells_processed = 0;
+uint64_t stats_n_cert_cells_processed = 0;
+uint64_t stats_n_link_auth_cells_processed = 0;
 
 /* These are the main functions for processing cells */
 static void command_process_create_cell(cell_t *cell, or_connection_t *conn);
@@ -35,6 +37,8 @@ static void command_process_relay_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_destroy_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_versions_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_netinfo_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_cert_cell(cell_t *cell, or_connection_t *conn);
+static void command_process_link_auth_cell(cell_t *cell,or_connection_t *conn);
 
 #ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the
@@ -113,6 +117,8 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
 #define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
 #endif
 
+  /*XXXX020 reject all but VERSIONS, NETINFO, CERT, LINK_AUTH when
+   * handshaking. */
   switch (cell->command) {
     case CELL_PADDING:
       ++stats_n_padding_cells_processed;
@@ -143,6 +149,14 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
     case CELL_NETINFO:
       ++stats_n_netinfo_cells_processed;
       PROCESS_CELL(netinfo, cell, conn);
+      break;
+    case CELL_CERT:
+      ++stats_n_cert_cells_processed;
+      PROCESS_CELL(cert, cell, conn);
+      break;
+    case CELL_LINK_AUTH:
+      ++stats_n_link_auth_cells_processed;
+      PROCESS_CELL(link_auth, cell, conn);
       break;
     default:
       log_fn(LOG_INFO, LD_PROTOCOL,
@@ -500,6 +514,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   conn->handshake_state->received_netinfo = 1;
 }
 
+/*XXXX020 move to connection_or.c */
 /** DOCDOC Called when we're done authenticating; act on stuff we
  * learned in netinfo. */
 void
@@ -536,3 +551,92 @@ connection_or_act_on_netinfo(or_connection_t *conn)
     conn->is_canonical = 1;
   }
 }
+
+static void
+command_process_cert_cell(cell_t *cell, or_connection_t *conn)
+{
+  (void) cell;
+  (void) conn;
+
+  /* Parse certs. */
+  /* Verify that identity cert has signed peer cert in SSL, or
+   * peer cert in the cell. */
+  /* Verify that identity cert is self-signed. */
+  /* Learn ID digest. */
+  /* Learn cert digests. */
+  /* Remember peer cert public key. */
+  /* set received_certs. */
+}
+
+#define LINK_AUTH_STRING "Tor initiator certificate verification"
+
+/** DOCDOC */
+static void
+command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
+{
+  or_handshake_state_t *s;
+  char hmac[DIGEST_LEN];
+  size_t sig_len;
+  const char *sig;
+  char *checked = NULL;
+  int checked_len;
+  tor_assert(conn);
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a LINK_AUTH cell on connection in the wrong state; "
+           "dropping.");
+    return;
+  }
+  s = conn->handshake_state;
+  tor_assert(s);
+  if (s->started_here) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Got a LINK_AUTH cell from a server; closing the connection.");
+    goto err;
+  }
+  if (!s->received_netinfo || !s->received_versions || !s->received_certs) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got a LINK_AUTH cell too early; "
+           "closing the connection");
+    goto err;
+  }
+  if (cell->payload[0] != 0x00) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Unrecognized LINK_AUTH signature "
+           "version; closing the connection");
+    goto err;
+  }
+  connection_or_compute_link_auth_hmac(conn, hmac);
+
+  tor_assert(s->signing_key);
+
+  /*XXXX020 these two are wrong; fix when protocol is revised. */
+  sig = cell->payload+1;
+  sig_len = 128;
+  checked = tor_malloc(crypto_pk_keysize(s->signing_key));
+  checked_len = crypto_pk_public_checksig(s->signing_key,checked,sig,sig_len);
+  if (checked_len < 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad signature on LINK_AUTH cell; "
+           "closing the connection");
+    goto err;
+  }
+  if (checked_len != DIGEST_LEN) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad length (%d) of signed material in "
+           "LINK_AUTH cell; closing the connection", checked_len);
+    goto err;
+  }
+  if (memcmp(checked, hmac, DIGEST_LEN) != 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad signed data in LINK_AUTH cell; "
+           "closing the connection.");
+    goto err;
+  }
+
+  /* Okay, we're authenticated. */
+  s->authenticated = 1;
+
+  /* XXXX020 act on being authenticated: */
+
+  return;
+ err:
+  tor_free(checked);
+  connection_mark_for_close(TO_CONN(conn));
+}
+

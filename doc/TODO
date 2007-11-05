@@ -37,14 +37,15 @@ Things we'd like to do in 0.2.0.x:
         - functions to parse x509 certs
         - functions to validate a single x509 cert against a TLS connection
         - functions to validate a chain of x509 certs, and extract a PK.
+        o function to encode x509 certs
         - Parse CERT cells
         - Generate CERT cells
         o Keep copies of X509 certs around, not necessarily associated with
           connection.
       - LINK_AUTH cells
-        - Code to generate
+        . Code to generate
           o Remember certificate digests from TLS
-        - Code to parse and check
+        o Code to parse and check
         - Unit tests
       - Revised handshake: TLS
         - Server checks for new cipher types, and if it finds them, sends
@@ -53,7 +54,7 @@ Things we'd like to do in 0.2.0.x:
         - Client sends new cipher list.
         - Client sends correct extension list.
       - Revised handshake: post-TLS.
-        - If in 'handshaking' state (since v2+ conn is in use), accept
+        o If in 'handshaking' state (since v2+ conn is in use), accept
           VERSIONS and NETINFO and CERT and LINK_AUTH.
         - After we send NETINFO, send CERT and LINK_AUTH if needed.
         - Once we get a good LINK_AUTH, the connection is OPEN.
