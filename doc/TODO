@@ -21,58 +21,45 @@ Things we'd like to do in 0.2.0.x:
     licenses for other components of the bundles.
 
   - Before the feature freeze: (Nick)
-    o Support for preconfigured mirror lists
-      o Use a pre-shipped fallback consensus.
-      o Code to install a pre-defined fallback consensus
-    o Download consensuses (et al) via if-modified-since
-      o Implement backend support for sending if-modified-since
-      o Use it for consensuses.
-      D Use it for certificates
-    o base Guard flag on WFU rather than on MTBF.
-      o Change guard calculation
-      o Change dir-spec.txt
-      o What should we do about hosts that have been up for only 1 hour,
-        but have been up for 100% of that one hour? -NM
-        Perhaps the guard flag should only be assigned if the measurement
-        period for that server is at least some large period, like a
-        week; but ignore this exception if "most" servers have too-short
-        measurement periods. -RD
     D 118 if feasible and obvious
     D Maintain a skew estimate and use ftime consistently.
     - 105+TLS, if possible.
-      - 105 only
-        - Need to get a finished proposal 105
-        o "Pick a version" function
-        o Have a 'waiting_for_version' state.
-        o Store version in or_connection_t.
-        o Generate netinfo cells
-        o Accept netinfo cells
-        . Add an is_canonical field to or_connection_t.
-          o Set it when we get a match in the netinfo.
-          o Set it when we get a match for a routerinfo we have.
-          - Don't extend a circuit over a noncanonical connection with
-            mismatched address.
-        o Version negotiation: send a version cell and enter
-          waiting-for-version; when version cell arrives, pick version
-          and send netinfo and be "open".
-        o On netinfo, warn if there's skew from a server.
+      - Add a separate handshake structure that handles version negotiation,
+        and stores netinfo data until authentication is done.
+      - Revise versions and netinfo to use separate structure; make
+        act-on-netinfo logic separate so it can get called _after_
+        negotiation.
+      - CERT cells
+        - functions to parse x509 certs
+        - functions to validate a single x509 cert against a TLS connection
+        - functions to validate a chain of x509 certs, and extract a PK.
+        - Parse CERT cells
+        - Generate CERT cells
+        - Keep copies of X509 certs around, not necessarily associated with
+          connection.
+      - LINK_AUTH cells
+        - Code to generate
+        - Code to parse and check
+        - Unit tests
+      - Revised handshake: TLS
+        - Server checks for new cipher types, and if it finds them, sends
+          only one cert and does not ask for client certs.
+        - Client sends certs only if server asks for them.
+        - Client sends new cipher list.
+        - Client sends correct extension list.
+      - Revised handshake: post-TLS.
+        - If in 'handshaking' state (since v2+ conn is in use), accept
+          VERSIONS and NETINFO and CERT and LINK_AUTH.
+        - After we send NETINFO, send CERT and LINK_AUTH if needed.
+        - Once we get a good LINK_AUTH, the connection is OPEN.
+        - Ban most cell types on a non-OPEN connection.
+      - NETINFO fallout
+        - Don't extend a circuit over a noncanonical connection with
+          mismatched address.
         - Learn our outgoing IP address from netinfo cells?
+      - Protocol revision.
         - Earliest stages of 110 (infinite-length) in v2 protocol:
           add support for RELAY_EARLY.
-      - TLS only
-        - Need to get a finished TLS normalization proposal
-        - Revised authentication.
-        - Revised handshake.
-        - Have a 'waiting_for_authentication' state.
-        - Only do version negotiation if we use the normalized TLS.
-    o Skew issues:
-      o if you load (nick says receive/set/anything) a consensus that's
-        in the future, then log about skew.
-      o should change the "skew complaint" to specify in largest units
-        rather than just seconds.
-    o Learn new authority IPs from consensus/certs.
-    o karsten's patches
-
   - Before the feature freeze: (Roger)
     - Make tunnelled dir conns use begin_dir if enabled
     - make bridge users fall back from bridge authority to direct attempt
@@ -114,15 +101,7 @@ Things we'd like to do in 0.2.0.x:
 
   - Proposals:
     o 101: Voting on the Tor Directory System (plus 103)
-      o Handle badly timed certificates properly.
-      o Start caching consensus documents once authorities make them;
-        start downloading consensus documents once caches serve
-        them
-        o Code to delay next download while fetching certificates to verify
-          a consensus we already got.
-        o Code to retry consensus download if we got one we already have.
-        D Use if-modified-since on consensus download
-        o Use if-modified-since on certificate download
+      D Use if-modified-since on consensus download
       - Controller support
         - GETINFO to get consensus
         - Event when new consensus arrives
@@ -142,7 +121,6 @@ Things we'd like to do in 0.2.0.x:
         - Handle rate-limiting on directory writes to linked directory
           connections in a more sensible manner.
         - Find more ways to test this.
-    o Do TLS rotation less often than "every 10 minutes" in the thrashy case.
     D Do TLS connection rotation more often than "once a week" in the
       extra-stable case.
     D Streamline how we pick entry nodes: Make choose_random_entry() have
@@ -193,19 +171,6 @@ R     - drop 'authority' queries if they're to our own identity key; accept
     - Audit how much RAM we're using for buffers and cell pools; try to
       trim down a lot.
     - Base relative control socket paths on datadir.
-    o We should ship with a list of stable dir mirrors -- they're not
-      trusted like the authorities, but they'll provide more robustness
-      and diversity for bootstrapping clients.
-      X Implement this as a list of routerstatus, like fake_routerstatus in
-        trusted_dir_derver_t?
-      o Implemented as a fallback networkstatus consensus.
-    o Better estimates in the directory of whether servers have good uptime
-       (high expected time to failure) or good guard qualities (high
-       fractional uptime).
-      o AKA Track uptime as %-of-time-up, as well as time-since-last-down
-       o Implement tracking
-       o Make uptime info persist too.
-       o Base Guard on weighted fractional uptime.
     - Make TrackHostExits expire TrackHostExitsExpire seconds after their
        *last* use, not their *first* use.
     - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
