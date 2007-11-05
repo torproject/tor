@@ -47,6 +47,7 @@ typedef struct tor_tls_context_t {
   SSL_CTX *ctx;
   X509 *my_cert;
   X509 *my_id_cert;
+  crypto_pk_env_t *key;
 } tor_tls_context_t;
 
 /** Holds a SSL object and its associated data.  Members are only
@@ -355,6 +356,7 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
     SSL_CTX_free(ctx->ctx);
     X509_free(ctx->my_cert);
     X509_free(ctx->my_id_cert);
+    crypto_free_pk_env(ctx->key);
     tor_free(ctx);
   }
 }
@@ -410,6 +412,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   result->refcnt = 1;
   result->my_cert = X509_dup(cert);
   result->my_id_cert = X509_dup(idcert);
+  result->key = crypto_pk_dup_key(rsa);
 
 #ifdef EVERYONE_HAS_AES
   /* Tell OpenSSL to only use TLS1 */
@@ -732,6 +735,13 @@ tor_tls_get_cert_digests(tor_tls_t *tls,
       return -1;
   }
   return 0;
+}
+
+/** DOCDOC */
+crypto_pk_env_t *
+tor_tls_dup_private_key(tor_tls_t *tls)
+{
+  return crypto_pk_dup_key(tls->context->key);
 }
 
 /** DOCDOC */

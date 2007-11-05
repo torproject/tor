@@ -980,4 +980,47 @@ connection_or_compute_link_auth_hmac(or_connection_t *conn,
   return 0;
 }
 
+/**DOCDOC*/
+int
+connection_or_send_cert(or_connection_t *conn)
+{
+  (void)conn;
+  /*XXX020 implement.*/
+  return 0;
+}
 
+/**DOCDOC*/
+int
+connection_or_send_link_auth(or_connection_t *conn)
+{
+  cell_t cell;
+  char hmac[DIGEST_LEN];
+  crypto_pk_env_t *key;
+  int r, len;
+
+  tor_assert(conn);
+  tor_assert(conn->tls);
+  tor_assert(conn->handshake_state);
+  tor_assert(conn->handshake_state->started_here == 1);
+  tor_assert(conn->handshake_state->received_certs == 1);
+
+  memset(&cell, 0, sizeof(cell));
+  cell.command = CELL_LINK_AUTH;
+  key = tor_tls_dup_private_key(conn->tls);
+  connection_or_compute_link_auth_hmac(conn, hmac);
+
+  cell.payload[2] = 0x00; /* Signature version */
+  r = crypto_pk_private_sign(key, cell.payload+3, hmac, sizeof(hmac));
+  crypto_free_pk_env(key);
+  if (r<0)
+    return -1;
+  len = r + 1;
+
+  set_uint16(cell.payload, htons(len));
+
+  connection_or_write_cell_to_buf(&cell, conn);
+
+  /* XXXX020 at this point, as a client, we can consider ourself
+   * authenticated. */
+  return 0;
+}

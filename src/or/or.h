@@ -2780,7 +2780,7 @@ void connection_or_write_cell_to_buf(const cell_t *cell,
 int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
 int connection_or_send_netinfo(or_connection_t *conn);
-int connection_or_send_certs(or_connection_t *conn);
+int connection_or_send_cert(or_connection_t *conn);
 int connection_or_send_link_auth(or_connection_t *conn);
 int connection_or_compute_link_auth_hmac(or_connection_t *conn,
                                          char *hmac_out);

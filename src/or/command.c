@@ -432,15 +432,22 @@ command_process_versions_cell(cell_t *cell, or_connection_t *conn)
   if (!highest_supported_version) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Couldn't find a version in common; defaulting to v1.");
-    /*XXXX020 just break the connection?*/
+    /*XXXX020 just break the connection! */
     conn->link_proto = 1;
     return;
   }
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
-  if (highest_supported_version >= 2)
+  if (highest_supported_version >= 2) {
+    /*XXXX020 check return values. */
     connection_or_send_netinfo(conn);
+    connection_or_send_cert(conn);
+    if (conn->handshake_state->started_here)
+      connection_or_send_link_auth(conn);
+  } else {
+    /* XXXX020 finish v1 verification. */
+  }
 }
 
 /** Process a 'netinfo' cell. DOCDOC say more. */
@@ -576,6 +583,7 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
 {
   or_handshake_state_t *s;
   char hmac[DIGEST_LEN];
+  uint16 len;
   size_t sig_len;
   const char *sig;
   char *checked = NULL;
@@ -599,7 +607,13 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
            "closing the connection");
     goto err;
   }
-  if (cell->payload[0] != 0x00) {
+  len = ntohs(get_uint16(cell.payload));
+  if (len < 2 || 2+len > CELL_PAYLOAD_SIZE) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad length field (%d) on LINK_AUTH cell;"
+           " closing the connection", (int)len);
+    goto err;
+  }
+  if (cell->payload[2] != 0x00) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR, "Unrecognized LINK_AUTH signature "
            "version; closing the connection");
     goto err;
@@ -608,9 +622,8 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
 
   tor_assert(s->signing_key);
 
-  /*XXXX020 these two are wrong; fix when protocol is revised. */
-  sig = cell->payload+1;
-  sig_len = 128;
+  sig = cell->payload+3;
+  sig_len = len-1;
   checked = tor_malloc(crypto_pk_keysize(s->signing_key));
   checked_len = crypto_pk_public_checksig(s->signing_key,checked,sig,sig_len);
   if (checked_len < 0) {
