@@ -43,6 +43,7 @@ Things we'd like to do in 0.2.0.x:
           connection.
       - LINK_AUTH cells
         - Code to generate
+          o Remember certificate digests from TLS
         - Code to parse and check
         - Unit tests
       - Revised handshake: TLS
@@ -57,6 +58,7 @@ Things we'd like to do in 0.2.0.x:
         - After we send NETINFO, send CERT and LINK_AUTH if needed.
         - Once we get a good LINK_AUTH, the connection is OPEN.
         - Ban most cell types on a non-OPEN connection.
+      - Make code work right wrt TLS context rotation.
       - NETINFO fallout
         - Don't extend a circuit over a noncanonical connection with
           mismatched address.

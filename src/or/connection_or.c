@@ -17,6 +17,8 @@ const char connection_or_c_id[] =
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
 static int connection_or_send_versions(or_connection_t *conn);
+static int connection_init_or_handshake_state(or_connection_t *conn,
+                                              int started_here);
 
 /**************************************************************/
 
@@ -629,8 +631,8 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
   check_no_tls_errors();
 
   if (has_cert) {
-    int v = tor_tls_verify(started_here?severity:LOG_INFO,
-                           conn->tls, &identity_rcvd);
+    int v = tor_tls_verify_v1(started_here?severity:LOG_INFO,
+                              conn->tls, &identity_rcvd);
     if (started_here && v<0) {
       log_fn(severity,LD_OR,"Tried connecting to router at %s:%d: It"
              " has a cert but it's invalid. Closing.",
@@ -725,10 +727,11 @@ connection_tls_finish_handshake(or_connection_t *conn)
   int started_here = connection_or_nonopen_was_started_here(conn);
 
   log_debug(LD_OR,"tls handshake done. verifying.");
+  /* V1 only XXXX020 */
   if (connection_or_check_valid_handshake(conn, started_here, digest_rcvd) < 0)
     return -1;
 
-  if (!started_here) { /* V1 only XXX020 */
+  if (!started_here) { /* V1 only XXXX020 */
     connection_or_init_conn_from_address(conn,conn->_base.addr,
                                          conn->_base.port, digest_rcvd, 0);
   }
@@ -740,16 +743,36 @@ connection_tls_finish_handshake(or_connection_t *conn)
     return connection_or_set_state_open(conn);
   } else {
     conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;
-    conn->handshake_state = tor_malloc_zero(sizeof(or_handshake_state_t));
-    conn->handshake_state->started_here = started_here ? 1 : 0;
-    if (tor_tls_get_random_values(conn->tls,
-                                  conn->handshake_state->client_random,
-                                  conn->handshake_state->server_random) < 0)
+    if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
     return connection_or_send_versions(conn);
   }
 }
 
+/** DOCDOC */
+static int
+connection_init_or_handshake_state(or_connection_t *conn, int started_here)
+{
+  or_handshake_state_t *s;
+  s = conn->handshake_state = tor_malloc_zero(sizeof(or_handshake_state_t));
+  s->started_here = started_here ? 1 : 0;
+  if (tor_tls_get_random_values(conn->tls,
+                                conn->handshake_state->client_random,
+                                conn->handshake_state->server_random) < 0)
+    return -1;
+  if (started_here) {
+    if (tor_tls_get_cert_digests(conn->tls,
+                                 s->client_cert_digest,
+                                 s->server_cert_digest)<0)
+      return -1;
+  } else {
+    if (tor_tls_get_cert_digests(conn->tls,
+                                 s->server_cert_digest,
+                                 s->client_cert_digest)<0)
+      return -1;
+  }
+  return 0;
+}
 
 /** DOCDOC */
 void

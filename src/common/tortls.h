@@ -53,9 +53,10 @@ tor_tls_t *tor_tls_new(int sock, int is_server);
 int tor_tls_is_server(tor_tls_t *tls);
 void tor_tls_free(tor_tls_t *tls);
 int tor_tls_peer_has_cert(tor_tls_t *tls);
-int tor_tls_get_peer_cert_nickname(int severity, tor_tls_t *tls,
-                                   char *buf, size_t buflen);
-int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity);
+int tor_tls_get_cert_digests(tor_tls_t *tls, char *my_digest_out,
+                             char *peer_digest_out);
+int tor_tls_verify_v1(int severity, tor_tls_t *tls,
+                      crypto_pk_env_t **identity);
 int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);
 int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);

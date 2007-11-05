@@ -868,8 +868,10 @@ typedef struct or_handshake_state_t {
   unsigned int authenticated : 1;
 
   /* from tls */
-  char client_random[32];
-  char server_random[32];
+  char client_random[TOR_TLS_RANDOM_LEN];
+  char server_random[TOR_TLS_RANDOM_LEN];
+  char client_cert_digest[DIGEST_LEN]; /* may also be set by netinfo */
+  char server_cert_digest[DIGEST_LEN];
 
   /* from netinfo */
   long apparent_skew;

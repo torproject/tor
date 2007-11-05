@@ -44,6 +44,8 @@ const char tortls_c_id[] =
 /** Structure holding the TLS state for a single connection. */
 typedef struct tor_tls_context_t {
   SSL_CTX *ctx;
+  X509 *my_cert;
+  X509 *my_id_cert;
 } tor_tls_context_t;
 
 /** Holds a SSL object and its associated data.  Members are only
@@ -64,6 +66,7 @@ struct tor_tls_t {
   unsigned long last_read_count;
 };
 
+static void tor_tls_context_free(tor_tls_context_t *ctx);
 static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         crypto_pk_env_t *rsa_sign,
                                         const char *cname,
@@ -211,8 +214,7 @@ void
 tor_tls_free_all(void)
 {
   if (global_tls_context) {
-    SSL_CTX_free(global_tls_context->ctx);
-    tor_free(global_tls_context);
+    tor_tls_context_free(global_tls_context);
     global_tls_context = NULL;
   }
 }
@@ -341,6 +343,16 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 #error "Tor requires OpenSSL version 0.9.7 or later, for AES support."
 #endif
 
+/** DOCDOC */
+static void
+tor_tls_context_free(tor_tls_context_t *ctx)
+{
+  SSL_CTX_free(ctx->ctx);
+  X509_free(ctx->my_cert);
+  X509_free(ctx->my_id_cert);
+  tor_free(ctx);
+}
+
 /** Create a new TLS context for use with Tor TLS handshakes.
  * <b>identity</b> should be set to the identity key used to sign the
  * certificate, and <b>nickname</b> set to the nickname to use.
@@ -382,6 +394,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   }
 
   result = tor_malloc_zero(sizeof(tor_tls_context_t));
+  result->my_cert = X509_dup(cert);
+  result->my_id_cert = X509_dup(idcert);
+
 #ifdef EVERYONE_HAS_AES
   /* Tell OpenSSL to only use TLS1 */
   if (!(result->ctx = SSL_CTX_new(TLSv1_method())))
@@ -431,8 +446,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   if (global_tls_context) {
     /* This is safe even if there are open connections: OpenSSL does
      * reference counting with SSL and SSL_CTX objects. */
-    SSL_CTX_free(global_tls_context->ctx);
-    tor_free(global_tls_context);
+    tor_tls_context_free(global_tls_context);
   }
   global_tls_context = result;
   if (rsa)
@@ -679,6 +693,29 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
   return 1;
 }
 
+/** DOCDOC */
+int
+tor_tls_get_cert_digests(tor_tls_t *tls,
+                         char *my_digest_out,
+                         char *peer_digest_out)
+{
+  X509 *cert;
+  unsigned int len;
+  cert = SSL_get_certificate(tls->ssl);
+  if (cert) {
+    X509_digest(cert, EVP_sha1(), (unsigned char*)my_digest_out, &len);
+    if (len != DIGEST_LEN)
+      return -1;
+  }
+  cert = SSL_get_peer_certificate(tls->ssl);
+  if (cert) {
+    X509_digest(cert, EVP_sha1(), (unsigned char*)peer_digest_out, &len);
+    if (len != DIGEST_LEN)
+      return -1;
+  }
+  return 0;
+}
+
 /** Warn that a certificate lifetime extends through a certain range. */
 static void
 log_cert_lifetime(X509 *cert, const char *problem)
@@ -736,7 +773,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
  * 0.  Else, return -1 and log complaints with log-level <b>severity</b>.
  */
 int
-tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
+tor_tls_verify_v1(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
 {
   X509 *cert = NULL, *id_cert = NULL;
   STACK_OF(X509) *chain = NULL;
@@ -931,5 +968,4 @@ tor_tls_hmac_with_master_secret(tor_tls_t *tls, char *hmac_out,
                    data, data_len);
   return 0;
 }
-
 
