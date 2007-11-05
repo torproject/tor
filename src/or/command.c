@@ -603,13 +603,51 @@ connection_or_act_on_netinfo(or_connection_t *conn)
   }
 }
 
+/*DOCDOC*/
 static void
 command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
 {
-  (void) cell;
-  (void) conn;
+  int n_certs = 0;
+  uint16_t conn_cert_len, id_cert_len;
+  const char *conn_cert = NULL, *id_cert = NULL;
+  const char *cp, *end;
 
-  /* Parse certs. */
+  /*XXXX020 log messages*/
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING)
+    goto err;
+  tor_assert(conn->handshake_state);
+  if (!conn->handshake_state->received_versions ||
+      !conn->handshake_state->received_netinfo ||
+      conn->handshake_state->received_certs)
+    goto err;
+
+  cp = cell->payload;
+  end = cell->payload + cell->payload_len;
+
+  while (cp < end) {
+    uint16_t len;
+    if (end-cp == 1)
+      goto err;
+    len = ntohs(get_uint16(cp));
+    cp += 2;
+    if (end-cp < len)
+      goto err;
+    if (n_certs == 0) {
+      conn_cert = cp;
+      conn_cert_len = len;
+    } else if (n_certs == 1) {
+      id_cert = cp;
+      id_cert_len = len;
+    } else {
+      goto err;
+    }
+    cp += len;
+    ++n_certs;
+  }
+
+  /* Now we have 0, 1, or 2 certs. */
+
+
   /* Verify that identity cert has signed peer cert in SSL, or
    * peer cert in the cell. */
   /* Verify that identity cert is self-signed. */
@@ -617,6 +655,11 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
   /* Learn cert digests. */
   /* Remember peer cert public key. */
   /* set received_certs. */
+
+  conn->handshake_state->received_certs = 1;
+  return;
+ err:
+  ;
 }
 
 #define LINK_AUTH_STRING "Tor initiator certificate verification"

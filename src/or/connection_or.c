@@ -965,6 +965,7 @@ connection_or_send_versions(or_connection_t *conn)
   connection_or_write_var_cell_to_buf(cell, conn);
   conn->handshake_state->sent_versions_at = time(NULL);
 
+  var_cell_free(cell);
   return 0;
 }
 
@@ -1037,8 +1038,42 @@ connection_or_compute_link_auth_hmac(or_connection_t *conn,
 int
 connection_or_send_cert(or_connection_t *conn)
 {
-  (void)conn;
-  /*XXX020 implement.*/
+  size_t conn_cert_len = 0, id_cert_len = 0, total_len = 0;
+  char *id_cert = NULL, *conn_cert = NULL;
+  var_cell_t *cell;
+  char *cp;
+
+  /* If we're a client, we can send no cert at all. XXXXX020 */
+  /* DOCDOC length of cert before cert. */
+  tor_assert(conn);
+  tor_assert(conn->handshake_state);
+  tor_assert(conn->handshake_state->received_versions == 1);
+  if (conn->handshake_state->started_here)
+    conn_cert = tor_tls_encode_my_certificate(conn->tls, &conn_cert_len, 1);
+  id_cert = tor_tls_encode_my_certificate(conn->tls, &id_cert_len, 0);
+  tor_assert(id_cert);
+  total_len = id_cert_len + conn_cert_len + conn_cert ? 4 : 2;
+
+  cell = var_cell_new(total_len);
+  cell->command = CELL_VERSIONS;
+  cp = cell->payload;
+  if (conn_cert) {
+    set_uint16(cp, htons(conn_cert_len));
+    cp += 2;
+    memcpy(cp, conn_cert, conn_cert_len);
+    cp += conn_cert_len;
+  }
+  set_uint16(cp, htons(id_cert_len));
+  cp += 2;
+  memcpy(cp, id_cert, id_cert_len);
+  cp += id_cert_len;
+  tor_assert(cp == cell->payload + total_len);
+
+  connection_or_write_var_cell_to_buf(cell, conn);
+
+  tor_free(conn_cert);
+  tor_free(id_cert);
+  var_cell_free(cell);
   return 0;
 }
 

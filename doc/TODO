@@ -29,18 +29,18 @@ Things we'd like to do in 0.2.0.x:
       o Revise versions and netinfo to use separate structure; make
         act-on-netinfo logic separate so it can get called _after_
         negotiation.
-      - Variable-length cells
+      o Variable-length cells
         o Add structure
         o Add parse logic
-        - Make CERT variable.
+        o Make CERT variable.
         o Make VERSIONS variable.
       - CERT cells
         - functions to parse x509 certs
         - functions to validate a single x509 cert against a TLS connection
         - functions to validate a chain of x509 certs, and extract a PK.
         o function to encode x509 certs
-        - Parse CERT cells
-        - Generate CERT cells
+        o Parse CERT cells
+        o Generate CERT cells
         o Keep copies of X509 certs around, not necessarily associated with
           connection.
       - LINK_AUTH cells
