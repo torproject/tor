@@ -4309,7 +4309,6 @@ hid_serv_next_directory(const char *id)
   int idx, i, f;
   if (!c || !smartlist_len(c->routerstatus_list)) return NULL;
   idx = networkstatus_vote_find_entry_idx(c, id, &f);
-  if (f) ++idx;
   if (idx >= smartlist_len(c->routerstatus_list))
     idx = 0;
   i = idx;
@@ -4350,13 +4349,23 @@ hid_serv_previous_directory(const char *id)
 }
 #endif
 
-/** Returns true, if we are aware of enough hidden service directory to
+/** Return true, if we are aware of enough hidden service directory to
  * usefully perform v2 rend operations on them (publish, fetch, replicate),
  * or false otherwise. */
 int
-hid_serv_have_enough_directories(const smartlist_t *hs_dirs)
+hid_serv_have_enough_directories(void)
 {
-  return (smartlist_len(hs_dirs) > REND_NUMBER_OF_CONSECUTIVE_REPLICAS);
+  int n_hsdirs = 0;
+  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+  if (!c || !smartlist_len(c->routerstatus_list))
+    return 0;
+  SMARTLIST_FOREACH(c->routerstatus_list, routerstatus_t *, r,
+  {
+    if (r->is_hs_dir)
+      if (++n_hsdirs > REND_NUMBER_OF_CONSECUTIVE_REPLICAS)
+        return 1;
+  });
+  return 0;
 }
 
 /** Determine the REND_NUMBER_OF_CONSECUTIVE_REPLICAS routers that are
@@ -4375,7 +4384,6 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   }
   tor_assert(id);
   start = networkstatus_vote_find_entry_idx(c, id, &found);
-  if (found) ++start;
   if (start == smartlist_len(c->routerstatus_list)) start = 0;
   i = start;
   do {
@@ -4392,27 +4400,6 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   log_warn(LD_REND, "We don't have enough hidden service directories to "
            "perform v2 rendezvous operations!");
   return -1;
-}
-
-/** Create a list of routerstatus_t in ascending order of identity digests
- * containing all routers that have been assigned as hidden service
- * directories by the directory authorities; this list can be used as
- * hidden service routing table. */
-smartlist_t *
-hid_serv_create_routing_table_st(void)
-{
-  smartlist_t *hs_dirs = smartlist_create();
-  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
-  if (!c) return hs_dirs;
-  /* Copy the routerstatus_t's of all hidden service directories to a new
-   * smartlist. */
-  SMARTLIST_FOREACH(c->routerstatus_list, routerstatus_t *, r,
-  {
-    if (r->is_hs_dir)
-      smartlist_add(hs_dirs, r);
-  });
-  /* It's already sorted by ID. */
-  return hs_dirs;
 }
 
 /** Return true if this node is currently acting as hidden service

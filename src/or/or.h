@@ -3815,15 +3815,12 @@ void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
-smartlist_t *hid_serv_create_routing_table_st(void);
-int hid_serv_have_enough_directories(const smartlist_t *hs_dirs);
+int hid_serv_have_enough_directories(void);
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);
 #if 0
-routerinfo_t *hid_serv_next_directory(const char *id,
-                                      const smartlist_t *hs_dirs);
-routerinfo_t *hid_serv_previous_directory(const char *id,
-                                          const smartlist_t *hs_dirs);
+routerstatus_t *hid_serv_next_directory(const char *id);
+routerstatus_t *hid_serv_previous_directory(const char *id);
 #endif
 int hid_serv_acting_as_directory(void);
 int hid_serv_responsible_for_desc_id(const char *id);

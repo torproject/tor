@@ -3131,9 +3131,10 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
       hs_dir = smartlist_get(responsible_dirs, j);
       /* Send publish request. */
       directory_initiate_command_routerstatus(hs_dir,
-                                 DIR_PURPOSE_UPLOAD_RENDDESC_V2,
-                                 ROUTER_PURPOSE_GENERAL,
-                                 1, NULL, desc_str, strlen(desc_str), 0);
+                                              DIR_PURPOSE_UPLOAD_RENDDESC_V2,
+                                              ROUTER_PURPOSE_GENERAL,
+                                              1, NULL, desc_str,
+                                              strlen(desc_str), 0);
       base32_encode(desc_id_base32, sizeof(desc_id_base32),
                     desc_id, DIGEST_LEN);
       log_info(LD_REND, "Sending publish request for v2 descriptor for "
@@ -3181,15 +3182,13 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
   base32_encode(desc_id_base32, sizeof(desc_id_base32),
                 desc_id, DIGEST_LEN);
   /* Send fetch request. */
-  directory_initiate_command_routerstatus(
-                             hs_dir,
-                             DIR_PURPOSE_FETCH_RENDDESC_V2,
-                             ROUTER_PURPOSE_GENERAL,
-                             1, desc_id_base32, NULL, 0, 0);
+  directory_initiate_command_routerstatus(hs_dir,
+                                          DIR_PURPOSE_FETCH_RENDDESC_V2,
+                                          ROUTER_PURPOSE_GENERAL,
+                                          1, desc_id_base32, NULL, 0, 0);
   log_info(LD_REND, "Sending fetch request for v2 descriptor for "
                     "service '%s' with descriptor ID '%s' to hidden "
                     "service directory '%s' on port %d.",
            query, desc_id_base32, hs_dir->nickname, hs_dir->dir_port);
-  smartlist_free(responsible_dirs);
 }
 

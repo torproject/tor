@@ -1100,8 +1100,7 @@ upload_service_descriptor(rend_service_t *service)
   /* Upload v2 descriptor? */
   if (service->descriptor_versions & (1 << 2) &&
       get_options()->PublishHidServDescriptors) {
-    smartlist_t *hs_dirs = hid_serv_create_routing_table_st();
-    if (hid_serv_have_enough_directories(hs_dirs)) {
+    if (hid_serv_have_enough_directories()) {
       int seconds_valid;
       smartlist_t *desc_strs = smartlist_create();
       smartlist_t *desc_ids = smartlist_create();
@@ -1112,7 +1111,6 @@ upload_service_descriptor(rend_service_t *service)
       if (seconds_valid < 0) {
         log_warn(LD_BUG, "Internal error: couldn't encode service descriptor; "
                  "not uploading.");
-        smartlist_free(hs_dirs);
         return;
       }
       /* Post the current descriptors to the hidden service directories. */
@@ -1143,7 +1141,6 @@ upload_service_descriptor(rend_service_t *service)
         if (seconds_valid < 0) {
           log_warn(LD_BUG, "Internal error: couldn't encode service "
                    "descriptor; not uploading.");
-          smartlist_free(hs_dirs);
           return;
         }
         directory_post_to_hs_dir(desc_ids, desc_strs, serviceid,
@@ -1159,7 +1156,6 @@ upload_service_descriptor(rend_service_t *service)
       uploaded = 1;
       log_info(LD_REND, "Successfully uploaded v2 rend descriptors!");
     }
-    smartlist_free(hs_dirs);
   }
 
   /* If not uploaded, try again in one minute. */
