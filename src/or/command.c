@@ -396,12 +396,14 @@ command_process_versions_cell(cell_t *cell, or_connection_t *conn)
   int highest_supported_version = 0;
   const char *cp, *end;
   if (conn->link_proto != 0 ||
-      conn->_base.state != OR_CONN_STATE_WAITING_FOR_VERSIONS) {
+      conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING ||
+      (conn->handshake_state && conn->handshake_state->received_versions)) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a VERSIONS cell on a connection with its version "
            "already set to %d; dropping", (int) conn->link_proto);
     return;
   }
+  tor_assert(conn->handshake_state);
   versionslen = ntohs(get_uint16(cell->payload));
   end = cell->payload + 2 + versionslen;
   if (end > cell->payload + CELL_PAYLOAD_SIZE)
@@ -416,12 +418,12 @@ command_process_versions_cell(cell_t *cell, or_connection_t *conn)
   if (!highest_supported_version) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Couldn't find a version in common; defaulting to v1.");
-    /*XXXX020 or just break the connection?*/
+    /*XXXX020 just break the connection?*/
     conn->link_proto = 1;
     return;
   }
   conn->link_proto = highest_supported_version;
-  conn->_base.state = OR_CONN_STATE_OPEN;
+  conn->handshake_state->received_versions = 1;
 
   if (highest_supported_version >= 2)
     connection_or_send_netinfo(conn);
@@ -438,33 +440,81 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   const char *cp, *end;
   uint8_t n_other_addrs;
   time_t now = time(NULL);
-
-  /*XXXX020 reject duplicate netinfos. */
-
-  if (conn->link_proto < 2 || conn->_base.state != OR_CONN_STATE_OPEN) {
+  if (conn->link_proto < 2) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a NETINFO cell on %s connection; dropping.",
            conn->link_proto == 0 ? "non-versioned" : "a v1");
     return;
   }
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a NETINFO cell on a non-handshaking; dropping.");
+    return;
+  }
+  tor_assert(conn->handshake_state &&
+             conn->handshake_state->received_versions);
+  if (conn->handshake_state->received_netinfo) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a duplicate NETINFO cell; dropping.");
+    return;
+  }
   /* Decode the cell. */
   timestamp = ntohl(get_uint32(cell->payload));
+  if (abs(now - conn->handshake_state->sent_versions_at) < 180) {
+    conn->handshake_state->apparent_skew = now - timestamp;
+  }
+
   my_addr_type = (uint8_t) cell->payload[4];
   my_addr_len = (uint8_t) cell->payload[5];
   my_addr_ptr = cell->payload + 6;
-  /* Possibly learn my address. XXXX020 */
   end = cell->payload + CELL_PAYLOAD_SIZE;
   cp = cell->payload + 6 + my_addr_len;
   if (cp >= end) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Address too long in netinfo cell; dropping.");
+    /*XXXX020 reject and break OR conn! */
     return;
+  } else if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
+    conn->handshake_state->my_apparent_addr = ntohl(get_uint32(my_addr_ptr));
   }
 
+  n_other_addrs = (uint8_t) *cp++;
+  while (n_other_addrs && cp < end-2) {
+    /* Consider all the other addresses; if any matches, this connection is
+     * "canonical." */
+    uint8_t other_addr_type = (uint8_t) *cp++;
+    uint8_t other_addr_len = (uint8_t) *cp++;
+    if (cp + other_addr_len >= end)
+      break; /*XXXX020 protocol warn. */
+    if (other_addr_type == RESOLVED_TYPE_IPV4 && other_addr_len == 4) {
+      uint32_t addr = ntohl(get_uint32(cp));
+      if (addr == conn->real_addr) {
+        conn->handshake_state->apparently_canonical = 1;
+        break;
+      }
+    }
+    cp += other_addr_len;
+    --n_other_addrs;
+  }
+
+  conn->handshake_state->received_netinfo = 1;
+}
+
+/** DOCDOC Called when we're done authenticating; act on stuff we
+ * learned in netinfo. */
+void
+connection_or_act_on_netinfo(or_connection_t *conn)
+{
+  long delta;
+  if (!conn->handshake_state)
+    return;
+
+  tor_assert(conn->handshake_state->authenticated != 0);
+
+  delta = conn->handshake_state->apparent_skew;
   /*XXXX020 magic number 3600 */
-  if (abs(timestamp - now) > 3600 &&
+  if (abs(delta) > 3600 &&
       router_get_by_digest(conn->identity_digest)) {
-    long delta = now - timestamp;
     char dbuf[64];
     /*XXXX020 not always warn!*/
     format_time_interval(dbuf, sizeof(dbuf), delta);
@@ -480,23 +530,9 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
                                  delta, conn->_base.address, conn->_base.port);
   }
 
-  n_other_addrs = (uint8_t) *cp++;
-  while (n_other_addrs && cp < end-2) {
-    /* Consider all the other addresses; if any matches, this connection is
-     * "canonical." */
-    uint8_t other_addr_type = (uint8_t) *cp++;
-    uint8_t other_addr_len = (uint8_t) *cp++;
-    if (cp + other_addr_len >= end)
-      break; /*XXXX020 protocol warn. */
-    if (other_addr_type == RESOLVED_TYPE_IPV4 && other_addr_len == 4) {
-      uint32_t addr = ntohl(get_uint32(cp));
-      if (addr == conn->real_addr) {
-        conn->is_canonical = 1;
-        break;
-      }
-    }
-    cp += other_addr_len;
-    --n_other_addrs;
+  /* XXX020 possibly, learn my address from my_apparent_addr */
+
+  if (conn->handshake_state->apparently_canonical) {
+    conn->is_canonical = 1;
   }
 }
-

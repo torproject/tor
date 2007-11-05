@@ -88,7 +88,8 @@ conn_state_to_string(int type, int state)
         case OR_CONN_STATE_CONNECTING: return "connect()ing";
         case OR_CONN_STATE_PROXY_FLUSHING: return "proxy flushing";
         case OR_CONN_STATE_PROXY_READING: return "proxy reading";
-        case OR_CONN_STATE_HANDSHAKING: return "handshaking";
+        case OR_CONN_STATE_TLS_HANDSHAKING: return "handshaking (TLS)";
+        case OR_CONN_STATE_OR_HANDSHAKING: return "handshaking (Tor)";
         case OR_CONN_STATE_OPEN: return "open";
       }
       break;
@@ -314,7 +315,10 @@ _connection_free(connection_t *conn)
       tor_tls_free(or_conn->tls);
       or_conn->tls = NULL;
     }
-
+    if (or_conn->handshake_state) {
+      or_handshake_state_free(or_conn->handshake_state);
+      or_conn->handshake_state = NULL;
+    }
     tor_free(or_conn->nickname);
   }
   if (CONN_IS_EDGE(conn)) {
@@ -1879,7 +1883,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
       conn->state > OR_CONN_STATE_PROXY_READING) {
     int pending;
     or_connection_t *or_conn = TO_OR_CONN(conn);
-    if (conn->state == OR_CONN_STATE_HANDSHAKING) {
+    if (conn->state == OR_CONN_STATE_TLS_HANDSHAKING) {
       /* continue handshaking even if global token bucket is empty */
       return connection_tls_continue_handshake(or_conn);
     }
@@ -2100,7 +2104,7 @@ connection_handle_write(connection_t *conn, int force)
   if (connection_speaks_cells(conn) &&
       conn->state > OR_CONN_STATE_PROXY_READING) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
-    if (conn->state == OR_CONN_STATE_HANDSHAKING) {
+    if (conn->state == OR_CONN_STATE_TLS_HANDSHAKING) {
       connection_stop_writing(conn);
       if (connection_tls_continue_handshake(or_conn) < 0) {
         /* Don't flush; connection is dead. */

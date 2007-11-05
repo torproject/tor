@@ -235,10 +235,11 @@ typedef enum {
 /** State for a connection to an OR: waiting for proxy response. */
 #define OR_CONN_STATE_PROXY_READING 3
 /** State for a connection to an OR: SSL is handshaking, not done yet. */
-#define OR_CONN_STATE_HANDSHAKING 4
-/** State for a connection to an OR: We sent a VERSIONS cell and want one back
+#define OR_CONN_STATE_TLS_HANDSHAKING 4
+/** State for a connection to an OR: We're done with our SSL handshake, but we
+ * haven't yet negotiated link protocol versions and finished authenticating.
  */
-#define OR_CONN_STATE_WAITING_FOR_VERSIONS 5
+#define OR_CONN_STATE_OR_HANDSHAKING 5
 /** State for a connection to an OR: Ready to send/receive cells. */
 #define OR_CONN_STATE_OPEN 6
 #define _OR_CONN_STATE_MAX 6
@@ -857,6 +858,29 @@ typedef struct connection_t {
 
 } connection_t;
 
+/** DOCDOC */
+typedef struct or_handshake_state_t {
+  time_t sent_versions_at;
+  unsigned int received_versions : 1;
+  unsigned int received_netinfo : 1;
+  unsigned int received_certs : 1;
+  unsigned int authenticated : 1;
+
+  /* from tls */
+  char client_random[32];
+  char server_random[32];
+
+  /* from netinfo */
+  long apparent_skew;
+  uint32_t my_apparent_addr;
+  unsigned int apparently_canonical;
+
+  /* from certs */
+  char cert_id_digest[DIGEST_LEN];
+  crypto_pk_env_t *signing_key;
+
+} or_handshake_state_t;
+
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
  * cells over TLS. */
 typedef struct or_connection_t {
@@ -878,13 +902,14 @@ typedef struct or_connection_t {
   circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
                                   * connection, which half of the space should
                                   * we use? */
-  unsigned int is_canonical; /**< DOCDOC */
+  unsigned int is_canonical:1; /**< DOCDOC */
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
                           * range 0..1<<15-1. */
 
+  or_handshake_state_t *handshake_state;/**< DOCDOC */
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
 
   /* bandwidth* and read_bucket only used by ORs in OPEN state: */
@@ -2517,6 +2542,7 @@ int connection_ap_handshake_attach_circuit(edge_connection_t *conn);
 /********************************* command.c ***************************/
 
 void command_process_cell(cell_t *cell, or_connection_t *conn);
+void connection_or_act_on_netinfo(or_connection_t *conn);
 
 extern uint64_t stats_n_padding_cells_processed;
 extern uint64_t stats_n_create_cells_processed;
@@ -2743,6 +2769,7 @@ or_connection_t *connection_or_connect(uint32_t addr, uint16_t port,
 int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);
 
+void or_handshake_state_free(or_handshake_state_t *state);
 int connection_or_set_state_open(or_connection_t *conn);
 void connection_or_write_cell_to_buf(const cell_t *cell,
                                      or_connection_t *conn);

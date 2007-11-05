@@ -524,7 +524,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 int
 connection_tls_start_handshake(or_connection_t *conn, int receiving)
 {
-  conn->_base.state = OR_CONN_STATE_HANDSHAKING;
+  conn->_base.state = OR_CONN_STATE_TLS_HANDSHAKING;
   conn->tls = tor_tls_new(conn->_base.s, receiving);
   if (!conn->tls) {
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
@@ -739,10 +739,20 @@ connection_tls_finish_handshake(or_connection_t *conn)
     conn->link_proto = 1;
     return connection_or_set_state_open(conn);
   } else {
-    /*XXXX020 actually, we'll need to send some kind of authentication. */
-    conn->_base.state = OR_CONN_STATE_WAITING_FOR_VERSIONS;
+    conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;
+    conn->handshake_state = tor_malloc_zero(sizeof(or_handshake_state_t));
     return connection_or_send_versions(conn);
   }
+}
+
+/** DOCDOC */
+void
+or_handshake_state_free(or_handshake_state_t *state)
+{
+  tor_assert(state);
+  if (state->signing_key)
+    crypto_free_pk_env(state->signing_key);
+  tor_free(state);
 }
 
 /**DOCDOC*/
@@ -858,6 +868,8 @@ connection_or_send_versions(or_connection_t *conn)
   uint8_t versions[] = { 1 };
   int n_versions = sizeof(versions) / sizeof(uint8_t);
   int i;
+  tor_assert(conn->handshake_state &&
+             !conn->handshake_state->sent_versions_at);
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_VERSIONS;
   set_uint16(cell.payload, htons(n_versions));
@@ -868,6 +880,7 @@ connection_or_send_versions(or_connection_t *conn)
   }
 
   connection_or_write_cell_to_buf(&cell, conn);
+  conn->handshake_state->sent_versions_at = time(NULL);
 
   return 0;
 }

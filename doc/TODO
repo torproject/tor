@@ -24,11 +24,15 @@ Things we'd like to do in 0.2.0.x:
     D 118 if feasible and obvious
     D Maintain a skew estimate and use ftime consistently.
     - 105+TLS, if possible.
-      - Add a separate handshake structure that handles version negotiation,
+      o Add a separate handshake structure that handles version negotiation,
         and stores netinfo data until authentication is done.
-      - Revise versions and netinfo to use separate structure; make
+      o Revise versions and netinfo to use separate structure; make
         act-on-netinfo logic separate so it can get called _after_
         negotiation.
+      - Variable-length cells
+        - Add structure
+        - Add parse logic
+        - Make CERT and VERSIONS variable.
       - CERT cells
         - functions to parse x509 certs
         - functions to validate a single x509 cert against a TLS connection
