@@ -1015,9 +1015,8 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out)
   length = ntohs(get_uint16(hdr+3));
   if (buf->datalen < (size_t)(VAR_CELL_HEADER_SIZE+length))
     return 1;
-  result = tor_malloc(sizeof(var_cell_t)+length-1);
+  result = var_cell_new(length);
   result->command = command;
-  result->payload_len = length;
   result->circ_id = ntohs(*(uint16_t*)hdr);
 
   buf_remove_from_front(buf, VAR_CELL_HEADER_SIZE);

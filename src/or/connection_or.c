@@ -149,11 +149,22 @@ cell_unpack(cell_t *dest, const char *src)
 
 /** DOCDOC */
 void
-var_cell_pack_header(var_cell_t *cell, char *hdr_out)
+var_cell_pack_header(const var_cell_t *cell, char *hdr_out)
 {
   *(uint16_t*)(hdr_out) = htons(cell->circ_id);
   *(uint8_t*)(hdr_out+2) = cell->command;
   set_uint16(hdr_out+3, htons(cell->payload_len));
+}
+
+/* DOCDOC*/
+var_cell_t *
+var_cell_new(uint16_t payload_len)
+{
+  var_cell_t *cell = tor_malloc(sizeof(var_cell_t)+payload_len-1);
+  cell->payload_len = payload_len;
+  cell->command = 0;
+  cell->circ_id = 0;
+  return cell;
 }
 
 /** DOCDOC */
@@ -841,6 +852,19 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   connection_write_to_buf(networkcell.body, CELL_NETWORK_SIZE, TO_CONN(conn));
 }
 
+/**DOCDOC*/
+void
+connection_or_write_var_cell_to_buf(const var_cell_t *cell,
+                                    or_connection_t *conn)
+{
+  char hdr[VAR_CELL_HEADER_SIZE];
+  tor_assert(cell);
+  tor_assert(conn);
+  var_cell_pack_header(cell, hdr);
+  connection_write_to_buf(hdr, sizeof(hdr), TO_CONN(conn));
+  connection_write_to_buf(cell->payload, cell->payload_len, TO_CONN(conn));
+}
+
 /** DOCDOC */
 static int
 connection_fetch_var_cell_from_buf(or_connection_t *conn, var_cell_t **out)
@@ -924,22 +948,21 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
 static int
 connection_or_send_versions(or_connection_t *conn)
 {
-  cell_t cell;
-  uint8_t versions[] = { 1 };
+  var_cell_t *cell;
+  uint16_t versions[] = { 1, 2 };
   int n_versions = sizeof(versions) / sizeof(uint8_t);
   int i;
   tor_assert(conn->handshake_state &&
              !conn->handshake_state->sent_versions_at);
-  memset(&cell, 0, sizeof(cell_t));
-  cell.command = CELL_VERSIONS;
-  set_uint16(cell.payload, htons(n_versions));
+  /*XXXX020 docdoc 2-byte versions */
+  cell = var_cell_new(n_versions * 2);
+  cell->command = CELL_VERSIONS;
   for (i = 0; i < n_versions; ++i) {
-    uint8_t v = versions[i];
-    tor_assert(v > 0 && v < 128);
-    cell.payload[2+i] = v;
+    uint16_t v = versions[i];
+    set_uint16(cell->payload+(2*i), htons(v));
   }
 
-  connection_or_write_cell_to_buf(&cell, conn);
+  connection_or_write_var_cell_to_buf(cell, conn);
   conn->handshake_state->sent_versions_at = time(NULL);
 
   return 0;
@@ -1054,3 +1077,4 @@ connection_or_send_link_auth(or_connection_t *conn)
    * authenticated. */
   return 0;
 }
+

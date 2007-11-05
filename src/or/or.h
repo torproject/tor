@@ -2790,6 +2790,8 @@ void or_handshake_state_free(or_handshake_state_t *state);
 int connection_or_set_state_open(or_connection_t *conn);
 void connection_or_write_cell_to_buf(const cell_t *cell,
                                      or_connection_t *conn);
+void connection_or_write_var_cell_to_buf(const var_cell_t *cell,
+                                         or_connection_t *conn);
 int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
                                int reason);
 int connection_or_send_netinfo(or_connection_t *conn);
@@ -2799,7 +2801,8 @@ int connection_or_compute_link_auth_hmac(or_connection_t *conn,
                                          char *hmac_out);
 
 void cell_pack(packed_cell_t *dest, const cell_t *src);
-void var_cell_pack_header(var_cell_t *cell, char *hdr_out);
+void var_cell_pack_header(const var_cell_t *cell, char *hdr_out);
+var_cell_t *var_cell_new(uint16_t payload_len);
 void var_cell_free(var_cell_t *cell);
 
 /********************************* control.c ***************************/

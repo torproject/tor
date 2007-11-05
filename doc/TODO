@@ -32,7 +32,8 @@ Things we'd like to do in 0.2.0.x:
       - Variable-length cells
         o Add structure
         o Add parse logic
-        - Make CERT and VERSIONS variable.
+        - Make CERT variable.
+        o Make VERSIONS variable.
       - CERT cells
         - functions to parse x509 certs
         - functions to validate a single x509 cert against a TLS connection

@@ -454,7 +454,6 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
 static void
 command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
 {
-  uint16_t versionslen;
   int highest_supported_version = 0;
   const char *cp, *end;
   if (conn->link_proto != 0 ||
@@ -466,13 +465,10 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
     return;
   }
   tor_assert(conn->handshake_state);
-  versionslen = ntohs(get_uint16(cell->payload));
-  end = cell->payload + 2 + versionslen;
-  if (end > cell->payload + CELL_PAYLOAD_SIZE)
-    end = cell->payload + CELL_PAYLOAD_SIZE; /*XXXX020 warn?*/
-  for (cp = cell->payload + 2; cp < end; ++cp) {
-    uint8_t v = *cp;
-    if (v == 1) {
+  end = cell->payload + cell->payload_len;
+  for (cp = cell->payload; cp+1 < end; ++cp) {
+    uint16_t v = ntohs(get_uint16(cp));
+    if (v == 1 || v == 2) {
       if (v > highest_supported_version)
         highest_supported_version = v;
     }
