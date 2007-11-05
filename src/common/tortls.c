@@ -718,7 +718,7 @@ tor_tls_get_cert_digests(tor_tls_t *tls,
 {
   X509 *cert;
   unsigned int len;
-  tor_assert(tls->context);
+  tor_assert(tls && tls->context);
   cert = tls->context->my_cert;
   if (cert) {
     X509_digest(cert, EVP_sha1(), (unsigned char*)my_digest_out, &len);
@@ -732,6 +732,26 @@ tor_tls_get_cert_digests(tor_tls_t *tls,
       return -1;
   }
   return 0;
+}
+
+/** DOCDOC */
+char *
+tor_tls_encode_my_certificate(tor_tls_t *tls, size_t *size_out,
+                              int conn_cert)
+{
+  unsigned char *result, *cp;
+  int certlen;
+  X509 *cert;
+  tor_assert(tls && tls->context);
+  cert = conn_cert ? tls->context->my_cert : tls->context->my_id_cert;
+  tor_assert(cert);
+  certlen = i2d_X509(cert, NULL);
+  tor_assert(certlen >= 0);
+  cp = result = tor_malloc(certlen);
+  i2d_X509(cert, &cp);
+  tor_assert(cp-result == certlen);
+  *size_out = (size_t)certlen;
+  return (char*) result;
 }
 
 /** Warn that a certificate lifetime extends through a certain range. */
