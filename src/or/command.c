@@ -583,7 +583,7 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
 {
   or_handshake_state_t *s;
   char hmac[DIGEST_LEN];
-  uint16 len;
+  uint16_t len;
   size_t sig_len;
   const char *sig;
   char *checked = NULL;
@@ -607,7 +607,7 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
            "closing the connection");
     goto err;
   }
-  len = ntohs(get_uint16(cell.payload));
+  len = ntohs(get_uint16(cell->payload));
   if (len < 2 || 2+len > CELL_PAYLOAD_SIZE) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad length field (%d) on LINK_AUTH cell;"
            " closing the connection", (int)len);
