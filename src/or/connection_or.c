@@ -728,7 +728,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
   if (connection_or_check_valid_handshake(conn, started_here, digest_rcvd) < 0)
     return -1;
 
-  if (!started_here) {
+  if (!started_here) { /* V1 only XXX020 */
     connection_or_init_conn_from_address(conn,conn->_base.addr,
                                          conn->_base.port, digest_rcvd, 0);
   }
@@ -741,9 +741,15 @@ connection_tls_finish_handshake(or_connection_t *conn)
   } else {
     conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;
     conn->handshake_state = tor_malloc_zero(sizeof(or_handshake_state_t));
+    conn->handshake_state->started_here = started_here ? 1 : 0;
+    if (tor_tls_get_random_values(conn->tls,
+                                  conn->handshake_state->client_random,
+                                  conn->handshake_state->server_random) < 0)
+      return -1;
     return connection_or_send_versions(conn);
   }
 }
+
 
 /** DOCDOC */
 void
@@ -752,6 +758,7 @@ or_handshake_state_free(or_handshake_state_t *state)
   tor_assert(state);
   if (state->signing_key)
     crypto_free_pk_env(state->signing_key);
+  memset(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
 

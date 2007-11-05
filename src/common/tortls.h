@@ -41,6 +41,9 @@ typedef struct tor_tls_t tor_tls_t;
   case TOR_TLS_ERROR_NO_ROUTE:                  \
   case TOR_TLS_ERROR_TIMEOUT
 
+/**DOCDOC*/
+#define TOR_TLS_RANDOM_LEN 32
+
 #define TOR_TLS_IS_ERROR(rv) ((rv) < TOR_TLS_CLOSE)
 
 void tor_tls_free_all(void);
@@ -65,6 +68,10 @@ void tor_tls_get_n_raw_bytes(tor_tls_t *tls,
                              size_t *n_read, size_t *n_written);
 
 int tor_tls_used_v1_handshake(tor_tls_t *tls);
+int tor_tls_get_random_values(tor_tls_t *tls, char *client_random_out,
+                              char *server_random_out);
+int tor_tls_hmac_with_master_secret(tor_tls_t *tls, char *hmac_out,
+                                    const char *data, size_t data_len);
 
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */

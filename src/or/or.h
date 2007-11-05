@@ -861,6 +861,7 @@ typedef struct connection_t {
 /** DOCDOC */
 typedef struct or_handshake_state_t {
   time_t sent_versions_at;
+  unsigned int started_here : 1;
   unsigned int received_versions : 1;
   unsigned int received_netinfo : 1;
   unsigned int received_certs : 1;
@@ -878,7 +879,6 @@ typedef struct or_handshake_state_t {
   /* from certs */
   char cert_id_digest[DIGEST_LEN];
   crypto_pk_env_t *signing_key;
-
 } or_handshake_state_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
