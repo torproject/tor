@@ -695,7 +695,7 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
     goto err;
   }
   len = ntohs(get_uint16(cell->payload));
-  if (len < 2 || 2+len > CELL_PAYLOAD_SIZE) {
+  if (len < 2 || len > CELL_PAYLOAD_SIZE - 2) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad length field (%d) on LINK_AUTH cell;"
            " closing the connection", (int)len);
     goto err;
