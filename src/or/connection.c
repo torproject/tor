@@ -1638,14 +1638,20 @@ connection_bucket_init(void)
   }
 }
 
+/** DOCDOC */
 static void
 connection_bucket_refill_helper(int *bucket, int rate, int burst,
                                 int seconds_elapsed, const char *name)
 {
-  if (*bucket < burst) {
-    *bucket += rate*seconds_elapsed;
-    if (*bucket > burst)
+  int starting_bucket = *bucket;
+  if (starting_bucket < burst) {
+    int incr = rate*seconds_elapsed;
+    *bucket += incr;
+    if (*bucket > burst || *bucket < starting_bucket) {
+      /* If we overflow the burst, or underflow our starting bucket,
+       * cap the bucket value to burst. */
       *bucket = burst;
+    }
     log(LOG_DEBUG, LD_NET,"%s now %d.", name, *bucket);
   }
 }

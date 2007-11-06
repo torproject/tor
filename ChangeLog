@@ -17,6 +17,8 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
     - Stop servers from crashing if they set a Family option (or
       maybe in other situations too). Bugfix on 0.2.0.9-alpha; reported
       by Fabian Keil.
+    - When the clock jumps forward a lot, do not allow the bandwidth
+      buckets to become negative.  Bugfix on 0.1.2.x; fixes Bug 544.
 
   o Major bugfixes (v3 dir, bugfixes on 0.2.0.9-alpha):
     - Consider replacing the current consensus when certificates arrive
