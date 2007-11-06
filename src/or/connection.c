@@ -1328,15 +1328,19 @@ connection_bucket_refill(int seconds_elapsed)
 
   /* refill the global buckets */
   if (global_read_bucket < (int)options->BandwidthBurst) {
+    int initial_read_bucket = global_read_bucket;
     global_read_bucket += (int)options->BandwidthRate*seconds_elapsed;
-    if (global_read_bucket > (int)options->BandwidthBurst)
+    if (global_read_bucket > (int)options->BandwidthBurst ||
+        global_read_bucket < initial_read_bucket)
       global_read_bucket = (int)options->BandwidthBurst;
     log(LOG_DEBUG, LD_NET,"global_read_bucket now %d.", global_read_bucket);
   }
   if (global_write_bucket < (int)options->BandwidthBurst) {
+    int initial_write_bucket = global_write_bucket;
     global_write_bucket_empty_last_second = global_write_bucket == 0;
     global_write_bucket += (int)options->BandwidthRate*seconds_elapsed;
-    if (global_write_bucket > (int)options->BandwidthBurst)
+    if (global_write_bucket > (int)options->BandwidthBurst ||
+        global_write_bucket < initial_write_bucket)
       global_write_bucket = (int)options->BandwidthBurst;
     log(LOG_DEBUG, LD_NET,"global_write_bucket now %d.", global_write_bucket);
   }
@@ -1349,8 +1353,10 @@ connection_bucket_refill(int seconds_elapsed)
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       if (connection_read_bucket_should_increase(or_conn)) {
+        int initial_read_bucket = or_conn->read_bucket;
         or_conn->read_bucket += or_conn->bandwidthrate*seconds_elapsed;
-        if (or_conn->read_bucket > or_conn->bandwidthburst)
+        if (or_conn->read_bucket > or_conn->bandwidthburst ||
+            or_conn->read_bucket < initial_read_bucket)
           or_conn->read_bucket = or_conn->bandwidthburst;
         //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i,
         //       conn->read_bucket);
