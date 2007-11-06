@@ -3527,7 +3527,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
     }
   }
 
-  if (! should_delay) {
+  if (! should_delay && n_downloadable) {
     int i, n_per_request;
     const char *req_plural = "", *rtr_plural = "";
     n_per_request = (n_downloadable+MIN_REQUESTS-1) / MIN_REQUESTS;
