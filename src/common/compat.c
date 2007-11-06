@@ -708,7 +708,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
     return -1;
   }
   most = rlim.rlim_max > (rlim_t)cap ? (rlim_t)cap : rlim.rlim_max;
-  if (most > (unsigned long)rlim.rlim_cur) {
+  if ((rlim_t)most > rlim.rlim_cur) {
     log_info(LD_NET,"Raising max file descriptors from %lu to %lu.",
              (unsigned long)rlim.rlim_cur, (unsigned long)most);
   }
@@ -722,7 +722,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
        * full of nasty lies.  I'm looking at you, OSX 10.5.... */
       rlim.rlim_cur = OPEN_MAX;
       if (setrlimit(RLIMIT_NOFILE, &rlim) == 0) {
-        if (rlim.rlim_cur < limit) {
+        if (rlim.rlim_cur < (rlim_t)limit) {
           log_warn(LD_CONFIG, "We are limited to %lu file descriptors by "
                  "OPEN_MAX, and ConnLimit is %lu.  Changing ConnLimit; sorry.",
                    (unsigned long)OPEN_MAX, limit);
