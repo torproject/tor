@@ -1,3 +1,9 @@
+Changes in version 0.1.2.19 - 2007-??-??
+  o Major bugfixes:
+    - When the clock jumps forward a lot, do not allow the bandwidth
+      buckets to become negative.  Fixes Bug 544.
+
+
 Changes in version 0.1.2.18 - 2007-10-28
   o Major bugfixes (crashes):
     - If a connection is shut down abruptly because of something that
@@ -30,8 +36,6 @@ Changes in version 0.1.2.18 - 2007-10-28
       that it shouldn't be considered to exist at all anymore. Now we
       clear all the flags for routers that fall out of the networkstatus
       consensus. Fixes bug 529.
-    - When the clock jumps forward a lot, do not allow the bandwidth
-      buckets to become negative.  Fixes Bug 544.
 
   o Minor bugfixes:
     - Don't try to access (or alter) the state file when running
