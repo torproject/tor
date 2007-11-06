@@ -1699,9 +1699,11 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       if (connection_read_bucket_should_increase(or_conn)) {
-        or_conn->read_bucket += or_conn->bandwidthrate*seconds_elapsed;
-        if (or_conn->read_bucket > or_conn->bandwidthburst)
-          or_conn->read_bucket = or_conn->bandwidthburst;
+        connection_bucket_refill_helper(&or_conn->read_bucket,
+                                        or_conn->bandwidthrate,
+                                        or_conn->bandwidthburst,
+                                        seconds_elapsed,
+                                        "or_conn->read_bucket");
         //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i,
         //       conn->read_bucket);
       }
