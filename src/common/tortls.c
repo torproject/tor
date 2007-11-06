@@ -815,27 +815,22 @@ log_cert_lifetime(X509 *cert, const char *problem)
     tor_free(s2);
 }
 
-/** If the provided tls connection is authenticated and has a
- * certificate that is currently valid and signed, then set
- * *<b>identity_key</b> to the identity certificate's key and return
- * 0.  Else, return -1 and log complaints with log-level <b>severity</b>.
- */
-int
-tor_tls_verify_v1(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
+/** DOCDOC helper.
+ * cert_out needs to be freed. id_cert_out doesn't. */
+static void
+try_to_extract_certs_from_tls(int severity, tor_tls_t *tls,
+                              X509 **cert_out, X509 **id_cert_out)
 {
   X509 *cert = NULL, *id_cert = NULL;
   STACK_OF(X509) *chain = NULL;
-  EVP_PKEY *id_pkey = NULL;
-  RSA *rsa;
-  int num_in_chain;
-  int r = -1, i;
-
-  *identity_key = NULL;
+  int num_in_chain, i;
+  *cert_out = *id_cert_out = NULL;
 
   if (!(cert = SSL_get_peer_certificate(tls->ssl)))
-    goto done;
+    return;
+  *cert_out = cert;
   if (!(chain = SSL_get_peer_cert_chain(tls->ssl)))
-    goto done;
+    return;
   num_in_chain = sk_X509_num(chain);
   /* 1 means we're receiving (server-side), and it's just the id_cert.
    * 2 means we're connecting (client-side), and it's both the link
@@ -845,18 +840,38 @@ tor_tls_verify_v1(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
     log_fn(severity,LD_PROTOCOL,
            "Unexpected number of certificates in chain (%d)",
            num_in_chain);
-    goto done;
+    return;
   }
   for (i=0; i<num_in_chain; ++i) {
     id_cert = sk_X509_value(chain, i);
     if (X509_cmp(id_cert, cert) != 0)
       break;
   }
+  *id_cert_out = id_cert;
+}
+
+/** If the provided tls connection is authenticated and has a
+ * certificate that is currently valid and signed, then set
+ * *<b>identity_key</b> to the identity certificate's key and return
+ * 0.  Else, return -1 and log complaints with log-level <b>severity</b>.
+ */
+int
+tor_tls_verify_v1(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
+{
+  X509 *cert = NULL, *id_cert = NULL;
+  EVP_PKEY *id_pkey = NULL;
+  RSA *rsa;
+  int r = -1;
+
+  *identity_key = NULL;
+
+  try_to_extract_certs_from_tls(severity, tls, &cert, &id_cert);
+  if (!cert)
+    goto done;
   if (!id_cert) {
     log_fn(severity,LD_PROTOCOL,"No distinct identity certificate found");
     goto done;
   }
-
   if (!(id_pkey = X509_get_pubkey(id_cert)) ||
       X509_verify(cert, id_pkey) <= 0) {
     log_fn(severity,LD_PROTOCOL,"X509_verify on cert and pkey returned <= 0");
@@ -880,6 +895,111 @@ tor_tls_verify_v1(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
   /* This should never get invoked, but let's make sure in case OpenSSL
    * acts unexpectedly. */
   tls_log_errors(LOG_WARN, "finishing tor_tls_verify");
+
+  return r;
+}
+
+/** DOCDOC
+ *
+ * Returns 1 on "verification is done", 0 on "still need LINK_AUTH."
+ */
+int
+tor_tls_verify_certs_v2(int severity, tor_tls_t *tls,
+                        const char *cert_str, size_t cert_len,
+                        const char *id_cert_str, size_t id_cert_len,
+                        crypto_pk_env_t **cert_key_out,
+                        char *conn_cert_digest_out,
+                        char *id_digest_out)
+{
+  X509 *cert = NULL, *id_cert = NULL;
+  EVP_PKEY *id_pkey = NULL, *cert_pkey = NULL;
+  int free_id_cert = 0, peer_used_tls_cert = 0;
+  int r = -1;
+
+  tor_assert(cert_key_out);
+  tor_assert(conn_cert_digest_out);
+  tor_assert(id_digest_out);
+
+  *cert_key_out = NULL;
+
+  if (cert_str && cert_len) {
+    /*XXXX020 warn on error. */
+    const unsigned char *cp = (const unsigned char*) cert_str;
+    cert = d2i_X509(NULL, &cp, cert_len);
+  }
+  if (id_cert_str && id_cert_len) {
+    /*XXXX020 warn on error. */
+    const unsigned char *cp = (const unsigned char*) id_cert_str;
+    id_cert = d2i_X509(NULL, &cp, id_cert_len);
+    if (id_cert)
+      free_id_cert = 1;
+  }
+
+  if (cert) {
+    int cmp = 0;
+    X509 *cert_tmp = SSL_get_peer_certificate(tls->ssl);
+    if (cert_tmp) {
+      peer_used_tls_cert = 1;
+      cmp = X509_cmp(cert, cert_tmp);
+      X509_free(cert_tmp);
+    }
+    if (cmp != 0) {
+      log_fn(severity, LD_PROTOCOL,
+             "Certificate in CERT cell didn't match TLS cert.");
+      goto done;
+    }
+  }
+
+  if (!cert || !id_cert) {
+    X509 *c=NULL, *id=NULL;
+    try_to_extract_certs_from_tls(severity, tls, &c, &id);
+    if (c) {
+      if (!cert)
+        cert = c;
+      else
+        X509_free(c);
+    }
+    if (id && !id_cert)
+      id_cert = id;
+  }
+  if (!id_cert || !cert)
+    goto done;
+
+  if (!(id_pkey = X509_get_pubkey(id_cert)) ||
+      X509_verify(cert, id_pkey) <= 0) {
+    log_fn(severity,LD_PROTOCOL,"X509_verify on cert and pkey returned <= 0");
+    tls_log_errors(severity,"verifying certificate");
+    goto done;
+  }
+
+  {
+    crypto_pk_env_t *i = _crypto_new_pk_env_evp_pkey(id_pkey);
+    if (!i)
+      goto done;
+    crypto_pk_get_digest(i, id_digest_out);
+    crypto_free_pk_env(i);
+  }
+  if (!(cert_pkey = X509_get_pubkey(cert)))
+    goto done;
+  if (!(*cert_key_out = _crypto_new_pk_env_evp_pkey(cert_pkey)))
+    goto done;
+
+  {
+    unsigned int len = 0;
+    X509_digest(cert, EVP_sha1(), (unsigned char*)conn_cert_digest_out, &len);
+    tor_assert(len == DIGEST_LEN);
+  }
+
+  r = peer_used_tls_cert ? 1 : 0;
+ done:
+  if (cert)
+    X509_free(cert);
+  if (id_cert && free_id_cert)
+    X509_free(id_cert);
+  if (id_pkey)
+    EVP_PKEY_free(id_pkey);
+  if (cert_pkey)
+    EVP_PKEY_free(cert_pkey);
 
   return r;
 }

@@ -633,8 +633,9 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
  *    this guy; and note that this guy is reachable.
  */
 static int
-connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
-                                    char *digest_rcvd)
+connection_or_check_valid_tls_handshake(or_connection_t *conn,
+                                        int started_here,
+                                        char *digest_rcvd_out)
 {
   crypto_pk_env_t *identity_rcvd=NULL;
   or_options_t *options = get_options();
@@ -677,7 +678,7 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
 
   if (identity_rcvd) {
     has_identity=1;
-    crypto_pk_get_digest(identity_rcvd, digest_rcvd);
+    crypto_pk_get_digest(identity_rcvd, digest_rcvd_out);
 
     if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
       conn->circ_id_type = CIRC_ID_TYPE_LOWER;
@@ -686,12 +687,12 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
     }
     crypto_free_pk_env(identity_rcvd);
   } else {
-    memset(digest_rcvd, 0, DIGEST_LEN);
+    memset(digest_rcvd_out, 0, DIGEST_LEN);
     conn->circ_id_type = CIRC_ID_TYPE_NEITHER;
   }
 
   if (started_here && tor_digest_is_zero(conn->identity_digest)) {
-    memcpy(conn->identity_digest, digest_rcvd, DIGEST_LEN);
+    memcpy(conn->identity_digest, digest_rcvd_out, DIGEST_LEN);
     tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
@@ -706,11 +707,11 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
     int as_advertised = 1;
     tor_assert(has_cert);
     tor_assert(has_identity);
-    if (memcmp(digest_rcvd, conn->identity_digest, DIGEST_LEN)) {
+    if (memcmp(digest_rcvd_out, conn->identity_digest, DIGEST_LEN)) {
       /* I was aiming for a particular digest. I didn't get it! */
       char seen[HEX_DIGEST_LEN+1];
       char expected[HEX_DIGEST_LEN+1];
-      base16_encode(seen, sizeof(seen), digest_rcvd, DIGEST_LEN);
+      base16_encode(seen, sizeof(seen), digest_rcvd_out, DIGEST_LEN);
       base16_encode(expected, sizeof(expected), conn->identity_digest,
                     DIGEST_LEN);
       log_fn(severity, LD_OR,
@@ -728,7 +729,7 @@ connection_or_check_valid_handshake(or_connection_t *conn, int started_here,
        * with the same address:port and a different key.
        */
       dirserv_orconn_tls_done(conn->_base.address, conn->_base.port,
-                              digest_rcvd, as_advertised);
+                              digest_rcvd_out, as_advertised);
     }
     if (!as_advertised)
       return -1;
@@ -755,7 +756,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
 
   log_debug(LD_OR,"tls handshake done. verifying.");
   /* V1 only XXXX020 */
-  if (connection_or_check_valid_handshake(conn, started_here, digest_rcvd) < 0)
+  if (connection_or_check_valid_tls_handshake(conn, started_here,
+                                              digest_rcvd) < 0)
     return -1;
 
   if (!started_here) { /* V1 only XXXX020 */

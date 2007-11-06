@@ -34,16 +34,16 @@ Things we'd like to do in 0.2.0.x:
         o Add parse logic
         o Make CERT variable.
         o Make VERSIONS variable.
-      - CERT cells
-        - functions to parse x509 certs
-        - functions to validate a single x509 cert against a TLS connection
-        - functions to validate a chain of x509 certs, and extract a PK.
+      o CERT cells
+        o functions to parse x509 certs
+        o functions to validate a single x509 cert against a TLS connection
+        o functions to validate a chain of x509 certs, and extract a PK.
         o function to encode x509 certs
         o Parse CERT cells
         o Generate CERT cells
         o Keep copies of X509 certs around, not necessarily associated with
           connection.
-      - LINK_AUTH cells
+      . LINK_AUTH cells
         o Code to generate
           o Remember certificate digests from TLS
         o Code to parse and check
