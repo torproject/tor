@@ -1325,6 +1325,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
     consensus_waiting_for_certs = NULL;
     if (consensus != consensus_waiting_for_certs_body)
       tor_free(consensus_waiting_for_certs_body);
+    else
+      consensus_waiting_for_certs_body = NULL;
     consensus_waiting_for_certs_set_at = 0;
     consensus_waiting_for_certs_dl_failed = 0;
     unlink(unverified_fname);
@@ -1727,8 +1729,8 @@ networkstatus_free_all(void)
     current_consensus = NULL;
   }
   if (consensus_waiting_for_certs) {
-    networkstatus_vote_free(current_consensus);
-    current_consensus = NULL;
+    networkstatus_vote_free(consensus_waiting_for_certs);
+    consensus_waiting_for_certs = NULL;
   }
   tor_free(consensus_waiting_for_certs_body);
   if (named_server_map) {
