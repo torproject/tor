@@ -3710,7 +3710,7 @@ update_consensus_router_descriptor_downloads(time_t now)
   networkstatus_vote_t *consensus =
     networkstatus_get_reasonably_live_consensus(now);
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
-    n_inprogress=0;
+    n_inprogress=0, n_in_oldrouters=0;
 
   if (!dirserver) {
     if (rep_hist_circbuilding_dormant(now))
@@ -3723,8 +3723,15 @@ update_consensus_router_descriptor_downloads(time_t now)
   list_pending_descriptor_downloads(map, 0);
   SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
     {
-      if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
+      signed_descriptor_t *sd;
+      if ((sd = router_get_by_descriptor_digest(rs->descriptor_digest))) {
+        routerinfo_t *ri;
         ++n_have;
+        if (!(ri = router_get_by_digest(rs->identity_digest)) ||
+            memcmp(ri->cache_info.signed_descriptor_digest,
+                   sd->signed_descriptor_digest, DIGEST_LEN)) {
+          ++n_in_oldrouters;
+        }
         continue; /* We have it already. */
       }
       if (!download_status_is_ready(&rs->dl_status, now,
@@ -3748,10 +3755,11 @@ update_consensus_router_descriptor_downloads(time_t now)
     });
 
   log_info(LD_DIR,
-           "%d routers downloadable. %d delayed; %d present; %d would_reject; "
+           "%d routers downloadable. %d delayed; %d present "
+           "(%d of those in old_routers); %d would_reject; "
            "%d wouldnt_use, %d in progress.",
-           smartlist_len(downloadable), n_delayed, n_have, n_would_reject,
-           n_wouldnt_use, n_inprogress);
+           smartlist_len(downloadable), n_delayed, n_have, n_in_oldrouters,
+           n_would_reject, n_wouldnt_use, n_inprogress);
 
   launch_router_descriptor_downloads(downloadable, now);
 

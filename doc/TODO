@@ -60,6 +60,7 @@ Things we'd like to do in 0.2.0.x:
         o After we send NETINFO, send CERT and LINK_AUTH if needed.
         - Once we get a good LINK_AUTH, the connection is OPEN.
         - Ban most cell types on a non-OPEN connection.
+        - Close connections on handshake failure.
       o Make code work right wrt TLS context rotation.
       - NETINFO fallout
         - Don't extend a circuit over a noncanonical connection with
