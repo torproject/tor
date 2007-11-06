@@ -27,7 +27,7 @@ Proposals by number:
 102  Dropping "opt" from the directory format [CLOSED]
 103  Splitting identity key from regularly used signing key [CLOSED]
 104  Long and Short Router Descriptors [CLOSED]
-105  Version negotiation for the Tor protocol [OPEN]
+105  Version negotiation for the Tor protocol [ACCEPTED]
 106  Checking fewer things during TLS handshakes [CLOSED]
 107  Uptime Sanity Checking [CLOSED]
 108  Base "Stable" Flag on Mean Time Between Failures [CLOSED]
@@ -46,12 +46,12 @@ Proposals by number:
 121  Hidden Service Authentication [OPEN]
 122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [OPEN]
+124  Blocking resistant TLS certificate usage [ACCEPTED]
 
 
 Proposals by status:
 
  OPEN:
-   105  Version negotiation for the Tor protocol
    110  Avoiding infinite length circuits
    113  Simplifying directory authority administration
    114  Distributed Storage for Tor Hidden Service Descriptors
@@ -62,6 +62,8 @@ Proposals by status:
    121  Hidden Service Authentication
    123  Naming authorities automatically create bindings
  ACCEPTED:
+   105  Version negotiation for the Tor protocol
+   124  Blocking resistant TLS certificate usage
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
  META:
