@@ -2492,6 +2492,7 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
     return NULL;
   memcpy(&ri->cache_info, sd, sizeof(signed_descriptor_t));
   sd->signed_descriptor_body = NULL; /* Steal reference. */
+  ri->cache_info.routerlist_index = -1;
 
   routerlist_remove_old(rl, sd, -1);
 
