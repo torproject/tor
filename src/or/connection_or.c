@@ -39,8 +39,9 @@ connection_or_remove_from_identity_map(or_connection_t *conn)
   tmp = digestmap_get(orconn_identity_map, conn->identity_digest);
   if (!tmp) {
     if (!tor_digest_is_zero(conn->identity_digest)) {
-      log_warn(LD_BUG, "Didn't find connection on identity map when "
-               "trying to remove it.");
+      log_warn(LD_BUG, "Didn't find connection '%s' on identity map when "
+               "trying to remove it.",
+               conn->nickname ? conn->nickname : "NULL");
     }
     return;
   }
