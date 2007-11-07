@@ -21,6 +21,7 @@ typedef struct tor_tls_t tor_tls_t;
 /* Possible return values for most tor_tls_* functions. */
 #define _MIN_TOR_TLS_ERROR_VAL     -9
 #define TOR_TLS_ERROR_MISC         -9
+/* Rename to unexpected close or something. XXX020 */
 #define TOR_TLS_ERROR_IO           -8
 #define TOR_TLS_ERROR_CONNREFUSED  -7
 #define TOR_TLS_ERROR_CONNRESET    -6
@@ -45,6 +46,7 @@ typedef struct tor_tls_t tor_tls_t;
 #define TOR_TLS_RANDOM_LEN 32
 
 #define TOR_TLS_IS_ERROR(rv) ((rv) < TOR_TLS_CLOSE)
+const char *tor_tls_err_to_string(int err);
 
 void tor_tls_free_all(void);
 int tor_tls_context_new(crypto_pk_env_t *rsa,

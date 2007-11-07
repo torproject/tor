@@ -145,6 +145,26 @@ tor_errno_to_tls_error(int e)
 #endif
 }
 
+/** DOCDOC */
+const char *
+tor_tls_err_to_string(int err)
+{
+  if (err >= 0)
+    return "[Not an error.]";
+  switch (err) {
+    case TOR_TLS_ERROR_MISC: return "misc error";
+    case TOR_TLS_ERROR_IO: return "unexpected close";
+    case TOR_TLS_ERROR_CONNREFUSED: return "connection refused";
+    case TOR_TLS_ERROR_CONNRESET: return "connection reset";
+    case TOR_TLS_ERROR_NO_ROUTE: return "host unreachable";
+    case TOR_TLS_ERROR_TIMEOUT: return "connection timed out";
+    case TOR_TLS_CLOSE: return "closed";
+    case TOR_TLS_WANTREAD: return "want to read";
+    case TOR_TLS_WANTWRITE: return "want to write";
+    default: return "(unknown error code)";
+  }
+}
+
 #define CATCH_SYSCALL 1
 #define CATCH_ZERO    2
 

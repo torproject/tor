@@ -66,6 +66,7 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
       an accepted-but-discarded descriptor upload.  Partially implements
       fix for bug 535.
     - Make the "not enough dir info yet" message better.
+    - Make the log message for "tls error. breaking." more useful.
 
   o Minor features (bridges):
     - If bridge users set UpdateBridgesFromAuthority, but the digest

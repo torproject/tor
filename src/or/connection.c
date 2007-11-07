@@ -1917,7 +1917,8 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
                  conn->address);
         return result;
       CASE_TOR_TLS_ERROR_ANY:
-        log_info(LD_NET,"tls error. breaking (nickname %s, address %s).",
+        log_info(LD_NET,"tls error [%s]. breaking (nickname %s, address %s).",
+                 tor_tls_err_to_string(result),
                  or_conn->nickname ? or_conn->nickname : "not set",
                  conn->address);
         return result;
