@@ -577,10 +577,13 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
 int
 connection_tls_continue_handshake(or_connection_t *conn)
 {
+  int result;
   check_no_tls_errors();
-  switch (tor_tls_handshake(conn->tls)) {
+  result = tor_tls_handshake(conn->tls);
+  switch (result) {
     CASE_TOR_TLS_ERROR_ANY:
-      log_info(LD_OR,"tls error. breaking connection.");
+    log_info(LD_OR,"tls error [%s]. breaking connection.",
+             tor_tls_err_to_string(result));
       return -1;
     case TOR_TLS_DONE:
       return connection_tls_finish_handshake(conn);
