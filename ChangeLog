@@ -19,6 +19,9 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
       by Fabian Keil.
     - When the clock jumps forward a lot, do not allow the bandwidth
       buckets to become negative.  Bugfix on 0.1.2.x; fixes Bug 544.
+    - When the consensus lists a router descriptor that we previously were
+      mirroring, but that we considered non-canonical, reload the
+      descriptor as canonical.
 
   o Major bugfixes (v3 dir, bugfixes on 0.2.0.9-alpha):
     - Consider replacing the current consensus when certificates arrive

@@ -2464,6 +2464,39 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
 #endif
 }
 
+/** DOCDOC */
+static routerinfo_t *
+routerlist_reparse_old(routerlist_t * rl, signed_descriptor_t *sd)
+{
+  routerinfo_t *ri;
+  const char *body;
+
+  body = signed_descriptor_get_body(sd);
+
+  ri = router_parse_entry_from_string(body, body+sd->signed_descriptor_len,
+                                      0, 0, NULL);
+  if (!ri)
+    return NULL;
+  memcpy(&ri->cache_info, sd, sizeof(signed_descriptor_t));
+  if (sd->signed_descriptor_body) {
+    /* Nasty, but we can't have it get freed. Do better. XXXX020 */
+    ri->cache_info->signed_descriptor_body =
+      tor_strndup(sd->signed_descriptor_body, sd->signed_descriptor_len);
+  }
+
+  /* Awful and inefficient.  Store the index in signed_descriptor_t, or do a
+   * single big linear scan of old_routers, or _something_. XXXX020 */
+  {
+    SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, s,
+                      if (s == sd) {
+                        routerlist_remove_old(rl, s, s_sl_idx);
+                        break;
+                      });
+  }
+
+  return ri;
+}
+
 /** Free all memory held by the routerlist module. */
 void
 routerlist_free_all(void)
@@ -2656,9 +2689,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   old_router = rimap_get(routerlist->identity_map,
                          router->cache_info.identity_digest);
   if (old_router) {
-    if (router->cache_info.published_on <=
-        old_router->cache_info.published_on) {
-      /* Same key, but old */
+    if (!in_consensus && (router->cache_info.published_on <=
+                          old_router->cache_info.published_on)) {
+      /* Same key, but old.  This one is not listed in the consensus. */
       log_debug(LD_DIR, "Skipping not-new descriptor for router '%s'",
                 router->nickname);
       /* Only journal this desc if we'll be serving it. */
@@ -2669,7 +2702,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       *msg = "Router descriptor was not new.";
       return -1;
     } else {
-      /* Same key, new. */
+      /* Same key, and either new, or listed in the consensus. */
       log_debug(LD_DIR, "Replacing entry for router '%s/%s' [%s]",
                 router->nickname, old_router->nickname,
                 hex_str(id_digest,DIGEST_LEN));
@@ -3704,6 +3737,7 @@ update_consensus_router_descriptor_downloads(time_t now)
 {
   or_options_t *options = get_options();
   digestmap_t *map = NULL;
+  smartlist_t *no_longer_old = smartlist_create();
   smartlist_t *downloadable = smartlist_create();
   int authdir = authdir_mode(options);
   int dirserver = dirserver_mode(options);
@@ -3714,10 +3748,10 @@ update_consensus_router_descriptor_downloads(time_t now)
 
   if (!dirserver) {
     if (rep_hist_circbuilding_dormant(now))
-      return;
+      goto done;
   }
   if (!consensus)
-    return;
+    goto done;
 
   map = digestmap_new();
   list_pending_descriptor_downloads(map, 0);
@@ -3730,7 +3764,8 @@ update_consensus_router_descriptor_downloads(time_t now)
         if (!(ri = router_get_by_digest(rs->identity_digest)) ||
             memcmp(ri->cache_info.signed_descriptor_digest,
                    sd->signed_descriptor_digest, DIGEST_LEN)) {
-          ++n_in_oldrouters;
+          smartlist_add(no_longer_old, sd);
+          ++n_in_oldrouters; /* We have it in old_routers. */
         }
         continue; /* We have it already. */
       }
@@ -3754,8 +3789,34 @@ update_consensus_router_descriptor_downloads(time_t now)
       smartlist_add(downloadable, rs->descriptor_digest);
     });
 
+  if (smartlist_len(no_longer_old)) {
+    routerlist_t *rl = router_get_routerlist();
+    /* XXXX020 downgrade to info */
+    log_notice(LD_DIR, "%d router descriptors listed in consensus are "
+               "currently in in old_routers; making them current.",
+               smartlist_len(no_longer_old));
+    log_notice(LD_DIR, "Before: %d in routerlist; %d in old_routers",
+               smartlist_len(rl->routers), smartlist_len(rl->old_routers));
+    SMARTLIST_FOREACH(no_longer_old, signed_descriptor_t *, sd, {
+        const char *msg;
+        int r;
+        routerinfo_t *ri = routerlist_reparse_old(rl, sd);
+        if (!ri) {
+          log_notice(LD_DIR, "Failed to re-parse.");
+          continue;
+        }
+        r = router_add_to_routerlist(ri, &msg, 1, 0);
+        if (r == -1) {
+          log_notice(LD_DIR, "Couldn't add: %s", msg?msg:"???");
+        }
+      });
+    log_notice(LD_DIR, "After: %d in routerlist; %d in old_routers",
+               smartlist_len(rl->routers), smartlist_len(rl->old_routers));
+    routerlist_assert_ok(rl);
+  }
+
   log_info(LD_DIR,
-           "%d routers downloadable. %d delayed; %d present "
+           "%d router descriptors downloadable. %d delayed; %d present "
            "(%d of those in old_routers); %d would_reject; "
            "%d wouldnt_use, %d in progress.",
            smartlist_len(downloadable), n_delayed, n_have, n_in_oldrouters,
@@ -3763,8 +3824,10 @@ update_consensus_router_descriptor_downloads(time_t now)
 
   launch_router_descriptor_downloads(downloadable, now);
 
-  smartlist_free(downloadable);
   digestmap_free(map, NULL);
+ done:
+  smartlist_free(downloadable);
+  smartlist_free(no_longer_old);
 }
 
 /** Launch downloads for router status as needed. */
