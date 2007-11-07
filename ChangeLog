@@ -1,4 +1,7 @@
 Changes in version 0.2.0.10-alpha - 2007-11-07
+  o New directory authorities:
+    - Set up ides (run by Mike Perry) as the third v3 directory authority.
+
   o Major features:
     - Allow tunnelled directory connections to ask for an encrypted
       "begin_dir" connection or an anonymized "uses a full Tor circuit"
@@ -49,7 +52,7 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
       on their fractional uptime: the fraction of the time that they
       are online. (No router counts as having uptime until we've known
       about it for at least 24 hours.)
-    - Clients new hold circuitless TLS connections open for 1.5 times
+    - Clients now hold circuitless TLS connections open for 1.5 times
       MaxCircuitDirtiness, since it is likely that they'll need to build
       a circuit over them within that timeframe. Previously, they held
       them open only for KeepalivePeriod.
@@ -68,7 +71,8 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
     - Authorities send back an X-Descriptor-Not-New header in response to
       an accepted-but-discarded descriptor upload.  Partially implements
       fix for bug 535.
-    - Make the "not enough dir info yet" message better.
+    - Make "not enough dir info yet" warnings describe *why* Tor feels
+      it doesn't have enough directory info yet.
     - Make the log message for "tls error. breaking." more useful.
 
   o Minor features (bridges):
@@ -115,10 +119,9 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
 
   - Minor bugfixes (portability):
     - Run correctly on platforms where rlim_t is larger than unsigned
-      long.
-    - Run correctly on platforms where the real limit for number of
-      open files is OPEN_FILES, not rlim_max from
-      getrlimit(RLIMIT_NOFILES).
+      long, and/or where the real limit for number of open files is
+      OPEN_FILES, not rlim_max from getrlimit(RLIMIT_NOFILES). In
+      particular, these may be needed for OS X 10.5.
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24

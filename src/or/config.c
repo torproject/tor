@@ -812,6 +812,8 @@ add_default_trusted_dirservers(void)
       "7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
     "Tonga orport=443 bridge no-v2 82.94.251.206:80 "
       "4A0C CD2D DC79 9508 3D73 F5D6 6710 0C8A 5831 F16D",
+    "ides orport=9090 no-v2 v3ident=27B6B5996C426270A5C95488AA5BCEB6BCC86956 "
+      "216.224.124.114:9030 F397 038A DC51 3361 35E7 B80B D99C A384 4360 292B",
     NULL
   };
   for (i=0; dirservers[i]; i++)
