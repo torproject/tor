@@ -1,14 +1,12 @@
-Changes in version 0.2.0.10-alpha - 2007-11-0?
+Changes in version 0.2.0.10-alpha - 2007-11-07
   o Major features:
-    - Separate "SOCKS_COMMAND_CONNECT_DIR" into two flags in
-      edge_connection_t: want_onehop if it must attach to a circuit with
-      only one hop (e.g. for the current tunnelled connections that use
-      begin_dir), and use_begindir if we mean to use a BEGIN_DIR relay
-      command to establish the stream rather than the normal BEGIN. Now
-      we can make anonymized begin_dir connections for (e.g.) more secure
-      hidden service posting and fetching.
-    - Code to implement new hidden service descriptor format (from Karsten
-      Loesing).
+    - Allow tunnelled directory connections to ask for an encrypted
+      "begin_dir" connection or an anonymized "uses a full Tor circuit"
+      connection independently. Now we can make anonymized begin_dir
+      connections for (e.g.) more secure hidden service posting and
+      fetching.
+    - More progress on proposal 114: code from Karsten Loesing to
+      implement new hidden service descriptor format.
     - Raise the default BandwidthRate/BandwidthBurst to 5MB/10MB, to
       accommodate the growing number of servers that use the default
       and are reaching it.
@@ -17,15 +15,20 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
     - Stop servers from crashing if they set a Family option (or
       maybe in other situations too). Bugfix on 0.2.0.9-alpha; reported
       by Fabian Keil.
+    - Make bridge users work again -- the move to v3 directories in
+      0.2.0.9-alpha had introduced a number of bugs that made bridges
+      no longer work for clients.
     - When the clock jumps forward a lot, do not allow the bandwidth
-      buckets to become negative.  Bugfix on 0.1.2.x; fixes Bug 544.
-    - When the consensus lists a router descriptor that we previously were
-      mirroring, but that we considered non-canonical, reload the
-      descriptor as canonical.
+      buckets to become negative. Bugfix on 0.1.2.x; fixes bug 544.
 
   o Major bugfixes (v3 dir, bugfixes on 0.2.0.9-alpha):
+    - When the consensus lists a router descriptor that we previously were
+      mirroring, but that we considered non-canonical, reload the
+      descriptor as canonical. This fixes bug 543 where Tor servers
+      would start complaining after a few days that they don't have
+      enough directory information to build a circuit.
     - Consider replacing the current consensus when certificates arrive
-      that make the pending consensus valid.  Previously, we were only
+      that make the pending consensus valid. Previously, we were only
       considering replacement when the new certs _didn't_ help.
     - Fix an assert error on startup if we didn't already have the
       consensus and certs cached in our datadirectory: we were caching
@@ -36,7 +39,7 @@ Changes in version 0.2.0.10-alpha - 2007-11-0?
       requests for all of them.
 
   o New requirements:
-    - Drop support for OpenSSL version 0.9.6.  Just about nobody was using
+    - Drop support for OpenSSL version 0.9.6. Just about nobody was using
       it, it had no AES, and it hasn't seen any security patches since
       2004.
 
