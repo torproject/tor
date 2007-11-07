@@ -343,6 +343,10 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
  */
 #define CIPHER_LIST (TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":" \
                      SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
+/* Note: for setting up your own private testing network with link
+ * crypto disabled, set your cipher list to SSL3_TXT_RSA_NULL_SHA.
+ * If you do this, you won't be able to communicate with any of the
+ * "real" Tors, though. */
 #else
 #error "Tor requires OpenSSL version 0.9.7 or later, for AES support."
 #endif
