@@ -2480,7 +2480,7 @@ routerlist_reparse_old(routerlist_t * rl, signed_descriptor_t *sd)
   memcpy(&ri->cache_info, sd, sizeof(signed_descriptor_t));
   if (sd->signed_descriptor_body) {
     /* Nasty, but we can't have it get freed. Do better. XXXX020 */
-    ri->cache_info->signed_descriptor_body =
+    ri->cache_info.signed_descriptor_body =
       tor_strndup(sd->signed_descriptor_body, sd->signed_descriptor_len);
   }
 
