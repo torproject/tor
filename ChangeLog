@@ -83,9 +83,9 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
       the bridge authority, even when they haven't set TunnelDirConns.
 
   o Minor features (controller):
-    - When reporting clock skew, and we only have a lower bound on
-      the amount of skew, amount anyway, marked as a lower bound.
-      [XXX Nick: what does this mean??]
+    - When reporting clock skew, and know that the clock is _at least
+      as skewed_ as some value, but we don't know the actual value,
+      report the value as a "minimum skew."
 
   o Utilities:
     - Update linux-tor-prio.sh script to allow QoS based on the uid of
