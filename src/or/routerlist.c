@@ -2987,12 +2987,16 @@ routerlist_remove_old_routers(void)
     goto done;
 
   smartlist_sort(routerlist->old_routers, _compare_old_routers_by_identity);
+  /* Fix indices. */
+  for (i = 0; i < smartlist_len(routerlist_old_routers); ++i) {
+    signed_descriptor_t *r = smartlist_get(routerlist->old_routers, i);
+    r->routerlist_index = i;
+  }
 
   /* Iterate through the list from back to front, so when we remove descriptors
    * we don't mess up groups we haven't gotten to. */
   for (i = smartlist_len(routerlist->old_routers)-1; i >= 0; --i) {
     signed_descriptor_t *r = smartlist_get(routerlist->old_routers, i);
-    r->routerlist_index = i;
     if (!cur_id) {
       cur_id = r->identity_digest;
       hi = i;
