@@ -21,14 +21,21 @@ Items blocking 0.2.0.10-alpha:
     we picked it" and "is still adequate to be used as a guard even
     after we've picked it". We should write a real proposal for this --
     in 0.2.1.x.
+    - Delay the separation of flags till 0.2.1.x. -NM
+    - Let's come up with a good formula for Guard.
+
   - Should we ship with a fallback-consensus? Where in the tarball does
     it go? What's the process for choosing it?
     - We can, but we don't have to now.  Stick it in place of the
-      empty fallback-consensus file in src/config if you like.
-    - To choose, just grab the most recent consensus you have.
+      empty fallback-consensus file in src/config if you like. -NM
+    - To choose, just grab the most recent consensus you have. -NM
+
   - If 1.5*MaxCircuitDirtiness is more than KeepAlive, do we then send
     a KeepAlive and reset our timeout, thus never reaching 1.5*MCD?
-  - "When reporting clock skew, and we only have a lower bound on
+    - Aw, crud.  We could keep track of how long it's been since
+      we last did anything _other_ than a keepalive, I guess. -NM
+
+  o "When reporting clock skew, and we only have a lower bound on
     the amount of skew, amount anyway, marked as a lower bound.
     [XXX Nick: what does this mean??]"
 
