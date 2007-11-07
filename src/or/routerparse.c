@@ -1103,7 +1103,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   tor_assert(tok->n_args >= 5);
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->routerlist_index = -1;
+  router->cache_info.routerlist_index = -1;
   router->cache_info.annotations_len = s-start_of_annotations + prepend_len;
   router->cache_info.signed_descriptor_len = end-s;
   if (cache_copy) {

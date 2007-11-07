@@ -755,20 +755,19 @@ connection_tls_finish_handshake(or_connection_t *conn)
   int started_here = connection_or_nonopen_was_started_here(conn);
 
   log_debug(LD_OR,"tls handshake done. verifying.");
-  /* V1 only XXXX020 */
-  if (connection_or_check_valid_tls_handshake(conn, started_here,
-                                              digest_rcvd) < 0)
-    return -1;
-
-  if (!started_here) { /* V1 only XXXX020 */
-    connection_or_init_conn_from_address(conn,conn->_base.addr,
-                                         conn->_base.port, digest_rcvd, 0);
-  }
 
   directory_set_dirty();
 
   if (tor_tls_used_v1_handshake(conn->tls)) {
+
     conn->link_proto = 1;
+    if (connection_or_check_valid_tls_handshake(conn, started_here,
+                                                digest_rcvd) < 0)
+      return -1;
+    if (!started_here) {
+      connection_or_init_conn_from_address(conn,conn->_base.addr,
+                                           conn->_base.port, digest_rcvd, 0);
+    }
     return connection_or_set_state_open(conn);
   } else {
     conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;

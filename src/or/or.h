@@ -1201,6 +1201,9 @@ typedef struct signed_descriptor_t {
   /** If saved_location is SAVED_IN_CACHE or SAVED_IN_JOURNAL, the offset of
    * this descriptor in the corresponding file. */
   off_t saved_offset;
+  /** What position is this descriptor within routerlist->routers or
+   * routerlist->old_routers? -1 for none. */
+  int routerlist_index;
   /** The valid-until time of the most recent consensus that listed this
    * descriptor.  0 for "never listed in a consensus, so far as we know." */
   time_t last_listed_as_valid_until;
@@ -1285,9 +1288,6 @@ typedef struct {
   /** When did we start testing reachability for this OR? */
   time_t testing_since;
 
-  /** What position is this descriptor within routerlist->routers? -1 for
-   * none. */
-  int routerlist_index;
 } routerinfo_t;
 
 /** Information needed to keep and cache a signed extra-info document. */

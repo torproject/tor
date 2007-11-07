@@ -1419,7 +1419,7 @@ routers_update_all_from_networkstatus(time_t now)
 
   routers_update_status_from_consensus_networkstatus(rl->routers, 0);
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
-                    ri->routerlist_index = ri_sl_idx);
+                    ri->cache_info.routerlist_index = ri_sl_idx);
   if (rl->old_routers)
     signed_descs_update_status_from_consensus_networkstatus(rl->old_routers);
   entry_guards_compute_status();
