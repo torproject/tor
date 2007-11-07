@@ -40,6 +40,8 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
     - Avoid sending a request for "keys/fp" (for which we'll get a 400 Bad
       Request) if we need more v3 certs but we've already got pending
       requests for all of them.
+    - Correctly back off from failing certificate downloads.  Fixes bug
+      546.
 
   o New requirements:
     - Drop support for OpenSSL version 0.9.6. Just about nobody was using

@@ -23,6 +23,9 @@ Items blocking 0.2.0.10-alpha:
     in 0.2.1.x.
   - Should we ship with a fallback-consensus? Where in the tarball does
     it go? What's the process for choosing it?
+    - We can, but we don't have to now.  Stick it in place of the
+      empty fallback-consensus file in src/config if you like.
+    - To choose, just grab the most recent consensus you have.
   - If 1.5*MaxCircuitDirtiness is more than KeepAlive, do we then send
     a KeepAlive and reset our timeout, thus never reaching 1.5*MCD?
   - "When reporting clock skew, and we only have a lower bound on

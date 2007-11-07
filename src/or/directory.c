@@ -595,7 +595,7 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
   if (!conn->requested_resource)
     return;
   failed = smartlist_create();
-  dir_split_resource_into_fingerprints(conn->requested_resource,
+  dir_split_resource_into_fingerprints(conn->requested_resource+3,
                                        failed, NULL, 1, 0);
   SMARTLIST_FOREACH(failed, char *, cp,
   {
