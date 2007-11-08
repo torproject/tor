@@ -97,6 +97,9 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
   o Minor bugfixes:
     - Refuse to start if both ORPort and UseBridges are set. Bugfix
       on 0.2.0.x.
+    - Don't stop fetching descriptors when FetchUselessDescriptors is
+      set, even if we stop asking for circuits. Bugfix on 0.1.2.x;
+      reported by tup and ioerror.
     - Better log message on vote from unknown authority.
     - Don't log "Launching 0 request for 0 router".
 

@@ -3753,10 +3753,9 @@ update_consensus_router_descriptor_downloads(time_t now)
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
     n_inprogress=0, n_in_oldrouters=0;
 
-  if (!dirserver) {
-    if (rep_hist_circbuilding_dormant(now))
-      goto done;
-  }
+  if (!dirserver && !options->FetchUselessDescriptors &&
+      rep_hist_circbuilding_dormant(now))
+    goto done;
   if (!consensus)
     goto done;
 
