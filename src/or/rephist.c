@@ -684,7 +684,7 @@ rep_hist_record_mtbf_data(void)
 
     base16_encode(dbuf, sizeof(dbuf), digest, DIGEST_LEN);
     PRINTF((f, "R %s\n", dbuf));
-    if (hist->start_of_run) {
+    if (hist->start_of_run > 0) {
       format_iso_time(time_buf, hist->start_of_run);
       t = time_buf;
     }
@@ -692,7 +692,7 @@ rep_hist_record_mtbf_data(void)
             hist->weighted_run_length, hist->total_run_weights,
             t ? " S=" : "", t ? t : ""));
     t = NULL;
-    if (hist->start_of_downtime) {
+    if (hist->start_of_downtime > 0) {
       format_iso_time(time_buf, hist->start_of_downtime);
       t = time_buf;
     }
@@ -726,6 +726,43 @@ find_next_with(smartlist_t *sl, int i, const char *prefix)
       return -1;
   }
   return -1;
+}
+
+static int n_bogus_times = 0;
+/** DOCDOC */
+static int
+parse_possibly_bad_iso_time(const char *s, time_t *time_out)
+{
+  int year;
+  char b[5];
+  strlcpy(b, s, sizeof(b));
+  b[4] = '\0';
+  year = atoi(b);
+  if (year < 1970) {
+    *time_out = 0;
+    ++n_bogus_times;
+    return 0;
+  } else
+    return parse_iso_time(s, time_out);
+}
+
+/** DOCDOC */
+static INLINE time_t
+correct_time(time_t t, time_t now, time_t stored_at, time_t started_measuring)
+{
+  if (t < started_measuring - 24*60*60*365)
+    return 0;
+  else if (t < started_measuring)
+    return started_measuring;
+  else if (t > stored_at)
+    return 0;
+  else {
+    long run_length = stored_at - t;
+    t = now - run_length;
+    if (t < started_measuring)
+      t = started_measuring;
+    return t;
+  }
 }
 
 /** Load MTBF data from disk.  Returns 0 on success or recoverable error, -1
@@ -798,6 +835,8 @@ rep_hist_load_mtbf_data(time_t now)
 
   if (line && !strcmp(line, "data"))
     ++i;
+
+  n_bogus_times = 0;
 
   for (; i < smartlist_len(lines); ++i) {
     char digest[DIGEST_LEN];
@@ -874,16 +913,12 @@ rep_hist_load_mtbf_data(time_t now)
     if (have_mtbf) {
       if (mtbf_timebuf[0]) {
         mtbf_timebuf[10] = ' ';
-        if (parse_iso_time(mtbf_timebuf, &start_of_run)<0)
+        if (parse_possibly_bad_iso_time(mtbf_timebuf, &start_of_run)<0)
           log_warn(LD_GENERAL, "Couldn't parse time %s",
                    escaped(mtbf_timebuf));
       }
-      if (!start_of_run || start_of_run > stored_at) {
-        hist->start_of_run = 0;
-      } else {
-        long run_length = stored_at - start_of_run;
-        hist->start_of_run = now - run_length;
-      }
+      hist->start_of_run = correct_time(start_of_run, now, stored_at,
+                                        tracked_since);
       if (hist->start_of_run < latest_possible_start + wrl)
         latest_possible_start = hist->start_of_run - wrl;
 
@@ -893,16 +928,12 @@ rep_hist_load_mtbf_data(time_t now)
     if (have_wfu) {
       if (wfu_timebuf[0]) {
         wfu_timebuf[10] = ' ';
-        if (parse_iso_time(wfu_timebuf, &start_of_downtime)<0)
+        if (parse_possibly_bad_iso_time(wfu_timebuf, &start_of_downtime)<0)
           log_warn(LD_GENERAL, "Couldn't parse time %s", escaped(wfu_timebuf));
       }
     }
-    if (!start_of_downtime || start_of_downtime > stored_at) {
-      hist->start_of_downtime = 0;
-    } else {
-      long down_length = stored_at - start_of_downtime;
-      hist->start_of_downtime = start_of_downtime - down_length;
-    }
+    hist->start_of_downtime = correct_time(start_of_downtime, now, stored_at,
+                                           tracked_since);
     hist->weighted_uptime = wt_uptime;
     hist->total_weighted_time = total_wt_time;
   }

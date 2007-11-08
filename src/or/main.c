@@ -53,7 +53,7 @@ static int stats_prev_global_write_bucket;
 static uint64_t stats_n_bytes_read = 0;
 static uint64_t stats_n_bytes_written = 0;
 /** What time did this process start up? */
-long time_of_process_start = 0;
+time_t time_of_process_start = 0;
 /** How many seconds have we been running? */
 long stats_n_seconds_working = 0;
 /** When do we next download a directory? */

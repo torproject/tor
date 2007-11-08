@@ -27,6 +27,8 @@ const char dirserv_c_id[] =
 /** If a v1 running-routers is older than this, discard it. */
 #define MAX_V1_RR_AGE (7*24*60*60)
 
+extern time_t time_of_process_start; /* from main.c */
+
 /** Do we need to regenerate the directory when someone asks for it? */
 static int the_directory_is_dirty = 1;
 static int runningrouters_is_dirty = 1;
@@ -1926,6 +1928,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->dir_port = ri->dir_port;
 }
 
+/** If we've been around for less than this amount of time, our reachability
+ * information is not accurate. */
+#define DIRSERV_TIME_TO_GET_REACHABILITY_INFO (30*60)
+
 /** Return a new networkstatus_vote_t* containing our current opinion. (For v3
  * authorities */
 networkstatus_vote_t *
@@ -1949,9 +1955,13 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   networkstatus_voter_info_t *voter = NULL;
   vote_timing_t timing;
   digestmap_t *omit_as_sybil = NULL;
+  int vote_on_reachability = 1;
 
   tor_assert(private_key);
   tor_assert(cert);
+
+  if (now - time_of_process_start < DIRSERV_TIME_TO_GET_REACHABILITY_INFO)
+    vote_on_reachability = 0;
 
   if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
     log_warn(LD_NET, "Couldn't resolve my hostname");
@@ -2014,6 +2024,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
           rs->is_running = rs->is_named = rs->is_valid = rs->is_v2_dir =
           rs->is_possible_guard = 0;
       }
+      if (!vote_on_reachability)
+        rs->is_running = 0;
 
       vrs->version = version_from_platform(ri->platform);
       smartlist_add(routerstatuses, vrs);
@@ -2057,8 +2069,10 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   v3_out->server_versions = server_versions;
   v3_out->known_flags = smartlist_create();
   smartlist_split_string(v3_out->known_flags,
-                "Authority Exit Fast Guard HSDir Running Stable V2Dir Valid",
+                "Authority Exit Fast Guard HSDir Stable V2Dir Valid",
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+  if (vote_on_reachability)
+    smartlist_add(v3_out->known_flags, tor_strdup("Running"));
   if (listbadexits)
     smartlist_add(v3_out->known_flags, tor_strdup("BadExit"));
   if (naming) {

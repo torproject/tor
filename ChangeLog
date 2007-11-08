@@ -42,6 +42,9 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
       requests for all of them.
     - Correctly back off from failing certificate downloads.  Fixes bug
       546.
+    - Authorities don't vote on the Running flag if they have been running
+      for less than 30 minutes themselves.  Fixes bug 547, where a newly
+      started authority would vote that everyone was down.
 
   o New requirements:
     - Drop support for OpenSSL version 0.9.6. Just about nobody was using
