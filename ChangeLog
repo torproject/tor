@@ -76,6 +76,8 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
     - Make "not enough dir info yet" warnings describe *why* Tor feels
       it doesn't have enough directory info yet.
     - Make the log message for "tls error. breaking." more useful.
+    - Better log messages about certificate downloads, to attempt to
+      track down the second incarnation of bug 546.
 
   o Minor features (bridges):
     - If bridge users set UpdateBridgesFromAuthority, but the digest

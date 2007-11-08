@@ -118,8 +118,9 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
     ds = trusteddirserver_get_by_v3_auth_digest(
                                        cert->cache_info.identity_digest);
     if (!ds) {
-      log_info(LD_DIR, "Found cached certificate whose key didn't match "
-               "any v3 authority we recognized; skipping.");
+      log_info(LD_DIR, "Found %s certificate whose key didn't match "
+               "any v3 authority we recognized; skipping.",
+               from_store ? "cached" : "downloaded");
       authority_cert_free(cert);
       continue;
     }
@@ -132,6 +133,9 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
                     cert->cache_info.signed_descriptor_digest,
                     DIGEST_LEN)) {
           /* we already have this one. continue. */
+          log_info(LD_DIR, "Skipping %s certificate for %s that we "
+                   "already have.",
+                   from_store ? "cached" : "downloaded", ds->nickname);
           authority_cert_free(cert);
           found = 1;
           break;
@@ -140,6 +144,10 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 
     if (found)
       continue;
+
+    log_info(LD_DIR, "Adding %s certificate for directory authority %s with "
+             "signing key %s", from_store ? "cached" : "downloaded",
+             ds->nickname, hex_str(cert->signing_key_digest,DIGEST_LEN));
 
     smartlist_add(ds->v3_certs, cert);
     if (options->LearnAuthorityAddrFromCerts &&
@@ -324,8 +332,12 @@ authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
           continue;
         }
         if (download_status_is_ready(&ds->cert_dl_status, now,
-                                     MAX_CERT_DL_FAILURES))
+                                     MAX_CERT_DL_FAILURES)) {
+          log_notice(LD_DIR, "We're missing a certificate from authority %s "
+                     "with signing key %s: launching request.", ds->nickname,
+                     hex_str(voter->signing_key_digest, DIGEST_LEN));
           smartlist_add(missing_digests, voter->identity_digest);
+        }
       });
   }
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
@@ -348,8 +360,11 @@ authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
           }
         });
       if (!found && download_status_is_ready(&ds->cert_dl_status, now,
-                                             MAX_CERT_DL_FAILURES))
+                                             MAX_CERT_DL_FAILURES)) {
+        log_notice(LD_DIR, "No current certificate known for authority %s; "
+                   "launching request.", ds->nickname);
         smartlist_add(missing_digests, ds->v3_identity_digest);
+      }
     });
 
   if (!smartlist_len(missing_digests)) {
@@ -378,8 +393,6 @@ authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
     SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
     smartlist_free(fps);
   }
-  log_notice(LD_DIR, "Launching request for %d missing certificates",
-             smartlist_len(missing_digests));
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                resource, 1);
 
