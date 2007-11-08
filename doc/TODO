@@ -28,7 +28,8 @@ Here's a go:
 
   Take the 7/8s of the Running servers that have the oldest birthdates.
   To be a guard, you must be in this set and you must at least match the
-  median WFU of the set.
+  median WFU of the set. In addition, anybody born more than a month ago
+  who has >=50% WFU is always a winner.
 
   - Should we ship with a fallback-consensus? Where in the tarball does
     it go? What's the process for choosing it?
