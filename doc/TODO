@@ -23,7 +23,7 @@ Items blocking 0.2.0.10-alpha:
     after we've picked it". We should write a real proposal for this --
     in 0.2.1.x.
     - Delay the separation of flags till 0.2.1.x. -NM
-    - Let's come up with a good formula for Guard.
+    o Let's come up with a good formula for Guard.
 
 Here's a go:
 

@@ -241,6 +241,10 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       should exist before trying to replace the current one.
     - Use a more forgiving schedule for retrying failed consensus
       downloads than for other types.
+    - Adjust the guard selection formula that authorities use a little more:
+      require guards to be in the top 7/8 in terms of how long we have
+      known about them, and above the median of those nodes in terms of
+      weighted fractional uptime.
 
   o Minor bugfixes (other directory issues):
     - Correct the implementation of "download votes by digest." Bugfix on

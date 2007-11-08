@@ -1214,4 +1214,5 @@ IMPLEMENT_ORDER_FUNC(find_nth_int, int)
 IMPLEMENT_ORDER_FUNC(find_nth_time, time_t)
 IMPLEMENT_ORDER_FUNC(find_nth_double, double)
 IMPLEMENT_ORDER_FUNC(find_nth_uint32, uint32_t)
+IMPLEMENT_ORDER_FUNC(find_nth_long, long)
 

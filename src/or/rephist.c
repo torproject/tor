@@ -384,8 +384,18 @@ get_stability(or_history_t *hist, time_t when)
   return total / total_weights;
 }
 
-/* Until we've known about you for this long, you simply can't be up. */
-#define MIN_WEIGHTED_TIME_TO_BE_UP (18*60*60)
+/** DODDOC */
+static long
+get_total_weighted_time(or_history_t *hist, time_t when)
+{
+  long total = hist->total_weighted_time;
+  if (hist->start_of_run) {
+    total += (when - hist->start_of_run);
+  } else if (hist->start_of_downtime) {
+    total += (when - hist->start_of_downtime);
+  }
+  return total;
+}
 
 /** Helper: Return the weighted percent-of-time-online of the router with
  * history <b>hist</b>. */
@@ -402,8 +412,6 @@ get_weighted_fractional_uptime(or_history_t *hist, time_t when)
   } else if (hist->start_of_downtime) {
     total += (when - hist->start_of_downtime);
   }
-  if (total < MIN_WEIGHTED_TIME_TO_BE_UP)
-    return 0.0;
   return ((double) up) / total;
 }
 
@@ -429,6 +437,22 @@ rep_hist_get_weighted_fractional_uptime(const char *id, time_t when)
     return 0.0;
 
   return get_weighted_fractional_uptime(hist, when);
+}
+
+/** Return a number representing how long we've known about the router whose
+ * digest is <b>id</b>. Return 0 if the router is unknown.
+ *
+ * Be careful: this measure incresases monotonically as we know the router for
+ * longer and longer, but it doesn't increase linearly.
+ */
+long
+rep_hist_get_weighted_time_known(const char *id, time_t when)
+{
+  or_history_t *hist = get_or_history(id);
+  if (!hist)
+    return 0;
+
+  return get_total_weighted_time(hist, when);
 }
 
 /** Return true if we've been measuring MTBFs for long enough to

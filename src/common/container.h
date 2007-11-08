@@ -322,6 +322,7 @@ int find_nth_int(int *array, int n_elements, int nth);
 time_t find_nth_time(time_t *array, int n_elements, int nth);
 double find_nth_double(double *array, int n_elements, int nth);
 uint32_t find_nth_uint32(uint32_t *array, int n_elements, int nth);
+long find_nth_long(long *array, int n_elements, int nth);
 static INLINE int
 median_int(int *array, int n_elements)
 {
@@ -341,6 +342,11 @@ static INLINE uint32_t
 median_uint32(uint32_t *array, int n_elements)
 {
   return find_nth_uint32(array, n_elements, (n_elements-1)/2);
+}
+static INLINE long
+median_long(long *array, int n_elements)
+{
+  return find_nth_long(array, n_elements, (n_elements-1)/2);
 }
 
 #endif

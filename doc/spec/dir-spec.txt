@@ -972,11 +972,11 @@ $Id$
    "Running" -- A router is 'Running' if the authority managed to connect to
    it successfully within the last 30 minutes.
 
-   "Stable" -- A router is 'Stable' if it is active, and either its
-   Weighted MTBF is at least the median for known active routers or
-   its Weighted MTBF is at least 10 days. Routers are never called Stable if
-   they are running a version of Tor known to drop circuits stupidly.
-   (0.1.1.10-alpha through 0.1.1.16-rc are stupid this way.)
+   "Stable" -- A router is 'Stable' if it is active, and either its Weighted
+   MTBF is at least the median for known active routers or its Weighted MTBF
+   corresponds to at least 7 days. Routers are never called Stable if they are
+   running a version of Tor known to drop circuits stupidly.  (0.1.1.10-alpha
+   through 0.1.1.16-rc are stupid this way.)
 
         To calculate weighted MTBF, compute the weighted mean of the lengths
         of all intervals when the router was observed to be up, weighting
@@ -991,15 +991,18 @@ $Id$
    either in the top 7/8ths for known active routers or at least 100KB/s.
 
    "Guard" -- A router is a possible 'Guard' if its Weighted Fractional
-   Uptime is at least the median for known active routers, and its bandwidth
-   is either at least the median for known active routers or at least
-   250KB/s. If the total bandwidth of active non-BadExit Exit servers is less
+   Uptime is at least the median for "familiar" active routers, and if
+   its bandwidth is at least median or at least 250KB/s.
+   If the total bandwidth of active non-BadExit Exit servers is less
    than one third of the total bandwidth of all active servers, no Exit is
    listed as a Guard.
 
         To calculate weighted fractional uptime, compute the fraction
         of time that the router is up in any given day, weighting so that
         downtime and uptime in the past counts less.
+
+        A node is 'familiar' if 1/8 of all active nodes have appeared more
+        recently than it, OR it has been around for a few weeks.
 
    "Authority" -- A router is called an 'Authority' if the authority
    generating the network-status document believes it is an authority.
