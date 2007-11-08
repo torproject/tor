@@ -32,11 +32,6 @@ Here's a go:
   median WFU of the set. In addition, anybody born more than a month ago
   who has >=50% WFU is always a winner.
 
-  o If 1.5*MaxCircuitDirtiness is more than KeepAlive, do we then send
-    a KeepAlive and reset our timeout, thus never reaching 1.5*MCD?
-    o Aw, crud.  We could keep track of how long it's been since
-      we last did anything _other_ than a keepalive, I guess. -NM
-
 For Tor 0.2.0.11-alpha:
   - Put a consensus in place of the empty fallback-consensus file in
     src/config and see what breaks.
@@ -97,9 +92,9 @@ Things we'd like to do in 0.2.0.x:
       - Protocol revision.
         - Earliest stages of 110 (infinite-length) in v2 protocol:
           add support for RELAY_EARLY.
-  - Before the feature freeze: (Roger)
-    - Make tunnelled dir conns use begin_dir if enabled
-    - make bridge users fall back from bridge authority to direct attempt
+  o Before the feature freeze: (Roger)
+    o Make tunnelled dir conns use begin_dir if enabled
+    o make bridge users fall back from bridge authority to direct attempt
 
   - get more v3 authorities before 0.2.0.x comes out.
     - brainstorm about who those should be
@@ -107,7 +102,7 @@ Things we'd like to do in 0.2.0.x:
   - Bugs.
      - Bug reports Roger has heard along that way that don't have enough
         details/attention to solve them yet.
-        - tup said that when he set FetchUselessDescriptors, after
+        o tup said that when he set FetchUselessDescriptors, after
           24 or 48 hours he wasn't fetching any descriptors at all
           anymore. This was in 0.2.0 but worked fine in 0.1.2.
         - arma noticed that when his network went away and he tried
@@ -122,7 +117,7 @@ Things we'd like to do in 0.2.0.x:
           I believe this is the result of confusion about whether to use
           relaybandwidth or bandwidthrate to control bandwidth usage for 
           servers.  Chances are, this isn't a bug per se. [phobos]
-        - this notion of authorities notifying servers that they're
+        o this notion of authorities notifying servers that they're
           unreachable is bunk -- it's leftover from the time when all
           servers ran 24/7. now it triggers every time a server goes
           away and then returns before the old descriptor has expired.
