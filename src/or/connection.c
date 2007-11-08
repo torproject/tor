@@ -209,8 +209,10 @@ connection_new(int type, int socket_family)
   if (CONN_IS_EDGE(conn)) {
     TO_EDGE_CONN(conn)->global_identifier = n_connections_allocated++;
   }
-  if (type == CONN_TYPE_OR)
+  if (type == CONN_TYPE_OR) {
+    TO_OR_CONN(conn)->timestamp_last_added_nonpadding = now;
     TO_OR_CONN(conn)->next_circ_id = crypto_rand_int(1<<15);
+  }
 
   conn->timestamp_created = now;
   conn->timestamp_lastread = now;

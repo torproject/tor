@@ -15,7 +15,7 @@ J       - Jeff claims
         X Abandoned
 
 Items blocking 0.2.0.10-alpha:
-  - Some resolution for (the reopened) bug 546.
+  . Some resolution for (the reopened) bug 546.
   - We should back out the MBTF->WFU Guard factors, since they open us
     up to new attacks, and don't this "median" notion doesn't necessarily
     help us distinguish between "was good enough to be a guard when
@@ -32,9 +32,9 @@ Here's a go:
   median WFU of the set. In addition, anybody born more than a month ago
   who has >=50% WFU is always a winner.
 
-  - If 1.5*MaxCircuitDirtiness is more than KeepAlive, do we then send
+  o If 1.5*MaxCircuitDirtiness is more than KeepAlive, do we then send
     a KeepAlive and reset our timeout, thus never reaching 1.5*MCD?
-    - Aw, crud.  We could keep track of how long it's been since
+    o Aw, crud.  We could keep track of how long it's been since
       we last did anything _other_ than a keepalive, I guess. -NM
 
 For Tor 0.2.0.11-alpha:

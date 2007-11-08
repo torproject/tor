@@ -855,6 +855,9 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   cell_pack(&networkcell, cell);
 
   connection_write_to_buf(networkcell.body, CELL_NETWORK_SIZE, TO_CONN(conn));
+
+  if (cell->command != CELL_PADDING)
+    conn->timestamp_last_added_nonpadding = time(NULL);
 }
 
 /**DOCDOC*/
@@ -868,6 +871,8 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
   var_cell_pack_header(cell, hdr);
   connection_write_to_buf(hdr, sizeof(hdr), TO_CONN(conn));
   connection_write_to_buf(cell->payload, cell->payload_len, TO_CONN(conn));
+  if (cell->command != CELL_PADDING)
+    conn->timestamp_last_added_nonpadding = time(NULL);
 }
 
 /** DOCDOC */

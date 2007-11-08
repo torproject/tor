@@ -780,7 +780,8 @@ run_connection_housekeeping(int i, time_t now)
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (!clique_mode(options) && !or_conn->n_circuits &&
-               now >= conn->timestamp_lastwritten + maxCircuitlessPeriod &&
+               now >= or_conn->timestamp_last_added_nonpadding +
+                                           maxCircuitlessPeriod &&
                (!router || !server_mode(options) ||
                 !router_is_clique_mode(router))) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
