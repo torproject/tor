@@ -3166,7 +3166,8 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
   tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
   /* Determine responsible dirs. */
   if (hid_serv_get_responsible_directories(responsible_dirs, desc_id) < 0) {
-    log_warn(LD_REND, "Could not determine the responsible hidden service "
+    /* XXX020 make this louder once we have some v2hidservs */
+    log_info(LD_REND, "Could not determine the responsible hidden service "
                       "directories to fetch descriptors.");
     smartlist_free(responsible_dirs);
     return;

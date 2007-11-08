@@ -4471,7 +4471,8 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
       i = 0;
   } while (i != start);
 
-  log_warn(LD_REND, "We don't have enough hidden service directories to "
+  /* XXX020 make this louder once we have some v2hidservs */
+  log_info(LD_REND, "We don't have enough hidden service directories to "
            "perform v2 rendezvous operations!");
   return -1;
 }
