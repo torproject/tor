@@ -13,6 +13,10 @@ Changes in version 0.2.0.10-alpha - 2007-11-10
     - Raise the default BandwidthRate/BandwidthBurst to 5MB/10MB, to
       accommodate the growing number of servers that use the default
       and are reaching it.
+    - Directory authorities use a new formula for selecting which nodes
+      to advertise as Guards: they must be in the top 7/8 in terms of
+      how long we have known about them, and above the median of those
+      nodes in terms of weighted fractional uptime.
 
   o Major bugfixes:
     - Stop servers from crashing if they set a Family option (or
@@ -52,11 +56,6 @@ Changes in version 0.2.0.10-alpha - 2007-11-10
       2004.
 
   o Minor features:
-    - Directory authorities now decide whether routers are stable
-      enough to be guards based not on their MTBF or their uptime, but
-      on their fractional uptime: the fraction of the time that they
-      are online. (No router counts as having uptime until we've known
-      about it for at least 24 hours.)
     - Clients now hold circuitless TLS connections open for 1.5 times
       MaxCircuitDirtiness, since it is likely that they'll need to build
       a circuit over them within that timeframe. Previously, they held
@@ -244,10 +243,6 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       should exist before trying to replace the current one.
     - Use a more forgiving schedule for retrying failed consensus
       downloads than for other types.
-    - Adjust the guard selection formula that authorities use a little more:
-      require guards to be in the top 7/8 in terms of how long we have
-      known about them, and above the median of those nodes in terms of
-      weighted fractional uptime.
 
   o Minor bugfixes (other directory issues):
     - Correct the implementation of "download votes by digest." Bugfix on
