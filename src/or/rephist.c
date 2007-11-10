@@ -456,7 +456,7 @@ rep_hist_get_weighted_time_known(const char *id, time_t when)
 }
 
 /** Return true if we've been measuring MTBFs for long enough to
- * prounounce on Stability. */
+ * pronounce on Stability. */
 int
 rep_hist_have_measured_enough_stability(void)
 {
