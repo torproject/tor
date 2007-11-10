@@ -12,6 +12,7 @@ Backport items for 0.1.2:
   - r12339: rlim_t may be wider than unsigned long.
   - r12341: Work if the real open-file limit is OPEN_FILES.
 
+  - r12459: Exit policies reject public IP address too
 
 Backport for 0.1.2.x once better tested:
   D r11287: Reject address mappings to internal addresses. (??)
