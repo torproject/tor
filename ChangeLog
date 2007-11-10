@@ -1,4 +1,4 @@
-Changes in version 0.2.0.10-alpha - 2007-11-07
+Changes in version 0.2.0.10-alpha - 2007-11-10
   o New directory authorities:
     - Set up ides (run by Mike Perry) as the third v3 directory authority.
 
@@ -40,10 +40,10 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
     - Avoid sending a request for "keys/fp" (for which we'll get a 400 Bad
       Request) if we need more v3 certs but we've already got pending
       requests for all of them.
-    - Correctly back off from failing certificate downloads.  Fixes bug
-      546.
+    - Correctly back off from failing certificate downloads. Fixes
+      bug 546.
     - Authorities don't vote on the Running flag if they have been running
-      for less than 30 minutes themselves.  Fixes bug 547, where a newly
+      for less than 30 minutes themselves. Fixes bug 547, where a newly
       started authority would vote that everyone was down.
 
   o New requirements:
@@ -90,7 +90,7 @@ Changes in version 0.2.0.10-alpha - 2007-11-07
       the bridge authority, even when they haven't set TunnelDirConns.
 
   o Minor features (controller):
-    - When reporting clock skew, and know that the clock is _at least
+    - When reporting clock skew, and we know that the clock is _at least
       as skewed_ as some value, but we don't know the actual value,
       report the value as a "minimum skew."
 
