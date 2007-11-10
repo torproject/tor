@@ -228,7 +228,7 @@ validate_addr_policies(or_options_t *options, char **msg)
   *msg = NULL;
 
   if (policies_parse_exit_policy(options->ExitPolicy, &addr_policy,
-                                 options->ExitPolicyRejectPrivate))
+                                 options->ExitPolicyRejectPrivate, NULL))
     REJECT("Error in ExitPolicy entry.");
 
   /* The rest of these calls *append* to addr_policy. So don't actually
@@ -556,10 +556,16 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
  */
 int
 policies_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
-                           int rejectprivate)
+                           int rejectprivate, const char *local_address)
 {
-  if (rejectprivate)
+  if (rejectprivate) {
     append_exit_policy_string(dest, "reject private:*");
+    if (local_address) {
+      char buf[POLICY_BUF_LEN];
+      tor_snprintf(buf, sizeof(buf), "reject %s:*", local_address);
+      append_exit_policy_string(dest, buf);
+    }
+  }
   if (parse_addr_policy(cfg, dest, -1))
     return -1;
   append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);

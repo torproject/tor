@@ -2935,7 +2935,7 @@ test_policies(void)
           compare_addr_to_addr_policy(0xc0a80102, 2, policy));
 
   policy2 = NULL;
-  test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1));
+  test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, NULL));
   test_assert(policy2);
 
   test_assert(!exit_policy_is_general_exit(policy));
@@ -2955,7 +2955,7 @@ test_policies(void)
   line.key = (char*)"foo";
   line.value = (char*)"accept *:80,reject private:*,reject *:*";
   line.next = NULL;
-  test_assert(0 == policies_parse_exit_policy(&line, &policy, 0));
+  test_assert(0 == policies_parse_exit_policy(&line, &policy, 0, NULL));
   test_assert(policy);
   test_streq(policy->string, "accept *:80");
   test_streq(policy->next->string, "reject *:*");

@@ -1215,7 +1215,8 @@ router_rebuild_descriptor(int force)
   ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
 
   policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
-                             options->ExitPolicyRejectPrivate);
+                             options->ExitPolicyRejectPrivate,
+                             ri->address);
 
   if (desc_routerinfo) { /* inherit values */
     ri->is_valid = desc_routerinfo->is_valid;

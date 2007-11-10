@@ -3356,9 +3356,8 @@ void policies_parse_from_options(or_options_t *options);
 int cmp_addr_policies(addr_policy_t *a, addr_policy_t *b);
 addr_policy_result_t compare_addr_to_addr_policy(uint32_t addr,
                               uint16_t port, addr_policy_t *policy);
-int policies_parse_exit_policy(config_line_t *cfg,
-                               addr_policy_t **dest,
-                               int rejectprivate);
+int policies_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
+                               int rejectprivate, const char *local_address);
 int exit_policy_is_general_exit(addr_policy_t *policy);
 int policy_is_reject_star(addr_policy_t *policy);
 int getinfo_helper_policies(control_connection_t *conn,

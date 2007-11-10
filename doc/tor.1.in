@@ -739,11 +739,13 @@ To specify all internal and link-local networks (including 0.0.0.0/8,
 169.254.0.0/16, 127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8, and
 172.16.0.0/12), you can use the "private" alias instead of an address.
 These addresses are rejected by default (at the beginning of your
-exit policy) unless you set the ExitPolicyRejectPrivate config option
+exit policy), along with your public IP address, unless you set the
+ExitPolicyRejectPrivate config option
 to 0. For example, once you've done that, you could allow HTTP to
 127.0.0.1 and block all other connections to internal networks with
-"accept
-127.0.0.1:80,reject private:*".  See RFC 1918 and RFC 3330 for more
+"accept 127.0.0.1:80,reject private:*", though that may also allow
+connections to your own computer that are addressed to its public
+(external) IP address. See RFC 1918 and RFC 3330 for more
 details about internal and reserved IP address space.
 
 This directive can be specified multiple times so you don't have to put
@@ -773,7 +775,8 @@ either a reject *:* or an accept *:*. Otherwise, you're _augmenting_
 .LP
 .TP
 \fBExitPolicyRejectPrivate \fR\fB0\fR|\fB1\fR\fP
-Reject all private (local) networks at the beginning of your exit
+Reject all private (local) networks, along with your own public IP
+address, at the beginning of your exit
 policy. See above entry on ExitPolicy. (Default: 1)
 .LP
 .TP
