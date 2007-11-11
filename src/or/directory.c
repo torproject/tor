@@ -1448,7 +1448,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       } else
         break;
     }
-    routers_update_all_from_networkstatus(now); /*launches router downloads*/
+    /* launches router downloads as needed */
+    routers_update_all_from_networkstatus(now, 2);
     directory_info_has_arrived(now, 0);
     if (which) {
       if (smartlist_len(which)) {
@@ -1482,7 +1483,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       networkstatus_consensus_download_failed(0);
       return -1;
     }
-    routers_update_all_from_networkstatus(now); /*launches router downloads*/
+    /* launches router downloads as needed */
+    routers_update_all_from_networkstatus(now, 3);
     directory_info_has_arrived(now, 0);
     log_info(LD_DIR, "Successfully loaded consensus.");
   }

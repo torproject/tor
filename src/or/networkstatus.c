@@ -148,7 +148,7 @@ router_reload_v2_networkstatus(void)
   SMARTLIST_FOREACH(entries, char *, fn, tor_free(fn));
   smartlist_free(entries);
   networkstatus_v2_list_clean(time(NULL));
-  routers_update_all_from_networkstatus(time(NULL));
+  routers_update_all_from_networkstatus(time(NULL), 2);
   return 0;
 }
 
@@ -202,7 +202,7 @@ router_reload_consensus_networkstatus(void)
     }
   }
 
-  routers_update_all_from_networkstatus(time(NULL));
+  routers_update_all_from_networkstatus(time(NULL), 3);
 
   return 0;
 }
@@ -1398,10 +1398,11 @@ networkstatus_note_certs_arrived(void)
 
 /** If the network-status list has changed since the last time we called this
  * function, update the status of every routerinfo from the network-status
- * list.
+ * list. If <b>dir_version</b> is 2, it's a v2 networkstatus that changed.
+ * If <b>dir_version</b> is 3, it's a v3 consensus that changed.
  */
 void
-routers_update_all_from_networkstatus(time_t now)
+routers_update_all_from_networkstatus(time_t now, int dir_version)
 {
   routerinfo_t *me;
   routerlist_t *rl = router_get_routerlist();
@@ -1410,7 +1411,7 @@ routers_update_all_from_networkstatus(time_t now)
   if (networkstatus_v2_list_has_changed)
     download_status_map_update_from_v2_networkstatus();
 
-  if (!consensus)
+  if (!consensus || dir_version < 3) /* nothing more we should do */
     return;
 
   /* More routers may be up or down now: we need to recalc whether there's

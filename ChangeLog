@@ -10,14 +10,19 @@ Changes in version 0.2.0.11-alpha - 2007-11-??
     - Fix a memory leak on exit relays; we were leaking a cached_resolve_t
       on every successful resolve. Reported by Mike Perry.
 
-  o Minor features:
-    - Allow people to say PreferTunnelledDirConns rather than
-      PreferTunneledDirConns, for those alternate-spellers out there.
-
   o Packaging fixes on 0.2.0.10-alpha:
     - We were including instructions about what to do with the
       src/config/fallback-consensus file, but we weren't actually
       including it in the tarball. Disable all of that for now.
+
+  o Minor features:
+    - Allow people to say PreferTunnelledDirConns rather than
+      PreferTunneledDirConns, for those alternate-spellers out there.
+
+  o Minor bugfixes:
+    - Don't reevaluate all the information from our consensus document
+      just because we've downloaded a v2 networkstatus that we intend
+      to cache. Fixes bug 545.
 
 
 Changes in version 0.2.0.10-alpha - 2007-11-10

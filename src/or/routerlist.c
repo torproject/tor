@@ -3986,10 +3986,10 @@ update_router_have_minimum_dir_info(void)
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())
-      strlcpy(dir_info_status, "We have no network-status document.",
+      strlcpy(dir_info_status, "We have no network-status consensus.",
               sizeof(dir_info_status));
     else
-      strlcpy(dir_info_status, "We have no recent network-status document.",
+      strlcpy(dir_info_status, "We have no recent network-status consensus.",
               sizeof(dir_info_status));
     res = 0;
     goto done;

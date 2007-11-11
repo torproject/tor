@@ -3268,7 +3268,7 @@ networkstatus_vote_t *networkstatus_get_reasonably_live_consensus(time_t now);
 int networkstatus_set_current_consensus(const char *consensus, int from_cache,
                                         int was_waiting_for_certs);
 void networkstatus_note_certs_arrived(void);
-void routers_update_all_from_networkstatus(time_t now);
+void routers_update_all_from_networkstatus(time_t now, dir_version);
 void routerstatus_list_update_from_consensus_networkstatus(time_t now);
 void routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                         int reset_failures);
