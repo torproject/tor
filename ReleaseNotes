@@ -3,6 +3,74 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.1.2.18 - 2007-10-28
+  Tor 0.1.2.18 fixes many problems including crash bugs, problems with
+  hidden service introduction that were causing huge delays, and a big
+  bug that was causing some servers to disappear from the network status
+  lists for a few hours each day.
+
+  o Major bugfixes (crashes):
+    - If a connection is shut down abruptly because of something that
+      happened inside connection_flushed_some(), do not call
+      connection_finished_flushing(). Should fix bug 451:
+      "connection_stop_writing: Assertion conn->write_event failed"
+      Bugfix on 0.1.2.7-alpha.
+    - Fix possible segfaults in functions called from
+      rend_process_relay_cell().
+
+  o Major bugfixes (hidden services):
+    - Hidden services were choosing introduction points uniquely by
+      hexdigest, but when constructing the hidden service descriptor
+      they merely wrote the (potentially ambiguous) nickname.
+    - Clients now use the v2 intro format for hidden service
+      connections: they specify their chosen rendezvous point by identity
+      digest rather than by (potentially ambiguous) nickname. These
+      changes could speed up hidden service connections dramatically.
+
+  o Major bugfixes (other):
+    - Stop publishing a new server descriptor just because we get a
+      HUP signal. This led (in a roundabout way) to some servers getting
+      dropped from the networkstatus lists for a few hours each day.
+    - When looking for a circuit to cannibalize, consider family as well
+      as identity. Fixes bug 438. Bugfix on 0.1.0.x (which introduced
+      circuit cannibalization).
+    - When a router wasn't listed in a new networkstatus, we were leaving
+      the flags for that router alone -- meaning it remained Named,
+      Running, etc -- even though absence from the networkstatus means
+      that it shouldn't be considered to exist at all anymore. Now we
+      clear all the flags for routers that fall out of the networkstatus
+      consensus. Fixes bug 529.
+
+  o Minor bugfixes:
+    - Don't try to access (or alter) the state file when running
+      --list-fingerprint or --verify-config or --hash-password. Resolves
+      bug 499.
+    - When generating information telling us how to extend to a given
+      router, do not try to include the nickname if it is
+      absent. Resolves bug 467.
+    - Fix a user-triggerable segfault in expand_filename(). (There isn't
+      a way to trigger this remotely.)
+    - When sending a status event to the controller telling it that an
+      OR address is readable, set the port correctly. (Previously we
+      were reporting the dir port.)
+    - Fix a minor memory leak whenever a controller sends the PROTOCOLINFO
+      command. Bugfix on 0.1.2.17.
+    - When loading bandwidth history, do not believe any information in
+      the future. Fixes bug 434.
+    - When loading entry guard information, do not believe any information
+      in the future.
+    - When we have our clock set far in the future and generate an
+      onion key, then re-set our clock to be correct, we should not stop
+      the onion key from getting rotated.
+    - On some platforms, accept() can return a broken address. Detect
+      this more quietly, and deal accordingly. Fixes bug 483.
+    - It's not actually an error to find a non-pending entry in the DNS
+      cache when canceling a pending resolve. Don't log unless stuff
+      is fishy. Resolves bug 463.
+    - Don't reset trusted dir server list when we set a configuration
+      option. Patch from Robert Hogan.
+
+
 Changes in version 0.1.2.17 - 2007-08-30
   Tor 0.1.2.17 features a new Vidalia version in the Windows and OS
   X bundles. Vidalia 0.0.14 makes authentication required for the
