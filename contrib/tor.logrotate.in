@@ -7,6 +7,6 @@
 	notifempty
 	sharedscripts
 	postrotate
-		/etc/rc.d/init.d/tor reload > /dev/null
+		/etc/init.d/tor reload > /dev/null
 	endscript
 }
