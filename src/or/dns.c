@@ -377,16 +377,15 @@ purge_expired_resolves(time_t now)
                 removed ? removed->address : "NULL", (void*)remove);
       }
       tor_assert(removed == resolve);
-      if (resolve->is_reverse)
-        tor_free(resolve->result.hostname);
-      resolve->magic = 0xF0BBF0BB;
-      tor_free(resolve);
     } else {
       /* This should be in state DONE. Make sure it's not in the cache. */
       cached_resolve_t *tmp = HT_FIND(cache_map, &cache_root, resolve);
       tor_assert(tmp != resolve);
-      /* XXX020 shouldn't we be freeing 'resolve' here? */
     }
+    if (resolve->is_reverse)
+      tor_free(resolve->result.hostname);
+    resolve->magic = 0xF0BBF0BB;
+    tor_free(resolve);
   }
 
   assert_cache_ok();
@@ -708,9 +707,8 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
         tor_fragile_assert();
     }
     tor_assert(0);
-  } else if (resolve) {
-    log_warn(LD_BUG, "Found Mike's bug. Memory leak here!");
   }
+  tor_assert(!resolve);
   /* not there, need to add it */
   resolve = tor_malloc_zero(sizeof(cached_resolve_t));
   resolve->magic = CACHED_RESOLVE_MAGIC;
