@@ -312,8 +312,8 @@ dns_free_all(void)
   tor_free(resolv_conf_fname);
 }
 
-/** Remove every cached_resolve whose <b>expire</b> time is before <b>now</b>
- * from the cache. */
+/** Remove every cached_resolve whose <b>expire</b> time is before or
+ * equal to <b>now</b> from the cache. */
 static void
 purge_expired_resolves(time_t now)
 {
@@ -385,6 +385,7 @@ purge_expired_resolves(time_t now)
       /* This should be in state DONE. Make sure it's not in the cache. */
       cached_resolve_t *tmp = HT_FIND(cache_map, &cache_root, resolve);
       tor_assert(tmp != resolve);
+      /* XXX020 shouldn't we be freeing 'resolve' here? */
     }
   }
 
