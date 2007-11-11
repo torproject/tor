@@ -81,6 +81,7 @@ static config_abbrev_t _option_abbrevs[] = {
   { "NumEntryNodes", "NumEntryGuards", 0, 0},
   { "ResolvConf", "ServerDNSResolvConfFile", 0, 1},
   { "SearchDomains", "ServerDNSSearchDomains", 0, 1},
+  { "PreferTunnelledDirConns", "PreferTunneledDirConns", 0, 0},
   { NULL, NULL, 0, 0},
 };
 /* A list of state-file abbreviations, for compatibility. */
