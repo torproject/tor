@@ -707,6 +707,8 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
         tor_fragile_assert();
     }
     tor_assert(0);
+  } else if (resolve) {
+    log_warn(LD_BUG, "Found Mike's bug. Memory leak here!");
   }
   /* not there, need to add it */
   resolve = tor_malloc_zero(sizeof(cached_resolve_t));
