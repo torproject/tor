@@ -3811,7 +3811,7 @@ update_consensus_router_descriptor_downloads(time_t now)
   if (smartlist_len(no_longer_old)) {
     routerlist_t *rl = router_get_routerlist();
     log_info(LD_DIR, "%d router descriptors listed in consensus are "
-             "currently in in old_routers; making them current.",
+             "currently in old_routers; making them current.",
              smartlist_len(no_longer_old));
     SMARTLIST_FOREACH(no_longer_old, signed_descriptor_t *, sd, {
         const char *msg;
