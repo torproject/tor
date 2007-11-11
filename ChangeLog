@@ -1,4 +1,4 @@
-Changes in version 0.2.0.11-alpha - 2007-11-??
+Changes in version 0.2.0.11-alpha - 2007-11-10
   o Security fixes:
     - Exit policies now reject connections that are addressed to a
       relay's public (external) IP address too, unless
@@ -10,9 +10,10 @@ Changes in version 0.2.0.11-alpha - 2007-11-??
     - Allow people to say PreferTunnelledDirConns rather than
       PreferTunneledDirConns, for those alternate-spellers out there.
 
-  o Minor bugfixes:
-    - We weren't actually including the src/config/fallback-consensus
-      file in the tarball. Reported by phobos.
+  o Packaging fixes on 0.2.0.10-alpha:
+    - We were including instructions about what to do with the
+      src/config/fallback-consensus file, but we weren't actually
+      including it in the tarball. Disable all of that for now.
 
 
 Changes in version 0.2.0.10-alpha - 2007-11-10
