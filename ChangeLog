@@ -2,6 +2,8 @@ Changes in version 0.1.2.19 - 2007-??-??
   o Major bugfixes:
     - When the clock jumps forward a lot, do not allow the bandwidth
       buckets to become negative.  Fixes Bug 544.
+    - Fix a memory leak on exit relays; we were leaking a cached_resolve_t
+      on every successful resolve. Reported by Mike Perry.
 
 
 Changes in version 0.1.2.18 - 2007-10-28

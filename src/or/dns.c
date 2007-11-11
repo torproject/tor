@@ -409,15 +409,15 @@ purge_expired_resolves(time_t now)
                 removed ? removed->address : "NULL", (void*)remove);
       }
       tor_assert(removed == resolve);
-      if (resolve->is_reverse)
-        tor_free(resolve->result.hostname);
-      resolve->magic = 0xF0BBF0BB;
-      tor_free(resolve);
     } else {
       /* This should be in state DONE. Make sure it's not in the cache. */
       cached_resolve_t *tmp = HT_FIND(cache_map, &cache_root, resolve);
       tor_assert(tmp != resolve);
     }
+    if (resolve->is_reverse)
+      tor_free(resolve->result.hostname);
+    resolve->magic = 0xF0BBF0BB;
+    tor_free(resolve);
   }
 
   assert_cache_ok();
