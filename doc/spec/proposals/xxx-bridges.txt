@@ -122,6 +122,10 @@ Status: Open
   corresponding to a particular identity fingerprint, it will happily
   give you the latest descriptor for that fingerprint.
 
+  To become a bridge authority, add these lines to your torrc:
+    AuthoritativeDirectory 1
+    BridgeAuthoritativeDir 1
+
   Right now there's one bridge authority, running on the Tonga relay.
 
 2.1. Exporting bridge-purpose descriptors
