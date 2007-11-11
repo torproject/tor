@@ -14,28 +14,12 @@ J       - Jeff claims
         D Deferred
         X Abandoned
 
-Items blocking 0.2.0.10-alpha:
-  . Some resolution for (the reopened) bug 546.
-  - We should back out the MBTF->WFU Guard factors, since they open us
-    up to new attacks, and don't this "median" notion doesn't necessarily
-    help us distinguish between "was good enough to be a guard when
-    we picked it" and "is still adequate to be used as a guard even
-    after we've picked it". We should write a real proposal for this --
-    in 0.2.1.x.
-    - Delay the separation of flags till 0.2.1.x. -NM
-    o Let's come up with a good formula for Guard.
+Items blocking 0.2.0.11-alpha:
+  - bug 548.
 
-Here's a go:
-
-  Take the 7/8s of the Running servers that have the oldest birthdates.
-  To be a guard, you must be in this set and you must at least match the
-  median WFU of the set. In addition, anybody born more than a month ago
-  who has >=50% WFU is always a winner.
-
-For Tor 0.2.0.11-alpha:
+For Tor 0.2.0.12-alpha:
   - Put a consensus in place of the empty fallback-consensus file in
     src/config and see what breaks.
-
 
 Things we'd like to do in 0.2.0.x:
   - See also Flyspray tasks.
@@ -248,6 +232,10 @@ Nice-to-have items for 0.2.0.x, time permitting:
       test circuits. this defeats the point.
 
 Planned for 0.2.1.x:
+  - consider whether a single Guard flag lets us distinguish between
+    "was good enough to be a guard when we picked it" and "is still
+    adequate to be used as a guard even after we've picked it". We should
+    write a real proposal for this.
   - switch out privoxy in the bundles and replace it with polipo.
   - make the new tls handshake blocking-resistant.
   - figure out some way to collect feedback about what countries are using
