@@ -1,10 +1,14 @@
-Changes in version 0.2.0.11-alpha - 2007-11-10
+Changes in version 0.2.0.11-alpha - 2007-11-??
   o Security fixes:
     - Exit policies now reject connections that are addressed to a
       relay's public (external) IP address too, unless
       ExitPolicyRejectPrivate is turned off. We do this because too
       many relays are running nearby to services that trust them based
       on network address.
+
+  o Major bugfixes:
+    - Fix a memory leak on exit relays; we were leaking a cached_resolve_t
+      on every successful resolve. Reported by Mike Perry.
 
   o Minor features:
     - Allow people to say PreferTunnelledDirConns rather than
