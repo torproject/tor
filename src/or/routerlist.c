@@ -3812,7 +3812,7 @@ update_consensus_router_descriptor_downloads(time_t now)
       smartlist_add(downloadable, rs->descriptor_digest);
     });
 
-  if (smartlist_len(no_longer_old)) {
+  if (!authdir_mode(options) && smartlist_len(no_longer_old)) {
     routerlist_t *rl = router_get_routerlist();
     log_info(LD_DIR, "%d router descriptors listed in consensus are "
              "currently in old_routers; making them current.",

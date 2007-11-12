@@ -9,6 +9,13 @@ Changes in version 0.2.0.11-alpha - 2007-11-??
   o Major bugfixes:
     - Fix a memory leak on exit relays; we were leaking a cached_resolve_t
       on every successful resolve. Reported by Mike Perry.
+    - On authorities, never downgrade to old router descriptors simply
+      because they're listed in the consensus.  This created a catch-22 where
+      we wouldn't list a new descriptor because there was an old one in the
+      consensus, and we couldn't get the new one in the consensus because we
+      wouldn't list it.  Possible fix for bug 548.  (Also, this might cause
+      bug 543 to appear on authorities.  If so, we'll need a band-aid for
+      that.)
 
   o Packaging fixes on 0.2.0.10-alpha:
     - We were including instructions about what to do with the
