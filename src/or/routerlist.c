@@ -3783,6 +3783,10 @@ update_consensus_router_descriptor_downloads(time_t now)
         if (!(ri = router_get_by_digest(rs->identity_digest)) ||
             memcmp(ri->cache_info.signed_descriptor_digest,
                    sd->signed_descriptor_digest, DIGEST_LEN)) {
+          /* We have a descriptor with this digest, but either there is no
+           * entry in routerlist with the same ID (!ri), or there is one,
+           * but the identity digest differs (memcmp).
+           */
           smartlist_add(no_longer_old, sd);
           ++n_in_oldrouters; /* We have it in old_routers. */
         }
