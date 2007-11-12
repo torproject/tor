@@ -1,3 +1,8 @@
+Changes in version 0.2.0.12-alpha - 2007-11-??
+  o Compile fixes:
+    - Make it build on OpenBSD again. Patch from tup.
+
+
 Changes in version 0.2.0.11-alpha - 2007-11-12
   o Security fixes:
     - Exit policies now reject connections that are addressed to a

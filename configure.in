@@ -4,7 +4,7 @@ dnl Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson
 dnl See LICENSE for licensing information
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.2.0.11-alpha)
+AM_INIT_AUTOMAKE(tor, 0.2.0.11-alpha-dev)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
@@ -363,7 +363,10 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, struct sockaddr_storage, s
 ])
 
 AC_CHECK_TYPES([rlim_t], , ,
-[#ifdef HAVE_SYS_RESOURCE_H
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
 ])
