@@ -4472,6 +4472,7 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   if (!c || !smartlist_len(c->routerstatus_list)) {
     log_warn(LD_REND, "We don't have a consensus, so we can't perform v2 "
              "rendezvous operations.");
+    return -1;
   }
   tor_assert(id);
   start = networkstatus_vote_find_entry_idx(c, id, &found);

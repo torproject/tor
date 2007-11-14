@@ -3,6 +3,11 @@ Changes in version 0.2.0.12-alpha - 2007-11-??
     - Make it build on OpenBSD again. Patch from tup.
     - Substitute BINDIR and LOCALSTATEDIR in scripts.  Fixes packaging.
 
+  o Minor bugfixes:
+    - When we're lacking a consensus, don't try to perform rendezvous
+      operations.  (Bug spotted by Karsten)
+
+
 Changes in version 0.2.0.11-alpha - 2007-11-12
   o Security fixes:
     - Exit policies now reject connections that are addressed to a
