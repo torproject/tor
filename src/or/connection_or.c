@@ -614,6 +614,8 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
   tor_assert(conn->_base.type == CONN_TYPE_OR);
   if (!conn->tls)
     return 1; /* it's still in proxy states or something */
+  if (conn->handshake_state)
+    return conn->handshake_state->started_here;
   return !tor_tls_is_server(conn->tls);
 }
 
@@ -651,8 +653,15 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     started_here ? conn->_base.address : safe_str(conn->_base.address);
   const char *conn_type = started_here ? "outgoing" : "incoming";
   int has_cert = 0, has_identity = 0;
+  int v1 = (conn->link_proto == 1);
 
   check_no_tls_errors();
+  if (v1) {
+    has_cert = tor_tls_peer_has_cert(conn->tls);
+  } else {
+    tor_assert(conn->handshake_state);
+    has_cert = !tor_digest_is_zero(conn->handshake_state->cert_id_digest);
+  }
   has_cert = tor_tls_peer_has_cert(conn->tls);
   if (started_here && !has_cert) {
     log_info(LD_PROTOCOL,"Tried connecting to router at %s:%d, but it didn't "
@@ -665,28 +674,34 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   }
   check_no_tls_errors();
 
-  if (has_cert) {
-    int v = tor_tls_verify_v1(started_here?severity:LOG_INFO,
-                              conn->tls, &identity_rcvd);
-    if (started_here && v<0) {
-      log_fn(severity,LD_OR,"Tried connecting to router at %s:%d: It"
-             " has a cert but it's invalid. Closing.",
-             safe_address, conn->_base.port);
-      return -1;
-    } else if (v<0) {
-      log_info(LD_PROTOCOL,"Incoming connection gave us an invalid cert "
-               "chain; ignoring.");
-    } else {
-      log_debug(LD_OR,"The certificate seems to be valid on %s connection "
-                "with %s:%d", conn_type, safe_address, conn->_base.port);
+  if (v1) {
+    if (has_cert) {
+      int v = tor_tls_verify_v1(started_here?severity:LOG_INFO,
+                                conn->tls, &identity_rcvd);
+      if (started_here && v<0) {
+        log_fn(severity,LD_OR,"Tried connecting to router at %s:%d: It"
+               " has a cert but it's invalid. Closing.",
+               safe_address, conn->_base.port);
+        return -1;
+      } else if (v<0) {
+        log_info(LD_PROTOCOL,"Incoming connection gave us an invalid cert "
+                 "chain; ignoring.");
+      } else {
+        log_debug(LD_OR,"The certificate seems to be valid on %s connection "
+                  "with %s:%d", conn_type, safe_address, conn->_base.port);
+      }
+      check_no_tls_errors();
     }
-    check_no_tls_errors();
+  } else {
+    if (conn->handshake_state->authenticated &&
+        conn->handshake_state->identity_key) {
+      identity_rcvd = crypto_pk_dup_key(conn->handshake_state->identity_key);
+    }
   }
 
   if (identity_rcvd) {
     has_identity=1;
     crypto_pk_get_digest(identity_rcvd, digest_rcvd_out);
-
     if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
       conn->circ_id_type = CIRC_ID_TYPE_LOWER;
     } else {
@@ -742,6 +757,29 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
       return -1;
   }
   return 0;
+}
+
+/** DOCDOC */
+int
+connection_or_finish_or_handshake(or_connection_t *conn)
+{
+  char id_digest[DIGEST_LEN];
+  tor_assert(conn);
+  tor_assert(conn->handshake_state);
+  tor_assert(conn->link_proto >= 2);
+  tor_assert(conn->handshake_state->received_versions != 0);
+  tor_assert(conn->handshake_state->received_netinfo != 0);
+  tor_assert(conn->handshake_state->received_certs != 0);
+
+  if (connection_or_check_valid_tls_handshake(conn,
+                                  conn->handshake_state->started_here,
+                                              id_digest) < 0)
+    return -1;
+  connection_or_init_conn_from_address(conn, conn->_base.addr,
+                                       conn->_base.port, id_digest, 0);
+  if (connection_or_act_on_netinfo(conn)<0)
+    return -1;
+  return connection_or_set_state_open(conn);
 }
 
 /** The tls handshake is finished.
@@ -815,6 +853,8 @@ or_handshake_state_free(or_handshake_state_t *state)
   tor_assert(state);
   if (state->signing_key)
     crypto_free_pk_env(state->signing_key);
+  if (state->identity_key)
+    crypto_free_pk_env(state->identity_key);
   memset(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
@@ -835,6 +875,10 @@ connection_or_set_state_open(or_connection_t *conn)
       return -1;
     }
     router_set_status(conn->identity_digest, 1);
+  }
+  if (conn->handshake_state) {
+    or_handshake_state_free(conn->handshake_state);
+    conn->handshake_state = NULL;
   }
   connection_watch_events(TO_CONN(conn), EV_READ);
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
@@ -1120,8 +1164,6 @@ connection_or_send_link_auth(or_connection_t *conn)
 
   connection_or_write_cell_to_buf(&cell, conn);
 
-  /* XXXX020 at this point, as a client, we can consider ourself
-   * authenticated. */
   return 0;
 }
 

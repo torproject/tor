@@ -933,6 +933,7 @@ tor_tls_verify_certs_v2(int severity, tor_tls_t *tls,
                         const char *id_cert_str, size_t id_cert_len,
                         crypto_pk_env_t **cert_key_out,
                         char *conn_cert_digest_out,
+                        crypto_pk_env_t **id_key_out,
                         char *id_digest_out)
 {
   X509 *cert = NULL, *id_cert = NULL;
@@ -942,6 +943,7 @@ tor_tls_verify_certs_v2(int severity, tor_tls_t *tls,
 
   tor_assert(cert_key_out);
   tor_assert(conn_cert_digest_out);
+  tor_assert(id_key_out);
   tor_assert(id_digest_out);
 
   *cert_key_out = NULL;
@@ -996,13 +998,9 @@ tor_tls_verify_certs_v2(int severity, tor_tls_t *tls,
     goto done;
   }
 
-  {
-    crypto_pk_env_t *i = _crypto_new_pk_env_evp_pkey(id_pkey);
-    if (!i)
-      goto done;
-    crypto_pk_get_digest(i, id_digest_out);
-    crypto_free_pk_env(i);
-  }
+  if (!(*id_key_out = _crypto_new_pk_env_evp_pkey(id_pkey)))
+    goto done;
+  crypto_pk_get_digest(*id_key_out, id_digest_out);
   if (!(cert_pkey = X509_get_pubkey(cert)))
     goto done;
   if (!(*cert_key_out = _crypto_new_pk_env_evp_pkey(cert_pkey)))

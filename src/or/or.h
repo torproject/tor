@@ -894,6 +894,7 @@ typedef struct or_handshake_state_t {
   /* from certs */
   char cert_id_digest[DIGEST_LEN];
   crypto_pk_env_t *signing_key;
+  crypto_pk_env_t *identity_key;
 } or_handshake_state_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
@@ -2561,7 +2562,7 @@ int connection_ap_handshake_attach_circuit(edge_connection_t *conn);
 
 void command_process_cell(cell_t *cell, or_connection_t *conn);
 void command_process_var_cell(var_cell_t *cell, or_connection_t *conn);
-void connection_or_act_on_netinfo(or_connection_t *conn);
+int connection_or_act_on_netinfo(or_connection_t *conn);
 
 extern uint64_t stats_n_padding_cells_processed;
 extern uint64_t stats_n_create_cells_processed;
@@ -2781,6 +2782,7 @@ int connection_or_process_inbuf(or_connection_t *conn);
 int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
+int connection_or_finish_or_handshake(or_connection_t *conn);
 
 or_connection_t *connection_or_connect(uint32_t addr, uint16_t port,
                                     const char *id_digest);

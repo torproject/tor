@@ -67,6 +67,7 @@ int tor_tls_verify_certs_v2(int severity, tor_tls_t *tls,
                             const char *id_cert_str, size_t id_cert_len,
                             crypto_pk_env_t **cert_key_out,
                             char *conn_cert_digest_out,
+                            crypto_pk_env_t **id_key_out,
                             char *id_digest_out);
 int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);
 int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);

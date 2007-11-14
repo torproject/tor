@@ -50,11 +50,10 @@ Things we'd like to do in 0.2.0.x:
         o Generate CERT cells
         o Keep copies of X509 certs around, not necessarily associated with
           connection.
-      . LINK_AUTH cells
+      o LINK_AUTH cells
         o Code to generate
           o Remember certificate digests from TLS
         o Code to parse and check
-        - Unit tests
       - Revised handshake: TLS
         - Server checks for new cipher types, and if it finds them, sends
           only one cert and does not ask for client certs.
@@ -65,9 +64,9 @@ Things we'd like to do in 0.2.0.x:
         o If in 'handshaking' state (since v2+ conn is in use), accept
           VERSIONS and NETINFO and CERT and LINK_AUTH.
         o After we send NETINFO, send CERT and LINK_AUTH if needed.
-        - Once we get a good LINK_AUTH, the connection is OPEN.
+        o Once we get a good LINK_AUTH, the connection is OPEN.
         - Ban most cell types on a non-OPEN connection.
-        - Close connections on handshake failure.
+        o Close connections on handshake failure.
       o Make code work right wrt TLS context rotation.
       - NETINFO fallout
         - Don't extend a circuit over a noncanonical connection with

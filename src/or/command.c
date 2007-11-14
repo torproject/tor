@@ -475,18 +475,20 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   }
   if (!highest_supported_version) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Couldn't find a version in common; defaulting to v1.");
-    /*XXXX020 just break the connection! */
-    conn->link_proto = 1;
+           "Couldn't find a version in common between my version list and the "
+           "list in the VERSIONS cell; closing connection.");
+    connection_mark_for_close(TO_CONN(conn));
     return;
   }
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
   if (highest_supported_version >= 2) {
-    /*XXXX020 check return values. */
-    connection_or_send_netinfo(conn);
-    connection_or_send_cert(conn);
+    if (connection_or_send_netinfo(conn) < 0 ||
+        connection_or_send_cert(conn) < 0) {
+      connection_mark_for_close(TO_CONN(conn));
+      return;
+    }
     if (conn->handshake_state->started_here)
       connection_or_send_link_auth(conn);
   } else {
@@ -536,8 +538,8 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   cp = cell->payload + 6 + my_addr_len;
   if (cp >= end) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Address too long in netinfo cell; dropping.");
-    /*XXXX020 reject and break OR conn! */
+           "Addresses too long in netinfo cell; closing connection.");
+    connection_mark_for_close(TO_CONN(conn));
     return;
   } else if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
     conn->handshake_state->my_apparent_addr = ntohl(get_uint32(my_addr_ptr));
@@ -549,8 +551,12 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
      * "canonical." */
     uint8_t other_addr_type = (uint8_t) *cp++;
     uint8_t other_addr_len = (uint8_t) *cp++;
-    if (cp + other_addr_len >= end)
-      break; /*XXXX020 protocol warn. */
+    if (cp + other_addr_len >= end) {
+      log_fn(LOG_PROTOCOL_WARN, LD_OR,
+             "Address too long in netinfo cell; closing connection.");
+      connection_mark_for_close(TO_CONN(conn));
+      return;
+    }
     if (other_addr_type == RESOLVED_TYPE_IPV4 && other_addr_len == 4) {
       uint32_t addr = ntohl(get_uint32(cp));
       if (addr == conn->real_addr) {
@@ -568,12 +574,12 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
 /*XXXX020 move to connection_or.c */
 /** DOCDOC Called when we're done authenticating; act on stuff we
  * learned in netinfo. */
-void
+int
 connection_or_act_on_netinfo(or_connection_t *conn)
 {
   long delta;
   if (!conn->handshake_state)
-    return;
+    return -1;
 
   tor_assert(conn->handshake_state->authenticated != 0);
 
@@ -601,6 +607,8 @@ connection_or_act_on_netinfo(or_connection_t *conn)
   if (conn->handshake_state->apparently_canonical) {
     conn->is_canonical = 1;
   }
+
+  return 0;
 }
 
 /*DOCDOC*/
@@ -611,16 +619,25 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
   uint16_t conn_cert_len = 0, id_cert_len = 0;
   const char *conn_cert = NULL, *id_cert = NULL;
   const char *cp, *end;
-  int authenticated = 0;
+  int done = 0;
 
-  /*XXXX020 log messages*/
-  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING)
-    goto err;
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got CERT cell when not handshaking. "
+           "Ignoring.");
+    return;
+  }
   tor_assert(conn->handshake_state);
   if (!conn->handshake_state->received_versions ||
-      !conn->handshake_state->received_netinfo ||
-      conn->handshake_state->received_certs)
+      !conn->handshake_state->received_netinfo) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got CERT cell before VERSIONS and "
+           "NETINFO. Closing the connection.");
     goto err;
+  }
+  if (conn->handshake_state->received_certs) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got duplicate CERT cell. "
+           "Closing the connection.");
+    goto err;
+  }
 
   cp = cell->payload;
   end = cell->payload + cell->payload_len;
@@ -651,6 +668,7 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
   /* Now we have 0, 1, or 2 certs. */
   if (n_certs == 0) {
     /* The other side is unauthenticated. */
+    done = 1;
   } else {
     int r;
     r = tor_tls_verify_certs_v2(LOG_PROTOCOL_WARN, conn->tls,
@@ -660,23 +678,27 @@ command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
                                 (conn->handshake_state->started_here ?
                                  conn->handshake_state->server_cert_digest :
                                  conn->handshake_state->client_cert_digest),
+                                &conn->handshake_state->identity_key,
                                 conn->handshake_state->cert_id_digest);
     if (r < 0)
       goto err;
-    if (r == 1)
-      authenticated = 1;
+    if (r == 1) {
+      done = 1;
+      conn->handshake_state->authenticated = 1;
+    }
   }
 
   conn->handshake_state->received_certs = 1;
-  if (authenticated) {
-    /* XXXX020 make the connection open. */
+  if (done) {
+    if (connection_or_finish_or_handshake(conn) < 0)
+      goto err;
   }
   if (! conn->handshake_state->signing_key)
     goto err;
 
   return;
  err:
-  /*XXXX020 close the connection */;
+  connection_mark_for_close(TO_CONN(conn));
 }
 
 #define LINK_AUTH_STRING "Tor initiator certificate verification"
@@ -746,11 +768,12 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
     goto err;
   }
 
-  /* Okay, we're authenticated. */
   s->authenticated = 1;
 
-  /* XXXX020 act on being authenticated: Open the connection. */
+  if (connection_or_finish_or_handshake(conn)<0)
+    goto err;
 
+  tor_free(checked);
   return;
  err:
   tor_free(checked);
