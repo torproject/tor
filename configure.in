@@ -620,6 +620,11 @@ AC_SUBST(CONFDIR)
 AH_TEMPLATE([CONFDIR],[tor's configuration directory])
 AC_DEFINE_UNQUOTED(CONFDIR,"$CONFDIR")
 
+BINDIR=`eval echo $bindir`
+AC_SUBST(BINDIR)
+LOCALSTATEDIR=`eval echo $localstatedir`
+AC_SUBST(LOCALSTATEDIR)
+
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
 if test $ac_cv_c_compiler_gnu = yes; then

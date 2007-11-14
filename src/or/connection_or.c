@@ -456,6 +456,9 @@ connection_or_get_by_identity_digest(const char *digest)
       continue; /* avoid non-open conns if we can */
     newer = best->_base.timestamp_created < conn->_base.timestamp_created;
 
+    if (best->is_canonical && !conn->is_canonical)
+      continue; /* A canonical connection is best. */
+
     if (!best->_base.or_is_obsolete && conn->_base.or_is_obsolete)
       continue; /* We never prefer obsolete over non-obsolete connections. */
 
@@ -763,7 +766,6 @@ connection_tls_finish_handshake(or_connection_t *conn)
   directory_set_dirty();
 
   if (tor_tls_used_v1_handshake(conn->tls)) {
-
     conn->link_proto = 1;
     if (connection_or_check_valid_tls_handshake(conn, started_here,
                                                 digest_rcvd) < 0)
