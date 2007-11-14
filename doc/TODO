@@ -72,8 +72,8 @@ Things we'd like to do in 0.2.0.x:
         - Don't extend a circuit over a noncanonical connection with
           mismatched address.
         - Learn our outgoing IP address from netinfo cells?
-      - Protocol revision.
-        - Earliest stages of 110 (infinite-length) in v2 protocol:
+      o Protocol revision.
+        o Earliest stages of 110 (infinite-length) in v2 protocol:
           add support for RELAY_EARLY.
   o Before the feature freeze: (Roger)
     o Make tunnelled dir conns use begin_dir if enabled

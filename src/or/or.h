@@ -659,6 +659,7 @@ typedef enum {
 #define CELL_NETINFO 8
 #define CELL_CERT 9
 #define CELL_LINK_AUTH 10
+#define CELL_RELAY_EARLY 11 /*DOCDOC*/
 
 #define CELL_COMMAND_IS_VAR_LENGTH(x) \
   ((x) == CELL_CERT || (x) == CELL_VERSIONS)

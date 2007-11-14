@@ -136,6 +136,7 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
       PROCESS_CELL(created, cell, conn);
       break;
     case CELL_RELAY:
+    case CELL_RELAY_EARLY:
       ++stats_n_relay_cells_processed;
       PROCESS_CELL(relay, cell, conn);
       break;
