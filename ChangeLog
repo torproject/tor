@@ -8,6 +8,8 @@ Changes in version 0.2.0.12-alpha - 2007-11-??
       operations.  (Bug spotted by Karsten)
     - Fix a small memory leak whenever we decide against using a
       newly picked entry guard. Reported by Mike Perry.
+    - Changing the ExitPolicyRejectPrivate setting should cause us to
+      rebuild the descriptor.
 
   o Minor features:
     - When we negotiate a v2 OR connection (not yet implemented), accept

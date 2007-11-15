@@ -3189,6 +3189,7 @@ options_transition_affects_descriptor(or_options_t *old_options,
       !opt_streq(old_options->Nickname,new_options->Nickname) ||
       !opt_streq(old_options->Address,new_options->Address) ||
       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
+      old_options->ExitPolicyRejectPrivate != new_options->ExitPolicyRejectPrivate ||
       old_options->ORPort != new_options->ORPort ||
       old_options->DirPort != new_options->DirPort ||
       old_options->ClientOnly != new_options->ClientOnly ||
