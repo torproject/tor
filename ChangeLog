@@ -5,6 +5,10 @@ Changes in version 0.1.2.19 - 2007-??-??
     - Fix a memory leak on exit relays; we were leaking a cached_resolve_t
       on every successful resolve. Reported by Mike Perry.
 
+  o Minor bugfixes:
+    - Changing the ExitPolicyRejectPrivate setting should cause us to
+      rebuild our server descriptor.
+
 
 Changes in version 0.1.2.18 - 2007-10-28
   Tor 0.1.2.18 fixes many problems including crash bugs, problems with
