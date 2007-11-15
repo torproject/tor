@@ -6,11 +6,14 @@ Changes in version 0.2.0.12-alpha - 2007-11-??
   o Minor bugfixes:
     - When we're lacking a consensus, don't try to perform rendezvous
       operations.  (Bug spotted by Karsten)
+    - Fix a small memory leak whenever we decide against using a
+      newly picked entry guard. Reported by Mike Perry.
 
   o Minor features:
     - When we negotiate a v2 OR connection (not yet implemented), accept
       RELAY_EARLY cells and turn them into RELAY cells if we've negotiated
       a v1 connection.  Initial code for proposal 110.
+
 
 Changes in version 0.2.0.11-alpha - 2007-11-12
   o Security fixes:

@@ -2281,7 +2281,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
                "Removing from the list. %d/%d entry guards usable/new.",
                entry->nickname, buf,
                num_live_entry_guards()-1, smartlist_len(entry_guards)-1);
-      tor_free(entry);
+      entry_guard_free(entry);
       smartlist_del_keeporder(entry_guards, idx);
       log_entry_guards(LOG_INFO);
       changed = 1;
@@ -2291,6 +2291,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
       entry->unreachable_since = entry->last_attempted = now;
       control_event_guard(entry->nickname, entry->identity, "DOWN");
       changed = 1;
+      entry->can_retry = 0; /* We gave it an early chance; no good. */
     } else {
       char tbuf[ISO_TIME_LEN+1];
       format_iso_time(tbuf, entry->unreachable_since);
@@ -2298,9 +2299,8 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
                 "'%s' (%s).  It has been unreachable since %s.",
                 entry->nickname, buf, tbuf);
       entry->last_attempted = now;
-    }
-    if (entry)
       entry->can_retry = 0; /* We gave it an early chance; no good. */
+    }
   }
 
   if (first_contact) {
