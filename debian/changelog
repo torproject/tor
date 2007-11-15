@@ -1,3 +1,11 @@
+tor (0.2.0.11-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * remove 12_r12235_do_not_crash_when_myfamily_is_set again, it's
+    now part of upstream.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 15 Nov 2007 11:07:06 +0100
+
 tor (0.2.0.9-alpha-2) experimental; urgency=low
 
   * Do not separate required lsb facilities with commas in the
