@@ -1330,7 +1330,7 @@ typedef struct routerstatus_t {
   unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
   unsigned int is_unnamed:1; /**< True iff "nickname" belongs to another
                               * router. */
-  unsigned int is_valid:1; /**< True iff this router is validated. */
+  unsigned int is_valid:1; /**< True iff this router isn't invalid. */
   unsigned int is_v2_dir:1; /**< True iff this router can serve directory
                              * information with v2 of the directory
                              * protocol. (All directory caches cache v1
@@ -1341,8 +1341,8 @@ typedef struct routerstatus_t {
                                * an exit node. */
   unsigned int is_bad_directory:1; /**< Do we think this directory is junky,
                                     * underpowered, or otherwise useless? */
-  unsigned int is_hs_dir:1; /** True iff this router is a hidden service
-                             * directory. */
+  unsigned int is_hs_dir:1; /** True iff this router is a v2-or-later hidden
+                             * service directory. */
   /** True iff we know version info for this router. (i.e., a "v" entry was
    * included.)  We'll replace all these with a big tor_version_t or a char[]
    * if the number of traits we care about ever becomes incredibly big. */
