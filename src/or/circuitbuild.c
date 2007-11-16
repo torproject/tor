@@ -2945,6 +2945,7 @@ fetch_bridge_descriptors(time_t now)
   or_options_t *options = get_options();
   int num_bridge_auths = get_n_authorities(BRIDGE_AUTHORITY);
   int ask_bridge_directly;
+  int can_use_bridge_authority;
 
   if (!bridge_list)
     return;
@@ -2960,9 +2961,10 @@ fetch_bridge_descriptors(time_t now)
       in.s_addr = htonl(bridge->addr);
       tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
 
-      ask_bridge_directly = tor_digest_is_zero(bridge->identity) ||
-                            !options->UpdateBridgesFromAuthority ||
-                            !num_bridge_auths;
+      can_use_bridge_authority = !tor_digest_is_zero(bridge->identity) &&
+                                 num_bridge_auths;
+      ask_bridge_directly = !can_use_bridge_authority ||
+                            !options->UpdateBridgesFromAuthority;
       log_debug(LD_DIR, "ask_bridge_directly=%d (%d, %d, %d)",
                 ask_bridge_directly, tor_digest_is_zero(bridge->identity),
                 !options->UpdateBridgesFromAuthority, !num_bridge_auths);
@@ -2971,9 +2973,9 @@ fetch_bridge_descriptors(time_t now)
           !fascist_firewall_allows_address_or(bridge->addr, bridge->port)) {
         log_notice(LD_DIR, "Bridge at '%s:%d' isn't reachable by our "
                    "firewall policy. %s.", address_buf, bridge->port,
-                   num_bridge_auths ? "Asking bridge authority instead" :
-                                      "Skipping");
-        if (num_bridge_auths)
+                   can_use_bridge_authority ?
+                     "Asking bridge authority instead" : "Skipping");
+        if (can_use_bridge_authorit)
           ask_bridge_directly = 0;
         else
           continue;
