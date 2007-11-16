@@ -3565,7 +3565,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
     } else {
       should_delay = (last_routerdesc_download_attempted +
                       MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
-      if (!should_delay) {
+      if (!should_delay && n_downloadable) {
         if (last_routerdesc_download_attempted) {
           log_info(LD_DIR,
                    "There are not many downloadable routerdescs, but we've "
