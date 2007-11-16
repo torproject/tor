@@ -16,6 +16,9 @@ Changes in version 0.2.0.12-alpha - 2007-11-??
       the bridge authority could help us (for example, we don't know
       a digest, or there is no bridge authority), don't be so eager to
       fall back to asking the bridge authority.
+    - If we're using bridges or have strictentrynodes set, and our
+      chosen exit is in the same family as all our bridges/entry guards,
+      then be flexible about families.
 
   o Minor features:
     - When we negotiate a v2 OR connection (not yet implemented), accept

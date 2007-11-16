@@ -2443,10 +2443,12 @@ choose_random_entry(cpath_build_state_t *state)
   routerinfo_t *r = NULL;
   int need_uptime = state ? state->need_uptime : 0;
   int need_capacity = state ? state->need_capacity : 0;
+  int consider_exit_family = 0;
 
   if (chosen_exit) {
     smartlist_add(exit_family, chosen_exit);
     routerlist_add_family(exit_family, chosen_exit);
+    consider_exit_family = 1;
   }
 
   if (!entry_guards)
@@ -2465,7 +2467,7 @@ choose_random_entry(cpath_build_state_t *state)
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       r = entry_is_live(entry, need_uptime, need_capacity, 0);
-      if (r && !smartlist_isin(exit_family, r)) {
+      if (r && (!consider_exit_family || !smartlist_isin(exit_family, r))) {
         smartlist_add(live_entry_guards, r);
         if (!entry->made_contact) {
           /* Always start with the first not-yet-contacted entry
@@ -2502,6 +2504,13 @@ choose_random_entry(cpath_build_state_t *state)
     if (!r && need_capacity) {
       /* still no? last attempt, try without requiring capacity */
       need_capacity = 0;
+      goto retry;
+    }
+    if (!r && !can_grow_entry_list(options) && consider_exit_family) {
+      /* still no? if we're using bridges or have strictentrynodes
+       * set, and our chosen exit is in the same family as all our
+       * bridges/entry guards, then be flexible about families. */
+      consider_exit_family = 0;
       goto retry;
     }
     /* live_entry_guards may be empty below. Oh well, we tried. */
