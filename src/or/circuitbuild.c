@@ -2975,7 +2975,7 @@ fetch_bridge_descriptors(time_t now)
                    "firewall policy. %s.", address_buf, bridge->port,
                    can_use_bridge_authority ?
                      "Asking bridge authority instead" : "Skipping");
-        if (can_use_bridge_authorit)
+        if (can_use_bridge_authority)
           ask_bridge_directly = 0;
         else
           continue;
