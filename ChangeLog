@@ -10,6 +10,8 @@ Changes in version 0.2.0.12-alpha - 2007-11-??
       newly picked entry guard. Reported by Mike Perry.
     - Changing the ExitPolicyRejectPrivate setting should cause us to
       rebuild the descriptor.
+    - When picking v2 hidden service directories, don't pick ones that
+      aren't listed as Running.
 
   o Minor features:
     - When we negotiate a v2 OR connection (not yet implemented), accept

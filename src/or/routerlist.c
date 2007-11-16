@@ -4480,7 +4480,7 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   i = start;
   do {
     routerstatus_t *r = smartlist_get(c->routerstatus_list, i);
-    if (r->is_hs_dir) {
+    if (r->is_hs_dir && r->is_running) {
       smartlist_add(responsible_dirs, r);
       if (++n_added == REND_NUMBER_OF_CONSECUTIVE_REPLICAS)
         return 0;
