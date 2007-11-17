@@ -6,6 +6,9 @@ Changes in version 0.2.0.13-alpha - 2007-11-??
 
 
 Changes in version 0.2.0.12-alpha - 2007-11-16
+  This twelfth development snapshot fixes some more build problems as
+  well as a few minor bugs.
+
   o Compile fixes:
     - Make it build on OpenBSD again. Patch from tup.
     - Substitute BINDIR and LOCALSTATEDIR in scripts. Fixes
@@ -42,6 +45,11 @@ Changes in version 0.2.0.12-alpha - 2007-11-16
 
 
 Changes in version 0.2.0.11-alpha - 2007-11-12
+  This eleventh development snapshot fixes some build problems with
+  the previous snapshot. It also includes a more secure-by-default exit
+  policy for relays, fixes an enormous memory leak for exit relays, and
+  fixes another bug where servers were falling out of the directory list.
+
   o Security fixes:
     - Exit policies now reject connections that are addressed to a
       relay's public (external) IP address too, unless
@@ -77,6 +85,13 @@ Changes in version 0.2.0.11-alpha - 2007-11-12
 
 
 Changes in version 0.2.0.10-alpha - 2007-11-10
+  This tenth development snapshot adds a third v3 directory authority
+  run by Mike Perry, adds most of Karsten Loesing's new hidden service
+  descriptor format, fixes a bad crash bug and new bridge bugs introduced
+  in 0.2.0.9-alpha, fixes many bugs with the v3 directory implementation,
+  fixes some minor memory leaks in previous 0.2.0.x snapshots, and
+  addresses many more minor issues.
+
   o New directory authorities:
     - Set up ides (run by Mike Perry) as the third v3 directory authority.
 
