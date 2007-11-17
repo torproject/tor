@@ -10,8 +10,12 @@ Changes in version 0.2.0.12-alpha - 2007-11-??
       newly picked entry guard. Reported by Mike Perry.
     - Changing the ExitPolicyRejectPrivate setting should cause us to
       rebuild the descriptor.
-    - When picking v2 hidden service directories, don't pick ones that
-      aren't listed as Running.
+    - When authorities detected more than two relays running on the same
+      IP address, they were clearing all the status flags but forgetting
+      to clear the "hsdir" flag. So clients were being told that a
+      given relay was the right choice for a v2 hsdir lookup, yet they
+      never had its descriptor because it was marked as 'not running'
+      in the consensus.
     - If we're trying to fetch a bridge descriptor and there's no way
       the bridge authority could help us (for example, we don't know
       a digest, or there is no bridge authority), don't be so eager to
