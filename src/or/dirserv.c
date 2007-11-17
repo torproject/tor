@@ -1537,9 +1537,12 @@ dirserv_thinks_router_is_unreliable(time_t now,
   return 0;
 }
 
-/** Return true if <b>router</b> has an uptime of at least
- * <b>__MinUptimeHidServDirectoryV2</b> and is reachable in the last
- * REND_HS_DIR_REACHABLE_TIMEOUT seconds, else false.
+/** Return true iff <b>router</b> should be assigned the "HSDir" flag.
+ * Right now this means it advertises support for it, it has a high
+ * uptime, and it's currently considered Running.
+ *
+ * This function needs to be called after router->is_running has
+ * been set.
  */
 static int
 dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
@@ -1548,8 +1551,7 @@ dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
 
   return (router->wants_to_be_hs_dir &&
           uptime > get_options()->__MinUptimeHidServDirectoryV2 &&
-          ((router_is_me(router) && !we_are_hibernating()) ||
-           (now < router->last_reachable + REND_HS_DIR_REACHABLE_TIMEOUT)));
+          router->is_running);
 }
 
 /** Look through the routerlist, and assign the median uptime of running valid

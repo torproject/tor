@@ -608,10 +608,6 @@ typedef enum {
  * in the ring) for a descriptor. */
 #define REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS 2
 
-/** Maximum time that an onion router may not respond unless taken
- * from the list of hidden service directories. */
-#define REND_HS_DIR_REACHABLE_TIMEOUT (45*60)
-
 /** Number of consecutive replicas for a descriptor. */
 #define REND_NUMBER_OF_CONSECUTIVE_REPLICAS 3
 
