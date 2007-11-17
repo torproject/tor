@@ -1,15 +1,16 @@
-Changes in version 0.2.0.12-alpha - 2007-11-??
+Changes in version 0.2.0.12-alpha - 2007-11-16
   o Compile fixes:
     - Make it build on OpenBSD again. Patch from tup.
-    - Substitute BINDIR and LOCALSTATEDIR in scripts.  Fixes packaging.
+    - Substitute BINDIR and LOCALSTATEDIR in scripts. Fixes
+      package-building for Red Hat, OS X, etc.
 
   o Minor bugfixes:
     - When we're lacking a consensus, don't try to perform rendezvous
-      operations.  (Bug spotted by Karsten)
+      operations. Reported by Karsten Loesing.
     - Fix a small memory leak whenever we decide against using a
       newly picked entry guard. Reported by Mike Perry.
     - Changing the ExitPolicyRejectPrivate setting should cause us to
-      rebuild the descriptor.
+      rebuild our server descriptor.
     - When authorities detected more than two relays running on the same
       IP address, they were clearing all the status flags but forgetting
       to clear the "hsdir" flag. So clients were being told that a
@@ -25,9 +26,10 @@ Changes in version 0.2.0.12-alpha - 2007-11-??
       then be flexible about families.
 
   o Minor features:
-    - When we negotiate a v2 OR connection (not yet implemented), accept
-      RELAY_EARLY cells and turn them into RELAY cells if we've negotiated
-      a v1 connection.  Initial code for proposal 110.
+    - When we negotiate a v2 link-layer connection (not yet implemented),
+      accept RELAY_EARLY cells and turn them into RELAY cells if we've
+      negotiated a v1 connection for their next step. Initial code for
+      proposal 110.
 
 
 Changes in version 0.2.0.11-alpha - 2007-11-12

@@ -14,12 +14,10 @@ J       - Jeff claims
         D Deferred
         X Abandoned
 
-Items blocking 0.2.0.11-alpha:
-  - bug 548.
-
-For Tor 0.2.0.12-alpha:
+For Tor 0.2.0.13-alpha:
   - Put a consensus in place of the empty fallback-consensus file in
     src/config and see what breaks.
+  - let bridges set relaybandwidthrate as low as 5kb
 
 Things we'd like to do in 0.2.0.x:
   - See also Flyspray tasks.

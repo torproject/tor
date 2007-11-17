@@ -2888,9 +2888,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
       *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
-    if (options->RelayBandwidthRate > options->RelayBandwidthBurst)
-      REJECT("RelayBandwidthBurst must be at least equal "
-             "to RelayBandwidthRate.");
     if (options->RelayBandwidthRate &&
       options->RelayBandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
       r = tor_snprintf(buf, sizeof(buf),
@@ -2902,6 +2899,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
       return -1;
     }
   }
+
+  if (options->RelayBandwidthRate > options->RelayBandwidthBurst)
+    REJECT("RelayBandwidthBurst must be at least equal "
+           "to RelayBandwidthRate.");
 
   if (options->BandwidthRate > options->BandwidthBurst)
     REJECT("BandwidthBurst must be at least equal to BandwidthRate.");
@@ -3189,7 +3190,8 @@ options_transition_affects_descriptor(or_options_t *old_options,
       !opt_streq(old_options->Nickname,new_options->Nickname) ||
       !opt_streq(old_options->Address,new_options->Address) ||
       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
-      old_options->ExitPolicyRejectPrivate != new_options->ExitPolicyRejectPrivate ||
+      old_options->ExitPolicyRejectPrivate !=
+        new_options->ExitPolicyRejectPrivate ||
       old_options->ORPort != new_options->ORPort ||
       old_options->DirPort != new_options->DirPort ||
       old_options->ClientOnly != new_options->ClientOnly ||
