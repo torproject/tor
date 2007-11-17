@@ -2241,7 +2241,7 @@ generate_v2_networkstatus_opinion(void)
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
         rs.is_authority = rs.is_exit = rs.is_stable = rs.is_fast =
           rs.is_running = rs.is_named = rs.is_valid = rs.is_v2_dir =
-          rs.is_possible_guard = 0;
+          rs.is_hs_dir = rs.is_possible_guard = 0;
       }
 
       if (routerstatus_format_entry(outp, endp-outp, &rs, version, 0)) {

@@ -1,16 +1,25 @@
+Changes in version 0.2.0.13-alpha - 2007-11-??
+  o Minor bugfixes:
+    - The fix in 0.2.0.12-alpha cleared the "hsdir" flag in v3 network
+      consensus documents when there are too many relays at a single
+      IP address. Now clear it in v2 network status documents too.
+
+
 Changes in version 0.2.0.12-alpha - 2007-11-16
   o Compile fixes:
     - Make it build on OpenBSD again. Patch from tup.
     - Substitute BINDIR and LOCALSTATEDIR in scripts. Fixes
       package-building for Red Hat, OS X, etc.
 
-  o Minor bugfixes:
+  o Minor bugfixes (on 0.1.2.x):
+    - Changing the ExitPolicyRejectPrivate setting should cause us to
+      rebuild our server descriptor.
+
+  o Minor bugfixes (on 0.2.0.x):
     - When we're lacking a consensus, don't try to perform rendezvous
       operations. Reported by Karsten Loesing.
     - Fix a small memory leak whenever we decide against using a
       newly picked entry guard. Reported by Mike Perry.
-    - Changing the ExitPolicyRejectPrivate setting should cause us to
-      rebuild our server descriptor.
     - When authorities detected more than two relays running on the same
       IP address, they were clearing all the status flags but forgetting
       to clear the "hsdir" flag. So clients were being told that a
@@ -38,7 +47,7 @@ Changes in version 0.2.0.11-alpha - 2007-11-12
       relay's public (external) IP address too, unless
       ExitPolicyRejectPrivate is turned off. We do this because too
       many relays are running nearby to services that trust them based
-      on network address.
+      on network address. Bugfix on 0.1.2.x.
 
   o Major bugfixes:
     - Fix a memory leak on exit relays; we were leaking a cached_resolve_t
@@ -64,7 +73,7 @@ Changes in version 0.2.0.11-alpha - 2007-11-12
   o Minor bugfixes:
     - Don't reevaluate all the information from our consensus document
       just because we've downloaded a v2 networkstatus that we intend
-      to cache. Fixes bug 545.
+      to cache. Fixes bug 545; bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.0.10-alpha - 2007-11-10
