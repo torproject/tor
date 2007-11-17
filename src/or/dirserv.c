@@ -1909,8 +1909,6 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   }
   rs->is_bad_exit = listbadexits && ri->is_bad_exit;
   ri->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, now);
-  if (get_options()->__ConsiderAllRoutersAsHidServDirectories)
-    ri->is_hs_dir = 1; /* Override real value. */
   rs->is_hs_dir = ri->is_hs_dir;
   /* 0.1.1.9-alpha is the first version to support fetch by descriptor
    * hash. */

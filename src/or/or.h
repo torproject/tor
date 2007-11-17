@@ -2092,8 +2092,6 @@ typedef struct {
    * them at some point, since I think C says that identifiers beginning with
    * __ are implementation-reserved or something. */
   int __MinUptimeHidServDirectoryV2; /**< Accept hs dirs after what time? */
-  int __ConsiderAllRoutersAsHidServDirectories; /**< Consider all routers as
-                                                 * hidden service dirs? */
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */
