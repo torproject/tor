@@ -586,6 +586,8 @@ router_rebuild_store(int force, desc_store_t *store)
                    "okay if we're just starting up after a long time. "
                    "Otherwise, it's a bug.",
                    fname);
+        /* XXX020 should we reduce the severity of the above log
+         * message? I don't think we see it much in practice. -RD */
       }
     } else {
       log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
