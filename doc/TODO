@@ -211,16 +211,18 @@ N   - Hack up a client that gives out weird/no certificates, so we can
     . Finish path-spec.txt
 
 P - Packaging:
-P   - Can we switch to polipo? 
-P    - Make documentation realize that location of system configuration file
-      will depend on location of system defaults, and isn't always /etc/torrc.
+P - Plan a switch to polipo.  Perhaps we'll offer two http proxies in
+    the future.
+P - Make documentation realize that location of system configuration file
+    will depend on location of system defaults, and isn't always /etc/torrc.
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
   - Create packages for Nokia 800, requested by Chris Soghoian
 P - Consider creating special Tor-Polipo-Vidalia test packages,
     requested by Dmitri Vitalev
   o Get Vidalia supporting protocolinfo and using auth by default.
-P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton
-  bundle
+P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
+P - Flyspray 487, create a universal binary privoxy for inclusion in
+    packages.
 
 Nice-to-have items for 0.2.0.x, time permitting:
   - Low-priority bugs:
@@ -525,11 +527,11 @@ NR  - write a spec appendix for 'being nice with tor'
     - Specify the keys and key rotation schedules and stuff
   - Mention controller libs someplace.
   - Remove need for HACKING file.
-P - document http://wiki.noreply.org/noreply/TheOnionRouter/TransparentProxy on freebsd and osx
+  - document http://wiki.noreply.org/noreply/TheOnionRouter/TransparentProxy on freebsd and osx
 P - figure out why x86_64 won't build rpms from tor.spec
 P - figure out spec files for bundles of vidalia-tor-polipo
 P - figure out polipo install scripts for bundles of vidalia-tor-polipo on osx, win32
-P - figure out selinux policy for tor
+  - figure out selinux policy for tor
 P - change packaging system to more automated and specific for each
      platform, suggested by Paul Wouter
 P - Setup repos for redhat and suse rpms & start signing the rpms the
@@ -555,6 +557,8 @@ P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
     tor-related tools you can use, and what they give you, and how well they
     work.  Right now, we don't give a lot of guidance wrt
     torbutton/foxproxy/privoxy/polipo in any consistent place.
+P - create a 'blog badge' for tor fans to link to and feature on their
+    blogs. A sample can be found at http://interloper.org/tmp/tor/tor-button.png
 
   - Tor mirrors
     - make a mailing list with the mirror operators
