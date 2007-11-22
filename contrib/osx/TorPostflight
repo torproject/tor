@@ -46,7 +46,7 @@ TORGROUP=daemon
 TARGET=$2/Library/Tor
 TORDIR=$TARGET/var/lib/tor
 LOGFILE=/var/log/tor.log
-TORBUTTON_VERSION="1.1.9.1-alpha"
+TORBUTTON_VERSION="1.1.11-alpha"
 
 # Check defaults for TARGET
 if [ "$TARGET" == "//Library/Tor" ]; then
