@@ -484,7 +484,7 @@ static config_var_description_t options_description[] = {
     "and servers." },
   { "ORListenAddress", "Bind to this address to listen for connections from "
     "clients and servers, instead of the default 0.0.0.0:ORPort." },
-  { "PublishServerDescriptor", "Set to \"\" to keep the server from "
+  { "PublishServerDescriptor", "Set to 0 to keep the server from "
     "uploading info to the directory authorities." },
   /*{ "RedirectExit", "When an outgoing connection tries to connect to a "
    *"given address, redirect it to another address instead." },
