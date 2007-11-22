@@ -3,6 +3,9 @@ Changes in version 0.2.0.13-alpha - 2007-11-??
     - The fix in 0.2.0.12-alpha cleared the "hsdir" flag in v3 network
       consensus documents when there are too many relays at a single
       IP address. Now clear it in v2 network status documents too.
+    - Don't crash if we get an unexpected value for the
+      PublishServerDescriptor config option. Reported by Matt Edman;
+      bugfix on 0.2.0.9-alpha.
 
 
 Changes in version 0.2.0.12-alpha - 2007-11-16
