@@ -47,6 +47,7 @@ Proposals by number:
 122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [OPEN]
 124  Blocking resistant TLS certificate usage [ACCEPTED]
+125  Behavior for bridge users, bridge relays, and bridge authorities [OPEN]
 
 
 Proposals by status:
@@ -61,6 +62,7 @@ Proposals by status:
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
    123  Naming authorities automatically create bindings
+   125  Behavior for bridge users, bridge relays, and bridge authorities
  ACCEPTED:
    105  Version negotiation for the Tor protocol
    124  Blocking resistant TLS certificate usage
