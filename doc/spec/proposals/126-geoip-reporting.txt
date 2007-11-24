@@ -1,0 +1,124 @@
+Filename: 126-geoip-fetching.txt
+Title: Fetching GeoIP databases for clients, relays, and bridges
+Version: $Revision: 11988 $
+Last-Modified: $Date: 2007-10-16 12:59:42 -0400 (Tue, 16 Oct 2007) $
+Author: Roger Dingledine
+Created: 2007-11-24
+Status: Open
+
+1. Background and motivation
+
+  Right now we can keep a rough count of Tor users, both total and by
+  country, by watching connections to a single directory mirror. Being
+  able to get usage estimates is useful both for our funders (to
+  demonstrate progress) and for our own development (so we know how
+  quickly we're scaling and can design accordingly, and so we know which
+  countries and communities to focus on more). This need for information
+  is the only reason we haven't deployed "directory guards" (think of
+  them like entry guards but for directory information; in practice,
+  it would seem that Tor clients should simply use their entry guards
+  as their directory guards).
+
+  With the move toward bridges, we will no longer be able to track Tor
+  clients that use bridges, since they use their bridges as directory
+  guards. Further, we need to be able to learn which bridges stop seeing
+  use from certain countries (and are thus likely blocked), so we can
+  avoid giving them out to other users in those countries.
+
+  Right now we support GeoIP lookups through Vidalia: Vidalia draws relays
+  and circuits on its 'network map', and it performs anonymized GeoIP
+  lookups to its central servers to know where to put the dots. Vidalia
+  caches answers it gets -- to reduce delay, to reduce overhead on
+  the network, and to reduce anonymity issues where users reveal their
+  behavior through which IP addresses they ask about.
+
+  But with the advent of bridges, Tor clients are asking about IP
+  addresses that aren't in the main directory. In particular, bridge
+  users tell the central Vidalia servers about each bridge as they
+  discover it and their Vidalia tries to map it.
+
+  Also, we wouldn't mind letting Vidalia do a GeoIP lookup on the client's
+  own IP address, so it can provide a more useful map.
+
+  Also, Vidalia's central servers leave users open to partitioning
+  attacks, even if they can't target specific users. Further, as we
+  start using GeoIP results for more operational or security-relevant
+  goals, such as avoiding or including particular countries in circuits,
+  it becomes more important that users can't be singled out in terms of
+  their IP-to-country mapping beliefs.
+
+  This proposal describes a way for Tor relays, bridges, and clients to
+  download a local copy of a GeoIP database, so they can do local private
+  queries. Thus we can avoid sending detailed queries to central servers.
+
+2. Publishing and caching the GeoIP database
+
+  We assume that we use a free GeoIP db, like ip2country. We will need
+  to standardize on its format; see Section 5.
+
+  Each v3 directory authority should put a copy of the "geoip" file in
+  its datadirectory. Then its votes should include a hash of this file,
+  and the resulting consensus directory should specify the consensus hash.
+
+  There should be a new URL for fetching this geoip db (by "current.z"
+  for testing purposes, and by hash.z for typical downloads). Authorities
+  should fetch and serve the one listed in the consensus, even when they
+  vote for their own. This would argue for storing the cached version
+  in a better filename than "geoip".
+
+  Directory mirrors should keep a copy of this file available via the
+  same URLs.
+
+  We assume that the file would change at most a few times a month. Should
+  Tor ship with a bootstrap geoip file?
+
+3. Clients use it for Vidalia
+
+  Tor fetches the geoip file as above, and puts it in Tor's DataDirectory.
+  Then we could have a status event that tells controllers that a new
+  geoip file has arrived.
+
+  Then Vidalia would either read the file directly, or we would add
+  a control protocol interface for querying. Since Tor probably needs
+  to parse the file itself (see Section 4 below), offering the control
+  interface is probably cleanest.
+
+  There should be a config option to disable updating the geoip file,
+  in case users want to use their own file (e.g. they have a proprietary
+  GeoIP file they prefer to use). In that case we leave it up to the
+  user to update his geoip file out-of-band.
+
+4. Bridges use it for usage summaries
+
+  Once bridges have a GeoIP database locally, they can start to publish
+  sanitized summaries of client usage -- how many users they see and from
+  what countries. This might also be a more useful way for ordinary Tor
+  relays to convey the level of usage they see.
+
+  But how to safely summarize this information without opening too many
+  anonymity leaks seems hard, so I'm going to leave it for a different
+  proposal.
+
+5. Which db to use?
+
+  A recent ip-to-country.csv is 3421362 bytes. Compressed, it is 564252
+  bytes. This isn't so bad. But we can easily cut it down further; some
+  sample lines are:
+    "205500992","208605279","US","USA","UNITED STATES"
+    "208605280","208605311","CA","CAN","CANADA"
+    "208605312","210784255","US","USA","UNITED STATES"
+  My guess is the compression will solve most of the redundancy, so we
+  can stick with the default format.
+  http://ip-to-country.webhosting.info/node/view/5
+
+  The maxmind GeoLite Country database is also about 500KB compressed.
+  http://www.maxmind.com/app/geolitecountry
+
+  The maxmind GeoLite City database gives more finegrained detail, such
+  as geo coordinates and city name. Vidalia currently makes use of this
+  information. On the other hand it's 16MB compressed, which would seem
+  to be out of our reach.
+  http://www.maxmind.com/app/geolitecity
+
+  What other options are there?
+

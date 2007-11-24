@@ -1,4 +1,4 @@
-Filename: xxx-autonaming.txt
+Filename: 123-autonaming.txt
 Title: Naming authorities automatically create bindings
 Version: $Revision$
 Last-Modified: $Date$
@@ -52,3 +52,4 @@ Proposal:
 
  This automaton does not necessarily need to live in the Tor code, it
  can do its job just as well when it's an external tool.
+
