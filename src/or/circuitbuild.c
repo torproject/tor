@@ -3087,7 +3087,7 @@ bridges_retry_helper(int act)
 /** Do we know any descriptors for our bridges, and are they all
  * down? */
 int
-bridges_should_be_retried(void)
+bridges_known_but_down(void)
 {
   return bridges_retry_helper(0);
 }

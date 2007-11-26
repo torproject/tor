@@ -970,7 +970,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
 
   if (!want_onehop && !router_have_minimum_dir_info()) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
-      if (options->UseBridges && bridges_should_be_retried()) {
+      if (options->UseBridges && bridges_known_but_down()) {
         log_notice(LD_APP|LD_DIR,
                    "Application request when we're believed to be "
                    "offline. Optimistically trying known bridges again.");

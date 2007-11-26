@@ -2468,7 +2468,7 @@ void retry_bridge_descriptor_fetch_directly(char *digest);
 void fetch_bridge_descriptors(time_t now);
 void learned_bridge_descriptor(routerinfo_t *ri);
 int any_bridge_descriptors_known(void);
-int bridges_should_be_retried(void);
+int bridges_known_but_down(void);
 void bridges_retry_all(void);
 
 void entry_guards_free_all(void);
