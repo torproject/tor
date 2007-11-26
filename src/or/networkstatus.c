@@ -1423,7 +1423,6 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
                     ri->cache_info.routerlist_index = ri_sl_idx);
   if (rl->old_routers)
     signed_descs_update_status_from_consensus_networkstatus(rl->old_routers);
-  entry_guards_compute_status();
 
   me = router_get_my_routerinfo();
   if (me && !have_warned_about_invalid_status) {

@@ -1844,40 +1844,44 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
 /** Check whether the entry guard <b>e</b> is usable, given the directory
  * authorities' opinion about the router (stored in <b>ri</b>) and the user's
  * configuration (in <b>options</b>). Set <b>e</b>-&gt;bad_since
- * accordingly. Return true iff the entry guard's status changes. */
+ * accordingly. Return true iff the entry guard's status changes.
+ *
+ * If it's not usable, set *<b>reason</b> to a static string explaining why.
+ */
 static int
 entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
-                       time_t now, or_options_t *options)
+                       time_t now, or_options_t *options, const char **reason)
 {
-  const char *reason = NULL;
   char buf[HEX_DIGEST_LEN+1];
   int changed = 0;
 
   tor_assert(options);
 
+  *reason = NULL;
+
   /* Do we want to mark this guard as bad? */
   if (!ri)
-    reason = "unlisted";
+    *reason = "unlisted";
   else if (!ri->is_running)
-    reason = "down";
+    *reason = "down";
   else if (options->UseBridges && ri->purpose != ROUTER_PURPOSE_BRIDGE)
-    reason = "not a bridge";
+    *reason = "not a bridge";
   else if (!options->UseBridges && !ri->is_possible_guard &&
            !router_nickname_is_in_list(ri, options->EntryNodes))
-    reason = "not recommended as a guard";
+    *reason = "not recommended as a guard";
   else if (router_nickname_is_in_list(ri, options->ExcludeNodes))
-    reason = "excluded";
+    *reason = "excluded";
 
-  if (reason && ! e->bad_since) {
+  if (*reason && ! e->bad_since) {
     /* Router is newly bad. */
     base16_encode(buf, sizeof(buf), e->identity, DIGEST_LEN);
     log_info(LD_CIRC, "Entry guard %s (%s) is %s: marking as unusable.",
-             e->nickname, buf, reason);
+             e->nickname, buf, *reason);
 
     e->bad_since = now;
     control_event_guard(e->nickname, e->identity, "BAD");
     changed = 1;
-  } else if (!reason && e->bad_since) {
+  } else if (!*reason && e->bad_since) {
     /* There's nothing wrong with the router any more. */
     base16_encode(buf, sizeof(buf), e->identity, DIGEST_LEN);
     log_info(LD_CIRC, "Entry guard %s (%s) is no longer unusable: "
@@ -2185,12 +2189,13 @@ remove_dead_entry_guards(void)
  *
  * An entry is 'down' if the directory lists it as nonrunning.
  * An entry is 'unlisted' if the directory doesn't include it.
+ *
+ * Don't call this on startup; only on a fresh download. Otherwise we'll
+ * think that things are unlisted.
  */
 void
 entry_guards_compute_status(void)
 {
-  /* Don't call this on startup; only on a fresh download.  Otherwise we'll
-   * think that things are unlisted. */
   time_t now;
   int changed = 0;
   int severity = LOG_INFO;
@@ -2205,13 +2210,18 @@ entry_guards_compute_status(void)
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       routerinfo_t *r = router_get_by_digest(entry->identity);
-      if (entry_guard_set_status(entry, r, now, options))
+      const char *reason = NULL;
+      if (entry_guard_set_status(entry, r, now, options, &reason))
         changed = 1;
 
-      log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s and %s.",
+      if (entry->bad_since)
+        tor_assert(reason);
+
+      log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s%s, and %s.",
                entry->nickname,
                entry->unreachable_since ? "unreachable" : "reachable",
-               entry->bad_since ? "unusable" : "usable",
+               entry->bad_since ? "unusable: " : "usable",
+               entry->bad_since ? reason : "",
                entry_is_live(entry, 0, 1, 0) ? "live" : "not live");
     });
 

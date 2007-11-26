@@ -663,6 +663,9 @@ directory_info_has_arrived(time_t now, int from_cache)
     update_router_descriptor_downloads(now);
     return;
   } else {
+    /* if we have enough dir info, then update our guard status with
+     * whatever we just learned. */
+    entry_guards_compute_status();
     /* Don't even bother trying to get extrainfo until the rest of our
      * directory info is up-to-date */
     if (options->DownloadExtraInfo)

@@ -1,4 +1,11 @@
 Changes in version 0.2.0.13-alpha - 2007-11-??
+  o Major bugfixes:
+    - Only update guard status (usable / not usable) once we have
+      enough directory information. This was causing us to always pick
+      two new guards on startup (bugfix on 0.2.0.9-alpha), and it was
+      causing us to discard all our guards on startup if we hadn't been
+      running for a few weeks (bugfix on 0.1.2.x). Fixes bug 448.
+
   o Minor bugfixes:
     - The fix in 0.2.0.12-alpha cleared the "hsdir" flag in v3 network
       consensus documents when there are too many relays at a single

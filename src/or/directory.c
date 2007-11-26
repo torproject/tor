@@ -1181,7 +1181,7 @@ load_downloaded_routers(const char *body, smartlist_t *which,
 }
 
 /** We are a client, and we've finished reading the server's
- * response. Parse and it and act appropriately.
+ * response. Parse it and act appropriately.
  *
  * If we're still happy with using this directory server in the future, return
  * 0. Otherwise return -1; and the caller should consider trying the request
