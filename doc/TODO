@@ -102,6 +102,10 @@ Things we'd like to do in 0.2.0.x:
           unreachable is bunk -- it's leftover from the time when all
           servers ran 24/7. now it triggers every time a server goes
           away and then returns before the old descriptor has expired.
+      - we need a config option to turn off proposal 109 behavior, else
+        running a private tor network on your own computer is very hard.
+      - man page entry for HidServDirectoryV2 and
+        MinUptimeHidServDirectoryV2.
       o add a --quiet commandline option that suppresses logs. useful
         for --hashed-password and maybe others.
       - Tor logs the libevent version on startup, for debugging purposes.
@@ -231,6 +235,13 @@ Nice-to-have items for 0.2.0.x, time permitting:
       test circuits. this defeats the point.
 
 Planned for 0.2.1.x:
+  - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
+  - configurable timestamp granularity. defaults to 'seconds'.
+  - consider making 'safelogging' extend to info-level logs too.
+  - we should consider a single config option TorPrivateNetwork that
+    turns on all the config options for running a private test tor
+    network. having to keep updating all the tools, and the docs,
+    just isn't working.
   - consider whether a single Guard flag lets us distinguish between
     "was good enough to be a guard when we picked it" and "is still
     adequate to be used as a guard even after we've picked it". We should
