@@ -204,7 +204,7 @@ rend_encode_v2_intro_points(char **ipos_base64,
     size_t onion_key_len;
     crypto_pk_env_t *intro_key;
     char *service_key = NULL;
-    char *addr = NULL;
+    char *address = NULL;
     size_t service_key_len;
     int res;
     char hex_digest[HEX_DIGEST_LEN+2]; /* includes $ and NUL. */
@@ -217,7 +217,6 @@ rend_encode_v2_intro_points(char **ipos_base64,
     if (crypto_pk_write_public_key_to_string(info->onion_key, &onion_key,
                                              &onion_key_len) < 0) {
       log_warn(LD_REND, "Could not write onion key.");
-      tor_free(onion_key);
       goto done;
     }
     /* Encode intro key. */
@@ -230,12 +229,11 @@ rend_encode_v2_intro_points(char **ipos_base64,
       crypto_pk_write_public_key_to_string(intro_key, &service_key,
                                            &service_key_len) < 0) {
       log_warn(LD_REND, "Could not write intro key.");
-      tor_free(service_key);
       tor_free(onion_key);
       goto done;
     }
     /* Assemble everything for this introduction point. */
-    addr = tor_dup_addr(info->addr);
+    address = tor_dup_addr(info->addr);
     res = tor_snprintf(unenc + unenc_written, unenc_len - unenc_written,
                          "introduction-point %s\n"
                          "ip-address %s\n"
@@ -243,11 +241,11 @@ rend_encode_v2_intro_points(char **ipos_base64,
                          "onion-key\n%s"
                          "service-key\n%s",
                        id_base32,
-                       addr,
+                       address,
                        info->port,
                        onion_key,
                        service_key);
-    tor_free(addr);
+    tor_free(address);
     tor_free(onion_key);
     tor_free(service_key);
     if (res < 0) {
@@ -357,7 +355,6 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
   if (desc->n_intro_points > 0 &&
       rend_encode_v2_intro_points(&ipos_base64, desc, descriptor_cookie) < 0) {
     log_warn(LD_REND, "Encoding of introduction points did not succeed.");
-    tor_free(ipos_base64);
     return -1;
   }
   /* Encode REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS descriptors. */
@@ -392,7 +389,6 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
     if (crypto_pk_write_public_key_to_string(desc->pk, &permanent_key,
                                              &permanent_key_len) < 0) {
       log_warn(LD_BUG, "Could not write public key to string.");
-      tor_free(permanent_key);
       goto err;
     }
     /* Encode timestamp. */
@@ -479,7 +475,7 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
   }
 
   log_info(LD_REND, "Successfully encoded a v2 descriptor and "
-                      "confirmed that it is parsable.");
+                    "confirmed that it is parsable.");
   goto done;
 
  err:

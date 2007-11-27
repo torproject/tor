@@ -486,6 +486,7 @@ crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
    */
   if (!PEM_write_bio_RSAPublicKey(b, env->key)) {
     crypto_log_errors(LOG_WARN, "writing public key to string");
+    /* XXX020 leaks b? maybe "BIO_free(b);" would be smart here. -RD */
     return -1;
   }
 
