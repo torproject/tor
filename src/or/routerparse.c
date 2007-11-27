@@ -324,7 +324,7 @@ static token_rule_t desc_token_table[] = {
   T1("secret-id-part", R_SECRET_ID_PART, EQ(1), NO_OBJ),
   T1("publication-time", R_PUBLICATION_TIME, CONCAT_ARGS, NO_OBJ),
   T1("protocol-versions", R_PROTOCOL_VERSIONS, EQ(1), NO_OBJ),
-  T1("introduction-points", R_INTRODUCTION_POINTS, NO_ARGS, NEED_OBJ),
+  T01("introduction-points", R_INTRODUCTION_POINTS, NO_ARGS, NEED_OBJ),
   T1_END("signature", R_SIGNATURE, NO_ARGS, NEED_OBJ),
   END_OF_TABLE
 };
@@ -3232,7 +3232,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   /* Set length of encoded descriptor. */
   *encoded_size_out = eos - desc;
   /* Check min allowed length of token list. */
-  if (smartlist_len(tokens) < 8) {
+  if (smartlist_len(tokens) < 7) {
     log_warn(LD_REND, "Impossibly short descriptor.");
     goto err;
   }
@@ -3318,15 +3318,19 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   smartlist_free(versions);
   /* Parse encrypted introduction points. Don't verify. */
   tok = find_first_by_keyword(tokens, R_INTRODUCTION_POINTS);
-  tor_assert(tok);
-  if (strcmp(tok->object_type, "MESSAGE")) {
-    log_warn(LD_DIR, "Bad object type: introduction points should be of "
-             "type MESSAGE");
-    goto err;
+  if (tok) {
+    if (strcmp(tok->object_type, "MESSAGE")) {
+      log_warn(LD_DIR, "Bad object type: introduction points should be of "
+               "type MESSAGE");
+      goto err;
+    }
+    *intro_points_encrypted_out = tok->object_body;
+    *intro_points_encrypted_size_out = tok->object_size;
+    tok->object_body = NULL; /* Prevent free. */
+  } else {
+    *intro_points_encrypted_out = NULL;
+    *intro_points_encrypted_size_out = 0;
   }
-  *intro_points_encrypted_out = tok->object_body;
-  *intro_points_encrypted_size_out = tok->object_size;
-  tok->object_body = NULL; /* Prevent free. */
   /* Parse and verify signature. */
   tok = find_first_by_keyword(tokens, R_SIGNATURE);
   tor_assert(tok);

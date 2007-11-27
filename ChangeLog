@@ -13,6 +13,11 @@ Changes in version 0.2.0.13-alpha - 2007-11-??
     - Don't crash if we get an unexpected value for the
       PublishServerDescriptor config option. Reported by Matt Edman;
       bugfix on 0.2.0.9-alpha.
+    - Our new v2 hidden service descriptor format allows descriptors
+      that have no introduction points. But Tor crashed when we tried
+      to build a descriptor with no intro points (and it would have
+      crashed if we had tried to parse one). Bugfix on 0.2.0.x; patch
+      by Karsten Loesing.
 
 
 Changes in version 0.2.0.12-alpha - 2007-11-16

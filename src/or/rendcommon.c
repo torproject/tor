@@ -354,7 +354,8 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
   seconds_valid = period * REND_TIME_PERIOD_V2_DESC_VALIDITY +
                   get_seconds_valid(now, service_id);
   /* Assemble, possibly encrypt, and encode introduction points. */
-  if (rend_encode_v2_intro_points(&ipos_base64, desc, descriptor_cookie) < 0) {
+  if (desc->n_intro_points > 0 &&
+      rend_encode_v2_intro_points(&ipos_base64, desc, descriptor_cookie) < 0) {
     log_warn(LD_REND, "Encoding of introduction points did not succeed.");
     tor_free(ipos_base64);
     return -1;
@@ -418,16 +419,12 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
              "permanent-key\n%s"
              "secret-id-part %s\n"
              "publication-time %s\n"
-             "protocol-versions %s\n"
-             "introduction-points\n"
-             "-----BEGIN MESSAGE-----\n%s"
-             "-----END MESSAGE-----\n",
+             "protocol-versions %s\n",
         desc_id_base32,
         permanent_key,
         secret_id_part_base32,
         published,
-        protocol_versions_string,
-        ipos_base64);
+        protocol_versions_string);
     tor_free(permanent_key);
     if (result < 0) {
       log_warn(LD_BUG, "Descriptor ran out of room.");
@@ -435,6 +432,20 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
       goto err;
     }
     written = result;
+    /* Add introduction points. */
+    if (ipos_base64) {
+      result = tor_snprintf(desc_str + written, desc_len - written,
+                            "introduction-points\n"
+                            "-----BEGIN MESSAGE-----\n%s"
+                            "-----END MESSAGE-----\n",
+                            ipos_base64);
+      if (result < 0) {
+        log_warn(LD_BUG, "could not write introduction points.");
+        tor_free(desc_str);
+        goto err;
+      }
+      written += result;
+    }
     /* Add signature. */
     strlcpy(desc_str + written, "signature\n", desc_len - written);
     written += strlen(desc_str + written);
@@ -1075,12 +1086,15 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     return -1;
   }
   /* Decode/decrypt introduction points. */
-  if (rend_decrypt_introduction_points(parsed, descriptor_cookie,
+  if (intro_content &&
+      rend_decrypt_introduction_points(parsed, descriptor_cookie,
                                        intro_content, intro_size) < 0) {
     log_warn(LD_PROTOCOL,"Couldn't decode/decrypt introduction points.");
     rend_service_descriptor_free(parsed);
     tor_free(intro_content);
     return -1;
+  } else {
+    parsed->n_intro_points = 0;
   }
   /* We don't need the encoded/encrypted introduction points any longer. */
   tor_free(intro_content);
