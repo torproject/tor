@@ -5,6 +5,8 @@ SPEC    - Spec not finalized
 N       - nick claims
 R       - arma claims
 P       - phobos claims
+S       - Steven claims
+M       - Matt claims
 J       - Jeff claims
         - Not done
         * Top priority
@@ -52,7 +54,7 @@ Things we'd like to do in 0.2.0.x:
         o Code to generate
           o Remember certificate digests from TLS
         o Code to parse and check
-      - Revised handshake: TLS
+      * Revised handshake: TLS
         - Server checks for new cipher types, and if it finds them, sends
           only one cert and does not ask for client certs.
         - Client sends certs only if server asks for them.
@@ -81,7 +83,7 @@ Things we'd like to do in 0.2.0.x:
     - brainstorm about who those should be
 
   - Bugs.
-     - Bug reports Roger has heard along that way that don't have enough
+     - Bug reports Roger has heard along the way that don't have enough
         details/attention to solve them yet.
         o tup said that when he set FetchUselessDescriptors, after
           24 or 48 hours he wasn't fetching any descriptors at all
@@ -104,14 +106,14 @@ Things we'd like to do in 0.2.0.x:
           away and then returns before the old descriptor has expired.
       - we need a config option to turn off proposal 109 behavior, else
         running a private tor network on your own computer is very hard.
-      - man page entry for HidServDirectoryV2 and
+      . man page entry for HidServDirectoryV2 and
         MinUptimeHidServDirectoryV2.
       o add a --quiet commandline option that suppresses logs. useful
         for --hashed-password and maybe others.
-      - Tor logs the libevent version on startup, for debugging purposes.
+      d Tor logs the libevent version on startup, for debugging purposes.
         This is great. But it does this before configuring the logs, so
         it only goes to stdout and is then lost.
-      - we should do another bandwidth test every 12 hours or something
+      d we should do another bandwidth test every 12 hours or something
         if we're showing less than 50KB and our bandwidthrate says we can
         do more than that. I think some servers are forgetting the results
         of their first test, and then never seeing use.
@@ -166,7 +168,7 @@ R     - drop 'authority' queries if they're to our own identity key; accept
       o be more robust to bridges being marked as down and leaving us
         stranded without any known "running" bridges.
     - Bridges operators (rudimentary version)
-      - Ability to act as dir cache without a dir port.
+      * Ability to act as dir cache without a dir port.
       o Bridges publish to bridge authorities
       o Fix BEGIN_DIR so that you connect to bridge of which you only
         know IP (and optionally fingerprint), and then use BEGIN_DIR to learn
@@ -175,14 +177,11 @@ R     - drop 'authority' queries if they're to our own identity key; accept
     - Bridges authorities (rudimentary version)
       o Rudimentary "do not publish networkstatus" option for bridge
         authorities.
-      - Clients can ask bridge authorities for more bridges.
+      d Clients can ask bridge authorities for more bridges.
     - Bridges
       o Clients can ask bridge authorities for updates on known bridges.
-      - More TLS normalization work: make Tor less easily
-        fingerprinted.
-      - Directory system improvements
     - Misc
-      - Make BEGIN_DIR mandatory for asking questions of bridge authorities?
+      * Make BEGIN_DIR mandatory for asking questions of bridge authorities?
 
   - Features (other than bridges):
     - Audit how much RAM we're using for buffers and cell pools; try to
@@ -233,6 +232,34 @@ Nice-to-have items for 0.2.0.x, time permitting:
     - we try to build 4 test circuits to break them over different
       servers. but sometimes our entry node is the same for multiple
       test circuits. this defeats the point.
+
+Planned for 0.2.1.x, December:
+  - mirror tor downloads on (via) tor dir caches
+R   - spec
+    - deploy
+  - geoip caching and publishing for bridges
+R   - spec
+    - deploy
+    d let Vidalia use the geoip data too rather than doing its own
+      anonymized queries
+  - bridge address disbursal strategies
+    o get the cached-descriptors* to bridges@moria
+    - parse out bridge addresses from cached-descriptors*
+      (or parse them out before Tonga sends them)
+      (or get Tonga's Tor to write them out better in the first place)
+    * answer by IP/timestamp
+      - run a little web server on moria?
+    d answer by answering email to bridges@torproject
+      - keep track of which addresses have been answered already
+    d some sort of reachability detection on bridges
+  - families of bridges
+  - interface for letting soat modify flags that authorities assign
+R   - spec
+    - deploy
+S * tor usb windows image (vidalia, polipo, tor, firefox)
+S/M - vidalia can launch firefox
+    - build a community version of firefox
+    - pick our favorite extensions
 
 Planned for 0.2.1.x:
   - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
