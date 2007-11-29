@@ -30,7 +30,7 @@ require 'db-config'
 
 verbose = ARGV.first == "-v"
 
-db = Db.new($CONFIG['database']['dbname'], $CONFIG['database']['user'], $CONFIG['database']['password'])
+db = Db.new($CONFIG['database']['dbhost'], $CONFIG['database']['dbname'], $CONFIG['database']['user'], $CONFIG['database']['password'])
 
 db.transaction_begin
 named = db.query2("

@@ -31,7 +31,7 @@ require 'db'
 require 'db-config'
 require 'update-named-status'
 
-$db = Db.new($CONFIG['database']['dbname'], $CONFIG['database']['user'], $CONFIG['database']['password'])
+$db = Db.new($CONFIG['database']['dbhost'], $CONFIG['database']['dbname'], $CONFIG['database']['user'], $CONFIG['database']['password'])
 
 $router_cache = {}
 $nickname_cache = {}

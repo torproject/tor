@@ -39,8 +39,8 @@ class WeaselDbQueryHandle
 end
 
 class Db
-	def initialize(database, user, password)
-		@dbh = DBI.connect("dbi:Pg:#{database}:localhost", user, password);
+	def initialize(host, database, user, password)
+		@dbh = DBI.connect("dbi:Pg:#{database}:#{host}", user, password);
 		@dbh['AutoCommit'] = false
 		@transaction = false
 		@pre_initial_transaction=true

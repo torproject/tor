@@ -28,7 +28,12 @@ require 'db'
 require 'db-config'
 
 def do_update(verbose)
-	now = "TIMESTAMP '" + $db.query_row("SELECT max(last_seen) AS max FROM router_claims_nickname")['max'].to_s + "'"
+	now = $db.query_row("SELECT max(last_seen) AS max FROM router_claims_nickname")['max']
+	unless now == ''
+		STDERR.puts "Could not find the latest last_seen timestamp.  Is the database empty still?"
+		return
+	end
+	now = "TIMESTAMP '" + now.to_s + "'"
 
 	denamed = $db.do("
 			UPDATE router_claims_nickname
@@ -56,7 +61,7 @@ def do_update(verbose)
 end
 
 if __FILE__ == $0
-	$db = Db.new($CONFIG['database']['dbname'], $CONFIG['database']['user'], $CONFIG['database']['password'])
+	$db = Db.new($CONFIG['database']['dbhost'], $CONFIG['database']['dbname'], $CONFIG['database']['user'], $CONFIG['database']['password'])
 	verbose = ARGV.first == "-v"
 
 	$db.transaction_begin
