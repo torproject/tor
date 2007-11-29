@@ -29,7 +29,7 @@ require 'db-config'
 
 def do_update(verbose)
 	now = $db.query_row("SELECT max(last_seen) AS max FROM router_claims_nickname")['max']
-	unless now == ''
+	unless now
 		STDERR.puts "Could not find the latest last_seen timestamp.  Is the database empty still?"
 		return
 	end
