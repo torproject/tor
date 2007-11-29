@@ -60,15 +60,7 @@ typedef struct rend_service_t {
   rend_service_descriptor_t *desc;
   time_t desc_is_dirty;
   time_t next_upload_time;
-  /* XXXX020 A service never actually has both descriptor versions; perhaps
-   * this should be an int rather than in intmax. */
-  /* A service can never publish v0 and v2 descriptors, but maybe it can
-   * publish v2 and v3 descriptors in the future. As with origin_circuit_t:
-   * Would it be clearer to switch to a single version number for now and
-   * switch back to a bitmap, when the above becomes true? -KL */
-  /* Yes. s/when/if/.  "YAGNI" -NM. */
-  /* Now it's used as version number, not as bitmask. -KL */
-  int descriptor_version; /**< rendezvous descriptor version that will be
+  int descriptor_version; /**< Rendezvous descriptor version that will be
                            * published. */
 } rend_service_t;
 
@@ -133,7 +125,7 @@ rend_service_free_all(void)
 /** Validate <b>service</b> and add it to rend_service_list if possible.
  */
 static void
-add_service(rend_service_t *service)
+rend_add_service(rend_service_t *service)
 {
   int i;
   rend_service_port_config_t *p;
@@ -163,7 +155,7 @@ add_service(rend_service_t *service)
     v0_service->intro_exclude_nodes = tor_strdup(service->intro_exclude_nodes);
     v0_service->intro_period_started = service->intro_period_started;
     v0_service->descriptor_version = 0; /* Unversioned descriptor. */
-    add_service(v0_service);
+    rend_add_service(v0_service);
 
     service->descriptor_version = 2; /* Versioned descriptor. */
   }
@@ -275,7 +267,7 @@ rend_config_services(or_options_t *options, int validate_only)
         if (validate_only)
           rend_service_free(service);
         else
-          add_service(service);
+          rend_add_service(service);
       }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
@@ -340,7 +332,7 @@ rend_config_services(or_options_t *options, int validate_only)
     if (validate_only)
       rend_service_free(service);
     else
-      add_service(service);
+      rend_add_service(service);
   }
 
   return 0;

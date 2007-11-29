@@ -1826,14 +1826,6 @@ typedef struct origin_circuit_t {
   /** Stores the rendezvous descriptor version if purpose is S_*. Used to
    * distinguish introduction and rendezvous points belonging to the same
    * rendezvous service ID, but different descriptor versions.
-   * XXXX020 I believe this is a bitmap, but the doc doesn't say so. If so,
-   *  why?  A circuit can't be using two different rendezvous decriptors. -NM
-   * Yes, it is a bitmap. The reason is that it might turn out that a version
-   * 3 _can_ use the same introduction point as version 2; only version 0
-   * is incompatible. Would it be clearer to switch to a single version number
-   * for now and switch back to a bitmap, when the above becomes true? -KL
-   * Yes.  "YAGNI." -NM
-   * Now it's not a bitmap any more. -KL
    */
   uint8_t rend_desc_version;
 

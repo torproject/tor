@@ -288,14 +288,10 @@ buf_shrink_freelists(int free_all)
       int i, n_to_skip, n_to_free;
       char **ptr;
       if (free_all) { /* Free every one of them */
-        /* Just a consideration: Is this log statement really useful on
-         * info level? -KL */
         log_debug(LD_GENERAL, "Freeing all %d elements from %d-byte freelist.",
                   list->len, (int)list->chunksize);
         n_to_free = list->len;
       } else { /* Skip over the slack and non-lowwater entries */
-        /* Just a consideration: Is this log statement really useful on
-         * info level? -KL */
         log_debug(LD_GENERAL, "We haven't used %d/%d allocated %d-byte buffer "
                   "memory chunks since the last call; freeing all but %d of "
                   "them",
@@ -379,8 +375,6 @@ buf_resize(buf_t *buf, size_t new_capacity)
     if (buf->mem)
       raw = tor_realloc(RAW_MEM(buf->mem), ALLOC_LEN(new_capacity));
     else {
-      /* Just a consideration: Is this log statement really useful on
-       * info level? -KL */
       log_debug(LD_GENERAL, "Jumping straight from 0 bytes to %d",
                (int)new_capacity);
       raw = tor_malloc(ALLOC_LEN(new_capacity));
