@@ -324,6 +324,9 @@ rend_config_services(or_options_t *options, int validate_only)
         version = atoi(version_str);
         versions_bitmask |= 1 << version;
       }
+      /* XXX020 Karsten: do you really want to overwrite the
+       * descriptor_version in the second line? Perhaps if both bits
+       * are set you want to leave it at -1? -RD */
       if (versions_bitmask == 1 << 0) service->descriptor_version = 0;
       if (versions_bitmask == 1 << 2) service->descriptor_version = 2;
     }
