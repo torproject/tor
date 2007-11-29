@@ -322,7 +322,7 @@ $Id$
 
    VA ... FU: Caches download the consensus.  (Note that since caches have
         no way of telling what VA and FU are until they have downloaded
-        the consensus, they assume that the present descriptor's VA is
+        the consensus, they assume that the present consensus's VA is
         equal to the previous one's FU, and that its FU is one interval after
         that.)
 
