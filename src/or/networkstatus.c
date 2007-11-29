@@ -57,10 +57,10 @@ static download_status_t consensus_dl_status = { 0, 0, DL_SCHED_CONSENSUS };
  * not being named. */
 static int have_warned_about_invalid_status = 0;
 /** True iff we have logged a warning about this OR's version being older than
- * listed by the authorities  */
+ * listed by the authorities. */
 static int have_warned_about_old_version = 0;
 /** True iff we have logged a warning about this OR's version being newer than
- * listed by the authorities  */
+ * listed by the authorities. */
 static int have_warned_about_new_version = 0;
 
 static void download_status_map_update_from_v2_networkstatus(void);
@@ -997,7 +997,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
 #define DELAY_WHILE_FETCHING_CERTS (20*60)
 
 /** If we want to download a fresh consensus, launch a new download as
- * appropriate.  */
+ * appropriate. */
 static void
 update_consensus_networkstatus_downloads(time_t now)
 {
