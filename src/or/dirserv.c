@@ -1550,7 +1550,7 @@ dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
   int uptime = real_uptime(router, now);
 
   return (router->wants_to_be_hs_dir &&
-          uptime > get_options()->__MinUptimeHidServDirectoryV2 &&
+          uptime > get_options()->MinUptimeHidServDirectoryV2 &&
           router->is_running);
 }
 

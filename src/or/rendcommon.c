@@ -58,12 +58,6 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
   tor_free(desc);
 }
 
-/** Length of a binary-encoded rendezvous service ID. */
-/*XXXX020 Rename to include "len" and maybe not "binary" */
-/* Need to change REND_SERVICE_ID_LEN 16 to REND_SERVICE_ID_LEN_BASE32
- * before! -KL */
-#define REND_SERVICE_ID_BINARY 10
-
 /** Length of the descriptor cookie that is used for versioned hidden
  * service descriptors. */
 #define REND_DESC_COOKIE_LEN 16
@@ -73,7 +67,7 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
 #define REND_REPLICA_LEN 1
 
 /** Compute the descriptor ID for <b>service_id</b> of length
- * <b>REND_SERVICE_ID_BINARY</b> and <b>secret_id_part</b> of length
+ * <b>REND_SERVICE_ID_LEN</b> and <b>secret_id_part</b> of length
  * <b>DIGEST_LEN</b>, and write it to <b>descriptor_id_out</b> of length
  * <b>DIGEST_LEN</b>. */
 void
@@ -82,7 +76,7 @@ rend_get_descriptor_id_bytes(char *descriptor_id_out,
                              const char *secret_id_part)
 {
   crypto_digest_env_t *digest = crypto_new_digest_env();
-  crypto_digest_add_bytes(digest, service_id, REND_SERVICE_ID_BINARY);
+  crypto_digest_add_bytes(digest, service_id, REND_SERVICE_ID_LEN);
   crypto_digest_add_bytes(digest, secret_id_part, DIGEST_LEN);
   crypto_digest_get_digest(digest, descriptor_id_out, DIGEST_LEN);
   crypto_free_digest_env(digest);
@@ -147,11 +141,11 @@ rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
                         const char *descriptor_cookie, time_t now,
                         uint8_t replica)
 {
-  char service_id_binary[REND_SERVICE_ID_BINARY];
+  char service_id_binary[REND_SERVICE_ID_LEN];
   char secret_id_part[DIGEST_LEN];
   uint32_t time_period;
   if (!service_id ||
-      strlen(service_id) != REND_SERVICE_ID_LEN) {
+      strlen(service_id) != REND_SERVICE_ID_LEN_BASE32) {
     log_warn(LD_REND, "Could not compute v2 descriptor ID: "
                       "Illegal service ID: %s", service_id);
     return -1;
@@ -162,8 +156,8 @@ rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
     return -1;
   }
   /* Convert service ID to binary. */
-  if (base32_decode(service_id_binary, REND_SERVICE_ID_BINARY,
-                    service_id, REND_SERVICE_ID_LEN) < 0) {
+  if (base32_decode(service_id_binary, REND_SERVICE_ID_LEN,
+                    service_id, REND_SERVICE_ID_LEN_BASE32) < 0) {
     log_warn(LD_REND, "Could not compute v2 descriptor ID: "
                       "Illegal characters in service ID: %s",
              service_id);
@@ -609,7 +603,7 @@ rend_get_service_id(crypto_pk_env_t *pk, char *out)
   tor_assert(pk);
   if (crypto_pk_get_digest(pk, buf) < 0)
     return -1;
-  base32_encode(out, REND_SERVICE_ID_LEN+1, buf, 10);
+  base32_encode(out, REND_SERVICE_ID_LEN_BASE32+1, buf, REND_SERVICE_ID_LEN);
   return 0;
 }
 
@@ -746,10 +740,10 @@ rend_id_is_in_interval(const char *a, const char *b, const char *c)
 int
 rend_valid_service_id(const char *query)
 {
-  if (strlen(query) != REND_SERVICE_ID_LEN)
+  if (strlen(query) != REND_SERVICE_ID_LEN_BASE32)
     return 0;
 
-  if (strspn(query, BASE32_CHARS) != REND_SERVICE_ID_LEN)
+  if (strspn(query, BASE32_CHARS) != REND_SERVICE_ID_LEN_BASE32)
     return 0;
 
   return 1;
@@ -764,7 +758,7 @@ rend_valid_service_id(const char *query)
 int
 rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
 {
-  char key[REND_SERVICE_ID_LEN+2]; /* <version><query>\0 */
+  char key[REND_SERVICE_ID_LEN_BASE32+2]; /* <version><query>\0 */
   tor_assert(rend_cache);
   if (!rend_valid_service_id(query))
     return -1;
@@ -848,8 +842,8 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
 {
   rend_cache_entry_t *e;
   rend_service_descriptor_t *parsed;
-  char query[REND_SERVICE_ID_LEN+1];
-  char key[REND_SERVICE_ID_LEN+2]; /* 0<query>\0 */
+  char query[REND_SERVICE_ID_LEN_BASE32+1];
+  char key[REND_SERVICE_ID_LEN_BASE32+2]; /* 0<query>\0 */
   time_t now;
   or_options_t *options = get_options();
   tor_assert(rend_cache);
@@ -1060,8 +1054,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   size_t encoded_size;
   const char *next_desc;
   time_t now = time(NULL);
-  char key[REND_SERVICE_ID_LEN+2];
-  char service_id[REND_SERVICE_ID_LEN+1];
+  char key[REND_SERVICE_ID_LEN_BASE32+2];
+  char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   rend_cache_entry_t *e;
   tor_assert(rend_cache);
   tor_assert(desc);

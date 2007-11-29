@@ -47,7 +47,7 @@ typedef struct rend_service_t {
   char *intro_exclude_nodes; /**< comma-separated list of nicknames */
   /* Other fields */
   crypto_pk_env_t *private_key;
-  char service_id[REND_SERVICE_ID_LEN+1];
+  char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   char pk_digest[DIGEST_LEN];
   smartlist_t *intro_nodes; /**< list of hexdigests for intro points we have,
                              * or are trying to establish. */
@@ -67,8 +67,9 @@ typedef struct rend_service_t {
    * Would it be clearer to switch to a single version number for now and
    * switch back to a bitmap, when the above becomes true? -KL */
   /* Yes. s/when/if/.  "YAGNI" -NM. */
-  int descriptor_versions; /**< bitmask of rendezvous descriptor versions
-                            * that will be published. "0" means "default." */
+  /* Now it's used as version number, not as bitmask. -KL */
+  int descriptor_version; /**< rendezvous descriptor version that will be
+                           * published. */
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.
@@ -142,14 +143,12 @@ add_service(rend_service_t *service)
     service->intro_prefer_nodes = tor_strdup("");
   if (!service->intro_exclude_nodes)
     service->intro_exclude_nodes = tor_strdup("");
-  if (service->descriptor_versions == 0)
-    service->descriptor_versions = 1 + (1<<2); /**< Default is v0 and v2 in
-                                                * parallel. */
+  service->intro_nodes = smartlist_create();
   service->intro_keys = strmap_new();
 
   /* If the service is configured to publish unversioned (v0) and versioned
    * descriptors (v2 or higher), split it up into two separate services. */
-  if (service->descriptor_versions > 1 && service->descriptor_versions & 1) {
+  if (service->descriptor_version == -1) {
     rend_service_t *v0_service = tor_malloc_zero(sizeof(rend_service_t));
     v0_service->directory = tor_strdup(service->directory);
     v0_service->ports = smartlist_create();
@@ -163,10 +162,10 @@ add_service(rend_service_t *service)
     v0_service->intro_prefer_nodes = tor_strdup(service->intro_prefer_nodes);
     v0_service->intro_exclude_nodes = tor_strdup(service->intro_exclude_nodes);
     v0_service->intro_period_started = service->intro_period_started;
-    v0_service->descriptor_versions = 1; /* Unversioned descriptor. */
+    v0_service->descriptor_version = 0; /* Unversioned descriptor. */
     add_service(v0_service);
 
-    service->descriptor_versions -= 1; /* Versioned descriptor. */
+    service->descriptor_version = 2; /* Versioned descriptor. */
   }
 
   if (!smartlist_len(service->ports)) {
@@ -283,7 +282,7 @@ rend_config_services(or_options_t *options, int validate_only)
       service->ports = smartlist_create();
       service->intro_nodes = smartlist_create();
       service->intro_period_started = time(NULL);
-      service->descriptor_versions = 0;
+      service->descriptor_version = -1; /**< All descriptor versions. */
       continue;
     }
     if (!service) {
@@ -318,7 +317,7 @@ rend_config_services(or_options_t *options, int validate_only)
     } else {
       smartlist_t *versions;
       char *version_str;
-      int i, version;
+      int i, version, versions_bitmask = 0;
       tor_assert(!strcasecmp(line->key, "HiddenServiceVersion"));
       versions = smartlist_create();
       smartlist_split_string(versions, line->value, ",",
@@ -331,8 +330,10 @@ rend_config_services(or_options_t *options, int validate_only)
           return -1;
         }
         version = atoi(version_str);
-        service->descriptor_versions |= 1 << version;
+        versions_bitmask |= 1 << version;
       }
+      if (versions_bitmask == 1 << 0) service->descriptor_version = 0;
+      if (versions_bitmask == 1 << 2) service->descriptor_version = 2;
     }
   }
   if (service) {
@@ -362,14 +363,14 @@ rend_service_update_descriptor(rend_service_t *service)
   d = service->desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
-  d->version = 1; /*< XXXX020 this value is ignored by the
-                   * encode functions; do we need to set it at all? */
+  d->version = service->descriptor_version;
   n = smartlist_len(service->intro_nodes);
   d->n_intro_points = 0;
   d->intro_points = tor_malloc_zero(sizeof(char*)*n);
   d->intro_point_extend_info = tor_malloc_zero(sizeof(extend_info_t*)*n);
-  /* We support intro protocol 2 and protocol 0. */
-  d->protocols = (1<<2) | (1<<0);
+  /* XXXX020 Why should we support the old intro protocol 0? Whoever
+   * understands descriptor version 2 also understands intro protocol 2. */
+  d->protocols = 1 << 2; /*< We only support intro protocol 2. */
 
   if (service->intro_keys) {
     /* We need to copy keys so that they're not deleted when we free the
@@ -464,16 +465,16 @@ rend_service_load_keys(void)
 }
 
 /** Return the service whose public key has a digest of <b>digest</b> and
- * which publishes exactly the descriptor of the given <b>versions</b>
- * bitmask.  Return NULL if no such service exists.
+ * which publishes the given descriptor <b>version</b>.  Return NULL if no
+ * such service exists.
  */
 static rend_service_t *
 rend_service_get_by_pk_digest_and_version(const char* digest,
-                                          uint8_t versions)
+                                          uint8_t version)
 {
   SMARTLIST_FOREACH(rend_service_list, rend_service_t*, s,
                     if (!memcmp(s->pk_digest,digest,DIGEST_LEN) &&
-                        s->descriptor_versions == versions) return s);
+                        s->descriptor_version == version) return s);
   return NULL;
 }
 
@@ -516,15 +517,15 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   crypto_dh_env_t *dh = NULL;
   origin_circuit_t *launched = NULL;
   crypt_path_t *cpath = NULL;
-  char serviceid[REND_SERVICE_ID_LEN+1];
+  char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   char hexcookie[9];
   int circ_needs_uptime;
   int reason = END_CIRC_REASON_TORPROTOCOL;
   crypto_pk_env_t *intro_key;
   char intro_key_digest[DIGEST_LEN];
 
-  base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                circuit->rend_pk_digest,10);
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                circuit->rend_pk_digest, REND_SERVICE_ID_LEN);
   log_info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %d.",
            escaped(serviceid), circuit->_base.n_circ_id);
 
@@ -552,8 +553,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     return -1;
   }
 
-  /* if descriptor is versioned, use intro key instead of service key. */
-  if (circuit->rend_desc_version & 1) {
+  /* if descriptor version is 2, use intro key instead of service key. */
+  if (circuit->rend_desc_version == 0) {
     intro_key = service->private_key;
   } else {
     intro_key = circuit->intro_key;
@@ -562,7 +563,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   /* first DIGEST_LEN bytes of request is intro or service pk digest */
   crypto_pk_get_digest(intro_key, intro_key_digest);
   if (memcmp(intro_key_digest, request, DIGEST_LEN)) {
-    base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request, 10);
+    base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                  request, REND_SERVICE_ID_LEN);
     log_warn(LD_REND, "Got an INTRODUCE2 cell for the wrong service (%s).",
              escaped(serviceid));
     return -1;
@@ -710,7 +712,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   memcpy(launched->rend_cookie, r_cookie, REND_COOKIE_LEN);
   strlcpy(launched->rend_query, service->service_id,
           sizeof(launched->rend_query));
-  launched->rend_desc_version = service->descriptor_versions;
+  launched->rend_desc_version = service->descriptor_version;
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
@@ -780,7 +782,8 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   newstate->pending_final_cpath = oldstate->pending_final_cpath;
   oldstate->pending_final_cpath = NULL;
 
-  memcpy(newcirc->rend_query, oldcirc->rend_query, REND_SERVICE_ID_LEN+1);
+  memcpy(newcirc->rend_query, oldcirc->rend_query,
+         REND_SERVICE_ID_LEN_BASE32+1);
   memcpy(newcirc->rend_pk_digest, oldcirc->rend_pk_digest,
          DIGEST_LEN);
   memcpy(newcirc->rend_cookie, oldcirc->rend_cookie,
@@ -815,8 +818,8 @@ rend_service_launch_establish_intro(rend_service_t *service,
   strlcpy(launched->rend_query, service->service_id,
           sizeof(launched->rend_query));
   memcpy(launched->rend_pk_digest, service->pk_digest, DIGEST_LEN);
-  launched->rend_desc_version = service->descriptor_versions;
-  if (!(service->descriptor_versions & 1)) {
+  launched->rend_desc_version = service->descriptor_version;
+  if (service->descriptor_version == 2) {
     launched->intro_key = crypto_new_pk_env();
     tor_assert(!crypto_pk_generate_key(launched->intro_key));
     strmap_set(service->intro_keys, nickname,
@@ -838,15 +841,15 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   int r;
   char buf[RELAY_PAYLOAD_SIZE];
   char auth[DIGEST_LEN + 9];
-  char serviceid[REND_SERVICE_ID_LEN+1];
+  char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int reason = END_CIRC_REASON_TORPROTOCOL;
   crypto_pk_env_t *intro_key;
 
   tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   tor_assert(circuit->cpath);
 
-  base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                circuit->rend_pk_digest,10);
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                circuit->rend_pk_digest, REND_SERVICE_ID_LEN);
 
   service = rend_service_get_by_pk_digest_and_version(
               circuit->rend_pk_digest, circuit->rend_desc_version);
@@ -864,7 +867,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   /* If the introduction point will not be used in an unversioned
    * descriptor, use the intro key instead of the service key in
    * ESTABLISH_INTRO. */
-  if (service->descriptor_versions & 1)
+  if (service->descriptor_version == 0)
     intro_key = service->private_key;
   else
     intro_key = circuit->intro_key;
@@ -910,7 +913,7 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
                                size_t request_len)
 {
   rend_service_t *service;
-  char serviceid[REND_SERVICE_ID_LEN+1];
+  char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   (void) request;
   (void) request_len;
 
@@ -929,8 +932,8 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
   service->desc_is_dirty = time(NULL);
   circuit->_base.purpose = CIRCUIT_PURPOSE_S_INTRO;
 
-  base32_encode(serviceid, REND_SERVICE_ID_LEN + 1,
-                circuit->rend_pk_digest, 10);
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32 + 1,
+                circuit->rend_pk_digest, REND_SERVICE_ID_LEN);
   log_info(LD_REND,
            "Received INTRO_ESTABLISHED cell on circuit %d for service %s",
            circuit->_base.n_circ_id, serviceid);
@@ -950,7 +953,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   rend_service_t *service;
   char buf[RELAY_PAYLOAD_SIZE];
   crypt_path_t *hop;
-  char serviceid[REND_SERVICE_ID_LEN+1];
+  char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   char hexcookie[9];
   int reason;
 
@@ -961,8 +964,8 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   tor_assert(hop);
 
   base16_encode(hexcookie,9,circuit->rend_cookie,4);
-  base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                circuit->rend_pk_digest,10);
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                circuit->rend_pk_digest, REND_SERVICE_ID_LEN);
 
   log_info(LD_REND,
            "Done building circuit %d to rendezvous with "
@@ -1063,7 +1066,7 @@ upload_service_descriptor(rend_service_t *service)
 {
   time_t now = time(NULL);
   int rendpostperiod;
-  char serviceid[REND_SERVICE_ID_LEN+1];
+  char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int uploaded = 0;
 
   /* Update the descriptor. */
@@ -1072,7 +1075,7 @@ upload_service_descriptor(rend_service_t *service)
   rendpostperiod = get_options()->RendPostPeriod;
 
   /* Upload unversioned (v0) descriptor? */
-  if (service->descriptor_versions & 1 &&
+  if (service->descriptor_version == 0 &&
       get_options()->PublishHidServDescriptors) {
     char *desc;
     size_t desc_len;
@@ -1098,7 +1101,7 @@ upload_service_descriptor(rend_service_t *service)
   }
 
   /* Upload v2 descriptor? */
-  if (service->descriptor_versions & (1 << 2) &&
+  if (service->descriptor_version == 2 &&
       get_options()->PublishHidServDescriptors) {
     if (hid_serv_have_enough_directories()) {
       int seconds_valid;
@@ -1137,7 +1140,8 @@ upload_service_descriptor(rend_service_t *service)
       /* Post also the next descriptors, if necessary. */
       if (seconds_valid < REND_TIME_PERIOD_OVERLAPPING_V2_DESCS) {
         seconds_valid = rend_encode_v2_descriptors(desc_strs, desc_ids,
-                service->desc, now, NULL, 1);
+                                                   service->desc, now,
+                                                   NULL, 1);
         if (seconds_valid < 0) {
           log_warn(LD_BUG, "Internal error: couldn't encode service "
                    "descriptor; not uploading.");
@@ -1369,14 +1373,14 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
                                       origin_circuit_t *circ)
 {
   rend_service_t *service;
-  char serviceid[REND_SERVICE_ID_LEN+1];
+  char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   smartlist_t *matching_ports;
   rend_service_port_config_t *chosen_port;
 
   tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   log_debug(LD_REND,"beginning to hunt for addr/port");
-  base32_encode(serviceid, REND_SERVICE_ID_LEN+1,
-                circ->rend_pk_digest,10);
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                circ->rend_pk_digest, REND_SERVICE_ID_LEN);
   service = rend_service_get_by_pk_digest_and_version(circ->rend_pk_digest,
                                                       circ->rend_desc_version);
   if (!service) {

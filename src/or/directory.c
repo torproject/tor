@@ -864,7 +864,7 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(!payload);
 
       /* this must be true or we wouldn't be doing the lookup */
-      tor_assert(strlen(resource) <= REND_SERVICE_ID_LEN);
+      tor_assert(strlen(resource) <= REND_SERVICE_ID_LEN_BASE32);
       /* This breaks the function abstraction. */
       strlcpy(conn->rend_query, resource, sizeof(conn->rend_query));
 
@@ -3165,7 +3165,7 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   tor_assert(desc_id);
   tor_assert(query);
-  tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
+  tor_assert(strlen(query) == REND_SERVICE_ID_LEN_BASE32);
   /* Determine responsible dirs. */
   if (hid_serv_get_responsible_directories(responsible_dirs, desc_id) < 0) {
     /* XXX020 make this louder once we have some v2hidservs */

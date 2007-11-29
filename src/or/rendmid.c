@@ -24,7 +24,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
   char pk_digest[DIGEST_LEN];
   size_t asn1len;
   or_circuit_t *c;
-  char serviceid[REND_SERVICE_ID_LEN+1];
+  char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int reason = END_CIRC_REASON_INTERNAL;
 
   log_info(LD_REND,
@@ -84,7 +84,8 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
   crypto_free_pk_env(pk); /* don't need it anymore */
   pk = NULL; /* so we don't free it again if err */
 
-  base32_encode(serviceid, REND_SERVICE_ID_LEN+1, pk_digest,10);
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                pk_digest, REND_SERVICE_ID_LEN);
 
   /* Close any other intro circuits with the same pk. */
   c = NULL;
@@ -129,7 +130,7 @@ int
 rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
 {
   or_circuit_t *intro_circ;
-  char serviceid[REND_SERVICE_ID_LEN+1];
+  char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   char nak_body[1];
 
   log_info(LD_REND, "Received an INTRODUCE1 request on circuit %d",
@@ -154,7 +155,8 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
     goto err;
   }
 
-  base32_encode(serviceid, REND_SERVICE_ID_LEN+1, request,10);
+  base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
+                request, REND_SERVICE_ID_LEN);
 
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
   intro_circ = circuit_get_intro_point(request);

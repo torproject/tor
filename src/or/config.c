@@ -290,8 +290,7 @@ static config_var_t _option_vars[] = {
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
-  /*XXXX020 for testing.  Maybe remove before -rc. */
-  V(__MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
+  V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
@@ -2831,10 +2830,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
   }
 
-  if (options->__MinUptimeHidServDirectoryV2 < 0) {
-    log_warn(LD_CONFIG, "__MinUptimeHidServDirectoryV2 option must be at "
+  if (options->MinUptimeHidServDirectoryV2 < 0) {
+    log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
                         "least 0 seconds. Changing to 0.");
-    options->__MinUptimeHidServDirectoryV2 = 0;
+    options->MinUptimeHidServDirectoryV2 = 0;
   }
 
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {

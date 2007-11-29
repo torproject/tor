@@ -87,6 +87,10 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                   introcirc->build_state->chosen_exit->identity_digest,
                   DIGEST_LEN);
     intro_key = strmap_get(entry->parsed->intro_keys, hex_digest);
+    if (!intro_key) {
+      log_warn(LD_BUG, "Internal error: could not find intro key.");
+      goto err;
+    }
   }
   if (crypto_pk_get_digest(intro_key, payload)<0) {
     log_warn(LD_BUG, "Internal error: couldn't hash public key.");
@@ -279,9 +283,9 @@ rend_client_refetch_renddesc(const char *query)
   }
 }
 
-/** If we are not currently fetching a rendezvous service descriptor for the
- * base32-encoded service ID <b>query</b>, start a connection to a hidden
- * service directory to fetch a new one.
+/** Start a connection to a hidden service directory to fetch a v2
+ * rendezvous service descriptor for the base32-encoded service ID
+ * <b>query</b>.
  */
 void
 rend_client_refetch_v2_renddesc(const char *query)
@@ -289,7 +293,7 @@ rend_client_refetch_v2_renddesc(const char *query)
   char descriptor_id[DIGEST_LEN];
   int replica;
   tor_assert(query);
-  tor_assert(strlen(query) == REND_SERVICE_ID_LEN);
+  tor_assert(strlen(query) == REND_SERVICE_ID_LEN_BASE32);
   /* Are we configured to fetch descriptors? */
   if (!get_options()->FetchHidServDescriptors) {
     log_warn(LD_REND, "We received an onion address for a v2 rendezvous "

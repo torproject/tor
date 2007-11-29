@@ -3275,7 +3275,7 @@ test_rend_fns_v2(void)
 {
   rend_service_descriptor_t *generated, *parsed;
   char service_id[DIGEST_LEN];
-  char service_id_base32[REND_SERVICE_ID_LEN+1];
+  char service_id_base32[REND_SERVICE_ID_LEN_BASE32+1];
   const char *next_desc;
   smartlist_t *desc_strs = smartlist_create();
   smartlist_t *desc_ids = smartlist_create();
@@ -3292,7 +3292,8 @@ test_rend_fns_v2(void)
   generated = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   generated->pk = crypto_pk_dup_key(pk1);
   crypto_pk_get_digest(generated->pk, service_id);
-  base32_encode(service_id_base32, REND_SERVICE_ID_LEN+1, service_id, 10);
+  base32_encode(service_id_base32, REND_SERVICE_ID_LEN_BASE32+1,
+                service_id, REND_SERVICE_ID_LEN);
   now = time(NULL);
   generated->timestamp = now;
   generated->n_intro_points = 3;

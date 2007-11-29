@@ -4455,7 +4455,9 @@ hid_serv_have_enough_directories(void)
   SMARTLIST_FOREACH(c->routerstatus_list, routerstatus_t *, r,
   {
     if (r->is_hs_dir)
-      if (++n_hsdirs > REND_NUMBER_OF_CONSECUTIVE_REPLICAS)
+      /* XXXX020 In fact, REND_NUMBER_OF_CONSECUTIVE_REPLICAS hs dirs
+       * are enough. */
+      if (++n_hsdirs >= REND_NUMBER_OF_CONSECUTIVE_REPLICAS)
         return 1;
   });
   return 0;

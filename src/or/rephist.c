@@ -1650,7 +1650,7 @@ rep_hist_free_all(void)
 /** List element containing a service id and the count. */
 typedef struct hs_usage_list_elem_t {
    /** Service id of this elem. */
-  char service_id[REND_SERVICE_ID_LEN+1];
+  char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   /** Number of occurrences for the given service id. */
   uint32_t count;
   /* Pointer to next list elem */

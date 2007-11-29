@@ -595,7 +595,10 @@ typedef enum {
 #define END_CIRC_REASON_FLAG_REMOTE     512
 
 /** Length of 'y' portion of 'y.onion' URL. */
-#define REND_SERVICE_ID_LEN 16
+#define REND_SERVICE_ID_LEN_BASE32 16
+
+/** Length of a binary-encoded rendezvous service ID. */
+#define REND_SERVICE_ID_LEN 10
 
 /** Time period for which a v2 descriptor will be valid. */
 #define REND_TIME_PERIOD_V2_DESC_VALIDITY (24*60*60)
@@ -984,8 +987,8 @@ typedef struct edge_connection_t {
   /** Bytes written since last call to control_event_stream_bandwidth_used() */
   uint32_t n_written;
 
-  char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
-                                           * querying for? (AP only) */
+  /** What rendezvous service are we querying for? (AP only) */
+  char rend_query[REND_SERVICE_ID_LEN_BASE32+1];
 
   /** Number of times we've reassigned this application connection to
    * a new circuit. We keep track because the timeout is longer if we've
@@ -1038,8 +1041,8 @@ typedef struct dir_connection_t {
   /** The zlib object doing on-the-fly compression for spooled data. */
   tor_zlib_state_t *zlib_state;
 
-  char rend_query[REND_SERVICE_ID_LEN+1]; /**< What rendezvous service are we
-                                           * querying for? */
+  /** What rendezvous service are we querying for? */
+  char rend_query[REND_SERVICE_ID_LEN_BASE32+1];
 
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the directory server's signing key. */
@@ -1818,7 +1821,7 @@ typedef struct origin_circuit_t {
    * if purpose is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL
    * for a hidden service, or is S_*.
    */
-  char rend_query[REND_SERVICE_ID_LEN+1];
+  char rend_query[REND_SERVICE_ID_LEN_BASE32+1];
 
   /** Stores the rendezvous descriptor version if purpose is S_*. Used to
    * distinguish introduction and rendezvous points belonging to the same
@@ -1830,6 +1833,7 @@ typedef struct origin_circuit_t {
    * is incompatible. Would it be clearer to switch to a single version number
    * for now and switch back to a bitmap, when the above becomes true? -KL
    * Yes.  "YAGNI." -NM
+   * Now it's not a bitmap any more. -KL
    */
   uint8_t rend_desc_version;
 
@@ -2088,10 +2092,8 @@ typedef struct {
   int FetchHidServDescriptors; /** and hidden service descriptors? */
   int HidServDirectoryV2; /**< Do we act as hs dir? */
 
-  /*XXXX020 maybe remove these next two testing options.  DEFINITELY rename
-   * them at some point, since I think C says that identifiers beginning with
-   * __ are implementation-reserved or something. */
-  int __MinUptimeHidServDirectoryV2; /**< Accept hs dirs after what time? */
+  int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden
+                                    * service directories after what time? */
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */

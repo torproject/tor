@@ -1429,7 +1429,7 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
   strlcat(name, suffix, sizeof(name));
 
   log_info(LD_EXIT, "Testing whether our DNS server is hijacking nonexistent "
-           "domains with requrest for bogus hostname \"%s\"", name);
+           "domains with request for bogus hostname \"%s\"", name);
 
   addr = tor_strdup(name);
   r = evdns_resolve_ipv4(name, DNS_QUERY_NO_SEARCH,

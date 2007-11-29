@@ -2685,7 +2685,7 @@ hostname_type_t
 parse_extended_hostname(char *address)
 {
     char *s;
-    char query[REND_SERVICE_ID_LEN+1];
+    char query[REND_SERVICE_ID_LEN_BASE32+1];
 
     s = strrchr(address,'.');
     if (!s)
@@ -2699,8 +2699,8 @@ parse_extended_hostname(char *address)
 
     /* so it is .onion */
     *s = 0; /* nul-terminate it */
-    if (strlcpy(query, address, REND_SERVICE_ID_LEN+1) >=
-        REND_SERVICE_ID_LEN+1)
+    if (strlcpy(query, address, REND_SERVICE_ID_LEN_BASE32+1) >=
+        REND_SERVICE_ID_LEN_BASE32+1)
       goto failed;
     if (rend_valid_service_id(query)) {
       return ONION_HOSTNAME; /* success */

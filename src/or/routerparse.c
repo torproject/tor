@@ -3262,6 +3262,9 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
      * is greater than 2, we bumped it because we broke backward
      * compatibility.  See how version numbers in our other formats
      * work. */
+    /* That means that adding optional fields to the descriptor wouldn't
+     * require a new version number, but the way of verifying it's origin
+     * would. Okay. -KL */
     log_warn(LD_REND, "Wrong descriptor version: %d", result->version);
     goto err;
   }
@@ -3311,6 +3314,12 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
      * non-backward-compatible changes.  This code doesn't know how to
      * parse a v3 descriptor, because a v3 descriptor is by definition not
      * compatible with this code.  */
+    /* This refers to the permitted versions of introduction cells which might
+     * change independently from the descriptor version. If we validated the
+     * numbers here, a hidden service directory might reject a descriptor that
+     * would be understood by newer clients. Then we would need a "HSDir3" tag
+     * only to be able to use a new introduction cell version. I really think
+     * we should not validate it here. -KL */
     version = atoi(smartlist_get(versions, i));
     result->protocols |= 1 << version;
   }
@@ -3467,6 +3476,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     tok = find_first_by_keyword(tokens, R_IPO_ONION_PORT);
     info->port = (uint16_t) atoi(tok->args[0]);
     /* XXXX020 this next check fails with ports like 65537. */
+    /* No, uint16_t only allows numbers in the interval 0..65535. -KL */
     if (!info->port) {
       log_warn(LD_REND, "Introduction point onion port is out of range: %d",
                info->port);
