@@ -187,7 +187,7 @@ $Id$
 
 1.1. What's different from version 2?
 
-   Clients used to download a multiple network status documents,
+   Clients used to download multiple network status documents,
    corresponding roughly to "status votes" above.  They would compute the
    result of the vote on the client side.
 
@@ -243,7 +243,7 @@ $Id$
   implementations MUST prefix items not recognized by older versions of
   Tor with an "opt" until those versions of Tor are obsolete.  [Note that
   key certificates, status vote documents, extra info documents, and
-  status consensus documents will never by read by older versions of Tor.]
+  status consensus documents will never be read by older versions of Tor.]
 
   Other implementations that want to extend Tor's directory format MAY
   introduce their own items.  The keywords for extension items SHOULD start
@@ -328,8 +328,8 @@ $Id$
 
    FU: The consensus is no longer the freshest consensus.
 
-   FU ... (the current descriptor's VU): Clients download the consensus.
-        (See note above: clients guess that the next descriptor's FU will be
+   FU ... (the current consensus's VU): Clients download the consensus.
+        (See note above: clients guess that the next consensus's FU will be
         two intervals after the current VA.)
 
    VU: The consensus is no longer valid.
@@ -352,6 +352,13 @@ $Id$
         (20 mins by default) has passed since then.
 
       - Its uptime has been reset (by restarting).
+
+      [XXX this list is incomplete; see router_differences_are_cosmetic()
+       in routerlist.c for others]
+
+   ORs SHOULD NOT publish a new router descriptor or extra-info document
+   if none of the above events have occurred and not much time has passed
+   (12 hours by default).
 
    After generating a descriptor, ORs upload them to every directory
    authority they know, by posting them (in order) to the URL
