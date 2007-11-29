@@ -556,6 +556,13 @@ $Id$
         it is prefixed with "opt"; it should be so prefixed until these
         versions are obsolete.]
 
+   "hidden-service-dir" NL
+
+       [At most once.]
+
+       Present only if this router stores and serves v2 hidden service
+       descriptors.
+
 2.2. Extra-info documents
 
    Extra-info documents consist of the following items:
@@ -908,6 +915,7 @@ $Id$
              circuits.
           "Fast" if the router is suitable for high-bandwidth circuits.
           "Guard" if the router is suitable for use as an entry guard.
+          "HSDir" if the router is considered a v2 hidden service directory.
           "Named" if the router's identity-nickname mapping is canonical,
              and this authority binds names.
           "Stable" if the router is suitable for long-lived circuits.
@@ -1016,6 +1024,10 @@ $Id$
    directory port, and it is running a version of the directory protocol that
    supports the functionality clients need.  (Currently, this is
    0.2.0.?????-alpha or later.)
+
+   "HSDir" -- A router is a v2 hidden service directory if it stores and
+   serves v2 hidden service descriptors and the authority managed to connect
+   to it successfully within the last 24 hours.
 
    Directory server administrators may label some servers or IPs as
    blacklisted, and elect not to include them in their network-status lists.
