@@ -123,8 +123,7 @@ Status: Researching
   Option A: Vidalia should continue doing its anonymized IP-to-city
   queries. Thus we can achieve goals 2a and 2b. We would solve goal
   3 by only doing lookups on descriptors that are purpose "general"
-  (or, alternately, by only doing lookups on descriptors that are in
-  the networkstatus consensus). We would leave goal 5 unsolved.
+  (see Section 4.2.1 for how). We would leave goal 5 unsolved.
 
   Option B: Each directory authority should keep an IP-to-city db,
   lookup the value for each router it lists, and include that line in
@@ -140,6 +139,31 @@ Status: Researching
   the GeoIP information won't change from one consensus to the next. Is
   there another reasonable location for it that can provide similar
   consensus security properties?
+
+4.2.1. Controllers can query for router annotations
+
+  Vidalia needs to stop doing queries on bridge relay IP addresses.
+  It could do that by only doing lookups on descriptors that are in
+  the networkstatus consensus, but that precludes designs like Blossom
+  that might want to map its relay locations. The best answer is that it
+  should learn the router annotations, with a new controller 'getinfo'
+  command:
+    "GETINFO router-annotations/id/<OR identity>" or
+    "GETINFO router-annotations/name/<OR nickname>"
+  which would respond with something like
+    @downloaded-at 2007-11-29 08:06:38
+    @source "128.31.0.34"
+    @purpose bridge
+
+  [We could also make the answer include the digest for the router in
+  question, which would enable us to ask GETINFO router-annotations/all.
+  Is this worth it? -RD]
+
+  Then Vidalia can avoid doing lookups on descriptors with purpose
+  "bridge". Even better would be to add a new annotation "@private true"
+  so Vidalia can know how to handle new purposes that we haven't created
+  yet. Vidalia could special-case "bridge" for now, for compatibility
+  with the current 0.2.0.x-alphas.
 
 4.3. Recommendation
 
@@ -181,17 +205,20 @@ Status: Researching
 
 6. Controllers use the IP-to-country db for mapping and for path building
 
-  Vidalia can use the IP-to-country mappings for placing on its map:
+  Down the road, vidalia can use the IP-to-country mappings for placing
+  on its map:
   - The location of the client
   - The location of the bridges, or other relays not in the
     networkstatus, on the map.
   - Any relays that it doesn't yet have an IP-to-city answer for.
 
-  Controllers can also it to set EntryNodes, ExitNodes, etc in a
-  per-country way. To support this feature, we need to export the
-  IP-to-country data via the Tor controller protocol.
+  Other controllers can also use it to set EntryNodes, ExitNodes, etc
+  in a per-country way.
 
-  Is it sufficient just to add a new GETINFO command:
+  To support these features, we need to export the IP-to-country data
+  via the Tor controller protocol.
+
+  Is it sufficient just to add a new GETINFO command?
     GETINFO ip-to-country/128.31.0.34
     250+ip-to-country/128.31.0.34="US","USA","UNITED STATES"
 
