@@ -556,12 +556,14 @@ $Id$
         it is prefixed with "opt"; it should be so prefixed until these
         versions are obsolete.]
 
-   "hidden-service-dir" NL
+   "hidden-service-dir" *(SP VersionNum) NL
 
        [At most once.]
 
-       Present only if this router stores and serves v2 hidden service
-       descriptors.
+       Present only if this router stores and serves hidden service
+       descriptors. If any VersionNum(s) are specified, this router
+       supports those descriptor versions. If none are specified, it
+       defaults to version 2 descriptors.
 
 2.2. Extra-info documents
 
