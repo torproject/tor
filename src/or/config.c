@@ -1269,8 +1269,8 @@ config_get_lines(char *string, config_line_t **result)
     }
     if (k && v) {
       /* This list can get long, so we keep a pointer to the end of it
-       * rather than using config_line_append over and over and getting n^2
-       * performance.  This is the only really long list. */
+       * rather than using config_line_append over and over and getting
+       * n^2 performance. */
       *next = tor_malloc(sizeof(config_line_t));
       (*next)->key = tor_strdup(k);
       (*next)->value = tor_strdup(v);

@@ -333,7 +333,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   if (!get_via_tor) {
     if (options->UseBridges && type != BRIDGE_AUTHORITY) {
       /* want to ask a running bridge for which we have a descriptor. */
-      /* XXX020 we assume that all of our bridges can answer any
+      /* XXX021 we assume that all of our bridges can answer any
        * possible directory question. This won't be true forever. -RD */
       routerinfo_t *ri = choose_random_entry(NULL);
       if (ri) {
