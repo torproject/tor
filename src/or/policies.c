@@ -523,7 +523,7 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
           policy_write_item(p1, sizeof(p1), ap);
           policy_write_item(p2, sizeof(p2), tmp);
           log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is already "
-              "covered by %s.", ap, tmp);
+              "covered by %s.", p1, p2);
           victim = ap;
           ap = ap->next;
 
