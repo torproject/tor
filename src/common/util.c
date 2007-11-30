@@ -240,8 +240,11 @@ tor_log_mallinfo(int severity)
   (void)severity;
 #endif
 #ifdef USE_DMALLOC
-  dmalloc_log_stats();
-  // too wordy dmalloc_log_unfreed();
+  dmalloc_log_changed(0, /* Since the program started. */
+                      1, /* Log info about non-freed pointers. */
+                      0, /* Do not log info about freed pointers. */
+                      0  /* Do not log individual pointers. */
+                      );
 #endif
 }
 
