@@ -18,6 +18,10 @@ Changes in version 0.2.0.13-alpha - 2007-11-??
       to build a descriptor with no intro points (and it would have
       crashed if we had tried to parse one). Bugfix on 0.2.0.x; patch
       by Karsten Loesing.
+    - Fix building with dmalloc 5.5.2 with glibc.
+
+  o Minor features:
+    - On USR1, when dmalloc is in use, log the top 10 memory consumers. 
 
 
 Changes in version 0.2.0.12-alpha - 2007-11-16

@@ -76,8 +76,10 @@ const char util_c_id[] = "$Id$";
  * Memory management
  * ===== */
 #ifdef USE_DMALLOC
+ #undef strndup
  #include <dmalloc.h>
  #define DMALLOC_FN_ARGS , file, line
+ #define dmalloc_strdup(file, line, string, xalloc_b) dmalloc_strndup(file, line, (string), -1, xalloc_b)
 #else
  #define dmalloc_strdup(file, line, string, xalloc_b) strdup(string)
 
@@ -227,6 +229,10 @@ tor_log_mallinfo(int severity)
       mi.keepcost);
 #else
   (void)severity;
+#endif
+#ifdef USE_DMALLOC
+  dmalloc_log_stats();
+  // too wordy dmalloc_log_unfreed();
 #endif
 }
 
