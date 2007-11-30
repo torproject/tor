@@ -7,12 +7,11 @@ Backport items for 0.1.2:
   o r11882: Avoid crash-bug 451.
   o r11886: Consider family as well as identity when cannibalizing circuits.
   - backport the osx privoxy.config changes
-  - no need to backport the windows privoxy.config changes because they're
+  X no need to backport the windows privoxy.config changes because they're
     not in SVN??
   - r12339: rlim_t may be wider than unsigned long.
   - r12341: Work if the real open-file limit is OPEN_FILES.
-
-  - r12459: Exit policies reject public IP address too
+  o r12459: Exit policies reject public IP address too
 
 Backport for 0.1.2.x once better tested:
   D r11287: Reject address mappings to internal addresses. (??)
@@ -20,7 +19,8 @@ Backport for 0.1.2.x once better tested:
   o r11499, r11500, r11501: hidserv hexdigests rather than nicknames
   o r11829: Don't warn when cancel_pending_resolve() finds a cached failure.
   o r11915: just because you hup, don't publish a near-duplicate descriptor
-  - r11994: Call routerlist_remove_old_routers() less.  This will be a
-	    tricky backport.
+  d r11994: Call routerlist_remove_old_routers() less.  This will be a
+            tricky backport.
   - r12153 and r12154: Give better warnings when we fail to mmap a descriptor
             store that we just wrote.
+
