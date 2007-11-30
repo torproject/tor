@@ -1076,13 +1076,14 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     return -1;
   }
   /* Decode/decrypt introduction points. */
-  if (intro_content &&
-      rend_decrypt_introduction_points(parsed, descriptor_cookie,
-                                       intro_content, intro_size) < 0) {
-    log_warn(LD_PROTOCOL,"Couldn't decode/decrypt introduction points.");
-    rend_service_descriptor_free(parsed);
-    tor_free(intro_content);
-    return -1;
+  if (intro_content) {
+    if (rend_decrypt_introduction_points(parsed, descriptor_cookie,
+                                         intro_content, intro_size) < 0) {
+      log_warn(LD_PROTOCOL,"Couldn't decode/decrypt introduction points.");
+      rend_service_descriptor_free(parsed);
+      tor_free(intro_content);
+      return -1;
+    }
   } else {
     parsed->n_intro_points = 0;
   }
