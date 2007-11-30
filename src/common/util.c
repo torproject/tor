@@ -79,8 +79,17 @@ const char util_c_id[] = "$Id$";
  #undef strndup
  #include <dmalloc.h>
  #define DMALLOC_FN_ARGS , file, line
- #define dmalloc_strdup(file, line, string, xalloc_b) dmalloc_strndup(file, line, (string), -1, xalloc_b)
-#else
+
+ #if defined(HAVE_DMALLOC_STRDUP)
+ /* the dmalloc_strdup should be fine as defined */
+ #elif defined(HAVE_DMALLOC_STRNDUP)
+ #define dmalloc_strdup(file, line, string, xalloc_b) \
+         dmalloc_strndup(file, line, (string), -1, xalloc_b)
+ #else
+ #error "No dmalloc_strdup or equivalent"
+ #endif
+
+#else /* not using dmalloc */
  #define dmalloc_strdup(file, line, string, xalloc_b) strdup(string)
 
  #define dmalloc_malloc(file, line, size, func_id, alignment, xalloc_b) \
