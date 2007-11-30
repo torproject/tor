@@ -1889,8 +1889,8 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
  * the start of the next line.  If we run out of data, return a pointer to the
  * end of the string.  If we encounter an error, return NULL.
  *
- * NOTE: We modify <b>line</b> as we parse it, by inserting NULs to terminate
- * the key and value.
+ * NOTE: We modify *<b>line</b> as we parse it, by inserting NULs
+ * to terminate the key and value.
  */
 char *
 parse_line_from_str(char *line, char **key_out, char **value_out)
@@ -1923,9 +1923,10 @@ parse_line_from_str(char *line, char **key_out, char **value_out)
   while (*line && !TOR_ISSPACE(*line) && *line != '#')
     ++line;
 
-  /* Skip until the value */
+  /* Skip until the value, writing nuls so key will be nul-terminated */
   while (*line == ' ' || *line == '\t')
     *line++ = '\0';
+
   val = line;
 
   /* Find the end of the line. */
