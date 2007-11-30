@@ -486,8 +486,11 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
     tmp=ap;
     while (tmp) {
       if (tmp->next && addr_policy_covers(ap, tmp->next)) {
+        char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
+        policy_write_item(p1, sizeof(p1), tmp->next);
+        policy_write_item(p2, sizeof(p2), ap);
         log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is made "
-            "redundant by %s.", tmp->next->string, ap->string);
+            "redundant by %s.", p1, p2);
         victim = tmp->next;
         tmp->next = victim->next;
         victim->next = NULL;
@@ -516,8 +519,11 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
         }
       } else { /* policy_types are equal. */
         if (addr_policy_covers(tmp, ap)) {
+          char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
+          policy_write_item(p1, sizeof(p1), ap);
+          policy_write_item(p2, sizeof(p2), tmp);
           log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is already "
-              "covered by %s.", ap->string, tmp->string);
+              "covered by %s.", ap, tmp);
           victim = ap;
           ap = ap->next;
 
@@ -694,7 +700,6 @@ addr_policy_free(addr_policy_t *p)
   while (p) {
     e = p;
     p = p->next;
-    tor_free(e->string);
     tor_free(e);
   }
 }

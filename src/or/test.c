@@ -2191,7 +2191,6 @@ test_dir_format(void)
   r1.platform = tor_strdup(platform);
 
   ex1.policy_type = ADDR_POLICY_ACCEPT;
-  ex1.string = NULL;
   ex1.addr = 0;
   ex1.maskbits = 0;
   ex1.prt_min = ex1.prt_max = 80;
@@ -2925,7 +2924,6 @@ test_policies(void)
   test_eq(16, policy->maskbits);
   test_eq(1, policy->prt_min);
   test_eq(65535, policy->prt_max);
-  test_streq("reject 192.168.0.0/16:*", policy->string);
 
   test_assert(ADDR_POLICY_ACCEPTED ==
           compare_addr_to_addr_policy(0x01020304u, 2, policy));
@@ -2957,8 +2955,8 @@ test_policies(void)
   line.next = NULL;
   test_assert(0 == policies_parse_exit_policy(&line, &policy, 0, NULL));
   test_assert(policy);
-  test_streq(policy->string, "accept *:80");
-  test_streq(policy->next->string, "reject *:*");
+  //test_streq(policy->string, "accept *:80");
+  //test_streq(policy->next->string, "reject *:*");
   test_eq_ptr(policy->next->next, NULL);
 
   addr_policy_free(policy);

@@ -1119,7 +1119,6 @@ typedef enum {
 /** A linked list of policy rules */
 typedef struct addr_policy_t {
   addr_policy_action_t policy_type; /**< What to do when the policy matches.*/
-  char *string; /**< String representation of this rule. */
 
   /* XXXX020 make this ipv6-capable */
   uint32_t addr; /**< Base address to accept or reject. */

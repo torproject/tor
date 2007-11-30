@@ -2480,7 +2480,6 @@ router_parse_addr_policy(directory_token_t *tok)
 {
   addr_policy_t *newe;
   char *arg;
-  char buf[POLICY_BUF_LEN];
 
   tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
 
@@ -2500,10 +2499,6 @@ router_parse_addr_policy(directory_token_t *tok)
                                 &newe->prt_min, &newe->prt_max))
     goto policy_read_failed;
 
-  if (policy_write_item(buf, sizeof(buf), newe) < 0)
-    goto policy_read_failed;
-
-  newe->string = tor_strdup(buf);
   return newe;
 
 policy_read_failed:
@@ -2540,16 +2535,13 @@ router_parse_addr_policy_private(directory_token_t *tok)
 
   nextp = &result;
   for (net = 0; private_nets[net]; ++net) {
-    size_t len;
+    char buf[POLICY_BUF_LEN];
     *nextp = tor_malloc_zero(sizeof(addr_policy_t));
     (*nextp)->policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
       : ADDR_POLICY_ACCEPT;
-    len = strlen(arg)+strlen(private_nets[net])+16;
-    (*nextp)->string = tor_malloc(len+1);
-    tor_snprintf((*nextp)->string, len, "%s %s%s",
-                 tok->tp == K_REJECT ? "reject" : "accept",
+    tor_snprintf(buf, sizeof(buf), "%s%s",
                  private_nets[net], arg);
-    if (parse_addr_and_port_range((*nextp)->string + 7,
+    if (parse_addr_and_port_range(buf,
                                   &(*nextp)->addr, &(*nextp)->maskbits,
                                   &(*nextp)->prt_min, &(*nextp)->prt_max)) {
       log_warn(LD_BUG, "Couldn't parse an address range we generated!");
@@ -2565,22 +2557,10 @@ router_parse_addr_policy_private(directory_token_t *tok)
 void
 assert_addr_policy_ok(addr_policy_t *t)
 {
-  addr_policy_t *t2;
   while (t) {
     tor_assert(t->policy_type == ADDR_POLICY_REJECT ||
                t->policy_type == ADDR_POLICY_ACCEPT);
     tor_assert(t->prt_min <= t->prt_max);
-    t2 = router_parse_addr_policy_from_string(t->string, -1);
-    tor_assert(t2);
-    tor_assert(t2->policy_type == t->policy_type);
-    tor_assert(t2->addr == t->addr);
-    tor_assert(t2->maskbits == t->maskbits);
-    tor_assert(t2->prt_min == t->prt_min);
-    tor_assert(t2->prt_max == t->prt_max);
-    tor_assert(!strcmp(t2->string, t->string));
-    tor_assert(t2->next == NULL);
-    addr_policy_free(t2);
-
     t = t->next;
   }
 
