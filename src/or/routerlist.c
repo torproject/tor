@@ -2262,7 +2262,8 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   return r;
 }
 
-#define should_cache_old_descriptors() dirserver_mode(get_options())
+#define should_cache_old_descriptors() \
+  directory_caches_dir_info(get_options())
 
 /** If we're a directory cache and routerlist <b>rl</b> doesn't have
  * a copy of router <b>ri</b> yet, add it to the list of old (not
@@ -2835,7 +2836,7 @@ routerlist_remove_old_cached_routers_with_id(time_t now,
 
   /* Check whether we need to do anything at all. */
   {
-    int mdpr = dirserver_mode(get_options()) ? 5 : 2;
+    int mdpr = directory_caches_dir_info(get_options()) ? 5 : 2;
     if (n <= mdpr)
       return;
     n_extra = n - mdpr;
@@ -2908,7 +2909,7 @@ routerlist_remove_old_routers(void)
   routerinfo_t *router;
   signed_descriptor_t *sd;
   digestmap_t *retain;
-  int dirserv = dirserver_mode(get_options());
+  int dirserv = directory_caches_dir_info(get_options());
   const networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
 
@@ -2999,7 +3000,7 @@ routerlist_remove_old_routers(void)
    * total number doesn't approach max_descriptors_per_router()*len(router).
    */
   if (smartlist_len(routerlist->old_routers) <
-      smartlist_len(routerlist->routers) * (dirserver_mode(get_options())?4:2))
+      smartlist_len(routerlist->routers) * (dirserv?4:2))
     goto done;
 
   smartlist_sort(routerlist->old_routers, _compare_old_routers_by_identity);
@@ -3223,7 +3224,7 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 {
   routerstatus_t *rs;
   networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
-  int dirserv = dirserver_mode(get_options());
+  int dirserv = directory_caches_dir_info(get_options());
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
 
   if (consensus) {
@@ -3559,7 +3560,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
   or_options_t *options = get_options();
 
   n_downloadable = smartlist_len(downloadable);
-  if (!dirserver_mode(options)) {
+  if (!directory_caches_dir_info(options)) {
     if (n_downloadable >= MAX_DL_TO_DELAY) {
       log_debug(LD_DIR,
              "There are enough downloadable routerdescs to launch requests.");
@@ -3623,7 +3624,7 @@ update_router_descriptor_cache_downloads(time_t now)
   or_options_t *options = get_options();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
 
-  if (! dirserver_mode(options)) {
+  if (! directory_caches_dir_info(options)) {
     log_warn(LD_BUG, "Called update_router_descriptor_cache_downloads() "
              "on a non-dir-mirror?");
   }
@@ -3762,7 +3763,7 @@ update_consensus_router_descriptor_downloads(time_t now)
   smartlist_t *no_longer_old = smartlist_create();
   smartlist_t *downloadable = smartlist_create();
   int authdir = authdir_mode(options);
-  int dirserver = dirserver_mode(options);
+  int dirserver = directory_caches_dir_info(options);
   networkstatus_vote_t *consensus =
     networkstatus_get_reasonably_live_consensus(now);
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
@@ -3858,7 +3859,7 @@ update_router_descriptor_downloads(time_t now)
   or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (dirserver_mode(options)) {
+  if (directory_caches_dir_info(options)) {
     update_router_descriptor_cache_downloads(now);
   }
   update_consensus_router_descriptor_downloads(now);

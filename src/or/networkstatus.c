@@ -483,7 +483,7 @@ add_networkstatus_to_cache(const char *s,
     tor_free(fn);
   }
 
-  if (dirserver_mode(get_options()))
+  if (directory_caches_dir_info(get_options()))
     dirserv_set_cached_networkstatus_v2(s,
                                         ns->identity_digest,
                                         ns->published_on);
@@ -528,7 +528,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   char fp[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
 
-  if (!dirserver_mode(get_options()))
+  if (!directory_caches_dir_info(get_options()))
     return 0; /* Don't bother storing it. */
 
   ns = networkstatus_v2_parse_from_string(s);
@@ -542,10 +542,6 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
       !(trusted_dir->type & V2_AUTHORITY)) {
     log_info(LD_DIR, "Network status was signed, but not by an authoritative "
              "directory we recognize.");
-    if (!dirserver_mode(get_options())) {
-      networkstatus_v2_free(ns);
-      return 0;
-    }
     source_desc = fp;
   } else {
     source_desc = trusted_dir->description;
@@ -600,7 +596,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   }
 
   if (!trusted_dir) {
-    if (!skewed && dirserver_mode(get_options())) {
+    if (!skewed) {
       /* We got a non-trusted networkstatus, and we're a directory cache.
        * This means that we asked an authority, and it told us about another
        * authority we didn't recognize. */
@@ -713,7 +709,7 @@ networkstatus_v2_list_clean(time_t now)
       unlink(fname);
     }
     tor_free(fname);
-    if (dirserver_mode(get_options())) {
+    if (directory_caches_dir_info(get_options())) {
       dirserv_set_cached_networkstatus_v2(NULL, ns->identity_digest, 0);
     }
     networkstatus_v2_free(ns);
@@ -1055,7 +1051,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
     long dl_interval;
     long interval = c->fresh_until - c->valid_after;
     time_t start;
-    if (dirserver_mode(options)) {
+    if (directory_caches_dir_info(options)) {
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
       start = c->fresh_until + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
@@ -1114,7 +1110,7 @@ update_networkstatus_downloads(time_t now)
   or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (dirserver_mode(options))
+  if (directory_caches_dir_info(options))
     update_v2_networkstatus_cache_downloads(now);
   update_consensus_networkstatus_downloads(now);
   update_certificate_downloads(now);
@@ -1351,7 +1347,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
     write_str_to_file(consensus_fname, consensus, 0);
   }
 
-  if (dirserver_mode(get_options()))
+  if (directory_caches_dir_info(get_options()))
     dirserv_set_cached_networkstatus_v3(consensus,
                                         current_consensus->valid_after);
 

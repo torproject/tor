@@ -282,7 +282,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
 {
   routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
-  int prefer_authority = server_mode(options) && dirserver_mode(options);
+  int prefer_authority = directory_fetches_from_authorities(options);
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
   authority_type_t type;
   int flags = retry_if_no_servers ? PDS_RETRY_IF_NO_SERVERS : 0;
@@ -2982,8 +2982,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
 {
   char digest[DIGEST_LEN];
   time_t now = time(NULL);
-  or_options_t *options = get_options();
-  int server = server_mode(options) && dirserver_mode(options);
+  int server = directory_fetches_from_authorities(get_options());
   if (!was_descriptor_digests) {
     if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
       tor_assert(!was_extrainfo); /* not supported yet */

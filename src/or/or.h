@@ -3001,6 +3001,12 @@ int list_server_status(smartlist_t *routers, char **router_status_out,
                        int for_controller);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
+
+int directory_caches_dir_info(or_options_t *options);
+int directory_fetches_from_authorities(or_options_t *options);
+int directory_permits_begindir_requests(or_options_t *options);
+int directory_permits_controller_requests(or_options_t *options);
+
 void directory_set_dirty(void);
 cached_dir_t *dirserv_get_directory(void);
 cached_dir_t *dirserv_get_runningrouters(void);
@@ -3628,7 +3634,6 @@ int authdir_mode_tests_reachability(or_options_t *options);
 int authdir_mode_bridge(or_options_t *options);
 int authdir_mode_any_nonbridge(or_options_t *options);
 int clique_mode(or_options_t *options);
-int dirserver_mode(or_options_t *options);
 int server_mode(or_options_t *options);
 int advertised_server_mode(void);
 int proxy_mode(or_options_t *options);

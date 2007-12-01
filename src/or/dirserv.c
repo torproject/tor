@@ -1056,6 +1056,50 @@ dirserv_dump_directory_to_string(char **dir_out,
   return -1;
 }
 
+/********************************************************************/
+
+/* A set of functions to answer questions about how we'd like to behave
+ * as a directory cache/client. */
+
+/** Return 1 if we want to keep descriptors, networkstatuses, etc around
+ * and serve them to others, or 0 otherwise.
+ * Also causes us to fetch new networkstatuses, descriptors, etc on the
+ * "mirror" schedule rather than the "client" schedule.
+ */
+int
+directory_caches_dir_info(or_options_t *options)
+{
+  return options->DirPort != 0;
+}
+
+/** Return 1 if we fetch our directory material directly from the
+ * authorities, rather than some other cache. */
+int
+directory_fetches_from_authorities(or_options_t *options)
+{
+  return server_mode(options) && options->DirPort != 0;
+}
+
+/** Return 1 if we want to allow remote people to ask us directory
+ * requests via the "begin_dir" interface, which doesn't require
+ * having any separate port open. */
+int
+directory_permits_begindir_requests(or_options_t *options)
+{
+  return options->DirPort != 0;
+}
+
+/** Return 1 if we want to allow controllers to ask us directory
+ * requests via the controller interface, which doesn't require
+ * having any separate port open. */
+int
+directory_permits_controller_requests(or_options_t *options)
+{
+  return options->DirPort != 0;
+}
+
+/********************************************************************/
+
 /* Used only by non-v1-auth dirservers: The v1 directory and
  * runningrouters we'll serve when requested. */
 static cached_dir_t *cached_directory = NULL;

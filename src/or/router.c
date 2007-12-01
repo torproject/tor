@@ -884,14 +884,6 @@ server_mode(or_options_t *options)
   return (options->ORPort != 0 || options->ORListenAddress);
 }
 
-/** Return true iff we are trying to be a directory server */
-int
-dirserver_mode(or_options_t *options)
-{
-//  if (options->ClientOnly) return 0;
-  return options->DirPort != 0;
-}
-
 /** Remember if we've advertised ourselves to the dirservers. */
 static int server_is_advertised=0;
 

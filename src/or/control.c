@@ -1382,7 +1382,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     tor_free(url);
     smartlist_free(descs);
   } else if (!strcmpstart(question, "dir/status/")) {
-    if (dirserver_mode(get_options())) {
+    if (directory_permits_controller_requests(get_options())) {
       size_t len=0;
       char *cp;
       smartlist_t *status_list = smartlist_create();
