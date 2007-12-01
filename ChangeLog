@@ -21,7 +21,10 @@ Changes in version 0.2.0.13-alpha - 2007-11-??
     - Fix building with dmalloc 5.5.2 with glibc.
 
   o Minor features:
-    - On USR1, when dmalloc is in use, log the top 10 memory consumers. 
+    - On USR1, when dmalloc is in use, log the top 10 memory
+      consumers. (We already do this on HUP.)
+    - Authorities and caches fetch the v2 networkstatus documents
+      less often, now that v3 is encouraged.
 
 
 Changes in version 0.2.0.12-alpha - 2007-11-16

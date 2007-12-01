@@ -922,11 +922,11 @@ networkstatus_nickname_is_unnamed(const char *nickname)
 
 /** How frequently do directory authorities re-download fresh networkstatus
  * documents? */
-#define AUTHORITY_NS_CACHE_INTERVAL (5*60)
+#define AUTHORITY_NS_CACHE_INTERVAL (10*60)
 
 /** How frequently do non-authority directory caches re-download fresh
  * networkstatus documents? */
-#define NONAUTHORITY_NS_CACHE_INTERVAL (15*60)
+#define NONAUTHORITY_NS_CACHE_INTERVAL (60*60)
 
 /** We are a directory server, and so cache network_status documents.
  * Initiate downloads as needed to update them.  For v2 authorities,
