@@ -70,6 +70,8 @@ struct tor_tls_t {
                        * time. */
   unsigned long last_write_count;
   unsigned long last_read_count;
+  void (*negotiated_callback)(tor_tls_t *tls, void *arg);
+  void *callback_arg;
 };
 
 static void tor_tls_context_decref(tor_tls_context_t *ctx);
@@ -606,6 +608,16 @@ tor_tls_new(int sock, int isServer)
   return result;
 }
 
+/**DOCDOC*/
+void
+tor_tls_set_renegotiate_callback(tor_tls_t *tls,
+                                 void (*cb)(tor_tls_t *, void *arg),
+                                 void *arg)
+{
+  tls->negotiated_callback = cb;
+  tls->callback_arg = arg;
+}
+
 /** Return whether this tls initiated the connect (client) or
  * received it (server). */
 int
@@ -624,6 +636,7 @@ tor_tls_free(tor_tls_t *tls)
   tor_assert(tls && tls->ssl);
   SSL_free(tls->ssl);
   tls->ssl = NULL;
+  tls->negotiated_callback = NULL;
   if (tls->context)
     tor_tls_context_decref(tls->context);
   tor_free(tls);
@@ -648,7 +661,8 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
       tls->hadCert = 1;
       /* New certificate! */
       log_info(LD_NET, "Got a TLS renegotiation.");
-      /* XXXX020 call some kind of 'there was a renegotiation' callback. */
+      if (tls->negotiated_callback)
+        tls->negotiated_callback(tls, tls->callback_arg);
     }
 #endif
     return r;

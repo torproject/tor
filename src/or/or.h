@@ -236,13 +236,15 @@ typedef enum {
 #define OR_CONN_STATE_PROXY_READING 3
 /** State for a connection to an OR: SSL is handshaking, not done yet. */
 #define OR_CONN_STATE_TLS_HANDSHAKING 4
+/** DOCDOC */
+#define OR_CONN_STATE_TLS_RENEGOTIATING 5
 /** State for a connection to an OR: We're done with our SSL handshake, but we
  * haven't yet negotiated link protocol versions and finished authenticating.
  */
-#define OR_CONN_STATE_OR_HANDSHAKING 5
+#define OR_CONN_STATE_OR_HANDSHAKING 6
 /** State for a connection to an OR: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 6
-#define _OR_CONN_STATE_MAX 6
+#define OR_CONN_STATE_OPEN 7
+#define _OR_CONN_STATE_MAX 7
 
 #define _EXIT_CONN_STATE_MIN 1
 /** State for an exit connection: waiting for response from dns farm. */
@@ -924,6 +926,7 @@ typedef struct or_connection_t {
                                   * connection, which half of the space should
                                   * we use? */
   unsigned int is_canonical:1; /**< DOCDOC */
+  unsigned int have_renegotiated:1; /**DOCDOC */
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
@@ -2775,7 +2778,9 @@ int connection_or_process_inbuf(or_connection_t *conn);
 int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
+#if 0
 int connection_or_finish_or_handshake(or_connection_t *conn);
+#endif
 
 or_connection_t *connection_or_connect(uint32_t addr, uint16_t port,
                                     const char *id_digest);

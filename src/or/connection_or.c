@@ -583,13 +583,23 @@ connection_tls_continue_handshake(or_connection_t *conn)
 {
   int result;
   check_no_tls_errors();
-  result = tor_tls_handshake(conn->tls);
+ again:
+  if (conn->_base.state == OR_CONN_STATE_TLS_RENEGOTIATING)
+    result = tor_tls_renegotiate(conn->tls);
+  else
+    result = tor_tls_handshake(conn->tls);
   switch (result) {
     CASE_TOR_TLS_ERROR_ANY:
     log_info(LD_OR,"tls error [%s]. breaking connection.",
              tor_tls_err_to_string(result));
       return -1;
     case TOR_TLS_DONE:
+      if (!tor_tls_is_server(conn->tls) &&
+          !tor_tls_used_v1_handshake(conn->tls) &&
+          conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
+        conn->_base.state = OR_CONN_STATE_TLS_RENEGOTIATING;
+        goto again;
+      }
       return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
       connection_start_writing(TO_CONN(conn));
@@ -652,16 +662,9 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   const char *safe_address =
     started_here ? conn->_base.address : safe_str(conn->_base.address);
   const char *conn_type = started_here ? "outgoing" : "incoming";
-  int has_cert = 0, has_identity = 0;
-  int v1 = (conn->link_proto == 1);
+  int has_cert = 0, has_identity=0;
 
   check_no_tls_errors();
-  if (v1) {
-    has_cert = tor_tls_peer_has_cert(conn->tls);
-  } else {
-    tor_assert(conn->handshake_state);
-    has_cert = !tor_digest_is_zero(conn->handshake_state->cert_id_digest);
-  }
   has_cert = tor_tls_peer_has_cert(conn->tls);
   if (started_here && !has_cert) {
     log_info(LD_PROTOCOL,"Tried connecting to router at %s:%d, but it didn't "
@@ -674,33 +677,26 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   }
   check_no_tls_errors();
 
-  if (v1) {
-    if (has_cert) {
-      int v = tor_tls_verify_v1(started_here?severity:LOG_INFO,
-                                conn->tls, &identity_rcvd);
-      if (started_here && v<0) {
-        log_fn(severity,LD_OR,"Tried connecting to router at %s:%d: It"
-               " has a cert but it's invalid. Closing.",
-               safe_address, conn->_base.port);
+  if (has_cert) {
+    int v = tor_tls_verify_v1(started_here?severity:LOG_INFO,
+                              conn->tls, &identity_rcvd);
+    if (started_here && v<0) {
+      log_fn(severity,LD_OR,"Tried connecting to router at %s:%d: It"
+             " has a cert but it's invalid. Closing.",
+             safe_address, conn->_base.port);
         return -1;
-      } else if (v<0) {
-        log_info(LD_PROTOCOL,"Incoming connection gave us an invalid cert "
-                 "chain; ignoring.");
-      } else {
-        log_debug(LD_OR,"The certificate seems to be valid on %s connection "
-                  "with %s:%d", conn_type, safe_address, conn->_base.port);
-      }
-      check_no_tls_errors();
+    } else if (v<0) {
+      log_info(LD_PROTOCOL,"Incoming connection gave us an invalid cert "
+               "chain; ignoring.");
+    } else {
+      log_debug(LD_OR,"The certificate seems to be valid on %s connection "
+                "with %s:%d", conn_type, safe_address, conn->_base.port);
     }
-  } else {
-    if (conn->handshake_state->authenticated &&
-        conn->handshake_state->identity_key) {
-      identity_rcvd = crypto_pk_dup_key(conn->handshake_state->identity_key);
-    }
+    check_no_tls_errors();
   }
 
   if (identity_rcvd) {
-    has_identity=1;
+    has_identity = 1;
     crypto_pk_get_digest(identity_rcvd, digest_rcvd_out);
     if (crypto_pk_cmp_keys(get_identity_key(), identity_rcvd)<0) {
       conn->circ_id_type = CIRC_ID_TYPE_LOWER;
@@ -759,6 +755,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   return 0;
 }
 
+#if 0
 /** DOCDOC */
 int
 connection_or_finish_or_handshake(or_connection_t *conn)
@@ -781,6 +778,7 @@ connection_or_finish_or_handshake(or_connection_t *conn)
     return -1;
   return connection_or_set_state_open(conn);
 }
+#endif
 
 /** The tls handshake is finished.
  *

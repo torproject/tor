@@ -39,7 +39,7 @@ Things we'd like to do in 0.2.0.x:
         - Clients only send certificates when asked for them.
         o Servers disable callback once negotiation is finished, so
           that renegotiation happens according to the old rules.
-        - Clients initiate renegotiation immediately on completing
+        o Clients initiate renegotiation immediately on completing
           a v2 connection.
         - Servers detect renegotiation, and if there is now a client
           cert, they adust the client ID.
