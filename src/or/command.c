@@ -38,8 +38,10 @@ static void command_process_destroy_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_versions_cell(var_cell_t *cell,
                                           or_connection_t *conn);
 static void command_process_netinfo_cell(cell_t *cell, or_connection_t *conn);
+#if 0
 static void command_process_cert_cell(var_cell_t *cell, or_connection_t *conn);
 static void command_process_link_auth_cell(cell_t *cell,or_connection_t *conn);
+#endif
 
 #ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the
@@ -151,13 +153,6 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
       ++stats_n_netinfo_cells_processed;
       PROCESS_CELL(netinfo, cell, conn);
       break;
-    case CELL_CERT:
-      tor_fragile_assert();
-      break;
-    case CELL_LINK_AUTH:
-      ++stats_n_link_auth_cells_processed;
-      PROCESS_CELL(link_auth, cell, conn);
-      break;
     default:
       log_fn(LOG_INFO, LD_PROTOCOL,
              "Cell of unknown type (%d) received. Dropping.", cell->command);
@@ -200,10 +195,6 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
     case CELL_VERSIONS:
       ++stats_n_versions_cells_processed;
       PROCESS_CELL(versions, cell, conn);
-      break;
-    case CELL_CERT:
-      ++stats_n_cert_cells_processed;
-      PROCESS_CELL(cert, cell, conn);
       break;
     default:
       log_warn(LD_BUG,
@@ -484,6 +475,8 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
+#if 0
+  /*XXXX020 not right; references dead functions */
   if (highest_supported_version >= 2) {
     if (connection_or_send_netinfo(conn) < 0 ||
         connection_or_send_cert(conn) < 0) {
@@ -495,6 +488,7 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   } else {
     /* XXXX020 finish v1 verification. */
   }
+#endif
 }
 
 /** Process a 'netinfo' cell. DOCDOC say more. */
@@ -612,6 +606,7 @@ connection_or_act_on_netinfo(or_connection_t *conn)
   return 0;
 }
 
+#if 0
 /*DOCDOC*/
 static void
 command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
@@ -780,4 +775,4 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
   tor_free(checked);
   connection_mark_for_close(TO_CONN(conn));
 }
-
+#endif

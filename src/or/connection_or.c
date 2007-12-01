@@ -1057,6 +1057,7 @@ connection_or_send_netinfo(or_connection_t *conn)
   return 0;
 }
 
+#if 0
 #define LINK_AUTH_STRING "Tor initiator certificate verification"
 /** DOCDOC */
 int
@@ -1166,4 +1167,5 @@ connection_or_send_link_auth(or_connection_t *conn)
 
   return 0;
 }
+#endif
 

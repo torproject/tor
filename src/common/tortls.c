@@ -34,6 +34,8 @@ const char tortls_c_id[] =
 #include "./log.h"
 #include <string.h>
 
+// #define V2_HANDSHAKE_SERVER
+
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -59,10 +61,11 @@ struct tor_tls_t {
   int socket; /**< The underlying file descriptor for this TLS connection. */
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
-    TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED
-  } state : 7; /**< The current SSL state, depending on which operations have
+    TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
+  } state : 6; /**< The current SSL state, depending on which operations have
                 * completed successfully. */
   unsigned int isServer:1; /**< True iff this is a server-side connection */
+  unsigned int hadCert:1; /**< Docdoc */
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
   unsigned long last_write_count;
@@ -455,7 +458,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
     goto error;
   X509_free(cert); /* We just added a reference to cert. */
   cert=NULL;
-#if 1
+#if 0
   if (idcert && !SSL_CTX_add_extra_chain_cert(result->ctx,idcert))
     goto error;
 #else
@@ -511,6 +514,55 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   return -1;
 }
 
+#ifdef V2_HANDSHAKE_SERVER
+static void
+tor_tls_server_info_callback(const SSL *ssl, int type, int val)
+{
+  int all_ciphers_in_v1_list = 1;
+  int i;
+  SSL_SESSION *session;
+  (void) val;
+  if (type != SSL_CB_ACCEPT_LOOP)
+    return;
+  if (ssl->state != SSL3_ST_SW_SRVR_HELLO_A)
+    return;
+  /* If we reached this point, we just got a client hello.  See if there is
+   * a cipher list. */
+  if (!(session = SSL_get_session(ssl))) {
+    log_warn(LD_NET, "No session on TLS?");
+    return;
+  }
+  if (!session->ciphers) {
+    log_warn(LD_NET, "No ciphers on session");
+    return;
+  }
+  /* Now we need to see if there are any ciphers whose presence means we're
+   * dealing with an updated Tor. */
+  for (i = 0; i < sk_SSL_CIPHER_num(session->ciphers); ++i) {
+    SSL_CIPHER *cipher = sk_SSL_CIPHER_value(session->ciphers, i);
+    const char *ciphername = SSL_CIPHER_get_name(cipher);
+    if (strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_128_SHA) &&
+        strcmp(ciphername, SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA) &&
+        strcmp(ciphername, "(NONE)")) {
+      /* XXXX should be ld_debug */
+      log_info(LD_NET, "Got a non-version-1 cipher called '%s'",ciphername);
+      all_ciphers_in_v1_list = 0;
+      break;
+    }
+  }
+
+  if (!all_ciphers_in_v1_list) {
+    /* Yes, we're casting away the const from ssl.  This is very naughty of us.
+     * Let's hope openssl doesn't notice! */
+
+    /* Set SSL_MODE_NO_AUTO_CHAIN to keep from sending back any extra certs. */
+    SSL_set_mode((SSL*) ssl, SSL_MODE_NO_AUTO_CHAIN);
+    /* Don't send a hello request. */
+    SSL_set_verify((SSL*) ssl, SSL_VERIFY_NONE, NULL);
+  }
+}
+#endif
+
 /** Create a new TLS object from a file descriptor, and a flag to
  * determine whether it is functioning as a server.
  */
@@ -544,6 +596,11 @@ tor_tls_new(int sock, int isServer)
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;
+#ifdef V2_HANDSHAKE_SERVER
+  if (isServer) {
+    SSL_set_info_callback(result->ssl, tor_tls_server_info_callback);
+  }
+#endif
   /* Not expected to get called. */
   tls_log_errors(LOG_WARN, "generating TLS context");
   return result;
@@ -585,8 +642,17 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
   tor_assert(tls->ssl);
   tor_assert(tls->state == TOR_TLS_ST_OPEN);
   r = SSL_read(tls->ssl, cp, len);
-  if (r > 0)
+  if (r > 0) {
+#ifdef V2_HANDSHAKE_SERVER
+    if (!tls->hadCert && tls->ssl->session && tls->ssl->session->peer) {
+      tls->hadCert = 1;
+      /* New certificate! */
+      log_info(LD_NET, "Got a TLS renegotiation.");
+      /* XXXX020 call some kind of 'there was a renegotiation' callback. */
+    }
+#endif
     return r;
+  }
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG);
   if (err == _TOR_TLS_ZERORETURN) {
     log_debug(LD_NET,"read returned r=%d; TLS is closed",r);
@@ -657,8 +723,43 @@ tor_tls_handshake(tor_tls_t *tls)
   }
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN;
+    tls->hadCert = tor_tls_peer_has_cert(tls) ? 1 : 0;
+    if (tls->isServer) {
+      SSL_set_info_callback(tls->ssl, NULL);
+      SSL_set_verify(tls->ssl, SSL_VERIFY_NONE, always_accept_verify_cb);
+      tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
+    }
   }
   return r;
+}
+
+/** Client only: Renegotiate a TLS session.  When finished, returns
+ * TOR_TLS_DONE.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD, or
+ * TOR_TLS_WANTWRITE.
+ */
+int
+tor_tls_renegotiate(tor_tls_t *tls)
+{
+  int r;
+  tor_assert(tls);
+  /* We could do server-initiated renegotiation too, but that would be tricky.
+   * Instead of "SSL_renegotiate, then SSL_do_handshake until done" */
+  tor_assert(!tls->isServer);
+  if (tls->state != TOR_TLS_ST_RENEGOTIATE) {
+    int r = SSL_renegotiate(tls->ssl);
+    if (r <= 0) {
+      return tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO,
+                               "renegotiating", LOG_WARN);
+    }
+    tls->state = TOR_TLS_ST_RENEGOTIATE;
+  }
+  r = SSL_do_handshake(tls->ssl);
+  if (r == 1) {
+    tls->state = TOR_TLS_ST_OPEN;
+    return TOR_TLS_DONE;
+  } else
+    return tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO,
+                             "renegotiating handshake", LOG_WARN);
 }
 
 /** Shut down an open tls connection <b>tls</b>.  When finished, returns
@@ -923,6 +1024,7 @@ tor_tls_verify_v1(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
   return r;
 }
 
+#if 0
 /** DOCDOC
  *
  * Returns 1 on "verification is done", 0 on "still need LINK_AUTH."
@@ -1025,6 +1127,7 @@ tor_tls_verify_certs_v2(int severity, tor_tls_t *tls,
 
   return r;
 }
+#endif
 
 /** Check whether the certificate set on the connection <b>tls</b> is
  * expired or not-yet-valid, give or take <b>tolerance</b>

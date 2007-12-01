@@ -62,6 +62,7 @@ char *tor_tls_encode_my_certificate(tor_tls_t *tls, size_t *size_out,
 crypto_pk_env_t *tor_tls_dup_private_key(tor_tls_t *tls);
 int tor_tls_verify_v1(int severity, tor_tls_t *tls,
                       crypto_pk_env_t **identity);
+#if 0
 int tor_tls_verify_certs_v2(int severity, tor_tls_t *tls,
                             const char *cert_str, size_t cert_len,
                             const char *id_cert_str, size_t id_cert_len,
@@ -69,10 +70,12 @@ int tor_tls_verify_certs_v2(int severity, tor_tls_t *tls,
                             char *conn_cert_digest_out,
                             crypto_pk_env_t **id_key_out,
                             char *id_digest_out);
+#endif
 int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);
 int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
 int tor_tls_handshake(tor_tls_t *tls);
+int tor_tls_renegotiate(tor_tls_t *tls);
 int tor_tls_shutdown(tor_tls_t *tls);
 int tor_tls_get_pending_bytes(tor_tls_t *tls);
 size_t tor_tls_get_forced_write_size(tor_tls_t *tls);
