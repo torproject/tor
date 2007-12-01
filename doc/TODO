@@ -41,10 +41,10 @@ Things we'd like to do in 0.2.0.x:
           that renegotiation happens according to the old rules.
         o Clients initiate renegotiation immediately on completing
           a v2 connection.
-        - Servers detect renegotiation, and if there is now a client
+        o Servers detect renegotiation, and if there is now a client
           cert, they adust the client ID.
           o Detect.
-          - Adjust.
+          o Adjust.
       o Add a separate handshake structure that handles version negotiation,
         and stores netinfo data until authentication is done.
       o Revise versions and netinfo to use separate structure; make
@@ -68,19 +68,17 @@ Things we'd like to do in 0.2.0.x:
         o Code to generate
           o Remember certificate digests from TLS
         o Code to parse and check
-      * Revised handshake: TLS
-        - Server checks for new cipher types, and if it finds them, sends
-          only one cert and does not ask for client certs.
-        - Client sends certs only if server asks for them.
-        - Client sends new cipher list.
-        - Client sends correct extension list.
-      - Revised handshake: post-TLS.
+      X Revised handshake: post-TLS.
         o If in 'handshaking' state (since v2+ conn is in use), accept
           VERSIONS and NETINFO and CERT and LINK_AUTH.
         o After we send NETINFO, send CERT and LINK_AUTH if needed.
         o Once we get a good LINK_AUTH, the connection is OPEN.
         - Ban most cell types on a non-OPEN connection.
         o Close connections on handshake failure.
+      - New revised handshake: post-TLS:
+        - start by sending VERSIONS cells
+        - once we have a version, send a netinfo and become open
+        - Ban most cell types on a non-OPEN connection.
       o Make code work right wrt TLS context rotation.
       - NETINFO fallout
         - Don't extend a circuit over a noncanonical connection with

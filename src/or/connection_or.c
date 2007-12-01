@@ -19,6 +19,9 @@ static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
 static int connection_or_send_versions(or_connection_t *conn);
 static int connection_init_or_handshake_state(or_connection_t *conn,
                                               int started_here);
+static int connection_or_check_valid_tls_handshake(or_connection_t *conn,
+                                                   int started_here,
+                                                   char *digest_rcvd_out);
 
 /**************************************************************/
 
@@ -573,6 +576,21 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
   return 0;
 }
 
+/*DOCDOC*/
+static void
+connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
+{
+  or_connection_t *conn = _conn;
+  char id_digest[DIGEST_LEN];
+
+  if (connection_or_check_valid_tls_handshake(conn,
+                                              !tor_tls_is_server(tls),
+                                              id_digest) < 0)
+    return;
+  connection_or_init_conn_from_address(conn, conn->_base.addr,
+                                       conn->_base.port, id_digest, 0);
+}
+
 /** Move forward with the tls handshake. If it finishes, hand
  * <b>conn</b> to connection_tls_finish_handshake().
  *
@@ -594,11 +612,18 @@ connection_tls_continue_handshake(or_connection_t *conn)
              tor_tls_err_to_string(result));
       return -1;
     case TOR_TLS_DONE:
-      if (!tor_tls_is_server(conn->tls) &&
-          !tor_tls_used_v1_handshake(conn->tls) &&
-          conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-        conn->_base.state = OR_CONN_STATE_TLS_RENEGOTIATING;
-        goto again;
+      if (tor_tls_used_v1_handshake(conn->tls)) {
+        if (!tor_tls_is_server(conn->tls)) {
+          if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
+            conn->_base.state = OR_CONN_STATE_TLS_RENEGOTIATING;
+            goto again;
+          }
+        } else {
+          /* improved handshake, but not a client. */
+          tor_tls_set_renegotiate_callback(conn->tls,
+                                           connection_or_tls_renegotiated_cb,
+                                           conn);
+        }
       }
       return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
@@ -812,6 +837,11 @@ connection_tls_finish_handshake(or_connection_t *conn)
     }
     return connection_or_set_state_open(conn);
   } else {
+    if (started_here) {
+      if (connection_or_check_valid_tls_handshake(conn, started_here,
+                                                  digest_rcvd) < 0)
+        return -1;
+    }
     conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
