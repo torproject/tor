@@ -959,7 +959,7 @@ run_scheduled_events(time_t now)
                                      ROUTER_PURPOSE_GENERAL, NULL, 1);
     }
 /** How often do we (as a cache) fetch a new V1 directory? */
-#define V1_DIR_FETCH_PERIOD (6*60*60)
+#define V1_DIR_FETCH_PERIOD (12*60*60)
     time_to_fetch_directory = now + V1_DIR_FETCH_PERIOD;
   }
 
@@ -971,7 +971,7 @@ run_scheduled_events(time_t now)
                                    ROUTER_PURPOSE_GENERAL, NULL, 1);
     }
 /** How often do we (as a cache) fetch a new V1 runningrouters document? */
-#define V1_RUNNINGROUTERS_FETCH_PERIOD (6*60*60)
+#define V1_RUNNINGROUTERS_FETCH_PERIOD (12*60*60)
     time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
 
      /* Also, take this chance to remove old information from rephist
