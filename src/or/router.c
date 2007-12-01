@@ -189,6 +189,8 @@ rotate_onion_key(void)
   goto done;
  error:
   log_warn(LD_GENERAL, "Couldn't rotate onion key.");
+  if (prkey)
+    crypto_free_pk_env(prkey);
  done:
   tor_free(fname);
   tor_free(fname_prev);
@@ -469,7 +471,7 @@ init_keys(void)
   }
 
   keydir = get_datadir_fname2("keys", "secret_onion_key.old");
-  if (file_status(keydir) == FN_FILE) {
+  if (!lastonionkey && file_status(keydir) == FN_FILE) {
     prkey = init_key_from_file(keydir, 1, LOG_ERR);
     if (prkey)
       lastonionkey = prkey;
