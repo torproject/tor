@@ -5,6 +5,8 @@ Changes in version 0.2.0.13-alpha - 2007-11-??
       two new guards on startup (bugfix on 0.2.0.9-alpha), and it was
       causing us to discard all our guards on startup if we hadn't been
       running for a few weeks (bugfix on 0.1.2.x). Fixes bug 448.
+    - Start purging old entries from the "rephist" database, and the
+      hidden service descriptor databases, even when DirPort is zero.
 
   o Minor bugfixes:
     - The fix in 0.2.0.12-alpha cleared the "hsdir" flag in v3 network

@@ -833,6 +833,8 @@ run_scheduled_events(time_t now)
   static time_t time_to_downrate_stability = 0;
 #define SAVE_STABILITY_INTERVAL (30*60)
   static time_t time_to_save_stability = 0;
+#define CLEAN_CACHES_INTERVAL (30*60)
+  static time_t time_to_clean_caches = 0;
   or_options_t *options = get_options();
   int i;
   int have_dir_info;
@@ -974,12 +976,14 @@ run_scheduled_events(time_t now)
 #define V1_RUNNINGROUTERS_FETCH_PERIOD (12*60*60)
     time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
 
-     /* Also, take this chance to remove old information from rephist
-     * and the rend cache. */
+  }
+
+  /* Remove old information from rephist and the rend cache. */
+  if (time_to_clean_caches < now) {
     rep_history_clean(now - options->RephistTrackTime);
     rend_cache_clean();
     rend_cache_clean_v2_descs_as_dir();
-    /* XXX020 we only clean this stuff if DirPort is set?! -RD */
+    time_to_clean_caches = now + CLEAN_CACHES_INTERVAL;
   }
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
