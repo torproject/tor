@@ -329,3 +329,20 @@ Status: Open
   Once proposal 124 (modified TLS handshake) is in place, we should
   consider doing the switch. This might even be in the 0.2.0.x timeframe.
 
+3.8. Do we need a second layer of entry guards?
+
+  If the bridge user uses the bridge as its entry guard, then the
+  triangulation attacks from Lasse and Paul's Oakland paper work to
+  locate the user's bridge(s).
+
+  Worse, this is another way to enumerate bridges: if the bridge users
+  keep rotating through second hops, then if you run a few fast servers
+  (and avoid getting considered an Exit or a Guard) you'll quickly get
+  a list of the bridges in active use.
+
+  That's probably the strongest reason why bridge users will need to
+  pick second-layer guards. Would this mean bridge users should switch
+  to four-hop circuits?
+
+  We should figure this out in the 0.2.1.x timeframe.
+
