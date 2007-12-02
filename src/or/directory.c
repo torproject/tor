@@ -2704,12 +2704,12 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
     if (r > 0)
       dirserv_get_directory(); /* rebuild and write to disk */
     switch (r) {
-      case -2:
       case -1:
-      case 1:
         log_notice(LD_DIRSERV,
-                   "Rejected router descriptor or extra-info from %s.",
-                   conn->_base.address);
+                   "Rejected router descriptor or extra-info from %s (\"%s\").",
+                   conn->_base.address, msg);
+        /* fall through */
+      case 1:
         /* malformed descriptor, or something wrong */
         write_http_status_line(conn, 400, msg);
         break;

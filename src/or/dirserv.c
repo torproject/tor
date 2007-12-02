@@ -627,7 +627,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
  * Return 2 if descriptor is well-formed and accepted;
  *  1 if well-formed and accepted but origin should hear *msg;
  *  0 if well-formed but redundant with one we already have;
- * -1 if it looks vaguely like a router descriptor but rejected;
+ * -1 if it is rejected and origin should hear *msg;
  *
  * This function is only called when fresh descriptors are posted, not when
  * we re-load the cache.
