@@ -557,7 +557,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   const char *s;
   int n_parsed = 0;
   time_t now = time(NULL);
-  char annotation_buf[256];
+  char annotation_buf[ROUTER_ANNOTATION_BUF_LEN];
   char time_buf[ISO_TIME_LEN+1];
   int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);

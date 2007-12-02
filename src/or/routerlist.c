@@ -3065,7 +3065,7 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
   routerinfo_t *ri;
   int r;
   smartlist_t *lst;
-  char annotation_buf[256];
+  char annotation_buf[ROUTER_ANNOTATION_BUF_LEN];
   tor_assert(msg);
   *msg = NULL;
 

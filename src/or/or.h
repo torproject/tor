@@ -1185,21 +1185,26 @@ typedef struct download_status_t {
   download_schedule_t schedule : 1;
 } download_status_t;
 
+/** The max size we expect router descriptor annotations we create to
+ * be. We'll accept larger ones if we see them on disk, but we won't
+ * create any that are larger than this. */
+#define ROUTER_ANNOTATION_BUF_LEN 256
+
 /** Information need to cache an onion router's descriptor. */
 typedef struct signed_descriptor_t {
-  /** Pointer to the raw server descriptor, preceeded by annotatinos.  Not
+  /** Pointer to the raw server descriptor, preceded by annotations.  Not
    * necessarily NUL-terminated.  If saved_location is SAVED_IN_CACHE, this
-   * pointer is null.  */
+   * pointer is null. */
   char *signed_descriptor_body;
   /** Length of the annotations preceeding the server descriptor. */
   size_t annotations_len;
   /** Length of the server descriptor. */
   size_t signed_descriptor_len;
-  /** Digest of the server descriptor, computed as specified in dir-spec.txt */
+  /** Digest of the server descriptor, computed as specified in dir-spec.txt. */
   char signed_descriptor_digest[DIGEST_LEN];
   /** Identity digest of the router. */
   char identity_digest[DIGEST_LEN];
-  /** Declared publication time of the descriptor */
+  /** Declared publication time of the descriptor. */
   time_t published_on;
   /** For routerdescs only: digest of the corresponding extrainfo. */
   char extra_info_digest[DIGEST_LEN];

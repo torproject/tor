@@ -2740,7 +2740,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   }
 
   if (authdir_mode_v3(options) &&
-      !strcmp(url,"/tor/post/vote")) { /* server descriptor post */
+      !strcmp(url,"/tor/post/vote")) { /* v3 networkstatus vote */
     const char *msg = "OK";
     int status;
     if (dirvote_add_vote(body, &msg, &status)) {
