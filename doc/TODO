@@ -263,7 +263,7 @@ R   - spec
       - run a little web server on moria?
     d answer by answering email to bridges@torproject
       - keep track of which addresses have been answered already
-    d some sort of reachability detection on bridges
+    d some sort of reachability testing on bridges
   - families of bridges
   - interface for letting soat modify flags that authorities assign
 R   - spec
