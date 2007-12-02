@@ -1,0 +1,111 @@
+Filename: 127-dirport-mirrors-downloads.txt
+Title: Relaying dirport requests to Tor download site
+Version: $Revision: 11988 $
+Last-Modified: $Date: 2007-10-16 12:59:42 -0400 (Tue, 16 Oct 2007) $
+Author: Roger Dingledine
+Created: 2007-12-02
+Status: Needs-Research
+
+1. Overview
+
+  Some countries and networks block connections to the Tor website. As
+  time goes by, this will remain a problem and it may even become worse.
+
+  We have a big pile of mirrors (google for "Tor mirrors"), but few of
+  our users think to try a search like that. Also, many of these mirrors
+  might be automatically blocked since their pages contain words that
+  might cause them to get blocked. And lastly, we can imagine a future
+  where the blockers are aware of the mirror list too.
+
+  Here we describe a new set of URLs for Tor's DirPort that will relay
+  connections from users to the official Tor download site. Rather than
+  trying to cache a bunch of new Tor packages (which is a hassle in terms
+  of keeping them up to date, and a hassle in terms of drive space used),
+  we instead just proxy the requests directly to Tor's /dist page.
+
+  Specifically, we should support
+
+    GET /tor/dist/$1
+
+  and
+
+    GET /tor/website/$1
+
+2. Linked connections
+
+  Check out the connection_ap_make_link() function, as called from
+  directory.c. Tor clients use this to create a "fake" socks connection
+  back to themselves, and then they attach a directory request to it,
+  so they can launch directory fetches via Tor. We could piggyback on
+  this feature.
+
+3. One-hop circuits or three-hop circuits?
+
+  We could relay the connections directly to the download site -- but
+  this produces recognizable outgoing traffic on the bridge or cache's
+  network, which will probably surprise our nice volunteers. (Is this
+  a good enough reason to discard the direct connection idea?)
+
+  But we still have a choice: should we do a one-hop begindir-style
+  connection to the mirror site (make a one-hop circuit to it, then send a
+  'begindir' cell down the circuit), or should we do a normal three-hop
+  anonymized connection?
+
+  If these mirrors are mainly bridges, doing a one-hop connection creates
+  another way to enumerate bridges. That would argue for three-hop. On
+  the other hand, downloading a 10+ megabyte installer through a normal
+  Tor circuit can't be fun. But if you're already getting throttled a
+  lot because you're in the "relayed traffic" bucket, you're going to
+  have to accept a slow transfer anyway. So three-hop it is.
+
+  Speaking of which, we would want to label this connection
+  as "relay" traffic for the purposes of rate limiting; see
+  connection_counts_as_relayed_traffic() and or_conn->client_used. This
+  will be a bit tricky though, because it uses the bridge's guards.
+
+4. Scanning resistance
+
+  One other goal we'd like to achieve, or at least not hinder, is making
+  it hard to scan large swaths of the Internet to look for responses
+  that indicate a bridge.
+
+  In general this is a really hard problem, so it's not critical that
+  we solve it here. But we can note that some bridges should open their
+  DirPort (and offer this functionality), and others shouldn't. Then some
+  bridges provide a download mirror while others are scanning-resistant.
+
+5. Integrity checking
+
+  If we serve this stuff in plaintext from the bridge, anybody in between
+  the user and the bridge can intercept and modify it. The bridge can too.
+
+  If we do an anonymized three-hop connection, the exit node can also
+  intercept and modify the exe it sends back.
+
+  Are we setting ourselves up for rogue exit relays, or rogue bridges,
+  that trojan our users?
+
+  Answer #1: Users need to do pgp signature checking. Not a very good
+  answer, a) because it's complex, and b) because they don't know the
+  right signatures in the first place.
+
+  Answer #2: The mirrors could exit from a specific Tor relay, using the
+  '.exit' notation. This would make connections a bit more brittle, but
+  would resolve the rogue exit relay issue. We could even round-robin
+  among several, and the list could be dynamic -- for example, all the
+  relays with an Authority flag that allow exits to the Tor website.
+
+  Answer #3: We could suggest that users only use trusted bridges for
+  fetching a copy of Tor. Hopefully they heard about the bridge from a
+  trusted source rather than from the adversary.
+
+  Answer #4: What if the adversary is trawling for Tor downloads by
+  network signature -- either by looking for known bytes in the binary,
+  or by looking for "GET /tor/dist/"? It would be nice to encrypt the
+  connection from the bridge user to the bridge. And we can! The bridge
+  already supports TLS.  Rather than initiating a TLS renegotiation after
+  connecting to the ORPort, the user should actually request a URL. Then
+  the ORPort can either pass the connection off as a linked conn to the
+  dirport, or renegotiate and become a Tor connection, depending on how
+  the client behaves.
+

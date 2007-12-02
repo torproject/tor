@@ -4,7 +4,7 @@ Version: $Revision: 11988 $
 Last-Modified: $Date: 2007-10-16 12:59:42 -0400 (Tue, 16 Oct 2007) $
 Author: Roger Dingledine
 Created: 2007-11-24
-Status: Researching
+Status: Needs-Research
 
 1. Background and motivation
 

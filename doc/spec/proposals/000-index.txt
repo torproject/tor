@@ -48,7 +48,8 @@ Proposals by number:
 123  Naming authorities automatically create bindings [OPEN]
 124  Blocking resistant TLS certificate usage [ACCEPTED]
 125  Behavior for bridge users, bridge relays, and bridge authorities [OPEN]
-126  Fetching GeoIP databases for clients, relays, and bridges [OPEN]
+126  Getting GeoIP data and publishing usage summaries [NEEDS-RESEARCH]
+127  Relaying dirport requests to Tor download site [NEEDS-RESEARCH]
 
 
 Proposals by status:
@@ -64,12 +65,13 @@ Proposals by status:
    121  Hidden Service Authentication
    123  Naming authorities automatically create bindings
    125  Behavior for bridge users, bridge relays, and bridge authorities
-   126  Fetching GeoIP databases for clients, relays, and bridges
  ACCEPTED:
    105  Version negotiation for the Tor protocol
    124  Blocking resistant TLS certificate usage
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
+   126  Getting GeoIP data and publishing usage summaries
+   127  Relaying dirport requests to Tor download site
  META:
    000  Index of Tor Proposals
    001  The Tor Proposal Process
