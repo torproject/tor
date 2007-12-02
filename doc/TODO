@@ -248,7 +248,7 @@ Nice-to-have items for 0.2.0.x, time permitting:
 Planned for 0.2.1.x, December:
   - mirror tor downloads on (via) tor dir caches
 R   - spec
-    - deploy
+    d deploy
   - geoip caching and publishing for bridges
 R   - spec
     - deploy
