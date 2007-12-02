@@ -23,7 +23,7 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Fix building with dmalloc 5.5.2 with glibc.
     - Reject uploaded descriptors and extrainfo documents if they're
       huge. Otherwise we'll cache them all over the network and it'll
-      clog everything up.
+      clog everything up. Reported by Aljosha Judmayer.
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory
