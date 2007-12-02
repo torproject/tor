@@ -107,7 +107,7 @@ Things we'd like to do in 0.2.0.x:
           it couldn't fetch any network statuses, and never tried again
           even when the network came back and arma clicked on things.
           also 0.2.0.
-        - phobos says relaybandwidth* sometimes don't do what we expect.
+        o phobos says relaybandwidth* sometimes don't do what we expect.
           http://interloper.org/tmp/2007-06-bw-usage.png
           I believe this is the result of confusion about whether to use
           relaybandwidth or bandwidthrate to control bandwidth usage for 
