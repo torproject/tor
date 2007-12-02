@@ -141,6 +141,14 @@
  * as an upload. */
 #define MAX_DIR_UL_SIZE 500000
 
+/** Maximum size, in bytes, of a single router descriptor uploaded to us
+ * as a directory authority. Caches and clients fetch whatever descriptors
+ * the authorities tell them to fetch, and don't care about size. */
+#define MAX_DESCRIPTOR_UPLOAD_SIZE 20000
+
+/** Maximum size of a single extrainfo document, as above. */
+#define MAX_EXTRAINFO_UPLOAD_SIZE 50000
+
 /** How long do we keep DNS cache entries before purging them (regardless of
  * their TTL)? */
 #define MAX_DNS_ENTRY_AGE (30*60)

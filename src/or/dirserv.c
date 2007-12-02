@@ -640,6 +640,22 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
   char *desc = NULL;
   size_t desclen = 0;
 
+  /* If it's too big, refuse it now. Otherwise we'll cache it all over the
+   * network and it'll clog everything up. */
+  if (ri->cache_info.signed_descriptor_len > MAX_DESCRIPTOR_UPLOAD_SIZE) {
+    log_notice(LD_DIR, "Somebody attempted to publish a router descriptor "
+               "with size %d. Either this is an attack, or the "
+               "MAX_DESCRIPTOR_UPLOAD_SIZE (%d) constant is too low.",
+               (int)ri->cache_info.signed_descriptor_len,
+               MAX_DESCRIPTOR_UPLOAD_SIZE);
+    *msg = "Router descriptor was too large";
+    control_event_or_authdir_new_descriptor("REJECTED",
+               ri->cache_info.signed_descriptor_body,
+               ri->cache_info.signed_descriptor_len, *msg);
+    routerinfo_free(ri);
+    return -1;
+  }
+
   /* Check whether this descriptor is semantically identical to the last one
    * from this server.  (We do this here and not in router_add_to_routerlist
    * because we want to be able to accept the newest router descriptor that
@@ -703,6 +719,20 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
     extrainfo_free(ei);
     return -1;
   }
+
+  /* If it's too big, refuse it now. Otherwise we'll cache it all over the
+   * network and it'll clog everything up. */
+  if (ei->cache_info.signed_descriptor_len > MAX_EXTRAINFO_UPLOAD_SIZE) {
+    log_notice(LD_DIR, "Somebody attempted to publish an extrainfo "
+               "with size %d. Either this is an attack, or the "
+               "MAX_EXTRAINFO_UPLOAD_SIZE (%d) constant is too low.",
+               (int)ei->cache_info.signed_descriptor_len,
+               MAX_EXTRAINFO_UPLOAD_SIZE);
+    *msg = "Extrainfo document was too large";
+    extrainfo_free(ei);
+    return -1;
+  }
+
   if ((r = routerinfo_incompatible_with_extrainfo(ri, ei, NULL, msg))) {
     extrainfo_free(ei);
     return r < 0 ? 0 : -1;
