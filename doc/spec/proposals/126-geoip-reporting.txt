@@ -64,7 +64,7 @@ Status: Open
   http://www.maxmind.com/app/geolitecountry
 
   The maxmind GeoLite City database gives more finegrained detail like
-  as geo coordinates and city name. Vidalia currently makes use of this
+  geo coordinates and city name. Vidalia currently makes use of this
   information. On the other hand it's 16MB compressed. A typical line is:
     206.124.149.146,Bellevue,WA,US,47.6051,-122.1134
   http://www.maxmind.com/app/geolitecity
@@ -225,6 +225,7 @@ Status: Open
 6.1. Other interfaces
 
   Robert Hogan has also suggested a
+
     GETINFO relays-by-country/cn
 
   as well as torrc options for ExitCountryCodes, EntryCountryCodes,
