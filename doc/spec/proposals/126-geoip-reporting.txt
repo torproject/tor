@@ -1,10 +1,10 @@
 Filename: 126-geoip-fetching.txt
 Title: Getting GeoIP data and publishing usage summaries
-Version: $Revision: 11988 $
-Last-Modified: $Date: 2007-10-16 12:59:42 -0400 (Tue, 16 Oct 2007) $
+Version: $Revision$
+Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 2007-11-24
-Status: Needs-Research
+Status: Open
 
 1. Background and motivation
 
@@ -260,7 +260,7 @@ Status: Needs-Research
 
 7.2. Granularity of users
 
-  Do we only want to report countries that have a very small anonymity set
+  Do we only want to report countries that have a sufficient anonymity set
   (that is, number of users) for the day? For example, we might avoid
   listing any countries that have seen less than five addresses over
   the 24 hour period. This approach would be helpful in reducing the
