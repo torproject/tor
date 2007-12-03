@@ -205,7 +205,7 @@ Status: Needs-Research
 
 6. Controllers use the IP-to-country db for mapping and for path building
 
-  Down the road, vidalia can use the IP-to-country mappings for placing
+  Down the road, Vidalia could use the IP-to-country mappings for placing
   on its map:
   - The location of the client
   - The location of the bridges, or other relays not in the
@@ -222,6 +222,14 @@ Status: Needs-Research
     GETINFO ip-to-country/128.31.0.34
     250+ip-to-country/128.31.0.34="US","USA","UNITED STATES"
 
+6.1. Other interfaces
+
+  Robert Hogan has also suggested a
+    GETINFO relays-by-country/cn
+
+  as well as torrc options for ExitCountryCodes, EntryCountryCodes,
+  ExcludeCountryCodes, etc.
+
 7. Relays and bridges use the IP-to-country db for usage summaries
 
   Once bridges have a GeoIP database locally, they can start to publish
@@ -231,5 +239,156 @@ Status: Needs-Research
   switch to using directory guards for all users by default.
 
   But how to safely summarize this information without opening too many
-  anonymity leaks seems hard...
+  anonymity leaks?
+
+7.1 Attacks to think about
+
+  First, note that we need to have a large enough time window that we're
+  not aiding correlation attacks much. I hope 24 hours is enough. So
+  that means no publishing stats until you've been up at least 24 hours.
+  And you can't publish follow-up stats more often than every 24 hours,
+  or people could look at the differential.
+
+  Second, note that we need to be sufficiently vague about the IP
+  addresses we're reporting. We are hoping that just specifying the
+  country will be vague enough. But a) what about active attacks where
+  we convince a bridge to use a GeoIP db that labels each suspect IP
+  address as a unique country? We have to assume that the consensus GeoIP
+  db won't be malicious in this way. And b) could such singling-out
+  attacks occur naturally, for example because of countries that have
+  a very small IP space? We should investigate that.
+
+7.2. Granularity of users
+
+  Do we only want to report countries that have a very small anonymity set
+  (that is, number of users) for the day? For example, we might avoid
+  listing any countries that have seen less than five addresses over
+  the 24 hour period. This approach would be helpful in reducing the
+  singling-out opportunities -- in the extreme case, we could imagine a
+  situation where one blogger from the Sudan used Tor on a given day, and
+  we can discover which entry guard she used.
+
+  But I fear that especially for bridges, seeing only one hit from a
+  given country in a given day may be quite common.
+
+  As a compromise, we should start out with an "Other" category in
+  the reported stats, which is the sum of unlisted countries; if that
+  category is consistently interesting, we can think harder about how
+  to get the right data from it safely.
+
+  But note that bridge summaries will not be made public individually,
+  since doing so would help people enumerate bridges. Whereas summaries
+  from normal relays will be public. So perhaps that means we can afford
+  to be more specific in bridge summaries? In particular, I'm thinking the
+  "other" category should be used by public relays but not for bridges
+  (or if it is, used with a lower threshold).
+
+  Even for countries that have many Tor users, we might not want to be
+  too specific about how many users we've seen. For example, we might
+  round down the number of users we report to the nearest multiple of 5.
+  My instinct for now is that this won't be that useful.
+
+7.3 Other issues
+
+  Another note: we'll likely be overreporting in the case of users with
+  dynamic IP addresses: if they rotate to a new address over the course
+  of the day, we'll count them twice. So be it.
+
+7.4. Where to publish the summaries?
+
+  We designed extrainfo documents for information like this. So they
+  should just be more entries in the extrainfo doc.
+
+  But if we want to publish summaries every 24 hours (no more often,
+  no less often), aren't we tried to the router descriptor publishing
+  schedule? That is, if we publish a new router descriptor at the 18
+  hour mark, and nothing much has changed at the 24 hour mark, won't
+  the new descriptor get dropped as being "cosmetically similar", and
+  then nobody will know to ask about the new extrainfo document?
+
+  One solution would be to make and remember the 24 hour summary at the
+  24 hour mark, but not actually publish it anywhere until we happen to
+  publish a new descriptor for other reasons. If we happen to go down
+  before publishing a new descriptor, then so be it, at least we tried.
+
+7.5. What if the relay is unreachable or goes to sleep?
+
+  Even if you've been up for 24 hours, if you were hibernating for 18
+  of them, then we're not getting as much fuzziness as we'd like. So
+  I guess that means that we need a 24-hour period of being "awake"
+  before we'll willing to publish a summary. A similar attack works if
+  you've been awake but unreachable for the first 18 of the 24 hours. As
+  another example, a bridge that's on a laptop might be suspended for
+  some of each day.
+
+  This implies that some relays and bridges will never publish summary
+  stats, because they're not ever reliably working for 24 hours in
+  a row. If a significant percentage of our reporters end up being in
+  this boat, we should investigate whether we can accumulate 24 hours of
+  "usefulness", even if there are holes in the middle, and publish based
+  on that.
+
+  What other issues are like this? It seems that just moving to a new
+  IP address shouldn't be a reason to cancel stats publishing, assuming
+  we were usable at each address.
+
+7.6. IP addresses that aren't in the geoip db
+
+  Some IP addresses aren't in the public geoip databases. In particular,
+  I've found that a lot of African countries are missing, but there
+  are also some common ones in the US that are missing, like parts of
+  Comcast. We could just lump unknown IP addresses into the "other"
+  category, but it might be useful to gather a general sense of how many
+  lookups are failing entirely, by adding a separate "Unknown" category.
+
+  We could also contribute back to the geoip db, by letting bridges set
+  a config option to report the actual IP addresses that failed their
+  lookup. Then the bridge authority operators can manually make sure
+  the correct answer will be in later geoip files. This config option
+  should be disabled by default.
+
+7.7 Bringing it all together
+
+  So here's the plan:
+
+  24 hours after starting up (modulo Section 7.5 above), bridges and
+  relays should construct a daily summary of client countries they've
+  seen, including the above "Unknown" category (Section 7.6) as well.
+
+  Non-bridge relays lump all countries with less than K (e.g. K=5) users
+  into the "Other" category (see Sec 7.2 above), whereas bridge relays are
+  willing to list a country even when it has only one user for the day.
+
+  Whenever we have a daily summary on record, we include it in our
+  extrainfo document whenever we publish one. The daily summary we
+  remember locally gets replaced with a newer one when another 24
+  hours pass.
+
+7.8. Some forward secrecy
+
+  How should we remember addresses locally? If we convert them into
+  country-codes immediately, we will count them again if we see them
+  again. On the other hand, we don't really want to keep a list hanging
+  around of all IP addresses we've seen in the past 24 hours.
+
+  Step one is that we should never write this stuff to disk. Keeping it
+  only in ram will make things somewhat better. Step two is to avoid
+  keeping any timestamps associated with it: rather than a rolling
+  24-hour window, which would require us to remember the various times
+  we've seen that address, we can instead just throw out the whole list
+  every 24 hours and start over.
+
+  We could hash the addresses, and then compare hashes when deciding if
+  we've seen a given address before. We could even do keyed hashes. Or
+  Bloom filters. But if our goal is to defend against an adversary
+  who steals a copy of our ram while we're running and then does
+  guess-and-check on whatever blob we're keeping, we're in bad shape.
+
+  We could drop the last octet of the IP address as soon as we see
+  it. That would cause us to undercount some users from cablemodem and
+  DSL networks that have a high density of Tor users. And it wouldn't
+  really help that much -- indeed, the extent to which it does help is
+  exactly the extent to which it makes our stats less useful.
+
+  Other ideas?
 
