@@ -1133,7 +1133,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens)
       rs->version_supports_begindir = 1;
     } else {
       rs->version_supports_begindir =
-        tor_version_as_new_as(tok->args[0], "0.1.2.2-alpha");
+        tor_version_as_new_as(tok->args[0], "0.2.0.1-alpha");
     }
   }
 

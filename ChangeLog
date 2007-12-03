@@ -8,11 +8,14 @@ Changes in version 0.1.2.19 - 2007-??-??
 
   o Major bugfixes:
     - When the clock jumps forward a lot, do not allow the bandwidth
-      buckets to become negative.  Fixes Bug 544.
+      buckets to become negative. Fixes bug 544.
     - Fix a memory leak on exit relays; we were leaking a cached_resolve_t
       on every successful resolve. Reported by Mike Perry.
     - Purge old entries from the "rephist" database and the hidden
       service descriptor database even when DirPort is zero.
+    - Stop thinking that 0.1.2.x directory servers can handle "begin_dir"
+      requests. Should ease bugs 406 and 419 where 0.1.2.x relays are
+      crashing or mis-answering these requests.
 
   o Minor bugfixes:
     - Changing the ExitPolicyRejectPrivate setting should cause us to
