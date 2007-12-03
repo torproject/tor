@@ -544,6 +544,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     SSL_CIPHER *cipher = sk_SSL_CIPHER_value(session->ciphers, i);
     const char *ciphername = SSL_CIPHER_get_name(cipher);
     if (strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_128_SHA) &&
+        strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_256_SHA) &&
         strcmp(ciphername, SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA) &&
         strcmp(ciphername, "(NONE)")) {
       /* XXXX should be ld_debug */
