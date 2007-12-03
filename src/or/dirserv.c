@@ -1727,7 +1727,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
 
   log(LOG_INFO, LD_DIRSERV,
       "Cutoffs: For Stable, %lu sec uptime, %lu sec MTBF. "
-      "For Fast: %lu bytes/sec."
+      "For Fast: %lu bytes/sec. "
       "For Guard: WFU %.03lf%%, time-known %lu sec, "
       "and bandwidth %lu or %lu bytes/sec.",
       (unsigned long)stable_uptime,

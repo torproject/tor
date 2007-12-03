@@ -1986,6 +1986,7 @@ connection_ap_make_link(char *address, uint16_t port,
   if (use_begindir) {
     conn->chosen_exit_name = tor_malloc(HEX_DIGEST_LEN+2);
     conn->chosen_exit_name[0] = '$';
+    tor_assert(digest);
     base16_encode(conn->chosen_exit_name+1,HEX_DIGEST_LEN+1,
                   digest, DIGEST_LEN);
   }
