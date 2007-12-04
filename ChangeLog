@@ -44,9 +44,6 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       you answer begin_dir requests, and it makes you cache dir info,
       even if your DirPort isn't on.
 
-  o Code simplifications:
-    - ????
-
 
 Changes in version 0.2.0.12-alpha - 2007-11-16
   This twelfth development snapshot fixes some more build problems as
