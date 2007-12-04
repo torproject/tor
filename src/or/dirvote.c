@@ -1521,8 +1521,10 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   ds = trusteddirserver_get_by_v3_auth_digest(vi->identity_digest);
   if (!ds) {
     char *keys = list_v3_auth_ids();
-    log_warn(LD_DIR, "Got a vote from an authority with authority key ID %s. "
+    log_warn(LD_DIR, "Got a vote from an authority (nickname %s, address %s) "
+             "with authority key ID %s. "
              "This key ID is not recognized.  Known v3 key IDs are: %s",
+             vi->nickname, vi->address,
              hex_str(vi->identity_digest, DIGEST_LEN), keys);
     tor_free(keys);
     *msg_out = "Vote not from a recognized v3 authority";
