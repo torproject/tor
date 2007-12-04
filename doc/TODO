@@ -45,41 +45,10 @@ Things we'd like to do in 0.2.0.x:
           cert, they adust the client ID.
           o Detect.
           o Adjust.
-      o Add a separate handshake structure that handles version negotiation,
-        and stores netinfo data until authentication is done.
-      o Revise versions and netinfo to use separate structure; make
-        act-on-netinfo logic separate so it can get called _after_
-        negotiation.
-      o Variable-length cells
-        o Add structure
-        o Add parse logic
-        o Make CERT variable.
-        o Make VERSIONS variable.
-      o CERT cells
-        o functions to parse x509 certs
-        o functions to validate a single x509 cert against a TLS connection
-        o functions to validate a chain of x509 certs, and extract a PK.
-        o function to encode x509 certs
-        o Parse CERT cells
-        o Generate CERT cells
-        o Keep copies of X509 certs around, not necessarily associated with
-          connection.
-      o LINK_AUTH cells
-        o Code to generate
-          o Remember certificate digests from TLS
-        o Code to parse and check
-      X Revised handshake: post-TLS.
-        o If in 'handshaking' state (since v2+ conn is in use), accept
-          VERSIONS and NETINFO and CERT and LINK_AUTH.
-        o After we send NETINFO, send CERT and LINK_AUTH if needed.
-        o Once we get a good LINK_AUTH, the connection is OPEN.
-        - Ban most cell types on a non-OPEN connection.
-        o Close connections on handshake failure.
       - New revised handshake: post-TLS:
         - start by sending VERSIONS cells
         - once we have a version, send a netinfo and become open
         - Ban most cell types on a non-OPEN connection.
-      o Make code work right wrt TLS context rotation.
       - NETINFO fallout
         - Don't extend a circuit over a noncanonical connection with
           mismatched address.
@@ -87,9 +56,6 @@ Things we'd like to do in 0.2.0.x:
       o Protocol revision.
         o Earliest stages of 110 (infinite-length) in v2 protocol:
           add support for RELAY_EARLY.
-  o Before the feature freeze: (Roger)
-    o Make tunnelled dir conns use begin_dir if enabled
-    o make bridge users fall back from bridge authority to direct attempt
 
   - get more v3 authorities before 0.2.0.x comes out.
     - brainstorm about who those should be
