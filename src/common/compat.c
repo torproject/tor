@@ -1093,12 +1093,12 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     return -1;
   } else if (tor_inet_pton(AF_INET, name, &iaddr)) {
     /* It's an IPv4 IP. */
-    addr->sa.sin_family = AF_INET;
-    memcpy(&addr->sa.sin_addr, &iaddr, sizeof(struct in_addr));
+    addr->family = AF_INET;
+    memcpy(&addr->addr.in_addr, &iaddr, sizeof(struct in_addr));
     return 0;
   } else if (tor_inet_pton(AF_INET6, name, &iaddr6)) {
-    addr->sa6.sin6_family = AF_INET6;
-    memcpy(&addr->sa6.sin6_addr, &iaddr6, sizeof(struct in6_addr));
+    addr->family = AF_INET6;
+    memcpy(&addr->addr.in6_addr, &iaddr6, sizeof(struct in6_addr));
     return 0;
   } else {
 #ifdef HAVE_GETADDRINFO
@@ -1129,14 +1129,14 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
       if (!best)
         best = res;
       if (best->ai_family == AF_INET) {
-        addr->sa.sin_family = AF_INET;
-        memcpy(&addr->sa.sin_addr,
+        addr->family = AF_INET;
+        memcpy(&addr->addr.in_addr,
                &((struct sockaddr_in*)best->ai_addr)->sin_addr,
                sizeof(struct in_addr));
         result = 0;
       } else if (best->ai_family == AF_INET6) {
-        addr->sa6.sin6_family = AF_INET6;
-        memcpy(&addr->sa6.sin6_addr,
+        addr->family = AF_INET6;
+        memcpy(&addr->addr.in6_addr,
                &((struct sockaddr_in6*)best->ai_addr)->sin6_addr,
                sizeof(struct in6_addr));
         result = 0;
@@ -1172,11 +1172,11 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
 #endif
 #endif /* endif HAVE_GETHOSTBYNAME_R_6_ARG. */
     if (ent) {
-      addr->sa.sin_family = ent->h_addrtype;
+      addr->family = ent->h_addrtype;
       if (ent->h_addrtype == AF_INET) {
-        memcpy(&addr->sa.sin_addr, ent->h_addr, sizeof(struct in_addr));
+        memcpy(&addr->addr.in_addr, ent->h_addr, sizeof(struct in_addr));
       } else if (ent->h_addrtype == AF_INET6) {
-        memcpy(&addr->sa6.sin6_addr, ent->h_addr, sizeof(struct in6_addr));
+        memcpy(&addr->addr.in6_addr, ent->h_addr, sizeof(struct in6_addr));
       } else {
         tor_assert(0); /* gethostbyname() returned a bizarre addrtype */
       }

@@ -325,12 +325,13 @@ struct sockaddr_in6 {
 
 typedef uint8_t maskbits_t;
 struct in_addr;
-typedef union tor_addr_t
+typedef struct tor_addr_t
 {
-  /* XXXX020 There are extra fields in sockaddr_in and sockaddr_in6 that
-   * make this union waste space.  Do we care? */
-  struct sockaddr_in sa;
-  struct sockaddr_in6 sa6;
+  sa_family_t family;
+  union {
+    struct in_addr in_addr;
+    struct in6_addr in6_addr;
+  } addr;
 } tor_addr_t;
 
 /* XXXX020 rename these. */
@@ -340,12 +341,11 @@ static INLINE uint32_t IPV4MAPh(const tor_addr_t *a);
 static INLINE uint16_t IN_FAMILY(const tor_addr_t *a);
 static INLINE const struct in_addr *IN4_ADDRESS(const tor_addr_t *a);
 static INLINE const struct in6_addr *IN6_ADDRESS(const tor_addr_t *a);
-static INLINE uint16_t IN_PORT(const tor_addr_t *a);
 
 static INLINE const struct in6_addr *
 IN6_ADDRESS(const tor_addr_t *a)
 {
-  return &a->sa6.sin6_addr;
+  return &a->addr.in6_addr;
 }
 
 #define IN6_ADDRESS16(x) S6_ADDR16(*IN6_ADDRESS(x))
@@ -354,7 +354,7 @@ IN6_ADDRESS(const tor_addr_t *a)
 static INLINE uint32_t
 IPV4IP(const tor_addr_t *a)
 {
-  return a->sa.sin_addr.s_addr;
+  return a->addr.in_addr.s_addr;
 }
 static INLINE uint32_t IPV4IPh(const tor_addr_t *a)
 {
@@ -369,20 +369,12 @@ IPV4MAPh(const tor_addr_t *a)
 static INLINE uint16_t
 IN_FAMILY(const tor_addr_t *a)
 {
-  return a->sa.sin_family;
+  return a->family;
 }
 static INLINE const struct in_addr *
 IN4_ADDRESS(const tor_addr_t *a)
 {
-  return &a->sa.sin_addr;
-}
-static INLINE uint16_t
-IN_PORT(const tor_addr_t *a)
-{
-  if (IN_FAMILY(a) == AF_INET)
-    return a->sa.sin_port;
-  else
-    return a->sa6.sin6_port;
+  return &a->addr.in_addr;
 }
 
 #define INET_NTOA_BUF_LEN 16 /* 255.255.255.255 */

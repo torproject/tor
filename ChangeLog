@@ -38,6 +38,9 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Authorities and caches fetch the v2 networkstatus documents
       less often, now that v3 is encouraged.
 
+  o Code simplifications:
+    - 
+
 
 Changes in version 0.2.0.12-alpha - 2007-11-16
   This twelfth development snapshot fixes some more build problems as

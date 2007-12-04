@@ -1074,38 +1074,38 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
 /*XXXX020 make this macro give useful output on failure, and follow the
  * conventions of the other test macros.  */
 #define test_internal_ip(a,b) STMT_BEGIN             \
-    r = tor_inet_pton(AF_INET6, a, &t1.sa6.sin6_addr); \
+    r = tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr); \
     test_assert(r==1);                               \
-    t1.sa6.sin6_family = AF_INET6;                   \
+    t1.family = AF_INET6;                            \
     r = tor_addr_is_internal(&t1, b);                \
     test_assert(r==1);                               \
   STMT_END
 
 /*XXXX020 make this macro give useful output on failure, and follow the
  * conventions of the other test macros.  */
-#define test_external_ip(a,b) STMT_BEGIN             \
-    r = tor_inet_pton(AF_INET6, a, &t1.sa6.sin6_addr); \
-    test_assert(r==1);                               \
-    t1.sa6.sin6_family = AF_INET6;                   \
-    r = tor_addr_is_internal(&t1, b);                \
-    test_assert(r==0);                               \
+#define test_external_ip(a,b) STMT_BEGIN               \
+    r = tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr); \
+    test_assert(r==1);                                 \
+    t1.family = AF_INET6;                              \
+    r = tor_addr_is_internal(&t1, b);                  \
+    test_assert(r==0);                                 \
   STMT_END
 
 /*XXXX020 make this macro give useful output on failure, and follow the
  * conventions of the other test macros.  */
 #define test_addr_convert6(a,b) STMT_BEGIN           \
-    tor_inet_pton(AF_INET6, a, &t1.sa6.sin6_addr);   \
-    tor_inet_pton(AF_INET6, b, &t2.sa6.sin6_addr);   \
-    t1.sa6.sin6_family = AF_INET6;                   \
-    t2.sa6.sin6_family = AF_INET6;                   \
+    tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr);   \
+    tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr);   \
+    t1.family = AF_INET6;                            \
+    t2.family = AF_INET6;                            \
   STMT_END
 
 /*XXXX020 make this macro give useful output on failure, and follow the
  * conventions of the other test macros. */
 #define test_addr_parse(xx) STMT_BEGIN                                \
     r=tor_addr_parse_mask_ports(xx, &t1, &mask, &port1, &port2);      \
-    t2.sa6.sin6_family = AF_INET6;                                    \
-    p1=tor_inet_ntop(AF_INET6, &t1.sa6.sin6_addr, bug, sizeof(bug));  \
+    t2.family = AF_INET6;                                             \
+    p1=tor_inet_ntop(AF_INET6, &t1.addr.in6_addr, bug, sizeof(bug));  \
   STMT_END
 
 /*XXXX020 make this macro give useful output on failure, and follow the
@@ -1309,7 +1309,7 @@ test_util_ip6_helpers(void)
   test_assert(TOR_ADDR_BUF_LEN >=
               sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255"));
 
-  test_assert(sizeof(tor_addr_t) >= sizeof(struct sockaddr_in6));
+  test_assert(sizeof(tor_addr_t) >= sizeof(struct in6_addr));
 
   /* get interface addresses */
   r = get_interface_address6(0, AF_INET, &t1);

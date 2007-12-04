@@ -2108,8 +2108,8 @@ int
 is_internal_IP(uint32_t ip, int for_listening)
 {
   tor_addr_t myaddr;
-  myaddr.sa.sin_family = AF_INET;
-  myaddr.sa.sin_addr.s_addr = htonl(ip);
+  myaddr.family = AF_INET;
+  myaddr.addr.in_addr.s_addr = htonl(ip);
 
   return tor_addr_is_internal(&myaddr, for_listening);
 }
@@ -2519,12 +2519,12 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
   memset(addr_out, 0, sizeof(tor_addr_t));
 
   if (!strcmp(address, "*")) {
-    addr_out->sa.sin_family = AF_INET; /* AF_UNSPEC ???? XXXXX020 */
+    addr_out->family = AF_INET; /* AF_UNSPEC ???? XXXXX020 */
     any_flag = 1;
-  } else if (tor_inet_pton(AF_INET6, address, &addr_out->sa6.sin6_addr) > 0) {
-    addr_out->sa6.sin6_family = AF_INET6;
-  } else if (tor_inet_pton(AF_INET, address, &addr_out->sa.sin_addr) > 0) {
-    addr_out->sa.sin_family = AF_INET;
+  } else if (tor_inet_pton(AF_INET6, address, &addr_out->addr.in6_addr) > 0) {
+    addr_out->family = AF_INET6;
+  } else if (tor_inet_pton(AF_INET, address, &addr_out->addr.in_addr) > 0) {
+    addr_out->family = AF_INET;
   } else {
     log_warn(LD_GENERAL, "Malformed IP %s in address pattern; rejecting.",
              escaped(address));
@@ -2708,8 +2708,8 @@ tor_addr_from_ipv4(tor_addr_t *dest, uint32_t v4addr)
 {
   tor_assert(dest);
   memset(dest, 0, sizeof(dest));
-  dest->sa.sin_family = AF_INET;
-  dest->sa.sin_addr.s_addr = htonl(v4addr);
+  dest->family = AF_INET;
+  dest->addr.in_addr.s_addr = htonl(v4addr);
 }
 
 /** Copy a tor_addr_t from <b>src</b> to <b>dest</b>.
