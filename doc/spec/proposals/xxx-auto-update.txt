@@ -1,0 +1,39 @@
+
+Notes on an auto updater:
+
+steve wants a "latest" symlink so he can always just fetch that.
+
+roger worries that this will exacerbate the "what version are you
+using?" "latest." problem.
+
+weasel suggests putting the latest recommended version in dns. then
+we don't have to hit the website. it's got caching, it's lightweight,
+it scales. just put it in a TXT record or something.
+
+but, no dnssec.
+
+roger suggests a file on the https website that lists the latest
+recommended version (or filename or url or something like that).
+
+(steve seems to already be doing this with xerobank. he additionally
+suggests a little blurb that can be displayed to the user to describe
+what's new.)
+
+how to verify you're getting the right file?
+a) it's https.
+b) ship with a signing key, and use some openssl functions to verify.
+c) both
+
+andrew reminds us that we have a "recommended versions" line in the
+consensus directory already.
+
+if only we had some way to point out the "latest stable recommendation"
+from this list. we could list it first, or something.
+
+the recommended versions line also doesn't take into account which
+packages are available -- e.g. on Windows one version might be the best
+available, and on OS X it might be a different one.
+
+aren't there existing solutions to this? surely there is a beautiful,
+efficient, crypto-correct auto updater lib out there. even for windows.
+
