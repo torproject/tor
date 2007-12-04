@@ -2292,8 +2292,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       return 0;
     }
   } else if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
-    or_options_t *options = get_options();
-    if (!directory_permits_begindir_requests(options) ||
+    if (!directory_permits_begindir_requests(get_options()) ||
         circ->purpose != CIRCUIT_PURPOSE_OR) {
       end_payload[0] = END_STREAM_REASON_NOTDIRECTORY;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,

@@ -144,6 +144,7 @@ static config_var_t _option_vars[] = {
   V(BandwidthRate,               MEMUNIT,  "5 MB"),
   V(BridgeAuthoritativeDir,      BOOL,     "0"),
   VAR("Bridge",                  LINELIST, Bridges,    NULL),
+  V(BridgeRelay,                 BOOL,     "0"),
   V(CircuitBuildTimeout,         INTERVAL, "1 minute"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
@@ -1132,8 +1133,10 @@ options_act(or_options_t *old_options)
   if (old_options) {
     if (authdir_mode_v3(options) && !authdir_mode_v3(old_options))
       dirvote_recalculate_timing(options, time(NULL));
-    if (!bool_eq(directory_caches_dir_info(options),
-                 directory_caches_dir_info(old_options))) {
+    if (!bool_eq(directory_fetches_dir_info_like_mirror(options),
+                 directory_fetches_dir_info_like_mirror(old_options)) ||
+        !bool_eq(directory_fetches_dir_info_like_bridge_user(options),
+                 directory_fetches_dir_info_like_bridge_user(old_options))) {
       /* Make sure update_router_have_min_dir_info gets called. */
       router_dir_info_changed();
       /* We might need to download a new consensus status later or sooner than

@@ -14,6 +14,8 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Stop thinking that 0.1.2.x directory servers can handle "begin_dir"
       requests. Should ease bugs 406 and 419 where 0.1.2.x relays are
       crashing or mis-answering these requests.
+    - Stop being so aggressive about fetching dir info if your DirPort is
+      on but your ORPort is off.
 
   o Minor bugfixes:
     - The fix in 0.2.0.12-alpha cleared the "hsdir" flag in v3 network
@@ -37,9 +39,13 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       consumers. (We already do this on HUP.)
     - Authorities and caches fetch the v2 networkstatus documents
       less often, now that v3 is encouraged.
+    - Add a new config option BridgeRelay that specifies you want to
+      be a bridge relay. Right now the only difference is that it makes
+      you answer begin_dir requests, and it makes you cache dir info,
+      even if your DirPort isn't on.
 
   o Code simplifications:
-    - 
+    - ????
 
 
 Changes in version 0.2.0.12-alpha - 2007-11-16

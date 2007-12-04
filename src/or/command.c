@@ -375,7 +375,7 @@ command_process_relay_cell(cell_t *cell, or_connection_t *conn)
   }
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
-    /* if we're a server and treating connections with recent local
+    /* if we're a relay and treating connections with recent local
      * traffic better, then this is one of them. */
     conn->client_used = time(NULL);
   }

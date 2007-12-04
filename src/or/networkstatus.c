@@ -1051,7 +1051,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
     long dl_interval;
     long interval = c->fresh_until - c->valid_after;
     time_t start;
-    if (directory_caches_dir_info(options)) {
+    if (directory_fetches_dir_info_like_mirror(options)) {
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
       start = c->fresh_until + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
@@ -1062,6 +1062,8 @@ update_consensus_networkstatus_fetch_time(time_t now)
       start = c->fresh_until + (interval*3)/4;
       /* But download the next one before this one is expired. */
       dl_interval = ((c->valid_until - start) * 7 )/ 8;
+    /* XXX020 do something different if
+     * directory_fetches_dir_info_like_bridge_user() */
     }
     if (dl_interval < 1)
       dl_interval = 1;
@@ -1110,7 +1112,7 @@ update_networkstatus_downloads(time_t now)
   or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (directory_caches_dir_info(options))
+  if (directory_fetches_dir_info_like_mirror(options))
     update_v2_networkstatus_cache_downloads(now);
   update_consensus_networkstatus_downloads(now);
   update_certificate_downloads(now);

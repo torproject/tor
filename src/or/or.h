@@ -2084,6 +2084,10 @@ typedef struct {
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
 
+  int BridgeRelay; /**< Boolean: are we acting as a bridge relay? We make
+                    * this explicit so we can change how we behave in the
+                    * future. */
+
   /** Boolean: if we know the bridge's digest, should we get new
    * descriptors from the bridge authorities or from the bridge itself? */
   int UpdateBridgesFromAuthority;
@@ -3025,10 +3029,13 @@ int list_server_status(smartlist_t *routers, char **router_status_out,
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
 
-int directory_caches_dir_info(or_options_t *options);
 int directory_fetches_from_authorities(or_options_t *options);
+int directory_fetches_dir_info_like_mirror(or_options_t *options);
+int directory_fetches_dir_info_like_bridge_user(or_options_t *options);
+int directory_caches_dir_info(or_options_t *options);
 int directory_permits_begindir_requests(or_options_t *options);
 int directory_permits_controller_requests(or_options_t *options);
+int directory_too_idle_to_fetch_descriptors(or_options_t *options, time_t now);
 
 void directory_set_dirty(void);
 cached_dir_t *dirserv_get_directory(void);

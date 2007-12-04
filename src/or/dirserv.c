@@ -1089,25 +1089,50 @@ dirserv_dump_directory_to_string(char **dir_out,
 /********************************************************************/
 
 /* A set of functions to answer questions about how we'd like to behave
- * as a directory cache/client. */
+ * as a directory mirror/client. */
+
+/** Return 1 if we fetch our directory material directly from the
+ * authorities, rather than from a mirror. */
+int
+directory_fetches_from_authorities(or_options_t *options)
+{
+  if (options->DirPort == 0)
+    return 0;
+  /* XXX if dirport not advertised, return 0 too */
+  if (!server_mode(options))
+    return 0;
+  /* XXX if orport or dirport not reachable, return 0 too */
+  return 1;
+}
+
+/* Return 1 if we should fetch new networkstatuses, descriptors, etc
+ * on the "mirror" schedule rather than the "client" schedule.
+ */
+int
+directory_fetches_dir_info_like_mirror(or_options_t *options)
+{
+  return directory_fetches_from_authorities(options);
+}
+
+/* Return 1 if we should fetch new networkstatuses, descriptors, etc
+ * on a very passive schedule -- waiting long enough for ordinary clients
+ * to probably have the info we want. These would include bridge users,
+ * and maybe others in the future e.g. if a Tor client uses another Tor
+ * client as a directory guard.
+ */
+int
+directory_fetches_dir_info_like_bridge_user(or_options_t *options)
+{
+  return options->UseBridges != 0;
+}
 
 /** Return 1 if we want to keep descriptors, networkstatuses, etc around
- * and serve them to others, or 0 otherwise.
- * Also causes us to fetch new networkstatuses, descriptors, etc on the
- * "mirror" schedule rather than the "client" schedule.
+ * and we're willing to serve them to others. Else return 0.
  */
 int
 directory_caches_dir_info(or_options_t *options)
 {
-  return options->DirPort != 0;
-}
-
-/** Return 1 if we fetch our directory material directly from the
- * authorities, rather than some other cache. */
-int
-directory_fetches_from_authorities(or_options_t *options)
-{
-  return server_mode(options) && options->DirPort != 0;
+  return options->BridgeRelay != 0 || options->DirPort != 0;
 }
 
 /** Return 1 if we want to allow remote people to ask us directory
@@ -1116,7 +1141,7 @@ directory_fetches_from_authorities(or_options_t *options)
 int
 directory_permits_begindir_requests(or_options_t *options)
 {
-  return options->DirPort != 0;
+  return options->BridgeRelay != 0 || options->DirPort != 0;
 }
 
 /** Return 1 if we want to allow controllers to ask us directory
@@ -1126,6 +1151,17 @@ int
 directory_permits_controller_requests(or_options_t *options)
 {
   return options->DirPort != 0;
+}
+
+/** Return 1 if we have no need to fetch new descriptors. This generally
+ * happens when we're not a dir cache and we haven't built any circuits
+ * lately.
+ */
+int
+directory_too_idle_to_fetch_descriptors(or_options_t *options, time_t now)
+{
+  return !options->DirPort && !options->FetchUselessDescriptors &&
+         rep_hist_circbuilding_dormant(now);
 }
 
 /********************************************************************/
