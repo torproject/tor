@@ -49,8 +49,8 @@ Proposals by number:
 124  Blocking resistant TLS certificate usage [ACCEPTED]
 125  Behavior for bridge users, bridge relays, and bridge authorities [OPEN]
 126  Getting GeoIP data and publishing usage summaries [OPEN]
-127  Relaying dirport requests to Tor download site [NEEDS-RESEARCH]
-128  Families of private bridges [NEEDS-RESEARCH]
+127  Relaying dirport requests to Tor download site / website [DRAFT]
+128  Families of private bridges [DRAFT]
 
 
 Proposals by status:
@@ -72,8 +72,6 @@ Proposals by status:
    124  Blocking resistant TLS certificate usage
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
-   127  Relaying dirport requests to Tor download site
-   128  Families of private bridges
  META:
    000  Index of Tor Proposals
    001  The Tor Proposal Process
@@ -96,3 +94,6 @@ Proposals by status:
    112  Bring Back Pathlen Coin Weight
  DEAD:
    100  Tor Unreliable Datagram Extension Proposal
+ DRAFT:
+   127  Relaying dirport requests to Tor download site / website
+   128  Families of private bridges

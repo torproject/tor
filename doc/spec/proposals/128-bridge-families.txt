@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 2007-12-xx
-Status: Needs-Research
+Status: Draft
 
 1. Overview
 

@@ -15,7 +15,7 @@ my %title = ();
 my %status = ();
 
 my @KNOWN_STATUSES = qw{
-    OPEN ACCEPTED NEEDS-RESEARCH META FINISHED CLOSED SUPERSEDED DEAD};
+    OPEN ACCEPTED NEEDS-RESEARCH META FINISHED CLOSED SUPERSEDED DEAD DRAFT};
 
 for my $f (@files) {
     my $num = substr($f, 0, 3);
