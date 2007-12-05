@@ -20,10 +20,10 @@ The steps:
 1) First, you'll need a certificate.  Run ./src/tools/tor-gencert to
    generate one.
 
-   Run tor-gencert in a separate, very secure directory.  The first time
-   you run it, you will need to run it with the --create-identity-key
-   option to make a v3 authority identity key.  Subsequent times, you
-   can just run it as-is.
+   Run tor-gencert in a separate, very secure directory.  Maybe even on
+   a more secure computer.  The first time you run it, you will need to
+   run it with the --create-identity-key option to make a v3 authority
+   identity key.  Subsequent times, you can just run it as-is.
 
    tor-gencert will make 3 files:
 
