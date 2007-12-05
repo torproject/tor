@@ -1479,7 +1479,7 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
       have_warned_about_old_version = 1;
       control_event_general_status(LOG_WARN, "DANGEROUS_VERSION "
            "CURRENT=%s REASON=%s RECOMMENDED=\"%s\"",
-           VERSION, status == VS_OLD ? "OLD" : "UNRECOMMENDED",
+           VERSION, status == VS_OLD ? "OBSOLETE" : "UNRECOMMENDED",
            recommended);
     }
   }
