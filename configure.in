@@ -361,6 +361,31 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, struct sockaddr_storage, s
 #endif
 #endif
 ])
+AC_CHECK_MEMBERS([struct in6_addr.s6_addr32, struct in6_addr.s6_addr16], , ,
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_NETINET_IN6_H
+#include <netinet/in6.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef MS_WINDOWS
+#define WIN32_WINNT 0x400
+#define _WIN32_WINNT 0x400
+#define WIN32_LEAN_AND_MEAN
+#if defined(_MSC_VER) && (_MSC_VER < 1300)
+#include <winsock.h>
+#else
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+#endif
+])
 
 AC_CHECK_TYPES([rlim_t], , ,
 [#ifdef HAVE_SYS_TYPES_H

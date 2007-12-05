@@ -33,6 +33,8 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Reject uploaded descriptors and extrainfo documents if they're
       huge. Otherwise we'll cache them all over the network and it'll
       clog everything up. Reported by Aljosha Judmayer.
+    - Check for presence of s6_addr16 and s6_addr32 fields in in6_addr
+      via autoconf.  Should fix compile on solaris.
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory

@@ -302,14 +302,16 @@ struct in6_addr
 typedef uint16_t sa_family_t;
 #endif
 
-#ifndef _MSC_VER
-/* Apparently, MSVC doesn't define s6_addr16 or s6_addr32. How dumb. */
-/* XXXX020 detect with autoconf. */
-#define S6_ADDR16(x) ((uint16_t*)(x).s6_addr16)
+/* Apparently, MS and Solaris don't define s6_addr16 or s6_addr32. */
+#ifdef HAVE_STRUCT_IN6_ADDR_S6_ADDR32
 #define S6_ADDR32(x) ((uint32_t*)(x).s6_addr32)
 #else
-#define S6_ADDR16(x) ((uint16_t*)((char*)&(x).s6_addr))
 #define S6_ADDR32(x) ((uint32_t*)((char*)&(x).s6_addr))
+#endif
+#ifdef HAVE_STRUCT_IN6_ADDR_S6_ADDR16
+#define S6_ADDR16(x) ((uint16_t*)(x).s6_addr16)
+#else
+#define S6_ADDR16(x) ((uint16_t*)((char*)&(x).s6_addr))
 #endif
 
 /* XXXX020 detect sockaddr_in6 correctly on ms_windows; this is also a hack. */
