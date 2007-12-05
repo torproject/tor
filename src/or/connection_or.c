@@ -612,7 +612,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
              tor_tls_err_to_string(result));
       return -1;
     case TOR_TLS_DONE:
-      if (tor_tls_used_v1_handshake(conn->tls)) {
+      if (! tor_tls_used_v1_handshake(conn->tls)) {
         if (!tor_tls_is_server(conn->tls)) {
           if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
             conn->_base.state = OR_CONN_STATE_TLS_RENEGOTIATING;
