@@ -20,6 +20,37 @@ For Tor 0.2.0.13-alpha:
   - Put a consensus in place of the empty fallback-consensus file in
     src/config and see what breaks.
   - let bridges set relaybandwidthrate as low as 5kb
+  - config option FetchDirInfoEagerly so the dnsel can fetch dir
+    info like a mirror without needing to be a tor server.
+    - nick has to pick a name for it
+
+Features blocking 0.2.0.x:
+  - mirror tor downloads on (via) tor dir caches
+R   . spec
+    d deploy
+  - geoip caching and publishing for bridges
+R   . spec
+    - deploy
+    d let Vidalia use the geoip data too rather than doing its own
+      anonymized queries
+  - bridge address disbursal strategies
+    o get the cached-descriptors* to bridges@moria
+    - parse out bridge addresses from cached-descriptors*
+      (or parse them out before Tonga sends them)
+      (or get Tonga's Tor to write them out better in the first place)
+N   * answer by IP/timestamp
+      - run a little web server on moria?
+N   d answer by answering email to bridges@torproject
+      - keep track of which addresses have been answered already
+R   d some sort of reachability testing on bridges
+R - families of bridges
+  - interface for letting soat modify flags that authorities assign
+R   . spec
+    - deploy
+S * tor usb windows image (vidalia, polipo, tor, firefox)
+S/M - vidalia can launch firefox
+    - build a community version of firefox
+    - pick our favorite extensions
 
 Things we'd like to do in 0.2.0.x:
   - See also Flyspray tasks.
@@ -146,7 +177,7 @@ R     - drop 'authority' queries if they're to our own identity key; accept
       o be more robust to bridges being marked as down and leaving us
         stranded without any known "running" bridges.
     - Bridges operators (rudimentary version)
-      * Ability to act as dir cache without a dir port.
+      o Ability to act as dir cache without a dir port.
       o Bridges publish to bridge authorities
       o Fix BEGIN_DIR so that you connect to bridge of which you only
         know IP (and optionally fingerprint), and then use BEGIN_DIR to learn
@@ -210,34 +241,6 @@ Nice-to-have items for 0.2.0.x, time permitting:
     - we try to build 4 test circuits to break them over different
       servers. but sometimes our entry node is the same for multiple
       test circuits. this defeats the point.
-
-Planned for 0.2.1.x, December:
-  - mirror tor downloads on (via) tor dir caches
-R   - spec
-    d deploy
-  - geoip caching and publishing for bridges
-R   - spec
-    - deploy
-    d let Vidalia use the geoip data too rather than doing its own
-      anonymized queries
-  - bridge address disbursal strategies
-    o get the cached-descriptors* to bridges@moria
-    - parse out bridge addresses from cached-descriptors*
-      (or parse them out before Tonga sends them)
-      (or get Tonga's Tor to write them out better in the first place)
-    * answer by IP/timestamp
-      - run a little web server on moria?
-    d answer by answering email to bridges@torproject
-      - keep track of which addresses have been answered already
-    d some sort of reachability testing on bridges
-  - families of bridges
-  - interface for letting soat modify flags that authorities assign
-R   - spec
-    - deploy
-S * tor usb windows image (vidalia, polipo, tor, firefox)
-S/M - vidalia can launch firefox
-    - build a community version of firefox
-    - pick our favorite extensions
 
 Planned for 0.2.1.x:
   - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
@@ -313,8 +316,8 @@ Deferred from 0.2.0.x:
       local_routerstatus (or equivalent) subsume all places to go for "what
       router is this?"
   - Blocking/scanning-resistance
-    - It would be potentially helpful to https requests on the OR port by
-      acting like an HTTPS server.
+    - It would be potentially helpful to respond to https requests on
+      the OR port by acting like an HTTPS server.
     - Do we want to maintain our own set of entryguards that we use as
       next hop after the bridge? Open research question; let's say no
       for 0.2.0 unless we learn otherwise.
