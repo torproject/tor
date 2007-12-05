@@ -30,7 +30,7 @@ R   . spec
     d deploy
   - geoip caching and publishing for bridges
 R   . spec
-    - deploy
+?   - deploy
     d let Vidalia use the geoip data too rather than doing its own
       anonymized queries
   - bridge address disbursal strategies
@@ -43,10 +43,13 @@ N   * answer by IP/timestamp
 N   d answer by answering email to bridges@torproject
       - keep track of which addresses have been answered already
 R   d some sort of reachability testing on bridges
-R - families of bridges
+R - bridge communities
+    - spec
+    - deploy
   - interface for letting soat modify flags that authorities assign
 R   . spec
     - deploy
+    - add an AuthDirBadexit torrc option if we decide we want one.
 S * tor usb windows image (vidalia, polipo, tor, firefox)
 S/M - vidalia can launch firefox
     - build a community version of firefox
@@ -94,9 +97,6 @@ Things we'd like to do in 0.2.0.x:
   - Bugs.
      - Bug reports Roger has heard along the way that don't have enough
         details/attention to solve them yet.
-        o tup said that when he set FetchUselessDescriptors, after
-          24 or 48 hours he wasn't fetching any descriptors at all
-          anymore. This was in 0.2.0 but worked fine in 0.1.2.
         - arma noticed that when his network went away and he tried
           a new guard node and the connect() syscall failed to it,
           the guard wasn't being marked as down. 0.2.0.x.
@@ -104,21 +104,10 @@ Things we'd like to do in 0.2.0.x:
           it couldn't fetch any network statuses, and never tried again
           even when the network came back and arma clicked on things.
           also 0.2.0.
-        o phobos says relaybandwidth* sometimes don't do what we expect.
-          http://interloper.org/tmp/2007-06-bw-usage.png
-          I believe this is the result of confusion about whether to use
-          relaybandwidth or bandwidthrate to control bandwidth usage for 
-          servers.  Chances are, this isn't a bug per se. [phobos]
-        o this notion of authorities notifying servers that they're
-          unreachable is bunk -- it's leftover from the time when all
-          servers ran 24/7. now it triggers every time a server goes
-          away and then returns before the old descriptor has expired.
       - we need a config option to turn off proposal 109 behavior, else
         running a private tor network on your own computer is very hard.
       . man page entry for HidServDirectoryV2 and
         MinUptimeHidServDirectoryV2.
-      o add a --quiet commandline option that suppresses logs. useful
-        for --hashed-password and maybe others.
       d Tor logs the libevent version on startup, for debugging purposes.
         This is great. But it does this before configuring the logs, so
         it only goes to stdout and is then lost.
@@ -182,15 +171,12 @@ R     - drop 'authority' queries if they're to our own identity key; accept
       o Fix BEGIN_DIR so that you connect to bridge of which you only
         know IP (and optionally fingerprint), and then use BEGIN_DIR to learn
         more about it.
-      - look at server_mode() and decide if it always applies to bridges too.
-    - Bridges authorities (rudimentary version)
-      o Rudimentary "do not publish networkstatus" option for bridge
-        authorities.
-      d Clients can ask bridge authorities for more bridges.
+R     - look at server_mode() and decide if it always applies to bridges too.
     - Bridges
       o Clients can ask bridge authorities for updates on known bridges.
     - Misc
       * Make BEGIN_DIR mandatory for asking questions of bridge authorities?
+        (but only for bridge descriptors. not for ordinary cache stuff.)
 
   - Features (other than bridges):
     - Audit how much RAM we're using for buffers and cell pools; try to
@@ -201,7 +187,6 @@ R     - drop 'authority' queries if they're to our own identity key; accept
     - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
       - Or maybe close connections from same IP when we get a lot from one.
       - Or maybe block IPs that connect too many times at once.
-    D add an AuthDirBadexit torrc option if we decide we want one.
 
   - Testing
 N   - Hack up a client that gives out weird/no certificates, so we can
@@ -236,13 +221,10 @@ P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 P - Flyspray 487, create a universal binary privoxy for inclusion in
     packages.
 
-Nice-to-have items for 0.2.0.x, time permitting:
-  - Low-priority bugs:
-    - we try to build 4 test circuits to break them over different
-      servers. but sometimes our entry node is the same for multiple
-      test circuits. this defeats the point.
-
 Planned for 0.2.1.x:
+  - we try to build 4 test circuits to break them over different
+    servers. but sometimes our entry node is the same for multiple
+    test circuits. this defeats the point.
   - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
   - configurable timestamp granularity. defaults to 'seconds'.
   - consider making 'safelogging' extend to info-level logs too.
@@ -325,7 +307,6 @@ Deferred from 0.2.0.x:
       bridge.
   - Build:
     - Detect correct version of libraries from autoconf script.
-
 
 Future versions:
   - See also Flyspray tasks.
