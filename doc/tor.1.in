@@ -120,7 +120,7 @@ problem.
 
 You should \fBnot\fP enable this feature unless you encounter the "no buffer
 space available" issue.  Reducing the TCP buffers affects window size for
-for the TCP stream and will reduce throughput in proportion to round trip
+the TCP stream and will reduce throughput in proportion to round trip
 time on long paths.  (Default: 0.)
 .LP
 .TP
@@ -201,6 +201,7 @@ the "no-hs" flag is \fBnot\fP set.  Tor will use this authority as a bridge
 authoritative directory if the "bridge" flag is set.  Lastly, if a flag
 "orport=\fBport\fR" is given, Tor will use the given port when opening
 encrypted tunnels to the dirserver.
+[XXX020 also mention v3ident= flag here]
 
 If no \fBdirserver\fP line is given, Tor will use the default
 directory servers.  NOTE: this option is intended
@@ -704,8 +705,8 @@ The following options are useful only for servers (that is, if \fBORPort\fP is n
 .LP
 .TP
 \fBAddress \fR\fIaddress\fP
-The IP or fqdn of this server (e.g. moria.mit.edu). You can leave this
-unset, and Tor will guess your IP.
+The IP address or fqdn of this server (e.g. moria.mit.edu). You can
+leave this unset, and Tor will guess your IP address.
 .LP
 .TP
 \fBAssumeReachable \fR\fB0\fR|\fB1\fR\fP
@@ -714,6 +715,13 @@ don't do self-reachability testing; just upload your server descriptor
 immediately. If \fBAuthoritativeDirectory\fP is also set, this option
 instructs the dirserver to bypass remote reachability testing too and
 list all connected servers as running.
+.LP
+.TP
+\fBBridgeRelay \fR\fB0\fR|\fB1\fR\fP
+Sets the relay to act as a "bridge" with respect to relaying connections
+from bridge users to the Tor network. Mainly it influences how the relay
+will cache and serve directory information. Usually used in combination
+with PublishServerDescriptor.
 .LP
 .TP
 \fBContactInfo \fR\fIemail_address\fP
@@ -990,6 +998,12 @@ When this option is set, Tor accepts and serves v2 hidden service
 descriptors. (Default: 0)
 .LP
 .TP
+\fBBridgeAuthoritativeDir \fR\fB0\fR|\fB1\fR\fP
+When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor
+accepts and serves router descriptors, but it caches and serves the main
+networkstatus documents rather than generating its own. (Default: 0)
+.LP
+.TP
 \fBDirPort \fR\fIPORT\fP
 Advertise the directory service on this port.
 .LP
@@ -1037,8 +1051,8 @@ When this is set then
 .TP
 \fBDirAllowPrivateAddresses \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will accept router descriptors with arbitrary "Address"
-elements. Otherwise, if the address is not an IP or is a private IP,
-it will reject the router descriptor. Defaults to 0.
+elements. Otherwise, if the address is not an IP address or is a private
+IP address, it will reject the router descriptor. Defaults to 0.
 .LP
 .TP
 \fBAuthDirBadExit \fR\fIAddressPattern\fR...\fP
