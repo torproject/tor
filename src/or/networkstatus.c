@@ -1161,7 +1161,9 @@ networkstatus_get_live_consensus(time_t now)
     return NULL;
 }
 
-/* XXXX020 remove this in favor of get_live_consensus. */
+/* XXXX020 remove this in favor of get_live_consensus. But actually,
+ * leave something like it for bridge users, who need to not totally
+ * lose if they spend a while fetching a new consensus. */
 networkstatus_vote_t *
 networkstatus_get_reasonably_live_consensus(time_t now)
 {
