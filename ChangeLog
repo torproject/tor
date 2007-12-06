@@ -49,6 +49,10 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       be a bridge relay. Right now the only difference is that it makes
       you answer begin_dir requests, and it makes you cache dir info,
       even if your DirPort isn't on.
+    - Add "GETINFO/desc-annotations/id/<OR digest>" so controllers can
+      ask about source, timestamp of arrival, purpose, etc. We need
+      something like this to help Vidalia not do GeoIP lookups on bridge
+      addresses.
 
 
 Changes in version 0.2.0.12-alpha - 2007-11-16

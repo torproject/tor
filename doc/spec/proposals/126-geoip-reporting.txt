@@ -148,8 +148,7 @@ Status: Open
   that might want to map its relay locations. The best answer is that it
   should learn the router annotations, with a new controller 'getinfo'
   command:
-    "GETINFO router-annotations/id/<OR identity>" or
-    "GETINFO router-annotations/name/<OR nickname>"
+    "GETINFO desc-annotations/id/<OR identity>"
   which would respond with something like
     @downloaded-at 2007-11-29 08:06:38
     @source "128.31.0.34"

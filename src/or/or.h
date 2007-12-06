@@ -3810,6 +3810,7 @@ signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
 signed_descriptor_t *router_get_by_extrainfo_digest(const char *digest);
 signed_descriptor_t *extrainfo_get_by_descriptor_digest(const char *digest);
 const char *signed_descriptor_get_body(signed_descriptor_t *desc);
+const char *signed_descriptor_get_annotations(signed_descriptor_t *desc);
 routerlist_t *router_get_routerlist(void);
 void routerinfo_free(routerinfo_t *router);
 void extrainfo_free(extrainfo_t *extrainfo);

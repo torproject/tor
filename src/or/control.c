@@ -1356,6 +1356,16 @@ getinfo_helper_dir(control_connection_t *control_conn,
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
+  } else if (!strcmpstart(question, "desc-annotations/id/")) {
+    routerinfo_t *ri = router_get_by_hexdigest(question+
+                                               strlen("desc-annotations/id/"));
+    if (ri) {
+      const char *annotations =
+        signed_descriptor_get_annotations(&ri->cache_info);
+      if (annotations)
+        *answer = tor_strndup(annotations,
+                              ri->cache_info.signed_annotations_len);
+    }
   } else if (!strcmpstart(question, "dir/server/")) {
     size_t answer_len = 0, url_len = strlen(question)+2;
     char *url = tor_malloc(url_len);

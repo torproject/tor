@@ -1966,7 +1966,8 @@ extrainfo_get_by_descriptor_digest(const char *digest)
  * The returned string is not guaranteed to be NUL-terminated: the string's
  * length will be in desc-\>signed_descriptor_len.
  *
- * If with_annotations is set, the returned string will include the annotations
+ * If <b>with_annotations</b> is set, the returned string will include
+ * the annotations
  * (if any) preceding the descriptor.  This will increase the length of the
  * string by desc-\>annotations_len.
  *
@@ -2018,6 +2019,14 @@ const char *
 signed_descriptor_get_body(signed_descriptor_t *desc)
 {
   return signed_descriptor_get_body_impl(desc, 0);
+}
+
+/** As signed_descriptor_get_body(), but points to the beginning of the
+ * annotations section rather than the beginning of the descriptor. */
+const char *
+signed_descriptor_get_annotations(signed_descriptor_t *desc)
+{
+  return signed_descriptor_get_body_impl(desc, 1);
 }
 
 /** Return the current list of all known routers. */

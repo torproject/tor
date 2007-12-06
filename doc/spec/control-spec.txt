@@ -371,6 +371,10 @@ $Id$
     "desc/id/<OR identity>" or "desc/name/<OR nickname>" -- the latest
       server descriptor for a given OR, NUL-terminated.
 
+    "desc-annotations/id/<OR identity>" -- outputs the annotations string
+      (source, timestamp of arrival, purpose, etc) for the corresponding
+      descriptor. [First implemented in 0.2.0.13-alpha.]
+
     "extra-info/digest/<digest>"  -- the extrainfo document whose digest (in
       hex) is <digest>.  Only available if we're downloading extra-info
       documents.
