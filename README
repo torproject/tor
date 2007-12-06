@@ -7,13 +7,13 @@ To build Tor from source:
         ./configure; make; make install
 
 Home page:
-        http://www.torproject.org/
+        https://www.torproject.org/
 
 Download new versions:
-        http://www.torproject.org/download.html
+        https://www.torproject.org/download.html
 
 Documentation, including links to installation and setup instructions:
-        http://www.torproject.org/documentation.html
+        https://www.torproject.org/documentation.html
 
 Making applications work with Tor:
         http://wiki.noreply.org/noreply/TheOnionRouter/TorifyHOWTO

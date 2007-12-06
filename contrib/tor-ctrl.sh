@@ -23,7 +23,7 @@
 # use notations like 1mb, 1kb or the number of bytes.
 #
 # Many, many other things are possible, see
-#              http://www.torproject.org/svn/trunk/doc/spec/control-spec.txt
+#              https://www.torproject.org/svn/trunk/doc/spec/control-spec.txt
 #
 # Copyright (c) 2007 by Stefan Behte
 #
@@ -68,7 +68,7 @@ cat <<EOF
 
 tor-ctrl $VERSION by Stefan Behte (http://ge.mine.nu)
 You should have a look at 
-http://www.torproject.org/svn/trunk/doc/spec/control-spec.txt
+https://www.torproject.org/svn/trunk/doc/spec/control-spec.txt
 
 usage: tor-ctrl [-switch] [variable]
 
