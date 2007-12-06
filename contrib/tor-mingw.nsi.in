@@ -10,10 +10,10 @@
 !define WEBSITE "https://www.torproject.org/"
 
 !define LICENSE "LICENSE"
-;BIN is where it expects to find tor.exe, tor-resolve.exe, libcrypto.a and libssl.a
+;BIN is where it expects to find tor.exe and tor-resolve.exe
 !define BIN "..\bin"
 
-SetCompressor lzma
+SetCompressor /SOLID lzma
 OutFile ${INSTALLER}
 InstallDir $PROGRAMFILES\Tor
 SetOverWrite ifnewer
@@ -25,10 +25,10 @@ CRCCheck on
 XPStyle on
 VIProductVersion "${VERSION}"
 VIAddVersionKey "ProductName" "The Onion Router: Tor"
-VIAddVersionKey "Comments" "https://www.torproject.org/"
+VIAddVersionKey "Comments" "${WEBSITE}"
 VIAddVersionKey "LegalTrademarks" "Three line BSD"
 VIAddVersionKey "LegalCopyright" "©2004-2007, Roger Dingledine, Nick Mathewson"
-VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at https://www.torproject.org/"
+VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at ${WEBSITE}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 
 !define MUI_WELCOMEPAGE_TITLE "Welcome to the Tor ${VERSION} Setup Wizard"

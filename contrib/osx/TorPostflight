@@ -89,8 +89,8 @@ ln -sf $TARGET/tor .
 ln -sf $TARGET/tor-resolve .
 
 cd /usr/share/man/man1
-MAN1=$TARGET/man/man1
-ln -sf $MAN1/*.1 .
+MAN1=$TARGET/share/man/man1
+#ln -sf $MAN1/*.1 .
 
 if [ -d /Library/StartupItems/Privoxy ]; then
   find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel
