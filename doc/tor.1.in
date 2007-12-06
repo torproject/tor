@@ -356,6 +356,15 @@ can opt to use them in some circuit positions, though. The default is
 "middle,rendezvous", and other choices are not advised.
 .LP
 .TP
+\fBBridge \fR\fIIP:ORPort\fR [fingerprint]\fP
+When set along with UseBridges, instructs Tor to use the relay at
+"IP:ORPort" as a "bridge" relaying into the Tor network. If "fingerprint"
+is provided (using the same format as for DirServer), we will verify that
+the relay running at that location has the right fingerprint. We also use
+fingerprint to look up the bridge descriptor at the bridge authority, if
+it's provided and if UpdateBridgesFromAuthority is set too.
+.LP
+.TP
 \fBCircuitBuildTimeout \fR\fINUM\fP
 Try for at most NUM seconds when building circuits. If the circuit
 isn't open in that time, give up on it.
@@ -560,6 +569,18 @@ this will observe it through cookies or other protocol-specific means anyhow.
 Since exit servers go up and down, it is desirable to expire the association
 between host and exit server after NUM seconds. The default
 is 1800 seconds (30 minutes).
+.LP
+.TP
+\fBUpdateBridgesFromAuthority \fR\fB0\fR|\fB1\fR\fP
+When set (along with UseBridges), Tor will try to fetch bridge descriptors
+from the configured bridge authorities when feasible. It will fall back
+to a direct request if the authority responds with a 404. (Default: 0)
+.LP
+.TP
+\fBUseBridges \fR\fB0\fR|\fB1\fR\fP
+When set, Tor will fetch descriptors for each bridge listed in the
+"Bridge" config lines, and use these relays as both entry guards and
+directory guards. (Default: 0)
 .LP
 .TP
 \fBUseEntryGuards \fR\fB0\fR|\fB1\fR\fP
