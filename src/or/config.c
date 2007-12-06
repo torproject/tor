@@ -1901,7 +1901,7 @@ print_usage(void)
   printf(
 "Copyright 2001-2007 Roger Dingledine, Nick Mathewson.\n\n"
 "tor -f <torrc> [args]\n"
-"See man page for options, or http://tor.eff.org/ for documentation.\n");
+"See man page for options, or http://www.torproject.org/ for documentation.\n");
 }
 
 /** Print all non-obsolete torrc options. */

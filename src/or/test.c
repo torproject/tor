@@ -2968,7 +2968,7 @@ test_rend_fns(void)
   char address1[] = "fooaddress.onion";
   char address2[] = "aaaaaaaaaaaaaaaa.onion";
   char address3[] = "fooaddress.exit";
-  char address4[] = "tor.eff.org";
+  char address4[] = "www.torproject.org";
   rend_service_descriptor_t *d1, *d2;
   char *encoded;
   size_t len;

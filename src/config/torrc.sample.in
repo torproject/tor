@@ -6,8 +6,8 @@
 ## that begin with just "#" are disabled commands: you can enable them
 ## by removing the "#" symbol.
 ##
-## See the man page, or http://tor.eff.org/tor-manual-dev.html, for more
-## options you can use in this file.
+## See the man page, or http://www.torproject.org/tor-manual-dev.html,
+## for more options you can use in this file.
 ##
 ## Tor will look for this file in various places based on your platform:
 ## http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#torrc
@@ -74,7 +74,7 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 
 ## NOTE: If you enable these, you should consider mailing the contents of
 ## the "fingerprint" file to the tor-ops, so we have contact info for you
-## in case we need it. See http://tor.eff.org/docs/tor-doc-server.html.
+## in case we need it. See http://www.torproject.org/docs/tor-doc-relay.
 
 ## A unique handle for your server.
 #Nickname ididnteditheconfig
@@ -123,9 +123,9 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## the default exit policy, end this with either a reject *:* or an
 ## accept *:*. Otherwise, you're _augmenting_ (prepending to) the
 ## default exit policy. Leave commented to just use the default, which is
-## available in the man page or at http://tor.eff.org/documentation.html
+## available in the man page or at http://www.torproject.org/documentation.html
 ##
-## Look at http://tor.eff.org/faq-abuse.html#TypicalAbuses
+## Look at http://www.torproject.org/faq-abuse.html#TypicalAbuses
 ## for issues you might encounter if you use the default exit policy.
 ##
 ## If certain IPs and ports are blocked externally, e.g. by your firewall,
