@@ -31,15 +31,7 @@ Status: Draft
 
     GET /tor/website/$1
 
-2. Linked connections
-
-  Check out the connection_ap_make_link() function, as called from
-  directory.c. Tor clients use this to create a "fake" socks connection
-  back to themselves, and then they attach a directory request to it,
-  so they can launch directory fetches via Tor. We can piggyback on
-  this feature.
-
-3. Direct connections, one-hop circuits, or three-hop circuits?
+2. Direct connections, one-hop circuits, or three-hop circuits?
 
   We could relay the connections directly to the download site -- but
   this produces recognizable outgoing traffic on the bridge or cache's
@@ -64,7 +56,7 @@ Status: Draft
   will be a bit tricky though, because these connections will use the
   bridge's guards.
 
-4. Scanning resistance
+3. Scanning resistance
 
   One other goal we'd like to achieve, or at least not hinder, is making
   it hard to scan large swaths of the Internet to look for responses
@@ -76,7 +68,7 @@ Status: Draft
   some bridges provide a download mirror while others can remain
   scanning-resistant.
 
-5. Integrity checking
+4. Integrity checking
 
   If we serve this stuff in plaintext from the bridge, anybody in between
   the user and the bridge can intercept and modify it. The bridge can too.
@@ -97,11 +89,14 @@ Status: Draft
   among several, and the list could be dynamic -- for example, all the
   relays with an Authority flag that allow exits to the Tor website.
 
-  Answer #3: We could suggest that users only use trusted bridges for
+  Answer #3: The mirrors should connect to the main distribution site
+  via SSL. That way the exit relay can't influence anything.
+
+  Answer #4: We could suggest that users only use trusted bridges for
   fetching a copy of Tor. Hopefully they heard about the bridge from a
   trusted source rather than from the adversary.
 
-  Answer #4: What if the adversary is trawling for Tor downloads by
+  Answer #5: What if the adversary is trawling for Tor downloads by
   network signature -- either by looking for known bytes in the binary,
   or by looking for "GET /tor/dist/"? It would be nice to encrypt the
   connection from the bridge user to the bridge. And we can! The bridge
@@ -111,7 +106,32 @@ Status: Draft
   dirport, or renegotiate and become a Tor connection, depending on how
   the client behaves.
 
-  I suggest we go with Answers 2 and 3 for now, and keep 4 in mind for
-  down the road.
+5. Linked connections: at what level should we proxy?
 
+  Check out the connection_ap_make_link() function, as called from
+  directory.c. Tor clients use this to create a "fake" socks connection
+  back to themselves, and then they attach a directory request to it,
+  so they can launch directory fetches via Tor. We can piggyback on
+  this feature.
+
+  We need to decide if we're going to be passing the bytes back and
+  forth between the web browser and the main distribution site, or if
+  we're going to be actually acting like a proxy (parsing out the file
+  they want, fetching that file, and serving it back).
+
+  Advantages of proxying without looking inside:
+    - We don't need to build any sort of http support (including
+      continues, partial fetches, etc etc).
+  Disadvantages:
+    - If the browser thinks it's speaking http, are there easy ways
+      to pass the bytes to an https server and have everything work
+      correctly? At the least, it would seem that the browser would
+      complain about the cert. More generally, ssl wants to be negotiated
+      before the URL and headers are sent, yet we need to read the URL
+      and headers to know that this is a mirror request; so we have an
+      ordering problem here.
+    - Makes it harder to do caching later on, if we don't look at what
+      we're relaying. (It might be useful down the road to cache the
+      answers to popular requests, so we don't have to keep getting
+      them again.)
 
