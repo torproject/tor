@@ -1096,7 +1096,10 @@ dirserv_dump_directory_to_string(char **dir_out,
 int
 directory_fetches_from_authorities(or_options_t *options)
 {
+  /* XXX if options->FetchDirInfoEagerly, return 1 */
   if (options->DirPort == 0)
+    return 0;
+  if (options->BridgeRelay == 1)
     return 0;
   /* XXX if dirport not advertised, return 0 too */
   if (!server_mode(options))

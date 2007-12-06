@@ -1058,12 +1058,21 @@ update_consensus_networkstatus_fetch_time(time_t now)
       /* But only in the first half-interval after that. */
       dl_interval = interval/2;
     } else {
-      /* Give all the caches enough time to download the consensus.*/
+      /* We're an ordinary client or a bridge. Give all the caches enough
+       * time to download the consensus. */
       start = c->fresh_until + (interval*3)/4;
-      /* But download the next one before this one is expired. */
+      /* But download the next one well before this one is expired. */
       dl_interval = ((c->valid_until - start) * 7 )/ 8;
-    /* XXX020 do something different if
-     * directory_fetches_dir_info_like_bridge_user() */
+
+      /* If we're a bridge user, make use of the numbers we just computed
+       * to choose the rest of the interval *after* them. */
+      if (directory_fetches_dir_info_like_bridge_user(options)) {
+        /* Give all the *clients* enough time to download the consensus. */
+        start = start + dl_interval + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
+        /* But try to get it before ours actually expires. */
+        dl_interval = (c->valid_until - start) -
+                      CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
+      }
     }
     if (dl_interval < 1)
       dl_interval = 1;
