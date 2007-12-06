@@ -1364,7 +1364,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
         signed_descriptor_get_annotations(&ri->cache_info);
       if (annotations)
         *answer = tor_strndup(annotations,
-                              ri->cache_info.signed_annotations_len);
+                              ri->cache_info.annotations_len);
     }
   } else if (!strcmpstart(question, "dir/server/")) {
     size_t answer_len = 0, url_len = strlen(question)+2;
