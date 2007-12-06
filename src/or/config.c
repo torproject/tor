@@ -3877,7 +3877,8 @@ parse_dir_server_line(const char *line, int validate_only)
     goto err;
   }
   if (!strcmp(fingerprint, "E623F7625FBE0C87820F11EC5F6D5377ED816294")) {
-    /* a known bad fingerprint. refuse to use it. */
+    /* a known bad fingerprint. refuse to use it. We can remove this
+     * clause once Tor 0.1.2.17 is obsolete. */
     log_warn(LD_CONFIG, "Dangerous dirserver line. To correct, erase your "
              "torrc file (%s), or reinstall Tor and use the default torrc.",
              get_torrc_fname());
