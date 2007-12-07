@@ -42,7 +42,7 @@ How?
   server allows connections to a certain address:port combo, look at the
   definitions in dir-spec.txt or follow the logic of the current exitlist
   script. If bug 405 is still open when you work on this
-  (http://bugs.torproject.org/flyspray/index.php?do=details&id=405), you'll
+  (https://bugs.torproject.org/flyspray/index.php?do=details&id=405), you'll
   probably want to extend it to look at only the newest descriptor for
   each server, so you don't use obsolete exit policy data.
 
