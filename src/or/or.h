@@ -1208,7 +1208,8 @@ typedef struct signed_descriptor_t {
   size_t annotations_len;
   /** Length of the server descriptor. */
   size_t signed_descriptor_len;
-  /** Digest of the server descriptor, computed as specified in dir-spec.txt. */
+  /** Digest of the server descriptor, computed as specified in
+   * dir-spec.txt. */
   char signed_descriptor_digest[DIGEST_LEN];
   /** Identity digest of the router. */
   char identity_digest[DIGEST_LEN];

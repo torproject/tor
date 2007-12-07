@@ -58,7 +58,6 @@ Proposals by status:
  OPEN:
    110  Avoiding infinite length circuits
    113  Simplifying directory authority administration
-   114  Distributed Storage for Tor Hidden Service Descriptors
    115  Two Hop Paths
    116  Two hop paths from entry guards
    117  IPv6 exits
@@ -88,6 +87,7 @@ Proposals by status:
    107  Uptime Sanity Checking
    108  Base "Stable" Flag on Mean Time Between Failures
    109  No more than one server per IP address
+   114  Distributed Storage for Tor Hidden Service Descriptors
    119  New PROTOCOLINFO command for controllers
    122  Network status entries need a new Unnamed flag
  SUPERSEDED:

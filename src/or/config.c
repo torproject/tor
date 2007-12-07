@@ -291,7 +291,6 @@ static config_var_t _option_vars[] = {
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
-  /* XXX020 Karsten: this still needs a man page entry -RD */
   V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -1901,7 +1900,8 @@ print_usage(void)
   printf(
 "Copyright 2001-2007 Roger Dingledine, Nick Mathewson.\n\n"
 "tor -f <torrc> [args]\n"
-"See man page for options, or https://www.torproject.org/ for documentation.\n");
+"See man page for options, or https://www.torproject.org/ for "
+"documentation.\n");
 }
 
 /** Print all non-obsolete torrc options. */

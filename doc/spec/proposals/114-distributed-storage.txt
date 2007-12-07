@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Karsten Loesing
 Created: 13-May-2007
-Status: Open
+Status: Closed
 
 Change history:
 
@@ -16,6 +16,7 @@ Change history:
   11-Aug-2007  Updated implementation statuses, included non-consecutive
                replication to descriptor format
   20-Aug-2007  Renamed config option HSDir as HidServDirectoryV2
+  02-Dec-2007  Closed proposal
 
 Overview:
 
@@ -27,6 +28,17 @@ Overview:
   this proposal suggests changes to the hidden service descriptor format to
   prevent new security threats coming from decentralization and to gain even
   better security properties.
+
+Status:
+
+  As of December 2007, the new hidden service descriptor format is implemented
+  and usable. However, servers and clients do not yet make use of descriptor
+  cookies, because there are open usability issues of this feature that might
+  be resolved in proposal 121. Further, hidden service directories do not
+  perform replication by themselves, because (unauthorized) replica fetch
+  requests would allow any attacker to fetch all hidden service descriptors in
+  the system. As neither issue is critical to the functioning of v2
+  descriptors and their distribution, this proposal is considered as Closed.
   
 Motivation:
 
@@ -35,7 +47,7 @@ Motivation:
 
   First, the three hidden service authoritative directories constitute a
   performance bottleneck in the system. The directory nodes are responsible for
-  storing and serving all hidden service descriptors. At the moment there are
+  storing and serving all hidden service descriptors. As of May 2007 there are
   about 1000 descriptors at a time, but this number is assumed to increase in
   the future. Further, there is no replication protocol for descriptors between
   the three directory nodes, so that hidden services must ensure the
@@ -123,22 +135,6 @@ Design:
     at least 24 hours. A participant only trusts its own routing list and never
     learns about routing information from other parties.
 
-    - rend-spec.txt, section 1.4: Added description of how to obtain a routing
-      list of hidden service directories.
-
-    - routerparse.c: Changed routerstatus_parse_entry_from_string to parse the
-      "HSDir" flag in vote and consensus status documents.
-    - routerlist.c: Changed router_get_routerlist() to initialize routing list.
-    - or.h: Added hs_dirs member to routerlist_t.
-
-    - Changed routerlist_free() to free storage held by routing list.
-    - Added UPDATE_HS_DIRS_INTERVAL.
-    - Added update_hs_dir_routing_table().
-    - Changed run_scheduled_events().
-    - Added is_hs_dir member to routerstatus_t.
-    
-      [Aug 11: Specified and running.]
-
   /2/ Determine responsible hidden service directory
 
     All participants can determine the hidden service directory that is
@@ -148,40 +144,12 @@ Design:
     its predecessor, exclusive, to its own ID, inclusive. Further, a hidden
     service directory holds replicas for its n predecessors, where n denotes
     the number of consecutive replicas. (requires /1/)
-    
-    - rend-spec.txt, section 1.4: Added description of how to determine the
-      responsible node(s) for a given descriptor ID.
 
-    - routerlist.c: Added get_responsible_hs_dirs() to determine the routers
-      that are responsible for a given descriptor ID.
-      
-    - Added is_hs_dir member to routerstatus_t.
-    - Added have_enough_hs_dirs().
-    - Added next_hs_dir().
-    
-      [July 9: Specified and running.]
-    
-  Hidden service clients and providers:
-
-  /3/ Send tunneled HTTP request to hidden service directory in BEGIN_DIR cell
-
-    - rend-spec.txt, section 1.4: Added the requirement that requests need to
-      be sent via Tor.
-    - rend-spec.txt, section 1.6: Added the requirement that requests need to
-      be sent via Tor.
-
-    [July 9: Pending]
+  [/3/ and /4/ were requirements to use BEGIN_DIR cells for directory
+   requests which have not been fulfilled in the course of the implementation
+   of this proposal, but elsewhere.]
 
   Hidden service directory nodes:
-
-  /4/ Process tunneled HTTP request in BEGIN_DIR cell
-
-    - rend-spec.txt, section 3.2: Added the requirement that requests need to
-      be contained within BEGIN_DIR cells.
-    - rend-spec.txt, section 3.3: Added the requirement that requests need to
-      be contained within BEGIN_DIR cells.
-  
-    [July 9: Pending]
     
   /5/ Advertise hidden service directory functionality
 
@@ -191,19 +159,6 @@ Design:
     option being set includes the flag "hidden-service-dir" in its router
     descriptors that it sends to directory authorities.
 
-    - tor.1.in: Added the config option HidServDirectoryV2.
-    - dir-spec.txt, section 2.1: Added the flag hidden-service-dir to the
-      router descriptor format.
-    - rend-spec.txt, section 3.1: Added process of configuring a hidden service
-      directory.
-
-    - router.c: Changed router_dump_router_to_string() to include the
-      hidden-service-dir flag in a router descriptor if configured.
-    - or.h: Added HidServDirectoryV2 to or_options_t.
-    - config.c: Added config option HidServDirectoryV2.
-
-      [July 9: Specified and running.]
-      
   /6/ Accept v2 publish requests, parse and store v2 descriptors
 
     Hidden service directory nodes accept publish requests for hidden service
@@ -217,44 +172,12 @@ Design:
     descriptor based on its own routing table. Every hidden service directory
     node is responsible for the descriptor IDs in the interval of its n-th
     predecessor in the ID circle up to its own ID (n denotes the number of
-    consecutive replicas). (requires /1/ and /4/)
-
-    - rend-spec.txt, section 1.2: Added the new v2 hidden service descriptor
-      format.
-    - rend-spec.txt, section 3.2: Added the acceptance of v2 publish requests.
-
-    - routerparse.c: Added rend_parse_v2_service_descriptor() to parse a v2
-      hidden service descriptor.
-    - routerparse.c: Added desc_token_table[] to parse v2 hidden service
-      descriptors.
-    - routerparse.c: Added 8 keywords to directory_keyword to parse v2 hidden
-      service descriptors.
-    - rendcommon.c: Added rend_cache_store_v2_dir() to allow a hidden service
-      directory to parse a v2 descriptor and store it in the local cache under
-      its descriptor ID instead of its service ID.
-    - or.h: Added constant REND_DESC_ID_V2_LEN to reflect that v2 descriptor
-      IDs are longer than v0/1 onion addresses.
-
-    - Changed directory_handle_command_post().
-    
-      [Aug 11: Specified and running.]
+    consecutive replicas). (requires /1/)
 
   /7/ Accept v2 fetch requests
 
     Same as /6/, but with fetch requests for hidden service descriptors.
-    (requires /2/ and /4/)
-
-    - rend-spec.txt, section 3.3: Added the processing of v2 fetch requests.
-
-    - rendcommon.c: Added rend_cache_lookup_v2_dir() to allow a hidden service
-      directory to look up a v2 descriptor in the local cache under its
-      descriptor ID instead of its service ID.
-    - or.h: Added constant REND_DESC_ID_V2_LEN to reflect that v2 descriptor
-      IDs are longer than v0/1 onion addresses.
-
-    - Changed directory_handle_command_get().
-    
-      [Aug 11: Specified and running.]
+    (requires /2/)
 
   /8/ Replicate descriptors with neighbors
 
@@ -269,20 +192,10 @@ Design:
     descriptors in the interval of its (n+1)-th and its n-th predecessor.
     (requires /1/)
 
-    - rend-spec.txt, section 3.3: Added the replication of v2 descriptors.
-
-    - Added HS_DIR_REPLICATION_INTERVAL.
-    - Added next_hs_dir and previous_hs_dir.
-    - Changed directory_handle_command_get().
-    - Changed run_scheduled_events.
-    - Added hs_dir_perform_replication().
-    - Added rend_cache_lookup_v2_replicas.
-    - Added DIR_PURPOSE_REPLICATE_RENDDESC_V2.
-    - Changed directory_initiate_command.
-    - directory_send_command.
-    - Changed connection_dir_client_reached_eof.
-
-      [Aug 11: To some extend specified, running.]
+    [Dec 02: This function has not been implemented, because arbitrary nodes
+     what have been able to download the entire set of v2 descriptors. An
+     authorized replication request would be necessary. For the moment, the
+     system runs without any directory-side replication. -KL]
 
   Authoritative directory nodes:
 
@@ -294,30 +207,6 @@ Design:
     changing its onion key to become responsible for an identifier it wants to
     target.
 
-    - dir-spec.txt, section 3.2: Added the status flag "HSDir" to the vote and
-      consensus status document format.
-    - dir-spec.txt, section 3.3: Added a rule for how an authority decides
-      whether a router is assigned the flag "HSDir".
-    - rend-spec.txt, section 3.1: Added the decision on whether an onion router
-      is confirmed to act as hidden service directory or not.
-
-    - routerparse.c: Changed router_parse_entry_from_string() to parse the
-      "hidden-service-dir" flag in router descriptors.
-    - routerparse.c: Added an entry to routerdesc_token_table[] to parse the
-      "hidden-service-directory" flag in router descriptors.
-    - routerparse.c: Added 1 keyword to directory_keyword to parse the
-      "hidden-service-dir" flag in router descriptors.
-    - or.h: Added is_hs_dir and wants_to_be_hs_dir members to routerinfo_t.
-    - dirserv.c: Changed routerstatus_format_entry() to include the "HSDir"
-      flag in vote and consensus status documents.
-    - dirserv.c: Changed set_routerstatus_from_routerinfo() to set the "HSDir"
-      flag.
-
-    - Added dirserv_thinks_router_is_hs_dir().
-    - Added MIN_UPTIME_HS_DIR and HS_DIR_REACHABLE_TIMEOUT.
-
-      [Aug 11: Specified and running.]
-
   Hidden service provider:
 
   /10/ Configure v2 hidden service
@@ -328,20 +217,6 @@ Design:
     configuring a hidden service, a hidden service provider checks if it has
     already created a random secret_cookie and a hostname2 file; if not, it
     creates both of them. (requires /2/)
-
-    - tor.1.in: Added the config option PublishV2HidServDescriptors.
-    - tor.1.in: Added the files hostname2 and secret_cookie.
-    - rend-spec.txt, section 1.1: Added requirement to create secret_cookie and
-      hostname2 file.
-
-    - rendservice.c: Added rend_get_hostname2() to assemble a v2 onion address.
-    - rendservice.c: Changed rend_service_load_keys() to write a secret_cookie
-      and a hostname2 file.
-    - rendservice.c: Extended rend_service_t by a member secret_cookie.
-    - or.h: Added PublishV2HidServDescriptors to or_options_t.
-    - config.c: Added config option PublishV2HidServDescriptors.
-
-      [July 9: Specified and running.]
 
   /11/ Establish introduction points with fresh key
 
@@ -357,14 +232,6 @@ Design:
     rely on the fact that all introduction points accept the same public key,
     so that this new feature cannot be used.)
 
-    - rend-spec.txt, section 1.3: Instead of Bob's public key, the hidden
-      service provider uses a freshly generated public key for every
-      introduction point.
-
-    - TODO: Change in rend_encode_v2_descriptors.
-
-      [July 9: Specified, but not yet implemented.]
-
   /12/ Encode v2 descriptors and send v2 publish requests
 
     If configured to publish v2 descriptors, a hidden service provider
@@ -376,32 +243,7 @@ Design:
     the next period. Publication is performed by sending the descriptor to all
     hidden service directories that are responsible for keeping replicas for
     the descriptor ID. This includes two non-consecutive replicas that are
-    stored at 3 consecutive nodes each. (requires /1/, /2/, and /3/)
-
-    - rend-spec.txt, section 1.2: Added the new v2 hidden service descriptor
-      format.
-    - rend-spec.txt, section 1.4: Bob's OP does not only upload v0/v1 service
-      descriptors to the authoritative directories, but also v2 service
-      descriptors to the hidden service directories.
-
-    - rendservice.c: Changed upload_service_descriptor() to upload v2 hidden
-      service descriptors, if configured.
-    - rendservice.c: Changed rend_consider_services_upload() to also initiate
-      the upload of v2 descriptors, if configured.
-    - rendservice.c: Extended rend_service_t by a member secret_cookie.
-    - rendcommon.c: Added rend_encode_v2_descriptor() to encode a v2
-      descriptor.
-    - or.h: Added constant DIR_PURPOSE_UPLOAD_RENDDESC_V2.
-    - directory.c: Added directory_post_to_hs_dir().
-    - directory.c: Changed directory_initiate_command() to also recognize v2
-      publish requests.
-    - directory.c: Changed directory_send_command() to also prepare v2 publish
-      requests.
-    - crypto.c: Added implementation for crypto_cipher_encrypt_cbc().
-
-    - Changed connection_dir_client_reached_eof().
-
-      [Aug 11: Specified and running.]
+    stored at 3 consecutive nodes each. (requires /1/ and /2/)
 
   Hidden service client:
 
@@ -417,73 +259,12 @@ Design:
     fact that the availability will be the highest on the node with next higher
     ID. A hidden service client relies on the hidden service provider to store
     two sets of descriptors to compensate clock skew between service and
-    client. (requires /1/, /2/, and /3/)
-
-    - tor.1.in: Added the config option FetchV2HidServDescriptors.
-    - rend-spec.txt, section 1.5: Added the new v2 onion address format.
-    - rend-spec.txt, section 1.6: Alice's OP downloads the service descriptors
-      similarly as Bob's OP uploaded them in 1.4.
-
-    - rendcommon.c: Changed rend_cache_lookup_entry to enable it to also lookup
-      v2 descriptors.
-    - rendcommon.c: Added rend_compute_v2_desc_id() to generate v2 descriptor IDs
-      from v2 onion addresses.
-    - rendcommon.c: Changed rend_valid_service_id() to also consider v2 onion
-      addresses as valid and return the version number of the request (0 or 2).
-    - rendclient.c: Added rend_client_refetch_v2_renddesc() to fetch v2 service
-      descriptors using the secret cookie.
-    - rendclient.c: Changed rend_client_remove_intro_point() to copy the secret
-      cookie if the local descriptor has expired or there are no introduction
-      points left.
-    - or.h: Added FetchV2HidServDescriptors to or_options_t.
-    - or.h: Added constant REND_DESC_ID_V2_LEN to reflect that v2 descriptor
-      IDs are longer than v0/1 onion addresses.
-    - or.h: Added constant DIR_PURPOSE_FETCH_RENDDESC_V2.
-    - directory.c: Added directory_get_from_hs_dir().
-    - directory.c: Changed directory_initiate_command() to also recognize v2
-      fetch requests.
-    - directory.c: Changed directory_send_command() to also prepare v2 fetch
-      requests.
-    - connection_edge.c: Changed connection_ap_handshake_rewrite_and_attach()
-      to fetch v2 service descriptors.
-    - connection_edge.c: Changed parse_extended_hostname() to accept both,
-      current and v2 onion addresses.
-    - config.c: Added config options FetchV2HidServDescriptors.
-
-      [Aug 11: Base version specified and running, but no memory of failed
-       hidden service directories, yet.]
+    client. (requires /1/ and /2/)
 
   /14/ Process v2 fetch reply and parse v2 descriptors
 
     A hidden service client that has sent a request for a v2 descriptor can
     parse it and store it to the local cache of rendezvous service descriptors.
-
-    - rend-spec.txt, section 1.2: Added the new v2 hidden service descriptor
-      format.
-    - rend-spec.txt, section 1.6: Alice's OP parses the reply received from the
-      hidden service directory.
-
-    - routerparse.c: Added rend_parse_v2_service_descriptor() to parse a v2
-      hidden service descriptor.
-    - routerparse.c: Added rend_decrypt_introduction_points() to decrypt and
-      parse the list of introduction points.
-    - routerparse.c: Added ipo_token_table[] to parse the decrypted
-      introduction points of v2 hidden service descriptors.
-    - routerparse.c: Added desc_token_table[] to parse v2 hidden service
-      descriptors.
-    - routerparse.c: Added 8 keywords to directory_keyword to parse v2 hidden
-      service descriptors, and 5 to parse the decrypted list of introduction
-      points.
-    - rendcommon.c: Added rend_cache_store_v2_client() to parse a v2 descriptor
-      and parse the encrypted list of introduction points.
-    - or.h: Added rend_version and secret_cookie to edge_connection_t, to
-      dir_connection_t, and to origin_circuit_t to be able to decrypt
-      introduction points when receiving a v2 descriptor.
-    - directory.c: Changed connection_dir_client_reached_eof() to also parse v2
-      fetch replies.
-    - crypto.c: Added implementation for crypto_cipher_decrypt_cbc().
-
-      [July 9: Specified and running.]
 
   /15/ Establish connection to v2 hidden service
 
@@ -497,26 +278,6 @@ Design:
     that are included in the descriptor; by this, connection establishment is
     to a certain extend decoupled from fetching the descriptor.
 
-    - rend-spec.txt, section 1.8: Alice uses the public key that is included in
-      the descriptor instead of Bob's permanent service key.
-
-    - rendclient.c: Changed rend_client_introduction_acked() to copy the secret
-      cookie in case the introduction point denied the request.
-    - rendclient.c: Changed rend_client_remove_intro_point() to copy the secret
-      cookie if the local descriptor has expired or there are no introduction
-      points left.
-    - or.h: Added secret_cookie to edge_connection_t, to dir_connection_t, and
-      to origin_circuit_t to be able to decrypt introduction points when
-      receiving a v2 descriptor.
-    - circuitlist.c: Changed _circuit_mark_for_close() to pass the secret
-      cookie to rend_client_remove_intro_point() when an intro circ has failed.
-    - circuituse.c: Changed circuit_get_open_circ_or_launch() to fetch a v2
-      descriptor with the secret cookie, if no descriptor is available, or copy
-      the secret cookie to the circuit, in case it dies later, so that it can
-      be used to fetch a new descriptor.
-
-      [July 9: Base version specified and running, but without fresh key.]
-      
   Hidden service descriptor:
 
   (Requirements concerning the descriptor format are contained in /6/ and /7/.)
@@ -677,288 +438,3 @@ Compatibility:
   After the second transition phase, the authoritative directories should stop
   serving hidden service descriptors.
 
-Specification:
-
-  The proposed changes affect multiple sections in several specification
-  documents that are only mentioned in the following. (As for now, all changes
-  to specification documents are limited to the SVN branch 114-dist-storage.)
-
-  tor.1.in
-
-    Added the config options HidServDirectoryV2 (/5/),
-    PublishV2HidServDescriptors (/10/), and FetchV2HidServDescriptors (/13/).
-
-    Added the files hostname2 and secret_cookie (/10/).
-
-  dir-spec.txt
-
-    2.1  Added the flag hidden-service-dir to the router descriptor format
-    (/5/).
-
-    3.2  Added the status flag HSDir to the vote and consensus status
-    document format (/9/).
-
-    3.3  Added a rule for how an authority decides whether a router is assigned
-    the flag HSDir (/9/).
-
-  rend-spec.txt
-
-    0.4  Added history
-
-    1.1  Added requirement to create secret_cookie and hostname2 file (/10/).
-
-    1.2  Added the new v2 hidden service descriptor format (/6/, /12/ and
-    /14/).
-
-    1.3  Instead of Bob's public key, the hidden service provider uses a
-    freshly generated public key for every introduction point (/11/).
-
-    1.4  Added description of how to obtain a routing list of hidden service
-    directories (/1/).
-
-    1.4  Added description of how to determine the responsible node(s) for a
-    given descriptor ID (/2/).
-
-    1.4  Bob's OP does not only upload v0/v1 service descriptors to the
-    authoritative directories, but also v2 service descriptors to the hidden
-    service directories (/12/).
-
-    1.4  Added the requirement that requests need to be sent via Tor (/3/).
-
-    1.5  Added the new v2 onion address format (/13/).
-
-    1.6  Added the requirement that requests need to be sent via Tor (/3/).
-
-    1.6  Alice's OP downloads the service descriptors similarly as Bob's OP
-    uploaded them in 1.4 (/13/).
- 
-    1.6  Alice's OP parses the reply received from the hidden service directory
-    (/14/).
-
-    1.8  Alice uses the public key that is included in the descriptor instead
-    of Bob's permanent service key (/15/).
-
-    3.1: Added process of configuring a hidden service directory (/5/).
-
-    3.1: Added the decision on whether an onion router is confirmed to act as
-    hidden service directory or not (/9/).
-
-    3.2: Added the requirement that requests need to be contained within
-    BEGIN_DIR cells (/4/).
-
-    3.2: Added the acceptance of v2 publish requests (/6/).
-
-    3.3: Added the requirement that requests need to be contained within
-    BEGIN_DIR cells (/4/).
-  
-    3.3: Added the processing of v2 fetch requests (/7/).
-
-    3.3: Added the replication of v2 descriptors (/8/).
-
-Implementation:
-
-  The proposed changes affect the following changes in the source code. (As for
-  now, all changes to code are limited to the SVN branch 114-dist-storage.)
-
-  container.h
-
-    Added prototype for smartlist_digest_next_circular() (/2/).
-
-  container.c
-
-    Added implementation for smartlist_digest_next_circular() (/2/).
-
-  crypto.h
-
-    Added 3 prototypes according to the changes in crypto.c (various
-    requirements).
-
-  crypto.c
-
-    Added implementation for crypto_cipher_encrypt_cbc() (/12/).
-
-    Added implementation for crypto_cipher_decrypt_cbc() (/14/).
-
-    Added implementation for base32_decode() (various requirements).
-
-  circuitlist.c
-
-    Changed _circuit_mark_for_close() to pass the secret cookie to
-    rend_client_remove_intro_point() when an intro circ has failed (/15/).
-
-  circuituse.c
-
-    Changed circuit_get_open_circ_or_launch() to fetch a v2 descriptor with the
-    secret cookie, if no descriptor is available, or copy the secret cookie to
-    the circuit, in case it dies later, so that it can be used to fetch a new
-    descriptor (/15/).
-
-  config.c
-
-    Added config options FetchV2HidServDescriptors (/13/),
-    HidServDirectoryV2 (/5/), and PublishV2HidServDescriptors (/10/).
-
-  connection_edge.c
-
-    Changed connection_ap_handshake_rewrite_and_attach() to fetch v2 service
-    descriptors (/13/).
-
-    Changed parse_extended_hostname() to accept both, current and v2 onion
-    addresses (/13/).
-
-  directory.c
-
-    Added directory_post_to_hs_dir() (/12/).
-
-    Added directory_get_from_hs_dir() (/13/).
-
-    Changed directory_initiate_command() to also recognize v2 publish (/12/)
-    and fetch (/13/) requests.
-
-    Changed directory_send_command() to also prepare v2 publish (/12/) and
-    fetch (/13/) requests.
-
-    Changed connection_dir_client_reached_eof() to also parse v2 fetch replies
-    (/14/).
-
-    Changed directory_handle_command_get() to handle v2 fetch requests (/13/).
-
-    Changed directory_handle_command_post() to handle v2 publish requests
-    (/12/).
-
-  dirserv.c
-
-    Changed routerstatus_format_entry() to include the "HSDir" flag in vote and
-    consensus status documents (/9/).
-
-    Changed set_routerstatus_from_routerinfo() to set the "HSDir" flag (/9/).
-
-  or.h
-
-    Added constants DIR_PURPOSE_UPLOAD_RENDDESC_V2 (/12/) and
-    DIR_PURPOSE_FETCH_RENDDESC_V2 (/13/).
-
-    Added constant REND_DESC_ID_V2_LEN to reflect that v2 descriptor IDs are
-    longer than v0/1 onion addresses (/6/, /7/, and /13/).
-
-    Added rend_version and secret_cookie to edge_connection_t, to
-    dir_connection_t, and to origin_circuit_t to be able to decrypt
-    introduction points when receiving a v2 descriptor (/14/ and /15/).
-
-    Added is_hs_dir member to routerinfo_t and to routerstatus_t (/9/).
-
-    Added hs_dirs member to routerlist_t (/1/).
-
-    Added FetchV2HidServDescriptors (/13/), HidServDirectoryV2 (/5/), and
-    PublishV2HidServDescriptors (/10/) to or_options_t.
-
-    Added 7 new members to rend_service_descriptor_t to store v2-specific
-    information (/12/, /14/, and /15/).
-
-    Added 11 prototypes and changed the signature of 1 according to the
-    changes in .c files (various requirements).
-
-  rendclient.c
-
-    Changed rend_client_introduction_acked() to copy the secret cookie in case
-    the introduction point denied the request (/15/).
-
-    Added rend_client_refetch_v2_renddesc() to fetch v2 service descriptors
-    using the secret cookie (/13/).
-
-    Changed rend_client_remove_intro_point() to copy the secret cookie if the
-    local descriptor has expired or there are no introduction points left (/13/
-    and /15/).
-
-  rendcommon.c
-
-    Added rend_compute_v2_descriptor_fields() to prepare the encoding of a v2
-    descriptor (/12/).
-
-    Added rend_compute_desc_id() to generate v2 descriptor IDs from v2 onion
-    addresses (/13/).
-
-    Added rend_encode_v2_descriptor() to encode a v2 descriptor (/12/).
-
-    Changed rend_valid_service_id() to also consider v2 onion addresses as
-    valid and return the version number of the request (1 or 2) (/13/).
-
-    Changed rend_cache_lookup_entry to enable it to also lookup v2 descriptors
-    (/13/).
-
-    Added rend_cache_lookup_v2_dir() to allow a hidden service directory to
-    look up a v2 descriptor in the local cache under its descriptor ID instead
-    of its service ID (/7/).
-
-    Moved the parsing part from rend_cache_store() to the new function
-    rend_cache_store_parse() to reuse it for v2 descriptors (/6/).
-
-    Added rend_cache_store_v2_client() to parse a v2 descriptor and parse the
-    encrypted list of introduction points (/14/).
-
-    Added rend_cache_store_v2_dir() to allow a hidden service directory to
-    store a v2 descriptor in the local cache under its descriptor ID instead of
-    its service ID (/6/).
-
-  rendservice.c
-
-    Extended rend_service_t by a member secret_cookie (/10/ and /12/).
-
-    Added rend_get_hostname2() to assemble a v2 onion address (/10/).
-
-    Changed rend_service_load_keys() to write a secret_cookie and a hostname2
-    file (/10/).
-
-    Changed upload_service_descriptor() to upload v2 hidden service
-    descriptors, if configured (/12/).
-
-    Changed rend_consider_services_upload() to also initiate the upload of v2
-    descriptors, if configured (/12/).
-
-  router.c
-
-    Changed router_dump_router_to_string() to include the "hidden-service-dir"
-    flag in a router descriptor if configured (/5/).
-
-  routerlist.c
-
-    Changed router_get_routerlist() to initialize routing list (/1/).
-
-    Added get_responsible_hs_dir() to determine the router that is responsible
-    for a given descriptor ID (/2/).
-
-  routerparse.c
-
-    Added 14 keywords to directory_keyword; 1 to parse the "hidden-service-dir"
-    flag in router descriptors (/9/), 8 to parse v2 hidden service descriptors
-    (/6/ and /14/), and 5 to parse the decrypted list of introduction points
-    (/14/).
-
-    Added an entry to routerdesc_token_table[] to parse the
-    "hidden-service-directory" flag in router descriptors (/9/).
-
-    Added desc_token_table[] to parse v2 hidden service descriptors (/6/ and
-    /14/).
-
-    Added ipo_token_table[] to parse the decrypted introduction points of v2
-    hidden service descriptors (/14/).
-
-    Changed router_parse_entry_from_string() to parse the "hidden-service-dir"
-    flag in router descriptors (/9/).
-
-    Changed routerstatus_parse_entry_from_string to parse the "HSDir" flag in
-    vote and consensus status documents (/1/).
-
-    Added rend_parse_v2_service_descriptor() to parse a v2 hidden service
-    descriptor (/6/ and /14/).
-
-    Added rend_decrypt_introduction_points() to decrypt and parse the list of
-    introduction points (/14/).
-
-Test: 
-
-  The changes were tested via test functions in test.c for separate,
-  short-running functionality and using an automatic validation based on
-  PuppeTor.
-
-  

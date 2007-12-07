@@ -1743,6 +1743,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           /* alice's ap_stream will notice when connection_mark_for_close
            * cleans it up */
           /*XXXX020 maybe retry quickly; timeout takes a while. */
+          /* This would require some kind of book-keeping which directories
+           * have been requested and which not. As directory servers are
+           * rather reliable, this should not be necessary, in constrast to
+           * v2 hidden service directories. -KL */
         } else {
           /* success. notify pending connections about this. */
           conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
@@ -1753,6 +1757,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         /* not there. pending connections will be notified when
          * connection_mark_for_close cleans it up. */
         /*XXXX020 maybe retry quickly; timeout takes a while. */
+        /* This would require some kind of book-keeping which directories
+         * have been requested and which not. As directory servers are
+         * rather reliable, this should not be necessary, in constrast to
+         * v2 hidden service directories. -KL */
         break;
       case 400:
         log_warn(LD_REND,
@@ -2706,7 +2714,8 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
     switch (r) {
       case -1:
         log_notice(LD_DIRSERV,
-                   "Rejected router descriptor or extra-info from %s (\"%s\").",
+                   "Rejected router descriptor or extra-info from %s "
+                   "(\"%s\").",
                    conn->_base.address, msg);
         /* fall through */
       case 1:

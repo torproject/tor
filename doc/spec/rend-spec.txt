@@ -109,6 +109,20 @@ $Id$
       39 -- RELAY_RENDEZVOUS_ESTABLISHED
       40 -- RELAY_COMMAND_INTRODUCE_ACK
 
+0.4. Version overview
+
+   There are several parts in the hidden service protocol that have
+   changed over time, each of them having its own version number, whereas
+   other parts remained the same. The following list of potentially
+   versioned protocol parts should help reduce some confusion:
+
+   - Hidden service descriptor: see 1.2. 
+
+   - Hidden service descriptor propagation mechanism: currently related to
+     the hidden service descriptor version; see 1.4 and 1.6.
+
+   - Introduction protocol: see 1.8.
+
 1. The Protocol
 
 1.1. Bob configures his local OP.
@@ -146,8 +160,9 @@ $Id$
     to do that if he previously advertised some introduction points,
     and now he doesn't have any. -RD]
 
-   The format of a "V2" descriptor, that will probably be used at some time
-   in the future, is as follows:
+   Beginning with 0.2.0.10-alpha, Bob's OP encodes "V2" descriptors in
+   addition to "V0" descriptors. The format of a "V2" descriptor is as
+   follows:
 
      "rendezvous-service-descriptor" descriptor-id NL
 
@@ -156,14 +171,14 @@ $Id$
        Indicates the beginning of the descriptor. "descriptor-id" is a
        periodically changing identifier of 160 bits formatted as 32 base32
        chars that is calculated by the hidden service and its clients. If
-       the optional "secret-cookie" is used, this "descriptor-id" cannot be
-       computed by anyone else. (Everyone can verify that this
+       the optional "descriptor-cookie" is used, this "descriptor-id"
+       cannot be computed by anyone else. (Everyone can verify that this
        "descriptor-id" belongs to the rest of the descriptor, even without
-       knowing the optional "secret-cookie", as described below.) The
+       knowing the optional "descriptor-cookie", as described below.) The
        "descriptor-id" is calculated by performing the following operation:
 
          descriptor-id =
-             H(permanent-id | H(time-period | secret-cookie | replica))
+             H(permanent-id | H(time-period | descriptor-cookie | replica))
 
        "permanent-id" is the permanent identifier of the hidden service,
        consisting of 80 bits. It can be calculated by computing the hash value
@@ -171,15 +186,15 @@ $Id$
 
          permanent-id = H(public-key)[:10]
 
-       "H(time-period | secret-cookie | replica)" is the (possibly secret)
-       id part that is
+       "H(time-period | descriptor-cookie | replica)" is the (possibly
+       secret) id part that is
        necessary to verify that the hidden service is the true originator
        of this descriptor. It can only be created by the hidden service
        and its clients, but the "signature" below can only be created by
        the service.
 
-       "secret-cookie" is an optional secret password of 128 bits that is
-       shared between the hidden service provider and its clients.
+       "descriptor-cookie" is an optional secret password of 128 bits that
+       is shared between the hidden service provider and its clients.
 
        "replica" denotes the number of the non-consecutive replica.
 
@@ -248,10 +263,10 @@ $Id$
 
        [At most once]
 
-       A list of introduction points. If the optional "secret-cookie" is
+       A list of introduction points. If the optional "descriptor-cookie" is
        used, this list is encrypted with AES in CTR mode with a random
        initialization vector of 128 bits that is written to
-       the beginning of the encrypted string, and the "secret-cookie" as
+       the beginning of the encrypted string, and the "descriptor-cookie" as
        secret key of 128 bits length.
 
        The string containing the introduction point data (either encrypted
@@ -260,9 +275,13 @@ $Id$
 
        The unencrypted string may begin with:
 
-        ["authentication" auth-type NL auth-data ... reserved]
+        ["service-authentication" auth-type NL auth-data ... reserved]
 
            [At start, any number]
+           
+           The service-specific authentication data can be used to perform
+           client authentication. This data is independent of the selected
+           introduction point as opposed to "intro-authentication" below.
 
        Subsequently, an arbitrary number of introduction point entries may
        follow, each containing the following data:
@@ -301,15 +320,14 @@ $Id$
            The public key that can be used to encrypt messages to the hidden
            service.
 
-        ["authentication" auth-type NL auth-data ... reserved]
+        ["intro-authentication" auth-type NL auth-data ... reserved]
 
            [Any number]
-           [XXXX this is valid at the start *and* at the end? -NM]
-           [These are two separate "authentication" fields. The one above
-            is global and independent from the introduction points, and
-            this one is specific for one introduction point. Should we use
-            different names for them? -KL]
-           [Probably. -NM]
+
+           The introduction-point-specific authentication data can be used
+           to perform client authentication. This data depends on the
+           selected introduction point as opposed to "service-authentication"
+           above.
 
         (This ends the fields in the encrypted portion of the descriptor.)
 
@@ -403,6 +421,17 @@ $Id$
    circuit with Bob's public key, and dissociates any other circuits
    currently associated with PK.  On success, the OR sends Bob a
    RELAY_INTRO_ESTABLISHED cell with an empty payload.
+ 
+   If a hidden service is configured to publish only v2 hidden service
+   descriptors, Bob's OP does not include its own public key in the
+   RELAY_ESTABLISH_INTRO cell, but the public key of a freshly generated
+   key pair. The OP also includes these fresh public keys in the v2 hidden
+   service descriptor together with the other introduction point
+   information. The reason is that the introduction point does not need to
+   and therefore should not know for which hidden service it works, so as
+   to prevent it from tracking the hidden service's activity. If the hidden
+   service is configured to publish both, v0 and v2 descriptors, two
+   separate sets of introduction points are established.
 
 1.4. Bob's OP advertises his service descriptor(s).
 
@@ -425,6 +454,34 @@ $Id$
    The directory server remembers this descriptor for at least 24 hours
    after its timestamp.  At least every 18 hours, Bob's OP uploads a
    fresh descriptor.
+
+   If Bob's OP is configured to publish v2 descriptors instead of or in
+   addition to v0 descriptors, it does so to a changing subset of all v2
+   hidden service directories instead of the authoritative directory
+   servers. Therefore, Bob's OP opens a stream via Tor to all
+   responsible hidden service directories. (He may re-use old circuits
+   for this.) Over this stream, Bob's OP makes an HTTP 'POST' request to a
+   URL "/tor/rendezvous2/publish" relative to the hidden service
+   directory's root, containing as its body Bob's service descriptor.
+
+   At any time, there are 6 hidden service directories responsible for
+   keeping replicas of a descriptor; they consist of 2 sets of 3 hidden
+   service directories with consecutive onion IDs. Bob's OP learns about
+   the complete list of hidden service directories by filtering the
+   consensus status document received from the directory authorities. A
+   hidden service directory is deemed responsible for all descriptor IDs in
+   the interval from its direct predecessor, exclusive, to its own ID,
+   inclusive; it further holds replicas for its 2 predecessors. A
+   participant only trusts its own routing list and never learns about
+   routing information from other parties.
+
+   Bob's OP publishes a new v2 descriptor once an hour or whenever its
+   content changes. V2 descriptors can be found by clients within a given
+   time period of 24 hours, after which they change their ID as described
+   under 1.2. If a published descriptor would be valid for less than 60
+   minutes (= 2 x 30 minutes to allow the server to be 30 minutes behind
+   and the client 30 minutes ahead), Bob's OP publishes the descriptor
+   under the ID of both, the current and the next publication period.
 
 1.5. Alice receives a x.y.z.onion address.
 
@@ -474,6 +531,22 @@ $Id$
    descriptors that are more than 24 hours older than their timestamp.
    [Caching may make her partitionable, but she fetched it anonymously,
     and we can't very well *not* cache it. -RD]
+
+   Alice's OP fetches v2 descriptors in parallel to v0 descriptors. Analog
+   to the description in section 1.4, the OP fetches a v2 descriptor from a
+   randomly chosen hidden service directory out of the changing subset of
+   6 nodes. If the request is unsuccessful, Alice retries the other
+   remaining responsible hidden service directories one after the other.
+   Alice relies on Bob to care about a potential clock skew between the two
+   by possibly storing two sets of descriptors.
+
+   Alice's OP opens a stream via Tor to the chosen v2 hidden service
+   directory. (She may re-use old circuits for this.) Over this stream,
+   Alice's OP makes an HTTP 'GET' request for the document
+   "/tor/rendezvous2/<z>", where z is replaced with the encoding of the
+   descriptor ID. The directory replies with a 404 HTTP response if it does
+   not recognize <z>, and otherwise returns Bob's most recently uploaded
+   service descriptor.
 
 1.7. Alice's OP establishes a rendezvous point.
 
@@ -539,6 +612,10 @@ $Id$
    format, whereas hidden services have understood and accepted v0,
    v1, and v2 since 0.1.1.x. As of Tor 0.2.0.7-alpha, clients switched
    to using the v2 intro format.
+
+   If Alice has downloaded a v2 descriptor, she uses the contained public
+   key ("service-key") instead of Bob's public key to create the
+   RELAY_INTRODUCE1 cell as described above.
 
 1.8.1. Other introduction formats we don't use.
 
@@ -633,3 +710,50 @@ $Id$
 2. Authentication and authorization.
 
 Foo.
+
+3. Hidden service directory operation
+
+   This section has been introduced with the v2 hidden service descriptor
+   format. It contains all operations of a v2 hidden service directory that
+   are required for the protocol described in section 1 to succeed with v2
+   hidden service descriptors.
+
+3.1. Configuring as hidden service directory
+
+   Every onion router that has its directory port open can decide whether it
+   wants to store and serve hidden service descriptors. An onion router which
+   is configured as such includes the "hidden-service-dir" flag in its router
+   descriptors that it sends to directory authorities.
+
+   The directory authorities include a new flag "HSDir" for routers that
+   decided to provide storage for hidden service descriptors and that are
+   running for at least 24 hours.
+
+3.2. Accepting publish requests
+
+   Hidden service directory nodes accept publish requests for v2 hidden service
+   descriptors and store them to their local memory. (It is not necessary to
+   make descriptors persistent, because after disconnecting, the onion router
+   would not be accepted as storing node anyway, because it has not been
+   running for at least 24 hours.) All requests and replies are formatted as
+   HTTP messages. Requests are contained within BEGIN_DIR cells, directed to
+   the router's directory port, and formatted as HTTP POST requests to the URL
+   "/tor/rendezvous2/publish" relative to the hidden service directory's root,
+   containing as its body a v2 service descriptor.
+
+   A hidden service directory node parses every received descriptor and only
+   stores it when it thinks that it is responsible for storing that descriptor
+   based on its own routing table. See section 1.4 for more information on how
+   to determine responsibility for a certain descriptor ID.
+
+3.3. Processing fetch requests
+
+   Hidden service directory nodes process fetch requests for hidden service
+   descriptors by looking them up in their local memory. (They do not need to
+   determine if they are responsible for the passed ID, because it does no harm
+   if they deliver a descriptor for which they are not (any more) responsible.)
+   All requests and replies are formatted as HTTP messages. Requests are
+   contained within BEGIN_DIR cells, directed to the router's directory port,
+   and formatted as HTTP GET requests for the document "/tor/rendezvous2/<z>",
+   where z is replaced with the encoding of the descriptor ID.
+

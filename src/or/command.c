@@ -776,3 +776,4 @@ command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
   connection_mark_for_close(TO_CONN(conn));
 }
 #endif
+

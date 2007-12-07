@@ -1025,6 +1025,11 @@ accepts and serves router descriptors, but it caches and serves the main
 networkstatus documents rather than generating its own. (Default: 0)
 .LP
 .TP
+\fBMinUptimeHidServDirectoryV2 \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
+Minimum uptime of a v2 hidden service directory to be accepted as such by
+authoritative directories. (Default: 24 hours)
+.LP
+.TP
 \fBDirPort \fR\fIPORT\fP
 Advertise the directory service on this port.
 .LP
