@@ -47,6 +47,7 @@ done
 
 ### Make Polipo package.
 chmod 755 contrib/PolipoPostflight
+mkdir -p $BUILD_DIR/polipo_packageroot/Library/Polipo/
 cp polipo $BUILD_DIR/polipo_packageroot/polipo
 cp config.sample $BUILD_DIR/polipo_packageroot/config
 cp contrib/PolipoPostflight $BUILD_DIR/polipo_packageroot/postflight
