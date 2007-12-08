@@ -4,7 +4,8 @@ $Id$
 
 0. Overview and preliminaries
 
-   Read https://www.torproject.org/doc/design-paper/tor-design.html#sec:rendezvous
+   Read
+   https://www.torproject.org/doc/design-paper/tor-design.html#sec:rendezvous
    before you read this specification. It will make more sense.
 
    Rendezvous points provide location-hidden services (server
@@ -116,12 +117,20 @@ $Id$
    other parts remained the same. The following list of potentially
    versioned protocol parts should help reduce some confusion:
 
-   - Hidden service descriptor: see 1.2. 
+   - Hidden service descriptor: the binary-based v0 was the default for
+     a long time, and an ascii-based v2 has been added by proposal
+     114. See 1.2.
 
    - Hidden service descriptor propagation mechanism: currently related to
-     the hidden service descriptor version; see 1.4 and 1.6.
+     the hidden service descriptor version -- v0 publishes to the original
+     hs directory authorities, whereas v2 publishes to a rotating subset
+     of relays with the "hsdir" flag; see 1.4 and 1.6.
 
-   - Introduction protocol: see 1.8.
+   - Introduction protocol for how to generate an introduction cell:
+     v0 specified a nickname for the rendezvous point and assumed the
+     relay would know about it, whereas v2 now specifies IP address,
+     port, and onion key so the relay doesn't need to already recognize
+     it. See 1.8.
 
 1. The Protocol
 
@@ -278,7 +287,7 @@ $Id$
         ["service-authentication" auth-type NL auth-data ... reserved]
 
            [At start, any number]
-           
+
            The service-specific authentication data can be used to perform
            client authentication. This data is independent of the selected
            introduction point as opposed to "intro-authentication" below.
@@ -342,7 +351,7 @@ $Id$
 
    The V1 descriptor format was understood and accepted from
    0.1.1.5-alpha-cvs to 0.2.0.6-alpha-dev, but no Tors generated it and
-   was removed:
+   it was removed:
 
          V     Format byte: set to 255               [1 octet]
          V     Version byte: set to 1                [1 octet]
@@ -421,7 +430,7 @@ $Id$
    circuit with Bob's public key, and dissociates any other circuits
    currently associated with PK.  On success, the OR sends Bob a
    RELAY_INTRO_ESTABLISHED cell with an empty payload.
- 
+
    If a hidden service is configured to publish only v2 hidden service
    descriptors, Bob's OP does not include its own public key in the
    RELAY_ESTABLISH_INTRO cell, but the public key of a freshly generated
@@ -458,8 +467,8 @@ $Id$
    If Bob's OP is configured to publish v2 descriptors instead of or in
    addition to v0 descriptors, it does so to a changing subset of all v2
    hidden service directories instead of the authoritative directory
-   servers. Therefore, Bob's OP opens a stream via Tor to all
-   responsible hidden service directories. (He may re-use old circuits
+   servers. Therefore, Bob's OP opens a stream via Tor to each
+   responsible hidden service directory. (He may re-use old circuits
    for this.) Over this stream, Bob's OP makes an HTTP 'POST' request to a
    URL "/tor/rendezvous2/publish" relative to the hidden service
    directory's root, containing as its body Bob's service descriptor.
@@ -532,13 +541,14 @@ $Id$
    [Caching may make her partitionable, but she fetched it anonymously,
     and we can't very well *not* cache it. -RD]
 
-   Alice's OP fetches v2 descriptors in parallel to v0 descriptors. Analog
+   Alice's OP fetches v2 descriptors in parallel to v0 descriptors. Similarly
    to the description in section 1.4, the OP fetches a v2 descriptor from a
    randomly chosen hidden service directory out of the changing subset of
    6 nodes. If the request is unsuccessful, Alice retries the other
-   remaining responsible hidden service directories one after the other.
+   remaining responsible hidden service directories in a random order.
    Alice relies on Bob to care about a potential clock skew between the two
-   by possibly storing two sets of descriptors.
+   by possibly storing two sets of descriptors. [XXX what does this mean
+   Bob does in practice, if anything? -RD]
 
    Alice's OP opens a stream via Tor to the chosen v2 hidden service
    directory. (She may re-use old circuits for this.) Over this stream,
@@ -578,16 +588,16 @@ $Id$
 
        Cleartext
           PK_ID  Identifier for Bob's PK      [20 octets]
-       Encrypted to Bob's PK:
+       Encrypted to Bob's PK: (in the v0 intro protocol)
           RP     Rendezvous point's nickname  [20 octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
-        OR
+        OR (in the v1 intro protocol)
           VER    Version byte: set to 1.        [1 octet]
           RP     Rendezvous point nick or ID  [42 octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
-        OR
+        OR (in the v2 intro protocol)
           VER    Version byte: set to 2.        [1 octet]
           IP     Rendezvous point's address    [4 octets]
           PORT   Rendezvous point's OR port    [2 octets]
@@ -610,8 +620,8 @@ $Id$
 
    Through Tor 0.2.0.6-alpha, clients only generated the v0 introduction
    format, whereas hidden services have understood and accepted v0,
-   v1, and v2 since 0.1.1.x. As of Tor 0.2.0.7-alpha, clients switched
-   to using the v2 intro format.
+   v1, and v2 since 0.1.1.x. As of Tor 0.2.0.7-alpha and 0.1.2.18,
+   clients switched to using the v2 intro format.
 
    If Alice has downloaded a v2 descriptor, she uses the contained public
    key ("service-key") instead of Bob's public key to create the
@@ -714,9 +724,9 @@ Foo.
 3. Hidden service directory operation
 
    This section has been introduced with the v2 hidden service descriptor
-   format. It contains all operations of a v2 hidden service directory that
-   are required for the protocol described in section 1 to succeed with v2
-   hidden service descriptors.
+   format. It describes all operations of the v2 hidden service descriptor
+   fetching and propagation mechanism that are required for the protocol
+   described in section 1 to succeed with v2 hidden service descriptors.
 
 3.1. Configuring as hidden service directory
 
@@ -726,14 +736,14 @@ Foo.
    descriptors that it sends to directory authorities.
 
    The directory authorities include a new flag "HSDir" for routers that
-   decided to provide storage for hidden service descriptors and that are
-   running for at least 24 hours.
+   decided to provide storage for hidden service descriptors and that
+   have been running for at least 24 hours.
 
 3.2. Accepting publish requests
 
    Hidden service directory nodes accept publish requests for v2 hidden service
    descriptors and store them to their local memory. (It is not necessary to
-   make descriptors persistent, because after disconnecting, the onion router
+   make descriptors persistent, because after restarting, the onion router
    would not be accepted as storing node anyway, because it has not been
    running for at least 24 hours.) All requests and replies are formatted as
    HTTP messages. Requests are contained within BEGIN_DIR cells, directed to

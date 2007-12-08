@@ -36,7 +36,7 @@ Proposals by number:
 111  Prioritizing local traffic over relayed traffic [FINISHED]
 112  Bring Back Pathlen Coin Weight [SUPERSEDED]
 113  Simplifying directory authority administration [OPEN]
-114  Distributed Storage for Tor Hidden Service Descriptors [OPEN]
+114  Distributed Storage for Tor Hidden Service Descriptors [CLOSED]
 115  Two Hop Paths [OPEN]
 116  Two hop paths from entry guards [OPEN]
 117  IPv6 exits [OPEN]
