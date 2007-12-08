@@ -25,16 +25,23 @@ const char tortls_c_id[] =
 #include <openssl/tls1.h>
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
+#include <openssl/opensslv.h>
+
+#if OPENSSL_VERSION_NUMBER < 0x00907000l
+#error "We require openssl >= 0.9.7"
+#endif
 
 #define CRYPTO_PRIVATE /* to import prototypes from crypto.h */
 
-#include "./crypto.h"
-#include "./tortls.h"
-#include "./util.h"
-#include "./log.h"
+#include "crypto.h"
+#include "tortls.h"
+#include "util.h"
+#include "log.h"
+#include "container.h"
 #include <string.h>
 
 // #define V2_HANDSHAKE_SERVER
+// #define V2_HANDSHAKE_CLIENT
 
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \
@@ -62,10 +69,11 @@ struct tor_tls_t {
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
-  } state : 6; /**< The current SSL state, depending on which operations have
+  } state : 3; /**< The current SSL state, depending on which operations have
                 * completed successfully. */
   unsigned int isServer:1; /**< True iff this is a server-side connection */
   unsigned int hadCert:1; /**< Docdoc */
+  unsigned int wasV2Handshake:1; /**< DOCDOC */
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
   unsigned long last_write_count;
@@ -358,22 +366,59 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   return x509;
 }
 
-#ifdef EVERYONE_HAS_AES
-/* Everybody is running OpenSSL 0.9.7 or later, so no backward compatibility
- * is needed. */
-#define CIPHER_LIST TLS1_TXT_DHE_RSA_WITH_AES_128_SHA
-#elif defined(TLS1_TXT_DHE_RSA_WITH_AES_128_SHA)
-/* Some people are running OpenSSL before 0.9.7, but we aren't.
- * We can support AES and 3DES.
- */
-#define CIPHER_LIST (TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":" \
-                     SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
-/* Note: for setting up your own private testing network with link
- * crypto disabled, set your cipher list to SSL3_TXT_RSA_NULL_SHA.
- * If you do this, you won't be able to communicate with any of the
- * "real" Tors, though. */
+#define SERVER_CIPHER_LIST                      \
+  (TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"        \
+   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"        \
+   SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
+/* Note: for setting up your own private testing network with link crypto
+ * disabled, set the cipher lists to your cipher list to
+ * SSL3_TXT_RSA_NULL_SHA.  If you do this, you won't be able to communicate
+ * with any of the "real" Tors, though. */
+
+#if OPENSSL_VERSION_NUMBER >= 0x00908000l
+#define CLIENT_CIPHER_LIST                         \
+  (TLS1_TXT_ECDHE_ECDSA_WITH_AES_256_CBC_SHA ":"   \
+   TLS1_TXT_ECDHE_RSA_WITH_AES_256_CBC_SHA ":"     \
+   TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"           \
+   TLS1_TXT_DHE_DSS_WITH_AES_256_SHA ":"           \
+   TLS1_TXT_ECDH_RSA_WITH_AES_256_CBC_SHA ":"      \
+   TLS1_TXT_ECDH_ECDSA_WITH_AES_256_CBC_SHA ":"    \
+   TLS1_TXT_RSA_WITH_AES_256_SHA ":"               \
+   TLS1_TXT_ECDHE_ECDSA_WITH_RC4_128_SHA ":"       \
+   TLS1_TXT_ECDHE_ECDSA_WITH_AES_128_CBC_SHA ":"   \
+   TLS1_TXT_ECDHE_RSA_WITH_RC4_128_SHA ":"         \
+   TLS1_TXT_ECDHE_RSA_WITH_AES_128_CBC_SHA ":"     \
+   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"           \
+   TLS1_TXT_DHE_DSS_WITH_AES_128_SHA ":"           \
+   TLS1_TXT_ECDH_RSA_WITH_RC4_128_SHA":"           \
+   TLS1_TXT_ECDH_RSA_WITH_AES_128_CBC_SHA":"       \
+   TLS1_TXT_ECDH_ECDSA_WITH_RC4_128_SHA  ":"       \
+   TLS1_TXT_ECDH_ECDSA_WITH_AES_128_CBC_SHA ":"    \
+   SSL3_TXT_RSA_RC4_128_MD5 ":"                    \
+   SSL3_TXT_RSA_RC4_128_SHA ":"                    \
+   TLS1_TXT_RSA_WITH_AES_128_SHA ":"               \
+   TLS1_TXT_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA ":"  \
+   TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA ":"    \
+   SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA ":"           \
+   SSL3_TXT_EDH_DSS_DES_192_CBC3_SHA ":"           \
+   TLS1_TXT_ECDH_RSA_WITH_DES_192_CBC3_SHA ":"     \
+   TLS1_TXT_ECDH_ECDSA_WITH_DES_192_CBC3_SHA ":"   \
+   SSL3_TXT_RSA_FIPS_WITH_3DES_EDE_CBC_SHA ":"     \
+   SSL3_TXT_RSA_DES_192_CBC3_SHA)
 #else
-#error "Tor requires OpenSSL version 0.9.7 or later, for AES support."
+/* Ug. We don't have as many ciphers with openssl 0.9.7 as we'd like.  Fix
+ * this list into something that sucks less. */
+#define CLIENT_CIPHER_LIST \
+  (TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"        \
+   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"        \
+   SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA ":"        \
+   SSL3_TXT_RSA_RC4_128_SHA)
+#endif
+
+#ifndef V2_HANDSHAKE_CLIENT
+#undef CLIENT_CIPHER_LIST
+#define CLIENT_CIPHER_LIST  (TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"      \
+                             SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
 #endif
 
 /** DOCDOC */
@@ -454,8 +499,6 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
 #endif
   SSL_CTX_set_options(result->ctx, SSL_OP_SINGLE_DH_USE);
-  if (!SSL_CTX_set_cipher_list(result->ctx, CIPHER_LIST))
-    goto error;
   if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
     goto error;
   X509_free(cert); /* We just added a reference to cert. */
@@ -517,26 +560,21 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
 }
 
 #ifdef V2_HANDSHAKE_SERVER
-static void
-tor_tls_server_info_callback(const SSL *ssl, int type, int val)
+/** DOCDOC */
+static int
+tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
 {
-  int all_ciphers_in_v1_list = 1;
   int i;
   SSL_SESSION *session;
-  (void) val;
-  if (type != SSL_CB_ACCEPT_LOOP)
-    return;
-  if (ssl->state != SSL3_ST_SW_SRVR_HELLO_A)
-    return;
   /* If we reached this point, we just got a client hello.  See if there is
    * a cipher list. */
   if (!(session = SSL_get_session(ssl))) {
     log_warn(LD_NET, "No session on TLS?");
-    return;
+    return 0;
   }
   if (!session->ciphers) {
     log_warn(LD_NET, "No ciphers on session");
-    return;
+    return 0;
   }
   /* Now we need to see if there are any ciphers whose presence means we're
    * dealing with an updated Tor. */
@@ -549,12 +587,39 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
         strcmp(ciphername, "(NONE)")) {
       /* XXXX should be ld_debug */
       log_info(LD_NET, "Got a non-version-1 cipher called '%s'",ciphername);
-      all_ciphers_in_v1_list = 0;
-      break;
+      // return 1;
+      goto dump_list;
     }
   }
+  return 0;
+ dump_list:
+  {
+    smartlist_t *elts = smartlist_create();
+    char *s;
+    for (i = 0; i < sk_SSL_CIPHER_num(session->ciphers); ++i) {
+      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(session->ciphers, i);
+      const char *ciphername = SSL_CIPHER_get_name(cipher);
+      smartlist_add(elts, (char*)ciphername);
+    }
+    s = smartlist_join_strings(elts, ":", 0, NULL);
+    log_info(LD_NET, "Got a non-version-1 cipher list.  It is: '%s'", s);
+    tor_free(s);
+    smartlist_free(elts);
+  }
+  return 1;
+}
 
-  if (!all_ciphers_in_v1_list) {
+/** DOCDOC */
+static void
+tor_tls_server_info_callback(const SSL *ssl, int type, int val)
+{
+  (void) val;
+  if (type != SSL_CB_ACCEPT_LOOP)
+    return;
+  if (ssl->state != SSL3_ST_SW_SRVR_HELLO_A)
+    return;
+
+  if (tor_tls_client_is_using_v2_ciphers(ssl)) {
     /* Yes, we're casting away the const from ssl.  This is very naughty of us.
      * Let's hope openssl doesn't notice! */
 
@@ -578,6 +643,12 @@ tor_tls_new(int sock, int isServer)
   tor_assert(global_tls_context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(global_tls_context->ctx))) {
     tls_log_errors(LOG_WARN, "generating TLS context");
+    tor_free(result);
+    return NULL;
+  }
+  if (!SSL_set_cipher_list(result->ssl,
+                     isServer ? SERVER_CIPHER_LIST : CLIENT_CIPHER_LIST)) {
+    SSL_free(result->ssl);
     tor_free(result);
     return NULL;
   }
@@ -742,7 +813,31 @@ tor_tls_handshake(tor_tls_t *tls)
     if (tls->isServer) {
       SSL_set_info_callback(tls->ssl, NULL);
       SSL_set_verify(tls->ssl, SSL_VERIFY_NONE, always_accept_verify_cb);
+      /* There doesn't seem to be a clear OpenSSL API to clear mode flags. */
       tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
+#ifdef V2_HANDSHAKE_SERVER
+      if (tor_tls_client_is_using_v2_ciphers(tls->ssl)) {
+        /* This check is redundant, but back when we did it in the callback,
+         * we didn't have access to the tor_tls_t struct.  We could make some
+         * kind of static map linking SSLs to tor_tls_ts, but that way lies
+         * sadness. */
+        tls->wasV2Handshake = 1;
+      } else {
+        tls->wasV2Handshake = 0;
+      }
+#endif
+    } else {
+#ifdef V2_HANDSHAKE_CLIENT
+      /* If we got no ID cert, we're a v2 handshake. */
+      X509 *cert = SSL_get_peer_certificate(tls->ssl);/*XXXX020 refcnt?*/
+      STACK_OF(X509) *chain = SSL_get_peer_cert_chain(tls->ssl);
+      int n_certs = sk_X509_num(chain);
+      if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0)))
+        tls->wasV2Handshake = 0;
+      else
+        tls->wasV2Handshake = 1;
+#endif
+      SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST);
     }
   }
   return r;
@@ -1238,7 +1333,15 @@ _check_no_tls_errors(const char *fname, int line)
 int
 tor_tls_used_v1_handshake(tor_tls_t *tls)
 {
-  (void)tls;
+  if (tls->isServer) {
+#ifdef V2_HANDSHAKE_SERVER
+    return ! tls->wasV2Handshake;
+#endif
+  } else {
+#ifdef V2_HANDSHAKE_CLIENT
+    return ! tls->wasV2Handshake;
+#endif
+  }
   return 1;
 }
 
