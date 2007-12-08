@@ -1,0 +1,115 @@
+
+How to hand out bridges.
+
+Divide bridges into 'strategies' as they come in.  Do this uniformly
+at random for now.
+
+For each strategy, we'll hand out bridges in a different way to
+clients.  This document describes two strategies: email-based and
+IP-based.
+
+0. Notation:
+
+   HMAC(k,v) : an HMAC of v using the key k.
+
+   A|B: The string A concatenated with the string B.
+
+
+1. Email-based.
+
+  Goal: bootstrap based on one or more popular email service's sybil
+     prevention algorithms.
+
+
+  Parameters:
+     HMAC -- an HMAC function
+     P -- a time period
+     K -- the number of bridges to send in a period.
+
+  Setup: Generate two nonces, N and M.
+
+  As bridges arrive, put them into a ring according to HMAC(N,ID)
+  where ID is the bridges's identity digest.
+
+  Divide time into divisions of length P.
+
+  When we get an email:
+
+     If it's not from a supported email service, reject it.
+
+     If we already sent a response to that email address (normalized)
+     in this period, send _exactly_ the same response.
+
+     If it is from a supported service, generate X = HMAC(M,PS|E) where E
+     is the lowercased normalized email address for the user, and
+     where PS is the start of the currrent period.  Send
+     the first K bridges in the ring after point X.
+
+  To normalize an email address:
+     Start with the RFC822 address.  Consider only the mailbox {???}
+     portion of the address (username@host).  Put this into lowercase
+     ascii.
+
+  Questions:
+     What to do with weird character encodings?  Look up the RFC.
+
+  Notes:
+     Make sure that you can't force a single email address to appear
+     in lots of different ways.  IOW, if nickm@freehaven.net and
+     NICKM@freehaven.net aren't treated the same, then I can get lots
+     more bridges than I should.
+
+     Make sure you can't construct a distinct address to match an
+     existing one.  IOW, if we treat nickm@X and nickm@Y as the same
+     user, then anybody can register nickm@Z and use it to tell which
+     bridges nickm@X got (or would get).
+
+     Make sure that we actually check headers so we can't be trivially
+     used to sapam people.
+
+
+
+2. IP-based.
+
+  Goal: avoid handing out all the bridges to users in a similar IP
+  space and time.
+
+  Parameters:
+
+     T_Flush -- how long it should take a user on a single network to
+        see a whole cluster of bridges.
+
+     N_C
+
+     K -- the number of bridges we hand out in response to a single
+     request.
+
+  Setup: using an AS map or a geoip map or some other flawed input
+  source, divide IP space into "areas" such that surveying a large
+  collection of "areas" is hard.  For v0, use /24 adress blocks.
+
+  Group areas into N_C clusters.
+
+  Generate nonces L, M, N.
+
+  Set the period P such that P*(bridges-per-cluster/K) = T_flush.
+  Don't set P to greater than a week, or less than three hours.
+
+  When we get a bridge:
+
+     Based on HMAC(L,ID), assign the bridge to a cluster.  Within each
+     cluster, keep the bridges in a ring based on HMAC(M,ID).
+
+  When we get a connection:
+
+     If it's http, redirect it to https.
+
+     Let net be the incoming IP network.  Let PS be the current
+     period.  Compute X = HMAC(N, PS|net).  Return the next K bridges
+     in the ring after X.
+
+3. Open issues
+
+   Denial of service attacks
+   A good view of network topology
+
