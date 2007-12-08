@@ -45,9 +45,38 @@ IP-based.
      where PS is the start of the currrent period.  Send
      the first K bridges in the ring after point X.
 
+     [If we want to make sure that repeat queries are given exactly the
+      same results, then we can't let the ring change during the
+      time period. For a long time period like a month, that's quite a
+      hassle. How about instead just keeping a replay cache of addresses
+      that have been answered, and sending them a "sorry, you already got
+      your addresses for the time period; perhaps you should try these
+      other fine distribution strategies while you wait?" response? This
+      approach would also resolve the "Make sure you can't construct a
+      distinct address to match an existing one" note below. -RD]
+
+     [While we're at it, if we do the replay cache thing and don't need
+      repeatable answers, we could just pick K random answers from the
+      pool. Is it beneficial that a bridge user who knows about a clump of
+      nodes will be sharing them with other users who know about a similar
+      (overlapping) clump? One good aspect is against an adversary who
+      learns about a clump this way and watches those bridges to learn
+      other users and discover *their* bridges: he doesn't learn about
+      as many new bridges as he might if they were randomly distributed.
+      A drawback is against an adversary who happens to pick two email
+      addresses in P that include overlapping answers: he can measure
+      the difference in clumps and estimate how quickly the bridge pool
+      is growing. -RD]
+
+     [If we make the period P be mailbox-specific, and make it a random
+      value around some mean, then we make it harder for an attacker to
+      know when to try using his small army of gmail addresses to gather
+      another harvest. But we also make it harder for users to know when
+      they can try again. -RD]
+
   To normalize an email address:
      Start with the RFC822 address.  Consider only the mailbox {???}
-     portion of the address (username@host).  Put this into lowercase
+     portion of the address (username@domain).  Put this into lowercase
      ascii.
 
   Questions:
@@ -65,8 +94,7 @@ IP-based.
      bridges nickm@X got (or would get).
 
      Make sure that we actually check headers so we can't be trivially
-     used to sapam people.
-
+     used to spam people.
 
 
 2. IP-based.
@@ -86,11 +114,11 @@ IP-based.
 
   Setup: using an AS map or a geoip map or some other flawed input
   source, divide IP space into "areas" such that surveying a large
-  collection of "areas" is hard.  For v0, use /24 adress blocks.
+  collection of "areas" is hard.  For v0, use /24 address blocks.
 
   Group areas into N_C clusters.
 
-  Generate nonces L, M, N.
+  Generate secrets L, M, N.
 
   Set the period P such that P*(bridges-per-cluster/K) = T_flush.
   Don't set P to greater than a week, or less than three hours.
@@ -100,13 +128,24 @@ IP-based.
      Based on HMAC(L,ID), assign the bridge to a cluster.  Within each
      cluster, keep the bridges in a ring based on HMAC(M,ID).
 
+     [Should we re-sort the rings for each new time period, so the ring
+      for a given cluster is based on HMAC(M,PS|ID)? -RD]
+
   When we get a connection:
 
      If it's http, redirect it to https.
 
-     Let net be the incoming IP network.  Let PS be the current
-     period.  Compute X = HMAC(N, PS|net).  Return the next K bridges
+     Let area be the incoming IP network.  Let PS be the current
+     period.  Compute X = HMAC(N, PS|area).  Return the next K bridges
      in the ring after X.
+
+     [Don't we want to compute C = HMAC(key, area) to learn what cluster
+     to answer from, and then X = HMAC(key, PS|area) to pick a point in
+     that ring? -RD]
+
+  Need to clarify that some HMACs are for rings, and some are for
+  partitions. How rings scale is clear. How do we grow the number of
+  partitions? Looking at successive bits from the HMAC output is one way.
 
 3. Open issues
 
