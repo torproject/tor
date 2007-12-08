@@ -1,4 +1,8 @@
 Changes in version 0.2.0.13-alpha - 2007-12-??
+  o New directory authorities:
+    - Set up lefkada (run by Geoff Goodell) as the fourth v3 directory
+      authority.
+
   o Major bugfixes:
     - Only update guard status (usable / not usable) once we have
       enough directory information. This was causing us to always pick
