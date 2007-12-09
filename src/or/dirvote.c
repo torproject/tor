@@ -28,7 +28,7 @@ static int dirvote_publish_consensus(void);
  * Voting
  * =====*/
 
-/** Return a new string containing teh string representation of the vote in
+/** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
  * For v3 authorities. */
 char *
