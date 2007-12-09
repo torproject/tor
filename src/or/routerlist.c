@@ -311,12 +311,15 @@ authority_cert_get_by_digests(const char *id_digest,
 void
 authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
 {
-  digestmap_t *pending = digestmap_new();
-  smartlist_t *missing_digests = smartlist_create();
+  digestmap_t *pending;
+  smartlist_t *missing_digests;
   char *resource = NULL;
 
   if (should_delay_dir_fetches(get_options()))
     return;
+
+  pending = digestmap_new();
+  missing_digests = smartlist_create();
 
   list_pending_downloads(pending, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
   if (status) {
