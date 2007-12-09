@@ -986,8 +986,8 @@ options_act(or_options_t *old_options)
       add_default_trusted_dirservers();
   }
 
-  clear_bridge_list();
   if (options->Bridges) {
+    clear_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
       if (parse_bridge_line(cl->value, 0)<0) {
         log_warn(LD_BUG,
@@ -1026,7 +1026,7 @@ options_act(or_options_t *old_options)
 
   /* Bail out at this point if we're not going to be a client or server:
    * we want to not fork, and to log stuff to stderr. */
-  if (options->command != CMD_RUN_TOR)
+  if (!running_tor)
     return 0;
 
   {
@@ -1078,9 +1078,6 @@ options_act(or_options_t *old_options)
   }
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
-
-  if (!running_tor)
-    return 0;
 
   /* Check for transitions that need action. */
   if (old_options) {
