@@ -159,7 +159,8 @@ socket.  (Unix and Unix-like systems only.)
 Don't allow any connections on the control port except when the other process
 knows the password whose one-way hash is \fIhashed_password\fP.  You can
 compute the hash of a password by running "tor --hash-password
-\fIpassword\fP".
+\fIpassword\fP". You can provide several acceptable passwords by using
+more than HashedControlPassword line.
 .LP
 .TP
 \fBCookieAuthentication \fR\fB0\fR|\fB1\fP

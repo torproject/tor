@@ -912,29 +912,42 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
-/** Decode the hashed, base64'd password stored in <b>hashed</b>.  If
- * <b>buf</b> is provided, store the hashed password in the first
- * S2K_SPECIFIER_LEN+DIGEST_LEN bytes of <b>buf</b>.  Return 0 on
- * success, -1 on failure.
+/** Decode the hashed, base64'd passwords stored in <b>passwords</b>.
+ * Return a smartlist of acceptable passwords (unterminated strings of
+ * length S2K_SPECIFIER_LEN+DIGEST_LEN) on success, or NULL on failure.
  */
-int
-decode_hashed_password(char *buf, const char *hashed)
+smartlist_t *
+decode_hashed_passwords(config_line_t *passwords)
 {
   char decoded[64];
-  if (!strcmpstart(hashed, "16:")) {
-    if (base16_decode(decoded, sizeof(decoded), hashed+3, strlen(hashed+3))<0
-        || strlen(hashed+3) != (S2K_SPECIFIER_LEN+DIGEST_LEN)*2) {
-      return -1;
-    }
-  } else {
-      if (base64_decode(decoded, sizeof(decoded), hashed, strlen(hashed))
-          != S2K_SPECIFIER_LEN+DIGEST_LEN) {
-        return -1;
+  config_line_t *cl;
+  smartlist_t *sl = smartlist_create();
+
+  tor_assert(passwords);
+
+  for (cl = passwords; cl; cl = cl->next) {
+    const char *hashed = cl->value;
+
+    if (!strcmpstart(hashed, "16:")) {
+      if (base16_decode(decoded, sizeof(decoded), hashed+3, strlen(hashed+3))<0
+          || strlen(hashed+3) != (S2K_SPECIFIER_LEN+DIGEST_LEN)*2) {
+        goto err;
       }
+    } else {
+        if (base64_decode(decoded, sizeof(decoded), hashed, strlen(hashed))
+            != S2K_SPECIFIER_LEN+DIGEST_LEN) {
+          goto err;
+        }
+    }
+    smartlist_add(sl, tor_memdup(decoded, S2K_SPECIFIER_LEN+DIGEST_LEN));
   }
-  if (buf)
-    memcpy(buf, decoded, S2K_SPECIFIER_LEN+DIGEST_LEN);
-  return 0;
+
+  return sl;
+
+ err:
+  SMARTLIST_FOREACH(sl, char*, cp, tor_free(cp));
+  smartlist_free(sl);
+  return NULL;
 }
 
 /** Called when we get an AUTHENTICATE message.  Check whether the
@@ -953,6 +966,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   const char *cp;
   int i;
   int bad_cookie=0, bad_password=0;
+  smartlist_t *sl = NULL;
 
   if (TOR_ISXDIGIT(body[0])) {
     cp = body;
@@ -1013,10 +1027,10 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   }
 
   if (options->HashedControlPassword) {
-    char expected[S2K_SPECIFIER_LEN+DIGEST_LEN];
     char received[DIGEST_LEN];
     int also_cookie = options->CookieAuthentication;
-    if (decode_hashed_password(expected, options->HashedControlPassword)<0) {
+    sl = decode_hashed_passwords(options->HashedControlPassword);
+    if (!sl) {
       if (!also_cookie) {
         log_warn(LD_CONTROL,
                  "Couldn't decode HashedControlPassword: invalid base16");
@@ -1024,9 +1038,14 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       }
       bad_password = 1;
     } else {
-      secret_to_key(received,DIGEST_LEN,password,password_len,expected);
-      if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
-        goto ok;
+      SMARTLIST_FOREACH(sl, char *, expected,
+      {
+        secret_to_key(received,DIGEST_LEN,password,password_len,expected);
+        if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
+          goto ok;
+      });
+      SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+      smartlist_free(sl);
 
       if (used_quoted_string)
         errstr = "Password did not match HashedControlPassword value from "
@@ -1060,6 +1079,10 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   send_control_done(conn);
   conn->_base.state = CONTROL_CONN_STATE_OPEN;
   tor_free(password);
+  if (sl) { /* clean up */
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_free(sl);
+  }
   return 0;
 }
 
@@ -2435,8 +2458,7 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
     char *esc_cfile = esc_for_log(cfile);
     char *methods;
     {
-      int passwd = (options->HashedControlPassword != NULL) &&
-        strlen(options->HashedControlPassword);
+      int passwd = (options->HashedControlPassword != NULL);
       smartlist_t *mlist = smartlist_create();
       if (cookies)
         smartlist_add(mlist, (char*)"COOKIE");

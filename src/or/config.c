@@ -187,7 +187,7 @@ static config_var_t _option_vars[] = {
   V(FetchUselessDescriptors,     BOOL,     "0"),
   V(Group,                       STRING,   NULL),
   V(HardwareAccel,               BOOL,     "0"),
-  V(HashedControlPassword,       STRING,   NULL),
+  V(HashedControlPassword,       LINELIST, NULL),
   V(HidServDirectoryV2,          BOOL,     "0"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceExcludeNodes", LINELIST_S, RendConfigLines, NULL),
@@ -2939,8 +2939,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HashedControlPassword) {
-    if (decode_hashed_password(NULL, options->HashedControlPassword)<0)
+    smartlist_t *sl = decode_hashed_passwords(options->HashedControlPassword);
+    if (!sl) {
       REJECT("Bad HashedControlPassword: wrong length or bad encoding");
+    } else {
+      SMARTLIST_FOREACH(sl, char*, cp, tor_free(cp));
+      smartlist_free(sl);
+    }
   }
 
   if (options->ControlListenAddress) {

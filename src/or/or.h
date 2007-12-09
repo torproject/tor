@@ -2211,8 +2211,9 @@ typedef struct {
                            * interval before hibernation?  0 for "never
                            * hibernate." */
 
-  char *HashedControlPassword; /**< Base64-encoded hash of a password for
-                                * the control system. */
+  /** Base64-encoded hash of accepted passwords for the control system. */
+  config_line_t *HashedControlPassword;
+
   int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
                              * the control system? */
   char *CookieAuthFile; /**< Location of a cookie authentication file. */
@@ -2920,7 +2921,7 @@ int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
 
 int init_cookie_authentication(int enabled);
-int decode_hashed_password(char *buf, const char *hashed);
+smartlist_t *decode_hashed_passwords(config_line_t *passwords);
 void disable_control_logging(void);
 void enable_control_logging(void);
 
