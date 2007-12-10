@@ -2481,6 +2481,7 @@ void entry_guards_compute_status(void);
 int entry_guard_register_connect_status(const char *digest, int succeeded,
                                         time_t now);
 void entry_nodes_should_be_added(void);
+int entry_list_can_grow(or_options_t *options);
 routerinfo_t *choose_random_entry(cpath_build_state_t *state);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 void entry_guards_update_state(or_state_t *state);

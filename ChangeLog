@@ -51,6 +51,10 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       running an obsolete version, it used the string "OLD" to describe
       it. Yet the "getinfo" interface used the string "OBSOLETE". Now use
       "OBSOLETE" in both cases.
+    - If we can't expand our list of entry guards (e.g. because we're
+      using bridges or we have StrictEntryNodes set), don't mark relays
+      down when they fail a directory request. Otherwise we're too quick
+      to mark all our entry points down.
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory

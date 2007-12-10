@@ -2430,8 +2430,8 @@ entry_guards_prepend_from_config(void)
 
 /** Return 1 if we're fine adding arbitrary routers out of the
  * directory to our entry guard list. Else return 0. */
-static int
-can_grow_entry_list(or_options_t *options)
+int
+entry_list_can_grow(or_options_t *options)
 {
   if (options->StrictEntryNodes)
     return 0;
@@ -2469,7 +2469,7 @@ choose_random_entry(cpath_build_state_t *state)
   if (should_add_entry_nodes)
     entry_guards_prepend_from_config();
 
-  if (can_grow_entry_list(options) &&
+  if (entry_list_can_grow(options) &&
       (! entry_guards ||
        smartlist_len(entry_guards) < options->NumEntryGuards))
     pick_entry_guards();
@@ -2498,7 +2498,7 @@ choose_random_entry(cpath_build_state_t *state)
    * using him.
    * (We might get 2 live-but-crummy entry guards, but so be it.) */
   if (smartlist_len(live_entry_guards) < 2) {
-    if (can_grow_entry_list(options)) {
+    if (entry_list_can_grow(options)) {
       /* still no? try adding a new entry then */
       /* XXX if guard doesn't imply fast and stable, then we need
        * to tell add_an_entry_guard below what we want, or it might
@@ -2518,7 +2518,7 @@ choose_random_entry(cpath_build_state_t *state)
       need_capacity = 0;
       goto retry;
     }
-    if (!r && !can_grow_entry_list(options) && consider_exit_family) {
+    if (!r && !entry_list_can_grow(options) && consider_exit_family) {
       /* still no? if we're using bridges or have strictentrynodes
        * set, and our chosen exit is in the same family as all our
        * bridges/entry guards, then be flexible about families. */

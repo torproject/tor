@@ -500,7 +500,8 @@ connection_dir_request_failed(dir_connection_t *conn)
                                   me->address, me->dir_port);
     return; /* this was a test fetch. don't retry. */
   }
-  router_set_status(conn->identity_digest, 0); /* don't try him again */
+  if (entry_list_can_grow(get_options()))
+    router_set_status(conn->identity_digest, 0); /* don't try him again */
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_DIR ||
       conn->_base.purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
     log_info(LD_DIR, "Giving up on directory server at '%s:%d'; retrying",
