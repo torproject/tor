@@ -2041,15 +2041,42 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->dir_port = ri->dir_port;
 }
 
+/** Routerstatus <b>rs</b> is part of a group of routers that are on
+ * too narrow an IP-space. Clear out its flags: we don't want people
+ * using it.
+ */
+static void
+clear_status_flags_on_sybil(routerstatus_t *rs)
+{
+  rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
+    rs->is_running = rs->is_named = rs->is_valid = rs->is_v2_dir =
+    rs->is_hs_dir = rs->is_possible_guard = rs->is_bad_exit = 0;
+  /* FFFF we might want some mechanism to check later on if we
+   * missed zeroing any flags: it's easy to add a new flag but
+   * forget to add it to this clause. */
+}
+
+/** Clear all the status flags in routerinfo <b>router</b>. We put this
+ * function here because it's eerily similar to
+ * clear_status_flags_on_sybil() above. One day we should merge them. */
+void
+router_clear_status_flags(routerinfo_t *router)
+{
+  router->is_valid = router->is_running = router->is_hs_dir =
+    router->is_fast = router->is_stable =
+    router->is_possible_guard = router->is_exit =
+    router->is_bad_exit = 0;
+}
+
 /** If we've been around for less than this amount of time, our reachability
  * information is not accurate. */
 #define DIRSERV_TIME_TO_GET_REACHABILITY_INFO (30*60)
 
 /** Return a new networkstatus_vote_t* containing our current opinion. (For v3
- * authorities */
+ * authorities) */
 networkstatus_vote_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
-                                       authority_cert_t *cert)
+                                        authority_cert_t *cert)
 {
   or_options_t *options = get_options();
   networkstatus_vote_t *v3_out = NULL;
@@ -2132,14 +2159,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                        naming, exits_can_be_guards,
                                        listbadexits);
 
-      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
-        rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
-          rs->is_running = rs->is_named = rs->is_valid = rs->is_v2_dir =
-          rs->is_hs_dir = rs->is_possible_guard = 0;
-        /* FFFF we might want some mechanism to check later on if we
-         * missed zeroing any flags: it's easy to add a new flag but
-         * forget to add it to this clause. */
-      }
+      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
+        clear_status_flags_on_sybil(rs);
+
       if (!vote_on_reachability)
         rs->is_running = 0;
 
@@ -2351,11 +2373,8 @@ generate_v2_networkstatus_opinion(void)
                                        naming, exits_can_be_guards,
                                        listbadexits);
 
-      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest)) {
-        rs.is_authority = rs.is_exit = rs.is_stable = rs.is_fast =
-          rs.is_running = rs.is_named = rs.is_valid = rs.is_v2_dir =
-          rs.is_hs_dir = rs.is_possible_guard = 0;
-      }
+      if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
+        clear_status_flags_on_sybil(&rs);
 
       if (routerstatus_format_entry(outp, endp-outp, &rs, version, 0)) {
         log_warn(LD_BUG, "Unable to print router status.");

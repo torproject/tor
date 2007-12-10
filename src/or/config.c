@@ -2827,7 +2827,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if ((parse_authority_type_from_list(options->PublishServerDescriptor,
                                &options->_PublishServerDescriptor, 1) < 0)) {
     r = tor_snprintf(buf, sizeof(buf),
-        "Unrecognized value for PublishServerDescriptor");
+                     "Unrecognized value in PublishServerDescriptor");
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }

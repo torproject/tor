@@ -1590,12 +1590,8 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       if (!namingdir)
         router->is_named = 0;
       if (!authdir) {
-        if (router->purpose == ROUTER_PURPOSE_GENERAL) {
-          router->is_valid = router->is_running =
-            router->is_fast = router->is_stable =
-            router->is_possible_guard = router->is_exit =
-            router->is_bad_exit = 0;
-        }
+        if (router->purpose == ROUTER_PURPOSE_GENERAL)
+          router_clear_status_flags(router);
       }
       continue;
     }

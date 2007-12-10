@@ -3133,6 +3133,7 @@ const char *dirvote_get_pending_detached_signatures(void);
 #define DGV_INCLUDE_PENDING 2
 #define DGV_INCLUDE_PREVIOUS 4
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
+void router_clear_status_flags(routerinfo_t *ri);
 networkstatus_vote_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert);
