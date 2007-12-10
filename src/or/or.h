@@ -1288,6 +1288,8 @@ typedef struct {
   unsigned int is_exit:1; /**< Do we think this is an OK exit? */
   unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
                                * or otherwise nasty? */
+  unsigned int is_bad_directory:1; /**< Do we think this directory is junky,
+                                    * underpowered, or otherwise useless? */
   unsigned int wants_to_be_hs_dir:1; /**< True iff this router claims to be
                                       * a hidden service directory. */
   unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
@@ -2195,12 +2197,16 @@ typedef struct {
   config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
   smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
+  config_line_t *AuthDirBadDir; /**< Address policy for descriptors to
+                                 * mark as bad dir mirrors. */
   config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
-                                 * mark as bad exits. */
+                                  * mark as bad exits. */
   config_line_t *AuthDirReject; /**< Address policy for descriptors to
                                  * reject. */
   config_line_t *AuthDirInvalid; /**< Address policy for descriptors to
                                   * never mark as valid. */
+  int AuthDirListBadDirs; /**< True iff we should list bad dirs,
+                           * and vote for all other dir mirrors as good. */
   int AuthDirListBadExits; /**< True iff we should list bad exits,
                             * and vote for all other exits as good. */
   int AuthDirRejectUnlisted; /**< Boolean: do we reject all routers that
@@ -3377,6 +3383,7 @@ int dir_policy_permits_address(uint32_t addr);
 int socks_policy_permits_address(uint32_t addr);
 int authdir_policy_permits_address(uint32_t addr, uint16_t port);
 int authdir_policy_valid_address(uint32_t addr, uint16_t port);
+int authdir_policy_baddir_address(uint32_t addr, uint16_t port);
 int authdir_policy_badexit_address(uint32_t addr, uint16_t port);
 
 int validate_addr_policies(or_options_t *options, char **msg);

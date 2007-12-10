@@ -1619,6 +1619,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       router->is_stable = rs->is_stable;
       router->is_possible_guard = rs->is_possible_guard;
       router->is_exit = rs->is_exit;
+      router->is_bad_directory = rs->is_bad_directory;
       router->is_bad_exit = rs->is_bad_exit;
       router->is_hs_dir = rs->is_hs_dir;
     }

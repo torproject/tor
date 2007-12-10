@@ -1528,6 +1528,8 @@ $Id$
      - Clients SHOULD NOT download directory information from non-'V2Dir'
        caches.
 
+   See the "path-spec.txt" document for more details.
+
 6.2. Managing naming
 
    In order to provide human-memorable names for individual server

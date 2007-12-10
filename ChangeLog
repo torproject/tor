@@ -67,6 +67,10 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       addresses.
     - Allow multiple HashedControlPassword config lines, to support
       multiple controller passwords.
+    - New config options AuthDirBadDir and AuthDirListBadDirs for
+      authorities to mark certain relays as "bad directories" in the
+      networkstatus documents. Also supports the "!baddir" directive in
+      the approved-routers file.
 
 
 Changes in version 0.2.0.12-alpha - 2007-11-16
