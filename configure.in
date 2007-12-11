@@ -84,6 +84,7 @@ AC_ARG_ENABLE(gcc-warnings,
      AC_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
 
 AC_PROG_CC
+AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
@@ -204,7 +205,10 @@ fi
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
-dnl This is a disgusting hack so we safely include recent libevent headers.
+dnl This needs to happen before the below disgusting hack.
+AC_CHECK_HEADERS(sys/types.h)
+
+dnl This is a disgusting hack so we safely include older libevent headers.
 AC_CHECK_TYPE(u_int64_t, unsigned long long)
 AC_CHECK_TYPE(u_int32_t, unsigned long)
 AC_CHECK_TYPE(u_int16_t, unsigned short)
@@ -268,7 +272,7 @@ LIBS="$LIBS -levent -lws2_32"
 else
 LIBS="$LIBS -levent"
 fi
-if test $tor_cv_libevent_dir != "(system)"; then
+if test "$tor_cv_libevent_dir" != "(system)"; then
   if test -d "$tor_cv_libevent_dir/lib" ; then
     LDFLAGS="-L$tor_cv_libevent_dir/lib $LDFLAGS"
     le_libdir="$tor_cv_libevent_dir/lib"
@@ -465,7 +469,7 @@ AC_SYS_LARGEFILE
 
 dnl The warning message here is no longer strictly accurate.
 
-AC_CHECK_HEADERS(unistd.h string.h signal.h ctype.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/time.h errno.h assert.h time.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
+AC_CHECK_HEADERS(unistd.h string.h signal.h ctype.h sys/stat.h fcntl.h sys/fcntl.h sys/time.h errno.h assert.h time.h, , AC_MSG_WARN(some headers were not found, compilation may fail))
 
 AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h)
 

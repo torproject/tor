@@ -23,6 +23,9 @@ Changes in version 0.1.2.19 - 2007-??-??
     - Fix handling of hex nicknames when answering controller requests for
       networkstatus by name, or when deciding whether to warn about unknown
       routers in a config option. (Patch from mwenge.)
+    - Fix a couple of hard-to-trigger autoconf problems that could result
+      in really weird results on platforms whose sys/types.h files define
+      nonstandard integer types.
 
 
 Changes in version 0.1.2.18 - 2007-10-28
