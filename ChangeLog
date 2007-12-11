@@ -61,6 +61,9 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Fix handling of hex nicknames when answering controller requests for
       networkstatus by name, or when deciding whether to warn about unknown
       routers in a config option. Bugfix on 0.2.0.x. (Patch from mwenge.)
+    - Fix a couple of hard-to-trigger autoconf problems that could result
+      in really weird results on platforms whose sys/types.h files define
+      nonstandard integer types.
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory

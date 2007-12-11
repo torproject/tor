@@ -113,12 +113,12 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
     AC_LINK_IFELSE(AC_LANG_PROGRAM([$5], [$6]),
                    [linkable=yes], [linkable=no])
 
-    if test $linkable = yes; then
+    if test "$linkable" = yes; then
       tor_$1_any_linkable=yes
       # Okay, we can link against it.  Can we find the headers?
       AC_COMPILE_IFELSE(AC_LANG_PROGRAM([$4], [$6]),
                         [buildable=yes], [buildable=no])
-      if test $buildable = yes; then
+      if test "$buildable" = yes; then
          tor_cv_library_$1_dir=$tor_trydir
          tor_$1_dir_found=yes
          break
@@ -126,8 +126,8 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
     fi
   done
 
-  if test $tor_$1_dir_found = no; then
-    if test $tor_$1_any_linkable = no ; then
+  if test "$tor_$1_dir_found" = no; then
+    if test "$tor_$1_any_linkable" = no ; then
       AC_MSG_WARN([Could not find a linkable $1.  If you have it installed somewhere unusal, you can specify an explicit path using $7])
       TOR_WARN_MISSING_LIB($1, pkg)
       AC_MSG_ERROR([Missing libraries; unable to proceed.])
@@ -144,7 +144,7 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
 ]) dnl end cache check
 
 LIBS="$LIBS $3"
-if test $tor_cv_library_$1_dir != "(system)"; then
+if test "$tor_cv_library_$1_dir" != "(system)"; then
    TOR_EXTEND_CODEPATH($tor_cv_library_$1_dir)
 fi
 

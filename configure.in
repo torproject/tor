@@ -10,7 +10,9 @@ AM_CONFIG_HEADER(orconfig.h)
 AC_CANONICAL_HOST
 
 if test -f /etc/redhat-release ; then
+  if test -f /usr/kerberos/include ; then
     CPPFLAGS="$CPPFLAGS -I/usr/kerberos/include"
+  fi
 fi
 
 # Not a no-op; we want to make sure that CPPFLAGS is set before we use
@@ -54,7 +56,7 @@ cpu workers lock up here, so I will disable threads.])
    esac
 fi
 
-if test $enable_threads = "yes"; then
+if test "$enable_threads" = "yes"; then
   AC_DEFINE(ENABLE_THREADS, 1, [Defined if we will try to use multithreading])
 fi
 
@@ -68,6 +70,7 @@ AC_ARG_ENABLE(gcc-warnings,
      AS_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
 
 AC_PROG_CC
+AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
@@ -109,7 +112,7 @@ bwin32=false; AC_MSG_RESULT([no]),
 bwin32=cross; AC_MSG_RESULT([cross])
 )
 
-if test $bwin32 = cross; then
+if test "$bwin32" = cross; then
 AC_MSG_CHECKING([for win32 (cross)])
 AC_COMPILE_IFELSE([
 #ifdef WIN32
@@ -123,7 +126,7 @@ bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no]))
 fi
 
-if test $bwin32 = true; then
+if test "$bwin32" = true; then
 AC_DEFINE(MS_WINDOWS, 1, [Define to 1 if we are building for Windows.])
 fi
 AM_CONDITIONAL(BUILD_NT_SERVICES, test x$bwin32 = xtrue)
@@ -139,7 +142,7 @@ AC_COMPILE_IFELSE(AC_LANG_PROGRAM(, [
 bmipspro=false; AC_MSG_RESULT(no),
 bmipspro=true; AC_MSG_RESULT(yes))
 
-if test $bmipspro = true; then
+if test "$bmipspro" = true; then
   CFLAGS="$CFLAGS -c99"
 fi
 
@@ -150,7 +153,7 @@ AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
 AC_SEARCH_LIBS(inet_aton, [resolv])
 
-if test $enable_threads = "yes"; then
+if test "$enable_threads" = "yes"; then
   AC_SEARCH_LIBS(pthread_create, [pthread])
   AC_SEARCH_LIBS(pthread_detach, [pthread])
 fi
@@ -161,7 +164,7 @@ dnl exports strlcpy without defining it in a header.
 
 AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull ftello getaddrinfo localtime_r gmtime_r memmem strtok_r inet_pton inet_ntop mallinfo)
 
-if test $enable_threads = "yes"; then
+if test "$enable_threads" = "yes"; then
   AC_CHECK_HEADERS(pthread.h)
   AC_CHECK_FUNCS(pthread_create)
 fi
@@ -169,7 +172,7 @@ fi
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
-if test $bwin32 = true; then
+if test "$bwin32" = true; then
   TOR_LIB_WS32=-lws2_32
   # Some of the cargo-cults recommend -lwsock32 as well, but I don't
   # think it's actually necessary.
@@ -181,7 +184,10 @@ fi
 AC_SUBST(TOR_LIB_WS32)
 AC_SUBST(TOR_LIB_GDI)
 
-dnl This is a disgusting hack so we safely include recent libevent headers.
+dnl We need to do this before we try our disgusting hack below.
+AC_CHECK_HEADERS([sys/types.h])
+
+dnl This is a disgusting hack so we safely include older libevent headers.
 AC_CHECK_TYPE(u_int64_t, unsigned long long)
 AC_CHECK_TYPE(u_int32_t, unsigned long)
 AC_CHECK_TYPE(u_int16_t, unsigned short)
@@ -417,7 +423,7 @@ else
   tor_cv_time_t_signed=yes
 fi
 
-if test $tor_cv_time_t_signed = yes; then
+if test "$tor_cv_time_t_signed" = yes; then
   AC_DEFINE([TIME_T_IS_SIGNED], 1,
             [Define to 1 iff time_t is signed])
 fi
@@ -454,7 +460,7 @@ else
   tor_cv_null_is_zero=yes
 fi
 
-if test $tor_cv_null_is_zero = yes; then
+if test "$tor_cv_null_is_zero" = yes; then
   AC_DEFINE([NULL_REP_IS_ZERO_BYTES], 1,
             [Define to 1 iff memset(0) sets pointers to NULL])
 fi
@@ -481,7 +487,7 @@ else
   tor_cv_malloc_zero_works=no
 fi
 
-if test $tor_cv_malloc_zero_works = yes; then
+if test "$tor_cv_malloc_zero_works" = yes; then
   AC_DEFINE([MALLOC_ZERO_WORKS], 1,
             [Define to 1 iff malloc(0) returns a pointer])
 fi
@@ -502,7 +508,7 @@ else
   tor_cv_twos_complement=yes
 fi
 
-if test $tor_cv_twos_complement = yes; then
+if test "$tor_cv_twos_complement" = yes; then
   AC_DEFINE([USING_TWOS_COMPLEMENT], 1,
             [Define to 1 iff we represent negative integers with two's complement])
 fi
@@ -614,15 +620,15 @@ int main(int c, char **v) { puts(__FUNCTION__); }],
   tor_cv_have_FUNCTION_macro=yes,
   tor_cv_have_FUNCTION_macro=no))
 
-if test $tor_cv_have_func_macro = 'yes'; then
+if test "$tor_cv_have_func_macro" = 'yes'; then
   AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
 fi
 
-if test $tor_cv_have_FUNC_macro = 'yes'; then
+if test "$tor_cv_have_FUNC_macro" = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNC__, 1, [Defined if the compiler supports __FUNC__])
 fi
 
-if test $tor_cv_have_FUNCTION_macro = 'yes'; then
+if test "$tor_cv_have_FUNCTION_macro" = 'yes'; then
   AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
            [Defined if the compiler supports __FUNCTION__])
 fi
@@ -653,7 +659,7 @@ AC_SUBST(LOCALSTATEDIR)
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
-if test $ac_cv_c_compiler_gnu = yes; then
+if test "$ac_cv_c_compiler_gnu" = yes; then
   CFLAGS="$CFLAGS -Wall -g -O2"
 else
   CFLAGS="$CFLAGS -g -O"
