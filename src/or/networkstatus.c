@@ -830,11 +830,11 @@ router_get_consensus_status_by_nickname(const char *nickname,
     return NULL;
 
   if (nickname[0] == '$') {
-    if (base16_decode(digest, DIGEST_LEN, nickname+1, strlen(nickname))<0)
+    if (base16_decode(digest, DIGEST_LEN, nickname+1, strlen(nickname+1))<0)
       return NULL;
     return networkstatus_vote_find_entry(current_consensus, digest);
   } else if (strlen(nickname) == HEX_DIGEST_LEN &&
-       (base16_decode(digest, DIGEST_LEN, nickname+1, strlen(nickname))==0)) {
+       (base16_decode(digest, DIGEST_LEN, nickname, strlen(nickname))==0)) {
     return networkstatus_vote_find_entry(current_consensus, digest);
   }
 

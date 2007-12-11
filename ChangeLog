@@ -58,6 +58,9 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       using bridges or we have StrictEntryNodes set), don't mark relays
       down when they fail a directory request. Otherwise we're too quick
       to mark all our entry points down.
+    - Fix handling of hex nicknames when answering controller requests for
+      networkstatus by name, or when deciding whether to warn about unknown
+      routers in a config option. Bugfix on 0.2.0.x. (Patch from mwenge.)
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory
