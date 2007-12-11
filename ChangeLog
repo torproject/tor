@@ -20,6 +20,9 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       crashing or mis-answering these requests.
     - Stop being so aggressive about fetching v2 dir info if your
       DirPort is on but your ORPort is off.
+    - Relays were publishing their server descriptor to v1 and v2
+      directory authorities, but they didn't try publishing to v3-only
+      authorities. Fix this; and also stop publishing to v1 authorities.
 
   o Major features:
     - Bridges now behave like clients with respect to time intervals for

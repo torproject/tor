@@ -853,7 +853,7 @@ descriptor to the directory authorities. (This is useful if you're
 testing out your server, or if you're using a Tor controller that handles
 directory publishing for you.) Otherwise, Tor will publish its descriptor
 to all directory authorities of the type(s) specified. The value "1" is
-treated as a synonym for the default, which is currently "v1,v2".
+treated as a synonym for the default, which is currently "v2,v3".
 .LP
 .TP
 \fBRedirectExit \fR\fIpattern target\fP

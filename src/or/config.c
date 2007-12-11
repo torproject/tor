@@ -234,7 +234,7 @@ static config_var_t _option_vars[] = {
   V(PidFile,                     STRING,   NULL),
   V(PreferTunneledDirConns,      BOOL,     "0"),
   V(ProtocolWarnings,            BOOL,     "0"),
-  V(PublishServerDescriptor,     CSV,      "v1,v2"),
+  V(PublishServerDescriptor,     CSV,      "v2,v3"),
   V(PublishHidServDescriptors,   BOOL,     "1"),
   V(ReachableAddresses,          LINELIST, NULL),
   V(ReachableDirAddresses,       LINELIST, NULL),
@@ -2420,7 +2420,7 @@ ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
 }
 
 /** Parse an authority type from <b>list</b> and write it to *<b>auth</b>.  If
- * <b>compatible</b> is non-zero, treat "1" as "v1,v2" and treat "0" as "".
+ * <b>compatible</b> is non-zero, treat "1" as "v2,v3" and treat "0" as "".
  * Return 0 on success or -1 if not a recognized authority type (in which
  * case the value of *<b>auth</b> is undefined). */
 static int
@@ -2435,7 +2435,7 @@ parse_authority_type_from_list(smartlist_t *list, authority_type_t *auth,
     if (!strcasecmp(string, "v1"))
       *auth |= V1_AUTHORITY;
     else if (compatible && !strcmp(string, "1"))
-      *auth |= V1_AUTHORITY | V2_AUTHORITY;
+      *auth |= V2_AUTHORITY | V3_AUTHORITY;
     else if (!strcasecmp(string, "v2"))
       *auth |= V2_AUTHORITY;
     else if (!strcasecmp(string, "v3"))
