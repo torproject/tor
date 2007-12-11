@@ -469,12 +469,14 @@ void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
 void tor_mutex_free(tor_mutex_t *m);
 unsigned long tor_get_thread_id(void);
+void tor_threads_init(void);
 #else
 #define tor_mutex_new() ((tor_mutex_t*)tor_malloc(sizeof(int)))
 #define tor_mutex_acquire(m) STMT_NIL
 #define tor_mutex_release(m) STMT_NIL
 #define tor_mutex_free(m) STMT_BEGIN tor_free(m); STMT_END
 #define tor_get_thread_id() (1UL)
+#define tor_threads_init() STMT_NIL
 #endif
 
 #ifdef TOR_IS_MULTITHREADED
@@ -484,7 +486,6 @@ void tor_cond_free(tor_cond_t *cond);
 int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex);
 void tor_cond_signal_one(tor_cond_t *cond);
 void tor_cond_signal_all(tor_cond_t *cond);
-void tor_threads_init(void);
 #endif
 
 /* Platform-specific helpers. */

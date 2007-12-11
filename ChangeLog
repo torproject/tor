@@ -64,6 +64,7 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Fix a couple of hard-to-trigger autoconf problems that could result
       in really weird results on platforms whose sys/types.h files define
       nonstandard integer types.
+    - Fix compilation with --disable-threads set.
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory
