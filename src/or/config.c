@@ -889,7 +889,7 @@ consider_adding_dir_authorities(or_options_t *options,
 {
   config_line_t *cl;
   int need_to_update =
-    !smartlist_len(router_get_trusted_dir_servers()) ||
+    !smartlist_len(router_get_trusted_dir_servers()) || !old_options ||
     !config_lines_eq(options->DirServers, old_options->DirServers) ||
     !config_lines_eq(options->AlternateBridgeAuthority,
                      old_options->AlternateBridgeAuthority) ||
@@ -910,7 +910,7 @@ consider_adding_dir_authorities(or_options_t *options,
     if (!options->AlternateBridgeAuthority)
       type |= BRIDGE_AUTHORITY;
     if (!options->AlternateDirAuthority)
-      type |= V2_AUTHORITY | V3_AUTHORITY;
+      type |= V1_AUTHORITY | V2_AUTHORITY | V3_AUTHORITY;
     if (!options->AlternateHSAuthority)
       type |= HIDSERV_AUTHORITY;
     add_default_trusted_dir_authorities(type);
