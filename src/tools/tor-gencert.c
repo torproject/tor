@@ -1,4 +1,4 @@
-/* Copyright 2007 Roger Dingledine, Nick Mathewson */
+/* Copyright (c) 2007 The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 /* $Id: /tor/trunk/src/tools/tor-resolve.c 12481 2007-04-21T17:27:19.371353Z nickm  $ */
 

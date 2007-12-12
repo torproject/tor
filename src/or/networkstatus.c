@@ -1,6 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
- * Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson. */
+ * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+ * Copyright (c) 2007, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 const char networkstatus_c_id[] =
@@ -819,7 +820,7 @@ router_get_consensus_status_by_id(const char *digest)
  * nickname, but the Named flag isn't set for that router. */
 routerstatus_t *
 router_get_consensus_status_by_nickname(const char *nickname,
-                                       int warn_if_unnamed)
+                                        int warn_if_unnamed)
 {
   char digest[DIGEST_LEN];
   routerstatus_t *best=NULL;

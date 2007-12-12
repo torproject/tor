@@ -1,4 +1,4 @@
-/* Copyright 2007 Nick Mathewson */
+/* Copyright (c) 2007, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 

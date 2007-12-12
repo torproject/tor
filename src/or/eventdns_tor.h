@@ -1,3 +1,5 @@
+/* Copyright (c) 2007, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 
 #include "orconfig.h"
 #define DNS_USE_OPENSSL_FOR_ID

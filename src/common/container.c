@@ -1,5 +1,6 @@
-/* Copyright 2003-2004 Roger Dingledine
-   Copyright 2004-2007 Roger Dingledine, Nick Mathewson */
+/* Copyright (c) 2003-2004, Roger Dingledine
+ * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
+ * Copyright (c) 2007, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 const char container_c_id[] =
