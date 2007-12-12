@@ -2189,8 +2189,21 @@ typedef struct {
   uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any */
   char *HttpsProxyAuthenticator; /**< username:password string, if any */
 
-  config_line_t *DirServers; /**< List of configuration lines
-                                     * for directory servers. */
+  /** List of configuration lines for replacement directory authorities.
+   * If you just want to replace one class of authority at a time,
+   * use the "Alternate*Authority" options below instead. */
+  config_line_t *DirServers;
+
+  /** If set, use these main (currently v3) directory authorities and
+   * not the default ones. */
+  config_line_t *AlternateDirAuthority;
+
+  /** If set, use these bridge authorities and not the default one. */
+  config_line_t *AlternateBridgeAuthority;
+
+  /** If set, use these HS authorities and not the default ones. */
+  config_line_t *AlternateHSAuthority;
+
   char *MyFamily; /**< Declared family for this OR. */
   config_line_t *NodeFamilies; /**< List of config lines for
                                        * node families */

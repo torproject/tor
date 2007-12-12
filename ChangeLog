@@ -29,6 +29,10 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       downloading new consensus documents. Bridge users now wait until
       the end of the interval, so their bridge will be sure to have a
       new consensus document.
+    - Three new config options (AlternateDirAuthority,
+      AlternateBridgeAuthority, and AlternateHSAuthority) that let the
+      user selectively replace the default directory authorities, rather
+      than the all-or-nothing replacement that DirServer offers.
 
   o Minor bugfixes:
     - The fix in 0.2.0.12-alpha cleared the "hsdir" flag in v3 network

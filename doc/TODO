@@ -42,14 +42,16 @@ N   * answer by IP/timestamp
       - run a little web server on moria?
 N   d answer by answering email to bridges@torproject
       - keep track of which addresses have been answered already
-R   d some sort of reachability testing on bridges
 R - bridge communities
     - spec
     - deploy
+      - man page entries for Alternate*Authority config options
+      - make the Alternate*Authority config options pass a "default_type"
+        to parse_dir_server_line() so they don't demand as much redundancy
+      d some sort of reachability testing on bridges
   - interface for letting soat modify flags that authorities assign
 R   . spec
-    - deploy
-    - add an AuthDirBadexit torrc option if we decide we want one.
+    o add an AuthDirBadexit torrc option if we decide we want one.
 S * tor usb windows image (vidalia, polipo, tor, firefox)
 S/M - vidalia can launch firefox
     - build a community version of firefox

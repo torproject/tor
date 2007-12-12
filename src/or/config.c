@@ -130,6 +130,9 @@ static config_var_t _option_vars[] = {
   V(Address,                     STRING,   NULL),
   V(AllowInvalidNodes,           CSV,      "middle,rendezvous"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),
+  V(AlternateBridgeAuthority,    LINELIST, NULL),
+  V(AlternateDirAuthority,       LINELIST, NULL),
+  V(AlternateHSAuthority,        LINELIST, NULL),
   V(AssumeReachable,             BOOL,     "0"),
   V(AuthDirBadDir,               LINELIST, NULL),
   V(AuthDirBadExit,              LINELIST, NULL),
@@ -590,6 +593,7 @@ static void option_clear(config_format_t *fmt, or_options_t *options,
 static void option_reset(config_format_t *fmt, or_options_t *options,
                          config_var_t *var, int use_defaults);
 static void config_free(config_format_t *fmt, void *options);
+static int config_lines_eq(config_line_t *a, config_line_t *b);
 static int option_is_same(config_format_t *fmt,
                           or_options_t *o1, or_options_t *o2,
                           const char *name);
@@ -608,7 +612,9 @@ static int check_nickname_list(const char *lst, const char *name, char **msg);
 static void config_register_addressmaps(or_options_t *options);
 
 static int parse_bridge_line(const char *line, int validate_only);
-static int parse_dir_server_line(const char *line, int validate_only);
+static int parse_dir_server_line(const char *line,
+                                 authority_type_t required_type,
+                                 int validate_only);
 static int parse_redirect_line(smartlist_t *result,
                                config_line_t *line, char **msg);
 static int parse_log_severity_range(const char *range, int *min_out,
@@ -795,9 +801,10 @@ escaped_safe_str(const char *address)
     return escaped(address);
 }
 
-/** Add the default directory servers directly into the trusted dir list. */
+/** Add the default directory authorities directly into the trusted dir list,
+ * but only add them insofar as they share bits with <b>type</b>. */
 static void
-add_default_trusted_dirservers(void)
+add_default_trusted_dir_authorities(authority_type_t type)
 {
   int i;
   const char *dirservers[] = {
@@ -818,7 +825,110 @@ add_default_trusted_dirservers(void)
     NULL
   };
   for (i=0; dirservers[i]; i++)
-    parse_dir_server_line(dirservers[i], 0);
+    parse_dir_server_line(dirservers[i], type, 0);
+}
+
+/** Look at all the config options for using alternate directory
+ * authorities, and make sure none of them are broken. Also, warn the
+ * user if we changed any dangerous ones.
+ */
+static int
+validate_dir_authorities(or_options_t *options, or_options_t *old_options)
+{
+  config_line_t *cl;
+
+  if (options->DirServers &&
+      (options->AlternateDirAuthority || options->AlternateBridgeAuthority ||
+       options->AlternateHSAuthority)) {
+    log_warn(LD_CONFIG,
+             "You cannot set both DirServers and Alternate*Authority.");
+    return -1;
+  }
+
+  /* do we want to complain to the user about being partitionable? */
+  if ((options->DirServers &&
+       (!old_options ||
+        !config_lines_eq(options->DirServers, old_options->DirServers))) ||
+      (options->AlternateDirAuthority &&
+       (!old_options ||
+        !config_lines_eq(options->AlternateDirAuthority,
+                         old_options->AlternateDirAuthority)))) {
+    log_warn(LD_CONFIG,
+             "You have used DirServer or AlternateDirAuthority to "
+             "specify alternate directory authorities in "
+             "your configuration. This is potentially dangerous: it can "
+             "make you look different from all other Tor users, and hurt "
+             "your anonymity. Even if you've specified the same "
+             "authorities as Tor uses by default, the defaults could "
+             "change in the future. Be sure you know what you're doing.");
+  }
+
+  /* Now go through the four ways you can configure an alternate
+   * set of directory authorities, and make sure none are broken. */
+  for (cl = options->DirServers; cl; cl = cl->next)
+    if (parse_dir_server_line(cl->value, 0, 1)<0)
+      return -1;
+  for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
+    if (parse_dir_server_line(cl->value, 0, 1)<0)
+      return -1;
+  for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
+    if (parse_dir_server_line(cl->value, 0, 1)<0)
+      return -1;
+  for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
+    if (parse_dir_server_line(cl->value, 0, 1)<0)
+      return -1;
+  return 0;
+}
+
+/** Look at all the config options and assign new dir authorities
+ * as appropriate.
+ */
+static int
+consider_adding_dir_authorities(or_options_t *options,
+                                or_options_t *old_options)
+{
+  config_line_t *cl;
+  int need_to_update =
+    !smartlist_len(router_get_trusted_dir_servers()) ||
+    !config_lines_eq(options->DirServers, old_options->DirServers) ||
+    !config_lines_eq(options->AlternateBridgeAuthority,
+                     old_options->AlternateBridgeAuthority) ||
+    !config_lines_eq(options->AlternateDirAuthority,
+                     old_options->AlternateDirAuthority) ||
+    !config_lines_eq(options->AlternateHSAuthority,
+                     old_options->AlternateHSAuthority);
+
+  if (!need_to_update)
+    return 0; /* all done */
+
+  /* Start from a clean slate. */
+  clear_trusted_dir_servers();
+
+  if (!options->DirServers) {
+    /* then we may want some of the defaults */
+    authority_type_t type = NO_AUTHORITY;
+    if (!options->AlternateBridgeAuthority)
+      type |= BRIDGE_AUTHORITY;
+    if (!options->AlternateDirAuthority)
+      type |= V2_AUTHORITY | V3_AUTHORITY;
+    if (!options->AlternateHSAuthority)
+      type |= HIDSERV_AUTHORITY;
+    add_default_trusted_dir_authorities(type);
+  }
+
+  for (cl = options->DirServers; cl; cl = cl->next)
+    if (parse_dir_server_line(cl->value, 0, 0)<0)
+      return -1;
+  for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
+    if (parse_dir_server_line(cl->value, 0, 0)<0)
+      return -1;
+  for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
+    if (parse_dir_server_line(cl->value, 0, 0)<0)
+      return -1;
+  for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
+    if (parse_dir_server_line(cl->value, 0, 0)<0)
+      return -1;
+  return 0;
 }
 
 /** Fetch the active option list, and take actions based on it. All of the
@@ -974,19 +1084,8 @@ options_act(or_options_t *old_options)
   int running_tor = options->command == CMD_RUN_TOR;
   char *msg;
 
-  if (options->DirServers) {
-    clear_trusted_dir_servers();
-    for (cl = options->DirServers; cl; cl = cl->next) {
-      if (parse_dir_server_line(cl->value, 0)<0) {
-        log_warn(LD_BUG,
-                 "Previously validated DirServer line could not be added!");
-        return -1;
-      }
-    }
-  } else {
-    if (!smartlist_len(router_get_trusted_dir_servers()))
-      add_default_trusted_dirservers();
-  }
+  if (consider_adding_dir_authorities(options, old_options) < 0)
+    return -1;
 
   if (options->Bridges) {
     clear_bridge_list();
@@ -2035,7 +2134,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   if (is_internal_IP(ntohl(in.s_addr), 0) &&
       options->_PublishServerDescriptor) {
     /* make sure we're ok with publishing an internal IP */
-    if (!options->DirServers) {
+    if (!options->DirServers && !options->AlternateDirAuthority) {
       /* if they are using the default dirservers, disallow internal IPs
        * always. */
       log_fn(warn_severity, LD_CONFIG,
@@ -3011,20 +3110,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
       return -1;
   }
 
-  if (options->DirServers) {
-    if (!old_options ||
-        !config_lines_eq(options->DirServers, old_options->DirServers))
-        COMPLAIN("You have used DirServer to specify directory authorities in "
-                 "your configuration.  This is potentially dangerous: it can "
-                 "make you look different from all other Tor users, and hurt "
-                 "your anonymity.  Even if you've specified the same "
-                 "authorities as Tor uses by default, the defaults could "
-                 "change in the future.  Be sure you know what you're doing.");
-    for (cl = options->DirServers; cl; cl = cl->next) {
-      if (parse_dir_server_line(cl->value, 1)<0)
-        REJECT("DirServer line did not parse. See logs for details.");
-    }
-  }
+  if (validate_dir_authorities(options, old_options) < 0)
+    REJECT("Directory authority line did not parse. See logs for details.");
 
   if (options->UseBridges && !options->Bridges)
     REJECT("If you set UseBridges, you must specify at least one bridge.");
@@ -3790,10 +3877,13 @@ parse_bridge_line(const char *line, int validate_only)
 
 /** Read the contents of a DirServer line from <b>line</b>.  Return 0
  * if the line is well-formed, and -1 if it isn't.  If
- * <b>validate_only</b> is 0, and the line is well-formed, then add
- * the dirserver described in the line as a valid authority. */
+ * <b>validate_only</b> is 0, and the line is well-formed, and it
+ * shares any bits with <b>required_type</b> or <b>required_type</b>
+ * is 0, then add the dirserver described in the line (minus whatever
+ * bits it's missing) as a valid authority. */
 static int
-parse_dir_server_line(const char *line, int validate_only)
+parse_dir_server_line(const char *line, authority_type_t required_type,
+                      int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
@@ -3893,10 +3983,12 @@ parse_dir_server_line(const char *line, int validate_only)
     goto err;
   }
 
-  if (!validate_only) {
-    log_debug(LD_DIR, "Trusted dirserver at %s:%d (%s)", address,
-              (int)dir_port,
-              (char*)smartlist_get(items,0));
+  if (!validate_only && (!required_type || required_type & type)) {
+    if (required_type)
+      type &= required_type; /* pare down what we think of them as an
+                              * authority for. */
+    log_debug(LD_DIR, "Trusted %d dirserver at %s:%d (%s)", (int)type,
+              address, (int)dir_port, (char*)smartlist_get(items,0));
     add_trusted_dir_server(nickname, address, dir_port, or_port, digest,
                            v3_digest, type);
   }
