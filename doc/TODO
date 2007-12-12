@@ -60,6 +60,8 @@ S/M - vidalia can launch firefox
 Things we'd like to do in 0.2.0.x:
   - document the "3/4 and 7/8" business in the clients fetching consensus
     documents timeline. then document the bridge user download timeline.
+  - config option __ControllerLimit that hangs up if there are a limit
+    of controller connections already.
   - See also Flyspray tasks.
   - See also all items marked XXXX020 and DOCDOC in the code
   - https://www.torproject.org/eff/legal-faq.html#License doesn't mention

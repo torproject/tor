@@ -404,7 +404,7 @@ $Id$
 1.3. Bob's OP establishes his introduction points.
 
    The OP establishes a new introduction circuit to each introduction
-   point.  These circuits MUST NOT be used for anything but rendezvous
+   point.  These circuits MUST NOT be used for anything but hidden service
    introduction.  To establish the introduction, Bob sends a
    RELAY_ESTABLISH_INTRO cell, containing:
 
