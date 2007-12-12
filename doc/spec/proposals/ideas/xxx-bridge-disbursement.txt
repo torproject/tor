@@ -168,3 +168,7 @@ IP-based.
    Denial of service attacks
    A good view of network topology
 
+at some point we should learn some reliability stats on our bridges. when
+we say above 'give out k bridges', we might give out 2 reliable ones and
+k-2 others. we count around the ring the same way we do now, to find them.
+
