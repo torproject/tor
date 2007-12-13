@@ -11,7 +11,7 @@ The steps:
 
 0) Make sure you're running ntp, and that your time is correct.
 
-   Make sure you have Tor version at least r11953. In the short term,
+   Make sure you have Tor version at least r12724. In the short term,
    running a working authority may mean running the latest version of
    Tor from SVN trunk. Later on, we hope that it will become easier
    and you can just run a recent development release (and later still,
