@@ -347,7 +347,7 @@ $Id$
 
       - A descriptor field other than bandwidth or uptime has changed.
 
-      - Bandwidth has changed by more than +/- 50% from the last time a
+      - Bandwidth has changed by a factor of 2 from the last time a
         descriptor was generated, and at least a given interval of time
         (20 mins by default) has passed since then.
 
