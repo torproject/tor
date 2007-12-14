@@ -228,6 +228,8 @@ P - Flyspray 487, create a universal binary privoxy for inclusion in
     packages.
 
 Planned for 0.2.1.x:
+  - when somebody uses the controlport as an http proxy, give them
+    a "tor isn't an http proxy" error too like we do for the socks port.
   - we try to build 4 test circuits to break them over different
     servers. but sometimes our entry node is the same for multiple
     test circuits. this defeats the point.
