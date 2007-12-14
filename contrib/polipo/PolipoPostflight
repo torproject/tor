@@ -42,8 +42,7 @@ if [ ! -f $TARGET/config]; then
 fi
 
 cd /usr/share/man/man1
-MAN1=$TARGET/man/man1
-ln -sf $MAN1/*.1 .
+MAN1=$TARGET/share/man/man1
 
 if [ -d /Library/StartupItems/Polipo ]; then
   find /Library/StartupItems/Polipo -print0 | xargs -0 chown root:wheel

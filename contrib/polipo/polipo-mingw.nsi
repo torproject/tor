@@ -1,20 +1,20 @@
 ;polipo-mingw.nsi - A basic win32 installer for Polipo
 ; Originally written by J Doe.
 ; Modified by Andrew Lewman
-; See LICENSE for licencing information
+; See the Tor LICENSE for licencing information
 ;-----------------------------------------
 ;
 !include "MUI.nsh"
 
-!define VERSION "1.0.3.20070922-darcs"
+!define VERSION "1.0.3"
 !define INSTALLER "polipo-${VERSION}-win32.exe"
 !define WEBSITE "http://www.pps.jussieu.fr/~jch/software/polipo/"
 
 !define LICENSE "COPYING"
-;BIN is where it expects to find polipo.exe
-!define BIN "."
+!define BIN "." ;BIN is where it expects to find polipo.exe
 
-SetCompressor lzma
+SetCompressor /SOLID LZMA ;Tighter compression
+RequestExecutionLevel user ;Updated for Vista compatibility
 OutFile ${INSTALLER}
 InstallDir $PROGRAMFILES\Polipo
 SetOverWrite ifnewer
@@ -32,7 +32,7 @@ VIAddVersionKey "LegalCopyright" "©2007, Juliusz Chroboczek"
 VIAddVersionKey "FileDescription" "Polipo is a caching web proxy."
 VIAddVersionKey "FileVersion" "${VERSION}"
 
-!define MUI_WELCOMEPAGE_TITLE "Welcome to the Polipo ${VERSION} Setup Wizard"
+!define MUI_WELCOMEPAGE_TITLE "Welcome to the Polipo Setup Wizard"
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of Polipo ${VERSION}.\r\n\r\nIf you have previously installed Polipo and it is currently running, please exit Polipo first before continuing this installation.\r\n\r\n$_CLICK"
 !define MUI_ABORTWARNING
 !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\win-install.ico"
