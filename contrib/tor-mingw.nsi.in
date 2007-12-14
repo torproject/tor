@@ -13,7 +13,7 @@
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "https://www.torproject.org/"
 !define LICENSE "LICENSE"
-!define BIN "..\bin" ;BIN is where it expects to find tor.exe, tor-resolve.exe, libcrypto.a and libssl.a
+!define BIN "..\bin" ;BIN is where it expects to find tor.exe, tor-resolve.exe
   
  
 SetCompressor /SOLID LZMA ;Tighter compression
@@ -201,8 +201,6 @@ FunctionEnd
 
 Function un.InstallFiles
 	Delete "$DESKTOP\Tor.lnk"
-	Delete "$INSTDIR\libcrypto.a"
-	Delete "$INSTDIR\libssl.a"
 	Delete "$INSTDIR\tor.exe"
 	Delete "$INSTDIR\tor-resolve.exe"
 	Delete "$INSTDIR\Tor Website.url"
