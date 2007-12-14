@@ -1,7 +1,7 @@
 ;tor.nsi - A basic win32 installer for Tor
 ; Originally written by J Doe.
 ; Modified by Steve Topletz
-; See LICENSE for licensing information
+; See the Tor LICENSE for licensing information
 ;-----------------------------------------
 ;
 !include "MUI.nsh"
