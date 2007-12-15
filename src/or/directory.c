@@ -3104,33 +3104,26 @@ dir_split_resource_into_fingerprints(const char *resource,
   return 0;
 }
 
-/** Determine the responsible hidden service directories for
- * <b>desc_ids</b> and upload the appropriate descriptor from
- * <b>desc_strs</b> to them; each smartlist must contain
- * REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS entries; <b>service_id</b> and
- * <b>seconds_valid</b> are only passed for logging purposes.*/
+/** Determine the responsible hidden service directories for the
+ * rend_encoded_v2_service_descriptor_t's in <b>descs</b> and upload them;
+ * <b>service_id</b> and <b>seconds_valid</b> are only passed for logging
+ * purposes.*/
 /* XXXX020 desc_ids and desc_strs could be merged.  Should they? */
 /* I guess they should. -KL */
+/* And now they are. -KL */
 void
-directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
-                         const char *service_id, int seconds_valid)
+directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
+                         int seconds_valid)
 {
   int i, j;
   smartlist_t *responsible_dirs;
   routerstatus_t *hs_dir;
-  if (smartlist_len(desc_ids) != REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS ||
-      smartlist_len(desc_strs) != REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS) {
-    log_warn(LD_BUG, "Could not post descriptors to hidden service "
-                      "directories: Illegal number of descriptor "
-                      "IDs/strings");
-    return;
-  }
   responsible_dirs = smartlist_create();
-  for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++) {
-    const char *desc_id = smartlist_get(desc_ids, i);
-    const char *desc_str = smartlist_get(desc_strs, i);
+  for (i = 0; i < smartlist_len(descs); i++) {
+    rend_encoded_v2_service_descriptor_t *desc = smartlist_get(descs, i);
     /* Determine responsible dirs. */
-    if (hid_serv_get_responsible_directories(responsible_dirs, desc_id) < 0) {
+    if (hid_serv_get_responsible_directories(responsible_dirs,
+                                             desc->desc_id) < 0) {
       log_warn(LD_REND, "Could not determine the responsible hidden service "
                         "directories to post descriptors to.");
       smartlist_free(responsible_dirs);
@@ -3145,10 +3138,10 @@ directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *desc_strs,
       directory_initiate_command_routerstatus(hs_dir,
                                               DIR_PURPOSE_UPLOAD_RENDDESC_V2,
                                               ROUTER_PURPOSE_GENERAL,
-                                              1, NULL, desc_str,
-                                              strlen(desc_str), 0);
+                                              1, NULL, desc->desc_str,
+                                              strlen(desc->desc_str), 0);
       base32_encode(desc_id_base32, sizeof(desc_id_base32),
-                    desc_id, DIGEST_LEN);
+                    desc->desc_id, DIGEST_LEN);
       log_info(LD_REND, "Sending publish request for v2 descriptor for "
                         "service '%s' with descriptor ID '%s' with validity "
                         "of %d seconds to hidden service directory '%s' on "

@@ -3276,8 +3276,7 @@ test_rend_fns_v2(void)
   char service_id[DIGEST_LEN];
   char service_id_base32[REND_SERVICE_ID_LEN_BASE32+1];
   const char *next_desc;
-  smartlist_t *desc_strs = smartlist_create();
-  smartlist_t *desc_ids = smartlist_create();
+  smartlist_t *descs = smartlist_create();
   char computed_desc_id[DIGEST_LEN];
   char parsed_desc_id[DIGEST_LEN];
   crypto_pk_env_t *pk1, *pk2;
@@ -3318,19 +3317,22 @@ test_rend_fns_v2(void)
     generated->intro_point_extend_info[i] = info;
     strmap_set(generated->intro_keys, info->nickname, pk2);
   }
-  test_assert(rend_encode_v2_descriptors(desc_strs, desc_ids, generated, now,
+  test_assert(rend_encode_v2_descriptors(descs, generated, now,
                                          NULL, 0) > 0);
   test_assert(rend_compute_v2_desc_id(computed_desc_id, service_id_base32,
                                       NULL, now, 0) == 0);
-  test_assert(smartlist_digest_isin(desc_ids, computed_desc_id));
+  test_memeq(((rend_encoded_v2_service_descriptor_t *)
+             smartlist_get(descs, 0))->desc_id, computed_desc_id, DIGEST_LEN);
   test_assert(rend_parse_v2_service_descriptor(&parsed, parsed_desc_id,
                                                &intro_points_encrypted,
                                                &intro_points_size,
                                                &encoded_size,
                                                &next_desc,
-                                               desc_strs->list[0]) == 0);
+                                     ((rend_encoded_v2_service_descriptor_t *)
+                                     smartlist_get(descs, 0))->desc_str) == 0);
   test_assert(parsed);
-  test_assert(smartlist_digest_isin(desc_ids, parsed_desc_id));
+  test_memeq(((rend_encoded_v2_service_descriptor_t *)
+             smartlist_get(descs, 0))->desc_id, parsed_desc_id, DIGEST_LEN);
   test_assert(rend_decrypt_introduction_points(parsed, NULL,
                                                intro_points_encrypted,
                                                intro_points_size) == 3);
@@ -3351,13 +3353,10 @@ test_rend_fns_v2(void)
     test_eq(gen_info->port, par_info->port);
   }
   tor_free(intro_points_encrypted);
-  /*for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
-    tor_free(desc_strs[i]);*/
-  smartlist_free(desc_strs);
-  for (i = 0; i < parsed->n_intro_points; i++) {
-    tor_free(parsed->intro_point_extend_info[i]->onion_key);
-    tor_free(generated->intro_point_extend_info[i]->onion_key);
-  }
+  for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
+    rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+  smartlist_free(descs);
+  rend_service_descriptor_free(parsed);
 }
 
 #define ENT(x) { #x, test_ ## x, 0, 0 }

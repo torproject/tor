@@ -3007,8 +3007,8 @@ int dir_split_resource_into_fingerprints(const char *resource,
 char *directory_dump_request_log(void);
 int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
-void directory_post_to_hs_dir(smartlist_t *desc_ids, smartlist_t *descs,
-                              const char *service_id, int seconds_valid);
+void directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
+                              int seconds_valid);
 void directory_get_from_hs_dir(const char *desc_id, const char *query);
 
 time_t download_status_increment_failure(download_status_t *dls,
@@ -3550,6 +3550,12 @@ int rend_client_send_introduction(origin_circuit_t *introcirc,
 
 /********************************* rendcommon.c ***************************/
 
+/** ASCII-encoded v2 hidden service descriptor. */
+typedef struct rend_encoded_v2_service_descriptor_t {
+  char desc_id[DIGEST_LEN]; /**< Descriptor ID. */
+  char *desc_str; /**< Descriptor string. */
+} rend_encoded_v2_service_descriptor_t;
+
 /** Information used to connect to a hidden service. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk; /**< This service's public key. */
@@ -3587,6 +3593,8 @@ int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str,
                                                          size_t len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
+void rend_encoded_v2_service_descriptor_free(
+                               rend_encoded_v2_service_descriptor_t *desc);
 
 /** A cached rendezvous descriptor. */
 typedef struct rend_cache_entry_t {
@@ -3611,8 +3619,7 @@ int rend_cache_store_v2_desc_as_client(const char *desc,
                                const char *descriptor_cookie);
 int rend_cache_store_v2_desc_as_dir(const char *desc);
 int rend_cache_size(void);
-int rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
-                               smartlist_t *desc_ids_out,
+int rend_encode_v2_descriptors(smartlist_t *descs_out,
                                rend_service_descriptor_t *desc, time_t now,
                                const char *descriptor_cookie, uint8_t period);
 int rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,

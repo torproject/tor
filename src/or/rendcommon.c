@@ -296,7 +296,7 @@ rend_encode_v2_intro_points(char **ipos_base64,
 /** Attempt to parse the given <b>desc_str</b> and return true if this
  * succeeds, false otherwise. */
 static int
-rend_desc_v2_is_parsable(const char *desc_str)
+rend_desc_v2_is_parsable(rend_encoded_v2_service_descriptor_t *desc)
 {
   rend_service_descriptor_t *test_parsed = NULL;
   char test_desc_id[DIGEST_LEN];
@@ -308,25 +308,31 @@ rend_desc_v2_is_parsable(const char *desc_str)
                                          &test_intro_content,
                                          &test_intro_size,
                                          &test_encoded_size,
-                                         &test_next, desc_str);
+                                         &test_next, desc->desc_str);
   if (test_parsed)
     rend_service_descriptor_free(test_parsed);
   tor_free(test_intro_content);
   return (res >= 0);
 }
 
-/** Encode a set of new service descriptors for <b>desc</b> at time
- * <b>now</b> using <b>descriptor_cookie</b> (may be <b>NULL</b> if
+/** Free the storage held by an encoded v2 service descriptor. */
+void
+rend_encoded_v2_service_descriptor_free(
+  rend_encoded_v2_service_descriptor_t *desc)
+{
+  if (desc->desc_str) tor_free(desc->desc_str);
+  tor_free(desc);
+}
+
+/** Encode a set of rend_encoded_v2_service_descriptor_t's for <b>desc</b>
+ * at time <b>now</b> using <b>descriptor_cookie</b> (may be <b>NULL</b> if
  * introduction points shall not be encrypted) and <b>period</b> (e.g. 0
- * for the current period, 1 for the next period, etc.), write the
- * ASCII-encoded outputs to newly allocated strings and add them to the
- * existing <b>desc_strs</b>, and write the descriptor IDs to newly
- * allocated strings and add them to the existing <b>desc_ids</b>; return
- * the number of seconds that the descriptors will be found under those
- * <b>desc_ids</b> by clients, or -1 if the encoding was not successful. */
+ * for the current period, 1 for the next period, etc.) and add them to
+ * the existing list <b>descs_out</b>; return the number of seconds that
+ * the descriptors will be found by clients, or -1 if the encoding was not
+ * successful. */
 int
-rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
-                           smartlist_t *desc_ids_out,
+rend_encode_v2_descriptors(smartlist_t *descs_out,
                            rend_service_descriptor_t *desc, time_t now,
                            const char *descriptor_cookie, uint8_t period)
 {
@@ -356,7 +362,6 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
   for (k = 0; k < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; k++) {
     char secret_id_part[DIGEST_LEN];
     char secret_id_part_base32[REND_SECRET_ID_PART_LEN_BASE32 + 1];
-    char *desc_id;
     char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
     char *permanent_key = NULL;
     size_t permanent_key_len;
@@ -369,21 +374,22 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
     int result = 0;
     size_t written = 0;
     char desc_digest[DIGEST_LEN];
+    rend_encoded_v2_service_descriptor_t *enc =
+      tor_malloc_zero(sizeof(rend_encoded_v2_service_descriptor_t));
     /* Calculate secret-id-part = h(time-period + cookie + replica). */
     get_secret_id_part_bytes(secret_id_part, time_period, descriptor_cookie,
                              k);
     base32_encode(secret_id_part_base32, sizeof(secret_id_part_base32),
                   secret_id_part, DIGEST_LEN);
     /* Calculate descriptor ID. */
-    desc_id = tor_malloc_zero(DIGEST_LEN);
-    rend_get_descriptor_id_bytes(desc_id, service_id, secret_id_part);
-    smartlist_add(desc_ids_out, desc_id);
+    rend_get_descriptor_id_bytes(enc->desc_id, service_id, secret_id_part);
     base32_encode(desc_id_base32, sizeof(desc_id_base32),
-                  desc_id, DIGEST_LEN);
+                  enc->desc_id, DIGEST_LEN);
     /* PEM-encode the public key */
     if (crypto_pk_write_public_key_to_string(desc->pk, &permanent_key,
                                              &permanent_key_len) < 0) {
       log_warn(LD_BUG, "Could not write public key to string.");
+      rend_encoded_v2_service_descriptor_free(enc);
       goto err;
     }
     /* Encode timestamp. */
@@ -403,7 +409,7 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
       protocol_versions_string[0]= '\0';
     /* Assemble complete descriptor. */
     desc_len = 2000 + desc->n_intro_points * 1000; /* far too long, but ok. */
-    desc_str = tor_malloc_zero(desc_len);
+    enc->desc_str = desc_str = tor_malloc_zero(desc_len);
     result = tor_snprintf(desc_str, desc_len,
              "rendezvous-service-descriptor %s\n"
              "version 2\n"
@@ -419,7 +425,7 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
     tor_free(permanent_key);
     if (result < 0) {
       log_warn(LD_BUG, "Descriptor ran out of room.");
-      tor_free(desc_str);
+      rend_encoded_v2_service_descriptor_free(enc);
       goto err;
     }
     written = result;
@@ -432,7 +438,7 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
                             ipos_base64);
       if (result < 0) {
         log_warn(LD_BUG, "could not write introduction points.");
-        tor_free(desc_str);
+        rend_encoded_v2_service_descriptor_free(enc);
         goto err;
       }
       written += result;
@@ -442,31 +448,31 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
     written += strlen(desc_str + written);
     if (crypto_digest(desc_digest, desc_str, written) < 0) {
       log_warn(LD_BUG, "could not create digest.");
-      tor_free(desc_str);
+      rend_encoded_v2_service_descriptor_free(enc);
       goto err;
     }
     if (router_append_dirobj_signature(desc_str + written,
                                        desc_len - written,
                                        desc_digest, desc->pk) < 0) {
       log_warn(LD_BUG, "Couldn't sign desc.");
-      tor_free(desc_str);
+      rend_encoded_v2_service_descriptor_free(enc);
       goto err;
     }
     written += strlen(desc_str+written);
     if (written+2 > desc_len) {
         log_warn(LD_BUG, "Could not finish desc.");
-        tor_free(desc_str);
+        rend_encoded_v2_service_descriptor_free(enc);
         goto err;
     }
     desc_str[written++] = '\n';
     desc_str[written++] = 0;
     /* Check if we can parse our own descriptor. */
-    if (!rend_desc_v2_is_parsable(desc_str)) {
+    if (!rend_desc_v2_is_parsable(enc)) {
       log_warn(LD_BUG, "Could not parse my own descriptor: %s", desc_str);
-      tor_free(desc_str);
+      rend_encoded_v2_service_descriptor_free(enc);
       goto err;
     }
-    smartlist_add(desc_strs_out, desc_str);
+    smartlist_add(descs_out, enc);
   }
 
   log_info(LD_REND, "Successfully encoded a v2 descriptor and "
@@ -474,10 +480,9 @@ rend_encode_v2_descriptors(smartlist_t *desc_strs_out,
   goto done;
 
  err:
-  SMARTLIST_FOREACH(desc_ids_out, void *, id, tor_free(id));
-  smartlist_clear(desc_ids_out);
-  SMARTLIST_FOREACH(desc_strs_out, void *, str, tor_free(str));
-  smartlist_clear(desc_strs_out);
+  SMARTLIST_FOREACH(descs_out, rend_encoded_v2_service_descriptor_t *, d,
+                    rend_encoded_v2_service_descriptor_free(d););
+  smartlist_clear(descs_out);
   seconds_valid = -1;
 
  done:

@@ -328,6 +328,11 @@ rend_config_services(or_options_t *options, int validate_only)
       /* XXX020 Karsten: do you really want to overwrite the
        * descriptor_version in the second line? Perhaps if both bits
        * are set you want to leave it at -1? -RD */
+      /* If both bits are set, versions_bitmask will be (1<<0) + (1<<2),
+       * so that neither condition will be true, leaving descriptor_version
+       * set to -1. Does the following comment make it less confusing? -KL */
+      /* If version 0 XOR 2 was set, change descriptor_version to that
+       * value; otherwise leave it at -1. */
       if (versions_bitmask == 1 << 0) service->descriptor_version = 0;
       if (versions_bitmask == 1 << 2) service->descriptor_version = 2;
     }
@@ -1101,12 +1106,11 @@ upload_service_descriptor(rend_service_t *service)
       get_options()->PublishHidServDescriptors) {
     if (hid_serv_have_enough_directories()) {
       int seconds_valid;
-      smartlist_t *desc_strs = smartlist_create();
-      smartlist_t *desc_ids = smartlist_create();
+      smartlist_t *descs = smartlist_create();
       int i;
       /* Encode the current descriptor. */
-      seconds_valid = rend_encode_v2_descriptors(desc_strs, desc_ids,
-                      service->desc, now, NULL, 0);
+      seconds_valid = rend_encode_v2_descriptors(descs, service->desc, now,
+                                                 NULL, 0);
       if (seconds_valid < 0) {
         log_warn(LD_BUG, "Internal error: couldn't encode service descriptor; "
                  "not uploading.");
@@ -1116,14 +1120,11 @@ upload_service_descriptor(rend_service_t *service)
       rend_get_service_id(service->desc->pk, serviceid);
       log_info(LD_REND, "Sending publish request for hidden service %s",
                    serviceid);
-      directory_post_to_hs_dir(desc_ids, desc_strs, serviceid, seconds_valid);
+      directory_post_to_hs_dir(descs, serviceid, seconds_valid);
       /* Free memory for descriptors. */
-      for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++) {
-        tor_free(smartlist_get(desc_strs, i));
-        tor_free(smartlist_get(desc_ids, i));
-      }
-      smartlist_clear(desc_strs);
-      smartlist_clear(desc_ids);
+      for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
+        rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+      smartlist_clear(descs);
       /* Update next upload time. */
       if (seconds_valid - REND_TIME_PERIOD_OVERLAPPING_V2_DESCS
           > rendpostperiod)
@@ -1135,23 +1136,18 @@ upload_service_descriptor(rend_service_t *service)
             REND_TIME_PERIOD_OVERLAPPING_V2_DESCS + 1;
       /* Post also the next descriptors, if necessary. */
       if (seconds_valid < REND_TIME_PERIOD_OVERLAPPING_V2_DESCS) {
-        seconds_valid = rend_encode_v2_descriptors(desc_strs, desc_ids,
-                                                   service->desc, now,
-                                                   NULL, 1);
+        seconds_valid = rend_encode_v2_descriptors(descs, service->desc,
+                                                   now, NULL, 1);
         if (seconds_valid < 0) {
           log_warn(LD_BUG, "Internal error: couldn't encode service "
                    "descriptor; not uploading.");
           return;
         }
-        directory_post_to_hs_dir(desc_ids, desc_strs, serviceid,
-                                 seconds_valid);
+        directory_post_to_hs_dir(descs, serviceid, seconds_valid);
         /* Free memory for descriptors. */
-        for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++) {
-          tor_free(smartlist_get(desc_strs, i));
-          tor_free(smartlist_get(desc_ids, i));
-        }
-        smartlist_free(desc_strs);
-        smartlist_free(desc_ids);
+        for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
+          rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+        smartlist_free(descs);
       }
       uploaded = 1;
       log_info(LD_REND, "Successfully uploaded v2 rend descriptors!");
