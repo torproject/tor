@@ -3107,10 +3107,7 @@ dir_split_resource_into_fingerprints(const char *resource,
 /** Determine the responsible hidden service directories for the
  * rend_encoded_v2_service_descriptor_t's in <b>descs</b> and upload them;
  * <b>service_id</b> and <b>seconds_valid</b> are only passed for logging
- * purposes.*/
-/* XXXX020 desc_ids and desc_strs could be merged.  Should they? */
-/* I guess they should. -KL */
-/* And now they are. -KL */
+ * purposes. */
 void
 directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
                          int seconds_valid)

@@ -320,7 +320,7 @@ void
 rend_encoded_v2_service_descriptor_free(
   rend_encoded_v2_service_descriptor_t *desc)
 {
-  if (desc->desc_str) tor_free(desc->desc_str);
+  tor_free(desc->desc_str);
   tor_free(desc);
 }
 

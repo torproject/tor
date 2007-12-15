@@ -325,13 +325,7 @@ rend_config_services(or_options_t *options, int validate_only)
         version = atoi(version_str);
         versions_bitmask |= 1 << version;
       }
-      /* XXX020 Karsten: do you really want to overwrite the
-       * descriptor_version in the second line? Perhaps if both bits
-       * are set you want to leave it at -1? -RD */
-      /* If both bits are set, versions_bitmask will be (1<<0) + (1<<2),
-       * so that neither condition will be true, leaving descriptor_version
-       * set to -1. Does the following comment make it less confusing? -KL */
-      /* If version 0 XOR 2 was set, change descriptor_version to that
+      /* If exactly one version is set, change descriptor_version to that
        * value; otherwise leave it at -1. */
       if (versions_bitmask == 1 << 0) service->descriptor_version = 0;
       if (versions_bitmask == 1 << 2) service->descriptor_version = 2;
@@ -1114,6 +1108,7 @@ upload_service_descriptor(rend_service_t *service)
       if (seconds_valid < 0) {
         log_warn(LD_BUG, "Internal error: couldn't encode service descriptor; "
                  "not uploading.");
+        smartlist_free(descs);
         return;
       }
       /* Post the current descriptors to the hidden service directories. */
@@ -1122,7 +1117,7 @@ upload_service_descriptor(rend_service_t *service)
                    serviceid);
       directory_post_to_hs_dir(descs, serviceid, seconds_valid);
       /* Free memory for descriptors. */
-      for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
+      for (i = 0; i < smartlist_len(descs); i++)
         rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
       smartlist_clear(descs);
       /* Update next upload time. */
@@ -1141,14 +1136,15 @@ upload_service_descriptor(rend_service_t *service)
         if (seconds_valid < 0) {
           log_warn(LD_BUG, "Internal error: couldn't encode service "
                    "descriptor; not uploading.");
+          smartlist_free(descs);
           return;
         }
         directory_post_to_hs_dir(descs, serviceid, seconds_valid);
         /* Free memory for descriptors. */
-        for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
+        for (i = 0; i < smartlist_len(descs); i++)
           rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
-        smartlist_free(descs);
       }
+      smartlist_free(descs);
       uploaded = 1;
       log_info(LD_REND, "Successfully uploaded v2 rend descriptors!");
     }

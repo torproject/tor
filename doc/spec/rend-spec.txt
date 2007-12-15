@@ -547,10 +547,7 @@ $Id$
    6 nodes. If the request is unsuccessful, Alice retries the other
    remaining responsible hidden service directories in a random order.
    Alice relies on Bob to care about a potential clock skew between the two
-   by possibly storing two sets of descriptors (see section 1.4).
-   [XXX what does this mean Bob does in practice, if anything? -RD]
-   [Cf. last sentence of 1.4. Maybe this reference would be helpful here,
-    so I added it. -KL]
+   by possibly storing two sets of descriptors (see end of section 1.4).
 
    Alice's OP opens a stream via Tor to the chosen v2 hidden service
    directory. (She may re-use old circuits for this.) Over this stream,
