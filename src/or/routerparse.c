@@ -3402,7 +3402,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     intro_points_encrypted_size = unenclen;
   }
   /* Consider one intro point after the other. */
-  current_ipo = (const char **)&intro_points_encrypted;
+  current_ipo = &intro_points_encrypted;
   intropoints = smartlist_create();
   tokens = smartlist_create();
   if (parsed->intro_keys) {
@@ -3479,6 +3479,9 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     tok->key = NULL; /* Prevent free */
     /* Add extend info to list of introduction points. */
     smartlist_add(intropoints, info);
+    /* XXX if intropoints has items on it, but we goto err the next
+     * time through the loop, we don't free the items in the 'err'
+     * section below. -RD */
   }
   /* Write extend infos to descriptor. */
   /* XXXX020 what if intro_points (&tc) are already set? */
@@ -3505,6 +3508,8 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   /* Free tokens and clear token list. */
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
+
+  smartlist_free(intropoints);
 
   return result;
 }
