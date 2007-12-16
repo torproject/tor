@@ -246,6 +246,10 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
     SMARTLIST_FOREACH(ns->known_flags, char *, c, tor_free(c));
     smartlist_free(ns->known_flags);
   }
+  if (ns->supported_methods) {
+    SMARTLIST_FOREACH(ns->supported_methods, char *, c, tor_free(c));
+    smartlist_free(ns->supported_methods);
+  }
   if (ns->voters) {
     SMARTLIST_FOREACH(ns->voters, networkstatus_voter_info_t *, voter,
     {

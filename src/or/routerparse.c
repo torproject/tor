@@ -2407,6 +2407,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   sigs = NULL;
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  smartlist_free(tokens);
   return sigs;
 }
 

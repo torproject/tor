@@ -652,6 +652,7 @@ test_crypto_s2k(void)
   }
   crypto_digest(buf2+9, buf3, 65536);
   test_memeq(buf, buf2, 29);
+  tor_free(buf3);
 }
 
 static int
@@ -987,7 +988,7 @@ test_util(void)
 
     tor_free(cp);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
+    smartlist_free(sl);
   }
 
   /* now make sure time works. */
@@ -1545,6 +1546,7 @@ test_util_smartlist(void)
   test_streq(cp, "will");
   smartlist_add(sl, cp);
   smartlist_remove(sl, cp);
+  tor_free(cp);
   cp = smartlist_join_strings(sl, ",", 0, NULL);
   test_streq(cp, "Some,say,the,Earth,fire,end,in,ice,and,some,in");
   tor_free(cp);
@@ -2122,10 +2124,10 @@ test_dir_format(void)
   char fingerprint[FINGERPRINT_LEN+1];
   char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
   size_t pk1_str_len, pk2_str_len, pk3_str_len;
-  routerinfo_t r1, r2;
+  routerinfo_t *r1, *r2;
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
-  addr_policy_t ex1, ex2;
+  addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   tor_version_t ver1;
 
@@ -2175,43 +2177,45 @@ test_dir_format(void)
   test_assert(!is_legal_nickname_or_hexdigest("abcdefghijklmnopqrst"));
 
   get_platform_str(platform, sizeof(platform));
-  memset(&r1,0,sizeof(r1));
-  memset(&r2,0,sizeof(r2));
-  r1.address = tor_strdup("18.244.0.1");
-  r1.addr = 0xc0a80001u; /* 192.168.0.1 */
-  r1.cache_info.published_on = 0;
-  r1.or_port = 9000;
-  r1.dir_port = 9003;
-  r1.onion_pkey = pk1;
-  r1.identity_pkey = pk2;
-  r1.bandwidthrate = 1000;
-  r1.bandwidthburst = 5000;
-  r1.bandwidthcapacity = 10000;
-  r1.exit_policy = NULL;
-  r1.nickname = tor_strdup("Magri");
-  r1.platform = tor_strdup(platform);
+  r1 = tor_malloc_zero(sizeof(routerinfo_t));
+  r1->address = tor_strdup("18.244.0.1");
+  r1->addr = 0xc0a80001u; /* 192.168.0.1 */
+  r1->cache_info.published_on = 0;
+  r1->or_port = 9000;
+  r1->dir_port = 9003;
+  r1->onion_pkey = crypto_pk_dup_key(pk1);
+  r1->identity_pkey = crypto_pk_dup_key(pk2);
+  r1->bandwidthrate = 1000;
+  r1->bandwidthburst = 5000;
+  r1->bandwidthcapacity = 10000;
+  r1->exit_policy = NULL;
+  r1->nickname = tor_strdup("Magri");
+  r1->platform = tor_strdup(platform);
 
-  ex1.policy_type = ADDR_POLICY_ACCEPT;
-  ex1.addr = 0;
-  ex1.maskbits = 0;
-  ex1.prt_min = ex1.prt_max = 80;
-  ex1.next = &ex2;
-  ex2.policy_type = ADDR_POLICY_REJECT;
-  ex2.addr = 18 << 24;
-  ex2.maskbits = 8;
-  ex2.prt_min = ex2.prt_max = 24;
-  ex2.next = NULL;
-  r2.address = tor_strdup("1.1.1.1");
-  r2.addr = 0x0a030201u; /* 10.3.2.1 */
-  r2.platform = tor_strdup(platform);
-  r2.cache_info.published_on = 5;
-  r2.or_port = 9005;
-  r2.dir_port = 0;
-  r2.onion_pkey = pk2;
-  r2.identity_pkey = pk1;
-  r2.bandwidthrate = r2.bandwidthburst = r2.bandwidthcapacity = 3000;
-  r2.exit_policy = &ex1;
-  r2.nickname = tor_strdup("Fred");
+  ex1 = tor_malloc_zero(sizeof(addr_policy_t));;
+  ex2 = tor_malloc_zero(sizeof(addr_policy_t));;
+  ex1->policy_type = ADDR_POLICY_ACCEPT;
+  ex1->addr = 0;
+  ex1->maskbits = 0;
+  ex1->prt_min = ex1->prt_max = 80;
+  ex1->next = ex2;
+  ex2->policy_type = ADDR_POLICY_REJECT;
+  ex2->addr = 18 << 24;
+  ex2->maskbits = 8;
+  ex2->prt_min = ex2->prt_max = 24;
+  ex2->next = NULL;
+  r2 = tor_malloc_zero(sizeof(routerinfo_t));
+  r2->address = tor_strdup("1.1.1.1");
+  r2->addr = 0x0a030201u; /* 10.3.2.1 */
+  r2->platform = tor_strdup(platform);
+  r2->cache_info.published_on = 5;
+  r2->or_port = 9005;
+  r2->dir_port = 0;
+  r2->onion_pkey = crypto_pk_dup_key(pk2);
+  r2->identity_pkey = crypto_pk_dup_key(pk1);
+  r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
+  r2->exit_policy = ex1;
+  r2->nickname = tor_strdup("Fred");
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
                                                     &pk1_str_len));
@@ -2221,7 +2225,7 @@ test_dir_format(void)
                                                     &pk3_str_len));
 
   memset(buf, 0, 2048);
-  test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
+  test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
 
   strlcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
           "platform Tor "VERSION" on ", sizeof(buf2));
@@ -2248,16 +2252,16 @@ test_dir_format(void)
 
   test_streq(buf, buf2);
 
-  test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
+  test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
   cp = buf;
   rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
   test_assert(rp1);
-  test_streq(rp1->address, r1.address);
-  test_eq(rp1->or_port, r1.or_port);
-  //test_eq(rp1->dir_port, r1.dir_port);
-  test_eq(rp1->bandwidthrate, r1.bandwidthrate);
-  test_eq(rp1->bandwidthburst, r1.bandwidthburst);
-  test_eq(rp1->bandwidthcapacity, r1.bandwidthcapacity);
+  test_streq(rp1->address, r1->address);
+  test_eq(rp1->or_port, r1->or_port);
+  //test_eq(rp1->dir_port, r1->dir_port);
+  test_eq(rp1->bandwidthrate, r1->bandwidthrate);
+  test_eq(rp1->bandwidthburst, r1->bandwidthburst);
+  test_eq(rp1->bandwidthcapacity, r1->bandwidthcapacity);
   test_assert(crypto_pk_cmp_keys(rp1->onion_pkey, pk1) == 0);
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
   test_assert(rp1->exit_policy == NULL);
@@ -2305,11 +2309,11 @@ test_dir_format(void)
   const char *m;
   /* XXXX NM re-enable. */
   /* Make sure routers aren't too far in the past any more. */
-  r1.cache_info.published_on = time(NULL);
-  r2.cache_info.published_on = time(NULL)-3*60*60;
-  test_assert(router_dump_router_to_string(buf, 2048, &r1, pk2)>0);
+  r1->cache_info.published_on = time(NULL);
+  r2->cache_info.published_on = time(NULL)-3*60*60;
+  test_assert(router_dump_router_to_string(buf, 2048, r1, pk2)>0);
   test_eq(dirserv_add_descriptor(buf,&m), 2);
-  test_assert(router_dump_router_to_string(buf, 2048, &r2, pk1)>0);
+  test_assert(router_dump_router_to_string(buf, 2048, r2, pk1)>0);
   test_eq(dirserv_add_descriptor(buf,&m), 2);
   get_options()->Nickname = tor_strdup("DirServer");
   test_assert(!dirserv_dump_directory_to_string(&cp,pk3, 0));
@@ -2323,12 +2327,16 @@ test_dir_format(void)
 
   tor_free(pk1_str);
   tor_free(pk2_str);
+  tor_free(pk3_str);
   if (pk1) crypto_free_pk_env(pk1);
   if (pk2) crypto_free_pk_env(pk2);
+  if (pk3) crypto_free_pk_env(pk3);
   if (rp1) routerinfo_free(rp1);
   if (rp2) routerinfo_free(rp2);
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
+  routerinfo_free(r1);
+  routerinfo_free(r2);
 
   /* Try out version parsing functionality */
   test_eq(0, tor_version_parse("0.3.4pre2-cvs", &ver1));
@@ -3218,6 +3226,7 @@ test_crypto_aes_iv(void)
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 16,
                                              encrypted1, encrypted_size);
+  crypto_free_cipher_env(cipher);
   test_eq(decrypted_size, 16);
   test_memeq(plain_16, decrypted1, 16);
   /* Special length case: 17. */
@@ -3353,7 +3362,7 @@ test_rend_fns_v2(void)
     test_eq(gen_info->port, par_info->port);
   }
   tor_free(intro_points_encrypted);
-  for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
+  for (i = 0; i < smartlist_len(descs); i++)
     rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
   smartlist_free(descs);
   rend_service_descriptor_free(parsed);
