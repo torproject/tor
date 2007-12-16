@@ -3324,7 +3324,7 @@ test_rend_fns_v2(void)
     info->port = crypto_rand_int(65536);
     generated->intro_points[i] = tor_strdup(info->nickname);
     generated->intro_point_extend_info[i] = info;
-    strmap_set(generated->intro_keys, info->nickname, pk2);
+    strmap_set(generated->intro_keys, info->nickname, crypto_pk_dup_key(pk2));
   }
   test_assert(rend_encode_v2_descriptors(descs, generated, now,
                                          NULL, 0) > 0);
@@ -3366,6 +3366,7 @@ test_rend_fns_v2(void)
     rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
   smartlist_free(descs);
   rend_service_descriptor_free(parsed);
+  rend_service_descriptor_free(generated);
 }
 
 #define ENT(x) { #x, test_ ## x, 0, 0 }
