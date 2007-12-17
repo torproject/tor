@@ -81,9 +81,14 @@ geoip_load_file(const char *filename)
   geoip_entries = smartlist_create();
   country_idxplus1_by_lc_code = strmap_new();
   while (!feof(f)) {
+    char buf[512];
     unsigned int low, high;
     char b[3];
-    if (fscanf(f, "%u,%u,%2s", &low, &high, b) == 3) {
+    if (fgets(buf, sizeof(buf), f) == NULL)
+      break;
+    if (sscanf(buf,"%u,%u,%2s", &low, &high, b) == 3) {
+      geoip_add_entry(low, high, b);
+    } else if (sscanf(buf,"\"%u\",\"%u\",\"%2s\",", &low, &high, b) == 3) {
       geoip_add_entry(low, high, b);
     }
   }
@@ -199,6 +204,12 @@ geoip_remove_old_clients(time_t cutoff)
 #define MIN_IPS_TO_NOTE_COUNTRY 8
 #define MIN_IPS_TO_NOTE_ANYTHING 16
 #define IP_GRANULARITY 8
+
+time_t
+geoip_get_history_start(void)
+{
+  return client_history_starts;
+}
 
 char *
 geoip_get_client_history(time_t now)

@@ -1694,6 +1694,7 @@ int
 extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
                          crypto_pk_env_t *ident_key)
 {
+  or_options_t *options = get_options();
   char identity[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];
@@ -1708,14 +1709,32 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
 
   result = tor_snprintf(s, maxlen,
                         "extra-info %s %s\n"
-                        "published %s\n%s"
-                        "router-signature\n",
+                        "published %s\n%s",
                         extrainfo->nickname, identity,
                         published, bandwidth_usage);
   tor_free(bandwidth_usage);
   if (result<0)
     return -1;
+
+  if (options->BridgeRelay && options->BridgeRecordUsageByCountry) {
+    char *geoip_summary = geoip_get_client_history(time(NULL));
+    if (geoip_summary) {
+      char geoip_start[ISO_TIME_LEN+1];
+      format_iso_time(geoip_start, geoip_get_history_start());
+      result = tor_snprintf(s+strlen(s), maxlen-strlen(s),
+                            "geoip-start-time %s\n"
+                            "geoip-client-origins %s\n",
+                            geoip_start, geoip_summary);
+      tor_free(geoip_summary);
+      if (result<0)
+        return -1;
+    }
+  }
+
+
   len = strlen(s);
+  strlcat(s+len, "router-signature\n", maxlen-len);
+  len += strlen(s+len);
   if (router_get_extrainfo_hash(s, digest)<0)
     return -1;
   if (router_append_dirobj_signature(s+len, maxlen-len, digest, ident_key)<0)

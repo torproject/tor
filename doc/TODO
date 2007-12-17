@@ -31,18 +31,18 @@ R   . spec
   . geoip caching and publishing for bridges
 R   . spec
     - Implement
-      . Code to load a geoip file from disk
+      o Code to load a geoip file from disk
         o Truncated format
-        - Full format.
+        o Full format.
         o Actually invoke
       o Code to store a GEOIP file in memory.
       o Code to remember client IPs.
-      . Code to generate history lines
-        - Make history lines match spec.
+      o Code to generate history lines
       - Controller interface
       - Track consecutive time up, not time since last-forgotten IP.
       - Add log lines.
     - Tests
+    - Mention in dir-spec.txt
     d let Vidalia use the geoip data too rather than doing its own
       anonymized queries
   o bridge address disbursal strategies
