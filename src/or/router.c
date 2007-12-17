@@ -1731,7 +1731,6 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     }
   }
 
-
   len = strlen(s);
   strlcat(s+len, "router-signature\n", maxlen-len);
   len += strlen(s+len);

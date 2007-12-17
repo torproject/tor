@@ -3210,6 +3210,8 @@ void geoip_note_client_seen(uint32_t addr, time_t now);
 void geoip_remove_old_clients(time_t cutoff);
 time_t geoip_get_history_start(void);
 char *geoip_get_client_history(time_t now);
+int getinfo_helper_geoip(control_connection_t *control_conn,
+                         const char *question, char **answer);
 void geoip_free_all(void);
 
 /********************************* hibernate.c **********************/

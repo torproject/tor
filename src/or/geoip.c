@@ -31,11 +31,12 @@ geoip_add_entry(uint32_t low, uint32_t high, const char *country)
     char *c = tor_strdup(country);
     tor_strlower(c);
     smartlist_add(geoip_countries, c);
-    idx = smartlist_len(geoip_countries) + 1;
+    idx = smartlist_len(geoip_countries) - 1;
     strmap_set_lc(country_idxplus1_by_lc_code, country, (void*)(idx+1));
   } else {
     idx = ((uintptr_t)_idxplus1)-1;
   }
+  tor_assert(!strcasecmp(smartlist_get(geoip_countries, idx), country));
   ent = tor_malloc_zero(sizeof(geoip_entry_t));
   ent->ip_low = low;
   ent->ip_high = high;
@@ -80,19 +81,24 @@ geoip_load_file(const char *filename)
   geoip_countries = smartlist_create();
   geoip_entries = smartlist_create();
   country_idxplus1_by_lc_code = strmap_new();
+  log_info(LD_GENERAL, "Parsing GEOIP file.");
   while (!feof(f)) {
     char buf[512];
     unsigned int low, high;
     char b[3];
     if (fgets(buf, sizeof(buf), f) == NULL)
       break;
+    /* XXXX020 track full country name. */
     if (sscanf(buf,"%u,%u,%2s", &low, &high, b) == 3) {
       geoip_add_entry(low, high, b);
     } else if (sscanf(buf,"\"%u\",\"%u\",\"%2s\",", &low, &high, b) == 3) {
       geoip_add_entry(low, high, b);
+    } else {
+      log_warn(LD_GENERAL, "Unable to parse line from GEOIP file: %s",
+               escaped(buf));
     }
   }
-  /*XXXX020 abort and return -1 if */
+  /*XXXX020 abort and return -1 if no entries/illformed?*/
   fclose(f);
 
   smartlist_sort(geoip_entries, _geoip_compare_entries);
@@ -257,6 +263,24 @@ geoip_get_client_history(time_t now)
   return result;
 }
 
+int
+getinfo_helper_geoip(control_connection_t *control_conn,
+                     const char *question, char **answer)
+{
+  (void)control_conn;
+  if (geoip_is_loaded() && !strcmpstart(question, "ip-to-country/")) {
+    int c;
+    uint32_t ip;
+    struct in_addr in;
+    question += strlen("ip-to-country/");
+    if (tor_inet_aton(question, &in) != 0) {
+      ip = ntohl(in.s_addr);
+      c = geoip_get_country_by_ip(ip);
+      *answer = tor_strdup(geoip_get_country_name(c));
+    }
+  }
+  return 0;
+}
 
 void
 geoip_free_all(void)
@@ -284,3 +308,4 @@ geoip_free_all(void)
   country_idxplus1_by_lc_code = NULL;
   geoip_entries = NULL;
 }
+
