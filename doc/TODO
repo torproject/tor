@@ -28,20 +28,32 @@ Features blocking 0.2.0.x:
   - mirror tor downloads on (via) tor dir caches
 R   . spec
     d deploy
-  - geoip caching and publishing for bridges
+  . geoip caching and publishing for bridges
 R   . spec
-?   - deploy
+    - Implement
+      . Code to load a geoip file from disk
+        o Truncated format
+        - Full format.
+        o Actually invoke
+      o Code to store a GEOIP file in memory.
+      o Code to remember client IPs.
+      . Code to generate history lines
+        - Make history lines match spec.
+      - Controller interface
+      - Track consecutive time up, not time since last-forgotten IP.
+      - Add log lines.
+    - Tests
     d let Vidalia use the geoip data too rather than doing its own
       anonymized queries
-  - bridge address disbursal strategies
+  o bridge address disbursal strategies
     o get the cached-descriptors* to bridges@moria
-    - parse out bridge addresses from cached-descriptors*
+    o parse out bridge addresses from cached-descriptors*
       (or parse them out before Tonga sends them)
       (or get Tonga's Tor to write them out better in the first place)
-N   * answer by IP/timestamp
-      - run a little web server on moria?
-N   d answer by answering email to bridges@torproject
-      - keep track of which addresses have been answered already
+    o answer by IP/timestamp
+      o run a little web server on moria?
+    o answer by answering email to bridges@torproject
+      o keep track of which addresses have been answered already
 R - bridge communities
     - spec
     - deploy

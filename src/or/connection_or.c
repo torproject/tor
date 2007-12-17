@@ -893,17 +893,20 @@ int
 connection_or_set_state_open(or_connection_t *conn)
 {
   int started_here = connection_or_nonopen_was_started_here(conn);
+  time_t now = time(NULL);
   conn->_base.state = OR_CONN_STATE_OPEN;
   control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED, 0);
 
   if (started_here) {
-    rep_hist_note_connect_succeeded(conn->identity_digest, time(NULL));
-    if (entry_guard_register_connect_status(conn->identity_digest, 1,
-                                            time(NULL)) < 0) {
+    rep_hist_note_connect_succeeded(conn->identity_digest, now);
+    if (entry_guard_register_connect_status(conn->identity_digest,
+                                            1, now) < 0) {
       /* pending circs get closed in circuit_about_to_close_connection() */
       return -1;
     }
     router_set_status(conn->identity_digest, 1);
+  } else {
+    geoip_note_client_seen(TO_CONN(conn)->addr, now);
   }
   if (conn->handshake_state) {
     or_handshake_state_free(conn->handshake_state);

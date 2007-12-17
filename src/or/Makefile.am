@@ -16,7 +16,7 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
 	cpuworker.c directory.c dirserv.c dirvote.c \
-	dns.c dnsserv.c hibernate.c main.c $(tor_platform_source) \
+	dns.c dnsserv.c geoip.c hibernate.c main.c $(tor_platform_source) \
 	networkstatus.c \
 	onion.c policies.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
@@ -38,7 +38,7 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
 	cpuworker.c directory.c dirserv.c dirvote.c \
-	dns.c dnsserv.c hibernate.c main.c $(tor_platform_source) \
+	dns.c dnsserv.c geoip.c hibernate.c main.c $(tor_platform_source) \
 	networkstatus.c \
 	onion.c policies.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \

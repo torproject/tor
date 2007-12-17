@@ -150,6 +150,7 @@ static config_var_t _option_vars[] = {
   V(BandwidthRate,               MEMUNIT,  "5 MB"),
   V(BridgeAuthoritativeDir,      BOOL,     "0"),
   VAR("Bridge",                  LINELIST, Bridges,    NULL),
+  V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(CircuitBuildTimeout,         INTERVAL, "1 minute"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
@@ -191,6 +192,7 @@ static config_var_t _option_vars[] = {
   V(FetchServerDescriptors,      BOOL,     "1"),
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
+  V(GEOIPFile,                   STRING,   NULL),
   V(Group,                       STRING,   NULL),
   V(HardwareAccel,               BOOL,     "0"),
   V(HashedControlPassword,       LINELIST, NULL),
@@ -1214,6 +1216,12 @@ options_act(or_options_t *old_options)
       init_keys();
   }
 
+  /* Maybe load geoip file */
+  if (options->GEOIPFile &&
+      ((!old_options || !opt_streq(old_options->GEOIPFile, options->GEOIPFile))
+       || !geoip_is_loaded())) {
+    geoip_load_file(options->GEOIPFile);
+  }
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||

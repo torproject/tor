@@ -1803,6 +1803,7 @@ tor_free_all(int postfork)
   if (!postfork) {
     evdns_shutdown(1);
   }
+  geoip_free_all();
   dirvote_free_all();
   routerlist_free_all();
   networkstatus_free_all();

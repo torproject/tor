@@ -13,6 +13,7 @@ const char rephist_c_id[] =
  **/
 
 #include "or.h"
+#include "ht.h"
 
 static void bw_arrays_init(void);
 static void predicted_ports_init(void);

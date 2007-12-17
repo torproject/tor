@@ -2315,6 +2315,10 @@ typedef struct {
   /** DOCDOC here and in tor.1 */
   int LearnAuthorityAddrFromCerts;
 
+  /** DOCDOC here and in tor.1 */
+  int BridgeRecordUsageByCountry;
+  char *GEOIPFile;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -3191,6 +3195,21 @@ void dnsserv_resolved(edge_connection_t *conn,
                       int ttl);
 void dnsserv_reject_request(edge_connection_t *conn);
 void dnsserv_launch_request(const char *name, int is_reverse);
+
+/********************************* geoip.c **************************/
+
+#ifdef GEOIP_PRIVATE
+void geoip_add_entry(uint32_t low, uint32_t high, const char *country);
+#endif
+int geoip_load_file(const char *filename);
+int geoip_get_country_by_ip(uint32_t ipaddr);
+int geoip_get_n_countries(void);
+const char *geoip_get_country_name(int num);
+int geoip_is_loaded(void);
+void geoip_note_client_seen(uint32_t addr, time_t now);
+void geoip_remove_old_clients(time_t cutoff);
+char *geoip_get_client_history(time_t now);
+void geoip_free_all(void);
 
 /********************************* hibernate.c **********************/
 
