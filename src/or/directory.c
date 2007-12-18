@@ -2703,7 +2703,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
     return 0;
   }
 
-  if (authdir_mode_handles_descs(options) &&
+  if (authdir_mode_handles_descs(options, -1) &&
       !strcmp(url,"/tor/")) { /* server descriptor post */
     const char *msg = NULL;
     uint8_t purpose = authdir_mode_bridge(options) ?

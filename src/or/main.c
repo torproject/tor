@@ -1295,7 +1295,7 @@ do_hup(void)
     return -1;
   }
   options = get_options(); /* they have changed now */
-  if (authdir_mode_handles_descs(options)) {
+  if (authdir_mode_handles_descs(options, -1)) {
     /* reload the approved-routers file */
     if (dirserv_load_fingerprint_file() < 0) {
       /* warnings are logged from dirserv_load_fingerprint_file() directly */

@@ -3718,7 +3718,7 @@ int authdir_mode(or_options_t *options);
 int authdir_mode_v1(or_options_t *options);
 int authdir_mode_v2(or_options_t *options);
 int authdir_mode_v3(or_options_t *options);
-int authdir_mode_handles_descs(or_options_t *options);
+int authdir_mode_handles_descs(or_options_t *options, int purpose);
 int authdir_mode_publishes_statuses(or_options_t *options);
 int authdir_mode_tests_reachability(or_options_t *options);
 int authdir_mode_bridge(or_options_t *options);

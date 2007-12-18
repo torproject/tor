@@ -46,8 +46,10 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
    MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
    5*2 /* ports */ + 10 /* punctuation */ +                             \
    /* second line */                                                    \
-   (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
-/* XXX020 RS_ENTRY_LEN should probably include space for v lines */
+   (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2 +                \
+   /* v line.  XXXX020 not accurate! */                                 \
+   80                                                                   \
+   )
 
   size_t len;
   char *status = NULL;

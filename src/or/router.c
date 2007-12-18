@@ -834,13 +834,22 @@ authdir_mode_any_nonhidserv(or_options_t *options)
      options->V2AuthoritativeDir ||
      options->V3AuthoritativeDir);
 }
-/** Return true iff we are an authoritative directory server that
- * is willing to receive or serve descriptors on its dirport.
- */
+/** Return true iff we are an authoritative directory server that is
+ * authoritative about receiving and serving descriptors of type
+ * <b>purpose</b> its dirport.  Use -1 for "any purpose". */
 int
-authdir_mode_handles_descs(or_options_t *options)
+authdir_mode_handles_descs(or_options_t *options, int purpose)
 {
-  return authdir_mode_any_nonhidserv(options);
+  if (purpose < 0)
+    return authdir_mode_any_nonhidserv(options);
+  else if (purpose == ROUTER_PURPOSE_GENERAL)
+    return (options->V1AuthoritativeDir ||
+            options->V2AuthoritativeDir ||
+            options->V3AuthoritativeDir);
+  else if (purpose == ROUTER_PURPOSE_BRIDGE)
+    return (options->BridgeAuthoritativeDir);
+  else
+    return 0;
 }
 /** Return true iff we are an authoritative directory server that
  * publishes its own network statuses.
@@ -858,7 +867,7 @@ authdir_mode_publishes_statuses(or_options_t *options)
 int
 authdir_mode_tests_reachability(or_options_t *options)
 {
-  return authdir_mode_handles_descs(options);
+  return authdir_mode_handles_descs(options, -1);
 }
 /** Return true iff we believe ourselves to be a bridge authoritative
  * directory server.

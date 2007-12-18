@@ -2624,7 +2624,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          int from_cache, int from_fetch)
 {
   const char *id_digest;
-  int authdir = authdir_mode(get_options());
+  int authdir = authdir_mode_handles_descs(get_options(), router->purpose);
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
   networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
@@ -2706,7 +2706,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   }
 
   if (router->purpose == ROUTER_PURPOSE_GENERAL &&
-      consensus && !in_consensus && !authdir_mode(get_options())) {
+      consensus && !in_consensus && !authdir) {
     /* If it's a general router not listed in the consensus, then don't
      * consider replacing the latest router with it. */
     if (!from_cache && should_cache_old_descriptors())
@@ -3830,9 +3830,8 @@ update_consensus_router_descriptor_downloads(time_t now)
       smartlist_add(downloadable, rs->descriptor_digest);
     });
 
-  if (!authdir_mode_handles_descs(options) && smartlist_len(no_longer_old)) {
-    /* XXX020 Nick: where do authorities decide never to put stuff in old?
-     * We should make sure bridge descriptors do that too. */
+  if (!authdir_mode_handles_descs(options, ROUTER_PURPOSE_GENERAL)
+      && smartlist_len(no_longer_old)) {
     routerlist_t *rl = router_get_routerlist();
     log_info(LD_DIR, "%d router descriptors listed in consensus are "
              "currently in old_routers; making them current.",
