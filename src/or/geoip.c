@@ -4,28 +4,48 @@
 const char geoip_c_id[] =
   "$Id: /tor/trunk/src/or/networkstatus.c 15493 2007-12-16T18:33:25.055570Z nickm  $";
 
+/**
+ * \file geoip.c
+ * \brief Functions related to maintaining an IP-to-country database and to
+ *    summarizing client connections by country.
+ */
+
 #define GEOIP_PRIVATE
 #include "or.h"
 #include "ht.h"
 
-/** DOCDOC this whole file */
+static void clear_geoip_db(void);
 
+/** An entry from the GeoIP file: maps an IP range to a country. */
 typedef struct geoip_entry_t {
-  uint32_t ip_low;
-  uint32_t ip_high;
-  int country;
+  uint32_t ip_low; /**< The lowest IP in the range, in host order */
+  uint32_t ip_high; /**< The highest IP in the range, in host order */
+  int country; /**< An index into geoip_countries */
 } geoip_entry_t;
 
+/** A list of lowercased two-letter country codes. */
 static smartlist_t *geoip_countries = NULL;
+/** A map from lowercased country codes to their position in geoip_countries.
+ * The index is encoded in the pointer, and 1 is added so that NULL can mean
+ * not found. */
 static strmap_t *country_idxplus1_by_lc_code = NULL;
+/** A list of all known geoip_entry_t, sorted by ip_low. */
 static smartlist_t *geoip_entries = NULL;
 
-void
+/** Add an entry to the GeoIP table, mapping all IPs between <b>low</b> and
+ * <b>high</b>, inclusive, to the 2-letter country code <b>country</b>.
+ */
+static void
 geoip_add_entry(uint32_t low, uint32_t high, const char *country)
 {
   uintptr_t idx;
   geoip_entry_t *ent;
-  void *_idxplus1 = strmap_get_lc(country_idxplus1_by_lc_code, country);
+  void *_idxplus1;
+
+  if (high < low)
+    return;
+
+  _idxplus1 = strmap_get_lc(country_idxplus1_by_lc_code, country);
 
   if (!_idxplus1) {
     char *c = tor_strdup(country);
@@ -44,6 +64,33 @@ geoip_add_entry(uint32_t low, uint32_t high, const char *country)
   smartlist_add(geoip_entries, ent);
 }
 
+/** Add an entry to the GeoIP table, parsing it from <b>line</b>.  The
+ * format is as for geoip_load_file. */
+/*private*/ int
+geoip_parse_entry(const char *line)
+{
+  unsigned int low, high;
+  char b[3];
+  if (!geoip_countries) {
+    geoip_countries = smartlist_create();
+    geoip_entries = smartlist_create();
+    country_idxplus1_by_lc_code = strmap_new();
+  }
+  if (sscanf(line,"%u,%u,%2s", &low, &high, b) == 3) {
+    geoip_add_entry(low, high, b);
+    return 0;
+  } else if (sscanf(line,"\"%u\",\"%u\",\"%2s\",", &low, &high, b) == 3) {
+    geoip_add_entry(low, high, b);
+    return 0;
+  } else {
+    log_warn(LD_GENERAL, "Unable to parse line from GEOIP file: %s",
+             escaped(line));
+    return -1;
+  }
+}
+
+/** Sorting helper: return -1, 1, or 0 based on comparison of two
+ * geoip_entry_t */
 static int
 _geoip_compare_entries(const void **_a, const void **_b)
 {
@@ -56,6 +103,8 @@ _geoip_compare_entries(const void **_a, const void **_b)
     return 0;
 }
 
+/** bsearch helper: return -1, 1, or 0 based on comparison of an IP (a pointer
+ * to a uint32_t in host order) to a geoip_entry_t */
 static int
 _geoip_compare_key_to_entry(const void *_key, const void **_member)
 {
@@ -69,11 +118,21 @@ _geoip_compare_key_to_entry(const void *_key, const void **_member)
     return 0;
 }
 
+/** Clear the GeoIP database and reload it from the file
+ * <b>filename</b>. Return 0 on success, -1 on failure.
+ *
+ * Recognized line formats are:
+ *   INTIPLOW,INTIPHIGH,CC
+ * and
+ *   "INTIPLOW","INTIPHIGH","CC","CC3","COUNTRY NAME"
+ * where INTIPLOW and INTIPHIGH are IPv4 addresses encoded as 4-byte unsigned
+ * integers, and CC is a country code.
+ */
 int
 geoip_load_file(const char *filename)
 {
   FILE *f;
-  geoip_free_all();
+  clear_geoip_db();
   if (!(f = fopen(filename, "r"))) {
     log_warn(LD_GENERAL, "Failed to open GEOIP file %s.", filename);
     return -1;
@@ -84,19 +143,10 @@ geoip_load_file(const char *filename)
   log_info(LD_GENERAL, "Parsing GEOIP file.");
   while (!feof(f)) {
     char buf[512];
-    unsigned int low, high;
-    char b[3];
     if (fgets(buf, sizeof(buf), f) == NULL)
       break;
     /* XXXX020 track full country name. */
-    if (sscanf(buf,"%u,%u,%2s", &low, &high, b) == 3) {
-      geoip_add_entry(low, high, b);
-    } else if (sscanf(buf,"\"%u\",\"%u\",\"%2s\",", &low, &high, b) == 3) {
-      geoip_add_entry(low, high, b);
-    } else {
-      log_warn(LD_GENERAL, "Unable to parse line from GEOIP file: %s",
-               escaped(buf));
-    }
+    geoip_parse_entry(buf);
   }
   /*XXXX020 abort and return -1 if no entries/illformed?*/
   fclose(f);
@@ -105,6 +155,11 @@ geoip_load_file(const char *filename)
   return 0;
 }
 
+/** Given an IP address in host order, return a number representing the
+ * country to which that address belongs, or -1 for unknown.  The return value
+ * will always be less than geoip_get_n_countries().  To decode it,
+ * call geoip_get_country_name().
+ */
 int
 geoip_get_country_by_ip(uint32_t ipaddr)
 {
@@ -115,12 +170,15 @@ geoip_get_country_by_ip(uint32_t ipaddr)
   return ent ? ent->country : -1;
 }
 
+/** Return the number of countries recognized by the GEOIP database. */
 int
 geoip_get_n_countries(void)
 {
   return smartlist_len(geoip_countries);
 }
 
+/** Return the two-letter country code associated with the number <b>num</b>,
+ * or "??" for an unknown value. */
 const char *
 geoip_get_country_name(int num)
 {
@@ -130,28 +188,35 @@ geoip_get_country_name(int num)
     return "??";
 }
 
+/** Return true iff we have loaded a GeoIP database.*/
 int
 geoip_is_loaded(void)
 {
   return geoip_countries != NULL && geoip_entries != NULL;
 }
 
-/** DOCDOC */
+/** Entry in a map from IP address to the last time we've seen an incoming
+ * connection from that IP address. Used by bridges only, to track which
+ * countries have them blocked. */
 typedef struct clientmap_entry_t {
   HT_ENTRY(clientmap_entry_t) node;
   uint32_t ipaddr;
   time_t last_seen;
 } clientmap_entry_t;
 
+/** Map from client IP address to last time seen. */
 static HT_HEAD(clientmap, clientmap_entry_t) client_history =
      HT_INITIALIZER();
+/** Time at which we started tracking client history. */
 static time_t client_history_starts = 0;
 
+/** Hashtable helper: compute a hash of a clientmap_entry_t. */
 static INLINE unsigned
 clientmap_entry_hash(const clientmap_entry_t *a)
 {
   return ht_improve_hash((unsigned) a->ipaddr);
 }
+/** Hashtable helper: compare two clientmap_entry_t values for equality. */
 static INLINE int
 clientmap_entries_eq(const clientmap_entry_t *a, const clientmap_entry_t *b)
 {
@@ -163,7 +228,8 @@ HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
 HT_GENERATE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
             clientmap_entries_eq, 0.6, malloc, realloc, free);
 
-/** DOCDOC */
+/** Note that we've seen a client connect from the IP <b>addr</b> (host order)
+ * at time <b>now</b>. Ignored by all but bridges. */
 void
 geoip_note_client_seen(uint32_t addr, time_t now)
 {
@@ -185,6 +251,8 @@ geoip_note_client_seen(uint32_t addr, time_t now)
     client_history_starts = now;
 }
 
+/** HT_FOREACH helper: remove a clientmap_entry_t from the hashtable if it's
+ * older than a certain time. */
 static int
 _remove_old_client_helper(struct clientmap_entry_t *ent, void *_cutoff)
 {
@@ -197,6 +265,7 @@ _remove_old_client_helper(struct clientmap_entry_t *ent, void *_cutoff)
   }
 }
 
+/** Forget about all clients that haven't connected since <b>cutoff</b>. */
 void
 geoip_remove_old_clients(time_t cutoff)
 {
@@ -207,16 +276,29 @@ geoip_remove_old_clients(time_t cutoff)
     client_history_starts = cutoff;
 }
 
+/** Do not mention any country from which fewer than this number of IPs have
+ * connected.  This avoids reporting information that could deanonymize
+ * users. */
 #define MIN_IPS_TO_NOTE_COUNTRY 8
+/** Do not report any geoip data at all if we have fewer than this number of
+ * IPs to report about. */
 #define MIN_IPS_TO_NOTE_ANYTHING 16
+/** When reporting geoip data about countries, round down to the nearest
+ * multiple of this value. */
 #define IP_GRANULARITY 8
 
+/** Return the time at which we started recording geoip data. */
 time_t
 geoip_get_history_start(void)
 {
   return client_history_starts;
 }
 
+/** Return a newly allocated comma-separated string containing entries for all
+ * the countries from which we've seen enough clients connect. The entry
+ * format is cc=num where num is the number of IPs we've seen connecting from
+ * that country, and cc is a lowercased country code.  Returns NULL if we don't
+ * want to export geoip data yet. */
 char *
 geoip_get_client_history(time_t now)
 {
@@ -263,6 +345,7 @@ geoip_get_client_history(time_t now)
   return result;
 }
 
+/** Helper used to implement GETINFO ip-to-country/... controller command. */
 int
 getinfo_helper_geoip(control_connection_t *control_conn,
                      const char *question, char **answer)
@@ -282,8 +365,9 @@ getinfo_helper_geoip(control_connection_t *control_conn,
   return 0;
 }
 
-void
-geoip_free_all(void)
+/** Release all storage held by the GeoIP database. */
+static void
+clear_geoip_db(void)
 {
   if (geoip_countries) {
     SMARTLIST_FOREACH(geoip_countries, char *, cp, tor_free(cp));
@@ -295,17 +379,23 @@ geoip_free_all(void)
     SMARTLIST_FOREACH(geoip_entries, geoip_entry_t *, ent, tor_free(ent));
     smartlist_free(geoip_entries);
   }
-  {
-    clientmap_entry_t **ent, **next, *this;
-    for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
-      this = *ent;
-      next = HT_NEXT_RMV(clientmap, &client_history, ent);
-      tor_free(this);
-    }
-    HT_CLEAR(clientmap, &client_history);
-  }
   geoip_countries = NULL;
   country_idxplus1_by_lc_code = NULL;
   geoip_entries = NULL;
+}
+
+/** Release all storage held in this file. */
+void
+geoip_free_all(void)
+{
+  clientmap_entry_t **ent, **next, *this;
+  for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
+    this = *ent;
+    next = HT_NEXT_RMV(clientmap, &client_history, ent);
+    tor_free(this);
+  }
+  HT_CLEAR(clientmap, &client_history);
+
+  clear_geoip_db();
 }
 

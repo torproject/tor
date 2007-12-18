@@ -2317,7 +2317,7 @@ typedef struct {
 
   /** DOCDOC here and in tor.1 */
   int BridgeRecordUsageByCountry;
-  char *GEOIPFile;
+  char *GeoIPFile;
 
 } or_options_t;
 
@@ -3199,7 +3199,7 @@ void dnsserv_launch_request(const char *name, int is_reverse);
 /********************************* geoip.c **************************/
 
 #ifdef GEOIP_PRIVATE
-void geoip_add_entry(uint32_t low, uint32_t high, const char *country);
+int geoip_parse_entry(const char *line);
 #endif
 int geoip_load_file(const char *filename);
 int geoip_get_country_by_ip(uint32_t ipaddr);

@@ -33,6 +33,7 @@ const char tor_svn_revision[] = "";
 #define CRYPTO_PRIVATE
 #define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
+#define GEOIP_PRIVATE
 #define MEMPOOL_PRIVATE
 #define ROUTER_PRIVATE
 
@@ -3369,6 +3370,66 @@ test_rend_fns_v2(void)
   rend_service_descriptor_free(generated);
 }
 
+static void
+test_geoip(void)
+{
+  int i, j;
+  time_t now = time(NULL);
+  char *s;
+
+  /* Populate the DB a bit.  Add these in order, since we can't do the final
+   * 'sort' step.  These aren't very good IP addresses, but they're perfectly
+   * fine uint32_t values. */
+  test_eq(0, geoip_parse_entry("10,50,AB"));
+  test_eq(0, geoip_parse_entry("52,90,XY"));
+  test_eq(0, geoip_parse_entry("95,100,AB"));
+  test_eq(0, geoip_parse_entry("\"105\",\"140\",\"ZZ\""));
+  test_eq(0, geoip_parse_entry("\"150\",\"190\",\"XY\""));
+  test_eq(0, geoip_parse_entry("\"200\",\"250\",\"AB\""));
+
+  /* We should have 3 countries: ab, xy, zz. */
+  test_eq(3, geoip_get_n_countries());
+  /* Make sure that country ID actually works. */
+#define NAMEFOR(x) geoip_get_country_name(geoip_get_country_by_ip(x))
+  test_streq("ab", NAMEFOR(32));
+  test_streq("??", NAMEFOR(5));
+  test_streq("??", NAMEFOR(51));
+  test_streq("xy", NAMEFOR(150));
+  test_streq("xy", NAMEFOR(190));
+  test_streq("??", NAMEFOR(2000));
+#undef NAMEFOR
+
+  get_options()->BridgeRelay = 1;
+  get_options()->BridgeRecordUsageByCountry = 1;
+  /* Put 9 observations in AB... */
+  for (i=32; i < 40; ++i)
+    geoip_note_client_seen(i, now);
+  geoip_note_client_seen(225, now);
+  /* and 3 observations in XY, several times. */
+  for (j=0; j < 10; ++j)
+    for (i=52; i < 55; ++i)
+      geoip_note_client_seen(i, now-3600);
+  /* and 17 observations in ZZ... */
+  for (i=110; i < 127; ++i)
+    geoip_note_client_seen(i, now-7200);
+  s = geoip_get_client_history(now+5*24*60*60);
+  test_assert(s);
+  test_streq("ab=8,zz=16", s);
+  tor_free(s);
+
+  /* Now clear out all the zz observations. */
+  geoip_remove_old_clients(now-6000);
+  s = geoip_get_client_history(now+5*24*60*60);
+  test_assert(! s); /* There are only 12 observations left.  Not enough to
+                       build an answer.  Add 4 more in XY... */
+  for (i=55; i < 59; ++i)
+    geoip_note_client_seen(i, now-3600);
+  s = geoip_get_client_history(now+5*24*60*60);
+  test_assert(s);
+  test_streq("ab=8", s);
+  tor_free(s);
+}
+
 #define ENT(x) { #x, test_ ## x, 0, 0 }
 #define SUBENT(x,y) { #x "/" #y, test_ ## x ## _ ## y, 1, 0 }
 
@@ -3403,6 +3464,7 @@ static struct {
   ENT(policies),
   ENT(rend_fns),
   SUBENT(rend_fns, v2),
+  ENT(geoip),
   { NULL, NULL, 0, 0 },
 };
 
