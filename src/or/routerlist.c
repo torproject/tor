@@ -2419,8 +2419,8 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
  * search over the list to decide which to remove.  We put ri_new in the same
  * index as ri_old, if possible.  ri is freed as appropriate.
  *
- * If <b>make_old</b> is true, instead of deleting the router, we try adding
- * it to rl-&gt;old_routers. */
+ * If should_cache_descriptors() is true, instead of deleting the router,
+ * we add it to rl-&gt;old_routers. */
 static void
 routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new)
@@ -3830,7 +3830,9 @@ update_consensus_router_descriptor_downloads(time_t now)
       smartlist_add(downloadable, rs->descriptor_digest);
     });
 
-  if (!authdir_mode_any_nonbridge(options) && smartlist_len(no_longer_old)) {
+  if (!authdir_mode_handles_descs(options) && smartlist_len(no_longer_old)) {
+    /* XXX020 Nick: where do authorities decide never to put stuff in old?
+     * We should make sure bridge descriptors do that too. */
     routerlist_t *rl = router_get_routerlist();
     log_info(LD_DIR, "%d router descriptors listed in consensus are "
              "currently in old_routers; making them current.",

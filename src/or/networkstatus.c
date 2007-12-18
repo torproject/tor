@@ -472,7 +472,7 @@ _compare_networkstatus_v2_published_on(const void **_a, const void **_b)
     return 0;
 }
 
-/** Add the parsed neworkstatus in <b>ns</b> (with original document in
+/** Add the parsed v2 networkstatus in <b>ns</b> (with original document in
  * <b>s</b>) to the disk cache (and the in-memory directory server cache) as
  * appropriate. */
 static int
@@ -1672,6 +1672,7 @@ char *
 networkstatus_getinfo_helper_single(routerstatus_t *rs)
 {
   char buf[256];
+  /* XXX020 that 256 above sounds a lot like RS_ENTRY_LEN in dirvote.c */
   routerstatus_format_entry(buf, sizeof(buf), rs, NULL, 0);
   return tor_strdup(buf);
 }

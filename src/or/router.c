@@ -823,13 +823,14 @@ authdir_mode_v3(or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
-/** Return true if we belive ourselves to be any kind of non-bridge
- * authoritative directory  */
+/** Return true if we believe ourselves to be any kind of
+ * authoritative directory beyond just a hidserv authority. */
 int
-authdir_mode_any_nonbridge(or_options_t *options)
+authdir_mode_any_nonhidserv(or_options_t *options)
 {
   return authdir_mode(options) &&
-    (options->V1AuthoritativeDir ||
+    (options->BridgeAuthoritativeDir ||
+     options->V1AuthoritativeDir ||
      options->V2AuthoritativeDir ||
      options->V3AuthoritativeDir);
 }
@@ -839,8 +840,7 @@ authdir_mode_any_nonbridge(or_options_t *options)
 int
 authdir_mode_handles_descs(or_options_t *options)
 {
-  return authdir_mode_any_nonbridge(options) ||
-    authdir_mode_bridge(options);
+  return authdir_mode_any_nonhidserv(options);
 }
 /** Return true iff we are an authoritative directory server that
  * publishes its own network statuses.
@@ -850,7 +850,7 @@ authdir_mode_publishes_statuses(or_options_t *options)
 {
   if (authdir_mode_bridge(options))
     return 0;
-  return authdir_mode_any_nonbridge(options);
+  return authdir_mode_any_nonhidserv(options);
 }
 /** Return true iff we are an authoritative directory server that
  * tests reachability of the descriptors it learns about.
@@ -858,7 +858,7 @@ authdir_mode_publishes_statuses(or_options_t *options)
 int
 authdir_mode_tests_reachability(or_options_t *options)
 {
-  return authdir_mode_any_nonbridge(options);
+  return authdir_mode_handles_descs(options);
 }
 /** Return true iff we believe ourselves to be a bridge authoritative
  * directory server.
@@ -868,7 +868,10 @@ authdir_mode_bridge(or_options_t *options)
 {
   return authdir_mode(options) && options->BridgeAuthoritativeDir != 0;
 }
-/** Return true iff we try to stay connected to all ORs at once.
+/** Return true iff we once tried to stay connected to all ORs at once.
+ * FFFF this function, and the notion of staying connected to ORs, is
+ * nearly obsolete. One day there will be a proposal for getting rid of
+ * it.
  */
 int
 clique_mode(or_options_t *options)

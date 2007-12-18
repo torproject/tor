@@ -1581,7 +1581,6 @@ static int
 should_generate_v2_networkstatus(void)
 {
   return authdir_mode_v2(get_options()) &&
-    !authdir_mode_bridge(get_options()) && /* XXX020 RD */
     the_v2_networkstatus_is_dirty &&
     the_v2_networkstatus_is_dirty + DIR_REGEN_SLACK_TIME < time(NULL);
 }
@@ -1673,7 +1672,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
  * Right now this means it advertises support for it, it has a high
  * uptime, and it's currently considered Running.
  *
- * This function needs to be called after router->is_running has
+ * This function needs to be called after router-\>is_running has
  * been set.
  */
 static int
@@ -1992,7 +1991,11 @@ get_possible_sybil_list(const smartlist_t *routers)
  * functions and store it in <b>rs</b>>.  If <b>naming</b>, consider setting
  * the named flag in <b>rs</b>. If not <b>exits_can_be_guards</b>, never mark
  * an exit as a guard.  If <b>listbadexits</b>, consider setting the badexit
- * flag. */
+ * flag.
+ *
+ * We assume that ri-\>is_running has already been set, e.g. by
+ *   dirserv_set_router_is_running(ri, now);
+ */
 static void
 set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  routerinfo_t *ri, time_t now,
@@ -2678,6 +2681,7 @@ dirserv_orconn_tls_done(const char *address,
 {
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
+  int bridge_auth = authdir_mode_bridge(get_options());
   tor_assert(address);
   tor_assert(digest_rcvd);
 
@@ -2686,10 +2690,12 @@ dirserv_orconn_tls_done(const char *address,
         as_advertised &&
         !memcmp(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN)) {
       /* correct digest. mark this router reachable! */
-      log_info(LD_DIRSERV, "Found router %s to be reachable. Yay.",
-               ri->nickname);
-      rep_hist_note_router_reachable(digest_rcvd, now);
-      ri->last_reachable = now;
+      if (!bridge_auth || ri->purpose == ROUTER_PURPOSE_BRIDGE) {
+        log_info(LD_DIRSERV, "Found router %s to be reachable. Yay.",
+                 ri->nickname);
+        rep_hist_note_router_reachable(digest_rcvd, now);
+        ri->last_reachable = now;
+      }
     }
   });
   /* FFFF Maybe we should reinstate the code that dumps routers with the same
@@ -2719,11 +2725,14 @@ dirserv_test_reachability(time_t now, int try_all)
 //  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   routerlist_t *rl = router_get_routerlist();
   static char ctr = 0;
+  int bridge_auth = authdir_mode_bridge(get_options());
 
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
     const char *id_digest = router->cache_info.identity_digest;
     if (router_is_me(router))
       continue;
+    if (bridge_auth && router->purpose != ROUTER_PURPOSE_BRIDGE)
+      continue; /* bridge authorities only test reachability on bridges */
 //    if (router->cache_info.published_on > cutoff)
 //      continue;
     if (try_all || (((uint8_t)id_digest[0]) % 128) == ctr) {

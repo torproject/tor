@@ -40,13 +40,14 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
 #define LONGEST_STATUS_FLAG_NAME_LEN 9
 /** Maximum number of status flags we'll apply to one router. */
 #define N_STATUS_FLAGS 10
-/** Amount of space to allocate for each entry. (r line and s line.) */
+/** Amount of space to allocate for each entry: r, s, and v lines. */
 #define RS_ENTRY_LEN                                                    \
   ( /* first line */                                                    \
    MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
    5*2 /* ports */ + 10 /* punctuation */ +                             \
    /* second line */                                                    \
    (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
+/* XXX020 RS_ENTRY_LEN should probably include space for v lines */
 
   size_t len;
   char *status = NULL;
@@ -208,7 +209,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
  * ===== */
 
 /** Given a vote <b>vote</b> (not a consensus!), return its associated
- * networkstatus_voter_info_t.*/
+ * networkstatus_voter_info_t. */
 static networkstatus_voter_info_t *
 get_voter(const networkstatus_vote_t *vote)
 {

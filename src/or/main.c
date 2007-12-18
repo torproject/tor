@@ -920,7 +920,7 @@ run_scheduled_events(time_t now)
 
   if (now % 10 == 0 && (authdir_mode_tests_reachability(options)) &&
       !we_are_hibernating()) {
-    /* try to determine reachability of the other Tor servers */
+    /* try to determine reachability of the other Tor relays */
     dirserv_test_reachability(now, 0);
   }
 
