@@ -294,6 +294,27 @@ geoip_get_history_start(void)
   return client_history_starts;
 }
 
+/* Helper type: used to sort results by value. */
+typedef struct c_hist_t {
+  char country[3];
+  unsigned total;
+} c_hist_t;
+
+/** Sorting helper: return -1, 1, or 0 based on comparison of two
+ * geoip_entry_t.  Sort in descending order of total, and then by country
+ * code. */
+static int
+_c_hist_compare(const void **_a, const void **_b)
+{
+  const c_hist_t *a = *_a, *b = *_b;
+  if (a->total > b->total)
+    return -1;
+  else if (a->total < b->total)
+    return 1;
+  else
+    return strcmp(a->country, b->country);
+}
+
 /** Return a newly allocated comma-separated string containing entries for all
  * the countries from which we've seen enough clients connect. The entry
  * format is cc=num where num is the number of IPs we've seen connecting from
@@ -308,6 +329,7 @@ geoip_get_client_history(time_t now)
   if (client_history_starts < (now - 12*60*60)) {
     char buf[32];
     smartlist_t *chunks = NULL;
+    smartlist_t *entries = NULL;
     int n_countries = geoip_get_n_countries();
     int i;
     clientmap_entry_t **ent;
@@ -321,25 +343,45 @@ geoip_get_client_history(time_t now)
       ++counts[country];
       ++total;
     }
+    /* Don't record anything if we haven't seen enough IPs. */
     if (total < MIN_IPS_TO_NOTE_ANYTHING)
       goto done;
-    chunks = smartlist_create();
+    /* Make a list of c_hist_t */
+    entries = smartlist_create();
     for (i = 0; i < n_countries; ++i) {
       unsigned c = counts[i];
       const char *countrycode;
+      c_hist_t *ent;
+      /* Only report a country if it has a minimum number of IPs. */
       if (c >= MIN_IPS_TO_NOTE_COUNTRY) {
         c -= c % IP_GRANULARITY;
         countrycode = geoip_get_country_name(i);
-        tor_snprintf(buf, sizeof(buf), "%s=%u", countrycode, c);
-        smartlist_add(chunks, tor_strdup(buf));
+        ent = tor_malloc(sizeof(c_hist_t));
+        strlcpy(ent->country, countrycode, sizeof(ent->country));
+        ent->total = c;
+        smartlist_add(entries, ent);
       }
     }
+    /* Sort entries. Note that we must do this _AFTER_ rounding, or else
+     * the sort order could leak info. */
+    smartlist_sort(entries, _c_hist_compare);
+
+    /* Build the result. */
+    chunks = smartlist_create();
+    SMARTLIST_FOREACH(entries, c_hist_t *, ch, {
+        tor_snprintf(buf, sizeof(buf), "%s=%u", ch->country, ch->total);
+        smartlist_add(chunks, tor_strdup(buf));
+      });
     result = smartlist_join_strings(chunks, ",", 0, NULL);
   done:
     tor_free(counts);
     if (chunks) {
       SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));
       smartlist_free(chunks);
+    }
+    if (entries) {
+      SMARTLIST_FOREACH(entries, c_hist_t *, c, tor_free(c));
+      smartlist_free(entries);
     }
   }
   return result;

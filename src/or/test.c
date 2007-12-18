@@ -3414,7 +3414,7 @@ test_geoip(void)
     geoip_note_client_seen(i, now-7200);
   s = geoip_get_client_history(now+5*24*60*60);
   test_assert(s);
-  test_streq("ab=8,zz=16", s);
+  test_streq("zz=16,ab=8", s);
   tor_free(s);
 
   /* Now clear out all the zz observations. */
