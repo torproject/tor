@@ -30,7 +30,7 @@ R   . spec
     d deploy
   . geoip caching and publishing for bridges
 R   . spec
-    - Implement
+    . Implement
       o Code to load a geoip file from disk
         o Truncated format
         o Full format.
@@ -40,8 +40,8 @@ R   . spec
       o Code to generate history lines
       o Controller interface
       - Track consecutive time up, not time since last-forgotten IP.
-      - Add log lines.
-    - Tests
+      o Add log lines.
+    o Tests
     - Mention in dir-spec.txt
     - Mention in control-spec.txt
     d let Vidalia use the geoip data too rather than doing its own
