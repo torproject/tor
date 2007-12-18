@@ -56,8 +56,6 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
                         uint32_t addr, uint16_t or_port,
                         const char *platform, const char *contact,
                         const char **msg, int should_log);
-static void dirserv_set_router_is_running(routerinfo_t *router,
-                                          time_t now);
 static void clear_cached_dir(cached_dir_t *d);
 
 static int dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
@@ -915,7 +913,7 @@ list_single_server_status(routerinfo_t *desc, int is_live)
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
  * or - We've found it reachable recently. */
-static void
+void
 dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 {
   int answer;
@@ -942,8 +940,8 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
  * If for_controller is &gt;1, use the verbose nickname format.
  */
 int
-list_server_status(smartlist_t *routers, char **router_status_out,
-                   int for_controller)
+list_server_status_v1(smartlist_t *routers, char **router_status_out,
+                      int for_controller)
 {
   /* List of entries in a router-status style: An optional !, then an optional
    * equals-suffixed nickname, then a dollar-prefixed hexdigest. */
@@ -952,7 +950,8 @@ list_server_status(smartlist_t *routers, char **router_status_out,
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   or_options_t *options = get_options();
   /* We include v2 dir auths here too, because they need to answer
-   * controllers. Eventually we'll deprecate this whole function. */
+   * controllers. Eventually we'll deprecate this whole function;
+   * see also networkstatus_getinfo_by_purpose(). */
   int authdir = authdir_mode_publishes_statuses(options);
   tor_assert(router_status_out);
 
@@ -1996,7 +1995,7 @@ get_possible_sybil_list(const smartlist_t *routers)
  * We assume that ri-\>is_running has already been set, e.g. by
  *   dirserv_set_router_is_running(ri, now);
  */
-static void
+void
 set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  routerinfo_t *ri, time_t now,
                                  int naming, int exits_can_be_guards,

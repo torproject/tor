@@ -379,8 +379,9 @@ $Id$
       hex) is <digest>.  Only available if we're downloading extra-info
       documents.
 
-    "ns/id/<OR identity>" or "ns/name/<OR nickname>" -- the latest network
-      status info for a given OR.  Network status info is as given in
+    "ns/id/<OR identity>" or "ns/name/<OR nickname>" -- the latest router
+      status info (v2 directory style) for a given OR.  Router status
+      info is as given in
       dir-spec.txt, and reflects the current beliefs of this Tor about the
       router in question. Like directory clients, controllers MUST
       tolerate unrecognized flags and lines.  The published date and
@@ -388,9 +389,13 @@ $Id$
       not necessarily those for a descriptor that Tor currently has.
       [First implemented in 0.1.2.3-alpha.]
 
-    "ns/all" -- Network status info (v2 directory style) for all ORs we
+    "ns/all" -- Router status info (v2 directory style) for all ORs we
       have an opinion about, joined by newlines. [First implemented
       in 0.1.2.3-alpha.]
+
+    "ns/purpose/<purpose>" -- Router status info (v2 directory style)
+      for all ORs of this purpose. Mostly designed for /ns/purpose/bridge
+      queries. [First implemented in 0.2.0.13-alpha.]
 
     "desc/all-recent" -- the latest server descriptor for every router that
       Tor knows about.
@@ -401,7 +406,8 @@ $Id$
       3 for details.  (If VERBOSE_NAMES is enabled, the output will
       not conform to dir-spec-v1.txt; instead, the result will be a
       space-separated list of LongName, each preceded by a "!" if it is
-      believed to be not running.)
+      believed to be not running.) This option is deprecated; use
+      "ns/all" instead.
 
     "address-mappings/all"
     "address-mappings/config"

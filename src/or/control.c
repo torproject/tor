@@ -1453,7 +1453,8 @@ getinfo_helper_dir(control_connection_t *control_conn,
     routerlist_t *routerlist = router_get_routerlist();
     int verbose = control_conn->use_long_names;
     if (!routerlist || !routerlist->routers ||
-        list_server_status(routerlist->routers, answer, verbose ? 2 : 1) < 0) {
+        list_server_status_v1(routerlist->routers, answer,
+                              verbose ? 2 : 1) < 0) {
       return -1;
     }
   } else if (!strcmpstart(question, "extra-info/digest/")) {

@@ -3051,8 +3051,9 @@ int dirserv_add_descriptor(routerinfo_t *ri, const char **msg);
 int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
                                         const char *question, char **answer);
 void dirserv_free_descriptors(void);
-int list_server_status(smartlist_t *routers, char **router_status_out,
-                       int for_controller);
+void dirserv_set_router_is_running(routerinfo_t *router, time_t now);
+int list_server_status_v1(smartlist_t *routers, char **router_status_out,
+                          int for_controller);
 int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
 
@@ -3158,6 +3159,10 @@ const char *dirvote_get_pending_detached_signatures(void);
 #define DGV_INCLUDE_PENDING 2
 #define DGV_INCLUDE_PREVIOUS 4
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
+void set_routerstatus_from_routerinfo(routerstatus_t *rs,
+                                      routerinfo_t *ri, time_t now,
+                                      int naming, int exits_can_be_guards,
+                                      int listbadexits, int listbaddirs);
 void router_clear_status_flags(routerinfo_t *ri);
 networkstatus_vote_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
@@ -3348,6 +3353,7 @@ void signed_descs_update_status_from_consensus_networkstatus(
                                                          smartlist_t *descs);
 
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
+char *networkstatus_getinfo_by_purpose(const char *purpose_string);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
 void networkstatus_free_all(void);

@@ -1677,6 +1677,49 @@ networkstatus_getinfo_helper_single(routerstatus_t *rs)
   return tor_strdup(buf);
 }
 
+/** Alloc and return a string describing routerstatuses for the most
+ * recent info of each router we know about that is of purpose
+ * <b>purpose_string</b>. Return NULL if unrecognized purpose.
+ *
+ * Right now this function is oriented toward listing bridges (you
+ * shouldn't use this for general-purpose routers, since those
+ * should be listed from the consensus, not from the routers list). */
+char *
+networkstatus_getinfo_by_purpose(const char *purpose_string)
+{
+  time_t now = time(NULL);
+  time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
+  char *answer;
+  routerlist_t *rl = router_get_routerlist();
+  smartlist_t *statuses = smartlist_create();
+  uint8_t purpose = router_purpose_from_string(purpose_string);
+  routerstatus_t rs;
+  int bridge_auth = authdir_mode_bridge(get_options());
+
+  if (purpose == ROUTER_PURPOSE_UNKNOWN) {
+    log_info(LD_DIR, "Unrecognized purpose '%s' when listing router statuses.",
+             purpose_string);
+    return NULL;
+  }
+
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+    if (ri->cache_info.published_on < cutoff)
+      continue;
+    if (ri->purpose != purpose)
+      continue;
+    if (bridge_auth && ri->purpose == ROUTER_PURPOSE_BRIDGE)
+      dirserv_set_router_is_running(ri, now);
+    /* then generate and write out status lines for each of them */
+    set_routerstatus_from_routerinfo(&rs, ri, now, 0, 0, 0, 0);
+    smartlist_add(statuses, networkstatus_getinfo_helper_single(&rs));
+  });
+
+  answer = smartlist_join_strings(statuses, "", 0, NULL);
+  SMARTLIST_FOREACH(statuses, char *, cp, tor_free(cp));
+  smartlist_free(statuses);
+  return answer;
+}
+
 /** If <b>question</b> is a string beginning with "ns/" in a format the
  * control interface expects for a GETINFO question, set *<b>answer</b> to a
  * newly-allocated string containing networkstatus lines for the appropriate
@@ -1712,13 +1755,15 @@ getinfo_helper_networkstatus(control_connection_t *conn,
     status = router_get_consensus_status_by_id(d);
   } else if (!strcmpstart(question, "ns/name/")) {
     status = router_get_consensus_status_by_nickname(question+8, 0);
+  } else if (!strcmpstart(question, "ns/purpose/")) {
+    *answer = networkstatus_getinfo_by_purpose(question+11);
+    return *answer ? 0 : -1;
   } else {
     return -1;
   }
 
-  if (status) {
+  if (status)
     *answer = networkstatus_getinfo_helper_single(status);
-  }
   return 0;
 }
 
