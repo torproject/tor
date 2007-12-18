@@ -219,7 +219,6 @@ authdir_policy_baddir_address(uint32_t addr, uint16_t port)
   return ! addr_policy_permits_address(addr, port, authdir_baddir_policy);
 }
 
-
 /** Return 1 if <b>addr</b>:<b>port</b> should be marked as a bad exit,
  * based on <b>authdir_badexit_policy</b>. Else return 0.
  */
