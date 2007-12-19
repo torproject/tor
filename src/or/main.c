@@ -119,8 +119,6 @@ int has_completed_circuit=0;
 /** How long do we let OR connections handshake before we decide that
  * they are obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT           (60)
-/** How often do we write hidden service usage statistics to disk? */
-#define WRITE_HSUSAGE_INTERVAL (900)
 
 /********* END VARIABLES ************/
 
@@ -830,7 +828,10 @@ run_scheduled_events(time_t now)
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
+#define WRITE_HSUSAGE_INTERVAL (30*60)
   static time_t time_to_write_hs_statistics = 0;
+#define BRIDGE_STATUSFILE_INTERVAL (30*60)
+  static time_t time_to_write_bridge_status_file = 0;
   static time_t time_to_downrate_stability = 0;
 #define SAVE_STABILITY_INTERVAL (30*60)
   static time_t time_to_save_stability = 0;
@@ -1110,6 +1111,12 @@ run_scheduled_events(time_t now)
   if (options->HSAuthorityRecordStats && time_to_write_hs_statistics < now) {
     hs_usage_write_statistics_to_file(now);
     time_to_write_hs_statistics = now+WRITE_HSUSAGE_INTERVAL;
+  }
+  /** 10b. write bridge networkstatus file to disk */
+  if (options->BridgeAuthoritativeDir &&
+      time_to_write_bridge_status_file < now) {
+    hs_usage_write_statistics_to_file(now);
+    time_to_write_bridge_status_file = now+BRIDGE_STATUSFILE_INTERVAL;
   }
 }
 

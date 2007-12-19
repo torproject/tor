@@ -36,13 +36,17 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       AlternateBridgeAuthority, and AlternateHSAuthority) that let the
       user selectively replace the default directory authorities, rather
       than the all-or-nothing replacement that DirServer offers.
-    - Tor can now be configured to read a GeoIP file from disk in one of two
-      formats.  This can be used by controllers to map IPs to countries.
-      Eventually, it may support exit-by-country.
-    - When possible, bridges remember which countries users are coming
-      from, and report aggregate information in their extra-info
-      documents, so that the bridge authorities can learn where Tor is
-      blocked.
+    - Tor can now be configured to read a GeoIP file from disk in one
+      of two formats. This can be used by controllers to map IP addresses
+      to countries. Eventually, it may support exit-by-country.
+    - When possible, bridge relays remember which countries users
+      are coming from, and report aggregate information in their
+      extra-info documents, so that the bridge authorities can learn
+      where Tor is blocked.
+    - Bridge directory authorities now do reachability testing on the
+      bridges they know. They provide router status summaries to the
+      controller on "getinfo ns/purpose/bridge", and also dump summaries
+      to a file periodically.
 
   o Minor bugfixes:
     - The fix in 0.2.0.12-alpha cleared the "hsdir" flag in v3 network

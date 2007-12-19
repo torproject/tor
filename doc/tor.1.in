@@ -721,7 +721,7 @@ anything itself; to save bandwidth, leave this option turned off.
 .LP
 .TP
 \fBFallbackNetworkstatusFile\fP \fIFILENAME\fP
-If Tor doesn't have a cached networkstatus file, it starts out uses
+If Tor doesn't have a cached networkstatus file, it starts out using
 this one instead.  Even if this file is out of date, Tor can still use
 it to learn about directory mirrors, so it doesn't need to put load on
 the authorities.  (Default: None).

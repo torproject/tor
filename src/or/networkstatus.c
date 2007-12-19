@@ -1685,9 +1685,8 @@ networkstatus_getinfo_helper_single(routerstatus_t *rs)
  * shouldn't use this for general-purpose routers, since those
  * should be listed from the consensus, not from the routers list). */
 char *
-networkstatus_getinfo_by_purpose(const char *purpose_string)
+networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
 {
-  time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   char *answer;
   routerlist_t *rl = router_get_routerlist();
@@ -1718,6 +1717,21 @@ networkstatus_getinfo_by_purpose(const char *purpose_string)
   SMARTLIST_FOREACH(statuses, char *, cp, tor_free(cp));
   smartlist_free(statuses);
   return answer;
+}
+
+/** Write out router status entries for all our bridge descriptors. */
+void
+networkstatus_dump_bridge_status_to_file(time_t now)
+{
+  char *status = networkstatus_getinfo_by_purpose("bridge", now);
+  or_options_t *options = get_options();
+  size_t len = strlen(options->DataDirectory) + 32;
+  char *fname = tor_malloc(len);
+  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"networkstatus-bridges",
+               options->DataDirectory);
+  write_str_to_file(fname,status,0);
+  tor_free(fname);
+  tor_free(status);
 }
 
 /** If <b>question</b> is a string beginning with "ns/" in a format the
@@ -1756,7 +1770,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   } else if (!strcmpstart(question, "ns/name/")) {
     status = router_get_consensus_status_by_nickname(question+8, 0);
   } else if (!strcmpstart(question, "ns/purpose/")) {
-    *answer = networkstatus_getinfo_by_purpose(question+11);
+    *answer = networkstatus_getinfo_by_purpose(question+11, time(NULL));
     return *answer ? 0 : -1;
   } else {
     return -1;

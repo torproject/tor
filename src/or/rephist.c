@@ -2153,21 +2153,21 @@ hs_usage_format_statistics(void)
   return buf;
 }
 
-/** Writes current statistics to file. */
+/** Write current statistics about hidden service usage to file. */
 void
 hs_usage_write_statistics_to_file(time_t now)
 {
   char *buf;
   size_t len;
   char *fname;
-  or_options_t *options;
+  or_options_t *options = get_options();
   /* check if we are up-to-date */
   hs_usage_check_if_current_period_is_up_to_date(now);
   buf = hs_usage_format_statistics();
-  options = get_options();
   len = strlen(options->DataDirectory) + 16;
   fname = tor_malloc(len);
-  tor_snprintf(fname,len, "%s"PATH_SEPARATOR"hsusage", options->DataDirectory);
+  tor_snprintf(fname, len, "%s"PATH_SEPARATOR"hsusage",
+               options->DataDirectory);
   write_str_to_file(fname,buf,0);
   tor_free(buf);
   tor_free(fname);
