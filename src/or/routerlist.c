@@ -2769,8 +2769,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 }
 
 /** Insert <b>ei</b> into the routerlist, or free it. Other arguments are
- * as for router_add_to_routerlist().
- * DOCDOC Inserted
+ * as for router_add_to_routerlist().  Return true iff we actually inserted
+ * it.
  */
 int
 router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
@@ -3962,7 +3962,8 @@ static int have_min_dir_info = 0;
  * enough directory info to build circuits that our old answer can no longer
  * be trusted. */
 static int need_to_update_have_min_dir_info = 1;
-/** DOCDOC */
+/** String describing what we're missing before we have enough directory
+ * info. */
 static char dir_info_status[128] = "";
 
 /** Return true iff we have enough networkstatus and router information to
@@ -3989,7 +3990,8 @@ router_dir_info_changed(void)
   need_to_update_have_min_dir_info = 1;
 }
 
-/** DOCDOC */
+/** Return a string describing what we're missing before we have enough
+ * directory info. */
 const char *
 get_dir_info_status_string(void)
 {
@@ -4166,14 +4168,13 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
   return 1;
 }
 
-/** Check whether <b>ri</b> is a router compatible with the extrainfo document
+/** Check whether <b>ri</b> (a.k.a. sd) is a router compatible with the
+ * extrainfo document
  * <b>ei</b>.  If no router is compatible with <b>ei</b>, <b>ei</b> should be
  * dropped.  Return 0 for "compatible", return 1 for "reject, and inform
  * whoever uploaded <b>ei</b>, and return -1 for "reject silently.".  If
  * <b>msg</b> is present, set *<b>msg</b> to a description of the
- * incompatibility (if any)
- *
- * DOCDOC sd.  DOCDOC extrainfo_is_bogus.
+ * incompatibility (if any).
  **/
 int
 routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,

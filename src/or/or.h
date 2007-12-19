@@ -1178,7 +1178,8 @@ typedef enum {
   SAVED_IN_JOURNAL
 } saved_location_t;
 
-/** DOCDOC */
+/** Enumeration: what kind of downlaod schedule are we using for a given
+ * object? */
 typedef enum {
   DL_SCHED_GENERIC = 0,
   DL_SCHED_CONSENSUS = 1,
@@ -1191,7 +1192,7 @@ typedef struct download_status_t {
                            * again? */
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
-  download_schedule_t schedule : 1;
+  download_schedule_t schedule : 8;
 } download_status_t;
 
 /** The max size we expect router descriptor annotations we create to
@@ -1462,12 +1463,15 @@ typedef struct networkstatus_voter_info_t {
   char *contact; /**< Contact information for this voter. */
   char vote_digest[DIGEST_LEN]; /**< Digest of this voter's vote, as signed. */
 
-  /* DOCDOC */
-  char signing_key_digest[DIGEST_LEN]; /* This part is _not_ signed. */
-  char *signature;
-  int signature_len;
-  unsigned int bad_signature : 1;
-  unsigned int good_signature : 1;
+  /* Nothing from here on is signed. */
+  char signing_key_digest[DIGEST_LEN]; /**< Declared digest of signing key
+                                        * used by this voter. */
+  char *signature; /**< Signature from this voter. */
+  int signature_len; /**< Length of <b>signature</b> */
+  unsigned int bad_signature : 1; /**< Set to true if we've verified the sig
+                                   * as good. */
+  unsigned int good_signature : 1; /**< Set to true if we've tried to verify
+                                    * the sig, and we know it's bad. */
 } networkstatus_voter_info_t;
 
 /** A common structure to hold a v2 network status vote, or a v2 network
@@ -2309,10 +2313,12 @@ typedef struct {
   /** The number of intervals we think a consensus should be valid. */
   int V3AuthNIntervalsValid;
 
-  /** DOCDOC here and in tor.1 */
+  /** File to check for a consensus networkstatus, if we don't have one
+   * cached. */
   char *FallbackNetworkstatusFile;
 
   /** DOCDOC here and in tor.1 */
+  /**XXXX020 make this always on? */
   int LearnAuthorityAddrFromCerts;
 
   /** DOCDOC here and in tor.1 */
@@ -2636,10 +2642,15 @@ int options_save_current(void);
 const char *get_torrc_fname(void);
 char *get_datadir_fname2_suffix(const char *sub1, const char *sub2,
                                 const char *suffix);
-/**DOCDOC*/
+/** Return a newly allocated string containing datadir/sub1.  See
+ * get_datadir_fname2_suffix.  */
 #define get_datadir_fname(sub1) get_datadir_fname2_suffix((sub1), NULL, NULL)
+/** Return a newly allocated string containing datadir/sub1/sub2.  See
+ * get_datadir_fname2_suffix.  */
 #define get_datadir_fname2(sub1,sub2) \
   get_datadir_fname2_suffix((sub1), (sub2), NULL)
+/** Return a newly allocated string containing datadir/sub1suffix.  See
+ * get_datadir_fname2_suffix. */
 #define get_datadir_fname_suffix(sub1, suffix) \
   get_datadir_fname2_suffix((sub1), NULL, (suffix))
 
@@ -3023,9 +3034,10 @@ time_t download_status_increment_failure(download_status_t *dls,
                                     get_options()->DirPort, time(NULL))
 
 void download_status_reset(download_status_t *dls);
-/** DOCDOC */
 static int download_status_is_ready(download_status_t *dls, time_t now,
                                     int max_failures);
+/** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
+ * ready to get its download reattempted. */
 static INLINE int
 download_status_is_ready(download_status_t *dls, time_t now,
                          int max_failures)
