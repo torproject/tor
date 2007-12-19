@@ -2318,10 +2318,6 @@ typedef struct {
   char *FallbackNetworkstatusFile;
 
   /** DOCDOC here and in tor.1 */
-  /**XXXX020 make this always on? */
-  int LearnAuthorityAddrFromCerts;
-
-  /** DOCDOC here and in tor.1 */
   int BridgeRecordUsageByCountry;
   char *GeoIPFile;
 

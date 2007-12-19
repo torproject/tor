@@ -109,7 +109,6 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 {
   trusted_dir_server_t *ds;
   const char *s, *eos;
-  or_options_t *options = get_options();
 
   for (s = contents; *s; s = eos) {
     authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
@@ -151,8 +150,9 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
              ds->nickname, hex_str(cert->signing_key_digest,DIGEST_LEN));
 
     smartlist_add(ds->v3_certs, cert);
-    if (options->LearnAuthorityAddrFromCerts &&
-        cert->cache_info.published_on > ds->addr_current_at) {
+    if (cert->cache_info.published_on > ds->addr_current_at) {
+      /* Check to see whether we should update our view of the authority's
+       * address. */
       if (cert->addr && cert->dir_port &&
           (ds->addr != cert->addr ||
            ds->dir_port != cert->dir_port)) {

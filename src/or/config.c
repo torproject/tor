@@ -211,7 +211,6 @@ static config_var_t _option_vars[] = {
   V(HttpsProxyAuthenticator,     STRING,   NULL),
   OBSOLETE("IgnoreVersion"),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
-  V(LearnAuthorityAddrFromCerts, BOOL,     "1"),
   VAR("Log",                     LINELIST, Logs,             NULL),
   OBSOLETE("LinkPadding"),
   OBSOLETE("LogLevel"),
