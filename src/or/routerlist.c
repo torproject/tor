@@ -2506,18 +2506,19 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
 #endif
 }
 
-/** DOCDOC -NM */
-/* XXX020 why are we dropping all router annotations here? -RD */
+/** Extract the descriptor <b>sd</b> from old_routerlist, and re-parse
+ * it as a fresh routerinfo_t. */
 static routerinfo_t *
 routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
 {
   routerinfo_t *ri;
   const char *body;
 
-  body = signed_descriptor_get_body(sd);
+  body = signed_descriptor_get_annotations(sd);
 
-  ri = router_parse_entry_from_string(body, body+sd->signed_descriptor_len,
-                                      0, 0, NULL);
+  ri = router_parse_entry_from_string(body,
+                         body+sd->signed_descriptor_len+sd->annotations_len,
+                         0, 1, NULL);
   if (!ri)
     return NULL;
   memcpy(&ri->cache_info, sd, sizeof(signed_descriptor_t));
