@@ -23,6 +23,9 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Relays were publishing their server descriptor to v1 and v2
       directory authorities, but they didn't try publishing to v3-only
       authorities. Fix this; and also stop publishing to v1 authorities.
+    - When we were reading router descriptors from cache, we were ignoring
+      the annotations -- including reading in bridge-purpose descriptors
+      as general-purpose descriptors.
 
   o Major features:
     - Bridges now behave like clients with respect to time intervals for

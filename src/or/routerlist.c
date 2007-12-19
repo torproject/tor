@@ -2506,7 +2506,8 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
 #endif
 }
 
-/** DOCDOC */
+/** DOCDOC -NM */
+/* XXX020 why are we dropping all router annotations here? -RD */
 static routerinfo_t *
 routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
 {

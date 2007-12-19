@@ -978,6 +978,8 @@ router_parse_list_from_string(const char **s, const char *eos,
                                               allow_annotations,
                                               prepend_annotations);
       if (router) {
+        log_debug(LD_DIR, "Read router '%s', purpose '%s'",
+                  router->nickname, router_purpose_to_string(router->purpose));
         signed_desc = &router->cache_info;
         elt = router;
       }
@@ -1063,7 +1065,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   if (prepend_annotations) {
     if (tokenize_string(prepend_annotations,NULL,tokens,
                         routerdesc_token_table,TS_NOCHECK)) {
-      log_warn(LD_DIR, "Error tokenizing router descriptor.");
+      log_warn(LD_DIR, "Error tokenizing router descriptor (annotations).");
       goto err;
     }
   }
@@ -1077,6 +1079,14 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   } else {
     s = cp+1;
+  }
+
+  if (allow_annotations && start_of_annotations != s) {
+    if (tokenize_string(start_of_annotations,s,tokens,
+                        routerdesc_token_table,TS_NOCHECK)) {
+      log_warn(LD_DIR, "Error tokenizing router descriptor (annotations).");
+      goto err;
+    }
   }
 
   if (router_get_router_hash(s, digest) < 0) {
@@ -1130,7 +1140,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
   router->address = tor_strdup(tok->args[1]);
   if (!tor_inet_aton(router->address, &in)) {
-    log_warn(LD_DIR,"Router address is not an IP.");
+    log_warn(LD_DIR,"Router address is not an IP address.");
     goto err;
   }
   router->addr = ntohl(in.s_addr);
@@ -2798,7 +2808,8 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
 
 /** Read all tokens from a string between <b>start</b> and <b>end</b>, and add
  * them to <b>out</b>.  Parse according to the token rules in <b>table</b>.
- * Caller must free tokens in <b>out</b>.
+ * Caller must free tokens in <b>out</b>.  If <b>end</b> is NULL, use the
+ * entire string.
  */
 static int
 tokenize_string(const char *start, const char *end, smartlist_t *out,
