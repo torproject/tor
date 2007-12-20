@@ -1115,7 +1115,7 @@ run_scheduled_events(time_t now)
   /** 10b. write bridge networkstatus file to disk */
   if (options->BridgeAuthoritativeDir &&
       time_to_write_bridge_status_file < now) {
-    hs_usage_write_statistics_to_file(now);
+    networkstatus_dump_bridge_status_to_file(now);
     time_to_write_bridge_status_file = now+BRIDGE_STATUSFILE_INTERVAL;
   }
 }
