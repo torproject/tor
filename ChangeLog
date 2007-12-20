@@ -26,6 +26,9 @@ Changes in version 0.1.2.19 - 2007-??-??
     - Fix a couple of hard-to-trigger autoconf problems that could result
       in really weird results on platforms whose sys/types.h files define
       nonstandard integer types.
+    - When we decide to send a 503 response to a request for servers, do
+      not then also send the server descriptors: this defeats the whole
+      purpose.  Fixes bug 539.
 
 
 Changes in version 0.1.2.18 - 2007-10-28
