@@ -399,6 +399,8 @@ Changes in version 0.1.2.18 - 2007-10-28
       is fishy. Resolves bug 463.
     - Don't reset trusted dir server list when we set a configuration
       option. Patch from Robert Hogan.
+    - Don't try to create the datadir when running --verify-config or
+      --hash-password. Resolves bug 540.
 
 
 Changes in version 0.2.0.9-alpha - 2007-10-24

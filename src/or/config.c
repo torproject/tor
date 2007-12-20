@@ -1004,7 +1004,8 @@ options_act_reversible(or_options_t *old_options, char **msg)
   }
 
   /* Ensure data directory is private; create if possible. */
-  if (check_private_dir(options->DataDirectory, CPD_CREATE)<0) {
+  if (check_private_dir(options->DataDirectory,
+                        running_tor ? CPD_CREATE : CPD_CHECK)<0) {
     char buf[1024];
     int tmp = tor_snprintf(buf, sizeof(buf),
               "Couldn't access/create private data directory \"%s\"",
