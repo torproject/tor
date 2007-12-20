@@ -203,6 +203,13 @@ router_reload_consensus_networkstatus(void)
     }
   }
 
+  if (!current_consensus) {
+    if (!named_server_map)
+      named_server_map = strmap_new();
+    if (!unnamed_server_map)
+      unnamed_server_map = strmap_new();
+  }
+
   routers_update_all_from_networkstatus(time(NULL), 3);
 
   return 0;

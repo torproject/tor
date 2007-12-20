@@ -85,6 +85,7 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Fix compilation with --disable-threads set.
     - Authorities decide whether they're authoritative for a given router
       based on the router's purpose.
+    - Don't crash on name lookup when we have no current consensus.
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory
