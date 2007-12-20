@@ -2440,6 +2440,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                  "Client asked for server descriptors, but we've been "
                  "writing too many bytes lately. Sending 503 Dir busy.");
         write_http_status_line(conn, 503, "Directory busy, try again later");
+        conn->dir_spool_src = DIR_SPOOL_NONE;
         goto done;
       }
       write_http_response_header(conn, -1, deflated, cache_lifetime);
