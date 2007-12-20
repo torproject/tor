@@ -29,6 +29,8 @@ Changes in version 0.1.2.19 - 2007-??-??
     - When we decide to send a 503 response to a request for servers, do
       not then also send the server descriptors: this defeats the whole
       purpose.  Fixes bug 539.
+    - Don't try to create the datadir when running --verify-config or
+      --hash-password. Resolves bug 540.
 
 
 Changes in version 0.1.2.18 - 2007-10-28
