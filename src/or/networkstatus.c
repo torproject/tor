@@ -495,7 +495,7 @@ add_networkstatus_to_cache(const char *s,
     tor_free(fn);
   }
 
-  if (directory_caches_dir_info(get_options()))
+  if (directory_caches_v2_dir_info(get_options()))
     dirserv_set_cached_networkstatus_v2(s,
                                         ns->identity_digest,
                                         ns->published_on);
@@ -540,7 +540,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   char fp[HEX_DIGEST_LEN+1];
   char published[ISO_TIME_LEN+1];
 
-  if (!directory_caches_dir_info(get_options()))
+  if (!directory_caches_v2_dir_info(get_options()))
     return 0; /* Don't bother storing it. */
 
   ns = networkstatus_v2_parse_from_string(s);
@@ -721,7 +721,7 @@ networkstatus_v2_list_clean(time_t now)
       unlink(fname);
     }
     tor_free(fname);
-    if (directory_caches_dir_info(get_options())) {
+    if (directory_caches_v2_dir_info(get_options())) {
       dirserv_set_cached_networkstatus_v2(NULL, ns->identity_digest, 0);
     }
     networkstatus_v2_free(ns);

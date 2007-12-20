@@ -3068,6 +3068,8 @@ int dirserv_dump_directory_to_string(char **dir_out,
 int directory_fetches_from_authorities(or_options_t *options);
 int directory_fetches_dir_info_like_mirror(or_options_t *options);
 int directory_fetches_dir_info_like_bridge_user(or_options_t *options);
+int directory_caches_v2_dir_info(or_options_t *options);
+#define directory_caches_v1_dir_info(o) directory_caches_v2_dir_info(o)
 int directory_caches_dir_info(or_options_t *options);
 int directory_permits_begindir_requests(or_options_t *options);
 int directory_permits_controller_requests(or_options_t *options);

@@ -1147,6 +1147,14 @@ directory_fetches_dir_info_like_bridge_user(or_options_t *options)
   return options->UseBridges != 0;
 }
 
+/** Return 1 if we want to cache v2 dir info (each status file).
+ */
+int
+directory_caches_v2_dir_info(or_options_t *options)
+{
+  return options->DirPort != 0;
+}
+
 /** Return 1 if we want to keep descriptors, networkstatuses, etc around
  * and we're willing to serve them to others. Else return 0.
  */

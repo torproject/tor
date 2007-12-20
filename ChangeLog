@@ -90,6 +90,9 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - When we decide to send a 503 response to a request for servers, do
       not then also send the server descriptors: this defeats the whole
       purpose.  Fixes bug 539; bugfix on 0.1.2.x.
+    - Only Tors that want to mirror the v2 directory info should
+      create the "cached-status" directory in their datadir. All Tors
+      used to create it. Bugfix on 0.1.2.x.
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory

@@ -1108,7 +1108,7 @@ options_act(or_options_t *old_options)
     return -1;
   }
 
-  if (running_tor) {
+  if (running_tor && directory_caches_v2_dir_info(options)) {
     len = strlen(options->DataDirectory)+32;
     fn = tor_malloc(len);
     tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
