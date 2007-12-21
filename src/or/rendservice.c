@@ -12,8 +12,9 @@ const char rendservice_c_id[] =
 
 #include "or.h"
 
-static origin_circuit_t *find_intro_circuit(routerinfo_t *router,
-                                            const char *pk_digest);
+static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
+                                            const char *pk_digest,
+                                            int desc_version);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -50,10 +51,8 @@ typedef struct rend_service_t {
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   char pk_digest[DIGEST_LEN];
-  smartlist_t *intro_nodes; /**< list of hexdigests for intro points we have,
+  smartlist_t *intro_nodes; /**< List of rend_intro_point_t's we have,
                              * or are trying to establish. */
-  strmap_t *intro_keys; /**< map from intro node hexdigest to key; only
-                          * used for versioned hidden service descriptors. */
   time_t intro_period_started;
   int n_intro_circuits_launched; /**< count of intro circuits we have
                                   * established in this period. */
@@ -78,15 +77,6 @@ num_rend_services(void)
   return smartlist_len(rend_service_list);
 }
 
-/** Helper: Release the storage held by the intro key in <b>_ent</b>.
- */
-static void
-intro_key_free(void *_ent)
-{
-  crypto_pk_env_t *ent = _ent;
-  crypto_free_pk_env(ent);
-}
-
 /** Release the storage held by <b>service</b>.
  */
 static void
@@ -98,12 +88,13 @@ rend_service_free(rend_service_t *service)
   smartlist_free(service->ports);
   if (service->private_key)
     crypto_free_pk_env(service->private_key);
-  if (service->intro_keys)
-    strmap_free(service->intro_keys, intro_key_free);
+  if (service->intro_nodes) {
+    SMARTLIST_FOREACH(service->intro_nodes, rend_intro_point_t *, intro,
+      rend_intro_point_free(intro););
+    smartlist_free(service->intro_nodes);
+  }
   tor_free(service->intro_prefer_nodes);
   tor_free(service->intro_exclude_nodes);
-  SMARTLIST_FOREACH(service->intro_nodes, void*, p, tor_free(p));
-  smartlist_free(service->intro_nodes);
   if (service->desc)
     rend_service_descriptor_free(service->desc);
   tor_free(service);
@@ -137,7 +128,6 @@ rend_add_service(rend_service_t *service)
   if (!service->intro_exclude_nodes)
     service->intro_exclude_nodes = tor_strdup("");
   service->intro_nodes = smartlist_create();
-  service->intro_keys = strmap_new();
 
   /* If the service is configured to publish unversioned (v0) and versioned
    * descriptors (v2 or higher), split it up into two separate services. */
@@ -151,7 +141,6 @@ rend_add_service(rend_service_t *service)
       memcpy(copy, p, sizeof(rend_service_port_config_t));
       smartlist_add(v0_service->ports, copy);
     });
-    v0_service->intro_nodes = smartlist_create();
     v0_service->intro_prefer_nodes = tor_strdup(service->intro_prefer_nodes);
     v0_service->intro_exclude_nodes = tor_strdup(service->intro_exclude_nodes);
     v0_service->intro_period_started = service->intro_period_started;
@@ -273,7 +262,6 @@ rend_config_services(or_options_t *options, int validate_only)
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
-      service->intro_nodes = smartlist_create();
       service->intro_period_started = time(NULL);
       service->descriptor_version = -1; /**< All descriptor versions. */
       continue;
@@ -349,8 +337,7 @@ rend_service_update_descriptor(rend_service_t *service)
 {
   rend_service_descriptor_t *d;
   origin_circuit_t *circ;
-  int i,n;
-  routerinfo_t *router;
+  int i;
   if (service->desc) {
     rend_service_descriptor_free(service->desc);
     service->desc = NULL;
@@ -359,46 +346,24 @@ rend_service_update_descriptor(rend_service_t *service)
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
   d->version = service->descriptor_version;
-  n = smartlist_len(service->intro_nodes);
-  d->n_intro_points = 0;
-  d->intro_points = tor_malloc_zero(sizeof(char*)*n);
-  d->intro_point_extend_info = tor_malloc_zero(sizeof(extend_info_t*)*n);
+  d->intro_nodes = smartlist_create();
   /* XXXX020 Why should we support the old intro protocol 0? Whoever
    * understands descriptor version 2 also understands intro protocol 2. */
   d->protocols = 1 << 2; /*< We only support intro protocol 2. */
 
-  if (service->intro_keys) {
-    /* We need to copy keys so that they're not deleted when we free the
-     * descriptor. */
-    strmap_iter_t *iter;
-    d->intro_keys = strmap_new();
-    for (iter = strmap_iter_init(service->intro_keys); !strmap_iter_done(iter);
-         iter = strmap_iter_next(service->intro_keys, iter)) {
-      const char *key;
-      void *val;
-      crypto_pk_env_t *k;
-      strmap_iter_get(iter, &key, &val);
-      k = val;
-      strmap_set(d->intro_keys, key, crypto_pk_dup_key(k));
-    }
-  }
-
-  for (i=0; i < n; ++i) {
-    const char *name = smartlist_get(service->intro_nodes, i);
-    router = router_get_by_nickname(name, 1);
-    if (!router) {
-      log_info(LD_REND,"Router '%s' not found for intro point %d. Skipping.",
-               safe_str(name), i);
+  for (i = 0; i < smartlist_len(service->intro_nodes); ++i) {
+    rend_intro_point_t *intro_svc = smartlist_get(service->intro_nodes, i);
+    rend_intro_point_t *intro_desc;
+    circ = find_intro_circuit(intro_svc, service->pk_digest, d->version);
+    if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO)
       continue;
-    }
-    circ = find_intro_circuit(router, service->pk_digest);
-    if (circ && circ->_base.purpose == CIRCUIT_PURPOSE_S_INTRO) {
-      /* We have an entirely established intro circuit. */
-      d->intro_points[d->n_intro_points] = tor_strdup(name);
-      d->intro_point_extend_info[d->n_intro_points] =
-        extend_info_from_router(router);
-      d->n_intro_points++;
-    }
+
+    /* We have an entirely established intro circuit. */
+    intro_desc = tor_malloc_zero(sizeof(rend_intro_point_t));
+    intro_desc->extend_info = extend_info_dup(intro_svc->extend_info);
+    if (intro_svc->intro_key)
+      intro_desc->intro_key = crypto_pk_dup_key(intro_svc->intro_key);
+    smartlist_add(d->intro_nodes, intro_desc);
   }
 }
 
@@ -791,35 +756,32 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
  */
 static int
 rend_service_launch_establish_intro(rend_service_t *service,
-                                    const char *nickname)
+                                    rend_intro_point_t *intro)
 {
   origin_circuit_t *launched;
 
   log_info(LD_REND,
            "Launching circuit to introduction point %s for service %s",
-           escaped_safe_str(nickname), service->service_id);
+           escaped_safe_str(intro->extend_info->nickname),
+           service->service_id);
 
   rep_hist_note_used_internal(time(NULL), 1, 0);
 
   ++service->n_intro_circuits_launched;
-  launched = circuit_launch_by_nickname(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO, 0,
-                                        nickname, 1, 0, 1);
+  launched = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
+                                           0, intro->extend_info, 1, 0, 1);
   if (!launched) {
     log_info(LD_REND,
              "Can't launch circuit to establish introduction at %s.",
-             escaped_safe_str(nickname));
+             escaped_safe_str(intro->extend_info->nickname));
     return -1;
   }
   strlcpy(launched->rend_query, service->service_id,
           sizeof(launched->rend_query));
   memcpy(launched->rend_pk_digest, service->pk_digest, DIGEST_LEN);
   launched->rend_desc_version = service->descriptor_version;
-  if (service->descriptor_version == 2) {
-    launched->intro_key = crypto_new_pk_env();
-    tor_assert(!crypto_pk_generate_key(launched->intro_key));
-    strmap_set(service->intro_keys, nickname,
-               crypto_pk_dup_key(launched->intro_key));
-  }
+  if (service->descriptor_version == 2)
+    launched->intro_key = crypto_pk_dup_key(intro->intro_key);
   if (launched->_base.state == CIRCUIT_STATE_OPEN)
     rend_service_intro_has_opened(launched);
   return 0;
@@ -1024,19 +986,22 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
  */
 
 /** Return the (possibly non-open) introduction circuit ending at
- * <b>router</b> for the service whose public key is <b>pk_digest</b>.  Return
+ * <b>intro</b> for the service whose public key is <b>pk_digest</b> and
+ * which publishes descriptor of version <b>desc_version</b>.  Return
  * NULL if no such service is found.
  */
 static origin_circuit_t *
-find_intro_circuit(routerinfo_t *router, const char *pk_digest)
+find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
+                   int desc_version)
 {
   origin_circuit_t *circ = NULL;
 
-  tor_assert(router);
+  tor_assert(intro);
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
-    if (!strcasecmp(circ->build_state->chosen_exit->nickname,
-                    router->nickname)) {
+    if (!strcasecmp(circ->build_state->chosen_exit->identity_digest,
+                    intro->extend_info->identity_digest) &&
+        circ->rend_desc_version == desc_version) {
       return circ;
     }
   }
@@ -1044,8 +1009,9 @@ find_intro_circuit(routerinfo_t *router, const char *pk_digest)
   circ = NULL;
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
-    if (!strcasecmp(circ->build_state->chosen_exit->nickname,
-                    router->nickname)) {
+    if (!strcasecmp(circ->build_state->chosen_exit->identity_digest,
+                    intro->extend_info->identity_digest) &&
+        circ->rend_desc_version == desc_version) {
       return circ;
     }
   }
@@ -1168,7 +1134,7 @@ rend_services_introduce(void)
   int i,j,r;
   routerinfo_t *router;
   rend_service_t *service;
-  char *intro;
+  rend_intro_point_t *intro;
   int changed, prev_intro_nodes;
   smartlist_t *intro_routers, *exclude_routers;
   time_t now;
@@ -1198,12 +1164,12 @@ rend_services_introduce(void)
        service. */
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
-      router = router_get_by_nickname(intro, 0);
-      if (!router || !find_intro_circuit(router,service->pk_digest)) {
+      router = router_get_by_digest(intro->extend_info->identity_digest);
+      if (!router || !find_intro_circuit(intro, service->pk_digest,
+                                         service->descriptor_version)) {
         log_info(LD_REND,"Giving up on %s as intro point for %s.",
-                 intro, service->service_id);
-        tor_free(intro);
-        /* XXXXX020 we could also remove the intro key here. */
+                 intro->extend_info->nickname, service->service_id);
+        rend_intro_point_free(intro);
         smartlist_del(service->intro_nodes,j--);
         changed = 1;
         service->desc_is_dirty = now;
@@ -1228,7 +1194,6 @@ rend_services_introduce(void)
     smartlist_add_all(exclude_routers, intro_routers);
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
-      char *hex_digest;
       router = router_choose_random_node(service->intro_prefer_nodes,
                service->intro_exclude_nodes, exclude_routers, 1, 0, 0,
                get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION,
@@ -1240,14 +1205,15 @@ rend_services_introduce(void)
         break;
       }
       changed = 1;
-      hex_digest = tor_malloc_zero(HEX_DIGEST_LEN+2);
-      hex_digest[0] = '$';
-      base16_encode(hex_digest+1, HEX_DIGEST_LEN+1,
-                    router->cache_info.identity_digest,
-                    DIGEST_LEN);
       smartlist_add(intro_routers, router);
       smartlist_add(exclude_routers, router);
-      smartlist_add(service->intro_nodes, hex_digest);
+      intro = tor_malloc_zero(sizeof(rend_intro_point_t));
+      intro->extend_info = extend_info_from_router(router);
+      if (service->descriptor_version == 2) {
+        intro->intro_key = crypto_new_pk_env();
+        tor_assert(!crypto_pk_generate_key(intro->intro_key));
+      }
+      smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                router->nickname, service->service_id);
     }
@@ -1265,7 +1231,7 @@ rend_services_introduce(void)
       r = rend_service_launch_establish_intro(service, intro);
       if (r<0) {
         log_warn(LD_REND, "Error launching circuit to node %s for service %s.",
-                 intro, service->service_id);
+                 intro->extend_info->nickname, service->service_id);
       }
     }
   }
@@ -1315,10 +1281,9 @@ void
 rend_service_dump_stats(int severity)
 {
   int i,j;
-  routerinfo_t *router;
   rend_service_t *service;
-  const char *nickname, *safe_name;
-  char nn_buf[MAX_VERBOSE_NICKNAME_LEN];
+  rend_intro_point_t *intro;
+  const char *safe_name;
   origin_circuit_t *circ;
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
@@ -1326,20 +1291,11 @@ rend_service_dump_stats(int severity)
     log(severity, LD_GENERAL, "Service configured in \"%s\":",
         service->directory);
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
-      nickname = smartlist_get(service->intro_nodes, j);
-      router = router_get_by_nickname(nickname,1);
-      if (router) {
-        router_get_verbose_nickname(nn_buf, router);
-        nickname = nn_buf;
-      }
-      safe_name = safe_str(nickname);
+      intro = smartlist_get(service->intro_nodes, j);
+      safe_name = safe_str(intro->extend_info->nickname);
 
-      if (!router) {
-        log(severity, LD_GENERAL,
-            "  Intro point %d at %s: unrecognized router", j, safe_name);
-        continue;
-      }
-      circ = find_intro_circuit(router, service->pk_digest);
+      circ = find_intro_circuit(intro, service->pk_digest,
+                                service->descriptor_version);
       if (!circ) {
         log(severity, LD_GENERAL, "  Intro point %d at %s: no circuit",
             j, safe_name);

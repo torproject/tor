@@ -20,41 +20,17 @@ rend_cmp_service_ids(const char *one, const char *two)
   return strcasecmp(one,two);
 }
 
-/** Helper: Release the storage held by the intro key in <b>_ent</b>.
- */
-/*XXXX020 there's also one of these in rendservice.c */
-/* Right. But the only alternative to that (which I know) would be to
- * write it to or.h. Should I do that? -KL */
-static void
-intro_key_free(void *_ent)
-{
-  crypto_pk_env_t *ent = _ent;
-  crypto_free_pk_env(ent);
-}
-
 /** Free the storage held by the service descriptor <b>desc</b>.
  */
 void
 rend_service_descriptor_free(rend_service_descriptor_t *desc)
 {
-  int i;
   if (desc->pk)
     crypto_free_pk_env(desc->pk);
-  if (desc->intro_points) {
-    for (i=0; i < desc->n_intro_points; ++i) {
-      tor_free(desc->intro_points[i]);
-    }
-    tor_free(desc->intro_points);
-  }
-  if (desc->intro_point_extend_info) {
-    for (i=0; i < desc->n_intro_points; ++i) {
-      if (desc->intro_point_extend_info[i])
-        extend_info_free(desc->intro_point_extend_info[i]);
-    }
-    tor_free(desc->intro_point_extend_info);
-  }
-  if (desc->intro_keys) {
-    strmap_free(desc->intro_keys, intro_key_free);
+  if (desc->intro_nodes) {
+    SMARTLIST_FOREACH(desc->intro_nodes, rend_intro_point_t *, intro,
+      rend_intro_point_free(intro););
+    smartlist_free(desc->intro_nodes);
   }
   tor_free(desc);
 }
@@ -191,9 +167,9 @@ rend_encode_v2_intro_points(char **ipos_base64,
   int r = -1;
   /* Assemble unencrypted list of introduction points. */
   *ipos_base64 = NULL;
-  unenc_len = desc->n_intro_points * 1000; /* too long, but ok. */
+  unenc_len = smartlist_len(desc->intro_nodes) * 1000; /* too long, but ok. */
   unenc = tor_malloc_zero(unenc_len);
-  for (i = 0; i < desc->n_intro_points; i++) {
+  for (i = 0; i < smartlist_len(desc->intro_nodes); i++) {
     char id_base32[REND_INTRO_POINT_ID_LEN_BASE32 + 1];
     char *onion_key = NULL;
     size_t onion_key_len;
@@ -202,9 +178,9 @@ rend_encode_v2_intro_points(char **ipos_base64,
     char *address = NULL;
     size_t service_key_len;
     int res;
-    char hex_digest[HEX_DIGEST_LEN+2]; /* includes $ and NUL. */
+    rend_intro_point_t *intro = smartlist_get(desc->intro_nodes, i);
     /* Obtain extend info with introduction point details. */
-    extend_info_t *info = desc->intro_point_extend_info[i];
+    extend_info_t *info = intro->extend_info;
     /* Encode introduction point ID. */
     base32_encode(id_base32, sizeof(id_base32),
                   info->identity_digest, DIGEST_LEN);
@@ -215,11 +191,7 @@ rend_encode_v2_intro_points(char **ipos_base64,
       goto done;
     }
     /* Encode intro key. */
-    hex_digest[0] = '$';
-    base16_encode(hex_digest+1, HEX_DIGEST_LEN+1,
-                  info->identity_digest,
-                  DIGEST_LEN);
-    intro_key = strmap_get(desc->intro_keys, hex_digest);
+    intro_key = intro->intro_key;
     if (!intro_key ||
       crypto_pk_write_public_key_to_string(intro_key, &service_key,
                                            &service_key_len) < 0) {
@@ -324,6 +296,17 @@ rend_encoded_v2_service_descriptor_free(
   tor_free(desc);
 }
 
+/** Free the storage held by an introduction point info. */
+void
+rend_intro_point_free(rend_intro_point_t *intro)
+{
+  if (intro->extend_info)
+    extend_info_free(intro->extend_info);
+  if (intro->intro_key)
+    crypto_free_pk_env(intro->intro_key);
+  tor_free(intro);
+}
+
 /** Encode a set of rend_encoded_v2_service_descriptor_t's for <b>desc</b>
  * at time <b>now</b> using <b>descriptor_cookie</b> (may be <b>NULL</b> if
  * introduction points shall not be encrypted) and <b>period</b> (e.g. 0
@@ -353,7 +336,7 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
   seconds_valid = period * REND_TIME_PERIOD_V2_DESC_VALIDITY +
                   get_seconds_valid(now, service_id);
   /* Assemble, possibly encrypt, and encode introduction points. */
-  if (desc->n_intro_points > 0 &&
+  if (smartlist_len(desc->intro_nodes) > 0 &&
       rend_encode_v2_intro_points(&ipos_base64, desc, descriptor_cookie) < 0) {
     log_warn(LD_REND, "Encoding of introduction points did not succeed.");
     return -1;
@@ -408,7 +391,8 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
     else
       protocol_versions_string[0]= '\0';
     /* Assemble complete descriptor. */
-    desc_len = 2000 + desc->n_intro_points * 1000; /* far too long, but ok. */
+    desc_len = 2000 + smartlist_len(desc->intro_nodes) * 1000; /* far too long,
+                                                                  but okay.*/
     enc->desc_str = desc_str = tor_malloc_zero(desc_len);
     result = tor_snprintf(desc_str, desc_len,
              "rendezvous-service-descriptor %s\n"
@@ -503,18 +487,24 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   char *end;
   int i;
   size_t asn1len;
-  size_t buflen = PK_BYTES*2*(desc->n_intro_points+2);/*Too long, but ok*/
+  size_t buflen =
+         PK_BYTES*2*(smartlist_len(desc->intro_nodes)+2);/*Too long, but ok*/
   cp = *str_out = tor_malloc(buflen);
-  end = cp + PK_BYTES*2*(desc->n_intro_points+1);
+  end = cp + PK_BYTES*2*(smartlist_len(desc->intro_nodes)+1);
   asn1len = crypto_pk_asn1_encode(desc->pk, cp+2, end-(cp+2));
   set_uint16(cp, htons((uint16_t)asn1len));
   cp += 2+asn1len;
   set_uint32(cp, htonl((uint32_t)desc->timestamp));
   cp += 4;
-  set_uint16(cp, htons((uint16_t)desc->n_intro_points));
+  set_uint16(cp, htons((uint16_t)smartlist_len(desc->intro_nodes)));
   cp += 2;
-  for (i=0; i < desc->n_intro_points; ++i) {
-    char *ipoint = (char*)desc->intro_points[i];
+  for (i=0; i < smartlist_len(desc->intro_nodes); ++i) {
+    rend_intro_point_t *intro = smartlist_get(desc->intro_nodes, i);
+    char ipoint[HEX_DIGEST_LEN+2];
+    ipoint[0] = '$';
+    base16_encode(ipoint+1, HEX_DIGEST_LEN+1,
+                  intro->extend_info->identity_digest,
+                  DIGEST_LEN);
     strlcpy(cp, ipoint, buflen-(cp-*str_out));
     cp += strlen(ipoint)+1;
   }
@@ -537,9 +527,10 @@ rend_service_descriptor_t *
 rend_parse_service_descriptor(const char *str, size_t len)
 {
   rend_service_descriptor_t *result = NULL;
-  int i;
+  int i, n_intro_points;
   size_t keylen, asn1len;
   const char *end, *cp, *eos;
+  rend_intro_point_t *intro;
 
   result = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   cp = str;
@@ -558,19 +549,22 @@ rend_parse_service_descriptor(const char *str, size_t len)
   cp += 4;
   result->protocols = 1<<2; /* always use intro format 2 */
   if (end-cp < 2) goto truncated;
-  result->n_intro_points = ntohs(get_uint16(cp));
+  n_intro_points = ntohs(get_uint16(cp));
   cp += 2;
 
-  if (result->n_intro_points != 0) {
-    result->intro_points =
-      tor_malloc_zero(sizeof(char*)*result->n_intro_points);
-    for (i=0;i<result->n_intro_points;++i) {
-      if (end-cp < 2) goto truncated;
-      eos = (const char *)memchr(cp,'\0',end-cp);
-      if (!eos) goto truncated;
-      result->intro_points[i] = tor_strdup(cp);
-      cp = eos+1;
-    }
+  result->intro_nodes = smartlist_create();
+  for (i=0;i<n_intro_points;++i) {
+    if (end-cp < 2) goto truncated;
+    eos = (const char *)memchr(cp,'\0',end-cp);
+    if (!eos) goto truncated;
+    /* Write nickname to extend info, but postpone the lookup whether
+     * we know that router. It's not part of the parsing process. */
+    intro = tor_malloc_zero(sizeof(rend_intro_point_t));
+    intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
+    strlcpy(intro->extend_info->nickname, cp,
+            sizeof(intro->extend_info->nickname));
+    smartlist_add(result->intro_nodes, intro);
+    cp = eos+1;
   }
   keylen = crypto_pk_keysize(result->pk);
   tor_assert(end-cp >= 0);
@@ -1091,7 +1085,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
       return -1;
     }
   } else {
-    parsed->n_intro_points = 0;
+    parsed->intro_nodes = smartlist_create();
   }
   /* We don't need the encoded/encrypted introduction points any longer. */
   tor_free(intro_content);

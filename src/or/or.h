@@ -3598,6 +3598,13 @@ typedef struct rend_encoded_v2_service_descriptor_t {
   char *desc_str; /**< Descriptor string. */
 } rend_encoded_v2_service_descriptor_t;
 
+/** Introduction point information. */
+typedef struct rend_intro_point_t {
+  extend_info_t *extend_info; /**< Extend info of this introduction point. */
+  crypto_pk_env_t *intro_key; /**< Introduction key that replaces the service
+                               * key, if this descriptor is V2. */
+} rend_intro_point_t;
+
 /** Information used to connect to a hidden service. */
 typedef struct rend_service_descriptor_t {
   crypto_pk_env_t *pk; /**< This service's public key. */
@@ -3605,21 +3612,9 @@ typedef struct rend_service_descriptor_t {
   time_t timestamp; /**< Time when the descriptor was generated. */
   uint16_t protocols; /**< Bitmask: which rendezvous protocols are supported?
                        * (We allow bits '0', '1', and '2' to be set.) */
-  int n_intro_points; /**< Number of introduction points. */
-  /** Array of n_intro_points elements for this service's introduction points'
-   * nicknames.  Elements are removed from this array if introduction attempts
-   * fail. */
-  char **intro_points;
-  /** Array of n_intro_points elements for this service's introduction points'
-   * extend_infos, or NULL if this descriptor is V0.  Elements are removed
-   * from this array if introduction attempts fail.  If this array is present,
-   * its elements correspond to the elements of intro_points. */
-  extend_info_t **intro_point_extend_info;
-  strmap_t *intro_keys; /**< map from intro node hexdigest to key; only
-                         * used for versioned hidden service descriptors. */
-
-  /* XXXX020 Refactor n_intro_points, intro_points, intro_point_extend_info,
-   * and intro_keys into a list of intro points. */
+  /** List of the service's introduction points.  Elements are removed if
+   * introduction attempts fail. */
+  smartlist_t *intro_nodes;
 } rend_service_descriptor_t;
 
 int rend_cmp_service_ids(const char *one, const char *two);
@@ -3637,6 +3632,7 @@ rend_service_descriptor_t *rend_parse_service_descriptor(const char *str,
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
 void rend_encoded_v2_service_descriptor_free(
                                rend_encoded_v2_service_descriptor_t *desc);
+void rend_intro_point_free(rend_intro_point_t *intro);
 
 /** A cached rendezvous descriptor. */
 typedef struct rend_cache_entry_t {

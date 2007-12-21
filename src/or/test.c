@@ -2984,6 +2984,7 @@ test_rend_fns(void)
   size_t len;
   crypto_pk_env_t *pk1, *pk2;
   time_t now;
+  int i;
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
 
@@ -2992,12 +2993,17 @@ test_rend_fns(void)
   d1->pk = crypto_pk_dup_key(pk1);
   now = time(NULL);
   d1->timestamp = now;
-  d1->n_intro_points = 3;
   d1->version = 0;
-  d1->intro_points = tor_malloc(sizeof(char*)*3);
-  d1->intro_points[0] = tor_strdup("tom");
-  d1->intro_points[1] = tor_strdup("crow");
-  d1->intro_points[2] = tor_strdup("joel");
+  d1->intro_nodes = smartlist_create();
+  for (i = 0; i < 3; i++) {
+    rend_intro_point_t *intro = tor_malloc_zero(sizeof(rend_intro_point_t));
+    intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
+    crypto_rand(intro->extend_info->identity_digest, DIGEST_LEN);
+    intro->extend_info->nickname[0] = '$';
+    base16_encode(intro->extend_info->nickname+1, HEX_DIGEST_LEN+1,
+                  intro->extend_info->identity_digest, DIGEST_LEN);
+    smartlist_add(d1->intro_nodes, intro);
+  }
   test_assert(! rend_encode_service_descriptor(d1, pk1, &encoded, &len));
   d2 = rend_parse_service_descriptor(encoded, len);
   test_assert(d2);
@@ -3006,11 +3012,13 @@ test_rend_fns(void)
   test_eq(d2->timestamp, now);
   test_eq(d2->version, 0);
   test_eq(d2->protocols, 1<<2);
-  test_eq(d2->n_intro_points, 3);
-  test_streq(d2->intro_points[0], "tom");
-  test_streq(d2->intro_points[1], "crow");
-  test_streq(d2->intro_points[2], "joel");
-  test_eq(NULL, d2->intro_point_extend_info);
+  test_eq(smartlist_len(d2->intro_nodes), 3);
+  for (i = 0; i < 3; i++) {
+    rend_intro_point_t *intro1 = smartlist_get(d1->intro_nodes, i);
+    rend_intro_point_t *intro2 = smartlist_get(d2->intro_nodes, i);
+    test_streq(intro1->extend_info->nickname,
+               intro2->extend_info->nickname);
+  }
 
   rend_service_descriptor_free(d1);
   rend_service_descriptor_free(d2);
@@ -3304,28 +3312,26 @@ test_rend_fns_v2(void)
                 service_id, REND_SERVICE_ID_LEN);
   now = time(NULL);
   generated->timestamp = now;
-  generated->n_intro_points = 3;
   generated->version = 2;
   generated->protocols = 42;
-  generated->intro_point_extend_info =
-    tor_malloc_zero(sizeof(extend_info_t *) * generated->n_intro_points);
-  generated->intro_points =
-    tor_malloc_zero(sizeof(char *) * generated->n_intro_points);
-  generated->intro_keys = strmap_new();
-  for (i = 0; i < generated->n_intro_points; i++) {
-    extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
+  generated->intro_nodes = smartlist_create();
+  for (i = 0; i < 3; i++) {
+    rend_intro_point_t *intro = tor_malloc_zero(sizeof(rend_intro_point_t));
     crypto_pk_env_t *okey = pk_generate(2 + i);
-    info->onion_key = crypto_pk_dup_key(okey);
-    crypto_pk_get_digest(info->onion_key, info->identity_digest);
+    intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
+    intro->extend_info->onion_key = crypto_pk_dup_key(okey);
+    crypto_pk_get_digest(intro->extend_info->onion_key,
+                         intro->extend_info->identity_digest);
     //crypto_rand(info->identity_digest, DIGEST_LEN); /* Would this work? */
-    info->nickname[0] = '$';
-    base16_encode(info->nickname + 1, sizeof(info->nickname) - 1,
-                  info->identity_digest, DIGEST_LEN);
-    info->addr = crypto_rand_int(65536); /* Does not cover all IP addresses. */
-    info->port = crypto_rand_int(65536);
-    generated->intro_points[i] = tor_strdup(info->nickname);
-    generated->intro_point_extend_info[i] = info;
-    strmap_set(generated->intro_keys, info->nickname, crypto_pk_dup_key(pk2));
+    intro->extend_info->nickname[0] = '$';
+    base16_encode(intro->extend_info->nickname + 1,
+                  sizeof(intro->extend_info->nickname) - 1,
+                  intro->extend_info->identity_digest, DIGEST_LEN);
+    intro->extend_info->addr = crypto_rand_int(65536); /* Does not cover all
+                                                        * IP addresses. */
+    intro->extend_info->port = crypto_rand_int(65536);
+    intro->intro_key = pk2;
+    smartlist_add(generated->intro_nodes, intro);
   }
   test_assert(rend_encode_v2_descriptors(descs, generated, now,
                                          NULL, 0) > 0);
@@ -3350,15 +3356,16 @@ test_rend_fns_v2(void)
   test_eq(parsed->timestamp, now);
   test_eq(parsed->version, 2);
   test_eq(parsed->protocols, 42);
-  test_eq(parsed->n_intro_points, 3);
-  for (i = 0; i < parsed->n_intro_points; i++) {
-    extend_info_t *par_info = parsed->intro_point_extend_info[i];
-    extend_info_t *gen_info = generated->intro_point_extend_info[i];
+  test_eq(smartlist_len(parsed->intro_nodes), 3);
+  for (i = 0; i < smartlist_len(parsed->intro_nodes); i++) {
+    rend_intro_point_t *par_intro = smartlist_get(parsed->intro_nodes, i),
+      *gen_intro = smartlist_get(generated->intro_nodes, i);
+    extend_info_t *par_info = par_intro->extend_info;
+    extend_info_t *gen_info = gen_intro->extend_info;
     test_assert(!crypto_pk_cmp_keys(gen_info->onion_key, par_info->onion_key));
     test_memeq(gen_info->identity_digest, par_info->identity_digest,
                DIGEST_LEN);
     test_streq(gen_info->nickname, par_info->nickname);
-    test_streq(generated->intro_points[i], parsed->intro_points[i]);
     test_eq(gen_info->addr, par_info->addr);
     test_eq(gen_info->port, par_info->port);
   }
@@ -3367,7 +3374,6 @@ test_rend_fns_v2(void)
     rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
   smartlist_free(descs);
   rend_service_descriptor_free(parsed);
-  rend_service_descriptor_free(generated);
 }
 
 static void

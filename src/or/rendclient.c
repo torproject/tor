@@ -82,12 +82,15 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   if (entry->parsed->version == 0) { /* unversioned descriptor */
     intro_key = entry->parsed->pk;
   } else { /* versioned descriptor */
-    char hex_digest[HEX_DIGEST_LEN+2];
-    hex_digest[0] = '$';
-    base16_encode(hex_digest+1, HEX_DIGEST_LEN+1,
-                  introcirc->build_state->chosen_exit->identity_digest,
-                  DIGEST_LEN);
-    intro_key = strmap_get(entry->parsed->intro_keys, hex_digest);
+    intro_key = NULL;
+    SMARTLIST_FOREACH(entry->parsed->intro_nodes, rend_intro_point_t *,
+                      intro, {
+      if (!memcmp(introcirc->build_state->chosen_exit->identity_digest,
+                  intro->extend_info->identity_digest, DIGEST_LEN)) {
+        intro_key = intro->intro_key;
+        break;
+      }
+    });
     if (!intro_key) {
       log_warn(LD_BUG, "Internal error: could not find intro key.");
       goto err;
@@ -342,35 +345,17 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
     return 0;
   }
 
-  if (ent->parsed->intro_point_extend_info) {
-    for (i=0; i < ent->parsed->n_intro_points; ++i) {
-      if (!memcmp(failed_intro->identity_digest,
-                  ent->parsed->intro_point_extend_info[i]->identity_digest,
-                  DIGEST_LEN)) {
-        tor_assert(!strcmp(ent->parsed->intro_points[i],
-                           ent->parsed->intro_point_extend_info[i]->nickname));
-        tor_free(ent->parsed->intro_points[i]);
-        extend_info_free(ent->parsed->intro_point_extend_info[i]);
-        --ent->parsed->n_intro_points;
-        ent->parsed->intro_points[i] =
-          ent->parsed->intro_points[ent->parsed->n_intro_points];
-        ent->parsed->intro_point_extend_info[i] =
-          ent->parsed->intro_point_extend_info[ent->parsed->n_intro_points];
-        break;
-      }
-    }
-  } else {
-    for (i=0; i < ent->parsed->n_intro_points; ++i) {
-      if (!strcasecmp(ent->parsed->intro_points[i], failed_intro->nickname)) {
-        tor_free(ent->parsed->intro_points[i]);
-        ent->parsed->intro_points[i] =
-          ent->parsed->intro_points[--ent->parsed->n_intro_points];
-        break;
-      }
+  for (i = 0; i < smartlist_len(ent->parsed->intro_nodes); i++) {
+    rend_intro_point_t *intro = smartlist_get(ent->parsed->intro_nodes, i);
+    if (!memcmp(failed_intro->identity_digest,
+                intro->extend_info->identity_digest, DIGEST_LEN)) {
+      rend_intro_point_free(intro);
+      smartlist_del(ent->parsed->intro_nodes, i);
+      break;
     }
   }
 
-  if (!ent->parsed->n_intro_points) {
+  if (smartlist_len(ent->parsed->intro_nodes) == 0) {
     log_info(LD_REND,
              "No more intro points remain for %s. Re-fetching descriptor.",
              escaped_safe_str(query));
@@ -388,7 +373,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
     return 0;
   }
   log_info(LD_REND,"%d options left for %s.",
-           ent->parsed->n_intro_points, escaped_safe_str(query));
+           smartlist_len(ent->parsed->intro_nodes), escaped_safe_str(query));
   return 1;
 }
 
@@ -503,7 +488,7 @@ rend_client_desc_here(const char *query)
       continue;
     assert_connection_ok(TO_CONN(conn), now);
     if (rend_cache_lookup_entry(conn->rend_query, -1, &entry) == 1 &&
-        entry->parsed->n_intro_points > 0) {
+        smartlist_len(entry->parsed->intro_nodes) > 0) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
       log_info(LD_REND,"Rend desc is usable. Launching circuits.");
@@ -537,6 +522,8 @@ rend_client_get_random_intro(const char *query)
 {
   int i;
   rend_cache_entry_t *entry;
+  rend_intro_point_t *intro;
+  routerinfo_t *router;
 
   if (rend_cache_lookup_entry(query, -1, &entry) < 1) {
     log_warn(LD_REND,
@@ -546,26 +533,25 @@ rend_client_get_random_intro(const char *query)
   }
 
  again:
-  if (!entry->parsed->n_intro_points)
+  if (smartlist_len(entry->parsed->intro_nodes) == 0)
     return NULL;
 
-  i = crypto_rand_int(entry->parsed->n_intro_points);
-
-  if (entry->parsed->intro_point_extend_info) {
-    return extend_info_dup(entry->parsed->intro_point_extend_info[i]);
-  } else {
-    /* add the intro point nicknames */
-    char *choice = entry->parsed->intro_points[i];
-    routerinfo_t *router = router_get_by_nickname(choice, 0);
+  i = crypto_rand_int(smartlist_len(entry->parsed->intro_nodes));
+  intro = smartlist_get(entry->parsed->intro_nodes, i);
+  /* Do we need to look up the router or is the extend info complete? */
+  if (!intro->extend_info->onion_key) {
+    router = router_get_by_nickname(intro->extend_info->nickname, 0);
     if (!router) {
       log_info(LD_REND, "Unknown router with nickname '%s'; trying another.",
-               choice);
-      tor_free(choice);
-      entry->parsed->intro_points[i] =
-        entry->parsed->intro_points[--entry->parsed->n_intro_points];
+               intro->extend_info->nickname);
+      rend_intro_point_free(intro);
+      smartlist_del(entry->parsed->intro_nodes, i);
       goto again;
     }
-    return extend_info_from_router(router);
+    extend_info_free(intro->extend_info);
+    intro = tor_malloc_zero(sizeof(rend_intro_point_t));
+    intro->extend_info = extend_info_from_router(router);
   }
+  return extend_info_dup(intro->extend_info);
 }
 

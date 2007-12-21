@@ -862,8 +862,8 @@ check_signature_token(const char *digest,
     tor_free(signed_digest);
     return -1;
   }
-  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
-            hex_str(signed_digest,4));
+//  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
+//            hex_str(signed_digest,4));
   if (memcmp(digest, signed_digest, DIGEST_LEN)) {
     log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
     tor_free(signed_digest);
@@ -3384,14 +3384,15 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
 {
   char *ipos_decrypted = NULL;
   const char **current_ipo;
-  smartlist_t *intropoints;
   smartlist_t *tokens;
-  int i;
   directory_token_t *tok;
+  rend_intro_point_t *intro;
   extend_info_t *info;
   struct in_addr ip;
   int result;
   tor_assert(parsed);
+  /** Function may only be invoked once. */
+  tor_assert(!parsed->intro_nodes);
   tor_assert(intro_points_encrypted);
   tor_assert(intro_points_encrypted_size > 0);
   /* Decrypt introduction points, if required. */
@@ -3413,15 +3414,9 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     intro_points_encrypted_size = unenclen;
   }
   /* Consider one intro point after the other. */
-  current_ipo = &intro_points_encrypted;
-  intropoints = smartlist_create();
+  current_ipo = (const char **)&intro_points_encrypted;
   tokens = smartlist_create();
-  if (parsed->intro_keys) {
-    log_warn(LD_BUG, "Parsing list of introduction points for the same "
-             "hidden service, twice.");
-  } else {
-    parsed->intro_keys = strmap_new();
-  }
+  parsed->intro_nodes = smartlist_create();
   while (!strcmpstart(*current_ipo, "introduction-point ")) {
     /* Determine end of string. */
     const char *eos = strstr(*current_ipo, "\nintroduction-point ");
@@ -3444,8 +3439,9 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
       log_warn(LD_REND, "Impossibly short introduction point.");
       goto err;
     }
-    /* Allocate new extend info. */
-    info = tor_malloc_zero(sizeof(extend_info_t));
+    /* Allocate new intro point and extend info. */
+    intro = tor_malloc_zero(sizeof(rend_intro_point_t));
+    info = intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
     /* Parse identifier. */
     tok = find_first_by_keyword(tokens, R_IPO_IDENTIFIER);
     tor_assert(tok);
@@ -3453,7 +3449,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
                       tok->args[0], REND_INTRO_POINT_ID_LEN_BASE32) < 0) {
       log_warn(LD_REND, "Identity digest contains illegal characters: %s",
                tok->args[0]);
-      tor_free(info);
+      rend_intro_point_free(intro);
       goto err;
     }
     /* Write identifier to nickname. */
@@ -3464,7 +3460,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     tok = find_first_by_keyword(tokens, R_IPO_IP_ADDRESS);
     if (tor_inet_aton(tok->args[0], &ip) == 0) {
       log_warn(LD_REND, "Could not parse IP address.");
-      tor_free(info);
+      rend_intro_point_free(intro);
       goto err;
     }
     info->addr = ntohl(ip.s_addr);
@@ -3477,7 +3473,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     if (!info->port) {
       log_warn(LD_REND, "Introduction point onion port is out of range: %d",
                info->port);
-      tor_free(info);
+      rend_intro_point_free(intro);
       goto err;
     }
     /* Parse onion key. */
@@ -3486,30 +3482,12 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     tok->key = NULL; /* Prevent free */
     /* Parse service key. */
     tok = find_first_by_keyword(tokens, R_IPO_SERVICE_KEY);
-    strmap_set(parsed->intro_keys, info->nickname, tok->key);
+    intro->intro_key = tok->key;
     tok->key = NULL; /* Prevent free */
     /* Add extend info to list of introduction points. */
-    smartlist_add(intropoints, info);
-    /* XXX if intropoints has items on it, but we goto err the next
-     * time through the loop, we don't free the items in the 'err'
-     * section below. -RD */
+    smartlist_add(parsed->intro_nodes, intro);
   }
-  /* Write extend infos to descriptor. */
-  /* XXXX020 what if intro_points (&tc) are already set? */
-  /* This function is not intended to be invoced multiple times for
-   * the same descriptor. Should this be asserted? -KL */
-  /* Yes. -NM */
-  parsed->n_intro_points = smartlist_len(intropoints);
-  parsed->intro_point_extend_info =
-    tor_malloc_zero(sizeof(extend_info_t *) * parsed->n_intro_points);
-  parsed->intro_points =
-    tor_malloc_zero(sizeof(char *) * parsed->n_intro_points);
-  i = 0;
-  SMARTLIST_FOREACH(intropoints, extend_info_t *, ipo, {
-      parsed->intro_points[i] = tor_strdup(ipo->nickname);
-      parsed->intro_point_extend_info[i++] = ipo;
-  });
-  result = parsed->n_intro_points;
+  result = smartlist_len(parsed->intro_nodes);
   goto done;
 
  err:
@@ -3519,8 +3497,6 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   /* Free tokens and clear token list. */
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
-
-  smartlist_free(intropoints);
 
   return result;
 }
