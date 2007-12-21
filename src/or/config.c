@@ -190,6 +190,7 @@ static config_var_t _option_vars[] = {
   V(FascistFirewall,             BOOL,     "0"),
   V(FirewallPorts,               CSV,      ""),
   V(FastFirstHopPK,              BOOL,     "1"),
+  V(FetchDirInfoEarly,           BOOL,     "0"),
   V(FetchServerDescriptors,      BOOL,     "1"),
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
@@ -1240,10 +1241,10 @@ options_act(or_options_t *old_options)
   if (old_options) {
     if (authdir_mode_v3(options) && !authdir_mode_v3(old_options))
       dirvote_recalculate_timing(options, time(NULL));
-    if (!bool_eq(directory_fetches_dir_info_like_mirror(options),
-                 directory_fetches_dir_info_like_mirror(old_options)) ||
-        !bool_eq(directory_fetches_dir_info_like_bridge_user(options),
-                 directory_fetches_dir_info_like_bridge_user(old_options))) {
+    if (!bool_eq(directory_fetches_dir_info_early(options),
+                 directory_fetches_dir_info_early(old_options)) ||
+        !bool_eq(directory_fetches_dir_info_later(options),
+                 directory_fetches_dir_info_later(old_options))) {
       /* Make sure update_router_have_min_dir_info gets called. */
       router_dir_info_changed();
       /* We might need to download a new consensus status later or sooner than

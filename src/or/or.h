@@ -2268,6 +2268,9 @@ typedef struct {
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */
   int FastFirstHopPK; /**< If Tor believes it is safe, should we save a third
                        * of our PK time by sending CREATE_FAST cells? */
+  /** Should we always fetch our dir info on the mirror schedule (which
+   * means directly from the authorities) no matter our other config? */
+  int FetchDirInfoEarly;
 
   addr_policy_t *reachable_addr_policy; /**< Parsed from ReachableAddresses */
 
@@ -3066,8 +3069,8 @@ int dirserv_dump_directory_to_string(char **dir_out,
                                      crypto_pk_env_t *private_key);
 
 int directory_fetches_from_authorities(or_options_t *options);
-int directory_fetches_dir_info_like_mirror(or_options_t *options);
-int directory_fetches_dir_info_like_bridge_user(or_options_t *options);
+int directory_fetches_dir_info_early(or_options_t *options);
+int directory_fetches_dir_info_later(or_options_t *options);
 int directory_caches_v2_dir_info(or_options_t *options);
 #define directory_caches_v1_dir_info(o) directory_caches_v2_dir_info(o)
 int directory_caches_dir_info(or_options_t *options);

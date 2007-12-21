@@ -1,4 +1,4 @@
-Changes in version 0.2.0.13-alpha - 2007-12-??
+Changes in version 0.2.0.13-alpha - 2007-12-21
   o New directory authorities:
     - Set up lefkada (run by Geoff Goodell) as the fourth v3 directory
       authority.
@@ -18,8 +18,6 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
     - Stop thinking that 0.1.2.x directory servers can handle "begin_dir"
       requests. Should ease bugs 406 and 419 where 0.1.2.x relays are
       crashing or mis-answering these requests.
-    - Stop being so aggressive about fetching v2 dir info if your
-      DirPort is on but your ORPort is off.
     - Relays were publishing their server descriptor to v1 and v2
       directory authorities, but they didn't try publishing to v3-only
       authorities. Fix this; and also stop publishing to v1 authorities.
@@ -47,6 +45,10 @@ Changes in version 0.2.0.13-alpha - 2007-12-??
       bridges they know. They provide router status summaries to the
       controller on "getinfo ns/purpose/bridge", and also dump summaries
       to a file periodically.
+    - Stop fetching directory info so aggressively if your DirPort is
+      on but your ORPort is off; stop fetching v2 dir info entirely.
+      You can override these choices with the new FetchDirInfoEarly
+      config option.
 
   o Minor bugfixes:
     - The fix in 0.2.0.12-alpha cleared the "hsdir" flag in v3 network

@@ -3575,7 +3575,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
   or_options_t *options = get_options();
 
   n_downloadable = smartlist_len(downloadable);
-  if (!directory_fetches_dir_info_like_mirror(options)) {
+  if (!directory_fetches_dir_info_early(options)) {
     if (n_downloadable >= MAX_DL_TO_DELAY) {
       log_debug(LD_DIR,
              "There are enough downloadable routerdescs to launch requests.");
@@ -3642,7 +3642,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
   or_options_t *options = get_options();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
 
-  if (! directory_fetches_dir_info_like_mirror(options)) {
+  if (! directory_fetches_dir_info_early(options)) {
     log_warn(LD_BUG, "Called update_router_descriptor_cache_downloads_v2() "
              "on a non-dir-mirror?");
   }
@@ -3877,7 +3877,7 @@ update_router_descriptor_downloads(time_t now)
   or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (directory_fetches_dir_info_like_mirror(options)) {
+  if (directory_fetches_dir_info_early(options)) {
     update_router_descriptor_cache_downloads_v2(now);
   }
   update_consensus_router_descriptor_downloads(now);

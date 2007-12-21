@@ -211,6 +211,13 @@ you use it, you will be distinguishable from other users, because you won't
 believe the same authorities they do.
 .LP
 .TP
+\fBFetchDirInfoEarly \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor will always fetch directory information like other
+directory caches, even if you don't meet the normal criteria for
+fetching early. Normal users should leave it off.
+(Default: 0)
+.LP
+.TP
 \fBFetchHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
 If set to 0, Tor will never fetch any hidden service descriptors from
 the rendezvous directories. This option is only useful if you're using

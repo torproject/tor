@@ -954,7 +954,7 @@ run_scheduled_events(time_t now)
    * (if we've passed our internal checks). */
   if (time_to_fetch_directory < now) {
     /* Only caches actually need to fetch directories now. */
-    if (directory_fetches_dir_info_like_mirror(options) &&
+    if (directory_fetches_dir_info_early(options) &&
         !authdir_mode_v1(options)) {
       if (any_trusted_dir_is_v1_authority() &&
           !should_delay_dir_fetches(options))
@@ -967,7 +967,7 @@ run_scheduled_events(time_t now)
   }
 
   /* Caches need to fetch running_routers; directory clients don't. */
-  if (directory_fetches_dir_info_like_mirror(options) &&
+  if (directory_fetches_dir_info_early(options) &&
       time_to_fetch_running_routers < now) {
     if (!authdir_mode_v1(options) && !should_delay_dir_fetches(options)) {
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST,

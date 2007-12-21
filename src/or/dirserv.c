@@ -1114,7 +1114,8 @@ dirserv_dump_directory_to_string(char **dir_out,
 int
 directory_fetches_from_authorities(or_options_t *options)
 {
-  /* XXX if options->FetchDirInfoEagerly, return 1 */
+  if (options->FetchDirInfoEarly)
+    return 1;
   if (options->DirPort == 0)
     return 0;
   if (options->BridgeRelay == 1)
@@ -1130,7 +1131,7 @@ directory_fetches_from_authorities(or_options_t *options)
  * on the "mirror" schedule rather than the "client" schedule.
  */
 int
-directory_fetches_dir_info_like_mirror(or_options_t *options)
+directory_fetches_dir_info_early(or_options_t *options)
 {
   return directory_fetches_from_authorities(options);
 }
@@ -1142,7 +1143,7 @@ directory_fetches_dir_info_like_mirror(or_options_t *options)
  * client as a directory guard.
  */
 int
-directory_fetches_dir_info_like_bridge_user(or_options_t *options)
+directory_fetches_dir_info_later(or_options_t *options)
 {
   return options->UseBridges != 0;
 }

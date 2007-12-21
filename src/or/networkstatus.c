@@ -1063,7 +1063,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
     long dl_interval;
     long interval = c->fresh_until - c->valid_after;
     time_t start;
-    if (directory_fetches_dir_info_like_mirror(options)) {
+    if (directory_fetches_dir_info_early(options)) {
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
       start = c->fresh_until + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
@@ -1078,7 +1078,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
 
       /* If we're a bridge user, make use of the numbers we just computed
        * to choose the rest of the interval *after* them. */
-      if (directory_fetches_dir_info_like_bridge_user(options)) {
+      if (directory_fetches_dir_info_later(options)) {
         /* Give all the *clients* enough time to download the consensus. */
         start = start + dl_interval + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
         /* But try to get it before ours actually expires. */
@@ -1133,7 +1133,7 @@ update_networkstatus_downloads(time_t now)
   or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (directory_fetches_dir_info_like_mirror(options))
+  if (directory_fetches_dir_info_early(options))
     update_v2_networkstatus_cache_downloads(now);
   update_consensus_networkstatus_downloads(now);
   update_certificate_downloads(now);
