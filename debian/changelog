@@ -1,3 +1,10 @@
+tor (0.2.0.13-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * Fix unit tests from HEAD (13_r12907-fix-unit-tests.dpatch).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 21 Dec 2007 11:52:43 +0100
+
 tor (0.2.0.12-alpha-1) experimental; urgency=low
 
   * New upstream version.

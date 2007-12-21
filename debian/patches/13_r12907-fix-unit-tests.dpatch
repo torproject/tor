@@ -1,0 +1,56 @@
+#! /bin/sh -e
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+if [ $# -lt 1 ]; then
+    echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+    exit 1
+fi
+
+[ -f debian/patches/00patch-opts ] && . debian/patches/00patch-opts
+patch_opts="${patch_opts:--f --no-backup-if-mismatch} ${2:+-d $2}"
+
+case "$1" in
+    -patch) patch -p1 ${patch_opts} < $0;;
+    -unpatch) patch -R -p1 ${patch_opts} < $0;;
+    *)
+        echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
+        exit 1;;
+esac
+
+exit 0
+
+#Author: arma
+#Date: 2007-12-21 05:44:10 -0500 (Fri, 21 Dec 2007)
+#New Revision: 12907
+#
+#Modified:
+   #tor/trunk/src/or/test.c
+#Log:
+#the better fix for the unit tests
+#
+#
+#Modified: tor/trunk/src/or/test.c
+#===================================================================
+@DPATCH@
+--- tor/src/or/test.c	2007-12-21 10:42:14 UTC (rev 12906)
++++ tor/src/or/test.c	2007-12-21 10:44:10 UTC (rev 12907)
+@@ -3330,7 +3330,7 @@
+     intro->extend_info->addr = crypto_rand_int(65536); /* Does not cover all
+                                                         * IP addresses. */
+     intro->extend_info->port = crypto_rand_int(65536);
+-    intro->intro_key = pk2;
++    intro->intro_key = crypto_pk_dup_key(pk2);
+     smartlist_add(generated->intro_nodes, intro);
+   }
+   test_assert(rend_encode_v2_descriptors(descs, generated, now,
+#@@ -3374,7 +3374,7 @@
+#     rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+#   smartlist_free(descs);
+#   rend_service_descriptor_free(parsed);
+#-//  rend_service_descriptor_free(generated); XXX020
+#+  rend_service_descriptor_free(generated);
+# }
+# 
+# static void
+#
