@@ -24,6 +24,7 @@ For Tor 0.2.0.x-rc:
     running a private tor network on your own computer is very hard.
   - Make BEGIN_DIR mandatory for asking questions of bridge authorities?
     (but only for bridge descriptors. not for ordinary cache stuff.)
+  - write a tor-gencert man page
 
 Features blocking 0.2.0.x:
   - mirror tor downloads on (via) tor dir caches
