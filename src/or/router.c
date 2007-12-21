@@ -823,16 +823,20 @@ authdir_mode_v3(or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
+static int
+authdir_mode_any_main(or_options_t *options)
+{
+  return options->V1AuthoritativeDir ||
+         options->V2AuthoritativeDir ||
+         options->V3AuthoritativeDir;
+}
 /** Return true if we believe ourselves to be any kind of
  * authoritative directory beyond just a hidserv authority. */
 int
 authdir_mode_any_nonhidserv(or_options_t *options)
 {
-  return authdir_mode(options) &&
-    (options->BridgeAuthoritativeDir ||
-     options->V1AuthoritativeDir ||
-     options->V2AuthoritativeDir ||
-     options->V3AuthoritativeDir);
+  return options->BridgeAuthoritativeDir ||
+         authdir_mode_any_main(options);
 }
 /** Return true iff we are an authoritative directory server that is
  * authoritative about receiving and serving descriptors of type
@@ -843,9 +847,7 @@ authdir_mode_handles_descs(or_options_t *options, int purpose)
   if (purpose < 0)
     return authdir_mode_any_nonhidserv(options);
   else if (purpose == ROUTER_PURPOSE_GENERAL)
-    return (options->V1AuthoritativeDir ||
-            options->V2AuthoritativeDir ||
-            options->V3AuthoritativeDir);
+    return authdir_mode_any_main(options);
   else if (purpose == ROUTER_PURPOSE_BRIDGE)
     return (options->BridgeAuthoritativeDir);
   else
