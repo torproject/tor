@@ -3374,6 +3374,7 @@ test_rend_fns_v2(void)
     rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
   smartlist_free(descs);
   rend_service_descriptor_free(parsed);
+  rend_service_descriptor_free(generated);
 }
 
 static void

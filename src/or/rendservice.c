@@ -347,9 +347,9 @@ rend_service_update_descriptor(rend_service_t *service)
   d->timestamp = time(NULL);
   d->version = service->descriptor_version;
   d->intro_nodes = smartlist_create();
-  /* XXXX020 Why should we support the old intro protocol 0? Whoever
-   * understands descriptor version 2 also understands intro protocol 2. */
-  d->protocols = 1 << 2; /*< We only support intro protocol 2. */
+  /* Whoever understands descriptor version 2 also understands intro
+   * protocol 2. So we only support 2. */
+  d->protocols = 1 << 2;
 
   for (i = 0; i < smartlist_len(service->intro_nodes); ++i) {
     rend_intro_point_t *intro_svc = smartlist_get(service->intro_nodes, i);

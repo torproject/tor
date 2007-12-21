@@ -3414,7 +3414,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     intro_points_encrypted_size = unenclen;
   }
   /* Consider one intro point after the other. */
-  current_ipo = (const char **)&intro_points_encrypted;
+  current_ipo = &intro_points_encrypted;
   tokens = smartlist_create();
   parsed->intro_nodes = smartlist_create();
   while (!strcmpstart(*current_ipo, "introduction-point ")) {
