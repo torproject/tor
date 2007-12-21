@@ -4,6 +4,10 @@ Changes in version 0.2.0.14-alpha - 2007-12-??
       unexpected (it used to be in our networkstatus when we started
       fetching it, but it isn't in our current networkstatus), and we
       aren't using bridges. Bugfix on 0.2.0.x.
+    - Fix a crash when accessing hidden services: it would work the first
+      time you use a given introduction point for your service, but
+      on subsequent requests we'd be using garbage memory. Fixed by
+      Karsten Loesing. Bugfix on 0.2.0.12-alpha.
 
   o Minor bugfixes:
     - Make the unit tests build again.

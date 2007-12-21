@@ -549,7 +549,6 @@ rend_client_get_random_intro(const char *query)
       goto again;
     }
     extend_info_free(intro->extend_info);
-    intro = tor_malloc_zero(sizeof(rend_intro_point_t));
     intro->extend_info = extend_info_from_router(router);
   }
   return extend_info_dup(intro->extend_info);
