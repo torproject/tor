@@ -4,7 +4,7 @@ dnl Copyright (c) 2004-2007, Roger Dingledine, Nick Mathewson
 dnl See LICENSE for licensing information
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.2.0.12-alpha-dev)
+AM_INIT_AUTOMAKE(tor, 0.2.0.13-alpha)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
@@ -247,7 +247,7 @@ TOR_SEARCH_LIBRARY(zlib, $tryzlibdir, [-lz],
     [zlibVersion(); exit(0);], [--with-zlib-dir],
     [/opt/zlib])
 
-dnl Make sure to enable support for large off_t if avalable.
+dnl Make sure to enable support for large off_t if available.
 
 AC_SYS_LARGEFILE
 
