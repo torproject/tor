@@ -13,27 +13,31 @@ Changes in version 0.2.0.13-alpha - 2007-12-21
       service descriptor databases even when DirPort is zero. Bugfix
       on 0.1.2.x.
     - We were ignoring our RelayBandwidthRate for the first 30 seconds
-      after opening a circuit -- even relayed circuits. Bugfix on
+      after opening a circuit -- even a relayed circuit. Bugfix on
       0.2.0.3-alpha.
     - Stop thinking that 0.1.2.x directory servers can handle "begin_dir"
       requests. Should ease bugs 406 and 419 where 0.1.2.x relays are
-      crashing or mis-answering these requests.
+      crashing or mis-answering these types of requests.
     - Relays were publishing their server descriptor to v1 and v2
       directory authorities, but they didn't try publishing to v3-only
       authorities. Fix this; and also stop publishing to v1 authorities.
+      Bugfix on 0.2.0.x.
     - When we were reading router descriptors from cache, we were ignoring
-      the annotations -- including reading in bridge-purpose descriptors
-      as general-purpose descriptors.
+      the annotations -- so for example we were reading in bridge-purpose
+      descriptors as general-purpose descriptors. Bugfix on 0.2.0.8-alpha.
+    - When we decided to send a 503 response to a request for servers, we
+      were then also sending the server descriptors: this defeats the
+      whole purpose. Fixes bug 539; bugfix on 0.1.2.x.
 
   o Major features:
-    - Bridges now behave like clients with respect to time intervals for
-      downloading new consensus documents. Bridge users now wait until
-      the end of the interval, so their bridge will be sure to have a
-      new consensus document.
+    - Bridge relays now behave like clients with respect to time
+      intervals for downloading new consensus documents -- otherwise they
+      stand out. Bridge users now wait until the end of the interval,
+      so their bridge relay will be sure to have a new consensus document.
     - Three new config options (AlternateDirAuthority,
       AlternateBridgeAuthority, and AlternateHSAuthority) that let the
-      user selectively replace the default directory authorities, rather
-      than the all-or-nothing replacement that DirServer offers.
+      user selectively replace the default directory authorities by type,
+      rather than the all-or-nothing replacement that DirServer offers.
     - Tor can now be configured to read a GeoIP file from disk in one
       of two formats. This can be used by controllers to map IP addresses
       to countries. Eventually, it may support exit-by-country.
@@ -43,7 +47,7 @@ Changes in version 0.2.0.13-alpha - 2007-12-21
       where Tor is blocked.
     - Bridge directory authorities now do reachability testing on the
       bridges they know. They provide router status summaries to the
-      controller on "getinfo ns/purpose/bridge", and also dump summaries
+      controller via "getinfo ns/purpose/bridge", and also dump summaries
       to a file periodically.
     - Stop fetching directory info so aggressively if your DirPort is
       on but your ORPort is off; stop fetching v2 dir info entirely.
@@ -69,37 +73,32 @@ Changes in version 0.2.0.13-alpha - 2007-12-21
       huge. Otherwise we'll cache them all over the network and it'll
       clog everything up. Reported by Aljosha Judmayer.
     - Check for presence of s6_addr16 and s6_addr32 fields in in6_addr
-      via autoconf.  Should fix compile on solaris.
+      via autoconf. Should fix compile on solaris. Bugfix on 0.2.0.x.
     - When the DANGEROUS_VERSION controller status event told us we're
       running an obsolete version, it used the string "OLD" to describe
       it. Yet the "getinfo" interface used the string "OBSOLETE". Now use
-      "OBSOLETE" in both cases.
+      "OBSOLETE" in both cases. Bugfix on 0.1.2.x.
     - If we can't expand our list of entry guards (e.g. because we're
       using bridges or we have StrictEntryNodes set), don't mark relays
       down when they fail a directory request. Otherwise we're too quick
-      to mark all our entry points down.
+      to mark all our entry points down. Bugfix on 0.1.2.x.
     - Fix handling of hex nicknames when answering controller requests for
       networkstatus by name, or when deciding whether to warn about unknown
       routers in a config option. Bugfix on 0.1.2.x. (Patch from mwenge.)
     - Fix a couple of hard-to-trigger autoconf problems that could result
       in really weird results on platforms whose sys/types.h files define
-      nonstandard integer types.
-    - Fix compilation with --disable-threads set.
-    - Authorities decide whether they're authoritative for a given router
-      based on the router's purpose.
+      nonstandard integer types. Bugfix on 0.1.2.x.
+    - Fix compilation with --disable-threads set. Bugfix on 0.2.0.x.
     - Don't crash on name lookup when we have no current consensus.  Fixes
       bug 538; bugfix on 0.2.0.x.
-    - When we decide to send a 503 response to a request for servers, do
-      not then also send the server descriptors: this defeats the whole
-      purpose.  Fixes bug 539; bugfix on 0.1.2.x.
     - Only Tors that want to mirror the v2 directory info should
-      create the "cached-status" directory in their datadir. All Tors
-      used to create it. Bugfix on 0.1.2.x.
+      create the "cached-status" directory in their datadir. (All Tors
+      used to create it.) Bugfix on 0.2.0.9-alpha.
     - Directory authorities should only automatically download Extra Info
-      documents if they're v1, v2, or v3 authorities.
+      documents if they're v1, v2, or v3 authorities. Bugfix on 0.1.2.x.
 
   o Minor features:
-    - On USR1, when dmalloc is in use, log the top 10 memory
+    - On the USR1 signal, when dmalloc is in use, log the top 10 memory
       consumers. (We already do this on HUP.)
     - Authorities and caches fetch the v2 networkstatus documents
       less often, now that v3 is encouraged.
@@ -113,6 +112,8 @@ Changes in version 0.2.0.13-alpha - 2007-12-21
       addresses.
     - Allow multiple HashedControlPassword config lines, to support
       multiple controller passwords.
+    - Authorities now decide whether they're authoritative for a given
+      router based on the router's purpose.
     - New config options AuthDirBadDir and AuthDirListBadDirs for
       authorities to mark certain relays as "bad directories" in the
       networkstatus documents. Also supports the "!baddir" directive in

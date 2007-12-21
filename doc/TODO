@@ -16,20 +16,21 @@ J       - Jeff claims
         D Deferred
         X Abandoned
 
-For Tor 0.2.0.13-alpha:
+For Tor 0.2.0.x-rc:
   - Put a consensus in place of the empty fallback-consensus file in
     src/config and see what breaks.
   - let bridges set relaybandwidthrate as low as 5kb
-  - config option FetchDirInfoEagerly so the dnsel can fetch dir
-    info like a mirror without needing to be a tor server.
-    - nick has to pick a name for it
+  - we need a config option to turn off proposal 109 behavior, else
+    running a private tor network on your own computer is very hard.
+  - Make BEGIN_DIR mandatory for asking questions of bridge authorities?
+    (but only for bridge descriptors. not for ordinary cache stuff.)
 
 Features blocking 0.2.0.x:
   - mirror tor downloads on (via) tor dir caches
 R   . spec
     d deploy
   . geoip caching and publishing for bridges
-R   . spec
+    . spec
     . Implement
       o Code to load a geoip file from disk
         o Truncated format
@@ -48,29 +49,25 @@ R   . spec
     - Mention in control-spec.txt
     d let Vidalia use the geoip data too rather than doing its own
       anonymized queries
-  o bridge address disbursal strategies
-    o get the cached-descriptors* to bridges@moria
-    o parse out bridge addresses from cached-descriptors*
-      (or parse them out before Tonga sends them)
-      (or get Tonga's Tor to write them out better in the first place)
-    o answer by IP/timestamp
-      o run a little web server on moria?
-    o answer by answering email to bridges@torproject
-      o keep track of which addresses have been answered already
 R - bridge communities
-    - spec
-    - deploy
+    . spec
+    . deploy
       - man page entries for Alternate*Authority config options
-      - make the Alternate*Authority config options pass a "default_type"
+      o make the Alternate*Authority config options pass a "default_type"
         to parse_dir_server_line() so they don't demand as much redundancy
-      d some sort of reachability testing on bridges
-  - interface for letting soat modify flags that authorities assign
-R   . spec
-    o add an AuthDirBadexit torrc option if we decide we want one.
+      o some sort of reachability testing on bridges
+      - a dir-based way to fetch the bridge networkstatus list
+      - there's a config option with a password and somehow use an
+        http header and check it
+      - clients who have a password configured decide to ask their bridge
+        authority for a networkstatus
+      - be able to have bridges that aren't in your torrc
+  d interface for letting soat modify flags that authorities assign
+    . spec
 S * tor usb windows image (vidalia, polipo, tor, firefox)
-S/M - vidalia can launch firefox
+S/M o vidalia can launch firefox
     - build a community version of firefox
-    - pick our favorite extensions
+    . pick our favorite extensions
 
 Things we'd like to do in 0.2.0.x:
   - document the "3/4 and 7/8" business in the clients fetching consensus
@@ -125,8 +122,6 @@ Things we'd like to do in 0.2.0.x:
           it couldn't fetch any network statuses, and never tried again
           even when the network came back and arma clicked on things.
           also 0.2.0.
-      - we need a config option to turn off proposal 109 behavior, else
-        running a private tor network on your own computer is very hard.
       . man page entry for HidServDirectoryV2 and
         MinUptimeHidServDirectoryV2.
       d Tor logs the libevent version on startup, for debugging purposes.
@@ -166,7 +161,7 @@ Things we'd like to do in 0.2.0.x:
     - Refactor networkstatus generation:
       - Include "v" line in getinfo values.
 
-  - Bridges:
+  * Bridges:
     . Bridges users (rudimentary version)
       o Ability to specify bridges manually
       o Config option 'UseBridges' that bridge users can turn on.
@@ -186,18 +181,6 @@ R     - drop 'authority' queries if they're to our own identity key; accept
         descriptor arrives
       o be more robust to bridges being marked as down and leaving us
         stranded without any known "running" bridges.
-    - Bridges operators (rudimentary version)
-      o Ability to act as dir cache without a dir port.
-      o Bridges publish to bridge authorities
-      o Fix BEGIN_DIR so that you connect to bridge of which you only
-        know IP (and optionally fingerprint), and then use BEGIN_DIR to learn
-        more about it.
-R     - look at server_mode() and decide if it always applies to bridges too.
-    - Bridges
-      o Clients can ask bridge authorities for updates on known bridges.
-    - Misc
-      * Make BEGIN_DIR mandatory for asking questions of bridge authorities?
-        (but only for bridge descriptors. not for ordinary cache stuff.)
 
   - Features (other than bridges):
     - Audit how much RAM we're using for buffers and cell pools; try to
@@ -205,7 +188,7 @@ R     - look at server_mode() and decide if it always applies to bridges too.
     - Base relative control socket paths on datadir.
     - Make TrackHostExits expire TrackHostExitsExpire seconds after their
        *last* use, not their *first* use.
-    - Limit to 2 dir, 2 OR, N SOCKS connections per IP.
+    D Limit to 2 dir, 2 OR, N SOCKS connections per IP.
       - Or maybe close connections from same IP when we get a lot from one.
       - Or maybe block IPs that connect too many times at once.
 
