@@ -2785,7 +2785,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "UseEntryGuards. Disabling.");
       options->UseEntryGuards = 0;
     }
-    if (!options->DownloadExtraInfo) {
+    if (!options->DownloadExtraInfo && authdir_mode_any_main(options)) {
       log_info(LD_CONFIG, "Authoritative directories always try to download "
                "extra-info documents. Setting DownloadExtraInfo.");
       options->DownloadExtraInfo = 1;

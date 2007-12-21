@@ -95,6 +95,8 @@ Changes in version 0.2.0.13-alpha - 2007-12-21
     - Only Tors that want to mirror the v2 directory info should
       create the "cached-status" directory in their datadir. All Tors
       used to create it. Bugfix on 0.1.2.x.
+    - Directory authorities should only automatically download Extra Info
+      documents if they're v1, v2, or v3 authorities.
 
   o Minor features:
     - On USR1, when dmalloc is in use, log the top 10 memory

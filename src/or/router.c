@@ -823,7 +823,8 @@ authdir_mode_v3(or_options_t *options)
 {
   return authdir_mode(options) && options->V3AuthoritativeDir != 0;
 }
-static int
+/** Return true iff we are a v1, v2, or v3 directory authority. */
+int
 authdir_mode_any_main(or_options_t *options)
 {
   return options->V1AuthoritativeDir ||
