@@ -2853,6 +2853,8 @@ clear_bridge_list(void)
 static bridge_info_t *
 routerinfo_get_configured_bridge(routerinfo_t *ri)
 {
+  if (!bridge_list)
+    return NULL;
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
     {
       if (tor_digest_is_zero(bridge->identity) &&

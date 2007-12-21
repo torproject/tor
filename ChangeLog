@@ -1,4 +1,10 @@
 Changes in version 0.2.0.14-alpha - 2007-12-??
+  o Major bugfixes:
+    - Fix a crash when we fetch a descriptor that turns out to be
+      unexpected (it used to be in our networkstatus when we started
+      fetching it, but it isn't in our current networkstatus), and we
+      aren't using bridges. Bugfix on 0.2.0.x.
+
   o Minor bugfixes:
     - Make the unit tests build again.
 
