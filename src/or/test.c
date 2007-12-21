@@ -3330,7 +3330,7 @@ test_rend_fns_v2(void)
     intro->extend_info->addr = crypto_rand_int(65536); /* Does not cover all
                                                         * IP addresses. */
     intro->extend_info->port = crypto_rand_int(65536);
-    intro->intro_key = pk2;
+    intro->intro_key = crypto_pk_dup_key(pk2);
     smartlist_add(generated->intro_nodes, intro);
   }
   test_assert(rend_encode_v2_descriptors(descs, generated, now,
@@ -3374,7 +3374,7 @@ test_rend_fns_v2(void)
     rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
   smartlist_free(descs);
   rend_service_descriptor_free(parsed);
-//  rend_service_descriptor_free(generated); XXX020
+  rend_service_descriptor_free(generated);
 }
 
 static void
