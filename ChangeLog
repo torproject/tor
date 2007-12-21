@@ -1,3 +1,8 @@
+Changes in version 0.2.0.14-alpha - 2007-12-??
+  o Minor bugfixes:
+    - Make the unit tests build again.
+
+
 Changes in version 0.2.0.13-alpha - 2007-12-21
   o New directory authorities:
     - Set up lefkada (run by Geoff Goodell) as the fourth v3 directory
