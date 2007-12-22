@@ -18,6 +18,10 @@ Changes in version 0.2.0.14-alpha - 2007-12-??
     - Make PublishServerDescriptor default to 1, so the default doesn't
       have to change as we invent new directory protocol versions.
 
+  o Minor features:
+    - If BridgeRelay is set to 1, then the default for
+      PublishServerDescriptor is now "bridge" rather than "v2,v3".
+
 
 Changes in version 0.2.0.13-alpha - 2007-12-21
   o New directory authorities:

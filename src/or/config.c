@@ -2303,7 +2303,7 @@ config_lines_eq(config_line_t *a, config_line_t *b)
   return 1;
 }
 
-/** Return true iff the option <b>var</b> has the same value in <b>o1</b>
+/** Return true iff the option <b>name</b> has the same value in <b>o1</b>
  * and <b>o2</b>.  Must not be called for LINELIST_S or OBSOLETE options.
  */
 static int
@@ -2529,23 +2529,28 @@ ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
   return 0;
 }
 
-/** Parse an authority type from <b>list</b> and write it to *<b>auth</b>.  If
- * <b>compatible</b> is non-zero, treat "1" as "v2,v3" and treat "0" as "".
+/** Parse an authority type from <b>options</b>-\>PublishServerDescriptor
+ * and write it to <b>options</b>-\>_PublishServerDescriptor. Treat "1"
+ * as "v2,v3" unless BridgeRelay is 1, in which case treat it as "bridge".
+ * Treat "0" as "".
  * Return 0 on success or -1 if not a recognized authority type (in which
- * case the value of *<b>auth</b> is undefined). */
+ * case the value of _PublishServerDescriptor is undefined). */
 static int
-parse_authority_type_from_list(smartlist_t *list, authority_type_t *auth,
-                               int compatible)
+compute_publishserverdescriptor(or_options_t *options)
 {
-  tor_assert(auth);
+  smartlist_t *list = options->PublishServerDescriptor;
+  authority_type_t *auth = &options->_PublishServerDescriptor;
   *auth = NO_AUTHORITY;
   if (!list) /* empty list, answer is none */
     return 0;
   SMARTLIST_FOREACH(list, const char *, string, {
     if (!strcasecmp(string, "v1"))
       *auth |= V1_AUTHORITY;
-    else if (compatible && !strcmp(string, "1"))
-      *auth |= V2_AUTHORITY | V3_AUTHORITY;
+    else if (!strcmp(string, "1"))
+      if (options->BridgeRelay)
+        *auth |= BRIDGE_AUTHORITY;
+      else
+        *auth |= V2_AUTHORITY | V3_AUTHORITY;
     else if (!strcasecmp(string, "v2"))
       *auth |= V2_AUTHORITY;
     else if (!strcasecmp(string, "v3"))
@@ -2554,7 +2559,7 @@ parse_authority_type_from_list(smartlist_t *list, authority_type_t *auth,
       *auth |= BRIDGE_AUTHORITY;
     else if (!strcasecmp(string, "hidserv"))
       *auth |= HIDSERV_AUTHORITY;
-    else if (!strcasecmp(string, "") || (compatible && !strcmp(string, "0")))
+    else if (!strcasecmp(string, "") || !strcmp(string, "0"))
       /* no authority */;
     else
       return -1;
@@ -2936,8 +2941,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       });
   }
 
-  if ((parse_authority_type_from_list(options->PublishServerDescriptor,
-                               &options->_PublishServerDescriptor, 1) < 0)) {
+  if (compute_publishserverdescriptor(options) < 0) {
     r = tor_snprintf(buf, sizeof(buf),
                      "Unrecognized value in PublishServerDescriptor");
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
