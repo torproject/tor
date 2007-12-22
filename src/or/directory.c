@@ -2596,9 +2596,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       options->BridgePassword &&
       !strcmp(url,"/tor/networkstatus-bridges")) {
     char *status;
-    size_t len;
+    char decoded[64];
+    char *secret;
+    int r;
 
-    header = http_get_header(headers, "Authenticator: ");
+    header = http_get_header(headers, "Authorization: basic ");
 
     if (!header) {
       write_http_status_line(conn, 404, "Not found");
@@ -2606,7 +2608,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     }
 
     /* now make sure the password is right */
-    if (1) { // check password_is_wrong(header)
+    r = base64_decode(decoded, sizeof(decoded), header, strlen(header));
+    secret = alloc_http_authenticator(options->BridgePassword);
+    if (r < 0 || (unsigned)r != strlen(secret) || memcmp(decoded, secret, r)) {
+      /* failed to decode, or didn't match. Refuse. */
       write_http_status_line(conn, 404, "Not found");
       tor_free(header);
       goto done;
@@ -2614,9 +2619,9 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     /* all happy now. send an answer. */
     status = networkstatus_getinfo_by_purpose("bridge", time(NULL));
-    len = strlen(status);
-    write_http_response_header(conn, len, 0, 0);
-    connection_write_to_buf(status, len, TO_CONN(conn));
+    dlen = strlen(status);
+    write_http_response_header(conn, dlen, 0, 0);
+    connection_write_to_buf(status, dlen, TO_CONN(conn));
     tor_free(status);
     goto done;
   }

@@ -15,6 +15,11 @@ Changes in version 0.2.0.14-alpha - 2007-12-??
       currently have a Bridge line for it in our torrc. Bugfix on
       0.2.0.12-alpha.
 
+  o Major features:
+    - If bridge authorities set BridgePassword, they will serve a
+      snapshot of known bridge routerstatuses from their DirPort to
+      anybody who knows that password. Unset by default.
+
   o Minor bugfixes:
     - Make the unit tests build again.
     - Make "GETINFO/desc-annotations/id/<OR digest>" actually work.
