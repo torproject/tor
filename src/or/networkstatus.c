@@ -127,6 +127,8 @@ router_reload_v2_networkstatus(void)
 
   entries = tor_listdir(filename);
   tor_free(filename);
+  if (!entries) /* dir doesn't exist */
+    return 0;
   SMARTLIST_FOREACH(entries, const char *, fn, {
       char buf[DIGEST_LEN];
       if (strlen(fn) != HEX_DIGEST_LEN ||

@@ -1,5 +1,8 @@
 Changes in version 0.2.0.14-alpha - 2007-12-??
   o Major bugfixes:
+    - Fix a crash on startup if you install Tor 0.2.0.13-alpha fresh
+      without a datadirectory from a previous Tor install. Reported
+      by Zax.
     - Fix a crash when we fetch a descriptor that turns out to be
       unexpected (it used to be in our networkstatus when we started
       fetching it, but it isn't in our current networkstatus), and we
