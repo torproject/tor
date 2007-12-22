@@ -151,6 +151,7 @@ static config_var_t _option_vars[] = {
   V(BandwidthRate,               MEMUNIT,  "5 MB"),
   V(BridgeAuthoritativeDir,      BOOL,     "0"),
   VAR("Bridge",                  LINELIST, Bridges,    NULL),
+  V(BridgePassword,              STRING,   NULL),
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(CircuitBuildTimeout,         INTERVAL, "1 minute"),

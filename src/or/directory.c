@@ -2290,7 +2290,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
   if (!strcmpstart(url,"/tor/status-vote/current/") ||
       !strcmpstart(url,"/tor/status-vote/next/")) {
-    /* XXXX If-modified-since is only the implemented for the current
+    /* XXXX If-modified-since is only implemented for the current
      * consensus: that's probably fine, since it's the only vote document
      * people fetch much.*/
     int current = 1;
@@ -2589,6 +2589,35 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         write_http_status_line(conn, 400, "Bad request");
         break;
     }
+    goto done;
+  }
+
+  if (options->BridgeAuthoritativeDir &&
+      options->BridgePassword &&
+      !strcmp(url,"/tor/networkstatus-bridges")) {
+    char *status;
+    size_t len;
+
+    header = http_get_header(headers, "Authenticator: ");
+
+    if (!header) {
+      write_http_status_line(conn, 404, "Not found");
+      goto done;
+    }
+
+    /* now make sure the password is right */
+    if (1) { // check password_is_wrong(header)
+      write_http_status_line(conn, 404, "Not found");
+      tor_free(header);
+      goto done;
+    }
+
+    /* all happy now. send an answer. */
+    status = networkstatus_getinfo_by_purpose("bridge", time(NULL));
+    len = strlen(status);
+    write_http_response_header(conn, len, 0, 0);
+    connection_write_to_buf(status, len, TO_CONN(conn));
+    tor_free(status);
     goto done;
   }
 

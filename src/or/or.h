@@ -2089,6 +2089,12 @@ typedef struct {
   int BridgeAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that aggregates bridge descriptors? */
 
+  /** If set on a bridge authority, it will answer requests on its dirport
+   * for bridge statuses -- but only if the requests use this password.
+   * If set on a bridge user, request bridge statuses, and use this password
+   * when doing so. */
+  char *BridgePassword;
+
   int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
 
