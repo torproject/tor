@@ -241,7 +241,7 @@ static config_var_t _option_vars[] = {
   V(PidFile,                     STRING,   NULL),
   V(PreferTunneledDirConns,      BOOL,     "0"),
   V(ProtocolWarnings,            BOOL,     "0"),
-  V(PublishServerDescriptor,     CSV,      "v2,v3"),
+  V(PublishServerDescriptor,     CSV,      "1"),
   V(PublishHidServDescriptors,   BOOL,     "1"),
   V(ReachableAddresses,          LINELIST, NULL),
   V(ReachableDirAddresses,       LINELIST, NULL),

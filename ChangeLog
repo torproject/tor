@@ -15,6 +15,8 @@ Changes in version 0.2.0.14-alpha - 2007-12-??
   o Minor bugfixes:
     - Make the unit tests build again.
     - Make "GETINFO/desc-annotations/id/<OR digest>" actually work.
+    - Make PublishServerDescriptor default to 1, so the default doesn't
+      have to change as we invent new directory protocol versions.
 
 
 Changes in version 0.2.0.13-alpha - 2007-12-21
