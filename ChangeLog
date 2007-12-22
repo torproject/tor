@@ -21,6 +21,8 @@ Changes in version 0.2.0.14-alpha - 2007-12-??
   o Minor features:
     - If BridgeRelay is set to 1, then the default for
       PublishServerDescriptor is now "bridge" rather than "v2,v3".
+    - If the user sets RelayBandwidthRate but doesn't set
+      RelayBandwidthBurst, then make them equal rather than erroring out.
 
 
 Changes in version 0.2.0.13-alpha - 2007-12-21
