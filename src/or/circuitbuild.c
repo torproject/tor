@@ -2908,6 +2908,7 @@ bridge_fetch_status_increment(bridge_info_t *bridge, time_t now)
 static void
 bridge_fetch_status_arrived(bridge_info_t *bridge, time_t now)
 {
+  tor_assert(bridge);
   bridge->fetch_status.next_attempt_at = now+60*60;
   bridge->fetch_status.n_download_failures = 0;
 }
@@ -3038,13 +3039,15 @@ learned_bridge_descriptor(routerinfo_t *ri)
     time_t now = time(NULL);
     ri->is_running = 1;
 
-    /* it's here; schedule its re-fetch for a long time from now. */
-    bridge_fetch_status_arrived(bridge, now);
+    if (bridge) { /* if we actually want to use this one */
+      /* it's here; schedule its re-fetch for a long time from now. */
+      bridge_fetch_status_arrived(bridge, now);
 
-    add_an_entry_guard(ri, 1);
-    log_notice(LD_DIR, "new bridge descriptor '%s'", ri->nickname);
-    if (first)
-      routerlist_retry_directory_downloads(now);
+      add_an_entry_guard(ri, 1);
+      log_notice(LD_DIR, "new bridge descriptor '%s'", ri->nickname);
+      if (first)
+        routerlist_retry_directory_downloads(now);
+    }
   }
 }
 

@@ -3050,8 +3050,8 @@ routerlist_remove_old_routers(void)
   digestmap_free(retain, NULL);
 }
 
-/** We just added a new descriptor that isn't of purpose
- * ROUTER_PURPOSE_GENERAL. Take whatever extra steps we need. */
+/** We just added a new set of descriptors. Take whatever extra steps
+ * we need. */
 static void
 routerlist_descriptors_added(smartlist_t *sl)
 {
