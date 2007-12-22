@@ -71,6 +71,8 @@ S/M o vidalia can launch firefox
     . pick our favorite extensions
 
 Things we'd like to do in 0.2.0.x:
+  - if we notice a cached-status directory and we're not serving v2 dir
+    info and it's old enough, delete it. same with cached-routers*.
   - document the "3/4 and 7/8" business in the clients fetching consensus
     documents timeline. then document the bridge user download timeline.
   - refactor circuit_launch_by_foo so all those flags at the end are
