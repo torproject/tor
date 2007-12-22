@@ -1782,6 +1782,7 @@ static const getinfo_item_t getinfo_items[] = {
       "current version"),
   ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
   ITEM("dir-usage", misc, "Breakdown of bytes transferred over DirPort."),
+  PREFIX("desc-annotations/id/", dir, "Router annotations by hexdigest."),
   PREFIX("dir/server/", dir,"Router descriptors as retrieved from a DirPort."),
   PREFIX("dir/status/", dir,"Networkstatus docs as retrieved from a DirPort."),
   PREFIX("exit-policy/default", policies,
