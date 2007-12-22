@@ -2381,6 +2381,8 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
     idx = sd->routerlist_index;
   }
   tor_assert(0 <= idx && idx < smartlist_len(rl->old_routers));
+  /* XXX020 edmanm's bridge relay triggered the following assert while
+   * running 0.2.0.12-alpha: */
   tor_assert(smartlist_get(rl->old_routers, idx) == sd);
   tor_assert(idx == sd->routerlist_index);
 
