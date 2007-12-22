@@ -2616,6 +2616,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       tor_free(header);
       goto done;
     }
+    tor_free(secret);
 
     /* all happy now. send an answer. */
     status = networkstatus_getinfo_by_purpose("bridge", time(NULL));
