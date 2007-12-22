@@ -25,6 +25,9 @@ Changes in version 0.2.0.14-alpha - 2007-12-??
     - Make "GETINFO/desc-annotations/id/<OR digest>" actually work.
     - Make PublishServerDescriptor default to 1, so the default doesn't
       have to change as we invent new directory protocol versions.
+    - Fix test for rlim_t on OSX 10.3: sys/resource.h doesn't want to
+      be included unless sys/time.h is already included.  Fixes
+      bug 553.  Bugfix on 0.2.0.x.
 
   o Minor features:
     - If BridgeRelay is set to 1, then the default for
