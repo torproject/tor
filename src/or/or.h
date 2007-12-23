@@ -67,8 +67,10 @@
 
 /** Upper bound on maximum simultaneous connections; can be lowered by
  * config file. */
-#if defined(CYGWIN) || defined(__CYGWIN__)
-/* http://archives.seul.org/or/talk/Aug-2006/msg00210.html */
+#if defined(CYGWIN) || defined(__CYGWIN__) || defined(IPHONE)
+/* Re Cygwin, see http://archives.seul.org/or/talk/Aug-2006/msg00210.html */
+/* For an iPhone, the limit would be closer to 9999.  But nobody seems to be
+ * running a server on an iPhone anyway? */
 #define MAXCONNECTIONS 3200
 #else
 /* very high by default. "nobody should need more than this..." */
