@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 18 August 2007 for Tor 0.2.0.5-alpha.
+## Last updated 22 December 2007 for Tor 0.2.0.14-alpha.
 ## (May or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -70,11 +70,9 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #HiddenServicePort 80 127.0.0.1:80
 #HiddenServicePort 22 127.0.0.1:22
 
-################ This section is just for servers #####################
-
-## NOTE: If you enable these, you should consider mailing the contents of
-## the "fingerprint" file to the tor-ops, so we have contact info for you
-## in case we need it. See https://www.torproject.org/docs/tor-doc-relay.
+################ This section is just for relays #####################
+#
+## See https://www.torproject.org/docs/tor-doc-relay for details.
 
 ## A unique handle for your server.
 #Nickname ididnteditheconfig
@@ -135,4 +133,18 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #ExitPolicy accept *:6660-6667,reject *:* # allow irc ports but no more
 #ExitPolicy accept *:119 # accept nntp as well as default exit policy
 #ExitPolicy reject *:* # no exits allowed
+#
+################ This section is just for bridge relays ##############
+#
+## Bridge relays (or "bridges" ) are Tor relays that aren't listed in the
+## main directory. Since there is no complete public list of them, even if an
+## ISP is filtering connections to all the known Tor relays, they probably
+## won't be able to block all the bridges. Unlike running an exit relay,
+## running a bridge relay just passes data to and from the Tor network --
+## so it shouldn't expose the operator to abuse complaints.
+
+#ORPort 443
+#BridgeRelay 1
+#RelayBandwidthRate 50KBytes
+#ExitPolicy reject *:*
 
