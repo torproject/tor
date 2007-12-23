@@ -1,4 +1,4 @@
-Changes in version 0.2.0.14-alpha - 2007-12-22
+Changes in version 0.2.0.14-alpha - 2007-12-23
   o Major bugfixes:
     - Fix a crash on startup if you install Tor 0.2.0.13-alpha fresh
       without a datadirectory from a previous Tor install. Reported
@@ -10,10 +10,10 @@ Changes in version 0.2.0.14-alpha - 2007-12-22
     - Fix a crash when accessing hidden services: it would work the first
       time you use a given introduction point for your service, but
       on subsequent requests we'd be using garbage memory. Fixed by
-      Karsten Loesing. Bugfix on 0.2.0.12-alpha.
+      Karsten Loesing. Bugfix on 0.2.0.13-alpha.
     - Fix a crash when we load a bridge descriptor from disk but we don't
       currently have a Bridge line for it in our torrc. Bugfix on
-      0.2.0.12-alpha.
+      0.2.0.13-alpha.
 
   o Major features:
     - If bridge authorities set BridgePassword, they will serve a
