@@ -23,4 +23,5 @@ Backport for 0.1.2.x once better tested:
             tricky backport.
   - r12153 and r12154: Give better warnings when we fail to mmap a descriptor
             store that we just wrote.
-
+  - r12945: better cross-compilation support in configure.in
+  - r12946: iPhone support; requires r12945.
