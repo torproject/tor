@@ -4121,6 +4121,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
       strcasecmp(r1->nickname, r2->nickname) ||
       r1->or_port != r2->or_port ||
       r1->dir_port != r2->dir_port ||
+      r1->purpose != r2->purpose ||
       crypto_pk_cmp_keys(r1->onion_pkey, r2->onion_pkey) ||
       crypto_pk_cmp_keys(r1->identity_pkey, r2->identity_pkey) ||
       strcasecmp(r1->platform, r2->platform) ||

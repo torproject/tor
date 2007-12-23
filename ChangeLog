@@ -28,6 +28,9 @@ Changes in version 0.2.0.14-alpha - 2007-12-??
     - Fix test for rlim_t on OSX 10.3: sys/resource.h doesn't want to
       be included unless sys/time.h is already included.  Fixes
       bug 553.  Bugfix on 0.2.0.x.
+    - If we receive a general-purpose descriptor and then receive an
+      identical bridge-purpose descriptor soon after, don't discard
+      the next one as a duplicate.
 
   o Minor features:
     - If BridgeRelay is set to 1, then the default for
