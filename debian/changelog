@@ -1,9 +1,12 @@
-tor (0.2.0.13-alpha-1+svn) experimental; urgency=low
+tor (0.2.0.14-alpha-1) experimental; urgency=low
 
+  * New upstream version.
   * Remove 13_r12907-fix-unit-tests.dpatch (Fix unit tests from HEAD) again -
     it's included upstream.
+  * Work around fig2dev failing to build the images on sparc like we do on
+    s390.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 23 Dec 2007 10:46:18 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun, 23 Dec 2007 13:45:41 +0100
 
 tor (0.2.0.13-alpha-1) experimental; urgency=low
 
