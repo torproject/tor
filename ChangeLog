@@ -1,3 +1,7 @@
+Changes in version 0.2.0.15-alpha - 2008-01-??
+  o Minor bugfixes:
+    - Fix configure.in logic for cross-compilation.
+
 Changes in version 0.2.0.14-alpha - 2007-12-23
   o Major bugfixes:
     - Fix a crash on startup if you install Tor 0.2.0.13-alpha fresh

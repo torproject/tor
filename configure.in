@@ -405,7 +405,6 @@ AC_CHECK_TYPES([rlim_t], , ,
 #endif
 ])
 
-if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
 AC_RUN_IFELSE(AC_LANG_SOURCE([
 #ifdef HAVE_SYS_TYPES_H
@@ -418,15 +417,14 @@ AC_RUN_IFELSE(AC_LANG_SOURCE([
 #include <time.h>
 #endif
 int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }]),
-  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes)
+  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes, tor_cv_time_t_signed=cross)
 ])
-else
-  # Cross-compiling; let's hope the target platform isn't loony.
+
+if test "$tor_cv_time_t_signed" = cross; then
   AC_MSG_NOTICE([Cross compiling: assuming that time_t is signed.])
-  tor_cv_time_t_signed=yes
 fi
 
-if test "$tor_cv_time_t_signed" = yes; then
+if test "$tor_cv_time_t_signed" != no; then
   AC_DEFINE([TIME_T_IS_SIGNED], 1,
             [Define to 1 iff time_t is signed])
 fi
@@ -442,7 +440,6 @@ AC_CHECK_SIZEOF(socklen_t, , [AC_INCLUDES_DEFAULT()
 AC_CHECK_SIZEOF(cell_t)
 
 # Now make sure that NULL can be represented as zero bytes.
-if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether memset(0) sets pointers to NULL], tor_cv_null_is_zero,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
 [[#include <stdlib.h>
@@ -457,20 +454,17 @@ return memcmp(&p1,&p2,sizeof(char*))?1:0; }]])],
        [tor_cv_null_is_zero=no],
        [tor_cv_null_is_zero=cross])])
 
-else
+if test "$tor_cv_null_is_zero" = cross ; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that NULL is represented as a sequence of 0-valued bytes.])
-  tor_cv_null_is_zero=yes
 fi
 
-if test "$tor_cv_null_is_zero" = yes; then
+if test "$tor_cv_null_is_zero" != no; then
   AC_DEFINE([NULL_REP_IS_ZERO_BYTES], 1,
             [Define to 1 iff memset(0) sets pointers to NULL])
 fi
 
 # And what happens when we malloc zero?
-
-if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether we can malloc(0) safely.], tor_cv_malloc_zero_works,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
 [[#include <stdlib.h>
@@ -484,10 +478,9 @@ int main () { return malloc(0)?0:1; }]])],
        [tor_cv_malloc_zero_works=no],
        [tor_cv_malloc_zero_works=cross])])
 
-else
+if test "$tor_cv_malloc_zero_works" = cross; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that we need to check malloc() arguments for 0.])
-  tor_cv_malloc_zero_works=no
 fi
 
 if test "$tor_cv_malloc_zero_works" = yes; then
@@ -496,7 +489,6 @@ if test "$tor_cv_malloc_zero_works" = yes; then
 fi
 
 # whether we seem to be in a 2s-complement world.
-if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether we are using 2s-complement arithmetic], tor_cv_twos_complement,
 [AC_RUN_IFELSE([AC_LANG_SOURCE(
 [[int main () { int problem = ((-99) != (~99)+1);
@@ -505,13 +497,12 @@ return problem ? 1 : 0; }]])],
        [tor_cv_twos_complement=no],
        [tor_cv_twos_complement=cross])])
 
-else
+if test "$tor_cv_twos_complement" = cross ; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that negative integers are represented with two's complement.])
-  tor_cv_twos_complement=yes
 fi
 
-if test "$tor_cv_twos_complement" = yes; then
+if test "$tor_cv_twos_complement" != no ; then
   AC_DEFINE([USING_TWOS_COMPLEMENT], 1,
             [Define to 1 iff we represent negative integers with two's complement])
 fi

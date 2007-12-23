@@ -150,7 +150,7 @@ fi
 
 TOR_DEFINE_CODEPATH($tor_cv_library_$1_dir, $1)
 
-if test -z "$CROSS_COMPILE"; then
+if test "$cross_compiling" != yes; then
   AC_CACHE_CHECK([whether we need extra options to link $1],
                  tor_cv_library_$1_linker_option, [
    orig_LDFLAGS="$LDFLAGS"
