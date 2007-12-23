@@ -551,11 +551,11 @@ init_keys(void)
   }
   /* 6b. [authdirserver only] add own key to approved directories. */
   crypto_pk_get_digest(get_identity_key(), digest);
-  type = ((options->V1AuthoritativeDir ? V1_AUTHORITY : 0) |
-          (options->V2AuthoritativeDir ? V2_AUTHORITY : 0) |
-          (options->V3AuthoritativeDir ? V3_AUTHORITY : 0) |
-          (options->BridgeAuthoritativeDir ? BRIDGE_AUTHORITY : 0) |
-          (options->HSAuthoritativeDir ? HIDSERV_AUTHORITY : 0));
+  type = ((options->V1AuthoritativeDir ? V1_AUTHORITY : NO_AUTHORITY) |
+          (options->V2AuthoritativeDir ? V2_AUTHORITY : NO_AUTHORITY) |
+          (options->V3AuthoritativeDir ? V3_AUTHORITY : NO_AUTHORITY) |
+          (options->BridgeAuthoritativeDir ? BRIDGE_AUTHORITY : NO_AUTHORITY) |
+          (options->HSAuthoritativeDir ? HIDSERV_AUTHORITY : NO_AUTHORITY));
 
   if (!router_digest_is_trusted_dir(digest)) {
     add_trusted_dir_server(options->Nickname, NULL,

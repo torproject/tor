@@ -871,16 +871,16 @@ validate_dir_authorities(or_options_t *options, or_options_t *old_options)
   /* Now go through the four ways you can configure an alternate
    * set of directory authorities, and make sure none are broken. */
   for (cl = options->DirServers; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, 0, 1)<0)
+    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 1)<0)
       return -1;
   for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, 0, 1)<0)
+    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 1)<0)
       return -1;
   for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, 0, 1)<0)
+    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 1)<0)
       return -1;
   for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, 0, 1)<0)
+    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 1)<0)
       return -1;
   return 0;
 }
@@ -922,16 +922,16 @@ consider_adding_dir_authorities(or_options_t *options,
   }
 
   for (cl = options->DirServers; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, 0, 0)<0)
+    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 0)<0)
       return -1;
   for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, 0, 0)<0)
+    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 0)<0)
       return -1;
   for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, 0, 0)<0)
+    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 0)<0)
       return -1;
   for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, 0, 0)<0)
+    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 0)<0)
       return -1;
   return 0;
 }
@@ -4206,13 +4206,19 @@ static struct unit_table_t memory_units[] = {
   { "byte",      1<< 0 },
   { "bytes",     1<< 0 },
   { "kb",        1<<10 },
+  { "kbyte",     1<<10 },
+  { "kbytes",    1<<10 },
   { "kilobyte",  1<<10 },
   { "kilobytes", 1<<10 },
   { "m",         1<<20 },
   { "mb",        1<<20 },
+  { "mbyte",     1<<20 },
+  { "mbytes",    1<<20 },
   { "megabyte",  1<<20 },
   { "megabytes", 1<<20 },
   { "gb",        1<<30 },
+  { "gbyte",     1<<30 },
+  { "gbytes",    1<<30 },
   { "gigabyte",  1<<30 },
   { "gigabytes", 1<<30 },
   { "tb",        U64_LITERAL(1)<<40 },

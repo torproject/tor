@@ -3878,7 +3878,7 @@ int router_digest_version_as_new_as(const char *digest, const char *cutoff);
 int router_digest_is_trusted_dir_type(const char *digest,
                                       authority_type_t type);
 #define router_digest_is_trusted_dir(d) \
-  router_digest_is_trusted_dir_type((d), 0)
+  router_digest_is_trusted_dir_type((d), NO_AUTHORITY)
 
 int router_addr_is_trusted_dir(uint32_t addr);
 int hexdigest_to_digest(const char *hexdigest, char *digest);
