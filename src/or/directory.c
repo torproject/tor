@@ -995,7 +995,7 @@ http_get_header(const char *headers, const char *which)
 {
   const char *cp = headers;
   while (cp) {
-    if (!strcmpstart(cp, which)) {
+    if (!strcasecmpstart(cp, which)) {
       char *eos;
       cp += strlen(which);
       if ((eos = strchr(cp,'\r')))
@@ -2600,7 +2600,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     char *secret;
     int r;
 
-    header = http_get_header(headers, "Authorization: basic ");
+    header = http_get_header(headers, "Authorization: Basic ");
 
     if (!header) {
       write_http_status_line(conn, 404, "Not found");

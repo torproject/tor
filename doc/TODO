@@ -57,8 +57,8 @@ R - bridge communities
       o make the Alternate*Authority config options pass a "default_type"
         to parse_dir_server_line() so they don't demand as much redundancy
       o some sort of reachability testing on bridges
-      - a dir-based way to fetch the bridge networkstatus list
-      - there's a config option with a password and somehow use an
+      o a dir-based way to fetch the bridge networkstatus list
+      o there's a config option with a password and somehow use an
         http header and check it
       - clients who have a password configured decide to ask their bridge
         authority for a networkstatus
