@@ -699,7 +699,8 @@ consider_testing_reachability(int test_or, int test_dir)
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, 0, me, 0, 1, 1);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me,
+                             CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
     control_event_server_status(LOG_NOTICE,
                                 "CHECKING_REACHABILITY ORADDRESS=%s:%d",
                                 me->address, me->or_port);

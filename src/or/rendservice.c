@@ -647,9 +647,10 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   /* Launch a circuit to alice's chosen rendezvous point.
    */
   for (i=0;i<MAX_REND_FAILURES;i++) {
+    int flags = CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_IS_INTERNAL;
+    if (circ_needs_uptime) flags |= CIRCLAUNCH_NEED_UPTIME;
     launched = circuit_launch_by_extend_info(
-          CIRCUIT_PURPOSE_S_CONNECT_REND, 0, extend_info,
-          circ_needs_uptime, 1, 1);
+                        CIRCUIT_PURPOSE_S_CONNECT_REND, extend_info, flags);
 
     if (launched)
       break;
@@ -728,8 +729,10 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   log_info(LD_REND,"Reattempting rendezvous circuit to '%s'",
            oldstate->chosen_exit->nickname);
 
-  newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND, 0,
-                               oldstate->chosen_exit, 0, 1, 1);
+  newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
+                            oldstate->chosen_exit,
+                            CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
+
   if (!newcirc) {
     log_warn(LD_REND,"Couldn't relaunch rendezvous circuit to '%s'.",
              oldstate->chosen_exit->nickname);
@@ -769,7 +772,9 @@ rend_service_launch_establish_intro(rend_service_t *service,
 
   ++service->n_intro_circuits_launched;
   launched = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
-                                           0, intro->extend_info, 1, 0, 1);
+                             intro->extend_info,
+                             CIRCLAUNCH_NEED_UPTIME|CIRCLAUNCH_IS_INTERNAL);
+
   if (!launched) {
     log_info(LD_REND,
              "Can't launch circuit to establish introduction at %s.",

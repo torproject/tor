@@ -791,19 +791,24 @@ circuit_get_intro_point(const char *digest)
 }
 
 /** Return a circuit that is open, is CIRCUIT_PURPOSE_C_GENERAL,
- * has a timestamp_dirty value of 0, is uptime/capacity/internal
- * if required, and if info is defined, does not already use info
+ * has a timestamp_dirty value of 0, has flags matching the CIRCLAUNCH_*
+ * flags in <b>flags</b>, and if info is defined, does not already use info
  * as any of its hops; or NULL if no circuit fits this description.
  *
- * If ! need_uptime, prefer returning non-uptime circuits.
+ * If !CIRCLAUNCH_NEED_UPTIME, prefer returning non-uptime circuits.
  */
 origin_circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
-                            int need_uptime,
-                            int need_capacity, int internal)
+                            int flags)
 {
+  /*XXXX020 arma: The purpose argument is ignored.  Can that possibly be
+   * right? */
+
   circuit_t *_circ;
   origin_circuit_t *best=NULL;
+  int need_uptime = flags & CIRCLAUNCH_NEED_UPTIME;
+  int need_capacity = flags & CIRCLAUNCH_NEED_CAPACITY;
+  int internal = flags & CIRCLAUNCH_IS_INTERNAL;
 
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "

@@ -2473,13 +2473,10 @@ char *circuit_list_path_for_controller(origin_circuit_t *circ);
 void circuit_log_path(int severity, unsigned int domain,
                       origin_circuit_t *circ);
 void circuit_rep_hist_note_result(origin_circuit_t *circ);
-origin_circuit_t *origin_circuit_init(uint8_t purpose, int onehop_tunnel,
-                                      int need_uptime,
-                                      int need_capacity, int internal);
+origin_circuit_t *origin_circuit_init(uint8_t purpose, int flags);
 origin_circuit_t *circuit_establish_circuit(uint8_t purpose,
-                                     int onehop_tunnel, extend_info_t *exit,
-                                     int need_uptime, int need_capacity,
-                                     int internal);
+                                            extend_info_t *exit,
+                                            int flags);
 int circuit_handle_first_hop(origin_circuit_t *circ);
 void circuit_n_conn_done(or_connection_t *or_conn, int status);
 int inform_testing_reachability(void);
@@ -2556,9 +2553,7 @@ origin_circuit_t *circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
 or_circuit_t *circuit_get_rendezvous(const char *cookie);
 or_circuit_t *circuit_get_intro_point(const char *digest);
 origin_circuit_t *circuit_find_to_cannibalize(uint8_t purpose,
-                                       extend_info_t *info,
-                                       int need_uptime,
-                                       int need_capacity, int internal);
+                                              extend_info_t *info, int flags);
 void circuit_mark_all_unused_circs(void);
 void circuit_expire_all_dirty_circs(void);
 void _circuit_mark_for_close(circuit_t *circ, int reason,
@@ -2590,21 +2585,24 @@ int circuit_enough_testing_circs(void);
 
 void circuit_has_opened(origin_circuit_t *circ);
 void circuit_build_failed(origin_circuit_t *circ);
+
+/** Flag to set when a circuit should have only a single hop. */
+#define CIRCLAUNCH_ONEHOP_TUNNEL  (1<<0)
+/** Flag to set when a circuit needs to be built of high-uptime nodes */
+#define CIRCLAUNCH_NEED_UPTIME    (1<<1)
+/** Flag to set when a circuit needs to be build of high-capcity nodes */
+#define CIRCLAUNCH_NEED_CAPACITY  (1<<2)
+/** Flag to set when the last hop of a circuit doesn't need to be an
+ * exit node. */
+#define CIRCLAUNCH_IS_INTERNAL    (1<<3)
 origin_circuit_t *circuit_launch_by_nickname(uint8_t purpose,
-                                      int onehop_tunnel,
-                                      const char *exit_nickname,
-                                      int need_uptime, int need_capacity,
-                                      int is_internal);
+                                             const char *exit_nickname,
+                                             int flags);
 origin_circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
-                                         int onehop_tunnel,
-                                         extend_info_t *info,
-                                         int need_uptime, int need_capacity,
-                                         int is_internal);
+                                                extend_info_t *info,
+                                                int flags);
 origin_circuit_t *circuit_launch_by_router(uint8_t purpose,
-                                    int onehop_tunnel,
-                                    routerinfo_t *exit,
-                                    int need_uptime, int need_capacity,
-                                    int is_internal);
+                                           routerinfo_t *exit, int flags);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
                                                   origin_circuit_t *circ,

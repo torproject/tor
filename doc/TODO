@@ -75,7 +75,7 @@ Things we'd like to do in 0.2.0.x:
     info and it's old enough, delete it. same with cached-routers*.
   - document the "3/4 and 7/8" business in the clients fetching consensus
     documents timeline. then document the bridge user download timeline.
-  - refactor circuit_launch_by_foo so all those flags at the end are
+  o refactor circuit_launch_by_foo so all those flags at the end are
     actually a flags argument.
   - config option __ControllerLimit that hangs up if there are a limit
     of controller connections already.

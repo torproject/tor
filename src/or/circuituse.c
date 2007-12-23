@@ -371,6 +371,7 @@ circuit_predict_and_launch_new(void)
   int hidserv_needs_uptime=0, hidserv_needs_capacity=1;
   int port_needs_uptime=0, port_needs_capacity=1;
   time_t now = time(NULL);
+  int flags = 0;
 
   /* First, count how many of each type of circuit we have already. */
   for (circ=global_circuitlist;circ;circ = circ->next) {
@@ -402,22 +403,26 @@ circuit_predict_and_launch_new(void)
    * and no circuit is currently available that can handle it. */
   if (!circuit_all_predicted_ports_handled(now, &port_needs_uptime,
                                            &port_needs_capacity)) {
+    if (port_needs_uptime)
+      flags |= CIRCLAUNCH_NEED_UPTIME;
+    if (port_needs_capacity)
+      flags |= CIRCLAUNCH_NEED_CAPACITY;
     log_info(LD_CIRC,
              "Have %d clean circs (%d internal), need another exit circ.",
              num, num_internal);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, 0, NULL,
-                             port_needs_uptime, port_needs_capacity, 0);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
     return;
   }
 
   /* Third, see if we need any more hidden service (server) circuits. */
   if (num_rend_services() && num_uptime_internal < 3) {
+    flags = (CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_NEED_UPTIME |
+             CIRCLAUNCH_IS_INTERNAL);
     log_info(LD_CIRC,
              "Have %d clean circs (%d internal), need another internal "
              "circ for my hidden service.",
              num, num_internal);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, 0, NULL,
-                             1, 1, 1);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
     return;
   }
 
@@ -426,12 +431,16 @@ circuit_predict_and_launch_new(void)
                                       &hidserv_needs_capacity) &&
       ((num_uptime_internal<2 && hidserv_needs_uptime) ||
         num_internal<2)) {
+    if (hidserv_needs_uptime)
+      flags |= CIRCLAUNCH_NEED_UPTIME;
+    if (hidserv_needs_capacity)
+      flags |= CIRCLAUNCH_NEED_CAPACITY;
+    flags |= CIRCLAUNCH_IS_INTERNAL;
     log_info(LD_CIRC,
              "Have %d clean circs (%d uptime-internal, %d internal), need"
              " another hidserv circ.",
              num, num_uptime_internal, num_internal);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, 0, NULL,
-                             hidserv_needs_uptime, hidserv_needs_capacity, 1);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
     return;
   }
 }
@@ -469,7 +478,7 @@ circuit_build_needed_circs(time_t now)
         circ &&
         circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
-      circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, 0, NULL, 0, 0, 0);
+      circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, 0);
     }
 #endif
   }
@@ -798,34 +807,33 @@ static int did_circs_fail_last_period = 0;
 /** Launch a new circuit; see circuit_launch_by_extend_info() for
  * details on arguments. */
 origin_circuit_t *
-circuit_launch_by_router(uint8_t purpose, int onehop_tunnel,
-                         routerinfo_t *exit, int need_uptime,
-                         int need_capacity, int internal)
+circuit_launch_by_router(uint8_t purpose,
+                         routerinfo_t *exit, int flags)
 {
   origin_circuit_t *circ;
   extend_info_t *info = NULL;
   if (exit)
     info = extend_info_from_router(exit);
-  circ = circuit_launch_by_extend_info(
-    purpose, onehop_tunnel, info, need_uptime, need_capacity, internal);
+  circ = circuit_launch_by_extend_info(purpose, info, flags);
   if (info)
     extend_info_free(info);
   return circ;
 }
 
 /** Launch a new circuit with purpose <b>purpose</b> and exit node
- * <b>extend_info</b> (or NULL to select a random exit node).
- * If <b>need_uptime</b> is true,
- * choose among routers with high uptime.  If <b>need_capacity</b> is true,
- * choose among routers with high bandwidth.  If <b>internal</b> is true, the
- * last hop need not be an exit node. Return the newly allocated circuit on
- * success, or NULL on failure. */
+ * <b>extend_info</b> (or NULL to select a random exit node).  If flags
+ * contains CIRCLAUNCH_NEED_UPTIME, choose among routers with high uptime.  If
+ * CIRCLAUNCH_NEED_CAPACITY is set, choose among routers with high bandwidth.
+ * If CIRCLAUNCH_IS_INTERNAL is true, the last hop need not be an exit node.
+ * If CIRCLAUNCH_ONEHOP_TUNNEL is set, the circuit will have only one hop.
+ * Return the newly allocated circuit on success, or NULL on failure. */
 origin_circuit_t *
-circuit_launch_by_extend_info(uint8_t purpose, int onehop_tunnel,
-                              extend_info_t *extend_info, int need_uptime,
-                              int need_capacity, int internal)
+circuit_launch_by_extend_info(uint8_t purpose,
+                              extend_info_t *extend_info,
+                              int flags)
 {
   origin_circuit_t *circ;
+  int onehop_tunnel = flags & CIRCLAUNCH_ONEHOP_TUNNEL;
 
   if (!onehop_tunnel && !router_have_minimum_dir_info()) {
     log_debug(LD_CIRC,"Haven't fetched enough directory info yet; canceling "
@@ -838,8 +846,7 @@ circuit_launch_by_extend_info(uint8_t purpose, int onehop_tunnel,
     /* see if there are appropriate circs available to cannibalize. */
     /* XXX020 if we're planning to add a hop, perhaps we want to look for
      * internal circs rather than exit circs? -RD */
-    circ = circuit_find_to_cannibalize(purpose, extend_info,
-                                       need_uptime, need_capacity, internal);
+    circ = circuit_find_to_cannibalize(purpose, extend_info, flags);
     if (circ) {
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d",
                build_state_get_exit_nickname(circ->build_state), purpose);
@@ -881,16 +888,14 @@ circuit_launch_by_extend_info(uint8_t purpose, int onehop_tunnel,
 
   /* try a circ. if it fails, circuit_mark_for_close will increment
    * n_circuit_failures */
-  return circuit_establish_circuit(purpose, onehop_tunnel, extend_info,
-                                   need_uptime, need_capacity, internal);
+  return circuit_establish_circuit(purpose, extend_info, flags);
 }
 
 /** Launch a new circuit; see circuit_launch_by_extend_info() for
  * details on arguments. */
 origin_circuit_t *
-circuit_launch_by_nickname(uint8_t purpose, int onehop_tunnel,
-                           const char *exit_nickname,
-                           int need_uptime, int need_capacity, int internal)
+circuit_launch_by_nickname(uint8_t purpose,
+                           const char *exit_nickname, int flags)
 {
   routerinfo_t *router = NULL;
 
@@ -902,8 +907,7 @@ circuit_launch_by_nickname(uint8_t purpose, int onehop_tunnel,
       return NULL;
     }
   }
-  return circuit_launch_by_router(purpose, onehop_tunnel, router,
-                                  need_uptime, need_capacity, internal);
+  return circuit_launch_by_router(purpose, router, flags);
 }
 
 /** Record another failure at opening a general circuit. When we have
@@ -1085,9 +1089,15 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
     else
       new_circ_purpose = desired_circuit_purpose;
 
-    circ = circuit_launch_by_extend_info(
-              new_circ_purpose, want_onehop, extend_info,
-              need_uptime, 1, need_internal);
+    {
+      int flags = CIRCLAUNCH_NEED_CAPACITY;
+      if (want_onehop) flags |= CIRCLAUNCH_ONEHOP_TUNNEL;
+      if (need_uptime) flags |= CIRCLAUNCH_NEED_UPTIME;
+      if (need_internal) flags |= CIRCLAUNCH_IS_INTERNAL;
+      circ = circuit_launch_by_extend_info(new_circ_purpose, extend_info,
+                                           flags);
+    }
+
     if (extend_info)
       extend_info_free(extend_info);
 

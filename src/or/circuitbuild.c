@@ -283,19 +283,23 @@ again:
 }
 
 /** Create and return a new origin circuit. Initialize its purpose and
- * build-state based on our arguments. */
+ * build-state based on our arguments.  The <b>flags</b> argument is a
+ * bitfield of CIRCLAUNCH_* flags. */
 origin_circuit_t *
-origin_circuit_init(uint8_t purpose, int onehop_tunnel,
-                    int need_uptime, int need_capacity, int internal)
+origin_circuit_init(uint8_t purpose, int flags)
 {
   /* sets circ->p_circ_id and circ->p_conn */
   origin_circuit_t *circ = origin_circuit_new();
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OR_WAIT);
   circ->build_state = tor_malloc_zero(sizeof(cpath_build_state_t));
-  circ->build_state->onehop_tunnel = onehop_tunnel;
-  circ->build_state->need_uptime = need_uptime;
-  circ->build_state->need_capacity = need_capacity;
-  circ->build_state->is_internal = internal;
+  circ->build_state->onehop_tunnel =
+    ((flags & CIRCLAUNCH_ONEHOP_TUNNEL) ? 1 : 0);
+  circ->build_state->need_uptime =
+    ((flags & CIRCLAUNCH_NEED_UPTIME) ? 1 : 0);
+  circ->build_state->need_capacity =
+    ((flags & CIRCLAUNCH_NEED_CAPACITY) ? 1 : 0);
+  circ->build_state->is_internal =
+    ((flags & CIRCLAUNCH_IS_INTERNAL) ? 1 : 0);
   circ->_base.purpose = purpose;
   return circ;
 }
@@ -308,15 +312,12 @@ origin_circuit_init(uint8_t purpose, int onehop_tunnel,
  * it's not open already.
  */
 origin_circuit_t *
-circuit_establish_circuit(uint8_t purpose, int onehop_tunnel,
-                          extend_info_t *exit,
-                          int need_uptime, int need_capacity, int internal)
+circuit_establish_circuit(uint8_t purpose, extend_info_t *exit, int flags)
 {
   origin_circuit_t *circ;
   int err_reason = 0;
 
-  circ = origin_circuit_init(purpose, onehop_tunnel,
-                             need_uptime, need_capacity, internal);
+  circ = origin_circuit_init(purpose, flags);
 
   if (onion_pick_cpath_exit(circ, exit) < 0 ||
       onion_populate_cpath(circ) < 0) {
