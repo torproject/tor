@@ -2521,7 +2521,7 @@ int routerinfo_is_a_configured_bridge(routerinfo_t *ri);
 void bridge_add_from_config(uint32_t addr, uint16_t port, char *digest);
 void retry_bridge_descriptor_fetch_directly(char *digest);
 void fetch_bridge_descriptors(time_t now);
-void learned_bridge_descriptor(routerinfo_t *ri);
+void learned_bridge_descriptor(routerinfo_t *ri, int from_cache);
 int any_bridge_descriptors_known(void);
 int bridges_known_but_down(void);
 void bridges_retry_all(void);

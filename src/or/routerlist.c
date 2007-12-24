@@ -3053,13 +3053,13 @@ routerlist_remove_old_routers(void)
 /** We just added a new set of descriptors. Take whatever extra steps
  * we need. */
 static void
-routerlist_descriptors_added(smartlist_t *sl)
+routerlist_descriptors_added(smartlist_t *sl, int from_cache)
 {
   tor_assert(sl);
   control_event_descriptors_changed(sl);
   SMARTLIST_FOREACH(sl, routerinfo_t *, ri,
     if (ri->purpose == ROUTER_PURPOSE_BRIDGE)
-      learned_bridge_descriptor(ri);
+      learned_bridge_descriptor(ri, from_cache);
   );
 }
 
@@ -3118,7 +3118,7 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
     smartlist_free(lst);
     return 0;
   } else {
-    routerlist_descriptors_added(lst);
+    routerlist_descriptors_added(lst, 0);
     smartlist_free(lst);
     log_debug(LD_DIR, "Added router to list");
     return 1;
@@ -3182,7 +3182,7 @@ router_load_routers_from_string(const char *s, const char *eos,
 
     if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0) {
       smartlist_add(changed, ri);
-      routerlist_descriptors_added(changed);
+      routerlist_descriptors_added(changed, from_cache);
       smartlist_clear(changed);
     }
   });

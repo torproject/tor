@@ -2054,8 +2054,10 @@ add_an_entry_guard(routerinfo_t *chosen, int reset_status)
     router = chosen;
     entry = is_an_entry_guard(router->cache_info.identity_digest);
     if (entry) {
-      if (reset_status)
+      if (reset_status) {
         entry->bad_since = 0;
+        entry->can_retry = 1;
+      }
       return NULL;
     }
   } else {
@@ -3030,7 +3032,7 @@ fetch_bridge_descriptors(time_t now)
 /** We just learned a descriptor for a bridge. See if that
  * digest is in our entry guard list, and add it if not. */
 void
-learned_bridge_descriptor(routerinfo_t *ri)
+learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
 {
   tor_assert(ri);
   tor_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
@@ -3042,10 +3044,12 @@ learned_bridge_descriptor(routerinfo_t *ri)
 
     if (bridge) { /* if we actually want to use this one */
       /* it's here; schedule its re-fetch for a long time from now. */
-      bridge_fetch_status_arrived(bridge, now);
+      if (!from_cache)
+        bridge_fetch_status_arrived(bridge, now);
 
       add_an_entry_guard(ri, 1);
-      log_notice(LD_DIR, "new bridge descriptor '%s'", ri->nickname);
+      log_notice(LD_DIR, "new bridge descriptor '%s' (%s)", ri->nickname,
+                 from_cache ? "cached" : "fresh");
       if (first)
         routerlist_retry_directory_downloads(now);
     }

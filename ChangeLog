@@ -1,6 +1,10 @@
 Changes in version 0.2.0.15-alpha - 2008-01-??
   o Minor bugfixes:
     - Fix configure.in logic for cross-compilation.
+    - When we load a bridge descriptor from the cache, and it was
+      previously unreachable, mark it as retriable so we won't just
+      ignore it. Also, try fetching a new copy immediately. Bugfixes
+      on 0.2.0.13-alpha.
 
   o Minor features:
     - Support compilation to target iPhone; patch from cjacker huang.
