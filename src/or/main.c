@@ -976,7 +976,6 @@ run_scheduled_events(time_t now)
 /** How often do we (as a cache) fetch a new V1 runningrouters document? */
 #define V1_RUNNINGROUTERS_FETCH_PERIOD (12*60*60)
     time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
-
   }
 
   /* Remove old information from rephist and the rend cache. */

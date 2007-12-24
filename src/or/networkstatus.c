@@ -1121,7 +1121,7 @@ int
 should_delay_dir_fetches(or_options_t *options)
 {
   if (options->UseBridges && !any_bridge_descriptors_known()) {
-    log_info(LD_DIR, "delaying dir fetches");
+    log_info(LD_DIR, "delaying dir fetches (no running bridges known)");
     return 1;
   }
   return 0;

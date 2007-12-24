@@ -170,7 +170,7 @@ geoip_get_country_by_ip(uint32_t ipaddr)
   return ent ? ent->country : -1;
 }
 
-/** Return the number of countries recognized by the GEOIP database. */
+/** Return the number of countries recognized by the GeoIP database. */
 int
 geoip_get_n_countries(void)
 {
