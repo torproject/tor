@@ -1,4 +1,14 @@
-Changes in version 0.2.0.15-alpha - 2008-01-??
+Changes in version 0.2.0.15-alpha - 2007-12-??
+  o Major bugfixes:
+    - Fix several remotely triggerable asserts based on DirPort requests
+      for a v2 or v3 networkstatus object before we were prepared. This
+      was particularly bad for 0.2.0.13 and later bridge relays, who
+      would never have a v2 networkstatus and would thus always crash
+      when used. Bugfixes on 0.2.0.x.
+    - Estimate the v3 networkstatus size more accurately, rather than
+      estimating it at zero bytes and giving it artificially high priority
+      compared to other directory requests. Bugfix on 0.2.0.x.
+
   o Minor bugfixes:
     - Fix configure.in logic for cross-compilation.
     - When we load a bridge descriptor from the cache, and it was

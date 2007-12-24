@@ -2757,6 +2757,24 @@ dirserv_test_reachability(time_t now, int try_all)
     ctr = (ctr + 1) % 128;
 }
 
+
+/** Given a fingerprint <b>fp</b> which is either set if we're looking
+ * for a v2 status, or zeroes if we're looking for a v3 status, return
+ * a pointer to the appropriate cached dir object, or NULL if there isn't
+ * one available. */
+static cached_dir_t *
+lookup_cached_dir_by_fp(const char *fp)
+{
+  cached_dir_t *d = NULL;
+  if (tor_digest_is_zero(fp) && cached_v3_networkstatus)
+    d = cached_v3_networkstatus;
+  else if (router_digest_is_me(fp) && the_v2_networkstatus)
+    d = the_v2_networkstatus;
+  else if (cached_v2_networkstatus)
+    d = digestmap_get(cached_v2_networkstatus, fp);
+  return d;
+}
+
 /** Remove from <b>fps</b> every networkstatus key where both
  * a) we have a networkstatus document and
  * b) it is not newer than <b>cutoff</b>.
@@ -2769,13 +2787,7 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
   int found_any = 0;
   SMARTLIST_FOREACH(fps, char *, digest,
   {
-    cached_dir_t *d;
-    if (router_digest_is_me(digest) && the_v2_networkstatus)
-      d = the_v2_networkstatus;
-    else if (tor_digest_is_zero(digest) && cached_v3_networkstatus)
-      d = cached_v3_networkstatus;
-    else
-      d = digestmap_get(cached_v2_networkstatus, digest);
+    cached_dir_t *d = lookup_cached_dir_by_fp(digest);
     if (!d)
       continue;
     found_any = 1;
@@ -2864,8 +2876,8 @@ dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
       result /= 2; /* observed compressability is between 35 and 55%. */
   } else {
     result = 0;
-    SMARTLIST_FOREACH(fps, const char *, d, {
-        cached_dir_t *dir = digestmap_get(cached_v2_networkstatus, d);
+    SMARTLIST_FOREACH(fps, const char *, digest, {
+        cached_dir_t *dir = lookup_cached_dir_by_fp(digest);
         if (dir)
           result += compressed ? dir->dir_z_len : dir->dir_len;
       });
@@ -3019,13 +3031,7 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
                smartlist_len(conn->fingerprint_stack)) {
       /* Add another networkstatus; start serving it. */
       char *fp = smartlist_pop_last(conn->fingerprint_stack);
-      cached_dir_t *d;
-      if (tor_digest_is_zero(fp))
-        d = cached_v3_networkstatus;
-      else if (router_digest_is_me(fp))
-        d = the_v2_networkstatus;
-      else
-        d = digestmap_get(cached_v2_networkstatus, fp);
+      cached_dir_t *d = lookup_cached_dir_by_fp(fp);
       tor_free(fp);
       if (d) {
         ++d->refcnt;
