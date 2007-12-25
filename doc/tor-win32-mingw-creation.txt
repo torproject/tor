@@ -111,7 +111,7 @@ Type "./configure"
 Type "make"
 
 You now have a tor.exe in src/or/.  This is Tor.
-You now have a tor_resolve.exe in src/tools/.
+You now have a tor-resolve.exe in src/tools/.
 
 Stage Six:  Build the installer
 -------------------------------
