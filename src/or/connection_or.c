@@ -906,7 +906,9 @@ connection_or_set_state_open(or_connection_t *conn)
     }
     router_set_status(conn->identity_digest, 1);
   } else {
-    geoip_note_client_seen(TO_CONN(conn)->addr, now);
+    /* only report it to the geoip module if it's not a known router */
+    if (!router_get_by_digest(conn->identity_digest))
+      geoip_note_client_seen(TO_CONN(conn)->addr, now);
   }
   if (conn->handshake_state) {
     or_handshake_state_free(conn->handshake_state);

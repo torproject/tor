@@ -48,7 +48,7 @@ R   . spec
       - Write some basic unit tests.
     - Mention in dir-spec.txt
     - Mention in control-spec.txt
-    - we count hits from our reachability tests too. stop that somehow.
+    o we count hits from our reachability tests too. stop that somehow.
     - have normal relays report geoip stats too.
     - different thresholds for bridges than for normal relays.
     d let Vidalia use the geoip data too rather than doing its own
