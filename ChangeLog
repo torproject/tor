@@ -1,4 +1,4 @@
-Changes in version 0.2.0.15-alpha - 2007-12-24
+Changes in version 0.2.0.15-alpha - 2007-12-25
   o Major bugfixes:
     - Fix several remotely triggerable asserts based on DirPort requests
       for a v2 or v3 networkstatus object before we were prepared. This
