@@ -1,3 +1,11 @@
+Changes in version 0.2.0.16-alpha - 2008-01-??
+  o Major performance improvements:
+    - Switch our old ring buffer implementation for one more like that
+      used by free Unix kernels.  The wasted space in a buffer with
+      1mb of data will now be more like 8k than 1mb.  The new
+      implementation also avoids realloc();realloc(); patterns that
+      can contribute to memory fragmentation.
+
 Changes in version 0.2.0.15-alpha - 2007-12-25
   o Major bugfixes:
     - Fix several remotely triggerable asserts based on DirPort requests

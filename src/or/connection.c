@@ -1873,7 +1873,7 @@ static int
 connection_read_to_buf(connection_t *conn, int *max_to_read)
 {
   int result, at_most = *max_to_read;
-  size_t bytes_in_buf, more_to_read;
+  size_t slack_in_buf, more_to_read;
   size_t n_read = 0, n_written = 0;
 
   if (at_most == -1) { /* we need to initialize it */
@@ -1882,11 +1882,11 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     at_most = connection_bucket_read_limit(conn, time(NULL));
   }
 
-  bytes_in_buf = buf_capacity(conn->inbuf) - buf_datalen(conn->inbuf);
+  slack_in_buf = buf_slack(conn->inbuf);
  again:
-  if ((size_t)at_most > bytes_in_buf && bytes_in_buf >= 1024) {
-    more_to_read = at_most - bytes_in_buf;
-    at_most = bytes_in_buf;
+  if ((size_t)at_most > slack_in_buf && slack_in_buf >= 1024) {
+    more_to_read = at_most - slack_in_buf;
+    at_most = slack_in_buf;
   } else {
     more_to_read = 0;
   }
@@ -1997,8 +1997,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
   connection_buckets_decrement(conn, time(NULL), n_read, n_written);
 
   if (more_to_read && result == at_most) {
-    bytes_in_buf = buf_capacity(conn->inbuf) - buf_datalen(conn->inbuf);
-    tor_assert(bytes_in_buf < 1024);
+    slack_in_buf = buf_slack(conn->inbuf);
     at_most = more_to_read;
     goto again;
   }
@@ -2785,11 +2784,11 @@ connection_dump_buffer_mem_stats(int severity)
     ++n_conns_by_type[tp];
     if (c->inbuf) {
       used_by_type[tp] += buf_datalen(c->inbuf);
-      alloc_by_type[tp] += buf_capacity(c->inbuf);
+      alloc_by_type[tp] += buf_allocation(c->inbuf);
     }
     if (c->outbuf) {
       used_by_type[tp] += buf_datalen(c->outbuf);
-      alloc_by_type[tp] += buf_capacity(c->outbuf);
+      alloc_by_type[tp] += buf_allocation(c->outbuf);
     }
   });
   for (i=0; i <= _CONN_TYPE_MAX; ++i) {

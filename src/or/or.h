@@ -2439,7 +2439,8 @@ void buf_shrink_freelists(int free_all);
 void buf_dump_freelist_sizes(int severity);
 
 size_t buf_datalen(const buf_t *buf);
-size_t buf_capacity(const buf_t *buf);
+size_t buf_allocation(const buf_t *buf);
+size_t buf_slack(const buf_t *buf);
 const char *_buf_peek_raw_buffer(const buf_t *buf);
 
 int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof);

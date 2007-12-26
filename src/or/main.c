@@ -1606,13 +1606,13 @@ dumpstats(int severity)
           "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",
           i,
           (int)buf_datalen(conn->inbuf),
-          (int)buf_capacity(conn->inbuf),
+          (int)buf_allocation(conn->inbuf),
           (int)(now - conn->timestamp_lastread));
       log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on outbuf "
           "(len %d, last written %d secs ago)",i,
           (int)buf_datalen(conn->outbuf),
-          (int)buf_capacity(conn->outbuf),
+          (int)buf_allocation(conn->outbuf),
           (int)(now - conn->timestamp_lastwritten));
     }
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits
