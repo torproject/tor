@@ -678,7 +678,10 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
   r = tor_tls_write(tls, chunk->data, sz);
   if (r < 0)
     return r;
-  *buf_flushlen -= r;
+  if (*buf_flushlen > (size_t)r)
+    *buf_flushlen -= r;
+  else
+    *buf_flushlen = 0;
   buf_remove_from_front(buf, r);
   log_debug(LD_NET,"flushed %d bytes, %d ready to flush, %d remain.",
             r,(int)*buf_flushlen,(int)buf->datalen);
@@ -721,25 +724,28 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 }
 
 /** As flush_buf(), but writes data to a TLS connection.
+ * DOCDOC can write more than flushlen bytes.
  */
 int
-flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
+flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen, size_t *buf_flushlen)
 {
   int r;
   size_t flushed = 0;
+  ssize_t sz;
   tor_assert(buf_flushlen);
   tor_assert(*buf_flushlen <= buf->datalen);
-  tor_assert(sz <= *buf_flushlen);
+  tor_assert(flushlen <= *buf_flushlen);
+  sz = (ssize_t) flushlen;
 
   /* we want to let tls write even if flushlen is zero, because it might
    * have a partial record pending */
   check_no_tls_errors();
 
   check();
-  while (sz) {
+  while (sz >= 0) {
     size_t flushlen0;
     if (buf->head) {
-      if (buf->head->datalen >= sz)
+      if ((ssize_t)buf->head->datalen >= sz)
         flushlen0 = sz;
       else
         flushlen0 = buf->head->datalen;
