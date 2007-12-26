@@ -16,8 +16,8 @@ const char buffers_c_id[] =
 
 #include "or.h"
 
-#define PARANOIA
-#define NOINLINE
+//#define PARANOIA
+//#define NOINLINE
 
 #ifdef PARANOIA
 #define check() STMT_BEGIN assert_buf_ok(buf); STMT_END
@@ -231,6 +231,8 @@ buf_shrink_freelists(int free_all)
       int n_to_skip = freelists[i].cur_length - n_to_free;
       chunk_t **chp = &freelists[i].head;
       chunk_t *chunk;
+      log_notice(LD_MM, "FL for %d: keep %d, drop %d.",
+                 (int)freelists[i].alloc_size, n_to_skip, n_to_free);
       while (n_to_skip) {
         tor_assert((*chp)->next);
         chp = &(*chp)->next;
