@@ -113,6 +113,7 @@ typedef struct chunk_freelist_t {
 
 /** Static array of freelists, sorted by alloc_len, terminated by an entry
  * with alloc_size of 0. */
+/**XXXX020 tune these values. */
 static chunk_freelist_t freelists[] = {
   FL(256, 1024, 16), FL(512, 1024, 16), FL(1024, 512, 8), FL(4096, 256, 8),
   FL(8192, 128, 4), FL(16384, 64, 4), FL(0, 0, 0)
@@ -735,11 +736,14 @@ flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t sz, size_t *buf_flushlen)
   check();
   while (sz) {
     size_t flushlen0;
-    tor_assert(buf->head);
-    if (buf->head->datalen >= sz)
-      flushlen0 = sz;
-    else
-      flushlen0 = buf->head->datalen;
+    if (buf->head) {
+      if (buf->head->datalen >= sz)
+        flushlen0 = sz;
+      else
+        flushlen0 = buf->head->datalen;
+    } else {
+      flushlen0 = 0;
+    }
 
     r = flush_chunk_tls(tls, buf, buf->head, flushlen0, buf_flushlen);
     check();
