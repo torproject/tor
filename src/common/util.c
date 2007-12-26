@@ -69,7 +69,10 @@ const char util_c_id[] = "$Id$";
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-#if defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
+#ifdef HAVE_MALLOC_MALLOC_H
+#include <malloc/malloc.h>
+#endif
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
 
@@ -219,6 +222,26 @@ void
 _tor_free(void *mem)
 {
   tor_free(mem);
+}
+
+/** Allocate and return a chunk of memory of size at least *<b>size</p>, using
+ * the same resources we would use to malloc *<b>sizep</b>.  Set *<b>sizep</b>
+ * to the number of usable bytes in the chunk of memory. */
+void *
+_tor_malloc_roundup(size_t *sizep DMALLOC_PARAMS)
+{
+#ifdef HAVE_MALLOC_GOOD_SIZE
+  *sizep = malloc_good_size(*sizep);
+  return _tor_malloc(*sizep DMALLOC_FN_ARGS);
+#else
+#if defined(HAVE_MALLOC_USABLE_SIZE) && !defined(USE_DMALLOC)
+  void *result = _tor_malloc(*sizep DMALLOC_FN_ARGS);
+  *sizep = malloc_usable_size(result);
+  return result;
+#else
+  return _tor_malloc(*sizep);
+#endif
+#endif
 }
 
 /** Call the platform malloc info function, and dump the results to the log at
