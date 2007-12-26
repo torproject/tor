@@ -113,7 +113,7 @@ typedef struct chunk_freelist_t {
 
 /** Static array of freelists, sorted by alloc_len, terminated by an entry
  * with alloc_size of 0. */
-/**XXXX020 tune these values. */
+/**XXXX020 tune these values.  And all allocation sizes, really. */
 static chunk_freelist_t freelists[] = {
   FL(256, 1024, 16), FL(512, 1024, 16), FL(1024, 512, 8), FL(4096, 256, 8),
   FL(8192, 128, 4), FL(16384, 64, 4), FL(0, 0, 0)
@@ -727,6 +727,8 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
       return r;
     flushed += r;
     sz -= r;
+    if (r == 0 || (size_t)r < flushlen0) /* can't flush any more now. */
+      break;
   }
   return flushed;
 }
@@ -767,6 +769,8 @@ flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen, size_t *buf_flushlen)
       return r;
     flushed += r;
     sz -= r;
+    if (r == 0) /* Can't flush any more now. */
+      break;
   } while (sz > 0);
   return flushed;
 }
@@ -892,7 +896,8 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out)
 int
 move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
 {
-  /*XXXX020 we can do way better here. */
+  /* XXXX020 we can do way better here.  See if this turns up in the
+   */
   char b[4096];
   size_t cp, len;
   len = *buf_flushlen;
@@ -951,10 +956,13 @@ fetch_from_buf_http(buf_t *buf,
   body = (char*) tor_memmem(buf->head->data, buf->head->datalen,
                             "\r\n\r\n", 4);
   if (!body && buf->datalen > buf->head->datalen) {
-    buf_pullup(buf, max_headerlen, 1);
+    size_t len_scanned = buf->head->datalen;
+    buf_pullup(buf, max_headerlen, 0);
     headers = buf->head->data;
-    /*XXX020 avoid searching the original part of the head chunk twice. */
-    body = (char*) tor_memmem(buf->head->data, buf->head->datalen,
+    /* avoid searching the original part of the head chunk twice. */
+    len_scanned = (len_scanned > 4) ? len_scanned - 4 : 0;
+    body = (char*) tor_memmem(buf->head->data + len_scanned,
+                              buf->head->datalen - len_scanned,
                               "\r\n\r\n", 4);
   }
 
@@ -1383,7 +1391,8 @@ fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
 
   if (!buf->head)
     return 0;
-  /* XXXX020 pull up less aggressively. */
+  /* XXXX020 pull up less aggressively.  And implement setting *data_len
+   * properly in cases where we return -1. */
   buf_pullup(buf, *data_len, 0);
   cp = memchr(buf->head->data, '\n', buf->head->datalen);
   if (!cp) {
