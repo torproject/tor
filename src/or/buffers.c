@@ -231,8 +231,9 @@ buf_shrink_freelists(int free_all)
       int n_to_skip = freelists[i].cur_length - n_to_free;
       chunk_t **chp = &freelists[i].head;
       chunk_t *chunk;
-      log_notice(LD_MM, "FL for %d: keep %d, drop %d.",
-                 (int)freelists[i].alloc_size, n_to_skip, n_to_free);
+      log_info(LD_MM, "Cleaning freelist for %d-byte chunks: keeping %d, "
+               "dropping %d.",
+               (int)freelists[i].alloc_size, n_to_skip, n_to_free);
       while (n_to_skip) {
         tor_assert((*chp)->next);
         chp = &(*chp)->next;
@@ -666,16 +667,23 @@ flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
 
 static INLINE int
 flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
-                     size_t sz, size_t *buf_flushlen)
+                size_t sz, size_t *buf_flushlen)
 {
   int r;
   size_t forced;
+  char *data;
 
   forced = tor_tls_get_forced_write_size(tls);
   if (forced > sz)
     sz = forced;
-  tor_assert(sz <= chunk->datalen);
-  r = tor_tls_write(tls, chunk->data, sz);
+  if (chunk) {
+    data = chunk->data;
+    tor_assert(sz <= chunk->datalen);
+  } else {
+    data = NULL;
+    tor_assert(sz == 0);
+  }
+  r = tor_tls_write(tls, data, sz);
   if (r < 0)
     return r;
   if (*buf_flushlen > (size_t)r)
@@ -742,7 +750,7 @@ flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen, size_t *buf_flushlen)
   check_no_tls_errors();
 
   check();
-  while (sz >= 0) {
+  do {
     size_t flushlen0;
     if (buf->head) {
       if ((ssize_t)buf->head->datalen >= sz)
@@ -759,7 +767,7 @@ flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen, size_t *buf_flushlen)
       return r;
     flushed += r;
     sz -= r;
-  }
+  } while (sz > 0);
   return flushed;
 }
 
