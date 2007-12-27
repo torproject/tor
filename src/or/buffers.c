@@ -105,11 +105,14 @@ typedef struct chunk_freelist_t {
   int cur_length; /**< How many chunks on the freelist now? */
   int lowest_length; /**< What's the smallest value of cur_length since the
                       * last time we cleaned this freelist? */
+  uint64_t n_alloc;
+  uint64_t n_free;
+  uint64_t n_hit;
   chunk_t *head; /**< First chunk on the freelist. */
 } chunk_freelist_t;
 
 /** Macro to help define freelists. */
-#define FL(a,m,s) { a, m, s, 0, 0, NULL }
+#define FL(a,m,s) { a, m, s, 0, 0, 0, 0, 0, NULL }
 
 /** Static array of freelists, sorted by alloc_len, terminated by an entry
  * with alloc_size of 0. */
@@ -119,6 +122,7 @@ static chunk_freelist_t freelists[] = {
   FL(8192, 128, 4), FL(16384, 64, 4), FL(0, 0, 0)
 };
 #undef FL
+static uint64_t n_freelist_miss = 0;
 
 static void assert_freelist_ok(chunk_freelist_t *fl);
 
@@ -147,6 +151,8 @@ chunk_free(chunk_t *chunk)
     freelist->head = chunk;
     ++freelist->cur_length;
   } else {
+    if (freelist)
+      ++freelist->n_free;
     tor_free(chunk);
   }
 }
@@ -166,8 +172,13 @@ chunk_new_with_alloc_size(size_t alloc)
     freelist->head = ch->next;
     if (--freelist->cur_length < freelist->lowest_length)
       freelist->lowest_length = freelist->cur_length;
+    ++freelist->n_hit;
   } else {
     /* XXXX020 take advantage of tor_malloc_roundup. */
+    if (freelist)
+      ++freelist->n_alloc;
+    else
+      ++n_freelist_miss;
     ch = tor_malloc(alloc);
   }
   ch->next = NULL;
@@ -247,6 +258,7 @@ buf_shrink_freelists(int free_all)
         tor_free(chunk);
         chunk = next;
         --n_to_free;
+        ++freelists[i].n_free;
       }
       tor_assert(!n_to_free);
       freelists[i].cur_length = new_length;
@@ -267,9 +279,16 @@ buf_dump_freelist_sizes(int severity)
     uint64_t total = ((uint64_t)freelists[i].cur_length) *
       freelists[i].alloc_size;
     log(severity, LD_MM,
-        U64_FORMAT" bytes in %d %d-byte chunks", U64_PRINTF_ARG(total),
-        freelists[i].cur_length, (int)freelists[i].alloc_size);
+        U64_FORMAT" bytes in %d %d-byte chunks ["U64_FORMAT
+        " misses; "U64_FORMAT" frees; "U64_FORMAT" hits]",
+        U64_PRINTF_ARG(total),
+        freelists[i].cur_length, (int)freelists[i].alloc_size,
+        U64_PRINTF_ARG(freelists[i].n_alloc),
+        U64_PRINTF_ARG(freelists[i].n_free),
+        U64_PRINTF_ARG(freelists[i].n_hit));
   }
+  log(severity, LD_MM, U64_FORMAT" allocations in non-freelist sizes",
+      U64_PRINTF_ARG(n_freelist_miss));
 }
 
 /** Magic value for buf_t.magic, to catch pointer errors. */
