@@ -506,7 +506,7 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
   tor_assert(CHUNK_REMAINING_CAPACITY(chunk) >= at_most);
   read_result = tor_socket_recv(fd, CHUNK_WRITE_PTR(chunk), at_most, 0);
   if (read_result < 0) {
-    int e = tor_socket_errno(s);
+    int e = tor_socket_errno(fd);
     if (!ERRNO_IS_EAGAIN(e)) { /* it's a real error */
 #ifdef MS_WINDOWS
       if (e == WSAENOBUFS)
