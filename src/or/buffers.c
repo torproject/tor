@@ -237,6 +237,7 @@ buf_shrink_freelists(int free_all)
       while (n_to_skip) {
         tor_assert((*chp)->next);
         chp = &(*chp)->next;
+        --n_to_skip;
       }
       chunk = *chp;
       *chp = NULL;
