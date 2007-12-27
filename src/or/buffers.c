@@ -247,8 +247,9 @@ buf_shrink_freelists(int free_all)
         --n_to_free;
       }
       tor_assert(!n_to_free);
-      freelists[i].lowest_length = freelists[i].cur_length = n_to_skip;
+      freelists[i].cur_length = n_to_skip;
     }
+    freelists[i].lowest_length = freelists[i].cur_length;
     assert_freelist_ok(&freelists[i]);
   }
 }
