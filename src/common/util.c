@@ -239,7 +239,7 @@ _tor_malloc_roundup(size_t *sizep DMALLOC_PARAMS)
   *sizep = malloc_usable_size(result);
   return result;
 #else
-  return _tor_malloc(*sizep);
+  return _tor_malloc(*sizep DMALLOC_FN_ARGS);
 #endif
 #endif
 }
