@@ -1398,6 +1398,22 @@ peek_buf_has_control0_command(buf_t *buf)
   return 0;
 }
 
+/** DOCDOC */
+static int
+buf_find_offset_of_char(buf_t *buf, char ch)
+{
+  chunk_t *chunk;
+  int offset = 0;
+  for (chunk = buf->head; chunk; chunk = chunk->next) {
+    char *cp = memchr(chunk->data, ch, chunk->datalen);
+    if (cp)
+      return offset + (cp - chunk->data);
+    else
+      offset += chunk->datalen;
+  }
+  return -1;
+}
+
 /** Try to read a single LF-terminated line from <b>buf</b>, and write it,
  * NUL-terminated, into the *<b>data_len</b> byte buffer at <b>data_out</b>.
  * Set *<b>data_len</b> to the number of bytes in the line, not counting the
@@ -1408,21 +1424,18 @@ peek_buf_has_control0_command(buf_t *buf)
 int
 fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
 {
-  char *cp;
   size_t sz;
+  int offset;
 
   if (!buf->head)
     return 0;
-  /* XXXX020 pull up less aggressively.  And implement setting *data_len
-   * properly in cases where we return -1. */
-  buf_pullup(buf, *data_len, 0);
-  cp = memchr(buf->head->data, '\n', buf->head->datalen);
-  if (!cp) {
+
+  offset = buf_find_offset_of_char(buf, '\n');
+  if (offset < 0)
     return 0;
-  }
-  sz = cp - buf->head->data;
+  sz = (size_t) offset;
   if (sz+2 > *data_len) {
-    *data_len = sz+2;
+    *data_len = sz + 2;
     return -1;
   }
   fetch_from_buf(data_out, sz+1, buf);

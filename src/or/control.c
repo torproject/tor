@@ -2631,10 +2631,11 @@ connection_control_process_inbuf(control_connection_t *conn)
         /* Line not all here yet. Wait. */
         return 0;
       else if (r == -1) {
-          while (conn->incoming_cmd_len < data_len+conn->incoming_cmd_cur_len)
-            conn->incoming_cmd_len *= 2;
-          conn->incoming_cmd = tor_realloc(conn->incoming_cmd,
-                                           conn->incoming_cmd_len);
+        /*XXXX020 impose some maximum on length! */
+        while (conn->incoming_cmd_len < data_len+conn->incoming_cmd_cur_len)
+          conn->incoming_cmd_len *= 2;
+        conn->incoming_cmd = tor_realloc(conn->incoming_cmd,
+                                         conn->incoming_cmd_len);
       }
     } while (r != 1);
 
