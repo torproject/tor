@@ -119,7 +119,8 @@ typedef struct chunk_freelist_t {
 /**XXXX020 tune these values.  And all allocation sizes, really. */
 static chunk_freelist_t freelists[] = {
   FL(256, 1024, 16), FL(512, 1024, 16), FL(1024, 512, 8), FL(4096, 256, 8),
-  FL(8192, 128, 4), FL(16384, 64, 4), FL(0, 0, 0)
+  FL(8192, 128, 4), FL(16384, 64, 4), FL(32768, 32, 2), FL(65536, 16, 2),
+  FL(0, 0, 0)
 };
 #undef FL
 static uint64_t n_freelist_miss = 0;
@@ -492,16 +493,19 @@ buf_free(buf_t *buf)
   tor_free(buf);
 }
 
-/** Append a new chunk with enough capacity to hold <b>cap</b> bytes to the
- * tail of <b>buf</b>. */
+/** Append a new chunk with enough capacity to hold <b>capacity</b> bytes to the
+ * tail of <b>buf</b>.  If <b>capped</b>, don't allocate a chunk bigger than
+ * MAX_CHUNK_ALLOC. */
 static chunk_t *
-buf_add_chunk_with_capacity(buf_t *buf, size_t cap)
+buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
 {
   chunk_t *chunk;
-  if (CHUNK_ALLOC_SIZE(cap) < buf->default_chunk_size) {
+  if (CHUNK_ALLOC_SIZE(capacity) < buf->default_chunk_size) {
     chunk = chunk_new_with_alloc_size(buf->default_chunk_size);
+  } else if (capped && CHUNK_ALLOC_SIZE(capacity) > MAX_CHUNK_ALLOC) {
+    chunk = chunk_new_with_alloc_size(MAX_CHUNK_ALLOC);
   } else {
-    chunk = chunk_new_with_alloc_size(preferred_chunk_size(cap));
+    chunk = chunk_new_with_alloc_size(preferred_chunk_size(capacity));
   }
   if (buf->tail) {
     tor_assert(buf->head);
@@ -580,12 +584,13 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
   tor_assert(reached_eof);
   tor_assert(s >= 0);
 
-  while (at_most) {
-    size_t readlen = at_most;
+  while (at_most > total_read) {
+    size_t readlen = at_most - total_read;
     chunk_t *chunk;
     if (!buf->tail || CHUNK_REMAINING_CAPACITY(buf->tail) < MIN_READ_LEN) {
-      chunk = buf_add_chunk_with_capacity(buf, at_most);
-      tor_assert(CHUNK_REMAINING_CAPACITY(chunk) >= readlen);
+      chunk = buf_add_chunk_with_capacity(buf, at_most, 1);
+      if (readlen > chunk->memlen)
+        readlen = chunk->memlen;
     } else {
       size_t cap = CHUNK_REMAINING_CAPACITY(buf->tail);
       chunk = buf->tail;
@@ -632,12 +637,13 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
   size_t total_read = 0;
   check();
 
-  while (at_most) {
-    size_t readlen = at_most;
+  while (at_most > total_read) {
+    size_t readlen = at_most - total_read;
     chunk_t *chunk;
     if (!buf->tail || CHUNK_REMAINING_CAPACITY(buf->tail) < MIN_READ_LEN) {
-      chunk = buf_add_chunk_with_capacity(buf, at_most);
-      tor_assert(CHUNK_REMAINING_CAPACITY(chunk) >= readlen);
+      chunk = buf_add_chunk_with_capacity(buf, at_most, 1);
+      if (readlen > chunk->memlen)
+        readlen = chunk->memlen;
     } else {
       size_t cap = CHUNK_REMAINING_CAPACITY(buf->tail);
       chunk = buf->tail;
@@ -809,8 +815,12 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
     return buf->datalen;
   check();
 
-  if (buf->tail && CHUNK_REMAINING_CAPACITY(buf->tail)) {
-    size_t copy = CHUNK_REMAINING_CAPACITY(buf->tail);
+  while (string_len) {
+    size_t copy;
+    if (!buf->tail || !CHUNK_REMAINING_CAPACITY(buf->tail))
+      buf_add_chunk_with_capacity(buf, string_len, 1);
+
+    copy = CHUNK_REMAINING_CAPACITY(buf->tail);
     if (copy > string_len)
       copy = string_len;
     memcpy(CHUNK_WRITE_PTR(buf->tail), string, copy);
@@ -818,13 +828,6 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
     string += copy;
     buf->datalen += copy;
     buf->tail->datalen += copy;
-  }
-
-  if (string_len) {
-    chunk_t *newchunk = buf_add_chunk_with_capacity(buf, string_len);
-    memcpy(newchunk->data, string, string_len);
-    newchunk->datalen = string_len;
-    buf->datalen += string_len;
   }
 
   check();
@@ -1460,9 +1463,7 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
     int need_new_chunk = 0;
     if (!buf->tail || ! CHUNK_REMAINING_CAPACITY(buf->tail)) {
       size_t cap = data_len / 4;
-      if (cap > MAX_CHUNK_ALLOC) /* Add a function for this. */
-        cap = MAX_CHUNK_ALLOC;
-      buf_add_chunk_with_capacity(buf, cap);
+      buf_add_chunk_with_capacity(buf, cap, 1);
     }
     next = CHUNK_WRITE_PTR(buf->tail);
     avail = old_avail = CHUNK_REMAINING_CAPACITY(buf->tail);
@@ -1487,7 +1488,7 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
     buf->datalen += old_avail - avail;
     buf->tail->datalen += old_avail - avail;
     if (need_new_chunk) {
-      buf_add_chunk_with_capacity(buf, data_len/4);
+      buf_add_chunk_with_capacity(buf, data_len/4, 1);
     }
 
   } while (!over);
