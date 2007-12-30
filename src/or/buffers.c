@@ -943,28 +943,32 @@ move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
   return cp;
 }
 
-// #define BUFPOS
-#ifdef BUFPOS
+/** Internal structure: represents a position in a buffer. */
 typedef struct buf_pos_t {
-  chunk_t *chunk;
-  int pos;
-  int pos_absolute;
-};
+  const chunk_t *chunk; /**< Which chunk are we pointing to? */
+  int pos; /**< Which character inside the chunk's data are we pointing to? */
+  int pos_absolute; /**< Which character inside the buffer are we pointing to?
+                     */
+} buf_pos_t;
 
+/** Initialize <b>out</b> to point to the first character of <b>buf</b>.*/
 static void
-buf_pos_init(buf_t *buf, buf_pos_t *out)
+buf_pos_init(const buf_t *buf, buf_pos_t *out)
 {
   out->chunk = buf->head;
   out->pos = 0;
   out->pos_absolute = 0;
 }
 
+/** Advance <b>out</b> to the first appearance of <b>ch</b> at the current
+ * position of <b>out</b>, or later.  Return -1 if no instances are found;
+ * otherwise returns the absolute position of the character. */
 static int
-buf_find_pos_of_char(const buf_t *buf, char ch, buf_pos_t *out)
+buf_find_pos_of_char(char ch, buf_pos_t *out)
 {
-  chunk_t *chunk;
+  const chunk_t *chunk;
   int offset = 0;
-  int pos = chunk->pos;
+  int pos = out->pos;
   for (chunk = out->chunk; chunk; chunk = chunk->next) {
     char *cp = memchr(chunk->data+pos, ch, chunk->datalen-pos);
     if (cp) {
@@ -980,10 +984,12 @@ buf_find_pos_of_char(const buf_t *buf, char ch, buf_pos_t *out)
   return -1;
 }
 
+/** Advance <b>pos</b> by a single character, if there are any more characters
+ * in the buffer.  Returns 0 on sucess, -1 on failure. */
 static INLINE int
 buf_pos_inc(buf_pos_t *pos)
 {
-  if (pos->pos == pos->chunk->datalen) {
+  if ((size_t)pos->pos == pos->chunk->datalen) {
     if (!pos->chunk->next)
       return -1;
     pos->chunk = pos->chunk->next;
@@ -992,43 +998,46 @@ buf_pos_inc(buf_pos_t *pos)
     ++pos->pos;
   }
   ++pos->pos_absolute;
+  return 0;
 }
 
+/** Return true iff the <b>n</b>-character string in <b>s</b> appears
+ * (verbatim) at <b>pos</b>. */
 static int
-buf_matches_at_pos(const buf_t *buf, const buf_pos_t *pos, const char *s,
-                   int n)
+buf_matches_at_pos(const buf_pos_t *pos, const char *s, int n)
 {
   buf_pos_t p;
-  memcpy(p, pos, sizeof(p));
+  memcpy(&p, pos, sizeof(p));
 
   while (n) {
-    char ch = p->chunk->data[p->pos];
+    char ch = p.chunk->data[p.pos];
     if (ch != *s)
       return 0;
     ++s;
     --n;
-    if (buf_pos_inc(p)<0)
+    if (buf_pos_inc(&p)<0)
       return 0;
   }
   return 1;
 }
 
+/** Return the first position in <b>buf</b> at which the <b>n</b>-character
+ * string <b>s</b> occurs, or -1 if it does not occur. */
 static int
-buf_find_string_offset(const char *buf, const char *s, int n)
+buf_find_string_offset(const buf_t *buf, const char *s, int n)
 {
   buf_pos_t pos;
   buf_pos_init(buf, &pos);
-  while (buf_find_pos_of_char(buf, *s, &pos) >= 0) {
-    if (buf_matches_at_pos(buf, pos, s, n)) {
-      return pos->pos_absolute;
+  while (buf_find_pos_of_char(*s, &pos) >= 0) {
+    if (buf_matches_at_pos(&pos, s, n)) {
+      return pos.pos_absolute;
     } else {
-      if (buf_pos_inc(pos)<0)
+      if (buf_pos_inc(&pos)<0)
         return -1;
     }
   }
   return -1;
 }
-#endif
 
 /** There is a (possibly incomplete) http statement on <b>buf</b>, of the
  * form "\%s\\r\\n\\r\\n\%s", headers, body. (body may contain nuls.)
@@ -1055,21 +1064,17 @@ fetch_from_buf_http(buf_t *buf,
                     char **body_out, size_t *body_used, size_t max_bodylen,
                     int force_complete)
 {
-  char *headers, *p, *body;
+  char *headers, *p;
   size_t headerlen, bodylen, contentlen;
-#ifdef BUFPOS
   int crlf_offset;
-#endif
 
   check();
   if (!buf->head)
     return 0;
 
   headers = buf->head->data;
-
-#ifdef BUFPOS
   crlf_offset = buf_find_string_offset(buf, "\r\n\r\n", 4);
-  if (crlf_offset > max_headerlen ||
+  if (crlf_offset > (int)max_headerlen ||
       (crlf_offset < 0 && buf->datalen > max_headerlen)) {
     log_debug(LD_HTTP,"headers too long.");
     return -1;
@@ -1077,37 +1082,11 @@ fetch_from_buf_http(buf_t *buf,
     log_debug(LD_HTTP,"headers not all here yet.");
     return 0;
   }
-  if (buf->head->datalen < crlf_offset + 4)
+  /* Okay, we have a full header.  Make sure it all appears in the first
+   * chunk. */
+  if ((int)buf->head->datalen < crlf_offset + 4)
     buf_pullup(buf, crlf_offset+4, 0);
   headerlen = crlf_offset + 4;
-  body = buf->data + headerlen; /*XXX020 unused. */
-#else
-  /* See if CRLFCRLF is already in the head chunk.  If it is, we don't need
-   * to move or resize anything. */
-  body = (char*) tor_memmem(buf->head->data, buf->head->datalen,
-                            "\r\n\r\n", 4);
-  if (!body && buf->datalen > buf->head->datalen) {
-    size_t len_scanned = buf->head->datalen;
-    buf_pullup(buf, max_headerlen, 0);
-    headers = buf->head->data;
-    /* avoid searching the original part of the head chunk twice. */
-    len_scanned = (len_scanned > 4) ? len_scanned - 4 : 0;
-    body = (char*) tor_memmem(buf->head->data + len_scanned,
-                              buf->head->datalen - len_scanned,
-                              "\r\n\r\n", 4);
-  }
-
-  if (!body) {
-    if (buf->head->datalen >= max_headerlen) {
-      log_debug(LD_HTTP,"headers too long.");
-      return -1;
-    }
-    log_debug(LD_HTTP,"headers not all here yet.");
-    return 0;
-  }
-  body += 4; /* Skip the the CRLFCRLF */
-  headerlen = body-headers; /* includes the CRLFCRLF */
-#endif
 
   bodylen = buf->datalen - headerlen;
   log_debug(LD_HTTP,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
