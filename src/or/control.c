@@ -38,7 +38,7 @@ const char control_c_id[] =
 #define EVENT_ADDRMAP          0x000C
 // #define EVENT_AUTHDIR_NEWDESCS 0x000D
 #define EVENT_DESCCHANGED      0x000E
-#define EVENT_NS               0x000F
+// #define EVENT_NS               0x000F
 #define EVENT_STATUS_CLIENT    0x0010
 #define EVENT_STATUS_SERVER    0x0011
 #define EVENT_STATUS_GENERAL   0x0012

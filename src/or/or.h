@@ -2930,6 +2930,7 @@ int connection_control_reached_eof(control_connection_t *conn);
 int connection_control_process_inbuf(control_connection_t *conn);
 
 #define EVENT_AUTHDIR_NEWDESCS 0x000D
+#define EVENT_NS 0x000F
 int control_event_is_interesting(int event);
 
 int control_event_circuit_status(origin_circuit_t *circ,

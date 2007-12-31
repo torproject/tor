@@ -1199,6 +1199,77 @@ networkstatus_get_reasonably_live_consensus(time_t now)
     return NULL;
 }
 
+/** Given two router status entries for the same router identity, return 1 if
+ * if the contents have changed between them. Otherwise, return 0. */
+static int
+routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
+{
+  tor_assert(!memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN));
+
+  return strcmp(a->nickname, b->nickname) ||
+         memcmp(a->descriptor_digest, b->descriptor_digest, DIGEST_LEN) ||
+         a->addr != b->addr ||
+         a->or_port != b->or_port ||
+         a->dir_port != b->dir_port ||
+         a->is_authority != b->is_authority ||
+         a->is_exit != b->is_exit ||
+         a->is_stable != b->is_stable ||
+         a->is_fast != b->is_fast ||
+         a->is_running != b->is_running ||
+         a->is_named != b->is_named ||
+         a->is_unnamed != b->is_unnamed ||
+         a->is_valid != b->is_valid ||
+         a->is_v2_dir != b->is_v2_dir ||
+         a->is_possible_guard != b->is_possible_guard ||
+         a->is_bad_exit != b->is_bad_exit ||
+         a->is_bad_directory != b->is_bad_directory ||
+         a->is_hs_dir != b->is_hs_dir ||
+         a->version_known != b->version_known ||
+         a->version_supports_begindir != b->version_supports_begindir ||
+         a->version_supports_extrainfo_upload !=
+           b->version_supports_extrainfo_upload ||
+         a->version_supports_v3_dir != b->version_supports_v3_dir;
+}
+
+/** Notify controllers of any router status entries that changed between
+ * <b>old_c</b> and <b>new_c</b>. */
+static void
+notify_control_networkstatus_changed(const networkstatus_vote_t *old_c,
+                                     const networkstatus_vote_t *new_c)
+{
+  int idx = 0;
+  int old_remain = old_c && smartlist_len(old_c->routerstatus_list);
+  const routerstatus_t *rs_old = NULL;
+  smartlist_t *changed;
+  if (old_c == new_c)
+    return;
+  changed = smartlist_create();
+  if (old_remain)
+    rs_old = smartlist_get(old_c->routerstatus_list, idx);
+
+  SMARTLIST_FOREACH(new_c->routerstatus_list, routerstatus_t *, rs_new,
+  {
+    if (!old_remain) {
+      smartlist_add(changed, rs_new);
+    } else {
+      int r;
+      while ((r = memcmp(rs_old->identity_digest, rs_new->identity_digest,
+                         DIGEST_LEN)) < 0) {
+        if (++idx == smartlist_len(old_c->routerstatus_list)) {
+          old_remain = 0;
+          break;
+        }
+        rs_old = smartlist_get(old_c->routerstatus_list, idx);
+      }
+      if (r || (!r && routerstatus_has_changed(rs_old, rs_new)))
+        smartlist_add(changed, rs_new);
+    }
+  });
+
+  control_event_networkstatus_changed(changed);
+  smartlist_free(changed);
+}
+
 /** Copy all the ancillary information (like router download status and so on)
  * from <b>old_c</b> to <b>new_c</b>. */
 static void
@@ -1336,6 +1407,9 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   /* Are we missing any certificates at all? */
   if (r != 1)
     authority_certs_fetch_missing(c, now);
+
+  if (control_event_is_interesting(EVENT_NS))
+    notify_control_networkstatus_changed(current_consensus, c);
 
   if (current_consensus) {
     networkstatus_copy_old_consensus_info(c, current_consensus);

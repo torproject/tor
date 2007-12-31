@@ -6,6 +6,9 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
       implementation also avoids realloc();realloc(); patterns that
       can contribute to memory fragmentation.
 
+  o Minor features (controller):
+    - Get NS events working again.  (Patch from tup)
+
 Changes in version 0.2.0.15-alpha - 2007-12-25
   o Major bugfixes:
     - Fix several remotely triggerable asserts based on DirPort requests
