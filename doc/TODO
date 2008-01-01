@@ -84,8 +84,6 @@ Things we'd like to do in 0.2.0.x:
     of controller connections already.
   - See also Flyspray tasks.
   - See also all items marked XXXX020 and DOCDOC in the code
-  - https://www.torproject.org/eff/legal-faq.html#License doesn't mention
-    licenses for other components of the bundles.
 
   - Before the feature freeze: (Nick)
     D 118 if feasible and obvious
