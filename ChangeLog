@@ -9,11 +9,16 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
   o Minor performance improvements:
     - Reference-count and share copies of address policy entries; only
       5% of them were actually distinct.
+    - Never walk through the list of logs if we know that no log is
+      interested in a given message.
 
   o Minor bugfixes:
     - When an authority has not signed a consensus, do not try to
       download a nonexistant "certificate with key 00000000".  Bugfix
       on 0.2.0.x. Fixes bug 569.
+    - Use a mutex to protect the list of logs, so we never write to
+      the list as it's being freed.  Bugfix on 0.1.2.x.  Fixes the
+      very rare bug 575, which is kind of the revenge of bug 222.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)

@@ -1945,6 +1945,7 @@ tor_main(int argc, char *argv[])
                                       _tor_dmalloc_free);
   log_notice(LD_CONFIG, "Set up dmalloc; returned %d", r);
 #endif
+  init_logging();
 #ifdef NT_SERVICE
   {
      int done = 0;

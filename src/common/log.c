@@ -78,12 +78,26 @@ should_log_function_name(uint32_t domain, int severity)
   }
 }
 
-/* XXXX We should really have this protected by a mutex or something;
- * XXXX see bug 222. */
+#define USE_LOG_MUTEX
+
+#ifdef USE_LOG_MUTEX
+/** A mutex to guard changes to logfiles and logging. */
+static tor_mutex_t *log_mutex = NULL;
+#endif
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 #ifdef HAVE_SYSLOG_H
 static int syslog_count = 0;
+#endif
+
+#ifdef USE_LOG_MUTEX
+#define LOCK_LOGS() STMT_BEGIN                                          \
+  tor_mutex_acquire(log_mutex);                                         \
+  STMT_END
+#define UNLOCK_LOGS() STMT_BEGIN tor_mutex_release(log_mutex); STMT_END
+#else
+#define LOCK_LOGS() STMT_NIL
+#define UNLOCK_LOGS() STMT_NIL
 #endif
 
 /* What's the lowest log level anybody cares about? */
@@ -241,6 +255,7 @@ logv(int severity, uint32_t domain, const char *funcname, const char *format,
   char *end_of_prefix=NULL;
 
   assert(format);
+  LOCK_LOGS();
   lf = logfiles;
   while (lf) {
     if (severity > lf->min_loglevel || severity < lf->max_loglevel) {
@@ -282,6 +297,7 @@ logv(int severity, uint32_t domain, const char *funcname, const char *format,
     }
     lf = lf->next;
   }
+  UNLOCK_LOGS();
 }
 
 /** Output a message to the log. */
@@ -289,6 +305,8 @@ void
 _log(int severity, uint32_t domain, const char *format, ...)
 {
   va_list ap;
+  if (severity > _log_global_min_severity)
+    return;
   va_start(ap,format);
   logv(severity, domain, NULL, format, ap);
   va_end(ap);
@@ -300,6 +318,8 @@ void
 _log_fn(int severity, uint32_t domain, const char *fn, const char *format, ...)
 {
   va_list ap;
+  if (severity > _log_global_min_severity)
+    return;
   va_start(ap,format);
   logv(severity, domain, fn, format, ap);
   va_end(ap);
@@ -310,6 +330,8 @@ void
 _log_fn(int severity, uint32_t domain, const char *format, ...)
 {
   va_list ap;
+  if (severity > _log_global_min_severity)
+    return;
   va_start(ap,format);
   logv(severity, domain, _log_fn_function_name, format, ap);
   va_end(ap);
@@ -319,6 +341,9 @@ void
 _log_debug(uint32_t domain, const char *format, ...)
 {
   va_list ap;
+  /* For GCC we do this check in the macro. */
+  if (PREDICT_LIKELY(LOG_DEBUG > _log_global_min_severity))
+    return;
   va_start(ap,format);
   logv(LOG_DEBUG, domain, _log_fn_function_name, format, ap);
   va_end(ap);
@@ -328,6 +353,8 @@ void
 _log_info(uint32_t domain, const char *format, ...)
 {
   va_list ap;
+  if (LOG_INFO > _log_global_min_severity)
+    return;
   va_start(ap,format);
   logv(LOG_INFO, domain, _log_fn_function_name, format, ap);
   va_end(ap);
@@ -337,6 +364,8 @@ void
 _log_notice(uint32_t domain, const char *format, ...)
 {
   va_list ap;
+  if (LOG_NOTICE > _log_global_min_severity)
+    return;
   va_start(ap,format);
   logv(LOG_NOTICE, domain, _log_fn_function_name, format, ap);
   va_end(ap);
@@ -346,6 +375,8 @@ void
 _log_warn(uint32_t domain, const char *format, ...)
 {
   va_list ap;
+  if (LOG_WARN > _log_global_min_severity)
+    return;
   va_start(ap,format);
   logv(LOG_WARN, domain, _log_fn_function_name, format, ap);
   va_end(ap);
@@ -355,6 +386,8 @@ void
 _log_err(uint32_t domain, const char *format, ...)
 {
   va_list ap;
+  if (LOG_ERR > _log_global_min_severity)
+    return;
   va_start(ap,format);
   logv(LOG_ERR, domain, _log_fn_function_name, format, ap);
   va_end(ap);
@@ -367,8 +400,10 @@ void
 logs_free_all(void)
 {
   logfile_t *victim, *next;
+  LOCK_LOGS();
   next = logfiles;
   logfiles = NULL;
+  UNLOCK_LOGS();
   while (next) {
     victim = next;
     next = next->next;
@@ -423,10 +458,10 @@ close_log(logfile_t *victim)
 }
 
 /** Add a log handler to send all messages of severity <b>loglevel</b>
- * or higher to <b>stream</b>. */
-void
-add_stream_log(int loglevelMin, int loglevelMax,
-               const char *name, FILE *stream)
+ * or higher to <b>stream</b>. DOCDOC.*/
+static void
+add_stream_log_impl(int loglevelMin, int loglevelMax,
+                    const char *name, FILE *stream)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
@@ -435,9 +470,28 @@ add_stream_log(int loglevelMin, int loglevelMax,
   lf->max_loglevel = loglevelMax;
   lf->file = stream;
   lf->next = logfiles;
-  logfiles = lf;
 
+  logfiles = lf;
   _log_global_min_severity = get_min_log_level();
+}
+
+/** Add a log handler to send all messages of severity <b>loglevel</b>
+ * or higher to <b>stream</b>. */
+void
+add_stream_log(int loglevelMin, int loglevelMax,
+               const char *name, FILE *stream)
+{
+  LOCK_LOGS();
+  add_stream_log_impl(loglevelMin, loglevelMax, name, stream);
+  UNLOCK_LOGS();
+}
+
+/** Initialize the global logging facility */
+void
+init_logging(void)
+{
+  if (!log_mutex)
+    log_mutex = tor_mutex_new();
 }
 
 /** Add a log handler to receive messages during startup (before the real
@@ -446,10 +500,10 @@ add_stream_log(int loglevelMin, int loglevelMax,
 void
 add_temp_log(void)
 {
-  add_stream_log(LOG_NOTICE, LOG_ERR, "<temp>", stdout);
+  LOCK_LOGS();
+  add_stream_log_impl(LOG_NOTICE, LOG_ERR, "<temp>", stdout);
   logfiles->is_temporary = 1;
-
-  _log_global_min_severity = get_min_log_level();
+  UNLOCK_LOGS();
 }
 
 /**
@@ -467,9 +521,11 @@ add_callback_log(int loglevelMin, int loglevelMax, log_callback cb)
   lf->filename = tor_strdup("<callback>");
   lf->callback = cb;
   lf->next = logfiles;
-  logfiles = lf;
 
+  LOCK_LOGS();
+  logfiles = lf;
   _log_global_min_severity = get_min_log_level();
+  UNLOCK_LOGS();
   return 0;
 }
 
@@ -480,14 +536,15 @@ change_callback_log_severity(int loglevelMin, int loglevelMax,
                              log_callback cb)
 {
   logfile_t *lf;
+  LOCK_LOGS();
   for (lf = logfiles; lf; lf = lf->next) {
     if (lf->callback == cb) {
       lf->min_loglevel = loglevelMin;
       lf->max_loglevel = loglevelMax;
     }
   }
-
   _log_global_min_severity = get_min_log_level();
+  UNLOCK_LOGS();
 }
 
 /** Close any log handlers added by add_temp_log or marked by mark_logs_temp */
@@ -495,6 +552,8 @@ void
 close_temp_logs(void)
 {
   logfile_t *lf, **p;
+
+  LOCK_LOGS();
   for (p = &logfiles; *p; ) {
     if ((*p)->is_temporary) {
       lf = *p;
@@ -509,6 +568,7 @@ close_temp_logs(void)
   }
 
   _log_global_min_severity = get_min_log_level();
+  UNLOCK_LOGS();
 }
 
 /** Make all currently temporary logs (set to be closed by close_temp_logs)
@@ -517,8 +577,10 @@ void
 rollback_log_changes(void)
 {
   logfile_t *lf;
+  LOCK_LOGS();
   for (lf = logfiles; lf; lf = lf->next)
     lf->is_temporary = ! lf->is_temporary;
+  UNLOCK_LOGS();
   close_temp_logs();
 }
 
@@ -527,8 +589,10 @@ void
 mark_logs_temp(void)
 {
   logfile_t *lf;
+  LOCK_LOGS();
   for (lf = logfiles; lf; lf = lf->next)
     lf->is_temporary = 1;
+  UNLOCK_LOGS();
 }
 
 /**
@@ -540,14 +604,22 @@ int
 add_file_log(int loglevelMin, int loglevelMax, const char *filename)
 {
   FILE *f;
+  logfile_t *lf;
   f = fopen(filename, "a");
   if (!f) return -1;
-  add_stream_log(loglevelMin, loglevelMax, filename, f);
+  LOCK_LOGS();
+  add_stream_log_impl(loglevelMin, loglevelMax, filename, f);
   logfiles->needs_close = 1;
-  if (log_tor_version(logfiles, 0) < 0) {
-    delete_log(logfiles);
-  }
+  lf = logfiles;
   _log_global_min_severity = get_min_log_level();
+  UNLOCK_LOGS();
+
+  if (log_tor_version(lf, 0) < 0) {
+    LOCK_LOGS();
+    delete_log(lf);
+    UNLOCK_LOGS();
+  }
+
   return 0;
 }
 
@@ -568,10 +640,12 @@ add_syslog_log(int loglevelMin, int loglevelMax)
   lf->filename = tor_strdup("<syslog>");
   lf->max_loglevel = loglevelMax;
   lf->is_syslog = 1;
+
+  LOCK_LOGS();
   lf->next = logfiles;
   logfiles = lf;
-
   _log_global_min_severity = get_min_log_level();
+  UNLOCK_LOGS();
   return 0;
 }
 #endif
@@ -619,9 +693,11 @@ void
 switch_logs_debug(void)
 {
   logfile_t *lf;
+  LOCK_LOGS();
   for (lf = logfiles; lf; lf=lf->next) {
     lf->min_loglevel = LOG_DEBUG;
   }
+  UNLOCK_LOGS();
 }
 
 #ifdef HAVE_EVENT_SET_LOG_CALLBACK

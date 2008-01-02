@@ -3504,6 +3504,8 @@ main(int c, char**v)
   int verbose = 0, any_selected = 0;
   int loglevel = LOG_ERR;
 
+  init_logging();
+
   for (i = 1; i < c; ++i) {
     if (!strcmp(v[i], "-v") || !strcmp(v[i], "--verbose"))
       verbose++;
