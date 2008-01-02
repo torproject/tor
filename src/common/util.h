@@ -265,7 +265,8 @@ int append_bytes_to_file(const char *fname, const char *str, size_t len,
 struct stat;
 char *read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   ATTR_MALLOC;
-char *parse_line_from_str(char *line, char **key_out, char **value_out);
+const char *parse_config_line_from_str(const char *line,
+                                       char **key_out, char **value_out);
 char *expand_filename(const char *filename);
 struct smartlist_t *tor_listdir(const char *dirname);
 int path_is_relative(const char *filename) ATTR_PURE;

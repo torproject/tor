@@ -682,6 +682,7 @@ test_util(void)
   uint32_t u32;
   uint16_t u16;
   char *cp, *k, *v;
+  const char *str;
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -821,52 +822,60 @@ test_util(void)
                U64_PRINTF_ARG(U64_LITERAL(12345678901)));
   test_streq(buf, "x!12345678901!x");
 
-  /* Test parse_line_from_str */
+  /* Test parse_config_line_from_str */
   strlcpy(buf, "k v\n" " key    value with spaces   \n" "keykey val\n"
           "k2\n"
           "k3 \n" "\n" "   \n" "#comment\n"
           "k4#a\n" "k5#abc\n" "k6 val #with comment\n", sizeof(buf));
-  cp = buf;
+  str = buf;
 
-  cp = parse_line_from_str(cp, &k, &v);
+  str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k");
   test_streq(v, "v");
-  test_assert(!strcmpstart(cp, " key    value with"));
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, " key    value with"));
 
-  cp = parse_line_from_str(cp, &k, &v);
+  str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "key");
   test_streq(v, "value with spaces");
-  test_assert(!strcmpstart(cp, "keykey"));
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, "keykey"));
 
-  cp = parse_line_from_str(cp, &k, &v);
+  str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "keykey");
   test_streq(v, "val");
-  test_assert(!strcmpstart(cp, "k2\n"));
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, "k2\n"));
 
-  cp = parse_line_from_str(cp, &k, &v);
+  str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k2");
   test_streq(v, "");
-  test_assert(!strcmpstart(cp, "k3 \n"));
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, "k3 \n"));
 
-  cp = parse_line_from_str(cp, &k, &v);
+  str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k3");
   test_streq(v, "");
-  test_assert(!strcmpstart(cp, "\n   \n"));
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, "\n   \n"));
 
-  cp = parse_line_from_str(cp, &k, &v);
+  str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k4");
   test_streq(v, "");
-  test_assert(!strcmpstart(cp, "k5#abc"));
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, "k5#abc"));
 
-  cp = parse_line_from_str(cp, &k, &v);
+  str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k5");
   test_streq(v, "");
-  test_assert(!strcmpstart(cp, "k6"));
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, "k6"));
 
-  cp = parse_line_from_str(cp, &k, &v);
+  str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k6");
   test_streq(v, "val");
-  test_streq(cp, "");
+  tor_free(k); tor_free(v);
+  test_streq(str, "");
 
   /* Test for strcmpstart and strcmpend. */
   test_assert(strcmpstart("abcdef", "abcdef")==0);

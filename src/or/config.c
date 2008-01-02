@@ -1366,16 +1366,16 @@ config_line_append(config_line_t **lst,
 /** Helper: parse the config string and strdup into key/value
  * strings. Set *result to the list, or NULL if parsing the string
  * failed.  Return 0 on success, -1 on failure. Warn and ignore any
- * misformatted lines. Modifies the contents of <b>string</b>. */
+ * misformatted lines. */
 int
-config_get_lines(char *string, config_line_t **result)
+config_get_lines(const char *string, config_line_t **result)
 {
   config_line_t *list = NULL, **next;
   char *k, *v;
 
   next = &list;
   do {
-    string = parse_line_from_str(string, &k, &v);
+    string = parse_config_line_from_str(string, &k, &v);
     if (!string) {
       config_free_lines(list);
       return -1;
@@ -1385,10 +1385,13 @@ config_get_lines(char *string, config_line_t **result)
        * rather than using config_line_append over and over and getting
        * n^2 performance. */
       *next = tor_malloc(sizeof(config_line_t));
-      (*next)->key = tor_strdup(k);
-      (*next)->value = tor_strdup(v);
+      (*next)->key = k;
+      (*next)->value = v;
       (*next)->next = NULL;
       next = &((*next)->next);
+    } else {
+      tor_free(k);
+      tor_free(v);
     }
   } while (*string);
 

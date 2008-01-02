@@ -1926,23 +1926,22 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 
 /** Given a string containing part of a configuration file or similar format,
  * advance past comments and whitespace and try to parse a single line.  If we
- * parse a line successfully, set *<b>key_out</b> to the key portion and
- * *<b>value_out</b> to the value portion of the line, and return a pointer to
- * the start of the next line.  If we run out of data, return a pointer to the
- * end of the string.  If we encounter an error, return NULL.
- *
- * NOTE: We modify *<b>line</b> as we parse it, by inserting NULs
- * to terminate the key and value.
+ * parse a line successfully, set *<b>key_out</b> to a new string holding the
+ * key portion and *<b>value_out</b> to a new string holding the value portion
+ * of the line, and return a pointer to the start of the next line.  If we run
+ * out of data, return a pointer to the end of the string.  If we encounter an
+ * error, return NULL.
  */
-char *
-parse_line_from_str(char *line, char **key_out, char **value_out)
+const char *
+parse_config_line_from_str(const char *line, char **key_out, char **value_out)
 {
-  char *key, *val, *cp;
+  const char *key, *val, *cp;
 
   tor_assert(key_out);
   tor_assert(value_out);
 
-  *key_out = *value_out = key = val = NULL;
+  *key_out = *value_out = NULL;
+  key = val = NULL;
   /* Skip until the first keyword. */
   while (1) {
     while (TOR_ISSPACE(*line))
@@ -1964,34 +1963,35 @@ parse_line_from_str(char *line, char **key_out, char **value_out)
   key = line;
   while (*line && !TOR_ISSPACE(*line) && *line != '#')
     ++line;
+  *key_out = tor_strndup(key, line-key);
 
   /* Skip until the value, writing nuls so key will be nul-terminated */
   while (*line == ' ' || *line == '\t')
-    *line++ = '\0';
+    ++line;
 
   val = line;
 
   /* Find the end of the line. */
   while (*line && *line != '\n' && *line != '#')
     ++line;
-  if (*line == '\n')
+  if (*line == '\n') {
     cp = line++;
-  else {
-    cp = line-1;
+  } else {
+    cp = line;
   }
-  while (cp>=val && TOR_ISSPACE(*cp))
-    *cp-- = '\0';
+  while (cp>val && TOR_ISSPACE(*(cp-1)))
+    --cp;
+
+  tor_assert(cp >= val);
+  *value_out = tor_strndup(val, cp-val);
 
   if (*line == '#') {
     do {
-      *line++ = '\0';
+      ++line;
     } while (*line && *line != '\n');
     if (*line == '\n')
       ++line;
   }
-
-  *key_out = key;
-  *value_out = val;
 
   return line;
 }
