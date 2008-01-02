@@ -53,8 +53,9 @@ Display Tor version.
 .LP
 .TP
 Other options can be specified either on the command-line (\fI--option
-value\fR), or in the configuration file (\fIoption value\fR).
-Options are case-insensitive.
+value\fR), or in the configuration file (\fIoption value\fR or
+\fIoption "value"\fR).  Options are case-insensitive.  C-style escaped
+characters are allowed inside quoted values.
 .LP
 .TP
 \fBBandwidthRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP

@@ -6,6 +6,11 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
       implementation also avoids realloc();realloc(); patterns that
       can contribute to memory fragmentation.
 
+  o Minor features:
+    - Configuration files now accept C-style strings as values.  This
+      helps encode characters not allowed in the current configuration
+      file format, such as newline or #.  Addresses bug 557.
+
   o Minor performance improvements:
     - Reference-count and share copies of address policy entries; only
       5% of them were actually distinct.

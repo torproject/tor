@@ -1924,6 +1924,95 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   return string;
 }
 
+#define TOR_ISODIGIT(c) ('0' <= (c) && (c) <= '7')
+
+/* DOCDOC */
+static const char *
+unescape_string(const char *s, char **result, size_t *size_out)
+{
+  const char *cp;
+  char *out;
+  tor_assert(s[0] == '\"');
+  cp = s+1;
+  while (1) {
+    switch (*cp) {
+      case '\0':
+      case '\n':
+        return NULL;
+      case '\"':
+        goto end_of_loop;
+      case '\\':
+        if ((cp[1] == 'x' || cp[1] == 'X')
+            && TOR_ISXDIGIT(cp[2]) && TOR_ISXDIGIT(cp[3])) {
+          cp += 4;
+        } else if (TOR_ISODIGIT(cp[1])) {
+          cp += 2;
+          if (TOR_ISODIGIT(*cp)) ++cp;
+          if (TOR_ISODIGIT(*cp)) ++cp;
+        } else if (cp[1]) {
+          cp += 2;
+        } else {
+          return NULL;
+        }
+        break;
+      default:
+        ++cp;
+        break;
+    }
+  }
+ end_of_loop:
+  out = *result = tor_malloc(cp-s + 1);
+  cp = s+1;
+  while (1) {
+    switch (*cp)
+      {
+      case '\"':
+        *out = '\0';
+        if (size_out) *size_out = out - *result;
+        return cp+1;
+      case '\0':
+        tor_fragile_assert();
+        tor_free(*result);
+        return NULL;
+      case '\\':
+        switch (cp[1])
+          {
+          case 'n': *out++ = '\n'; cp += 2; break;
+          case 'r': *out++ = '\r'; cp += 2; break;
+          case 't': *out++ = '\t'; cp += 2; break;
+          case 'x': case 'X':
+            *out++ = ((hex_decode_digit(cp[2])<<4) +
+                      hex_decode_digit(cp[3]));
+            cp += 4;
+            break;
+          case '0': case '1': case '2': case '3': case '4': case '5':
+          case '6': case '7':
+            {
+              int n = cp[1]-'0';
+              cp += 2;
+              if (TOR_ISODIGIT(*cp)) { n = n*8 + *cp-'0'; cp++; }
+              if (TOR_ISODIGIT(*cp)) { n = n*8 + *cp-'0'; cp++; }
+              if (n > 255) { tor_free(*result); return NULL; }
+              *out++ = (char)n;
+            }
+            break;
+          case '\'':
+          case '\"':
+          case '\\':
+          case '\?':
+            *out++ = cp[1];
+            cp += 2;
+            break;
+          default:
+            tor_free(*result); return NULL;
+          }
+        break;
+      default:
+        *out++ = *cp++;
+      }
+  }
+}
+
 /** Given a string containing part of a configuration file or similar format,
  * advance past comments and whitespace and try to parse a single line.  If we
  * parse a line successfully, set *<b>key_out</b> to a new string holding the
@@ -1965,33 +2054,40 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
     ++line;
   *key_out = tor_strndup(key, line-key);
 
-  /* Skip until the value, writing nuls so key will be nul-terminated */
+  /* Skip until the value. */
   while (*line == ' ' || *line == '\t')
     ++line;
 
   val = line;
 
   /* Find the end of the line. */
-  while (*line && *line != '\n' && *line != '#')
-    ++line;
-  if (*line == '\n') {
-    cp = line++;
+  if (*line == '\"') {
+    line = unescape_string(line, value_out, NULL);
+    while (*line == ' ' || *line == '\t')
+      ++line;
+    if (*line && *line != '#' && *line != '\n')
+      return NULL;
   } else {
-    cp = line;
-  }
-  while (cp>val && TOR_ISSPACE(*(cp-1)))
-    --cp;
+    while (*line && *line != '\n' && *line != '#')
+      ++line;
+    if (*line == '\n') {
+      cp = line++;
+    } else {
+      cp = line;
+    }
+    while (cp>val && TOR_ISSPACE(*(cp-1)))
+      --cp;
 
-  tor_assert(cp >= val);
-  *value_out = tor_strndup(val, cp-val);
+    tor_assert(cp >= val);
+    *value_out = tor_strndup(val, cp-val);
+  }
 
   if (*line == '#') {
     do {
       ++line;
     } while (*line && *line != '\n');
-    if (*line == '\n')
-      ++line;
   }
+  while(TOR_ISSPACE(*line)) ++line;
 
   return line;
 }

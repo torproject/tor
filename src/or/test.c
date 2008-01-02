@@ -826,14 +826,17 @@ test_util(void)
   strlcpy(buf, "k v\n" " key    value with spaces   \n" "keykey val\n"
           "k2\n"
           "k3 \n" "\n" "   \n" "#comment\n"
-          "k4#a\n" "k5#abc\n" "k6 val #with comment\n", sizeof(buf));
+          "k4#a\n" "k5#abc\n" "k6 val #with comment\n"
+          "kseven   \"a quoted 'string\"\n"
+          "k8 \"a \\x71uoted\\n\\\"str\\\\ing\\t\\001\\01\\1\\\"\"\n"
+          , sizeof(buf));
   str = buf;
 
   str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k");
   test_streq(v, "v");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, " key    value with"));
+  test_assert(!strcmpstart(str, "key    value with"));
 
   str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "key");
@@ -857,7 +860,7 @@ test_util(void)
   test_streq(k, "k3");
   test_streq(v, "");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "\n   \n"));
+  test_assert(!strcmpstart(str, "#comment"));
 
   str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k4");
@@ -874,6 +877,18 @@ test_util(void)
   str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k6");
   test_streq(v, "val");
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, "kseven"));
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "kseven");
+  test_streq(v, "a quoted 'string");
+  tor_free(k); tor_free(v);
+  test_assert(!strcmpstart(str, "k8 "));
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k8");
+  test_streq(v, "a quoted\n\"str\\ing\t\x01\x01\x01\"");
   tor_free(k); tor_free(v);
   test_streq(str, "");
 
