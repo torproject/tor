@@ -328,8 +328,13 @@ authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
       {
         trusted_dir_server_t *ds
           = trusteddirserver_get_by_v3_auth_digest(voter->identity_digest);
-        if (!ds)
+        if (!ds) /* XXXX020 This is wrong!!  If we're a cache, we should
+                  * download unrecognized signing keys so we can serve
+                  * them. */
           continue;
+        if (tor_digest_is_zero(voter->signing_key_digest))
+          continue; /* This authority never signed this consensus, so don't
+                     * go looking for a cert with key digest 0000000000. */
         if (authority_cert_get_by_digests(voter->identity_digest,
                                           voter->signing_key_digest)) {
           download_status_reset(&ds->cert_dl_status);

@@ -10,6 +10,11 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Reference-count and share copies of address policy entries; only
       5% of them were actually distinct.
 
+  o Minor bugfixes:
+    - When an authority has not signed a consensus, do not try to
+      download a nonexistant "certificate with key 00000000".  Bugfix
+      on 0.2.0.x. Fixes bug 569.
+
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)
 
