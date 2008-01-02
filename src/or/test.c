@@ -2193,18 +2193,16 @@ test_dir_format(void)
   r1->nickname = tor_strdup("Magri");
   r1->platform = tor_strdup(platform);
 
-  ex1 = tor_malloc_zero(sizeof(addr_policy_t));;
-  ex2 = tor_malloc_zero(sizeof(addr_policy_t));;
+  ex1 = tor_malloc_zero(sizeof(addr_policy_t));
+  ex2 = tor_malloc_zero(sizeof(addr_policy_t));
   ex1->policy_type = ADDR_POLICY_ACCEPT;
   ex1->addr = 0;
   ex1->maskbits = 0;
   ex1->prt_min = ex1->prt_max = 80;
-  ex1->next = ex2;
   ex2->policy_type = ADDR_POLICY_REJECT;
   ex2->addr = 18 << 24;
   ex2->maskbits = 8;
   ex2->prt_min = ex2->prt_max = 24;
-  ex2->next = NULL;
   r2 = tor_malloc_zero(sizeof(routerinfo_t));
   r2->address = tor_strdup("1.1.1.1");
   r2->addr = 0x0a030201u; /* 10.3.2.1 */
@@ -2215,7 +2213,9 @@ test_dir_format(void)
   r2->onion_pkey = crypto_pk_dup_key(pk2);
   r2->identity_pkey = crypto_pk_dup_key(pk1);
   r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
-  r2->exit_policy = ex1;
+  r2->exit_policy = smartlist_create();
+  smartlist_add(r2->exit_policy, &ex2);
+  smartlist_add(r2->exit_policy, &ex1);
   r2->nickname = tor_strdup("Fred");
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
@@ -2922,18 +2922,22 @@ test_v3_networkstatus(void)
 static void
 test_policies(void)
 {
-  addr_policy_t *policy, *policy2;
+  smartlist_t *policy, *policy2;
+  addr_policy_t *p;
   tor_addr_t tar;
   config_line_t line;
 
-  policy = router_parse_addr_policy_from_string("reject 192.168.0.0/16:*",-1);
-  test_eq(NULL, policy->next);
-  test_eq(ADDR_POLICY_REJECT, policy->policy_type);
+  policy = smartlist_create();
+
+  p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",-1);
+  test_eq(ADDR_POLICY_REJECT, p->policy_type);
   tor_addr_from_ipv4(&tar, 0xc0a80000u);
-  test_assert(policy->addr == 0xc0a80000u);
-  test_eq(16, policy->maskbits);
-  test_eq(1, policy->prt_min);
-  test_eq(65535, policy->prt_max);
+  test_assert(p->addr == 0xc0a80000u);
+  test_eq(16, p->maskbits);
+  test_eq(1, p->prt_min);
+  test_eq(65535, p->prt_max);
+
+  smartlist_add(policy, p);
 
   test_assert(ADDR_POLICY_ACCEPTED ==
           compare_addr_to_addr_policy(0x01020304u, 2, policy));
@@ -2955,8 +2959,8 @@ test_policies(void)
   test_assert(!policy_is_reject_star(policy2));
   test_assert(policy_is_reject_star(policy));
 
-  addr_policy_free(policy);
-  addr_policy_free(policy2);
+  addr_policy_list_free(policy);
+  addr_policy_list_free(policy2);
 
   /* make sure compacting logic works. */
   policy = NULL;
@@ -2967,9 +2971,9 @@ test_policies(void)
   test_assert(policy);
   //test_streq(policy->string, "accept *:80");
   //test_streq(policy->next->string, "reject *:*");
-  test_eq_ptr(policy->next->next, NULL);
+  test_eq(smartlist_len(policy), 2);
 
-  addr_policy_free(policy);
+  addr_policy_list_free(policy);
 }
 
 static void

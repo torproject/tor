@@ -12,30 +12,74 @@ const char policies_c_id[] = \
  **/
 
 #include "or.h"
+#include "ht.h"
 
 /** Policy that addresses for incoming SOCKS connections must match. */
-static addr_policy_t *socks_policy = NULL;
+static smartlist_t *socks_policy = NULL;
 /** Policy that addresses for incoming directory connections must match. */
-static addr_policy_t *dir_policy = NULL;
+static smartlist_t *dir_policy = NULL;
 /** Policy that addresses for incoming router descriptors must match in order
  * to be published by us. */
-static addr_policy_t *authdir_reject_policy = NULL;
+static smartlist_t *authdir_reject_policy = NULL;
 /** Policy that addresses for incoming router descriptors must match in order
  * to be marked as valid in our networkstatus. */
-static addr_policy_t *authdir_invalid_policy = NULL;
+static smartlist_t *authdir_invalid_policy = NULL;
 /** Policy that addresses for incoming router descriptors must <b>not</b>
  * match in order to not be marked as BadDirectory. */
-static addr_policy_t *authdir_baddir_policy = NULL;
+static smartlist_t *authdir_baddir_policy = NULL;
 /** Policy that addresses for incoming router descriptors must <b>not</b>
  * match in order to not be marked as BadExit. */
-static addr_policy_t *authdir_badexit_policy = NULL;
+static smartlist_t *authdir_badexit_policy = NULL;
 
 /** Parsed addr_policy_t describing which addresses we believe we can start
  * circuits at. */
-static addr_policy_t *reachable_or_addr_policy = NULL;
+static smartlist_t *reachable_or_addr_policy = NULL;
 /** Parsed addr_policy_t describing which addresses we believe we can connect
  * to directories at. */
-static addr_policy_t *reachable_dir_addr_policy = NULL;
+static smartlist_t *reachable_dir_addr_policy = NULL;
+
+/** Replace all "private" entries in *<b>policy</b> with their expanded
+ * equivalents. */
+void
+policy_expand_private(smartlist_t **policy)
+{
+  static const char *private_nets[] = {
+    "0.0.0.0/8", "169.254.0.0/16",
+    "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12", NULL };
+  uint16_t port_min, port_max;
+
+  int i;
+  smartlist_t *tmp;
+
+  if (!*policy)
+    return;
+
+  tmp = smartlist_create();
+
+  SMARTLIST_FOREACH(*policy, addr_policy_t *, p,
+  {
+     if (! p->is_private) {
+       smartlist_add(tmp, p);
+       continue;
+     }
+     for (i = 0; private_nets[i]; ++i) {
+       addr_policy_t policy;
+       memcpy(&policy, p, sizeof(addr_policy_t));
+       policy.is_private = 0;
+       policy.is_canonical = 0;
+       if (parse_addr_and_port_range(private_nets[i],
+                                     &policy.addr,
+                                     &policy.maskbits, &port_min, &port_max)) {
+         tor_assert(0);
+       }
+       smartlist_add(tmp, addr_policy_get_canonical_entry(&policy));
+     }
+     addr_policy_free(p);
+  });
+
+  smartlist_free(*policy);
+  *policy = tmp;
+}
 
 /**
  * Given a linked list of config lines containing "allow" and "deny"
@@ -43,21 +87,18 @@ static addr_policy_t *reachable_dir_addr_policy = NULL;
  * if any tokens are malformed, else return 0.
  */
 static int
-parse_addr_policy(config_line_t *cfg, addr_policy_t **dest,
+parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
                   int assume_action)
 {
-  addr_policy_t **nextp;
+  smartlist_t *result;
   smartlist_t *entries;
+  addr_policy_t *item;
   int r = 0;
 
   if (!cfg)
     return 0;
 
-  nextp = dest;
-
-  while (*nextp)
-    nextp = &((*nextp)->next);
-
+  result = smartlist_create();
   entries = smartlist_create();
   for (; cfg; cfg = cfg->next) {
     smartlist_split_string(entries, cfg->value, ",",
@@ -65,11 +106,9 @@ parse_addr_policy(config_line_t *cfg, addr_policy_t **dest,
     SMARTLIST_FOREACH(entries, const char *, ent,
     {
       log_debug(LD_CONFIG,"Adding new entry '%s'",ent);
-      *nextp = router_parse_addr_policy_from_string(ent, assume_action);
-      if (*nextp) {
-        /* Advance nextp to the end of the policy. */
-        while (*nextp)
-          nextp = &((*nextp)->next);
+      item = router_parse_addr_policy_item_from_string(ent, assume_action);
+      if (item) {
+        smartlist_add(result, item);
       } else {
         log_warn(LD_CONFIG,"Malformed policy '%s'.", ent);
         r = -1;
@@ -79,6 +118,19 @@ parse_addr_policy(config_line_t *cfg, addr_policy_t **dest,
     smartlist_clear(entries);
   }
   smartlist_free(entries);
+  if (r == -1) {
+    addr_policy_list_free(result);
+  } else {
+    policy_expand_private(&result);
+
+    if (*dest) {
+      smartlist_add_all(*dest, result);
+      smartlist_free(result);
+    } else {
+      *dest = result;
+    }
+  }
+
   return r;
 }
 
@@ -96,7 +148,7 @@ parse_reachable_addresses(void)
              "Both ReachableDirAddresses and ReachableORAddresses are set. "
              "ReachableAddresses setting will be ignored.");
   }
-  addr_policy_free(reachable_or_addr_policy);
+  addr_policy_list_free(reachable_or_addr_policy);
   reachable_or_addr_policy = NULL;
   if (!options->ReachableORAddresses && options->ReachableAddresses)
     log_info(LD_CONFIG,
@@ -110,7 +162,7 @@ parse_reachable_addresses(void)
              options->ReachableORAddresses ? "OR" : "");
   }
 
-  addr_policy_free(reachable_dir_addr_policy);
+  addr_policy_list_free(reachable_dir_addr_policy);
   reachable_dir_addr_policy = NULL;
   if (!options->ReachableDirAddresses && options->ReachableAddresses)
     log_info(LD_CONFIG,
@@ -139,7 +191,7 @@ firewall_is_fascist_or(void)
  */
 static int
 addr_policy_permits_address(uint32_t addr, uint16_t port,
-                            addr_policy_t *policy)
+                            smartlist_t *policy)
 {
   addr_policy_result_t p;
   p = compare_addr_to_addr_policy(addr, port, policy);
@@ -237,7 +289,7 @@ authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 int
 validate_addr_policies(or_options_t *options, char **msg)
 {
-  addr_policy_t *addr_policy=NULL;
+  smartlist_t *addr_policy=NULL;
   *msg = NULL;
 
   if (policies_parse_exit_policy(options->ExitPolicy, &addr_policy,
@@ -267,7 +319,7 @@ validate_addr_policies(or_options_t *options, char **msg)
     REJECT("Error in AuthDirInvalid entry.");
 
 err:
-  addr_policy_free(addr_policy);
+  addr_policy_list_free(addr_policy);
   return *msg ? -1 : 0;
 #undef REJECT
 }
@@ -277,18 +329,19 @@ err:
  * Ignore port specifiers.
  */
 static void
-load_policy_from_option(config_line_t *config, addr_policy_t **policy,
+load_policy_from_option(config_line_t *config, smartlist_t **policy,
                         int assume_action)
 {
-  addr_policy_t *n;
-  addr_policy_free(*policy);
+  addr_policy_list_free(*policy);
   *policy = NULL;
   parse_addr_policy(config, policy, assume_action);
-  /* ports aren't used. */
-  for (n=*policy; n; n = n->next) {
-    n->prt_min = 1;
-    n->prt_max = 65535;
-  }
+  if (!*policy)
+    return;
+  SMARTLIST_FOREACH(*policy, addr_policy_t *, n, {
+      /* ports aren't used. */
+      n->prt_min = 1;
+      n->prt_max = 65535;
+    });
 }
 
 /** Set all policies based on <b>options</b>, which should have been validated
@@ -317,6 +370,8 @@ cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
   int r;
   if ((r=((int)a->policy_type - (int)b->policy_type)))
     return r;
+  if ((r=((int)a->is_private - (int)b->is_private)))
+    return r;
   if ((r=((int)a->addr - (int)b->addr)))
     return r;
   if ((r=((int)a->maskbits - (int)b->maskbits)))
@@ -331,21 +386,86 @@ cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
 /** Like cmp_single_addr_policy() above, but looks at the
  * whole set of policies in each case. */
 int
-cmp_addr_policies(addr_policy_t *a, addr_policy_t *b)
+cmp_addr_policies(smartlist_t *a, smartlist_t *b)
 {
-  int r;
-  while (a && b) {
-    if ((r=cmp_single_addr_policy(a,b)))
+  int r, i;
+  int len_a = a ? smartlist_len(a) : 0;
+  int len_b = b ? smartlist_len(b) : 0;
+
+  for (i = 0; i < len_a && i < len_b; ++i) {
+    if ((r = cmp_single_addr_policy(smartlist_get(a, i), smartlist_get(b, i))))
       return r;
-    a = a->next;
-    b = b->next;
   }
-  if (!a && !b)
+  if (i == len_a && i == len_b)
     return 0;
-  if (a)
+  if (i < len_a)
     return -1;
   else
     return 1;
+}
+
+/** Node in hashtable used to store address policy entries. */
+typedef struct policy_map_ent_t {
+  HT_ENTRY(policy_map_ent_t) node;
+  addr_policy_t *policy;
+} policy_map_ent_t;
+
+static HT_HEAD(policy_map, policy_map_ent_t) policy_root;
+
+/** Return true iff a and b are equal. */
+static INLINE int
+policy_eq(policy_map_ent_t *a, policy_map_ent_t *b)
+{
+  return cmp_single_addr_policy(a->policy, b->policy) == 0;
+}
+
+/** Return a hashcode for <b>ent</b> */
+static unsigned int
+policy_hash(policy_map_ent_t *ent)
+{
+  addr_policy_t *a = ent->policy;
+  unsigned int r;
+  if (a->is_private)
+    r = 0x1234abcd;
+  else
+    r = (unsigned int)a->addr;
+  r += a->prt_min << 8;
+  r += a->prt_max << 16;
+  r += a->maskbits;
+  if (a->policy_type == ADDR_POLICY_REJECT)
+    r ^= 0xffffffff;
+
+  return r;
+}
+
+HT_PROTOTYPE(policy_map, policy_map_ent_t, node, policy_hash,
+             policy_eq)
+HT_GENERATE(policy_map, policy_map_ent_t, node, policy_hash,
+            policy_eq, 0.6, malloc, realloc, free)
+
+/** Given a pointer to an addr_policy_t, return a copy of the pointer to the
+ * "canonical" copy of that addr_policy_t; the canonical copy is a single
+ * reference-counted object. */
+addr_policy_t *
+addr_policy_get_canonical_entry(addr_policy_t *e)
+{
+  policy_map_ent_t search, *found;
+  if (e->is_canonical)
+    return e;
+
+  search.policy = e;
+  found = HT_FIND(policy_map, &policy_root, &search);
+  if (!found) {
+    found = tor_malloc_zero(sizeof(policy_map_ent_t));
+    found->policy = tor_memdup(e, sizeof(addr_policy_t));
+    found->policy->is_canonical = 1;
+    found->policy->refcnt = 1;
+    HT_INSERT(policy_map, &policy_root, found);
+  }
+
+  tor_assert(!cmp_single_addr_policy(found->policy, e));
+  ++found->policy->refcnt;
+  return found->policy;
 }
 
 /** Decide whether a given addr:port is definitely accepted,
@@ -367,15 +487,17 @@ cmp_addr_policies(addr_policy_t *a, addr_policy_t *b)
  */
 addr_policy_result_t
 compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
-                            addr_policy_t *policy)
+                            smartlist_t *policy)
 {
   int maybe_reject = 0;
   int maybe_accept = 0;
   int match = 0;
   int maybe = 0;
-  addr_policy_t *tmpe;
+  int i, len;
+  len = policy ? smartlist_len(policy) : 0;
 
-  for (tmpe=policy; tmpe; tmpe=tmpe->next) {
+  for (i = 0; i < len; ++i) {
+    addr_policy_t *tmpe = smartlist_get(policy, i);
     maybe = 0;
     if (!addr) {
       /* Address is unknown. */
@@ -420,6 +542,7 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
       }
     }
   }
+
   /* accept all by default. */
   return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
 }
@@ -468,7 +591,7 @@ addr_policy_intersects(addr_policy_t *a, addr_policy_t *b)
 /** Add the exit policy described by <b>more</b> to <b>policy</b>.
  */
 static void
-append_exit_policy_string(addr_policy_t **policy, const char *more)
+append_exit_policy_string(smartlist_t **policy, const char *more)
 {
   config_line_t tmp;
 
@@ -480,38 +603,40 @@ append_exit_policy_string(addr_policy_t **policy, const char *more)
 
 /** Detect and excise "dead code" from the policy *<b>dest</b>. */
 static void
-exit_policy_remove_redundancies(addr_policy_t **dest)
+exit_policy_remove_redundancies(smartlist_t *dest)
 {
-  addr_policy_t *ap, *tmp, *victim, *previous;
+  addr_policy_t *ap, *tmp, *victim;
+  int i, j;
 
   /* Step one: find a *:* entry and cut off everything after it. */
-  for (ap=*dest; ap; ap=ap->next) {
+  for (i = 0; i < smartlist_len(dest); ++i) {
+    ap = smartlist_get(dest, i);
     if (ap->maskbits == 0 && ap->prt_min <= 1 && ap->prt_max >= 65535) {
       /* This is a catch-all line -- later lines are unreachable. */
-      if (ap->next) {
-        addr_policy_free(ap->next);
-        ap->next = NULL;
+      while (i+1 < smartlist_len(dest)) {
+        victim = smartlist_get(dest, i+1);
+        smartlist_del(dest, i+1);
+        addr_policy_free(victim);
       }
+      break;
     }
   }
 
   /* Step two: for every entry, see if there's a redundant entry
    * later on, and remove it. */
-  for (ap=*dest; ap; ap=ap->next) {
-    tmp=ap;
-    while (tmp) {
-      if (tmp->next && addr_policy_covers(ap, tmp->next)) {
+  for (i = 0; i < smartlist_len(dest)-1; ++i) {
+    ap = smartlist_get(dest, i);
+    for (j = i+1; j < smartlist_len(dest); ++j) {
+      tmp = smartlist_get(dest, j);
+      tor_assert(j > i);
+      if (addr_policy_covers(ap, tmp)) {
         char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
-        policy_write_item(p1, sizeof(p1), tmp->next);
+        policy_write_item(p1, sizeof(p1), tmp);
         policy_write_item(p2, sizeof(p2), ap);
-        log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is made "
-            "redundant by %s.", p1, p2);
-        victim = tmp->next;
-        tmp->next = victim->next;
-        victim->next = NULL;
-        addr_policy_free(victim);
-      } else {
-        tmp=tmp->next;
+        log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s (%d).  It is made "
+            "redundant by %s (%d).", p1, j, p2, i);
+        smartlist_del_keeporder(dest, j--);
+        addr_policy_free(tmp);
       }
     }
   }
@@ -523,15 +648,14 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
    *
    * Anybody want to doublecheck the logic here? XXX
    */
-  ap = *dest;
-  previous = NULL;
-  while (ap) {
-    for (tmp=ap->next; tmp; tmp=tmp->next) {
+  for (i = 0; i < smartlist_len(dest)-1; ++i) {
+    ap = smartlist_get(dest, i);
+    for (j = i+1; j < smartlist_len(dest); ++j) {
+      tor_assert(j > i);
+      tmp = smartlist_get(dest, j);
       if (ap->policy_type != tmp->policy_type) {
-        if (addr_policy_intersects(ap, tmp)) {
-          tmp = NULL; /* so that we advance previous and ap */
+        if (addr_policy_intersects(ap, tmp))
           break;
-        }
       } else { /* policy_types are equal. */
         if (addr_policy_covers(tmp, ap)) {
           char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
@@ -539,26 +663,11 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
           policy_write_item(p2, sizeof(p2), tmp);
           log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is already "
               "covered by %s.", p1, p2);
-          victim = ap;
-          ap = ap->next;
-
-          if (previous) {
-            assert(previous->next == victim);
-            previous->next = victim->next;
-          } else {
-            assert(*dest == victim);
-            *dest = victim->next;
-          }
-
-          victim->next = NULL;
-          addr_policy_free(victim);
+          smartlist_del_keeporder(dest, i--);
+          addr_policy_free(ap);
           break;
         }
       }
-    }
-    if (!tmp) {
-      previous = ap;
-      ap = ap->next;
     }
   }
 }
@@ -576,7 +685,7 @@ exit_policy_remove_redundancies(addr_policy_t **dest)
  * else return 0.
  */
 int
-policies_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
+policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                            int rejectprivate, const char *local_address)
 {
   if (rejectprivate) {
@@ -591,22 +700,33 @@ policies_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
     return -1;
   append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);
 
-  exit_policy_remove_redundancies(dest);
+  exit_policy_remove_redundancies(*dest);
+
   return 0;
+}
+
+/** DOCDOC */
+void
+policies_set_router_exitpolicy_to_reject_all(routerinfo_t *r)
+{
+  addr_policy_t *item;
+  addr_policy_list_free(r->exit_policy);
+  r->exit_policy = smartlist_create();
+  item = router_parse_addr_policy_item_from_string("reject *:*", -1);
+  smartlist_add(r->exit_policy, item);
 }
 
 /** Return true iff <b>ri</b> is "useful as an exit node", meaning
  * it allows exit to at least one /8 address space for at least
  * two of ports 80, 443, and 6667. */
 int
-exit_policy_is_general_exit(addr_policy_t *policy)
+exit_policy_is_general_exit(smartlist_t *policy)
 {
   static const int ports[] = { 80, 443, 6667 };
   int n_allowed = 0;
   int i;
   for (i = 0; i < 3; ++i) {
-    struct addr_policy_t *p = policy;
-    for ( ; p; p = p->next) {
+    SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
       if (p->prt_min > ports[i] || p->prt_max < ports[i])
         continue; /* Doesn't cover our port. */
       if (p->maskbits > 8)
@@ -618,7 +738,7 @@ exit_policy_is_general_exit(addr_policy_t *policy)
         ++n_allowed;
         break; /* stop considering this port */
       }
-    }
+    });
   }
   return n_allowed >= 2;
 }
@@ -626,16 +746,16 @@ exit_policy_is_general_exit(addr_policy_t *policy)
 /** Return false if <b>policy</b> might permit access to some addr:port;
  * otherwise if we are certain it rejects everything, return true. */
 int
-policy_is_reject_star(addr_policy_t *p)
+policy_is_reject_star(smartlist_t *policy)
 {
-  for ( ; p; p = p->next) {
+  SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
     if (p->policy_type == ADDR_POLICY_ACCEPT)
       return 0;
     else if (p->policy_type == ADDR_POLICY_REJECT &&
              p->prt_min <= 1 && p->prt_max == 65535 &&
              p->maskbits == 0)
       return 1;
-  }
+  });
   return 1;
 }
 
@@ -647,14 +767,21 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy)
   struct in_addr in;
   size_t written = 0;
   char addrbuf[INET_NTOA_BUF_LEN];
+  const char *addrpart;
   int result;
 
   in.s_addr = htonl(policy->addr);
   tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
   /* write accept/reject 1.2.3.4 */
+  if (policy->is_private)
+    addrpart = "private";
+  else if (policy->maskbits == 0)
+    addrpart = "*";
+  else
+    addrpart = addrbuf;
   result = tor_snprintf(buf, buflen, "%s %s",
             policy->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
-            policy->maskbits == 0 ? "*" : addrbuf);
+                        addrpart);
   if (result < 0)
     return -1;
   written += strlen(buf);
@@ -708,14 +835,30 @@ getinfo_helper_policies(control_connection_t *conn,
 
 /** Release all storage held by <b>p</b>. */
 void
+addr_policy_list_free(smartlist_t *lst)
+{
+  if (!lst) return;
+  SMARTLIST_FOREACH(lst, addr_policy_t *, policy, addr_policy_free(policy));
+  smartlist_free(lst);
+}
+
+/** Release all storage held by <b>p</b>. */
+void
 addr_policy_free(addr_policy_t *p)
 {
-  addr_policy_t *e;
-
-  while (p) {
-    e = p;
-    p = p->next;
-    tor_free(e);
+  if (p) {
+    if (--p->refcnt <= 0) {
+      if (p->is_canonical) {
+        policy_map_ent_t search, *found;
+        search.policy = p;
+        found = HT_REMOVE(policy_map, &policy_root, &search);
+        if (found) {
+          tor_assert(p == found->policy);
+          tor_free(found);
+        }
+      }
+      tor_free(p);
+    }
   }
 }
 
@@ -723,17 +866,17 @@ addr_policy_free(addr_policy_t *p)
 void
 policies_free_all(void)
 {
-  addr_policy_free(reachable_or_addr_policy);
+  addr_policy_list_free(reachable_or_addr_policy);
   reachable_or_addr_policy = NULL;
-  addr_policy_free(reachable_dir_addr_policy);
+  addr_policy_list_free(reachable_dir_addr_policy);
   reachable_dir_addr_policy = NULL;
-  addr_policy_free(socks_policy);
+  addr_policy_list_free(socks_policy);
   socks_policy = NULL;
-  addr_policy_free(dir_policy);
+  addr_policy_list_free(dir_policy);
   dir_policy = NULL;
-  addr_policy_free(authdir_reject_policy);
+  addr_policy_list_free(authdir_reject_policy);
   authdir_reject_policy = NULL;
-  addr_policy_free(authdir_invalid_policy);
+  addr_policy_list_free(authdir_invalid_policy);
   authdir_invalid_policy = NULL;
 }
 

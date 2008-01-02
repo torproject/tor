@@ -764,9 +764,7 @@ connection_edge_process_end_not_open(
                  "Exitrouter '%s' seems to be more restrictive than its exit "
                  "policy. Not using this router as exit for now.",
                  exitrouter->nickname);
-          addr_policy_free(exitrouter->exit_policy);
-          exitrouter->exit_policy =
-            router_parse_addr_policy_from_string("reject *:*", -1);
+          policies_set_router_exitpolicy_to_reject_all(exitrouter);
         }
         /* rewrite it to an IP if we learned one. */
         if (addressmap_rewrite(conn->socks_request->address,
@@ -819,9 +817,7 @@ connection_edge_process_end_not_open(
       case END_STREAM_REASON_HIBERNATING:
       case END_STREAM_REASON_RESOURCELIMIT:
         if (exitrouter) {
-          addr_policy_free(exitrouter->exit_policy);
-          exitrouter->exit_policy =
-            router_parse_addr_policy_from_string("reject *:*", -1);
+          policies_set_router_exitpolicy_to_reject_all(exitrouter);
         }
         if (conn->_base.chosen_exit_optional) {
           /* stop wanting a specific exit */

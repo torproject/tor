@@ -2079,7 +2079,7 @@ routerinfo_free(routerinfo_t *router)
     SMARTLIST_FOREACH(router->declared_family, char *, s, tor_free(s));
     smartlist_free(router->declared_family);
   }
-  addr_policy_free(router->exit_policy);
+  addr_policy_list_free(router->exit_policy);
 
   /* XXXX020 Remove once 414/417 is fixed. But I have a hunch... */
   memset(router, 77, sizeof(routerinfo_t));

@@ -1242,6 +1242,7 @@ router_parse_entry_from_string(const char *s, const char *end,
                       log_warn(LD_DIR,"Error in exit policy");
                       goto err;
                     });
+  policy_expand_private(&router->exit_policy);
 
   if ((tok = find_first_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
     int i;
@@ -2426,7 +2427,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
  * ADDR_POLICY_REJECT) for items that specify no action.
  */
 addr_policy_t *
-router_parse_addr_policy_from_string(const char *s, int assume_action)
+router_parse_addr_policy_item_from_string(const char *s, int assume_action)
 {
   directory_token_t *tok = NULL;
   const char *cp, *eos;
@@ -2475,13 +2476,14 @@ router_parse_addr_policy_from_string(const char *s, int assume_action)
 static int
 router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 {
-  addr_policy_t *newe, **tmpe;
+  addr_policy_t *newe;
   newe = router_parse_addr_policy(tok);
   if (!newe)
     return -1;
-  for (tmpe = &router->exit_policy; *tmpe; tmpe=&((*tmpe)->next))
-    ;
-  *tmpe = newe;
+  if (! router->exit_policy)
+    router->exit_policy = smartlist_create();
+
+  smartlist_add(router->exit_policy, newe);
 
   return 0;
 }
@@ -2491,7 +2493,7 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 static addr_policy_t *
 router_parse_addr_policy(directory_token_t *tok)
 {
-  addr_policy_t *newe;
+  addr_policy_t newe;
   char *arg;
 
   tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
@@ -2503,20 +2505,19 @@ router_parse_addr_policy(directory_token_t *tok)
   if (!strcmpstart(arg,"private"))
     return router_parse_addr_policy_private(tok);
 
-  newe = tor_malloc_zero(sizeof(addr_policy_t));
+  memset(&newe, 0, sizeof(newe));
 
-  newe->policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
+  newe.policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
     : ADDR_POLICY_ACCEPT;
 
-  if (parse_addr_and_port_range(arg, &newe->addr, &newe->maskbits,
-                                &newe->prt_min, &newe->prt_max))
+  if (parse_addr_and_port_range(arg, &newe.addr, &newe.maskbits,
+                                &newe.prt_min, &newe.prt_max))
     goto policy_read_failed;
 
-  return newe;
+  return addr_policy_get_canonical_entry(&newe);
 
 policy_read_failed:
   log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
-  tor_free(newe);
   return NULL;
 }
 
@@ -2527,17 +2528,14 @@ policy_read_failed:
 static addr_policy_t *
 router_parse_addr_policy_private(directory_token_t *tok)
 {
-  static const char *private_nets[] = {
-    "0.0.0.0/8", "169.254.0.0/16",
-    "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",NULL };
-  char *arg;
-  addr_policy_t *result, **nextp;
-  int net;
+  const char *arg;
   uint16_t port_min, port_max;
+  addr_policy_t result;
 
   arg = tok->args[0];
   if (strcmpstart(arg, "private"))
     return NULL;
+
   arg += strlen("private");
   arg = (char*) eat_whitespace(arg);
   if (!arg || *arg != ':')
@@ -2546,37 +2544,26 @@ router_parse_addr_policy_private(directory_token_t *tok)
   if (parse_port_range(arg+1, &port_min, &port_max)<0)
     return NULL;
 
-  nextp = &result;
-  for (net = 0; private_nets[net]; ++net) {
-    char buf[POLICY_BUF_LEN];
-    *nextp = tor_malloc_zero(sizeof(addr_policy_t));
-    (*nextp)->policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
-      : ADDR_POLICY_ACCEPT;
-    tor_snprintf(buf, sizeof(buf), "%s%s",
-                 private_nets[net], arg);
-    if (parse_addr_and_port_range(buf,
-                                  &(*nextp)->addr, &(*nextp)->maskbits,
-                                  &(*nextp)->prt_min, &(*nextp)->prt_max)) {
-      log_warn(LD_BUG, "Couldn't parse an address range we generated!");
-      return NULL;
-    }
-    nextp = &(*nextp)->next;
-  }
+  memset(&result, 0, sizeof(result));
+  result.policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
+    : ADDR_POLICY_ACCEPT;
+  result.is_private = 1;
+  result.prt_min = port_min;
+  result.prt_max = port_max;
 
-  return result;
+  return addr_policy_get_canonical_entry(&result);
 }
 
 /** Log and exit if <b>t</b> is malformed */
 void
-assert_addr_policy_ok(addr_policy_t *t)
+assert_addr_policy_ok(smartlist_t *lst)
 {
-  while (t) {
+  if (!lst) return;
+  SMARTLIST_FOREACH(lst, addr_policy_t *, t, {
     tor_assert(t->policy_type == ADDR_POLICY_REJECT ||
                t->policy_type == ADDR_POLICY_ACCEPT);
     tor_assert(t->prt_min <= t->prt_max);
-    t = t->next;
-  }
-
+  });
 }
 
 /*

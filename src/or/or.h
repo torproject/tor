@@ -1137,17 +1137,20 @@ typedef enum {
 
 /** A linked list of policy rules */
 typedef struct addr_policy_t {
-  addr_policy_action_t policy_type; /**< What to do when the policy matches.*/
-
-  /* XXXX020 make this ipv6-capable */
-  uint32_t addr; /**< Base address to accept or reject. */
+  int refcnt; /**< Reference count */
+  addr_policy_action_t policy_type:2;/**< What to do when the policy matches.*/
+  unsigned int is_private:1; /**< True iff this is the pseudo-address,
+                              * "private". */
+  unsigned int is_canonical:1; /**< True iff this policy is the canonical
+                                * copy (stored in a hash table to avoid
+                                * duplication of common policies) */
   maskbits_t maskbits; /**< Accept/reject all addresses <b>a</b> such that the
                  * first <b>maskbits</b> bits of <b>a</b> match
                  * <b>addr</b>. */
+  /* XXXX020 make this ipv6-capable */
+  uint32_t addr; /**< Base address to accept or reject. */
   uint16_t prt_min; /**< Lowest port number to accept/reject. */
   uint16_t prt_max; /**< Highest port number to accept/reject. */
-
-  struct addr_policy_t *next; /**< Next rule in list. */
 } addr_policy_t;
 
 /** A cached_dir_t represents a cacheable directory object, along with its
@@ -1265,8 +1268,8 @@ typedef struct {
   uint32_t bandwidthburst; /**< How large is this OR's token bucket? */
   /** How many bytes/s is this router known to handle? */
   uint32_t bandwidthcapacity;
-  addr_policy_t *exit_policy; /**< What streams will this OR permit
-                                      * to exit? */
+  smartlist_t *exit_policy; /**< What streams will this OR permit
+                             * to exit?  NULL for 'reject *:*'. */
   long uptime; /**< How many seconds the router claims to have been up */
   smartlist_t *declared_family; /**< Nicknames of router which this router
                                  * claims are its family. */
@@ -2280,7 +2283,7 @@ typedef struct {
    * means directly from the authorities) no matter our other config? */
   int FetchDirInfoEarly;
 
-  addr_policy_t *reachable_addr_policy; /**< Parsed from ReachableAddresses */
+  smartlist_t *reachable_addr_policy; /**< Parsed from ReachableAddresses */
 
   char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
                              * MAPADDRESS requests. */
@@ -3452,19 +3455,23 @@ int authdir_policy_baddir_address(uint32_t addr, uint16_t port);
 int authdir_policy_badexit_address(uint32_t addr, uint16_t port);
 
 int validate_addr_policies(or_options_t *options, char **msg);
+void policy_expand_private(smartlist_t **policy);
 void policies_parse_from_options(or_options_t *options);
 
-int cmp_addr_policies(addr_policy_t *a, addr_policy_t *b);
+addr_policy_t *addr_policy_get_canonical_entry(addr_policy_t *ent);
+int cmp_addr_policies(smartlist_t *a, smartlist_t *b);
 addr_policy_result_t compare_addr_to_addr_policy(uint32_t addr,
-                              uint16_t port, addr_policy_t *policy);
-int policies_parse_exit_policy(config_line_t *cfg, addr_policy_t **dest,
+                              uint16_t port, smartlist_t *policy);
+int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                int rejectprivate, const char *local_address);
-int exit_policy_is_general_exit(addr_policy_t *policy);
-int policy_is_reject_star(addr_policy_t *policy);
+void policies_set_router_exitpolicy_to_reject_all(routerinfo_t *exitrouter);
+int exit_policy_is_general_exit(smartlist_t *policy);
+int policy_is_reject_star(smartlist_t *policy);
 int getinfo_helper_policies(control_connection_t *conn,
                             const char *question, char **answer);
-int policy_write_item(char *buf, size_t buflen, addr_policy_t *policy);
+int policy_write_item(char *buf, size_t buflen, addr_policy_t *item);
 
+void addr_policy_list_free(smartlist_t *p);
 void addr_policy_free(addr_policy_t *p);
 void policies_free_all(void);
 
@@ -3999,15 +4006,15 @@ routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
                                              const char *prepend_annotations);
 extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
                          int cache_copy, struct digest_ri_map_t *routermap);
-addr_policy_t *router_parse_addr_policy_from_string(const char *s,
-                                                    int assume_action);
+addr_policy_t *router_parse_addr_policy_item_from_string(const char *s,
+                                                  int assume_action);
 version_status_t tor_version_is_obsolete(const char *myversion,
                                          const char *versionlist);
 int tor_version_parse(const char *s, tor_version_t *out);
 int tor_version_as_new_as(const char *platform, const char *cutoff);
 int tor_version_compare(tor_version_t *a, tor_version_t *b);
 void sort_version_list(smartlist_t *lst, int remove_duplicates);
-void assert_addr_policy_ok(addr_policy_t *t);
+void assert_addr_policy_ok(smartlist_t *t);
 void dump_distinct_digest_count(int severity);
 
 networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);

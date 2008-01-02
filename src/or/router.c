@@ -1631,26 +1631,28 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   /* Write the exit policy to the end of 's'. */
-  tmpe = router->exit_policy;
   if (dns_seems_to_be_broken()) {
     /* DNS is screwed up; don't claim to be an exit. */
     strlcat(s+written, "reject *:*\n", maxlen-written);
     written += strlen("reject *:*\n");
     tmpe = NULL;
-  }
-  for ( ; tmpe; tmpe=tmpe->next) {
-    result = policy_write_item(s+written, maxlen-written, tmpe);
-    if (result < 0) {
-      log_warn(LD_BUG,"descriptor policy_write_item ran out of room!");
-      return -1;
+  } else if (router->exit_policy) {
+    int i;
+    for (i = 0; i < smartlist_len(router->exit_policy); ++i) {
+      tmpe = smartlist_get(router->exit_policy, i);
+      result = policy_write_item(s+written, maxlen-written, tmpe);
+      if (result < 0) {
+        log_warn(LD_BUG,"descriptor policy_write_item ran out of room!");
+        return -1;
+      }
+      tor_assert(result == (int)strlen(s+written));
+      written += result;
+      if (written+2 > maxlen) {
+        log_warn(LD_BUG,"descriptor policy_write_item ran out of room (2)!");
+        return -1;
+      }
+      s[written++] = '\n';
     }
-    tor_assert(result == (int)strlen(s+written));
-    written += result;
-    if (written+2 > maxlen) {
-      log_warn(LD_BUG,"descriptor policy_write_item ran out of room (2)!");
-      return -1;
-    }
-    s[written++] = '\n';
   }
 
   if (written+256 > maxlen) { /* Not enough room for signature. */

@@ -2382,7 +2382,7 @@ parse_port_range(const char *port, uint16_t *port_min_out,
 }
 
 /** Parse a string <b>s</b> in the format of
- * (IP(/mask|/mask-bits)?|*)(:*|port(-maxport)?)?, setting the various
+ * (IP(/mask|/mask-bits)?|*)(:(*|port(-maxport))?)?, setting the various
  * *out pointers as appropriate.  Return 0 on success, -1 on failure.
  */
 int
