@@ -278,6 +278,8 @@ main(int argc, char **argv)
   char *result_hostname = NULL;
   char buf[INET_NTOA_BUF_LEN];
 
+  init_logging();
+
   arg = &argv[1];
   n_args = argc-1;
 

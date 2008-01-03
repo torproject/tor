@@ -392,6 +392,8 @@ int
 main(int argc, char **argv)
 {
   int r = 1;
+  init_logging();
+
   /* Don't bother using acceleration. */
   if (crypto_global_init(0)) {
     fprintf(stderr, "Couldn't initialize crypto library.\n");
