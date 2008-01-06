@@ -2727,18 +2727,17 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
     switch (rend_cache_store_v2_desc_as_dir(body)) {
       case -2:
-        log_info(LD_REND, "Rejected rend descriptor (length %d) from %s.",
+        log_info(LD_REND, "Rejected v2 rend descriptor (length %d) from %s "
+                 "since we're not currently a hidden service directory.",
                  (int)body_len, conn->_base.address);
         write_http_status_line(conn, 503, "Currently not acting as v2 "
                                "hidden service directory");
-        log_info(LD_REND, "Handled v2 rendezvous descriptor post: rejected");
         break;
       case -1:
-        log_info(LD_REND, "Rejected rend descriptor (length %d) from %s.",
+        log_warn(LD_REND, "Rejected v2 rend descriptor (length %d) from %s.",
                  (int)body_len, conn->_base.address);
         write_http_status_line(conn, 400, "Invalid service descriptor "
                                           "rejected");
-        log_info(LD_REND, "Handled v2 rendezvous descriptor post: rejected");
         break;
       default:
         write_http_status_line(conn, 200, "Service descriptor stored");

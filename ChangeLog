@@ -24,6 +24,9 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Use a mutex to protect the list of logs, so we never write to
       the list as it's being freed.  Bugfix on 0.1.2.x.  Fixes the
       very rare bug 575, which is kind of the revenge of bug 222.
+    - Patch from Karsten Loesing to complain less at both the client
+      and the relay when a relay used to have the HSDir flag but doesn't
+      anymore, and we try to upload a hidden service descriptor.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)
