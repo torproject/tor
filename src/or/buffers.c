@@ -493,9 +493,9 @@ buf_free(buf_t *buf)
   tor_free(buf);
 }
 
-/** Append a new chunk with enough capacity to hold <b>capacity</b> bytes to the
- * tail of <b>buf</b>.  If <b>capped</b>, don't allocate a chunk bigger than
- * MAX_CHUNK_ALLOC. */
+/** Append a new chunk with enough capacity to hold <b>capacity</b> bytes to
+ * the tail of <b>buf</b>.  If <b>capped</b>, don't allocate a chunk bigger
+ * than MAX_CHUNK_ALLOC. */
 static chunk_t *
 buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
 {
@@ -765,7 +765,8 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
  * DOCDOC can write more than flushlen bytes.
  */
 int
-flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen, size_t *buf_flushlen)
+flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen,
+              size_t *buf_flushlen)
 {
   int r;
   size_t flushed = 0;

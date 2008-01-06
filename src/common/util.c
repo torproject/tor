@@ -2087,7 +2087,7 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
       ++line;
     } while (*line && *line != '\n');
   }
-  while(TOR_ISSPACE(*line)) ++line;
+  while (TOR_ISSPACE(*line)) ++line;
 
   return line;
 }

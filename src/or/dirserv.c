@@ -2757,7 +2757,6 @@ dirserv_test_reachability(time_t now, int try_all)
     ctr = (ctr + 1) % 128;
 }
 
-
 /** Given a fingerprint <b>fp</b> which is either set if we're looking
  * for a v2 status, or zeroes if we're looking for a v3 status, return
  * a pointer to the appropriate cached dir object, or NULL if there isn't
