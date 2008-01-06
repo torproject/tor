@@ -2745,9 +2745,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("NatdPort option out of bounds.");
 
   if (options->SocksPort == 0 && options->TransPort == 0 &&
-      options->NatdPort == 0 && options->ORPort == 0)
-    REJECT("SocksPort, TransPort, NatdPort, and ORPort are all undefined? "
-           "Quitting.");
+      options->NatdPort == 0 && options->ORPort == 0 &&
+      options->DNSPort == 0 && !options->RendConfigLines)
+    log(LOG_WARN, LD_CONFIG,
+        "SocksPort, TransPort, NatdPort, DNSPort, and ORPort are all "
+        "undefined, and there aren't any hidden services configured.  "
+        "Tor will still run, but probably won't do anything.");
 
   if (options->ControlPort < 0 || options->ControlPort > 65535)
     REJECT("ControlPort option out of bounds.");

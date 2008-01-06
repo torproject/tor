@@ -28,6 +28,12 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)
 
+  o Minor features (other):
+    - Add hidden services and DNSPorts to the list of things that make
+      Tor accept that it has running ports.  Change starting Tor with
+      no ports from a fatal error to a warning; we might change it
+      back if this turns out to confuse anybody.  (Fixes bug 579.)
+
 Changes in version 0.2.0.15-alpha - 2007-12-25
   o Major bugfixes:
     - Fix several remotely triggerable asserts based on DirPort requests
