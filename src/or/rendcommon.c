@@ -917,9 +917,10 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
  *
  * If we have a newer descriptor with the same ID, ignore this one.
  * If we have an older descriptor with the same ID, replace it.
- * Return -1 if it's malformed or otherwise rejected; return 0 if
- * it's the same or older than one we've already got; return 1 if
- * it's novel.
+ * Return -2 if we are not acting as hidden service directory;
+ * return -1 if the descriptor(s) were not parsable; return 0 if all
+ * descriptors are the same or older than those we've already got;
+ * return a positive number for the number of novel stored descriptors.
  */
 int
 rend_cache_store_v2_desc_as_dir(const char *desc)
@@ -930,7 +931,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   size_t intro_size;
   size_t encoded_size;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-  int number_stored = 0;
+  int number_parsed = 0, number_stored = 0;
   const char *current_desc = desc;
   const char *next_desc;
   rend_cache_entry_t *e;
@@ -941,11 +942,12 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     /* Cannot store descs, because we are (currently) not acting as
      * hidden service directory. */
     log_info(LD_REND, "Cannot store descs: Not acting as hs dir");
-    return -1;
+    return -2;
   }
   while (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                           &intro_size, &encoded_size,
                                           &next_desc, current_desc) >= 0) {
+    number_parsed++;
     /* We don't care about the introduction points. */
     tor_free(intro_content);
     /* For pretty log statements. */
@@ -1012,8 +1014,12 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
         strcmpstart(current_desc, "rendezvous-service-descriptor "))
       break;
   }
-  log_info(LD_REND, "Parsed and added %d descriptor%s.",
-           number_stored, number_stored != 1 ? "s" : "");
+  if (!number_parsed) {
+    log_info(LD_REND, "Could not parse any descriptor.");
+    return -1;
+  }
+  log_info(LD_REND, "Parsed %d and added %d descriptor%s.",
+           number_parsed, number_stored, number_stored != 1 ? "s" : "");
   return number_stored;
 }
 

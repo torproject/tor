@@ -1830,6 +1830,12 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "'%s:%d'. Malformed rendezvous descriptor?",
                  escaped(reason), conn->_base.address, conn->_base.port);
         break;
+      case 503:
+        log_info(LD_REND,"http status 503 (%s) response from dirserver "
+                 "'%s:%d'. Node is (currently) not acting as v2 hidden "
+                 "service directory.",
+                 escaped(reason), conn->_base.address, conn->_base.port);
+        break;
       default:
         log_warn(LD_REND,"http status %d (%s) response unexpected (server "
                  "'%s:%d').",
@@ -2719,14 +2725,24 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   /* Handle v2 rendezvous service publish request. */
   if (options->HidServDirectoryV2 &&
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
-    if (rend_cache_store_v2_desc_as_dir(body) < 0) {
-      log_warn(LD_REND, "Rejected rend descriptor (length %d) from %s.",
-             (int)body_len, conn->_base.address);
-      write_http_status_line(conn, 400, "Invalid service descriptor rejected");
-      log_info(LD_REND, "Handled v2 rendezvous descriptor post: rejected");
-    } else {
-      write_http_status_line(conn, 200, "Service descriptor stored");
-      log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");
+    switch (rend_cache_store_v2_desc_as_dir(body)) {
+      case -2:
+        log_info(LD_REND, "Rejected rend descriptor (length %d) from %s.",
+                 (int)body_len, conn->_base.address);
+        write_http_status_line(conn, 503, "Currently not acting as v2 "
+                               "hidden service directory");
+        log_info(LD_REND, "Handled v2 rendezvous descriptor post: rejected");
+        break;
+      case -1:
+        log_info(LD_REND, "Rejected rend descriptor (length %d) from %s.",
+                 (int)body_len, conn->_base.address);
+        write_http_status_line(conn, 400, "Invalid service descriptor "
+                                          "rejected");
+        log_info(LD_REND, "Handled v2 rendezvous descriptor post: rejected");
+        break;
+      default:
+        write_http_status_line(conn, 200, "Service descriptor stored");
+        log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");
     }
     goto done;
   }
