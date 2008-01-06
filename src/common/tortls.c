@@ -39,6 +39,7 @@ const char tortls_c_id[] =
 #include "util.h"
 #include "log.h"
 #include "container.h"
+#include "ht.h"
 #include <string.h>
 
 // #define V2_HANDSHAKE_SERVER
@@ -64,6 +65,7 @@ typedef struct tor_tls_context_t {
  * accessed from within tortls.c.
  */
 struct tor_tls_t {
+  HT_ENTRY(tor_tls_t) node;
   tor_tls_context_t *context; /**DOCDOC */
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
@@ -82,6 +84,45 @@ struct tor_tls_t {
   void (*negotiated_callback)(tor_tls_t *tls, void *arg);
   void *callback_arg;
 };
+
+/** Helper: compare tor_tls_t objects by its SSL. */
+static INLINE int
+tor_tls_entries_eq(const tor_tls_t *a, const tor_tls_t *b)
+{
+  return a->ssl == b->ssl;
+}
+
+/** Helper: return a hash value for a tor_tls_t by its SSL. */
+static INLINE unsigned int
+tor_tls_entry_hash(const tor_tls_t *a)
+{
+#if SIZEOF_INT == SIZEOF_VOID_P
+  return ((unsigned int)a->ssl);
+#else
+  return (unsigned int) ((((uint64_t)a->ssl)>>2) & UINT_MAX);
+#endif
+}
+
+/** Map from SSL* pointers to tor_tls_t objects using those pointers.
+ */
+static HT_HEAD(tlsmap, tor_tls_t) tlsmap_root = HT_INITIALIZER();
+
+HT_PROTOTYPE(tlsmap, tor_tls_t, node, tor_tls_entry_hash,
+             tor_tls_entries_eq)
+HT_GENERATE(tlsmap, tor_tls_t, node, tor_tls_entry_hash,
+            tor_tls_entries_eq, 0.6, malloc, realloc, free)
+
+/** Helper: given a SSL* pointer, return the tor_tls_t object using that
+ * pointer. */
+static INLINE tor_tls_t *
+tor_tls_get_by_ssl(SSL *ssl)
+{
+  tor_tls_t search, *result;
+  memset(&search, 0, sizeof(search));
+  search.ssl = ssl;
+  result = HT_FIND(tlsmap, &tlsmap_root, &search);
+  return result;
+}
 
 static void tor_tls_context_decref(tor_tls_context_t *ctx);
 static void tor_tls_context_incref(tor_tls_context_t *ctx);
@@ -404,8 +445,13 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
    SSL3_TXT_EDH_DSS_DES_192_CBC3_SHA ":"           \
    TLS1_TXT_ECDH_RSA_WITH_DES_192_CBC3_SHA ":"     \
    TLS1_TXT_ECDH_ECDSA_WITH_DES_192_CBC3_SHA ":"   \
-   SSL3_TXT_RSA_FIPS_WITH_3DES_EDE_CBC_SHA ":"     \
+   /*SSL3_TXT_RSA_FIPS_WITH_3DES_EDE_CBC_SHA ":"*/ \
    SSL3_TXT_RSA_DES_192_CBC3_SHA)
+/* SSL3_TXT_RSA_FIPS_WITH_3DES_EDE_CBC_SHA is commented out because it doesn't
+ * really exist; if I understand correctly, it's a bit of silliness that
+ * netscape did on its own before any standard for what they wanted was
+ * formally approved.  Nonetheless, Firefox still uses it, so we need to
+ * fake it at some point soon. XXXX020 -NM */
 #else
 /* Ug. We don't have as many ciphers with openssl 0.9.7 as we'd like.  Fix
  * this list into something that sucks less. */
@@ -622,6 +668,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     return;
 
   if (tor_tls_client_is_using_v2_ciphers(ssl)) {
+    tor_tls_t *tls;
     /* Yes, we're casting away the const from ssl.  This is very naughty of us.
      * Let's hope openssl doesn't notice! */
 
@@ -629,6 +676,13 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     SSL_set_mode((SSL*) ssl, SSL_MODE_NO_AUTO_CHAIN);
     /* Don't send a hello request. */
     SSL_set_verify((SSL*) ssl, SSL_VERIFY_NONE, NULL);
+
+    tls = tor_tls_get_by_ssl((SSL*)ssl);
+    if (tls) {
+      tls->wasV2Handshake = 1;
+    } else {
+      log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
+    }
   }
 }
 #endif
@@ -666,6 +720,7 @@ tor_tls_new(int sock, int isServer)
     tor_free(result);
     return NULL;
   }
+  HT_INSERT(tlsmap, &tlsmap_root, result);
   SSL_set_bio(result->ssl, bio, bio);
   tor_tls_context_incref(global_tls_context);
   result->context = global_tls_context;
@@ -707,7 +762,12 @@ tor_tls_is_server(tor_tls_t *tls)
 void
 tor_tls_free(tor_tls_t *tls)
 {
+  tor_tls_t *removed;
   tor_assert(tls && tls->ssl);
+  removed = HT_REMOVE(tlsmap, &tlsmap_root, tls);
+  if (!removed) {
+    log_warn(LD_BUG, "Freeing a TLS that was not in the ssl->tls map.");
+  }
   SSL_free(tls->ssl);
   tls->ssl = NULL;
   tls->negotiated_callback = NULL;
@@ -820,9 +880,12 @@ tor_tls_handshake(tor_tls_t *tls)
 #ifdef V2_HANDSHAKE_SERVER
       if (tor_tls_client_is_using_v2_ciphers(tls->ssl)) {
         /* This check is redundant, but back when we did it in the callback,
-         * we didn't have access to the tor_tls_t struct.  We could make some
-         * kind of static map linking SSLs to tor_tls_ts, but that way lies
-         * sadness. */
+         * we might have not been able to look up the tor_tls_t if the code
+         * was buggy.  Fixing that. */
+        if (!tls->wasV2Handshake) {
+          log_warn(LD_BUG, "For some reason, wasV2Handshake didn't"
+                   " get set. Fixing that.");
+        }
         tls->wasV2Handshake = 1;
       } else {
         tls->wasV2Handshake = 0;
@@ -836,8 +899,10 @@ tor_tls_handshake(tor_tls_t *tls)
       int n_certs = sk_X509_num(chain);
       if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0)))
         tls->wasV2Handshake = 0;
-      else
+      else {
+        log_notice(LD_NET, "I think I got a v2 handshake!");
         tls->wasV2Handshake = 1;
+      }
 #endif
       SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST);
     }

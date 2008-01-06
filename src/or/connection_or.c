@@ -261,6 +261,7 @@ connection_or_process_inbuf(or_connection_t *conn)
     case OR_CONN_STATE_PROXY_READING:
       return connection_or_read_proxy_response(conn);
     case OR_CONN_STATE_OPEN:
+    case OR_CONN_STATE_OR_HANDSHAKING:
       return connection_or_process_cells_from_inbuf(conn);
     default:
       return 0; /* don't do anything */
@@ -315,6 +316,7 @@ connection_or_finished_flushing(or_connection_t *conn)
       connection_stop_writing(TO_CONN(conn));
       break;
     case OR_CONN_STATE_OPEN:
+    case OR_CONN_STATE_OR_HANDSHAKING:
       connection_stop_writing(TO_CONN(conn));
       break;
     default:
