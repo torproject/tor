@@ -39,8 +39,7 @@
  * security-critical properties.
  */
 #error "Sorry; we don't support building with NDEBUG."
-#else
-#ifdef __GNUC__
+#elif defined(__GNUC__)
 /* Give an int-valued version of !x that won't confuse PREDICT_UNLIKELY. */
 #define IS_FALSE_AS_INT(x) ((x) == ((typeof(x)) 0))
 #else
@@ -57,7 +56,6 @@
               _SHORT_FILE_, __LINE__, __func__, #expr);                 \
       abort();                                                          \
     } STMT_END
-#endif
 
 #ifdef USE_DMALLOC
 #define DMALLOC_PARAMS , const char *file, const int line

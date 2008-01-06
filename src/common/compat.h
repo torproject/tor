@@ -139,14 +139,12 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #ifdef __GNUC__
 #define STMT_BEGIN (void) ({
 #define STMT_END })
-#else
-#if defined(sun) || defined(__sun__)
+#elif defined(sun) || defined(__sun__)
 #define STMT_BEGIN if (1) {
 #define STMT_END } else STMT_NIL
 #else
 #define STMT_BEGIN do {
 #define STMT_END } while (0)
-#endif
 #endif
 
 /* ===== String compatibility */

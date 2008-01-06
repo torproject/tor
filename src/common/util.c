@@ -233,14 +233,12 @@ _tor_malloc_roundup(size_t *sizep DMALLOC_PARAMS)
 #ifdef HAVE_MALLOC_GOOD_SIZE
   *sizep = malloc_good_size(*sizep);
   return _tor_malloc(*sizep DMALLOC_FN_ARGS);
-#else
-#if defined(HAVE_MALLOC_USABLE_SIZE) && !defined(USE_DMALLOC)
+#elif defined(HAVE_MALLOC_USABLE_SIZE) && !defined(USE_DMALLOC)
   void *result = _tor_malloc(*sizep DMALLOC_FN_ARGS);
   *sizep = malloc_usable_size(result);
   return result;
 #else
   return _tor_malloc(*sizep DMALLOC_FN_ARGS);
-#endif
 #endif
 }
 
