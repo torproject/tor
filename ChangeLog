@@ -27,6 +27,8 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Patch from Karsten Loesing to complain less at both the client
       and the relay when a relay used to have the HSDir flag but doesn't
       anymore, and we try to upload a hidden service descriptor.
+    - Stop leaking one cert per TLS context.  Fixes bug 582.  Bugfix
+      on 0.2.0.15-alpha.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)
