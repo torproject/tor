@@ -3366,8 +3366,10 @@ networkstatus_v2_t *networkstatus_v2_get_by_digest(const char *digest);
 networkstatus_vote_t *networkstatus_get_latest_consensus(void);
 networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);
 networkstatus_vote_t *networkstatus_get_reasonably_live_consensus(time_t now);
-int networkstatus_set_current_consensus(const char *consensus, int from_cache,
-                                        int was_waiting_for_certs);
+#define NSSET_FROM_CACHE 1
+#define NSSET_WAS_WAITING_FOR_CERTS 2
+#define NSSET_DONT_DOWNLOAD_CERTS 4
+int networkstatus_set_current_consensus(const char *consensus, unsigned flags);
 void networkstatus_note_certs_arrived(void);
 void routers_update_all_from_networkstatus(time_t now, int dir_version);
 void routerstatus_list_update_from_consensus_networkstatus(time_t now);

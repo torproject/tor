@@ -33,6 +33,8 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
       anymore, and we try to upload a hidden service descriptor.
     - Stop leaking one cert per TLS context.  Fixes bug 582.  Bugfix
       on 0.2.0.15-alpha.
+    - Do not try to download missing certificates until we have tried
+      to check our fallback consensus.  Fixes bug 583.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)

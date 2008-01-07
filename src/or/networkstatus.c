@@ -163,13 +163,14 @@ router_reload_consensus_networkstatus(void)
   char *s;
   struct stat st;
   or_options_t *options = get_options();
+  const unsigned int flags = NSSET_FROM_CACHE | NSSET_DONT_DOWNLOAD_CERTS;
 
   /* XXXX020 Suppress warnings if cached consensus is bad. */
 
   filename = get_datadir_fname("cached-consensus");
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   if (s) {
-    if (networkstatus_set_current_consensus(s, 1, 0)) {
+    if (networkstatus_set_current_consensus(s, flags)) {
       log_warn(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
                filename);
     }
@@ -180,7 +181,8 @@ router_reload_consensus_networkstatus(void)
   filename = get_datadir_fname("unverified-consensus");
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   if (s) {
-    if (networkstatus_set_current_consensus(s, 1, 1)) {
+    if (networkstatus_set_current_consensus(s,
+                                     flags|NSSET_WAS_WAITING_FOR_CERTS)) {
       log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
                filename);
     }
@@ -194,7 +196,7 @@ router_reload_consensus_networkstatus(void)
     s = read_file_to_str(options->FallbackNetworkstatusFile,
                          RFTS_IGNORE_MISSING, NULL);
     if (s) {
-      if (networkstatus_set_current_consensus(s, 1, 1)) {
+      if (networkstatus_set_current_consensus(s, flags)) {
         log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
                  options->FallbackNetworkstatusFile);
       } else {
@@ -211,6 +213,8 @@ router_reload_consensus_networkstatus(void)
     if (!unnamed_server_map)
       unnamed_server_map = strmap_new();
   }
+
+  update_certificate_downloads(time(NULL));
 
   routers_update_all_from_networkstatus(time(NULL), 3);
 
@@ -1323,13 +1327,17 @@ networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
  * user, and -2 for more serious problems.
  */
 int
-networkstatus_set_current_consensus(const char *consensus, int from_cache,
-                                    int was_waiting_for_certs)
+networkstatus_set_current_consensus(const char *consensus, unsigned flags)
+
+
 {
   networkstatus_vote_t *c;
   int r, result = -1;
   time_t now = time(NULL);
   char *unverified_fname = NULL, *consensus_fname = NULL;
+  const unsigned from_cache = flags & NSSET_FROM_CACHE;
+  const unsigned was_waiting_for_certs = flags & NSSET_WAS_WAITING_FOR_CERTS;
+  const unsigned dl_certs = !(flags & NSSET_DONT_DOWNLOAD_CERTS);
 
   /* Make sure it's parseable. */
   c = networkstatus_parse_vote_from_string(consensus, NULL, 0);
@@ -1380,7 +1388,8 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
         if (!from_cache) {
           write_str_to_file(unverified_fname, consensus, 0);
         }
-        authority_certs_fetch_missing(c, now);
+        if (dl_certs)
+          authority_certs_fetch_missing(c, now);
         /* This case is not a success or a failure until we get the certs
          * or fail to get the certs. */
         result = 0;
@@ -1405,7 +1414,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
   }
 
   /* Are we missing any certificates at all? */
-  if (r != 1)
+  if (r != 1 && dl_certs)
     authority_certs_fetch_missing(c, now);
 
   if (control_event_is_interesting(EVENT_NS))
@@ -1486,7 +1495,8 @@ networkstatus_note_certs_arrived(void)
     if (networkstatus_check_consensus_signature(
                                     consensus_waiting_for_certs, 0)>=0) {
       if (!networkstatus_set_current_consensus(
-                                 consensus_waiting_for_certs_body, 0, 1)) {
+                                 consensus_waiting_for_certs_body,
+                                 NSSET_WAS_WAITING_FOR_CERTS)) {
         tor_free(consensus_waiting_for_certs_body);
       }
     }
