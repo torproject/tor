@@ -1,0 +1,63 @@
+
+1. Overview
+
+  We should rate limit the volume of stream creations at exits:
+
+2.1. Per-circuit limits
+
+  If a given circuit opens more than N streams in X seconds, further
+  stream requests over the next Y seconds should fail with the reason
+  'resourcelimit'. Clients will automatically notice this and switch to
+  a new circuit.
+
+  The goal is to limit the effects of port scans on a given exit relay,
+  so the relay's ISP won't get hassled as much.
+
+  First thoughts for parameters would be N=100 streams in X=5 seconds
+  causes 30 seconds of fails; and N=300 streams in X=30 seconds causes
+  30 seconds of fails.
+
+  We could simplify by, instead of having a "for 30 seconds" parameter,
+  just marking the circuit as forever failing new requests. (We don't want
+  to just close the circuit because it may still have open streams on it.)
+
+2.2. Per-destination limits
+
+  If a given circuit opens more than N1 streams in X seconds to a single
+  IP address, or all the circuits combined open more than N2 streams,
+  then we should fail further attempts to reach that address for a while.
+
+  The goal is to limit the abuse that Tor exit relays can dish out
+  to a single target either for socket DoS or for web crawling, in
+  the hopes of a) not triggering their automated defenses, and b) not
+  making them upset at Tor. Hopefully these self-imposed bans will be
+  much shorter-lived than bans or barriers put up by the websites.
+
+3. Issues
+
+3.1. Circuit-creation overload
+
+  Making clients move to new circuits more often will cause more circuit
+  creation requests.
+
+3.2. How to pick the parameters?
+
+  If we pick the numbers too low, then popular sites are effectively
+  cut out of Tor. If we pick them too high, we don't do much good.
+
+  Worse, picking them wrong isn't easy to fix, since the deployed Tor
+  servers will ship with a certain set of numbers.
+
+  We could put numbers (or "general settings") in the networkstatus
+  consensus, and Tor exits would adapt more dynamically.
+
+  We could also have a local config option about how aggressive this
+  server should be with its parameters.
+
+4. Client-side limitations
+
+  Perhaps the clients should have built-in rate limits too, so they avoid
+  harrassing the servers by default?
+
+  Tricky if we want to get Tor clients in use at large enclaves.
+
