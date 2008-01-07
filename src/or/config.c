@@ -627,7 +627,8 @@ static int parse_log_severity_range(const char *range, int *min_out,
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
 static config_line_t *get_assigned_option(config_format_t *fmt,
-                                     or_options_t *options, const char *key);
+                                      or_options_t *options, const char *key,
+                                      int escape_val);
 static void config_init(config_format_t *fmt, void *options);
 static int or_state_validate(or_state_t *old_options, or_state_t *options,
                              int from_setconf, char **msg);
@@ -1686,7 +1687,33 @@ option_get_canonical_name(const char *key)
 config_line_t *
 option_get_assignment(or_options_t *options, const char *key)
 {
-  return get_assigned_option(&options_format, options, key);
+  return get_assigned_option(&options_format, options, key, 1);
+}
+
+/** Return true iff value needs to be quoted and escaped to be used in
+ * a configuration file. */
+static int
+config_value_needs_escape(const char *value)
+{
+  if (*value == '\"')
+    return 1;
+  while (*value) {
+    switch (*value)
+    {
+    case '\r':
+    case '\n':
+    case '#':
+      /* Note: quotes and backspaces need special handling when we are using
+       * quotes, not otherwise, so they don't trigger escaping on their
+       * own. */
+      return 1;
+    default:
+      if (!TOR_ISPRINT(*value))
+        return 1;
+    }
+    ++value;
+  }
+  return 0;
 }
 
 /** Return a newly allocated deep copy of the lines in <b>inp</b>. */
@@ -1707,10 +1734,12 @@ config_lines_dup(const config_line_t *inp)
 }
 
 /** Return newly allocated line or lines corresponding to <b>key</b> in the
- * configuration <b>options</b>.  Return NULL if no such key exists. */
+ * configuration <b>options</b>.  If <b>escape_val</b> is true and a
+ * value needs to be quoted before it's put in a config file, quote and
+ * escape that value. Return NULL if no such key exists. */
 static config_line_t *
 get_assigned_option(config_format_t *fmt, or_options_t *options,
-                    const char *key)
+                    const char *key, int escape_val)
 /* XXXX argument is options, but fmt is provided. Inconsistent. */
 {
   config_var_t *var;
@@ -1749,6 +1778,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
         tor_free(result->key);
         tor_free(result);
       }
+      escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
@@ -1756,18 +1786,22 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
        * needs to be an int. Not, say, a uint16_t or char. */
       tor_snprintf(buf, sizeof(buf), "%d", *(int*)value);
       result->value = tor_strdup(buf);
+      escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_MEMUNIT:
       tor_snprintf(buf, sizeof(buf), U64_FORMAT,
                    U64_PRINTF_ARG(*(uint64_t*)value));
       result->value = tor_strdup(buf);
+      escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_DOUBLE:
       tor_snprintf(buf, sizeof(buf), "%f", *(double*)value);
       result->value = tor_strdup(buf);
+      escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_BOOL:
       result->value = tor_strdup(*(int*)value ? "1" : "0");
+      escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_CSV:
       if (*(smartlist_t**)value)
@@ -1793,7 +1827,8 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
     case CONFIG_TYPE_LINELIST_V:
       tor_free(result->key);
       tor_free(result);
-      return config_lines_dup(*(const config_line_t**)value);
+      result = config_lines_dup(*(const config_line_t**)value);
+      break;
     default:
       tor_free(result->key);
       tor_free(result);
@@ -1801,6 +1836,17 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
                var->type, key);
       return NULL;
     }
+
+  if (escape_val) {
+    config_line_t *line;
+    for (line = result; line; line = line->next) {
+      if (line->value && config_value_needs_escape(line->value)) {
+        char *newval = esc_for_log(line->value);
+        tor_free(line->value);
+        line->value = newval;
+      }
+    }
+  }
 
   return result;
 }
@@ -2319,8 +2365,8 @@ option_is_same(config_format_t *fmt,
   CHECK(fmt, o1);
   CHECK(fmt, o2);
 
-  c1 = get_assigned_option(fmt, o1, name);
-  c2 = get_assigned_option(fmt, o2, name);
+  c1 = get_assigned_option(fmt, o1, name, 0);
+  c2 = get_assigned_option(fmt, o2, name, 0);
   r = config_lines_eq(c1, c2);
   config_free_lines(c1);
   config_free_lines(c2);
@@ -2341,7 +2387,7 @@ options_dup(config_format_t *fmt, or_options_t *old)
       continue;
     if (fmt->vars[i].type == CONFIG_TYPE_OBSOLETE)
       continue;
-    line = get_assigned_option(fmt, old, fmt->vars[i].name);
+    line = get_assigned_option(fmt, old, fmt->vars[i].name, 0);
     if (line) {
       char *msg = NULL;
       if (config_assign(fmt, newopts, line, 0, 0, &msg) < 0) {
@@ -2430,7 +2476,7 @@ config_dump(config_format_t *fmt, void *options, int minimal,
       comment_option = 1;
 
     desc = config_find_description(fmt, fmt->vars[i].name);
-    line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name);
+    line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name, 1);
 
     if (line && desc) {
       /* Only dump the description if there's something to describe. */

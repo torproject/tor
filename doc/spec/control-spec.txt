@@ -139,7 +139,8 @@ $Id$
 
   Change the value of one or more configuration variables.  The syntax is:
 
-    "SETCONF" 1*(SP keyword ["=" String]) CRLF
+    "SETCONF" 1*(SP keyword ["=" value]) CRLF
+    value = String / QuotedString
 
   Tor behaves as though it had just read each of the key-value pairs
   from its configuration file.  Keywords with no corresponding values have
@@ -183,6 +184,10 @@ $Id$
   If any option is set to a 'default' value semantically different from an
   empty string, Tor may reply with a reply line of the form:
       250 keyword
+
+  Value may be a raw value or a quoted string.  Tor will try to use
+  unquoted values except when the value could be misinterpreted through
+  not being quoted.
 
   If some of the listed keywords can't be found, Tor replies with a
   "552 unknown configuration keyword" message.

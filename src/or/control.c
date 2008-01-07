@@ -364,6 +364,44 @@ read_escaped_data(const char *data, size_t len, char **out)
   return outp - *out;
 }
 
+/** DOCDOC */
+static const char *
+extract_escaped_string(const char *start, size_t in_len_max,
+                       char **out, size_t *out_len)
+{
+  const char *cp, *end;
+  size_t len=0;
+
+  if (*start != '\"')
+    return NULL;
+
+  cp = start+1;
+  end = start+in_len_max;
+
+  /* Calculate length. */
+  while (1) {
+    if (cp >= end)
+      return NULL;
+    else if (*cp == '\\') {
+      if (++cp == end)
+        return NULL; /* Can't escape EOS. */
+      ++cp;
+      ++len;
+    } else if (*cp == '\"') {
+      break;
+    } else {
+      ++cp;
+      ++len;
+    }
+  }
+  end = cp;
+
+  *out_len = end-start+1;
+  *out = tor_strndup(start, *out_len);
+
+  return end+1;
+}
+
 /** Given a pointer to a string starting at <b>start</b> containing
  * <b>in_len_max</b> characters, decode a string beginning with one double
  * quote, containing any number of non-quote characters or characters escaped
@@ -372,6 +410,7 @@ read_escaped_data(const char *data, size_t len, char **out)
  * store its length in <b>out_len</b>.  On success, return a pointer to the
  * character immediately following the escaped string.  On failure, return
  * NULL. */
+/* XXXX020 fold into extract_escaped_string */
 static const char *
 get_escaped_string(const char *start, size_t in_len_max,
                    char **out, size_t *out_len)
@@ -659,8 +698,8 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
         val = tor_strndup(val_start, body-val_start);
         val_len = strlen(val);
       } else {
-        body = (char*)get_escaped_string(body, (len - (body-start)),
-                                         &val, &val_len);
+        body = (char*)extract_escaped_string(body, (len - (body-start)),
+                                             &val, &val_len);
         if (!body) {
           connection_write_str_to_buf("551 Couldn't parse string\r\n", conn);
           SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
