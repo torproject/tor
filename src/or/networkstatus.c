@@ -1359,7 +1359,7 @@ networkstatus_set_current_consensus(const char *consensus, int from_cache,
 
   /* Make sure it's signed enough. */
   if ((r=networkstatus_check_consensus_signature(c, 1))<0) {
-    if (r == -1 && !was_waiting_for_certs) {
+    if (r == -1) {
       /* Okay, so it _might_ be signed enough if we get more certificates. */
       if (!was_waiting_for_certs) {
         /* XXX020 eventually downgrade this log severity, or make it so
