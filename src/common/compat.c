@@ -606,6 +606,10 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 
 #define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond _ConnLimit */
 
+#if defined(HAVE_GETRLIMIT) && !defined(HAVE_RLIM_T)
+typedef unsigned long rlim_t;
+#endif
+
 /** Learn the maximum allowed number of file descriptors. (Some systems
  * have a low soft limit.
  *
@@ -627,7 +631,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
   }
 #else
   struct rlimit rlim;
-  unsigned long most;
+  rlim_t most;
   tor_assert(limit > 0);
   tor_assert(cap > 0);
 
@@ -642,10 +646,10 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
              limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
-  most = (rlim.rlim_max > cap) ? cap : (unsigned) rlim.rlim_max;
+  most = (rlim.rlim_max > (rlim_t)cap) ? (rlim_t)cap : rlim.rlim_max;
   if (most > rlim.rlim_cur) {
     log_info(LD_NET,"Raising max file descriptors from %lu to %lu.",
-             (unsigned long)rlim.rlim_cur, most);
+             (unsigned long)rlim.rlim_cur, (unsigned long)most);
   }
   rlim.rlim_cur = most;
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {

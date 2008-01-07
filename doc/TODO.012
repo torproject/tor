@@ -9,7 +9,7 @@ Backport items for 0.1.2:
   - backport the osx privoxy.config changes
   X no need to backport the windows privoxy.config changes because they're
     not in SVN??
-  - r12339: rlim_t may be wider than unsigned long.
+  o r12339: rlim_t may be wider than unsigned long.
   - r12341: Work if the real open-file limit is OPEN_FILES.
   o r12459: Exit policies reject public IP address too
 

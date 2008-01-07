@@ -589,6 +589,18 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_storage], , ,
 #include <sys/socket.h>
 #endif])
 
+AC_CHECK_TYPES([rlim_t], , ,
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
+])
+
 if test -z "$CROSS_COMPILE"; then
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
 AC_TRY_RUN([
