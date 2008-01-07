@@ -1252,16 +1252,24 @@ router_rebuild_descriptor(int force)
        else
          member = router_get_by_nickname(name, 1);
        if (!member) {
+         int is_legal = is_legal_nickname_or_hexdigest(name);
          if (!smartlist_string_isin(warned_nonexistent_family, name) &&
              !is_legal_hexdigest(name)) {
-           log_warn(LD_CONFIG,
-                    "I have no descriptor for the router named \"%s\" "
-                    "in my declared family; I'll use the nickname as is, but "
-                    "this may confuse clients.", name);
+           if (is_legal)
+             log_warn(LD_CONFIG,
+                      "I have no descriptor for the router named \"%s\" in my "
+                      "declared family; I'll use the nickname as is, but "
+                      "this may confuse clients.", name);
+           else
+             log_warn(LD_CONFIG, "There is a router named \"%s\" in my "
+                      "declared family, but that isn't a legal nickname. "
+                      "Skipping it.", escaped(name));
            smartlist_add(warned_nonexistent_family, tor_strdup(name));
          }
-         smartlist_add(ri->declared_family, name);
-         name = NULL;
+         if (is_legal) {
+           smartlist_add(ri->declared_family, name);
+           name = NULL;
+         }
        } else if (router_is_me(member)) {
          /* Don't list ourself in our own family; that's redundant */
        } else {
@@ -1621,8 +1629,10 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   written = result;
 
   if (options->ContactInfo && strlen(options->ContactInfo)) {
-    result = tor_snprintf(s+written,maxlen-written, "contact %s\n",
-                          options->ContactInfo);
+    const char *ci = options->ContactInfo;
+    if (strchr(ci, '\n') || strchr(ci, '\r'))
+      ci = escaped(ci);
+    result = tor_snprintf(s+written,maxlen-written, "contact %s\n", ci);
     if (result<0) {
       log_warn(LD_BUG,"descriptor snprintf #2 ran out of room!");
       return -1;
