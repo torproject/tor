@@ -35,6 +35,10 @@ Changes in version 0.1.2.19 - 2008-01-??
       directory caches, and then we learned about a new descriptor for
       that router, we weren't resetting our failure count. Reported
       by lodger.
+    - Although we fixed bug 539 (where servers would send HTTP status 503
+      responses _and_ send a body too), there are still servers out there
+      that haven't upgraded.  Therefore, make clients parse such bodies
+      when they receive them.
 
 
 Changes in version 0.1.2.18 - 2007-10-28

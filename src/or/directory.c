@@ -932,7 +932,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
   (void) skewed; /* skewed isn't used yet. */
 
-  if (status_code == 503) {
+  if (status_code == 503 && body_len < 16) {
     local_routerstatus_t *rs;
     trusted_dir_server_t *ds;
     time_t now = time(NULL);
@@ -947,6 +947,12 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
     tor_free(body); tor_free(headers); tor_free(reason);
     return -1;
+  } else if (status_code == 503) {
+    /* XXXX022 Remove this once every server with bug 539 is obsolete. */
+    log_info(LD_DIR, "Server at '%s:%d' sent us a 503 response, but included "
+             "a body anyway.  We'll pretend it gave us a 200.",
+             conn->_base.address, conn->_base.port);
+    status_code = 200;
   }
 
   plausible = body_is_plausible(body, body_len, conn->_base.purpose);
