@@ -10,6 +10,10 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Configuration files now accept C-style strings as values.  This
       helps encode characters not allowed in the current configuration
       file format, such as newline or #.  Addresses bug 557.
+    - Although we fixed bug 539 (where servers would send HTTP status 503
+      responses _and_ send a body too), there are still servers out there
+      that haven't upgraded.  Therefore, make clients parse such bodies
+      when they receive them.
 
   o Minor performance improvements:
     - Reference-count and share copies of address policy entries; only
