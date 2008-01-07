@@ -10,7 +10,7 @@ Backport items for 0.1.2:
   X no need to backport the windows privoxy.config changes because they're
     not in SVN??
   o r12339: rlim_t may be wider than unsigned long.
-  - r12341: Work if the real open-file limit is OPEN_FILES.
+  o r12341: Work if the real open-file limit is OPEN_FILES.
   o r12459: Exit policies reject public IP address too
 
 Backport for 0.1.2.x once better tested:
