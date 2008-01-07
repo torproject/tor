@@ -499,16 +499,6 @@ void *
 smartlist_bsearch(smartlist_t *sl, const void *key,
                   int (*compare)(const void *key, const void **member))
 {
-#if 0
-  void ** r;
-
-  if (!sl->num_used)
-    return NULL;
-
-  r = bsearch(key, sl->list, sl->num_used, sizeof(void*),
-              (int (*)(const void *, const void *))compare);
-  return r ? *r : NULL;
-#endif
   int found, idx;
   idx = smartlist_bsearch_idx(sl, key, compare, &found);
   return found ? smartlist_get(sl, idx) : NULL;
