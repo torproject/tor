@@ -3810,7 +3810,7 @@ routerstatus_list_update_from_networkstatus(time_t now)
     memcpy(&rs_out->status, most_recent, sizeof(routerstatus_t));
     /* Copy status info about this router, if we had any before. */
     if ((rs_old = router_get_combined_status_by_digest(lowest))) {
-      if (!memcmp(rs_out->status.descriptor_digest,
+      if (!memcmp(rs_old->status.descriptor_digest,
                   most_recent->descriptor_digest, DIGEST_LEN)) {
         rs_out->n_download_failures = rs_old->n_download_failures;
         rs_out->next_attempt_at = rs_old->next_attempt_at;

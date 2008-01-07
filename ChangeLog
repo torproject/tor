@@ -31,6 +31,10 @@ Changes in version 0.1.2.19 - 2008-01-??
       nonstandard integer types.
     - Don't try to create the datadir when running --verify-config or
       --hash-password. Resolves bug 540.
+    - If we were having problems getting a particular descriptor from the
+      directory caches, and then we learned about a new descriptor for
+      that router, we weren't resetting our failure count. Reported
+      by lodger.
 
 
 Changes in version 0.1.2.18 - 2007-10-28
