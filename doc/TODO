@@ -586,3 +586,8 @@ P - create a 'blog badge' for tor fans to link to and feature on their
       "tor mirrors" if the main site is blocked.
     - find a mirror volunteer to coordinate all of this
 
+Blog todo:
+  - Remove the "digg this" and "slashdot this" links
+  - A "Tor calendar" so we can list upcoming talks, etc?
+  - Link to the blog from the main Tor website
+
