@@ -828,6 +828,9 @@ add_default_trusted_dir_authorities(authority_type_t type)
       "4A0C CD2D DC79 9508 3D73 F5D6 6710 0C8A 5831 F16D",
     "ides orport=9090 no-v2 v3ident=27B6B5996C426270A5C95488AA5BCEB6BCC86956 "
       "216.224.124.114:9030 F397 038A DC51 3361 35E7 B80B D99C A384 4360 292B",
+    "gabelmoo orport=443 no-v2 "
+      "v3ident=EAA879B5C75032E462CB018630D2D0DF46EBA606 "
+      "88.198.7.215:80 6833 3D07 61BC F397 A587 A0C0 B963 E4A9 E99E C4D3",
     NULL
   };
   for (i=0; dirservers[i]; i++)

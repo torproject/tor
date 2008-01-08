@@ -1,4 +1,8 @@
 Changes in version 0.2.0.16-alpha - 2008-01-??
+  o New directory authorities:
+    - Set up gabelmoo (run by Karsten Loesing) as the fifth v3 directory
+      authority.
+
   o Major performance improvements:
     - Switch our old ring buffer implementation for one more like that
       used by free Unix kernels.  The wasted space in a buffer with
@@ -23,7 +27,7 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
 
   o Minor bugfixes:
     - When an authority has not signed a consensus, do not try to
-      download a nonexistant "certificate with key 00000000".  Bugfix
+      download a nonexistent "certificate with key 00000000".  Bugfix
       on 0.2.0.x. Fixes bug 569.
     - Use a mutex to protect the list of logs, so we never write to
       the list as it's being freed.  Bugfix on 0.1.2.x.  Fixes the
