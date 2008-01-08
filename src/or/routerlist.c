@@ -3155,6 +3155,7 @@ router_load_routers_from_string(const char *s, const char *eos,
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
   int allow_annotations = (saved_location != SAVED_NOWHERE);
+  int any_changed = 0;
 
   router_parse_list_from_string(&s, eos, routers, saved_location, 0,
                                 allow_annotations, prepend_annotations);
@@ -3186,6 +3187,7 @@ router_load_routers_from_string(const char *s, const char *eos,
     }
 
     if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0) {
+      any_changed = 1;
       smartlist_add(changed, ri);
       routerlist_descriptors_added(changed, from_cache);
       smartlist_clear(changed);
@@ -3194,7 +3196,8 @@ router_load_routers_from_string(const char *s, const char *eos,
 
   routerlist_assert_ok(routerlist);
 
-  router_rebuild_store(0, &routerlist->desc_store);
+  if (any_changed)
+    router_rebuild_store(0, &routerlist->desc_store);
 
   smartlist_free(routers);
   smartlist_free(changed);
