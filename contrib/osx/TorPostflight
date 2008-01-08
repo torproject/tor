@@ -1,4 +1,37 @@
 #!/bin/sh
+# ====================================================================
+#  TorPostFlight is distributed under this license
+#
+#  Copyright (c) 2006 Andrew Lewman
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+#     * Redistributions of source code must retain the above copyright
+# notice, this list of conditions and the following disclaimer.
+#
+#     * Redistributions in binary form must reproduce the above
+# copyright notice, this list of conditions and the following disclaimer
+# in the documentation and/or other materials provided with the
+# distribution.
+#
+#     * Neither the names of the copyright owners nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# ======================================================================
 
 # TorPostflight gets invoked after any install or upgrade.
 
@@ -13,6 +46,7 @@ TORGROUP=daemon
 TARGET=$2/Library/Tor
 TORDIR=$TARGET/var/lib/tor
 LOGFILE=/var/log/tor.log
+TORBUTTON_VERSION="1.0.4.01-fx+tb"
 
 # Check defaults for TARGET
 if [ "$TARGET" == "//Library/Tor" ]; then
@@ -55,8 +89,8 @@ ln -sf $TARGET/tor .
 ln -sf $TARGET/tor-resolve .
 
 cd /usr/share/man/man1
-MAN1=$TARGET/man/man1
-ln -sf $MAN1/*.1 .
+MAN1=$TARGET/share/man/man1
+#ln -sf $MAN1/*.1 .
 
 if [ -d /Library/StartupItems/Privoxy ]; then
   find /Library/StartupItems/Privoxy -print0 | xargs -0 chown root:wheel
@@ -70,12 +104,12 @@ fi
 # Copy Uninstaller
 if [ -f $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.applescript ]; then 
    cp $PACKAGE_PATH/Contents/Resources/Tor_Uninstaller.applescript $TARGET/Tor_Uninstaller.applescript
-   chmod 555 $TARGET/Tor_Uninstaller.applescript
+   chmod 550 $TARGET/Tor_Uninstaller.applescript
 fi
 
 if [ -f $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh ]; then
    cp $PACKAGE_PATH/Contents/Resources/uninstall_tor_bundle.sh $TARGET/uninstall_tor_bundle.sh
-   chmod 555 $TARGET/uninstall_tor_bundle.sh
+   chmod 550 $TARGET/uninstall_tor_bundle.sh
 fi
 
 if [ -f $PACKAGE_PATH/Contents/Resources/package_list.txt ]; then
@@ -85,4 +119,20 @@ fi
 if [ -d /Library/StartupItems/Tor ]; then
    rm -f /Library/StartupItems/Tor/Tor.loc
    echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
+fi
+
+if [ -f /Applications/Firefox.app/Contents/MacOS/firefox ]; then
+  if [ -f $TARGET/torbutton-$TORBUTTON_VERSION.xpi ]; then
+      /Applications/Firefox.app/Contents/MacOS/firefox -install-global-extension $TARGET/torbutton-$TORBUTTON_VERSION.xpi
+# The following is a kludge to get around the fact that the installer
+# runs as root.  This means the Torbutton extension will install with
+# root permissions; thereby making uninstalling Torbutton from inside
+# Firefox impossible.  The user will be caught in an endless loop of
+# uninstall -> automatic re-installation of Torbutton.  The OSX
+# installer doesn't tell you the owner of Firefox, therefore we have to
+# parse it.
+      USR=`ls -alrt /Applications/Firefox.app/Contents/MacOS/extensions/ | tail -1 | awk '{print $3}'`
+      GRP=`ls -alrt /Applications/Firefox.app/Contents/MacOS/extensions/ | tail -1 | awk '{print $4}'`
+      chown -R $USR:$GRP /Applications/Firefox.app/Contents/MacOS/extensions/
+  fi
 fi

@@ -38,6 +38,12 @@
 			<key>IFPkgFlagPackageSelection</key>
 			<string>selected</string>
 		</dict>
+		<dict>
+			<key>IFPkgFlagPackageLocation</key>
+			<string>torbutton.pkg</string>
+			<key>IFPkgFlagPackageSelection</key>
+			<string>selected</string>
+		</dict>
 	</array>
         <key>IFPkgFormatVersion</key>
         <real>0.10000000149011612</real>

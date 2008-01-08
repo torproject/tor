@@ -2,13 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>IFPkgDescriptionDeleteWarning</key>
-	<string></string>
-	<key>IFPkgDescriptionDescription</key>
-	<string>Bundled package of Tor @VERSION@, Privoxy 3.0.6, and Torbutton.</string>
 	<key>IFPkgDescriptionTitle</key>
-	<string>Tor - Privoxy - Torbutton Bundle</string>
+	<string>Torbutton Extension for Firefox</string>
 	<key>IFPkgDescriptionVersion</key>
-	<string>@VERSION@</string>
+	<string>0.1</string>
 </dict>
 </plist>
