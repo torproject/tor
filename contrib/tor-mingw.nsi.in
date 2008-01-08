@@ -9,7 +9,7 @@
 !include "FileFunc.nsh"
 !insertmacro GetParameters
   
-!define VERSION "0.2.0.15-alpha-dev"
+!define VERSION "@VERSION@"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "https://www.torproject.org/"
 !define LICENSE "LICENSE"
@@ -30,7 +30,7 @@ VIProductVersion "${VERSION}"
 VIAddVersionKey "ProductName" "The Onion Router: Tor"
 VIAddVersionKey "Comments" "${WEBSITE}"
 VIAddVersionKey "LegalTrademarks" "Three line BSD"
-VIAddVersionKey "LegalCopyright" "©2004-2007, Roger Dingledine, Nick Mathewson"
+VIAddVersionKey "LegalCopyright" "©2004-2008, Roger Dingledine, Nick Mathewson"
 VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at ${WEBSITE}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 
