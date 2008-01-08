@@ -557,7 +557,7 @@ init_keys(void)
           (options->BridgeAuthoritativeDir ? BRIDGE_AUTHORITY : NO_AUTHORITY) |
           (options->HSAuthoritativeDir ? HIDSERV_AUTHORITY : NO_AUTHORITY));
 
-  if (!router_digest_is_trusted_dir(digest)) {
+  if (!router_get_trusteddirserver_by_digest(digest)) {
     add_trusted_dir_server(options->Nickname, NULL,
                            (uint16_t)options->DirPort,
                            (uint16_t)options->ORPort,
