@@ -565,19 +565,19 @@ init_keys(void)
                            v3_digest,
                            type);
   }
-  if ((ds = router_get_trusteddirserver_by_digest(digest))) {
-    if (ds->type != type) {
-      log_warn(LD_DIR,  "Configured authority type does not match authority "
-               "type in DirServer list.  Adjusting. (%d v %d)",
-               type, ds->type);
-      ds->type = type;
-    }
-    if (v3_digest_set && (ds->type & V3_AUTHORITY) &&
-        memcmp(v3_digest, ds->v3_identity_digest, DIGEST_LEN)) {
-      log_warn(LD_DIR, "V3 identity key does not match identity declared in "
-               "DirServer line.  Adjusting.");
-      memcpy(ds->v3_identity_digest, v3_digest, DIGEST_LEN);
-    }
+  ds = router_get_trusteddirserver_by_digest(digest);
+  tor_assert(ds);
+  if (ds->type != type) {
+    log_warn(LD_DIR,  "Configured authority type does not match authority "
+             "type in DirServer list.  Adjusting. (%d v %d)",
+             type, ds->type);
+    ds->type = type;
+  }
+  if (v3_digest_set && (ds->type & V3_AUTHORITY) &&
+      memcmp(v3_digest, ds->v3_identity_digest, DIGEST_LEN)) {
+    log_warn(LD_DIR, "V3 identity key does not match identity declared in "
+             "DirServer line.  Adjusting.");
+    memcpy(ds->v3_identity_digest, v3_digest, DIGEST_LEN);
   }
 
   return 0; /* success */
