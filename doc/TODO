@@ -26,48 +26,21 @@ For Tor 0.2.0.x-rc:
     (but only for bridge descriptors. not for ordinary cache stuff.)
   - write a tor-gencert man page
 
-Features blocking 0.2.0.x:
-  - mirror tor downloads on (via) tor dir caches
-R   . spec
-    d deploy
   . geoip caching and publishing for bridges
-    . spec
-    . Implement
-      o Code to load a geoip file from disk
-        o Truncated format
-        o Full format.
-        o Actually invoke
-      o Code to store a GEOIP file in memory.
-      o Code to remember client IPs.
-      o Code to generate history lines
-      o Controller interface
-      - Track consecutive time up, not time since last-forgotten IP.
-      o Add log lines.
-    o Tests
-      - Run a tweaked version on peacetime.  Verify lack of kaboom.
-      - Write some basic unit tests.
+    d Track consecutive time up, not time since last-forgotten IP.
     - Mention in dir-spec.txt
     - Mention in control-spec.txt
-    o we count hits from our reachability tests too. stop that somehow.
     - have normal relays report geoip stats too.
     - different thresholds for bridges than for normal relays.
-    d let Vidalia use the geoip data too rather than doing its own
-      anonymized queries
 R - bridge communities
     . spec
     . deploy
       - man page entries for Alternate*Authority config options
-      o make the Alternate*Authority config options pass a "default_type"
-        to parse_dir_server_line() so they don't demand as much redundancy
-      o some sort of reachability testing on bridges
-      o a dir-based way to fetch the bridge networkstatus list
       o there's a config option with a password and somehow use an
         http header and check it
       - clients who have a password configured decide to ask their bridge
         authority for a networkstatus
       - be able to have bridges that aren't in your torrc
-  d interface for letting soat modify flags that authorities assign
-    . spec
 S * tor usb windows image (vidalia, polipo, tor, firefox)
 S/M o vidalia can launch firefox
     - build a community version of firefox
@@ -78,16 +51,12 @@ Things we'd like to do in 0.2.0.x:
     info and it's old enough, delete it. same with cached-routers*.
   - document the "3/4 and 7/8" business in the clients fetching consensus
     documents timeline. then document the bridge user download timeline.
-  o refactor circuit_launch_by_foo so all those flags at the end are
-    actually a flags argument.
   - config option __ControllerLimit that hangs up if there are a limit
     of controller connections already.
   - See also Flyspray tasks.
   - See also all items marked XXXX020 and DOCDOC in the code
 
   - Before the feature freeze: (Nick)
-    D 118 if feasible and obvious
-    D Maintain a skew estimate and use ftime consistently.
     - 105+TLS, if possible.
       . TLS backend work
         - New list of ciphers for clients
@@ -111,12 +80,6 @@ Things we'd like to do in 0.2.0.x:
         - Don't extend a circuit over a noncanonical connection with
           mismatched address.
         - Learn our outgoing IP address from netinfo cells?
-      o Protocol revision.
-        o Earliest stages of 110 (infinite-length) in v2 protocol:
-          add support for RELAY_EARLY.
-
-  - get more v3 authorities before 0.2.0.x comes out.
-    - brainstorm about who those should be
 
   - Bugs.
      - Bug reports Roger has heard along the way that don't have enough
@@ -128,11 +91,6 @@ Things we'd like to do in 0.2.0.x:
           it couldn't fetch any network statuses, and never tried again
           even when the network came back and arma clicked on things.
           also 0.2.0.
-      . man page entry for HidServDirectoryV2 and
-        MinUptimeHidServDirectoryV2.
-      d Tor logs the libevent version on startup, for debugging purposes.
-        This is great. But it does this before configuring the logs, so
-        it only goes to stdout and is then lost.
       d we should do another bandwidth test every 12 hours or something
         if we're showing less than 50KB and our bandwidthrate says we can
         do more than that. I think some servers are forgetting the results
@@ -160,51 +118,12 @@ Things we'd like to do in 0.2.0.x:
         - Handle rate-limiting on directory writes to linked directory
           connections in a more sensible manner.
         - Find more ways to test this.
-    D Do TLS connection rotation more often than "once a week" in the
-      extra-stable case.
-    D Streamline how we pick entry nodes: Make choose_random_entry() have
-      less magic and less control logic.
     - Refactor networkstatus generation:
       - Include "v" line in getinfo values.
-
-  * Bridges:
-    . Bridges users (rudimentary version)
-      o Ability to specify bridges manually
-      o Config option 'UseBridges' that bridge users can turn on.
-        o uses bridges as first hop rather than entry guards.
-      o if you don't have any routerinfos for your bridges, or you don't
-        like the ones you have, ask a new bridge for its server/authority.
-      . Ask all directory questions to bridge via BEGIN_DIR.
-        - use the bridges for dir fetches even when our dirport is open.
-R     - drop 'authority' queries if they're to our own identity key; accept
-        them otherwise.
-      X Design/implement the "local-status" or something like it, from the
-        "Descriptor purposes: how to tell them apart" section of
-        http://archives.seul.org/or/dev/May-2007/msg00008.html
-      o timeout and retry schedules for fetching bridge descriptors
-      - give extend_info_t a router_purpose again
-      o react faster to download networkstatuses after the first bridge
-        descriptor arrives
-      o be more robust to bridges being marked as down and leaving us
-        stranded without any known "running" bridges.
-
-  - Features (other than bridges):
-    - Audit how much RAM we're using for buffers and cell pools; try to
-      trim down a lot.
-    - Base relative control socket paths on datadir.
-    - Make TrackHostExits expire TrackHostExitsExpire seconds after their
-       *last* use, not their *first* use.
-    D Limit to 2 dir, 2 OR, N SOCKS connections per IP.
-      - Or maybe close connections from same IP when we get a lot from one.
-      - Or maybe block IPs that connect too many times at once.
 
   - Testing
 N   - Hack up a client that gives out weird/no certificates, so we can
       test to make sure that this doesn't cause servers to crash.
-
-  - Deprecations:
-    - can we deprecate 'getinfo network-status'?
-    - can we deprecate the FastFirstHopPK config option?
 
   - Documentation
     - HOWTO for DNSPort.
@@ -217,21 +136,52 @@ N   - Hack up a client that gives out weird/no certificates, so we can
     - Publicize torel.  (What else?
     . Finish path-spec.txt
 
-P - Packaging:
-P - Plan a switch to polipo.  Perhaps we'll offer two http proxies in
-    the future.
 P - Make documentation realize that location of system configuration file
     will depend on location of system defaults, and isn't always /etc/torrc.
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
-  - Create packages for Nokia 800, requested by Chris Soghoian
-P - Consider creating special Tor-Polipo-Vidalia test packages,
-    requested by Dmitri Vitalev
-  o Get Vidalia supporting protocolinfo and using auth by default.
 P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 P - Flyspray 487, create a universal binary privoxy for inclusion in
     packages.
 
 Planned for 0.2.1.x:
+  - Features (other than bridges):
+    - Audit how much RAM we're using for buffers and cell pools; try to
+      trim down a lot.
+    - Base relative control socket paths on datadir.
+    - Make TrackHostExits expire TrackHostExitsExpire seconds after their
+       *last* use, not their *first* use.
+P - Plan a switch to polipo.  Perhaps we'll offer two http proxies in
+    the future.
+P - Consider creating special Tor-Polipo-Vidalia test packages,
+    requested by Dmitri Vitalev
+  - Create packages for Nokia 800, requested by Chris Soghoian
+  - mirror tor downloads on (via) tor dir caches
+    . spec
+    - deploy
+  - interface for letting soat modify flags that authorities assign
+    . spec
+  - proposal 118 if feasible and obvious
+  - Maintain a skew estimate and use ftime consistently.
+  - Tor logs the libevent version on startup, for debugging purposes.
+    This is great. But it does this before configuring the logs, so
+    it only goes to stdout and is then lost.
+  - Deprecations:
+    - can we deprecate 'getinfo network-status'?
+    - can we deprecate the FastFirstHopPK config option?
+  - Bridges:
+    . Bridges users (rudimentary version)
+      . Ask all directory questions to bridge via BEGIN_DIR.
+        - use the bridges for dir fetches even when our dirport is open.
+      - drop 'authority' queries if they're to our own identity key; accept
+        them otherwise.
+      - give extend_info_t a router_purpose again
+  d Limit to 2 dir, 2 OR, N SOCKS connections per IP.
+    - Or maybe close connections from same IP when we get a lot from one.
+    - Or maybe block IPs that connect too many times at once.
+  - Do TLS connection rotation more often than "once a week" in the
+    extra-stable case.
+  - Streamline how we pick entry nodes: Make choose_random_entry() have
+    less magic and less control logic.
   - when somebody uses the controlport as an http proxy, give them
     a "tor isn't an http proxy" error too like we do for the socks port.
   - we try to build 4 test circuits to break them over different
@@ -590,9 +540,6 @@ P - create a 'blog badge' for tor fans to link to and feature on their
     - find a mirror volunteer to coordinate all of this
 
 Blog todo:
-  o Remove the "digg this" and "slashdot this" links
   - A "Tor calendar" so we can list upcoming talks, etc?
-  o Make the article previews a tiny bit longer. They're so short
-    as to be nearly meaningless currently.
   - Link to the blog from the main Tor website
 
