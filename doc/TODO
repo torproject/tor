@@ -17,21 +17,30 @@ J       - Jeff claims
         X Abandoned
 
 For Tor 0.2.0.x-rc:
-  - Put a consensus in place of the empty fallback-consensus file in
-    src/config and see what breaks.
-  - let bridges set relaybandwidthrate as low as 5kb
-  - we need a config option to turn off proposal 109 behavior, else
-    running a private tor network on your own computer is very hard.
+R - Figure out the autoconf problem with adding a fallback consensus.
+R - add a geoip file
+W   - figure out license
+R - let bridges set relaybandwidthrate as low as 5kb
+N - we need a config option to turn off proposal 109 behavior,
+RK- make it easier to set up a private tor network on your own computer
+    is very hard.
+    - FAQ entry which is wrong
   - Make BEGIN_DIR mandatory for asking questions of bridge authorities?
     (but only for bridge descriptors. not for ordinary cache stuff.)
-  - write a tor-gencert man page
+N   - add a bit in the dir_connection_t. or check whether the linked conn
+      field is set. or whatever is smart. add a macro
+      dir-connection-is-encrypted.
+    - set up a filter to not answer any bridge descriptors on a
+      non-encrypted request
+N - write a tor-gencert man page
 
   . geoip caching and publishing for bridges
     d Track consecutive time up, not time since last-forgotten IP.
     - Mention in dir-spec.txt
     - Mention in control-spec.txt
-    - have normal relays report geoip stats too.
-    - different thresholds for bridges than for normal relays.
+    D have normal relays report geoip stats too.
+    D different thresholds for bridges than for normal relays.
+N   - bridge relays round geoip stats *up*, not down.
 R - bridge communities
     . spec
     . deploy
@@ -41,22 +50,16 @@ R - bridge communities
       - clients who have a password configured decide to ask their bridge
         authority for a networkstatus
       - be able to have bridges that aren't in your torrc
-S * tor usb windows image (vidalia, polipo, tor, firefox)
-S/M o vidalia can launch firefox
-    - build a community version of firefox
-    . pick our favorite extensions
 
 Things we'd like to do in 0.2.0.x:
-  - if we notice a cached-status directory and we're not serving v2 dir
+N - if we notice a cached-status directory and we're not serving v2 dir
     info and it's old enough, delete it. same with cached-routers*.
-  - document the "3/4 and 7/8" business in the clients fetching consensus
-    documents timeline. then document the bridge user download timeline.
-  - config option __ControllerLimit that hangs up if there are a limit
-    of controller connections already.
-  - See also Flyspray tasks.
-  - See also all items marked XXXX020 and DOCDOC in the code
+    Nick says: don't we already do that?
+N - document the "3/4 and 7/8" business in the clients fetching consensus
+    documents timeline.
+R   - then document the bridge user download timeline.
 
-  - Before the feature freeze: (Nick)
+N - Before the feature freeze:
     - 105+TLS, if possible.
       . TLS backend work
         - New list of ciphers for clients
@@ -91,59 +94,64 @@ Things we'd like to do in 0.2.0.x:
           it couldn't fetch any network statuses, and never tried again
           even when the network came back and arma clicked on things.
           also 0.2.0.
-      d we should do another bandwidth test every 12 hours or something
+R       - for above two, roger should turn them into flyspray entry.
+R     - we should do another bandwidth test every 12 hours or something
         if we're showing less than 50KB and our bandwidthrate says we can
         do more than that. I think some servers are forgetting the results
         of their first test, and then never seeing use.
 
   - Proposals:
     o 101: Voting on the Tor Directory System (plus 103)
-      D Use if-modified-since on consensus download
+N     - Use if-modified-since on consensus download
       - Controller support
-        - GETINFO to get consensus
-        - Event when new consensus arrives
-    - 105: Version negotiation for the Tor protocol
+        D GETINFO to get consensus
+N       - Event when new consensus arrives
     . 111: Prioritize local traffic over relayed.
-      - Merge into tor-spec.txt.
+R     - Merge into tor-spec.txt.
 
   - Refactoring:
     . Make cells get buffered on circuit, not on the or_conn.
       . Switch to pool-allocation for cells?
-        - Benchmark pool-allocation vs straightforward malloc.
-        - Adjust memory allocation logic in pools to favor a little less
+N       - Benchmark pool-allocation vs straightforward malloc.
+N       - Adjust memory allocation logic in pools to favor a little less
           slack memory.
     . Remove socketpair-based bridges conns, and the word "bridge".  (Use
       shared (or connected) buffers for communication, rather than sockets.)
       . Implement
-        - Handle rate-limiting on directory writes to linked directory
+N       - Handle rate-limiting on directory writes to linked directory
           connections in a more sensible manner.
-        - Find more ways to test this.
-    - Refactor networkstatus generation:
-      - Include "v" line in getinfo values.
-
-  - Testing
-N   - Hack up a client that gives out weird/no certificates, so we can
-      test to make sure that this doesn't cause servers to crash.
+          Nick thinks he did this already?
+N       - Find more ways to test this.
+          (moria doesn't rate limit, so testing on moria not so good.)
 
   - Documentation
-    - HOWTO for DNSPort.
-    - Quietly document NT Service options
-    - More prominently, we should have a recommended apps list.
-      - recommend pidgin (gaim is renamed)
-      - unrecommend IE because of ftp:// bug.
-    - we should add a preamble to tor-design saying it's out of date.
+    - HOWTO for DNSPort. See tup's wiki page.
     . Document transport and natdport in a good HOWTO.
-    - Publicize torel.  (What else?
-    . Finish path-spec.txt
+N   - Quietly document NT Service options: revise (or create) FAQ entry
+
+R - make sure you solved bug 556
 
 P - Make documentation realize that location of system configuration file
     will depend on location of system defaults, and isn't always /etc/torrc.
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
-P - Flyspray 487, create a universal binary privoxy for inclusion in
-    packages.
 
 Planned for 0.2.1.x:
+  - anonymity concern: since our is-consensus-fresh-enough check is
+    sloppy so clients will actually work when a consensus wasn't formed,
+    does that mean that if users are idle for 5 hours and then click on
+    something, we will immediately use the old descriptors we've got,
+    while we try fetching the newer descriptors?
+    related to bug 401.
+  . Finish path-spec.txt
+  - More prominently, we should have a recommended apps list.
+    - recommend pidgin (gaim is renamed)
+    - unrecommend IE because of ftp:// bug.
+  - we should add a preamble to tor-design saying it's out of date.
+  - Refactor networkstatus generation:
+    - Include "v" line in getinfo values.
+  - config option __ControllerLimit that hangs up if there are a limit
+    of controller connections already.
   - Features (other than bridges):
     - Audit how much RAM we're using for buffers and cell pools; try to
       trim down a lot.
