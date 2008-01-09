@@ -1711,7 +1711,9 @@ dirvote_compute_consensus(void)
     SMARTLIST_FOREACH(pending_consensus_signature_list, char *, sig,
       {
         const char *msg = NULL;
-        n_sigs += dirvote_add_signatures_to_pending_consensus(sig, &msg);
+        int r = dirvote_add_signatures_to_pending_consensus(sig, &msg);
+        if (r >= 0)
+          n_sigs += r;
         tor_free(sig);
       });
     if (n_sigs)
@@ -1740,7 +1742,7 @@ dirvote_compute_consensus(void)
   return -1;
 }
 
-/** Helper: we just got the <b>deteached_signatures_body</b> sent to us as
+/** Helper: we just got the <b>detached_signatures_body</b> sent to us as
  * signatures on the currently pending consensus.  Add them to the consensus
  * as appropriate.  Return the number of signatures added. (?) */
 static int
