@@ -321,6 +321,9 @@ Deferred from 0.2.0.x:
     - Detect correct version of libraries from autoconf script.
 
 Future versions:
+  - deprecate router_digest_is_trusted_dir() in favor of
+    router_get_trusteddirserver_by_digest()
+
   - See also Flyspray tasks.
   - See also all OPEN/ACCEPTED proposals.
   - See also all items marked XXXX and FFFF in the code.
@@ -587,9 +590,9 @@ P - create a 'blog badge' for tor fans to link to and feature on their
     - find a mirror volunteer to coordinate all of this
 
 Blog todo:
-  - Remove the "digg this" and "slashdot this" links
+  o Remove the "digg this" and "slashdot this" links
   - A "Tor calendar" so we can list upcoming talks, etc?
-  - Make the article previews a tiny bit longer. They're so short
+  o Make the article previews a tiny bit longer. They're so short
     as to be nearly meaningless currently.
   - Link to the blog from the main Tor website
 
