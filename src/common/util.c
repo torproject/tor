@@ -2060,7 +2060,8 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
 
   /* Find the end of the line. */
   if (*line == '\"') {
-    line = unescape_string(line, value_out, NULL);
+    if (!(line = unescape_string(line, value_out, NULL)))
+       return NULL;
     while (*line == ' ' || *line == '\t')
       ++line;
     if (*line && *line != '#' && *line != '\n')
