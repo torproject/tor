@@ -1245,6 +1245,8 @@ typedef struct signed_descriptor_t {
   /* If true, we got an extrainfo for this item, and the digest was right,
    * but it was incompatible. */
   unsigned int extrainfo_is_bogus : 1;
+  /* If true, we are willing to transmit this item unencrypted. */
+  unsigned int send_unencrypted : 1;
 } signed_descriptor_t;
 
 /** Information about another onion router in the network. */
@@ -3113,7 +3115,8 @@ void dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
 void dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
                                                const char *key);
 int dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
-                                        const char **msg);
+                                        const char **msg,
+                                        int for_unencrypted_conn);
 int dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
                             const char **msg);
 void dirserv_orconn_tls_done(const char *address,

@@ -54,6 +54,10 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Actually implement the -s option to tor-gencert.
     - Add a manual page for tor-gencert.
 
+  o Minor features (bridges):
+    - Bridge authorities no longer serve bridge descriptors over unencrypted
+      connections.
+
   o Minor features (other):
     - Add hidden services and DNSPorts to the list of things that make
       Tor accept that it has running ports.  Change starting Tor with

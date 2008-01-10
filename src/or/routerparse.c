@@ -1172,6 +1172,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   } else {
     router->purpose = ROUTER_PURPOSE_GENERAL;
   }
+  router->cache_info.send_unencrypted =
+    (router->purpose == ROUTER_PURPOSE_GENERAL) ? 1 : 0;
 
   if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
     tor_assert(tok->n_args >= 1);
@@ -1326,7 +1328,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   smartlist_t *tokens = NULL;
   directory_token_t *tok;
   crypto_pk_env_t *key = NULL;
-  routerinfo_t *router;
+  routerinfo_t *router = NULL;
 
   if (!end) {
     end = s + strlen(s);
@@ -1405,6 +1407,9 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     if (check_signature_token(digest, tok, key, 0, "extra-info") < 0)
       goto err;
 
+    if (router)
+      extrainfo->cache_info.send_unencrypted =
+        router->cache_info.send_unencrypted;
   } else {
     extrainfo->pending_sig = tor_memdup(tok->object_body,
                                         tok->object_size);

@@ -57,7 +57,9 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
                         const char *platform, const char *contact,
                         const char **msg, int should_log);
 static void clear_cached_dir(cached_dir_t *d);
-
+static signed_descriptor_t *get_signed_descriptor_by_fp(const char *fp,
+                                                        int extrainfo,
+                                                        time_t publish_cutoff);
 static int dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
 
 /************** Fingerprint handling code ************/
@@ -2571,8 +2573,9 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
  */
 int
 dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
-                                    const char **msg)
+                                    const char **msg, int for_unencrypted_conn)
 {
+  int by_id = 1;
   *msg = NULL;
 
   if (!strcmp(key, "all")) {
@@ -2586,6 +2589,7 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
       smartlist_add(fps_out,
                     tor_memdup(ri->cache_info.identity_digest, DIGEST_LEN));
   } else if (!strcmpstart(key, "d/")) {
+    by_id = 0;
     key += strlen("d/");
     dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
   } else if (!strcmpstart(key, "fp/")) {
@@ -2594,6 +2598,19 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
   } else {
     *msg = "Key not recognized";
     return -1;
+  }
+
+  if (for_unencrypted_conn) {
+    /* Remove anything whose purpose isn't general. */
+    SMARTLIST_FOREACH(fps_out, char *, cp, {
+        signed_descriptor_t *sd =
+          by_id ? get_signed_descriptor_by_fp(cp,0,0) :
+                  router_get_by_descriptor_digest(cp);
+        if (sd && !sd->send_unencrypted) {
+          tor_free(cp);
+          SMARTLIST_DEL_CURRENT(fps_out, cp);
+        }
+      });
   }
 
   if (!smartlist_len(fps_out)) {
@@ -2618,12 +2635,12 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
  * If -1 is returned *<b>msg</b> will be set to an appropriate error
  * message.
  *
- * (Despite its name, this function is also called from the controller, which
- * exposes a similar means to fetch descriptors.)
+ * XXXX020 rename this function.  IT's only called from the controller.
+ * XXXX020 in fact, refactor this function, mergeing as much as possible.
  */
 int
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
-  const char **msg)
+                        const char **msg)
 {
   *msg = NULL;
 
@@ -2938,6 +2955,14 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
     tor_free(fp);
     if (!sd)
       continue;
+    if (!connection_dir_is_encrypted(conn) && !sd->send_unencrypted) {
+      /* we did this check once before (so we could have an accurate size
+       * estimate and maybe send a 404 if somebody asked for only bridges on a
+       * connection), but we need to do it again in case a previously
+       * unknown bridge descriptor has shown up between then and now. */
+      continue;
+    }
+
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
       int last = ! smartlist_len(conn->fingerprint_stack);

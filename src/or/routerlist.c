@@ -4226,6 +4226,7 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
       goto err; /* Bad signature, or no match. */
     }
 
+    ei->cache_info.send_unencrypted = ri->cache_info.send_unencrypted;
     tor_free(ei->pending_sig);
   }
 

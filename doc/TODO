@@ -28,7 +28,7 @@ RK- make it easier to set up a private tor network on your own computer
   - Make BEGIN_DIR mandatory for asking questions of bridge authorities?
     (but only for bridge descriptors. not for ordinary cache stuff.)
     o Implement connection_dir_is_encrypted().
-    - set up a filter to not answer any bridge descriptors on a
+    o set up a filter to not answer any bridge descriptors on a
       non-encrypted request
   o write a tor-gencert man page
 
