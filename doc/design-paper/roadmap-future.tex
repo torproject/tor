@@ -20,19 +20,131 @@
 \maketitle
 \pagestyle{plain}
 
-% TO DO:
-%   add cites
-%   add time estimates
-
-
 \section{Introduction}
 
 Tor (the software) and Tor (the overall software/network/support/document
 suite) are now experiencing all the crises of success.  Over the next
-years, we're probably going to grow more in terms of users, developers,
+years, we're probably going to grow even more in terms of users, developers,
 and funding than before. This document attempts to lay out all the
 well-understood next steps that Tor needs to take. We should periodically
 reorganize it to reflect current and intended priorities.
+
+\section{Everybody can be a relay}
+\subsection{UPNP}
+\subsection{"ORPort auto" to look for a reachable port}
+\subsection{Incentives design}
+\subsection{Windows libevent}
+\subsection{Network scaling}
+      - Practical side: how to handle a huge directory?
+      - Anonymity side: impacts from partitioning?
+\subsection{Using fewer sockets}
+      - Restricted-route topology
+      - UDP design
+\subsection{Better algorithms for giving priority to local traffic}
+\subsection{Auto bandwidth detection and rate limiting, especially for
+      asymmetric connections.}
+\subsection{Tolerate absurdly wrong clocks, even for servers}
+\subsection{Metrics for deciding when you're fast enough and stable enough
+      to opt to switch from being a bridge relay to a public relay.}
+\section{Tor on low resources / slow links}
+\subsection{Reducing directory fetches further}
+\subsection{AvoidDiskWrites}
+\subsection{Using less ram}
+\subsection{Better DoS resistance for tor servers / authorities}
+\section{Blocking resistance}
+\subsection{Better bridge-address-distribution strategies}
+\subsection{Get more volunteers running bridges}
+\subsection{Handle multiple bridge authorities}
+\subsection{Anonymity for bridge users: second layer of entry guards, etc?}
+\subsection{More TLS normalization}
+\subsection{Harder to block Tor software distribution}
+\subsection{Integration with Psiphon}
+\section{Packaging}
+\subsection{Switch Privoxy out for Polipo}
+      - Make Vidalia able to launch more programs itself
+\subsection{Continue Torbutton improvements}
+      especially better docs
+\subsection{Vidalia and stability (especially wrt ongoing Windows problems)}
+\subsection{Polipo support on Windows}
+\subsection{Auto update for Tor, Vidalia, others}
+\subsection{Tor browser bundle for USB and standalone use}
+\subsection{LiveCD solution}
+\subsection{VM-based solution}
+\subsection{Tor-on-enclave-firewall configuration}
+\subsection{General tutorials on what common applications are Tor-friendly}
+\subsection{Controller libraries (torctl) plus documentation}
+\subsection{Localization and translation (Vidalia, Torbutton, web pages)}
+\section{Interacting better with Internet sites}
+\subsection{Make tordnsel (tor exitlist) better and more well-known}
+\subsection{Nymble}
+\subsection{Work with Wikipedia, Slashdot, Google(, IRC networks)}
+\subsection{IPv6 support for exit destinations}
+\section{Network health}
+\subsection{torflow / soat to detect bad relays}
+\subsection{make authorities more automated}
+\subsection{torstatus pages and better trend tracking}
+\subsection{better metrics for assessing network health / growth}
+      - geoip usage-by-country reporting and aggregation
+        (Once that's working, switch to Directory guards)
+\subsection{Performance research}
+      - Load balance better
+      - Improve our congestion control algorithms
+\section{Outreach and user education}
+\subsection{"Who uses Tor" use cases}
+\subsection{Law enforcement contacts}
+      - "Was this IP address a Tor relay recently?" database
+\subsection{Commercial/enterprise outreach. Help them use Tor well and
+      not fear it.}
+\subsection{NGO outreach and training.}
+      - "How to be a safe blogger"
+\subsection{More activist coordinators, more people to answer user questions}
+\subsection{More people to hold hands of server operators}
+\subsection{The-dangers-of-plaintext awareness}
+\subsection{check.torproject.org and other "privacy checkers"}
+\subsection{Stronger legal FAQ for US}
+\subsection{Legal FAQs for other countries}
+\section{Anonymity research}
+\subsection{estimate relay bandwidth more securely}
+\subsection{website fingerprinting attacks}
+\subsection{safer e2e defenses}
+\subsection{Using Tor when you really need anonymity. Can you compose it
+      with other steps, like more trusted guards or separate proxies?}
+\subsection{Topology-aware routing; routing-zones, steven's pet2007 paper.}
+\section{Organizational growth and stability}
+\subsection{A contingency plan if Roger gets hit by a bus}
+      - Get a new executive director
+\subsection{More diversity of funding}
+      - Don't rely on any one funder as much
+      - Don't rely on any sector or funder category as much
+\subsection{More Tor-funded people who are skilled at peripheral apps like
+      Vidalia, Torbutton, Polipo, etc}
+\subsection{Clearer and more predictable trademark behavior}
+\subsection{More outside funding for internships, etc e.g. GSoC.}
+\section{Hidden services}
+\subsection{Scaling: how to handle many hidden services}
+\subsection{Performance: how to rendezvous with them quickly}
+\subsection{Authentication/authorization: how to tolerate DoS / load}
+\section{Tor as a general overlay network}
+\subsection{Choose paths / exit by country}
+\subsection{Easier to run your own private servers and have Tor use them
+      anywhere in the path}
+\subsection{Easier to run an independent Tor network}
+\section{Code security/correctness}
+\subsection{veracode}
+\subsection{code audit}
+\subsection{more fuzzing tools}
+\subsection{build farm, better testing harness}
+\subsection{Long-overdue code refactoring and cleanup}
+\section{Protocol security}
+\subsection{safer circuit handshake}
+\subsection{protocol versioning for future compatibility}
+\subsection{cell sizes}
+\subsection{adapt to new key sizes, etc}
+
+
+
+
+
 
 \section{Code and design infrastructure}
 
