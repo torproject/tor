@@ -553,8 +553,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   if (idcert) {
     X509_STORE *s = SSL_CTX_get_cert_store(result->ctx);
     tor_assert(s);
-    X509_STORE_add_cert(s, idcert); /*XXXX020 This cert seems not to get
-                                     * freed.  Fix that! */
+    X509_STORE_add_cert(s, idcert);
     X509_free(idcert); /* The context now owns the reference to idcert */
     idcert = NULL;
   }

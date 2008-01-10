@@ -2252,7 +2252,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       goto err;
     }
     if (!(v = networkstatus_get_voter_by_id(ns, declared_identity))) {
-      log_warn(LD_DIR, "ID on signature on network-status vote does not match"
+      log_warn(LD_DIR, "ID on signature on network-status vote does not match "
                "any declared directory source.");
       goto err;
     }

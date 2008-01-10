@@ -688,8 +688,8 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
     key = tor_strndup(body, eq-body);
     body = eq+1;
     if (*eq == '=') {
-      char *val;
-      size_t val_len;
+      char *val=NULL;
+      size_t val_len=0;
       size_t ent_len;
       if (*body != '\"') {
         char *val_start = body;

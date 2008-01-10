@@ -200,7 +200,8 @@ router_reload_consensus_networkstatus(void)
         log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
                  options->FallbackNetworkstatusFile);
       } else {
-        log_notice(LD_FS, "Loaded fallback consensus networkstaus from \"%s\"",
+        log_notice(LD_FS,
+                   "Loaded fallback consensus networkstatus from \"%s\"",
                    options->FallbackNetworkstatusFile);
       }
       tor_free(s);
@@ -1328,8 +1329,6 @@ networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
  */
 int
 networkstatus_set_current_consensus(const char *consensus, unsigned flags)
-
-
 {
   networkstatus_vote_t *c;
   int r, result = -1;
