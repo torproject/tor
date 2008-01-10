@@ -1322,6 +1322,13 @@ router_rebuild_descriptor(int force)
   ri->cache_info.signed_descriptor_len =
     strlen(ri->cache_info.signed_descriptor_body);
 
+  ri->purpose =
+    options->BridgeRelay ? ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
+  if (!options->BridgeRelay) {
+    ri->cache_info.send_unencrypted = 1;
+    ei->cache_info.send_unencrypted = 1;
+  }
+
   router_get_router_hash(ri->cache_info.signed_descriptor_body,
                          ri->cache_info.signed_descriptor_digest);
 
