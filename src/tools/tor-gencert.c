@@ -96,6 +96,12 @@ parse_commandline(int argc, char **argv)
         return 1;
       }
       identity_key_file = tor_strdup(argv[++i]);
+    } else if (!strcmp(argv[i], "-s")) {
+      if (i+1>=argc) {
+        fprintf(stderr, "No argument to -s\n");
+        return 1;
+      }
+      signing_key_file = tor_strdup(argv[++i]);
     } else if (!strcmp(argv[i], "-c")) {
       if (i+1>=argc) {
         fprintf(stderr, "No argument to -c\n");
@@ -158,7 +164,7 @@ parse_commandline(int argc, char **argv)
   if (!certificate_file) {
     certificate_file = tor_strdup("./authority_certificate");
     log_info(LD_GENERAL, "No signing key file given; defaulting to %s",
-             signing_key_file);
+             certificate_file);
   }
   return 0;
 }

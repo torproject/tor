@@ -50,6 +50,8 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - New configuration options to override default maximum number of
       servers allowed on a single IP address.  This is important
       for running a test network on a single host.
+    - Actually implement the -s option to tor-gencert.
+    - Add a manual page for tor-gencert.
 
   o Minor features (other):
     - Add hidden services and DNSPorts to the list of things that make

@@ -1,0 +1,81 @@
+.TH tor-gencert 1 "" Jan-2008 ""
+.\" manual page by Nick Mathewson
+.SH NAME
+.LP
+tor-gencert \- Generate certs and keys for Tor directory authorities
+
+.SH SYNOPSIS
+\fBtor-gencert\fP\ [-h|--help] [-v] [-r|--reuse] [--create-identity-key] [-i \fIid_file\fP] [-c \fIcert_file\fP] [-m \fInum\fP] [-a \fIaddress\fP:\fIport\fP]
+
+.SH DESCRIPTION
+\fBtor-gencert\fR generates certificates and private keys for use by Tor
+directory authorities running the v3 Tor directory protocol, as used by Tor
+0.2.0 and later.  If you are not running a directory authority, you don't
+need to use tor-gencert.
+.PP
+Every directory authority has a long term authority \fIidentity key\fP (which
+is distinct from the identity key it uses as a Tor server); this key should
+be kept offline in a secure location.  It is used to certify shorter-lived
+\fIsigning keys\fP, which are kept online and used by the directory authority
+to sign votes and consensus documents.
+.PP
+After you use this program to generate a signing key and a certificate, copy
+those files to the keys subdirectory of your Tor process, and send Tor a
+SIGHUP signal. DO NOT COPY THE IDENTITY KEY.
+
+.SH OPTIONS
+\fB-v\fP
+Display verbose output.
+.LP
+.TP
+\fB-h\fP or \fB--help\fP
+Display help text and exit.
+.LP
+.TP
+\fB-r\fP or \fB--reuse\fP
+Generate a new certificate, but not a new signing key.  This can be
+used to change the address or lifetime associated with a given key.
+.LP
+.TP
+\fB--create-identity-key\fP
+Generate a new identity key.  You should only use this option the first
+time you run tor-gencert; in the future, you should use the identity
+key that's already there.
+.LP
+.TP
+\fB-i \fR\fIFILENAME\fP
+Read the identity key from the specified file.  If the file is not present
+and --create-identity-key is provided, create the identity key in the
+specified file.  Default: "./authority_identity_key"
+.LP
+.TP
+\fB-s \fR\fIFILENAME\fP
+Write the signing key to the specified file.  Default:
+"./authority_signing_key"
+.LP
+.TP
+\fB-c \fR\fIFILENAME\fP
+Write the certificate to the specified file.
+Default: "./authority_certificate"
+.LP
+.TP
+\fB-m \fR\fINUM\fP
+Number of months that the certificate should be valid.  Default: 12.
+.LP
+.TP
+\fB-a \fR\fIaddress\fR:\fIport\fP
+If provided, advertise the address:port combination as this authority's
+preferred directory port in its certificate.  If the address is a hostname,
+the hostname is resolved to an IP before it's published.
+
+.SH BUGS
+This probably doesn't run on Windows.  That's not a big issue, since we
+don't really want authorities to be running on Windows anyway.
+
+.SH SEE ALSO
+.BR tor (1)
+.PP
+See also the "dir-spec.txt" file, distributed with Tor.
+
+.SH AUTHORS
+Roger Dingledine <arma@mit.edu>, Nick Mathewson <nickm@alum.mit.edu>.

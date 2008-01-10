@@ -32,7 +32,7 @@ N   - add a bit in the dir_connection_t. or check whether the linked conn
       dir-connection-is-encrypted.
     - set up a filter to not answer any bridge descriptors on a
       non-encrypted request
-N - write a tor-gencert man page
+  o write a tor-gencert man page
 
   . geoip caching and publishing for bridges
     d Track consecutive time up, not time since last-forgotten IP.
