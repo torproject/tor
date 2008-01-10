@@ -40,7 +40,7 @@ N   - add a bit in the dir_connection_t. or check whether the linked conn
     - Mention in control-spec.txt
     D have normal relays report geoip stats too.
     D different thresholds for bridges than for normal relays.
-N   - bridge relays round geoip stats *up*, not down.
+    o bridge relays round geoip stats *up*, not down.
 R - bridge communities
     . spec
     . deploy

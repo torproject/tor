@@ -354,6 +354,8 @@ geoip_get_client_history(time_t now)
       c_hist_t *ent;
       /* Only report a country if it has a minimum number of IPs. */
       if (c >= MIN_IPS_TO_NOTE_COUNTRY) {
+        /* Round up to the next multiple of IP_GRANULARITY */
+        c += IP_GRANULARITY-1;
         c -= c % IP_GRANULARITY;
         countrycode = geoip_get_country_name(i);
         ent = tor_malloc(sizeof(c_hist_t));
