@@ -25,7 +25,7 @@ R - let bridges set relaybandwidthrate as low as 5kb
 RK- make it easier to set up a private tor network on your own computer
     is very hard.
     - FAQ entry which is wrong
-  - Make BEGIN_DIR mandatory for asking questions of bridge authorities?
+  o Make BEGIN_DIR mandatory for asking questions of bridge authorities?
     (but only for bridge descriptors. not for ordinary cache stuff.)
     o Implement connection_dir_is_encrypted().
     o set up a filter to not answer any bridge descriptors on a
@@ -50,9 +50,9 @@ R - bridge communities
       - be able to have bridges that aren't in your torrc
 
 Things we'd like to do in 0.2.0.x:
-N - if we notice a cached-status directory and we're not serving v2 dir
-    info and it's old enough, delete it. same with cached-routers*.
-    Nick says: don't we already do that?
+  o if we notice a cached-status directory and we're not serving v2 dir
+    info and it's old enough, delete it.
+     o same with cached-routers*.
 N - document the "3/4 and 7/8" business in the clients fetching consensus
     documents timeline.
 R   - then document the bridge user download timeline.

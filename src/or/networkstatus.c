@@ -122,15 +122,29 @@ router_reload_v2_networkstatus(void)
   struct stat st;
   char *s;
   char *filename = get_datadir_fname("cached-status");
+  int maybe_delete = !directory_caches_v2_dir_info(get_options());
+  time_t now = time(NULL);
   if (!networkstatus_v2_list)
     networkstatus_v2_list = smartlist_create();
 
   entries = tor_listdir(filename);
-  tor_free(filename);
-  if (!entries) /* dir doesn't exist */
+  if (!entries) { /* dir doesn't exist */
+    tor_free(filename);
     return 0;
+  } else if (!smartlist_len(entries) && maybe_delete) {
+    rmdir(filename);
+    tor_free(filename);
+    return 0;
+  }
+  tor_free(filename);
   SMARTLIST_FOREACH(entries, const char *, fn, {
       char buf[DIGEST_LEN];
+      if (maybe_delete) {
+        filename = get_datadir_fname2("cached-status", fn);
+        remove_file_if_very_old(filename, now);
+        tor_free(filename);
+        continue;
+      }
       if (strlen(fn) != HEX_DIGEST_LEN ||
           base16_decode(buf, sizeof(buf), fn, strlen(fn))) {
         log_info(LD_DIR,

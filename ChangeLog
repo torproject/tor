@@ -18,6 +18,9 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
       responses _and_ send a body too), there are still servers out there
       that haven't upgraded.  Therefore, make clients parse such bodies
       when they receive them.
+    - When we're not serving v2 directory information, there is no reason
+      to actually keep any around.  Remove the obsolete files and directory
+      on startup if they are very old and we aren't going to serve them.
 
   o Minor performance improvements:
     - Reference-count and share copies of address policy entries; only
