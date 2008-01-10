@@ -1129,6 +1129,17 @@ Authoritative directories only.  If set to 1, the directory server
 rejects all uploaded server descriptors that aren't explicitly listed
 in the fingerprints file. This acts as a "panic button" if we get
 Sybiled. (Default: 0)
+.LP
+.TP
+\fBAuthDirMaxServersPerAddr\fR \fINUM\fP
+Authoritative directories only.  The maximum number of servers that we
+will list as acceptable on a single IP address.  Set this to "0" for
+"no limit". (Default: 2)
+.LP
+.TP
+\fBAuthDirMaxServersPerAuthAddr\fR \fINUM\fP
+Authoritative directories only.  Like AuthDirMaxServersPerAddr, but
+applies to addresses shared with directory authorities.  (Default: 5)
 
 .SH HIDDEN SERVICE OPTIONS
 .PP

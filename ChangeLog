@@ -46,6 +46,11 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
       that don't otherwise fit into the torrc file.
     - The SETCONF command now handles quoted values correctly.
 
+  o Minor features (directory authorities):
+    - New configuration options to override default maximum number of
+      servers allowed on a single IP address.  This is important
+      for running a test network on a single host.
+
   o Minor features (other):
     - Add hidden services and DNSPorts to the list of things that make
       Tor accept that it has running ports.  Change starting Tor with

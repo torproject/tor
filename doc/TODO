@@ -21,7 +21,7 @@ R - Figure out the autoconf problem with adding a fallback consensus.
 R - add a geoip file
 W   - figure out license
 R - let bridges set relaybandwidthrate as low as 5kb
-N - we need a config option to turn off proposal 109 behavior,
+  o we need a config option to turn off proposal 109 behavior,
 RK- make it easier to set up a private tor network on your own computer
     is very hard.
     - FAQ entry which is wrong
