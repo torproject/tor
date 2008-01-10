@@ -718,6 +718,19 @@ directory_initiate_command(const char *address, uint32_t addr,
   }
 }
 
+/** Return true iff anything we say on <b>conn</b> is being encrypted before
+ * we send it to the client/server. */
+int
+connection_dir_is_encrypted(dir_connection_t *conn)
+{
+  /* Right now it's sufficient to see if conn is or has been linked, since
+   * the only thing it could be linked to is an edge connection on a
+   * circuit, and the only way it could have been unlinked is at the edge
+   * connection getting closed.
+   */
+  return TO_CONN(conn)->linked;
+}
+
 /** Queue an appropriate HTTP command on conn-\>outbuf.  The other args
  * are as in directory_initiate_command.
  */
