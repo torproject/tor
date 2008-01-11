@@ -69,6 +69,9 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
 
 
 Changes in version 0.2.0.15-alpha - 2007-12-25
+  Tor 0.2.0.14-alpha and 0.2.0.15-alpha fix a bunch of bugs with the
+  features added in 0.2.0.13-alpha.
+
   o Major bugfixes:
     - Fix several remotely triggerable asserts based on DirPort requests
       for a v2 or v3 networkstatus object before we were prepared. This
