@@ -9,7 +9,7 @@
 #   http://developer.apple.com/documentation/DeveloperTools/Conceptual/SoftwareDistribution/index.html
 #   man packagemaker
 
-VERSION="1.0.3"
+VERSION="1.0.4"
 
 ## Determine OSX Version
 # map version to name

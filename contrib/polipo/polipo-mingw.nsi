@@ -6,7 +6,7 @@
 ;
 !include "MUI.nsh"
 
-!define VERSION "1.0.3"
+!define VERSION "1.0.4"
 !define INSTALLER "polipo-${VERSION}-win32.exe"
 !define WEBSITE "http://www.pps.jussieu.fr/~jch/software/polipo/"
 
@@ -28,7 +28,7 @@ VIProductVersion "${VERSION}"
 VIAddVersionKey "ProductName" "Polipo: A caching web proxy"
 VIAddVersionKey "Comments" "http://www.pps.jussieu.fr/~jch/software/polipo/"
 VIAddVersionKey "LegalTrademarks" "See COPYING"
-VIAddVersionKey "LegalCopyright" "©2007, Juliusz Chroboczek"
+VIAddVersionKey "LegalCopyright" "©2008, Juliusz Chroboczek"
 VIAddVersionKey "FileDescription" "Polipo is a caching web proxy."
 VIAddVersionKey "FileVersion" "${VERSION}"
 

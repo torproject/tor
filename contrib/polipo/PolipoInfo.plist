@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>Polipo 20061218</string>
+	<string>Polipo 1.0.4</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Polipo 20061218</string>
+	<string>Polipo 1.0.4</string>
 	<key>CFBundleName</key>
 	<string>Polipo</string>
 	<key>CFBundleSortVersionString</key>
-	<string>20061218</string>
+	<string>1.0.4</string>
 	<key>IFPkgFlagAllowBackRev</key>
 	<true/>
 	<key>IFPkgFlagAuthorizationAction</key>
