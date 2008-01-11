@@ -30,24 +30,120 @@ well-understood next steps that Tor needs to take. We should periodically
 reorganize it to reflect current and intended priorities.
 
 \section{Everybody can be a relay}
+
+We've made a lot of progress towards letting an ordinary Tor client also
+serve as a Tor relay. But these issues remain.
+
 \subsection{UPNP}
-\subsection{"ORPort auto" to look for a reachable port}
+
+We should teach Vidalia how to speak UPNP to automatically open and
+forward ports on common (e.g. Linksys) routers. There are some promising
+Qt-based UPNP libs out there, and in any case there are others (e.g. in
+Perl) that we can base it on.
+
+\subsection{``ORPort auto'' to look for a reachable port}
+
+Vidalia defaults to port 443 on Windows and port 8080 elsewhere. But if
+that port is already in use, or the ISP filters incoming connections
+on that port (some cablemodem providers filter 443 inbound), the user
+needs to learn how to notice this, and then pick a new one and type it
+into Vidalia.
+
+We should add a new option ``auto'' that cycles through a set of preferred
+ports, testing bindability and reachability for each of them, and only
+complains to the user once it's given up on the common options.
+
 \subsection{Incentives design}
+
+Roger has been working with researchers at Rice University to simulate
+and analyze a new design where the directory authorities assign gold
+stars to well-behaving relays, and then all the relays give priority
+to traffic from gold-starred relays. The great feature of the design is
+that not only does it provide the (explicit) incentive to run a relay,
+but it also aims to grow the overall capacity of the network, so even
+non-relays will benefit.
+
+It needs more analysis, and perhaps more design work, before we try
+deploying it.
+
 \subsection{Windows libevent}
+
+Tor relays still don't work well or reliably on Windows XP or Windows
+Vista, because we don't use the Windows-native ``overlapped IO''
+approach. Christian King made a good start at teaching libevent about
+overlapped IO during Google Summer of Code 2007, and next steps are
+to a) finish that, b) teach Tor to do openssl calls on buffers rather
+than directly to the network, and c) teach Tor to use the new libevent
+buffers approach.
+
 \subsection{Network scaling}
-      - Practical side: how to handle a huge directory?
-      - Anonymity side: impacts from partitioning?
+
+If we attract many more relays, we will need to handle the growing pains
+in terms of getting all the directory information to all the users.
+
+The first piece of this issue is a practical question: since the
+directory size scales linearly with more relays, at some point it
+will no longer be practical for every client to learn about every
+relay. We can try to reduce the amount of information each client needs
+to fetch (e.g. based on fetching less information preemptively as in
+Section~\ref{subsec:fewer-descriptor-fetches} below), but eventually
+clients will need to learn about only a subset of the network, and we
+will need to design good ways to divide up the network information.
+
+The second piece is an anonymity question that arises from this
+partitioning: if Tor's security comes from having all the clients
+behaving in similar ways, yet we are now giving different clients
+different directory information, how can we minimize the new anonymity
+attacks we introduce?
+
 \subsection{Using fewer sockets}
-      - Restricted-route topology
-      - UDP design
-\subsection{Better algorithms for giving priority to local traffic}
+
+Since in the current network every Tor relay can reach every other Tor
+relay, and we have many times more users than relays, pretty much every
+possible link in the network is in use. That is, the current network
+is a clique in practice.
+
+And since each of these connections requires a TCP socket, it's going
+to be hard for the network to grow much larger: many systems come with
+a default of 1024 file descriptors allowed per process, and raising
+that ulimit is hard for end users. Worse, many low-end gateway/firewall
+routers can't handle this many connections in their routing table.
+
+One approach is a restricted-route topology~\cite{danezis:pet2003}:
+predefine which relays can reach which other relays, and communicate
+these restrictions to the clients. We would need to compute which links
+are acceptable in a way that's decentralized yet scalable, and we would
+need an efficient (compact) way to characterize the topology information
+so all the users could keep up to date.
+
+Another approach would be to switch to UDP-based transport between
+relays, so we don't need to keep the TCP sockets open at all. Needs more
+investigation too.
+
 \subsection{Auto bandwidth detection and rate limiting, especially for
       asymmetric connections.}
+
+
+\subsection{Better algorithms for giving priority to local traffic}
+
+Proposal 111 made a lot of progress at separating local traffic from
+relayed traffic, so Tor users can rate limit the relayed traffic at a
+stricter level. But since we want to pass both traffic classes over the
+same TCP connection, we can't keep them entirely separate. The current
+compromise is that we treat all bytes to/from a given connectin as
+local traffic if any of the bytes within the past N seconds were local
+bytes.  But a) we could use some more intelligent heuristics, and b)
+this leaks information to an active attacker about when local traffic
+was sent/received.
+
 \subsection{Tolerate absurdly wrong clocks, even for servers}
-\subsection{Metrics for deciding when you're fast enough and stable enough
-      to opt to switch from being a bridge relay to a public relay.}
+\subsection{First a bridge, then a public relay?}
+Metrics for deciding when you're fast enough and stable enough
+      to opt to switch from being a bridge relay to a public relay.
+\subsection{Risks from being a relay}
 \section{Tor on low resources / slow links}
 \subsection{Reducing directory fetches further}
+\label{subsec:fewer-descriptor-fetches}
 \subsection{AvoidDiskWrites}
 \subsection{Using less ram}
 \subsection{Better DoS resistance for tor servers / authorities}
@@ -86,9 +182,11 @@ reorganize it to reflect current and intended priorities.
 \subsection{better metrics for assessing network health / growth}
       - geoip usage-by-country reporting and aggregation
         (Once that's working, switch to Directory guards)
-\subsection{Performance research}
-      - Load balance better
-      - Improve our congestion control algorithms
+\section{Performance research}
+\subsection{Load balance better}
+\subsection{Improve our congestion control algorithms}
+\subsection{Two-hops vs Three-hops}
+\subsection{Transport IP packets end-to-end}
 \section{Outreach and user education}
 \subsection{"Who uses Tor" use cases}
 \subsection{Law enforcement contacts}
@@ -99,6 +197,7 @@ reorganize it to reflect current and intended priorities.
       - "How to be a safe blogger"
 \subsection{More activist coordinators, more people to answer user questions}
 \subsection{More people to hold hands of server operators}
+\subsection{Teaching the media about Tor}
 \subsection{The-dangers-of-plaintext awareness}
 \subsection{check.torproject.org and other "privacy checkers"}
 \subsection{Stronger legal FAQ for US}
@@ -110,6 +209,13 @@ reorganize it to reflect current and intended priorities.
 \subsection{Using Tor when you really need anonymity. Can you compose it
       with other steps, like more trusted guards or separate proxies?}
 \subsection{Topology-aware routing; routing-zones, steven's pet2007 paper.}
+\subsection{Exactly what do guard nodes provide?}
+
+Entry guards seem to defend against all sorts of attacks. Can we work
+through all the benefits they provide? Papers like Nikita's CCS 2007
+paper make me think their value is not well-understood by the research
+community.
+
 \section{Organizational growth and stability}
 \subsection{A contingency plan if Roger gets hit by a bus}
       - Get a new executive director
@@ -118,6 +224,7 @@ reorganize it to reflect current and intended priorities.
       - Don't rely on any sector or funder category as much
 \subsection{More Tor-funded people who are skilled at peripheral apps like
       Vidalia, Torbutton, Polipo, etc}
+\subsection{More coordinated media handling and strategy}
 \subsection{Clearer and more predictable trademark behavior}
 \subsection{More outside funding for internships, etc e.g. GSoC.}
 \section{Hidden services}
