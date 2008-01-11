@@ -6,7 +6,7 @@
 ;
 !include "MUI.nsh"
 
-!define VERSION "1.0.4"
+!define VERSION "1.0.4.0"
 !define INSTALLER "polipo-${VERSION}-win32.exe"
 !define WEBSITE "http://www.pps.jussieu.fr/~jch/software/polipo/"
 
@@ -70,7 +70,7 @@ Section "Polipo" Polipo
    File "${BIN}\polipo.exe"
    File "${BIN}\COPYING"
    File "${BIN}\CHANGES"
-   File "${BIN}\config.windows"
+   File "${BIN}\config.sample"
    File "${BIN}\forbidden.sample"
    File "${BIN}\README.Windows"
    WriteIniStr "$INSTDIR\Polipo Website.url" "InternetShortcut" "URL" ${WEBSITE}
@@ -84,9 +84,9 @@ Section "Polipo" Polipo
       Delete $INSTDIR\config
       Goto endifconfig
      yesreplace:
-      StrCpy $configfile ".\config.windows"
+      StrCpy $configfile ".\config.sample"
    endifconfig:
-   File /oname=$configfile ".\config.windows"
+   File /oname=$configfile ".\config.sample"
    IfFileExists "$INSTDIR\www\*.*" "" endifwebroot
 	CreateDirectory "$INSTDIR\www"
    endifwebroot:
