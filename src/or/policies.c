@@ -651,7 +651,8 @@ exit_policy_remove_redundancies(smartlist_t *dest)
   for (i = 0; i < smartlist_len(dest)-1; ++i) {
     ap = smartlist_get(dest, i);
     for (j = i+1; j < smartlist_len(dest); ++j) {
-      tor_assert(j > i);
+      // tor_assert(j > i); // j starts out at i+1; j only increases; i only
+      //                    // decreases.
       tmp = smartlist_get(dest, j);
       if (ap->policy_type != tmp->policy_type) {
         if (addr_policy_intersects(ap, tmp))
