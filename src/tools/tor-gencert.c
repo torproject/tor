@@ -53,10 +53,11 @@ static void
 show_help(void)
 {
   fprintf(stderr, "Syntax:\n"
-          "tor-gencert [-h|--help] [-v] [--create-identity-key] "
-          "[-i identity_key_file]\n"
-          "            [-s signing_key_file] [-c certificate_file] "
-          "[--reuse-signing-key]\n");
+          "tor-gencert [-h|--help] [-v] [-r|--reuse] [--create-identity-key]\n"
+          "        [-i identity_key_file] [-s signing_key_file] "
+          "[-c certificate_file]\n"
+          "        [-m lifetime_in_months] [-a address:port]\n");
+
 }
 
 /* XXXX copied from crypto.c */
