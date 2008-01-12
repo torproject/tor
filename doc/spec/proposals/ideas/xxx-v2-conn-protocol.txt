@@ -41,7 +41,8 @@ Proposal:
   The version of the Tor connection protocol implemented up to now is
   "version 1".  This proposal describes "version 2".
 
-  "Old" or "Older" versions of Tor are ones not aware of this protocol;
+  "Old" or "Older" versions of Tor are ones not aware that version 2
+  of this protocol exists;
   "New" or "Newer" versions are ones that are.
 
   The connection initiator is referred to below as the Client; the
@@ -81,14 +82,14 @@ Proposal:
   coming from a Tor server.  The server does not ask the client for
   certificates.
 
-  Old Servers will (mostly) ignore the cipher list respond as in the v1
-  protocol, and send back a two-certificate chain.
+  Old Servers will (mostly) ignore the cipher list and respond as in the v1
+  protocol, sending back a two-certificate chain.
 
   After the Client gets a response from the server, it checks for the
-  number of certificates.  If there are two certificates, the client
-  assumes a V1 connection and proceeds as in tor-spec.txt.  But if there
-  is only one certificate, the client assumes a V2 or later protocol and
-  continues.
+  number of certificates it received.  If there are two certificates,
+  the client assumes a V1 connection and proceeds as in tor-spec.txt.
+  But if there is only one certificate, the client assumes a V2 or later
+  protocol and continues.
 
   At this point, the client has established a TLS connection with the
   server, but the parties have not been authenticated: the server hasn't
@@ -131,9 +132,13 @@ Proposal:
   SSL_MODE_NO_AUTO_CHAIN flag and sets the callback as for the V1
   protocol.  It then starts reading.
 
-
   The other problem to take care of is missing ciphers and OpenSSL's
-  cipher sorting algorithms. [XXXX more on this.]
+  cipher sorting algorithms. The two main issues are a) OpenSSL doesn't
+  support some of the default ciphers that Firefox advertises, and b)
+  OpenSSL sorts the list of ciphers it offers in a different way than
+  Firefox sorts them, so unless we fix that Tor will still look different
+  than Firefox.
+  [XXXX more on this.]
 
 
 1.2. Compatibility for clients using libraries less hackable than OpenSSL.
