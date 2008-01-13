@@ -68,7 +68,7 @@ if ! [ -s "$TMPFILE" ] ; then
 fi
 
 expirydate="$(awk '$1=="dir-key-expires" {printf "%s %s", $2, $3}' < "$TMPFILE")"
-expiryunix=$(date -d "$expirydate" +%s)
+expiryunix=$(TZ=UTC date -d "$expirydate" +%s)
 now=$(date +%s)
 
 if [ "$now" -ge "$expiryunix" ]; then
