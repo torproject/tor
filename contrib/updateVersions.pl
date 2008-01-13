@@ -2,7 +2,7 @@
 
 $CONFIGURE_IN = './configure.in';
 $ORCONFIG_H = './src/win32/orconfig.h';
-$TOR_NSI = './contrib/tor-mingw.nsi.in';
+#$TOR_NSI = './contrib/tor-mingw.nsi.in';
 
 sub demand {
     my $fn = shift;
@@ -11,7 +11,7 @@ sub demand {
 
 demand($CONFIGURE_IN);
 demand($ORCONFIG_H);
-demand($TOR_NSI);
+#demand($TOR_NSI);
 
 # extract version from configure.in
 
@@ -53,5 +53,5 @@ sub correctversion {
     }
 }
 
-correctversion($TOR_NSI, "!");
+# correctversion($TOR_NSI, "!");
 correctversion($ORCONFIG_H, "#");
