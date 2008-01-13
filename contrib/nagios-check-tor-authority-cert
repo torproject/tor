@@ -82,5 +82,5 @@ elif [ "$(( $now + 30*24*60*60 ))" -ge "$expiryunix" ]; then
 	exit 1
 else
 	echo "OK: Certificate expires $expirydate (authority $identity)."
-	exit 1
+	exit 0
 fi
