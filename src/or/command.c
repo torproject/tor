@@ -461,10 +461,8 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   end = cell->payload + cell->payload_len;
   for (cp = cell->payload; cp+1 < end; ++cp) {
     uint16_t v = ntohs(get_uint16(cp));
-    if (v == 1 || v == 2) {
-      if (v > highest_supported_version)
-        highest_supported_version = v;
-    }
+    if (is_or_protocol_version_known(v) && v > highest_supported_version)
+      highest_supported_version = v;
   }
   if (!highest_supported_version) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
@@ -476,20 +474,15 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
-#if 0
-  /*XXXX020 not right; references dead functions */
   if (highest_supported_version >= 2) {
-    if (connection_or_send_netinfo(conn) < 0 ||
-        connection_or_send_cert(conn) < 0) {
+    if (connection_or_send_netinfo(conn) < 0) {
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
-    if (conn->handshake_state->started_here)
-      connection_or_send_link_auth(conn);
   } else {
-    /* XXXX020 finish v1 verification. */
+    /* Should be impossible. */
+    tor_fragile_assert();
   }
-#endif
 }
 
 /** Process a 'netinfo' cell. DOCDOC say more. */
@@ -577,7 +570,7 @@ connection_or_act_on_netinfo(or_connection_t *conn)
   if (!conn->handshake_state)
     return -1;
 
-  tor_assert(conn->handshake_state->authenticated != 0);
+  tor_assert(conn->handshake_state->received_versions != 0);
 
   delta = conn->handshake_state->apparent_skew;
   /*XXXX020 magic number 3600 */
@@ -606,175 +599,4 @@ connection_or_act_on_netinfo(or_connection_t *conn)
 
   return 0;
 }
-
-#if 0
-/*DOCDOC*/
-static void
-command_process_cert_cell(var_cell_t *cell, or_connection_t *conn)
-{
-  int n_certs = 0;
-  uint16_t conn_cert_len = 0, id_cert_len = 0;
-  const char *conn_cert = NULL, *id_cert = NULL;
-  const char *cp, *end;
-  int done = 0;
-
-  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got CERT cell when not handshaking. "
-           "Ignoring.");
-    return;
-  }
-  tor_assert(conn->handshake_state);
-  if (!conn->handshake_state->received_versions ||
-      !conn->handshake_state->received_netinfo) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got CERT cell before VERSIONS and "
-           "NETINFO. Closing the connection.");
-    goto err;
-  }
-  if (conn->handshake_state->received_certs) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got duplicate CERT cell. "
-           "Closing the connection.");
-    goto err;
-  }
-
-  cp = cell->payload;
-  end = cell->payload + cell->payload_len;
-
-  while (cp < end) {
-    uint16_t len;
-    if (end-cp == 1)
-      goto err;
-    len = ntohs(get_uint16(cp));
-    cp += 2;
-    if (end-cp < len)
-      goto err;
-    if (n_certs == 0) {
-      id_cert = cp;
-      id_cert_len = len;
-    } else if (n_certs == 1) {
-      conn_cert = id_cert;
-      conn_cert_len = id_cert_len;
-      id_cert = cp;
-      id_cert_len = len;
-    } else {
-      goto err;
-    }
-    cp += len;
-    ++n_certs;
-  }
-
-  /* Now we have 0, 1, or 2 certs. */
-  if (n_certs == 0) {
-    /* The other side is unauthenticated. */
-    done = 1;
-  } else {
-    int r;
-    r = tor_tls_verify_certs_v2(LOG_PROTOCOL_WARN, conn->tls,
-                                conn_cert, conn_cert_len,
-                                id_cert, id_cert_len,
-                                &conn->handshake_state->signing_key,
-                                (conn->handshake_state->started_here ?
-                                 conn->handshake_state->server_cert_digest :
-                                 conn->handshake_state->client_cert_digest),
-                                &conn->handshake_state->identity_key,
-                                conn->handshake_state->cert_id_digest);
-    if (r < 0)
-      goto err;
-    if (r == 1) {
-      done = 1;
-      conn->handshake_state->authenticated = 1;
-    }
-  }
-
-  conn->handshake_state->received_certs = 1;
-  if (done) {
-    if (connection_or_finish_or_handshake(conn) < 0)
-      goto err;
-  }
-  if (! conn->handshake_state->signing_key)
-    goto err;
-
-  return;
- err:
-  connection_mark_for_close(TO_CONN(conn));
-}
-
-#define LINK_AUTH_STRING "Tor initiator certificate verification"
-
-/** DOCDOC */
-static void
-command_process_link_auth_cell(cell_t *cell, or_connection_t *conn)
-{
-  or_handshake_state_t *s;
-  char hmac[DIGEST_LEN];
-  uint16_t len;
-  size_t sig_len;
-  const char *sig;
-  char *checked = NULL;
-  int checked_len;
-  tor_assert(conn);
-  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Received a LINK_AUTH cell on connection in the wrong state; "
-           "dropping.");
-    return;
-  }
-  s = conn->handshake_state;
-  tor_assert(s);
-  if (s->started_here) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Got a LINK_AUTH cell from a server; closing the connection.");
-    goto err;
-  }
-  if (!s->received_netinfo || !s->received_versions || !s->received_certs) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Got a LINK_AUTH cell too early; "
-           "closing the connection");
-    goto err;
-  }
-  len = ntohs(get_uint16(cell->payload));
-  if (len < 2 || len > CELL_PAYLOAD_SIZE - 2) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad length field (%d) on LINK_AUTH cell;"
-           " closing the connection", (int)len);
-    goto err;
-  }
-  if (cell->payload[2] != 0x00) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Unrecognized LINK_AUTH signature "
-           "version; closing the connection");
-    goto err;
-  }
-  connection_or_compute_link_auth_hmac(conn, hmac);
-
-  tor_assert(s->signing_key);
-
-  sig = cell->payload+3;
-  sig_len = len-1;
-  checked = tor_malloc(crypto_pk_keysize(s->signing_key));
-  checked_len = crypto_pk_public_checksig(s->signing_key,checked,sig,sig_len);
-  if (checked_len < 0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad signature on LINK_AUTH cell; "
-           "closing the connection");
-    goto err;
-  }
-  if (checked_len != DIGEST_LEN) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad length (%d) of signed material in "
-           "LINK_AUTH cell; closing the connection", checked_len);
-    goto err;
-  }
-  if (memcmp(checked, hmac, DIGEST_LEN) != 0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR, "Bad signed data in LINK_AUTH cell; "
-           "closing the connection.");
-    goto err;
-  }
-
-  s->authenticated = 1;
-
-  if (connection_or_finish_or_handshake(conn)<0)
-    goto err;
-
-  tor_free(checked);
-  return;
- err:
-  tor_free(checked);
-  connection_mark_for_close(TO_CONN(conn));
-}
-#endif
 

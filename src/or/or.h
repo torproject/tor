@@ -248,14 +248,16 @@ typedef enum {
 /** State for a connection to an OR: SSL is handshaking, not done yet. */
 #define OR_CONN_STATE_TLS_HANDSHAKING 4
 /** DOCDOC */
-#define OR_CONN_STATE_TLS_RENEGOTIATING 5
+#define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 5
+/** DOCDOC */
+#define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 6
 /** State for a connection to an OR: We're done with our SSL handshake, but we
  * haven't yet negotiated link protocol versions and finished authenticating.
  */
-#define OR_CONN_STATE_OR_HANDSHAKING 6
+#define OR_CONN_STATE_OR_HANDSHAKING 7
 /** State for a connection to an OR: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 7
-#define _OR_CONN_STATE_MAX 7
+#define OR_CONN_STATE_OPEN 8
+#define _OR_CONN_STATE_MAX 8
 
 #define _EXIT_CONN_STATE_MIN 1
 /** State for an exit connection: waiting for response from dns farm. */
@@ -669,16 +671,8 @@ typedef enum {
 #define CELL_CREATED_FAST 6
 #define CELL_VERSIONS 7
 #define CELL_NETINFO 8
-#if 0
-#define CELL_CERT 9
-#define CELL_LINK_AUTH 10
-#endif
-#define CELL_RELAY_EARLY 11 /*DOCDOC*/
+#define CELL_RELAY_EARLY 9
 
-#if 0
-#define CELL_COMMAND_IS_VAR_LENGTH(x) \
-  ((x) == CELL_CERT || (x) == CELL_VERSIONS)
-#endif
 #define CELL_COMMAND_IS_VAR_LENGTH(x) ((x) == CELL_VERSIONS)
 
 /** How long to test reachability before complaining to the user. */
@@ -823,7 +817,7 @@ typedef struct connection_t {
                          * connections.  Set once we've set the stream end,
                          * and check in connection_about_to_close_connection().
                          */
-  /** Edge connections only: true if we've blocked writing until the
+  /** Edge connections only: true if we've blocked reading until the
    * circuit has fewer queued cells. */
   unsigned int edge_blocked_on_circ:1;
   /** Used for OR conns that shouldn't get any new circs attached to them. */
@@ -895,24 +889,11 @@ typedef struct or_handshake_state_t {
   unsigned int started_here : 1;
   unsigned int received_versions : 1;
   unsigned int received_netinfo : 1;
-  unsigned int received_certs : 1;
-  unsigned int authenticated : 1;
-
-  /* from tls */
-  char client_random[TOR_TLS_RANDOM_LEN];
-  char server_random[TOR_TLS_RANDOM_LEN];
-  char client_cert_digest[DIGEST_LEN]; /* may also be set by netinfo */
-  char server_cert_digest[DIGEST_LEN];
 
   /* from netinfo */
   long apparent_skew;
   uint32_t my_apparent_addr;
   unsigned int apparently_canonical;
-
-  /* from certs */
-  char cert_id_digest[DIGEST_LEN];
-  crypto_pk_env_t *signing_key;
-  crypto_pk_env_t *identity_key;
 } or_handshake_state_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
@@ -2873,6 +2854,7 @@ int connection_or_send_cert(or_connection_t *conn);
 int connection_or_send_link_auth(or_connection_t *conn);
 int connection_or_compute_link_auth_hmac(or_connection_t *conn,
                                          char *hmac_out);
+int is_or_protocol_version_known(uint16_t version);
 
 void cell_pack(packed_cell_t *dest, const cell_t *src);
 void var_cell_pack_header(const var_cell_t *cell, char *hdr_out);

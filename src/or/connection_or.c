@@ -584,14 +584,18 @@ static void
 connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
 {
   or_connection_t *conn = _conn;
-  char id_digest[DIGEST_LEN];
+  (void)tls;
 
-  if (connection_or_check_valid_tls_handshake(conn,
-                                              !tor_tls_is_server(tls),
-                                              id_digest) < 0)
-    return;
+  if (connection_tls_finish_handshake(conn) < 0) {
+    /* XXXX020 double-check that it's ok to do this from inside read. */
+    connection_mark_for_close(TO_CONN(conn));
+  }
+
+#if 0
+  /* XXXX020 this happens later, right? */
   connection_or_init_conn_from_address(conn, conn->_base.addr,
                                        conn->_base.port, id_digest, 0);
+#endif
 }
 
 /** Move forward with the tls handshake. If it finishes, hand
@@ -605,10 +609,12 @@ connection_tls_continue_handshake(or_connection_t *conn)
   int result;
   check_no_tls_errors();
  again:
-  if (conn->_base.state == OR_CONN_STATE_TLS_RENEGOTIATING)
+  if (conn->_base.state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING)
     result = tor_tls_renegotiate(conn->tls);
-  else
+  else {
+    tor_assert(conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING);
     result = tor_tls_handshake(conn->tls);
+  }
   switch (result) {
     CASE_TOR_TLS_ERROR_ANY:
     log_info(LD_OR,"tls error [%s]. breaking connection.",
@@ -618,7 +624,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
       if (! tor_tls_used_v1_handshake(conn->tls)) {
         if (!tor_tls_is_server(conn->tls)) {
           if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-            conn->_base.state = OR_CONN_STATE_TLS_RENEGOTIATING;
+            conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
             goto again;
           }
         } else {
@@ -626,6 +632,10 @@ connection_tls_continue_handshake(or_connection_t *conn)
           tor_tls_set_renegotiate_callback(conn->tls,
                                            connection_or_tls_renegotiated_cb,
                                            conn);
+          conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
+          connection_stop_writing(TO_CONN(conn));
+          connection_start_reading(TO_CONN(conn));
+          return 0;
         }
       }
       return connection_tls_finish_handshake(conn);
@@ -829,22 +839,18 @@ connection_tls_finish_handshake(or_connection_t *conn)
 
   directory_set_dirty();
 
+  if (connection_or_check_valid_tls_handshake(conn, started_here,
+                                              digest_rcvd) < 0)
+    return -1;
+
   if (tor_tls_used_v1_handshake(conn->tls)) {
     conn->link_proto = 1;
-    if (connection_or_check_valid_tls_handshake(conn, started_here,
-                                                digest_rcvd) < 0)
-      return -1;
     if (!started_here) {
       connection_or_init_conn_from_address(conn,conn->_base.addr,
                                            conn->_base.port, digest_rcvd, 0);
     }
     return connection_or_set_state_open(conn);
   } else {
-    if (started_here) {
-      if (connection_or_check_valid_tls_handshake(conn, started_here,
-                                                  digest_rcvd) < 0)
-        return -1;
-    }
     conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
@@ -859,21 +865,6 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
   or_handshake_state_t *s;
   s = conn->handshake_state = tor_malloc_zero(sizeof(or_handshake_state_t));
   s->started_here = started_here ? 1 : 0;
-  if (tor_tls_get_random_values(conn->tls,
-                                conn->handshake_state->client_random,
-                                conn->handshake_state->server_random) < 0)
-    return -1;
-  if (started_here) {
-    if (tor_tls_get_cert_digests(conn->tls,
-                                 s->client_cert_digest,
-                                 s->server_cert_digest)<0)
-      return -1;
-  } else {
-    if (tor_tls_get_cert_digests(conn->tls,
-                                 s->server_cert_digest,
-                                 s->client_cert_digest)<0)
-      return -1;
-  }
   return 0;
 }
 
@@ -882,10 +873,6 @@ void
 or_handshake_state_free(or_handshake_state_t *state)
 {
   tor_assert(state);
-  if (state->signing_key)
-    crypto_free_pk_env(state->signing_key);
-  if (state->identity_key)
-    crypto_free_pk_env(state->identity_key);
   memset(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
@@ -1036,21 +1023,35 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   return 0;
 }
 
+/**DOCDOC*/
+static const uint16_t or_protocol_versions[] = { 1, 2 };
+static const int n_or_protocol_versions =
+  sizeof(or_protocol_versions)/sizeof(uint16_t);
+
+/**DOCDOC*/
+int
+is_or_protocol_version_known(uint16_t v)
+{
+  int i;
+  for (i = 0; i < n_or_protocol_versions; ++i) {
+    if (or_protocol_versions[i] == v)
+      return 1;
+  }
+  return 0;
+}
+
 /** DOCDOC */
 static int
 connection_or_send_versions(or_connection_t *conn)
 {
   var_cell_t *cell;
-  uint16_t versions[] = { 1, 2 };
-  int n_versions = sizeof(versions) / sizeof(uint8_t);
   int i;
   tor_assert(conn->handshake_state &&
              !conn->handshake_state->sent_versions_at);
-  /*XXXX020 docdoc 2-byte versions */
-  cell = var_cell_new(n_versions * 2);
+  cell = var_cell_new(n_or_protocol_versions * 2);
   cell->command = CELL_VERSIONS;
-  for (i = 0; i < n_versions; ++i) {
-    uint16_t v = versions[i];
+  for (i = 0; i < n_or_protocol_versions; ++i) {
+    uint16_t v = or_protocol_versions[i];
     set_uint16(cell->payload+(2*i), htons(v));
   }
 
@@ -1092,116 +1093,4 @@ connection_or_send_netinfo(or_connection_t *conn)
 
   return 0;
 }
-
-#if 0
-#define LINK_AUTH_STRING "Tor initiator certificate verification"
-/** DOCDOC */
-int
-connection_or_compute_link_auth_hmac(or_connection_t *conn,
-                                     char *hmac_out)
-{
-  char buf[64 + 2*TOR_TLS_RANDOM_LEN + 2*DIGEST_LEN];
-  char *cp;
-  or_handshake_state_t *s;
-  tor_assert(conn);
-  tor_assert(conn->handshake_state);
-  tor_assert(conn->tls);
-  s = conn->handshake_state;
-
-  /* Fill the buffer. */
-  strlcpy(buf, LINK_AUTH_STRING, sizeof(buf));
-  cp = buf+strlen(buf);
-  ++cp; /* Skip the NUL */
-  memcpy(cp, s->client_random, TOR_TLS_RANDOM_LEN);
-  cp += TOR_TLS_RANDOM_LEN;
-  memcpy(cp, s->server_random, TOR_TLS_RANDOM_LEN);
-  cp += TOR_TLS_RANDOM_LEN;
-  memcpy(cp, s->client_cert_digest, DIGEST_LEN);
-  cp += DIGEST_LEN;
-  memcpy(cp, s->server_cert_digest, DIGEST_LEN);
-  cp += DIGEST_LEN;
-  tor_assert(cp < buf+sizeof(buf));
-
-  if (tor_tls_hmac_with_master_secret(conn->tls, hmac_out, buf, cp-buf) < 0)
-    return -1;
-  return 0;
-}
-
-/**DOCDOC*/
-int
-connection_or_send_cert(or_connection_t *conn)
-{
-  size_t conn_cert_len = 0, id_cert_len = 0, total_len = 0;
-  char *id_cert = NULL, *conn_cert = NULL;
-  var_cell_t *cell;
-  char *cp;
-
-  /* If we're a client, we can send no cert at all. XXXXX020 */
-  /* DOCDOC length of cert before cert. */
-  tor_assert(conn);
-  tor_assert(conn->handshake_state);
-  tor_assert(conn->handshake_state->received_versions == 1);
-  if (conn->handshake_state->started_here)
-    conn_cert = tor_tls_encode_my_certificate(conn->tls, &conn_cert_len, 1);
-  id_cert = tor_tls_encode_my_certificate(conn->tls, &id_cert_len, 0);
-  tor_assert(id_cert);
-  total_len = id_cert_len + conn_cert_len + conn_cert ? 4 : 2;
-
-  cell = var_cell_new(total_len);
-  cell->command = CELL_VERSIONS;
-  cp = cell->payload;
-  if (conn_cert) {
-    set_uint16(cp, htons(conn_cert_len));
-    cp += 2;
-    memcpy(cp, conn_cert, conn_cert_len);
-    cp += conn_cert_len;
-  }
-  set_uint16(cp, htons(id_cert_len));
-  cp += 2;
-  memcpy(cp, id_cert, id_cert_len);
-  cp += id_cert_len;
-  tor_assert(cp == cell->payload + total_len);
-
-  connection_or_write_var_cell_to_buf(cell, conn);
-
-  tor_free(conn_cert);
-  tor_free(id_cert);
-  var_cell_free(cell);
-  return 0;
-}
-
-/**DOCDOC*/
-int
-connection_or_send_link_auth(or_connection_t *conn)
-{
-  cell_t cell;
-  char hmac[DIGEST_LEN];
-  crypto_pk_env_t *key;
-  int r, len;
-
-  tor_assert(conn);
-  tor_assert(conn->tls);
-  tor_assert(conn->handshake_state);
-  tor_assert(conn->handshake_state->started_here == 1);
-  tor_assert(conn->handshake_state->received_certs == 1);
-
-  memset(&cell, 0, sizeof(cell));
-  cell.command = CELL_LINK_AUTH;
-  key = tor_tls_dup_private_key(conn->tls);
-  connection_or_compute_link_auth_hmac(conn, hmac);
-
-  cell.payload[2] = 0x00; /* Signature version */
-  r = crypto_pk_private_sign(key, cell.payload+3, hmac, sizeof(hmac));
-  crypto_free_pk_env(key);
-  if (r<0)
-    return -1;
-  len = r + 1;
-
-  set_uint16(cell.payload, htons(len));
-
-  connection_or_write_cell_to_buf(&cell, conn);
-
-  return 0;
-}
-#endif
 
