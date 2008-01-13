@@ -95,6 +95,7 @@ chunk_repack(chunk_t *chunk)
   chunk->data = &chunk->mem[0];
 }
 
+#ifdef ENABLE_BUF_FREELISTS
 /** A freelist of chunks. */
 typedef struct chunk_freelist_t {
   size_t alloc_size; /**< What size chunks does this freelist hold? */
@@ -188,6 +189,24 @@ chunk_new_with_alloc_size(size_t alloc)
   ch->data = &ch->mem[0];
   return ch;
 }
+#else
+static void
+chunk_free(chunk_t *chunk)
+{
+  tor_free(chunk);
+}
+static INLINE chunk_t *
+chunk_new_with_alloc_size(size_t alloc)
+{
+  chunk_t *ch;
+  ch = tor_malloc_roundup(&alloc);
+  ch->next = NULL;
+  ch->datalen = 0;
+  ch->memlen = CHUNK_SIZE_WITH_ALLOC(alloc);
+  ch->data = &ch->mem[0];
+  return ch;
+}
+#endif
 
 /** Allocate a new chunk with memory size of <b>sz</b>. */
 #define chunk_new_with_capacity(sz) \
@@ -221,6 +240,7 @@ static INLINE size_t
 preferred_chunk_size(size_t target)
 {
   /* XXXX020 use log2 code, maybe. */
+  /* XXXX020 or make sizing code more fine-grained! */
   size_t sz = MIN_CHUNK_ALLOC;
   while (CHUNK_SIZE_WITH_ALLOC(sz) < target) {
     sz <<= 1;
@@ -233,6 +253,7 @@ preferred_chunk_size(size_t target)
 void
 buf_shrink_freelists(int free_all)
 {
+#ifdef ENABLE_BUF_FREELISTS
   int i;
   for (i = 0; freelists[i].alloc_size; ++i) {
     int slack = freelists[i].slack;
@@ -267,6 +288,9 @@ buf_shrink_freelists(int free_all)
     freelists[i].lowest_length = freelists[i].cur_length;
     assert_freelist_ok(&freelists[i]);
   }
+#else
+  (void) free_all;
+#endif
 }
 
 /** Describe the current status of the freelists at log level <b>severity</b>.
@@ -274,6 +298,7 @@ buf_shrink_freelists(int free_all)
 void
 buf_dump_freelist_sizes(int severity)
 {
+#ifdef ENABLE_BUF_FREELISTS
   int i;
   log(severity, LD_MM, "====== Buffer freelists:");
   for (i = 0; freelists[i].alloc_size; ++i) {
@@ -290,6 +315,9 @@ buf_dump_freelist_sizes(int severity)
   }
   log(severity, LD_MM, U64_FORMAT" allocations in non-freelist sizes",
       U64_PRINTF_ARG(n_freelist_miss));
+#else
+  (void)severity;
+#endif
 }
 
 /** Magic value for buf_t.magic, to catch pointer errors. */
@@ -1612,6 +1640,7 @@ assert_buf_ok(buf_t *buf)
   }
 }
 
+#ifdef ENABLE_BUF_FREELISTS
 /** Log an error and exit if <b>fl</b> is corrupted.
  */
 static void
@@ -1629,4 +1658,5 @@ assert_freelist_ok(chunk_freelist_t *fl)
   tor_assert(n >= fl->lowest_length);
   tor_assert(n <= fl->max_length);
 }
+#endif
 

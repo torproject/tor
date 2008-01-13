@@ -34,12 +34,19 @@ AC_ARG_ENABLE(iphone,
    CFLAGS="$CFLAGS -D__DARWIN_UNIX03 -DIPHONE"
   fi])
 
+#XXXX020 We should make these enabled or not, before 0.2.0.x-final
 AC_ARG_ENABLE(cell-pool,
      AS_HELP_STRING(--disable-cell-pool, disable pool allocator for cells))
+AC_ARG_ENABLE(buf-freelists,
+   AS_HELP_STRING(--disable-buf-freelists, disable freelists for buffer RAM))
 
 if test x$enable_cell_pool != xno; then
   AC_DEFINE(ENABLE_CELL_POOL, 1,
             [Defined if we try to use the pool allocator for queued cells])
+fi
+if test x$enable_buf_freelists != xno; then
+  AC_DEFINE(ENABLE_BUF_FREELISTS, 1,
+            [Defined if we try to use freelists for buffer RAM chunks])
 fi
 
 AC_ARG_ENABLE(transparent,
