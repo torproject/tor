@@ -2959,7 +2959,11 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
   {
     char digest[DIGEST_LEN];
     trusted_dir_server_t *dir;
-    base16_decode(digest, DIGEST_LEN, fp, strlen(fp));
+    if (base16_decode(digest, DIGEST_LEN, fp, strlen(fp))<0) {
+      log_warn(LD_BUG, "Called with bad fingerprint in list: %s",
+               escaped(fp));
+      continue;
+    }
     dir = router_get_trusteddirserver_by_digest(digest);
 
     if (dir)
@@ -3070,7 +3074,11 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
       tor_assert(!was_extrainfo); /* not supported yet */
       SMARTLIST_FOREACH(failed, const char *, cp,
       {
-        base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
+        if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp))<0) {
+          log_warn(LD_BUG, "Malformed fingerprint in list: %s",
+                   escaped(cp));
+          continue;
+        }
         retry_bridge_descriptor_fetch_directly(digest);
       });
     }
@@ -3079,7 +3087,10 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
   SMARTLIST_FOREACH(failed, const char *, cp,
   {
     download_status_t *dls = NULL;
-    base16_decode(digest, DIGEST_LEN, cp, strlen(cp));
+    if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp)) < 0) {
+      log_warn(LD_BUG, "Malformed fingerprint in list: %s", escaped(cp));
+      continue;
+    }
     if (was_extrainfo) {
       signed_descriptor_t *sd =
         router_get_by_extrainfo_digest(digest);

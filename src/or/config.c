@@ -835,8 +835,12 @@ add_default_trusted_dir_authorities(authority_type_t type)
       "88.198.7.215:80 6833 3D07 61BC F397 A587 A0C0 B963 E4A9 E99E C4D3",
     NULL
   };
-  for (i=0; dirservers[i]; i++)
-    parse_dir_server_line(dirservers[i], type, 0);
+  for (i=0; dirservers[i]; i++) {
+    if (parse_dir_server_line(dirservers[i], type, 0)<0) {
+      log_err(LD_BUG, "Couldn't parse internal dirserver line %s",
+              dirservers[i]);
+    }
+  }
 }
 
 /** Look at all the config options for using alternate directory

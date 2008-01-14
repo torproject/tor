@@ -1462,7 +1462,10 @@ evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb,
 
 	event_set(&port->event, port->socket, EV_READ | EV_PERSIST,
 			  server_port_ready_callback, port);
-	event_add(&port->event, NULL); /* check return. */
+	if (event_add(&port->event, NULL)<0) {
+		free(port);
+		return NULL;
+	}
 	return port;
 }
 

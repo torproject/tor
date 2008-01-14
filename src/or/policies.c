@@ -332,11 +332,12 @@ static void
 load_policy_from_option(config_line_t *config, smartlist_t **policy,
                         int assume_action)
 {
+  int r;
   addr_policy_list_free(*policy);
   *policy = NULL;
-  parse_addr_policy(config, policy, assume_action);
-  if (!*policy)
-    return;
+  r = parse_addr_policy(config, policy, assume_action);
+  if (r < 0 || !*policy)
+    return; /* XXXX020 have an error return. */
   SMARTLIST_FOREACH(*policy, addr_policy_t *, n, {
       /* ports aren't used. */
       n->prt_min = 1;
@@ -598,7 +599,9 @@ append_exit_policy_string(smartlist_t **policy, const char *more)
   tmp.key = NULL;
   tmp.value = (char*) more;
   tmp.next = NULL;
-  parse_addr_policy(&tmp, policy, -1);
+  if (parse_addr_policy(&tmp, policy, -1)<0) {
+    log_warn(LD_BUG, "Unable to parse internally generated policy %s",more);
+  }
 }
 
 /** Detect and excise "dead code" from the policy *<b>dest</b>. */

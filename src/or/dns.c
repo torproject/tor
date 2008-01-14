@@ -1458,8 +1458,11 @@ launch_test_addresses(int fd, short event, void *args)
     return;
   SMARTLIST_FOREACH(options->ServerDNSTestAddresses, const char *, address,
     {
-      evdns_resolve_ipv4(address, DNS_QUERY_NO_SEARCH, evdns_callback,
-                         tor_strdup(address));
+      int r = evdns_resolve_ipv4(address, DNS_QUERY_NO_SEARCH, evdns_callback,
+                                 tor_strdup(address));
+      if (r)
+        log_info(LD_EXIT, "eventdns rejected test address %s: error %d",
+                 escaped_safe_str(address), r);
     });
 }
 
@@ -1512,7 +1515,9 @@ dns_launch_correctness_checks(void)
   evtimer_set(&launch_event, launch_test_addresses, NULL);
   timeout.tv_sec = 30;
   timeout.tv_usec = 0;
-  evtimer_add(&launch_event, &timeout);
+  if (evtimer_add(&launch_event, &timeout)<0) {
+    log_warn(LD_BUG, "Couldn't add timer for checking for dns hijacking");
+  }
 }
 
 /** Return true iff our DNS servers lie to us too much to be trustd. */

@@ -130,7 +130,12 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
 
   conn->dns_server_request = req;
 
-  connection_add(TO_CONN(conn));
+  if (connection_add(TO_CONN(conn)) < 0) {
+    log_warn(LD_APP, "Couldn't register dummy connection for DNS request");
+    evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
+    connection_free(TO_CONN(conn));
+    return;
+  }
 
   control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
 
@@ -171,7 +176,12 @@ dnsserv_launch_request(const char *name, int reverse)
   strlcpy(conn->socks_request->address, name,
           sizeof(conn->socks_request->address));
 
-  connection_add(TO_CONN(conn));
+  if (connection_add(TO_CONN(conn))<0) {
+    log_warn(LD_APP, "Couldn't register dummy connection for RESOLVE request");
+    evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
+    connection_free(TO_CONN(conn));
+    return;
+  }
 
   /* Now, throw the connection over to get rewritten (which will answer it
   * immediately if it's in the cache, or completely bogus, or automapped),

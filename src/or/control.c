@@ -1500,9 +1500,9 @@ getinfo_helper_dir(control_connection_t *control_conn,
     question += strlen("extra-info/digest/");
     if (strlen(question) == HEX_DIGEST_LEN) {
       char d[DIGEST_LEN];
-      signed_descriptor_t *sd;
-      base16_decode(d, sizeof(d), question, strlen(question));
-      sd = extrainfo_get_by_descriptor_digest(d);
+      signed_descriptor_t *sd = NULL;
+      if (base16_decode(d, sizeof(d), question, strlen(question))==0)
+        sd = extrainfo_get_by_descriptor_digest(d);
       if (sd) {
         const char *body = signed_descriptor_get_body(sd);
         if (body)

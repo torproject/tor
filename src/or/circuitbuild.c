@@ -2617,7 +2617,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       }
       if (strlen(line->value) >= ISO_TIME_LEN+ISO_TIME_LEN+1) {
         /* ignore failure */
-        parse_iso_time(line->value+ISO_TIME_LEN+1, &last_try);
+        (void) parse_iso_time(line->value+ISO_TIME_LEN+1, &last_try);
       }
       if (!strcasecmp(line->key, "EntryGuardDownSince")) {
         node->unreachable_since = when;
