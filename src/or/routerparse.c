@@ -521,7 +521,6 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
   i = strlen(buf);
   if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
     log_warn(LD_BUG,"couldn't base64-encode signature");
-    tor_free(buf);
     goto err;
   }
 

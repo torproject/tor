@@ -43,6 +43,7 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Do not try to download missing certificates until we have tried
       to check our fallback consensus.  Fixes bug 583.
     - Make bridges round geoip info up, not down.
+    - Avoid a spurious free on base64 failure.  Bugfix on 0.1.2.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)
