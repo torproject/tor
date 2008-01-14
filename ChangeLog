@@ -44,6 +44,7 @@ Changes in version 0.1.2.19 - 2008-01-??
     - Run correctly on platforms (like some versions of OS X 10.5) where
       the real limit for number of open files is OPEN_FILES, not
       rlim_max from getrlimit(RLIMIT_NOFILES).
+    - Avoid a spurious free on base64 failure.
 
 
 Changes in version 0.1.2.18 - 2007-10-28
