@@ -858,8 +858,10 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   crypto_free_cipher_env(cipher);
   return outlen + symlen;
  err:
-  memset(buf, 0, pkeylen);
-  tor_free(buf);
+  if (buf) {
+    memset(buf, 0, pkeylen);
+    tor_free(buf);
+  }
   if (cipher) crypto_free_cipher_env(cipher);
   return -1;
 }
