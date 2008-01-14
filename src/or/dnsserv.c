@@ -178,7 +178,7 @@ dnsserv_launch_request(const char *name, int reverse)
 
   if (connection_add(TO_CONN(conn))<0) {
     log_warn(LD_APP, "Couldn't register dummy connection for RESOLVE request");
-    evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
+    /* XXXX020 Answer the controller. */
     connection_free(TO_CONN(conn));
     return;
   }
