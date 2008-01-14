@@ -47,6 +47,9 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Detect more kinds of possible internal error.
     - Avoid possible segfault if key generation fails in
       crypto_pk_hybrid_encrypt. Bugfix on 0.2.0.
+    - Avoid segfault in the case where a badly behaved v2 versioning
+      directory sends a signed networkstatus with missing client-versions.
+      Bugfix on 0.1.2.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)

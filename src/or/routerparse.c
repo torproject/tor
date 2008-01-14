@@ -1882,7 +1882,8 @@ networkstatus_v2_parse_from_string(const char *s)
 
   if (ns->recommends_versions) {
     if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS))) {
-      log_warn(LD_DIR, "Missing client-versions");
+      log_warn(LD_DIR, "Missing client-versions on versioning directory");
+      goto err;
     }
     ns->client_versions = tok->args[0];
     tok->args[0] = NULL;
