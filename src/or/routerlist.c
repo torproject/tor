@@ -1494,7 +1494,7 @@ router_get_by_hexdigest(const char *hexdigest)
 
   ri = router_get_by_digest(digest);
 
-  if (len > HEX_DIGEST_LEN) {
+  if (ri && len > HEX_DIGEST_LEN) {
     if (hexdigest[HEX_DIGEST_LEN] == '=') {
       if (strcasecmp(ri->nickname, hexdigest+HEX_DIGEST_LEN+1) ||
           !ri->is_named)

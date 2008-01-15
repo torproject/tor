@@ -45,6 +45,10 @@ Changes in version 0.1.2.19 - 2008-01-??
       the real limit for number of open files is OPEN_FILES, not
       rlim_max from getrlimit(RLIMIT_NOFILES).
     - Avoid a spurious free on base64 failure.
+    - Avoid segfaults on certain complex invocations of
+      router_get_by_hexdigest()
+    - Fix rare bug on REDIRECTSTREAM control command when called with no
+      port set: it could erroneously report an error when none had happened.
 
 
 Changes in version 0.1.2.18 - 2007-10-28
