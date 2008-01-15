@@ -1683,12 +1683,13 @@ option_is_recognized(const char *key)
   return (var != NULL);
 }
 
-/** Return the canonical name of a configuration option. */
+/** Return the canonical name of a configuration option, or NULL
+ * if no such option exists. */
 const char *
 option_get_canonical_name(const char *key)
 {
   config_var_t *var = config_find_option(&options_format, key);
-  return var->name;
+  return var ? var->name : NULL;
 }
 
 /** Return a canonicalized list of the options assigned for key.
