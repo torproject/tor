@@ -2118,6 +2118,7 @@ _evdns_nameserver_add_impl(unsigned long int address, int port) {
 #else
 	fcntl(ns->socket, F_SETFL, O_NONBLOCK);
 #endif
+	memset(&sin, 0, sizeof(sin));
 	sin.sin_addr.s_addr = address;
 	sin.sin_port = htons(port);
 	sin.sin_family = AF_INET;

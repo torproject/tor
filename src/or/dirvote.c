@@ -82,7 +82,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     char *cp;
     if (client_versions)
       v_len += strlen(client_versions);
-    if (client_versions)
+    if (server_versions)
       v_len += strlen(server_versions);
     version_lines = tor_malloc(v_len);
     cp = version_lines;

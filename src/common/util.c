@@ -1271,7 +1271,7 @@ parse_http_time(const char *date, struct tm *tm)
     }
   }
 
-  month[4] = '\0';
+  month[3] = '\0';
   /* Okay, now decode the month. */
   for (i = 0; i < 12; ++i) {
     if (!strcasecmp(MONTH_NAMES[i], month)) {

@@ -50,6 +50,14 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Avoid segfault in the case where a badly behaved v2 versioning
       directory sends a signed networkstatus with missing client-versions.
       Bugfix on 0.1.2.
+    - Avoid segfaults on certain complex invocations of
+      router_get_by_hexdigest().  Bugfix on 0.1.2.
+    - Correct bad index on array access in parse_http_time().  Bugfix
+      on 0.2.0.
+    - Fix possible bug in vote generation when server versions are present
+      but client versions are not.
+    - Fix rare bug on REDIRECTSTREAM control command when called with no
+      port set: it could erroneously report an error when none had happened.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)

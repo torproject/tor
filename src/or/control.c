@@ -2325,7 +2325,7 @@ handle_control_redirectstream(control_connection_t *conn, uint32_t len,
     connection_printf_to_buf(conn, "552 Unknown stream \"%s\"\r\n",
                              (char*)smartlist_get(args, 0));
   } else {
-    int ok;
+    int ok = 1;
     if (smartlist_len(args) > 2) { /* they included a port too */
       new_port = (uint16_t) tor_parse_ulong(smartlist_get(args, 2),
                                             10, 1, 65535, &ok, NULL);

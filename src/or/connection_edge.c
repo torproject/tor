@@ -2304,6 +2304,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       address = tor_strdup(or_circ->p_conn->_base.address);
     else
       address = tor_strdup("127.0.0.1");
+    port = 1; /*XXXX020 set this to something sensible?  - NM*/
   } else {
     log_warn(LD_BUG, "Got an unexpected command %d", (int)rh.command);
     end_payload[0] = END_STREAM_REASON_INTERNAL;

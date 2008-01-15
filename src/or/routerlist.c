@@ -492,7 +492,6 @@ _compare_signed_descriptors_by_age(const void **_a, const void **_b)
 static int
 router_rebuild_store(int force, desc_store_t *store)
 {
-  or_options_t *options;
   smartlist_t *chunk_list = NULL;
   char *fname = NULL, *fname_tmp = NULL;
   int r = -1;
@@ -517,8 +516,6 @@ router_rebuild_store(int force, desc_store_t *store)
   routerlist_remove_old_routers();
 
   log_info(LD_DIR, "Rebuilding %s cache", store->description);
-
-  options = get_options();
 
   fname = get_datadir_fname(store->fname_base);
   fname_tmp = get_datadir_fname_suffix(store->fname_base, ".tmp");
@@ -1903,7 +1900,7 @@ router_get_by_hexdigest(const char *hexdigest)
 
   ri = router_get_by_digest(digest);
 
-  if (len > HEX_DIGEST_LEN) {
+  if (ri && len > HEX_DIGEST_LEN) {
     if (hexdigest[HEX_DIGEST_LEN] == '=') {
       if (strcasecmp(ri->nickname, hexdigest+HEX_DIGEST_LEN+1) ||
           !ri->is_named)
