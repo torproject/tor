@@ -1796,7 +1796,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   char *answer;
   routerlist_t *rl = router_get_routerlist();
-  smartlist_t *statuses = smartlist_create();
+  smartlist_t *statuses;
   uint8_t purpose = router_purpose_from_string(purpose_string);
   routerstatus_t rs;
   int bridge_auth = authdir_mode_bridge(get_options());
@@ -1807,6 +1807,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
     return NULL;
   }
 
+  statuses = smartlist_create();
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (ri->cache_info.published_on < cutoff)
       continue;

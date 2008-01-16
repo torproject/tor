@@ -704,6 +704,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
           connection_write_str_to_buf("551 Couldn't parse string\r\n", conn);
           SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
           smartlist_free(entries);
+          tor_free(key);
           return 0;
         }
       }
@@ -1440,6 +1441,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     res = dirserv_get_routerdescs(descs, url, &msg);
     if (res) {
       log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
+      smartlist_free(descs);
       return -1;
     }
     SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,

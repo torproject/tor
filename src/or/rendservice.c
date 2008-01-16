@@ -284,6 +284,7 @@ rend_config_services(or_options_t *options, int validate_only)
         log_warn(LD_CONFIG,
                  "Got multiple HiddenServiceNodes lines for a single "
                  "service.");
+        rend_service_free(service);
         return -1;
       }
       service->intro_prefer_nodes = tor_strdup(line->value);
@@ -292,6 +293,7 @@ rend_config_services(or_options_t *options, int validate_only)
         log_warn(LD_CONFIG,
                  "Got multiple HiddenServiceExcludedNodes lines for "
                  "a single service.");
+        rend_service_free(service);
         return -1;
       }
       service->intro_exclude_nodes = tor_strdup(line->value);
@@ -308,6 +310,9 @@ rend_config_services(or_options_t *options, int validate_only)
         if (strlen(version_str) != 1 || strspn(version_str, "02") != 1) {
           log_warn(LD_CONFIG,
                    "HiddenServiceVersion can only be 0 and/or 2.");
+          SMARTLIST_FOREACH(versions, char *, cp, tor_free(cp));
+          smartlist_free(versions);
+          rend_service_free(service);
           return -1;
         }
         version = atoi(version_str);
@@ -317,6 +322,8 @@ rend_config_services(or_options_t *options, int validate_only)
        * value; otherwise leave it at -1. */
       if (versions_bitmask == 1 << 0) service->descriptor_version = 0;
       if (versions_bitmask == 1 << 2) service->descriptor_version = 2;
+      SMARTLIST_FOREACH(versions, char *, cp, tor_free(cp));
+      smartlist_free(versions);
     }
   }
   if (service) {
@@ -618,7 +625,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
     log_warn(LD_PROTOCOL, "Bad length %u for INTRODUCE2 cell.", (int)len);
     reason = END_CIRC_REASON_TORPROTOCOL;
-    return -1;
+    goto err;
   }
 
   r_cookie = ptr;

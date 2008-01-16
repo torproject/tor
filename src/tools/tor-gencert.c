@@ -370,6 +370,8 @@ generate_certificate(void)
                "dir-key-certification\n",
                address?"\ndir-address ":"", address?address:"",
                fingerprint, published, expires, ident, signing);
+  tor_free(ident);
+  tor_free(signing);
   signed_len = strlen(buf);
   SHA1((const unsigned char*)buf,signed_len,(unsigned char*)digest);
 

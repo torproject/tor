@@ -43,7 +43,7 @@ const char tortls_c_id[] =
 #include <string.h>
 
 // #define V2_HANDSHAKE_SERVER
-// #define V2_HANDSHAKE_CLIENT
+#define V2_HANDSHAKE_CLIENT
 
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \

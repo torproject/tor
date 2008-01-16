@@ -139,7 +139,7 @@ tor_gzip_compress(char **out, size_t *out_len,
   *out_len = stream->total_out;
   if (stream->total_out > out_size + 4097) {
     /* If we're wasting more than 4k, don't. */
-    tor_realloc(*out, stream->total_out + 1);
+    *out = tor_realloc(*out, stream->total_out + 1);
   }
   if (deflateEnd(stream)!=Z_OK) {
     log_warn(LD_BUG, "Error freeing gzip structures");

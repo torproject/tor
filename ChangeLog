@@ -58,6 +58,12 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
       but client versions are not.
     - Fix rare bug on REDIRECTSTREAM control command when called with no
       port set: it could erroneously report an error when none had happened.
+    - Avoid bogus crash-prone, leak-prone tor_realloc when we're compressing
+      large objects and find ourselves with more than 4k left over.  Bugfix
+      on 0.2.0.
+    - Fix a small memory leak when setting up a hidden service.
+    - Fix a few memory leaks that could in theory happen under bizarre error
+      conditions.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)

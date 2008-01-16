@@ -195,6 +195,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   if ((len = build_socks_resolve_request(&req, "", hostname, reverse,
                                          version))<0) {
     log_err(LD_BUG,"Error generating SOCKS request");
+    tor_assert(!req);
     return -1;
   }
   if (write_all(s, req, len, 1) != len) {

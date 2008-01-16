@@ -336,14 +336,13 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   len = crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
                                  key_material, 20+key_out_len);
   if (len < 0)
-    return -1;
+    goto err;
 
   if (memcmp(key_material, handshake_reply+DH_KEY_LEN, 20)) {
     /* H(K) does *not* match. Something fishy. */
-    tor_free(key_material);
     log_warn(LD_PROTOCOL,"Digest DOES NOT MATCH on onion handshake. "
              "Bug or attack.");
-    return -1;
+    goto err;
   }
 
   /* use the rest of the key material for our shared keys, digests, etc */
@@ -357,6 +356,9 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 
   tor_free(key_material);
   return 0;
+ err:
+  tor_free(key_material);
+  return -1;
 }
 
 /** Implement the server side of the CREATE_FAST abbreviated handshake.  The
@@ -429,6 +431,7 @@ fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
     /* H(K) does *not* match. Something fishy. */
     log_warn(LD_PROTOCOL,"Digest DOES NOT MATCH on fast handshake. "
              "Bug or attack.");
+    tor_free(out);
     return -1;
   }
   memcpy(key_out, out+DIGEST_LEN, key_out_len);

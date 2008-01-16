@@ -961,13 +961,13 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags)
   int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
   int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
 
+  if (!trusted_dir_servers)
+    return NULL;
+
   direct = smartlist_create();
   tunnel = smartlist_create();
   overloaded_direct = smartlist_create();
   overloaded_tunnel = smartlist_create();
-
-  if (!trusted_dir_servers)
-    return NULL;
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
     {
@@ -2006,8 +2006,10 @@ signed_descriptor_get_body_impl(signed_descriptor_t *desc,
   tor_assert(r);
   if (!with_annotations) {
     if (memcmp("router ", r, 7) && memcmp("extra-info ", r, 11)) {
+      char *cp = tor_strndup(r, 64);
       log_err(LD_DIR, "descriptor at %p begins with unexpected string %s",
-              desc, tor_strndup(r, 64));
+              desc, escaped(cp));
+      tor_free(cp);
     }
     tor_assert(!memcmp("router ", r, 7) || !memcmp("extra-info ", r, 11));
   }
