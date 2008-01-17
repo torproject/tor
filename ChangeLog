@@ -1,30 +1,30 @@
-Changes in version 0.2.0.16-alpha - 2008-01-??
+Changes in version 0.2.0.16-alpha - 2008-01-17
   o New directory authorities:
     - Set up gabelmoo (run by Karsten Loesing) as the fifth v3 directory
       authority.
 
   o Major performance improvements:
     - Switch our old ring buffer implementation for one more like that
-      used by free Unix kernels.  The wasted space in a buffer with
-      1mb of data will now be more like 8k than 1mb.  The new
-      implementation also avoids realloc();realloc(); patterns that
-      can contribute to memory fragmentation.
+      used by free Unix kernels. The wasted space in a buffer with 1mb
+      of data will now be more like 8k than 1mb. The new implementation
+      also avoids realloc();realloc(); patterns that can contribute to
+      memory fragmentation.
 
   o Minor features:
-    - Configuration files now accept C-style strings as values.  This
+    - Configuration files now accept C-style strings as values. This
       helps encode characters not allowed in the current configuration
-      file format, such as newline or #.  Addresses bug 557.
+      file format, such as newline or #. Addresses bug 557.
     - Although we fixed bug 539 (where servers would send HTTP status 503
-      responses _and_ send a body too), there are still servers out there
-      that haven't upgraded.  Therefore, make clients parse such bodies
-      when they receive them.
+      responses _and_ send a body too), there are still servers out
+      there that haven't upgraded. Therefore, make clients parse such
+      bodies when they receive them.
     - When we're not serving v2 directory information, there is no reason
       to actually keep any around.  Remove the obsolete files and directory
       on startup if they are very old and we aren't going to serve them.
 
   o Minor performance improvements:
-    - Reference-count and share copies of address policy entries; only
-      5% of them were actually distinct.
+    - Reference-count and share copies of address policy entries; only 5%
+      of them were actually distinct.
     - Never walk through the list of logs if we know that no log is
       interested in a given message.
 
@@ -32,65 +32,68 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - When an authority has not signed a consensus, do not try to
       download a nonexistent "certificate with key 00000000".  Bugfix
       on 0.2.0.x. Fixes bug 569.
-    - Use a mutex to protect the list of logs, so we never write to
-      the list as it's being freed.  Bugfix on 0.1.2.x.  Fixes the
-      very rare bug 575, which is kind of the revenge of bug 222.
+    - Fix a rare assert error when we're closing one of our threads:
+      use a mutex to protect the list of logs, so we never write to the
+      list as it's being freed. Bugfix on 0.1.2.x. Fixes the very rare
+      bug 575, which is kind of the revenge of bug 222.
     - Patch from Karsten Loesing to complain less at both the client
       and the relay when a relay used to have the HSDir flag but doesn't
       anymore, and we try to upload a hidden service descriptor.
-    - Stop leaking one cert per TLS context.  Fixes bug 582.  Bugfix
-      on 0.2.0.15-alpha.
+    - Stop leaking one cert per TLS context. Fixes bug 582. Bugfix on
+      0.2.0.15-alpha.
     - Do not try to download missing certificates until we have tried
-      to check our fallback consensus.  Fixes bug 583.
-    - Make bridges round geoip info up, not down.
-    - Avoid a spurious free on base64 failure.  Bugfix on 0.1.2.
-    - Detect more kinds of possible internal error.
+      to check our fallback consensus. Fixes bug 583.
+    - Make bridges round reported GeoIP stats info up to the nearest
+      estimate, not down. Now we can distinguish between "0 people from
+      this country" and "1 person from this country".
+    - Avoid a spurious free on base64 failure. Bugfix on 0.1.2.
     - Avoid possible segfault if key generation fails in
       crypto_pk_hybrid_encrypt. Bugfix on 0.2.0.
     - Avoid segfault in the case where a badly behaved v2 versioning
       directory sends a signed networkstatus with missing client-versions.
       Bugfix on 0.1.2.
     - Avoid segfaults on certain complex invocations of
-      router_get_by_hexdigest().  Bugfix on 0.1.2.
-    - Correct bad index on array access in parse_http_time().  Bugfix
+      router_get_by_hexdigest(). Bugfix on 0.1.2.
+    - Correct bad index on array access in parse_http_time(). Bugfix
       on 0.2.0.
     - Fix possible bug in vote generation when server versions are present
       but client versions are not.
     - Fix rare bug on REDIRECTSTREAM control command when called with no
-      port set: it could erroneously report an error when none had happened.
-    - Avoid bogus crash-prone, leak-prone tor_realloc when we're compressing
-      large objects and find ourselves with more than 4k left over.  Bugfix
-      on 0.2.0.
+      port set: it could erroneously report an error when none had
+      happened.
+    - Avoid bogus crash-prone, leak-prone tor_realloc when we're
+      compressing large objects and find ourselves with more than 4k
+      left over. Bugfix on 0.2.0.
     - Fix a small memory leak when setting up a hidden service.
-    - Fix a few memory leaks that could in theory happen under bizarre error
-      conditions.
+    - Fix a few memory leaks that could in theory happen under bizarre
+      error conditions.
     - Fix an assert if we post a general-purpose descriptor via the
       control port but that descriptor isn't mentioned in our current
       network consensus. Bug reported by Jon McLachlan; bugfix on
       0.2.0.9-alpha.
 
   o Minor features (controller):
-    - Get NS events working again.  (Patch from tup)
+    - Get NS events working again. Patch from tup.
     - The GETCONF command now escapes and quotes configuration values
       that don't otherwise fit into the torrc file.
     - The SETCONF command now handles quoted values correctly.
 
   o Minor features (directory authorities):
     - New configuration options to override default maximum number of
-      servers allowed on a single IP address.  This is important
-      for running a test network on a single host.
+      servers allowed on a single IP address. This is important for
+      running a test network on a single host.
     - Actually implement the -s option to tor-gencert.
     - Add a manual page for tor-gencert.
 
   o Minor features (bridges):
-    - Bridge authorities no longer serve bridge descriptors over unencrypted
-      connections.
+    - Bridge authorities no longer serve bridge descriptors over
+      unencrypted connections.
 
   o Minor features (other):
     - Add hidden services and DNSPorts to the list of things that make
-      Tor accept that it has running ports.  Change starting Tor with
-      no ports from a fatal error to a warning; we might change it
-      back if this turns out to confuse anybody.  (Fixes bug 579.)
+      Tor accept that it has running ports. Change starting Tor with no
+      ports from a fatal error to a warning; we might change it back if
+      this turns out to confuse anybody. Fixes bug 579.
 
 
 Changes in version 0.2.0.15-alpha - 2007-12-25
