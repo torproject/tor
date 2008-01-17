@@ -1,4 +1,4 @@
-Changes in version 0.1.2.19 - 2008-01-??
+Changes in version 0.1.2.19 - 2008-01-17
   o Security fixes:
     - Exit policies now reject connections that are addressed to a
       relay's public (external) IP address too, unless
@@ -24,8 +24,8 @@ Changes in version 0.1.2.19 - 2008-01-??
     - Changing the ExitPolicyRejectPrivate setting should cause us to
       rebuild our server descriptor.
     - Fix handling of hex nicknames when answering controller requests for
-      networkstatus by name, or when deciding whether to warn about unknown
-      routers in a config option. (Patch from mwenge.)
+      networkstatus by name, or when deciding whether to warn about
+      unknown routers in a config option. (Patch from mwenge.)
     - Fix a couple of hard-to-trigger autoconf problems that could result
       in really weird results on platforms whose sys/types.h files define
       nonstandard integer types.
@@ -37,18 +37,19 @@ Changes in version 0.1.2.19 - 2008-01-??
       by lodger.
     - Although we fixed bug 539 (where servers would send HTTP status 503
       responses _and_ send a body too), there are still servers out there
-      that haven't upgraded.  Therefore, make clients parse such bodies
+      that haven't upgraded. Therefore, make clients parse such bodies
       when they receive them.
     - Run correctly on systems where rlim_t is larger than unsigned long.
       This includes some 64-bit systems.
     - Run correctly on platforms (like some versions of OS X 10.5) where
-      the real limit for number of open files is OPEN_FILES, not
-      rlim_max from getrlimit(RLIMIT_NOFILES).
+      the real limit for number of open files is OPEN_FILES, not rlim_max
+      from getrlimit(RLIMIT_NOFILES).
     - Avoid a spurious free on base64 failure.
     - Avoid segfaults on certain complex invocations of
-      router_get_by_hexdigest()
+      router_get_by_hexdigest().
     - Fix rare bug on REDIRECTSTREAM control command when called with no
-      port set: it could erroneously report an error when none had happened.
+      port set: it could erroneously report an error when none had
+      happened.
 
 
 Changes in version 0.1.2.18 - 2007-10-28
