@@ -654,8 +654,8 @@ $Id$
                       CRLF Descriptor CRLF "." CRLF
 
   This message informs the server about a new descriptor. If Purpose is
-  specified, it must be either "general" or "controller", else we
-  return a 552 error.
+  specified, it must be either "general", "controller", or "bridge",
+  else we return a 552 error.
 
   If Cache is specified, it must be either "no" or "yes", else we
   return a 552 error. If Cache is not specified, Tor will decide for

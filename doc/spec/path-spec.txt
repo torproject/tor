@@ -182,7 +182,7 @@ of their choices.
    proportional to its advertised bandwidth [the smaller of the 'rate' and
    'observed' arguments to the "bandwidth" element in its descriptor].  If a
    router's advertised bandwidth is greater than MAX_BELIEVABLE_BANDWIDTH
-   (10 MB/s), we clip to that value.
+   (currently 10 MB/s), we clip to that value.
 
    For non-exit positions on "fast" circuits, we pick routers as above, but
    we weight the clipped advertised bandwidth of Exit-flagged nodes depending
@@ -351,8 +351,23 @@ of their choices.
   Tor does not add a guard persistently to the list until the first time we
   have connected to it successfully.
 
+6. Router descriptor purposes
 
+  There are currently three "purposes" supported for router descriptors:
+  general, controller, and bridge. Most descriptors are of type general
+  -- these are the ones listed in the consensus, and the ones fetched
+  and used in normal cases.
 
+  Controller-purpose descriptors are those delivered by the controller
+  and labelled as such: they will be kept around (and expire like
+  normal descriptors), and they can be used by the controller in its
+  CIRCUITEXTEND commands. Otherwise they are ignored by Tor when it
+  chooses paths.
+
+  Bridge-purpose descriptors are for routers that are used as bridges. See
+  doc/design-paper/blocking.pdf for more design explanation, or proposal
+  125 for specific details. Currently bridge descriptors are used in place
+  of normal entry guards, for Tor clients that have UseBridges enabled.
 
 
 X. Old notes
