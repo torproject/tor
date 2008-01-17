@@ -64,6 +64,10 @@ Changes in version 0.2.0.16-alpha - 2008-01-??
     - Fix a small memory leak when setting up a hidden service.
     - Fix a few memory leaks that could in theory happen under bizarre error
       conditions.
+    - Fix an assert if we post a general-purpose descriptor via the
+      control port but that descriptor isn't mentioned in our current
+      network consensus. Bug reported by Jon McLachlan; bugfix on
+      0.2.0.9-alpha.
 
   o Minor features (controller):
     - Get NS events working again.  (Patch from tup)

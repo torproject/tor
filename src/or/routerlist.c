@@ -2721,6 +2721,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       signed_desc_append_to_journal(&router->cache_info,
                                     &routerlist->desc_store);
     routerlist_insert_old(routerlist, router);
+    *msg = "Skipping router descriptor: not in consensus.";
     return -1;
   }
 
