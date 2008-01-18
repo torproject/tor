@@ -57,10 +57,6 @@ static uint64_t stats_n_bytes_written = 0;
 time_t time_of_process_start = 0;
 /** How many seconds have we been running? */
 long stats_n_seconds_working = 0;
-/** When do we next download a directory? */
-static time_t time_to_fetch_directory = 0;
-/** When do we next download a running-routers summary? */
-static time_t time_to_fetch_running_routers = 0;
 /** When do we next launch DNS wildcarding checks? */
 static time_t time_to_check_for_correct_dns = 0;
 
@@ -88,17 +84,6 @@ static int called_loop_once = 0;
  * entry to inform the user that Tor is working. */
 int has_completed_circuit=0;
 
-/** If our router descriptor ever goes this long without being regenerated
- * because something changed, we force an immediate regenerate-and-upload. */
-#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL (18*60*60)
-/** How often do we check whether part of our router info has changed in a way
- * that would require an upload? */
-#define CHECK_DESCRIPTOR_INTERVAL (60)
-/** How often do we (as a router) check whether our IP address has changed? */
-#define CHECK_IPADDRESS_INTERVAL (15*60)
-/** How often do we check buffers and pools for empty space that can be
- * deallocated? */
-#define MEM_SHRINK_INTERVAL (60)
 /** How often do we check for router descriptors that we should download
  * when we have too little directory info? */
 #define GREEDY_DESCRIPTOR_RETRY_INTERVAL (10)
@@ -108,8 +93,6 @@ int has_completed_circuit=0;
 /** How often do we 'forgive' undownloadable router descriptors and attempt
  * to download them again? */
 #define DESCRIPTOR_FAILURE_RESET_INTERVAL (60*60)
-/** How often do we add more entropy to OpenSSL's RNG pool? */
-#define ENTROPY_INTERVAL (60*60)
 /** How long do we let a directory connection stall before expiring it? */
 #define DIR_CONN_MAX_STALL (5*60)
 
@@ -118,7 +101,7 @@ int has_completed_circuit=0;
 #define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7)
 /** How long do we let OR connections handshake before we decide that
  * they are obsolete? */
-#define TLS_HANDSHAKE_TIMEOUT           (60)
+#define TLS_HANDSHAKE_TIMEOUT (60)
 
 /********* END VARIABLES ************/
 
@@ -818,9 +801,10 @@ run_connection_housekeeping(int i, time_t now)
 static void
 run_scheduled_events(time_t now)
 {
+  static time_t time_to_fetch_directory = 0;
+  static time_t time_to_fetch_running_routers = 0;
   static time_t last_rotated_x509_certificate = 0;
   static time_t time_to_check_v3_certificate = 0;
-#define CHECK_V3_CERTIFICATE_INTERVAL (5*60)
   static time_t time_to_check_listeners = 0;
   static time_t time_to_check_descriptor = 0;
   static time_t time_to_check_ipaddress = 0;
@@ -828,14 +812,10 @@ run_scheduled_events(time_t now)
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
-#define WRITE_HSUSAGE_INTERVAL (30*60)
   static time_t time_to_write_hs_statistics = 0;
-#define BRIDGE_STATUSFILE_INTERVAL (30*60)
   static time_t time_to_write_bridge_status_file = 0;
   static time_t time_to_downrate_stability = 0;
-#define SAVE_STABILITY_INTERVAL (30*60)
   static time_t time_to_save_stability = 0;
-#define CLEAN_CACHES_INTERVAL (30*60)
   static time_t time_to_clean_caches = 0;
   static time_t time_to_recheck_bandwidth = 0;
   or_options_t *options = get_options();
@@ -849,7 +829,7 @@ run_scheduled_events(time_t now)
   consider_hibernation(now);
 
   /* 0b. If we've deferred a signewnym, make sure it gets handled
-   * eventually */
+   * eventually. */
   if (signewnym_is_pending &&
       time_of_last_signewnym + MAX_SIGNEWNYM_RATE <= now) {
     log(LOG_INFO, LD_CONTROL, "Honoring delayed NEWNYM request");
@@ -900,18 +880,21 @@ run_scheduled_events(time_t now)
     if (tor_tls_context_new(get_identity_key(), options->Nickname,
                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_warn(LD_BUG, "Error reinitializing TLS context");
-      /* XXX is it a bug here, that we just keep going? */
+      /* XXX is it a bug here, that we just keep going? -RD */
     }
     last_rotated_x509_certificate = now;
-    /* XXXX We should rotate TLS connections as well; this code doesn't change
-     *      them at all. */
+    /* We also make sure to rotate the TLS connections themselves if they've
+     * been up for too long -- but that's done via or_is_obsolete in
+     * connection_run_housekeeping() above. */
   }
 
-  if (time_to_add_entropy == 0)
-    time_to_add_entropy = now + ENTROPY_INTERVAL;
   if (time_to_add_entropy < now) {
-    /* We already seeded once, so don't die on failure. */
-    crypto_seed_rng();
+    if (time_to_add_entropy) {
+      /* We already seeded once, so don't die on failure. */
+      crypto_seed_rng();
+    }
+/** How often do we add more entropy to OpenSSL's RNG pool? */
+#define ENTROPY_INTERVAL (60*60)
     time_to_add_entropy = now + ENTROPY_INTERVAL;
   }
 
@@ -932,13 +915,11 @@ run_scheduled_events(time_t now)
   if (time_to_downrate_stability < now)
     time_to_downrate_stability = rep_hist_downrate_old_runs(now);
   if (authdir_mode_tests_reachability(options)) {
-    if (!time_to_save_stability)
-      time_to_save_stability = now + SAVE_STABILITY_INTERVAL;
     if (time_to_save_stability < now) {
-      if (rep_hist_record_mtbf_data()<0) {
+      if (time_to_save_stability && rep_hist_record_mtbf_data()<0) {
         log_warn(LD_GENERAL, "Couldn't store mtbf data.");
       }
-
+#define SAVE_STABILITY_INTERVAL (30*60)
       time_to_save_stability = now + SAVE_STABILITY_INTERVAL;
     }
   }
@@ -947,6 +928,7 @@ run_scheduled_events(time_t now)
    * close to expiring and warn the admin if it is. */
   if (time_to_check_v3_certificate < now) {
     v3_authority_check_key_expiry();
+#define CHECK_V3_CERTIFICATE_INTERVAL (5*60)
     time_to_check_v3_certificate = now + CHECK_V3_CERTIFICATE_INTERVAL;
   }
 
@@ -984,8 +966,15 @@ run_scheduled_events(time_t now)
     rep_history_clean(now - options->RephistTrackTime);
     rend_cache_clean();
     rend_cache_clean_v2_descs_as_dir();
+#define CLEAN_CACHES_INTERVAL (30*60)
     time_to_clean_caches = now + CLEAN_CACHES_INTERVAL;
   }
+
+/** How often do we check whether part of our router info has changed in a way
+ * that would require an upload? */
+#define CHECK_DESCRIPTOR_INTERVAL (60)
+/** How often do we (as a router) check whether our IP address has changed? */
+#define CHECK_IPADDRESS_INTERVAL (15*60)
 
   /* 2b. Once per minute, regenerate and upload the descriptor if the old
    * one is inaccurate. */
@@ -997,6 +986,9 @@ run_scheduled_events(time_t now)
       time_to_check_ipaddress = now + CHECK_IPADDRESS_INTERVAL;
       check_descriptor_ipaddress_changed(now);
     }
+/** If our router descriptor ever goes this long without being regenerated
+ * because something changed, we force an immediate regenerate-and-upload. */
+#define FORCE_REGENERATE_DESCRIPTOR_INTERVAL (18*60*60)
     mark_my_descriptor_dirty_if_older_than(
                                   now - FORCE_REGENERATE_DESCRIPTOR_INTERVAL);
     consider_publishable_server(0);
@@ -1088,6 +1080,9 @@ run_scheduled_events(time_t now)
       });
     clean_cell_pool();
     buf_shrink_freelists(0);
+/** How often do we check buffers and pools for empty space that can be
+ * deallocated? */
+#define MEM_SHRINK_INTERVAL (60)
     time_to_shrink_memory = now + MEM_SHRINK_INTERVAL;
   }
 
@@ -1123,12 +1118,14 @@ run_scheduled_events(time_t now)
   /** 10. write hidden service usage statistic to disk */
   if (options->HSAuthorityRecordStats && time_to_write_hs_statistics < now) {
     hs_usage_write_statistics_to_file(now);
+#define WRITE_HSUSAGE_INTERVAL (30*60)
     time_to_write_hs_statistics = now+WRITE_HSUSAGE_INTERVAL;
   }
   /** 10b. write bridge networkstatus file to disk */
   if (options->BridgeAuthoritativeDir &&
       time_to_write_bridge_status_file < now) {
     networkstatus_dump_bridge_status_to_file(now);
+#define BRIDGE_STATUSFILE_INTERVAL (30*60)
     time_to_write_bridge_status_file = now+BRIDGE_STATUSFILE_INTERVAL;
   }
 }
