@@ -837,6 +837,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_save_stability = 0;
 #define CLEAN_CACHES_INTERVAL (30*60)
   static time_t time_to_clean_caches = 0;
+  static time_t time_to_recheck_bandwidth = 0;
   or_options_t *options = get_options();
   int i;
   int have_dir_info;
@@ -1003,11 +1004,24 @@ run_scheduled_events(time_t now)
      * 20 minutes of our uptime. */
     if (server_mode(options) &&
         (has_completed_circuit || !any_predicted_circuits(now)) &&
-        stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT &&
         !we_are_hibernating()) {
-      consider_testing_reachability(1, dirport_reachability_count==0);
-      if (++dirport_reachability_count > 5)
-        dirport_reachability_count = 0;
+      if (stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
+        consider_testing_reachability(1, dirport_reachability_count==0);
+        if (++dirport_reachability_count > 5)
+          dirport_reachability_count = 0;
+      } else if (time_to_recheck_bandwidth < now) {
+        /* If we haven't checked for 12 hours and our bandwidth estimate is
+         * low, do another bandwidth test. This is especially important for
+         * bridges, since they might go long periods without much use. */
+        routerinfo_t *me = router_get_my_routerinfo();
+        if (time_to_recheck_bandwidth && me &&
+            me->bandwidthcapacity < me->bandwidthrate &&
+            me->bandwidthcapacity < 51200) {
+          reset_bandwidth_test();
+        }
+#define BANDWIDTH_RECHECK_INTERVAL (12*60*60)
+        time_to_recheck_bandwidth = now + BANDWIDTH_RECHECK_INTERVAL;
+      }
     }
 
     /* If any networkstatus documents are no longer recent, we need to

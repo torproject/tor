@@ -3,6 +3,9 @@ Changes in version 0.2.0.18-alpha - 2008-01-??
     - Avoid going directly to the directory authorities even if you're a
       relay, if you haven't found yourself reachable yet or if you've
       decided not to advertise your dirport yet. Addresses bug 556.
+    - If we've gone 12 hours since our last bandwidth check, and we
+      estimate we have less than 50KB bandwidth capacity but we could
+      handle more, do another bandwidth test.
 
   o Minor features:
     - Don't answer "/tor/networkstatus-bridges" directory requests if

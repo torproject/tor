@@ -93,7 +93,7 @@ N - Before the feature freeze:
           even when the network came back and arma clicked on things.
           also 0.2.0.
 R       - for above two, roger should turn them into flyspray entry.
-R     - we should do another bandwidth test every 12 hours or something
+      o we should do another bandwidth test every 12 hours or something
         if we're showing less than 50KB and our bandwidthrate says we can
         do more than that. I think some servers are forgetting the results
         of their first test, and then never seeing use.
