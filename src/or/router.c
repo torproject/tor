@@ -321,7 +321,7 @@ init_v3_authority_keys(void)
   return r;
 }
 
-/** If we're a v3 authority, check whether we have a certificatge that's
+/** If we're a v3 authority, check whether we have a certificate that's
  * likely to expire soon.  Warn if we do, but not too often. */
 void
 v3_authority_check_key_expiry(void)
