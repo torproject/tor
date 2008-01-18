@@ -1116,16 +1116,18 @@ dirserv_dump_directory_to_string(char **dir_out,
 int
 directory_fetches_from_authorities(or_options_t *options)
 {
+  routerinfo_t *me;
   if (options->FetchDirInfoEarly)
     return 1;
   if (options->DirPort == 0)
     return 0;
   if (options->BridgeRelay == 1)
     return 0;
-  /* XXX if dirport not advertised, return 0 too */
-  if (!server_mode(options))
+  if (!server_mode(options) || !advertised_server_mode())
     return 0;
-  /* XXX if orport or dirport not reachable, return 0 too */
+  me = router_get_my_routerinfo();
+  if (!me || !me->dir_port)
+    return 0; /* if dirport not advertised, return 0 too */
   return 1;
 }
 

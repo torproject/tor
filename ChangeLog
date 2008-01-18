@@ -1,3 +1,10 @@
+Changes in version 0.2.0.18-alpha - 2008-01-??
+  o Major features:
+    - Avoid going directly to the directory authorities even if you're a
+      relay, if you haven't found yourself reachable yet or if you've
+      decided not to advertise your dirport yet. Addresses bug 556.
+
+
 Changes in version 0.2.0.17-alpha - 2008-01-17
   o Compile fixes:
     - Make the tor-gencert man page get included correctly in the tarball.
