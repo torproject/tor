@@ -3821,6 +3821,10 @@ update_consensus_router_descriptor_downloads(time_t now)
         }
         continue; /* We have it already. */
       }
+      if (digestmap_get(map, rs->descriptor_digest)) {
+        ++n_inprogress;
+        continue; /* We have an in-progress download. */
+      }
       if (!download_status_is_ready(&rs->dl_status, now,
                                     MAX_ROUTERDESC_DOWNLOAD_FAILURES)) {
         ++n_delayed; /* Not ready for retry. */
@@ -3834,10 +3838,6 @@ update_consensus_router_descriptor_downloads(time_t now)
           !client_would_use_router(rs, now, options)) {
         ++n_wouldnt_use;
         continue; /* We would never use it ourself. */
-      }
-      if (digestmap_get(map, rs->descriptor_digest)) {
-        ++n_inprogress;
-        continue; /* We have an in-progress download. */
       }
       smartlist_add(downloadable, rs->descriptor_digest);
     });
