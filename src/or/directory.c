@@ -2337,7 +2337,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         smartlist_add(items, (char*)item);
     } else if (!current && !strcmp(url, "consensus-signatures")) {
       /* XXXX020 the spec says that we should implement
-       * currrent/consensus-signatures too.  Why? */
+       * current/consensus-signatures too.  Why? -NM */
       const char *item;
       if ((item=dirvote_get_pending_detached_signatures()))
         smartlist_add(items, (char*)item);
@@ -2620,6 +2620,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
   if (options->BridgeAuthoritativeDir &&
       options->BridgePassword &&
+      connection_dir_is_encrypted(conn) &&
       !strcmp(url,"/tor/networkstatus-bridges")) {
     char *status;
     char decoded[64];
