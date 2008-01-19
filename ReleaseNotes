@@ -3,6 +3,64 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.1.2.19 - 2008-01-17
+  Tor 0.1.2.19 fixes a huge memory leak on exit relays, makes the default
+  exit policy a little bit more conservative so it's safer to run an
+  exit relay on a home system, and fixes a variety of smaller issues.
+
+  o Security fixes:
+    - Exit policies now reject connections that are addressed to a
+      relay's public (external) IP address too, unless
+      ExitPolicyRejectPrivate is turned off. We do this because too
+      many relays are running nearby to services that trust them based
+      on network address.
+
+  o Major bugfixes:
+    - When the clock jumps forward a lot, do not allow the bandwidth
+      buckets to become negative. Fixes bug 544.
+    - Fix a memory leak on exit relays; we were leaking a cached_resolve_t
+      on every successful resolve. Reported by Mike Perry.
+    - Purge old entries from the "rephist" database and the hidden
+      service descriptor database even when DirPort is zero.
+    - Stop thinking that 0.1.2.x directory servers can handle "begin_dir"
+      requests. Should ease bugs 406 and 419 where 0.1.2.x relays are
+      crashing or mis-answering these requests.
+    - When we decide to send a 503 response to a request for servers, do
+      not then also send the server descriptors: this defeats the whole
+      purpose. Fixes bug 539.
+
+  o Minor bugfixes:
+    - Changing the ExitPolicyRejectPrivate setting should cause us to
+      rebuild our server descriptor.
+    - Fix handling of hex nicknames when answering controller requests for
+      networkstatus by name, or when deciding whether to warn about
+      unknown routers in a config option. (Patch from mwenge.)
+    - Fix a couple of hard-to-trigger autoconf problems that could result
+      in really weird results on platforms whose sys/types.h files define
+      nonstandard integer types.
+    - Don't try to create the datadir when running --verify-config or
+      --hash-password. Resolves bug 540.
+    - If we were having problems getting a particular descriptor from the
+      directory caches, and then we learned about a new descriptor for
+      that router, we weren't resetting our failure count. Reported
+      by lodger.
+    - Although we fixed bug 539 (where servers would send HTTP status 503
+      responses _and_ send a body too), there are still servers out there
+      that haven't upgraded. Therefore, make clients parse such bodies
+      when they receive them.
+    - Run correctly on systems where rlim_t is larger than unsigned long.
+      This includes some 64-bit systems.
+    - Run correctly on platforms (like some versions of OS X 10.5) where
+      the real limit for number of open files is OPEN_FILES, not rlim_max
+      from getrlimit(RLIMIT_NOFILES).
+    - Avoid a spurious free on base64 failure.
+    - Avoid segfaults on certain complex invocations of
+      router_get_by_hexdigest().
+    - Fix rare bug on REDIRECTSTREAM control command when called with no
+      port set: it could erroneously report an error when none had
+      happened.
+
+
 Changes in version 0.1.2.18 - 2007-10-28
   Tor 0.1.2.18 fixes many problems including crash bugs, problems with
   hidden service introduction that were causing huge delays, and a big
