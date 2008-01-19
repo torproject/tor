@@ -911,7 +911,7 @@ connection_or_set_state_open(or_connection_t *conn)
 
 /** Pack <b>cell</b> into wire-format, and write it onto <b>conn</b>'s outbuf.
  * For cells that use or affect a circuit, this should only be called by
- * connection_or_flush_from_first_active_circuit()
+ * connection_or_flush_from_first_active_circuit().
  */
 void
 connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)

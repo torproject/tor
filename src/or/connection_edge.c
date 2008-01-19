@@ -1402,7 +1402,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       }
     } else if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
       rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
-      ; /* nothing */
+      /* no extra processing needed */
     } else {
       tor_fragile_assert();
     }

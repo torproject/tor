@@ -2100,7 +2100,7 @@ typedef struct {
   /** Boolean: should we never publish a descriptor? Deprecated. */
   int NoPublish;
   /** To what authority types do we publish our descriptor? Choices are
-   * "v1", "v2", "bridge", or "". */
+   * "v1", "v2", "v3", "bridge", or "". */
   smartlist_t *PublishServerDescriptor;
   /** An authority type, derived from PublishServerDescriptor. */
   authority_type_t _PublishServerDescriptor;
@@ -2108,7 +2108,7 @@ typedef struct {
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /** and hidden service descriptors? */
-  int HidServDirectoryV2; /**< Do we act as hs dir? */
+  int HidServDirectoryV2; /**< Do we participate in the HS DHT? */
 
   int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden
                                     * service directories after what time? */
@@ -2176,17 +2176,17 @@ typedef struct {
   char *TestVia; /**< When reachability testing, use these as middle hop. */
   config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
-  char *ContactInfo; /**< Contact info to be published in the directory */
+  char *ContactInfo; /**< Contact info to be published in the directory. */
 
-  char *HttpProxy; /**< hostname[:port] to use as http proxy, if any */
-  uint32_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any */
-  uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any */
-  char *HttpProxyAuthenticator; /**< username:password string, if any */
+  char *HttpProxy; /**< hostname[:port] to use as http proxy, if any. */
+  uint32_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
+  uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any. */
+  char *HttpProxyAuthenticator; /**< username:password string, if any. */
 
-  char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any */
-  uint32_t HttpsProxyAddr; /**< Parsed IPv4 addr for https proxy, if any */
-  uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any */
-  char *HttpsProxyAuthenticator; /**< username:password string, if any */
+  char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any. */
+  uint32_t HttpsProxyAddr; /**< Parsed IPv4 addr for https proxy, if any. */
+  uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any. */
+  char *HttpsProxyAuthenticator; /**< username:password string, if any. */
 
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,
@@ -2309,9 +2309,9 @@ typedef struct {
 
   /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;
-  /** The length of time we think it will take to distribute votes */
+  /** The length of time we think it will take to distribute votes. */
   int V3AuthVoteDelay;
-  /** The length of time we think it will take to distribute signatures */
+  /** The length of time we think it will take to distribute signatures. */
   int V3AuthDistDelay;
   /** The number of intervals we think a consensus should be valid. */
   int V3AuthNIntervalsValid;
