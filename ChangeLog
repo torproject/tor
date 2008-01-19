@@ -13,11 +13,16 @@ Changes in version 0.2.0.18-alpha - 2008-01-??
 
 
 Changes in version 0.2.0.17-alpha - 2008-01-17
+  Tor 0.2.0.17-alpha makes the tarball build cleanly again (whoops).
+
   o Compile fixes:
     - Make the tor-gencert man page get included correctly in the tarball.
 
 
 Changes in version 0.2.0.16-alpha - 2008-01-17
+  Tor 0.2.0.16-alpha adds a fifth v3 directory authority run by Karsten
+  Loesing, and generally cleans up a lot of features and minor bugs.
+
   o New directory authorities:
     - Set up gabelmoo (run by Karsten Loesing) as the fifth v3 directory
       authority.
@@ -38,7 +43,7 @@ Changes in version 0.2.0.16-alpha - 2008-01-17
       there that haven't upgraded. Therefore, make clients parse such
       bodies when they receive them.
     - When we're not serving v2 directory information, there is no reason
-      to actually keep any around.  Remove the obsolete files and directory
+      to actually keep any around. Remove the obsolete files and directory
       on startup if they are very old and we aren't going to serve them.
 
   o Minor performance improvements:
@@ -49,7 +54,7 @@ Changes in version 0.2.0.16-alpha - 2008-01-17
 
   o Minor bugfixes:
     - When an authority has not signed a consensus, do not try to
-      download a nonexistent "certificate with key 00000000".  Bugfix
+      download a nonexistent "certificate with key 00000000". Bugfix
       on 0.2.0.x. Fixes bug 569.
     - Fix a rare assert error when we're closing one of our threads:
       use a mutex to protect the list of logs, so we never write to the
