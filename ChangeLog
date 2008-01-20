@@ -6,6 +6,9 @@ Changes in version 0.2.0.18-alpha - 2008-01-??
     - If we've gone 12 hours since our last bandwidth check, and we
       estimate we have less than 50KB bandwidth capacity but we could
       handle more, do another bandwidth test.
+    - New config options WarnPlaintextPorts and RejectPlaintextPorts so
+      Tor can warn and/or refuse connections to ports commonly used with
+      vulnerable-plaintext protocols.
 
   o Minor features:
     - Don't answer "/tor/networkstatus-bridges" directory requests if

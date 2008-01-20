@@ -253,6 +253,7 @@ static config_var_t _option_vars[] = {
   V(RecommendedClientVersions,   LINELIST, NULL),
   V(RecommendedServerVersions,   LINELIST, NULL),
   V(RedirectExit,                LINELIST, NULL),
+  V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
   V(RendExcludeNodes,            STRING,   NULL),
@@ -300,6 +301,7 @@ static config_var_t _option_vars[] = {
   V(V3AuthNIntervalsValid,       UINT,     "3"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
+  V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
@@ -2896,6 +2898,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
 
   if (validate_ports_csv(options->LongLivedPorts, "LongLivedPorts", msg) < 0)
+    return -1;
+
+  if (validate_ports_csv(options->RejectPlaintextPorts,
+                         "RejectPlaintextPorts", msg) < 0)
+    return -1;
+
+  if (validate_ports_csv(options->WarnPlaintextPorts,
+                         "WarnPlaintextPorts", msg) < 0)
     return -1;
 
   if (options->FascistFirewall && !options->ReachableAddresses) {

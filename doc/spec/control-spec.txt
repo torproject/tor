@@ -1300,9 +1300,22 @@ $Id$
        to do so.}
        [Note: only REASON=CLOCK_JUMPED is implemented currently.]
 
+     DANGEROUS_PORT
+     "PORT=" port
+     "RESULT=" "REJECT" / "WARN"
+       A stream was initiated to a port that's commonly used for
+       vulnerable-plaintext protocols. If the Result is "reject", we
+       refused the connection; whereas if it's "warn", we allowed it.
+
+       {Controllers should warn their users when this occurs, unless they
+       happen to know that the application using Tor is in fact doing so
+       correctly (e.g., because it is part of a distributed bundle). They
+       might also want some sort of interface to let the user configure
+       their RejectPlaintextPorts and WarnPlaintextPorts config options.}
+
      DANGEROUS_SOCKS
-     "PROTOCOL=SOCKS4/SOCKS5"
-     "ADDRESS=IP:port"
+     "PROTOCOL=" "SOCKS4" / "SOCKS5"
+     "ADDRESS=" IP:port
        A connection was made to Tor's SOCKS port using one of the SOCKS
        approaches that doesn't support hostnames -- only raw IP addresses.
        If the client application got this address from gethostbyname(),

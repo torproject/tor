@@ -529,6 +529,7 @@ typedef enum {
 #define END_STREAM_REASON_CONNRESET 12
 #define END_STREAM_REASON_TORPROTOCOL 13
 #define END_STREAM_REASON_NOTDIRECTORY 14
+#define END_STREAM_REASON_ENTRYPOLICY 15
 
 /* These high-numbered end reasons are not part of the official spec,
  * and are not intended to be put in relay end cells. They are here
@@ -2132,6 +2133,15 @@ typedef struct {
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */
   smartlist_t *LongLivedPorts;
+  /** Application ports that are likely to be unencrypted and
+   * unauthenticated; we reject requests for them to prevent the
+   * user from screwing up and leaking plaintext secrets to an
+   * observer somewhere on the Internet. */
+  smartlist_t *RejectPlaintextPorts;
+  /** Related to RejectPlaintextPorts above, except this config option
+   * controls whether we warn (in the log and via a controller status
+   * event) every time a risky connection is attempted. */
+  smartlist_t *WarnPlaintextPorts;
   /** Should we try to reuse the same exit node for a given host */
   smartlist_t *TrackHostExits;
   int TrackHostExitsExpire; /**< Number of seconds until we expire an

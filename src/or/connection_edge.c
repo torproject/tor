@@ -32,6 +32,7 @@ static int connection_ap_handshake_process_socks(edge_connection_t *conn);
 static int connection_ap_process_natd(edge_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int address_is_in_virtual_range(const char *addr);
+static int consider_plaintext_ports(edge_connection_t *conn, uint16_t port);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -470,6 +471,7 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
   {
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
+        conn->state != AP_CONN_STATE_CIRCUIT_WAIT ||
         !conn->chosen_exit_optional)
       continue;
     edge_conn = TO_EDGE_CONN(conn);
@@ -482,6 +484,9 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
                escaped_safe_str(edge_conn->socks_request->address));
       conn->chosen_exit_optional = 0;
       tor_free(edge_conn->chosen_exit_name); /* clears it */
+      /* if this port is dangerous, warn or reject it now that we don't
+       * think it'll be using an enclave. */
+      consider_plaintext_ports(edge_conn, edge_conn->socks_request->port);
     }
   });
 }
@@ -1182,6 +1187,32 @@ addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
    }
 }
 
+/** Check if <b>conn</b> is using a dangerous port. Then warn and/or
+ * reject depending on our config options. */
+static int
+consider_plaintext_ports(edge_connection_t *conn, uint16_t port)
+{
+  or_options_t *options = get_options();
+  int reject = smartlist_string_num_isin(options->RejectPlaintextPorts, port);
+
+  if (smartlist_string_num_isin(options->WarnPlaintextPorts, port)) {
+    log_warn(LD_APP, "Application request to port %d: this port is "
+             "commonly used for unencrypted protocols. Please make sure "
+             "you don't send anything you would mind the rest of the "
+             "Internet reading!%s", port, reject ? " Closing." : "");
+    control_event_client_status(LOG_WARN, "DANGEROUS_PORT PORT=%d RESULT=%s",
+                                port, reject ? "REJECT" : "WARN");
+  }
+
+  if (reject) {
+    log_info(LD_APP, "Port %d listed in RejectPlaintextPorts. Closing.", port);
+    connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+    return -1;
+  }
+
+  return 0;
+}
+
 /** Connection <b>conn</b> just finished its socks handshake, or the
  * controller asked us to take care of it. If <b>circ</b> is defined,
  * then that's where we'll want to attach it. Otherwise we have to
@@ -1395,6 +1426,11 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
           conn->_base.chosen_exit_optional = 1;
         }
       }
+
+      /* warn or reject if it's using a dangerous port */
+      if (!conn->use_begindir && !conn->chosen_exit_name && !circ)
+        if (consider_plaintext_ports(conn, socks->port) < 0)
+          return -1;
 
       if (!conn->use_begindir) {
         /* help predict this next time */

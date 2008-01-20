@@ -600,7 +600,10 @@ connection_edge_end_reason_str(int reason)
 
 /** Translate <b>reason</b> (as from a relay 'end' cell) into an
  * appropriate SOCKS5 reply code.
- * DODCDOC 0
+ *
+ * A reason of 0 means that we're not actually expecting to send
+ * this code back to the socks client; we just call it 'succeeded'
+ * to keep things simple.
  */
 socks5_reply_status_t
 connection_edge_end_reason_socks5_response(int reason)
@@ -614,6 +617,8 @@ connection_edge_end_reason_socks5_response(int reason)
       return SOCKS5_HOST_UNREACHABLE;
     case END_STREAM_REASON_CONNECTREFUSED:
       return SOCKS5_CONNECTION_REFUSED;
+    case END_STREAM_REASON_ENTRYPOLICY:
+      return SOCKS5_NOT_ALLOWED;
     case END_STREAM_REASON_EXITPOLICY:
       return SOCKS5_NOT_ALLOWED;
     case END_STREAM_REASON_DESTROY:
