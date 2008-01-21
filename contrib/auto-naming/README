@@ -34,7 +34,7 @@ The rules are simple:
  * once the database is sufficiently populated, maybe a month or so after the
    previous step, setup a cronjob to regularly build the binding list using
    the build-approved-routers script.  You probably want to append a manually
-   manged list of rejections to that file and give it to tor as its
+   managed list of rejections to that file and give it to tor as its
    "approved-routers" file.
    The Sample-Makefile and Sample-crontab demonstrate the method used at tor26.
 
