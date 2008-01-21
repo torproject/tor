@@ -1,10 +1,14 @@
-Below is a proposal to mitigate insecure protocol use over Tor.
-
+Filename: 129-reject-plaintext-ports.txt
 Title: Block Insecure Protocols by Default
+Version: $Revision$
+Last-Modified: $Date$
 Author: Kevin Bauer & Damon McCoy
-Date: January 15, 2008
+Created: 2008-01-15
+Status: Open
 
 Overview:
+
+  Below is a proposal to mitigate insecure protocol use over Tor.
 
   This document 1) demonstrates the extent to which insecure protocols are
   currently used within the Tor network, and 2) proposes a simple solution
@@ -38,8 +42,13 @@ Motivation:
 
 Security Implications:
 
-  None. This proposal is intended to improve Tor's security by limiting the
+  This proposal is intended to improve Tor's security by limiting the
   use of insecure protocols.
+
+  Roger added: By adding these warnings for only some of the risky
+  behavior, users may do other risky behavior, not get a warning, and
+  believe that it is therefore safe. But overall, I think it's better
+  to warn for some of it than to warn for none of it.
 
 Specification:
 
@@ -87,4 +96,20 @@ References:
   [2] Rogue Nodes Turn Tor Anonymizer Into Eavesdropper's Paradise.
       http://www.wired.com/politics/security/news/2007/09/embassy_hacks.
       Wired. September 10, 2007.
+
+Implementation:
+
+  Roger added this feature in
+  http://archives.seul.org/or/cvs/Jan-2008/msg00182.html
+  He also added a status event for Vidalia to recognize attempts to use
+  vulnerable-plaintext ports, so it can help the user understand what's
+  going on and how to fix it.
+
+Next steps:
+
+  a) Vidalia should learn to recognize this controller status event,
+  so we don't leave users out in the cold when we enable this feature.
+
+  b) We should decide which ports to reject by default. The current
+  consensus is 23,109,110,143 -- the same set that we warn for now.
 
