@@ -31,6 +31,14 @@ else
 fi
 
 
+for i in lib run log; do
+	if ! [ -d "/var/$i/tor" ]; then
+		echo "Something or somebody made /var/$i/tor disappear."
+		echo "Creating one for you again."
+		mkdir "/var/$i/tor"
+	fi
+done
+
 find /var/lib/tor ! -user debian-tor -o ! -group debian-tor -print0 | xargs -0 --no-run-if-empty chown debian-tor:debian-tor
 find /var/lib/tor -type d -print0 | xargs -0 --no-run-if-empty chmod 02700
 find /var/lib/tor -type f -print0 | xargs -0 --no-run-if-empty chmod 00600
