@@ -5,6 +5,7 @@
 	delaycompress
 	missingok
 	notifempty
+	create 0640 debian-tor adm
 	sharedscripts
 	postrotate
 		/etc/init.d/tor reload > /dev/null
