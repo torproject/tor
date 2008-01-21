@@ -1,4 +1,11 @@
 Changes in version 0.2.0.18-alpha - 2008-01-??
+  o Major bugfixes:
+    - We accidentally enabled the under-development v2 TLS handshake
+      code, which is causing log entries like "TLS error while
+      renegotiating handshake". Disable it again. Resolves bug 590.
+    - Fix a major memory leak when attempting to use the v2 TLS
+      handshake code.
+
   o Major features:
     - Avoid going directly to the directory authorities even if you're a
       relay, if you haven't found yourself reachable yet or if you've
@@ -10,19 +17,14 @@ Changes in version 0.2.0.18-alpha - 2008-01-??
       Tor can warn and/or refuse connections to ports commonly used with
       vulnerable-plaintext protocols.
 
-  o Major bugfixes:
-    - We accidentally enabled the under-development v2 TLS handshake
-      code, which is causing log entries like "TLS error while
-      renegotiating handshake". Disable it again. Resolves bug 590.
+  o Minor bugfixes:
+    - When we setconf ClientOnly to 1, close any current OR and Dir
+      listeners. Reported by mwenge.
 
   o Minor features:
     - Don't answer "/tor/networkstatus-bridges" directory requests if
       the request isn't encrypted.
     - Make "ClientOnly 1" config option disable directory ports too.
-
-  o Minor bugfixes:
-    - When we setconf ClientOnly to 1, close any current OR and Dir
-      listeners. Reported by mwenge.
 
 
 Changes in version 0.2.0.17-alpha - 2008-01-17
