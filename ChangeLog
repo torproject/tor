@@ -13,6 +13,7 @@ Changes in version 0.2.0.18-alpha - 2008-01-??
   o Minor features:
     - Don't answer "/tor/networkstatus-bridges" directory requests if
       the request isn't encrypted.
+    - Make "ClientOnly 1" config option disable directory ports too.
 
 
 Changes in version 0.2.0.17-alpha - 2008-01-17

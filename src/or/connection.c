@@ -1340,7 +1340,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
     return -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
                       options->DirPort, "0.0.0.0",
-                      replaced_conns, new_conns, 0,
+                      replaced_conns, new_conns, options->ClientOnly,
                       AF_INET)<0)
     return -1;
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksListenAddress,

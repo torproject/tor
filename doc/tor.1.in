@@ -391,7 +391,8 @@ circuit list.
 .LP
 .TP
 \fBClientOnly \fR\fB0\fR|\fB1\fR\fP
-If set to 1, Tor will under no circumstances run as a server. The default
+If set to 1, Tor will under no circumstances run as a server or serve
+directory requests. The default
 is to run as a client unless ORPort is configured.  (Usually,
 you don't need to set this; Tor is pretty smart at figuring out whether
 you are reliable and high-bandwidth enough to be a useful server.)
