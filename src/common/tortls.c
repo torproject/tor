@@ -898,6 +898,8 @@ tor_tls_handshake(tor_tls_t *tls)
         log_notice(LD_NET, "I think I got a v2 handshake!");
         tls->wasV2Handshake = 1;
       }
+      if (cert)
+        X509_free(cert);
 #endif
       SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST);
     }
