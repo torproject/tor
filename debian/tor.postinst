@@ -30,28 +30,18 @@ else
 		debian-tor
 fi
 
-# ch{owning,moding} things around
-# We will do nothing across upgrades.
 
-if [ "$2" = "" ]; then
-    for i in lib log run; do
-	chown -R debian-tor:debian-tor /var/$i/tor
-	chmod -R 700 /var/$i/tor
-	find /var/$i/tor -type f -exec chmod 600 '{}' ';'
-    done
-    chgrp -R adm  /var/log/tor
-    chmod -R g+rX /var/log/tor
-    chmod    g+s  /var/log/tor
-else
-    # fix permissions of logs after 0.0.8+0.0.9pre5-1
-    if [ "$1" = "configure" ]; then
-        if dpkg --compare-versions "$2" le "0.0.8+0.0.9pre5-1" ; then
-            chgrp -R adm  /var/log/tor
-            chmod -R g+rX /var/log/tor
-            chmod    g+s  /var/log/tor
-        fi
-    fi
-fi
+find /var/lib/tor ! -user debian-tor -o ! -group debian-tor -print0 | xargs -0 --no-run-if-empty chown debian-tor:debian-tor
+find /var/lib/tor -type d -print0 | xargs -0 --no-run-if-empty chmod 02700
+find /var/lib/tor -type f -print0 | xargs -0 --no-run-if-empty chmod 00600
+
+find /var/run/tor ! -user debian-tor -o ! -group debian-tor -print0 | xargs -0 --no-run-if-empty chown debian-tor:debian-tor
+find /var/run/tor -type d -print0 | xargs -0 --no-run-if-empty chmod 02750
+find /var/run/tor -type f -print0 | xargs -0 --no-run-if-empty chmod 00600
+
+find /var/log/tor ! -user debian-tor -o ! -group adm -print0 | xargs -0 --no-run-if-empty chown debian-tor:adm
+find /var/log/tor -type d -print0 | xargs -0 --no-run-if-empty chmod 02750
+find /var/log/tor -type f -print0 | xargs -0 --no-run-if-empty chmod 00640
 
 #DEBHELPER#
 
