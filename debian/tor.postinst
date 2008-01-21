@@ -9,24 +9,25 @@ home=`getent passwd debian-tor | cut -d ":" -f 6`
 # the sanit(ar)y checks otherwise we can safely create it.
 
 if [ "$uid" ]; then
-    if [ "$home" = "/var/lib/tor" ]; then
-        echo "debian-tor homedir check: ok"
-    else
-	echo "ERROR: debian-tor account has an invalid home directory!"
-	echo "Please check /usr/share/doc/tor/README.Debian on how to"
-	echo "correct this problem"
-	exit 1
-    fi
+	if [ "$home" = "/var/lib/tor" ]; then
+		:
+		#echo "debian-tor homedir check: ok"
+	else
+		echo "ERROR: debian-tor account has an unexpected home directory!"
+		echo "It should be '/var/lib/tor', but it is '$home'."
+		echo "Removing the debian-tor user might fix this, but the question"
+		echo "remains how you got into this mess to begin with."
+		exit 1
+	fi
 else
-    # what this might mean?? oh creating a system l^Huser!
-    adduser --quiet \
-            --system \
-            --disabled-password \
-            --home /var/lib/tor \
-	    --no-create-home \
-	    --shell /bin/bash \
-	    --group \
-    debian-tor
+	adduser --quiet \
+		--system \
+		--disabled-password \
+		--home /var/lib/tor \
+		--no-create-home \
+		--shell /bin/bash \
+		--group \
+		debian-tor
 fi
 
 # ch{owning,moding} things around
