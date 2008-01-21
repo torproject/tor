@@ -9,15 +9,6 @@ home=`getent passwd debian-tor | cut -d ":" -f 6`
 # the sanit(ar)y checks otherwise we can safely create it.
 
 if [ "$uid" ]; then
-    # guess??? the checks!!!
-    if [ $uid -ge 100 ] && [ $uid -le 999 ]; then
-    	echo "debian-tor uid check: ok"
-    else
-    	echo "ERROR: debian-tor account has a non-system uid!"
-	echo "Please check /usr/share/doc/tor/README.Debian on how to"
-	echo "correct this problem"
-	exit 1
-    fi
     if [ "$home" = "/var/lib/tor" ]; then
         echo "debian-tor homedir check: ok"
     else
