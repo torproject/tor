@@ -1177,6 +1177,9 @@ connection_connect(connection_t *conn, const char *address,
  * only close listeners that are no longer wanted.  Existing listeners
  * that are still configured are not touched.
  *
+ * If <b>disable_all_conns</b> is set, then never open new conns, and
+ * close the existing ones.
+ *
  * Add all old conns that should be closed to <b>replaced_conns</b>.
  * Add all new connections to <b>new_conns</b>.
  */
@@ -1185,7 +1188,7 @@ retry_listeners(int type, config_line_t *cfg,
                 int port_option, const char *default_addr,
                 smartlist_t *replaced_conns,
                 smartlist_t *new_conns,
-                int never_open_conns,
+                int disable_all_conns,
                 int socket_family)
 {
   smartlist_t *launch = smartlist_create(), *conns;
@@ -1251,7 +1254,7 @@ retry_listeners(int type, config_line_t *cfg,
             tor_assert(0);
         }
       });
-    if (! line) {
+    if (!line || disable_all_conns) {
       /* This one isn't configured. Close it. */
       log_notice(LD_NET, "Closing no-longer-configured %s on %s:%d",
                  conn_type_to_string(type), conn->address, conn->port);
@@ -1273,7 +1276,7 @@ retry_listeners(int type, config_line_t *cfg,
 
   /* Now open all the listeners that are configured but not opened. */
   r = 0;
-  if (!never_open_conns) {
+  if (!disable_all_conns) {
     SMARTLIST_FOREACH(launch, config_line_t *, cfg_line,
       {
         char *address = NULL;
