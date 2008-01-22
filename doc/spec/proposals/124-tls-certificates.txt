@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Steven J. Murdoch
 Created: 2007-10-25
-Status: Accepted
+Status: Superseded
 
 Overview:
 

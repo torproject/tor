@@ -1,10 +1,10 @@
-Filename: xxx-v2-conn-protocol.txt
+Filename: 130-v2-conn-protocol.txt
 Title: Version 2 Tor connection protocol
 Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 2007-10-25
-Status: Draft
+Status: Open
 
 Overview:
 
@@ -98,7 +98,9 @@ Proposal:
   renegotiation.  This time, the server continues with two certificates
   as usual, and asks for certificates so that the client will send
   certificates of its own.  Because the TLS connection has been
-  established, all of this is encrypted.
+  established, all of this is encrypted.  (The certificate sent by the
+  server in the renegotiated connection need not be the same that
+  as sentin the original connection.)
 
   The server MUST NOT write any data until the client has renegotiated.
 

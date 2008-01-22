@@ -46,11 +46,13 @@ Proposals by number:
 121  Hidden Service Authentication [OPEN]
 122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [OPEN]
-124  Blocking resistant TLS certificate usage [ACCEPTED]
+124  Blocking resistant TLS certificate usage [SUPERSEDED]
 125  Behavior for bridge users, bridge relays, and bridge authorities [OPEN]
 126  Getting GeoIP data and publishing usage summaries [OPEN]
 127  Relaying dirport requests to Tor download site / website [DRAFT]
 128  Families of private bridges [DRAFT]
+129  Block Insecure Protocols by Default [OPEN]
+130  Version 2 Tor connection protocol [OPEN]
 
 
 Proposals by status:
@@ -66,9 +68,10 @@ Proposals by status:
    123  Naming authorities automatically create bindings
    125  Behavior for bridge users, bridge relays, and bridge authorities
    126  Getting GeoIP data and publishing usage summaries
+   129  Block Insecure Protocols by Default
+   130  Version 2 Tor connection protocol
  ACCEPTED:
    105  Version negotiation for the Tor protocol
-   124  Blocking resistant TLS certificate usage
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
  META:
@@ -92,6 +95,7 @@ Proposals by status:
    122  Network status entries need a new Unnamed flag
  SUPERSEDED:
    112  Bring Back Pathlen Coin Weight
+   124  Blocking resistant TLS certificate usage
  DEAD:
    100  Tor Unreliable Datagram Extension Proposal
  DRAFT:
