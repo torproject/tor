@@ -1,4 +1,8 @@
 Changes in version 0.2.0.18-alpha - 2008-01-??
+  o New directory authorities:
+    - Set up dannenberg (run by CCC) as the sixth v3 directory
+      authority.
+
   o Major bugfixes:
     - We accidentally enabled the under-development v2 TLS handshake
       code, which is causing log entries like "TLS error while

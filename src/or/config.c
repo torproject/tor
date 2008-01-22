@@ -835,6 +835,9 @@ add_default_trusted_dir_authorities(authority_type_t type)
     "gabelmoo orport=443 no-v2 "
       "v3ident=EAA879B5C75032E462CB018630D2D0DF46EBA606 "
       "88.198.7.215:80 6833 3D07 61BC F397 A587 A0C0 B963 E4A9 E99E C4D3",
+    "dannenberg orport=443 no-v2 "
+      "v3ident=585769C78764D58426B8B52B6651A5A71137189A "
+      "213.73.91.31:80 7BE6 83E6 5D48 1413 21C5 ED92 F075 C553 64AC 7123",
     NULL
   };
   for (i=0; dirservers[i]; i++) {
