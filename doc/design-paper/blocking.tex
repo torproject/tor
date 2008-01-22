@@ -1,4 +1,7 @@
-\documentclass{llncs}
+%\documentclass{llncs}
+\documentclass{usenixsubmit}
+%\documentclass[twocolumn]{article}
+%usepackage{usenix}
 
 \usepackage{url}
 \usepackage{amsmath}
@@ -18,15 +21,17 @@
     %  \setlength{\topsep}{0mm}
     }}{\end{list}}
 
-\begin{document}
+\newcommand{\workingnote}[1]{}        % The version that hides the note.
+%\newcommand{\workingnote}[1]{(**#1)}   % makes the note visible.
 
+\date{}
 \title{Design of a blocking-resistant anonymity system\\DRAFT}
 
 %\author{Roger Dingledine\inst{1} \and Nick Mathewson\inst{1}}
-\author{Roger Dingledine \and Nick Mathewson}
-\institute{The Free Haven Project\\
-\email{\{arma,nickm\}@freehaven.net}}
+\author{Roger Dingledine \\ The Tor Project \\ arma@torproject.org \and
+Nick Mathewson \\ The Tor Project \\ nickm@torproject.org}
 
+\begin{document}
 \maketitle
 \pagestyle{plain}
 
@@ -93,8 +98,8 @@ In sections~\ref{sec:bridges} through~\ref{sec:discovery}, we explore the
 components of our designs in detail.  Section~\ref{sec:security} considers
 security implications and Section~\ref{sec:reachability} presents other
 issues with maintaining connectivity and sustainability for the design.
-Section~\ref{sec:future} speculates about future more complex designs,
-and finally Section~\ref{sec:conclusion} summarizes our next steps and
+%Section~\ref{sec:future} speculates about future more complex designs,
+Finally Section~\ref{sec:conclusion} summarizes our next steps and
 recommendations.
 
 % The other motivation is for places where we're concerned they will
@@ -278,7 +283,7 @@ that have been pressured
 recently into revealing the identity of bloggers
 %~\cite{arrested-bloggers}
 or treating clients differently depending on their network
-location~\cite{goodell-syverson06}.
+location~\cite{netauth}.
 %~\cite{google-geolocation}.
 
 The Tor design provides other features as well that are not typically
@@ -1700,6 +1705,32 @@ See Section~\ref{subsec:first-bridge} for more discussion.
 % Ian suggests that we have every tor server distribute a signed copy of the
 % software.
 
+\section{Next Steps}
+\label{sec:conclusion}
+
+Technical solutions won't solve the whole censorship problem. After all,
+the firewalls in places like China are \emph{socially} very
+successful, even if technologies and tricks exist to get around them.
+However, having a strong technical solution is still necessary as one
+important piece of the puzzle.
+
+In this paper, we have shown that Tor provides a great set of building
+blocks to start from. The next steps are to deploy prototype bridges and
+bridge authorities, implement some of the proposed discovery strategies,
+and then observe the system in operation and get more intuition about
+the actual requirements and adversaries we're up against.
+
+\bibliographystyle{plain} \bibliography{tor-design}
+
+%\appendix
+
+%\section{Counting Tor users by country}
+%\label{app:geoip}
+
+\end{document}
+
+
+
 \section{Future designs}
 \label{sec:future}
 
@@ -1727,29 +1758,8 @@ and they would be a fine target to take down the network.
 
 % Hidden services as bridge directory authorities.
 
-\section{Next Steps}
-\label{sec:conclusion}
 
-Technical solutions won't solve the whole censorship problem. After all,
-the firewalls in places like China are \emph{socially} very
-successful, even if technologies and tricks exist to get around them.
-However, having a strong technical solution is still necessary as one
-important piece of the puzzle.
-
-In this paper, we have shown that Tor provides a great set of building
-blocks to start from. The next steps are to deploy prototype bridges and
-bridge authorities, implement some of the proposed discovery strategies,
-and then observe the system in operation and get more intuition about
-the actual requirements and adversaries we're up against.
-
-\bibliographystyle{plain} \bibliography{tor-design}
-
-%\appendix
-
-%\section{Counting Tor users by country}
-%\label{app:geoip}
-
-\end{document}
+------------------------------------------
 
 ship geoip db to bridges. they look up users who tls to them in the db,
 and upload a signed list of countries and number-of-users each day. the
