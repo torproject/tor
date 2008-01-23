@@ -1827,11 +1827,13 @@ dirvote_add_signatures(const char *detached_signatures_body,
                        const char **msg)
 {
   if (pending_consensus) {
-    log_notice(LD_DIR, "Got a signature from %s. Adding it to the pending consensus.", source);
+    log_notice(LD_DIR, "Got a signature from %s. "
+                       "Adding it to the pending consensus.", source);
     return dirvote_add_signatures_to_pending_consensus(
                                      detached_signatures_body, msg);
   } else {
-    log_notice(LD_DIR, "Got a signature from %s. Queueing it for the next consensus.", source);
+    log_notice(LD_DIR, "Got a signature from %s. "
+                       "Queueing it for the next consensus.", source);
     if (!pending_consensus_signature_list)
       pending_consensus_signature_list = smartlist_create();
     smartlist_add(pending_consensus_signature_list,
