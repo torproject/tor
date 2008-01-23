@@ -1565,7 +1565,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    if (dirvote_add_signatures(body, &msg)<0) {
+    if (dirvote_add_signatures(body, conn->_base.address, &msg)<0) {
       log_warn(LD_DIR, "Problem adding detached signatures from %s:%d: %s",
                conn->_base.address, conn->_base.port, msg?msg:"???");
     }
@@ -2838,7 +2838,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   if (authdir_mode_v3(options) &&
       !strcmp(url,"/tor/post/consensus-signature")) { /* sigs on consensus. */
     const char *msg = NULL;
-    if (dirvote_add_signatures(body, &msg)>=0) {
+    if (dirvote_add_signatures(body, conn->_base.address, &msg)>=0) {
       write_http_status_line(conn, 200, msg?msg:"Signatures stored");
     } else {
       log_warn(LD_DIR, "Unable to store signatures posted by %s: %s",
