@@ -2403,7 +2403,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
       if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
           base16_decode(sk_digest, sizeof(sk_digest),
                         tok->args[1], HEX_DIGEST_LEN) < 0) {
-        log_warn(LD_DIR, "Error decoding declared identity %s in "
+        log_warn(LD_DIR, "Error decoding declared digest %s in "
                  "network-status vote.", escaped(tok->args[1]));
         goto err;
       }
