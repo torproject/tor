@@ -1763,13 +1763,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       case 200:
         if (rend_cache_store(body, body_len, 0) < 0) {
           log_warn(LD_REND,"Failed to fetch rendezvous descriptor.");
-          /* alice's ap_stream will notice when connection_mark_for_close
-           * cleans it up */
-          /*XXXX020 maybe retry quickly; timeout takes a while. */
-          /* This would require some kind of book-keeping which directories
-           * have been requested and which not. As directory servers are
-           * rather reliable, this should not be necessary, in constrast to
-           * v2 hidden service directories. -KL */
+          /* Any pending rendezvous attempts will notice when
+           * connection_about_to_close_connection()
+           * cleans this dir conn up. */
+          /* We could retry. But since v0 descriptors are going out of
+           * style, it isn't worth the hassle. We'll do better in v2. */
         } else {
           /* success. notify pending connections about this. */
           conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
@@ -1777,13 +1775,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         }
         break;
       case 404:
-        /* not there. pending connections will be notified when
-         * connection_mark_for_close cleans it up. */
-        /*XXXX020 maybe retry quickly; timeout takes a while. */
-        /* This would require some kind of book-keeping which directories
-         * have been requested and which not. As directory servers are
-         * rather reliable, this should not be necessary, in constrast to
-         * v2 hidden service directories. -KL */
+        /* Not there. Pending connections will be notified when
+         * connection_about_to_close_connection() cleans this conn up. */
         break;
       case 400:
         log_warn(LD_REND,
@@ -1808,9 +1801,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         if (rend_cache_store_v2_desc_as_client(body, NULL) < 0) {
           log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
                    "Retrying at another directory.");
-          /* alice's ap_stream will notice when connection_mark_for_close
-           * cleans it up */
-          rend_client_refetch_v2_renddesc(conn->rend_query);
+          /* We'll retry when connection_about_to_close_connection()
+           * cleans this dir conn up. */
         } else {
           /* success. notify pending connections about this. */
           log_info(LD_REND, "Successfully fetched rendezvous descriptor.");
@@ -1819,18 +1811,16 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         }
         break;
       case 404:
-        /* not there. pending connections will be notified when
-         * connection_mark_for_close cleans it up. */
+        /* Not there. We'll retry when
+         * connection_about_to_close_connection() cleans this conn up. */
         log_info(LD_REND,"Fetching v2 rendezvous descriptor failed: "
                          "Retrying at another directory.");
-        rend_client_refetch_v2_renddesc(conn->rend_query);
         break;
       case 400:
         log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
                  "http status 400 (%s). Dirserver didn't like our "
                  "v2 rendezvous query? Retrying at another directory.",
                  escaped(reason));
-        rend_client_refetch_v2_renddesc(conn->rend_query);
         break;
       default:
         log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
@@ -1839,7 +1829,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "Retrying at another directory.",
                  status_code, escaped(reason), conn->_base.address,
                  conn->_base.port);
-        rend_client_refetch_v2_renddesc(conn->rend_query);
         break;
     }
   }
