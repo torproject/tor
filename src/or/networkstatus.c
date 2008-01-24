@@ -435,11 +435,11 @@ networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
   if (warn >= 0) {
     SMARTLIST_FOREACH(unrecognized, networkstatus_voter_info_t *, voter,
       {
-        log(severity, LD_DIR, "Consensus includes unrecognized authority '%s' "
-            "at %s:%d (contact %s; identity %s)",
-            voter->nickname, voter->address, (int)voter->dir_port,
-            voter->contact?voter->contact:"n/a",
-            hex_str(voter->identity_digest, DIGEST_LEN));
+        log_info(LD_DIR, "Consensus includes unrecognized authority '%s' "
+                 "at %s:%d (contact %s; identity %s)",
+                 voter->nickname, voter->address, (int)voter->dir_port,
+                 voter->contact?voter->contact:"n/a",
+                 hex_str(voter->identity_digest, DIGEST_LEN));
       });
     SMARTLIST_FOREACH(need_certs_from, networkstatus_voter_info_t *, voter,
       {

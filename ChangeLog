@@ -24,6 +24,8 @@ Changes in version 0.2.0.18-alpha - 2008-01-??
   o Minor bugfixes:
     - When we setconf ClientOnly to 1, close any current OR and Dir
       listeners. Reported by mwenge.
+    - When we get a consensus that's been signed by more people than
+      we expect, don't log about it; it's not a big deal.
 
   o Minor features:
     - Don't answer "/tor/networkstatus-bridges" directory requests if
