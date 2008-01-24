@@ -323,23 +323,8 @@ rend_client_refetch_v2_renddesc(const char *query)
                         "descriptor ID did not succeed.");
       return;
     }
-    switch (directory_get_from_hs_dir(descriptor_id, query)) {
-    case -1:
-      /* Whatever error this was, it was already logged. */
-      log_info(LD_REND, "Error while trying to fetch descriptor from "
-                        "hidden service directory!");
-      return;
-    case 0:
-      /* Try the next replica, if available. */
-      log_info(LD_REND, "No hidden service directory left for this replica; "
-                        "trying another.");
-      continue;
-    case 1:
-      /* Request was sent, we are done here. */
-      log_info(LD_REND, "Request to fetch descriptor from hidden service "
-                        "directory sent; waiting for response.");
-      return;
-    }
+    if (directory_get_from_hs_dir(descriptor_id, query) != 0)
+      return; /* either success or failure, but we're done */
   }
   /* If we come here, there are no hidden service directories left. */
   log_info(LD_REND, "Could not pick one of the responsible hidden "
