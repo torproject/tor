@@ -1798,16 +1798,27 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
       case 200:
-        if (rend_cache_store_v2_desc_as_client(body, NULL) < 0) {
-          log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
-                   "Retrying at another directory.");
-          /* We'll retry when connection_about_to_close_connection()
-           * cleans this dir conn up. */
-        } else {
-          /* success. notify pending connections about this. */
-          log_info(LD_REND, "Successfully fetched rendezvous descriptor.");
-          conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
-          rend_client_desc_here(conn->rend_query);
+        switch (rend_cache_store_v2_desc_as_client(body, NULL)) {
+          case -2:
+            log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
+                     "Retrying at another directory.");
+            /* We'll retry when connection_about_to_close_connection()
+             * cleans this dir conn up. */
+            break;
+          case -1:
+            /* We already have a v0 descriptor here. Ignoring this one
+             * and _not_ performing another request. */
+            log_info(LD_REND, "Successfully fetched v2 rendezvous "
+                     "descriptor, but we already have a v0 descriptor.");
+            conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
+            break;
+          default:
+            /* success. notify pending connections about this. */
+            log_info(LD_REND, "Successfully fetched v2 rendezvous "
+                     "descriptor.");
+            conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
+            rend_client_desc_here(conn->rend_query);
+            break;
         }
         break;
       case 404:
