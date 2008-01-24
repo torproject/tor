@@ -3247,39 +3247,31 @@ directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
  * values are pointers to timestamps of the last requests. */
 static strmap_t *last_hid_serv_requests = NULL;
 
-/** Return the last request time to hidden service directory <b>hs_dir</b>
- * for descriptor ID <b>desc_id_base32</b> or 0 if no such request has been
- * sent before. */
+/** Look up the last request time to hidden service directory <b>hs_dir</b>
+ * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
+ * assign the current time <b>now</b> and return that. Otherwise, return
+ * the most recent request time, or 0 if no such request has been sent
+ * before. */
 static time_t
-get_last_hid_serv_request(routerstatus_t *hs_dir, const char *desc_id_base32)
+lookup_last_hid_serv_request(routerstatus_t *hs_dir,
+                             const char *desc_id_base32, time_t now, int set)
 {
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   char hsdir_desc_comb_id[2 * REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t *last_request_ptr;
-  base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
-                hs_dir->identity_digest, DIGEST_LEN);
-  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
-               hsdir_id_base32, desc_id_base32);
-  last_request_ptr = strmap_get_lc(last_hid_serv_requests, hsdir_desc_comb_id);
-  return (last_request_ptr) ? *last_request_ptr : 0;
-}
-
-/** Store the time in <b>now</b> as the last request time to hidden service
- * directory <b>hs_dir</b> for descriptor ID <b>desc_id_base32</b>. */
-static void
-set_last_hid_serv_request(routerstatus_t *hs_dir, const char *desc_id_base32,
-                     time_t now)
-{
-  char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-  char hsdir_desc_comb_id[2 * REND_DESC_ID_V2_LEN_BASE32 + 1];
-  time_t *last_request_ptr = tor_malloc_zero(sizeof(time_t *));
   if (!last_hid_serv_requests) last_hid_serv_requests = strmap_new();
-  *last_request_ptr = now;
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
   tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
                hsdir_id_base32, desc_id_base32);
-  strmap_set(last_hid_serv_requests, hsdir_desc_comb_id, last_request_ptr);
+  if (set) {
+    last_request_ptr = tor_malloc_zero(sizeof(time_t *));
+    *last_request_ptr = now;
+    strmap_set(last_hid_serv_requests, hsdir_desc_comb_id, last_request_ptr);
+  } else
+    last_request_ptr = strmap_get_lc(last_hid_serv_requests,
+                                     hsdir_desc_comb_id);
+  return (last_request_ptr) ? *last_request_ptr : 0;
 }
 
 /** Clean the history of request times to hidden service directories, so that
@@ -3343,7 +3335,8 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
     directory_clean_last_hid_serv_requests();
 
     SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
-      time_t last_request = get_last_hid_serv_request(dir, desc_id_base32);
+      time_t last_request = 
+        lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0);
       if (!last_request ||
           last_request + REND_HID_SERV_DIR_REQUERY_PERIOD < now)
         smartlist_add(selectible_dirs, dir);
@@ -3369,7 +3362,7 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
 
   /* Remember, that we are requesting a descriptor from this hidden service
    * directory now. */
-  set_last_hid_serv_request(hs_dir, desc_id_base32, now);
+  lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
 
   /* Send fetch request. (Pass query as payload to write it to the directory
    * connection so that it can be referred to when the response arrives.) */
