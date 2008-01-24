@@ -3196,9 +3196,8 @@ directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
                          int seconds_valid)
 {
   int i, j;
-  smartlist_t *responsible_dirs;
+  smartlist_t *responsible_dirs = smartlist_create();
   routerstatus_t *hs_dir;
-  responsible_dirs = smartlist_create();
   for (i = 0; i < smartlist_len(descs); i++) {
     rend_encoded_v2_service_descriptor_t *desc = smartlist_get(descs, i);
     /* Determine responsible dirs. */
@@ -3259,7 +3258,6 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   char hsdir_desc_comb_id[2 * REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t *last_request_ptr;
-  if (!last_hid_serv_requests) last_hid_serv_requests = strmap_new();
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
   tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
@@ -3282,6 +3280,8 @@ directory_clean_last_hid_serv_requests(void)
 {
   strmap_iter_t *iter;
   time_t cutoff = time(NULL) - REND_HID_SERV_DIR_REQUERY_PERIOD;
+  if (!last_hid_serv_requests)
+    last_hid_serv_requests = strmap_new();
   for (iter = strmap_iter_init(last_hid_serv_requests);
        !strmap_iter_done(iter); ) {
     const char *key;
@@ -3309,7 +3309,6 @@ int
 directory_get_from_hs_dir(const char *desc_id, const char *query)
 {
   smartlist_t *responsible_dirs = smartlist_create();
-  smartlist_t *selectible_dirs = smartlist_create();
   routerstatus_t *hs_dir;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t now = time(NULL);
@@ -3330,30 +3329,23 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
 
   /* Only select those hidden service directories to which we did not send
    * a request earlier. */
-  if (last_hid_serv_requests) {
-    /* Clean up request history first. */
-    directory_clean_last_hid_serv_requests();
+  directory_clean_last_hid_serv_requests(); /* Clean request history first. */
 
-    SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
-      time_t last_request = 
-        lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0);
-      if (!last_request ||
-          last_request + REND_HID_SERV_DIR_REQUERY_PERIOD < now)
-        smartlist_add(selectible_dirs, dir);
-    });
-  } else {
-    smartlist_add_all(selectible_dirs, responsible_dirs);
-  }
-  smartlist_free(responsible_dirs);
+  SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
+    if (lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0) +
+        REND_HID_SERV_DIR_REQUERY_PERIOD >= now)
+      SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
+  });
 
-  if (smartlist_len(selectible_dirs) == 0) {
+  if (smartlist_len(responsible_dirs) == 0) {
     log_info(LD_REND, "Could not pick one of the responsible hidden "
                       "service directories, because we requested them all "
                       "recently without success.");
+    smartlist_free(responsible_dirs);
     return 0;
   }
-  hs_dir = smartlist_choose(selectible_dirs);
-  smartlist_free(selectible_dirs);
+  hs_dir = smartlist_choose(responsible_dirs);
+  smartlist_free(responsible_dirs);
   if (!hs_dir) {
     log_warn(LD_BUG, "Could not pick one of the responsible hidden service "
                      "directories to fetch descriptors.");
