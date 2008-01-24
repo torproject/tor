@@ -252,7 +252,7 @@ $Id$
        32 base32 chars. Using this secret id part, everyone can verify that
        the signed descriptor belongs to "descriptor-id".
 
-         secret-id-part = H(time-period | cookie | replica)
+         secret-id-part = H(time-period | descriptor-cookie | replica)
 
      "publication-time" YYYY-MM-DD HH:MM:SS NL
 

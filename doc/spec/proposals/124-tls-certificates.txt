@@ -81,7 +81,7 @@ Version negotiation and cipher suite selection:
   Responders supporting version 2 of the Tor connection protocol should compare
   the cipher suite list in the client hello with those in List 1. If it matches
   any in the list then the responder should assume that the initiatior supports
-  version 1, and should thus should maintain the version 1 behavior, i.e. send a
+  version 1, and thus should maintain the version 1 behavior, i.e. send a
   two-certificate chain, request a client certificate and do not send or expect
   a VERSIONS cell [2].
 
