@@ -981,17 +981,27 @@ networkstatus_add_detached_signatures(networkstatus_vote_t *target,
   /* For each voter in src... */
   SMARTLIST_FOREACH(sigs->signatures, networkstatus_voter_info_t *, src_voter,
     {
+      char voter_identity[HEX_DIGEST_LEN+1];
       networkstatus_voter_info_t *target_voter =
         networkstatus_get_voter_by_id(target, src_voter->identity_digest);
       authority_cert_t *cert;
+
+      base16_encode(voter_identity, sizeof(voter_identity),
+                    src_voter->identity_digest, DIGEST_LEN);
+      log_info(LD_DIR, "Looking at signature from %s", voter_identity);
       /* If the target doesn't know about this voter, then forget it. */
-      if (!target_voter)
+      if (!target_voter) {
+        log_info(LD_DIR, "We do not know about %s", voter_identity);
         continue;
+      }
 
       /* If the target already has a good signature from this voter, then skip
        * this one. */
-      if (target_voter->good_signature)
+      if (target_voter->good_signature) {
+        log_info(LD_DIR, "We already have a good signature from %s",
+                         voter_identity);
         continue;
+      }
 
       /* Try checking the signature if we haven't already. */
       if (!src_voter->good_signature && !src_voter->bad_signature) {
@@ -1004,6 +1014,7 @@ networkstatus_add_detached_signatures(networkstatus_vote_t *target,
       /* If this signature is good, or we don't have any signature yet,
        * then add it. */
       if (src_voter->good_signature || !target_voter->signature) {
+        log_info(LD_DIR, "Adding signature from %s", voter_identity);
         ++r;
         tor_free(target_voter->signature);
         target_voter->signature =
@@ -1013,6 +1024,8 @@ networkstatus_add_detached_signatures(networkstatus_vote_t *target,
         target_voter->signature_len = src_voter->signature_len;
         target_voter->good_signature = 1;
         target_voter->bad_signature = 0;
+      } else {
+        log_info(LD_DIR, "Not adding signature from %s", voter_identity);
       }
     });
 
@@ -1714,6 +1727,10 @@ dirvote_compute_consensus(void)
         int r = dirvote_add_signatures_to_pending_consensus(sig, &msg);
         if (r >= 0)
           n_sigs += r;
+        else
+          log_warn(LD_DIR,
+                   "Could not add queued signature to new consensus: %s",
+                   msg);
         tor_free(sig);
       });
     if (n_sigs)
@@ -1769,8 +1786,11 @@ dirvote_add_signatures_to_pending_consensus(
     goto err;
   }
 
+  log_info(LD_DIR, "Have %d signatures for adding to consensus.",
+                   smartlist_len(sigs->signatures));
   r = networkstatus_add_detached_signatures(pending_consensus,
                                             sigs, msg_out);
+  log_info(LD_DIR,"Added %d signatures to consensus.", r);
 
   if (r >= 0) {
     char *new_detached =
