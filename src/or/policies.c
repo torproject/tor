@@ -84,7 +84,7 @@ policy_expand_private(smartlist_t **policy)
 /**
  * Given a linked list of config lines containing "allow" and "deny"
  * tokens, parse them and append the result to <b>dest</b>. Return -1
- * if any tokens are malformed, else return 0.
+ * if any tokens are malformed (and don't append any), else return 0.
  */
 static int
 parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
@@ -336,8 +336,9 @@ load_policy_from_option(config_line_t *config, smartlist_t **policy,
   addr_policy_list_free(*policy);
   *policy = NULL;
   r = parse_addr_policy(config, policy, assume_action);
-  if (r < 0 || !*policy)
+  if (r < 0 || !*policy) {
     return; /* XXXX020 have an error return. */
+  }
   SMARTLIST_FOREACH(*policy, addr_policy_t *, n, {
       /* ports aren't used. */
       n->prt_min = 1;
