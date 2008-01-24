@@ -3953,7 +3953,9 @@ void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
+#if 0
 int hid_serv_have_enough_directories(void);
+#endif
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);
 #if 0

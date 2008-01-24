@@ -3208,9 +3208,7 @@ directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
       smartlist_free(responsible_dirs);
       return;
     }
-    tor_assert(smartlist_len(responsible_dirs) ==
-               REND_NUMBER_OF_CONSECUTIVE_REPLICAS);
-    for (j = 0; j < REND_NUMBER_OF_CONSECUTIVE_REPLICAS; j++) {
+    for (j = 0; j < smartlist_len(responsible_dirs); j++) {
       char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       hs_dir = smartlist_get(responsible_dirs, j);
       /* Send publish request. */

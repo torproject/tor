@@ -4474,6 +4474,7 @@ hid_serv_previous_directory(const char *id)
 }
 #endif
 
+#if 0
 /** Return true, if we are aware of enough hidden service directory to
  * usefully perform v2 rend operations on them (publish, fetch, replicate),
  * or false otherwise. */
@@ -4494,11 +4495,11 @@ hid_serv_have_enough_directories(void)
   });
   return 0;
 }
+#endif
 
-/** Determine the REND_NUMBER_OF_CONSECUTIVE_REPLICAS routers that are
- * responsible for <b>id</b> (binary) and add pointers to those routers'
- * routerstatus_t to <b>responsible_dirs</b>. If we don't have enough
- * hidden service directories, return -1, else 0. */
+/** Determine the routers that are responsible for <b>id</b> (binary) and
+ * add pointers to those routers' routerstatus_t to <b>responsible_dirs</b>.
+ * If we don't have a consensus, return -1, else 0. */
 int
 hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                      const char *id)
@@ -4525,10 +4526,9 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
       i = 0;
   } while (i != start);
 
-  /* XXX020 make this louder once we have some v2hidservs */
-  log_info(LD_REND, "We don't have enough hidden service directories to "
-           "perform v2 rendezvous operations!");
-  return -1;
+  /* Even though we don't have the desired number of hidden service
+   * directories, we are happy with what we got. */
+  return 0;
 }
 
 /** Return true if this node is currently acting as hidden service
