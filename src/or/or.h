@@ -3035,7 +3035,7 @@ int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
 void directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
                               int seconds_valid);
-void directory_get_from_hs_dir(const char *desc_id, const char *query);
+int directory_get_from_hs_dir(const char *desc_id, const char *query);
 
 time_t download_status_increment_failure(download_status_t *dls,
                                          int status_code, const char *item,

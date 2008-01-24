@@ -295,7 +295,8 @@ void
 rend_client_refetch_v2_renddesc(const char *query)
 {
   char descriptor_id[DIGEST_LEN];
-  int replica;
+  int replicas_left_to_try[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS];
+  int i, tries_left;
   tor_assert(query);
   tor_assert(strlen(query) == REND_SERVICE_ID_LEN_BASE32);
   /* Are we configured to fetch descriptors? */
@@ -306,14 +307,44 @@ rend_client_refetch_v2_renddesc(const char *query)
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
             query);
-  replica = crypto_rand_int(REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS);
-  if (rend_compute_v2_desc_id(descriptor_id, query, NULL, time(NULL),
-                              replica) < 0) {
-    log_warn(LD_REND, "Internal error: Computing v2 rendezvous "
-                      "descriptor ID did not succeed.");
-    return;
+  /* Randomly iterate over the replicas until a descriptor can be fetched
+   * from one of the consecutive nodes, or no options are left. */
+  tries_left = REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
+  for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
+    replicas_left_to_try[i] = i;
+  while (tries_left > 0) {
+    int rand = crypto_rand_int(tries_left);
+    int chosen_replica = replicas_left_to_try[rand];
+    replicas_left_to_try[rand] = replicas_left_to_try[--tries_left];
+
+    if (rend_compute_v2_desc_id(descriptor_id, query, NULL, time(NULL),
+                                chosen_replica) < 0) {
+      log_warn(LD_REND, "Internal error: Computing v2 rendezvous "
+                        "descriptor ID did not succeed.");
+      return;
+    }
+    switch (directory_get_from_hs_dir(descriptor_id, query)) {
+    case -1:
+      /* Whatever error this was, it was already logged. */
+      log_info(LD_REND, "Error while trying to fetch descriptor from "
+                        "hidden service directory!");
+      return;
+    case 0:
+      /* Try the next replica, if available. */
+      log_info(LD_REND, "No hidden service directory left for this replica; "
+                        "trying another.");
+      continue;
+    case 1:
+      /* Request was sent, we are done here. */
+      log_info(LD_REND, "Request to fetch descriptor from hidden service "
+                        "directory sent; waiting for response.");
+      return;
+    }
   }
-  directory_get_from_hs_dir(descriptor_id, query);
+  /* If we come here, there are no hidden service directories left. */
+  log_info(LD_REND, "Could not pick one of the responsible hidden "
+                    "service directories to fetch descriptors, because "
+                    "we already tried them all unsuccessfully.");
   return;
 }
 
