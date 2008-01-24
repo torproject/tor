@@ -3315,20 +3315,15 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
   tor_assert(desc_id);
   tor_assert(query);
   tor_assert(strlen(query) == REND_SERVICE_ID_LEN_BASE32);
-  /* Determine responsible dirs. */
-  if (hid_serv_get_responsible_directories(responsible_dirs, desc_id) < 0) {
-    /* XXX020 make this louder once we have some v2hidservs */
-    log_info(LD_REND, "Could not determine the responsible hidden service "
-                      "directories to fetch descriptors.");
-    smartlist_free(responsible_dirs);
-    return -1;
-  }
+  /* Determine responsible dirs. Even if we can't get all we want,
+   * work with the ones we have. If it's empty, we'll notice below. */
+  (int) hid_serv_get_responsible_directories(responsible_dirs, desc_id);
 
   base32_encode(desc_id_base32, sizeof(desc_id_base32),
                 desc_id, DIGEST_LEN);
 
   /* Only select those hidden service directories to which we did not send
-   * a request earlier. */
+   * a request recently. */
   directory_clean_last_hid_serv_requests(); /* Clean request history first. */
 
   SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
@@ -3337,19 +3332,13 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
   });
 
-  if (smartlist_len(responsible_dirs) == 0) {
-    log_info(LD_REND, "Could not pick one of the responsible hidden "
-                      "service directories, because we requested them all "
-                      "recently without success.");
-    smartlist_free(responsible_dirs);
-    return 0;
-  }
   hs_dir = smartlist_choose(responsible_dirs);
   smartlist_free(responsible_dirs);
   if (!hs_dir) {
-    log_warn(LD_BUG, "Could not pick one of the responsible hidden service "
-                     "directories to fetch descriptors.");
-    return -1;
+    log_info(LD_REND, "Could not pick one of the responsible hidden "
+                      "service directories, because we requested them all "
+                      "recently without success.");
+    return 0;
   }
 
   /* Remember, that we are requesting a descriptor from this hidden service
