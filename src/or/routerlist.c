@@ -4505,7 +4505,8 @@ hid_serv_responsible_for_desc_id(const char *query)
     return 0; /* This is redundant, but let's be paranoid. */
   my_id = me->cache_info.identity_digest;
   responsible = smartlist_create();
-  if (hid_serv_get_responsible_directories(responsible, query)<0) {
+  (int) hid_serv_get_responsible_directories(responsible, query);
+  if (!smartlist_len(responsible)) {
     smartlist_free(responsible);
     return 0;
   }
