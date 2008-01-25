@@ -2387,9 +2387,9 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     SMARTLIST_FOREACH(items, const char *, item, {
         size_t ln = strlen(item);
         if (deflated) {
-          body_len += ln; estimated_len += ln;
-        } else {
           estimated_len += ln/2;
+        } else {
+          body_len += ln; estimated_len += ln;
         }
       });
 

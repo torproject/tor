@@ -8,7 +8,11 @@ Changes in version 0.2.0.18-alpha - 2008-01-??
       code, which is causing log entries like "TLS error while
       renegotiating handshake". Disable it again. Resolves bug 590.
     - Fix a major memory leak when attempting to use the v2 TLS
-      handshake code.
+      handshake code. Bugfix on 0.2.0.x; fixes bug 589.
+    - We were computing the wrong Content-Length: header for directory
+      responses that need to be compressed on the fly, causing clients
+      asking for those items to always fail. Bugfix on 0.2.0.x; fixes
+      bug 593.
 
   o Major features:
     - Avoid going directly to the directory authorities even if you're a
