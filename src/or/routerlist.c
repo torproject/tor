@@ -4423,7 +4423,8 @@ routers_sort_by_identity(smartlist_t *routers)
 
 /** Determine the routers that are responsible for <b>id</b> (binary) and
  * add pointers to those routers' routerstatus_t to <b>responsible_dirs</b>.
- * If we don't have a consensus, return -1, else 0. */
+ * Return -1 if we're returning an empty smartlist, else return 0.
+ */
 int
 hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                      const char *id)
@@ -4451,8 +4452,8 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   } while (i != start);
 
   /* Even though we don't have the desired number of hidden service
-   * directories, we are happy with what we got. */
-  return 0;
+   * directories, be happy if we got any. */
+  return smartlist_len(responsible_dirs) ? 0 : -1;
 }
 
 /** Return true if this node is currently acting as hidden service
@@ -4505,8 +4506,7 @@ hid_serv_responsible_for_desc_id(const char *query)
     return 0; /* This is redundant, but let's be paranoid. */
   my_id = me->cache_info.identity_digest;
   responsible = smartlist_create();
-  (int) hid_serv_get_responsible_directories(responsible, query);
-  if (!smartlist_len(responsible)) {
+  if (hid_serv_get_responsible_directories(responsible, query) < 0) {
     smartlist_free(responsible);
     return 0;
   }
