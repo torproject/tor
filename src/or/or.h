@@ -2736,9 +2736,6 @@ connection_t *connection_get_by_type_purpose(int type, int purpose);
 connection_t *connection_get_by_type_addr_port_purpose(int type, uint32_t addr,
                                                    uint16_t port, int purpose);
 connection_t *connection_get_by_type_state(int type, int state);
-#if 0
-connection_t *connection_get_by_type_state_lastwritten(int type, int state);
-#endif
 connection_t *connection_get_by_type_state_rendquery(int type, int state,
                                                      const char *rendquery);
 
@@ -3953,15 +3950,8 @@ void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
-#if 0
-int hid_serv_have_enough_directories(void);
-#endif
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);
-#if 0
-routerstatus_t *hid_serv_next_directory(const char *id);
-routerstatus_t *hid_serv_previous_directory(const char *id);
-#endif
 int hid_serv_acting_as_directory(void);
 int hid_serv_responsible_for_desc_id(const char *id);
 

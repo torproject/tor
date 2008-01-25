@@ -4421,82 +4421,6 @@ routers_sort_by_identity(smartlist_t *routers)
   smartlist_sort(routers, _compare_routerinfo_by_id_digest);
 }
 
-#if 0
-/** Return the first router that is acting as hidden service directory and that
- * has a greater ID than <b>id</b>; if all routers have smaller IDs than
- * <b>id</b>, return the router with the smallest ID; if the router list is
- * NULL, or has no elements, return NULL.
- */
-routerstatus_t *
-hid_serv_next_directory(const char *id)
-{
-  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
-  int idx, i, f;
-  if (!c || !smartlist_len(c->routerstatus_list)) return NULL;
-  idx = networkstatus_vote_find_entry_idx(c, id, &f);
-  if (idx >= smartlist_len(c->routerstatus_list))
-    idx = 0;
-  i = idx;
-  do {
-    routerstatus_t *rs = smartlist_get(c->routerstatus_list, i);
-    if (rs->is_hs_dir)
-      return rs;
-    if (++i == smartlist_len(c->routerstatus_list))
-      i = 0;
-  } while (i != idx);
-  return NULL;
-}
-
-/** Return the first router that is acting as hidden service directory and that
- * has a smaller ID than <b>id</b>; if all routers have greater IDs than
- * <b>id</b>, return the router with the highest ID; if the router list is
- * NULL, or has no elements, return NULL.
- */
-routerstatus_t *
-hid_serv_previous_directory(const char *id)
-{
-  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
-  int idx, i, f;
-  if (!c || !smartlist_len(c->routerstatus_list)) return NULL;
-  idx = networkstatus_vote_find_entry_idx(c, id, &f);
-  --idx;
-  if (idx < 0)
-    idx = smartlist_len(c->routerstatus_list) - 1;
-  i = idx;
-  do {
-    routerstatus_t *rs = smartlist_get(c->routerstatus_list, i);
-    if (rs->is_hs_dir)
-      return rs;
-    if (--i < 0)
-      i = smartlist_len(c->routerstatus_list) - 1;
-  } while (i != idx);
-  return NULL;
-}
-#endif
-
-#if 0
-/** Return true, if we are aware of enough hidden service directory to
- * usefully perform v2 rend operations on them (publish, fetch, replicate),
- * or false otherwise. */
-int
-hid_serv_have_enough_directories(void)
-{
-  int n_hsdirs = 0;
-  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
-  if (!c || !smartlist_len(c->routerstatus_list))
-    return 0;
-  SMARTLIST_FOREACH(c->routerstatus_list, routerstatus_t *, r,
-  {
-    if (r->is_hs_dir)
-      /* XXXX020 In fact, REND_NUMBER_OF_CONSECUTIVE_REPLICAS hs dirs
-       * are enough. */
-      if (++n_hsdirs >= REND_NUMBER_OF_CONSECUTIVE_REPLICAS)
-        return 1;
-  });
-  return 0;
-}
-#endif
-
 /** Determine the routers that are responsible for <b>id</b> (binary) and
  * add pointers to those routers' routerstatus_t to <b>responsible_dirs</b>.
  * If we don't have a consensus, return -1, else 0. */
@@ -4562,16 +4486,6 @@ hid_serv_acting_as_directory(void)
              "the consensus, so we won't be one.");
     return 0;
   }
-
-#if 0
-  if (smartlist_len(hs_dirs) <= REND_NUMBER_OF_CONSECUTIVE_REPLICAS) {
-    /* too few HS Dirs -- that won't work */
-    log_info(LD_REND, "We are not acting as hidden service directory, "
-                      "because there are too few hidden service "
-                      "directories in the routing table.");
-    return 0;
-  }
-#endif
   return 1;
 }
 
