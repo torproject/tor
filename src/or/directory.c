@@ -2141,7 +2141,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   char *url, *url_mem, *header;
   or_options_t *options = get_options();
   time_t if_modified_since = 0;
-  int deflated = 0;
+  int deflated;
   size_t url_len;
 
   /* We ignore the body of a GET request. */
@@ -2329,7 +2329,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     /* XXXX If-modified-since is only implemented for the current
      * consensus: that's probably fine, since it's the only vote document
      * people fetch much.*/
-    int current = 1;
+    int current;
     ssize_t body_len = 0;
     ssize_t estimated_len = 0;
     smartlist_t *items = smartlist_create();
