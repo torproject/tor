@@ -1,14 +1,14 @@
-Changes in version 0.2.0.18-alpha - 2008-01-??
+Changes in version 0.2.0.18-alpha - 2008-01-25
   o New directory authorities:
     - Set up dannenberg (run by CCC) as the sixth v3 directory
       authority.
 
   o Major bugfixes:
-    - We accidentally enabled the under-development v2 TLS handshake
-      code, which is causing log entries like "TLS error while
-      renegotiating handshake". Disable it again. Resolves bug 590.
     - Fix a major memory leak when attempting to use the v2 TLS
       handshake code. Bugfix on 0.2.0.x; fixes bug 589.
+    - We accidentally enabled the under-development v2 TLS handshake
+      code, which was causing log entries like "TLS error while
+      renegotiating handshake". Disable it again. Resolves bug 590.
     - We were computing the wrong Content-Length: header for directory
       responses that need to be compressed on the fly, causing clients
       asking for those items to always fail. Bugfix on 0.2.0.x; fixes
@@ -23,13 +23,15 @@ Changes in version 0.2.0.18-alpha - 2008-01-??
       handle more, do another bandwidth test.
     - New config options WarnPlaintextPorts and RejectPlaintextPorts so
       Tor can warn and/or refuse connections to ports commonly used with
-      vulnerable-plaintext protocols.
+      vulnerable-plaintext protocols. Currently we warn on ports 23,
+      109, 110, and 143, but we don't reject any.
 
   o Minor bugfixes:
     - When we setconf ClientOnly to 1, close any current OR and Dir
       listeners. Reported by mwenge.
     - When we get a consensus that's been signed by more people than
-      we expect, don't log about it; it's not a big deal.
+      we expect, don't log about it; it's not a big deal. Reported
+      by Kyle Williams.
 
   o Minor features:
     - Don't answer "/tor/networkstatus-bridges" directory requests if
