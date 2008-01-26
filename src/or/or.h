@@ -3030,6 +3030,10 @@ int dir_split_resource_into_fingerprints(const char *resource,
 char *directory_dump_request_log(void);
 int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
+void directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
+                              int seconds_valid);
+int directory_get_from_hs_dir(const char *desc_id, const char *query);
+
 time_t download_status_increment_failure(download_status_t *dls,
                                          int status_code, const char *item,
                                          int server, time_t now);
@@ -3813,9 +3817,11 @@ typedef struct trusted_dir_server_t {
   /** What kind of authority is this? (Bitfield.) */
   authority_type_t type;
 
+#if 0
   smartlist_t *v3_certs; /**< V3 key certificates for this authority */
   download_status_t cert_dl_status; /**< Status of downloading this server's
                                * latest certificate. */
+#endif
   download_status_t v2_ns_dl_status; /**< Status of downloading this server's
                                * v2 network status. */
   time_t addr_current_at; /**< When was the document that we derived the
@@ -3840,6 +3846,8 @@ authority_cert_t *authority_cert_get_newest_by_id(const char *id_digest);
 authority_cert_t *authority_cert_get_by_sk_digest(const char *sk_digest);
 authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
                                                 const char *sk_digest);
+void authority_cert_get_all(smartlist_t *certs_out);
+void authority_cert_dl_failed(const char *id_digest, int status);
 void authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now);
 int router_reload_router_list(void);
 smartlist_t *router_get_trusted_dir_servers(void);

@@ -601,9 +601,7 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
                                        failed, NULL, 1, 0);
   SMARTLIST_FOREACH(failed, char *, cp,
   {
-    trusted_dir_server_t *dir = trusteddirserver_get_by_v3_auth_digest(cp);
-    if (dir)
-      download_status_failed(&dir->cert_dl_status, status);
+    authority_cert_dl_failed(cp, status);
     tor_free(cp);
   });
   smartlist_free(failed);
@@ -2494,14 +2492,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     smartlist_t *certs = smartlist_create();
     ssize_t len = -1;
     if (!strcmp(url, "/tor/keys/all")) {
-      SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
-                        trusted_dir_server_t *, ds,
-      {
-        if (!ds->v3_certs)
-          continue;
-        SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, cert,
-                          smartlist_add(certs, cert));
-      });
+      authority_cert_get_all(certs);
     } else if (!strcmp(url, "/tor/keys/authority")) {
       authority_cert_t *cert = get_my_v3_authority_cert();
       if (cert)

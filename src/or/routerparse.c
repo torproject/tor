@@ -1433,14 +1433,13 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
 authority_cert_t *
 authority_cert_parse_from_string(const char *s, const char **end_of_string)
 {
-  authority_cert_t *cert = NULL;
+  authority_cert_t *cert = NULL, *old_cert;
   smartlist_t *tokens = NULL;
   char digest[DIGEST_LEN];
   directory_token_t *tok;
   char fp_declared[DIGEST_LEN];
   char *eos;
   size_t len;
-  trusted_dir_server_t *ds;
   int found;
 
   s = eat_whitespace(s);
@@ -1531,22 +1530,19 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   }
 
   /* If we already have this cert, don't bother checking the signature. */
-  ds = trusteddirserver_get_by_v3_auth_digest(
-                                     cert->cache_info.identity_digest);
+  old_cert = authority_cert_get_by_digests(
+                                     cert->cache_info.identity_digest,
+                                     cert->signing_key_digest);
   found = 0;
-  if (ds && ds->v3_certs) {
-    SMARTLIST_FOREACH(ds->v3_certs, authority_cert_t *, c,
-      {
-        /* XXXX020 can we just compare signed_descriptor_digest ? */
-        if (c->cache_info.signed_descriptor_len == len &&
-            c->cache_info.signed_descriptor_body &&
-            !memcmp(s, c->cache_info.signed_descriptor_body, len)) {
-          log_debug(LD_DIR, "We already checked the signature on this "
-                    "certificate; no need to do so again.");
-          found = 1;
-          break;
-        }
-      });
+  if (old_cert) {
+    /* XXXX020 can we just compare signed_descriptor_digest ? */
+    if (old_cert->cache_info.signed_descriptor_len == len &&
+        old_cert->cache_info.signed_descriptor_body &&
+        !memcmp(s, old_cert->cache_info.signed_descriptor_body, len)) {
+      log_debug(LD_DIR, "We already checked the signature on this "
+                "certificate; no need to do so again.");
+      found = 1;
+    }
   }
   if (!found) {
     if (check_signature_token(digest, tok, cert->identity_key, 0,
