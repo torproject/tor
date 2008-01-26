@@ -208,6 +208,24 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
 
 #undef DECLARE_MAP_FNS
 
+#define MAP_FOREACH(prefix, map, keytype, keyvar, valtype, valvar)      \
+  STMT_BEGIN                                                            \
+    prefix##iter_t *key##_iter;                                         \
+    for (key##_iter = prefix##iter_init(map);                           \
+         !prefix##iter_done(key##_iter);                                \
+         key##_iter = prefix##iter_next(map, key##_iter)) {             \
+      keytype keyvar;                                                   \
+      void *valvar##_voidp;                                             \
+      valtype valvar;                                                   \
+      prefix##iter_get(key##_iter, &keyvar, &valvar##_voidp);           \
+      valvar = valvar##_voidp;
+
+#define MAP_FOREACH_END } STMT_END ;
+
+#define DIGESTMAP_FOREACH(map, keyvar, valtype, valvar)                 \
+  MAP_FOREACH(digestmap_, map, const char *, keyvar, valtype, valvar)
+#define DIGESTMAP_FOREACH_END MAP_FOREACH_END
+
 void* strmap_set_lc(strmap_t *map, const char *key, void *val);
 void* strmap_get_lc(const strmap_t *map, const char *key);
 void* strmap_remove_lc(strmap_t *map, const char *key);
