@@ -2026,14 +2026,14 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
 }
 
 /** As write_http_response_header_impl, but sets encoding and content-typed
- * based on whether the response will be <b>deflated</b> or not. */
+ * based on whether the response will be <b>compressed</b> or not. */
 static void
 write_http_response_header(dir_connection_t *conn, ssize_t length,
-                           int deflated, int cache_lifetime)
+                           int compressed, int cache_lifetime)
 {
   write_http_response_header_impl(conn, length,
-                          deflated?"application/octet-stream":"text/plain",
-                          deflated?"deflate":"identity",
+                          compressed?"application/octet-stream":"text/plain",
+                          compressed?"deflate":"identity",
                              NULL,
                              cache_lifetime);
 }
@@ -2141,7 +2141,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   char *url, *url_mem, *header;
   or_options_t *options = get_options();
   time_t if_modified_since = 0;
-  int deflated;
+  int compressed;
   size_t url_len;
 
   /* We ignore the body of a GET request. */
@@ -2169,8 +2169,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
   url_mem = url;
   url_len = strlen(url);
-  deflated = url_len > 2 && !strcmp(url+url_len-2, ".z");
-  if (deflated) {
+  compressed = url_len > 2 && !strcmp(url+url_len-2, ".z");
+  if (compressed) {
     url[url_len-2] = '\0';
     url_len -= 2;
   }
@@ -2194,7 +2194,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto done;
     }
 
-    dlen = deflated ? d->dir_z_len : d->dir_len;
+    dlen = compressed ? d->dir_z_len : d->dir_len;
 
     if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
       log_info(LD_DIRSERV,
@@ -2207,12 +2207,12 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     note_request(url, dlen);
 
     log_debug(LD_DIRSERV,"Dumping %sdirectory to client.",
-              deflated?"deflated ":"");
-    write_http_response_header(conn, dlen, deflated,
+              compressed?"compressed ":"");
+    write_http_response_header(conn, dlen, compressed,
                           FULL_DIR_CACHE_LIFETIME);
     conn->cached_dir = d;
     conn->cached_dir_offset = 0;
-    if (! deflated)
+    if (!compressed)
       conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
     ++d->refcnt;
 
@@ -2237,7 +2237,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 304, "Not modified");
       goto done;
     }
-    dlen = deflated ? d->dir_z_len : d->dir_len;
+    dlen = compressed ? d->dir_z_len : d->dir_len;
 
     if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
       log_info(LD_DIRSERV,
@@ -2247,9 +2247,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto done;
     }
     note_request(url, dlen);
-    write_http_response_header(conn, dlen, deflated,
+    write_http_response_header(conn, dlen, compressed,
                  RUNNINGROUTERS_CACHE_LIFETIME);
-    connection_write_to_buf(deflated ? d->dir_z : d->dir, dlen, TO_CONN(conn));
+    connection_write_to_buf(compressed ? d->dir_z : d->dir, dlen,
+                            TO_CONN(conn));
     goto done;
   }
 
@@ -2264,12 +2265,12 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     if (!is_v3) {
       dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
       if (!strcmpstart(key, "fp/"))
-        request_type = deflated?"/tor/status/fp.z":"/tor/status/fp";
+        request_type = compressed?"/tor/status/fp.z":"/tor/status/fp";
       else if (!strcmpstart(key, "authority"))
-        request_type = deflated?"/tor/status/authority.z":
+        request_type = compressed?"/tor/status/authority.z":
           "/tor/status/authority";
       else if (!strcmpstart(key, "all"))
-        request_type = deflated?"/tor/status/all.z":"/tor/status/all";
+        request_type = compressed?"/tor/status/all.z":"/tor/status/all";
       else
         request_type = "/tor/status/?";
     } else {
@@ -2277,7 +2278,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       time_t now = time(NULL);
       smartlist_add(dir_fps, tor_memdup("\0\0\0\0\0\0\0\0\0\0"
                                         "\0\0\0\0\0\0\0\0\0\0", 20));
-      request_type = deflated?"v3.z":"v3";
+      request_type = compressed?"v3.z":"v3";
       lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
     }
 
@@ -2299,7 +2300,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto done;
     }
 
-    dlen = dirserv_estimate_data_size(dir_fps, 0, deflated);
+    dlen = dirserv_estimate_data_size(dir_fps, 0, compressed);
     if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
       log_info(LD_DIRSERV,
                "Client asked for network status lists, but we've been "
@@ -2312,10 +2313,10 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     // note_request(request_type,dlen);
     (void) request_type;
-    write_http_response_header(conn, -1, deflated,
+    write_http_response_header(conn, -1, compressed,
                                smartlist_len(dir_fps) == 1 ? lifetime : 0);
     conn->fingerprint_stack = dir_fps;
-    if (! deflated)
+    if (! compressed)
       conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
 
     /* Prime the connection with some data. */
@@ -2382,11 +2383,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto vote_done;
     }
     SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
-                      body_len += deflated ? d->dir_z_len : d->dir_len);
+                      body_len += compressed ? d->dir_z_len : d->dir_len);
     estimated_len += body_len;
     SMARTLIST_FOREACH(items, const char *, item, {
         size_t ln = strlen(item);
-        if (deflated) {
+        if (compressed ) {
           estimated_len += ln/2;
         } else {
           body_len += ln; estimated_len += ln;
@@ -2397,11 +2398,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 503, "Directory busy, try again later.");
       goto vote_done;
     }
-    write_http_response_header(conn, body_len ? body_len : -1, deflated,
+    write_http_response_header(conn, body_len ? body_len : -1, compressed,
                  lifetime);
 
     if (smartlist_len(items)) {
-      if (deflated) {
+      if (compressed) {
         conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
         SMARTLIST_FOREACH(items, const char *, c,
                  connection_write_to_buf_zlib(c, strlen(c), conn, 0));
@@ -2412,8 +2413,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       }
     } else {
       SMARTLIST_FOREACH(dir_items, cached_dir_t *, d,
-          connection_write_to_buf(deflated ? d->dir_z : d->dir,
-                                  deflated ? d->dir_z_len : d->dir_len,
+          connection_write_to_buf(compressed ? d->dir_z : d->dir,
+                                  compressed ? d->dir_z_len : d->dir_len,
                                   TO_CONN(conn)));
     }
   vote_done:
@@ -2436,18 +2437,18 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                                           !connection_dir_is_encrypted(conn));
 
     if (!strcmpstart(url, "fp/")) {
-      request_type = deflated?"/tor/server/fp.z":"/tor/server/fp";
+      request_type = compressed?"/tor/server/fp.z":"/tor/server/fp";
       if (smartlist_len(conn->fingerprint_stack) == 1)
         cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
     } else if (!strcmpstart(url, "authority")) {
-      request_type = deflated?"/tor/server/authority.z":
+      request_type = compressed?"/tor/server/authority.z":
         "/tor/server/authority";
       cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
     } else if (!strcmpstart(url, "all")) {
-      request_type = deflated?"/tor/server/all.z":"/tor/server/all";
+      request_type = compressed?"/tor/server/all.z":"/tor/server/all";
       cache_lifetime = FULL_DIR_CACHE_LIFETIME;
     } else if (!strcmpstart(url, "d/")) {
-      request_type = deflated?"/tor/server/d.z":"/tor/server/d";
+      request_type = compressed?"/tor/server/d.z":"/tor/server/d";
       if (smartlist_len(conn->fingerprint_stack) == 1)
         cache_lifetime = ROUTERDESC_BY_DIGEST_CACHE_LIFETIME;
     } else {
@@ -2471,7 +2472,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 404, msg);
     else {
       dlen = dirserv_estimate_data_size(conn->fingerprint_stack,
-                                        1, deflated);
+                                        1, compressed);
       if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
         log_info(LD_DIRSERV,
                  "Client asked for server descriptors, but we've been "
@@ -2480,8 +2481,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         conn->dir_spool_src = DIR_SPOOL_NONE;
         goto done;
       }
-      write_http_response_header(conn, -1, deflated, cache_lifetime);
-      if (deflated)
+      write_http_response_header(conn, -1, compressed, cache_lifetime);
+      if (compressed)
         conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
       /* Prime the connection with some data. */
       connection_dirserv_flushed_some(conn);
@@ -2544,13 +2545,13 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     SMARTLIST_FOREACH(certs, authority_cert_t *, c,
                       len += c->cache_info.signed_descriptor_len);
 
-    if (global_write_bucket_low(TO_CONN(conn), deflated?len/2:len, 1)) {
+    if (global_write_bucket_low(TO_CONN(conn), compressed?len/2:len, 1)) {
       write_http_status_line(conn, 503, "Directory busy, try again later.");
       goto keys_done;
     }
 
-    write_http_response_header(conn, deflated?-1:len, deflated, 60*60);
-    if (deflated) {
+    write_http_response_header(conn, compressed?-1:len, compressed, 60*60);
+    if (compressed) {
       conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_write_to_buf_zlib(c->cache_info.signed_descriptor_body,
