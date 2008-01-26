@@ -25,7 +25,7 @@
 %\newcommand{\workingnote}[1]{(**#1)}   % makes the note visible.
 
 \date{}
-\title{Design of a blocking-resistant anonymity system\\DRAFT}
+\title{Design of a blocking-resistant anonymity system}
 
 %\author{Roger Dingledine\inst{1} \and Nick Mathewson\inst{1}}
 \author{Roger Dingledine \\ The Tor Project \\ arma@torproject.org \and
@@ -50,12 +50,12 @@ by government-level attackers.
 
 \end{abstract}
 
-\section{Introduction and Goals}
+\section{Introduction}
 
 Anonymizing networks like Tor~\cite{tor-design} bounce traffic around a
 network of encrypting relays.  Unlike encryption, which hides only {\it what}
 is said, these networks also aim to hide who is communicating with whom, which
-users are using which websites, and similar relations.  These systems have a
+users are using which websites, and so on.  These systems have a
 broad range of users, including ordinary citizens who want to avoid being
 profiled for targeted advertisements, corporations who don't want to reveal
 information to their competitors, and law enforcement and government
@@ -78,14 +78,14 @@ Wikipedia
 and Blogspot, they are no longer affected by local censorship
 and firewall rules. In fact, an informal user study
 %(described in Appendix~\ref{app:geoip})
-showed China as the third largest user base
-for Tor clients, with perhaps ten thousand people accessing the Tor
-network from China each day.
+showed that a few hundred thousand users people access the Tor network
+each day, with about 20\% of them coming from China~\cite{something}.
 
 The current Tor design is easy to block if the attacker controls Alice's
 connection to the Tor network---by blocking the directory authorities,
-by blocking all the server IP addresses in the directory, or by filtering
-based on the fingerprint of the Tor TLS handshake. Here we describe an
+by blocking all the relay IP addresses in the directory, or by filtering
+based on the network fingerprint of the Tor TLS handshake. Here we
+describe an
 extended design that builds upon the current Tor network to provide an
 anonymizing
 network that resists censorship as well as anonymity-breaking attacks.
@@ -99,7 +99,7 @@ components of our designs in detail.  Section~\ref{sec:security} considers
 security implications and Section~\ref{sec:reachability} presents other
 issues with maintaining connectivity and sustainability for the design.
 %Section~\ref{sec:future} speculates about future more complex designs,
-Finally Section~\ref{sec:conclusion} summarizes our next steps and
+Finally section~\ref{sec:conclusion} summarizes our next steps and
 recommendations.
 
 % The other motivation is for places where we're concerned they will
@@ -137,8 +137,8 @@ unanticipated oppressive situations. In fact, by designing with
 a variety of adversaries in mind, we can take advantage of the fact that
 adversaries will be in different stages of the arms race at each location,
 so an address blocked in one locale can still be useful in others.
+We focus on an attacker with somewhat complex goals:
 
-We assume that the attackers' goals are somewhat complex.
 \begin{tightlist}
 \item The attacker would like to restrict the flow of certain kinds of
   information, particularly when this information is seen as embarrassing to
@@ -222,7 +222,7 @@ success and visibility.
 
 We do not assume that government-level attackers are always uniform
 across the country. For example, users of different ISPs in China
-experience different censorship policies and mechanisms.
+experience different censorship policies and mechanisms~\cite{china-ccs07}.
 %there is no single centralized place in China
 %that coordinates its specific censorship decisions and steps.
 
@@ -253,11 +253,11 @@ real Tor network.
 
 Tor is popular and sees a lot of use---it's the largest anonymity
 network of its kind, and has
-attracted more than 800 volunteer-operated routers from around the
+attracted more than 1500 volunteer-operated routers from around the
 world.  Tor protects each user by routing their traffic through a multiply
-encrypted ``circuit'' built of a few randomly selected servers, each of which
-can remove only a single layer of encryption.  Each server sees only the step
-before it and the step after it in the circuit, and so no single server can
+encrypted ``circuit'' built of a few randomly selected relay, each of which
+can remove only a single layer of encryption.  Each relay sees only the step
+before it and the step after it in the circuit, and so no single relay can
 learn the connection between a user and her chosen communication partners.
 In this section, we examine some of the reasons why Tor has become popular,
 with particular emphasis to how we can take advantage of these properties
@@ -290,7 +290,7 @@ The Tor design provides other features as well that are not typically
 present in manual or ad hoc circumvention techniques.
 
 First, Tor has a well-analyzed and well-understood way to distribute
-information about servers.
+information about relay.
 Tor directory authorities automatically aggregate, test,
 and publish signed summaries of the available Tor routers. Tor clients
 can fetch these summaries to learn which routers are available and
@@ -365,11 +365,11 @@ something else: hundreds of thousands of different and often-changing
 addresses that we can leverage for our blocking-resistance design.
 
 Finally and perhaps most importantly, Tor provides anonymity and prevents any
-single server from linking users to their communication partners.  Despite
+single relay from linking users to their communication partners.  Despite
 initial appearances, {\it distributed-trust anonymity is critical for
-anti-censorship efforts}.  If any single server can expose dissident bloggers
+anti-censorship efforts}.  If any single relay can expose dissident bloggers
 or compile a list of users' behavior, the censors can profitably compromise
-that server's operator, perhaps by  applying economic pressure to their
+that relay's operator, perhaps by applying economic pressure to their
 employers,
 breaking into their computer, pressuring their family (if they have relatives
 in the censored area), or so on.  Furthermore, in designs where any relay can
@@ -394,7 +394,8 @@ process of finding one or more usable relays.
 For example, we can divide the pieces of Tor in the previous section
 into the process of building paths and sending
 traffic over them (relay) and the process of learning from the directory
-servers about what routers are available (discovery).  With this distinction
+authorities about what routers are available (discovery).  With this
+distinction
 in mind, we now examine several categories of relay-based schemes.
 
 \subsection{Centrally-controlled shared proxies}
@@ -579,33 +580,34 @@ firewalls can't notice them without performing expensive stream
 reconstruction~\cite{ptacek98insertion}. This technique relies on the
 same insight as our weak steganography assumption.
 
-\subsection{Internal caching networks}
+%\subsection{Internal caching networks}
 
-Freenet~\cite{freenet-pets00} is an anonymous peer-to-peer data store.
-Analyzing Freenet's security can be difficult, as its design is in flux as
-new discovery and routing mechanisms are proposed, and no complete
-specification has (to our knowledge) been written.  Freenet servers relay
-requests for specific content (indexed by a digest of the content)
-``toward'' the server that hosts it, and then cache the content as it
-follows the same path back to
-the requesting user.  If Freenet's routing mechanism is successful in
-allowing nodes to learn about each other and route correctly even as some
-node-to-node links are blocked by firewalls, then users inside censored areas
-can ask a local Freenet server for a piece of content, and get an answer
-without having to connect out of the country at all.  Of course, operators of
-servers inside the censored area can still be targeted, and the addresses of
-external servers can still be blocked.
+%Freenet~\cite{freenet-pets00} is an anonymous peer-to-peer data store.
+%Analyzing Freenet's security can be difficult, as its design is in flux as
+%new discovery and routing mechanisms are proposed, and no complete
+%specification has (to our knowledge) been written.  Freenet servers relay
+%requests for specific content (indexed by a digest of the content)
+%``toward'' the server that hosts it, and then cache the content as it
+%follows the same path back to
+%the requesting user.  If Freenet's routing mechanism is successful in
+%allowing nodes to learn about each other and route correctly even as some
+%node-to-node links are blocked by firewalls, then users inside censored areas
+%can ask a local Freenet server for a piece of content, and get an answer
+%without having to connect out of the country at all.  Of course, operators of
+%servers inside the censored area can still be targeted, and the addresses of
+%external servers can still be blocked.
 
-\subsection{Skype}
+%\subsection{Skype}
 
-The popular Skype voice-over-IP software uses multiple techniques to tolerate
-restrictive networks, some of which allow it to continue operating in the
-presence of censorship.  By switching ports and using encryption, Skype
-attempts to resist trivial blocking and content filtering.  Even if no
-encryption were used, it would still be expensive to scan all voice
-traffic for sensitive words.  Also, most current keyloggers are unable to
-store voice traffic.  Nevertheless, Skype can still be blocked, especially at
-its central login server.
+%The popular Skype voice-over-IP software uses multiple techniques to tolerate
+%restrictive networks, some of which allow it to continue operating in the
+%presence of censorship.  By switching ports and using encryption, Skype
+%attempts to resist trivial blocking and content filtering.  Even if no
+%encryption were used, it would still be expensive to scan all voice
+%traffic for sensitive words.  Also, most current keyloggers are unable to
+%store voice traffic.  Nevertheless, Skype can still be blocked, especially at
+%its central login server.
+
 %*sjmurdoch* "we consider the login server to be the only central component in
 %the Skype p2p network."
 %*sjmurdoch* http://www1.cs.columbia.edu/~salman/publications/skype1_4.pdf
@@ -661,7 +663,7 @@ to get more relay addresses, and to distribute them to users differently.
 
 \subsection{Bridge relays}
 
-Today, Tor servers operate on less than a thousand distinct IP addresses;
+Today, Tor relays operate on a few thousand distinct IP addresses;
 an adversary
 could enumerate and block them all with little trouble.  To provide a
 means of ingress to the network, we need a larger set of entry points, most
@@ -695,7 +697,7 @@ Tor client; but we leave this discussion for Section~\ref{sec:security}.
 How do the bridge relays advertise their existence to the world? We
 introduce a second new component of the design: a specialized directory
 authority that aggregates and tracks bridges. Bridge relays periodically
-publish server descriptors (summaries of their keys, locations, etc,
+publish relay descriptors (summaries of their keys, locations, etc,
 signed by their long-term identity key), just like the relays in the
 ``main'' Tor network, but in this case they publish them only to the
 bridge directory authorities.
@@ -703,7 +705,7 @@ bridge directory authorities.
 The main difference between bridge authorities and the directory
 authorities for the main Tor network is that the main authorities provide
 a list of every known relay, but the bridge authorities only give
-out a server descriptor if you already know its identity key. That is,
+out a relay descriptor if you already know its identity key. That is,
 you can keep up-to-date on a bridge's location and other information
 once you know about it, but you can't just grab a list of all the bridges.
 
@@ -733,7 +735,7 @@ authorities, to limit the potential impact of an authority compromise.
 %Secondly, while users can in fact configure which directory authorities
 %they use, we need to add a new type of directory authority and teach
 %bridges to fetch directory information from the main authorities while
-%publishing server descriptors to the bridge authorities. We're most of
+%publishing relay descriptors to the bridge authorities. We're most of
 %the way there, since we can already specify attributes for directory
 %authorities:
 %add a separate flag named ``blocking''.
@@ -756,7 +758,7 @@ If a blocked user knows the identity keys of a set of bridge relays, and
 he has correct address information for at least one of them, he can use
 that one to make a secure connection to the bridge authority and update
 his knowledge about the other bridge relays. He can also use it to make
-secure connections to the main Tor network and directory servers, so he
+secure connections to the main Tor network and directory authorities, so he
 can build circuits and connect to the rest of the Internet. All of these
 updates happen in the background: from the blocked user's perspective,
 he just accesses the Internet via his Tor client like always.
@@ -786,15 +788,15 @@ out too much.
 Currently, Tor uses two protocols for its network communications. The
 main protocol uses TLS for encrypted and authenticated communication
 between Tor instances. The second protocol is standard HTTP, used for
-fetching directory information. All Tor servers listen on their ``ORPort''
+fetching directory information. All Tor relays listen on their ``ORPort''
 for TLS connections, and some of them opt to listen on their ``DirPort''
-as well, to serve directory information. Tor servers choose whatever port
-numbers they like; the server descriptor they publish to the directory
+as well, to serve directory information. Tor relays choose whatever port
+numbers they like; the relay descriptor they publish to the directory
 tells users where to connect.
 
 One format for communicating address information about a bridge relay is
 its IP address and DirPort. From there, the user can ask the bridge's
-directory cache for an up-to-date copy of its server descriptor, and
+directory cache for an up-to-date copy of its relay descriptor, and
 learn its current circuit keys, its ORPort, and so on.
 
 However, connecting directly to the directory cache involves a plaintext
@@ -824,7 +826,7 @@ potential users, and their current and anticipated firewall restrictions.
 Furthermore, we need to look at the specifics of Tor's TLS handshake.
 Right now Tor uses some predictable strings in its TLS handshakes. For
 example, it sets the X.509 organizationName field to ``Tor'', and it puts
-the Tor server's nickname in the certificate's commonName field. We
+the Tor relay's nickname in the certificate's commonName field. We
 should tweak the handshake protocol so it doesn't rely on any unusual details
 in the certificate, yet it remains secure; the certificate itself
 should be made to resemble an ordinary HTTPS certificate.  We should also try
@@ -841,7 +843,7 @@ These extra certificates may help identify Tor's TLS handshake; instead,
 bridges should consider using only a single TLS key certificate signed by
 their identity key, and providing the full value of the identity key in an
 early handshake cell.  More significantly, Tor currently has all clients
-present certificates, so that clients are harder to distinguish from servers.
+present certificates, so that clients are harder to distinguish from relays.
 But in a blocking-resistance environment, clients should not present
 certificates at all.
 
@@ -892,10 +894,10 @@ adversary could do similar attacks just by monitoring the network
 traffic.
 % cue paper by steven and george
 
-Once the Tor client has fetched the bridge's server descriptor, it should
+Once the Tor client has fetched the bridge's relay descriptor, it should
 remember the identity key fingerprint for that bridge relay. Thus if
 the bridge relay moves to a new IP address, the client can query the
-bridge directory authority to look up a fresh server descriptor using
+bridge directory authority to look up a fresh relay descriptor using
 this fingerprint.
 
 So we've shown that it's \emph{possible} to bootstrap into the network
@@ -1143,7 +1145,7 @@ bridge directory authorities, and bridges gravitate to one based on
 their identity key. The better answer would be some federation of bridge
 authorities that work together to provide redundancy but don't introduce
 new security issues. We could even imagine designs where the bridge
-authorities have encrypted versions of the bridge's server descriptors,
+authorities have encrypted versions of the bridge's relay descriptors,
 and the users learn a decryption key that they keep private when they
 first hear about the bridge---this way the bridge authorities would not
 be able to learn the IP address of the bridges.
@@ -1163,7 +1165,7 @@ is it reachable from the public Internet? Second, what proportion of
 the time is it available? Third, is it blocked in certain jurisdictions?
 
 The first component can be tested just as we test reachability of
-ordinary Tor servers. Specifically, the bridges do a self-test---connect
+ordinary Tor relays. Specifically, the bridges do a self-test---connect
 to themselves via the Tor network---before they are willing to
 publish their descriptor, to make sure they're not obviously broken or
 misconfigured. Once the bridges publish, the bridge authority also tests
@@ -1377,7 +1379,7 @@ start the race. More research remains.
 
 Against some attacks, relaying traffic for others can improve
 anonymity. The simplest example is an attacker who owns a small number
-of Tor servers. He will see a connection from the bridge, but he won't
+of Tor relays. He will see a connection from the bridge, but he won't
 be able to know whether the connection originated there or was relayed
 from somebody else. More generally, the mere uncertainty of whether the
 traffic originated from that user may be helpful.
@@ -1406,9 +1408,9 @@ of its own.
 We also need to examine how entry guards fit in. Entry guards
 (a small set of nodes that are always used for the first
 step in a circuit) help protect against certain attacks
-where the attacker runs a few Tor servers and waits for
-the user to choose these servers as the beginning and end of her
-circuit\footnote{\url{http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ\#EntryGuards}}.
+where the attacker runs a few Tor relays and waits for
+the user to choose these relays as the beginning and end of her
+circuit\footnote{\url{http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#EntryGuards}}.
 If the blocked user doesn't use the bridge's entry guards, then the bridge
 doesn't gain as much cover benefit. On the other hand, what design changes
 are needed for the blocked user to use the bridge's entry guards without
@@ -1450,17 +1452,17 @@ system.
 \label{subsec:trust-chain}
 
 Tor's ``public key infrastructure'' provides a chain of trust to
-let users verify that they're actually talking to the right servers.
+let users verify that they're actually talking to the right relays.
 There are four pieces to this trust chain.
 
 First, when Tor clients are establishing circuits, at each step
-they demand that the next Tor server in the path prove knowledge of
+they demand that the next Tor relay in the path prove knowledge of
 its private key~\cite{tor-design}. This step prevents the first node
 in the path from just spoofing the rest of the path. Second, the
-Tor directory authorities provide a signed list of servers along with
+Tor directory authorities provide a signed list of relays along with
 their public keys---so unless the adversary can control a threshold
 of directory authorities, he can't trick the Tor client into using other
-Tor servers. Third, the location and keys of the directory authorities,
+Tor relays. Third, the location and keys of the directory authorities,
 in turn, is hard-coded in the Tor source code---so as long as the user
 got a genuine version of Tor, he can know that he is using the genuine
 Tor network. And last, the source code and other packages are signed
@@ -1491,7 +1493,7 @@ community, though, this question remains a critical weakness.
 %\section{Performance improvements}
 %\label{sec:performance}
 %
-%\subsection{Fetch server descriptors just-in-time}
+%\subsection{Fetch relay descriptors just-in-time}
 %
 %I guess we should encourage most places to do this, so blocked
 %users don't stand out.
@@ -1635,9 +1637,9 @@ emphasizes the connections the bridge user is currently relaying.
 %(Minor
 %anonymity implications, but hey.) (In many cases there won't be much
 %activity, so this may backfire. Or it may be better suited to full-fledged
-%Tor servers.)
+%Tor relay.)
 
-% Also consider everybody-a-server. Many of the scalability questions
+% Also consider everybody-a-relay. Many of the scalability questions
 % are easier when you're talking about making everybody a bridge.
 
 %\subsection{What if the clients can't install software?}
@@ -1702,7 +1704,7 @@ each bridge, so users who hear about an honest bridge can get a good
 copy.
 See Section~\ref{subsec:first-bridge} for more discussion.
 
-% Ian suggests that we have every tor server distribute a signed copy of the
+% Ian suggests that we have every tor relay distribute a signed copy of the
 % software.
 
 \section{Next Steps}
@@ -1824,7 +1826,7 @@ from somewhere.
 9. Bridge directories must not simply be a handful of nodes that
 provide the list of bridges. They must flood or otherwise distribute
 information out to other Tor nodes as mirrors. That way it becomes
-difficult for censors to flood the bridge directory servers with
+difficult for censors to flood the bridge directory authorities with
 requests, effectively denying access for others. But, there's lots of
 churn and a much larger size than Tor directories.  We are forced to
 handle the directory scaling problem here much sooner than for the
