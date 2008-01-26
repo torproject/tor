@@ -1030,6 +1030,53 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
   return NULL;
 }
 
+/** Determine the responsible hidden service directories for the
+ * rend_encoded_v2_service_descriptor_t's in <b>descs</b> and upload them;
+ * <b>service_id</b> and <b>seconds_valid</b> are only passed for logging
+ * purposes. */
+static void
+directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
+                         int seconds_valid)
+{
+  int i, j;
+  smartlist_t *responsible_dirs = smartlist_create();
+  routerstatus_t *hs_dir;
+  for (i = 0; i < smartlist_len(descs); i++) {
+    rend_encoded_v2_service_descriptor_t *desc = smartlist_get(descs, i);
+    /* Determine responsible dirs. */
+    if (hid_serv_get_responsible_directories(responsible_dirs,
+                                             desc->desc_id) < 0) {
+      log_warn(LD_REND, "Could not determine the responsible hidden service "
+                        "directories to post descriptors to.");
+      smartlist_free(responsible_dirs);
+      return;
+    }
+    for (j = 0; j < smartlist_len(responsible_dirs); j++) {
+      char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+      hs_dir = smartlist_get(responsible_dirs, j);
+      /* Send publish request. */
+      directory_initiate_command_routerstatus(hs_dir,
+                                              DIR_PURPOSE_UPLOAD_RENDDESC_V2,
+                                              ROUTER_PURPOSE_GENERAL,
+                                              1, NULL, desc->desc_str,
+                                              strlen(desc->desc_str), 0);
+      base32_encode(desc_id_base32, sizeof(desc_id_base32),
+                    desc->desc_id, DIGEST_LEN);
+      log_info(LD_REND, "Sending publish request for v2 descriptor for "
+                        "service '%s' with descriptor ID '%s' with validity "
+                        "of %d seconds to hidden service directory '%s' on "
+                        "port %d.",
+               service_id,
+               desc_id_base32,
+               seconds_valid,
+               hs_dir->nickname,
+               hs_dir->dir_port);
+    }
+    smartlist_clear(responsible_dirs);
+  }
+  smartlist_free(responsible_dirs);
+}
+
 /** Encode and sign up-to-date v0 and/or v2 service descriptors for
  * <b>service</b>, and upload it/them to all the dirservers/to the
  * responsible hidden service directories.
