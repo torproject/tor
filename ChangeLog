@@ -37,6 +37,10 @@ Changes in version 0.2.0.18-alpha - 2008-01-25
     - Don't answer "/tor/networkstatus-bridges" directory requests if
       the request isn't encrypted.
     - Make "ClientOnly 1" config option disable directory ports too.
+    - Patches from Karsten Loesing to make v2 hidden services more
+      robust: work even when there aren't enough HSDir relays available;
+      retry when a v2 rend desc fetch fails; but don't retry if we
+      already have a usable v0 rend desc.
 
 
 Changes in version 0.2.0.17-alpha - 2008-01-17
