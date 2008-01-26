@@ -1034,7 +1034,7 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
  * rend_encoded_v2_service_descriptor_t's in <b>descs</b> and upload them;
  * <b>service_id</b> and <b>seconds_valid</b> are only passed for logging
  * purposes. */
-static void
+void
 directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
                          int seconds_valid)
 {

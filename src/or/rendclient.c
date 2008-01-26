@@ -336,7 +336,7 @@ directory_clean_last_hid_serv_requests(void)
  * in the case that no hidden service directory is left to ask for the
  * descriptor, return 0, and in case of a failure -1. <b>query</b> is only
  * passed for pretty log statements. */
-static int
+int
 directory_get_from_hs_dir(const char *desc_id, const char *query)
 {
   smartlist_t *responsible_dirs = smartlist_create();
