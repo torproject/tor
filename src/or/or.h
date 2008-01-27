@@ -3030,10 +3030,6 @@ int dir_split_resource_into_fingerprints(const char *resource,
 char *directory_dump_request_log(void);
 int router_supports_extrainfo(const char *identity_digest, int is_authority);
 
-void directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
-                              int seconds_valid);
-int directory_get_from_hs_dir(const char *desc_id, const char *query);
-
 time_t download_status_increment_failure(download_status_t *dls,
                                          int status_code, const char *item,
                                          int server, time_t now);
