@@ -8,6 +8,9 @@ Changes in version 0.2.0.19-alpha - 2008-0?-??
     - Detect version of OSX where malloc_good_size is present in the
       library but never actually declared.  Resolves bug 587.  Bugfix
       on 0.2.0.x.
+    - When connecting to a bridge without specifying its key, insert
+      the connection into the identity-to-connection map as soon as
+      a key is learned.  Fixes bug 574.  Bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.0.18-alpha - 2008-01-25

@@ -748,7 +748,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   }
 
   if (started_here && tor_digest_is_zero(conn->identity_digest)) {
-    memcpy(conn->identity_digest, digest_rcvd_out, DIGEST_LEN);
+    connection_or_set_identity_digest(conn, digest_rcvd_out);
     tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
