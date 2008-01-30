@@ -1545,6 +1545,7 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
   if (rl->old_routers)
     signed_descs_update_status_from_consensus_networkstatus(rl->old_routers);
 
+  /* XXX020 these warnings don't help anymore; we should disable them -RD */
   me = router_get_my_routerinfo();
   if (me && !have_warned_about_invalid_status) {
     routerstatus_t *rs = networkstatus_vote_find_entry(consensus,
