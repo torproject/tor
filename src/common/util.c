@@ -224,6 +224,14 @@ _tor_free(void *mem)
   tor_free(mem);
 }
 
+#if defined(HAVE_MALLOC_GOOD_SIZE) && !defined(HAVE_MALLOC_GOOD_SIZE_PROTOTYPE)
+/* Some version of Mac OSX have malloc_good_size in their libc, but not
+ * actually defined in malloc/malloc.h.  We detect this and work around it by
+ * prototyping.
+ */
+extern size_t malloc_good_size(size_t size);
+#endif
+
 /** Allocate and return a chunk of memory of size at least *<b>size</p>, using
  * the same resources we would use to malloc *<b>sizep</b>.  Set *<b>sizep</b>
  * to the number of usable bytes in the chunk of memory. */

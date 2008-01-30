@@ -193,3 +193,17 @@ CPPFLAGS="$tor_saved_CPPFLAGS"
 
 ]) dnl end defun
 
+dnl Check whether the prototype for a function is present or missing.
+dnl Apple has a nasty habit of putting functions in their libraries (so that
+dnl AC_CHECK_FUNCS passes) but not actually declaring them in the headers.
+dnl
+dnl TOR_CHECK_PROTYPE(1:functionname, 2:macroname, 2: includes)
+AC_DEFUN([TOR_CHECK_PROTOTYPE], [
+ AC_CACHE_CHECK([for declaration of $1], tor_cv_$1_declared, [
+   AC_COMPILE_IFELSE(AC_LANG_PROGRAM([$3],[void *ptr= $1 ;]),
+                     tor_cv_$1_declared=yes,tor_cv_$1_declared=no)])
+if test x$tor_cv_$1_declared != xno ; then
+  AC_DEFINE($2, 1,
+       [Defined if the prototype for $1 seems to be present.])
+fi
+])

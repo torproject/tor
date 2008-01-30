@@ -5,6 +5,9 @@ Changes in version 0.2.0.19-alpha - 2008-0?-??
       recognize them.  Fixes bug 571.  Bugfix on 0.2.0.x.
     - Stop recommending that every server operator send mail to tor-ops.
       Resolves bug 597.  Bugfix on 0.1.2.x.
+    - Detect version of OSX where malloc_good_size is present in the
+      library but never actually declared.  Resolves bug 587.  Bugfix
+      on 0.2.0.x.
 
 
 Changes in version 0.2.0.18-alpha - 2008-01-25
