@@ -3441,9 +3441,7 @@ routers_update_all_from_networkstatus(void)
         have_warned_about_invalid_status = 1;
       } else if (n_naming && !n_named) {
         log_info(LD_GENERAL, "0/%d name-binding directory authorities "
-                 "recognize your nickname. Please consider sending your "
-                 "nickname and identity fingerprint to the tor-ops.",
-                 n_naming);
+                 "recognize your nickname.", n_naming);
         have_warned_about_invalid_status = 1;
       }
     }
