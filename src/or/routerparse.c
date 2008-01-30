@@ -533,6 +533,7 @@ find_dir_signing_key(const char *str)
   }
   if (tok->tp != K_DIR_SIGNING_KEY) {
     log_warn(LD_DIR, "Dir-signing-key token did not parse as expected");
+    token_free(tok);
     return NULL;
   }
 
@@ -541,6 +542,7 @@ find_dir_signing_key(const char *str)
     tok->key = NULL; /* steal reference. */
   } else {
     log_warn(LD_DIR, "Dir-signing-key token contained no key");
+    token_free(tok);
     return NULL;
   }
 
@@ -778,7 +780,7 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   if (router_get_router_hash(s, digest) < 0) {
     log_warn(LD_DIR, "Couldn't compute router hash.");
-    return NULL;
+    goto err;
   }
   tokens = smartlist_create();
   if (tokenize_string(s,end,tokens,RTR)) {

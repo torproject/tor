@@ -619,13 +619,13 @@ router_pick_trusteddirserver_impl(authority_type_t type,
   routerstatus_t *result;
   time_t now = time(NULL);
 
+  if (!trusted_dir_servers)
+    return NULL;
+
   direct = smartlist_create();
   tunnel = smartlist_create();
   overloaded_direct = smartlist_create();
   overloaded_tunnel = smartlist_create();
-
-  if (!trusted_dir_servers)
-    return NULL;
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
     {

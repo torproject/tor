@@ -249,8 +249,10 @@ init_keys(void)
   if (!server_mode(options)) {
     if (!(prkey = crypto_new_pk_env()))
       return -1;
-    if (crypto_pk_generate_key(prkey))
+    if (crypto_pk_generate_key(prkey)) {
+      crypto_free_pk_env(prkey);
       return -1;
+    }
     set_identity_key(prkey);
     /* Create a TLS context; default the client nickname to "client". */
     if (tor_tls_context_new(get_identity_key(),

@@ -936,6 +936,8 @@ options_act(or_options_t *old_options)
       if (parse_redirect_line(sl, cl, &errmsg)<0) {
         log_warn(LD_CONFIG, "%s", errmsg);
         tor_free(errmsg);
+        SMARTLIST_FOREACH(sl, exit_redirect_t *, er, tor_free(er));
+        smartlist_free(sl);
         return -1;
       }
     }
@@ -1808,6 +1810,7 @@ list_torrc_options(void)
       smartlist_clear(lines);
     }
   }
+  smartlist_free(lines);
 }
 
 /** Last value actually set by resolve_my_address. */
