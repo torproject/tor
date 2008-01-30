@@ -1527,6 +1527,7 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
   routerinfo_t *me;
   routerlist_t *rl = router_get_routerlist();
   networkstatus_vote_t *consensus = networkstatus_get_live_consensus(now);
+  or_options_t *options = get_options();
 
   if (networkstatus_v2_list_has_changed)
     download_status_map_update_from_v2_networkstatus();
@@ -1554,15 +1555,14 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
                "Are you misconfigured?");
       have_warned_about_invalid_status = 1;
     } else if (rs->is_unnamed) {
-      /* XXXX020 this isn't a useful warning. */
+      /* Maybe upgrade this to notice? XXXX020 */
       log_info(LD_GENERAL,  "The directory have assigned the nickname "
-               "you're using to a different identity.");
+               "you're using (%s) to a different identity; you may want to "
+               "choose a different nickname.", options->Nickname);
       have_warned_about_invalid_status = 1;
     } else if (!rs->is_named) {
-      /*XXXX020 this isn't a correct warning. */
-      log_info(LD_GENERAL,  "The directory authorities do not recognize "
-               "your nickname. Please consider sending your "
-               "nickname and identity fingerprint to the tor-ops.");
+      log_debug(LD_GENERAL, "The directory authorities do not currently "
+                "recognize your nickname.");
       have_warned_about_invalid_status = 1;
     }
   }
