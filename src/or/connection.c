@@ -2250,7 +2250,7 @@ _connection_write_to_buf_impl(const char *string, size_t len,
   /* XXXX This function really needs to return -1 on failure. */
   int r;
   size_t old_datalen;
-  if (!len)
+  if (!len && !(zlib<0))
     return;
   /* if it's marked for close, only allow write if we mean to flush it */
   if (conn->marked_for_close && !conn->hold_open_until_flushed)

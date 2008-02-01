@@ -14,6 +14,8 @@ Changes in version 0.2.0.19-alpha - 2008-0?-??
     - When our consensus networkstatus has been expired for a while, stop
       being willing to build circuits using it.  Fixes bug 401.  Bugfix on
       0.1.2.x.
+    - Stop incorrectly truncating zlib responses to directory authority
+      signature download requests.  Fix for bug 593.  Bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.0.18-alpha - 2008-01-25

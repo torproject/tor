@@ -2385,7 +2385,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     estimated_len += body_len;
     SMARTLIST_FOREACH(items, const char *, item, {
         size_t ln = strlen(item);
-        if (compressed ) {
+        if (compressed) {
           estimated_len += ln/2;
         } else {
           body_len += ln; estimated_len += ln;
