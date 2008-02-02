@@ -92,7 +92,7 @@ build-stamp:  config.status
 	@echo
 
 	# XXX
-	# So, gs-gpl on s390 is broken (#321435) and fails to properly build
+	# So, gs-gpl on s390 is broken (#457568) and fails to properly build
 	# .pdf files from .fig files using fig2dev.  Therefore we ship them
 	# until this bug is fixed.
 	#
@@ -100,7 +100,9 @@ build-stamp:  config.status
 	#
 	# the hexdumps were built using something like
 	#   perl -e 'while (<>) { print unpack ("H*", $_); }' interaction.pdf | fold > hexdump-interaction.pdf
-	if [ "$(DEB_BUILD_GNU_TYPE)" = "s390-linux-gnu" ]; then \
+	if [ "$(DEB_BUILD_GNU_TYPE)" = "s390-linux-gnu" ] || \
+	   [ "$(DEB_BUILD_GNU_TYPE)" = "sparc-linux-gnu" ] || \
+	   [ "$(DEB_BUILD_GNU_TYPE)" = "mipsel-linux" ]; then \
 		cd doc/design-paper; \
 		fig2dev -L pdf cell-struct.fig cell-struct.pdf || \
 			( echo "** Using shipped pdf file because fig2dev failed"; \

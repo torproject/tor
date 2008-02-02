@@ -1,3 +1,11 @@
+tor (0.1.2.19-2) unstable; urgency=low
+
+  * Backport from 0.2.0.18-alpha + 1:  We now use the shipped images
+    on mipsel and sparc (in addition to s390) because fig2dev segfaults
+    on those archs (re #457568).
+
+ -- Peter Palfrader <weasel@debian.org>  Sat,  2 Feb 2008 15:14:23 +0100
+
 tor (0.1.2.19-1) unstable; urgency=low
 
   * New upstream version.
