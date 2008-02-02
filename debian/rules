@@ -101,7 +101,8 @@ build-stamp:  config.status
 	# the hexdumps were built using something like
 	#   perl -e 'while (<>) { print unpack ("H*", $_); }' interaction.pdf | fold > hexdump-interaction.pdf
 	if [ "$(DEB_BUILD_GNU_TYPE)" = "s390-linux-gnu" ] || \
-	   [ "$(DEB_BUILD_GNU_TYPE)" = "sparc-linux-gnu" ]; then \
+	   [ "$(DEB_BUILD_GNU_TYPE)" = "sparc-linux-gnu" ] || \
+	   [ "$(DEB_BUILD_GNU_TYPE)" = "mipsel-linux" ]; then \
 		cd doc/design-paper; \
 		fig2dev -L pdf cell-struct.fig cell-struct.pdf || \
 			( echo "** Using shipped pdf file because fig2dev failed"; \
