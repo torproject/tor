@@ -92,7 +92,7 @@ build-stamp:  config.status
 	@echo
 
 	# XXX
-	# So, gs-gpl on s390 is broken (#321435) and fails to properly build
+	# So, gs-gpl on s390 is broken (#457568) and fails to properly build
 	# .pdf files from .fig files using fig2dev.  Therefore we ship them
 	# until this bug is fixed.
 	#
