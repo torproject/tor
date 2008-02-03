@@ -9,14 +9,16 @@ Upstream Authors: Roger Dingledine <arma@freehaven.net>
 Copyright (c) 2001 Matej Pfajfar
 Copyright (c) 2001-2004, Roger Dingledine
 Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
+Copyright (c) 2007-2008, The Tor Project, Inc.
 strlcat, strlcpy: Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
 ht.h: Copyright (c) 2002, Christopher Clark, 2006 Nick Mathewson
-Modifications for Debian: Copyright (c) 2004, 2005, 2006 Peter Palfrader
+Modifications for Debian: Copyright (c) 2004, 2005, 2006, 2007, 2008 Peter Palfrader
 
 Tor is distributed under this license:
 ===============================================================================
 Copyright (c) 2001-2004, Roger Dingledine
 Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
+Copyright (c) 2007-2008, The Tor Project, Inc.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are

@@ -1,3 +1,9 @@
+tor (0.2.0.18-alpha-3) experimentalunreleased; urgency=low
+
+  * It's 2008.  Now is the time to add copyright statements for 2007.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun,  3 Feb 2008 21:50:43 +0100
+
 tor (0.2.0.18-alpha-2) experimental; urgency=low
 
   * Work around fig2dev failing to build the images on mipsel like we do on
