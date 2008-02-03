@@ -1,11 +1,11 @@
-tor (0.2.0.18-alpha+svn-1) experimental; urgency=low
+tor (0.2.0.18-alpha-2) experimental; urgency=low
 
-  * 13351 + log
-  *
   * Work around fig2dev failing to build the images on mipsel like we do on
     sparc and s390 (re #457568)
+  * Fix postinst find command that chowns stuff to the right user.  Find
+    does weird things in the presence of !.
 
- -- Peter Palfrader <weasel@debian.org>  Sat,  2 Feb 2008 15:13:17 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun,  3 Feb 2008 18:17:16 +0100
 
 tor (0.2.0.18-alpha-1) experimental; urgency=low
 
