@@ -1659,7 +1659,7 @@ router_choose_random_node(const char *preferred,
                           int weight_for_exit)
 {
   smartlist_t *sl, *excludednodes;
-  routerinfo_t *choice = NULL;
+  routerinfo_t *choice = NULL, *r;
   bandwidth_weight_rule_t rule;
 
   tor_assert(!(weight_for_exit && need_guard));
@@ -1668,6 +1668,11 @@ router_choose_random_node(const char *preferred,
 
   excludednodes = smartlist_create();
   add_nickname_list_to_smartlist(excludednodes,excluded,0);
+
+  if ((r = routerlist_find_my_routerinfo())) {
+    smartlist_add(excludednodes, r);
+    routerlist_add_family(excludednodes, r);
+  }
 
   /* Try the preferred nodes first. Ignore need_uptime and need_capacity
    * and need_guard, since the user explicitly asked for these nodes. */

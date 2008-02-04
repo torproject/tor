@@ -1,4 +1,9 @@
-Changes in version 0.2.0.19-alpha - 2008-0?-??
+Changes in version 0.2.0.19-alpha - 2008-02-??
+  o Major bugfixes:
+    - If we're a relay, avoid picking ourselves as an introduction point,
+      a rendezvous point, or as the final hop for internal circuits. Bug
+      reported by taranis and lodger. Bugfix on 0.1.2.x.
+
   o Minor bugfixes:
     - Directory caches now fetch certificates from all authorities
       listed in a networkstatus consensus, even when they do not

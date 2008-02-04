@@ -1577,10 +1577,6 @@ choose_good_middle_server(uint8_t purpose,
     smartlist_add(excluded, r);
     routerlist_add_family(excluded, r);
   }
-  if ((r = routerlist_find_my_routerinfo())) {
-    smartlist_add(excluded, r);
-    routerlist_add_family(excluded, r);
-  }
   for (i = 0, cpath = head; i < cur_len; ++i, cpath=cpath->next) {
     if ((r = router_get_by_digest(cpath->extend_info->identity_digest))) {
       smartlist_add(excluded, r);
@@ -1621,10 +1617,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   excluded = smartlist_create();
 
   if (state && (r = build_state_get_exit_router(state))) {
-    smartlist_add(excluded, r);
-    routerlist_add_family(excluded, r);
-  }
-  if ((r = routerlist_find_my_routerinfo())) {
     smartlist_add(excluded, r);
     routerlist_add_family(excluded, r);
   }
