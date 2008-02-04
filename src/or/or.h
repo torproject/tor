@@ -3929,10 +3929,11 @@ void routerlist_retry_directory_downloads(time_t now);
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
 int router_exit_policy_rejects_all(routerinfo_t *router);
-void add_trusted_dir_server(const char *nickname, const char *address,
-                       uint16_t dir_port, uint16_t or_port,
-                       const char *digest, const char *v3_auth_digest,
-                       authority_type_t type);
+trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
+                           const char *address,
+                           uint16_t dir_port, uint16_t or_port,
+                           const char *digest, const char *v3_auth_digest,
+                           authority_type_t type);
 void authority_cert_free(authority_cert_t *cert);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);

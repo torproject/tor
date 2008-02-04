@@ -2872,7 +2872,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
           options->V1AuthoritativeDir || options->V2AuthoritativeDir ||
           options->V3AuthoritativeDir))
       REJECT("AuthoritativeDir is set, but none of "
-             "(Bridge/HS/V1/V2/V3)AuthoriativeDir is set.");
+             "(Bridge/HS/V1/V2/V3)AuthoritativeDir is set.");
   }
 
   if (options->AuthoritativeDir && !options->DirPort)
@@ -3974,12 +3974,12 @@ parse_bridge_line(const char *line, int validate_only)
   return r;
 }
 
-/** Read the contents of a DirServer line from <b>line</b>.  Return 0
- * if the line is well-formed, and -1 if it isn't.  If
+/** Read the contents of a DirServer line from <b>line</b>. If
  * <b>validate_only</b> is 0, and the line is well-formed, and it
  * shares any bits with <b>required_type</b> or <b>required_type</b>
  * is 0, then add the dirserver described in the line (minus whatever
- * bits it's missing) as a valid authority. */
+ * bits it's missing) as a valid authority. Return 0 on success,
+ * or -1 if the line isn't well-formed or if we can't add it. */
 static int
 parse_dir_server_line(const char *line, authority_type_t required_type,
                       int validate_only)
@@ -4088,8 +4088,9 @@ parse_dir_server_line(const char *line, authority_type_t required_type,
                               * authority for. */
     log_debug(LD_DIR, "Trusted %d dirserver at %s:%d (%s)", (int)type,
               address, (int)dir_port, (char*)smartlist_get(items,0));
-    add_trusted_dir_server(nickname, address, dir_port, or_port, digest,
-                           v3_digest, type);
+    if (!add_trusted_dir_server(nickname, address, dir_port, or_port,
+                                digest, v3_digest, type))
+      goto err;
   }
 
   r = 0;

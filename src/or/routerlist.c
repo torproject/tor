@@ -3366,8 +3366,9 @@ router_exit_policy_rejects_all(routerinfo_t *router)
 
 /** Add to the list of authorized directory servers one at
  * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
- * <b>address</b> is NULL, add ourself. */
-void
+ * <b>address</b> is NULL, add ourself. Return 0 if success, -1 if
+ * we couldn't add it. */
+trusted_dir_server_t *
 add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
                        const char *digest, const char *v3_auth_digest,
@@ -3385,14 +3386,14 @@ add_trusted_dir_server(const char *nickname, const char *address,
       log_warn(LD_CONFIG,
                "Couldn't find a suitable address when adding ourself as a "
                "trusted directory server.");
-      return;
+      return NULL;
     }
   } else {
     if (tor_lookup_hostname(address, &a)) {
       log_warn(LD_CONFIG,
                "Unable to lookup address for directory server at '%s'",
                address);
-      return;
+      return NULL;
     }
     hostname = tor_strdup(address);
   }
@@ -3433,6 +3434,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
 
   smartlist_add(trusted_dir_servers, ent);
   router_dir_info_changed();
+  return ent;
 }
 
 /** Free storage held in <b>cert</b>. */

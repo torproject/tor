@@ -559,16 +559,20 @@ init_keys(void)
           (options->BridgeAuthoritativeDir ? BRIDGE_AUTHORITY : NO_AUTHORITY) |
           (options->HSAuthoritativeDir ? HIDSERV_AUTHORITY : NO_AUTHORITY));
 
-  if (!router_get_trusteddirserver_by_digest(digest)) {
-    add_trusted_dir_server(options->Nickname, NULL,
-                           (uint16_t)options->DirPort,
-                           (uint16_t)options->ORPort,
-                           digest,
-                           v3_digest,
-                           type);
-  }
   ds = router_get_trusteddirserver_by_digest(digest);
-  tor_assert(ds);
+  if (!ds) {
+    ds = add_trusted_dir_server(options->Nickname, NULL,
+                                (uint16_t)options->DirPort,
+                                (uint16_t)options->ORPort,
+                                digest,
+                                v3_digest,
+                                type);
+    if (!ds) {
+      log_err(LD_GENERAL,"We want to be a directory authority, but we "
+              "couldn't add ourselves to the authority list. Failing.");
+      return -1;
+    }
+  }
   if (ds->type != type) {
     log_warn(LD_DIR,  "Configured authority type does not match authority "
              "type in DirServer list.  Adjusting. (%d v %d)",
