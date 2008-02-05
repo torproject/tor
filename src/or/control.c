@@ -1640,8 +1640,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_free(status);
   } else if (!strcmpstart(question, "addr-mappings/") ||
              !strcmpstart(question, "address-mappings/")) {
-    /* XXXX020 Warn about deprecated addr-mappings variant?  Or wait for
-     * 0.2.1.x? */
+    /* XXXX021 Warn about deprecated addr-mappings variant. */
     time_t min_e, max_e;
     smartlist_t *mappings;
     int want_expiry = !strcmpstart(question, "address-mappings/");
@@ -1712,10 +1711,11 @@ getinfo_helper_events(control_connection_t *control_conn,
           }
       } else if (!strcmp(question, "status/version/num-versioning") ||
                  !strcmp(question, "status/version/num-concurring")) {
-        /*XXXX020 deprecate.*/
         char s[33];
         tor_snprintf(s, sizeof(s), "%d", get_n_authorities(V3_AUTHORITY));
         *answer = tor_strdup(s);
+        log_warn(LD_GENERAL, "%s is deprecated; it no longer gives useful "
+                 "information");
       }
     } else {
       return 0;
@@ -2627,6 +2627,11 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
   return 0;
 }
 
+/** Do not accept any control command of more than 1MB in length.  Anything
+ * that needs to be anywhere near this long probably means that one of our
+ * interfaces is broken. */
+#define MAX_COMMAND_LINE_LENGTH (1024*1024)
+
 /** Called when data has arrived on a v1 control connection: Try to fetch
  * commands from conn->inbuf, and execute them.
  */
@@ -2679,7 +2684,12 @@ connection_control_process_inbuf(control_connection_t *conn)
         /* Line not all here yet. Wait. */
         return 0;
       else if (r == -1) {
-        /*XXXX020 impose some maximum on length! */
+        if (data_len + conn->incoming_cmd_cur_len > MAX_COMMAND_LINE_LENGTH) {
+          connection_write_str_to_buf("500 Line too long.\r\n", TO_CONN(conn));
+          connection_stop_reading(TO_CONN(conn));
+          connection_mark_for_close(TO_CONN(conn));
+          conn->_base.hold_open_until_flushed = 1;
+        }
         while (conn->incoming_cmd_len < data_len+conn->incoming_cmd_cur_len)
           conn->incoming_cmd_len *= 2;
         conn->incoming_cmd = tor_realloc(conn->incoming_cmd,

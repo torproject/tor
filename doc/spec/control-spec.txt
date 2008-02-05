@@ -557,9 +557,6 @@ $Id$
     "status/version/recommended" -- List of currently recommended versions
     "status/version/current" -- Status of the current version. One of:
         new, old, unrecommended, recommended, new in series, obsolete.
-    "status/version/num-versioning" -- Number of versioning authorities
-    "status/version/num-concurring" -- Number of versioning authorities
-        agreeing on the status of the current version
 
   Examples:
      C: GETINFO version desc/name/moria1

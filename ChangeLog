@@ -1,7 +1,16 @@
 Changes in version 0.2.0.19-alpha - 2008-02-??
-  o Minor features:
+  o Minor features (directory authority):
     - Actually validate the options passed to AuthDirReject, AuthDirInvalid,
       AuthDirBadDir, and AuthDirBadExit.
+
+  o Minor features (controller):
+    - Reject controller commands over 1MB in length.  This keeps rogue
+      processes from running us out of memory.
+
+  o Deprecated features (controller):
+    - The status/version/num-versioning and status/version/num-concurring
+      GETINFO options are no longer useful in the V3 directory protocol:
+      treat them as deprecated, and warn when they're used.
 
   o Major bugfixes:
     - If we're a relay, avoid picking ourselves as an introduction point,
