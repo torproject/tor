@@ -135,11 +135,14 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
 }
 
 /** Helper: parse the Reachable(Dir|OR)?Addresses fields into
- * reachable_(or|dir)_addr_policy. */
-static void
+ * reachable_(or|dir)_addr_policy.  The options should already have
+ * been validated by validate_addr_policies.
+ */
+static int
 parse_reachable_addresses(void)
 {
   or_options_t *options = get_options();
+  int ret = 0;
 
   if (options->ReachableDirAddresses &&
       options->ReachableORAddresses &&
@@ -160,6 +163,7 @@ parse_reachable_addresses(void)
     log_warn(LD_CONFIG,
              "Error parsing Reachable%sAddresses entry; ignoring.",
              options->ReachableORAddresses ? "OR" : "");
+    ret = -1;
   }
 
   addr_policy_list_free(reachable_dir_addr_policy);
@@ -174,7 +178,9 @@ parse_reachable_addresses(void)
     if (options->ReachableDirAddresses)
       log_warn(LD_CONFIG,
                "Error parsing ReachableDirAddresses entry; ignoring.");
+    ret = -1;
   }
+  return ret;
 }
 
 /** Return true iff the firewall options might block any address:port
@@ -289,6 +295,9 @@ authdir_policy_badexit_address(uint32_t addr, uint16_t port)
 int
 validate_addr_policies(or_options_t *options, char **msg)
 {
+  /* XXXX Maybe merge this into parse_policies_from_options, to make sure
+   * that the two can't go out of sync. */
+
   smartlist_t *addr_policy=NULL;
   *msg = NULL;
 
@@ -302,6 +311,19 @@ validate_addr_policies(or_options_t *options, char **msg)
     REJECT("Error in DirPolicy entry.");
   if (parse_addr_policy(options->SocksPolicy, &addr_policy, -1))
     REJECT("Error in SocksPolicy entry.");
+  if (parse_addr_policy(options->AuthDirReject, &addr_policy,
+                        ADDR_POLICY_REJECT))
+    REJECT("Error in AuthDirReject entry.");
+  if (parse_addr_policy(options->AuthDirInvalid, &addr_policy,
+                        ADDR_POLICY_REJECT))
+    REJECT("Error in AuthDirInvalid entry.");
+  if (parse_addr_policy(options->AuthDirBadDir, &addr_policy,
+                        ADDR_POLICY_REJECT))
+    REJECT("Error in AuthDirBadDir entry.");
+  if (parse_addr_policy(options->AuthDirBadExit, &addr_policy,
+                        ADDR_POLICY_REJECT))
+    REJECT("Error in AuthDirBadExit entry.");
+
   if (parse_addr_policy(options->ReachableAddresses, &addr_policy,
                         ADDR_POLICY_ACCEPT))
     REJECT("Error in ReachableAddresses entry.");
@@ -328,7 +350,7 @@ err:
  * is parsed, and put the processed version in *<b>policy</b>.
  * Ignore port specifiers.
  */
-static void
+static int
 load_policy_from_option(config_line_t *config, smartlist_t **policy,
                         int assume_action)
 {
@@ -336,32 +358,44 @@ load_policy_from_option(config_line_t *config, smartlist_t **policy,
   addr_policy_list_free(*policy);
   *policy = NULL;
   r = parse_addr_policy(config, policy, assume_action);
-  if (r < 0 || !*policy) {
-    return; /* XXXX020 have an error return. */
+  if (r < 0) {
+    return -1;
   }
-  SMARTLIST_FOREACH(*policy, addr_policy_t *, n, {
-      /* ports aren't used. */
-      n->prt_min = 1;
-      n->prt_max = 65535;
-    });
+  if (*policy) {
+    SMARTLIST_FOREACH(*policy, addr_policy_t *, n, {
+        /* ports aren't used. */
+        n->prt_min = 1;
+        n->prt_max = 65535;
+      });
+  }
+  return 0;
 }
 
 /** Set all policies based on <b>options</b>, which should have been validated
- * first. */
-void
+ * first by validate_addr_policies. */
+int
 policies_parse_from_options(or_options_t *options)
 {
-  load_policy_from_option(options->SocksPolicy, &socks_policy, -1);
-  load_policy_from_option(options->DirPolicy, &dir_policy, -1);
-  load_policy_from_option(options->AuthDirReject,
-                          &authdir_reject_policy, ADDR_POLICY_REJECT);
-  load_policy_from_option(options->AuthDirInvalid,
-                          &authdir_invalid_policy, ADDR_POLICY_REJECT);
-  load_policy_from_option(options->AuthDirBadDir,
-                          &authdir_baddir_policy, ADDR_POLICY_REJECT);
-  load_policy_from_option(options->AuthDirBadExit,
-                          &authdir_badexit_policy, ADDR_POLICY_REJECT);
-  parse_reachable_addresses();
+  int ret = 0;
+  if (load_policy_from_option(options->SocksPolicy, &socks_policy, -1) < 0)
+    ret = -1;
+  if (load_policy_from_option(options->DirPolicy, &dir_policy, -1) < 0)
+    ret = -1;
+  if (load_policy_from_option(options->AuthDirReject,
+                              &authdir_reject_policy, ADDR_POLICY_REJECT) < 0)
+    ret = -1;
+  if (load_policy_from_option(options->AuthDirInvalid,
+                              &authdir_invalid_policy, ADDR_POLICY_REJECT) < 0)
+    ret = -1;
+  if (load_policy_from_option(options->AuthDirBadDir,
+                              &authdir_baddir_policy, ADDR_POLICY_REJECT) < 0)
+    ret = -1;
+  if (load_policy_from_option(options->AuthDirBadExit,
+                              &authdir_badexit_policy, ADDR_POLICY_REJECT) < 0)
+    ret = -1;
+  if (parse_reachable_addresses() < 0)
+    ret = -1;
+  return ret;
 }
 
 /** Compare two provided address policy items, and return -1, 0, or 1

@@ -1182,7 +1182,11 @@ options_act(or_options_t *old_options)
   parse_virtual_addr_network(options->VirtualAddrNetwork, 0, &msg);
 
   /* Update address policies. */
-  policies_parse_from_options(options);
+  if (policies_parse_from_options(options) < 0) {
+    /* This should be impossible, but let's be sure. */
+    log_warn(LD_BUG,"Error parsing already-validated policy options.");
+    return -1;
+  }
 
   if (init_cookie_authentication(options->CookieAuthentication) < 0) {
     log_warn(LD_CONFIG,"Error creating cookie authentication file.");
