@@ -1183,7 +1183,6 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
       }
       return 0;
     }
-    memset(addr, 0, sizeof(tor_addr_t)); /* XXXX020 is this redundant? */
 #ifdef MS_WINDOWS
     return (err == WSATRY_AGAIN) ? 1 : -1;
 #else
@@ -1701,6 +1700,7 @@ struct tor_mutex_t {
 
 /* Conditions. */
 #ifdef USE_PTHREADS
+#if 0
 /** Cross-platform condtion implementation. */
 struct tor_cond_t {
   pthread_cond_t cond;
@@ -1747,12 +1747,14 @@ tor_cond_signal_all(tor_cond_t *cond)
 {
   pthread_cond_broadcast(&cond->cond);
 }
+#endif
 /** Set up common structures for use by threading. */
 void
 tor_threads_init(void)
 {
 }
 #elif defined(USE_WIN32_THREADS)
+#if 0
 static DWORD cond_event_tls_index;
 struct tor_cond_t {
   CRITICAL_SECTION mutex;
@@ -1771,7 +1773,7 @@ tor_cond_free(tor_cond_t *cond)
 {
   tor_assert(cond);
   DeleteCriticalSection(&cond->mutex);
-  /* XXXX020 notify? */
+  /* XXXX notify? */
   smartlist_free(cond->events);
   tor_free(cond);
 }
@@ -1834,10 +1836,13 @@ tor_cond_signal_all(tor_cond_t *cond)
   smartlist_clear(cond->events);
   LeaveCriticalSection(&cond->mutex);
 }
+#endif
 void
 tor_threads_init(void)
 {
+#if 0
   cond_event_tls_index = TlsAlloc();
+#endif
 }
 #endif
 

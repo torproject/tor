@@ -363,7 +363,6 @@ IPV4IP(const tor_addr_t *a)
 }
 static INLINE uint32_t IPV4IPh(const tor_addr_t *a)
 {
-  /*XXXX020 remove this function */
   return ntohl(IPV4IP(a));
 }
 static INLINE uint32_t
@@ -483,12 +482,14 @@ void tor_threads_init(void);
 #endif
 
 #ifdef TOR_IS_MULTITHREADED
+#if 0
 typedef struct tor_cond_t tor_cond_t;
 tor_cond_t *tor_cond_new(void);
 void tor_cond_free(tor_cond_t *cond);
 int tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex);
 void tor_cond_signal_one(tor_cond_t *cond);
 void tor_cond_signal_all(tor_cond_t *cond);
+#endif
 #endif
 
 /* Platform-specific helpers. */
