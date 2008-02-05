@@ -2346,8 +2346,9 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       if ((item = dirvote_get_pending_consensus()))
         smartlist_add(items, (char*)item);
     } else if (!current && !strcmp(url, "consensus-signatures")) {
-      /* XXXX020 the spec says that we should implement
-       * current/consensus-signatures too.  Why? -NM */
+      /* XXXX the spec says that we should implement
+       * current/consensus-signatures too.  It doesn't seem to be needed,
+       * though. */
       const char *item;
       if ((item=dirvote_get_pending_detached_signatures()))
         smartlist_add(items, (char*)item);

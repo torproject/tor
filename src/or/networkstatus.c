@@ -783,7 +783,7 @@ networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
                            _compare_digest_to_routerstatus_entry);
 }
 
-/*XXXX020 make this static once functions are moved into this file. */
+/*XXXX make this static once functions are moved into this file. */
 /** DOCDOC */
 int
 networkstatus_vote_find_entry_idx(networkstatus_t *ns,

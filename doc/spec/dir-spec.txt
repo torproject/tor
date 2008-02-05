@@ -945,8 +945,9 @@ $Id$
         protocol versioning system, and the protocol is "a version of the
         Tor protocol more recent than any we recognize."
 
-        Directory authorities SHOULD truncate version strings from
-        descriptors so that "v" lines are no more than 128 characters long.
+        Directory authorities SHOULD omit version strings they receive from
+        descriptors if they would cause "v" lines to be over 128 characters
+        long.
 
    The signature section contains the following item, which appears
    Exactly Once for a vote, and At Least Once for a consensus.
@@ -1253,6 +1254,8 @@ $Id$
       http://<hostname>/tor/status-vote/current/consensus.z
    and
       http://<hostname>/tor/status-vote/current/consensus-signatures.z
+   [XXX current/consensus-signatures is not currently implemented, as it
+    is not used in the voting protocol.]
 
    The other vote documents are analogously made available under
      http://<hostname>/tor/status-vote/current/authority.z

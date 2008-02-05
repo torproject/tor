@@ -633,12 +633,9 @@ router_rebuild_store(int force, desc_store_t *store)
         log_warn(LD_FS, "We wrote some bytes to a new descriptor file at '%s',"
                  " but when we went to mmap it, it was empty!", fname);
       } else if (had_any) {
-        log_notice(LD_FS, "We just removed every descriptor in '%s'.  This is "
-                   "okay if we're just starting up after a long time. "
-                   "Otherwise, it's a bug.",
-                   fname);
-        /* XXX020 should we reduce the severity of the above log
-         * message? I don't think we see it much in practice. -RD */
+        log_info(LD_FS, "We just removed every descriptor in '%s'.  This is "
+                 "okay if we're just starting up after a long time. "
+                 "Otherwise, it's a bug.", fname);
       }
     } else {
       log_warn(LD_FS, "Unable to mmap new descriptor file at '%s'.",fname);
@@ -1809,8 +1806,8 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
                ) {
       if (router_hex_digest_matches(router, nickname))
         return router;
-      else
-        best_match = router; // XXXX020 NM not exactly right.
+      /* If we reach this point, we have a ID=name syntax that matches the
+       * identity but not the name. That isn't an acceptable match. */
     }
   });
 
@@ -2135,7 +2132,7 @@ routerinfo_free(routerinfo_t *router)
   }
   addr_policy_list_free(router->exit_policy);
 
-  /* XXXX020 Remove once 414/417 is fixed. But I have a hunch... */
+  /* XXXX Remove if this turns out to affect performance. */
   memset(router, 77, sizeof(routerinfo_t));
 
   tor_free(router);
@@ -2150,7 +2147,7 @@ extrainfo_free(extrainfo_t *extrainfo)
   tor_free(extrainfo->cache_info.signed_descriptor_body);
   tor_free(extrainfo->pending_sig);
 
-  /* XXXX020 remove this once more bugs go away. */
+  /* XXXX remove this if it turns out to slow us down. */
   memset(extrainfo, 88, sizeof(extrainfo_t)); /* debug bad memory usage */
   tor_free(extrainfo);
 }
@@ -2161,7 +2158,7 @@ signed_descriptor_free(signed_descriptor_t *sd)
 {
   tor_free(sd->signed_descriptor_body);
 
-  /* XXXX020 remove this once more bugs go away. */
+  /* XXXX remove this once more bugs go away. */
   memset(sd, 99, sizeof(signed_descriptor_t)); /* Debug bad mem usage */
   tor_free(sd);
 }
@@ -2258,7 +2255,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
   routerinfo_t *ri_old;
   {
-    /* XXXX020 remove this code once bug 417/404 is fixed. */
+    /* XXXX Remove if this slows us down. */
     routerinfo_t *ri_generated = router_get_my_routerinfo();
     tor_assert(ri_generated != ri);
   }
@@ -2293,7 +2290,7 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   extrainfo_t *ei_tmp;
 
   {
-    /* XXXX020 remove this code once bug 417/404 is fixed. */
+    /* XXXX remove this code if it slows us down. */
     extrainfo_t *ei_generated = router_get_my_extrainfo();
     tor_assert(ei_generated != ei);
   }
@@ -2339,7 +2336,7 @@ static void
 routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 {
   {
-    /* XXXX020 remove this code once bug 417/404 is fixed. */
+    /* XXXX remove this code if it slows us down. */
     routerinfo_t *ri_generated = router_get_my_routerinfo();
     tor_assert(ri_generated != ri);
   }
@@ -2436,7 +2433,7 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
   }
   tor_assert(0 <= idx && idx < smartlist_len(rl->old_routers));
   /* XXX020 edmanm's bridge relay triggered the following assert while
-   * running 0.2.0.12-alpha: */
+   * running 0.2.0.12-alpha. */
   tor_assert(smartlist_get(rl->old_routers, idx) == sd);
   tor_assert(idx == sd->routerlist_index);
 
@@ -2486,7 +2483,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
   {
-    /* XXXX020 remove this code once bug 417/404 is fixed. */
+    /* XXXX Remove this if it turns out to slow us down. */
     routerinfo_t *ri_generated = router_get_my_routerinfo();
     tor_assert(ri_generated != ri_new);
   }
