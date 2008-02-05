@@ -1396,22 +1396,13 @@ dirserv_set_cached_networkstatus_v3(const char *networkstatus,
 void
 dirserv_clear_old_networkstatuses(time_t cutoff)
 {
-  digestmap_iter_t *iter;
-
   if (!cached_v2_networkstatus)
     return;
 
-  for (iter = digestmap_iter_init(cached_v2_networkstatus);
-       !digestmap_iter_done(iter); ) {
-    const char *ident;
-    void *val;
-    cached_dir_t *dir;
-    digestmap_iter_get(iter, &ident, &val);
-    dir = val;
+  DIGESTMAP_FOREACH_MODIFY(cached_v2_networkstatus, id, cached_dir_t *, dir) {
     if (dir->published < cutoff) {
       char *fname;
-      iter = digestmap_iter_next_rmv(cached_v2_networkstatus, iter);
-      fname = networkstatus_get_cache_filename(ident);
+      fname = networkstatus_get_cache_filename(id);
       if (file_status(fname) == FN_FILE) {
         log_info(LD_DIR, "Removing too-old untrusted networkstatus in %s",
                  fname);
@@ -1419,10 +1410,9 @@ dirserv_clear_old_networkstatuses(time_t cutoff)
       }
       tor_free(fname);
       cached_dir_decref(dir);
-    } else {
-      iter = digestmap_iter_next(cached_v2_networkstatus, iter);
+      MAP_DEL_CURRENT(id);
     }
-  }
+  } DIGESTMAP_FOREACH_END
 }
 
 /** Remove any v1 info from the directory cache that was published
