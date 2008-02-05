@@ -271,8 +271,11 @@ int get_n_open_sockets(void);
 typedef int socklen_t;
 #endif
 
-/* XXXX020 detect in6_addr correctly on ms_windows; this is a hack. */
-#if !defined(HAVE_STRUCT_IN6_ADDR) && !defined(MS_WINDOWS)
+/* Define struct in6_addr on platforms that do not have it.  Generally,
+ * these platforms are ones without IPv6 support, but we want to have
+ * a working in6_addr there anyway, so we can use it to parse IPv6
+ * addresses. */
+#if !defined(HAVE_STRUCT_IN6_ADDR)
 struct in6_addr
 {
   union {
@@ -313,8 +316,9 @@ typedef uint16_t sa_family_t;
 #define S6_ADDR16(x) ((uint16_t*)((char*)&(x).s6_addr))
 #endif
 
-/* XXXX020 detect sockaddr_in6 correctly on ms_windows; this is also a hack. */
-#if !defined(HAVE_STRUCT_SOCKADDR_IN6) && !defined(MS_WINDOWS)
+/* Define struct sockaddr_in6 on platforms that do not have it. See notes
+ * on struct in6_addr. */
+#if !defined(HAVE_STRUCT_SOCKADDR_IN6)
 struct sockaddr_in6 {
   sa_family_t sin6_family;
   uint16_t sin6_port;
