@@ -1715,7 +1715,7 @@ getinfo_helper_events(control_connection_t *control_conn,
         tor_snprintf(s, sizeof(s), "%d", get_n_authorities(V3_AUTHORITY));
         *answer = tor_strdup(s);
         log_warn(LD_GENERAL, "%s is deprecated; it no longer gives useful "
-                 "information");
+                 "information", question);
       }
     } else {
       return 0;
@@ -2685,7 +2685,7 @@ connection_control_process_inbuf(control_connection_t *conn)
         return 0;
       else if (r == -1) {
         if (data_len + conn->incoming_cmd_cur_len > MAX_COMMAND_LINE_LENGTH) {
-          connection_write_str_to_buf("500 Line too long.\r\n", TO_CONN(conn));
+          connection_write_str_to_buf("500 Line too long.\r\n", conn);
           connection_stop_reading(TO_CONN(conn));
           connection_mark_for_close(TO_CONN(conn));
           conn->_base.hold_open_until_flushed = 1;
