@@ -387,15 +387,16 @@ static void
 process_pending_task(connection_t *cpuworker)
 {
   or_circuit_t *circ;
+  char *onionskin = NULL;
 
   tor_assert(cpuworker);
 
   /* for now only process onion tasks */
 
-  circ = onion_next_task();
+  circ = onion_next_task(&onionskin);
   if (!circ)
     return;
-  if (assign_to_cpuworker(cpuworker, CPUWORKER_TASK_ONION, circ) < 0)
+  if (assign_onionskin_to_cpuworker(cpuworker, circ, onionskin))
     log_warn(LD_OR,"assign_to_cpuworker failed. Ignoring.");
 }
 
@@ -433,28 +434,22 @@ cull_wedged_cpuworkers(void)
 /** If cpuworker is defined, assert that he's idle, and use him. Else,
  * look for an idle cpuworker and use him. If none idle, queue task onto
  * the pending onion list and return.
- * If question_type is CPUWORKER_TASK_ONION then task is a circ.
- * No other question_types are allowed.
+ * DOCDOC this function is now less general
  */
 int
-assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
-                    void *task)
+assign_onionskin_to_cpuworker(connection_t *cpuworker,
+                              or_circuit_t *circ, char *onionskin)
 {
-  or_circuit_t *circ;
+  char qbuf[1];
   char tag[TAG_LEN];
-
-  tor_assert(question_type == CPUWORKER_TASK_ONION);
 
   cull_wedged_cpuworkers();
   spawn_enough_cpuworkers();
 
-  if (question_type == CPUWORKER_TASK_ONION) {
-    circ = task;
-    tor_assert(circ->_base.onionskin);
-
+  if (1) {
     if (num_cpuworkers_busy == num_cpuworkers) {
       log_debug(LD_OR,"No idle cpuworkers. Queuing.");
-      if (onion_pending_add(circ) < 0)
+      if (onion_pending_add(circ, onionskin) < 0)
         return -1;
       return 0;
     }
@@ -467,6 +462,7 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
 
     if (!circ->p_conn) {
       log_info(LD_OR,"circ->p_conn gone. Failing circ.");
+      tor_free(onionskin);
       return -1;
     }
     tag_pack(tag, circ->p_conn->_base.addr, circ->p_conn->_base.port,
@@ -479,11 +475,11 @@ assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
     cpuworker->timestamp_lastwritten = time(NULL);
     num_cpuworkers_busy++;
 
-    connection_write_to_buf((char*)&question_type, 1, cpuworker);
+    qbuf[0] = CPUWORKER_TASK_ONION;
+    connection_write_to_buf(qbuf, 1, cpuworker);
     connection_write_to_buf(tag, sizeof(tag), cpuworker);
-    connection_write_to_buf(circ->_base.onionskin, ONIONSKIN_CHALLENGE_LEN,
-                            cpuworker);
-    tor_free(circ->_base.onionskin);
+    connection_write_to_buf(onionskin, ONIONSKIN_CHALLENGE_LEN, cpuworker);
+    tor_free(onionskin);
   }
   return 0;
 }

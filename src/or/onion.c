@@ -19,6 +19,7 @@ const char onion_c_id[] =
  * to process a waiting onion handshake. */
 typedef struct onion_queue_t {
   or_circuit_t *circ;
+  char *onionskin;
   time_t when_added;
   struct onion_queue_t *next;
 } onion_queue_t;
@@ -37,13 +38,14 @@ static int ol_length=0;
  * if ol_list is too long, in which case do nothing and return -1.
  */
 int
-onion_pending_add(or_circuit_t *circ)
+onion_pending_add(or_circuit_t *circ, char *onionskin)
 {
   onion_queue_t *tmp;
   time_t now = time(NULL);
 
   tmp = tor_malloc_zero(sizeof(onion_queue_t));
   tmp->circ = circ;
+  tmp->onionskin = onionskin;
   tmp->when_added = now;
 
   if (!ol_tail) {
@@ -86,7 +88,7 @@ onion_pending_add(or_circuit_t *circ)
  * NULL if the list is empty.
  */
 or_circuit_t *
-onion_next_task(void)
+onion_next_task(char **onionskin_out)
 {
   or_circuit_t *circ;
 
@@ -97,6 +99,8 @@ onion_next_task(void)
   tor_assert(ol_list->circ->p_conn); /* make sure it's still valid */
   tor_assert(ol_length > 0);
   circ = ol_list->circ;
+  *onionskin_out = ol_list->onionskin;
+  ol_list->onionskin = NULL; /* prevent free. */
   onion_pending_remove(ol_list->circ);
   return circ;
 }
@@ -139,6 +143,7 @@ onion_pending_remove(or_circuit_t *circ)
 
   /* now victim points to the element that needs to be removed */
 
+  tor_free(victim->onionskin);
   tor_free(victim);
 }
 
@@ -448,6 +453,7 @@ clear_pending_onions(void)
   while (ol_list) {
     onion_queue_t *victim = ol_list;
     ol_list = victim->next;
+    tor_free(victim->onionskin);
     tor_free(victim);
   }
   ol_list = ol_tail = NULL;

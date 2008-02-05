@@ -42,6 +42,14 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
       port fails because we have overrun the limit on the number of
       connections, tell the controller that the request has failed.
 
+  o Code simplifications and refactoring:
+    - Remove some needless generality from cpuworker code, for improved
+      type-safety.
+    - Stop overloading the circuit_t.onionskin field for both "onionskin
+      from a CREATE cell that we are waiting for a cpuworker to be
+      assigned" and "onionskin from an EXTEND cell that we are going to
+      send to an OR as soon as we are connected".
+
 
 Changes in version 0.2.0.18-alpha - 2008-01-25
   o New directory authorities:

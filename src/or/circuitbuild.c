@@ -461,12 +461,13 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
         }
       } else {
         /* pull the create cell out of circ->onionskin, and send it */
-        tor_assert(circ->onionskin);
-        if (circuit_deliver_create_cell(circ,CELL_CREATE,circ->onionskin)<0) {
+        tor_assert(circ->n_conn_onionskin);
+        if (circuit_deliver_create_cell(circ,CELL_CREATE,
+                                        circ->n_conn_onionskin)<0) {
           circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
           continue;
         }
-        tor_free(circ->onionskin);
+        tor_free(circ->n_conn_onionskin);
         circuit_set_state(circ, CIRCUIT_STATE_OPEN);
       }
     });
@@ -757,8 +758,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     log_info(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
              tmpbuf, circ->n_port);
 
-    circ->onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
-    memcpy(circ->onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
+    circ->n_conn_onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
+    memcpy(circ->n_conn_onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
     circuit_set_state(circ, CIRCUIT_STATE_OR_WAIT);
 
     /* imprint the circuit with its future n_conn->id */

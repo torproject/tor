@@ -262,11 +262,11 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
   circ->_base.purpose = CIRCUIT_PURPOSE_OR;
   circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_ONIONSKIN_PENDING);
   if (cell->command == CELL_CREATE) {
-    circ->_base.onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
-    memcpy(circ->_base.onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
+    char *onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
+    memcpy(onionskin, cell->payload, ONIONSKIN_CHALLENGE_LEN);
 
     /* hand it off to the cpuworkers, and then return. */
-    if (assign_to_cpuworker(NULL, CPUWORKER_TASK_ONION, circ) < 0) {
+    if (assign_onionskin_to_cpuworker(NULL, circ, onionskin) < 0) {
       log_warn(LD_GENERAL,"Failed to hand off onionskin. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;

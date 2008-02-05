@@ -1775,11 +1775,10 @@ typedef struct circuit_t {
    * more. */
   int deliver_window;
 
-  /** For storage while passing to cpuworker (state
-    * CIRCUIT_STATE_ONIONSKIN_PENDING), or while n_conn is pending
+  /** For storage while n_conn is pending
     * (state CIRCUIT_STATE_OR_WAIT). When defined, it is always
     * length ONIONSKIN_CHALLENGE_LEN. */
-  char *onionskin;
+  char *n_conn_onionskin;
 
   time_t timestamp_created; /**< When was this circuit created? */
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
@@ -2979,8 +2978,9 @@ void cpuworkers_rotate(void);
 int connection_cpu_finished_flushing(connection_t *conn);
 int connection_cpu_reached_eof(connection_t *conn);
 int connection_cpu_process_inbuf(connection_t *conn);
-int assign_to_cpuworker(connection_t *cpuworker, uint8_t question_type,
-                        void *task);
+int assign_onionskin_to_cpuworker(connection_t *cpuworker,
+                                  or_circuit_t *circ,
+                                  char *onionskin);
 
 /********************************* directory.c ***************************/
 
@@ -3398,8 +3398,8 @@ void nt_service_set_state(DWORD state);
 
 /********************************* onion.c ***************************/
 
-int onion_pending_add(or_circuit_t *circ);
-or_circuit_t *onion_next_task(void);
+int onion_pending_add(or_circuit_t *circ, char *onionskin);
+or_circuit_t *onion_next_task(char **onionskin_out);
 void onion_pending_remove(or_circuit_t *circ);
 
 int onion_skin_create(crypto_pk_env_t *router_key,

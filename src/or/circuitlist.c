@@ -200,6 +200,8 @@ circuit_set_state(circuit_t *circ, int state)
     /* add to waiting-circuit list. */
     smartlist_add(circuits_pending_or_conns, circ);
   }
+  if (state == CIRCUIT_STATE_OPEN)
+    tor_assert(!circ->n_conn_onionskin);
   circ->state = state;
 }
 
@@ -413,8 +415,6 @@ circuit_free(circuit_t *circ)
       other->rend_splice = NULL;
     }
 
-    tor_free(circ->onionskin);
-
     /* remove from map. */
     circuit_set_p_circid_orconn(ocirc, 0, NULL);
 
@@ -422,6 +422,8 @@ circuit_free(circuit_t *circ)
      * "active" checks will be violated. */
     cell_queue_clear(&ocirc->p_conn_cells);
   }
+
+  tor_free(circ->n_conn_onionskin);
 
   /* Remove from map. */
   circuit_set_n_circid_orconn(circ, 0, NULL);
@@ -1162,7 +1164,7 @@ assert_circuit_ok(const circuit_t *c)
   tor_assert(c->deliver_window >= 0);
   tor_assert(c->package_window >= 0);
   if (c->state == CIRCUIT_STATE_OPEN) {
-    tor_assert(!c->onionskin);
+    tor_assert(!c->n_conn_onionskin);
     if (or_circ) {
       tor_assert(or_circ->n_crypto);
       tor_assert(or_circ->p_crypto);
