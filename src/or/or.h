@@ -3519,7 +3519,6 @@ int connection_or_flush_from_first_active_circuit(or_connection_t *conn,
 void assert_active_circuits_ok(or_connection_t *orconn);
 void make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn);
 void make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn);
-void circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn);
 
 /********************************* rephist.c ***************************/
 

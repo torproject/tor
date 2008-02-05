@@ -1516,7 +1516,8 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 static int total_cells_allocated = 0;
 
 #ifdef ENABLE_CELL_POOL /* Defined in ./configure. True by default. */
-/* XXX020 make cell pools the only option once we know they work? -RD */
+/* XXX020 make cell pools the only option once we know they work and improve
+ * matters? -RD */
 static mp_pool_t *cell_pool = NULL;
 /** Allocate structures to hold cells. */
 void
@@ -1919,27 +1920,6 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
     log_debug(LD_GENERAL, "Primed a buffer.");
     connection_or_flush_from_first_active_circuit(orconn, 1);
   }
-}
-
-/** Remove all the cells queued on <b>circ</b> for <b>orconn</b>. */
-void
-circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn)
-{
-  cell_queue_t *queue;
-  // int streams_blocked; // XXXX020 use this for something, or remove it.
-  if (circ->n_conn == orconn) {
-    queue = &circ->n_conn_cells;
-    // streams_blocked = circ->streams_blocked_on_n_conn;
-  } else {
-    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
-    queue = &orcirc->p_conn_cells;
-    // streams_blocked = circ->streams_blocked_on_p_conn;
-  }
-
-  if (queue->n)
-    make_circuit_inactive_on_conn(circ,orconn);
-
-  cell_queue_clear(queue);
 }
 
 /** Fail with an assert if the active circuits ring on <b>orconn</b> is
