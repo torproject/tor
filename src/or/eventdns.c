@@ -122,7 +122,7 @@ typedef int socklen_t;
 #include <stdio.h>
 #endif
 
-/*XXXX020 for debugging possible memory leaks. */
+/* for debugging possible memory leaks. */
 #define malloc(x) tor_malloc(x)
 #define realloc(x,y) tor_realloc((x),(y))
 #define free(x) tor_free(x)

@@ -145,7 +145,7 @@ geoip_load_file(const char *filename)
     char buf[512];
     if (fgets(buf, sizeof(buf), f) == NULL)
       break;
-    /* XXXX020 track full country name. */
+    /* FFFF track full country name. */
     geoip_parse_entry(buf);
   }
   /*XXXX020 abort and return -1 if no entries/illformed?*/

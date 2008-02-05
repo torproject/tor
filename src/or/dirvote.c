@@ -1106,7 +1106,6 @@ ns_detached_signatures_free(ns_detached_signatures_t *s)
  * Certificate functions
  * ===== */
 
-/*XXXX020 make this static? */
 /** Allocate and return a new authority_cert_t with the same contents as
  * <b>cert</b>. */
 authority_cert_t *

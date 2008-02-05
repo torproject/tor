@@ -261,7 +261,6 @@ init_key_from_file(const char *fname, int generate, int severity)
 /** Load the v3 (voting) authority signing key and certificate, if they are
  * present.  Return -1 if anything is missing, mismatched, or unloadable;
  * return 0 on success. */
-/* XXXX020 maybe move to dirserv.c or dirvote.c */
 static int
 init_v3_authority_keys(void)
 {

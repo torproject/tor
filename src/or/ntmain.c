@@ -25,8 +25,10 @@ const char ntmain_c_id[] =
 static SERVICE_STATUS service_status;
 static SERVICE_STATUS_HANDLE hStatus;
 
-/* XXXX020 This 'backup argv' and 'backup argc' business is an ugly hack. This
- * is a job for arguments, not globals. */
+/* XXXX This 'backup argv' and 'backup argc' business is an ugly hack. This
+ * is a job for arguments, not globals.  Alas, some of the functions that
+ * use them use them need to have fixed signatures, so they can be passed
+ * to the NT service functions. */
 static char **backup_argv;
 static int backup_argc;
 static char* nt_strerror(uint32_t errnum);
