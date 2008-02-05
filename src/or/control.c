@@ -1684,7 +1684,7 @@ getinfo_helper_events(control_connection_t *control_conn,
                    check_whether_dirport_reachable() ? 1 : 0);
     } else if (!strcmpstart(question, "status/version/")) {
       int is_server = server_mode(get_options());
-      networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+      networkstatus_t *c = networkstatus_get_latest_consensus();
       version_status_t status;
       const char *recommended;
       if (c) {

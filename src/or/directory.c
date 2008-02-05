@@ -323,7 +323,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   }
 
   if (DIR_PURPOSE_FETCH_CONSENSUS) {
-    networkstatus_vote_t *v = networkstatus_get_latest_consensus();
+    networkstatus_t *v = networkstatus_get_latest_consensus();
     if (v)
       if_modified_since = v->valid_after + 180;
   }
@@ -2272,7 +2272,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       else
         request_type = "/tor/status/?";
     } else {
-      networkstatus_vote_t *v = networkstatus_get_latest_consensus();
+      networkstatus_t *v = networkstatus_get_latest_consensus();
       time_t now = time(NULL);
       smartlist_add(dir_fps, tor_memdup("\0\0\0\0\0\0\0\0\0\0"
                                         "\0\0\0\0\0\0\0\0\0\0", 20));

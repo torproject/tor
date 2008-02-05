@@ -34,7 +34,7 @@ static int dirvote_publish_consensus(void);
  * For v3 authorities. */
 char *
 format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
-                          networkstatus_vote_t *v3_ns)
+                          networkstatus_t *v3_ns)
 {
 /** Longest status flag name that we generate. */
 #define LONGEST_STATUS_FLAG_NAME_LEN 9
@@ -188,7 +188,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   }
 
   {
-    networkstatus_vote_t *v;
+    networkstatus_t *v;
     if (!(v = networkstatus_parse_vote_from_string(status, NULL, 1))) {
       log_err(LD_BUG,"Generated a networkstatus vote we couldn't parse: "
               "<<%s>>", status);
@@ -213,7 +213,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
 /** Given a vote <b>vote</b> (not a consensus!), return its associated
  * networkstatus_voter_info_t. */
 static networkstatus_voter_info_t *
-get_voter(const networkstatus_vote_t *vote)
+get_voter(const networkstatus_t *vote)
 {
   tor_assert(vote);
   tor_assert(vote->is_vote);
@@ -222,12 +222,12 @@ get_voter(const networkstatus_vote_t *vote)
   return smartlist_get(vote->voters, 0);
 }
 
-/** Helper for sorting networkstatus_vote_t votes (not consensuses) by the
+/** Helper for sorting networkstatus_t votes (not consensuses) by the
  * hash of their voters' identity digests. */
 static int
 _compare_votes_by_authority_id(const void **_a, const void **_b)
 {
-  const networkstatus_vote_t *a = *_a, *b = *_b;
+  const networkstatus_t *a = *_a, *b = *_b;
   return memcmp(get_voter(a)->identity_digest,
                 get_voter(b)->identity_digest, DIGEST_LEN);
 }
@@ -396,7 +396,7 @@ compute_consensus_method(smartlist_t *votes)
   int min = (smartlist_len(votes) * 2) / 3;
   int n_ok;
   int result;
-  SMARTLIST_FOREACH(votes, networkstatus_vote_t *, vote,
+  SMARTLIST_FOREACH(votes, networkstatus_t *, vote,
   {
     tor_assert(vote->supported_methods);
     smartlist_add_all(tmp, vote->supported_methods);
@@ -428,7 +428,7 @@ consensus_method_is_supported(int method)
   return (method >= 1) && (method <= 2);
 }
 
-/** Given a list of vote networkstatus_vote_t in <b>votes</b>, our public
+/** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
  * voting quorum, generate the text of a new v3 consensus vote, and return the
@@ -482,7 +482,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *combined_client_versions = smartlist_create();
     smartlist_t *combined_server_versions = smartlist_create();
     int j;
-    SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
+    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
     {
       tor_assert(v->is_vote);
       va_times[v_sl_idx] = v->valid_after;
@@ -590,7 +590,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   /* Sort the votes. */
   smartlist_sort(votes, _compare_votes_by_authority_id);
   /* Add the authority sections. */
-  SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
+  SMARTLIST_FOREACH(votes, networkstatus_t *, v,
   {
     char buf[1024];
     struct in_addr in;
@@ -658,7 +658,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     chosen_unnamed_idx = smartlist_string_pos(flags, "Unnamed");
 
     /* Build the flag index. */
-    SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
+    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
     {
       flag_map[v_sl_idx] = tor_malloc_zero(
                            sizeof(int)*smartlist_len(v->known_flags));
@@ -679,7 +679,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
     /* Named and Unnamed get treated specially */
     if (consensus_method >= 2) {
-      SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
+      SMARTLIST_FOREACH(votes, networkstatus_t *, v,
       {
         uint64_t nf;
         if (named_flag[v_sl_idx]<0)
@@ -703,7 +703,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
           }
         });
       });
-      SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v,
+      SMARTLIST_FOREACH(votes, networkstatus_t *, v,
       {
         uint64_t uf;
         if (unnamed_flag[v_sl_idx]<0)
@@ -744,7 +744,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       char buf[256];
 
       /* Of the next-to-be-considered digest in each voter, which is first? */
-      SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v, {
+      SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
         if (index[v_sl_idx] < size[v_sl_idx]) {
           rs = smartlist_get(v->routerstatus_list, index[v_sl_idx]);
           if (!lowest_id ||
@@ -761,7 +761,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_clear(versions);
 
       /* Okay, go through all the entries for this digest. */
-      SMARTLIST_FOREACH(votes, networkstatus_vote_t *, v, {
+      SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
         if (index[v_sl_idx] >= size[v_sl_idx])
           continue; /* out of entries. */
         rs = smartlist_get(v->routerstatus_list, index[v_sl_idx]);
@@ -924,7 +924,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   smartlist_free(chunks);
 
   {
-    networkstatus_vote_t *c;
+    networkstatus_t *c;
     if (!(c = networkstatus_parse_vote_from_string(result, NULL, 0))) {
       log_err(LD_BUG,"Generated a networkstatus consensus we couldn't "
               "parse.");
@@ -946,7 +946,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
  * changed, or -1 if the document signed by <b>sigs</b> isn't the same
  * document as <b>target</b>. */
 int
-networkstatus_add_detached_signatures(networkstatus_vote_t *target,
+networkstatus_add_detached_signatures(networkstatus_t *target,
                                       ns_detached_signatures_t *sigs,
                                       const char **msg_out)
 {
@@ -1035,7 +1035,7 @@ networkstatus_add_detached_signatures(networkstatus_vote_t *target,
 /** Return a newly allocated string holding the detached-signatures document
  * corresponding to the signatures on <b>consensus</b>. */
 char *
-networkstatus_get_detached_signatures(networkstatus_vote_t *consensus)
+networkstatus_get_detached_signatures(networkstatus_t *consensus)
 {
   smartlist_t *elements;
   char buf[4096];
@@ -1220,7 +1220,7 @@ dirvote_recalculate_timing(or_options_t *options, time_t now)
   int interval, vote_delay, dist_delay;
   time_t start;
   time_t end;
-  networkstatus_vote_t *consensus;
+  networkstatus_t *consensus;
 
   if (!authdir_mode_v3(options))
     return;
@@ -1315,12 +1315,12 @@ dirvote_act(or_options_t *options, time_t now)
   }
 }
 
-/** A vote networkstatus_vote_t and its unparsed body: held around so we can
+/** A vote networkstatus_t and its unparsed body: held around so we can
  * use it to generate a consensus (at voting_ends) and so we can serve it to
  * other authorities that might want it. */
 typedef struct pending_vote_t {
   cached_dir_t *vote_body;
-  networkstatus_vote_t *vote;
+  networkstatus_t *vote;
 } pending_vote_t;
 
 /** List of pending_vote_t for the current vote.  Before we've used them to
@@ -1336,7 +1336,7 @@ static char *pending_consensus_body = NULL;
  * building. */
 static char *pending_consensus_signatures = NULL;
 /** The parsed in-progress consensus document. */
-static networkstatus_vote_t *pending_consensus = NULL;
+static networkstatus_t *pending_consensus = NULL;
 /** List of ns_detached_signatures_t: hold signatures that get posted to us
  * before we have generated the consensus on our own. */
 static smartlist_t *pending_consensus_signature_list = NULL;
@@ -1348,7 +1348,7 @@ dirvote_perform_vote(void)
 {
   crypto_pk_env_t *key = get_my_v3_authority_signing_key();
   authority_cert_t *cert = get_my_v3_authority_cert();
-  networkstatus_vote_t *ns;
+  networkstatus_t *ns;
   char *contents;
   pending_vote_t *pending_vote;
 
@@ -1507,7 +1507,7 @@ list_v3_auth_ids(void)
 pending_vote_t *
 dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 {
-  networkstatus_vote_t *vote;
+  networkstatus_t *vote;
   networkstatus_voter_info_t *vi;
   trusted_dir_server_t *ds;
   pending_vote_t *pending_vote = NULL;
@@ -1664,7 +1664,7 @@ dirvote_compute_consensus(void)
   int n_votes, n_voters;
   smartlist_t *votes = NULL;
   char *consensus_body = NULL, *signatures = NULL;
-  networkstatus_vote_t *consensus = NULL;
+  networkstatus_t *consensus = NULL;
   authority_cert_t *my_cert;
 
   if (!pending_vote_list)
@@ -1813,7 +1813,7 @@ dirvote_add_signatures_to_pending_consensus(
     {
       ns_detached_signatures_t *sigs =
         networkstatus_parse_detached_signatures(new_detached, NULL);
-      networkstatus_vote_t *v = networkstatus_parse_vote_from_string(
+      networkstatus_t *v = networkstatus_parse_vote_from_string(
                                              pending_consensus_body, NULL, 0);
       tor_assert(sigs);
       ns_detached_signatures_free(sigs);

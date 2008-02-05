@@ -1123,7 +1123,7 @@ upload_service_descriptor(rend_service_t *service)
   /* Upload v2 descriptor? */
   if (service->descriptor_version == 2 &&
       get_options()->PublishHidServDescriptors) {
-    networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+    networkstatus_t *c = networkstatus_get_latest_consensus();
     if (c && smartlist_len(c->routerstatus_list) > 0) {
       int seconds_valid;
       smartlist_t *descs = smartlist_create();

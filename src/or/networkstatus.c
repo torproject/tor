@@ -33,11 +33,11 @@ static strmap_t *named_server_map = NULL;
 static strmap_t *unnamed_server_map = NULL;
 
 /** Most recently received and validated v3 consensus network status. */
-static networkstatus_vote_t *current_consensus = NULL;
+static networkstatus_t *current_consensus = NULL;
 
 /** A v3 consensus networkstatus that we've received, but which we don't
  * have enough certificates to be happy about. */
-static networkstatus_vote_t *consensus_waiting_for_certs = NULL;
+static networkstatus_t *consensus_waiting_for_certs = NULL;
 static char *consensus_waiting_for_certs_body = NULL;
 static time_t consensus_waiting_for_certs_set_at = 0;
 static int consensus_waiting_for_certs_dl_failed = 0;
@@ -263,7 +263,7 @@ networkstatus_v2_free(networkstatus_v2_t *ns)
 
 /** Clear all storage held in <b>ns</b>. */
 void
-networkstatus_vote_free(networkstatus_vote_t *ns)
+networkstatus_vote_free(networkstatus_t *ns)
 {
   if (!ns)
     return;
@@ -317,7 +317,7 @@ networkstatus_vote_free(networkstatus_vote_t *ns)
  * is <b>identity</b>, or NULL if no such voter is associated with
  * <b>vote</b>. */
 networkstatus_voter_info_t *
-networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
+networkstatus_get_voter_by_id(networkstatus_t *vote,
                               const char *identity)
 {
   if (!vote || !vote->voters)
@@ -334,7 +334,7 @@ networkstatus_get_voter_by_id(networkstatus_vote_t *vote,
  * <b>voter</b>, and return 0. */
 /* (private; exposed for testing.) */
 int
-networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
+networkstatus_check_voter_signature(networkstatus_t *consensus,
                                     networkstatus_voter_info_t *voter,
                                     authority_cert_t *cert)
 {
@@ -370,7 +370,7 @@ networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
  * about every problem; if warn is at least 1, warn only if we can't get
  * enough signatures; if warn is negative, log nothing at all. */
 int
-networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
+networkstatus_check_consensus_signature(networkstatus_t *consensus,
                                         int warn)
 {
   int n_good = 0;
@@ -777,7 +777,7 @@ networkstatus_v2_find_entry(networkstatus_v2_t *ns, const char *digest)
 /** Return the entry in <b>ns</b> for the identity digest <b>digest</b>, or
  * NULL if none was found. */
 routerstatus_t *
-networkstatus_vote_find_entry(networkstatus_vote_t *ns, const char *digest)
+networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
 {
   return smartlist_bsearch(ns->routerstatus_list, digest,
                            _compare_digest_to_routerstatus_entry);
@@ -786,7 +786,7 @@ networkstatus_vote_find_entry(networkstatus_vote_t *ns, const char *digest)
 /*XXXX020 make this static once functions are moved into this file. */
 /** DOCDOC */
 int
-networkstatus_vote_find_entry_idx(networkstatus_vote_t *ns,
+networkstatus_vote_find_entry_idx(networkstatus_t *ns,
                                   const char *digest, int *found_out)
 {
   return smartlist_bsearch_idx(ns->routerstatus_list, digest,
@@ -1079,7 +1079,7 @@ void
 update_consensus_networkstatus_fetch_time(time_t now)
 {
   or_options_t *options = get_options();
-  networkstatus_vote_t *c = networkstatus_get_live_consensus(now);
+  networkstatus_t *c = networkstatus_get_live_consensus(now);
   if (c) {
     long dl_interval;
     long interval = c->fresh_until - c->valid_after;
@@ -1184,7 +1184,7 @@ networkstatus_v2_get_by_digest(const char *digest)
 
 /** Return the most recent consensus that we have downloaded, or NULL if we
  * don't have one. */
-networkstatus_vote_t *
+networkstatus_t *
 networkstatus_get_latest_consensus(void)
 {
   return current_consensus;
@@ -1192,7 +1192,7 @@ networkstatus_get_latest_consensus(void)
 
 /** Return the most recent consensus that we have downloaded, or NULL if it is
  * no longer live. */
-networkstatus_vote_t *
+networkstatus_t *
 networkstatus_get_live_consensus(time_t now)
 {
   if (current_consensus &&
@@ -1206,7 +1206,7 @@ networkstatus_get_live_consensus(time_t now)
 /* XXXX020 remove this in favor of get_live_consensus. But actually,
  * leave something like it for bridge users, who need to not totally
  * lose if they spend a while fetching a new consensus. */
-networkstatus_vote_t *
+networkstatus_t *
 networkstatus_get_reasonably_live_consensus(time_t now)
 {
 #define REASONABLY_LIVE_TIME (24*60*60)
@@ -1253,8 +1253,8 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
 /** Notify controllers of any router status entries that changed between
  * <b>old_c</b> and <b>new_c</b>. */
 static void
-notify_control_networkstatus_changed(const networkstatus_vote_t *old_c,
-                                     const networkstatus_vote_t *new_c)
+notify_control_networkstatus_changed(const networkstatus_t *old_c,
+                                     const networkstatus_t *new_c)
 {
   int idx = 0;
   int old_remain = old_c && smartlist_len(old_c->routerstatus_list);
@@ -1292,8 +1292,8 @@ notify_control_networkstatus_changed(const networkstatus_vote_t *old_c,
 /** Copy all the ancillary information (like router download status and so on)
  * from <b>old_c</b> to <b>new_c</b>. */
 static void
-networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
-                                      const networkstatus_vote_t *old_c)
+networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
+                                      const networkstatus_t *old_c)
 {
   int idx = 0;
   const routerstatus_t *rs_old;
@@ -1344,7 +1344,7 @@ networkstatus_copy_old_consensus_info(networkstatus_vote_t *new_c,
 int
 networkstatus_set_current_consensus(const char *consensus, unsigned flags)
 {
-  networkstatus_vote_t *c;
+  networkstatus_t *c;
   int r, result = -1;
   time_t now = time(NULL);
   char *unverified_fname = NULL, *consensus_fname = NULL;
@@ -1526,7 +1526,7 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
 {
   routerinfo_t *me;
   routerlist_t *rl = router_get_routerlist();
-  networkstatus_vote_t *consensus = networkstatus_get_live_consensus(now);
+  networkstatus_t *consensus = networkstatus_get_live_consensus(now);
   or_options_t *options = get_options();
 
   if (networkstatus_v2_list_has_changed)
@@ -1675,7 +1675,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
   int namingdir = authdir && options->NamingAuthoritativeDir;
-  networkstatus_vote_t *ns = current_consensus;
+  networkstatus_t *ns = current_consensus;
   int idx;
   if (!ns || !smartlist_len(ns->routerstatus_list))
     return;
@@ -1751,7 +1751,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
 void
 signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
 {
-  networkstatus_vote_t *ns = current_consensus;
+  networkstatus_t *ns = current_consensus;
   if (!ns)
     return;
 

@@ -341,7 +341,7 @@ static token_rule_t ipo_token_table[] = {
   END_OF_TABLE
 };
 
-static token_rule_t networkstatus_vote_token_table[] = {
+static token_rule_t networkstatus_token_table[] = {
   T1("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
   T1("vote-status",            K_VOTE_STATUS,      GE(1),       NO_OBJ ),
@@ -1605,7 +1605,7 @@ find_start_of_next_routerstatus(const char *s)
  **/
 static routerstatus_t *
 routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
-                                     networkstatus_vote_t *vote,
+                                     networkstatus_t *vote,
                                      vote_routerstatus_t *vote_rs,
                                      int consensus_method)
 {
@@ -1950,14 +1950,14 @@ networkstatus_v2_parse_from_string(const char *s)
 /** Parse a v3 networkstatus vote (if <b>is_vote</b> is true) or a v3
  * networkstatus consensus (if <b>is_vote</b> is false) from <b>s</b>, and
  * return the result.  Return NULL on failure. */
-networkstatus_vote_t *
+networkstatus_t *
 networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                                      int is_vote)
 {
   smartlist_t *tokens = smartlist_create();
   smartlist_t *rs_tokens = NULL, *footer_tokens = NULL;
   networkstatus_voter_info_t *voter = NULL;
-  networkstatus_vote_t *ns = NULL;
+  networkstatus_t *ns = NULL;
   char ns_digest[DIGEST_LEN];
   const char *cert, *end_of_header, *end_of_footer;
   directory_token_t *tok;
@@ -1972,13 +1972,13 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   end_of_header = find_start_of_next_routerstatus(s);
   if (tokenize_string(s, end_of_header, tokens,
-                      is_vote ? networkstatus_vote_token_table :
+                      is_vote ? networkstatus_token_table :
                                 networkstatus_consensus_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing network-status vote header.");
     goto err;
   }
 
-  ns = tor_malloc_zero(sizeof(networkstatus_vote_t));
+  ns = tor_malloc_zero(sizeof(networkstatus_t));
   memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
   if (is_vote) {

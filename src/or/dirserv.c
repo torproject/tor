@@ -2105,14 +2105,14 @@ router_clear_status_flags(routerinfo_t *router)
  * information is not accurate. */
 #define DIRSERV_TIME_TO_GET_REACHABILITY_INFO (30*60)
 
-/** Return a new networkstatus_vote_t* containing our current opinion. (For v3
+/** Return a new networkstatus_t* containing our current opinion. (For v3
  * authorities) */
-networkstatus_vote_t *
+networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert)
 {
   or_options_t *options = get_options();
-  networkstatus_vote_t *v3_out = NULL;
+  networkstatus_t *v3_out = NULL;
   uint32_t addr;
   char *hostname = NULL, *client_versions = NULL, *server_versions = NULL;
   const char *contact;
@@ -2206,14 +2206,14 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   smartlist_free(routers);
   digestmap_free(omit_as_sybil, NULL);
 
-  v3_out = tor_malloc_zero(sizeof(networkstatus_vote_t));
+  v3_out = tor_malloc_zero(sizeof(networkstatus_t));
 
   v3_out->is_vote = 1;
   dirvote_get_preferred_voting_intervals(&timing);
   v3_out->published = now;
   {
     char tbuf[ISO_TIME_LEN+1];
-    networkstatus_vote_t *current_consensus =
+    networkstatus_t *current_consensus =
       networkstatus_get_live_consensus(now);
     time_t last_consensus_interval; /* only used to pick a valid_after */
     if (current_consensus)

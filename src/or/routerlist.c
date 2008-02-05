@@ -366,7 +366,7 @@ authority_cert_dl_failed(const char *id_digest, int status)
  * already have.
  **/
 void
-authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now)
+authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 {
   digestmap_t *pending;
   smartlist_t *missing_digests;
@@ -924,7 +924,7 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
   smartlist_t *trusted_direct, *trusted_tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   time_t now = time(NULL);
-  const networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
+  const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   int requireother = ! (flags & PDS_ALLOW_SELF);
   int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
   int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
@@ -2695,7 +2695,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   int authdir = authdir_mode_handles_descs(get_options(), router->purpose);
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
-  networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
+  networkstatus_t *consensus = networkstatus_get_latest_consensus();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
   int in_consensus = 0;
 
@@ -2992,7 +2992,7 @@ routerlist_remove_old_routers(void)
   signed_descriptor_t *sd;
   digestmap_t *retain;
   int caches = directory_caches_dir_info(get_options());
-  const networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
+  const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
 
   trusted_dirs_remove_old_certs();
@@ -3308,7 +3308,7 @@ static int
 signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 {
   routerstatus_t *rs;
-  networkstatus_vote_t *consensus = networkstatus_get_latest_consensus();
+  networkstatus_t *consensus = networkstatus_get_latest_consensus();
   int caches = directory_caches_dir_info(get_options());
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
 
@@ -3848,7 +3848,7 @@ update_consensus_router_descriptor_downloads(time_t now)
   smartlist_t *no_longer_old = smartlist_create();
   smartlist_t *downloadable = smartlist_create();
   int authdir = authdir_mode(options);
-  networkstatus_vote_t *consensus =
+  networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now);
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
     n_inprogress=0, n_in_oldrouters=0;
@@ -4075,7 +4075,7 @@ update_router_have_minimum_dir_info(void)
   time_t now = time(NULL);
   int res;
   or_options_t *options = get_options();
-  const networkstatus_vote_t *consensus =
+  const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now);
 
   if (!consensus) {
@@ -4487,7 +4487,7 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                      const char *id)
 {
   int start, found, n_added = 0, i;
-  networkstatus_vote_t *c = networkstatus_get_latest_consensus();
+  networkstatus_t *c = networkstatus_get_latest_consensus();
   if (!c || !smartlist_len(c->routerstatus_list)) {
     log_warn(LD_REND, "We don't have a consensus, so we can't perform v2 "
              "rendezvous operations.");
@@ -4519,7 +4519,7 @@ int
 hid_serv_acting_as_directory(void)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  networkstatus_vote_t *c;
+  networkstatus_t *c;
   routerstatus_t *rs;
   if (!me)
     return 0;

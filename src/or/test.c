@@ -2513,7 +2513,7 @@ test_v3_networkstatus(void)
 
   time_t now = time(NULL);
   networkstatus_voter_info_t *voter;
-  networkstatus_vote_t *vote, *v1, *v2, *v3, *con;
+  networkstatus_t *vote, *v1, *v2, *v3, *con;
   vote_routerstatus_t *vrs;
   routerstatus_t *rs;
   char *v1_text, *v2_text, *v3_text, *consensus_text, *cp;
@@ -2543,7 +2543,7 @@ test_v3_networkstatus(void)
   /*
    * Set up a vote; generate it; try to parse it.
    */
-  vote = tor_malloc_zero(sizeof(networkstatus_vote_t));
+  vote = tor_malloc_zero(sizeof(networkstatus_t));
   vote->is_vote = 1;
   vote->published = now;
   vote->valid_after = now+1000;
@@ -2840,7 +2840,7 @@ test_v3_networkstatus(void)
 
   {
     char *consensus_text2, *consensus_text3;
-    networkstatus_vote_t *con2, *con3;
+    networkstatus_t *con2, *con3;
     char *detached_text1, *detached_text2;
     ns_detached_signatures_t *dsig1, *dsig2;
     const char *msg=NULL;

@@ -1436,7 +1436,7 @@ typedef struct vote_routerstatus_t {
   routerstatus_t status; /**< Underlying 'status' object for this router.
                           * Flags are redundant. */
   uint64_t flags; /**< Bit-field for all recognized flags; index into
-                   * networkstatus_vote_t.known_flags. */
+                   * networkstatus_t.known_flags. */
   char *version; /**< The version that the authority says this router is
                   * running. */
 } vote_routerstatus_t;
@@ -1463,11 +1463,9 @@ typedef struct networkstatus_voter_info_t {
                                     * the sig, and we know it's bad. */
 } networkstatus_voter_info_t;
 
-/** A common structure to hold a v2 network status vote, or a v2 network
+/** A common structure to hold a v3 network status vote, or a v3 network
  * status consensus. */
-/* XXXX020 rename to networkstatus_t once it replaces networkstatus_t in
- * functionality. */
-typedef struct networkstatus_vote_t {
+typedef struct networkstatus_t {
   int is_vote; /**< True if this is a vote; false if it is a consensus. */
   time_t published; /**< Vote only: Tiem when vote was written. */
   time_t valid_after; /**< Time after which this vote or consensus applies. */
@@ -1514,10 +1512,10 @@ typedef struct networkstatus_vote_t {
   /** If present, a map from descriptor digest to elements of
    * routerstatus_list. */
   digestmap_t *desc_digest_map;
-} networkstatus_vote_t;
+} networkstatus_t;
 
 /** A set of signatures for a networkstatus consensus.  All fields are as for
- * networkstatus_vote_t. */
+ * networkstatus_t. */
 typedef struct ns_detached_signatures_t {
   time_t valid_after;
   time_t fresh_until;
@@ -3142,10 +3140,10 @@ char *networkstatus_compute_consensus(smartlist_t *votes,
                                       int total_authorities,
                                       crypto_pk_env_t *identity_key,
                                       crypto_pk_env_t *signing_key);
-int networkstatus_add_detached_signatures(networkstatus_vote_t *target,
+int networkstatus_add_detached_signatures(networkstatus_t *target,
                                           ns_detached_signatures_t *sigs,
                                           const char **msg_out);
-char *networkstatus_get_detached_signatures(networkstatus_vote_t *consensus);
+char *networkstatus_get_detached_signatures(networkstatus_t *consensus);
 void ns_detached_signatures_free(ns_detached_signatures_t *s);
 
 /* cert manipulation */
@@ -3184,14 +3182,14 @@ void set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                       int naming, int exits_can_be_guards,
                                       int listbadexits, int listbaddirs);
 void router_clear_status_flags(routerinfo_t *ri);
-networkstatus_vote_t *
+networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert);
 
 #ifdef DIRVOTE_PRIVATE
 char *
 format_networkstatus_vote(crypto_pk_env_t *private_key,
-                          networkstatus_vote_t *v3_ns);
+                          networkstatus_t *v3_ns);
 #endif
 
 /********************************* dns.c ***************************/
@@ -3324,13 +3322,13 @@ int router_reload_v2_networkstatus(void);
 int router_reload_consensus_networkstatus(void);
 void routerstatus_free(routerstatus_t *rs);
 void networkstatus_v2_free(networkstatus_v2_t *ns);
-void networkstatus_vote_free(networkstatus_vote_t *ns);
+void networkstatus_vote_free(networkstatus_t *ns);
 networkstatus_voter_info_t *networkstatus_get_voter_by_id(
-                                       networkstatus_vote_t *vote,
+                                       networkstatus_t *vote,
                                        const char *identity);
-int networkstatus_check_consensus_signature(networkstatus_vote_t *consensus,
+int networkstatus_check_consensus_signature(networkstatus_t *consensus,
                                             int warn);
-int networkstatus_check_voter_signature(networkstatus_vote_t *consensus,
+int networkstatus_check_voter_signature(networkstatus_t *consensus,
                                         networkstatus_voter_info_t *voter,
                                         authority_cert_t *cert);
 char *networkstatus_get_cache_filename(const char *identity_digest);
@@ -3340,9 +3338,9 @@ int router_set_networkstatus_v2(const char *s, time_t arrived_at,
 void networkstatus_v2_list_clean(time_t now);
 routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
                                          const char *digest);
-routerstatus_t *networkstatus_vote_find_entry(networkstatus_vote_t *ns,
+routerstatus_t *networkstatus_vote_find_entry(networkstatus_t *ns,
                                               const char *digest);
-int networkstatus_vote_find_entry_idx(networkstatus_vote_t *ns,
+int networkstatus_vote_find_entry_idx(networkstatus_t *ns,
                                       const char *digest, int *found_out);
 const smartlist_t *networkstatus_get_v2_list(void);
 download_status_t *router_get_dl_status_by_descriptor_digest(const char *d);
@@ -3359,9 +3357,9 @@ int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);
 void update_certificate_downloads(time_t now);
 networkstatus_v2_t *networkstatus_v2_get_by_digest(const char *digest);
-networkstatus_vote_t *networkstatus_get_latest_consensus(void);
-networkstatus_vote_t *networkstatus_get_live_consensus(time_t now);
-networkstatus_vote_t *networkstatus_get_reasonably_live_consensus(time_t now);
+networkstatus_t *networkstatus_get_latest_consensus(void);
+networkstatus_t *networkstatus_get_live_consensus(time_t now);
+networkstatus_t *networkstatus_get_reasonably_live_consensus(time_t now);
 #define NSSET_FROM_CACHE 1
 #define NSSET_WAS_WAITING_FOR_CERTS 2
 #define NSSET_DONT_DOWNLOAD_CERTS 4
@@ -3844,7 +3842,7 @@ authority_cert_t *authority_cert_get_by_digests(const char *id_digest,
                                                 const char *sk_digest);
 void authority_cert_get_all(smartlist_t *certs_out);
 void authority_cert_dl_failed(const char *id_digest, int status);
-void authority_certs_fetch_missing(networkstatus_vote_t *status, time_t now);
+void authority_certs_fetch_missing(networkstatus_t *status, time_t now);
 int router_reload_router_list(void);
 smartlist_t *router_get_trusted_dir_servers(void);
 
@@ -4016,7 +4014,7 @@ void assert_addr_policy_ok(smartlist_t *t);
 void dump_distinct_digest_count(int severity);
 
 networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);
-networkstatus_vote_t *networkstatus_parse_vote_from_string(const char *s,
+networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                                           const char **eos_out,
                                                           int is_vote);
 ns_detached_signatures_t *networkstatus_parse_detached_signatures(
