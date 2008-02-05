@@ -47,7 +47,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   (void) addrlen;
   sa = (struct sockaddr*) &addr;
   if (sa->sa_family != AF_INET) {
-    /* XXXX020 Handle IPV6 */
+    /* XXXX_IP6 Handle IPV6 */
     log_warn(LD_APP, "Requesting address wasn't ipv4.");
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
     return;
@@ -155,8 +155,10 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
 
 /* Helper function: called whenever the client sends a resolve request to our
  * controller.  We need to eventually answer the request <b>req</b>.
+ * Returns 0 if the controller will be getting (or has gotten) an event in
+ * response; -1 if we couldn't launch the request.
  */
-void
+int
 dnsserv_launch_request(const char *name, int reverse)
 {
   edge_connection_t *conn;
@@ -178,9 +180,8 @@ dnsserv_launch_request(const char *name, int reverse)
 
   if (connection_add(TO_CONN(conn))<0) {
     log_warn(LD_APP, "Couldn't register dummy connection for RESOLVE request");
-    /* XXXX020 Answer the controller. */
     connection_free(TO_CONN(conn));
-    return;
+    return -1;
   }
 
   /* Now, throw the connection over to get rewritten (which will answer it
@@ -195,6 +196,7 @@ dnsserv_launch_request(const char *name, int reverse)
   log_info(LD_APP, "Passed request for %s to rewrite_and_attach.",
            escaped_safe_str(q_name));
   tor_free(q_name);
+  return 0;
 }
 
 /** If there is a pending request on <b>conn</b> that's waiting for an answer,

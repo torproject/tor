@@ -2439,7 +2439,7 @@ static int
 handle_control_resolve(control_connection_t *conn, uint32_t len,
                        const char *body)
 {
-  smartlist_t *args;
+  smartlist_t *args, *failed;
   int is_reverse = 0;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
 
@@ -2458,14 +2458,21 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
     tor_free(cp);
     is_reverse = 1;
   }
+  failed = smartlist_create();
   SMARTLIST_FOREACH(args, const char *, arg, {
-      dnsserv_launch_request(arg, is_reverse);
+      if (dnsserv_launch_request(arg, is_reverse)<0)
+        smartlist_add(failed, (char*)arg);
+  });
+
+  send_control_done(conn);
+  SMARTLIST_FOREACH(failed, const char *, arg, {
+      control_event_address_mapped(arg, arg, time(NULL),
+                                   "Unable to launch resolve request");
   });
 
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
-
-  send_control_done(conn);
+  smartlist_free(failed);
   return 0;
 }
 

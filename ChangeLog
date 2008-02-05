@@ -1,4 +1,8 @@
 Changes in version 0.2.0.19-alpha - 2008-02-??
+  o Minor features:
+    - Actually validate the options passed to AuthDirReject, AuthDirInvalid,
+      AuthDirBadDir, and AuthDirBadExit.
+
   o Major bugfixes:
     - If we're a relay, avoid picking ourselves as an introduction point,
       a rendezvous point, or as the final hop for internal circuits. Bug
@@ -23,6 +27,11 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
       signature download requests.  Fix for bug 593.  Bugfix on 0.2.0.x.
     - Don't trigger an assert if we start a directory authority with a
       private IP address (like 127.0.0.1).
+    - Avoid possible failures when generating a directory with routers with
+      over-long versions strings, or too many flags set.  Bugfix on 0.1.2.x.
+    - If an attempt to launch a DNS resolve request over the control
+      port fails because we have overrun the limit on the number of
+      connections, tell the controller that the request has failed.
 
 
 Changes in version 0.2.0.18-alpha - 2008-01-25

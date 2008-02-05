@@ -3221,7 +3221,7 @@ void dnsserv_resolved(edge_connection_t *conn,
                       const char *answer,
                       int ttl);
 void dnsserv_reject_request(edge_connection_t *conn);
-void dnsserv_launch_request(const char *name, int is_reverse);
+int dnsserv_launch_request(const char *name, int is_reverse);
 
 /********************************* geoip.c **************************/
 
