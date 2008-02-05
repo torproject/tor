@@ -487,7 +487,7 @@ crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
    */
   if (!PEM_write_bio_RSAPublicKey(b, env->key)) {
     crypto_log_errors(LOG_WARN, "writing public key to string");
-    /* XXX020 leaks b? maybe "BIO_free(b);" would be smart here. -RD */
+    BIO_free(b);
     return -1;
   }
 
@@ -1277,7 +1277,7 @@ void
 crypto_digest_get_digest(crypto_digest_env_t *digest,
                          char *out, size_t out_len)
 {
-  static unsigned char r[DIGEST_LEN]; /*XXXXX020 why static? */
+  unsigned char r[DIGEST_LEN];
   SHA_CTX tmpctx;
   tor_assert(digest);
   tor_assert(out);

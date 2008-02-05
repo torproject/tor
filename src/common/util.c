@@ -2409,7 +2409,7 @@ addr_mask_get_bits(uint32_t mask)
 /** Compare two addresses <b>a1</b> and <b>a2</b> for equality under a
  *  etmask of <b>mbits</b> bits.  Return -1, 0, or 1.
  *
- * XXXX020Temporary function to allow masks as bitcounts everywhere.  This
+ * XXXX_IP6 Temporary function to allow masks as bitcounts everywhere.  This
  * will be replaced with an IPv6-aware version as soon as 32-bit addresses are
  * no longer passed around.
  */
@@ -2646,7 +2646,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
   memset(addr_out, 0, sizeof(tor_addr_t));
 
   if (!strcmp(address, "*")) {
-    addr_out->family = AF_INET; /* AF_UNSPEC ???? XXXXX020 */
+    addr_out->family = AF_INET; /* AF_UNSPEC ???? XXXX_IP6 */
     any_flag = 1;
   } else if (tor_inet_pton(AF_INET6, address, &addr_out->addr.in6_addr) > 0) {
     addr_out->family = AF_INET6;
@@ -2714,7 +2714,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
                    bits);
           goto err;
         }
-        /* XXXX020 is this really what we want? */
+        /* XXXX_IP6 is this really what we want? */
         bits = 96 + bits%32; /* map v4-mapped masks onto 96-128 bits */
       }
     } else { /* pick an appropriate mask, as none was given */
@@ -2827,7 +2827,7 @@ tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len)
 /** Take a 32-bit host-order ipv4 address <b>v4addr</b> and store it in the
  *  tor_addr *<b>dest</b>.
  *
- *  XXXX020 Temporary, for use while 32-bit int addresses are still being
+ *  XXXX_IP6 Temporary, for use while 32-bit int addresses are still being
  *  passed around.
  */
 void
@@ -2876,7 +2876,7 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
 
   tor_assert(addr1 && addr2);
 
-  /* XXXX020 this code doesn't handle mask bits right it's using v4-mapped v6
+  /* XXXX_IP6 this code doesn't handle mask bits right it's using v4-mapped v6
    * addresses.  If I ask whether ::ffff:1.2.3.4 and ::ffff:1.2.7.8 are the
    * same in the first 16 bits, it will say "yes."  That's not so intuitive.
    */

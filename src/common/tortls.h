@@ -22,7 +22,7 @@ typedef struct tor_tls_t tor_tls_t;
 /* Possible return values for most tor_tls_* functions. */
 #define _MIN_TOR_TLS_ERROR_VAL     -9
 #define TOR_TLS_ERROR_MISC         -9
-/* Rename to unexpected close or something. XXX020 */
+/* Rename to unexpected close or something. XXXX */
 #define TOR_TLS_ERROR_IO           -8
 #define TOR_TLS_ERROR_CONNREFUSED  -7
 #define TOR_TLS_ERROR_CONNRESET    -6

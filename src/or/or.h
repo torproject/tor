@@ -860,7 +860,7 @@ typedef struct connection_t {
                                  * could write? */
   time_t timestamp_created; /**< When was this connection_t created? */
 
-  /* XXXX020 make this ipv6-capable */
+  /* XXXX_IP6 make this ipv6-capable */
   int socket_family; /**< Address family of this connection's socket.  Usually
                       * AF_INET, but it can also be AF_UNIX, or in the future
                       * AF_INET6 */
@@ -1129,7 +1129,7 @@ typedef struct addr_policy_t {
   maskbits_t maskbits; /**< Accept/reject all addresses <b>a</b> such that the
                  * first <b>maskbits</b> bits of <b>a</b> match
                  * <b>addr</b>. */
-  /* XXXX020 make this ipv6-capable */
+  /* XXXX_IP6 make this ipv6-capable */
   uint32_t addr; /**< Base address to accept or reject. */
   uint16_t prt_min; /**< Lowest port number to accept/reject. */
   uint16_t prt_max; /**< Highest port number to accept/reject. */
@@ -1956,7 +1956,7 @@ static INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 /** An entry specifying a set of addresses and ports that should be remapped
  * to another address and port before exiting this exit node. */
 typedef struct exit_redirect_t {
-  /* XXXX020 make this whole mess ipv6-capable.  (Does anybody use it? */
+  /* XXXX_IP6 make this whole mess ipv6-capable.  (Does anybody use it? */
 
   uint32_t addr;
   uint16_t port_min;

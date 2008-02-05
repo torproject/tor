@@ -49,11 +49,6 @@
  *       - We keep a list of full chunks (so we can have a "nuke everything"
  *         function).  Obmalloc's pools leave full chunks to float unanchored.
  *
- *         [XXXX020 Another way to support 'nuke everything' would be to keep
- *         _all_ the chunks in a doubly-linked-list.  This would have more
- *         space overhead per chunk, but less pointer manipulation overhead
- *         than the current approach.]
- *
  * LIMITATIONS:
  *   - Not even slightly threadsafe.
  *   - Likes to have lots of items per chunks.
