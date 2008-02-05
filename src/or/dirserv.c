@@ -1868,6 +1868,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   if (first_line_only)
     return 0;
   cp = buf + strlen(buf);
+  /* NOTE: Whenever this list expands, be sure to increase MAX_FLAG_LINE_LEN*/
   r = tor_snprintf(cp, buf_len - (cp-buf),
                    "s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
                   /* These must stay in alphabetical order. */
@@ -1890,7 +1891,9 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   }
   cp += strlen(cp);
 
-  if (version) {
+  /* length of "opt v \n" */
+#define V_LINE_OVERHEAD 7
+  if (version && strlen(version) < MAX_V_LINE_LEN - V_LINE_OVERHEAD) {
     if (tor_snprintf(cp, buf_len - (cp-buf), "opt v %s\n", version)<0) {
       log_warn(LD_BUG, "Unable to print router version.");
       return -1;
@@ -2280,17 +2283,15 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
 static cached_dir_t *
 generate_v2_networkstatus_opinion(void)
 {
-/** Longest status flag name that we generate. */
-#define LONGEST_STATUS_FLAG_NAME_LEN 9
-/** Maximum number of status flags we'll apply to one router. */
-#define N_STATUS_FLAGS 10
 /** Amount of space to allocate for each entry. (r line and s line.) */
 #define RS_ENTRY_LEN                                                    \
   ( /* first line */                                                    \
    MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
    5*2 /* ports */ + 10 /* punctuation */ +                             \
    /* second line */                                                    \
-   (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2)
+   (MAX_FLAG_LINE_LEN) +                                                \
+   /* third line */                                                     \
+   (MAX_V_LINE_LEN))
 
   cached_dir_t *r = NULL;
   size_t len, identity_pkey_len;

@@ -3049,7 +3049,11 @@ download_status_is_ready(download_status_t *dls, time_t now,
 }
 
 /********************************* dirserv.c ***************************/
-
+/** Maximum allowable length of a version line in a networkstatus. */
+#define MAX_V_LINE_LEN 128
+/** Length of "r Authority BadDirectory BadExit Exit Fast Guard HSDir Named
+ * Running Stable Unnamed V2Dir Valid\n". */
+#define MAX_FLAG_LINE_LEN 96
 #define UNNAMED_ROUTER_NICKNAME "Unnamed"
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);

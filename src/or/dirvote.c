@@ -36,19 +36,15 @@ char *
 format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
-/** Longest status flag name that we generate. */
-#define LONGEST_STATUS_FLAG_NAME_LEN 9
-/** Maximum number of status flags we'll apply to one router. */
-#define N_STATUS_FLAGS 10
 /** Amount of space to allocate for each entry: r, s, and v lines. */
 #define RS_ENTRY_LEN                                                    \
   ( /* first line */                                                    \
    MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
    5*2 /* ports */ + 10 /* punctuation */ +                             \
    /* second line */                                                    \
-   (LONGEST_STATUS_FLAG_NAME_LEN+1)*N_STATUS_FLAGS + 2 +                \
-   /* v line.  XXXX020 not accurate! */                                 \
-   80                                                                   \
+   MAX_FLAG_LINE_LEN +                                                  \
+   /* v line. */                                                        \
+   MAX_V_LINE_LEN                                                       \
    )
 
   size_t len;
