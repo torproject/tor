@@ -143,16 +143,6 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
     ds = trusteddirserver_get_by_v3_auth_digest(
                                        cert->cache_info.identity_digest);
 
-#if 0
-    if (drop_unknown && !ds) {
-        log_info(LD_DIR, "Found %s certificate whose key didn't match "
-                 "any v3 authority we recognized; skipping.",
-                 from_store ? "cached" : "downloaded");
-        authority_cert_free(cert);
-        continue;
-      }
-    }
-#endif
     cl = get_cert_list(cert->cache_info.identity_digest);
 
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, c,
@@ -2716,11 +2706,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     routerinfo_free(router);
     return -1;
   }
-
-#if 0
-  if (routerlist_is_overfull(routerlist))
-    routerlist_remove_old_routers();
-#endif
 
   if (authdir) {
     if (authdir_wants_to_reject_router(router, msg,

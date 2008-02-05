@@ -39,10 +39,6 @@ static void command_process_destroy_cell(cell_t *cell, or_connection_t *conn);
 static void command_process_versions_cell(var_cell_t *cell,
                                           or_connection_t *conn);
 static void command_process_netinfo_cell(cell_t *cell, or_connection_t *conn);
-#if 0
-static void command_process_cert_cell(var_cell_t *cell, or_connection_t *conn);
-static void command_process_link_auth_cell(cell_t *cell,or_connection_t *conn);
-#endif
 
 #ifdef KEEP_TIMING_STATS
 /** This is a wrapper function around the actual function that processes the

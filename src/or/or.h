@@ -3814,11 +3814,6 @@ typedef struct trusted_dir_server_t {
   /** What kind of authority is this? (Bitfield.) */
   authority_type_t type;
 
-#if 0
-  smartlist_t *v3_certs; /**< V3 key certificates for this authority */
-  download_status_t cert_dl_status; /**< Status of downloading this server's
-                               * latest certificate. */
-#endif
   download_status_t v2_ns_dl_status; /**< Status of downloading this server's
                                * v2 network status. */
   time_t addr_current_at; /**< When was the document that we derived the
