@@ -2283,16 +2283,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
 static cached_dir_t *
 generate_v2_networkstatus_opinion(void)
 {
-/** Amount of space to allocate for each entry. (r line and s line.) */
-#define RS_ENTRY_LEN                                                    \
-  ( /* first line */                                                    \
-   MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
-   5*2 /* ports */ + 10 /* punctuation */ +                             \
-   /* second line */                                                    \
-   (MAX_FLAG_LINE_LEN) +                                                \
-   /* third line */                                                     \
-   (MAX_V_LINE_LEN))
-
   cached_dir_t *r = NULL;
   size_t len, identity_pkey_len;
   char *status = NULL, *client_versions = NULL, *server_versions = NULL,

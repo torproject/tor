@@ -457,8 +457,9 @@ close_log(logfile_t *victim)
   }
 }
 
-/** Add a log handler to send all messages of severity <b>loglevel</b>
- * or higher to <b>stream</b>. DOCDOC.*/
+/** Add a log handler named <b>name</b> to send all messages of severity
+ * between <b>loglevelMin</b> and <b>loglevelMax</b> (inclusive) to
+ * <b>stream</b>. */
 static void
 add_stream_log_impl(int loglevelMin, int loglevelMax,
                     const char *name, FILE *stream)

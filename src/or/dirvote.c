@@ -36,17 +36,6 @@ char *
 format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
-/** Amount of space to allocate for each entry: r, s, and v lines. */
-#define RS_ENTRY_LEN                                                    \
-  ( /* first line */                                                    \
-   MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
-   5*2 /* ports */ + 10 /* punctuation */ +                             \
-   /* second line */                                                    \
-   MAX_FLAG_LINE_LEN +                                                  \
-   /* v line. */                                                        \
-   MAX_V_LINE_LEN                                                       \
-   )
-
   size_t len;
   char *status = NULL;
   const char *client_versions = NULL, *server_versions = NULL;
@@ -367,22 +356,28 @@ hash_list_members(char *digest_out, smartlist_t *lst)
   crypto_free_digest_env(d);
 }
 
-/**DOCDOC*/
+/** Sorting helper: compare two strings based on their values as base-ten
+ * positive integers. (Non-integers are treated as prior to all integers, and
+ * compared lexically.) */
 static int
 _cmp_int_strings(const void **_a, const void **_b)
 {
   const char *a = *_a, *b = *_b;
   int ai = (int)tor_parse_long(a, 10, 1, INT_MAX, NULL, NULL);
   int bi = (int)tor_parse_long(b, 10, 1, INT_MAX, NULL, NULL);
-  if (ai<bi)
+  if (ai<bi) {
     return -1;
-  else if (ai==bi)
+  } else if (ai==bi) {
+    if (ai == 0) /* Parsing failed. */
+      return strcmp(a, b);
     return 0;
-  else
+  } else {
     return 1;
+  }
 }
 
-/**DOCDOC*/
+/** Given a list of networkstatus_t votes, determine and return the number of
+ * the highest consensus method that is supported by 2/3 of the voters. */
 static int
 compute_consensus_method(smartlist_t *votes)
 {
@@ -417,7 +412,7 @@ compute_consensus_method(smartlist_t *votes)
   return result;
 }
 
-/**DOCDOC*/
+/** Return true iff <b>method</b> is a consensus method that we support. */
 static int
 consensus_method_is_supported(int method)
 {

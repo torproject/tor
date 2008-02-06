@@ -744,7 +744,7 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   return 0;
 }
 
-/** DOCDOC */
+/** Replace the exit policy of <b>r</b> with reject *:*. */
 void
 policies_set_router_exitpolicy_to_reject_all(routerinfo_t *r)
 {

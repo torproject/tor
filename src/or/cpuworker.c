@@ -431,10 +431,13 @@ cull_wedged_cpuworkers(void)
   });
 }
 
-/** If cpuworker is defined, assert that he's idle, and use him. Else,
- * look for an idle cpuworker and use him. If none idle, queue task onto
- * the pending onion list and return.
- * DOCDOC this function is now less general
+/** Try to tell a cpuworker to perform the public key operations necessary to
+ * respond to <b>onionskin</b> for the circuit <b>circ</b>.
+ *
+ * If <b>cpuworker</b> is defined, assert that he's idle, and use him. Else,
+ * look for an idle cpuworker and use him. If none idle, queue task onto the
+ * pending onion list and return.  Return 0 if we successfully assign the
+ * task, or -1 on failure.
  */
 int
 assign_onionskin_to_cpuworker(connection_t *cpuworker,

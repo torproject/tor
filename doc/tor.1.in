@@ -49,7 +49,13 @@ List all valid options.
 .LP
 .TP
 \fB--version\fP
-Display Tor version.
+Display Tor version and exit.
+.LP
+.TP
+\fB--quiet\fP
+Do not start Tor with a console log unless explicitly requested to do
+so.  (By default, Tor starts out logging messages at level "notice" or
+higher to the console, until it has parsed its configuration.)
 .LP
 .TP
 Other options can be specified either on the command-line (\fI--option

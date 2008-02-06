@@ -3058,6 +3058,16 @@ download_status_is_ready(download_status_t *dls, time_t now,
 /** Length of "r Authority BadDirectory BadExit Exit Fast Guard HSDir Named
  * Running Stable Unnamed V2Dir Valid\n". */
 #define MAX_FLAG_LINE_LEN 96
+/** Amount of space to allocate for each entry: r, s, and v lines. */
+#define RS_ENTRY_LEN                                                    \
+  ( /* first line */                                                    \
+   MAX_NICKNAME_LEN+BASE64_DIGEST_LEN*2+ISO_TIME_LEN+INET_NTOA_BUF_LEN+ \
+   5*2 /* ports */ + 10 /* punctuation */ +                             \
+   /* second line */                                                    \
+   MAX_FLAG_LINE_LEN +                                                  \
+   /* v line. */                                                        \
+   MAX_V_LINE_LEN                                                       \
+   )
 #define UNNAMED_ROUTER_NICKNAME "Unnamed"
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);

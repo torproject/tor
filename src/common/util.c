@@ -1298,7 +1298,10 @@ parse_http_time(const char *date, struct tm *tm)
   return 0;
 }
 
-/** DOCDOC */
+/** Given an <b>interval</b> in seconds, try to write it to the
+ * <b>out_len</b>-byte buffer in <b>out</b> in a human-readable form.
+ * Return 0 on success, -1 on failure.
+ */
 int
 format_time_interval(char *out, size_t out_len, long interval)
 {
@@ -1932,13 +1935,19 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 
 #define TOR_ISODIGIT(c) ('0' <= (c) && (c) <= '7')
 
-/* DOCDOC */
+/* Given a c-style double-quoted escaped string in <b>s</b>, extract and
+ * decode its contents into a newly allocated string.  On success, assign this
+ * string to *<b>result</b>, assign its length to <b>size_out</b> (if
+ * provided), and return a pointer to the position in <b>s</b> immediately
+ * after the string.  On failure, return NULL.
+ */
 static const char *
 unescape_string(const char *s, char **result, size_t *size_out)
 {
   const char *cp;
   char *out;
-  tor_assert(s[0] == '\"');
+  if (s[0] != '\"')
+    return NULL;
   cp = s+1;
   while (1) {
     switch (*cp) {

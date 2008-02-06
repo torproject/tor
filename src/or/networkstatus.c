@@ -1206,6 +1206,7 @@ networkstatus_get_live_consensus(time_t now)
 /* XXXX020 remove this in favor of get_live_consensus. But actually,
  * leave something like it for bridge users, who need to not totally
  * lose if they spend a while fetching a new consensus. */
+/** DOCDOC */
 networkstatus_t *
 networkstatus_get_reasonably_live_consensus(time_t now)
 {
@@ -1781,8 +1782,7 @@ signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
 char *
 networkstatus_getinfo_helper_single(routerstatus_t *rs)
 {
-  char buf[256];
-  /* XXX020 that 256 above sounds a lot like RS_ENTRY_LEN in dirvote.c */
+  char buf[RS_ENTRY_LEN+1];
   routerstatus_format_entry(buf, sizeof(buf), rs, NULL, 0);
   return tor_strdup(buf);
 }

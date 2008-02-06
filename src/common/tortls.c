@@ -1304,38 +1304,3 @@ tor_tls_used_v1_handshake(tor_tls_t *tls)
   return 1;
 }
 
-#if SSL3_RANDOM_SIZE != TOR_TLS_RANDOM_LEN
-#error "The TOR_TLS_RANDOM_LEN macro is defined incorrectly.  That's a bug."
-#endif
-
-/** DOCDOC */
-int
-tor_tls_get_random_values(tor_tls_t *tls, char *client_random_out,
-                          char *server_random_out)
-{
-  tor_assert(tls && tls->ssl);
-  if (!tls->ssl->s3)
-    return -1;
-  memcpy(client_random_out, tls->ssl->s3->client_random, SSL3_RANDOM_SIZE);
-  memcpy(server_random_out, tls->ssl->s3->server_random, SSL3_RANDOM_SIZE);
-  return 0;
-}
-
-/** DOCDOC */
-int
-tor_tls_hmac_with_master_secret(tor_tls_t *tls, char *hmac_out,
-                                const char *data, size_t data_len)
-{
-  SSL_SESSION *s;
-  tor_assert(tls && tls->ssl);
-  if (!(s = SSL_get_session(tls->ssl)))
-    return -1;
-  if (s->master_key_length < 0)
-    return -1;
-  crypto_hmac_sha1(hmac_out,
-                   (const char*)s->master_key,
-                   (size_t)s->master_key_length,
-                   data, data_len);
-  return 0;
-}
-

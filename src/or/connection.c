@@ -1650,7 +1650,10 @@ connection_bucket_init(void)
   }
 }
 
-/** DOCDOC */
+/** Refill a single <b>bucket</b> called <b>name</b> with bandwith rate
+ * <b>rate</b> and bandwidth burst <b>burst</b>, assuming that
+ * <b>seconds_elapsed</b> seconds have passed since the last call.
+ **/
 static void
 connection_bucket_refill_helper(int *bucket, int rate, int burst,
                                 int seconds_elapsed, const char *name)

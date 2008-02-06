@@ -48,6 +48,7 @@ typedef struct rend_service_t {
   char *intro_prefer_nodes; /**< comma-separated list of nicknames */
   char *intro_exclude_nodes; /**< comma-separated list of nicknames */
   /* Other fields */
+  /* DOCDOC All of these fields */
   crypto_pk_env_t *private_key;
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   char pk_digest[DIGEST_LEN];
@@ -56,7 +57,6 @@ typedef struct rend_service_t {
   time_t intro_period_started;
   int n_intro_circuits_launched; /**< count of intro circuits we have
                                   * established in this period. */
-  /* DOCDOC undocumented versions */
   rend_service_descriptor_t *desc;
   time_t desc_is_dirty;
   time_t next_upload_time;

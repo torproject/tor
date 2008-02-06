@@ -580,6 +580,7 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
   }
 }
 
+/** DOCDOC */
 static INLINE int
 read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
                   size_t at_most)
@@ -722,6 +723,7 @@ flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
   }
 }
 
+/** DOCDOC */
 static INLINE int
 flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
                 size_t sz, size_t *buf_flushlen)
@@ -1518,7 +1520,8 @@ peek_buf_has_control0_command(buf_t *buf)
   return 0;
 }
 
-/** DOCDOC */
+/** Return the index within <b>buf</b> at which <b>ch</b> first appears,
+ * or -1 if <b>ch</b> does not appear on buf. */
 static int
 buf_find_offset_of_char(buf_t *buf, char ch)
 {

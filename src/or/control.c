@@ -364,42 +364,55 @@ read_escaped_data(const char *data, size_t len, char **out)
   return outp - *out;
 }
 
-/** DOCDOC */
-static const char *
-extract_escaped_string(const char *start, size_t in_len_max,
-                       char **out, size_t *out_len)
+/** If the first <b>in_len_max</b> characters in <b>start<b> contain a
+ * double-quoted string with escaped characters, return the length of that
+ * string (as encoded, including quotes).  Otherwise return -1. */
+static INLINE int
+get_escaped_string_length(const char *start, size_t in_len_max,
+                          int *chars_out)
 {
   const char *cp, *end;
-  size_t len=0;
+  int chars = 0;
 
   if (*start != '\"')
-    return NULL;
+    return -1;
 
   cp = start+1;
   end = start+in_len_max;
 
   /* Calculate length. */
   while (1) {
-    if (cp >= end)
-      return NULL;
-    else if (*cp == '\\') {
+    if (cp >= end) {
+      return -1; /* Too long. */
+    } else if (*cp == '\\') {
       if (++cp == end)
-        return NULL; /* Can't escape EOS. */
+        return -1; /* Can't escape EOS. */
       ++cp;
-      ++len;
+      ++chars;
     } else if (*cp == '\"') {
       break;
     } else {
       ++cp;
-      ++len;
+      ++chars;
     }
   }
-  end = cp;
+  if (chars_out)
+    *chars_out = chars;
+  return cp - start+1;
+}
 
-  *out_len = end-start+1;
+/** As decode_escaped_string, but does not decode the string: copies the
+ * entire thing, including quotation marks. */
+static const char *
+extract_escaped_string(const char *start, size_t in_len_max,
+                       char **out, size_t *out_len)
+{
+  int length = get_escaped_string_length(start, in_len_max, NULL);
+  if (length<0)
+    return NULL;
+  *out_len = length;
   *out = tor_strndup(start, *out_len);
-
-  return end+1;
+  return start+length;
 }
 
 /** Given a pointer to a string starting at <b>start</b> containing
@@ -410,40 +423,22 @@ extract_escaped_string(const char *start, size_t in_len_max,
  * store its length in <b>out_len</b>.  On success, return a pointer to the
  * character immediately following the escaped string.  On failure, return
  * NULL. */
-/* XXXX020 fold into extract_escaped_string */
 static const char *
-get_escaped_string(const char *start, size_t in_len_max,
+decode_escaped_string(const char *start, size_t in_len_max,
                    char **out, size_t *out_len)
 {
   const char *cp, *end;
   char *outp;
-  size_t len=0;
+  int len, n_chars = 0;
 
-  if (*start != '\"')
+  len = get_escaped_string_length(start, in_len_max, &n_chars);
+  if (len<0)
     return NULL;
 
-  cp = start+1;
-  end = start+in_len_max;
-
-  /* Calculate length. */
-  while (1) {
-    if (cp >= end)
-      return NULL;
-    else if (*cp == '\\') {
-      if (++cp == end)
-        return NULL; /* Can't escape EOS. */
-      ++cp;
-      ++len;
-    } else if (*cp == '\"') {
-      break;
-    } else {
-      ++cp;
-      ++len;
-    }
-  }
-  end = cp;
+  end = start+len-1; /* Index of last quote. */
+  tor_assert(*end == '\"');
   outp = *out = tor_malloc(len+1);
-  *out_len = len;
+  *out_len = n_chars;
 
   cp = start+1;
   while (cp < end) {
@@ -1030,7 +1025,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     password = tor_strdup("");
     password_len = 0;
   } else {
-    if (!get_escaped_string(body, len, &password, &password_len)) {
+    if (!decode_escaped_string(body, len, &password, &password_len)) {
       connection_write_str_to_buf("551 Invalid quoted string.  You need "
             "to put the password in double quotes.\r\n", conn);
       connection_mark_for_close(TO_CONN(conn));

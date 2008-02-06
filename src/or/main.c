@@ -1785,7 +1785,7 @@ tor_init(int argc, char *argv[])
   /* We search for the "quiet" option first, since it decides whether we
    * will log anything at all to the command line. */
   for (i=1;i<argc;++i) {
-    if (!strcmp(argv[i], "--quiet")) /*DOCDOC in mangpage.*/
+    if (!strcmp(argv[i], "--quiet"))
       quiet = 1;
   }
   if (!quiet) {

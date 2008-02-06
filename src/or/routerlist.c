@@ -55,7 +55,8 @@ DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
  * server. */
 static smartlist_t *trusted_dir_servers = NULL;
 
-/** DOCDOC */
+/** List of for a given authority, and download status for latest certificate.
+ */
 typedef struct cert_list_t {
   download_status_t dl_status;
   smartlist_t *certs;
@@ -95,7 +96,8 @@ get_n_authorities(authority_type_t type)
 
 #define get_n_v2_authorities() get_n_authorities(V2_AUTHORITY)
 
-/** DOCDOC */
+/** Helper: Return the cert_list_t for an authority whose authority ID is
+ * <b>id_digest</b>, allocating a new list if necessary. */
 static cert_list_t *
 get_cert_list(const char *id_digest)
 {
@@ -328,10 +330,11 @@ authority_cert_get_by_digests(const char *id_digest,
   return NULL;
 }
 
-/** DOCDOC */
+/** Add every known authority_cert_t to <b>certs_out</b>. */
 void
 authority_cert_get_all(smartlist_t *certs_out)
 {
+  tor_assert(certs_out);
   if (!trusted_dir_certs)
     return;
 
@@ -341,7 +344,9 @@ authority_cert_get_all(smartlist_t *certs_out)
   } DIGESTMAP_FOREACH_END;
 }
 
-/** DOCDOC */
+/** Called when an attempt to download a certificate with the authority with
+ * ID <b>id_digest</b> fails with HTTP response code <b>status</b>: remember
+ * the failure, so we don't try again immediately. */
 void
 authority_cert_dl_failed(const char *id_digest, int status)
 {

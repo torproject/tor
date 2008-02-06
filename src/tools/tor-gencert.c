@@ -36,6 +36,7 @@
 #define SIGNING_KEY_BITS 1024
 #define DEFAULT_LIFETIME 12
 
+/* These globals are set via command line options. */
 char *identity_key_file = NULL;
 char *signing_key_file = NULL;
 char *certificate_file = NULL;
@@ -48,7 +49,7 @@ char *address = NULL;
 EVP_PKEY *identity_key = NULL;
 EVP_PKEY *signing_key = NULL;
 
-/* DOCDOC */
+/** Write a usage message for tor-gencert to stderr. */
 static void
 show_help(void)
 {
@@ -82,7 +83,9 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 
-/** DOCDOC */
+/** Read the command line options from <b>argc</b> and <b>argv</b>,
+ * setting global option vars as needed.
+ */
 static int
 parse_commandline(int argc, char **argv)
 {
@@ -170,7 +173,10 @@ parse_commandline(int argc, char **argv)
   return 0;
 }
 
-/** DOCDOC */
+/** Try to read the identity key from <b>identity_key_file</b>.  If no such
+ * file exists and create_identity_key is set, make a new identity key and
+ * store it.  Return 0 on success, nonzero on failure.
+ */
 static int
 load_identity_key(void)
 {
@@ -240,7 +246,8 @@ load_identity_key(void)
   return 0;
 }
 
-/** DOCDOC */
+/** Load a saved signing key from disk.  Return 0 on success, nonzero on
+ * failure. */
 static int
 load_signing_key(void)
 {
@@ -258,7 +265,8 @@ load_signing_key(void)
   return 0;
 }
 
-/** DOCDOC */
+/** Generate a new signing key and write it to disk.  Return 0 on success,
+ * nonzero on failure. */
 static int
 generate_signing_key(void)
 {
@@ -295,6 +303,8 @@ generate_signing_key(void)
   return 0;
 }
 
+/** Encode <b>key</b> in the format used in directory documents; return
+ * a newly allocated string holding the result or NULL on failure. */
 static char *
 key_to_string(EVP_PKEY *key)
 {
@@ -322,6 +332,7 @@ key_to_string(EVP_PKEY *key)
   return result;
 }
 
+/** Set <b>out</b> to the hex-encoded fingerprint of <b>pkey</b>. */
 static int
 get_fingerprint(EVP_PKEY *pkey, char *out)
 {
@@ -334,6 +345,8 @@ get_fingerprint(EVP_PKEY *pkey, char *out)
   return r;
 }
 
+/** Generate a new certificate for our loaded or generated keys, and write it
+ * to disk.  Return 0 on success, nonzero on failure. */
 static int
 generate_certificate(void)
 {
