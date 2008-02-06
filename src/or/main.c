@@ -961,26 +961,24 @@ run_scheduled_events(time_t now)
    * new running-routers list, and/or force-uploading our descriptor
    * (if we've passed our internal checks). */
   if (time_to_fetch_directory < now) {
-    /* Only caches actually need to fetch directories now. */
+    /* Only caches actually need to fetch v1 directories now. */
     if (directory_fetches_dir_info_early(options) &&
-        !authdir_mode_v1(options)) {
-      if (any_trusted_dir_is_v1_authority() &&
-          !should_delay_dir_fetches(options))
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR,
-                                     ROUTER_PURPOSE_GENERAL, NULL, 1);
-    }
+        !authdir_mode_v1(options) && any_trusted_dir_is_v1_authority() &&
+        !should_delay_dir_fetches(options))
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR,
+                                   ROUTER_PURPOSE_GENERAL, NULL, 1);
 /** How often do we (as a cache) fetch a new V1 directory? */
 #define V1_DIR_FETCH_PERIOD (12*60*60)
     time_to_fetch_directory = now + V1_DIR_FETCH_PERIOD;
   }
 
   /* Caches need to fetch running_routers; directory clients don't. */
-  if (directory_fetches_dir_info_early(options) &&
-      time_to_fetch_running_routers < now) {
-    if (!authdir_mode_v1(options) && !should_delay_dir_fetches(options)) {
+  if (time_to_fetch_running_routers < now) {
+    if (directory_fetches_dir_info_early(options) &&
+        !authdir_mode_v1(options) && any_trusted_dir_is_v1_authority() &&
+        !should_delay_dir_fetches(options))
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST,
                                    ROUTER_PURPOSE_GENERAL, NULL, 1);
-    }
 /** How often do we (as a cache) fetch a new V1 runningrouters document? */
 #define V1_RUNNINGROUTERS_FETCH_PERIOD (12*60*60)
     time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
