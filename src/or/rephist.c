@@ -741,7 +741,7 @@ parse_possibly_bad_iso_time(const char *s, time_t *time_out)
   char b[5];
   strlcpy(b, s, sizeof(b));
   b[4] = '\0';
-  year = atoi(b);
+  year = (int)tor_parse_long(b, 10, 0, INT_MAX, NULL, NULL);
   if (year < 1970) {
     *time_out = 0;
     ++n_bogus_times;

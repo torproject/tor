@@ -1049,6 +1049,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   struct in_addr in;
   const char *start_of_annotations, *cp;
   size_t prepend_len = prepend_annotations ? strlen(prepend_annotations) : 0;
+  int ok = 1;
 
   tor_assert(!allow_annotations || !prepend_annotations);
 
@@ -1145,25 +1146,39 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->addr = ntohl(in.s_addr);
 
   router->or_port =
-    (uint16_t) tor_parse_long(tok->args[2],10,0,65535,NULL,NULL);
+    (uint16_t) tor_parse_long(tok->args[2],10,0,65535,&ok,NULL);
+  if (!ok) {
+    log_warn(LD_DIR,"Invalid OR port %s", escaped(tok->args[2]));
+    goto err;
+  }
   router->dir_port =
-    (uint16_t) tor_parse_long(tok->args[4],10,0,65535,NULL,NULL);
+    (uint16_t) tor_parse_long(tok->args[4],10,0,65535,&ok,NULL);
+  if (!ok) {
+    log_warn(LD_DIR,"Invalid dir port %s", escaped(tok->args[4]));
+    goto err;
+  }
 
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
   tor_assert(tok && tok->n_args >= 3);
   router->bandwidthrate =
-    tor_parse_long(tok->args[0],10,0,INT_MAX,NULL,NULL);
+    tor_parse_long(tok->args[0],10,1,INT_MAX,&ok,NULL);
 
-  if (!router->bandwidthrate) {
+  if (!ok) {
     log_warn(LD_DIR, "bandwidthrate %s unreadable or 0. Failing.",
              escaped(tok->args[0]));
     goto err;
   }
-  router->bandwidthburst =
-    tor_parse_long(tok->args[1],10,0,INT_MAX,NULL,NULL);
+  router->bandwidthburst = tor_parse_long(tok->args[1],10,0,INT_MAX,&ok,NULL);
+  if (!ok) {
+    log_warn(LD_DIR, "Invalid bandwidthburst %s", escaped(tok->args[1]));
+    goto err;
+  }
   router->bandwidthcapacity =
-    tor_parse_long(tok->args[2],10,0,INT_MAX,NULL,NULL);
-  /* XXXX020 we don't error-check these values? -RD */
+    tor_parse_long(tok->args[2],10,0,INT_MAX,&ok,NULL);
+  if (!ok) {
+    log_warn(LD_DIR, "Invalid bandwidthcapacity %s", escaped(tok->args[1]));
+    goto err;
+  }
 
   if ((tok = find_first_by_keyword(tokens, A_PURPOSE))) {
     tor_assert(tok->n_args);
@@ -1176,7 +1191,11 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
     tor_assert(tok->n_args >= 1);
-    router->uptime = tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL);
+    router->uptime = tor_parse_long(tok->args[0],10,0,LONG_MAX,&ok,NULL);
+    if (!ok) {
+      log_warn(LD_DIR, "Invalid uptime %s", escaped(tok->args[0]));
+      goto err;
+    }
   }
 
   if ((tok = find_first_by_keyword(tokens, K_HIBERNATING))) {
@@ -1535,7 +1554,8 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
                                      cert->signing_key_digest);
   found = 0;
   if (old_cert) {
-    /* XXXX020 can we just compare signed_descriptor_digest ? */
+    /* XXXX We could just compare signed_descriptor_digest, but that wouldn't
+     * buy us much. */
     if (old_cert->cache_info.signed_descriptor_len == len &&
         old_cert->cache_info.signed_descriptor_body &&
         !memcmp(s, old_cert->cache_info.signed_descriptor_body, len)) {
@@ -3180,7 +3200,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   smartlist_t *tokens = smartlist_create();
   directory_token_t *tok;
   char secret_id_part[DIGEST_LEN];
-  int i, version;
+  int i, version, num_ok=1;
   smartlist_t *versions;
   char public_key_hash[DIGEST_LEN];
   char test_desc_id[DIGEST_LEN];
@@ -3238,17 +3258,15 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   tok = find_first_by_keyword(tokens, R_VERSION);
   tor_assert(tok);
   tor_assert(tok->n_args == 1);
-  result->version = atoi(tok->args[0]);
-  if (result->version != 2) {
+  result->version =
+    (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &num_ok, NULL);
+  if (result->version != 2 || !num_ok) {
     /* If it's <2, it shouldn't be under this format.  If the number
      * is greater than 2, we bumped it because we broke backward
      * compatibility.  See how version numbers in our other formats
-     * work. -NM */
-    /* That means that adding optional fields to the descriptor wouldn't
-     * require a new version number, but the way of verifying it's origin
-     * would. Okay. -KL */
-    /* XXX020 Nick, confirm that you're happy here -RD */
-    log_warn(LD_REND, "Wrong descriptor version: %d", result->version);
+     * work. */
+    log_warn(LD_REND, "Unrecognized descriptor version: %s",
+             escaped(tok->args[0]));
     goto err;
   }
   /* Parse public key. */
@@ -3287,24 +3305,10 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   smartlist_split_string(versions, tok->args[0], ",",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   for (i = 0; i < smartlist_len(versions); i++) {
-    /* XXXX020 validate the numbers here. -NM */
-    /* As above, validating these numbers on a hidden service directory
-     * might require an extension to new valid numbers at some time. But
-     * this would require making a distinction of hidden service direcoties
-     * which accept the old valid numbers and those which accept the new
-     * valid numbers. -KL */
-    /* As above, increased version numbers are for
-     * non-backward-compatible changes.  This code doesn't know how to
-     * parse a v3 descriptor, because a v3 descriptor is by definition not
-     * compatible with this code. -NM */
-    /* This refers to the permitted versions of introduction cells which might
-     * change independently from the descriptor version. If we validated the
-     * numbers here, a hidden service directory might reject a descriptor that
-     * would be understood by newer clients. Then we would need a "HSDir3" tag
-     * only to be able to use a new introduction cell version. I really think
-     * we should not validate it here. -KL */
-    /* XXX020 Nick, confirm that you're happy here -RD */
-    version = atoi(smartlist_get(versions, i));
+    version = (int) tor_parse_long(smartlist_get(versions, i),
+                                   10, 0, INT_MAX, &num_ok, NULL);
+    if (!num_ok) /* It's a string; let's ignore it. */
+      continue;
     result->protocols |= 1 << version;
   }
   SMARTLIST_FOREACH(versions, char *, cp, tor_free(cp));
@@ -3377,7 +3381,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   rend_intro_point_t *intro;
   extend_info_t *info;
   struct in_addr ip;
-  int result;
+  int result, num_ok=1;
   tor_assert(parsed);
   /** Function may only be invoked once. */
   tor_assert(!parsed->intro_nodes);
@@ -3454,13 +3458,11 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     info->addr = ntohl(ip.s_addr);
     /* Parse onion port. */
     tok = find_first_by_keyword(tokens, R_IPO_ONION_PORT);
-    info->port = (uint16_t) atoi(tok->args[0]);
-    /* XXXX020 this next check fails with ports like 65537. -NM */
-    /* No, uint16_t only allows numbers in the interval 0..65535. -KL */
-    /* XXX020 Nick, confirm that you're happy here -RD */
-    if (!info->port) {
-      log_warn(LD_REND, "Introduction point onion port is out of range: %d",
-               info->port);
+    info->port = (uint16_t) tor_parse_long(tok->args[0],10,1,65535,
+                                           &num_ok,NULL);
+    if (!info->port || !num_ok) {
+      log_warn(LD_REND, "Introduction point onion port %s is invalid",
+               escaped(tok->args[0]));
       rend_intro_point_free(intro);
       goto err;
     }

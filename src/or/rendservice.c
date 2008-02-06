@@ -195,10 +195,10 @@ parse_port_config(const char *string)
     goto err;
   }
 
-  virtport = atoi(smartlist_get(sl,0));
-  if (virtport < 1 || virtport > 65535) {
-    log_warn(LD_CONFIG, "Missing or invalid port in hidden service port "
-             "configuration.");
+  virtport = (int)tor_parse_long(smartlist_get(sl,0), 10, 1, 65535, NULL,NULL);
+  if (!virtport) {
+    log_warn(LD_CONFIG, "Missing or invalid port %s in hidden service port "
+             "configuration", escaped(smartlist_get(sl,0)));
     goto err;
   }
 
@@ -217,9 +217,12 @@ parse_port_config(const char *string)
       realport = p?p:virtport;
     } else {
       /* No addr:port, no addr -- must be port. */
-      realport = atoi(addrport);
-      if (realport < 1 || realport > 65535)
+      realport = (int)tor_parse_long(addrport, 10, 1, 65535, NULL, NULL);
+      if (!realport) {
+        log_warn(LD_CONFIG,"Unparseable or out-of-range port %s in hidden "
+                 "service port configuration.", escaped(addrport));
         goto err;
+      }
       addr = 0x7F000001u; /* Default to 127.0.0.1 */
     }
   }
@@ -300,7 +303,7 @@ rend_config_services(or_options_t *options, int validate_only)
     } else {
       smartlist_t *versions;
       char *version_str;
-      int i, version, versions_bitmask = 0;
+      int i, version, ver_ok=1, versions_bitmask = 0;
       tor_assert(!strcasecmp(line->key, "HiddenServiceVersion"));
       versions = smartlist_create();
       smartlist_split_string(versions, line->value, ",",
@@ -315,7 +318,10 @@ rend_config_services(or_options_t *options, int validate_only)
           rend_service_free(service);
           return -1;
         }
-        version = atoi(version_str);
+        version = (int)tor_parse_long(version_str, 10, 0, INT_MAX, &ver_ok,
+                                      NULL);
+        if (!ver_ok)
+          continue;
         versions_bitmask |= 1 << version;
       }
       /* If exactly one version is set, change descriptor_version to that

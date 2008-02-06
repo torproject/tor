@@ -7,6 +7,12 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
     - Reject controller commands over 1MB in length.  This keeps rogue
       processes from running us out of memory.
 
+  o Minor features (misc):
+    - Reject router descriptors with out-of-range bandwidthcapacity or
+      bandwidthburst values.
+    - Give more descriptive well-formedness errors for out-of-range
+      hidden service descriptor/protocol versions.
+
   o Deprecated features (controller):
     - The status/version/num-versioning and status/version/num-concurring
       GETINFO options are no longer useful in the V3 directory protocol:
