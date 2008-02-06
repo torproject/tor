@@ -1668,7 +1668,8 @@ dirvote_compute_consensus(void)
   n_voters = get_n_authorities(V3_AUTHORITY);
   n_votes = smartlist_len(pending_vote_list);
   if (n_votes <= n_voters/2) {
-    log_warn(LD_DIR, "We don't have enough votes to generate a consensus.");
+    log_warn(LD_DIR, "We don't have enough votes to generate a consensus: "
+             "%d of %d", n_votes, n_voters/2);
     goto err;
   }
 

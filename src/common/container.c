@@ -1174,7 +1174,7 @@ digestmap_size(const digestmap_t *map)
   return HT_SIZE(&map->head);
 }
 
-/** declare a function called <b>funcname</b> that acts as a find_nth_XXX
+/** Declare a function called <b>funcname</b> that acts as a find_nth_FOO
  * function for an array of type <b>elt_t</b>*.
  *
  * NOTE: The implementation kind of sucks: It's O(n log n), whereas finding

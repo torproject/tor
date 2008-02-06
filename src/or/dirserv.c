@@ -204,7 +204,7 @@ dirserv_load_fingerprint_file(void)
       tor_free(fname);
       return -1;
     } else {
-      log_info(LD_FS, "Cannot open fingerprint file '%s'. Returning.", fname);
+      log_info(LD_FS, "Cannot open fingerprint file '%s'. That's ok.", fname);
       tor_free(fname);
       return 0;
     }
@@ -2517,7 +2517,7 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
     }
     smartlist_sort_digests(result);
     if (smartlist_len(result) == 0)
-      log_warn(LD_DIRSERV,
+      log_info(LD_DIRSERV,
                "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
     dir_split_resource_into_fingerprints(key+3, result, NULL, 1, 1);

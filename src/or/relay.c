@@ -1375,7 +1375,7 @@ connection_edge_consider_sending_sendme(edge_connection_t *conn)
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
                                      NULL, 0) < 0) {
-      log_warn(LD_APP,"connection_edge_send_command failed. Returning.");
+      log_warn(LD_APP,"connection_edge_send_command failed. Skipping.");
       return; /* the circuit's closed, don't continue */
     }
   }
