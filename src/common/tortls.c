@@ -75,7 +75,6 @@ struct tor_tls_t {
   } state : 3; /**< The current SSL state, depending on which operations have
                 * completed successfully. */
   unsigned int isServer:1; /**< True iff this is a server-side connection */
-  unsigned int hadCert:1; /**< Docdoc */
   unsigned int wasV2Handshake:1; /**< DOCDOC */
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
@@ -115,11 +114,11 @@ HT_GENERATE(tlsmap, tor_tls_t, node, tor_tls_entry_hash,
 /** Helper: given a SSL* pointer, return the tor_tls_t object using that
  * pointer. */
 static INLINE tor_tls_t *
-tor_tls_get_by_ssl(SSL *ssl)
+tor_tls_get_by_ssl(const SSL *ssl)
 {
   tor_tls_t search, *result;
   memset(&search, 0, sizeof(search));
-  search.ssl = ssl;
+  search.ssl = (SSL*)ssl;
   result = HT_FIND(tlsmap, &tlsmap_root, &search);
   return result;
 }
@@ -786,12 +785,12 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
   r = SSL_read(tls->ssl, cp, len);
   if (r > 0) {
 #ifdef V2_HANDSHAKE_SERVER
-    if (!tls->hadCert && tls->ssl->session && tls->ssl->session->peer) {
-      tls->hadCert = 1;
+    if (SSL_num_renegotiations(tls->ssl)) {
       /* New certificate! */
-      log_info(LD_NET, "Got a TLS renegotiation.");
+      log_notice(LD_NET, "Got a TLS renegotiation from %p", tls);
       if (tls->negotiated_callback)
         tls->negotiated_callback(tls, tls->callback_arg);
+      SSL_clear_num_renegotiations(tls->ssl);
     }
 #endif
     return r;
@@ -866,7 +865,6 @@ tor_tls_handshake(tor_tls_t *tls)
   }
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN;
-    tls->hadCert = tor_tls_peer_has_cert(tls) ? 1 : 0;
     if (tls->isServer) {
       SSL_set_info_callback(tls->ssl, NULL);
       SSL_set_verify(tls->ssl, SSL_VERIFY_NONE, always_accept_verify_cb);
@@ -895,7 +893,7 @@ tor_tls_handshake(tor_tls_t *tls)
       if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0)))
         tls->wasV2Handshake = 0;
       else {
-        log_notice(LD_NET, "I think I got a v2 handshake!");
+        log_notice(LD_NET, "I think I got a v2 handshake on %p!", tls);
         tls->wasV2Handshake = 1;
       }
       if (cert)
