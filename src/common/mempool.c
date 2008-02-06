@@ -400,6 +400,9 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
 void
 mp_pool_clean(mp_pool_t *pool, int n)
 {
+  /* XXXX020 this is stupid.  We shouldn't care about empty chunks if there
+   * is lots of space in used chunks. */
+
   mp_chunk_t *chunk, **first_to_free;
   if (n < 0) {
     /* As said in the documentation, "negative n" means "leave an additional

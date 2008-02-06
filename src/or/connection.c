@@ -1912,6 +1912,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
       conn->state > OR_CONN_STATE_PROXY_READING) {
     int pending;
     or_connection_t *or_conn = TO_OR_CONN(conn);
+    size_t initial_size;
     if (conn->state == OR_CONN_STATE_TLS_HANDSHAKING ||
         conn->state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING) {
       /* continue handshaking even if global token bucket is empty */
@@ -1924,6 +1925,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
               conn->s,(int)buf_datalen(conn->inbuf),
               tor_tls_get_pending_bytes(or_conn->tls), at_most);
 
+    initial_size = buf_datalen(conn->inbuf);
     /* else open, or closing */
     result = read_to_buf_tls(or_conn->tls, at_most, conn->inbuf);
     if (TOR_TLS_IS_ERROR(result) || result == TOR_TLS_CLOSE)
@@ -1963,11 +1965,9 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
       if (r2<0) {
         log_warn(LD_BUG, "apparently, reading pending bytes can fail.");
         return -1;
-      } else {
-        result += r2;
       }
     }
-
+    result = (int)(buf_datalen(conn->inbuf)-initial_size);
     tor_tls_get_n_raw_bytes(or_conn->tls, &n_read, &n_written);
     log_debug(LD_GENERAL, "After TLS read of %d: %ld read, %ld written",
               result, (long)n_read, (long)n_written);

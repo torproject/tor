@@ -548,7 +548,10 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
   return chunk;
 }
 
-/** DOCDOC */
+/** Read up to <b>at_most</b> bytes from the socket <b>fd</b> into
+ * <b>chunk</b> (which must be on <b>buf/b>). If we get an EOF, set
+ * *<b>reached_eof</b> to 1.  Return -1 on error, 0 on eof or blocking,
+ * and the number of bytes read otherwise. */
 static INLINE int
 read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
               int *reached_eof)
@@ -580,7 +583,8 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
   }
 }
 
-/** DOCDOC */
+/** As read_to_chunk(), but return (negative) error code on error, blocking,
+ * or TLS, and the number of bytes read otherwise. */
 static INLINE int
 read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
                   size_t at_most)
@@ -597,16 +601,17 @@ read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
 }
 
 /** Read from socket <b>s</b>, writing onto end of <b>buf</b>.  Read at most
- * <b>at_most</b> bytes, resizing the buffer as necessary.  If recv()
- * returns 0, set *<b>reached_eof</b> to 1 and return 0. Return -1 on error;
- * else return the number of bytes read.  Return 0 if recv() would
- * block.
- *
- * DOCDOC revise
+ * <b>at_most</b> bytes, growing the buffer as necessary.  If recv() returns 0
+ * (because of EOF), set *<b>reached_eof</b> to 1 and return 0. Return -1 on
+ * error; else return the number of bytes read.
  */
+/* XXXX020 indicate "read blocked" somehow? */
 int
 read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
 {
+  /* XXXX020 It's stupid to overload the return values for these functions:
+   * "error status" and "number of bytes read" are not mutually exclusive.
+   */
   int r = 0;
   size_t total_read = 0;
 
@@ -639,7 +644,8 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
   return r;
 }
 
-/** As read_to_buf, but reads from a TLS connection.
+/** As read_to_buf, but reads from a TLS connection, and returns a TLS
+ * status value rather than the number of bytes read.
  *
  * Using TLS on OR connections complicates matters in two ways.
  *
@@ -657,8 +663,6 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
  * Second, the TLS stream's events do not correspond directly to network
  * events: sometimes, before a TLS stream can read, the network must be
  * ready to write -- or vice versa.
- *
- * DOCDOC revise
  */
 int
 read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
@@ -686,20 +690,20 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
     if (r < 0)
       return r; /* Error */
     else if ((size_t)r < readlen) /* eof, block, or no more to read. */
-      return r + total_read;
+      return r;
     total_read += r;
   }
   return r;
 }
 
-/** Helper for flush_buf(): try to write <b>sz</b> bytes from buffer
- * <b>buf</b> onto socket <b>s</b>.  On success, deduct the bytes written
- * from *<b>buf_flushlen</b>.
- * Return the number of bytes written on success, -1 on failure.
+/** Helper for flush_buf(): try to write <b>sz</b> bytes from chunk
+ * <b>chunk</b> of buffer <b>buf</b> onto socket <b>s</b>.  On success, deduct
+ * the bytes written from *<b>buf_flushlen</b>.  Return the number of bytes
+ * written on success, 0 on blocking, -1 on failure.
  */
 static INLINE int
 flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
-               size_t *buf_flushlen)
+            size_t *buf_flushlen)
 {
   int write_result;
 
@@ -764,6 +768,9 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
 int
 flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
+  /* XXXX020 It's stupid to overload the return values for these functions:
+   * "error status" and "number of bytes flushed" are not mutually exclusive.
+   */
   int r;
   size_t flushed = 0;
   tor_assert(buf_flushlen);

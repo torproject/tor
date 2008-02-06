@@ -19,6 +19,7 @@ static void bw_arrays_init(void);
 static void predicted_ports_init(void);
 static void hs_usage_init(void);
 
+/**DOCDOC*/
 uint64_t rephist_total_alloc=0;
 uint32_t rephist_total_num=0;
 
@@ -732,8 +733,10 @@ find_next_with(smartlist_t *sl, int i, const char *prefix)
   return -1;
 }
 
+/** How many bad times has parse_possibly_bad_iso_time parsed? */
 static int n_bogus_times = 0;
-/** DOCDOC */
+/** Parse the ISO-formatted time in <b>s</b> into *<b>time_out</b>, but
+ * rounds any pre-1970 date to Jan 1, 1970. */
 static int
 parse_possibly_bad_iso_time(const char *s, time_t *time_out)
 {
