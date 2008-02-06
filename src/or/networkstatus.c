@@ -1577,6 +1577,9 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
 
     if (status == VS_RECOMMENDED) {
       log_info(LD_GENERAL, "The directory authorities say my version is ok.");
+    } else if (status == VS_EMPTY) {
+      log_info(LD_GENERAL,
+               "The directory authorities don't recommend any versions.");
     } else if (status == VS_NEW || status == VS_NEW_IN_SERIES) {
       if (!have_warned_about_new_version) {
         log_notice(LD_GENERAL, "This version of Tor (%s) is newer than any "

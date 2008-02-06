@@ -1706,6 +1706,7 @@ getinfo_helper_events(control_connection_t *control_conn,
           case VS_NEW: *answer = tor_strdup("new"); break;
           case VS_NEW_IN_SERIES: *answer = tor_strdup("new in series"); break;
           case VS_UNRECOMMENDED: *answer = tor_strdup("unrecommended"); break;
+          case VS_EMPTY: *answer = tor_strdup("none recommended"); break;
           case VS_UNKNOWN: *answer = tor_strdup("unknown"); break;
           default: tor_fragile_assert();
           }

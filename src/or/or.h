@@ -3317,6 +3317,7 @@ typedef enum version_status_t {
                        * in its series, but later recommended versions exist.
                        */
   VS_UNRECOMMENDED=4, /**< This version is not recommended (general case). */
+  VS_EMPTY=5, /**< The version list was empty; no agreed-on versions. */
   VS_UNKNOWN, /**< We have no idea. */
 } version_status_t;
 

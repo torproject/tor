@@ -280,7 +280,7 @@ static token_rule_t dir_footer_token_table[] = {
   END_OF_TABLE
 };
 
-/** List of tokens allowable in v1 diectory headers/footers. */
+/** List of tokens allowable in v1 directory headers/footers. */
 static token_rule_t dir_token_table[] = {
   /* don't enforce counts; this is obsolete. */
   T( "network-status",      K_NETWORK_STATUS,      NO_ARGS, NO_OBJ ),
@@ -538,7 +538,8 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
 }
 
 /** Return VS_RECOMMENDED if <b>myversion</b> is contained in
- * <b>versionlist</b>.  Else, return VS_OLD if every member of
+ * <b>versionlist</b>.  Else, return VS_EMPTY if versionlist has no
+ * entries. Else, return VS_OLD if every member of
  * <b>versionlist</b> is newer than <b>myversion</b>.  Else, return
  * VS_NEW_IN_SERIES if there is at least one member of <b>versionlist</b> in
  * the same series (major.minor.micro) as <b>myversion</b>, but no such member
@@ -568,6 +569,11 @@ tor_version_is_obsolete(const char *myversion, const char *versionlist)
   }
   version_sl = smartlist_create();
   smartlist_split_string(version_sl, versionlist, ",", SPLIT_SKIP_SPACE, 0);
+
+  if (!strlen(versionlist)) { /* no authorities cared or agreed */
+    ret = VS_EMPTY;
+    goto done;
+  }
 
   SMARTLIST_FOREACH(version_sl, const char *, cp, {
     if (!strcmpstart(cp, "Tor "))
