@@ -2343,7 +2343,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 ns_detached_signatures_t *
 networkstatus_parse_detached_signatures(const char *s, const char *eos)
 {
-  /* XXXX020 there is too much duplicate code here. */
+  /* XXXX there is too much duplicate code here. */
   directory_token_t *tok;
 
   smartlist_t *tokens = smartlist_create();

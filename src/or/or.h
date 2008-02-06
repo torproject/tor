@@ -2613,7 +2613,6 @@ int connection_ap_handshake_attach_circuit(edge_connection_t *conn);
 
 void command_process_cell(cell_t *cell, or_connection_t *conn);
 void command_process_var_cell(var_cell_t *cell, or_connection_t *conn);
-int connection_or_act_on_netinfo(or_connection_t *conn);
 
 extern uint64_t stats_n_padding_cells_processed;
 extern uint64_t stats_n_create_cells_processed;
@@ -2864,6 +2863,7 @@ void cell_pack(packed_cell_t *dest, const cell_t *src);
 void var_cell_pack_header(const var_cell_t *cell, char *hdr_out);
 var_cell_t *var_cell_new(uint16_t payload_len);
 void var_cell_free(var_cell_t *cell);
+int connection_or_act_on_netinfo(or_connection_t *conn);
 
 /********************************* control.c ***************************/
 

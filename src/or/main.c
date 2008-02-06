@@ -416,8 +416,9 @@ connection_stop_reading_from_linked_conn(connection_t *conn)
 
   if (conn->active_on_link) {
     conn->active_on_link = 0;
-    /* XXXX020 maybe we should keep an index here so we can smartlist_del
-     * cleanly. */
+    /* FFFF We could keep an index here so we can smartlist_del
+     * cleanly.  On the other hand, this doesn't show up on profiles,
+     * so let's leave it alone for now. */
     smartlist_remove(active_linked_connection_lst, conn);
   } else {
     tor_assert(!smartlist_isin(active_linked_connection_lst, conn));
@@ -552,12 +553,11 @@ conn_close_if_marked(int i)
          * we're gone. */
         connection_start_reading_from_linked_conn(conn->linked_conn);
       }
-      /* XXXX020 Downgrade to debug. */
-      log_info(LD_GENERAL, "Flushed last %d bytes from a linked conn; "
+      log_debug(LD_GENERAL, "Flushed last %d bytes from a linked conn; "
                "%d left; flushlen %d; wants-to-flush==%d", retval,
                (int)buf_datalen(conn->outbuf),
                (int)conn->outbuf_flushlen,
-               connection_wants_to_flush(conn));
+                connection_wants_to_flush(conn));
     } else if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
         retval = flush_buf_tls(TO_OR_CONN(conn)->tls, conn->outbuf, sz,
@@ -795,6 +795,17 @@ run_connection_housekeeping(int i, time_t now)
   }
 }
 
+/** Honor a NEWNYM request: make future requests unlinkability to past
+ * requests. */
+static void
+signewnym_impl(time_t now)
+{
+  circuit_expire_all_dirty_circs();
+  addressmap_clear_transient();
+  time_of_last_signewnym = now;
+  signewnym_is_pending = 0;
+}
+
 /** Perform regular maintenance tasks.  This function gets run once per
  * second by prepare_for_poll.
  */
@@ -834,10 +845,7 @@ run_scheduled_events(time_t now)
   if (signewnym_is_pending &&
       time_of_last_signewnym + MAX_SIGNEWNYM_RATE <= now) {
     log(LOG_INFO, LD_CONTROL, "Honoring delayed NEWNYM request");
-    circuit_expire_all_dirty_circs();
-    addressmap_clear_transient();
-    time_of_last_signewnym = now;
-    signewnym_is_pending = 0;
+    signewnym_impl(now);
   }
 
   /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
@@ -1471,7 +1479,7 @@ do_main_loop(void)
 
     /* refilling buckets and sending cells happens at the beginning of the
      * next iteration of the loop, inside prepare_for_poll()
-     * XXXX020 No longer so; fix comment.
+     * DOCDOC No longer so; fix comment.
      */
   }
 }
@@ -1574,12 +1582,7 @@ signal_callback(int fd, short events, void *arg)
             "Rate limiting NEWNYM request: delaying by %d second(s)",
             (int)(MAX_SIGNEWNYM_RATE+time_of_last_signewnym-now));
       } else {
-        /* XXX020 refactor someday: these two calls are in
-         * run_scheduled_events() above too, and they should be in just
-         * one place. */
-        circuit_expire_all_dirty_circs();
-        addressmap_clear_transient();
-        time_of_last_signewnym = now;
+        signewnym_impl(now);
       }
       break;
     }

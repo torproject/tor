@@ -78,6 +78,7 @@ command_time_process_cell(cell_t *cell, or_connection_t *conn, int *time,
 void
 command_process_cell(cell_t *cell, or_connection_t *conn)
 {
+  int handshaking = (conn->_base.state == OR_CONN_STATE_OR_HANDSHAKING);
 #ifdef KEEP_TIMING_STATS
   /* how many of each cell have we seen so far this second? needs better
    * name. */
@@ -117,8 +118,10 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
 #define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
 #endif
 
-  /*XXXX020 reject all but VERSIONS, NETINFO, CERT, LINK_AUTH when
-   * handshaking. */
+  /* Reject all but VERSIONS when handshaking. */
+  if (handshaking && cell->command != CELL_VERSIONS)
+    return;
+
   switch (cell->command) {
     case CELL_PADDING:
       ++stats_n_padding_cells_processed;
@@ -187,7 +190,10 @@ command_process_var_cell(var_cell_t *cell, or_connection_t *conn)
   }
 #endif
 
-  /*XXXX020 reject all when not handshaking. */
+  /* reject all when not handshaking. */
+  if (conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING)
+    return;
+
   switch (cell->command) {
     case CELL_VERSIONS:
       ++stats_n_versions_cells_processed;
@@ -554,45 +560,5 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   }
 
   conn->handshake_state->received_netinfo = 1;
-}
-
-/*XXXX020 move to connection_or.c */
-/** DOCDOC Called when we're done authenticating; act on stuff we
- * learned in netinfo. */
-int
-connection_or_act_on_netinfo(or_connection_t *conn)
-{
-  long delta;
-  if (!conn->handshake_state)
-    return -1;
-
-  tor_assert(conn->handshake_state->received_versions != 0);
-
-  delta = conn->handshake_state->apparent_skew;
-  /*XXXX020 magic number 3600 */
-  if (abs(delta) > 3600 &&
-      router_get_by_digest(conn->identity_digest)) {
-    char dbuf[64];
-    /*XXXX020 not always warn!*/
-    format_time_interval(dbuf, sizeof(dbuf), delta);
-    log_fn(LOG_WARN, LD_HTTP, "Received NETINFO cell with skewed time from "
-           "server at %s:%d.  It seems that our clock is %s by %s, or "
-           "that theirs is %s. Tor requires an accurate clock to work: "
-           "please check your time and date settings.",
-           conn->_base.address, (int)conn->_base.port,
-           delta>0 ? "ahead" : "behind", dbuf,
-           delta>0 ? "behind" : "ahead");
-    control_event_general_status(LOG_WARN,
-                                 "CLOCK_SKEW SKEW=%ld SOURCE=OR:%s:%d",
-                                 delta, conn->_base.address, conn->_base.port);
-  }
-
-  /* XXX020 possibly, learn my address from my_apparent_addr */
-
-  if (conn->handshake_state->apparently_canonical) {
-    conn->is_canonical = 1;
-  }
-
-  return 0;
 }
 

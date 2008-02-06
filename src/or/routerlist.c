@@ -41,6 +41,13 @@ static void list_pending_downloads(digestmap_t *result,
 DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
 DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
 DECLARE_TYPED_DIGESTMAP_FNS(eimap_, digest_ei_map_t, extrainfo_t)
+#define SDMAP_FOREACH(map, keyvar, valvar)                              \
+  DIGESTMAP_FOREACH(sdmap_to_digestmap(map), keyvar, signed_descriptor_t *, \
+                    valvar)
+#define RIMAP_FOREACH(map, keyvar, valvar) \
+  DIGESTMAP_FOREACH(rimap_to_digestmap(map), keyvar, routerinfo_t *, valvar)
+#define EIMAP_FOREACH(map, keyvar, valvar) \
+  DIGESTMAP_FOREACH(eimap_to_digestmap(map), keyvar, extrainfo_t *, valvar)
 
 /****************************************************************************/
 
@@ -222,7 +229,7 @@ trusted_dirs_flush_certs_to_disk(void)
             c->len = cert->cache_info.signed_descriptor_len;
             smartlist_add(chunks, c);
           });
-  } DIGESTMAP_FOREACH_END
+  } DIGESTMAP_FOREACH_END;
 
   filename = get_datadir_fname("cached-certs");
   if (write_chunks_to_file(filename, chunks, 0)) {
@@ -259,7 +266,7 @@ trusted_dirs_remove_old_certs(void)
             authority_cert_free(cert);
             trusted_dir_servers_certs_changed = 1;
           });
-  } DIGESTMAP_FOREACH_END
+  } DIGESTMAP_FOREACH_END;
 #undef OLD_CERT_LIFETIME
 
   trusted_dirs_flush_certs_to_disk();
@@ -299,7 +306,7 @@ authority_cert_get_by_sk_digest(const char *sk_digest)
       if (!memcmp(cert->signing_key_digest, sk_digest, DIGEST_LEN))
         return cert;
     });
-  } DIGESTMAP_FOREACH_END
+  } DIGESTMAP_FOREACH_END;
   return NULL;
 }
 
@@ -331,7 +338,7 @@ authority_cert_get_all(smartlist_t *certs_out)
   DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, c,
                       smartlist_add(certs_out, c));
-  } DIGESTMAP_FOREACH_END
+  } DIGESTMAP_FOREACH_END;
 }
 
 /** DOCDOC */
@@ -4300,7 +4307,6 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
 void
 routerlist_assert_ok(routerlist_t *rl)
 {
-  digestmap_iter_t *iter; /* XXXX020 use the appropriate iter type. */
   routerinfo_t *r2;
   signed_descriptor_t *sd2;
   if (!rl)
@@ -4355,46 +4361,19 @@ routerlist_assert_ok(routerlist_t *rl)
 #endif
   });
 
-  iter = digestmap_iter_init((digestmap_t*)rl->identity_map);
-  while (!digestmap_iter_done(iter)) {
-    const char *d;
-    void *_r;
-    routerinfo_t *r;
-    digestmap_iter_get(iter, &d, &_r);
-    r = _r;
+  RIMAP_FOREACH(rl->identity_map, d, r) {
     tor_assert(!memcmp(r->cache_info.identity_digest, d, DIGEST_LEN));
-    iter = digestmap_iter_next((digestmap_t*)rl->identity_map, iter);
-  }
-  iter = digestmap_iter_init((digestmap_t*)rl->desc_digest_map);
-  while (!digestmap_iter_done(iter)) {
-    const char *d;
-    void *_sd;
-    signed_descriptor_t *sd;
-    digestmap_iter_get(iter, &d, &_sd);
-    sd = _sd;
+  } DIGESTMAP_FOREACH_END;
+  SDMAP_FOREACH(rl->desc_digest_map, d, sd) {
     tor_assert(!memcmp(sd->signed_descriptor_digest, d, DIGEST_LEN));
-    iter = digestmap_iter_next((digestmap_t*)rl->desc_digest_map, iter);
-  }
-  iter = digestmap_iter_init((digestmap_t*)rl->desc_by_eid_map);
-  while (!digestmap_iter_done(iter)) {
-    const char *d;
-    void *_sd;
-    signed_descriptor_t *sd;
-    digestmap_iter_get(iter, &d, &_sd);
-    sd = _sd;
+  } DIGESTMAP_FOREACH_END;
+  SDMAP_FOREACH(rl->desc_by_eid_map, d, sd) {
     tor_assert(!tor_digest_is_zero(d));
     tor_assert(sd);
     tor_assert(!memcmp(sd->extra_info_digest, d, DIGEST_LEN));
-    iter = digestmap_iter_next((digestmap_t*)rl->desc_by_eid_map, iter);
-  }
-  iter = digestmap_iter_init((digestmap_t*)rl->extra_info_map);
-  while (!digestmap_iter_done(iter)) {
-    const char *d;
-    void *_ei;
-    extrainfo_t *ei;
+  } DIGESTMAP_FOREACH_END;
+  EIMAP_FOREACH(rl->extra_info_map, d, ei) {
     signed_descriptor_t *sd;
-    digestmap_iter_get(iter, &d, &_ei);
-    ei = _ei;
     tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
                        d, DIGEST_LEN));
     sd = sdmap_get(rl->desc_by_eid_map,
@@ -4404,8 +4383,7 @@ routerlist_assert_ok(routerlist_t *rl)
       tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
                          sd->extra_info_digest, DIGEST_LEN));
     }
-    iter = digestmap_iter_next((digestmap_t*)rl->extra_info_map, iter);
-  }
+  } DIGESTMAP_FOREACH_END;
 }
 
 /** Allocate and return a new string representing the contact info

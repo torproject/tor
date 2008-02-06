@@ -176,7 +176,8 @@ chunk_new_with_alloc_size(size_t alloc)
       freelist->lowest_length = freelist->cur_length;
     ++freelist->n_hit;
   } else {
-    /* XXXX020 take advantage of tor_malloc_roundup. */
+    /* XXXX020 take advantage of tor_malloc_roundup, once we know how that
+     * affects freelists. */
     if (freelist)
       ++freelist->n_alloc;
     else
@@ -950,8 +951,8 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out)
 int
 move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
 {
-  /* XXXX020 we can do way better here.  See if this turns up in the
-   */
+  /* XXXX we can do way better here, but this doesn't turn up in any
+   * profiles. */
   char b[4096];
   size_t cp, len;
   len = *buf_flushlen;
