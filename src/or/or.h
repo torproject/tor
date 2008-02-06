@@ -2291,6 +2291,10 @@ typedef struct {
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
                      * resolver from the file here rather than from
                      * /etc/resolv.conf (Unix) or the registry (Windows). */
+  /** Boolean: if set, we start even if our resolv.conf file is missing
+   * or broken. */
+  int ServerDNSAllowBrokenResolvConf;
+
   smartlist_t *ServerDNSTestAddresses; /**< A list of addresses that definitely
                                         * should be resolveable. Used for
                                         * testing our DNS server. */

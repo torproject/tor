@@ -265,6 +265,7 @@ static config_var_t _option_vars[] = {
   V(RunTesting,                  BOOL,     "0"),
   V(SafeLogging,                 BOOL,     "1"),
   V(SafeSocks,                   BOOL,     "0"),
+  V(ServerDNSAllowBrokenResolvConf, BOOL,  "0"),
   V(ServerDNSAllowNonRFC953Hostnames, BOOL,"0"),
   V(ServerDNSDetectHijacking,    BOOL,     "1"),
   V(ServerDNSResolvConfFile,     STRING,   NULL),
@@ -3252,7 +3253,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
       options->V3AuthVotingInterval/2) {
-    REJECT("V3AuthVoteDelay and V3AuthDistDelay must be no more than half "
+    REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
            "V3AuthVotingInterval");
   }
   if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS)

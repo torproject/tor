@@ -1108,7 +1108,7 @@ configure_nameservers(int force)
     if (stat(conf_fname, &st)) {
       log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s': %s",
                conf_fname, strerror(errno));
-      return -1;
+      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
     }
     if (!force && resolv_conf_fname && !strcmp(conf_fname,resolv_conf_fname)
         && st.st_mtime == resolv_conf_mtime) {
@@ -1123,11 +1123,11 @@ configure_nameservers(int force)
     if ((r = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))) {
       log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers in '%s' (%d)",
                conf_fname, conf_fname, r);
-      return -1;
+      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
     }
     if (evdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.", conf_fname);
-      return -1;
+      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
     }
     tor_free(resolv_conf_fname);
     resolv_conf_fname = tor_strdup(conf_fname);
@@ -1143,13 +1143,13 @@ configure_nameservers(int force)
     }
     if (evdns_config_windows_nameservers())  {
       log_warn(LD_EXIT,"Could not config nameservers.");
-      return -1;
+      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
     }
     if (evdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any platform nameservers in "
                "your Windows configuration.  Perhaps you should list a "
                "ServerDNSResolvConfFile file in your torrc?");
-      return -1;
+      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
     }
     if (nameservers_configured)
       evdns_resume();
