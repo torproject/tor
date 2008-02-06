@@ -260,6 +260,10 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
   {                                                                     \
     return (maptype*)digestmap_new();                                   \
   }                                                                     \
+  static INLINE digestmap_t* prefix##to_digestmap(maptype *map)         \
+  {                                                                     \
+    return (digestmap_t*)map;                                           \
+  }                                                                     \
   static INLINE valtype* prefix##get(maptype *map, const char *key)     \
   {                                                                     \
     return (valtype*)digestmap_get((digestmap_t*)map, key);             \
