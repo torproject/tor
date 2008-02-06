@@ -64,7 +64,9 @@ N - Before the feature freeze:
         o Servers detect new ciphers, and only send ID cert when they
           get an older cipher list, and only request client cert when
           they get an older cipher list.
-        - Clients only send certificates when asked for them.
+        . Clients only send certificates when asked for them.
+          o Implement
+          - Enable
         o Servers disable callback once negotiation is finished, so
           that renegotiation happens according to the old rules.
         o Clients initiate renegotiation immediately on completing
@@ -73,10 +75,16 @@ N - Before the feature freeze:
           cert, they adust the client ID.
           o Detect.
           o Adjust.
-      - New revised handshake: post-TLS:
-        - start by sending VERSIONS cells
-        - once we have a version, send a netinfo and become open
+      . New revised handshake: post-TLS:
+        o start by sending VERSIONS cells
+        o once we have a version, send a netinfo and become open
         - Ban most cell types on a non-OPEN connection.
+      - Test
+        o Verify version negotiation on client
+        - Verify version negotiation on server
+        - Verify that client->server connection becomes open
+        - Verify that server->server connection becomes open and
+          authenticated.
       - NETINFO fallout
         - Don't extend a circuit over a noncanonical connection with
           mismatched address.

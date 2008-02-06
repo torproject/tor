@@ -56,11 +56,6 @@ void tor_tls_set_renegotiate_callback(tor_tls_t *tls,
 int tor_tls_is_server(tor_tls_t *tls);
 void tor_tls_free(tor_tls_t *tls);
 int tor_tls_peer_has_cert(tor_tls_t *tls);
-int tor_tls_get_cert_digests(tor_tls_t *tls, char *my_digest_out,
-                             char *peer_digest_out);
-char *tor_tls_encode_my_certificate(tor_tls_t *tls, size_t *size_out,
-                                    int conn_cert);
-crypto_pk_env_t *tor_tls_dup_private_key(tor_tls_t *tls);
 int tor_tls_verify_v1(int severity, tor_tls_t *tls,
                       crypto_pk_env_t **identity);
 int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);

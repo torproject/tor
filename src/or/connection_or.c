@@ -588,6 +588,7 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
 
   if (connection_tls_finish_handshake(conn) < 0) {
     /* XXXX_TLS double-check that it's ok to do this from inside read. */
+    /* XXXX_TLS double-check that this verifies certificates. */
     connection_mark_for_close(TO_CONN(conn));
   }
 
@@ -609,11 +610,15 @@ connection_tls_continue_handshake(or_connection_t *conn)
   int result;
   check_no_tls_errors();
  again:
-  if (conn->_base.state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING)
+  if (conn->_base.state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING) {
+    // log_notice(LD_OR, "Renegotiate with %p", conn->tls);
     result = tor_tls_renegotiate(conn->tls);
-  else {
+    // log_notice(LD_OR, "Result: %d", result);
+  } else {
     tor_assert(conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING);
+    // log_notice(LD_OR, "Continue handshake with %p", conn->tls);
     result = tor_tls_handshake(conn->tls);
+    // log_notice(LD_OR, "Result: %d", result);
   }
   switch (result) {
     CASE_TOR_TLS_ERROR_ANY:
@@ -624,9 +629,11 @@ connection_tls_continue_handshake(or_connection_t *conn)
       if (! tor_tls_used_v1_handshake(conn->tls)) {
         if (!tor_tls_is_server(conn->tls)) {
           if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
+            // log_notice(LD_OR,"Done. state was TLS_HANDSHAKING.");
             conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
             goto again;
           }
+          // log_notice(LD_OR,"Done. state was %d.", conn->_base.state);
         } else {
           /* improved handshake, but not a client. */
           tor_tls_set_renegotiate_callback(conn->tls,
@@ -835,7 +842,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
   char digest_rcvd[DIGEST_LEN];
   int started_here = connection_or_nonopen_was_started_here(conn);
 
-  log_debug(LD_OR,"tls handshake done. verifying.");
+  log_debug(LD_OR,"tls handshake with %s done. verifying.",
+            conn->_base.address);
 
   directory_set_dirty();
 

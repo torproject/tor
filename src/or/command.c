@@ -476,6 +476,8 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
+  // log_notice(LD_OR, "Negotiated version %d", highest_supported_version);
+
   if (highest_supported_version >= 2) {
     if (connection_or_send_netinfo(conn) < 0) {
       connection_mark_for_close(TO_CONN(conn));

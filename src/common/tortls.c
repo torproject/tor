@@ -66,7 +66,7 @@ typedef struct tor_tls_context_t {
  */
 struct tor_tls_t {
   HT_ENTRY(tor_tls_t) node;
-  tor_tls_context_t *context; /**DOCDOC */
+  tor_tls_context_t *context; /** A link to the context object for this tls */
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
   enum {
@@ -75,12 +75,24 @@ struct tor_tls_t {
   } state : 3; /**< The current SSL state, depending on which operations have
                 * completed successfully. */
   unsigned int isServer:1; /**< True iff this is a server-side connection */
-  unsigned int wasV2Handshake:1; /**< DOCDOC */
+  unsigned int wasV2Handshake:1; /**< True iff the original handshake for
+                                  * this connection used the updated version
+                                  * of the connection protocol (client sends
+                                  * different cipher list, server sends only
+                                  * one certificate). */
+  int got_renegotiate:1; /**< True iff we should call negotiated_callback
+                          * when we're done reading. */
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
+  /** Last values retrieved from BIO_number_read()/write(); see
+   * tor_tls_get_n_raw_bytes() for usage.
+   */
   unsigned long last_write_count;
   unsigned long last_read_count;
+  /** If set, a callback to invoke whenever the client tries to renegotiate
+   * the handshake. */
   void (*negotiated_callback)(tor_tls_t *tls, void *arg);
+  /** Argument to pass to negotiated_callback. */
   void *callback_arg;
 };
 
@@ -199,7 +211,7 @@ tor_errno_to_tls_error(int e)
 #endif
 }
 
-/** DOCDOC */
+/** Given a TOR_TLS_* error code, return a string equivalent. */
 const char *
 tor_tls_err_to_string(int err)
 {
@@ -305,9 +317,8 @@ static int
 always_accept_verify_cb(int preverify_ok,
                         X509_STORE_CTX *x509_ctx)
 {
-  /* avoid "unused parameter" warning. */
-  preverify_ok = 0;
-  x509_ctx = NULL;
+  (void) preverify_ok;
+  (void) x509_ctx;
   return 1;
 }
 
@@ -467,7 +478,8 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
                              SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
 #endif
 
-/** DOCDOC */
+/** Remove a reference to <b>ctx</b>, and free it if it has no more
+ * references. */
 static void
 tor_tls_context_decref(tor_tls_context_t *ctx)
 {
@@ -481,7 +493,7 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
   }
 }
 
-/** DOCDOC */
+/** Increase the reference count of <b>ctx</b>. */
 static void
 tor_tls_context_incref(tor_tls_context_t *ctx)
 {
@@ -602,7 +614,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
 }
 
 #ifdef V2_HANDSHAKE_SERVER
-/** DOCDOC */
+/** Return true iff the cipher list suggested by the client for <b>ssl</b> is
+ * a list that indicates that the client know how to do the v2 TLS connection
+ * handshake. */
 static int
 tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
 {
@@ -651,18 +665,35 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
   return 1;
 }
 
-/** DOCDOC */
+/** Invoked when we're accepting a connection on <b>ssl</b>, and the connection
+ * changes state. We use this:
+ * <ul><li>To alter the state of the handshake partway through, so we
+ *         do not send or request extra certificates in v2 handshakes.</li>
+ * <li>To detect renegotiation</li></ul>
+ */
 static void
 tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 {
+  tor_tls_t *tls;
   (void) val;
   if (type != SSL_CB_ACCEPT_LOOP)
     return;
   if (ssl->state != SSL3_ST_SW_SRVR_HELLO_A)
     return;
 
+  tls = tor_tls_get_by_ssl(ssl);
+  if (tls) {
+    /* Check whether we're watching for renegotiates.  If so, this is one! */
+    if (tls->negotiated_callback)
+      tls->got_renegotiate = 1;
+  } else {
+    log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
+  }
+
+  /* Now check the cipher list. */
   if (tor_tls_client_is_using_v2_ciphers(ssl)) {
-    tor_tls_t *tls;
+    /*XXXX_TLS keep this from happening more than once! */
+
     /* Yes, we're casting away the const from ssl.  This is very naughty of us.
      * Let's hope openssl doesn't notice! */
 
@@ -671,7 +702,6 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     /* Don't send a hello request. */
     SSL_set_verify((SSL*) ssl, SSL_VERIFY_NONE, NULL);
 
-    tls = tor_tls_get_by_ssl((SSL*)ssl);
     if (tls) {
       tls->wasV2Handshake = 1;
     } else {
@@ -731,7 +761,10 @@ tor_tls_new(int sock, int isServer)
   return result;
 }
 
-/**DOCDOC*/
+/** Set <b>cb</b> to be called with argument <b>arg</b> whenever <b>tls</b>
+ * next gets a client-side renegotiate in the middle of a read.  Do not
+ * invoke this function untile <em>after</em> initial handshaking is done!
+ */
 void
 tor_tls_set_renegotiate_callback(tor_tls_t *tls,
                                  void (*cb)(tor_tls_t *, void *arg),
@@ -739,6 +772,14 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
 {
   tls->negotiated_callback = cb;
   tls->callback_arg = arg;
+  tls->got_renegotiate = 0;
+#ifdef V2_HANDSHAKE_SERVER
+  if (cb) {
+    SSL_set_info_callback(tls->ssl, tor_tls_server_info_callback);
+  } else {
+    SSL_set_info_callback(tls->ssl, NULL);
+  }
+#endif
 }
 
 /** Return whether this tls initiated the connect (client) or
@@ -785,12 +826,12 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
   r = SSL_read(tls->ssl, cp, len);
   if (r > 0) {
 #ifdef V2_HANDSHAKE_SERVER
-    if (SSL_num_renegotiations(tls->ssl)) {
-      /* New certificate! */
+    if (tls->got_renegotiate) {
+      /* Renegotiation happened! */
       log_notice(LD_NET, "Got a TLS renegotiation from %p", tls);
       if (tls->negotiated_callback)
         tls->negotiated_callback(tls, tls->callback_arg);
-      SSL_clear_num_renegotiations(tls->ssl);
+      tls->got_renegotiate = 0;
     }
 #endif
     return r;
@@ -1008,57 +1049,6 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
     return 0;
   X509_free(cert);
   return 1;
-}
-
-/** DOCDOC */
-int
-tor_tls_get_cert_digests(tor_tls_t *tls,
-                         char *my_digest_out,
-                         char *peer_digest_out)
-{
-  X509 *cert;
-  unsigned int len;
-  tor_assert(tls && tls->context);
-  cert = tls->context->my_cert;
-  if (cert) {
-    X509_digest(cert, EVP_sha1(), (unsigned char*)my_digest_out, &len);
-    if (len != DIGEST_LEN)
-      return -1;
-  }
-  cert = SSL_get_peer_certificate(tls->ssl);
-  if (cert) {
-    X509_digest(cert, EVP_sha1(), (unsigned char*)peer_digest_out, &len);
-    if (len != DIGEST_LEN)
-      return -1;
-  }
-  return 0;
-}
-
-/** DOCDOC */
-crypto_pk_env_t *
-tor_tls_dup_private_key(tor_tls_t *tls)
-{
-  return crypto_pk_dup_key(tls->context->key);
-}
-
-/** DOCDOC */
-char *
-tor_tls_encode_my_certificate(tor_tls_t *tls, size_t *size_out,
-                              int conn_cert)
-{
-  unsigned char *result, *cp;
-  int certlen;
-  X509 *cert;
-  tor_assert(tls && tls->context);
-  cert = conn_cert ? tls->context->my_cert : tls->context->my_id_cert;
-  tor_assert(cert);
-  certlen = i2d_X509(cert, NULL);
-  tor_assert(certlen >= 0);
-  cp = result = tor_malloc(certlen);
-  i2d_X509(cert, &cp);
-  tor_assert(cp-result == certlen);
-  *size_out = (size_t)certlen;
-  return (char*) result;
 }
 
 /** Warn that a certificate lifetime extends through a certain range. */
