@@ -210,7 +210,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
   return 0;
 }
 
-/** Save all v3 key certifiacates to the cached-certs file. */
+/** Save all v3 key certificates to the cached-certs file. */
 void
 trusted_dirs_flush_certs_to_disk(void)
 {
@@ -4100,10 +4100,10 @@ update_router_have_minimum_dir_info(void)
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
             "We have only %d/%d usable descriptors.", num_present, num_usable);
     res = 0;
-  } else if (num_usable < 2) {
+  } else if (num_present < 2) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                 "Only %d usable descriptor%s known!", num_usable,
-                 num_usable ? "" : "s");
+                 "Only %d usable descriptor%s known!", num_present,
+                 num_present ? "" : "s");
     res = 0;
   } else {
     res = 1;
