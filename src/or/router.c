@@ -387,6 +387,7 @@ init_keys(void)
   time_t now = time(NULL);
   trusted_dir_server_t *ds;
   int v3_digest_set = 0;
+  authority_cert_t *cert = NULL;
 
   if (!key_lock)
     key_lock = tor_mutex_new();
@@ -431,7 +432,8 @@ init_keys(void)
               "Use tor-gencert to generate them. Dying.");
       return -1;
     }
-    if (get_my_v3_authority_cert()) {
+    cert = get_my_v3_authority_cert();
+    if (cert) {
       crypto_pk_get_digest(get_my_v3_authority_cert()->identity_key,
                            v3_digest);
       v3_digest_set = 1;
@@ -583,6 +585,15 @@ init_keys(void)
     log_warn(LD_DIR, "V3 identity key does not match identity declared in "
              "DirServer line.  Adjusting.");
     memcpy(ds->v3_identity_digest, v3_digest, DIGEST_LEN);
+  }
+
+  if (cert) { /* add my own cert to the list of known certs */
+    log_info(LD_DIR, "adding my own v3 cert");
+    if (trusted_dirs_load_certs_from_string(
+          cert->cache_info.signed_descriptor_body, 0)<0) {
+      log_warn(LD_DIR, "Unable to parse my own v3 cert! Failing.");
+      return -1;
+    }
   }
 
   return 0; /* success */
