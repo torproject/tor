@@ -47,6 +47,8 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
     - If an attempt to launch a DNS resolve request over the control
       port fails because we have overrun the limit on the number of
       connections, tell the controller that the request has failed.
+    - Avoid using too little bandwidth when Tor skips a few seconds.  Bugfix
+      on 0.1.2.x.
 
   o Code simplifications and refactoring:
     - Remove some needless generality from cpuworker code, for improved

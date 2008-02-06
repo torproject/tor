@@ -1659,13 +1659,19 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
                                 int seconds_elapsed, const char *name)
 {
   int starting_bucket = *bucket;
-  if (starting_bucket < burst) {
-    int incr = rate*seconds_elapsed;
-    *bucket += incr;
-    if (*bucket > burst || *bucket < starting_bucket) {
-      /* If we overflow the burst, or underflow our starting bucket,
-       * cap the bucket value to burst. */
-      *bucket = burst;
+  if (starting_bucket < burst && seconds_elapsed) {
+    if (((burst - starting_bucket)/seconds_elapsed) < rate) {
+      *bucket = burst;  /* We would overflow the bucket; just set it to
+                         * the maximum. */
+    } else {
+      int incr = rate*seconds_elapsed;
+      *bucket += incr;
+      if (*bucket > burst || *bucket < starting_bucket) {
+        /* If we overflow the burst, or underflow our starting bucket,
+         * cap the bucket value to burst. */
+        /* XXXX020 this might be redundant now. */
+        *bucket = burst;
+      }
     }
     log(LOG_DEBUG, LD_NET,"%s now %d.", name, *bucket);
   }
