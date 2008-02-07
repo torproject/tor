@@ -1,8 +1,9 @@
-PREFIX = "C:\Program Files"
+PREFIX = Polipo
 BINDIR = $(PREFIX)\bin
 MANDIR = $(PREFIX)\man
 INFODIR = $(PREFIX)\info
-LOCAL_ROOT = 
+LOCAL_ROOT = $(PREFIX)
+DISK_CACHE_ROOT = $(PREFIX)\cache
 
 # To compile with Unix CC:
 
@@ -40,7 +41,7 @@ CDEBUGFLAGS = -Os -g -Wall
  EXE=.exe
  LDLIBS = -lwsock32 -lregex
 
-FILE_DEFINES = -DLOCAL_ROOT=\"$(LOCAL_ROOT)/\" -DNO_DISK_CACHE -DHAVE_REGEX
+FILE_DEFINES = -DHAVE_REGEX
 
 # You may optionally also add any of the following to DEFINES:
 #
@@ -83,50 +84,6 @@ md5import.o: md5import.c md5.c
 .PHONY: all install install.binary install.man
 
 all: polipo$(EXE) polipo.info html/index.html localindex.html
-
-install: install.binary install.man
-
-install.binary: all
-	mkdir -p $(TARGET)$(BINDIR)
-	mkdir -p $(TARGET)$(LOCAL_ROOT)
-	mkdir -p $(TARGET)$(LOCAL_ROOT)/doc
-	rm -f $(TARGET)$(BINDIR)/polipo
-	cp -f polipo $(TARGET)$(BINDIR)/
-	cp -f html/* $(TARGET)$(LOCAL_ROOT)/doc
-	cp -f localindex.html $(TARGET)$(LOCAL_ROOT)/index.html
-
-install.man: all
-	mkdir -p $(TARGET)$(MANDIR)/man1
-	mkdir -p $(TARGET)$(INFODIR)
-	cp -f polipo.man $(TARGET)$(MANDIR)/man1/polipo.1
-	cp polipo.info $(TARGET)$(INFODIR)/
-	install-info --info-dir=$(TARGET)$(INFODIR) polipo.info
-
-
-polipo.info: polipo.texi
-	makeinfo polipo.texi
-
-html/index.html: polipo.texi
-	mkdir -p html
-	makeinfo --html -o html polipo.texi
-
-polipo.html: polipo.texi
-	makeinfo --html --no-split --no-headers -o polipo.html polipo.texi
-
-polipo.pdf: polipo.texi
-	texi2pdf polipo.texi
-
-polipo.ps.gz: polipo.ps
-	gzip -c polipo.ps > polipo.ps.gz
-
-polipo.ps: polipo.dvi
-	dvips -Pwww -o polipo.ps polipo.dvi
-
-polipo.dvi: polipo.texi
-	texi2dvi polipo.texi
-
-polipo.man.html: polipo.man
-	groff -man -Thtml polipo.man > polipo.man.html
 
 TAGS: $(SRCS)
 	etags $(SRCS)

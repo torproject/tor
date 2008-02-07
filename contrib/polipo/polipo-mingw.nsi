@@ -1,20 +1,20 @@
 ;polipo-mingw.nsi - A basic win32 installer for Polipo
 ; Originally written by J Doe.
 ; Modified by Andrew Lewman
-; See the Tor LICENSE for licencing information
+; See LICENSE for licencing information
 ;-----------------------------------------
 ;
 !include "MUI.nsh"
 
-!define VERSION "1.0.4.0"
+!define VERSION "1.0.4.0-forbidden-1"
 !define INSTALLER "polipo-${VERSION}-win32.exe"
 !define WEBSITE "http://www.pps.jussieu.fr/~jch/software/polipo/"
 
 !define LICENSE "COPYING"
-!define BIN "." ;BIN is where it expects to find polipo.exe
+;BIN is where it expects to find polipo.exe
+!define BIN "."
 
-SetCompressor /SOLID LZMA ;Tighter compression
-RequestExecutionLevel user ;Updated for Vista compatibility
+SetCompressor lzma
 OutFile ${INSTALLER}
 InstallDir $PROGRAMFILES\Polipo
 SetOverWrite ifnewer
@@ -32,7 +32,7 @@ VIAddVersionKey "LegalCopyright" "©2008, Juliusz Chroboczek"
 VIAddVersionKey "FileDescription" "Polipo is a caching web proxy."
 VIAddVersionKey "FileVersion" "${VERSION}"
 
-!define MUI_WELCOMEPAGE_TITLE "Welcome to the Polipo Setup Wizard"
+!define MUI_WELCOMEPAGE_TITLE "Welcome to the Polipo ${VERSION} Setup Wizard"
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of Polipo ${VERSION}.\r\n\r\nIf you have previously installed Polipo and it is currently running, please exit Polipo first before continuing this installation.\r\n\r\n$_CLICK"
 !define MUI_ABORTWARNING
 !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\win-install.ico"
@@ -44,9 +44,6 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 !define MUI_FINISHPAGE_LINK_LOCATION ${WEBSITE}
 
 !insertmacro MUI_PAGE_WELCOME
-; There's no point in having a clickthrough license: Our license adds
-; certain rights, but doesn't remove them.
-; !insertmacro MUI_PAGE_LICENSE "${LICENSE}"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -58,6 +55,7 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 !insertmacro MUI_LANGUAGE "English"
 
 Var configfile
+Var forbiddenfile
 
 ;Sections
 ;--------
@@ -73,9 +71,11 @@ Section "Polipo" Polipo
    File "${BIN}\config.sample"
    File "${BIN}\forbidden.sample"
    File "${BIN}\README.Windows"
+   File "${BIN}\libgnurx-0.dll"
    WriteIniStr "$INSTDIR\Polipo Website.url" "InternetShortcut" "URL" ${WEBSITE}
 
    StrCpy $configfile "config"
+   StrCpy $forbiddenfile "forbidden"
    SetOutPath $INSTDIR
    ;If there's already a polipo config file, ask if they want to
    ;overwrite it with the new one.
@@ -87,10 +87,20 @@ Section "Polipo" Polipo
       StrCpy $configfile ".\config.sample"
    endifconfig:
    File /oname=$configfile ".\config.sample"
-   IfFileExists "$INSTDIR\www\*.*" "" endifwebroot
-	CreateDirectory "$INSTDIR\www"
-   endifwebroot:
-   CopyFiles "${BIN}\localindex.html" $INSTDIR\www\index.html
+   ;If there's already a polipo forbidden file, ask if they want to
+   ;overwrite it with the new one.
+   IfFileExists "$INSTDIR\forbidden" "" endifforbidden
+      MessageBox MB_ICONQUESTION|MB_YESNO "You already have a Polipo forbidden file.$\r$\nDo you want to overwrite it with the default sample forbidden file?" IDNO forbidyesreplace
+      Delete $INSTDIR\forbidden
+      Goto endifforbidden
+     forbidyesreplace:
+      StrCpy $forbiddenfile ".\forbidden.sample"
+   endifforbidden:
+   File /oname=$forbiddenfile ".\forbidden.sample"
+   IfFileExists "$INSTDIR\bin\*.*" "" endifbinroot
+	CreateDirectory "$INSTDIR\bin"
+   endifbinroot:
+   CopyFiles "${BIN}\localindex.html" $INSTDIR\index.html
    IfFileExists "$INSTDIR\cache\*.*" "" endifcache
 	CreateDirectory "$INSTDIR\cache"
    endifcache:
@@ -117,7 +127,7 @@ SectionEnd
 
 Section /o "Run at startup" Startup
    SetOutPath $INSTDIR
-   CreateShortCut "$SMSTARTUP\Polipo.lnk" "$INSTDIR\polipo.exe" "-c config" "" "" "" SW_SHOWMINIMIZED
+   CreateShortCut "$SMSTARTUP\Polipo.lnk" "$INSTDIR\polipo.exe" "-c config -f forbidden" "" "" "" SW_SHOWMINIMIZED
 SectionEnd
 
 SubSectionEnd
@@ -128,6 +138,11 @@ Section "Uninstall"
    Delete "$INSTDIR\Polipo Website.url"
    Delete "$INSTDIR\config"
    Delete "$INSTDIR\config.sample"
+   Delete "$INSTDIR\forbidden.sample"
+   Delete "$INSTDIR\libgnurx-0.dll"
+   Delete "$INSTDIR\COPYING"
+   Delete "$INSTDIR\CHANGES"
+   Delete "$INSTDIR\README.Windows"
    StrCmp $INSTDIR $INSTDIR +2 ""
       RMDir /r $INSTDIR
    Delete "$INSTDIR\Uninstall.exe"
