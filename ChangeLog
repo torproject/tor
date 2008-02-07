@@ -49,6 +49,8 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
       connections, tell the controller that the request has failed.
     - Avoid using too little bandwidth when Tor skips a few seconds.  Bugfix
       on 0.1.2.x.
+    - Fix shell error when warning about missing packages in configure
+      script, on fedora or redhat machines. Bugfix on 0.2.0.x.
 
   o Code simplifications and refactoring:
     - Remove some needless generality from cpuworker code, for improved
