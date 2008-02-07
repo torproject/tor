@@ -378,10 +378,12 @@ static void
 circuit_free(circuit_t *circ)
 {
   void *mem;
+  size_t memlen;
   tor_assert(circ);
   if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     mem = ocirc;
+    memlen = sizeof(origin_circuit_t);
     tor_assert(circ->magic == ORIGIN_CIRCUIT_MAGIC);
     if (ocirc->build_state) {
       if (ocirc->build_state->chosen_exit)
@@ -398,6 +400,7 @@ circuit_free(circuit_t *circ)
   } else {
     or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);
     mem = ocirc;
+    memlen = sizeof(or_circuit_t);
     tor_assert(circ->magic == OR_CIRCUIT_MAGIC);
 
     if (ocirc->p_crypto)
@@ -432,7 +435,7 @@ circuit_free(circuit_t *circ)
    * "active" checks will be violated. */
   cell_queue_clear(&circ->n_conn_cells);
 
-  memset(circ, 0xAA, sizeof(circuit_t)); /* poison memory */
+  memset(circ, 0xAA, memlen); /* poison memory */
   tor_free(mem);
 }
 
@@ -499,7 +502,7 @@ circuit_free_cpath_node(crypt_path_t *victim)
   if (victim->extend_info)
     extend_info_free(victim->extend_info);
 
-  victim->magic = 0xDEADBEEFu;
+  memset(victim, 0xBB, sizeof(crypt_path_t)); /* poison memory */
   tor_free(victim);
 }
 

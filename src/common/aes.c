@@ -289,12 +289,48 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
    * of alignmement, using a bigger buffer, and so on. Not till after 0.1.2.x,
    * though. */
   int c = cipher->pos;
-  if (!len) return;
+  if (PREDICT_UNLIKELY(!len)) return;
 
   while (1) {
     do {
       if (len-- == 0) { cipher->pos = c; return; }
       *(output++) = *(input++) ^ cipher->buf[c];
+    } while (++c != 16);
+    cipher->pos = c = 0;
+    if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 0))) {
+      if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 1))) {
+        if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 2))) {
+          ++COUNTER(cipher, 3);
+          UPDATE_CTR_BUF(cipher, 3);
+        }
+        UPDATE_CTR_BUF(cipher, 2);
+      }
+      UPDATE_CTR_BUF(cipher, 1);
+    }
+    UPDATE_CTR_BUF(cipher, 0);
+    _aes_fill_buf(cipher);
+  }
+}
+
+/** Encrypt <b>len</b> bytes from <b>input</b>, storing the results in place.
+ * Uses the key in <b>cipher</b>, and advances the counter by <b>len</b> bytes
+ * as it encrypts.
+ */
+void
+aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
+{
+
+  /* XXXX This function is up to 5% of our runtime in some profiles;
+   * we should look into unrolling some of the loops; taking advantage
+   * of alignmement, using a bigger buffer, and so on. Not till after 0.1.2.x,
+   * though. */
+  int c = cipher->pos;
+  if (PREDICT_UNLIKELY(!len)) return;
+
+  while (1) {
+    do {
+      if (len-- == 0) { cipher->pos = c; return; }
+      *(data++) ^= cipher->buf[c];
     } while (++c != 16);
     cipher->pos = c = 0;
     if (PREDICT_UNLIKELY(! ++COUNTER(cipher, 0))) {

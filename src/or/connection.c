@@ -266,27 +266,33 @@ static void
 _connection_free(connection_t *conn)
 {
   void *mem;
+  size_t memlen;
   switch (conn->type) {
     case CONN_TYPE_OR:
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
       mem = TO_OR_CONN(conn);
+      memlen = sizeof(or_connection_t);
       break;
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
       tor_assert(conn->magic == EDGE_CONNECTION_MAGIC);
       mem = TO_EDGE_CONN(conn);
+      memlen = sizeof(edge_connection_t);
       break;
     case CONN_TYPE_DIR:
       tor_assert(conn->magic == DIR_CONNECTION_MAGIC);
       mem = TO_DIR_CONN(conn);
+      memlen = sizeof(dir_connection_t);
       break;
     case CONN_TYPE_CONTROL:
       tor_assert(conn->magic == CONTROL_CONNECTION_MAGIC);
       mem = TO_CONTROL_CONN(conn);
+      memlen = sizeof(control_connection_t);
       break;
     default:
       tor_assert(conn->magic == BASE_CONNECTION_MAGIC);
       mem = conn;
+      memlen = sizeof(connection_t);
       break;
   }
 
@@ -331,6 +337,7 @@ _connection_free(connection_t *conn)
   if (CONN_IS_EDGE(conn)) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     tor_free(edge_conn->chosen_exit_name);
+    memset(edge_conn->socks_request, 0xcc, sizeof(socks_request_t));
     tor_free(edge_conn->socks_request);
   }
   if (conn->type == CONN_TYPE_CONTROL) {
@@ -365,7 +372,7 @@ _connection_free(connection_t *conn)
     connection_or_remove_from_identity_map(TO_OR_CONN(conn));
   }
 
-  memset(conn, 0xAA, sizeof(connection_t)); /* poison memory */
+  memset(conn, 0xAA, memlen); /* poison memory */
   tor_free(mem);
 }
 

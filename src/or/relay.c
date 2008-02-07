@@ -117,19 +117,14 @@ static int
 relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
                         int encrypt_mode)
 {
-  char out[CELL_PAYLOAD_SIZE]; /* 'in' must be this size too */
   int r;
-
-  if (encrypt_mode)
-    r = crypto_cipher_encrypt(cipher, out, in, CELL_PAYLOAD_SIZE);
-  else
-    r = crypto_cipher_decrypt(cipher, out, in, CELL_PAYLOAD_SIZE);
+  (void)encrypt_mode;
+  r = crypto_cipher_crypt_inplace(cipher, in, CELL_PAYLOAD_SIZE);
 
   if (r) {
     log_warn(LD_BUG,"Error during relay encryption");
     return -1;
   }
-  memcpy(in,out,CELL_PAYLOAD_SIZE);
   return 0;
 }
 

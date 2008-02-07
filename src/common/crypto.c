@@ -380,6 +380,7 @@ crypto_free_cipher_env(crypto_cipher_env_t *env)
 
   tor_assert(env->cipher);
   aes_free_cipher(env->cipher);
+  memset(env, 0, sizeof(crypto_cipher_env_t));
   tor_free(env);
 }
 
@@ -775,10 +776,13 @@ int
 crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to,
                               const char *from, size_t fromlen)
 {
+  int r;
   char digest[DIGEST_LEN];
   if (crypto_digest(digest,from,fromlen)<0)
     return -1;
-  return crypto_pk_private_sign(env,to,digest,DIGEST_LEN);
+  r = crypto_pk_private_sign(env,to,digest,DIGEST_LEN);
+  memset(digest, 0, sizeof(digest));
+  return r;
 }
 
 /** Perform a hybrid (public/secret) encryption on <b>fromlen</b>
@@ -1156,6 +1160,16 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
   return 0;
 }
 
+/** Encrypt <b>len</b> bytes on <b>from</b> using the cipher in <b>env</b>;
+ * on success, return 0.  On failure, return -1.
+ */
+int
+crypto_cipher_crypt_inplace(crypto_cipher_env_t *env, char *buf, size_t len)
+{
+  aes_crypt_inplace(env->cipher, buf, len);
+  return 0;
+}
+
 /** Encrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the key in
  * <b>cipher</b> to the buffer in <b>to</b> of length
  * <b>tolen</b>. <b>tolen</b> must be at least <b>fromlen</b> plus
@@ -1250,6 +1264,7 @@ crypto_new_digest_env(void)
 void
 crypto_free_digest_env(crypto_digest_env_t *digest)
 {
+  memset(digest, 0, sizeof(crypto_digest_env_t));
   tor_free(digest);
 }
 
@@ -1286,6 +1301,7 @@ crypto_digest_get_digest(crypto_digest_env_t *digest,
   memcpy(&tmpctx, &digest->d, sizeof(SHA_CTX));
   SHA1_Final(r, &tmpctx);
   memcpy(out, r, out_len);
+  memset(r, 0, sizeof(r));
 }
 
 /** Allocate and return a new digest object with the same state as
@@ -1588,11 +1604,13 @@ crypto_expand_key_material(const char *key_in, size_t key_in_len,
   }
   memset(tmp, 0, key_in_len+1);
   tor_free(tmp);
+  memset(digest, 0, sizeof(digest));
   return 0;
 
  err:
   memset(tmp, 0, key_in_len+1);
   tor_free(tmp);
+  memset(digest, 0, sizeof(digest));
   return -1;
 }
 
@@ -1668,6 +1686,7 @@ crypto_seed_rng(void)
     return rand_poll_status ? 0 : -1;
   }
   RAND_seed(buf, sizeof(buf));
+  memset(buf, 0, sizeof(buf));
   return 0;
 #else
   for (i = 0; filenames[i]; ++i) {
@@ -1682,6 +1701,7 @@ crypto_seed_rng(void)
       return -1;
     }
     RAND_seed(buf, sizeof(buf));
+    memset(buf, 0, sizeof(buf));
     return 0;
   }
 
@@ -1863,7 +1883,6 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   ret += len;
   return ret;
 #else
-  #define ACC32
   const char *eos = src+srclen;
   uint32_t n=0;
   int n_idx=0;
@@ -2056,6 +2075,7 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     }
   }
 
+  memset(tmp, 0, srclen);
   tor_free(tmp);
   tmp = NULL;
   return 0;
@@ -2099,6 +2119,7 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
     }
   }
   crypto_digest_get_digest(d, key_out, key_out_len);
+  memset(tmp, 0, 8+secret_len);
   tor_free(tmp);
   crypto_free_digest_env(d);
 }

@@ -166,7 +166,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
                   crypto_dh_env_t **handshake_state_out,
                   char *onion_skin_out) /* ONIONSKIN_CHALLENGE_LEN bytes */
 {
-  char *challenge = NULL;
+  char challenge[DH_KEY_LEN];
   crypto_dh_env_t *dh = NULL;
   int dhbytes, pkbytes;
 
@@ -183,7 +183,6 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   pkbytes = crypto_pk_keysize(dest_router_key);
   tor_assert(dhbytes == 128);
   tor_assert(pkbytes == 128);
-  challenge = tor_malloc_zero(DH_KEY_LEN);
 
   if (crypto_dh_get_public(dh, challenge, dhbytes))
     goto err;
@@ -211,12 +210,12 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
                                       PK_PKCS1_OAEP_PADDING, 1)<0)
     goto err;
 
-  tor_free(challenge);
+  memset(challenge, 0, sizeof(challenge));
   *handshake_state_out = dh;
 
   return 0;
  err:
-  tor_free(challenge);
+  memset(challenge, 0, sizeof(challenge));
   if (dh) crypto_dh_free(dh);
   return -1;
 }
@@ -238,6 +237,7 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
   crypto_dh_env_t *dh = NULL;
   int len;
   char *key_material=NULL;
+  size_t key_material_len=0;
   int i;
   crypto_pk_env_t *k;
 
@@ -277,9 +277,10 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
   puts("");
 #endif
 
-  key_material = tor_malloc(DIGEST_LEN+key_out_len);
+  key_material_len = DIGEST_LEN+key_out_len;
+  key_material = tor_malloc(key_material_len);
   len = crypto_dh_compute_secret(dh, challenge, DH_KEY_LEN,
-                                 key_material, DIGEST_LEN+key_out_len);
+                                 key_material, key_material_len);
   if (len < 0) {
     log_info(LD_GENERAL, "crypto_dh_compute_secret failed.");
     goto err;
@@ -300,11 +301,17 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
   puts("");
 #endif
 
+  memset(challenge, 0, sizeof(challenge));
+  memset(key_material, 0, key_material_len);
   tor_free(key_material);
   crypto_dh_free(dh);
   return 0;
  err:
-  tor_free(key_material);
+  memset(challenge, 0, sizeof(challenge));
+  if (key_material) {
+    memset(key_material, 0, key_material_len);
+    tor_free(key_material);
+  }
   if (dh) crypto_dh_free(dh);
 
   return -1;
@@ -327,6 +334,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 {
   int len;
   char *key_material=NULL;
+  size_t key_material_len;
   tor_assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
 
 #ifdef DEBUG_ONION_SKINS
@@ -337,13 +345,14 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   puts("");
 #endif
 
-  key_material = tor_malloc(20+key_out_len);
+  key_material_len = DIGEST_LEN + key_out_len;
+  key_material = tor_malloc(key_material_len);
   len = crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
-                                 key_material, 20+key_out_len);
+                                 key_material, key_material_len);
   if (len < 0)
     goto err;
 
-  if (memcmp(key_material, handshake_reply+DH_KEY_LEN, 20)) {
+  if (memcmp(key_material, handshake_reply+DH_KEY_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
     log_warn(LD_PROTOCOL,"Digest DOES NOT MATCH on onion handshake. "
              "Bug or attack.");
@@ -351,7 +360,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   }
 
   /* use the rest of the key material for our shared keys, digests, etc */
-  memcpy(key_out, key_material+20, key_out_len);
+  memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
 
 #ifdef DEBUG_ONION_SKINS
   printf("Client: keys out:");
@@ -359,9 +368,11 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   puts("");
 #endif
 
+  memset(key_material, 0, key_material_len);
   tor_free(key_material);
   return 0;
  err:
+  memset(key_material, 0, key_material_len);
   tor_free(key_material);
   return -1;
 }
@@ -380,8 +391,9 @@ fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
                       size_t key_out_len)
 {
   char tmp[DIGEST_LEN+DIGEST_LEN];
-  char *out;
+  char *out = NULL;
   size_t out_len;
+  int r = -1;
 
   if (crypto_rand(handshake_reply_out, DIGEST_LEN)<0)
     return -1;
@@ -391,15 +403,16 @@ fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
   out_len = key_out_len+DIGEST_LEN;
   out = tor_malloc(out_len);
   if (crypto_expand_key_material(tmp, sizeof(tmp), out, out_len)) {
-    tor_free(out);
-    return -1;
+    goto done;
   }
   memcpy(handshake_reply_out+DIGEST_LEN, out, DIGEST_LEN);
   memcpy(key_out, out+DIGEST_LEN, key_out_len);
+  r = 0;
+ done:
   memset(tmp, 0, sizeof(tmp));
   memset(out, 0, out_len);
   tor_free(out);
-  return 0;
+  return r;
 }
 
 /** Implement the second half of the client side of the CREATE_FAST handshake.
@@ -423,27 +436,28 @@ fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
   char tmp[DIGEST_LEN+DIGEST_LEN];
   char *out;
   size_t out_len;
+  int r;
 
   memcpy(tmp, handshake_state, DIGEST_LEN);
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
   out_len = key_out_len+DIGEST_LEN;
   out = tor_malloc(out_len);
   if (crypto_expand_key_material(tmp, sizeof(tmp), out, out_len)) {
-    tor_free(out);
-    return -1;
+    goto done;
   }
   if (memcmp(out, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
     log_warn(LD_PROTOCOL,"Digest DOES NOT MATCH on fast handshake. "
              "Bug or attack.");
-    tor_free(out);
-    return -1;
+    goto done;
   }
   memcpy(key_out, out+DIGEST_LEN, key_out_len);
+  r = 0;
+ done:
   memset(tmp, 0, sizeof(tmp));
   memset(out, 0, out_len);
   tor_free(out);
-  return 0;
+  return r;
 }
 
 /** Remove all circuits from the pending list.  Called from tor_free_all. */

@@ -13,6 +13,10 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
     - Give more descriptive well-formedness errors for out-of-range
       hidden service descriptor/protocol versions.
 
+  o Minor features (security):
+    - Be slightly more paranoid about overwriting sensitive memory on free,
+      as a defensive programming tactic to ensure forward secrecy.
+
   o Deprecated features (controller):
     - The status/version/num-versioning and status/version/num-concurring
       GETINFO options are no longer useful in the V3 directory protocol:
@@ -59,6 +63,8 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
       from a CREATE cell that we are waiting for a cpuworker to be
       assigned" and "onionskin from an EXTEND cell that we are going to
       send to an OR as soon as we are connected".
+    - Add an in-place version of aes_crypt so that we can avoid doing a
+      needless memcpy() call on each cell payload.
 
 
 Changes in version 0.2.0.18-alpha - 2008-01-25
