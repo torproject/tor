@@ -2093,7 +2093,7 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 {
   crypto_digest_env_t *d;
   uint8_t c;
-  size_t count;
+  size_t count, tmplen;
   char *tmp;
   tor_assert(key_out_len < SIZE_T_CEILING);
 
@@ -2105,7 +2105,8 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
   tor_assert(key_out_len <= DIGEST_LEN);
 
   d = crypto_new_digest_env();
-  tmp = tor_malloc(8+secret_len);
+  tmplen = 8+secret_len;
+  tmp = tor_malloc(tmplen);
   memcpy(tmp,s2k_specifier,8);
   memcpy(tmp+8,secret,secret_len);
   secret_len += 8;
@@ -2119,7 +2120,7 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
     }
   }
   crypto_digest_get_digest(d, key_out, key_out_len);
-  memset(tmp, 0, 8+secret_len);
+  memset(tmp, 0, tmplen);
   tor_free(tmp);
   crypto_free_digest_env(d);
 }
