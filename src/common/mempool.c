@@ -1,4 +1,4 @@
-/* Copyright (c) 2007, The Tor Project, Inc. */
+/* Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 /* $Id$ */
 #if 1

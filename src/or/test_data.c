@@ -1,6 +1,6 @@
 /* Copyright 2001-2004 Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007, The Tor Project, Inc. */
+ * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 /* $Id: /tor/trunk/src/or/test.c 13338 2007-06-10T19:13:32.101740Z nickm  $ */
 const char test_data_c_id[] =

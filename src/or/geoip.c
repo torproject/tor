@@ -1,4 +1,4 @@
-/* Copyright (c) 2007, The Tor Project, Inc. */
+/* Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 /* $Id: /tor/trunk/src/or/networkstatus.c 15493 2007-12-16T18:33:25.055570Z nickm  $ */
 const char geoip_c_id[] =
