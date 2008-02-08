@@ -784,7 +784,9 @@ networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
 }
 
 /*XXXX make this static once functions are moved into this file. */
-/** DOCDOC */
+/** Search the routerstatuses in <b>ns</b> for one whose identity digest is
+ * <b>digest</b>.  Return value and set *<b>found_out</b> as for
+ * smartlist_besearch_idx(). */
 int
 networkstatus_vote_find_entry_idx(networkstatus_t *ns,
                                   const char *digest, int *found_out)
@@ -944,7 +946,8 @@ networkstatus_get_router_digest_by_nickname(const char *nickname)
   return strmap_get_lc(named_server_map, nickname);
 }
 
-/** DOCDOC */
+/** Return true iff <b>nickname</b> is disallowed from being the nickname
+ * of any server. */
 int
 networkstatus_nickname_is_unnamed(const char *nickname)
 {
@@ -1020,9 +1023,10 @@ update_v2_networkstatus_cache_downloads(time_t now)
   }
 }
 
-/**DOCDOC*/
+/** How many times will we try to fetch a consensus before we give up? */
 #define CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES 8
-/**DOCDOC*/
+/** How long will we hang onto a possibly live consensus for which we're
+ * fetching certs before we check whether there is a better one? */
 #define DELAY_WHILE_FETCHING_CERTS (20*60)
 
 /** If we want to download a fresh consensus, launch a new download as
@@ -1045,6 +1049,7 @@ update_consensus_networkstatus_downloads(time_t now)
     return; /* There's an in-progress download.*/
 
   if (consensus_waiting_for_certs) {
+    /* XXXX020 make sure this doesn't delay sane downloads. */
     if (consensus_waiting_for_certs_set_at + DELAY_WHILE_FETCHING_CERTS > now)
       return; /* We're still getting certs for this one. */
     else {
@@ -1070,7 +1075,8 @@ networkstatus_consensus_download_failed(int status_code)
   update_consensus_networkstatus_downloads(time(NULL));
 }
 
-/**DOCDOC*/
+/** How long do we (as a cache) wait after a consensus becomes non-fresh
+ * before trying to fetch another? */
 #define CONSENSUS_MIN_SECONDS_BEFORE_CACHING 120
 
 /** Update the time at which we'll consider replacing the current
@@ -1160,7 +1166,8 @@ update_networkstatus_downloads(time_t now)
   update_certificate_downloads(now);
 }
 
-/**DOCDOC */
+/** Launch requests as appropriate for missing directory authority
+ * certificates. */
 void
 update_certificate_downloads(time_t now)
 {
@@ -1206,7 +1213,8 @@ networkstatus_get_live_consensus(time_t now)
 /* XXXX020 remove this in favor of get_live_consensus. But actually,
  * leave something like it for bridge users, who need to not totally
  * lose if they spend a while fetching a new consensus. */
-/** DOCDOC */
+/** As networkstatus_get_live_consensus(), but is way more tolerant of expired
+ * consensuses. */
 networkstatus_t *
 networkstatus_get_reasonably_live_consensus(time_t now)
 {
@@ -1751,7 +1759,8 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   router_dir_info_changed();
 }
 
-/**DOCDOC*/
+/** Given a list of signed_descriptor_t, update their fields (mainly, when
+ * they were last listed) from the most recent consensus. */
 void
 signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
 {

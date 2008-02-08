@@ -727,7 +727,12 @@ flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
   }
 }
 
-/** DOCDOC */
+/** Helper for flush_buf_tls(): try to write <b>sz</b> bytes from chunk
+ * <b>chunk</b> of buffer <b>buf</b> onto socket <b>s</b>.  (Tries to write
+ * more if there is a forced pending write size.)  On success, deduct the
+ * bytes written from *<b>buf_flushlen</b>.  Return the number of bytes
+ * written on success, and a TOR_TLS error code on failue or blocking.
+ */
 static INLINE int
 flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
                 size_t sz, size_t *buf_flushlen)
@@ -799,8 +804,8 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
   return flushed;
 }
 
-/** As flush_buf(), but writes data to a TLS connection.
- * DOCDOC can write more than flushlen bytes.
+/** As flush_buf(), but writes data to a TLS connection.  Can write more than
+ * <b>flushlen</b> bytes.
  */
 int
 flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen,
@@ -918,15 +923,26 @@ fetch_from_buf(char *string, size_t string_len, buf_t *buf)
   return buf->datalen;
 }
 
-/** DOCDOC Returns 0 on "not a var-length cell."; 1 whether it's all here
- * yet or not. */
+/** Check <b>buf</b> for a variable-length cell according to the rules of link
+ * protocol version <b>linkproto</b>.  If one is found, pull it off the buffer
+ * and assign a newly allocated var_cell_t to *<b>out</b>, and return 1.
+ * Return 0 if whatever is on the start of buf_t is not a variable-length
+ * cell.  Return 1 and set *<b>out</b> to NULL if there seems to be the start
+ * of a variable-length cell on <b>buf</b>, but the whole thing isn't there
+ * yet. */
 int
-fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out)
+fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
 {
   char hdr[VAR_CELL_HEADER_SIZE];
   var_cell_t *result;
   uint8_t command;
   uint16_t length;
+  /* If linkproto is unknown (0) or v2 (2), variable-length cells work as
+   * implemented here. If it's 1, there are no variable-length cells.  Tor
+   * does not support other versions right now, and so can't negotiate them.
+   */
+  if (linkproto == 1)
+    return 0;
   check();
   *out = NULL;
   if (buf->datalen < VAR_CELL_HEADER_SIZE)

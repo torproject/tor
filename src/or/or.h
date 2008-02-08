@@ -245,14 +245,17 @@ typedef enum {
 #define OR_CONN_STATE_PROXY_FLUSHING 2
 /** State for a connection to an OR: waiting for proxy response. */
 #define OR_CONN_STATE_PROXY_READING 3
-/** State for a connection to an OR: SSL is handshaking, not done yet. */
+/** State for a connection to an OR or client: SSL is handshaking, not done
+ * yet. */
 #define OR_CONN_STATE_TLS_HANDSHAKING 4
-/** DOCDOC */
+/** State for a connection to an OR: We're doing a second SSL handshake for
+ * renegotiation purposes. */
 #define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 5
-/** DOCDOC */
+/** State for a connection at an OR: We're waiting for the client to
+ * renegotiate. */
 #define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 6
 /** State for a connection to an OR: We're done with our SSL handshake, but we
- * haven't yet negotiated link protocol versions and finished authenticating.
+ * haven't yet negotiated link protocol versions and sent a netinfo cell.
  */
 #define OR_CONN_STATE_OR_HANDSHAKING 7
 /** State for a connection to an OR: Ready to send/receive cells. */
@@ -2457,7 +2460,7 @@ int write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
                       const char *data, size_t data_len, int done);
 int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
-int fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out);
+int fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto);
 int fetch_from_buf_http(buf_t *buf,
                         char **headers_out, size_t max_headerlen,
                         char **body_out, size_t *body_used, size_t max_bodylen,

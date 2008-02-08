@@ -1994,8 +1994,6 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
  * and call connection_ap_handshake_attach_circuit(conn) on it.
  *
  * Return the other end of the linked connection pair, or -1 if error.
- *
- * DOCDOC start_reading
  */
 edge_connection_t *
 connection_ap_make_link(char *address, uint16_t port,
@@ -2051,7 +2049,9 @@ connection_ap_make_link(char *address, uint16_t port,
   return conn;
 }
 
-/** DOCDOC */
+/** Notify any interested controller connections about a new hostname resolve
+ * or resolve error.  Takes the same arguments as does
+ * connection_ap_handshake_socks_resolved(). */
 static void
 tell_controller_about_resolved_result(edge_connection_t *conn,
                                       int answer_type,
@@ -2088,7 +2088,7 @@ tell_controller_about_resolved_result(edge_connection_t *conn,
  * via SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6|HOSTNAME) or
  * -1 for unreachable; the answer should be in the format specified
  * in the socks extensions document.
- * DOCDOC expires
+ * DOCDOC ttl expires
  **/
 void
 connection_ap_handshake_socks_resolved(edge_connection_t *conn,

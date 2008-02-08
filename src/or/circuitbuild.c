@@ -2822,7 +2822,7 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   return 0;
 }
 
-/** DOCDOC */
+/** DOCDOC arma */
 typedef struct {
   uint32_t addr;
   uint16_t port;

@@ -152,7 +152,8 @@ cell_unpack(cell_t *dest, const char *src)
   memcpy(dest->payload, src+3, CELL_PAYLOAD_SIZE);
 }
 
-/** DOCDOC */
+/** Write the header of <b>cell</b> into the first VAR_CELL_HEADER_SIZE
+ * bytes of <b>hdr_out</b>. */
 void
 var_cell_pack_header(const var_cell_t *cell, char *hdr_out)
 {
@@ -161,7 +162,8 @@ var_cell_pack_header(const var_cell_t *cell, char *hdr_out)
   set_uint16(hdr_out+3, htons(cell->payload_len));
 }
 
-/* DOCDOC*/
+/** Allocate and return a new var_cell_t with <b>payload_len</b> bytes of
+ * payload space. */
 var_cell_t *
 var_cell_new(uint16_t payload_len)
 {
@@ -172,7 +174,7 @@ var_cell_new(uint16_t payload_len)
   return cell;
 }
 
-/** DOCDOC */
+/** Release all space held by <b>cell</b> */
 void
 var_cell_free(var_cell_t *cell)
 {
@@ -579,12 +581,16 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
   return 0;
 }
 
-/*DOCDOC*/
+/** Invoked on the server side from inside tor_tls_read() when the server
+ * gets a successful TLS renegotiation from the client. */
 static void
 connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
 {
   or_connection_t *conn = _conn;
   (void)tls;
+
+  /* Don't invoke this again. */
+  tor_tls_set_renegotiate_callback(tls, NULL, NULL);
 
   if (connection_tls_finish_handshake(conn) < 0) {
     /* XXXX_TLS double-check that it's ok to do this from inside read. */
@@ -937,7 +943,10 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
     conn->timestamp_last_added_nonpadding = time(NULL);
 }
 
-/**DOCDOC*/
+/** Pack a variable-length <b>cell</b> into wire-format, and write it onto
+ * <b>conn</b>'s outbuf.  Right now, this <em>DOES NOT</em> support cells that
+ * affect a circuit.
+ */
 void
 connection_or_write_var_cell_to_buf(const var_cell_t *cell,
                                     or_connection_t *conn)
@@ -952,11 +961,12 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
     conn->timestamp_last_added_nonpadding = time(NULL);
 }
 
-/** DOCDOC */
+/** See whether there's a variable-length cell waiting on <b>conn</b>'s
+ * inbuf.  Return values as for fetch_var_cell_from_buf(). */
 static int
 connection_fetch_var_cell_from_buf(or_connection_t *conn, var_cell_t **out)
 {
-  return fetch_var_cell_from_buf(conn->_base.inbuf, out);
+  return fetch_var_cell_from_buf(conn->_base.inbuf, out, conn->link_proto);
 }
 
 /** Process cells from <b>conn</b>'s inbuf.
@@ -1026,12 +1036,14 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
   return 0;
 }
 
-/**DOCDOC*/
+/** Array of recognized link protocol versions. */
 static const uint16_t or_protocol_versions[] = { 1, 2 };
+/** Number of versions in <b>or_protocol_versions</b>. */
 static const int n_or_protocol_versions =
   sizeof(or_protocol_versions)/sizeof(uint16_t);
 
-/**DOCDOC*/
+/** Return true iff <b>v</b> is a link protocol version that this Tor
+ * implementation believes it can support. */
 int
 is_or_protocol_version_known(uint16_t v)
 {
@@ -1043,7 +1055,8 @@ is_or_protocol_version_known(uint16_t v)
   return 0;
 }
 
-/** DOCDOC */
+/** Send a VERSIONS cell on <b>conn</b>, telling the other host about the
+ * link protocol versions that this Tor can support. */
 static int
 connection_or_send_versions(or_connection_t *conn)
 {
@@ -1065,7 +1078,8 @@ connection_or_send_versions(or_connection_t *conn)
   return 0;
 }
 
-/** DOCDOC */
+/** Send a NETINFO cell on <b>conn</b>, telling the other server what we know
+ * about their address, our address, and the current time. */
 int
 connection_or_send_netinfo(or_connection_t *conn)
 {
