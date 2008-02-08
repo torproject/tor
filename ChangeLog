@@ -61,6 +61,9 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
       script, on fedora or redhat machines. Bugfix on 0.2.0.x.
     - Do not become confused when receiving a spurious VERSIONS-like
       cell from a confused v1 client.  Bugfix on 0.2.0.x.
+    - Re-fetch v2 (as well as v0) rend descriptors when all intro points for
+      a hidden service have failed.  Patch from Karsten Loesing.  Bugfix on
+      0.2.0.x.
 
   o Code simplifications and refactoring:
     - Remove some needless generality from cpuworker code, for improved

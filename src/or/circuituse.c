@@ -1027,6 +1027,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
                  "No intro points for '%s': refetching service descriptor.",
                  safe_str(conn->rend_query));
         rend_client_refetch_renddesc(conn->rend_query);
+        rend_client_refetch_v2_renddesc(conn->rend_query);
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
