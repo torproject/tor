@@ -118,8 +118,9 @@ command_process_cell(cell_t *cell, or_connection_t *conn)
 #define PROCESS_CELL(tp, cl, cn) command_process_ ## tp ## _cell(cl, cn)
 #endif
 
-  /* Reject all but VERSIONS when handshaking. */
-  if (handshaking && cell->command != CELL_VERSIONS)
+  /* Reject all but VERSIONS and NETINFO when handshaking. */
+  if (handshaking && cell->command != CELL_VERSIONS &&
+      cell->command != CELL_NETINFO)
     return;
 
   switch (cell->command) {
@@ -476,7 +477,8 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
-  // log_notice(LD_OR, "Negotiated version %d", highest_supported_version);
+  log_info(LD_OR, "Negotiated version %d with %s",
+           highest_supported_version, safe_str(conn->_base.address));
 
   if (highest_supported_version >= 2) {
     if (connection_or_send_netinfo(conn) < 0) {
@@ -500,6 +502,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   const char *cp, *end;
   uint8_t n_other_addrs;
   time_t now = time(NULL);
+
   if (conn->link_proto < 2) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a NETINFO cell on %s connection; dropping.",
@@ -562,5 +565,16 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   }
 
   conn->handshake_state->received_netinfo = 1;
+
+  if (conn->handshake_state->apparently_canonical) {
+    conn->is_canonical = 1;
+  }
+  if (connection_or_act_on_netinfo(conn)<0 ||
+      connection_or_set_state_open(conn)<0)
+    connection_mark_for_close(TO_CONN(conn));
+
+  log_info(LD_OR, "Got good NETINFO cell from %s",
+           safe_str(conn->_base.address));
+  assert_connection_ok(TO_CONN(conn),time(NULL));
 }
 

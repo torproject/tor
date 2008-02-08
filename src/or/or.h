@@ -892,9 +892,9 @@ typedef struct or_handshake_state_t {
   time_t sent_versions_at;
   unsigned int started_here : 1;
   unsigned int received_versions : 1;
-  unsigned int received_netinfo : 1;
 
-  /* from netinfo */
+  /* from netinfo: XXXX020 totally useless. */
+  unsigned int received_netinfo : 1;
   long apparent_skew;
   uint32_t my_apparent_addr;
   unsigned int apparently_canonical;

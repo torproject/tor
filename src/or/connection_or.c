@@ -597,12 +597,6 @@ connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn)
     /* XXXX_TLS double-check that this verifies certificates. */
     connection_mark_for_close(TO_CONN(conn));
   }
-
-#if 0
-  /* XXXX_TLS this happens later, right? */
-  connection_or_init_conn_from_address(conn, conn->_base.addr,
-                                       conn->_base.port, id_digest, 0);
-#endif
 }
 
 /** Move forward with the tls handshake. If it finishes, hand
@@ -806,31 +800,6 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   return 0;
 }
 
-#if 0
-/** DOCDOC */
-int
-connection_or_finish_or_handshake(or_connection_t *conn)
-{
-  char id_digest[DIGEST_LEN];
-  tor_assert(conn);
-  tor_assert(conn->handshake_state);
-  tor_assert(conn->link_proto >= 2);
-  tor_assert(conn->handshake_state->received_versions != 0);
-  tor_assert(conn->handshake_state->received_netinfo != 0);
-  tor_assert(conn->handshake_state->received_certs != 0);
-
-  if (connection_or_check_valid_tls_handshake(conn,
-                                  conn->handshake_state->started_here,
-                                              id_digest) < 0)
-    return -1;
-  connection_or_init_conn_from_address(conn, conn->_base.addr,
-                                       conn->_base.port, id_digest, 0);
-  if (connection_or_act_on_netinfo(conn)<0)
-    return -1;
-  return connection_or_set_state_open(conn);
-}
-#endif
-
 /** The tls handshake is finished.
  *
  * Make sure we are happy with the person we just handshaked with.
@@ -868,6 +837,10 @@ connection_tls_finish_handshake(or_connection_t *conn)
     conn->_base.state = OR_CONN_STATE_OR_HANDSHAKING;
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
+    if (!started_here) {
+      connection_or_init_conn_from_address(conn,conn->_base.addr,
+                                           conn->_base.port, digest_rcvd, 0);
+    }
     return connection_or_send_versions(conn);
   }
 }
@@ -917,7 +890,7 @@ connection_or_set_state_open(or_connection_t *conn)
     or_handshake_state_free(conn->handshake_state);
     conn->handshake_state = NULL;
   }
-  connection_watch_events(TO_CONN(conn), EV_READ);
+  connection_start_reading(TO_CONN(conn));
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
 
   return 0;
@@ -1117,6 +1090,7 @@ int
 connection_or_act_on_netinfo(or_connection_t *conn)
 {
   long delta;
+  /*XXXX020 merge this into handle_netinfo.*/
   if (!conn->handshake_state)
     return -1;
 
@@ -1142,12 +1116,10 @@ connection_or_act_on_netinfo(or_connection_t *conn)
                                  delta, conn->_base.address, conn->_base.port);
   }
 
-  /* XXX020 possibly, learn my address from my_apparent_addr */
-
-  if (conn->handshake_state->apparently_canonical) {
+  if (conn->handshake_state->apparently_canonical)
     conn->is_canonical = 1;
-  }
 
+  /* XXX020 possibly, learn my address from my_apparent_addr */
   return 0;
 }
 
