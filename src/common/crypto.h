@@ -171,6 +171,9 @@ int crypto_rand(char *to, size_t n);
 int crypto_rand_int(unsigned int max);
 uint64_t crypto_rand_uint64(uint64_t max);
 
+char *crypto_random_hostname(int min_rand_len, int max_rand_len,
+                             const char *prefix, const char *suffix);
+
 struct smartlist_t;
 void *smartlist_choose(const struct smartlist_t *sl);
 void smartlist_shuffle(struct smartlist_t *sl);

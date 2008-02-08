@@ -75,6 +75,7 @@ N - Before the feature freeze:
           cert, they adust the client ID.
           o Detect.
           o Adjust.
+        o Better cname and organizationName generation.
       . New revised handshake: post-TLS:
         o start by sending VERSIONS cells
         o once we have a version, send a netinfo and become open

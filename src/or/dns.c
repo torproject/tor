@@ -1418,22 +1418,14 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
 static void
 launch_wildcard_check(int min_len, int max_len, const char *suffix)
 {
-  char random_bytes[20], name[64], *addr;
-  size_t len;
+  char *addr;
   int r;
 
-  len = min_len + crypto_rand_int(max_len-min_len+1);
-  if (crypto_rand(random_bytes, sizeof(random_bytes)) < 0)
-    return;
-  base32_encode(name, sizeof(name), random_bytes, sizeof(random_bytes));
-  name[len] = '\0';
-  strlcat(name, suffix, sizeof(name));
-
+  addr = crypto_random_hostname(min_len, max_len, "", suffix);
   log_info(LD_EXIT, "Testing whether our DNS server is hijacking nonexistent "
-           "domains with request for bogus hostname \"%s\"", name);
+           "domains with request for bogus hostname \"%s\"", addr);
 
-  addr = tor_strdup(name);
-  r = evdns_resolve_ipv4(name, DNS_QUERY_NO_SEARCH,
+  r = evdns_resolve_ipv4(addr, DNS_QUERY_NO_SEARCH,
                          evdns_wildcard_check_callback, addr);
   if (r)
     tor_free(addr);

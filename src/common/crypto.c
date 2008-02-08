@@ -1768,6 +1768,37 @@ crypto_rand_uint64(uint64_t max)
   }
 }
 
+/** Generate and return a new random hostname starting with prefix, ending
+ * with suffix, and containing between min_rand_len and max_rand_len random
+ * base32 characters between. */
+char *
+crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
+                       const char *suffix)
+{
+  char *result, *rand_bytes;
+  int randlen, resultlen, rand_bytes_len, prefixlen;
+
+  tor_assert(max_rand_len >= min_rand_len);
+  randlen = min_rand_len + crypto_rand_int(max_rand_len - min_rand_len + 1);
+  prefixlen = strlen(prefix);
+  resultlen = prefixlen + strlen(suffix) + randlen + 16;
+
+  rand_bytes_len = ((randlen*5)+7)/8;
+  if (rand_bytes_len % 5)
+    rand_bytes_len += 5 - (rand_bytes_len%5);
+  rand_bytes = tor_malloc(rand_bytes_len);
+  crypto_rand(rand_bytes, rand_bytes_len);
+
+  result = tor_malloc(resultlen);
+  memcpy(result, prefix, prefixlen);
+  base32_encode(result+prefixlen, resultlen-prefixlen,
+                rand_bytes, rand_bytes_len);
+  tor_free(rand_bytes);
+  strlcpy(result+prefixlen+randlen, suffix, resultlen-(prefixlen+randlen));
+
+  return result;
+}
+
 /** Return a randomly chosen element of sl; or NULL if sl is empty.
  */
 void *

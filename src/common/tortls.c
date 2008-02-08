@@ -322,6 +322,24 @@ always_accept_verify_cb(int preverify_ok,
   return 1;
 }
 
+/** Return a newly allocated X509 name with commonName <b>cname</b> */
+static X509_NAME *
+tor_x509_name_new(const char *cname)
+{
+  int nid;
+  X509_NAME *name;
+  if (!(name = X509_NAME_new()))
+    return NULL;
+  if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
+  if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
+                                   (unsigned char*)cname, -1, -1, 0)))
+    goto error;
+  return name;
+ error:
+  X509_NAME_free(name);
+  return NULL;
+}
+
 /** Generate and sign an X509 certificate with the public key <b>rsa</b>,
  * signed by the private key <b>rsa_sign</b>.  The commonName of the
  * certificate will be <b>cname</b>; the commonName of the issuer will be
@@ -340,7 +358,6 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   EVP_PKEY *sign_pkey = NULL, *pkey=NULL;
   X509 *x509 = NULL;
   X509_NAME *name = NULL, *name_issuer=NULL;
-  int nid;
 
   tor_tls_init();
 
@@ -361,30 +378,11 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   if (!(ASN1_INTEGER_set(X509_get_serialNumber(x509), (long)start_time)))
     goto error;
 
-  if (!(name = X509_NAME_new()))
-    goto error;
-  if ((nid = OBJ_txt2nid("organizationName")) == NID_undef)
-    goto error;
-  if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   (unsigned char*)"t o r", -1, -1, 0)))
-    goto error;
-  if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
-  if (!(X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
-                                   (unsigned char*)cname, -1, -1, 0)))
+  if (!(name = tor_x509_name_new(cname)))
     goto error;
   if (!(X509_set_subject_name(x509, name)))
     goto error;
-
-  if (!(name_issuer = X509_NAME_new()))
-    goto error;
-  if ((nid = OBJ_txt2nid("organizationName")) == NID_undef)
-    goto error;
-  if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
-                                   (unsigned char*)"t o r", -1, -1, 0)))
-    goto error;
-  if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
-  if (!(X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
-                              (unsigned char*)cname_sign, -1, -1, 0)))
+  if (!(name_issuer = tor_x509_name_new(cname_sign)))
     goto error;
   if (!(X509_set_issuer_name(x509, name_issuer)))
     goto error;
@@ -509,20 +507,19 @@ tor_tls_context_incref(tor_tls_context_t *ctx)
  * the new SSL context.
  */
 int
-tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
-                    unsigned int key_lifetime)
+tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 {
   crypto_pk_env_t *rsa = NULL;
   crypto_dh_env_t *dh = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context_t *result = NULL;
   X509 *cert = NULL, *idcert = NULL;
-  char nn2[128];
-  if (!nickname)
-    nickname = "null";
-  tor_snprintf(nn2, sizeof(nn2), "%s <signing>", nickname);
+  char *nickname = NULL, *nn2 = NULL;
 
   tor_tls_init();
+  nickname = crypto_random_hostname(8, 20, "www.", ".net");
+  nn2 = crypto_random_hostname(8, 20, "www.", ".net");
+  log_notice(LD_NET, "<%s> <%s>", nickname, nn2);
 
   /* Generate short-term RSA key. */
   if (!(rsa = crypto_new_pk_env()))
@@ -594,10 +591,14 @@ tor_tls_context_new(crypto_pk_env_t *identity, const char *nickname,
   global_tls_context = result;
   if (rsa)
     crypto_free_pk_env(rsa);
+  tor_free(nickname);
+  tor_free(nn2);
   return 0;
 
  error:
   tls_log_errors(LOG_WARN, "creating TLS context");
+  tor_free(nickname);
+  tor_free(nn2);
   if (pkey)
     EVP_PKEY_free(pkey);
   if (rsa)

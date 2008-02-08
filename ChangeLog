@@ -18,6 +18,8 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
   o Minor features (security):
     - Be slightly more paranoid about overwriting sensitive memory on free,
       as a defensive programming tactic to ensure forward secrecy.
+    - Do not include recognizeable strings in the commonname part of
+      Tor's x509 certificates.
 
   o Deprecated features (controller):
     - The status/version/num-versioning and status/version/num-concurring
