@@ -436,7 +436,7 @@ fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
   char tmp[DIGEST_LEN+DIGEST_LEN];
   char *out;
   size_t out_len;
-  int r;
+  int r = -1;
 
   memcpy(tmp, handshake_state, DIGEST_LEN);
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
