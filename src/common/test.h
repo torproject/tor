@@ -23,15 +23,18 @@
 
 extern int have_failed;
 
-#define test_fail()                                             \
+#define test_fail_msg(msg)                                      \
   STMT_BEGIN                                                    \
     have_failed = 1;                                            \
-    printf("\nFile %s: line %d (%s): assertion failed.",        \
+    printf("\nFile %s: line %d (%s): %s",                       \
       _SHORT_FILE_,                                             \
       __LINE__,                                                 \
-      PRETTY_FUNCTION);                                         \
+      PRETTY_FUNCTION,                                          \
+      msg);                                                     \
     return;                                                     \
   STMT_END
+
+#define test_fail() test_fail_msg("Assertion failed.")
 
 #define test_assert(expr)                                       \
   STMT_BEGIN                                                    \

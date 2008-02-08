@@ -1042,6 +1042,7 @@ test_util(void)
   test_eq(round_to_power_of_2(0), 2);
 }
 
+/** DOCDOC */
 static void
 _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
              const char *e2, int line)
@@ -1076,69 +1077,66 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     fflush(stdout);
   }
 }
+/** DOCDOC */
 #define test_eq_ip6(a,b) _test_eq_ip6((a),(b),#a,#b,__LINE__)
 
-#define test_pton6_same(a,b) STMT_BEGIN          \
-    r = tor_inet_pton(AF_INET6, a, &a1);         \
-    test_assert(r==1);                           \
-    r = tor_inet_pton(AF_INET6, b, &a2);         \
-    test_assert(r==1);                           \
-    test_eq_ip6(&a1,&a2);                        \
+/** Helper: Assert that two strings both decode as IPv6 addresses with
+ * tor_inet_pton, and both decode to the same address. */
+#define test_pton6_same(a,b) STMT_BEGIN                \
+     test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);      \
+     test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);      \
+    _test_eq_ip6(&a1,&a2,#a,#b,__LINE__);              \
   STMT_END
 
+/** Helper: Assert that <b>a</b> is recognized as a bed IPv6 address by
+ * tor_inet_pton. */
 #define test_pton6_bad(a)                       \
   test_eq(0, tor_inet_pton(AF_INET6, a, &a1))
 
+/** Helper: assert that <b>a</b> when parsed by tor_inet_pton and displayed
+ * with tor_inet_ntop, yields <b>b</b>. Also assert that <b>b</b> parses to
+ * the same value as <b>a</b>. */
 #define test_ntop6_reduces(a,b) STMT_BEGIN                              \
-    r = tor_inet_pton(AF_INET6, a, &a1);                                \
-    test_assert(r==1);                                                  \
+    test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);                        \
     test_streq(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), b);      \
-    r = tor_inet_pton(AF_INET6, b, &a2);                                \
-    test_assert(r==1);                                                  \
-    test_eq_ip6(&a1, &a2);                                              \
+    test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);                        \
+    _test_eq_ip6(&a1, &a2, a, b, __LINE__);                             \
   STMT_END
 
-/*XXXX020 make this macro give useful output on failure, and follow the
- * conventions of the other test macros.  */
-#define test_internal_ip(a,b) STMT_BEGIN             \
-    r = tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr); \
-    test_assert(r==1);                               \
-    t1.family = AF_INET6;                            \
-    r = tor_addr_is_internal(&t1, b);                \
-    test_assert(r==1);                               \
+/** Helper: assert that <b>a</a> parses by tor_inet_pton into a address that
+ * passes tor_addr_is_internal with for_listening */
+#define test_internal_ip(a,for_listening) STMT_BEGIN           \
+    test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
+    t1.family = AF_INET6;                                      \
+    if (!tor_addr_is_internal(&t1, for_listening))             \
+      test_fail_msg( a "was not internal.");                   \
   STMT_END
 
-/*XXXX020 make this macro give useful output on failure, and follow the
- * conventions of the other test macros.  */
-#define test_external_ip(a,b) STMT_BEGIN               \
-    r = tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr); \
-    test_assert(r==1);                                 \
-    t1.family = AF_INET6;                              \
-    r = tor_addr_is_internal(&t1, b);                  \
-    test_assert(r==0);                                 \
+/** Helper: assert that <b>a</a> parses by tor_inet_pton into a address that
+ * does not pass tor_addr_is_internal with for_listening. */
+#define test_external_ip(a,for_listening) STMT_BEGIN           \
+    test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
+    t1.family = AF_INET6;                                      \
+    if (tor_addr_is_internal(&t1, for_listening))              \
+      test_fail_msg(a  "was not external.");                   \
   STMT_END
 
-/*XXXX020 make this macro give useful output on failure, and follow the
- * conventions of the other test macros.  */
-#define test_addr_convert6(a,b) STMT_BEGIN           \
-    tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr);   \
-    tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr);   \
-    t1.family = AF_INET6;                            \
-    t2.family = AF_INET6;                            \
+/** Helper: Assert that a and b, when parsed by tor_inet_pton, give addresses
+ * that compare in the order defined by op with tor_addr_compare(). */
+#define test_addr_compare(a, op, b) STMT_BEGIN                    \
+    test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1);    \
+    test_eq(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), 1);    \
+    t1.family = t2.family = AF_INET6;                             \
+    r = tor_addr_compare(&t1,&t2);                                \
+    if (!(r op 0))                                                \
+      test_fail_msg("failed: tor_addr_compare("a","b") "#op" 0"); \
   STMT_END
 
-/*XXXX020 make this macro give useful output on failure, and follow the
- * conventions of the other test macros. */
-#define test_addr_parse(xx) STMT_BEGIN                                \
-    r=tor_addr_parse_mask_ports(xx, &t1, &mask, &port1, &port2);      \
-    t2.family = AF_INET6;                                             \
-    p1=tor_inet_ntop(AF_INET6, &t1.addr.in6_addr, bug, sizeof(bug));  \
-  STMT_END
-
-/*XXXX020 make this macro give useful output on failure, and follow the
- * conventions of the other test macros. */
-#define test_addr_parse_check(ip1, ip2, ip3, ip4, mm, pt1, pt2) STMT_BEGIN  \
-    test_assert(r>=0);                                     \
+/**DOCDOC*/
+#define test_addr_mask_ports_parse(xx, f, ip1, ip2, ip3, ip4, mm, pt1, pt2) \
+  STMT_BEGIN                                                                \
+    test_eq(tor_addr_parse_mask_ports(xx, &t1, &mask, &port1, &port2), f);  \
+    p1=tor_inet_ntop(AF_INET6, &t1.addr.in6_addr, bug, sizeof(bug));        \
     test_eq(htonl(ip1), IN6_ADDRESS32(&t1)[0]);            \
     test_eq(htonl(ip2), IN6_ADDRESS32(&t1)[1]);            \
     test_eq(htonl(ip3), IN6_ADDRESS32(&t1)[2]);            \
@@ -1280,16 +1278,11 @@ test_util_ip6_helpers(void)
   test_external_ip("::ffff:169.255.0.0", 0);
 
   /* tor_addr_compare(tor_addr_t x2) */
-  test_addr_convert6("ffff::", "ffff::0");
-  test_assert(tor_addr_compare(&t1, &t2) == 0);
-  test_addr_convert6("0::3:2:1", "0::ffff:0.3.2.1");
-  test_assert(tor_addr_compare(&t1, &t2) > 0);
-  test_addr_convert6("0::2:2:1", "0::ffff:0.3.2.1");
-  test_assert(tor_addr_compare(&t1, &t2) > 0);
-  test_addr_convert6("0::ffff:0.3.2.1", "0::0:0:0");
-  test_assert(tor_addr_compare(&t1, &t2) < 0);
-  test_addr_convert6("0::ffff:5.2.2.1", "::ffff:6.0.0.0");
-  test_assert(tor_addr_compare(&t1, &t2) < 0); /* XXXX wrong. */
+  test_addr_compare("ffff::", ==, "ffff::0");
+  test_addr_compare("0::3:2:1", >, "0::ffff:0.3.2.1");
+  test_addr_compare("0::2:2:1", >, "0::ffff:0.3.2.1");
+  test_addr_compare("0::ffff:0.3.2.1", <, "0::0:0:0");
+  test_addr_compare("0::ffff:5.2.2.1", <, "::ffff:6.0.0.0"); /* XXXX wrong. */
   tor_addr_parse_mask_ports("[::ffff:2.3.4.5]", &t1, NULL, NULL, NULL);
   tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);
   test_assert(tor_addr_compare(&t1, &t2) == 0);
@@ -1300,14 +1293,14 @@ test_util_ip6_helpers(void)
   /* XXXX020 test compare_masked */
 
   /* test tor_addr_parse_mask_ports */
-  test_addr_parse("[::f]/17:47-95");
-  test_addr_parse_check(0, 0, 0, 0x0000000f, 17, 47, 95);
+  test_addr_mask_ports_parse("[::f]/17:47-95", AF_INET6,
+                             0, 0, 0, 0x0000000f, 17, 47, 95);
   //test_addr_parse("[::fefe:4.1.1.7/120]:999-1000");
   //test_addr_parse_check("::fefe:401:107", 120, 999, 1000);
-  test_addr_parse("[::ffff:4.1.1.7]/120:443");
-  test_addr_parse_check(0, 0, 0x0000ffff, 0x04010107, 120, 443, 443);
-  test_addr_parse("[abcd:2::44a:0]:2-65000");
-  test_addr_parse_check(0xabcd0002, 0, 0, 0x044a0000, 128, 2, 65000);
+  test_addr_mask_ports_parse("[::ffff:4.1.1.7]/120:443", AF_INET6,
+                             0, 0, 0x0000ffff, 0x04010107, 120, 443, 443);
+  test_addr_mask_ports_parse("[abcd:2::44a:0]:2-65000", AF_INET6,
+                             0xabcd0002, 0, 0, 0x044a0000, 128, 2, 65000);
 
   r=tor_addr_parse_mask_ports("[fefef::]/112", &t1, NULL, NULL, NULL);
   test_assert(r == -1);
