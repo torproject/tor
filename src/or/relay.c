@@ -1538,7 +1538,7 @@ void
 clean_cell_pool(void)
 {
   tor_assert(cell_pool);
-  mp_pool_clean(cell_pool, -1);
+  mp_pool_clean(cell_pool, -1, 0);
 }
 
 /** Release storage held by <b>cell</b>. */

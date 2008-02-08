@@ -12,6 +12,8 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
       bandwidthburst values.
     - Give more descriptive well-formedness errors for out-of-range
       hidden service descriptor/protocol versions.
+    - Make memory debugging output describe more about history of cell
+      allocation.
 
   o Minor features (security):
     - Be slightly more paranoid about overwriting sensitive memory on free,

@@ -18,10 +18,12 @@ typedef struct mp_pool_t mp_pool_t;
 void *mp_pool_get(mp_pool_t *pool);
 void mp_pool_release(void *item);
 mp_pool_t *mp_pool_new(size_t item_size, size_t chunk_capacity);
-void mp_pool_clean(mp_pool_t *pool, int n);
+void mp_pool_clean(mp_pool_t *pool, int n_to_keep, int keep_recently_used);
 void mp_pool_destroy(mp_pool_t *pool);
 void mp_pool_assert_ok(mp_pool_t *pool);
 void mp_pool_log_status(mp_pool_t *pool, int severity);
+
+#define MEMPOOL_STATS
 
 #ifdef MEMPOOL_PRIVATE
 /* These declarations are only used by mempool.c and test.c */
@@ -47,6 +49,14 @@ struct mp_pool_t {
   /** Size to allocate for each item, including overhead and alignment
    * padding. */
   size_t item_alloc_size;
+#ifdef MEMPOOL_STATS
+  /** Total number of items allocated ever */
+  uint64_t total_items_allocated;
+  /** Total number of chunks allocated ever */
+  uint64_t total_chunks_allocated;
+  /** Total number of chunks freed ever */
+  uint64_t total_chunks_freed;
+#endif
 };
 #endif
 

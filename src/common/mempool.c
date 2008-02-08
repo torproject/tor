@@ -8,9 +8,11 @@
 
 #include <stdlib.h>
 #include <string.h>
-
+#include "torint.h"
 #define MEMPOOL_PRIVATE
 #include "mempool.h"
+
+//#define LAZY_CHUNK_SORT
 
 /* OVERVIEW:
  *
@@ -59,7 +61,6 @@
  *     if you need doubles.
  *   - Could probably be optimized a bit; the representation contains
  *     a bit more info than it really needs to have.
- *   - probably, chunks should always be a power of 2.
  */
 
 #if 1
@@ -174,6 +175,9 @@ mp_chunk_new(mp_pool_t *pool)
 #else
   mp_chunk_t *chunk = ALLOC(CHUNK_OVERHEAD + sz);
 #endif
+#ifdef MEMPOOL_STATS
+  ++pool->total_chunks_allocated;
+#endif
   CHECK_ALLOC(chunk);
   memset(chunk, 0, sizeof(mp_chunk_t)); /* Doesn't clear the whole thing. */
   chunk->magic = MP_CHUNK_MAGIC;
@@ -187,6 +191,17 @@ mp_chunk_new(mp_pool_t *pool)
   chunk->next_mem = chunk->mem;
   chunk->pool = pool;
   return chunk;
+}
+
+/** DOCDOC */
+static INLINE void
+add_newly_used_chunk_to_used_list(mp_pool_t *pool, mp_chunk_t *chunk)
+{
+  chunk->next = pool->used_chunks;
+  if (chunk->next)
+    chunk->next->prev = chunk;
+  pool->used_chunks = chunk;
+  ASSERT(!chunk->prev);
 }
 
 /** Return an newly allocated item from <b>pool</b>. */
@@ -214,10 +229,7 @@ mp_pool_get(mp_pool_t *pool)
       chunk->next->prev = NULL;
 
     /* Put the chunk on the 'used' list*/
-    chunk->next = pool->used_chunks;
-    if (chunk->next)
-      chunk->next->prev = chunk;
-    pool->used_chunks = chunk;
+    add_newly_used_chunk_to_used_list(pool, chunk);
 
     ASSERT(!chunk->prev);
     --pool->n_empty_chunks;
@@ -229,11 +241,7 @@ mp_pool_get(mp_pool_t *pool)
     CHECK_ALLOC(chunk);
 
     /* Add the new chunk to the used list. */
-    chunk->next = pool->used_chunks;
-    if (chunk->next)
-      chunk->next->prev = chunk;
-    pool->used_chunks = chunk;
-    ASSERT(!chunk->prev);
+    add_newly_used_chunk_to_used_list(pool, chunk);
   }
 
   ASSERT(chunk->n_allocated < chunk->capacity);
@@ -258,6 +266,9 @@ mp_pool_get(mp_pool_t *pool)
   }
 
   ++chunk->n_allocated;
+#ifdef MEMPOOL_STATS
+  ++pool->total_items_allocated;
+#endif
 
   if (PREDICT_UNLIKELY(chunk->n_allocated == chunk->capacity)) {
     /* This chunk just became full. */
@@ -275,7 +286,6 @@ mp_pool_get(mp_pool_t *pool)
       chunk->next->prev = chunk;
     pool->full_chunks = chunk;
   }
-
   /* And return the memory portion of the mp_allocated_t. */
   return A2M(allocated);
 }
@@ -393,43 +403,111 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
   return pool;
 }
 
+#ifdef LAZY_CHUNK_SORT
+/** DOCDOC */
+static int
+mp_pool_sort_used_chunks_helper(const void *_a, const void *_b)
+{
+  mp_chunk_t *a = *(mp_chunk_t**)_a;
+  mp_chunk_t *b = *(mp_chunk_t**)_b;
+  return b->n_allocated - a->n_allocated;
+}
+
+/** DOCDOC */
+static void
+mp_pool_sort_used_chunks(mp_pool_t *pool)
+{
+  int i, n=0, inverted=0;
+  mp_chunk_t **chunks, *chunk;
+  for (chunk = pool->used_chunks; chunk; chunk = chunk->next) {
+    ++n;
+    if (chunk->next && chunk->next->n_allocated > chunk->n_allocated)
+      ++inverted;
+  }
+  if (!inverted)
+    return;
+  ASSERT(n);
+  //printf("Sort %d/%d\n",inverted,n);
+  chunks = ALLOC(sizeof(mp_chunk_t *)*n);
+#ifdef ALLOC_CAN_RETURN_NULL
+  if (PREDICT_UNLIKELY(!chunks)) return;
+#endif
+  for (i=0,chunk = pool->used_chunks; chunk; chunk = chunk->next)
+    chunks[i++] = chunk;
+  qsort(chunks, n, sizeof(mp_chunk_t *), mp_pool_sort_used_chunks_helper);
+  pool->used_chunks = chunks[0];
+  chunks[0]->prev = NULL;
+  for (i=1;i<n;++i) {
+    chunks[i-1]->next = chunks[i];
+    chunks[i]->prev = chunks[i-1];
+  }
+  chunks[n-1]->next = NULL;
+  FREE(chunks);
+#if 0
+  inverted = 0;
+  for (chunk = pool->used_chunks; chunk; chunk = chunk->next) {
+    if (chunk->next) {
+      ASSERT(chunk->next->n_allocated <= chunk->n_allocated);
+    }
+  }
+#endif
+  mp_pool_assert_ok(pool);
+}
+#endif
+
 /** If there are more than <b>n</b> empty chunks in <b>pool</b>, free the
  * excess ones that have been empty for the longest.  (If <b>n</b> is less
  * than zero, free only empty chunks that were not used since the last
- * call to mp_pool_clean(), leaving only -<b>n</b>.) */
+ * call to mp_pool_clean(), leaving only -<b>n</b>.)
+ * DOCDOC Keep_recently_used, n_to_keep
+ * XXXX020 maybe dump negative n_to_keep behavior, if k_r_u turns out to be
+ *   smarter.
+ **/
 void
-mp_pool_clean(mp_pool_t *pool, int n)
+mp_pool_clean(mp_pool_t *pool, int n_to_keep, int keep_recently_used)
 {
-  /* XXXX020 this is stupid.  We shouldn't care about empty chunks if there
-   * is lots of space in used chunks. */
-
   mp_chunk_t *chunk, **first_to_free;
-  if (n < 0) {
+
+#ifdef LAZY_CHUNK_SORT
+  mp_pool_sort_used_chunks(pool);
+#endif
+
+  if (n_to_keep < 0) {
     /* As said in the documentation, "negative n" means "leave an additional
      * -n chunks". So replace n with a positive number. */
-    n = pool->min_empty_chunks + (-n);
-    if (n < pool->n_empty_chunks)
-      pool->min_empty_chunks = n;
+    n_to_keep = pool->min_empty_chunks + (-n_to_keep);
   }
-  ASSERT(n>=0);
+  if (keep_recently_used) {
+    int n_recently_used = pool->n_empty_chunks - pool->min_empty_chunks;
+    if (n_to_keep < n_recently_used)
+      n_to_keep = n_recently_used;
+  }
+
+  ASSERT(n_to_keep >= 0);
 
   first_to_free = &pool->empty_chunks;
-  while (*first_to_free && n > 0) {
+  while (*first_to_free && n_to_keep > 0) {
     first_to_free = &(*first_to_free)->next;
-    --n;
+    --n_to_keep;
   }
-  if (!*first_to_free)
+  if (!*first_to_free) {
+    pool->min_empty_chunks = pool->n_empty_chunks;
     return;
+  }
 
   chunk = *first_to_free;
   while (chunk) {
     mp_chunk_t *next = chunk->next;
     chunk->magic = 0xdeadbeef;
     FREE(chunk);
+#ifdef MEMPOOL_STATS
+    ++pool->total_chunks_freed;
+#endif
     --pool->n_empty_chunks;
     chunk = next;
   }
 
+  pool->min_empty_chunks = pool->n_empty_chunks;
   *first_to_free = NULL;
 }
 
@@ -535,6 +613,8 @@ mp_pool_log_status(mp_pool_t *pool, int severity)
     ++n_used;
     bu += chunk->n_allocated * pool->item_alloc_size;
     ba += chunk->mem_size;
+    log_fn(severity, LD_MM, "   used chunk: %d items allocated",
+           chunk->n_allocated);
   }
   log_fn(severity, LD_MM, U64_FORMAT"/"U64_FORMAT
          " bytes in %d partially full chunks",
@@ -556,6 +636,15 @@ mp_pool_log_status(mp_pool_t *pool, int severity)
   log_fn(severity, LD_MM, "Total: "U64_FORMAT"/"U64_FORMAT" bytes allocated "
          "for cell pools are full.",
          U64_PRINTF_ARG(bytes_used), U64_PRINTF_ARG(bytes_allocated));
+
+#ifdef MEMPOOL_STATS
+  log_fn(severity, LD_MM, U64_FORMAT" cell allocations ever; "
+         U64_FORMAT" chunk allocations ever; "
+         U64_FORMAT" chunk frees ever.",
+         U64_PRINTF_ARG(pool->total_items_allocated),
+         U64_PRINTF_ARG(pool->total_chunks_allocated),
+         U64_PRINTF_ARG(pool->total_chunks_freed));
+#endif
 }
 #endif
 

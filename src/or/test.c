@@ -3120,14 +3120,14 @@ test_util_mempool(void)
       //mp_pool_assert_ok(pool);
     }
     if (crypto_rand_int(777)==0)
-      mp_pool_clean(pool, -1);
+      mp_pool_clean(pool, -1, 0);
 
     if (i % 777)
       mp_pool_assert_ok(pool);
   }
   SMARTLIST_FOREACH(allocated, void *, m, mp_pool_release(m));
   mp_pool_assert_ok(pool);
-  mp_pool_clean(pool, 0);
+  mp_pool_clean(pool, 0, 0);
   mp_pool_assert_ok(pool);
   mp_pool_destroy(pool);
   smartlist_free(allocated);
