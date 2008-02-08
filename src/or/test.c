@@ -2789,7 +2789,7 @@ test_v3_networkstatus(void)
   test_assert(!rs->is_v2_dir);
   test_assert(!rs->is_valid);
   test_assert(!rs->is_named);
-  /* XXXX020 check version */
+  /* XXXX check version */
 
   rs = smartlist_get(con->routerstatus_list, 1);
   /* This one showed up in 3 digests. Twice with ID 'M', once with 'Z'.  */
@@ -2811,7 +2811,7 @@ test_v3_networkstatus(void)
   test_assert(rs->is_v2_dir);
   test_assert(rs->is_valid);
   test_assert(!rs->is_named);
-  /* XXXX020 check version */
+  /* XXXX check version */
 
   /* Check signatures.  the first voter hasn't got one.  The second one
    * does: validate it. */
