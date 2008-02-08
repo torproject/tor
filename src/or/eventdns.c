@@ -65,8 +65,6 @@
 #include <openssl/rand.h>
 #endif
 
-#define _FORTIFY_SOURCE 3
-
 #include <string.h>
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>

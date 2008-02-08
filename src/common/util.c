@@ -3109,7 +3109,10 @@ start_daemon(void)
     return;
   start_daemon_called = 1;
 
-  pipe(daemon_filedes);
+  if (pipe(daemon_filedes)) {
+    log_err(LD_GENERAL,"pipe failed; exiting. Error was %s", strerror(errno));
+    exit(1);
+  }
   pid = fork();
   if (pid < 0) {
     log_err(LD_GENERAL,"fork failed. Exiting.");
@@ -3189,7 +3192,10 @@ finish_daemon(const char *desired_cwd)
   }
   if (nullfd > 2)
     close(nullfd);
-  write(daemon_filedes[1], &c, sizeof(char)); /* signal success */
+  /* signal success */
+  if (write(daemon_filedes[1], &c, sizeof(char)) != sizeof(char)) {
+    log_err(LD_GENERAL,"write failed. Exiting.");
+  }
   close(daemon_filedes[1]);
 }
 #else
