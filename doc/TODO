@@ -76,14 +76,14 @@ N - Before the feature freeze:
           o Detect.
           o Adjust.
         o Better cname and organizationName generation.
-      . New revised handshake: post-TLS:
+      o New revised handshake: post-TLS:
         o start by sending VERSIONS cells
         o once we have a version, send a netinfo and become open
-        - Ban most cell types on a non-OPEN connection.
+        o Ban most cell types on a non-OPEN connection.
       - Test
         o Verify version negotiation on client
         - Verify version negotiation on server
-        - Verify that client->server connection becomes open
+        . Verify that client->server connection becomes open
         - Verify that server->server connection becomes open and
           authenticated.
       - NETINFO fallout

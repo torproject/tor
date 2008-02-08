@@ -177,6 +177,7 @@ Proposal:
 
    Once a v2 protocol has been negotiated, NETINFO cells are exchanged
    as in proposal 105, and communications begin as per tor-spec.txt.
+   Until NETINFO cells have been exchanged, the connection is not open.
 
    RELAY_EARLY cells are accepted as in proposal 110, and treated as
    RELAY cells except that they are relayed as RELAY_EARLY if the next
