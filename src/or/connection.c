@@ -337,8 +337,10 @@ _connection_free(connection_t *conn)
   if (CONN_IS_EDGE(conn)) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     tor_free(edge_conn->chosen_exit_name);
-    memset(edge_conn->socks_request, 0xcc, sizeof(socks_request_t));
-    tor_free(edge_conn->socks_request);
+    if (edge_conn->socks_request) {
+      memset(edge_conn->socks_request, 0xcc, sizeof(socks_request_t));
+      tor_free(edge_conn->socks_request);
+    }
   }
   if (conn->type == CONN_TYPE_CONTROL) {
     control_connection_t *control_conn = TO_CONTROL_CONN(conn);
