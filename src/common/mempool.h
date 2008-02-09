@@ -50,11 +50,11 @@ struct mp_pool_t {
    * padding. */
   size_t item_alloc_size;
 #ifdef MEMPOOL_STATS
-  /** Total number of items allocated ever */
+  /** Total number of items allocated ever. */
   uint64_t total_items_allocated;
-  /** Total number of chunks allocated ever */
+  /** Total number of chunks allocated ever. */
   uint64_t total_chunks_allocated;
-  /** Total number of chunks freed ever */
+  /** Total number of chunks freed ever. */
   uint64_t total_chunks_freed;
 #endif
 };

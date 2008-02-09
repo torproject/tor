@@ -1876,7 +1876,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   return 0;
 }
 
-/** Called when a directory connection reaches EOF */
+/** Called when a directory connection reaches EOF. */
 int
 connection_dir_reached_eof(dir_connection_t *conn)
 {

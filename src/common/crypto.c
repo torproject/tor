@@ -1550,12 +1550,12 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
     goto error;
   }
   secret_len = result;
-  /* sometimes secret_len might be less than 128, e.g., 127. that's ok. */
+  /* sometimes secret_len might be less than 128, e.g., 127. that's ok. -RD */
   /* Actually, http://www.faqs.org/rfcs/rfc2631.html says:
    *   Leading zeros MUST be preserved, so that ZZ occupies as many
    *   octets as p. For instance, if p is 1024 bits, ZZ should be 128
    *   bytes long.
-   * What are the security implications here?
+   * XXX021 What are the security implications here? -NM
    */
   if (crypto_expand_key_material(secret_tmp, secret_len,
                                  secret_out, secret_bytes_out)<0)
@@ -1578,7 +1578,7 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
 
 /** Given <b>key_in_len</b> bytes of negotiated randomness in <b>key_in</b>
  * ("K"), expand it into <b>key_out_len</b> bytes of negotiated key material in
- * <b>key_out</b> by taking the first key_out_len bytes of
+ * <b>key_out</b> by taking the first <b>key_out_len</b> bytes of
  *    H(K | [00]) | H(K | [01]) | ....
  *
  * Return 0 on success, -1 on failure.
@@ -1710,7 +1710,7 @@ crypto_seed_rng(void)
 #endif
 }
 
-/** Write n bytes of strong random data to <b>to</b>. Return 0 on
+/** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
  * success, -1 on failure.
  */
 int
@@ -1725,7 +1725,7 @@ crypto_rand(char *to, size_t n)
 }
 
 /** Return a pseudorandom integer, chosen uniformly from the values
- * between 0 and max-1. */
+ * between 0 and <b>max</b>-1. */
 int
 crypto_rand_int(unsigned int max)
 {
@@ -1746,8 +1746,8 @@ crypto_rand_int(unsigned int max)
   }
 }
 
-/** Return a pseudorandom integer, chosen uniformly from the values
- * between 0 and max-1. */
+/** Return a pseudorandom 64-bit integer, chosen uniformly from the values
+ * between 0 and <b>max</b>-1. */
 uint64_t
 crypto_rand_uint64(uint64_t max)
 {
@@ -1768,9 +1768,10 @@ crypto_rand_uint64(uint64_t max)
   }
 }
 
-/** Generate and return a new random hostname starting with prefix, ending
- * with suffix, and containing between min_rand_len and max_rand_len random
- * base32 characters between. */
+/** Generate and return a new random hostname starting with <b>prefix</b>,
+ * ending with <b>suffix</b>, and containing no less than
+ * <b>min_rand_len</b> and no more than <b>max_rand_len</b> random base32
+ * characters between. */
 char *
 crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
                        const char *suffix)
@@ -1799,8 +1800,8 @@ crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
   return result;
 }
 
-/** Return a randomly chosen element of sl; or NULL if sl is empty.
- */
+/** Return a randomly chosen element of <b>sl</b>; or NULL if <b>sl</b>
+ * is empty. */
 void *
 smartlist_choose(const smartlist_t *sl)
 {
@@ -1811,7 +1812,7 @@ smartlist_choose(const smartlist_t *sl)
   return NULL; /* no elements to choose from */
 }
 
-/** Scramble the elements of sl into a random order. */
+/** Scramble the elements of <b>sl</b> into a random order. */
 void
 smartlist_shuffle(smartlist_t *sl)
 {
@@ -1834,7 +1835,7 @@ smartlist_shuffle(smartlist_t *sl)
 int
 base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
-  /* XXXX we might want to rewrite this along the lines of base64_decode, if
+  /* FFFF we might want to rewrite this along the lines of base64_decode, if
    * it ever shows up in the profile. */
   EVP_ENCODE_CTX ctx;
   int len, ret;

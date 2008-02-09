@@ -19,9 +19,9 @@ static void bw_arrays_init(void);
 static void predicted_ports_init(void);
 static void hs_usage_init(void);
 
-/** Total number of bytes currently allocated in fields used by rephist.c */
+/** Total number of bytes currently allocated in fields used by rephist.c. */
 uint64_t rephist_total_alloc=0;
-/** Number of or_history_t obects currently allocated */
+/** Number of or_history_t objects currently allocated. */
 uint32_t rephist_total_num=0;
 
 /** If the total weighted run count of all runs for a router ever falls

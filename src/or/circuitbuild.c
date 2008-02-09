@@ -2822,15 +2822,23 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   return 0;
 }
 
-/** DOCDOC arma */
+/** Information about a configured bridge. Currently this just matches the
+ * ones in the torrc file, but one day we may be able to learn about new
+ * bridges on our own, and remember them in the state file. */
 typedef struct {
+  /** IPv4 address of the bridge. */
   uint32_t addr;
+  /** TLS port for the bridge. */
   uint16_t port;
+  /** Expected identity digest, or all \0's if we don't know what the
+   * digest should be. */
   char identity[DIGEST_LEN];
+  /** When should we next try to fetch a descriptor for this bridge? */
   download_status_t fetch_status;
 } bridge_info_t;
 
-/** A list of known bridges. */
+/** A list of configured bridges. Whenever we actually get a descriptor
+ * for one, we add it as an entry guard. */
 static smartlist_t *bridge_list = NULL;
 
 /** Initialize the bridge list to empty, creating it if needed. */

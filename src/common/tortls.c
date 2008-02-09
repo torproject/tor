@@ -322,7 +322,7 @@ always_accept_verify_cb(int preverify_ok,
   return 1;
 }
 
-/** Return a newly allocated X509 name with commonName <b>cname</b> */
+/** Return a newly allocated X509 name with commonName <b>cname</b>. */
 static X509_NAME *
 tor_x509_name_new(const char *cname)
 {

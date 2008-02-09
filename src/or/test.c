@@ -1081,20 +1081,20 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
 #define test_eq_ip6(a,b) _test_eq_ip6((a),(b),#a,#b,__LINE__)
 
 /** Helper: Assert that two strings both decode as IPv6 addresses with
- * tor_inet_pton, and both decode to the same address. */
+ * tor_inet_pton(), and both decode to the same address. */
 #define test_pton6_same(a,b) STMT_BEGIN                \
      test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);      \
      test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);      \
     _test_eq_ip6(&a1,&a2,#a,#b,__LINE__);              \
   STMT_END
 
-/** Helper: Assert that <b>a</b> is recognized as a bed IPv6 address by
- * tor_inet_pton. */
+/** Helper: Assert that <b>a</b> is recognized as a bad IPv6 address by
+ * tor_inet_pton(). */
 #define test_pton6_bad(a)                       \
   test_eq(0, tor_inet_pton(AF_INET6, a, &a1))
 
-/** Helper: assert that <b>a</b> when parsed by tor_inet_pton and displayed
- * with tor_inet_ntop, yields <b>b</b>. Also assert that <b>b</b> parses to
+/** Helper: assert that <b>a</b>, when parsed by tor_inet_pton() and displayed
+ * with tor_inet_ntop(), yields <b>b</b>. Also assert that <b>b</b> parses to
  * the same value as <b>a</b>. */
 #define test_ntop6_reduces(a,b) STMT_BEGIN                              \
     test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);                        \
@@ -1103,8 +1103,8 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     _test_eq_ip6(&a1, &a2, a, b, __LINE__);                             \
   STMT_END
 
-/** Helper: assert that <b>a</a> parses by tor_inet_pton into a address that
- * passes tor_addr_is_internal with for_listening */
+/** Helper: assert that <b>a</a> parses by tor_inet_pton() into a address that
+ * passes tor_addr_is_internal() with <b>for_listening</b> */
 #define test_internal_ip(a,for_listening) STMT_BEGIN           \
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
     t1.family = AF_INET6;                                      \
@@ -1112,8 +1112,8 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
       test_fail_msg( a "was not internal.");                   \
   STMT_END
 
-/** Helper: assert that <b>a</a> parses by tor_inet_pton into a address that
- * does not pass tor_addr_is_internal with for_listening. */
+/** Helper: assert that <b>a</a> parses by tor_inet_pton() into a address that
+ * does not pass tor_addr_is_internal() with <b>for_listening</b>. */
 #define test_external_ip(a,for_listening) STMT_BEGIN           \
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
     t1.family = AF_INET6;                                      \
@@ -1121,8 +1121,9 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
       test_fail_msg(a  "was not external.");                   \
   STMT_END
 
-/** Helper: Assert that a and b, when parsed by tor_inet_pton, give addresses
- * that compare in the order defined by op with tor_addr_compare(). */
+/** Helper: Assert that <b>a</b> and <b>b</b>, when parsed by
+ * tor_inet_pton(), give addresses that compare in the order defined by
+ * <b>op</b> with tor_addr_compare(). */
 #define test_addr_compare(a, op, b) STMT_BEGIN                    \
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1);    \
     test_eq(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), 1);    \

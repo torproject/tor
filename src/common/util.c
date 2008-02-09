@@ -707,7 +707,7 @@ tor_parse_long(const char *s, int base, long min, long max,
   CHECK_STRTOX_RESULT();
 }
 
-/** As tor_parse_long, but return an unsigned long. */
+/** As tor_parse_long(), but return an unsigned long. */
 unsigned long
 tor_parse_ulong(const char *s, int base, unsigned long min,
                 unsigned long max, int *ok, char **next)

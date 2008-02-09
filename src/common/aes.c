@@ -286,7 +286,7 @@ aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
 
   /* XXXX This function is up to 5% of our runtime in some profiles;
    * we should look into unrolling some of the loops; taking advantage
-   * of alignmement, using a bigger buffer, and so on. Not till after 0.1.2.x,
+   * of alignment, using a bigger buffer, and so on. Not till after 0.1.2.x,
    * though. */
   int c = cipher->pos;
   if (PREDICT_UNLIKELY(!len)) return;
@@ -322,7 +322,7 @@ aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
 
   /* XXXX This function is up to 5% of our runtime in some profiles;
    * we should look into unrolling some of the loops; taking advantage
-   * of alignmement, using a bigger buffer, and so on. Not till after 0.1.2.x,
+   * of alignment, using a bigger buffer, and so on. Not till after 0.1.2.x,
    * though. */
   int c = cipher->pos;
   if (PREDICT_UNLIKELY(!len)) return;

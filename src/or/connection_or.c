@@ -174,13 +174,14 @@ var_cell_new(uint16_t payload_len)
   return cell;
 }
 
-/** Release all space held by <b>cell</b> */
+/** Release all space held by <b>cell</b>. */
 void
 var_cell_free(var_cell_t *cell)
 {
   tor_free(cell);
 }
 
+/** We've received an EOF from <b>conn</b>. Mark it for close and return. */
 int
 connection_or_reached_eof(or_connection_t *conn)
 {

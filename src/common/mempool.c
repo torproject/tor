@@ -204,7 +204,7 @@ add_newly_used_chunk_to_used_list(mp_pool_t *pool, mp_chunk_t *chunk)
   ASSERT(!chunk->prev);
 }
 
-/** Return an newly allocated item from <b>pool</b>. */
+/** Return a newly allocated item from <b>pool</b>. */
 void *
 mp_pool_get(mp_pool_t *pool)
 {

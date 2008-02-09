@@ -786,7 +786,7 @@ networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
 /*XXXX make this static once functions are moved into this file. */
 /** Search the routerstatuses in <b>ns</b> for one whose identity digest is
  * <b>digest</b>.  Return value and set *<b>found_out</b> as for
- * smartlist_besearch_idx(). */
+ * smartlist_bsearch_idx(). */
 int
 networkstatus_vote_find_entry_idx(networkstatus_t *ns,
                                   const char *digest, int *found_out)
