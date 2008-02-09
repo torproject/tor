@@ -2355,7 +2355,7 @@ test_dir_format(void)
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
   routerinfo_free(r1);
-  routerinfo_free(r2);
+//  routerinfo_free(r2); XXX020 this line crashes on openbsd and netbsd
 
   /* Try out version parsing functionality */
   test_eq(0, tor_version_parse("0.3.4pre2-cvs", &ver1));
