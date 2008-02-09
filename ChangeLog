@@ -1,30 +1,7 @@
-Changes in version 0.2.0.19-alpha - 2008-02-??
-  o Minor features (directory authority):
-    - Actually validate the options passed to AuthDirReject, AuthDirInvalid,
-      AuthDirBadDir, and AuthDirBadExit.
-
-  o Minor features (controller):
-    - Reject controller commands over 1MB in length.  This keeps rogue
-      processes from running us out of memory.
-
-  o Minor features (misc):
-    - Reject router descriptors with out-of-range bandwidthcapacity or
-      bandwidthburst values.
-    - Give more descriptive well-formedness errors for out-of-range
-      hidden service descriptor/protocol versions.
-    - Make memory debugging output describe more about history of cell
-      allocation.
-
-  o Minor features (security):
-    - Be slightly more paranoid about overwriting sensitive memory on free,
-      as a defensive programming tactic to ensure forward secrecy.
+Changes in version 0.2.0.19-alpha - 2008-02-09
+  o Major features:
     - Do not include recognizeable strings in the commonname part of
       Tor's x509 certificates.
-
-  o Deprecated features (controller):
-    - The status/version/num-versioning and status/version/num-concurring
-      GETINFO options are no longer useful in the V3 directory protocol:
-      treat them as deprecated, and warn when they're used.
 
   o Major bugfixes:
     - If we're a relay, avoid picking ourselves as an introduction point,
@@ -34,39 +11,65 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
       mirror at IP address X and he says we look like we're coming from
       IP address X. Bugfix on 0.1.2.x.
 
+  o Minor features (security):
+    - Be more paranoid about overwriting sensitive memory on free(),
+      as a defensive programming tactic to ensure forward secrecy.
+
+  o Minor features (directory authority):
+    - Actually validate the options passed to AuthDirReject,
+      AuthDirInvalid, AuthDirBadDir, and AuthDirBadExit.
+    - Reject router descriptors with out-of-range bandwidthcapacity or
+      bandwidthburst values.
+
+  o Minor features (controller):
+    - Reject controller commands over 1MB in length.  This keeps rogue
+      processes from running us out of memory.
+
+  o Minor features (misc):
+    - Give more descriptive well-formedness errors for out-of-range
+      hidden service descriptor/protocol versions.
+    - Make memory debugging information describe more about history
+      of cell allocation, so we can help reduce our memory use.
+
+  o Deprecated features (controller):
+    - The status/version/num-versioning and status/version/num-concurring
+      GETINFO options are no longer useful in the v3 directory protocol:
+      treat them as deprecated, and warn when they're used.
+
   o Minor bugfixes:
+    - When our consensus networkstatus has been expired for a while, stop
+      being willing to build circuits using it. Fixes bug 401. Bugfix
+      on 0.1.2.x.
     - Directory caches now fetch certificates from all authorities
       listed in a networkstatus consensus, even when they do not
-      recognize them.  Fixes bug 571.  Bugfix on 0.2.0.x.
-    - Stop recommending that every server operator send mail to tor-ops.
-      Resolves bug 597.  Bugfix on 0.1.2.x.
-    - Detect version of OSX where malloc_good_size is present in the
-      library but never actually declared.  Resolves bug 587.  Bugfix
-      on 0.2.0.x.
+      recognize them. Fixes bug 571. Bugfix on 0.2.0.x.
     - When connecting to a bridge without specifying its key, insert
       the connection into the identity-to-connection map as soon as
-      a key is learned.  Fixes bug 574.  Bugfix on 0.2.0.x.
-    - When our consensus networkstatus has been expired for a while, stop
-      being willing to build circuits using it.  Fixes bug 401.  Bugfix on
-      0.1.2.x.
+      a key is learned. Fixes bug 574. Bugfix on 0.2.0.x.
+    - Detect versions of OS X where malloc_good_size() is present in the
+      library but never actually declared. Resolves bug 587. Bugfix
+      on 0.2.0.x.
     - Stop incorrectly truncating zlib responses to directory authority
-      signature download requests.  Fix for bug 593.  Bugfix on 0.2.0.x.
+      signature download requests. Fixes bug 593. Bugfix on 0.2.0.x.
+    - Stop recommending that every server operator send mail to tor-ops.
+      Resolves bug 597. Bugfix on 0.1.2.x.
     - Don't trigger an assert if we start a directory authority with a
       private IP address (like 127.0.0.1).
-    - Avoid possible failures when generating a directory with routers with
-      over-long versions strings, or too many flags set.  Bugfix on 0.1.2.x.
+    - Avoid possible failures when generating a directory with routers
+      with over-long versions strings, or too many flags set. Bugfix
+      on 0.1.2.x.
     - If an attempt to launch a DNS resolve request over the control
       port fails because we have overrun the limit on the number of
       connections, tell the controller that the request has failed.
-    - Avoid using too little bandwidth when Tor skips a few seconds.  Bugfix
-      on 0.1.2.x.
+    - Avoid using too little bandwidth when our clock skips a few
+      seconds. Bugfix on 0.1.2.x.
     - Fix shell error when warning about missing packages in configure
-      script, on fedora or redhat machines. Bugfix on 0.2.0.x.
+      script, on Fedora or Red Hat machines. Bugfix on 0.2.0.x.
     - Do not become confused when receiving a spurious VERSIONS-like
       cell from a confused v1 client.  Bugfix on 0.2.0.x.
-    - Re-fetch v2 (as well as v0) rend descriptors when all intro points for
-      a hidden service have failed.  Patch from Karsten Loesing.  Bugfix on
-      0.2.0.x.
+    - Re-fetch v2 (as well as v0) rendezvous descriptors when all
+      introduction points for a hidden service have failed. Patch from
+      Karsten Loesing. Bugfix on 0.2.0.x.
 
   o Code simplifications and refactoring:
     - Remove some needless generality from cpuworker code, for improved
@@ -74,8 +77,8 @@ Changes in version 0.2.0.19-alpha - 2008-02-??
     - Stop overloading the circuit_t.onionskin field for both "onionskin
       from a CREATE cell that we are waiting for a cpuworker to be
       assigned" and "onionskin from an EXTEND cell that we are going to
-      send to an OR as soon as we are connected".
-    - Add an in-place version of aes_crypt so that we can avoid doing a
+      send to an OR as soon as we are connected". Might help with bug 600.
+    - Add an in-place version of aes_crypt() so that we can avoid doing a
       needless memcpy() call on each cell payload.
 
 
@@ -92,8 +95,8 @@ Changes in version 0.2.0.18-alpha - 2008-01-25
       renegotiating handshake". Disable it again. Resolves bug 590.
     - We were computing the wrong Content-Length: header for directory
       responses that need to be compressed on the fly, causing clients
-      asking for those items to always fail. Bugfix on 0.2.0.x; fixes
-      bug 593.
+      asking for those items to always fail. Bugfix on 0.2.0.x; partially
+      fixes bug 593.
 
   o Major features:
     - Avoid going directly to the directory authorities even if you're a
