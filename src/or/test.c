@@ -2232,8 +2232,8 @@ test_dir_format(void)
   r2->identity_pkey = crypto_pk_dup_key(pk1);
   r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
   r2->exit_policy = smartlist_create();
-  smartlist_add(r2->exit_policy, &ex2);
-  smartlist_add(r2->exit_policy, &ex1);
+  smartlist_add(r2->exit_policy, ex2);
+  smartlist_add(r2->exit_policy, ex1);
   r2->nickname = tor_strdup("Fred");
 
   test_assert(!crypto_pk_write_public_key_to_string(pk1, &pk1_str,
@@ -2355,7 +2355,7 @@ test_dir_format(void)
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
   routerinfo_free(r1);
-//  routerinfo_free(r2); XXX020 this line crashes on openbsd and netbsd
+  routerinfo_free(r2);
 
   /* Try out version parsing functionality */
   test_eq(0, tor_version_parse("0.3.4pre2-cvs", &ver1));
