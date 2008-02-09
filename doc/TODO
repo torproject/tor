@@ -45,9 +45,9 @@ R - bridge communities
       - man page entries for Alternate*Authority config options
       o there's a config option with a password and somehow use an
         http header and check it
-      - clients who have a password configured decide to ask their bridge
+      D clients who have a password configured decide to ask their bridge
         authority for a networkstatus
-      - be able to have bridges that aren't in your torrc
+      D be able to have bridges that aren't in your torrc
 
 Things we'd like to do in 0.2.0.x:
   o if we notice a cached-status directory and we're not serving v2 dir
