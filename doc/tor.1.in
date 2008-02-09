@@ -1,4 +1,4 @@
-.TH TOR 1 "January 2006" "TOR"
+.TH TOR 1 "February 2008" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -1003,7 +1003,15 @@ Tor clients up to 0.1.0.x).
 \fBV2AuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
 When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor
 generates version 2 network statuses and serves descriptors, etc as
-described in doc/spec/dir-spec.txt.
+described in doc/spec/dir-spec-v2.txt (for Tor clients and servers
+running 0.1.1.x and 0.1.2.x).
+.LP
+.TP
+\fBV3AuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
+When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor
+generates version 3 network statuses and serves descriptors, etc as
+described in doc/spec/dir-spec.txt (for Tor clients and servers
+running at least 0.2.0.x).
 .LP
 .TP
 \fBVersioningAuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP

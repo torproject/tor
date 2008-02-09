@@ -744,9 +744,9 @@ $Id$
      Same as passing 'EXTENDED' to SETEVENTS; this is the preferred way to
      request the extended event syntax.
 
-     This will not be always-enabled until at least XXX (or, at least two
-     stable releases after XXX, the release where it was first used for
-     anything.)
+     This will not be always-enabled until at least two stable releases
+     after 0.1.2.3-alpha, the release where it was first used for
+     anything.
 
   VERBOSE_NAMES
 
@@ -757,9 +757,8 @@ $Id$
      LongName format includes a Fingerprint, an indication of Named status,
      and a Nickname (if one is known).
 
-     This will not be always-enabled until at least 0.1.4.x (or at least two
-     stable releases after 0.1.2.2-alpha, the release where it was first
-     available.)
+     This will not be always-enabled until at least two stable releases
+     after 0.1.2.2-alpha, the release where it was first available.
 
 3.20. RESOLVE
 
