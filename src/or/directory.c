@@ -1257,7 +1257,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->dirconn_direct) {
     char *guess = http_get_header(headers, X_ADDRESS_HEADER);
     if (guess) {
-      router_new_address_suggestion(guess);
+      router_new_address_suggestion(guess, conn);
       tor_free(guess);
     }
   }

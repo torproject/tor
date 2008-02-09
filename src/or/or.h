@@ -3779,7 +3779,8 @@ void mark_my_descriptor_dirty_if_older_than(time_t when);
 void mark_my_descriptor_dirty(void);
 void check_descriptor_bandwidth_changed(time_t now);
 void check_descriptor_ipaddress_changed(time_t now);
-void router_new_address_suggestion(const char *suggestion);
+void router_new_address_suggestion(const char *suggestion, 
+				   const dir_connection_t *d_conn);
 int router_compare_to_my_exit_policy(edge_connection_t *conn);
 routerinfo_t *router_get_my_routerinfo(void);
 extrainfo_t *router_get_my_extrainfo(void);
