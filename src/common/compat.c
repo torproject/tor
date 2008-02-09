@@ -1701,7 +1701,7 @@ struct tor_mutex_t {
 /* Conditions. */
 #ifdef USE_PTHREADS
 #if 0
-/** Cross-platform condtion implementation. */
+/** Cross-platform condition implementation. */
 struct tor_cond_t {
   pthread_cond_t cond;
 };
