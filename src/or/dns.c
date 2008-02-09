@@ -1429,6 +1429,9 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
                          evdns_wildcard_check_callback, addr);
   if (r)
     tor_free(addr);
+  /* XXX020 Nick, the above "if" needs some explanation. Plus the fact
+   * that we're sending addr twice. Given that evdns_resolve_ipv4() has
+   * no doxygen documentation. -RD */
 }
 
 /** Launch attempts to resolve a bunch of known-good addresses (configured in
