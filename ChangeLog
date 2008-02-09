@@ -1,5 +1,10 @@
 Changes in versino 0.1.2.20 - 2008-??-??
-  o Minor bugfixes
+  o Major bugfixes:
+    - Patch from "Andrew S. Lists" to catch when we contact a directory
+      mirror at IP address X and he says we look like we're coming from
+      IP address X. Bugfix on 0.1.2.x.
+
+  o Minor bugfixes:
     - Stop recommending that every server operator send mail to tor-ops.
       Resolves bug 597.
     - Fix a few memory leaks that could in theory happen under bizarre error

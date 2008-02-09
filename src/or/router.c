@@ -1077,7 +1077,8 @@ static uint32_t last_guessed_ip = 0;
  * If this address is different from the one we think we are now, and
  * if our computer doesn't actually know its IP address, then switch. */
 void
-router_new_address_suggestion(const char *suggestion)
+router_new_address_suggestion(const char *suggestion,
+                              const dir_connection_t *conn)
 {
   uint32_t addr, cur = 0;
   struct in_addr in;
@@ -1105,6 +1106,13 @@ router_new_address_suggestion(const char *suggestion)
   }
   if (is_internal_IP(addr, 0)) {
     /* Don't believe anybody who says our IP is, say, 127.0.0.1. */
+    return;
+  }
+  if (addr == conn->_base.addr) {
+    /* Don't believe anybody who says our IP is their IP. */
+    log_debug(LD_DIR, "A directory server told us our IP address is %s, "
+              "but he's just reporting his own IP address. Ignoring.",
+              suggestion);
     return;
   }
 
