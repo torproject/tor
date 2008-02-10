@@ -446,7 +446,10 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
 }
 
 /** Process a 'versions' cell.  The current link protocol version must be 0
- * to indicate that no version has yet been negotiated. DOCDOC say more. */
+ * to indicate that no version has yet been negotiated.  We compare the versions
+ * cell to the list of versions we support, and pick the highest version we
+ * have in common.
+ */
 static void
 command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
 {
@@ -471,6 +474,12 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Couldn't find a version in common between my version list and the "
            "list in the VERSIONS cell; closing connection.");
+    connection_mark_for_close(TO_CONN(conn));
+    return;
+  } else if (highest_supported_version == 1) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Used version negotiation protocol to negotiate a v1 connection. "
+           "That's crazily non-compliant. Closing connection.");
     connection_mark_for_close(TO_CONN(conn));
     return;
   }
@@ -568,9 +577,10 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   if (abs(apparent_skew) > NETINFO_NOTICE_SKEW &&
       router_get_by_digest(conn->identity_digest)) {
     char dbuf[64];
-    /*XXXX020 not always warn!*/
+    /*XXXX This should check the trustedness of the other side. */
+    int severity = server_mode(get_options()) ? LOG_INFO : LOG_WARN;
     format_time_interval(dbuf, sizeof(dbuf), apparent_skew);
-    log_fn(LOG_WARN, LD_HTTP, "Received NETINFO cell with skewed time from "
+    log_fn(severity, LD_GENERAL, "Received NETINFO cell with skewed time from "
            "server at %s:%d.  It seems that our clock is %s by %s, or "
            "that theirs is %s. Tor requires an accurate clock to work: "
            "please check your time and date settings.",
