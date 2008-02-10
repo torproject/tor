@@ -1,8 +1,9 @@
 tor (0.2.0.18-alpha-3) experimentalunreleased; urgency=low
 
   * It's 2008.  Now is the time to add copyright statements for 2007.
+  * Forward port 03_tor_manpage_in_section_8.dpatch.
 
- -- Peter Palfrader <weasel@debian.org>  Sun,  3 Feb 2008 21:50:43 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun, 10 Feb 2008 01:12:04 +0100
 
 tor (0.2.0.18-alpha-2) experimental; urgency=low
 
@@ -15,6 +16,7 @@ tor (0.2.0.18-alpha-2) experimental; urgency=low
 
 tor (0.2.0.18-alpha-1) experimental; urgency=low
 
+  * New upstream version.
   * postinst: Remove the check that requires the debian-tor user
     to have a uid between 100 and 999.  There is no good reason
     to require this.  If the local admin moves the system users/uid-space
