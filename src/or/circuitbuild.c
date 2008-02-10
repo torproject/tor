@@ -1761,33 +1761,6 @@ extend_info_from_router(routerinfo_t *r)
                            r->onion_pkey, r->addr, r->or_port);
 }
 
-#if 0
-/** What router purpose is <b>digest</b>?
- * It's a general purpose router unless it's on our bridges list.
- */
-static uint8_t
-get_router_purpose_from_digest(char *digest)
-{
-  if (digest_is_a_bridge(digest))
-    return ROUTER_PURPOSE_BRIDGE;
-  return ROUTER_PURPOSE_GENERAL;
-}
-#endif
-
-#if 0
-/** Allocate and return a new extend_info_t that can be used to build a
- * circuit to or through the router <b>r</b>. */
-extend_info_t *
-extend_info_from_routerstatus(routerstatus_t *s)
-{
-  tor_assert(s);
-  /* routerstatus doesn't know onion_key; leave it NULL */
-  return extend_info_alloc(s->nickname, s->identity_digest,
-                           NULL, s->addr, s->or_port);
-//                      get_router_purpose_from_digest(s->identity_digest));
-}
-#endif
-
 /** Release storage held by an extend_info_t struct. */
 void
 extend_info_free(extend_info_t *info)

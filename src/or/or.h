@@ -2836,9 +2836,6 @@ int connection_or_process_inbuf(or_connection_t *conn);
 int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
-#if 0
-int connection_or_finish_or_handshake(or_connection_t *conn);
-#endif
 
 or_connection_t *connection_or_connect(uint32_t addr, uint16_t port,
                                     const char *id_digest);

@@ -837,7 +837,7 @@ router_pick_directory_server(authority_type_t type, int flags)
   if (choice)
     return choice;
 
-  /* XXXX020 what's the point of *reloading* and trying again?? -NM */
+  /* XXXX020 arma: what's the point of *reloading* and trying again?? -NM */
   log_info(LD_DIR,"Still no %s router entries. Reloading and trying again.",
            (flags & PDS_IGNORE_FASCISTFIREWALL) ? "known" : "reachable");
   if (router_reload_router_list()) {
