@@ -503,6 +503,9 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   uint8_t n_other_addrs;
   time_t now = time(NULL);
 
+  long apparent_skew = 0;
+  uint32_t my_apparent_addr = 0;
+
   if (conn->link_proto < 2) {
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Received a NETINFO cell on %s connection; dropping.",
@@ -516,15 +519,10 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   }
   tor_assert(conn->handshake_state &&
              conn->handshake_state->received_versions);
-  if (conn->handshake_state->received_netinfo) {
-    log_fn(LOG_PROTOCOL_WARN, LD_OR,
-           "Received a duplicate NETINFO cell; dropping.");
-    return;
-  }
   /* Decode the cell. */
   timestamp = ntohl(get_uint32(cell->payload));
   if (abs(now - conn->handshake_state->sent_versions_at) < 180) {
-    conn->handshake_state->apparent_skew = now - timestamp;
+    apparent_skew = now - timestamp;
   }
 
   my_addr_type = (uint8_t) cell->payload[4];
@@ -538,7 +536,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     connection_mark_for_close(TO_CONN(conn));
     return;
   } else if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
-    conn->handshake_state->my_apparent_addr = ntohl(get_uint32(my_addr_ptr));
+    my_apparent_addr = ntohl(get_uint32(my_addr_ptr));
   }
 
   n_other_addrs = (uint8_t) *cp++;
@@ -556,7 +554,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     if (other_addr_type == RESOLVED_TYPE_IPV4 && other_addr_len == 4) {
       uint32_t addr = ntohl(get_uint32(cp));
       if (addr == conn->real_addr) {
-        conn->handshake_state->apparently_canonical = 1;
+        conn->is_canonical = 1;
         break;
       }
     }
@@ -564,17 +562,33 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     --n_other_addrs;
   }
 
-  conn->handshake_state->received_netinfo = 1;
-
-  if (conn->handshake_state->apparently_canonical) {
-    conn->is_canonical = 1;
+  /* Act on apparent skew. */
+  /** Warn when we get a netinfo skew with at least this value. */
+#define NETINFO_NOTICE_SKEW 3600
+  if (abs(apparent_skew) > NETINFO_NOTICE_SKEW &&
+      router_get_by_digest(conn->identity_digest)) {
+    char dbuf[64];
+    /*XXXX020 not always warn!*/
+    format_time_interval(dbuf, sizeof(dbuf), apparent_skew);
+    log_fn(LOG_WARN, LD_HTTP, "Received NETINFO cell with skewed time from "
+           "server at %s:%d.  It seems that our clock is %s by %s, or "
+           "that theirs is %s. Tor requires an accurate clock to work: "
+           "please check your time and date settings.",
+           conn->_base.address, (int)conn->_base.port,
+           apparent_skew>0 ? "ahead" : "behind", dbuf,
+           apparent_skew>0 ? "behind" : "ahead");
+    control_event_general_status(LOG_WARN,
+                        "CLOCK_SKEW SKEW=%ld SOURCE=OR:%s:%d",
+                        apparent_skew, conn->_base.address, conn->_base.port);
   }
-  if (connection_or_act_on_netinfo(conn)<0 ||
-      connection_or_set_state_open(conn)<0)
-    connection_mark_for_close(TO_CONN(conn));
 
-  log_info(LD_OR, "Got good NETINFO cell from %s",
-           safe_str(conn->_base.address));
+  /*XXX020 maybe act on my_apparent_addr */
+
+  if (connection_or_set_state_open(conn)<0)
+    connection_mark_for_close(TO_CONN(conn));
+  else
+    log_info(LD_OR, "Got good NETINFO cell from %s",
+             safe_str(conn->_base.address));
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }
 

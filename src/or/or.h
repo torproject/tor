@@ -893,11 +893,6 @@ typedef struct or_handshake_state_t {
   unsigned int started_here : 1;
   unsigned int received_versions : 1;
 
-  /* from netinfo: XXXX020 totally useless. */
-  unsigned int received_netinfo : 1;
-  long apparent_skew;
-  uint32_t my_apparent_addr;
-  unsigned int apparently_canonical;
 } or_handshake_state_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
@@ -2870,7 +2865,6 @@ void cell_pack(packed_cell_t *dest, const cell_t *src);
 void var_cell_pack_header(const var_cell_t *cell, char *hdr_out);
 var_cell_t *var_cell_new(uint16_t payload_len);
 void var_cell_free(var_cell_t *cell);
-int connection_or_act_on_netinfo(or_connection_t *conn);
 
 /********************************* control.c ***************************/
 
