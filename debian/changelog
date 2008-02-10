@@ -1,5 +1,6 @@
-tor (0.2.0.18-alpha-3) experimentalunreleased; urgency=low
+tor (0.2.0.19-alpha-1) experimental; urgency=low
 
+  * New upstream version.
   * It's 2008.  Now is the time to add copyright statements for 2007.
   * Forward port 03_tor_manpage_in_section_8.dpatch.
 
