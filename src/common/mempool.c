@@ -608,7 +608,7 @@ mp_pool_log_status(mp_pool_t *pool, int severity)
     bytes_allocated += chunk->mem_size;
   }
   log_fn(severity, LD_MM, U64_FORMAT" bytes in %d empty chunks",
-         U64_PRINTF_ARG(bytes_used), pool->n_empty_chunks);
+         U64_PRINTF_ARG(bytes_allocated), pool->n_empty_chunks);
   for (chunk = pool->used_chunks; chunk; chunk = chunk->next) {
     ++n_used;
     bu += chunk->n_allocated * pool->item_alloc_size;

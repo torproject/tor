@@ -1,3 +1,7 @@
+Changes in version 0.2.0.2-?? - 2008-02-??
+  o Minor bugfixes:
+    - Log the correct memory chunk sizes for empty RAM chunks in mempool.c
+
 Changes in version 0.2.0.19-alpha - 2008-02-09
   o Major features:
     - Do not include recognizeable strings in the commonname part of
