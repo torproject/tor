@@ -1984,8 +1984,10 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp), "Content-Type: %s\r\n", type);
     cp += strlen(cp);
   }
-  if (!is_internal_IP(conn->_base.addr, 0)) {
-    /* Don't report the source address for a localhost/private connection. */
+  if (!is_local_IP(conn->_base.addr)) {
+    /* Don't report the source address for a nearby/private connection.
+     * Otherwise we tend to mis-report in cases where incoming ports are
+     * being forwarded to a Tor server running behind the firewall. */
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp),
                  X_ADDRESS_HEADER "%s\r\n", conn->_base.address);
     cp += strlen(cp);

@@ -1,6 +1,10 @@
-Changes in version 0.2.0.2-?? - 2008-02-??
+Changes in version 0.2.0.20-?? - 2008-02-??
   o Minor bugfixes:
     - Log the correct memory chunk sizes for empty RAM chunks in mempool.c
+    - Directory mirrors no longer include a guess at the client's IP
+      address if the connection appears to be coming from the same /24
+      network; it was producing too many wrong guesses.
+
 
 Changes in version 0.2.0.19-alpha - 2008-02-09
   o Major features:
