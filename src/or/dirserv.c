@@ -2051,12 +2051,18 @@ connection_dirserv_unlink_from_bridge(dir_connection_t *dir_conn)
   or_conn = connection_dirserv_get_target_or_conn(dir_conn);
   if (or_conn) {
     /* XXXX Really, this is only necessary if dir_conn->is_blocked_on_or_conn.
-     * But for now, let's leave it in, so the assert can catch  */
+     * But for now, let's leave it in, so the assert can catch problems.  */
     connection_dirserv_remove_from_blocked_list(or_conn, dir_conn);
   }
   dir_conn->is_blocked_on_or_conn = 0; /* Probably redundant. */
-  edge_conn->bridge_for_conn = NULL;
   dir_conn->bridge_conn = NULL;
+  if (edge_conn) {
+    edge_conn->bridge_for_conn = NULL;
+    if (!edge_conn->_base.marked_for_close)
+      connection_mark_for_close(TO_CONN(edge_conn));
+  }
+  if (!dir_conn->_base.marked_for_close)
+    connection_mark_for_close(TO_CONN(dir_conn));
 }
 
 /** Stop writing on a bridged dir_conn, and remember that it's blocked because
