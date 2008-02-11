@@ -846,7 +846,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
   }
 }
 
-/** DOCDOC */
+/** Allocate a new connection handshake state for the connection
+ * <b>conn</b>.  Return 0 on success, -1 on failure. */
 static int
 connection_init_or_handshake_state(or_connection_t *conn, int started_here)
 {
@@ -856,7 +857,7 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
   return 0;
 }
 
-/** DOCDOC */
+/** Free all storage held by <b>state</b>. */
 void
 or_handshake_state_free(or_handshake_state_t *state)
 {
@@ -865,7 +866,9 @@ or_handshake_state_free(or_handshake_state_t *state)
   tor_free(state);
 }
 
-/**DOCDOC*/
+/** Set <b>conn</b>'s state to OR_CONN_STATE_OPEN, and tell other subsystems
+ * as appropriate.  Called when we are done with all TLS and OR handshaking.
+ */
 int
 connection_or_set_state_open(or_connection_t *conn)
 {

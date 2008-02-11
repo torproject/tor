@@ -447,8 +447,8 @@ command_process_destroy_cell(cell_t *cell, or_connection_t *conn)
 
 /** Process a 'versions' cell.  The current link protocol version must be 0
  * to indicate that no version has yet been negotiated.  We compare the versions
- * cell to the list of versions we support, and pick the highest version we
- * have in common.
+ * cell to the list of versions we support, pick the highest version we
+ * have in common, and continue the negotiation from there.
  */
 static void
 command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
@@ -477,6 +477,7 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
     connection_mark_for_close(TO_CONN(conn));
     return;
   } else if (highest_supported_version == 1) {
+    /*XXXXX020 consider this carefully. */
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Used version negotiation protocol to negotiate a v1 connection. "
            "That's crazily non-compliant. Closing connection.");
@@ -500,7 +501,8 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   }
 }
 
-/** Process a 'netinfo' cell. DOCDOC say more. */
+/** Process a 'netinfo' cell: read and act on its contents, and set the
+ * connection state to "open". */
 static void
 command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
 {

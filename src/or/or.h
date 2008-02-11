@@ -887,12 +887,17 @@ typedef struct connection_t {
 
 } connection_t;
 
-/** DOCDOC */
+/** Stores flags and information related to the portion of a v2 Tor OR
+ * connection handshake that happens after the TLS handshake is finished.
+ */
 typedef struct or_handshake_state_t {
+  /** When was the VERSIONS cell sent on this connection?  Used to get
+   * an estimate of the skew in the returning NETINFO reply. */
   time_t sent_versions_at;
+  /** True iff we originated this connection */
   unsigned int started_here : 1;
+  /** True iff we have received and processed a VERSIONS cell. */
   unsigned int received_versions : 1;
-
 } or_handshake_state_t;
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
@@ -917,14 +922,15 @@ typedef struct or_connection_t {
                                   * connection, which half of the space should
                                   * we use? */
   unsigned int is_canonical:1; /**< DOCDOC */
-  unsigned int have_renegotiated:1; /**DOCDOC */
+  unsigned int have_renegotiated:1; /**< DOCDOC */
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
                           * range 0..1<<15-1. */
 
-  or_handshake_state_t *handshake_state;/**< DOCDOC */
+  or_handshake_state_t *handshake_state; /**< If we are setting this connection
+                                          * up, state information to do so. */
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
   time_t timestamp_last_added_nonpadding; /** When did we last add a
                                            * non-padding cell to the outbuf? */
