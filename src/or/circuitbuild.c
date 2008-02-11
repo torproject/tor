@@ -1513,7 +1513,9 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
  * probably already connected to them.
  *
  * We only return one, so this doesn't become stupid when the
- * whole network has upgraded. */
+ * whole network has upgraded.
+ * XXX021 we can great simplify this function now that all the broken
+ * versions are obsolete. -RD */
 static char *
 compute_preferred_testing_list(const char *answer)
 {
