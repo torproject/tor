@@ -922,7 +922,7 @@ tor_tls_handshake(tor_tls_t *tls)
         }
         tls->wasV2Handshake = 1;
         log_debug(LD_NET, "Completed V2 TLS handshake with client; waiting "
-                  "for renegotiation."));
+                  "for renegotiation.");
       } else {
         tls->wasV2Handshake = 0;
       }
