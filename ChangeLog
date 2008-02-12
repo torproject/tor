@@ -7,6 +7,11 @@ Changes in version 0.2.0.20-?? - 2008-02-??
 
 
 Changes in version 0.2.0.19-alpha - 2008-02-09
+  Tor 0.2.0.19-alpha makes more progress towards normalizing Tor's TLS
+  handshake, makes path selection for relays more secure and IP address
+  guessing more robust, and generally fixes a lot of bugs in preparation
+  for calling the 0.2.0 branch stable.
+
   o Major features:
     - Do not include recognizeable strings in the commonname part of
       Tor's x509 certificates.
@@ -91,6 +96,11 @@ Changes in version 0.2.0.19-alpha - 2008-02-09
 
 
 Changes in version 0.2.0.18-alpha - 2008-01-25
+  Tor 0.2.0.18-alpha adds a sixth v3 directory authority run by CCC,
+  fixes a big memory leak in 0.2.0.17-alpha, and adds new config options
+  that can warn or reject connections to ports generally associated with
+  vulnerable-plaintext protocols.
+
   o New directory authorities:
     - Set up dannenberg (run by CCC) as the sixth v3 directory
       authority.
