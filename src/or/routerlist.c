@@ -1393,6 +1393,7 @@ get_max_believable_bandwidth(void)
  * If <b>for_guard</b>, we're picking a guard node: consider all guard's
  * bandwidth equally. Otherwise, weight guards proportionally less.
  *
+ * XXX DOCDOC the above args aren't args anymore
  */
 static void *
 smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,

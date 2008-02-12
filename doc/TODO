@@ -127,6 +127,7 @@ P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 
 Planned for 0.2.1.x:
+  - router_choose_random_node() has a big pile of args. make it "flags".
   - anonymity concern: since our is-consensus-fresh-enough check is
     sloppy so clients will actually work when a consensus wasn't formed,
     does that mean that if users are idle for 5 hours and then click on

@@ -2501,7 +2501,16 @@ choose_random_entry(cpath_build_state_t *state)
   }
 
  choose_and_finish:
-  r = smartlist_choose(live_entry_guards);
+  if (entry_list_can_grow(options)) {
+    /* We choose uniformly at random here, because choose_good_entry_server()
+     * already weights its choices by bandwidth, so we don't want to
+     * *double*-weight our guard selection. */
+    r = smartlist_choose(live_entry_guards);
+  } else {
+    /* We need to weight by bandwidth, because our bridges or entryguards
+     * were not already selected proportional to their bandwidth. */
+    r = routerlist_sl_choose_by_bandwidth(live_entry_guards, WEIGHT_FOR_GUARD);
+  }
   smartlist_free(live_entry_guards);
   smartlist_free(exit_family);
   return r;
