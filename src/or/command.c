@@ -487,7 +487,7 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
-  log_info(LD_OR, "Negotiated version %d with %s",
+  log_info(LD_OR, "Negotiated version %d with %s; sending NETINFO.",
            highest_supported_version, safe_str(conn->_base.address));
   tor_assert(conn->link_proto >= 2);
 
@@ -595,8 +595,9 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   if (connection_or_set_state_open(conn)<0)
     connection_mark_for_close(TO_CONN(conn));
   else
-    log_info(LD_OR, "Got good NETINFO cell from %s",
-             safe_str(conn->_base.address));
+    log_info(LD_OR, "Got good NETINFO cell from %s; OR connection is now "
+             "open, using protocol version %d",
+             safe_str(conn->_base.address), (int)conn->link_proto);
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }
 

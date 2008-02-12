@@ -921,6 +921,8 @@ tor_tls_handshake(tor_tls_t *tls)
                    " get set. Fixing that.");
         }
         tls->wasV2Handshake = 1;
+        log_debug(LD_NET, "Completed V2 TLS handshake with client; waiting "
+                  "for renegotiation."));
       } else {
         tls->wasV2Handshake = 0;
       }
@@ -934,7 +936,8 @@ tor_tls_handshake(tor_tls_t *tls)
       if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0)))
         tls->wasV2Handshake = 0;
       else {
-        log_debug(LD_NET, "I think I got a v2 handshake on %p!", tls);
+        log_debug(LD_NET, "Server sent back a single certificate; looks like "
+                  "a v2 handshake on %p.", tls);
         tls->wasV2Handshake = 1;
       }
       if (cert)
