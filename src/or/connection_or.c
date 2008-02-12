@@ -406,6 +406,11 @@ connection_or_init_conn_from_address(or_connection_t *conn,
        * its actual addr/port, we won't remember. Careful! */
       /* XXXX020 arma: this is stupid, and it's the reason we need real_addr
        * to track is_canonical properly.  What requires it? */
+      /* XXXX <arma> i believe the reason we did this, originally, is because
+       * we wanted to log what OR a connection was to, and if we logged the
+       * right IP address and port 56244, that wouldn't be as helpful. now we
+       * log the "right" port too, so we know if it's moria1 or moria2.
+      */
       conn->_base.addr = r->addr;
       conn->_base.port = r->or_port;
     }

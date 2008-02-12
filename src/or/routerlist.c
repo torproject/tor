@@ -838,6 +838,8 @@ router_pick_directory_server(authority_type_t type, int flags)
     return choice;
 
   /* XXXX020 arma: what's the point of *reloading* and trying again?? -NM */
+  /* XXXX020 <arma> once upon a time, reloading set the is_running back
+     to 1. i think. i bet it has no purpose now. */
   log_info(LD_DIR,"Still no %s router entries. Reloading and trying again.",
            (flags & PDS_IGNORE_FASCISTFIREWALL) ? "known" : "reachable");
   if (router_reload_router_list()) {
