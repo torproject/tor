@@ -20,6 +20,8 @@ const char buffers_c_id[] =
 //#define NOINLINE
 
 #ifdef PARANOIA
+/** Helper: If PARANOIA is defined, assert that the buffer in local variable
+ * <b>buf</b> is well-formed. */
 #define check() STMT_BEGIN assert_buf_ok(buf); STMT_END
 #else
 #define check() STMT_NIL
@@ -124,6 +126,8 @@ static chunk_freelist_t freelists[] = {
   FL(0, 0, 0)
 };
 #undef FL
+/** How many times have we looked for a chunk of a size that no freelist
+ * could help with? */
 static uint64_t n_freelist_miss = 0;
 
 static void assert_freelist_ok(chunk_freelist_t *fl);
@@ -232,7 +236,7 @@ chunk_grow(chunk_t *chunk, size_t sz)
 #define MIN_READ_LEN 8
 /** Every chunk should take up at least this many bytes. */
 #define MIN_CHUNK_ALLOC 256
-/*XXXX020 enforce this maximum. */
+/** No chunk should take up more than this many bytes. */
 #define MAX_CHUNK_ALLOC 65536
 
 /** Return the allocation size we'd like to use to hold <b>target</b>
@@ -549,7 +553,7 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
 }
 
 /** Read up to <b>at_most</b> bytes from the socket <b>fd</b> into
- * <b>chunk</b> (which must be on <b>buf/b>). If we get an EOF, set
+ * <b>chunk</b> (which must be on <b>buf</b>). If we get an EOF, set
  * *<b>reached_eof</b> to 1.  Return -1 on error, 0 on eof or blocking,
  * and the number of bytes read otherwise. */
 static INLINE int

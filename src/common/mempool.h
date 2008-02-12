@@ -3,7 +3,7 @@
 /* $Id$ */
 
 /**
- * \file util.h
+ * \file mempool.h
  * \brief Headers for mempool.c
  **/
 

@@ -8,7 +8,8 @@ const char networkstatus_c_id[] =
   "$Id$";
 
 /**
- * \file Functions and structures for handling network status documents as a
+ * \file networkstatus.c
+ * \brief Functions and structures for handling network status documents as a
  * client or cache.
  */
 

@@ -1042,7 +1042,9 @@ test_util(void)
   test_eq(round_to_power_of_2(0), 2);
 }
 
-/** DOCDOC */
+/** Helper: assert that IPv6 addresses <b>a</b> and <b>b</b> are the same.  On
+ * failure, reports an error, describing the addresses as <b>e1</b> and
+ * <b>e2</b>, and reporting the line number as <b>line</b>. */
 static void
 _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
              const char *e2, int line)
@@ -1077,8 +1079,6 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     fflush(stdout);
   }
 }
-/** DOCDOC */
-#define test_eq_ip6(a,b) _test_eq_ip6((a),(b),#a,#b,__LINE__)
 
 /** Helper: Assert that two strings both decode as IPv6 addresses with
  * tor_inet_pton(), and both decode to the same address. */
@@ -1133,7 +1133,10 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
       test_fail_msg("failed: tor_addr_compare("a","b") "#op" 0"); \
   STMT_END
 
-/**DOCDOC*/
+/** Helper: assert that <b>xx</b> is parseable as a masked IPv6 address with
+ * ports by <b>tor_parse_mask_addr_ports(), with family <b>f</b>, IP address
+ * as 4 32-bit words <b>ip1...ip4</b>, mask bits as <b>mm</b>, and port range
+ * as <b>pt1..pt2</b>. */
 #define test_addr_mask_ports_parse(xx, f, ip1, ip2, ip3, ip4, mm, pt1, pt2) \
   STMT_BEGIN                                                                \
     test_eq(tor_addr_parse_mask_ports(xx, &t1, &mask, &port1, &port2), f);  \
@@ -3121,7 +3124,7 @@ test_util_mempool(void)
       //mp_pool_assert_ok(pool);
     }
     if (crypto_rand_int(777)==0)
-      mp_pool_clean(pool, -1, 0);
+      mp_pool_clean(pool, 1, 1);
 
     if (i % 777)
       mp_pool_assert_ok(pool);

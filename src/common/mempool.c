@@ -12,7 +12,7 @@
 #define MEMPOOL_PRIVATE
 #include "mempool.h"
 
-//#define LAZY_CHUNK_SORT
+#define LAZY_CHUNK_SORT
 
 /* OVERVIEW:
  *
@@ -193,7 +193,9 @@ mp_chunk_new(mp_pool_t *pool)
   return chunk;
 }
 
-/** DOCDOC */
+/** Take a <b>chunk</b> that has just been allocated or removed from
+ * <b>pool</b>'s empty chunk list, and add it to the head of the used chunk
+ * list. */
 static INLINE void
 add_newly_used_chunk_to_used_list(mp_pool_t *pool, mp_chunk_t *chunk)
 {
@@ -347,7 +349,6 @@ mp_pool_release(void *item)
 
     ++pool->n_empty_chunks;
   }
-
   --chunk->n_allocated;
 }
 
@@ -404,7 +405,8 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
 }
 
 #ifdef LAZY_CHUNK_SORT
-/** DOCDOC */
+/** Helper function for qsort: used to sort pointers to mp_chunk_t into
+ * descending order of fullness. */
 static int
 mp_pool_sort_used_chunks_helper(const void *_a, const void *_b)
 {
@@ -413,7 +415,9 @@ mp_pool_sort_used_chunks_helper(const void *_a, const void *_b)
   return b->n_allocated - a->n_allocated;
 }
 
-/** DOCDOC */
+/** Sort the used chunks in <b>pool</b> into descending order of fullness,
+ * so that we preferentially fill up mostly full chunks before we make
+ * nearly empty chunks less nearly empty. */
 static void
 mp_pool_sort_used_chunks(mp_pool_t *pool)
 {
@@ -426,7 +430,6 @@ mp_pool_sort_used_chunks(mp_pool_t *pool)
   }
   if (!inverted)
     return;
-  ASSERT(n);
   //printf("Sort %d/%d\n",inverted,n);
   chunks = ALLOC(sizeof(mp_chunk_t *)*n);
 #ifdef ALLOC_CAN_RETURN_NULL
@@ -456,12 +459,9 @@ mp_pool_sort_used_chunks(mp_pool_t *pool)
 #endif
 
 /** If there are more than <b>n</b> empty chunks in <b>pool</b>, free the
- * excess ones that have been empty for the longest.  (If <b>n</b> is less
- * than zero, free only empty chunks that were not used since the last
- * call to mp_pool_clean(), leaving only -<b>n</b>.)
- * DOCDOC Keep_recently_used, n_to_keep
- * XXXX020 maybe dump negative n_to_keep behavior, if k_r_u turns out to be
- *   smarter.
+ * excess ones that have been empty for the longest. If
+ * <b>keep_recently_used</b> is true, do not free chunks unless they have been
+ * empty since the last call to this function.
  **/
 void
 mp_pool_clean(mp_pool_t *pool, int n_to_keep, int keep_recently_used)
@@ -471,12 +471,8 @@ mp_pool_clean(mp_pool_t *pool, int n_to_keep, int keep_recently_used)
 #ifdef LAZY_CHUNK_SORT
   mp_pool_sort_used_chunks(pool);
 #endif
+  ASSERT(n_to_keep >= 0);
 
-  if (n_to_keep < 0) {
-    /* As said in the documentation, "negative n" means "leave an additional
-     * -n chunks". So replace n with a positive number. */
-    n_to_keep = pool->min_empty_chunks + (-n_to_keep);
-  }
   if (keep_recently_used) {
     int n_recently_used = pool->n_empty_chunks - pool->min_empty_chunks;
     if (n_to_keep < n_recently_used)

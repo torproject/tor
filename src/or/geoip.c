@@ -294,10 +294,10 @@ geoip_get_history_start(void)
   return client_history_starts;
 }
 
-/* Helper type: used to sort results by value. */
+/** Helper type: used to sort per-country totals by value. */
 typedef struct c_hist_t {
-  char country[3];
-  unsigned total;
+  char country[3]; /**< two-leter country code. */
+  unsigned total; /**< total ips seen in this country. */
 } c_hist_t;
 
 /** Sorting helper: return -1, 1, or 0 based on comparison of two

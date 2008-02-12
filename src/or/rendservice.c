@@ -42,26 +42,30 @@ typedef struct rend_service_port_config_t {
 
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
-  /** Fields specified in config file */
+  /* Fields specified in config file */
   char *directory; /**< where in the filesystem it stores it */
   smartlist_t *ports; /**< List of rend_service_port_config_t */
   char *intro_prefer_nodes; /**< comma-separated list of nicknames */
   char *intro_exclude_nodes; /**< comma-separated list of nicknames */
-  /* Other fields */
-  /* DOCDOC All of these fields */
-  crypto_pk_env_t *private_key;
-  char service_id[REND_SERVICE_ID_LEN_BASE32+1];
-  char pk_digest[DIGEST_LEN];
-  smartlist_t *intro_nodes; /**< List of rend_intro_point_t's we have,
-                             * or are trying to establish. */
-  time_t intro_period_started;
-  int n_intro_circuits_launched; /**< count of intro circuits we have
-                                  * established in this period. */
-  rend_service_descriptor_t *desc;
-  time_t desc_is_dirty;
-  time_t next_upload_time;
   int descriptor_version; /**< Rendezvous descriptor version that will be
                            * published. */
+  /* Other fields */
+  crypto_pk_env_t *private_key; /**< Permanent hidden-service key. */
+  char service_id[REND_SERVICE_ID_LEN_BASE32+1]; /**< Onion address without
+                                                  * '.onion' */
+  char pk_digest[DIGEST_LEN]; /**< Hash of permanent hidden-service key. */
+  smartlist_t *intro_nodes; /**< List of rend_intro_point_t's we have,
+                             * or are trying to establish. */
+  time_t intro_period_started; /**< Start of the current period to build
+                                * introduction points. */
+  int n_intro_circuits_launched; /**< count of intro circuits we have
+                                  * established in this period. */
+  rend_service_descriptor_t *desc; /**< Current hidden service descriptor. */
+  time_t desc_is_dirty; /**< Time at which changes to the hidden service
+                         * descriptor content occurred, or 0 if it's
+                         * up-to-date. */
+  time_t next_upload_time; /**< Scheduled next hidden service descriptor
+                            * upload time. */
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.

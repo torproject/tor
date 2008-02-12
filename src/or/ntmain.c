@@ -45,6 +45,8 @@ static int nt_service_remove(void);
 static int nt_service_cmd_start(void);
 static int nt_service_cmd_stop(void);
 
+/** Struct to hold dynamically loaded NT-service related function pointers.
+ */
 struct service_fns {
   int loaded;
 

@@ -1105,8 +1105,13 @@ log_cert_lifetime(X509 *cert, const char *problem)
     tor_free(s2);
 }
 
-/** DOCDOC helper.
- * cert_out needs to be freed. id_cert_out doesn't. */
+/** Helper function: try to extract a link certificate and an identity
+ * certificate from <b>tls</b>, and store them in *<b>cert_out</b> and
+ * *<b>id_cert_out</b> respectively.  Log all messages at level
+ * <b>severity</b>.
+ *
+ * Note that a reference is added to cert_out, so it needs to be
+ * freed. id_cert_out doesn't. */
 static void
 try_to_extract_certs_from_tls(int severity, tor_tls_t *tls,
                               X509 **cert_out, X509 **id_cert_out)
@@ -1141,12 +1146,12 @@ try_to_extract_certs_from_tls(int severity, tor_tls_t *tls,
 }
 
 /** If the provided tls connection is authenticated and has a
- * certificate that is currently valid and signed, then set
+ * certificate chain that is currently valid and signed, then set
  * *<b>identity_key</b> to the identity certificate's key and return
  * 0.  Else, return -1 and log complaints with log-level <b>severity</b>.
  */
 int
-tor_tls_verify_v1(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
+tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
 {
   X509 *cert = NULL, *id_cert = NULL;
   EVP_PKEY *id_pkey = NULL;
@@ -1279,7 +1284,8 @@ _check_no_tls_errors(const char *fname, int line)
   tls_log_errors(LOG_WARN, NULL);
 }
 
-/**DOCDOC */
+/** Return true iff the initial TLS connection at <b>tls</b> did not use a v2
+ * TLS handshake. Output undefined if the handshake isn't finished. */
 int
 tor_tls_used_v1_handshake(tor_tls_t *tls)
 {

@@ -916,13 +916,20 @@ typedef struct or_connection_t {
    * recent, we can rate limit it further. */
   time_t client_used;
 
-  uint32_t real_addr; /**DOCDOC */
+  uint32_t real_addr; /**< The actual address that this connection came from
+                       * or went to.  The <b>addr</b> field is prone to
+                       * getting overridden by the address from the router
+                       * descriptor matching <b>identity_digest</b>. */
 
   circ_id_type_t circ_id_type:2; /**< When we send CREATE cells along this
                                   * connection, which half of the space should
                                   * we use? */
-  unsigned int is_canonical:1; /**< DOCDOC */
-  unsigned int have_renegotiated:1; /**< DOCDOC */
+  /** Should this connection be used for extending circuits to the server
+   * matching the <b>identity_digest</b> field?  Set to true if we're pretty
+   * sure we aren't getting MITMed, either because we're connected to an
+   * address listed in a server descriptor, or because an authenticated
+   * NETINFO cell listed the address we're connected to as recognized. */
+  unsigned int is_canonical:1;
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   uint16_t next_circ_id; /**< Which circ_id do we try to use next on
@@ -1445,7 +1452,7 @@ typedef struct vote_routerstatus_t {
                   * running. */
 } vote_routerstatus_t;
 
-/* Information about a single voter in a vote or a consensus. */
+/** Information about a single voter in a vote or a consensus. */
 typedef struct networkstatus_voter_info_t {
   char *nickname; /**< Nickname of this voter */
   char identity_digest[DIGEST_LEN]; /**< Digest of this voter's identity key */
@@ -2335,8 +2342,11 @@ typedef struct {
    * cached. */
   char *FallbackNetworkstatusFile;
 
-  /** DOCDOC here and in tor.1 */
+  /** If true, and we have GeoIP data, and we're a bridge, keep a per-country
+   * count of how many client addresses have contacted us so that we can help
+   * the bridge authority guess which countries have blocked access to us. */
   int BridgeRecordUsageByCountry;
+  /** Optionally, a file with GeoIP data. */
   char *GeoIPFile;
 
 } or_options_t;

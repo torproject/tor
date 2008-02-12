@@ -404,8 +404,8 @@ connection_or_init_conn_from_address(or_connection_t *conn,
       /* Override the addr/port, so our log messages will make sense.
        * This is dangerous, since if we ever try looking up a conn by
        * its actual addr/port, we won't remember. Careful! */
-      /* XXXX020 this is stupid, and it's the reason we need real_addr to
-       * track is_canonical properly. */
+      /* XXXX020 arma: this is stupid, and it's the reason we need real_addr
+       * to track is_canonical properly.  What requires it? */
       conn->_base.addr = r->addr;
       conn->_base.port = r->or_port;
     }
@@ -724,8 +724,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   check_no_tls_errors();
 
   if (has_cert) {
-    int v = tor_tls_verify_v1(started_here?severity:LOG_INFO,
-                              conn->tls, &identity_rcvd);
+    int v = tor_tls_verify(started_here?severity:LOG_INFO,
+                           conn->tls, &identity_rcvd);
     if (started_here && v<0) {
       log_fn(severity,LD_OR,"Tried connecting to router at %s:%d: It"
              " has a cert but it's invalid. Closing.",

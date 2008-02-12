@@ -1665,7 +1665,7 @@ typedef struct hs_usage_list_elem_t {
   struct hs_usage_list_elem_t *next;
 } hs_usage_list_elem_t;
 
-/* Ordered list that stores service ids and the number of observations. It is
+/** Ordered list that stores service ids and the number of observations. It is
  * ordered by the number of occurrences in descending order. Its purpose is to
  * calculate the frequency distribution when the period is over. */
 typedef struct hs_usage_list_t {

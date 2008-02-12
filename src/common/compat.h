@@ -330,6 +330,7 @@ struct sockaddr_in6 {
 
 typedef uint8_t maskbits_t;
 struct in_addr;
+/** DOCDOC */
 typedef struct tor_addr_t
 {
   sa_family_t family;

@@ -28,8 +28,13 @@ const char aes_c_id[] = "$Id$";
 /* We have 3 strategies for getting AES: Via OpenSSL's AES_encrypt function,
  * via OpenSSL's EVP_EncryptUpdate function, or via the built-in AES
  * implementation below. */
+
+/** Defined iff we're using openssl's AES functions for AES. */
 #undef USE_OPENSSL_AES
+/** Defined iff we're using openssl's EVP code for AES. */
 #undef USE_OPENSSL_EVP
+/** Defined iff we're using Tor's internal AES implementation, defined
+ * below. */
 #undef USE_BUILTIN_AES
 
 /* Figure out our CPU type.  We use this to pick an AES implementation.
@@ -130,6 +135,7 @@ static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr,
 /*======================================================================*/
 /* Interface to AES code, and counter implementation */
 
+/** Implements an aes counter-mode cipher. */
 struct aes_cnt_cipher {
   /** This next element (howevever it's defined) is the AES key. */
 #if defined(USE_OPENSSL_EVP)

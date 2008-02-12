@@ -925,6 +925,7 @@ client_dns_set_reverse_addressmap(const char *address, const char *v,
  *
  * These options are configured by parse_virtual_addr_network().
  */
+/*DOCDOC options */
 static uint32_t virtual_addr_network = 0x7fc00000u;
 static maskbits_t virtual_addr_netmask_bits = 10;
 static uint32_t next_virtual_addr    = 0x7fc00000u;

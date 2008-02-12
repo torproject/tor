@@ -979,6 +979,17 @@ This option only affects name lookups that your server does on
 behalf of clients, and only takes effect if Tor was built with
 eventdns support.
 (Default: 0)
+.LP
+.TP
+\fBBridgeRecordUsageByCountry \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled and BridgeRelay is also enabled, and we
+have GeoIP data, Tor keeps a keep a per-country count of how many
+client addresses have contacted it so that it can help the bridge
+authority guess which countries have blocked access to it.
+.LP
+.TP
+\fBGeoIPFile \fR\fIfilename\fP
+A filename containing GeoIP data, for use with BridgeRecordUsageByCountry.
 
 .SH DIRECTORY SERVER OPTIONS
 .PP
