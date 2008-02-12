@@ -60,32 +60,15 @@ R   - then document the bridge user download timeline.
 N - Before the feature freeze:
     - 105+TLS, if possible.
       . TLS backend work
-        - New list of ciphers for clients
-        o Servers detect new ciphers, and only send ID cert when they
-          get an older cipher list, and only request client cert when
-          they get an older cipher list.
-        . Clients only send certificates when asked for them.
-          o Implement
-          - Enable
-        o Servers disable callback once negotiation is finished, so
-          that renegotiation happens according to the old rules.
-        o Clients initiate renegotiation immediately on completing
-          a v2 connection.
-        o Servers detect renegotiation, and if there is now a client
-          cert, they adust the client ID.
-          o Detect.
-          o Adjust.
-        o Better cname and organizationName generation.
-      o New revised handshake: post-TLS:
-        o start by sending VERSIONS cells
-        o once we have a version, send a netinfo and become open
-        o Ban most cell types on a non-OPEN connection.
+        . Enable.
       - Test
         o Verify version negotiation on client
-        - Verify version negotiation on server
-        . Verify that client->server connection becomes open
+        o Verify version negotiation on server
+        o Verify that client->server connection becomes open
         - Verify that server->server connection becomes open and
           authenticated.
+        - Verify that initiator sends no cert in first stage of TLS
+          handshake.
       - NETINFO fallout
         - Don't extend a circuit over a noncanonical connection with
           mismatched address.
