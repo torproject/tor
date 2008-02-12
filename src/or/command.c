@@ -489,15 +489,11 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
 
   log_info(LD_OR, "Negotiated version %d with %s",
            highest_supported_version, safe_str(conn->_base.address));
+  tor_assert(conn->link_proto >= 2);
 
-  if (highest_supported_version >= 2) {
-    if (connection_or_send_netinfo(conn) < 0) {
-      connection_mark_for_close(TO_CONN(conn));
-      return;
-    }
-  } else {
-    /* Should be impossible. */
-    tor_fragile_assert();
+  if (connection_or_send_netinfo(conn) < 0) {
+    connection_mark_for_close(TO_CONN(conn));
+    return;
   }
 }
 
