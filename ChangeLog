@@ -13,6 +13,8 @@ Changes in version 0.2.0.20-?? - 2008-02-??
     - Directory mirrors no longer include a guess at the client's IP
       address if the connection appears to be coming from the same /24
       network; it was producing too many wrong guesses.
+    - We were leaking a file descriptor if Tor started with a zero-length
+      cached-descriptors file. Patch by freddy77; bugfix on 0.1.2.
 
 
 Changes in version 0.2.0.19-alpha - 2008-02-09

@@ -129,6 +129,7 @@ typedef struct tor_mmap_impl_t {
   size_t mapping_size; /**< Size of the actual mapping. (This is this file
                         * size, rounded up to the nearest page.) */
 } tor_mmap_impl_t;
+
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
  * failure, return NULL.  Sets errno properly, using ERANGE to mean
  * "empty file". */
@@ -164,20 +165,19 @@ tor_mmap_file(const char *filename)
      * return NULL, and bad things will happen. So just fail. */
     log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
     errno = ERANGE;
+    close(fd);
     return NULL;
   }
 
   string = mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0);
+  close(fd);
   if (string == MAP_FAILED) {
     int save_errno = errno;
-    close(fd);
     log_warn(LD_FS,"Could not mmap file \"%s\": %s", filename,
              strerror(errno));
     errno = save_errno;
     return NULL;
   }
-
-  close(fd);
 
   res = tor_malloc_zero(sizeof(tor_mmap_impl_t));
   res->base.data = string;
