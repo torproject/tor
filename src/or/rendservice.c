@@ -1076,8 +1076,8 @@ directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
                         "service '%s' with descriptor ID '%s' with validity "
                         "of %d seconds to hidden service directory '%s' on "
                         "port %d.",
-               service_id,
-               desc_id_base32,
+               safe_str(service_id),
+               safe_str(desc_id_base32),
                seconds_valid,
                hs_dir->nickname,
                hs_dir->dir_port);

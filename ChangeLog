@@ -15,6 +15,8 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       network; it was producing too many wrong guesses.
     - We were leaking a file descriptor if Tor started with a zero-length
       cached-descriptors file. Patch by freddy77; bugfix on 0.1.2.
+    - Have the new hidden service code respect the SafeLogging setting.
+      Bugfix on 0.2.0.x.  Patch from Karsten.
 
 
 Changes in version 0.2.0.19-alpha - 2008-02-09

@@ -385,7 +385,8 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
   log_info(LD_REND, "Sending fetch request for v2 descriptor for "
                     "service '%s' with descriptor ID '%s' to hidden "
                     "service directory '%s' on port %d.",
-           query, desc_id_base32, hs_dir->nickname, hs_dir->dir_port);
+           safe_str(query), safe_str(desc_id_base32), hs_dir->nickname,
+           hs_dir->dir_port);
   return 1;
 }
 
@@ -398,7 +399,8 @@ rend_client_refetch_renddesc(const char *query)
 {
   if (!get_options()->FetchHidServDescriptors)
     return;
-  log_info(LD_REND, "Fetching rendezvous descriptor for service %s", query);
+  log_info(LD_REND, "Fetching rendezvous descriptor for service %s",
+           escaped_safe_str(query));
   if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
     log_info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
              "already in progress.", escaped_safe_str(query));
@@ -428,7 +430,7 @@ rend_client_refetch_v2_renddesc(const char *query)
     return;
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
-            query);
+            safe_str(query));
   /* Randomly iterate over the replicas until a descriptor can be fetched
    * from one of the consecutive nodes, or no options are left. */
   tries_left = REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;

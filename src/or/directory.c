@@ -2570,7 +2570,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     const char *query = url + strlen("/tor/rendezvous2/");
     if (strlen(query) == REND_DESC_ID_V2_LEN_BASE32) {
       log_info(LD_REND, "Got a v2 rendezvous descriptor request for ID '%s'",
-               query);
+               safe_str(query));
       switch (rend_cache_lookup_v2_desc_as_dir(query, &descp)) {
         case 1: /* valid */
           write_http_response_header(conn, strlen(descp), 0, 0);
