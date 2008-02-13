@@ -13,6 +13,8 @@ Changes in versino 0.1.2.20 - 2008-??-??
       Resolves bug 597.
     - Fix a few memory leaks that could in theory happen under bizarre error
       conditions.
+    - We were leaking a file descriptor if Tor started with a zero-length
+      cached-descriptors file. Patch by freddy77.
 
 
 Changes in version 0.1.2.19 - 2008-01-17

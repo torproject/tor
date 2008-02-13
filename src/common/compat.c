@@ -158,18 +158,17 @@ tor_mmap_file(const char *filename)
     /* Zero-length file. If we call mmap on it, it will succeed but
      * return NULL, and bad things will happen. So just fail. */
     log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
+    close(fd);
     return NULL;
   }
 
   string = mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0);
+  close(fd);
   if (string == MAP_FAILED) {
-    close(fd);
     log_warn(LD_FS,"Could not mmap file \"%s\": %s", filename,
              strerror(errno));
     return NULL;
   }
-
-  close(fd);
 
   res = tor_malloc_zero(sizeof(tor_mmap_impl_t));
   res->base.data = string;
