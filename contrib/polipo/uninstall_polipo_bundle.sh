@@ -1,5 +1,8 @@
 #!/bin/sh
 #
+# Original version 2005 by loki der quaeler
+# Copyright 2007-2008 Andrew Lewman
+# This is licensed under a Modified BSD license.
 
 
 ### this is the location of a file which contains all the actual package names

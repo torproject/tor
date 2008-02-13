@@ -1,7 +1,7 @@
 ;polipo-mingw.nsi - A basic win32 installer for Polipo
 ; Originally written by J Doe.
 ; Modified by Andrew Lewman
-; See LICENSE for licencing information
+; This is licensed under a Modified BSD license.
 ;-----------------------------------------
 ;
 !include "MUI.nsh"

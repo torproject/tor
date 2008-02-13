@@ -1,8 +1,8 @@
 #!/bin/sh
 # $Id: package.sh 8992 2006-12-23 03:12:09Z phobos $
 # Copyright 2004-2005 Nick Mathewson & Andrew Lewman. 
-# Copyright 2005-2007 Andrew Lewman
-# See LICENSE in Polipo distribution for licensing information.
+# Copyright 2005-2008 Andrew Lewman
+# This is licensed under the Modified BSD License.
 
 ###
 # Helpful info on OS X packaging:
