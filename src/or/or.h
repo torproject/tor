@@ -882,7 +882,7 @@ typedef struct connection_t {
   /** Annother connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
 
-  /* XXXX020 move this into a subtype!!! */
+  /* XXXX021 move this into a subtype. */
   struct evdns_server_port *dns_server_port;
 
 } connection_t;

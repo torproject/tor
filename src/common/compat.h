@@ -340,7 +340,7 @@ typedef struct tor_addr_t
   } addr;
 } tor_addr_t;
 
-/* XXXX020 rename these. */
+/* XXXX021 rename these. */
 static INLINE uint32_t IPV4IP(const tor_addr_t *a);
 static INLINE uint32_t IPV4IPh(const tor_addr_t *a);
 static INLINE uint32_t IPV4MAPh(const tor_addr_t *a);

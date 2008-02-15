@@ -227,7 +227,7 @@ dnsserv_resolved(edge_connection_t *conn,
   if (!req)
     return;
 
-  /* XXXX020 Re-do; this is dumb. */
+  /* XXXX021 Re-do; this is dumb. */
   if (ttl < 60)
     ttl = 60;
 

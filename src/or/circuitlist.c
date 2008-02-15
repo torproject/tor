@@ -806,7 +806,7 @@ origin_circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
                             int flags)
 {
-  /*XXXX020 arma: The purpose argument is ignored.  Can that possibly be
+  /*XXXX021 arma: The purpose argument is ignored.  Can that possibly be
    * right? */
   /* XXXX <arma> i don't know of any actual bugs that this causes. since i
    * think we only call the function for purposes where we want it to do what

@@ -1388,16 +1388,14 @@ get_max_believable_bandwidth(void)
  * If <b>statuses</b> is zero, then <b>sl</b> is a list of
  * routerinfo_t's. Otherwise it's a list of routerstatus_t's.
  *
- * If <b>for_exit</b>, we're picking an exit node: consider all nodes'
- * bandwidth equally regardless of their Exit status, since there may be
- * some in the list because they exit to obscure ports. If not <b>for_exit</b>,
- * we're picking a non-exit node: weight exit-node's bandwidth less
- * depending on the smallness of the fraction of Exit-to-total bandwidth.
- *
- * If <b>for_guard</b>, we're picking a guard node: consider all guard's
- * bandwidth equally. Otherwise, weight guards proportionally less.
- *
- * XXX DOCDOC the above args aren't args anymore
+ * If <b>rule</b>==WEIGHT_FOR_EXIT. we're picking an exit node: consider all
+ * nodes' bandwidth equally regardless of their Exit status, since there may
+ * be some in the list because they exit to obscure ports. If
+ * <b>rule</b>==NO_WEIGHTING, we're picking a non-exit node: weight
+ * exit-node's bandwidth less depending on the smallness of the fraction of
+ * Exit-to-total bandwidth.  If <b>rule</b>==WEIGHT_FOR_GUARD, we're picking a
+ * guard node: consider all guard's bandwidth equally. Otherwise, weight
+ * guards proportionally less.
  */
 static void *
 smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
@@ -3666,7 +3664,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
       }
     }
   }
-  /* XXX020 should we consider having even the dir mirrors delay
+  /* XXX should we consider having even the dir mirrors delay
    * a little bit, so we don't load the authorities as much? -RD
    * I don't think so.  If we do, clients that want those descriptors may
    * not actually find them if the caches haven't got them yet. -NM

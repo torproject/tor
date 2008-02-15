@@ -925,9 +925,12 @@ client_dns_set_reverse_addressmap(const char *address, const char *v,
  *
  * These options are configured by parse_virtual_addr_network().
  */
-/*DOCDOC options */
+/** Which network should we use for virtual IPv4 addresses?  Only the first
+ * bits of this value are fixed. */
 static uint32_t virtual_addr_network = 0x7fc00000u;
+/** How many bits of <b>virtual_addr_network</b> are fixed? */
 static maskbits_t virtual_addr_netmask_bits = 10;
+/** What's the next virtual address we will hand out? */
 static uint32_t next_virtual_addr    = 0x7fc00000u;
 
 /** Read a netmask of the form 127.192.0.0/10 from "val", and check whether
@@ -1944,7 +1947,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
     uint32_t a;
     size_t len = strlen(ap_conn->socks_request->address);
     char c = 0;
-    /* XXXX020 This logic is a little ugly: we check for an in-addr.arpa ending
+    /* XXXX021 This logic is a little ugly: we check for an in-addr.arpa ending
      * on the address.  If we have one, the address is already in the right
      * order, so we'll leave it alone later.  Otherwise, we reverse it and
      * turn it into an in-addr.arpa address. */
@@ -1958,11 +1961,11 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
       return -1;
     }
     if (c) {
-      /* this path happens on DNS. Can we unify? XXXX020 */
+      /* this path happens on DNS. Can we unify? XXXX021 */
       ap_conn->socks_request->address[len-13] = c;
       strlcpy(inaddr_buf, ap_conn->socks_request->address, sizeof(inaddr_buf));
     } else {
-      /* this path happens on tor-resolve. Can we unify? XXXX020 */
+      /* this path happens on tor-resolve. Can we unify? XXXX021 */
       a = ntohl(in.s_addr);
       tor_snprintf(inaddr_buf, sizeof(inaddr_buf), "%d.%d.%d.%d.in-addr.arpa",
                    (int)(uint8_t)((a    )&0xff),
@@ -2085,12 +2088,15 @@ tell_controller_about_resolved_result(edge_connection_t *conn,
   }
 }
 
-/** Send an answer to an AP connection that has requested a DNS lookup
- * via SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6|HOSTNAME) or
- * -1 for unreachable; the answer should be in the format specified
- * in the socks extensions document.
- * DOCDOC ttl expires
+/** Send an answer to an AP connection that has requested a DNS lookup via
+ * SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6|HOSTNAME) or -1
+ * for unreachable; the answer should be in the format specified in the socks
+ * extensions document.  <b>ttl</b> is the ttl for the answer, or -1 on
+ * certain errors or for values that didn't come via DNS.  <b>expires</b> is
+ * a time when the answer expires, or -1 or TIME_MAX if there's a good TTL.
  **/
+/* XXXX021 the use of the ttl and expires fields is nutty.  Let's make this
+ * interface and those that use it less ugly. */
 void
 connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                        int answer_type,
@@ -2341,7 +2347,9 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       address = tor_strdup(or_circ->p_conn->_base.address);
     else
       address = tor_strdup("127.0.0.1");
-    port = 1; /*XXXX020 set this to something sensible?  - NM*/
+    port = 1; /* XXXX This value is never actually used anywhere, and there
+               * isn't "really" a connection here.  But we
+               * need to set it to something nonzero. */
   } else {
     log_warn(LD_BUG, "Got an unexpected command %d", (int)rh.command);
     end_payload[0] = END_STREAM_REASON_INTERNAL;

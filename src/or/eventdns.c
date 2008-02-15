@@ -1829,7 +1829,7 @@ server_port_free(struct evdns_server_port *port)
 	}
 	(void) event_del(&port->event);
 	CLEAR(&port->event);
-	/* XXXX020 actually free the port? -NM */
+	/* XXXX021 actually free the port? -NM */
 	/* XXXX yes, and fix up evdns_close_server_port to dtrt. -NM */
 }
 

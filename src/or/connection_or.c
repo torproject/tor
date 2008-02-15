@@ -404,7 +404,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
       /* Override the addr/port, so our log messages will make sense.
        * This is dangerous, since if we ever try looking up a conn by
        * its actual addr/port, we won't remember. Careful! */
-      /* XXXX020 arma: this is stupid, and it's the reason we need real_addr
+      /* XXXX021 arma: this is stupid, and it's the reason we need real_addr
        * to track is_canonical properly.  What requires it? */
       /* XXXX <arma> i believe the reason we did this, originally, is because
        * we wanted to log what OR a connection was to, and if we logged the

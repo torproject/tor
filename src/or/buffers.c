@@ -119,10 +119,8 @@ typedef struct chunk_freelist_t {
 
 /** Static array of freelists, sorted by alloc_len, terminated by an entry
  * with alloc_size of 0. */
-/**XXXX020 tune these values.  And all allocation sizes, really. */
 static chunk_freelist_t freelists[] = {
-  FL(256, 1024, 16), FL(512, 1024, 16), FL(1024, 512, 8), FL(4096, 256, 8),
-  FL(8192, 128, 4), FL(16384, 64, 4), FL(32768, 32, 2), FL(65536, 16, 2),
+  FL(4096, 256, 8), FL(8192, 128, 4), FL(16384, 64, 4), FL(32768, 32, 2),
   FL(0, 0, 0)
 };
 #undef FL
@@ -180,7 +178,7 @@ chunk_new_with_alloc_size(size_t alloc)
       freelist->lowest_length = freelist->cur_length;
     ++freelist->n_hit;
   } else {
-    /* XXXX020 take advantage of tor_malloc_roundup, once we know how that
+    /* XXXX021 take advantage of tor_malloc_roundup, once we know how that
      * affects freelists. */
     if (freelist)
       ++freelist->n_alloc;
@@ -244,8 +242,6 @@ chunk_grow(chunk_t *chunk, size_t sz)
 static INLINE size_t
 preferred_chunk_size(size_t target)
 {
-  /* XXXX020 use log2 code, maybe. */
-  /* XXXX020 or make sizing code more fine-grained! */
   size_t sz = MIN_CHUNK_ALLOC;
   while (CHUNK_SIZE_WITH_ALLOC(sz) < target) {
     sz <<= 1;
@@ -418,10 +414,7 @@ buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
 }
 
 /** Resize buf so it won't hold extra memory that we haven't been
- * using lately (that is, since the last time we called buf_shrink).
- * Try to shrink the buf until it is the largest factor of two that
- * can contain <b>buf</b>-&gt;highwater, but never smaller than
- * MIN_LAZY_SHRINK_SIZE.
+ * using lately.
  */
 void
 buf_shrink(buf_t *buf)
@@ -454,8 +447,8 @@ buf_remove_from_front(buf_t *buf, size_t n)
   check();
 }
 
-/** Create and return a new buf with capacity <b>size</b>.
- * (Used for testing). */
+/** Create and return a new buf with default chunk capacity <b>size</b>.
+ */
 buf_t *
 buf_new_with_capacity(size_t size)
 {
@@ -609,11 +602,11 @@ read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
  * (because of EOF), set *<b>reached_eof</b> to 1 and return 0. Return -1 on
  * error; else return the number of bytes read.
  */
-/* XXXX020 indicate "read blocked" somehow? */
+/* XXXX021 indicate "read blocked" somehow? */
 int
 read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
 {
-  /* XXXX020 It's stupid to overload the return values for these functions:
+  /* XXXX021 It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes read" are not mutually exclusive.
    */
   int r = 0;
@@ -777,7 +770,7 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
 int
 flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
-  /* XXXX020 It's stupid to overload the return values for these functions:
+  /* XXXX021 It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes flushed" are not mutually exclusive.
    */
   int r;

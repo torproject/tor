@@ -311,7 +311,8 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
   if (!started_tracking_stability)
     started_tracking_stability = time(NULL);
   if (hist && hist->start_of_run) {
-    /*XXXX020 treat failure specially? */
+    /*XXXX We could treat failed connections differently from failed
+     * conect attempts. */
     long run_length = when - hist->start_of_run;
     hist->weighted_run_length += run_length;
     hist->total_run_weights += 1.0;
@@ -388,7 +389,8 @@ get_stability(or_history_t *hist, time_t when)
   return total / total_weights;
 }
 
-/** DODDOC */
+/** Return the total amount of time we've been observing, with each run of
+ * time downrated by the appropriate factor. */
 static long
 get_total_weighted_time(or_history_t *hist, time_t when)
 {
@@ -464,7 +466,7 @@ rep_hist_get_weighted_time_known(const char *id, time_t when)
 int
 rep_hist_have_measured_enough_stability(void)
 {
-  /* XXXX020 This doesn't do so well when we change our opinion
+  /* XXXX021 This doesn't do so well when we change our opinion
    * as to whether we're tracking router stability. */
   return started_tracking_stability < time(NULL) - 4*60*60;
 }
@@ -755,7 +757,11 @@ parse_possibly_bad_iso_time(const char *s, time_t *time_out)
     return parse_iso_time(s, time_out);
 }
 
-/** DOCDOC */
+/** We've read a time <b>t</b> from a file stored at <b>stored_at</b>, which
+ * says we started measuring at <b>started_measuring</b>.  Return a new number
+ * that's about as much before <b>now</b> as <b>t</b> was before
+ * <b>stored_at</b>.
+ */
 static INLINE time_t
 correct_time(time_t t, time_t now, time_t stored_at, time_t started_measuring)
 {
@@ -868,7 +874,6 @@ rep_hist_load_mtbf_data(time_t now)
     wfu_timebuf[0] = '\0';
 
     if (format == 1) {
-      /* XXXX020 audit the heck out of my scanf usage. */
       n = sscanf(line, "%40s %ld %lf S=%10s %8s",
                  hexbuf, &wrl, &trw, mtbf_timebuf, mtbf_timebuf+11);
       if (n != 3 && n != 5) {
