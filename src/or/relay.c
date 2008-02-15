@@ -503,7 +503,7 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
 
   if (cell_direction == CELL_DIRECTION_OUT && circ->n_conn) {
     /* if we're using relaybandwidthrate, this conn wants priority */
-    /* XXXX020 the call to time() seems little too frequent */
+    /* XXXX021 the call to time() seems little too frequent */
     circ->n_conn->client_used = time(NULL);
   }
 
@@ -1511,7 +1511,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 static int total_cells_allocated = 0;
 
 #ifdef ENABLE_CELL_POOL /* Defined in ./configure. True by default. */
-/* XXX020 make cell pools the only option once we know they work and improve
+/* XXX021 make cell pools the only option once we know they work and improve
  * matters? -RD */
 static mp_pool_t *cell_pool = NULL;
 /** Allocate structures to hold cells. */

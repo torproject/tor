@@ -678,8 +678,9 @@ rep_hist_record_mtbf_data(void)
 
   PUT("data\n");
 
-  /* XXX020 Nick: now bridge auths record this for all routers too.
-   * Should we make them record it only for bridge routers? */
+  /* XXX021 Nick: now bridge auths record this for all routers too.
+   * Should we make them record it only for bridge routers? -RD
+   * Not for 0.2.0. -NM */
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
        orhist_it = digestmap_iter_next(history_map,orhist_it)) {

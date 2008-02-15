@@ -865,6 +865,7 @@ router_get_consensus_status_by_nickname(const char *nickname,
   if (!current_consensus || !nickname)
     return NULL;
 
+  /* Is this name really a hexadecimal identity digest? */
   if (nickname[0] == '$') {
     if (base16_decode(digest, DIGEST_LEN, nickname+1, strlen(nickname+1))<0)
       return NULL;
@@ -874,16 +875,23 @@ router_get_consensus_status_by_nickname(const char *nickname,
     return networkstatus_vote_find_entry(current_consensus, digest);
   }
 
+  /* Is there a server that is Named with this name? */
   if (named_server_map)
     named_id = strmap_get_lc(named_server_map, nickname);
   if (named_id)
     return networkstatus_vote_find_entry(current_consensus, named_id);
 
+  /* Okay; is this name listed as Unnamed? */
   if (unnamed_server_map &&
-      strmap_get_lc(unnamed_server_map, nickname))
-    return NULL; /* XXXX020 should we warn? */
+      strmap_get_lc(unnamed_server_map, nickname)) {
+    log_info(LD_GENERAL, "The name %s is listed as Unnamed; it is not the "
+             "canonical name of any server we know.", escaped(nickname));
+    return NULL;
+  }
 
-  /*XXXX020 is this behavior really what we want? */
+  /* This name is not canonical for any server; go through the list and
+   * see who it matches. */
+  /*XXXX021 This is inefficient. */
   matches = smartlist_create();
   SMARTLIST_FOREACH(current_consensus->routerstatus_list,
                     routerstatus_t *, lrs,
@@ -1000,7 +1008,9 @@ update_v2_networkstatus_cache_downloads(time_t now)
             * doing a tunneled conn. In that case it should be or_port.
             * How to guess from here? Maybe make the function less general
             * and have it know that it's looking for dir conns. -RD */
-           /* We are already fetching this one. */
+           /* Only directory caches download v2 networkstatuses, and they
+            * don't use tunneled connections.  I think it's okay to ignore
+            * this. */
            continue;
          }
          strlcpy(resource, "fp/", sizeof(resource));

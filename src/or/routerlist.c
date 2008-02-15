@@ -837,9 +837,11 @@ router_pick_directory_server(authority_type_t type, int flags)
   if (choice)
     return choice;
 
-  /* XXXX020 arma: what's the point of *reloading* and trying again?? -NM */
-  /* XXXX020 <arma> once upon a time, reloading set the is_running back
+  /* XXXX021 arma: what's the point of *reloading* and trying again?? -NM */
+  /* XXXX021 <arma> once upon a time, reloading set the is_running back
      to 1. i think. i bet it has no purpose now. */
+  /* XXXX021 Let's stop reloading in 0.2.1.x, then, and see if anything
+   * breaks -NM */
   log_info(LD_DIR,"Still no %s router entries. Reloading and trying again.",
            (flags & PDS_IGNORE_FASCISTFIREWALL) ? "known" : "reachable");
   if (router_reload_router_list()) {
@@ -2447,8 +2449,9 @@ routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)
     idx = sd->routerlist_index;
   }
   tor_assert(0 <= idx && idx < smartlist_len(rl->old_routers));
-  /* XXX020 edmanm's bridge relay triggered the following assert while
-   * running 0.2.0.12-alpha. */
+  /* XXXX edmanm's bridge relay triggered the following assert while
+   * running 0.2.0.12-alpha.  If anybody triggers this again, see if we
+   * can ge a backtrace. */
   tor_assert(smartlist_get(rl->old_routers, idx) == sd);
   tor_assert(idx == sd->routerlist_index);
 
@@ -3288,8 +3291,10 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
                         ei->cache_info.identity_digest,
                       DIGEST_LEN);
         smartlist_string_remove(requested_fingerprints, fp);
-        /* XXX020 We silently let people stuff us with extrainfos we
-         * didn't ask for. Is this a problem? -RD */
+        /* We silently let people stuff us with extrainfos we didn't ask for,
+         * so long as we would have wanted them anyway.  Since we always fetch
+         * all the extrainfos we want, and we never actually act on them
+         * inside Tor, this should be harmless. */
       }
     });
 
@@ -3662,7 +3667,10 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
     }
   }
   /* XXX020 should we consider having even the dir mirrors delay
-   * a little bit, so we don't load the authorities as much? -RD */
+   * a little bit, so we don't load the authorities as much? -RD
+   * I don't think so.  If we do, clients that want those descriptors may
+   * not actually find them if the caches haven't got them yet. -NM
+   */
 
   if (! should_delay && n_downloadable) {
     int i, n_per_request;
@@ -4328,7 +4336,7 @@ routerlist_assert_ok(routerlist_t *rl)
     tor_assert(&(r->cache_info) == sd2);
     tor_assert(r->cache_info.routerlist_index == r_sl_idx);
 #if 0
-    /* XXXX020.
+    /* XXXX021.
      *
      *   Hoo boy.  We need to fix this one, and the fix is a bit tricky, so
      * commenting this out is just a band-aid.
@@ -4343,7 +4351,8 @@ routerlist_assert_ok(routerlist_t *rl)
      * refactoring once consensus directories are in.  For now,
      * this rep violation is probably harmless: an adversary can make us
      * reset our retry count for an extrainfo, but that's not the end
-     * of the world.
+     * of the world.  Changing the representation in 0.2.0.x would just
+     * destabilize the codebase.
      */
     if (!tor_digest_is_zero(r->cache_info.extra_info_digest)) {
       signed_descriptor_t *sd3 =
@@ -4360,7 +4369,7 @@ routerlist_assert_ok(routerlist_t *rl)
     tor_assert(sd == sd2);
     tor_assert(sd->routerlist_index == sd_sl_idx);
 #if 0
-    /* XXXX020 see above. */
+    /* XXXX021 see above. */
     if (!tor_digest_is_zero(sd->extra_info_digest)) {
       signed_descriptor_t *sd3 =
         sdmap_get(rl->desc_by_eid_map, sd->extra_info_digest);
@@ -4386,7 +4395,7 @@ routerlist_assert_ok(routerlist_t *rl)
                        d, DIGEST_LEN));
     sd = sdmap_get(rl->desc_by_eid_map,
                    ei->cache_info.signed_descriptor_digest);
-    // tor_assert(sd); // XXXX020 see above
+    // tor_assert(sd); // XXXX021 see above
     if (sd) {
       tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
                          sd->extra_info_digest, DIGEST_LEN));
