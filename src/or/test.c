@@ -1133,6 +1133,18 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
       test_fail_msg("failed: tor_addr_compare("a","b") "#op" 0"); \
   STMT_END
 
+/** Helper: Assert that <b>a</b> and <b>b</b>, when parsed by
+ * tor_inet_pton(), give addresses that compare in the order defined by
+ * <b>op</b> with tor_addr_compare_masked() with <b>m</b> masked. */
+#define test_addr_compare_masked(a, op, b, m) STMT_BEGIN          \
+    test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1);    \
+    test_eq(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), 1);    \
+    t1.family = t2.family = AF_INET6;                             \
+    r = tor_addr_compare_masked(&t1,&t2,m);                       \
+    if (!(r op 0))                                                \
+      test_fail_msg("failed: tor_addr_compare_masked("a","b","#m") "#op" 0"); \
+  STMT_END
+
 /** Helper: assert that <b>xx</b> is parseable as a masked IPv6 address with
  * ports by <b>tor_parse_mask_addr_ports(), with family <b>f</b>, IP address
  * as 4 32-bit words <b>ip1...ip4</b>, mask bits as <b>mm</b>, and port range
@@ -1294,7 +1306,11 @@ test_util_ip6_helpers(void)
   tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);
   test_assert(tor_addr_compare(&t1, &t2) < 0);
 
-  /* XXXX020 test compare_masked */
+  /* test compare_masked */
+  test_addr_compare_masked("ffff::", ==, "ffff::0", 128);
+  test_addr_compare_masked("ffff::", ==, "ffff::0", 64);
+  test_addr_compare_masked("0::2:2:1", <, "0::8000:2:1", 81);
+  test_addr_compare_masked("0::2:2:1", ==, "0::8000:2:1", 80);
 
   /* test tor_addr_parse_mask_ports */
   test_addr_mask_ports_parse("[::f]/17:47-95", AF_INET6,
