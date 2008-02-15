@@ -2335,7 +2335,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     ssize_t estimated_len = 0;
     smartlist_t *items = smartlist_create();
     smartlist_t *dir_items = smartlist_create();
-    int lifetime = 60; /* XXXX020 should actually use vote intervals. */
+    int lifetime = 60; /* XXXX021 should actually use vote intervals. */
     url += strlen("/tor/status-vote/");
     current = !strcmpstart(url, "current/");
     url = strchr(url, '/');

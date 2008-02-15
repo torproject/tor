@@ -613,12 +613,6 @@ _connection_mark_for_close(connection_t *conn, int line, const char *file)
   conn->marked_for_close_file = file;
   add_connection_to_closeable_list(conn);
 
-#if 0
-  /* XXXX020 Actually, I don't think this is right. */
-  if (conn->linked_conn && !conn->linked_conn->marked_for_close)
-    _connection_mark_for_close(conn->linked_conn, line, file);
-#endif
-
   /* in case we're going to be held-open-til-flushed, reset
    * the number of seconds since last successful write, so
    * we get our whole 15 seconds */
@@ -1681,7 +1675,8 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
       if (*bucket > burst || *bucket < starting_bucket) {
         /* If we overflow the burst, or underflow our starting bucket,
          * cap the bucket value to burst. */
-        /* XXXX020 this might be redundant now. */
+        /* XXXX021 this might be redundant now, but it doesn't show up
+         * in profiles.  Remove it after analysis. */
         *bucket = burst;
       }
     }

@@ -851,8 +851,6 @@ dns_cancel_pending_resolve(const char *address)
   }
 
   if (!resolve->pending_connections) {
-    /* XXX this should never trigger, but sometimes it does */
-    /* XXXX020 is the above still true? -NM */
     log_warn(LD_BUG,
              "Address %s is pending but has no pending connections!",
              escaped_safe_str(address));
@@ -872,8 +870,7 @@ dns_cancel_pending_resolve(const char *address)
     assert_connection_ok(TO_CONN(pendconn), 0);
     tor_assert(pendconn->_base.s == -1);
     if (!pendconn->_base.marked_for_close) {
-      /* XXXX020 RESOURCELIMIT?  Not RESOLVEFAILED??? */
-      connection_edge_end(pendconn, END_STREAM_REASON_RESOURCELIMIT);
+      connection_edge_end(pendconn, END_STREAM_REASON_RESOLVEFAILED);
     }
     circ = circuit_get_by_edge_conn(pendconn);
     if (circ)
@@ -1269,7 +1266,7 @@ launch_resolve(edge_connection_t *exitconn)
     log_info(LD_EXIT, "Launching eventdns request for %s",
              escaped_safe_str(exitconn->_base.address));
     r = evdns_resolve_ipv4(exitconn->_base.address, options,
-                              evdns_callback, addr);
+                           evdns_callback, addr);
   } else if (r == 1) {
     log_info(LD_EXIT, "Launching eventdns reverse request for %s",
              escaped_safe_str(exitconn->_base.address));
@@ -1425,13 +1422,14 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
   log_info(LD_EXIT, "Testing whether our DNS server is hijacking nonexistent "
            "domains with request for bogus hostname \"%s\"", addr);
 
-  r = evdns_resolve_ipv4(addr, DNS_QUERY_NO_SEARCH,
-                         evdns_wildcard_check_callback, addr);
-  if (r)
+  r = evdns_resolve_ipv4(/* This "addr" tells us which address to resolve */
+                         addr,
+                         DNS_QUERY_NO_SEARCH, evdns_wildcard_check_callback,
+                         /* This "addr" is an argument to the callback*/ addr);
+  if (r) {
+    /* There is no evdns request in progress; stop addr from getting leaked */
     tor_free(addr);
-  /* XXX020 Nick, the above "if" needs some explanation. Plus the fact
-   * that we're sending addr twice. Given that evdns_resolve_ipv4() has
-   * no doxygen documentation. -RD */
+  }
 }
 
 /** Launch attempts to resolve a bunch of known-good addresses (configured in

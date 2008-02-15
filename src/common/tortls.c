@@ -459,7 +459,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
  * really exist; if I understand correctly, it's a bit of silliness that
  * netscape did on its own before any standard for what they wanted was
  * formally approved.  Nonetheless, Firefox still uses it, so we need to
- * fake it at some point soon. XXXX020 -NM */
+ * fake it at some point soon. XXXX021 -NM */
 #else
 /* Ug. We don't have as many ciphers with openssl 0.9.7 as we'd like.  Fix
  * this list into something that sucks less. */

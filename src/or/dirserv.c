@@ -861,7 +861,8 @@ directory_set_dirty(void)
   time_t now = time(NULL);
   int set_v1_dirty=0;
 
-  /* Regenerate stubs only every 8 hours. XXXX020 */
+  /* Regenerate stubs only every 8 hours.
+   * XXXX021 It would be nice to generate less often. */
 #define STUB_REGENERATE_INTERVAL (8*60*60)
   if (!the_directory || !the_runningrouters.dir)
     set_v1_dirty = 1;
@@ -1430,7 +1431,7 @@ dirserv_clear_old_v1_info(time_t now)
   }
 }
 
-/** Helper: If we're an authority for the right directory version
+/** Helper: If we're an authority for the right directory version (v1 or v2)
  * (based on <b>auth_type</b>), try to regenerate
  * auth_src as appropriate and return it, falling back to cache_src on
  * failure.  If we're a cache, simply return cache_src.
@@ -1445,7 +1446,6 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
   or_options_t *options = get_options();
   int authority = (auth_type == V1_AUTHORITY && authdir_mode_v1(options)) ||
                   (auth_type == V2_AUTHORITY && authdir_mode_v2(options));
-  /* XXX020 eventually use authdir_mode_publishes_statuses() here */
 
   if (!authority || authdir_mode_bridge(options)) {
     return cache_src;
@@ -1814,7 +1814,7 @@ version_from_platform(const char *platform)
   if (platform && !strcmpstart(platform, "Tor ")) {
     const char *eos = find_whitespace(platform+4);
     if (eos && !strcmpstart(eos, " (r")) {
-      /* XXXX020 Unify this logic with the other version extraction
+      /* XXXX021 Unify this logic with the other version extraction
        * logic */
       eos = find_whitespace(eos+1);
     }
@@ -2618,8 +2618,8 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
  * If -1 is returned *<b>msg</b> will be set to an appropriate error
  * message.
  *
- * XXXX020 rename this function.  IT's only called from the controller.
- * XXXX020 in fact, refactor this function, mergeing as much as possible.
+ * XXXX021 rename this function.  It's only called from the controller.
+ * XXXX021 in fact, refactor this function, mergeing as much as possible.
  */
 int
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
