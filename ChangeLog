@@ -18,6 +18,11 @@ Changes in version 0.2.0.20-?? - 2008-02-??
     - Have the new hidden service code respect the SafeLogging setting.
       Bugfix on 0.2.0.x.  Patch from Karsten.
 
+  o Code simplifications and refactoring:
+    - Remove the tor_strpartition function: its logic was confused,
+      and it was only used for one thing that could be implemented far
+      more easily.
+
 
 Changes in version 0.2.0.19-alpha - 2008-02-09
   Tor 0.2.0.19-alpha makes more progress towards normalizing Tor's TLS

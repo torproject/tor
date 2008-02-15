@@ -624,6 +624,17 @@ test_crypto(void)
   tor_free(data1);
   tor_free(data2);
   tor_free(data3);
+
+  /* Add spaces to fingerprint */
+  {
+    data1 = tor_strdup("ABCD1234ABCD56780000ABCD1234ABCD56780000");
+    test_eq(strlen(data1), 40);
+    data2 = tor_malloc(FINGERPRINT_LEN+1);
+    add_spaces_to_fp(data2, FINGERPRINT_LEN+1, data1);
+    test_streq(data2, "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 0000");
+    tor_free(data1);
+    tor_free(data2);
+  }
 }
 
 static void
@@ -757,10 +768,6 @@ test_util(void)
   strlcpy(buf, "!Testing 1 2 3?", sizeof(buf));
   test_eq(5, tor_strstrip(buf, "!? "));
   test_streq(buf, "Testing123");
-
-  /* Test tor_strpartition() */
-  test_assert(! tor_strpartition(buf, sizeof(buf), "abcdefghi", "##", 3));
-  test_streq(buf, "abc##def##ghi");
 
   /* Test parse_addr_port */
   cp = NULL; u32 = 3; u16 = 3;

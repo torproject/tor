@@ -207,6 +207,7 @@ struct dh_st *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
 /* Prototypes for private functions only used by crypto.c and test.c*/
 int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
                                            const char *s);
+void add_spaces_to_fp(char *out, size_t outlen, const char *in);
 #endif
 
 #endif

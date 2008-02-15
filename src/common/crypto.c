@@ -999,6 +999,24 @@ crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out)
   return 0;
 }
 
+/** Copy <b>in</b> to the <b>outlen</b>-byte buffer <b>out</b>, adding spaces
+ * every four spaces. */
+/* static */ void
+add_spaces_to_fp(char *out, size_t outlen, const char *in)
+{
+  int n = 0;
+  char *end = out+outlen;
+  while (*in && out<end) {
+    *out++ = *in++;
+    if (++n == 4 && *in && out<end) {
+      n = 0;
+      *out++ = ' ';
+    }
+  }
+  tor_assert(out<end);
+  *out = '\0';
+}
+
 /** Given a private or public key <b>pk</b>, put a fingerprint of the
  * public key into <b>fp_out</b> (must have at least FINGERPRINT_LEN+1 bytes of
  * space).  Return 0 on success, -1 on failure.
@@ -1019,8 +1037,7 @@ crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out, int add_space)
   }
   base16_encode(hexdigest,sizeof(hexdigest),digest,DIGEST_LEN);
   if (add_space) {
-    if (tor_strpartition(fp_out, FINGERPRINT_LEN+1, hexdigest, " ", 4)<0)
-      return -1;
+    add_spaces_to_fp(fp_out, FINGERPRINT_LEN+1, hexdigest);
   } else {
     strncpy(fp_out, hexdigest, HEX_DIGEST_LEN+1);
   }

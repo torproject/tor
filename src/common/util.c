@@ -347,54 +347,6 @@ tor_strstrip(char *s, const char *strip)
   return read-s;
 }
 
-/** Set the <b>dest_len</b>-byte buffer <b>buf</b> to contain the
- * string <b>s</b>, with the string <b>insert</b> inserted after every
- * <b>n</b> characters.  Return 0 on success, -1 on failure.
- *
- * Never end the string with <b>insert</b>, even if its length <i>is</i> a
- * multiple of <b>n</b>.
- */
-int
-tor_strpartition(char *dest, size_t dest_len,
-                 const char *s, const char *insert, size_t n)
-{
-  char *destp;
-  size_t len_in, len_out, len_ins;
-  int is_even, remaining;
-  tor_assert(s);
-  tor_assert(insert);
-  tor_assert(n > 0);
-  tor_assert(n < SIZE_T_CEILING);
-  tor_assert(dest_len < SIZE_T_CEILING);
-  len_in = strlen(s);
-  len_ins = strlen(insert);
-  tor_assert(len_in < SIZE_T_CEILING);
-  tor_assert(len_in/n < SIZE_T_CEILING/len_ins); /* avoid overflow */
-  len_out = len_in + (len_in/n)*len_ins;
-  is_even = (len_in%n) == 0;
-  if (is_even && len_in)
-    len_out -= len_ins;
-  if (dest_len < len_out+1)
-    return -1;
-  destp = dest;
-  remaining = len_in;
-  while (remaining) {
-    strncpy(destp, s, n);
-    remaining -= n;
-    if (remaining < 0) {
-      break;
-    } else if (remaining == 0) {
-      *(destp+n) = '\0';
-      break;
-    }
-    strncpy(destp+n, insert, len_ins+1);
-    s += n;
-    destp += n+len_ins;
-  }
-  tor_assert(len_out == strlen(dest));
-  return 0;
-}
-
 /** Return a pointer to a NUL-terminated hexadecimal string encoding
  * the first <b>fromlen</b> bytes of <b>from</b>. (fromlen must be \<= 32.) The
  * result does not need to be deallocated, but repeated calls to

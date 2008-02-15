@@ -167,8 +167,6 @@ int strcmpend(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
 int strcasecmpend(const char *s1, const char *s2)
   ATTR_PURE ATTR_NONNULL((1,2));
 int tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
-int tor_strpartition(char *dest, size_t dest_len,
-                     const char *s, const char *insert, size_t n);
 long tor_parse_long(const char *s, int base, long min,
                     long max, int *ok, char **next);
 unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
