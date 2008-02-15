@@ -6,7 +6,7 @@ N       - nick claims
 R       - arma claims
 P       - phobos claims
 S       - Steven claims
-M       - Matt claims
+M       - Matt/Mike claims
 J       - Jeff claims
         - Not done
         * Top priority
@@ -15,6 +15,87 @@ J       - Jeff claims
         d Deferrable
         D Deferred
         X Abandoned
+
+=======================================================================
+
+External constraints:
+  - Mid Feb, blocking-resistance roll-out
+M   - Adequately stable Vidalia snapshot, or 0.1.0 release
+R   - Write some text for it
+S   - New Tor Browser Bundle with above Vidalia
+
+  - Late Feb, NGO in a box
+    - Have 0.2.0 beta or rc out
+
+  - Mid Mar, upnp
+S   - Pick a suitable-looking upnp library and begin integrating it
+
+  - Mid Apr
+    - More Torbrowser work:
+      o Get polipo into it
+?     - Resolve branding issue
+      o Make Torbrowser website
+R     - Get it integrated into the Tor download pages
+S   - Zip-splitting:
+      - Document the use of 7-zip to combine fractional files and
+        reconstruct them after download.  Host such files.
+      - If it's faster to research a self-extracting splitter
+        and use it, with simpler documentation, that's obviously fine.
+S   - Finish first cut at integrating upnp lib into Vidalia
+
+  - End of June
+S   - More TorBrowser work
+      - Integrate pidgin and OTR
+      - move portablefirefox nsi goo into vidalia as appropriate
+      - Firefox extension framework for Torbrowser build-time
+      - Progress bar during startup, including some "timeout" events to
+        indicate when Tor's unlikely to succeed at startup.
+R       - Make Tor put out appropriate events
+        - Let Vidalia notice them and change its appearance
+      - Enumerate and analyze traces left when running from USB
+R   - Finish tor-doc-bridge.wml
+    - More bridgedb work:
+R     - Get the dkimproxy patch in
+?     - Brainstorm about safe but effective ways for vidalia to
+        auto-update its user's bridges via Tor in the background.
+NR    - Include "stable" bridge and "port 443" bridge and "adequately
+        new version" bridge free in every specially marked
+        box!^W^W^Woutput batch.
+N     - Detect proxies and treat them as the same address
+    - More back-end work:
+N     - Investigate and start resolving (or declare unresolvable) the ram
+        issue for relays
+N     - Write a research proposal for how to safely collect and aggregate
+        some GeoIP data from non-bridge entry nodes. Deploy that if we
+        think it's safe enough, or produce a clear roadmap to getting it
+        safe if we don't think it's ready yet.
+N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
+        - spoof the cipher suites
+        - spoof the extensions list
+        - red-team testing (a.k.a, look at a packet dump and compare),
+        - investigate the feasibility of handing connections off to a
+          local apache if they don't look like Tor or if they don't
+          portknock or whatever.
+R     - Get closer to downloading far fewer descriptors
+        - Instrument the code to track how many descriptors we download vs how
+          many times we extend a circuit.
+        - Write a proposal for how to fetch far fewer descriptors; assess
+          anonymity attacks, like from looking at the size of the
+          descriptor you fetch.
+?     - Translation portal
+        - Vidalia translations
+        - Vidalia installer
+        - Torbutton plus its docs
+        - Torbrowser docs
+        - Tor website
+        - check.torproject.org
+
+  - mid June
+R   - SRI stuff
+
+
+
+=======================================================================
 
 For Tor 0.2.0.x-rc:
 R - Figure out the autoconf problem with adding a fallback consensus.
@@ -126,8 +207,13 @@ P - Make documentation realize that location of system configuration file
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 
+=======================================================================
+
 Planned for 0.2.1.x:
   - router_choose_random_node() has a big pile of args. make it "flags".
+  - Consider if we can solve: the Tor client doesn't know what flags
+    its bridge has (since it only gets the descriptor), so it can't
+    make decisions based on Fast or Stable.
   - anonymity concern: since our is-consensus-fresh-enough check is
     sloppy so clients will actually work when a consensus wasn't formed,
     does that mean that if users are idle for 5 hours and then click on
@@ -268,6 +354,8 @@ Deferred from 0.2.0.x:
       bridge.
   - Build:
     - Detect correct version of libraries from autoconf script.
+
+=======================================================================
 
 Future versions:
   - deprecate router_digest_is_trusted_dir() in favor of
@@ -483,6 +571,7 @@ Future versions:
   - Related tools
     - Patch privoxy and socks protocol to pass strings to the browser.
 
+=======================================================================
 
 Documentation, non-version-specific.
   - Specs
@@ -539,6 +628,5 @@ P - create a 'blog badge' for tor fans to link to and feature on their
     - find a mirror volunteer to coordinate all of this
 
 Blog todo:
-  - A "Tor calendar" so we can list upcoming talks, etc?
   - Link to the blog from the main Tor website
 
