@@ -2436,11 +2436,13 @@ connection_get_by_type_state(int type, int state)
 
 /** Return a connection of type <b>type</b> that has rendquery equal
  * to <b>rendquery</b>, and that is not marked for close. If state
- * is non-zero, conn must be of that state too.
+ * is non-zero, conn must be of that state too. If rendversion is
+ * nonnegative, conn must fetch that rendversion, too.
  */
 connection_t *
 connection_get_by_type_state_rendquery(int type, int state,
-                                       const char *rendquery)
+                                       const char *rendquery,
+                                       int rendversion)
 {
   smartlist_t *conns = get_connection_array();
 
@@ -2453,6 +2455,8 @@ connection_get_by_type_state_rendquery(int type, int state,
         !conn->marked_for_close &&
         (!state || state == conn->state)) {
       if (type == CONN_TYPE_DIR &&
+          (rendversion < 0 ||
+                  rendversion == TO_DIR_CONN(conn)->rend_version) &&
           !rend_cmp_service_ids(rendquery, TO_DIR_CONN(conn)->rend_query))
         return conn;
       else if (CONN_IS_EDGE(conn) &&

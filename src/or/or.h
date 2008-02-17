@@ -1053,6 +1053,9 @@ typedef struct dir_connection_t {
   /** The zlib object doing on-the-fly compression for spooled data. */
   tor_zlib_state_t *zlib_state;
 
+  /** What hidden service descriptor are we fetching, if any? */
+  int rend_version;
+
   /** What rendezvous service are we querying for? */
   char rend_query[REND_SERVICE_ID_LEN_BASE32+1];
 
@@ -2751,7 +2754,8 @@ connection_t *connection_get_by_type_addr_port_purpose(int type, uint32_t addr,
                                                    uint16_t port, int purpose);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state,
-                                                     const char *rendquery);
+                                                     const char *rendquery,
+                                                     int rendversion);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 int connection_is_listener(connection_t *conn);

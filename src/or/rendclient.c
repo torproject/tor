@@ -401,7 +401,7 @@ rend_client_refetch_renddesc(const char *query)
     return;
   log_info(LD_REND, "Fetching rendezvous descriptor for service %s",
            escaped_safe_str(query));
-  if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
+  if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query, 0)) {
     log_info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
              "already in progress.", escaped_safe_str(query));
   } else {
@@ -421,12 +421,19 @@ rend_client_refetch_v2_renddesc(const char *query)
   char descriptor_id[DIGEST_LEN];
   int replicas_left_to_try[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS];
   int i, tries_left;
+  rend_cache_entry_t *e = NULL;
   tor_assert(query);
   tor_assert(strlen(query) == REND_SERVICE_ID_LEN_BASE32);
   /* Are we configured to fetch descriptors? */
   if (!get_options()->FetchHidServDescriptors) {
     log_warn(LD_REND, "We received an onion address for a v2 rendezvous "
         "service descriptor, but are not fetching service descriptors.");
+    return;
+  }
+  /* Before fetching, check if we already have the descriptor here. */
+  if (rend_cache_lookup_entry(query, -1, &e) > 0) {
+    log_info(LD_REND, "We would fetch a v2 rendezvous descriptor, but we "
+                      "already have that descriptor here. Not fetching.");
     return;
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
@@ -506,7 +513,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro, const char *query)
 
     /* move all pending streams back to renddesc_wait */
     while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
-                                   AP_CONN_STATE_CIRCUIT_WAIT, query))) {
+                                   AP_CONN_STATE_CIRCUIT_WAIT, query, -1))) {
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
     }
 

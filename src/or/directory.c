@@ -880,6 +880,7 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(strlen(resource) <= REND_SERVICE_ID_LEN_BASE32);
       /* This breaks the function abstraction. */
       strlcpy(conn->rend_query, resource, sizeof(conn->rend_query));
+      conn->rend_version = 0;
 
       httpcommand = "GET";
       /* Request the most recent versioned descriptor. */
@@ -894,6 +895,7 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(strlen(resource) <= REND_DESC_ID_V2_LEN_BASE32);
       /* Remember the query to refer to it when a response arrives. */
       strlcpy(conn->rend_query, payload, sizeof(conn->rend_query));
+      conn->rend_version = 2;
       payload = NULL;
       httpcommand = "GET";
       len = strlen(resource) + 32;
