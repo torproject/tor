@@ -102,10 +102,11 @@ R - Figure out the autoconf problem with adding a fallback consensus.
 R - add a geoip file
 W   - figure out license
 R - let bridges set relaybandwidthrate as low as 5kb
-  o we need a config option to turn off proposal 109 behavior,
-RK- make it easier to set up a private tor network on your own computer
+R - bug: if we launch using bridges, and then stop using bridges, we
+    still have our bridges in our entryguards section, and may use them.
+  . make it easier to set up a private tor network on your own computer
     is very hard.
-    - FAQ entry which is wrong
+R   . FAQ entry which is wrong
   o Make BEGIN_DIR mandatory for asking questions of bridge authorities?
     (but only for bridge descriptors. not for ordinary cache stuff.)
     o Implement connection_dir_is_encrypted().
@@ -124,11 +125,6 @@ R - bridge communities
     . spec
     . deploy
       - man page entries for Alternate*Authority config options
-      o there's a config option with a password and somehow use an
-        http header and check it
-      D clients who have a password configured decide to ask their bridge
-        authority for a networkstatus
-      D be able to have bridges that aren't in your torrc
 
 Things we'd like to do in 0.2.0.x:
   o if we notice a cached-status directory and we're not serving v2 dir
@@ -166,10 +162,6 @@ N - Before the feature freeze:
           even when the network came back and arma clicked on things.
           also 0.2.0.
 R       - for above two, roger should turn them into flyspray entry.
-      o we should do another bandwidth test every 12 hours or something
-        if we're showing less than 50KB and our bandwidthrate says we can
-        do more than that. I think some servers are forgetting the results
-        of their first test, and then never seeing use.
 
   - Proposals:
     o 101: Voting on the Tor Directory System (plus 103)
@@ -210,6 +202,11 @@ P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 =======================================================================
 
 Planned for 0.2.1.x:
+  - bridge communities with local bridge authorities:
+    - clients who have a password configured decide to ask their bridge
+      authority for a networkstatus
+    - be able to have bridges that aren't in your torrc. save them in
+      state file, etc.
   - router_choose_random_node() has a big pile of args. make it "flags".
   - Consider if we can solve: the Tor client doesn't know what flags
     its bridge has (since it only gets the descriptor), so it can't
