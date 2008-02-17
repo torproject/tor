@@ -12,6 +12,10 @@ Changes in version 0.2.0.20-?? - 2008-02-??
   o Minor features (performance):
     - Tune parameters for cell pool allocation to minimize amount of
       RAM overhead used.
+    - Add OpenBSD malloc code from phk as an optional malloc
+      replacement on Linux: some glibc libraries do very poorly
+      with Tor's memory allocation patterns.  Pass
+      --enable-openbsd-malloc to get the replacement malloc code.
 
   o Minor features (controller):
     - Add a new __HashedControlSessionPassword option for controllers
