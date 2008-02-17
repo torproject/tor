@@ -1034,14 +1034,16 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     used_quoted_string = 1;
   }
 
-  if (!options->CookieAuthentication && !options->HashedControlPassword) {
+  if (!options->CookieAuthentication && !options->HashedControlPassword &&
+      !options->HashedControlSessionPassword) {
     /* if Tor doesn't demand any stronger authentication, then
      * the controller can get in with anything. */
     goto ok;
   }
 
   if (options->CookieAuthentication) {
-    int also_password = options->HashedControlPassword != NULL;
+    int also_password = options->HashedControlPassword != NULL ||
+      options->HashedControlSessionPassword != NULL;
     if (password_len != AUTHENTICATION_COOKIE_LEN) {
       if (!also_password) {
         log_warn(LD_CONTROL, "Got authentication cookie with wrong length "
@@ -1062,17 +1064,39 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     }
   }
 
-  if (options->HashedControlPassword) {
+  if (options->HashedControlPassword || options->HashedControlSessionPassword) {
+    int bad = 0;
+    smartlist_t *sl_tmp;
     char received[DIGEST_LEN];
     int also_cookie = options->CookieAuthentication;
-    sl = decode_hashed_passwords(options->HashedControlPassword);
-    if (!sl) {
+    sl = smartlist_create();
+    if (options->HashedControlPassword) {
+      sl_tmp = decode_hashed_passwords(options->HashedControlPassword);
+      if (!sl_tmp)
+        bad = 1;
+      else {
+        smartlist_add_all(sl, sl_tmp);
+        smartlist_free(sl_tmp);
+      }
+    }
+    if (options->HashedControlSessionPassword) {
+      sl_tmp = decode_hashed_passwords(options->HashedControlSessionPassword);
+      if (!sl_tmp)
+        bad = 1;
+      else {
+        smartlist_add_all(sl, sl_tmp);
+        smartlist_free(sl_tmp);
+      }
+    }
+    if (bad) {
       if (!also_cookie) {
         log_warn(LD_CONTROL,
                  "Couldn't decode HashedControlPassword: invalid base16");
         errstr="Couldn't decode HashedControlPassword value in configuration.";
       }
       bad_password = 1;
+      SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+      smartlist_free(sl);
     } else {
       SMARTLIST_FOREACH(sl, char *, expected,
       {

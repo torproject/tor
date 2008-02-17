@@ -1560,3 +1560,8 @@ $Id$
 
     (Boolean. Default: "0".)
 
+  __HashedControlSessionPassword
+
+    As HashedControlPassword, but is not saved to the torrc file by
+    SAVECONF.  Added in Tor 0.2.0.20-rc.
+    

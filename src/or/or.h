@@ -2258,6 +2258,8 @@ typedef struct {
 
   /** Base64-encoded hash of accepted passwords for the control system. */
   config_line_t *HashedControlPassword;
+  /** As HashedControlPassword, but not saved. */
+  config_line_t *HashedControlSessionPassword;
 
   int CookieAuthentication; /**< Boolean: do we enable cookie-based auth for
                              * the control system? */

@@ -13,6 +13,11 @@ Changes in version 0.2.0.20-?? - 2008-02-??
     - Tune parameters for cell pool allocation to minimize amount of
       RAM overhead used.
 
+  o Minor features (controller):
+    - Add a new __HashedControlSessionPassword option for controllers
+      to use for one-off session password hashes that shouldn't get
+      saved to disk by SAVECONF.  Partial fix for bug 586.
+
   o Minor bugfixes:
     - Log the correct memory chunk sizes for empty RAM chunks in mempool.c.
     - Directory mirrors no longer include a guess at the client's IP

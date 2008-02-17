@@ -306,6 +306,8 @@ static config_var_t _option_vars[] = {
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
+  VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
+      NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -3155,6 +3157,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
+  if (options->HashedControlSessionPassword) {
+    smartlist_t *sl = decode_hashed_passwords(
+                                  options->HashedControlSessionPassword);
+    if (!sl) {
+      REJECT("Bad HashedControlSessionPassword: wrong length or bad encoding");
+    } else {
+      SMARTLIST_FOREACH(sl, char*, cp, tor_free(cp));
+      smartlist_free(sl);
+    }
+  }
+
   if (options->ControlListenAddress) {
     int all_are_local = 1;
     config_line_t *ln;
@@ -3163,7 +3176,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
         all_are_local = 0;
     }
     if (!all_are_local) {
-      if (!options->HashedControlPassword && !options->CookieAuthentication) {
+      if (!options->HashedControlPassword &&
+          !options->HashedControlSessionPassword &&
+          !options->CookieAuthentication) {
         log_warn(LD_CONFIG, "You have a ControlListenAddress set to accept "
                  "connections from a non-local address.  This means that "
                  "any program on the internet can reconfigure your Tor. "
@@ -3179,6 +3194,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->ControlPort && !options->HashedControlPassword &&
+      !options->HashedControlSessionPassword &&
       !options->CookieAuthentication) {
     log_warn(LD_CONFIG, "ControlPort is open, but no authentication method "
              "has been configured.  This means that any program on your "
