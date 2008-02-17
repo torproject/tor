@@ -16,6 +16,9 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       replacement on Linux: some glibc libraries do very poorly
       with Tor's memory allocation patterns.  Pass
       --enable-openbsd-malloc to get the replacement malloc code.
+    - Add a --with-tcmalloc option to the configure script to link
+      against tcmalloc (if present).  Does not yet search for
+      non-system include paths.
 
   o Minor features (controller):
     - Add a new __HashedControlSessionPassword option for controllers

@@ -557,6 +557,14 @@ if [[ $dmalloc -eq 1 ]]; then
   AC_CHECK_FUNCS(dmalloc_strdup dmalloc_strndup)
 fi
 
+AC_ARG_WITH(tcmalloc,
+[  --with-tcmalloc         Use tcmalloc memory allocation library. ],
+[ tcmalloc=yes ], [ tcmalloc=no ])
+
+if test x$tcmalloc = xyes ; then
+   LDFLAGS="-ltcmalloc $LDFLAGS"
+fi
+
 # Allow user to specify an alternate syslog facility
 AC_ARG_WITH(syslog-facility,
 [  --with-syslog-facility=LOG syslog facility to use (default=LOG_DAEMON)],
