@@ -151,6 +151,8 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
       break;
     ds = trusteddirserver_get_by_v3_auth_digest(
                                        cert->cache_info.identity_digest);
+    log_debug(LD_DIR, "Parsed certificate for %s",
+              ds ? ds->nickname : "unknown authority");
 
     cl = get_cert_list(cert->cache_info.identity_digest);
 
@@ -162,10 +164,10 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
           /* we already have this one. continue. */
           log_info(LD_DIR, "Skipping %s certificate for %s that we "
                    "already have.",
-                   from_store ? "cached" : "downloaded", ds->nickname);
+                   from_store ? "cached" : "downloaded",
+                   ds ? ds->nickname : "??");
           authority_cert_free(cert);
           found = 1;
-          break;
         }
       });
 
