@@ -4,12 +4,17 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       bandwidth, rather than uniformly at random. This should speed up Tor
       for bridge users. Also do this for people who set StrictEntryNodes.
 
+  o Major bugfixes:
+    - Resolved problems with (re-)fetching hidden service descriptors.
+      Patch from Karsten Loesing; fixes problems with 0.2.0.18-alpha
+      and 0.2.0.19-alpha.
+
   o Minor features (performance):
     - Tune parameters for cell pool allocation to minimize amount of
       RAM overhead used.
 
   o Minor bugfixes:
-    - Log the correct memory chunk sizes for empty RAM chunks in mempool.c
+    - Log the correct memory chunk sizes for empty RAM chunks in mempool.c.
     - Directory mirrors no longer include a guess at the client's IP
       address if the connection appears to be coming from the same /24
       network; it was producing too many wrong guesses.
