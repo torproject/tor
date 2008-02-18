@@ -132,6 +132,23 @@ trusted_dirs_reload_certs(void)
   return r;
 }
 
+/** Helper: return true iff we already have loaded the exact cert
+ * <b>cert</b>. */
+static INLINE int
+already_have_cert(authority_cert_t *cert)
+{
+  cert_list_t *cl = get_cert_list(cert->cache_info.identity_digest);
+
+  SMARTLIST_FOREACH(cl->certs, authority_cert_t *, c,
+  {
+    if (!memcmp(c->cache_info.signed_descriptor_digest,
+                cert->cache_info.signed_descriptor_digest,
+                DIGEST_LEN))
+      return 1;
+  });
+  return 0;
+}
+
 /** Load a bunch of new key certificates from the string <b>contents</b>.  If
  * <b>from_store</b> is true, the certificates are from the cache, and we
  * don't need to flush them to disk.  If <b>from_store</b> is false, we need
@@ -141,12 +158,11 @@ int
 trusted_dirs_load_certs_from_string(const char *contents, int from_store)
 {
   trusted_dir_server_t *ds;
-  cert_list_t *cl;
   const char *s, *eos;
 
   for (s = contents; *s; s = eos) {
     authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
-    int found = 0;
+    cert_list_t *cl;
     if (!cert)
       break;
     ds = trusteddirserver_get_by_v3_auth_digest(
@@ -154,25 +170,15 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
     log_debug(LD_DIR, "Parsed certificate for %s",
               ds ? ds->nickname : "unknown authority");
 
-    cl = get_cert_list(cert->cache_info.identity_digest);
-
-    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, c,
-      {
-        if (!memcmp(c->cache_info.signed_descriptor_digest,
-                    cert->cache_info.signed_descriptor_digest,
-                    DIGEST_LEN)) {
-          /* we already have this one. continue. */
-          log_info(LD_DIR, "Skipping %s certificate for %s that we "
-                   "already have.",
-                   from_store ? "cached" : "downloaded",
-                   ds ? ds->nickname : "??");
-          authority_cert_free(cert);
-          found = 1;
-        }
-      });
-
-    if (found)
+    if (already_have_cert(cert)) {
+      /* we already have this one. continue. */
+      log_info(LD_DIR, "Skipping %s certificate for %s that we "
+               "already have.",
+               from_store ? "cached" : "downloaded",
+               ds ? ds->nickname : "??");
+      authority_cert_free(cert);
       continue;
+    }
 
     if (ds) {
       log_info(LD_DIR, "Adding %s certificate for directory authority %s with "
@@ -185,6 +191,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
                hex_str(cert->signing_key_digest,DIGEST_LEN));
     }
 
+    cl = get_cert_list(cert->cache_info.identity_digest);
     smartlist_add(cl->certs, cert);
     if (ds && cert->cache_info.published_on > ds->addr_current_at) {
       /* Check to see whether we should update our view of the authority's
