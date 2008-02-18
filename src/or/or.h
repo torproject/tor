@@ -802,17 +802,18 @@ typedef struct connection_t {
                    * *_CONNECTION_MAGIC. */
 
   uint8_t state; /**< Current state of this connection. */
-  uint8_t type:4; /**< What kind of connection is this? */
-  uint8_t purpose:5; /**< Only used for DIR and EXIT types currently. */
+  unsigned int type:4; /**< What kind of connection is this? */
+  unsigned int purpose:5; /**< Only used for DIR and EXIT types currently. */
 
   /* The next fields are all one-bit booleans. Some are only applicable to
    * connection subtypes, but we hold them here anyway, to save space.
    */
-  unsigned read_blocked_on_bw:1; /**< Boolean: should we start reading again
-                            * once the bandwidth throttler allows it? */
-  unsigned write_blocked_on_bw:1; /**< Boolean: should we start writing again
-                             * once the bandwidth throttler allows reads? */
-  unsigned hold_open_until_flushed:1; /**< Despite this connection's being
+  unsigned int read_blocked_on_bw:1; /**< Boolean: should we start reading
+                            * again once the bandwidth throttler allows it? */
+  unsigned int write_blocked_on_bw:1; /**< Boolean: should we start writing
+                             * again once the bandwidth throttler allows
+                             * reads? */
+  unsigned int hold_open_until_flushed:1; /**< Despite this connection's being
                                       * marked for close, do we flush it
                                       * before closing it? */
   unsigned int inbuf_reached_eof:1; /**< Boolean: did read() return 0 on this
@@ -1976,7 +1977,7 @@ typedef struct exit_redirect_t {
 
   uint32_t addr_dest;
   uint16_t port_dest;
-  unsigned is_redirect:1;
+  unsigned int is_redirect:1;
 } exit_redirect_t;
 
 /* limits for TCP send and recv buffer size used for constrained sockets */
@@ -2443,7 +2444,7 @@ struct socks_request_t {
   char address[MAX_SOCKS_ADDR_LEN]; /**< What address did the client ask to
                                        connect to/resolve? */
   uint16_t port; /**< What port did the client ask to connect to? */
-  unsigned has_finished : 1; /**< Has the SOCKS handshake finished? Used to
+  unsigned int has_finished : 1; /**< Has the SOCKS handshake finished? Used to
                               * make sure we send back a socks reply for
                               * every connection. */
 };
