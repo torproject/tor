@@ -1064,7 +1064,8 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     }
   }
 
-  if (options->HashedControlPassword || options->HashedControlSessionPassword) {
+  if (options->HashedControlPassword ||
+      options->HashedControlSessionPassword) {
     int bad = 0;
     smartlist_t *sl_tmp;
     char received[DIGEST_LEN];
