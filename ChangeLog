@@ -10,7 +10,7 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       and 0.2.0.19-alpha.
     - If we only ever used Tor for hidden service lookups or posts, we
       would stop building circuits and start refusing connections after
-      24 hours, since we false believed that Tor was dormant. Reported
+      24 hours, since we falsely believed that Tor was dormant. Reported
       by nwf; bugfix on 0.1.2.x.
 
   o Minor features (performance):
