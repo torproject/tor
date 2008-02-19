@@ -475,6 +475,7 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
   /* XXXX NM Split this function into a separate versions per circuit type? */
 
   tor_assert(circ);
+  tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_RELAY;
@@ -493,10 +494,8 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
   rh.stream_id = stream_id;
   rh.length = payload_len;
   relay_header_pack(cell.payload, &rh);
-  if (payload_len) {
-    tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
+  if (payload_len)
     memcpy(cell.payload+RELAY_HEADER_SIZE, payload, payload_len);
-  }
 
   log_debug(LD_OR,"delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
