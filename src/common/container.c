@@ -66,6 +66,8 @@ smartlist_set_capacity(smartlist_t *sl, int n)
 {
   if (n < sl->num_used)
     n = sl->num_used;
+  if (n < 1)
+    n = 1;
   if (sl->capacity != n) {
     sl->capacity = n;
     sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);

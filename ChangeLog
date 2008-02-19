@@ -38,6 +38,7 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       cached-descriptors file. Patch by freddy77; bugfix on 0.1.2.
     - Make the new hidden service code respect the SafeLogging setting.
       Bugfix on 0.2.0.x.  Patch from Karsten.
+    - Detect size overflow in zlib code.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,

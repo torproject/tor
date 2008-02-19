@@ -71,7 +71,7 @@ tor_gzip_compress(char **out, size_t *out_len,
                   compress_method_t method)
 {
   struct z_stream_s *stream = NULL;
-  size_t out_size;
+  size_t out_size, old_size;
   off_t offset;
 
   tor_assert(out);
@@ -119,7 +119,12 @@ tor_gzip_compress(char **out, size_t *out_len,
           break;
       case Z_BUF_ERROR:
         offset = stream->next_out - ((unsigned char*)*out);
+        old_size = out_size;
         out_size *= 2;
+        if (out_size < old_size) {
+          log_warn(LD_GENERAL, "Size overflow in compression.");
+          goto err;
+        }
         *out = tor_realloc(*out, out_size);
         stream->next_out = (unsigned char*)(*out + offset);
         if (out_size - offset > UINT_MAX) {
@@ -178,7 +183,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
                     int protocol_warn_level)
 {
   struct z_stream_s *stream = NULL;
-  size_t out_size;
+  size_t out_size, old_size;
   off_t offset;
   int r;
 
@@ -245,7 +250,12 @@ tor_gzip_uncompress(char **out, size_t *out_len,
           goto err;
         }
         offset = stream->next_out - (unsigned char*)*out;
+        old_size = out_size;
         out_size *= 2;
+        if (out_size < old_size) {
+          log_warn(LD_GENERAL, "Size overflow in compression.");
+          goto err;
+        }
         *out = tor_realloc(*out, out_size);
         stream->next_out = (unsigned char*)(*out + offset);
         if (out_size - offset > UINT_MAX) {
