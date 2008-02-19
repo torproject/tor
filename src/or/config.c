@@ -363,7 +363,7 @@ static config_var_description_t options_description[] = {
     "this node to the specified number of bytes per second." },
   { "BandwidthBurst", "Limit the maximum token buffer size (also known as "
     "burst) to the given number of bytes." },
-  { "ConnLimit", "Maximum number of simultaneous sockets allowed." },
+  { "ConnLimit", "Minimum number of simultaneous sockets we must have." },
   { "ConstrainedSockets", "Shrink tx and rx buffers for sockets to avoid "
     "system limits on vservers and related environments.  See man page for "
     "more information regarding this option." },
