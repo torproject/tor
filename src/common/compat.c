@@ -487,6 +487,12 @@ touch_file(const char *fname)
   return 0;
 }
 
+#undef DEBUG_SOCKET_COUNTING
+#ifdef DEBUG_SOCKET_COUNTING
+static bitarray_t *open_sockets = NULL;
+static int max_socket = -1;
+#endif
+
 /** Count of number of sockets currently open.  (Undercounts sockets opened by
  * eventdns and libevent.) */
 static int n_sockets_open = 0;
@@ -498,6 +504,15 @@ int
 tor_close_socket(int s)
 {
   int r = 0;
+#ifdef DEBUG_SOCKET_COUNTING
+  if (s > max_socket || ! bitarray_is_set(open_sockets, s)) {
+    log_warn(LD_BUG, "Closing a socket (%d) that wasn't returned by tor_open_"
+             "socket(), or that was already closed or something.", s);
+  } else {
+    tor_assert(open_sockets && s <= max_socket);
+    bitarray_clear(open_sockets, s);
+  }
+#endif
   /* On Windows, you have to call close() on fds returned by open(),
    * and closesocket() on fds returned by socket().  On Unix, everything
    * gets close()'d.  We abstract this difference by always using
@@ -536,8 +551,25 @@ int
 tor_open_socket(int domain, int type, int protocol)
 {
   int s = socket(domain, type, protocol);
-  if (s >= 0)
+  if (s >= 0) {
     ++n_sockets_open;
+#ifdef DEBUG_SOCKET_COUNTING
+    if (s > max_socket) {
+      if (max_socket == -1) {
+        open_sockets = bitarray_init_zero(s+128);
+        max_socket = s+128;
+      } else {
+        open_sockets = bitarray_expand(open_sockets, max_socket, s+128);
+        max_socket = s+128;
+      }
+    }
+    if (bitarray_is_set(open_sockets, s)) {
+      log_warn(LD_BUG, "I thought that %d was already open, but socket() just "
+               "gave it to me!", s);
+    }
+    bitarray_set(open_sockets, s);
+#endif
+  }
   return s;
 }
 
