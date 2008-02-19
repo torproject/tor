@@ -158,7 +158,6 @@ rend_add_service(rend_service_t *service)
     log_warn(LD_CONFIG, "Hidden service with no ports configured; ignoring.");
     rend_service_free(service);
   } else {
-    smartlist_set_capacity(service->ports, -1);
     smartlist_add(rend_service_list, service);
     log_debug(LD_REND,"Configuring service with directory \"%s\"",
               service->directory);

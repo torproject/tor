@@ -55,25 +55,6 @@ smartlist_free(smartlist_t *sl)
   tor_free(sl);
 }
 
-/** Change the capacity of the smartlist to <b>n</b>, so that we can grow
- * the list up to <b>n</b> elements with no further reallocation or wasted
- * space.  If <b>n</b> is less than or equal to the number of elements
- * currently in the list, reduce the list's capacity as much as
- * possible without losing elements.
- */
-void
-smartlist_set_capacity(smartlist_t *sl, int n)
-{
-  if (n < sl->num_used)
-    n = sl->num_used;
-  if (n < 1)
-    n = 1;
-  if (sl->capacity != n) {
-    sl->capacity = n;
-    sl->list = tor_realloc(sl->list, sizeof(void*)*sl->capacity);
-  }
-}
-
 /** Remove all elements from the list.
  */
 void
