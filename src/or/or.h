@@ -647,14 +647,6 @@ typedef enum {
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
 
-#ifdef TOR_PERF
-/* These options are here for internal testing on a separate network. If
- * you enable them, you won't be compatible with the main Tor network. */
-#define CIRCWINDOW_START 10000
-#define CIRCWINDOW_INCREMENT 1000
-#define STREAMWINDOW_START 5000
-#define STREAMWINDOW_INCREMENT 500
-#else
 /** Initial value for both sides of a circuit transmission window when the
  * circuit is initialized.  Measured in cells. */
 #define CIRCWINDOW_START 1000
@@ -665,7 +657,6 @@ typedef enum {
 #define STREAMWINDOW_START 500
 /** Amount to increment a stream window when we get a stream SENDME. */
 #define STREAMWINDOW_INCREMENT 50
-#endif
 
 /* cell commands */
 #define CELL_PADDING 0

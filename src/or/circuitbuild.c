@@ -1039,15 +1039,12 @@ new_route_len(uint8_t purpose, extend_info_t *exit,
 
   tor_assert(routers);
 
-#ifdef TOR_PERF
-  routelen = 2;
-#else
   routelen = 3;
   if (exit &&
       purpose != CIRCUIT_PURPOSE_TESTING &&
       purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
     routelen++;
-#endif
+
   log_debug(LD_CIRC,"Chosen route length %d (%d routers available).",
             routelen, smartlist_len(routers));
 
